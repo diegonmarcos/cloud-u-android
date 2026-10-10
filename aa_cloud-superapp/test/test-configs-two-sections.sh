@@ -222,9 +222,9 @@ import json
 print(len(next(s for s in json.load(open('$BJ'))['ui']['sections']
                if s['id'] == 'config')['pages']))
 ")
-[ "$COUNT" = 21 ] \
-  && ok "21 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall)" \
-  || bad "$COUNT config pages, expected 21 — a page was added or DELETED, and T5 cannot report a page that is gone"
+[ "$COUNT" = 22 ] \
+  && ok "22 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery)" \
+  || bad "$COUNT config pages, expected 22 — a page was added or DELETED, and T5 cannot report a page that is gone"
 
 echo "== T6: ACTIONS IS UNTOUCHED =="
 # The owner said to keep it as it is. Three things make that true: the same three
@@ -307,7 +307,8 @@ BEFORE = {'presets', 'controls', 'onehand', 'notify', 'launcher',
           'adb-shell',  # added on purpose: Configs ▸ Network ▸ ADB Shell (the privileged channel's page)
           'c3', 'network-sep-1',   # added on purpose: Network's C3 entry and its separator
           'firewall',   # added on purpose: Configs ▸ Network ▸ Firewall hosts the firewall engine's controls (About keeps a summary)
-          'dns'}        # #740 added on purpose: Configs ▸ Mesh ▸ DNS (the fleet resolver)
+          'dns',        # #740 added on purpose: Configs ▸ Mesh ▸ DNS (the fleet resolver)
+          'battery'}    # added on purpose: Configs ▸ About ▸ Battery, the battery SoT's stats page (hidden, page:config/battery)
 sec     = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
                if s['id'] == 'config')
 pages   = sec['pages']

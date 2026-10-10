@@ -120,6 +120,10 @@ object SectionPages {
             com.diegonmarcos.superapp.configs.OneHandFragment.newInstance()
         sectionId == "config" && pageId == "perms" ->
             com.diegonmarcos.superapp.configs.PermissionsFragment.newInstance()
+        // Configs ▸ About ▸ Battery: the battery Source of Truth's full stats page (hidden; opened from
+        // About's Battery section, the home-screen battery popup and the Battery badge).
+        sectionId == "config" && pageId == "battery"        ->
+            com.diegonmarcos.superapp.batterystats.BatteryStatsFragment.newInstance()
         sectionId == "config" && (pageId == "about" || pageId == "dev") ->
             com.diegonmarcos.superapp.devcontrol.DevControlFragment.newInstance()
         // "browser" section is dead — tile target extapp:cloud-browser bypasses openSectionPage.

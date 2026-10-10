@@ -227,18 +227,10 @@
         "aa_cloud-superapp"
       ]
     },
-    "battery_badge": {
-      "kind": "prefs",
-      "class": "device",
-      "doc": "The Battery badge's short-term rate tracker: the reference sample (time, level, charge counter, direction) and the EMA of the charge or drain rate. Hardware-specific telemetry, rebuilt within minutes.",
-      "used_by": [
-        "aa_cloud-superapp"
-      ]
-    },
     "battery_history": {
       "kind": "prefs",
       "class": "device",
-      "doc": "Locally recorded battery sessions/days; hardware-specific telemetry.",
+      "doc": "The old ledger of completed battery sessions/days. Read once by the battery SoT (libs:battery BatteryRepository) to seed battery_sot.db, then cleared; hardware-specific telemetry.",
       "used_by": [
         "lib-battery"
       ]

@@ -64,8 +64,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `apps_mesh` | prefs | config | yes | #793 the Apps Mesh page's chosen chip filter (`filter`): which members the page shows first. A view preference, so it moves with the phone; the probe cache itself is a cacheDir file and never migrates. |
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
 | `badge_customization` | prefs | config | yes | Per-badge notification toggles (enabled/persistent/options) the user set in the notification center. |
-| `battery_badge` | prefs | device | no | The Battery badge's short-term rate tracker: the reference sample (time, level, charge counter, direction) and the EMA of the charge or drain rate. Hardware-specific telemetry, rebuilt within minutes. |
-| `battery_history` | prefs | device | no | Locally recorded battery sessions/days; hardware-specific telemetry. |
+| `battery_history` | prefs | device | no | The old ledger of completed battery sessions/days. Read once by the battery SoT (libs:battery BatteryRepository) to seed battery_sot.db, then cleared; hardware-specific telemetry. |
 | `battery_session` | prefs | device | no | Plug/unplug anchors and charge counters of this battery. |
 | `charge_snapshots` | prefs | device | no | Local charge snapshots of this battery. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |

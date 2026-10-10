@@ -5,14 +5,16 @@
 # notification. Five ways it goes wrong without anyone noticing, closed here:
 #   1. it is posted by hand-written start code instead of the declared restart
 #      path, so it is gone after the next update (the #515 asymmetry);
-#   2. it re-tracks what libs:battery already persists (the unplug/plug
-#      anchors, capacity) instead of reading it;
+#   2. it computes the battery itself (a current, a rate, an EMA, a store)
+#      instead of reading the ONE battery Source of Truth, libs:battery
+#      BatteryRepository/BatteryTruth, that the popup and About › Battery read;
 #   3. it polls on a timer instead of reacting to ACTION_BATTERY_CHANGED, or
 #      statically registers that sticky broadcast, and drains the battery;
 #   4. it posts without the Android 13+ notification grant, or has no off switch;
-#   5. it keeps a preference store the fleet config does not declare.
-# The estimators and the card are proven by BatteryEstimatorTest and
-# BatteryBadgeModelTest (unit tests); this is the static half.
+#   5. it keeps a preference store of its own (the SoT's history is battery_sot.db).
+# The SoT's arithmetic and the card are proven by BatteryMathTest,
+# BatteryHistoryTest, BatteryTruthTest and BatteryBadgeModelTest (unit tests);
+# this is the static half.
 #
 # Static tester (no device, no build): build.json is read as data, the Kotlin
 # and the manifest are checked for the contract that data relies on.
@@ -28,7 +30,7 @@ BJ="$APP/build.json"
 SRC="$APP/app/src/main/java/com/diegonmarcos/superapp/notificationcenter"
 SVC="$SRC/BatteryBadgeService.kt"
 MODEL="$SRC/BatteryBadgeModel.kt"
-EST="$SRC/BatteryEstimator.kt"
+SOT="$ROOT/ab_cloud-libs-shared/libs/battery/src/main/java/com/diegonmarcos/superapp/battery"
 MANIFEST="$APP/app/src/main/AndroidManifest.xml"
 FLEET="$ROOT/ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json"
 
@@ -71,22 +73,27 @@ else:                                           print('OK')
 PY
 )" "BatteryBadgeService is a non-exported specialUse foreground service"
 
-echo "== T3: libs:battery is read, not re-tracked; the model and estimator are pure =="
-check "$(python3 - "$SVC" "$MODEL" "$EST" <<'PY'
-import re, sys
+echo "== T3: the badge reads the battery SoT and computes nothing; the SoT's math is pure =="
+check "$(python3 - "$SVC" "$MODEL" "$SOT" <<'PY'
+import os, re, sys
 def code(p):
     return '\n'.join(l for l in open(p).read().split('\n')
                      if not l.strip().startswith(('*', '//', '/*')))
-s, m, e = (code(p) for p in sys.argv[1:4])
-if 'BatterySessionStats.read(' not in s:        print('does not read the anchors from libs:battery')
-elif 'BatteryCapacity.read(' not in s:          print('does not read the capacity from libs:battery')
-elif re.search(r'ACTION_POWER_(DIS)?CONNECTED|"unplug_ts"|"plug_ts"|getSharedPreferences\("battery_session"', s):
-                                                print('re-tracks the plug/unplug anchors libs:battery owns')
-elif any(re.search(r'^import android\.|System\.currentTimeMillis', x, re.M) for x in (m, e)):
-                                                print('the model/estimator must stay free of Android types and the clock')
+s, m = code(sys.argv[1]), code(sys.argv[2])
+pure = [os.path.join(sys.argv[3], f) for f in ('BatteryMath.kt', 'BatteryHistory.kt', 'BatteryTruth.kt', 'BatteryRows.kt')]
+if os.path.exists(os.path.join(os.path.dirname(sys.argv[1]), 'BatteryEstimator.kt')):
+                                                print('BatteryEstimator.kt is back: a second battery calculation')
+elif 'BatteryRepository.report(' not in s:      print('does not read the battery SoT')
+elif re.search(r'getIntProperty|CURRENT_NOW|getSharedPreferences|BatterySessionStats|ACTION_POWER_(DIS)?CONNECTED', s):
+                                                print('the service reads or tracks the battery itself')
+elif re.search(r'\b(msToEmpty|msToFull|pctPerHour\(|ema\()', m):
+                                                print('the badge model computes instead of formatting the report')
+elif any(not os.path.exists(p) for p in pure):  print('a SoT source is missing')
+elif any(re.search(r'^import android\.|System\.currentTimeMillis', code(p), re.M) for p in pure + [sys.argv[2]]):
+                                                print('the model / SoT math must stay free of Android types and the clock')
 else:                                           print('OK')
 PY
-)" "anchors and capacity come from libs:battery; model and estimator are pure"
+)" "the badge draws BatteryRepository.report(); model and SoT math are pure"
 
 echo "== T4: event-driven on ACTION_BATTERY_CHANGED, no polling =="
 check "$(python3 - "$SVC" "$MANIFEST" <<'PY'
@@ -118,33 +125,32 @@ PY
 )" "no grant -> no post, and the Notify pane says why"
 
 echo "== T6: estimates are h:mm, labelled, with a learning state =="
-check "$(python3 - "$MODEL" "$EST" <<'PY'
+check "$(python3 - "$MODEL" "$SOT" <<'PY'
 import re, sys
-m, e = open(sys.argv[1]).read(), open(sys.argv[2]).read()
+m = open(sys.argv[1]).read()
+rows = open(sys.argv[2] + '/BatteryRows.kt').read()
+hist = open(sys.argv[2] + '/BatteryHistory.kt').read()
+repo = open(sys.argv[2] + '/BatteryRepository.kt').read()
 if '(est)' not in m:                            print('estimates are not labelled')
 elif 'learning…' not in m:                      print('no learning state')
-elif '"%d:%02d"' not in m:                      print('durations are not h:mm')
-elif 'computeChargeTimeRemaining' not in open(sys.argv[1].replace('BatteryBadgeModel', 'BatteryBadgeService')).read():
-                                                print('the system charge estimate is not asked for')
-elif not re.search(r'MIN_USED_PCT\s*=\s*2\b', e) or not re.search(r'MIN_ELAPSED_MS\s*=\s*15\s*\*', e):
+elif '"%d:%02d"' not in rows:                   print('durations are not h:mm')
+elif 'computeChargeTimeRemaining' not in repo:  print('the system charge estimate is not asked for')
+elif not re.search(r'MIN_USED_PCT\s*=\s*2\b', hist) or not re.search(r'MIN_ELAPSED_MS\s*=\s*15\s*\*', hist):
                                                 print('the learning gate is not 2% / 15 min')
 else:                                           print('OK')
 PY
 )" "h:mm, (est), learning gate, system charge estimate first"
 
-echo "== T7: its preference store is declared in fleet-config.json =="
+echo "== T7: no preference store of its own; the old rate store is gone from fleet-config.json =="
 check "$(python3 - "$SVC" "$FLEET" <<'PY'
 import json, re, sys
 s = open(sys.argv[1]).read()
-name = re.search(r'const val PREFS\s*=\s*"([^"]+)"', s)
 f = json.load(open(sys.argv[2]))
-if not name:                                    print('the service names no store')
-elif name.group(1) not in f['stores']:          print(name.group(1) + ' is not a declared store')
-elif f['stores'][name.group(1)].get('class') != 'device':
-                                                print('a rate sample is device state, not config')
+if re.search(r'const val PREFS\s*=', s):        print('the service names a store again')
+elif 'battery_badge' in f['stores']:            print('battery_badge is still declared but nothing writes it')
 else:                                           print('OK')
 PY
-)" "battery_badge is a declared device store"
+)" "the badge keeps no store; its history is the SoT's battery_sot.db"
 
 echo
 echo "battery-badge: $PASS passed, $FAIL failed"

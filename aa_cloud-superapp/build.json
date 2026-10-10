@@ -404,7 +404,7 @@
         "libs:core",
         "libs:shizuku-adb-debug-tools"
       ],
-      "comment": "Battery/energy engine + its dialogs, extracted from app so it sits as a sibling of libs:firewall. Tier-1 (no-root): BatteryManager/sysfs correlation. Tier-2 (privileged): ShizukuEnergy reads `dumpsys batterystats` via the Shizuku user-service (IUserService/ShizukuUserService) now consolidated into libs:shizuku-adb-debug-tools — hence the lib→lib dep (not lib→app). Consumed by app/devcontrol (the About UI). Also the 'battery-manager' for per-app energy ranking (EnergyWatchdog.perAppEstimate) feeding the Phone 'Top Battery' smart folder."
+      "comment": "Battery/energy engine + its dialogs, extracted from app so it sits as a sibling of libs:firewall. Tier-1 (no-root): BatteryManager/sysfs correlation. Tier-2 (privileged): ShizukuEnergy reads `dumpsys batterystats` via the Shizuku user-service (IUserService/ShizukuUserService) now consolidated into libs:shizuku-adb-debug-tools — hence the lib→lib dep (not lib→app). Consumed by app/devcontrol (the About UI). Also the 'battery-manager' for per-app energy ranking (EnergyWatchdog.perAppEstimate) feeding the Phone 'Top Battery' smart folder. THE battery Source of Truth lives here too: BatteryRepository (reads + records into battery_sot.db on battery events and the 15-min tick) → BatteryTruth.compute (one report) → BatteryRows (the words); the Battery badge, the home-screen battery popup and Configs ▸ About ▸ Battery (page:config/battery) all draw that report."
     },
     "libs:datamanager": {
       "dir": "../ab_cloud-libs-shared/libs/datamanager",
@@ -4901,6 +4901,13 @@
             "icon": "ic_settings",
             "group": "Setup",
             "subgroup": "Observability"
+          },
+          {
+            "_doc": "Configs ▸ About ▸ Battery — the battery Source of Truth's full stats page (aa_cloud-superapp batterystats/BatteryStatsFragment over libs:battery BatteryRepository/BatteryTruth): Now + Since last charge (the home-screen popup's sections, the same rows), the level graph over 24 h / 7 d, estimated vs design capacity, cycles, temperature/voltage spreads, the discharge-cycle and charge-session tables, and the privileged extras (gauge sysfs, per-app power) through the shell channel. hidden = no tile of its own: About's Battery section, the battery popup's 'Battery stats ›' and the Battery badge open it as page:config/battery.",
+            "id": "battery",
+            "label": "Battery",
+            "icon": "ic_settings",
+            "hidden": true
           },
           {
             "_doc": "Store tab 1 — the fleet store that used to be the whole page (libs:appstore StoreCloudFragment). The LABEL keeps the word Constellation deliberately; the id does not, because the id is identity and the label is only display. hidden = reached through the Store strip, not as its own Configs tile.",

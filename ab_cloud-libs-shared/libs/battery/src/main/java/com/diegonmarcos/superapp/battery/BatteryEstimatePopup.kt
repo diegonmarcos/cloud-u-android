@@ -5,106 +5,78 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.PopupWindow
+import android.widget.ScrollView
 import android.widget.TextView
 
 /**
- * Compact info bubble shown when the user taps the status-strip
- * battery icon. Surfaces the same battery-session metrics rendered
- * in Configs/About/Battery & Usage, with "Estimated battery last"
- * as the headline since that's what the user usually wants from a
- * one-glance tap.
+ * The home-screen TOP-RIGHT battery bubble (tap the battery icon). It draws
+ * the battery SoT's report ([BatteryRepository.report]) through
+ * [BatteryRows.popup] — the same values the Battery badge and Configs ›
+ * About › Battery print, computed once — in the network popup's shape: bold
+ * section headers, a full-width 1 dp divider between sections, scrolling,
+ * capped at ~85% of the screen.
  *
- * Anchored under the tapped icon (Gravity.END so the wider popup
- * extends leftward from the right-edge icon and stays on-screen).
- * Outside-touch + back dismiss. Stateless — each show() re-reads
- * via BatterySessionStats so a left-open popup never shows stale
- * numbers.
+ *   Battery                                   Battery stats ›
+ *   NOW               level, state + source, current, power, rate (%/h · W),
+ *                     to empty / to full, voltage, temperature, health
+ *   ───────────────
+ *   SINCE LAST CHARGE unplugged, used, average (%/h · W), to empty at avg,
+ *                     screen on / off   (SINCE PLUGGED IN while on power)
+ *
+ * While open it re-reads every [REFRESH_MS], so the smoothed "now" settles in
+ * front of the user; the refresh stops when the bubble closes.
  */
 object BatteryEstimatePopup {
 
-    fun show(ctx: Context, anchor: View) {
-        val s = BatterySessionStats.read(ctx)
+    const val REFRESH_MS = 2_000L
+
+    /** [openStats] opens Configs › About › Battery (the host app owns navigation); null hides the link. */
+    fun show(ctx: Context, anchor: View, openStats: (() -> Unit)? = null) {
         val d = ctx.resources.displayMetrics.density
         val pad = (12 * d).toInt()
-
         val container = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(pad, pad, pad, pad)
+            minimumWidth = (ctx.resources.displayMetrics.widthPixels * 0.5f).toInt()
             background = GradientDrawable().apply {
                 cornerRadius = 12f * d
                 setColor(0xEE111111.toInt())
                 setStroke(maxOf(1, (1 * d).toInt()), 0x44FFFFFF.toInt())
             }
         }
-
-        // Headline: wall-clock ETA — discharging shows "23:14 today"
-        // (battery dies at), charging shows "07:42 tomorrow" (fully
-        // charged at). Single field, label flips on charging state so
-        // the user always reads the most actionable number first.
-        container.addView(label(ctx, if (s.isCharging) "ETA full charge" else "ETA battery drained"))
-        container.addView(valueBig(ctx, BatterySessionStats.fmtEtaWallClock(s)))
-        container.addView(spacer(ctx, (10 * d).toInt()))
-        container.addView(label(ctx, if (s.isCharging) "Estimated time to full" else "Estimated battery last"))
-        container.addView(valueSmall(ctx, BatterySessionStats.fmtEtaDuration(s)))
-        container.addView(spacer(ctx, (6 * d).toInt()))
-        container.addView(label(ctx, if (s.isCharging) "Since plugged in" else "Since last charge"))
-        container.addView(valueSmall(ctx, BatterySessionStats.fmtSinceAnchor(s)))
-        container.addView(spacer(ctx, (6 * d).toInt()))
-        // Honest rename: this is the BATTERY storage rate (V × I going
-        // INTO the cell), not the charger input. Android doesn't expose
-        // the latter via public API — see fmtChargerSpec below.
-        // Power IN / OUT breakdown (shared PowerFlow):
-        //   NET (battery)  +  CONSUMPTION (phone)  =  ACTUAL IN (wall, est)
-        // NET is measured (battery V×I); CONSUMPTION measured on battery /
-        // modeled while charging; wall IN derived (est) since it isn't
-        // readable on this device. Same model as Battery Usage Details.
-        val pf = runCatching { PowerFlow.read(ctx) }.getOrNull()
-        container.addView(label(ctx, "Net (battery)"))
-        container.addView(valueSmall(ctx, if (pf != null) PowerFlow.fmtNet(pf) else BatterySessionStats.fmtPowerRow(s)))
-        if (pf != null) {
-            container.addView(spacer(ctx, (4 * d).toInt()))
-            container.addView(label(ctx, "Phone consumption"))
-            container.addView(valueSmall(ctx, PowerFlow.fmtConsumption(pf)))
-            container.addView(spacer(ctx, (4 * d).toInt()))
-            container.addView(label(ctx, "Actual in (est wall)"))
-            container.addView(valueSmall(ctx, PowerFlow.fmtEstIn(pf)))
+        var popup: PopupWindow? = null
+        fun fill() {
+            container.removeAllViews()
+            val head = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+            head.addView(title(ctx, "Battery"), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            if (openStats != null) head.addView(link(ctx, "Battery stats ›") { popup?.dismiss(); openStats() })
+            container.addView(head)
+            val report = runCatching { BatteryRepository.report(ctx) }.getOrNull()
+            if (report == null) { container.addView(value(ctx, "Battery state unavailable")); return }
+            BatteryRows.popup(report).forEachIndexed { i, sec ->
+                if (i > 0) container.addView(divider(ctx))
+                container.addView(header(ctx, sec.title))
+                for (row in sec.rows) container.addView(value(ctx, "${row.label}: ${row.value}"))
+            }
         }
-        container.addView(spacer(ctx, (6 * d).toInt()))
-        container.addView(label(ctx, if (s.isCharging) "% battery / h gained" else "% battery / h consumed"))
-        container.addView(valueSmall(ctx, BatterySessionStats.fmtRateUnified(s)))
-        // Battery health surface: live temperature + manual cycle counter.
-        // Temp from sticky intent EXTRA_TEMPERATURE (always available);
-        // cycles derived from CHARGE_COUNTER deltas + first-seen-at-100%
-        // peak (AccuBattery's calibration method). Both rows render
-        // "—" / "calibrating" until they have data, never disappear.
-        container.addView(spacer(ctx, (6 * d).toInt()))
-        container.addView(label(ctx, "Battery temperature"))
-        container.addView(valueSmall(ctx, BatterySessionStats.fmtBatteryTemp(s)))
-        container.addView(spacer(ctx, (4 * d).toInt()))
-        container.addView(label(ctx, "Cycle count (since install)"))
-        container.addView(valueSmall(ctx, BatterySessionStats.fmtCycleCount(s)))
-        // Battery capacity — RATED (nameplate/design, via hidden
-        // PowerProfile reflection, AccuBattery's path) and CURRENT-FULL
-        // (worn, via the CHARGE_COUNTER peak BatterySessionStats already
-        // tracks). Wh derived at 3.85 V nominal. Multi-source fallback +
-        // "—" / "calibrating" live in BatteryCapacity so a blocked sysfs
-        // node never makes the rows vanish.
-        val cap = runCatching { BatteryCapacity.read(ctx, s.peakChargeCounterUah) }.getOrNull()
-        container.addView(spacer(ctx, (6 * d).toInt()))
-        container.addView(label(ctx, "Capacity (rated)"))
-        container.addView(valueSmall(ctx, if (cap != null) BatteryCapacity.fmtRated(cap) else "—"))
-        container.addView(spacer(ctx, (4 * d).toInt()))
-        container.addView(label(ctx, "Capacity (now)"))
-        container.addView(valueSmall(ctx, if (cap != null) BatteryCapacity.fmtFullNow(cap) else "—"))
+        fill()
 
+        val dm = ctx.resources.displayMetrics
+        val scroll = ScrollView(ctx).apply { isVerticalScrollBarEnabled = false; addView(container) }
+        container.measure(
+            View.MeasureSpec.makeMeasureSpec(dm.widthPixels, View.MeasureSpec.AT_MOST),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+        val maxH = (dm.heightPixels * 0.85f).toInt()
         val pw = PopupWindow(
-            container,
+            scroll,
             LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
+            if (container.measuredHeight > maxH) maxH else LinearLayout.LayoutParams.WRAP_CONTENT,
             true,
         ).apply {
             isOutsideTouchable = true
@@ -112,32 +84,58 @@ object BatteryEstimatePopup {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             elevation = 8 * d
         }
-        // Gravity.END aligns the popup's right edge with the anchor's
-        // right edge, so the wider bubble extends LEFTWARD instead of
-        // off-screen to the right.
+        popup = pw
+        val main = Handler(Looper.getMainLooper())
+        val tick = object : Runnable {
+            override fun run() { if (!pw.isShowing) return; fill(); main.postDelayed(this, REFRESH_MS) }
+        }
+        pw.setOnDismissListener { main.removeCallbacks(tick) }
+        // Gravity.END: the bubble's right edge on the icon's, so it extends leftward and stays on screen.
         pw.showAsDropDown(anchor, 0, (6 * d).toInt(), Gravity.END)
+        main.postDelayed(tick, REFRESH_MS)
     }
 
-    private fun label(ctx: Context, t: String) = TextView(ctx).apply {
+    private fun title(ctx: Context, t: String) = TextView(ctx).apply {
+        text = t
+        setTextColor(0xFFFFFFFFL.toInt())
+        textSize = 16f
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+    }
+
+    /** A section header: the label's look, bold (the network popup's). */
+    private fun header(ctx: Context, t: String) = TextView(ctx).apply {
         text = t
         setTextColor(0xAAFFFFFFL.toInt())
         textSize = 11f
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-    }
-    private fun valueBig(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t
-        setTextColor(0xFFFFFFFFL.toInt())
-        textSize = 22f
         typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+        val d = ctx.resources.displayMetrics.density
+        setPadding(0, (6 * d).toInt(), 0, (2 * d).toInt())
     }
-    private fun valueSmall(ctx: Context, t: String) = TextView(ctx).apply {
+
+    private fun value(ctx: Context, t: String) = TextView(ctx).apply {
         text = t
         setTextColor(0xFFFFFFFFL.toInt())
-        textSize = 13f
+        textSize = 12f
         typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
     }
-    private fun spacer(ctx: Context, h: Int) = View(ctx).apply {
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, h)
+
+    private fun link(ctx: Context, t: String, onTap: () -> Unit) = TextView(ctx).apply {
+        text = t
+        setTextColor(0xFF7FB8FF.toInt())
+        textSize = 12f
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+        val d = ctx.resources.displayMetrics.density
+        setPadding((10 * d).toInt(), (4 * d).toInt(), 0, (4 * d).toInt())
+        isClickable = true
+        setOnClickListener { onTap() }
+    }
+
+    /** The full-width 1 dp line between two sections, with 8 dp above the next header. */
+    private fun divider(ctx: Context) = View(ctx).apply {
+        val d = ctx.resources.displayMetrics.density
+        setBackgroundColor(0x40FFFFFF)
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, maxOf(1, (1 * d).toInt())).apply {
+            topMargin = (6 * d).toInt(); bottomMargin = (8 * d).toInt()
+        }
     }
 }

@@ -88,18 +88,19 @@ class EnergyUsageDialog : DialogFragment() {
         })
         root.addView(header)
 
-        // 1) Live discharge speed
+        // 1) Live discharge speed — the battery SoT's numbers (BatteryRepository),
+        //    the same ones the badge, the strip popup and About › Battery print.
         val bs = runCatching { BatterySessionStats.read(ctx) }.getOrNull()
+        val rep = runCatching { BatteryRepository.report(ctx) }.getOrNull()
         card(ctx, root, "Discharging speed") { box ->
-            if (bs == null) { box.addView(line(ctx, "—", "no data")); return@card }
-            val ma = if (bs.currentUa != 0) (kotlin.math.abs(bs.currentUa) / 1000) else 0
+            if (rep == null) { box.addView(line(ctx, "—", "no data")); return@card }
             big(ctx, box,
-                if (ma > 0) "$ma mA" else "—",
-                BatterySessionStats.fmtRateUnified(bs))
-            box.addView(line(ctx, "Live draw", BatterySessionStats.fmtPowerRow(bs)))
-            box.addView(line(ctx, "Battery temp", BatterySessionStats.fmtBatteryTemp(bs)))
-            box.addView(line(ctx, bs.let { if (it.isCharging) "Time to full" else "Est. battery last" },
-                BatterySessionStats.fmtEtaDuration(bs)))
+                rep.smoothedMa?.let { BatteryRows.fmtMa(it) } ?: "—",
+                BatteryRows.rate(rep.ratePctH, rep.rateW))
+            box.addView(line(ctx, "Live draw", rep.powerW?.let { BatteryRows.fmtW(it) } ?: "—"))
+            box.addView(line(ctx, "Battery temp", rep.reading.tempC?.let { BatteryRows.fmtTemp(it) } ?: "—"))
+            box.addView(line(ctx, if (rep.reading.onPower) "Time to full" else "Est. battery last",
+                if (rep.reading.onPower) BatteryRows.toFull(rep) else BatteryRows.toEmpty(rep.toEmptyMs, "current rate")))
         }
 
         // 1b) Power IN / OUT — ACTUAL IN = NET + CONSUMPTION. NET is measured

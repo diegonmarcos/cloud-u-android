@@ -16,8 +16,8 @@ import java.util.Locale
  * long-term memory: monthly rows are tiny, so we keep them essentially
  * forever while the OS keeps the fine-grained truth for the recent past.
  *
- * Three newline-separated ledgers in SharedPreferences, same shape as
- * [com.diegonmarcos.superapp.battery.BatteryHistoryStore]:
+ * Three newline-separated ledgers in SharedPreferences, the shape the old
+ * battery_history ledger had (now imported into the battery SoT):
  *
  *   "months" — exact device totals, one line per month, oldest first:
  *       yyyy-MM|mobileRx|mobileTx|wifiRx|wifiTx

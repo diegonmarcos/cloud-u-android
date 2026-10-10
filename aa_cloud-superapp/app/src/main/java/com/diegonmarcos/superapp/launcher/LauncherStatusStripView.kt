@@ -373,7 +373,9 @@ class LauncherStatusStripView @JvmOverloads constructor(
             // metrics (same numbers Configs/About/Battery & Usage
             // shows, just one-glance accessible from the strip).
             isClickable = true
-            setOnClickListener { BatteryEstimatePopup.show(context, this) }
+            setOnClickListener {
+                BatteryEstimatePopup.show(context, this) { com.diegonmarcos.superapp.batterystats.BatteryStatsPage.open(context) }
+            }
         }
         rightCluster.addView(makeToolColumn("ram", ramView))
         rightCluster.addView(makeToolColumn("storage", storageView))

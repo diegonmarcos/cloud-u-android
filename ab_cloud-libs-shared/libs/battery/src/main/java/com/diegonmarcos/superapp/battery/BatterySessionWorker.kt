@@ -51,6 +51,8 @@ class BatterySessionWorker(
     override fun doWork(): Result {
         EnergyLedger.wake("bg.battery_worker")
         runCatching { BatterySessionStats.read(applicationContext) }
+        // The battery SoT's low-frequency tick: one history sample even when nothing else runs.
+        runCatching { BatteryRepository.record(applicationContext) }
         // Piggyback the energy watchdog on the same 15-min wakeup — one
         // coarse background sample per tick (cheap; the screen-on
         // foreground sampler adds the fine resolution).

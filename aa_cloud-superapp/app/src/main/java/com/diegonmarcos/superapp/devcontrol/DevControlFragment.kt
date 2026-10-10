@@ -1152,58 +1152,28 @@ class DevControlFragment : Fragment() {
                 }
             }
 
-            // ── Since-last-charge battery analytics ───────────────
-            // Read current battery level + charging status, persist
-            // the "last unplug" anchor in SharedPreferences, derive
-            // the three user-requested rows.
-            // Battery-session math (anchor lifecycle + rate + ETA) lives
-            // in BatterySessionStats — same source the status-strip
-            // BatteryEstimatePopup reads from when the user taps the
-            // icon. Single calc, two surfaces.
-            val bs = com.diegonmarcos.superapp.battery.BatterySessionStats.read(ctxAny)
-            // Row labels auto-flip on charging state. Discharging: "Since
-            // last charge / % battery/min consumed / Estimated battery last
-            // / ETA battery drained". Charging: same shape, charge-flavoured
-            // wording + ETA-to-full math. Same underlying snapshot fields,
-            // unified formatters in BatterySessionStats decide the wording.
-            val labelSince = if (bs.isCharging) "Since plugged in"        else "Since last charge"
-            val labelRate  = if (bs.isCharging) "% battery/h gained"      else "% battery/h consumed"
-            // Honest rename — this is BATTERY storage (V × I into the
-            // cell), NOT the charger input. Android doesn't expose the
-            // charger live input via public API; the "Charger input"
-            // row below shows the dumpsys-reported max negotiated spec.
-            val labelPower = if (bs.isCharging) "Battery storage (live)" else "Battery drain (live)"
-            val labelEta   = if (bs.isCharging) "Estimated time to full"  else "Estimated battery last"
-            val labelWall  = if (bs.isCharging) "ETA full charge"         else "ETA battery drained"
-            row(ctx, it, labelSince,
-                com.diegonmarcos.superapp.battery.BatterySessionStats.fmtSinceAnchor(bs))
-            row(ctx, it, labelRate,
-                com.diegonmarcos.superapp.battery.BatterySessionStats.fmtRateUnified(bs))
-            row(ctx, it, labelPower,
-                com.diegonmarcos.superapp.battery.BatterySessionStats.fmtPowerRow(bs))
-            if (bs.isCharging) {
-                row(ctx, it, "Charger input",
-                    com.diegonmarcos.superapp.battery.BatterySessionStats.fmtChargerSpec(bs))
-                val phone = com.diegonmarcos.superapp.battery.BatterySessionStats.fmtPhoneConsumption(bs)
-                if (phone.isNotEmpty()) {
-                    row(ctx, it, "Phone consumption", "$phone  (charger − battery)")
+            // ── Battery: the SoT's summary, the full page one tap away ─────
+            // The rows are the battery Source of Truth's (libs:battery
+            // BatteryRepository.report → BatteryRows), the same values the
+            // home-screen popup and the Battery badge show; nothing is
+            // computed here. The full stats (graph, cycles, charge sessions,
+            // capacity vs design, privileged extras) are Configs › About ›
+            // Battery, page:config/battery.
+            val rep = runCatching { com.diegonmarcos.superapp.battery.BatteryRepository.report(ctxAny) }.getOrNull()
+            if (rep != null) {
+                for (sec in com.diegonmarcos.superapp.battery.BatteryRows.popup(rep)) {
+                    it.addView(small(ctx, "— ${sec.title} —"))
+                    for (r in sec.rows) row(ctx, it, r.label, r.value)
                 }
-            }
-            row(ctx, it, labelEta,
-                com.diegonmarcos.superapp.battery.BatterySessionStats.fmtEtaDuration(bs))
-            row(ctx, it, labelWall,
-                com.diegonmarcos.superapp.battery.BatterySessionStats.fmtEtaWallClock(bs))
-            // BatteryManager / sticky-intent surface — works on hardened
-            // Samsung where /sys/class/power_supply/* is SELinux-blocked.
-            row(ctx, it, "Battery temp",
-                com.diegonmarcos.superapp.battery.BatterySessionStats.fmtBatteryTemp(bs))
-            row(ctx, it, "Cycle count",
-                com.diegonmarcos.superapp.battery.BatterySessionStats.fmtCycleCount(bs))
-            // Debug rows so the user can see WHICH path the power
-            // figure came from + the anchor provenance.
-            row(ctx, it, "Power source",      bs.powerWSource)
-            row(ctx, it, "Unplug anchor src", bs.unplugAnchorSource)
-            row(ctx, it, "Plug anchor src",   bs.plugAnchorSource)
+                if (rep.reading.onPower) {
+                    val bs = com.diegonmarcos.superapp.battery.BatterySessionStats.read(ctxAny)
+                    row(ctx, it, "Charger input",
+                        com.diegonmarcos.superapp.battery.BatterySessionStats.fmtChargerSpec(bs))
+                }
+            } else row(ctx, it, "Battery", "unavailable")
+            it.addView(actionButton(ctx, "Battery stats ›", GRAY) {
+                runCatching { com.diegonmarcos.superapp.batterystats.BatteryStatsPage.open(requireActivity()) }
+            })
             it.addView(small(ctx, "Battery-stats internals (mAh per-component, wakelocks, wakeups) are system-only. Grant Usage Access + Set Battery No Optimization shortcuts live in the Permissions section above."))
             // Deep BatteryManager / sticky-intent dump — merged in from
             // the former separate "Battery (deep)" section (one Battery
@@ -1218,17 +1188,6 @@ class DevControlFragment : Fragment() {
                 runCatching {
                     com.diegonmarcos.superapp.battery.EnergyUsageDialog()
                         .show(parentFragmentManager, com.diegonmarcos.superapp.battery.EnergyUsageDialog.TAG)
-                }
-            })
-            // Full historical view — the same "open the full data screen"
-            // affordance the Firewall section has. EnergyUsageDialog answers
-            // "what is draining me NOW"; this one replays every completed
-            // charge/discharge run, the per-day aggregates and the lifetime
-            // cycle counters out of BatteryHistoryStore.
-            it.addView(actionButton(ctx, "Battery History", GRAY) {
-                runCatching {
-                    com.diegonmarcos.superapp.battery.BatteryHistoryDialog()
-                        .show(parentFragmentManager, com.diegonmarcos.superapp.battery.BatteryHistoryDialog.TAG)
                 }
             })
         }

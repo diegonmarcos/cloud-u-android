@@ -232,7 +232,6 @@
       "ui": "views",
       "size": "S",
       "screens_left": [
-        "BatteryHistoryDialog",
         "EnergyUsageDialog",
         "BatteryEstimatePopup",
         "BatteryIconView (custom)"
@@ -241,9 +240,9 @@
         "superapp"
       ],
       "baseline": {
-        "view_screens": 2,
+        "view_screens": 1,
         "layout_xml": 0,
-        "view_ui_files": 3,
+        "view_ui_files": 2,
         "custom_views": 1
       }
     },
