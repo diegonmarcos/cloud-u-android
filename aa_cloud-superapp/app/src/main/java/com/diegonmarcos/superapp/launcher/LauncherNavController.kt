@@ -496,7 +496,10 @@ class LauncherNavController(private val host: NavHost) {
                 }
                 TileGridFragment.newInstance(title, pages + actions)
             }
-            section.tileGroups.isNotEmpty() -> GroupedTilesFragment.newInstance(section.id)
+            // Cloud ▸ Apps pins its search bar under the grid (the fragment draws it for
+            // the cloud section's apps page only; other pages keep the plain grid).
+            section.tileGroups.isNotEmpty() ->
+                GroupedTilesFragment.newInstance(section.id, search = page.id == "apps")
             else -> {
                 val ctx = host.navContext()
                 TileGridFragment.newInstance(title, Sections.aggregatorTilesFor(section, page.id)

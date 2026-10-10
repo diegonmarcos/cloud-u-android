@@ -2167,6 +2167,10 @@ open class ShellActivity : AppCompatActivity(),
     override fun onBackPressed() {
         if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START)
+        } else if ((supportFragmentManager.findFragmentById(R.id.fragment_container) as? BackHandler)
+                ?.tryHandleBack() == true) {
+            // handled in the page — e.g. Cloud ▸ Apps clearing its search back to the full grid,
+            // the same chance the toolbar Back already gives it
         } else if (supportFragmentManager.backStackEntryCount > 0) {
             supportFragmentManager.popBackStack()
         } else if (navigateUpToParent()) {

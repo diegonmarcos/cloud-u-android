@@ -8,7 +8,18 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.apps.PhoneApp
+import com.diegonmarcos.superapp.apps.PhoneAppClassifier
+import com.diegonmarcos.superapp.apps.PhoneAppsFragment
+import com.diegonmarcos.superapp.apps.PhoneFolders
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitSearchBar
+import com.diegonmarcos.superapp.uikit.kitComposeView
 
 /**
  * Aggregator section that renders themed sub-groups stacked vertically.
@@ -26,13 +37,30 @@ import androidx.fragment.app.Fragment
  * the activity already implements, so deep-link grammar (section: / page: /
  * action: / http(s):) routes identically to the flat aggregator path.
  */
-class GroupedTilesFragment : Fragment() {
+class GroupedTilesFragment : Fragment(), BackHandler {
+
+    // ── Search (Cloud ▸ Apps only) ────────────────────────────────────────
+    /** One searchable thing on the page: a declared tile, or an installed fleet app. */
+    private sealed class Entry {
+        data class Tile(val tile: Sections.AggTile) : Entry()
+        data class App(val app: PhoneApp) : Entry()
+    }
+
+    /** The query lives with the fragment's view and nowhere else: never saved, so a relaunch
+     *  (or a re-entry to the page) starts on the full grid. */
+    private val query = mutableStateOf("")
+    private var grid: View? = null
+    private var results: LinearLayout? = null
+    private var searchBar: View? = null
+    private var index: List<AppsSearch.Group<Entry>>? = null
+    private var lastResult: AppsSearch.Result<Entry>? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
         val sectionId = arguments?.getString(ARG_SECTION_ID).orEmpty()
         val section = Sections.byId(sectionId)
         val groups  = section?.tileGroups.orEmpty()
+        val search  = arguments?.getBoolean(ARG_SEARCH) == true && sectionId == "cloud"
 
         val scroll = ScrollView(ctx).apply {
             layoutParams = ViewGroup.LayoutParams(
@@ -45,7 +73,21 @@ class GroupedTilesFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             val pad = dp(12); setPadding(pad, pad, pad, pad)
         }
-        scroll.addView(col)
+        if (search) {
+            // The grid and the search results share the one scroller; exactly one is visible.
+            val out = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                val pad = dp(12); setPadding(pad, 0, pad, pad)
+                visibility = View.GONE
+            }
+            scroll.addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(col); addView(out)
+            })
+            grid = col; results = out
+        } else {
+            scroll.addView(col)
+        }
 
         // Suite is the only section merging in the generic Home-tab "All
         // Apps" grid + a "Recently Used" smart folder below its Quickmarks
@@ -70,11 +112,10 @@ class GroupedTilesFragment : Fragment() {
         // actions, so repeating them in Home, Labs and Configs would be the
         // same five tiles four times over.
         if (sectionId == "cloud") {
-            val starActions = com.diegonmarcos.superapp.onehand.CircularMenu.config().actions
-                .map { Sections.AggTile(it.target, it.label, it.iconName, it.target) }
-            if (starActions.isNotEmpty()) {
+            val actions = starActions()
+            if (actions.isNotEmpty()) {
                 col.addView(groupHeader(ctx, "Actions"))
-                col.addView(tileRow(ctx, starActions))
+                col.addView(tileRow(ctx, actions))
             }
         }
 
@@ -135,7 +176,221 @@ class GroupedTilesFragment : Fragment() {
                 }
             }
         }
+        return if (search) withSearchBar(ctx, scroll) else scroll
+    }
+
+    private fun starActions(): List<Sections.AggTile> =
+        com.diegonmarcos.superapp.onehand.CircularMenu.config().actions
+            .map { Sections.AggTile(it.target, it.label, it.iconName, it.target) }
+
+    /**
+     * The page with the search bar pinned under it — the bottom of the page, so just above the
+     * bottom island the content host already clears, where the thumb is. The bar is the kit's
+     * [KitSearchBar]; typing filters every group live ([AppsSearch]), Go launches the top match,
+     * and with no match the one row left offers the query to Cloud Search.
+     */
+    private fun withSearchBar(ctx: android.content.Context, scroll: ScrollView): View {
+        val bar = ctx.kitComposeView(LauncherPalette.kit(ctx)) {
+            KitSearchBar(
+                query = query.value,
+                onQueryChange = ::setQuery,
+                onSubmit = ::submit,
+                placeholder = "Search apps",
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            )
+        }
+        searchBar = bar
+        // The keyboard hides when the user scrolls the page — a DRAG, not any scroll change:
+        // the results swapping in under a typed letter clamp the scroll position too, and that
+        // must not close the keyboard mid-word. The listener sees an event only once the
+        // scroller itself handles the gesture (a drag that began on a tile reaches it as MOVEs
+        // after it intercepts), so any event short of the release means the finger is dragging.
+        var dragging = false
+        scroll.setOnTouchListener { _, ev ->
+            dragging = when (ev.actionMasked) {
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> false
+                else -> true
+            }
+            false
+        }
+        scroll.setOnScrollChangeListener { _, _, y, _, oldY -> if (dragging && y != oldY) hideKeyboard() }
+        return LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
+            addView(scroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+            addView(bar, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+    }
+
+    private fun setQuery(q: String) {
+        query.value = q
+        val out = results ?: return
+        val full = grid ?: return
+        if (!AppsSearch.isActive(q)) {
+            lastResult = null
+            out.removeAllViews()
+            out.visibility = View.GONE
+            full.visibility = View.VISIBLE
+            return
+        }
+        val ctx = out.context
+        val r = AppsSearch.filter(searchIndex(ctx), q)
+        lastResult = r
+        full.visibility = View.GONE
+        out.visibility = View.VISIBLE
+        out.removeAllViews()
+        // Hidden groups are simply not drawn: an empty result is the Cloud Search row alone.
+        if (r.isEmpty) {
+            out.addView(cloudSearchRow(ctx, q.trim()))
+            return
+        }
+        for (g in r.groups) {
+            out.addView(groupHeader(ctx, g.title))
+            out.addView(resultRow(ctx, g.items.map { it.value }))
+        }
+    }
+
+    /** Go: the top match, else Cloud Search. A folder's Go opens the folder, like its tap. */
+    private fun submit() {
+        val q = query.value
+        if (!AppsSearch.isActive(q)) return
+        val top = lastResult?.top?.value
+        when (top) {
+            null -> launch(CLOUD_SEARCH_TARGET)
+            is Entry.App -> launch("app:${top.app.packageName}")
+            is Entry.Tile -> if (top.tile.children.isNotEmpty()) openFolder(top.tile) else launch(top.tile.target)
+        }
+    }
+
+    /** Leaving through search resets it: coming back shows the full grid, not a stale filter. */
+    private fun launch(target: String) {
+        setQuery("")
+        hideKeyboard()
+        (activity as? TileGridFragment.TileClickListener)?.onTileClicked(target)
+    }
+
+    private fun hideKeyboard() {
+        val bar = searchBar ?: return
+        val imm = bar.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+            as? android.view.inputmethod.InputMethodManager
+        imm?.hideSoftInputFromWindow(bar.windowToken, 0)
+        bar.clearFocus()
+    }
+
+    /** Back with a query clears it (the full grid returns) before Back leaves the page. */
+    override fun tryHandleBack(): Boolean {
+        if (!AppsSearch.isActive(query.value)) return false
+        setQuery("")
+        hideKeyboard()
+        return true
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        grid = null; results = null; searchBar = null; index = null; lastResult = null
+        query.value = ""
+    }
+
+    /**
+     * Everything the page shows, as search groups: the declared rows (a folder AND the tiles in
+     * it, separators dropped — a "|" is punctuation, not a destination), the star's Actions, then
+     * the installed fleet apps by the same folders All Apps draws them in. Built on the first
+     * letter typed, not with the page.
+     */
+    private fun searchIndex(ctx: android.content.Context): List<AppsSearch.Group<Entry>> {
+        index?.let { return it }
+        val out = mutableListOf<AppsSearch.Group<Entry>>()
+        for (g in Sections.byId("cloud")?.tileGroups.orEmpty()) {
+            val tiles = g.tiles.filterNot { it.separator }
+                .flatMap { t -> listOf(t) + t.children.filterNot { it.separator } }
+            out += AppsSearch.Group(g.title, tiles.map { AppsSearch.Item(it.label, Entry.Tile(it)) })
+        }
+        out += AppsSearch.Group("Actions", starActions().map { AppsSearch.Item(it.label, Entry.Tile(it)) })
+        runCatching {
+            val ours = Sections.constellationPackages(ctx.packageName)
+            val apps = PhoneAppsFragment.snapshot(ctx)
+                .filter { it.packageName in ours && it.activityComponent != null }
+            val folders = PhoneFolders.loadFromBuildConfig()
+            val byFolder = PhoneAppClassifier.groupByFolder(apps, folders)
+            for (f in folders) {
+                val inIt = byFolder[f.id].orEmpty()
+                if (inIt.isNotEmpty()) out += AppsSearch.Group(f.label, inIt.map { AppsSearch.Item(it.label, Entry.App(it)) })
+            }
+        }
+        return out.also { index = it }
+    }
+
+    private fun resultRow(ctx: android.content.Context, entries: List<Entry>): View {
+        val scroll = android.widget.HorizontalScrollView(ctx).apply {
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+        }
+        val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        for (e in entries) row.addView(when (e) {
+            is Entry.Tile -> tileCell(ctx, e.tile, fromSearch = true)
+            is Entry.App -> appCell(ctx, e.app)
+        })
+        scroll.addView(row)
         return scroll
+    }
+
+    /** An installed fleet app in the results: its own icon, launched as `app:<package>`. */
+    private fun appCell(ctx: android.content.Context, app: PhoneApp): View =
+        LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+            val pad = dp(6); setPadding(pad, pad, pad, pad)
+            layoutParams = LinearLayout.LayoutParams(dp(60), LinearLayout.LayoutParams.WRAP_CONTENT)
+            isClickable = true; isFocusable = true
+            setOnClickListener { launch("app:${app.packageName}") }
+            addView(android.widget.ImageView(ctx).apply {
+                setImageDrawable(app.icon)
+                layoutParams = LinearLayout.LayoutParams(dp(32), dp(32))
+            })
+            addView(TextView(ctx).apply {
+                text = app.label
+                setTextColor(0xCCFFFFFF.toInt())
+                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+                gravity = android.view.Gravity.CENTER
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(0, dp(4), 0, 0)
+            })
+        }
+
+    /** The one row an empty result leaves: hand the query to Cloud Search. Cloud Search takes
+     *  no query by intent today, so the row opens the app (extapp:cloud-search, the AGI tile's
+     *  own target — installed or offered for install the same way). */
+    private fun cloudSearchRow(ctx: android.content.Context, q: String): View =
+        LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(4), dp(10), dp(4), dp(10))
+            isClickable = true; isFocusable = true
+            setOnClickListener { launch(CLOUD_SEARCH_TARGET) }
+            val iconRes = Sections.iconResFor(ctx, "ic_cloud_search")
+            if (iconRes != 0) addView(android.widget.ImageView(ctx).apply {
+                setImageResource(iconRes)
+                layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(8) }
+            })
+            addView(TextView(ctx).apply {
+                text = "Search \u201C$q\u201D in Cloud Search"
+                setTextColor(0xCCFFFFFF.toInt())
+                setTextAppearance(android.R.style.TextAppearance_Material_Body1)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            })
+        }
+
+    private fun openFolder(tile: Sections.AggTile) {
+        val ctx = context ?: return
+        TileFolderDialog.open(ctx, tile) { child ->
+            (activity as? TileGridFragment.TileClickListener)?.onTileClicked(child.target)
+        }
     }
 
     private fun groupHeader(ctx: android.content.Context, title: String): View =
@@ -207,7 +462,8 @@ class GroupedTilesFragment : Fragment() {
             )
         }
 
-    private fun tileCell(ctx: android.content.Context, tile: Sections.AggTile): View {
+    /** [fromSearch]: the cell is a search result, so a launch from it resets the search. */
+    private fun tileCell(ctx: android.content.Context, tile: Sections.AggTile, fromSearch: Boolean = false): View {
         if (tile.separator) return separatorCell(ctx, tile)
         // Fixed-width cells so the horizontal scroll row shows ~6
         // tiles at a time on a typical phone width (matches Home Apps'
@@ -247,6 +503,8 @@ class GroupedTilesFragment : Fragment() {
                         (activity as? TileGridFragment.TileClickListener)
                             ?.onTileClicked(child.target)
                     }
+                } else if (fromSearch) {
+                    launch(tile.target)
                 } else {
                     (activity as? TileGridFragment.TileClickListener)?.onTileClicked(tile.target)
                 }
@@ -301,9 +559,18 @@ class GroupedTilesFragment : Fragment() {
 
     companion object {
         private const val ARG_SECTION_ID = "section_id"
+        private const val ARG_SEARCH = "search"
 
-        fun newInstance(sectionId: String): GroupedTilesFragment = GroupedTilesFragment().apply {
-            arguments = Bundle().apply { putString(ARG_SECTION_ID, sectionId) }
+        /** Where an empty search sends its query: the Cloud Search app (ac_cloud-search). */
+        const val CLOUD_SEARCH_TARGET = "extapp:cloud-search"
+
+        /** [search] pins the search bar under the page — Cloud ▸ Apps asks for it; the Home
+         *  sheet's Cloud tab does not (that sheet has its own search island on top). */
+        fun newInstance(sectionId: String, search: Boolean = false): GroupedTilesFragment = GroupedTilesFragment().apply {
+            arguments = Bundle().apply {
+                putString(ARG_SECTION_ID, sectionId)
+                putBoolean(ARG_SEARCH, search)
+            }
         }
     }
 }
