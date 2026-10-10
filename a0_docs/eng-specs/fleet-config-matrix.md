@@ -48,7 +48,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **197** | **35** | **84%** |
+| **fleet** | | **198** | **35** | **84%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
