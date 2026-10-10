@@ -318,7 +318,7 @@ class NavAccessibilityTest {
         for (e in CLOUD_CODE) {
             assertEquals("cell ${e.first} is minCellWidth wide, not crushed", px(R.dimen.bottom_nav_min_cell_width), laidOut(itemTag(e.first)).width, 1f)
         }
-        for (sel in listOf("myterminal", "home", "backlog", "browser")) {
+        for (sel in listOf("myterminal", "chat", "backlog", "browser")) {
             selectedId = sel
             compose.waitForIdle()
             val item = laidOut(itemTag(sel))
@@ -558,7 +558,7 @@ class NavAccessibilityTest {
          *  tests must not change outcome when another app's tree changes (#870). */
         val CLOUD_CODE = listOf(
             Triple("backlog", "Backlog", Icons.Filled.Inbox), Triple("editor", "Editor", Icons.Filled.Code),
-            Triple("repos", "Repos", Icons.Filled.Build), Triple("home", "Home", Icons.Filled.Home),
+            Triple("repos", "Repos", Icons.Filled.Build), Triple("chat", "Chat", Icons.Filled.ChatBubble),
             Triple("agents", "Agents", Icons.Filled.Star), Triple("browser", "Browser", Icons.Filled.Public),
             Triple("myterminal", "MyTerminal", Icons.Filled.Terminal),
         )
