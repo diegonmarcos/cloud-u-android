@@ -71,7 +71,7 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
-      "unit_test_sources": 3,
+      "unit_test_sources": 4,
       "workflow": "ship-cloud-account.yml"
     },
     "ac_cloud-agenda": {
@@ -314,7 +314,7 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
-      "unit_test_sources": 644,
+      "unit_test_sources": 648,
       "workflow": "ship-cloud-vault.yml"
     },
     "ac_cloud-wallet": {
