@@ -70,6 +70,9 @@ class App : Application() {
         // /api/store/... on the fleet debug server, as in SuperApp (#774).
         runCatching { StoreDebugApi.register(this) }
             .onFailure { Log.w(TAG, "store debug API not registered", it) }
+        // An import a self-update (or any process death) cut short picks up where it stopped.
+        runCatching { StoreDebugApi.resumePendingImport(this) }
+            .onFailure { Log.w(TAG, "pending import not resumed", it) }
     }
 
     private companion object { const val TAG = "CloudStore" }

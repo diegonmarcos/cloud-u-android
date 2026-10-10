@@ -150,10 +150,29 @@ object StoreDebugApi {
             .put("direct", pkgs(plan.direct)).put("manual", pkgs(plan.manual))
             .put("store", JSONArray(plan.store.map { JSONObject().put("pkg", it.entry.pkg).put("store", it.label) }))
         if (run && plan.direct.isNotEmpty()) {
-            thread(name = "store-import-api") { StoreImport.installMissing(app, PhoneAppActions.resolver(sources), plan) }
+            // Remembered until the run FINISHES: a Store self-update replaces this process mid-batch,
+            // and [resumePendingImport] picks the same inventory up on the next start. The APKs already
+            // downloaded stay in the cache, so a resume skips straight to what is still missing.
+            runCatching { pendingImport(app).writeText(body) }
+            thread(name = "store-import-api") {
+                StoreImport.installMissing(app, PhoneAppActions.resolver(sources), plan)
+                pendingImport(app).delete()
+            }
             out.put("started", "installing ${plan.direct.size} direct apps in the background; poll /api/store/progress")
         }
         return out
+    }
+
+    private fun pendingImport(ctx: Context) = java.io.File(ctx.applicationContext.filesDir, "store-import-pending.json")
+
+    /** Resume an import a process death interrupted (called from the host's Application.onCreate). */
+    fun resumePendingImport(ctx: Context) {
+        val f = pendingImport(ctx)
+        if (!f.exists()) return
+        val body = runCatching { f.readText() }.getOrNull()
+        if (body.isNullOrBlank()) { f.delete(); return }
+        android.util.Log.i("StoreDebugApi", "resuming the interrupted import (${f.length()} B inventory)")
+        importInventory(ctx, body, run = true)
     }
 
     /** #841 which leg (fleet git-proxy or GitHub fallback) served each feed. */
