@@ -112,6 +112,19 @@ mutate() {
 }
 J() { printf "d=json.loads(s); %s; s=json.dumps(d)" "$1"; }
 
+# green <label> <file> <python-edit-of-s> [<file2> <edit2>]: a change the guard must ACCEPT
+green() {
+    stage
+    local f
+    for f in "$2" "${4:-}"; do [ -n "$f" ] || continue
+        local e="$3"; [ "$f" = "$2" ] || e="$5"
+        python3 -c "import re,json,sys; p=sys.argv[1]; s=open(p).read(); $e; open(p,'w').write(s)" "$T/$f"
+    done
+    local out rc
+    out="$(python3 "$GUARD" "$T")"; rc=$?
+    if [ "$rc" -eq 0 ]; then ok "$1 passes"; else fail "$1 is red (rc=$rc)"; printf '%s\n' "$out" | grep FAIL; fi
+}
+
 stage
 out="$(python3 "$GUARD" "$T")"; rc=$?
 if [ "$rc" -eq 0 ]; then ok "the unbroken synthetic fleet passes ($(tail -1 <<<"$out"))"
@@ -121,7 +134,13 @@ mutate "the lib loses PageTabsView.kt's class"  "$LIB/src/main/kotlin/com/diegon
     "s=s.replace('class PageTabsView','class Gone')" "N0 $LIB: PageTabsView.kt no longer declares"
 mutate "the lib loses PageTabs.kt's function (#876: it lives in commonMain)" "$LIB/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt" \
     "s=s.replace('fun PageTabs(','fun Gone(')" "N0 $LIB: PageTabs.kt no longer declares"
-mutate "six ids on the bar"                      "$FIX/build.json" "$(J "d['ui']['bottom_nav']=list('abcdef')")" "N1 $FIX: ui.bottom_nav has 6 ids"
+# N1 limits: the owner lifted the cap of 5 (2026-10); the island scrolls above 5, the bar holds 2..8.
+BAR() { printf "ids=list('%s'); d['ui']['sections'] += [{'id': i, 'label': i.upper(), 'icon': 'x'} for i in ids[2:]]; d['ui']['bottom_nav'] = ids" "$1"; }
+for ids in abcdef abcdefg abcdefgh; do
+    green "${#ids} ids on the bar" "$FIX/build.json" "$(J "$(BAR "$ids")")"
+done
+mutate "nine ids on the bar"                     "$FIX/build.json" "$(J "$(BAR abcdefghi)")" "N1 $FIX: ui.bottom_nav has 9 ids, the island holds at most 8"
+mutate "one id on the bar"                       "$FIX/build.json" "$(J "d['ui']['bottom_nav']=['a']")" "N1 $FIX: ui.bottom_nav has 1 ids, the island needs at least 2"
 mutate "a bar id that is no section"             "$FIX/build.json" "$(J "d['ui']['bottom_nav']=['a','zzz']")" "N1 $FIX: ui.bottom_nav id 'zzz'"
 mutate "a default outside the bar"               "$FIX/build.json" "$(J "d['ui']['default_section']='nope'")" "N1 $FIX: ui.default_section 'nope'"
 mutate "no bottomnav dependency"                 "$FIX/app/build.gradle" "s=s.replace(\"implementation project(':libs:bottomnav')\",'')" "N2 $FIX: does not compile libs:bottomnav"
@@ -143,6 +162,14 @@ mutate "an inset set inside a strip view's apply" "$KT" "s+='\nval t = PageTabsV
 mutate "an island colour of the app's own"       "$FIX/app/src/main/res/values/colors.xml" "s=s.replace('app_bg','bottom_nav_pill')" "declares \`bottom_nav_pill\`"
 mutate "an island dimen of the app's own"        "$FIX/app/src/main/res/values/colors.xml" "s=s.replace('<color name=\"app_bg\">#000000</color>','<dimen name=\"page_tabs_pill_radius\">4dp</dimen>')" "declares \`page_tabs_pill_radius\`"
 mutate "the window chrome is not called"         "$KT" "s=s.replace('FleetChrome.apply(this)','')" "N7 $FIX: no source calls FleetChrome.apply("
+# N9: a page's declared background picks the strip's lib-owned surface; code never names one
+mutate "an unknown section background"           "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='neon'")" "N9 $FIX: ui.sections a declares background 'neon'"
+mutate "an unknown page background"              "$FIX/build.json" "$(J "d['ui']['sections'][0]['pages'][1]['background']='grey'")" "N9 $FIX: ui.sections a/p2 declares background 'grey'"
+mutate "a surface chosen in code"                "$KT" "s+='\nval x = TabSurface.Light\n'" "N9 $FIX: $KT:6 names TabSurface.Light"
+mutate "a theme background no strip reads"       "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='theme'")" "N9 $FIX: declares a light/theme page background but no source calls stripSurface("
+green  "a theme background read through stripSurface" "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='theme'")" \
+    "$KT" "s=s.replace('PageTabs(pages, null, {});','PageTabs(pages, null, {}, surface = nav.stripSurface(\"a\", dark));')"
+green  "an explicit dark background with no stripSurface" "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='dark'")"
 mutate "an exemption without a reason"           "$DATA" "$(J "d['exempt']['ac_cloud-old']='tbd'")" "N6 ac_cloud-old: exemption needs a reason"
 mutate "an exemption for an app that is gone"    "$DATA" "$(J "d['exempt']['ac_cloud-gone']='Batch Z (synthetic): there is no such app any more.'")" "N6 ac_cloud-gone: exempt"
 mutate "a migrated app still exempt"             "$DATA" "$(J "d['exempt']['$FIX']='Batch Z (synthetic): migrated but nobody deleted this.'")" "N6 $FIX: passes N1-N5 but is still exempt"

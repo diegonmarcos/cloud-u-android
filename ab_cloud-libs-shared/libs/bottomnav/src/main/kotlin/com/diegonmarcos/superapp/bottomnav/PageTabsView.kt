@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.AbstractComposeView
  *  - [underTopChrome] adds the live status-bar / cutout inset above the strip (a strip under the
  *    toolbar island); false for a strip in a sheet. [insets] null = the live window's.
  *  - there is no colour, size or inset to configure: the strip is the fleet's, whatever theme the
- *    host app wears.
+ *    host app wears. [surface] only picks which of the lib's two palettes (dark page / light page).
  */
 public class PageTabsView @JvmOverloads constructor(
     context: Context,
@@ -34,6 +34,8 @@ public class PageTabsView @JvmOverloads constructor(
     public var pages: List<NavPage> by mutableStateOf(emptyList())
     public var selectedId: String? by mutableStateOf(null)
     public var underTopChrome: Boolean by mutableStateOf(true)
+    /** What the strip is drawn over (see [PageTabs]); one of the lib's two palettes, never a colour. */
+    public var surface: TabSurface by mutableStateOf(TabSurface.Dark)
     /** Tests inject an inset; null = the live window's. Not part of the public contract. */
     internal var insets: WindowInsets? by mutableStateOf(null)
     public var onSelect: (NavPage) -> Unit = {}
@@ -49,6 +51,7 @@ public class PageTabsView @JvmOverloads constructor(
             onReselect = { onReselect(it) },
             underTopChrome = underTopChrome,
             insets = insets,
+            surface = surface,
         )
     }
 }

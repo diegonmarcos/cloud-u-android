@@ -102,6 +102,7 @@ fun AgentsSection(state: SearchState) {
             selectedId = state.agentsPage,
             onSelect = { if (it.id == state.agentsPage) state.agentOpen = null; state.agentsPage = it.id },
             underTopChrome = false,
+            surface = NAV.stripSurface("agents", state.dark),
         )
         Box(Modifier.fillMaxWidth().weight(1f).testTag(Tags.page("agents_" + state.agentsPage))) {
             val svc = state.services.agents

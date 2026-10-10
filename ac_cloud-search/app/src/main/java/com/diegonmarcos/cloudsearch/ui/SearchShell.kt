@@ -321,6 +321,7 @@ private fun VerticalsSection(state: SearchState, section: String, v: SearchConfi
                 selectedId = state.vertical,
                 onSelect = { state.open(it.id) },
                 underTopChrome = false,
+                surface = NAV.stripSurface(section, state.dark),
             )
         }
     }
@@ -345,6 +346,7 @@ private fun ChatSection(state: SearchState, v: SearchConfig.Vertical) {
                 selectedId = state.chatPage,
                 onSelect = { state.chatPage = it.id },
                 underTopChrome = false,
+                surface = NAV.stripSurface("chat", state.dark),
             )
         }
     }

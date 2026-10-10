@@ -73,6 +73,13 @@ internal fun buildNavTokens(ctx: Context, density: Density): NavTokens {
         tabsIdleFill = colour(R.color.page_tabs_idle_fill),
         tabsIdleStroke = colour(R.color.page_tabs_idle_stroke),
         tabsIdleText = colour(R.color.page_tabs_idle_text),
+        tabsLightSelectedFill = colour(R.color.page_tabs_light_selected_fill),
+        tabsLightSelectedStroke = colour(R.color.page_tabs_light_selected_stroke),
+        tabsLightSelectedText = colour(R.color.page_tabs_light_selected_text),
+        tabsLightIdleFill = colour(R.color.page_tabs_light_idle_fill),
+        tabsLightIdleStroke = colour(R.color.page_tabs_light_idle_stroke),
+        tabsLightIdleText = colour(R.color.page_tabs_light_idle_text),
+        tabsLightFocusRing = colour(R.color.page_tabs_light_focus_ring),
     )
 }
 

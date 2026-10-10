@@ -6,8 +6,8 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 /**
  * THE navigation declaration of the fleet (#868): `build.json::ui` as an app reads it at runtime.
  *
- *   ui.bottom_nav      [<section id>, ...]   at most [MAX_BOTTOM] ids, in display order. The island.
- *   ui.sections        [{id,label,icon,pages:[{id,label,icon,action?,pages?:[...]}]}]
+ *   ui.bottom_nav      [<section id>, ...]   [MIN_BOTTOM]..[MAX_BOTTOM] ids, in display order. The island.
+ *   ui.sections        [{id,label,icon,background?,pages:[{id,label,icon,action?,background?,pages?:[...]}]}]
  *   ui.default_section <section id>          one of ui.bottom_nav
  *   ui.style           "fleet" (default) | "search-html"   see [NavStyle]; only the apps nav-shape.json::variants
  *                                            names may declare anything but the default (rule N8)
@@ -17,11 +17,55 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * bakes `UI_BOTTOM_NAV` (the JSON array text), `UI_SECTIONS_B64` (base64 of the sections array)
  * and `UI_DEFAULT_SECTION` into BuildConfig; [fromBuildConfig] turns them into this.
  *
+ * A section's or page's `background` ([PageBackground]: "dark" default, "light", or "theme" = the
+ * app's own light/dark mode) is what its tab strip is drawn over, which picks the strip's lib-owned
+ * [TabSurface]. Unset on a page = its parent's.
+ *
  * Parsing is FAIL-SOFT: a malformed blob yields an empty declaration and an app that opens on a
  * blank page, never one that crashes on launch. The nav-shape guard (cloud-android-nav-shape-guard)
- * is what makes a malformed declaration a build failure instead.
+ * is what makes a malformed declaration a build failure instead; [NavDecl.problems] states the same
+ * rules at runtime.
  */
-public const val MAX_BOTTOM: Int = 5
+
+/**
+ * The most items the island holds (the owner lifted the old cap of 5, 2026-10). The island keeps
+ * equal cells while they fit and above [EQUAL_CELLS_BOTTOM] items scrolls in 56dp cells
+ * (bottom_nav_min_cell_width) inside its 80% pill, so a count is a discoverability limit, not a
+ * layout one: on a 360dp phone the pill shows about five cells, and at 8 the bar is already
+ * 448dp of cells, three of them off-screen at any time. A 9th item would put ~45% of the bar out of
+ * sight, which is a menu, not a bar. Cloud Code (7, its own Cordova nav) is the widest declaration.
+ */
+public const val MAX_BOTTOM: Int = 8
+
+/** The fewest items the island holds: one item is no choice, so it is no navigation. */
+public const val MIN_BOTTOM: Int = 2
+
+/** Up to this many items the island's cells only have to clear the 48dp touch floor; above it a
+ *  cell that would fall under bottom_nav_min_cell_width (56dp) makes the island scroll instead. */
+public const val EQUAL_CELLS_BOTTOM: Int = 5
+
+/**
+ * What a tab strip is drawn over, as `build.json::ui` declares it (`sections[].background`,
+ * `pages[].background`). [Theme] = the page follows the app's own light/dark mode, which only the
+ * app knows; [surface] turns it into the strip's [TabSurface].
+ */
+public enum class PageBackground(public val declared: String) {
+    Dark("dark"),
+    Light("light"),
+    Theme("theme");
+
+    public fun surface(darkTheme: Boolean): TabSurface = when (this) {
+        Dark -> TabSurface.Dark
+        Light -> TabSurface.Light
+        Theme -> if (darkTheme) TabSurface.Dark else TabSurface.Light
+    }
+
+    public companion object {
+        /** A declared `background`; blank is null (inherit), anything unknown is null too (the guard rejects it). */
+        public fun of(text: String?): PageBackground? =
+            if (text.isNullOrBlank()) null else entries.firstOrNull { it.declared == text.trim() }
+    }
+}
 
 /**
  * Which look the island is drawn in (`build.json::ui.style`). [Fleet] is SuperApp's island and every
@@ -48,6 +92,8 @@ public data class NavPage(
     /** Non-blank: a LAUNCH tab (it leaves the page for [action]) rather than a destination. */
     val action: String = "",
     val pages: List<NavPage> = emptyList(),
+    /** What this page's own sub-strip is drawn over; null = its parent's. */
+    val background: PageBackground? = null,
 ) {
     /** The tab that actually renders when this one is selected, walked all the way down. */
     public fun leaf(): NavPage = pages.firstOrNull()?.leaf() ?: this
@@ -58,7 +104,17 @@ public data class NavSection(
     val label: String,
     val icon: String = "",
     val pages: List<NavPage> = emptyList(),
+    /** What this section's tab strip is drawn over ([PageBackground.Dark] unless declared). */
+    val background: PageBackground = PageBackground.Dark,
 ) {
+    /**
+     * The strip [TabSurface] for this section's top strip ([pageId] null) or for the sub-strip of the
+     * container page [pageId]: the nearest declared background on the path, else the section's.
+     * [darkTheme] is the app's own light/dark decision, read only for a "theme" background.
+     */
+    public fun stripSurface(darkTheme: Boolean, pageId: String? = null): TabSurface =
+        (path(pageId).lastOrNull { it.background != null }?.background ?: background).surface(darkTheme)
+
     /** The chain of tabs from the top strip down to [id], outermost first; empty when absent. */
     public fun path(id: String?): List<NavPage> = pathTo(pages, id)
 
@@ -71,7 +127,7 @@ public data class NavSection(
 }
 
 public class NavDecl(
-    /** `ui.bottom_nav`, in order, capped at [MAX_BOTTOM]. */
+    /** `ui.bottom_nav`, in order, as declared ([bottomSections] draws at most [MAX_BOTTOM]). */
     public val bottomNav: List<String>,
     public val sections: List<NavSection>,
     /** `ui.default_section`; blank resolves to the first bottom-nav id. */
@@ -83,8 +139,24 @@ public class NavDecl(
 
     public fun section(id: String?): NavSection? = if (id == null) null else index[id]
 
-    /** The island's sections, in bottom_nav order; an id with no section is skipped. */
-    public fun bottomSections(): List<NavSection> = bottomNav.mapNotNull { index[it] }
+    /** The island's sections, in bottom_nav order, at most [MAX_BOTTOM]; an id with no section is skipped. */
+    public fun bottomSections(): List<NavSection> = bottomNav.take(MAX_BOTTOM).mapNotNull { index[it] }
+
+    /** The strip surface for section [sectionId] (see [NavSection.stripSurface]); Dark when it is not declared. */
+    public fun stripSurface(sectionId: String?, darkTheme: Boolean, pageId: String? = null): TabSurface =
+        section(sectionId)?.stripSurface(darkTheme, pageId) ?: TabSurface.Dark
+
+    /**
+     * What is wrong with this declaration, as the nav-shape guard's N1 says it (empty = valid):
+     * [MIN_BOTTOM]..[MAX_BOTTOM] bar ids, each a section, and a default that is one of them. Parsing
+     * never throws, so this is how a test (or a debug screen) asks whether a declaration would pass.
+     */
+    public fun problems(): List<String> = buildList {
+        if (bottomNav.size < MIN_BOTTOM) add("ui.bottom_nav has ${bottomNav.size} ids, the island needs at least $MIN_BOTTOM")
+        if (bottomNav.size > MAX_BOTTOM) add("ui.bottom_nav has ${bottomNav.size} ids, the island holds at most $MAX_BOTTOM")
+        bottomNav.filter { it !in index }.forEach { add("ui.bottom_nav id '$it' is not a ui.sections id") }
+        if (defaultSection.isNotBlank() && defaultSection !in bottomNav) add("ui.default_section '$defaultSection' is not one of ui.bottom_nav")
+    }
 
     /** Where the app opens: the declared default, else the first bar section, else the first section. */
     public fun default(): NavSection? =
@@ -125,7 +197,8 @@ public class NavDecl(
             val array = MiniJson.parse(sections.toString()) as? List<*>
                 ?: throw IllegalArgumentException("ui.sections is not a JSON array")
             val parsed = array.mapNotNull { (it as? Map<*, *>)?.let(::section) }
-            val bar = bottomIds(bottomNav).ifEmpty { parsed.map { it.id } }.take(MAX_BOTTOM)
+            // Kept as declared, so [problems] can see a bar that is too long; the island draws MAX_BOTTOM.
+            val bar = bottomIds(bottomNav).ifEmpty { parsed.map { it.id }.take(MAX_BOTTOM) }
             return NavDecl(bar, parsed, defaultSection, NavStyle.of(style) ?: NavStyle.Fleet)
         }
 
@@ -148,14 +221,15 @@ public class NavDecl(
 
         private fun section(o: Map<*, *>): NavSection? {
             val id = o.text("id").ifBlank { return null }
-            return NavSection(id, o.text("label", id), o.text("icon"), pages(o["pages"]))
+            return NavSection(id, o.text("label", id), o.text("icon"), pages(o["pages"]),
+                PageBackground.of(o.text("background")) ?: PageBackground.Dark)
         }
 
         private fun pages(a: Any?): List<NavPage> =
             (a as? List<*>)?.mapNotNull { e ->
                 val o = e as? Map<*, *> ?: return@mapNotNull null
                 val id = o.text("id").ifBlank { return@mapNotNull null }
-                NavPage(id, o.text("label", id), o.text("icon"), o.text("action"), pages(o["pages"]))
+                NavPage(id, o.text("label", id), o.text("icon"), o.text("action"), pages(o["pages"]), PageBackground.of(o.text("background")))
             } ?: emptyList()
     }
 }

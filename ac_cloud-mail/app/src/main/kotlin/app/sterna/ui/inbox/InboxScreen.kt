@@ -203,6 +203,8 @@ import app.sterna.ui.components.Monogram
 import app.sterna.ui.components.accountColorOf
 import app.sterna.ui.components.verticalScrollbar
 import app.sterna.ui.theme.LocalMailListPalette
+import app.sterna.ui.theme.LocalSternaDarkTheme
+import app.sterna.ui.mailNav
 import app.sterna.ui.isOutgoingFolder
 import app.sterna.ui.messageFolderRole
 import app.sterna.ui.rememberMotionEnabled
@@ -2090,6 +2092,8 @@ private fun DrawerContent(
                     onSelect = { folderTab = FolderTab.valueOf(it.id) },
                     modifier = Modifier.padding(horizontal = MailMetrics.s12),
                     underTopChrome = false,
+                    // build.json declares the Mail section's background "theme": the drawer is light in light mode.
+                    surface = mailNav.stripSurface("mail", LocalSternaDarkTheme.current),
                 )
                 // ONLY the drawn list narrows with the tab. The fold registry below and the badge
                 // arithmetic further down still resolve against the WHOLE account: a folded parent

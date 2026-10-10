@@ -10,10 +10,19 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import app.sterna.core.data.settings.ThemeMode
+
+/**
+ * Whether [SternaTheme] went dark: its ONE light/dark decision (the theme setting, else the
+ * system), for the fleet page-tab strip, whose palette is libs:bottomnav's and is picked through
+ * the declaration (build.json ui.sections[].background "theme" -> NavDecl.stripSurface). Dark
+ * outside a SternaTheme, which is the strip every screen drew before.
+ */
+internal val LocalSternaDarkTheme = staticCompositionLocalOf { true }
 
 /**
  * The bottom-navigation island's geometry (#465) is now declared ONCE in the shared
@@ -71,7 +80,7 @@ fun SternaTheme(
         }
     }
 
-    CompositionLocalProvider(LocalMailListPalette provides mailListPalette) {
+    CompositionLocalProvider(LocalMailListPalette provides mailListPalette, LocalSternaDarkTheme provides darkTheme) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = SternaTypography,

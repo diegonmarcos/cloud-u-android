@@ -8,8 +8,9 @@ DECLARATION  1_cicd/src/data/nav-shape.json (the rules, the forbidden widgets, a
              the exemption ledger: every not-yet-migrated app, each with its reason)
 
   N0  libs:bottomnav still ships NavDecl, PageTabs and PageTabsView
-  N1  ui.bottom_nav is at most 5 ids, each one a ui.sections id; ui.default_section
-      is one of them
+  N1  ui.bottom_nav is min_bottom..max_bottom ids (2..8; the owner lifted the old cap of 5,
+      the island scrolls in 56dp cells above 5), each one a ui.sections id;
+      ui.default_section is one of them
   N2  the app compiles libs:bottomnav
   N3  no hand-rolled nav widget (BottomNavigationView, NavigationBar, NavigationRail,
       BottomAppBar, TabLayout, TabRow, ScrollableTabRow, PrimaryTabRow, a local
@@ -33,7 +34,13 @@ DECLARATION  1_cicd/src/data/nav-shape.json (the rules, the forbidden widgets, a
       variant call and no second island; nobody else may reference the variant's symbols. The
       variant itself lives in libs:bottomnav, so the colours, sizes and shape stay the lib's.
 
-Rules N1-N5 and N7 hold for every app that is NOT exempt. The baseline is all-exempt, so
+  N9  page backgrounds: every ui.sections[].background / pages[].background is one of
+      nav-shape.json::backgrounds ("dark" default, "light", "theme" = the app's light/dark mode);
+      it picks the strip's lib-owned TabSurface. No held app's source names a TabSurface
+      itself (the surface comes from the declaration, through NavDecl.stripSurface), and an
+      app that declares a non-dark background calls stripSurface( (else the line is dead).
+
+Rules N1-N5, N7 and N9 hold for every app that is NOT exempt. The baseline is all-exempt, so
 this is green today; each migration batch deletes its apps' entries.
 
 USAGE  cloud-android-nav-shape-guard.py [ROOT]
@@ -249,6 +256,8 @@ def check_app(root, app, ui, spec, bad):
         bar = []
     if len(bar) > spec["max_bottom"]:
         bad.append(f"N1 {app}: ui.bottom_nav has {len(bar)} ids, the island holds at most {spec['max_bottom']}")
+    if bar and len(bar) < spec["min_bottom"]:
+        bad.append(f"N1 {app}: ui.bottom_nav has {len(bar)} ids, the island needs at least {spec['min_bottom']}")
     for b in bar:
         if b not in ids:
             bad.append(f"N1 {app}: ui.bottom_nav id {b!r} is not a ui.sections id")
@@ -314,6 +323,36 @@ def check_app(root, app, ui, spec, bad):
     # N7
     check_parity(root, app, spec, code, bad)
 
+    # N9
+    check_backgrounds(app, sections, spec, code, rel, bad)
+
+
+def declared_backgrounds(nodes, where=""):
+    """(path, value) for every `background` key in sections/pages, to any depth."""
+    for n in nodes or []:
+        if not isinstance(n, dict):
+            continue
+        here = f"{where}/{n.get('id')}" if where else str(n.get("id"))
+        if "background" in n:
+            yield here, n.get("background")
+        yield from declared_backgrounds(n.get("pages"), here)
+
+
+def check_backgrounds(app, sections, spec, code, rel, bad):
+    allowed = spec["backgrounds"]
+    found = list(declared_backgrounds(sections))
+    for where, value in found:
+        if value not in allowed:
+            bad.append(f"N9 {app}: ui.sections {where} declares background {value!r}, not one of {allowed}")
+    for p, text in code.items():
+        m = re.search(r"\bTabSurface\.(Dark|Light)\b", text)
+        if m:
+            bad.append(f"N9 {app}: {rel(p)}:{line_of(text, m.start())} names TabSurface.{m.group(1)} — the strip's surface "
+                       f"comes from build.json (ui.sections[].background) through NavDecl.stripSurface, not from code")
+    if any(v in allowed and v != "dark" for _, v in found) and not any("stripSurface(" in t for t in code.values()):
+        bad.append(f"N9 {app}: declares a light/theme page background but no source calls stripSurface( — "
+                   f"the declaration reaches no strip")
+
 
 def main(argv):
     root = os.path.abspath(argv[0] if argv else ".")
@@ -367,7 +406,7 @@ def main(argv):
 
     for b in bad:
         print("FAIL     " + b)
-    print(f"── {len(apps)} app(s): {checked} held to N1-N5 + N7 + N8, {len(apps) - checked} exempt; {len(bad)} violation(s) ──")
+    print(f"── {len(apps)} app(s): {checked} held to N1-N5 + N7 + N8 + N9, {len(apps) - checked} exempt; {len(bad)} violation(s) ──")
     return 1 if bad else 0
 
 

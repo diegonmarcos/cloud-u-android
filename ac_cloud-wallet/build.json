@@ -88,7 +88,7 @@
       {"id": "pay", "label": "Pay", "icon": "pay", "pages": []},
       {"id": "me", "label": "Me", "icon": "me", "pages": []},
       {"id": "vcards", "label": "Vcards", "icon": "vcards", "pages": []},
-      {"id": "events", "label": "Events", "icon": "events", "pages": [
+      {"id": "events", "label": "Events", "icon": "events", "background": "dark", "pages": [
         {"id": "tickets", "label": "Tickets", "icon": ""},
         {"id": "bookings", "label": "Bookings", "icon": ""},
         {"id": "passes", "label": "Passes", "icon": ""},

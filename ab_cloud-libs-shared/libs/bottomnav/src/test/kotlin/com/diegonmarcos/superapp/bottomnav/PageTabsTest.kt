@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.util.Base64
 import android.view.View
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -83,11 +84,18 @@ class PageTabsTest {
     private var injected by mutableStateOf<WindowInsets?>(WindowInsets(0, 0, 0, 0))
     private var under by mutableStateOf(true)
 
+    /** null = the call every existing host makes, with no surface argument at all (the default). */
+    private var surface by mutableStateOf<TabSurface?>(null)
+    private var ground by mutableStateOf<Color?>(null)
+
     private fun show(pages: List<NavPage>) {
         compose.setContent {
             hostView = LocalView.current
-            Box(Modifier.fillMaxSize().testTag(ROOT)) {
-                PageTabsImpl(pages, selected, { tapped += it.id }, Modifier.testTag(BOX), { retapped += it.id }, under, injected)
+            val g = ground
+            Box(Modifier.fillMaxSize().then(if (g != null) Modifier.background(g) else Modifier).testTag(ROOT)) {
+                val s = surface
+                if (s == null) PageTabsImpl(pages, selected, { tapped += it.id }, Modifier.testTag(BOX), { retapped += it.id }, under, injected)
+                else PageTabsImpl(pages, selected, { tapped += it.id }, Modifier.testTag(BOX), { retapped += it.id }, under, injected, s)
             }
         }
         compose.waitForIdle()
@@ -146,13 +154,108 @@ class PageTabsTest {
         assertEquals("home", d.default()?.id)
         assertEquals("a blank bottom_nav falls back to every section",
             listOf("suite", "home"), NavDecl.fromBuildConfig(b64).bottomNav)
-        assertEquals("the bar is capped at five", MAX_BOTTOM,
-            NavDecl.parse(JSONArray((1..8).joinToString(",", "[", "]") { """{"id":"s$it"}""" })).bottomNav.size)
+        assertEquals("a bar taken from the sections is capped at MAX_BOTTOM", MAX_BOTTOM,
+            NavDecl.parse(JSONArray((1..10).joinToString(",", "[", "]") { """{"id":"s$it"}""" })).bottomNav.size)
         for (junk in listOf("", "not base64 !!", Base64.encodeToString("{".toByteArray(), Base64.NO_WRAP))) {
             val e = NavDecl.fromBuildConfig(junk, "[", "x")
             assertTrue("junk '$junk' yields an empty declaration", e.sections.isEmpty() && e.bottomNav.isEmpty())
             assertNull(e.default())
         }
+    }
+
+    // ── the item limits (the owner lifted the cap of 5, 2026-10) ─────────────────────────────
+
+    private fun barOf(n: Int): NavDecl {
+        val ids = (1..n).map { "s$it" }
+        return NavDecl.parse(
+            JSONArray(ids.joinToString(",", "[", "]") { """{"id":"$it","label":"${it.uppercase()}"}""" }),
+            ids.joinToString(",", "[", "]") { "\"$it\"" },
+            "s1",
+        )
+    }
+
+    @Test
+    fun `limits - a 6, 7 and 8 item declaration validates and the island gets every item`() {
+        assertEquals(2, MIN_BOTTOM)
+        assertEquals(8, MAX_BOTTOM)
+        for (n in listOf(2, 5, 6, 7, 8)) {
+            val d = barOf(n)
+            assertEquals("$n items validate", emptyList<String>(), d.problems())
+            assertEquals("$n items all reach the island", n, d.bottomSections().size)
+        }
+    }
+
+    @Test
+    fun `limits - 9 items and 1 item are rejected, and a 9 item blob still draws only 8`() {
+        val nine = barOf(9)
+        assertEquals(listOf("ui.bottom_nav has 9 ids, the island holds at most 8"), nine.problems())
+        assertEquals("fail-soft: the island draws the first MAX_BOTTOM", (1..8).map { "s$it" }, nine.bottomSections().map { it.id })
+        assertEquals(listOf("ui.bottom_nav has 1 ids, the island needs at least 2"), barOf(1).problems())
+        val stray = NavDecl.parse(JSONArray("""[{"id":"a"},{"id":"b"}]"""), "a,b,zzz", "b")
+        assertEquals(listOf("ui.bottom_nav id 'zzz' is not a ui.sections id"), stray.problems())
+        assertEquals(listOf("ui.default_section 'nope' is not one of ui.bottom_nav"),
+            NavDecl.parse(JSONArray("""[{"id":"a"},{"id":"b"}]"""), "a,b", "nope").problems())
+    }
+
+    // ── the strip's surface (the light-page variant) ──────────────────────────────────────
+
+    @Test
+    fun `surface - a page background is declared per section and page, inherited, and picks the strip surface`() {
+        val d = NavDecl.parse(JSONArray("""
+            [{"id":"a","background":"theme","pages":[{"id":"p","pages":[{"id":"q"}]},{"id":"r","background":"dark","pages":[{"id":"s"}]}]},
+             {"id":"b","background":"light","pages":[{"id":"x"}]},
+             {"id":"c","pages":[{"id":"y"}]},
+             {"id":"d","background":"neon","pages":[{"id":"z"}]}]
+        """.trimIndent()), "a,b,c,d", "a")
+        assertEquals(PageBackground.Theme, d.section("a")!!.background)
+        assertEquals("theme + the app in light mode", TabSurface.Light, d.stripSurface("a", darkTheme = false))
+        assertEquals("theme + the app in dark mode", TabSurface.Dark, d.stripSurface("a", darkTheme = true))
+        assertEquals("a page with no background of its own inherits its section's", TabSurface.Light, d.stripSurface("a", false, "p"))
+        assertEquals("a page's own background wins for its sub-strip", TabSurface.Dark, d.stripSurface("a", false, "r"))
+        assertEquals("light is light whatever the mode", TabSurface.Light, d.stripSurface("b", darkTheme = true))
+        assertEquals("undeclared is the dark strip it always was", TabSurface.Dark, d.stripSurface("c", false))
+        assertEquals("an unknown value fails soft to dark (the guard rejects it)", TabSurface.Dark, d.stripSurface("d", false))
+        assertEquals("an unknown section is dark", TabSurface.Dark, d.stripSurface("nope", false))
+        assertEquals(PageBackground.Dark, NavDecl.parse(JSONArray("""[{"id":"a"}]""")).section("a")!!.background)
+    }
+
+    @Test
+    fun `surface - the dark strip is the default, pixel for pixel, and the light strip wears the light tokens`() {
+        selected = "phone"
+        show(three)
+        val default = pixels(PageTabsTags.STRIP)
+        surface = TabSurface.Dark
+        compose.waitForIdle()
+        val dark = pixels(PageTabsTags.STRIP)
+        assertEquals(default.width to default.height, dark.width to dark.height)
+        for (x in 0 until default.width) for (y in 0 until default.height)
+            assertEquals("the explicit Dark strip differs from the default at $x,$y", default[x, y], dark[x, y])
+
+        surface = TabSurface.Light
+        ground = Color.White
+        compose.waitForIdle()
+        assertEquals("the light strip has the dark strip's geometry", default.width to default.height,
+            pixels(PageTabsTags.STRIP).let { it.width to it.height })
+        fun centre(id: String): Color = pixels(PageTabsTags.tab(id)).let { it[4, it.height / 2] }
+        fun flat(c: Color) = c.compositeOver(Color.White)
+        close("light selected pill fill", flat(colour(R.color.page_tabs_light_selected_fill)), flat(centre("phone")))
+        close("light idle pill fill", flat(colour(R.color.page_tabs_light_idle_fill)), flat(centre("cloud")))
+        val edge = pixels(PageTabsTags.tab("phone"))
+        close("light selected stroke", flat(colour(R.color.page_tabs_light_selected_stroke)), flat(edge[edge.width / 2, 0]))
+        val idle = pixels(PageTabsTags.tab("cloud"))
+        close("light idle stroke", flat(colour(R.color.page_tabs_light_idle_stroke).compositeOver(colour(R.color.page_tabs_light_idle_fill))), flat(idle[idle.width / 2, 0]))
+    }
+
+    @Test
+    fun `surface - the View host takes the surface too`() {
+        val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
+        val view = PageTabsView(activity)
+        assertEquals("a View host is dark unless told", TabSurface.Dark, view.surface)
+        view.surface = TabSurface.Light
+        view.pages = three
+        activity.setContentView(view)
+        shadowOf(android.os.Looper.getMainLooper()).idle()
+        assertEquals(TabSurface.Light, view.surface)
     }
 
     // ── the layout plan (equalise) ────────────────────────────────────────────────────────

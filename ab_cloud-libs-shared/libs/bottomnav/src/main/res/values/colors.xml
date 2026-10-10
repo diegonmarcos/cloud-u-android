@@ -29,4 +29,14 @@
     <color name="page_tabs_idle_fill">#22FFFFFF</color>
     <color name="page_tabs_idle_stroke">#33FFFFFF</color>
     <color name="page_tabs_idle_text">#AAFFFFFF</color>
+    <!-- The strip's LIGHT surface (TabSurface.Light): a strip over a white / near-white page.
+         WCAG AA over #FFFFFF .. #CFDEF3: selected text 7.10:1, idle text >= 6.04:1, selected pill
+         vs page >= 5.21:1, idle edge vs page >= 3.34:1, focus ring vs page >= 12.5:1. -->
+    <color name="page_tabs_light_selected_fill">#FF6D28D9</color>
+    <color name="page_tabs_light_selected_stroke">#FF5B21B6</color>
+    <color name="page_tabs_light_selected_text">#FFFFFFFF</color>
+    <color name="page_tabs_light_idle_fill">#0F000000</color>
+    <color name="page_tabs_light_idle_stroke">#FF79747E</color>
+    <color name="page_tabs_light_idle_text">#FF49454F</color>
+    <color name="page_tabs_light_focus_ring">#FF1D1B20</color>
 </resources>

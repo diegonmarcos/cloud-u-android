@@ -129,6 +129,8 @@ class NavAccessibilityTest {
 
     private var fixture by mutableStateOf(MAIL)
     private var pages by mutableStateOf<List<NavPage>?>(null)
+    /** The strip's surface; its ground follows it (black under Dark, white under Light). */
+    private var stripSurface by mutableStateOf(TabSurface.Dark)
     private var contentSet = false
 
     /** One setContent per test (the rule allows no second); later calls only move state. [pages]
@@ -150,8 +152,9 @@ class NavAccessibilityTest {
                     ) { Modifier }
                 }
             } else {
-                Column(Modifier.fillMaxSize().background(Color.Black).testTag(ROOT)) {
-                    PageTabsImpl(strip, selectedId, { picked += it.id }, Modifier, { picked += "again:" + it.id }, false, WindowInsets(0, 0, 0, 0))
+                val ground = if (stripSurface == TabSurface.Light) Color.White else Color.Black
+                Column(Modifier.fillMaxSize().background(ground).testTag(ROOT)) {
+                    PageTabsImpl(strip, selectedId, { picked += it.id }, Modifier, { picked += "again:" + it.id }, false, WindowInsets(0, 0, 0, 0), stripSurface)
                 }
             }
         }
@@ -337,6 +340,52 @@ class NavAccessibilityTest {
         for (w in cells) assertEquals("five equal cells", (island.width - 2 * inset) / 5, w, 1f)
     }
 
+    // ── the lifted cap: up to MAX_BOTTOM (8) items ────────────────────────────────────────
+
+    @Test
+    fun `limits - seven items on 360dp scroll in 56dp cells, the plan agrees, every target is 48dp and apart`() {
+        showIsland(CLOUD_CODE, "chat")
+        val t = NavTokens()
+        assertTrue("the plan scrolls seven items on 360dp", planIsland(360.dp, t.widthFraction, t.endInset, 7, t).scrolls)
+        val island = bounds(TAG_ISLAND)
+        assertEquals("the island is still 80% of the screen", bounds(ROOT).width * 0.8f, island.width, 1f)
+        for (e in CLOUD_CODE) assertEquals("cell ${e.first} is minCellWidth", px(R.dimen.bottom_nav_min_cell_width), laidOut(itemTag(e.first)).width, 1f)
+        val chat = laidOut(itemTag("chat"))
+        assertTrue("the selected item is in view", chat.left >= island.left - 0.5f && chat.right <= island.right + 0.5f)
+        assertTouchTargets("7 items at 360dp", CLOUD_CODE.map { itemTag(it.first) })
+    }
+
+    @Test
+    fun `limits - eight items, the new maximum, scroll on 360dp and keep the selected last item in view`() {
+        showIsland(EIGHT, "notes")
+        val island = bounds(TAG_ISLAND)
+        for (e in EIGHT) assertEquals("cell ${e.first} is minCellWidth", px(R.dimen.bottom_nav_min_cell_width), laidOut(itemTag(e.first)).width, 1f)
+        val last = laidOut(itemTag("notes"))
+        println("#a11y MEASURED 8 items: selected last at ${last.left}..${last.right} in island ${island.left}..${island.right}")
+        assertTrue("the selected 8th item is scrolled into view", last.left >= island.left - 0.5f && last.right <= island.right + 0.5f)
+        assertTouchTargets("8 items at 360dp", EIGHT.map { itemTag(it.first) })
+        assertEquals("TalkBack hears a list of 8 tabs", 8, node(TAG_ISLAND).config.getOrNull(SemanticsProperties.CollectionInfo)?.columnCount)
+    }
+
+    @Test
+    @Config(qualifiers = "w720dp-h640dp-mdpi")
+    fun `limits - seven items on a 720dp screen keep equal cells and do not scroll`() {
+        showIsland(CLOUD_CODE, "editor")
+        val island = bounds(TAG_ISLAND)
+        assertEquals("the island is 80% of 720dp", 576f, island.width, 1f)
+        val inset = px(R.dimen.bottom_nav_end_inset)
+        val equal = (island.width - 2 * inset) / 7
+        assertTrue("an equal cell ($equal) clears the 56dp floor", equal >= px(R.dimen.bottom_nav_min_cell_width))
+        for (e in CLOUD_CODE) {
+            val cell = bounds(itemTag(e.first))
+            assertEquals("cell ${e.first} is an equal share, not a 56dp scroll cell", equal, cell.width, 1f)
+            assertTrue("cell ${e.first} is fully on screen", cell.left >= island.left - 0.5f && cell.right <= island.right + 0.5f)
+        }
+        val t = NavTokens()
+        assertFalse(planIsland(720.dp, t.widthFraction, t.endInset, 7, t).scrolls)
+        assertFalse(planIsland(720.dp, t.widthFraction, t.endInset, 8, t).scrolls)
+    }
+
     // ── font scale ────────────────────────────────────────────────────────────────────────
 
     private fun assertNoOverlapAtThisFontScale(fixture: List<Triple<String, String, ImageVector>>) {
@@ -487,6 +536,23 @@ class NavAccessibilityTest {
         assertTrue("no visible focus on the pill: ${before[1, y]} -> ${after[1, y]}", distance(before[1, y], after[1, y]) > 0.25f)
     }
 
+    @Test
+    fun `a11y light page tabs - the focused selected pill shows a ring the page can see`() {
+        stripSurface = TabSurface.Light
+        showPageTabs(THREE, "labs")
+        val before = pixels(bounds(PageTabsTags.tab("labs")))
+        keyboardMode()
+        assertEquals(THREE.map { PageTabsTags.tab(it.id) }, walk(THREE.size))
+        val pill = bounds(PageTabsTags.tab("labs"))
+        val after = pixels(pill)
+        val y = (pill.height / 2).roundToInt()
+        println("#a11y MEASURED light focused selected pill edge ${after[1, y]} (unfocused ${before[1, y]})")
+        assertTrue("no visible focus on the light selected pill: ${before[1, y]} -> ${after[1, y]}", distance(before[1, y], after[1, y]) > 0.25f)
+        // The light focus token is near-black (#1D1B20); the pill's own ink would be white and vanish on the page.
+        assertTrue("the ring is the dark light-surface focus token, not the pill's white ink (${after[1, y]})",
+            after[1, y].luminance() < 0.1f)
+    }
+
     // ── contrast ──────────────────────────────────────────────────────────────────────────
 
     /** WCAG 2.x contrast ratio of two opaque colours. */
@@ -543,6 +609,62 @@ class NavAccessibilityTest {
         }
     }
 
+    /** The light pages the Light strip is drawn over (white .. the palest blue of Cloud Search's light gradient). */
+    private val lightGrounds = listOf(
+        "white #FFFFFF" to Color(0xFFFFFFFF),
+        "M3 light background #FEF7FF (Writer)" to Color(0xFFFEF7FF),
+        "Mail Arctic background #F7F8FA" to Color(0xFFF7F8FA),
+        "Mail drawer #F2F4F6" to Color(0xFFF2F4F6),
+        "M3 surfaceContainer #ECE6F0" to Color(0xFFECE6F0),
+        "Search light gradient start #E0EAFC" to Color(0xFFE0EAFC),
+        "Search light gradient end #CFDEF3" to Color(0xFFCFDEF3),
+    )
+
+    private fun assertLightStripContrast(name: String, t: NavTokens) {
+        val c = t.tabColors(TabSurface.Light)
+        for ((ground, g) in lightGrounds) {
+            val sel = c.selectedFill.compositeOver(g)
+            val idle = c.idleFill.compositeOver(g)
+            val selText = ratio(c.selectedText.compositeOver(sel), sel)
+            val idleText = ratio(c.idleText.compositeOver(idle), idle)
+            val selPill = ratio(sel, g)
+            val idleEdge = ratio(c.idleStroke.compositeOver(g), g)
+            val selVsIdle = ratio(sel, idle)
+            val ring = ratio(c.focusRing!!.compositeOver(g), g)
+            val divider = ratio(c.idleText.compositeOver(g), g)
+            println(("#a11y MEASURED contrast [$name light strip over $ground] selected text %.2f:1, idle text %.2f:1, " +
+                "selected pill vs page %.2f:1, idle edge vs page %.2f:1, selected vs idle %.2f:1, focus ring vs page %.2f:1, divider %.2f:1")
+                .format(selText, idleText, selPill, idleEdge, selVsIdle, ring, divider))
+            assertTrue("[$ground] light selected text %.2f:1".format(selText), selText >= 4.5f)
+            assertTrue("[$ground] light idle text %.2f:1".format(idleText), idleText >= 4.5f)
+            assertTrue("[$ground] the divider glyph %.2f:1".format(divider), divider >= 4.5f)
+            assertTrue("[$ground] the selected pill against the page %.2f:1".format(selPill), selPill >= 3f)
+            assertTrue("[$ground] an idle pill's edge against the page %.2f:1".format(idleEdge), idleEdge >= 3f)
+            assertTrue("[$ground] selected against idle %.2f:1".format(selVsIdle), selVsIdle >= 3f)
+            assertTrue("[$ground] the focus ring against the page %.2f:1".format(ring), ring >= 3f)
+        }
+    }
+
+    @Test
+    fun `a11y light page tabs meet WCAG AA over white and near-white pages, web literals and Android`() {
+        assertLightStripContrast("web", NavTokens())
+        assertLightStripContrast("android", buildNavTokens(RuntimeEnvironment.getApplication(), Density(1f, 1f)))
+        // The ratios the report quotes, pinned: over white and over the darkest ground in the set.
+        val c = NavTokens().tabColors(TabSurface.Light)
+        assertEquals(7.10f, ratio(c.selectedText, c.selectedFill), 0.05f)
+        assertEquals(8.20f, ratio(c.idleText.compositeOver(c.idleFill.compositeOver(Color.White)), c.idleFill.compositeOver(Color.White)), 0.05f)
+        val blue = Color(0xFFCFDEF3)
+        assertEquals(6.04f, ratio(c.idleText.compositeOver(c.idleFill.compositeOver(blue)), c.idleFill.compositeOver(blue)), 0.05f)
+        assertEquals(3.34f, ratio(c.idleStroke, blue), 0.05f)
+    }
+
+    @Test
+    fun `a11y the dark strip's colours are the tokens they always were`() {
+        val t = NavTokens()
+        assertEquals(TabColors(t.tabsSelectedFill, t.tabsSelectedStroke, t.tabsSelectedText, t.tabsIdleFill, t.tabsIdleStroke, t.tabsIdleText, null),
+            t.tabColors(TabSurface.Dark))
+    }
+
     private companion object {
         const val ROOT = "a11y_root"
 
@@ -562,6 +684,9 @@ class NavAccessibilityTest {
             Triple("agents", "Agents", Icons.Filled.Star), Triple("browser", "Browser", Icons.Filled.Public),
             Triple("myterminal", "MyTerminal", Icons.Filled.Terminal),
         )
+
+        /** The new maximum: Cloud Code's seven plus one. */
+        val EIGHT = CLOUD_CODE + Triple("notes", "Notes", Icons.Filled.Inbox)
 
         val THREE = listOf(NavPage("cloud", "Cloud"), NavPage("phone", "Phone"), NavPage("labs", "Labs"))
         val WITH_LAUNCH = listOf(NavPage("observ", "Observ"), NavPage("topology", "Topology"), NavPage("wd", "Watchdog", action = "extapp:wd"))

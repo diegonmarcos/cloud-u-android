@@ -40,7 +40,7 @@ public data class NavTokens(
     /** The accessibility touch floor (Material / Android: 48dp). No island cell is laid out
      *  narrower than this; a bar that would crush its cells below it scrolls instead. */
     val minTouchTarget: Dp = 48.dp,
-    /** Above [MAX_BOTTOM] items, the narrowest a cell may get before the island scrolls
+    /** Above [EQUAL_CELLS_BOTTOM] items, the narrowest a cell may get before the island scrolls
      *  horizontally instead of crushing its cells (the option the owner was offered for 6-7 items). */
     val minCellWidth: Dp = 56.dp,
     /** The keyboard / D-pad / switch-access focus ring, drawn in the item's own ink, only while
@@ -72,6 +72,38 @@ public data class NavTokens(
     val tabsIdleFill: Color = Color(0x22FFFFFF),
     val tabsIdleStroke: Color = Color(0x33FFFFFF),
     val tabsIdleText: Color = Color(0xAAFFFFFF),
+    // ── the page-tab strip's LIGHT surface ([TabSurface.Light], page_tabs_light_*) ──
+    // For a strip drawn over a white / near-white page, where the white-glass pills above are about
+    // 1.0:1. Opaque violet selected pill (the dark strip's #7C3AED family), dark ink on idle. WCAG AA
+    // over #FFFFFF .. #CFDEF3 (NavAccessibilityTest): selected text 7.10:1, idle text >= 6.04:1,
+    // selected pill vs page >= 5.21:1, idle edge vs page >= 3.34:1, focus ring vs page >= 12.5:1.
+    val tabsLightSelectedFill: Color = Color(0xFF6D28D9),
+    val tabsLightSelectedStroke: Color = Color(0xFF5B21B6),
+    val tabsLightSelectedText: Color = Color(0xFFFFFFFF),
+    val tabsLightIdleFill: Color = Color(0x0F000000),
+    val tabsLightIdleStroke: Color = Color(0xFF79747E),
+    val tabsLightIdleText: Color = Color(0xFF49454F),
+    /** The focus ring on a light strip. The dark strip rings in the pill's own ink; on a light page
+     *  the selected pill's white ink would vanish against the page, so the light strip has its own. */
+    val tabsLightFocusRing: Color = Color(0xFF1D1B20),
+) {
+    /** The strip's colours on [surface]. Only ever these tokens: an app picks a surface, never a colour. */
+    public fun tabColors(surface: TabSurface): TabColors = when (surface) {
+        TabSurface.Dark -> TabColors(tabsSelectedFill, tabsSelectedStroke, tabsSelectedText, tabsIdleFill, tabsIdleStroke, tabsIdleText, null)
+        TabSurface.Light -> TabColors(tabsLightSelectedFill, tabsLightSelectedStroke, tabsLightSelectedText, tabsLightIdleFill, tabsLightIdleStroke, tabsLightIdleText, tabsLightFocusRing)
+    }
+}
+
+/** One surface's strip colours, resolved from [NavTokens.tabColors]. [focusRing] null = the pill's own ink. */
+@Immutable
+public data class TabColors(
+    val selectedFill: Color,
+    val selectedStroke: Color,
+    val selectedText: Color,
+    val idleFill: Color,
+    val idleStroke: Color,
+    val idleText: Color,
+    val focusRing: Color?,
 )
 
 /** An override of the tokens for everything below it; null (the default) = the platform's own. */

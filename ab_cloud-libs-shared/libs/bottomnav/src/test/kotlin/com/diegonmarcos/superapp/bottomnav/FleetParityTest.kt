@@ -149,6 +149,24 @@ class FleetParityTest {
     }
 
     @Test
+    fun `golden the light tab strip tokens are the lib's, the one palette a light page gets`() {
+        // TabSurface.Light (#872 parity holds: an app picks the surface, the colours are only these).
+        assertEquals(Color(0xFF6D28D9), colour(R.color.page_tabs_light_selected_fill))
+        assertEquals(Color(0xFF5B21B6), colour(R.color.page_tabs_light_selected_stroke))
+        assertEquals(Color(0xFFFFFFFF), colour(R.color.page_tabs_light_selected_text))
+        assertEquals(Color(0x0F000000), colour(R.color.page_tabs_light_idle_fill))
+        assertEquals(Color(0xFF79747E), colour(R.color.page_tabs_light_idle_stroke))
+        assertEquals(Color(0xFF49454F), colour(R.color.page_tabs_light_idle_text))
+        assertEquals(Color(0xFF1D1B20), colour(R.color.page_tabs_light_focus_ring))
+        // The dark strip's palette IS the golden one above: the light variant added a palette, it moved nothing.
+        val t = NavTokens()
+        assertEquals(TabColors(Color(0x447C3AED), Color(0x66E9D8FD), Color(0xFFFFFFFF), Color(0x22FFFFFF), Color(0x33FFFFFF), Color(0xAAFFFFFF), null),
+            t.tabColors(TabSurface.Dark))
+        assertEquals(TabColors(Color(0xFF6D28D9), Color(0xFF5B21B6), Color(0xFFFFFFFF), Color(0x0F000000), Color(0xFF79747E), Color(0xFF49454F), Color(0xFF1D1B20)),
+            t.tabColors(TabSurface.Light))
+    }
+
+    @Test
     fun `golden SuperApp's press feedback is Compose's default indication`() {
         assertEquals(0.3f, FleetIndication.PRESSED, 0f)
         assertEquals(0.1f, FleetIndication.HOVERED, 0f)
@@ -276,6 +294,41 @@ class FleetParityTest {
     }
 
     private var expected = FleetChrome.Ink(Color.Unspecified, Color.Unspecified, Color.Unspecified)
+
+    @Test
+    fun `an app's MaterialTheme cannot change one pixel or bound of the tab strip, on either surface`() {
+        val hostile = lightColorScheme(primary = Color.Red, onSurface = Color.Green, surface = Color.Blue, background = Color.Magenta)
+        val loud = Typography(labelLarge = TextStyle(fontFamily = FontFamily.Serif, lineHeight = 40.sp, letterSpacing = 4.sp))
+        val pages = listOf(NavPage("cloud", "Cloud"), NavPage("phone", "Phone"), NavPage("labs", "Labs"))
+        var themed by mutableStateOf(false)
+        var surface by mutableStateOf(TabSurface.Dark)
+        compose.setContent {
+            hostView = LocalView.current
+            val ground = if (surface == TabSurface.Light) Color.White else Color.Black
+            Box(Modifier.fillMaxSize().background(ground)) {
+                if (themed) MaterialTheme(colorScheme = hostile, typography = loud) {
+                    PageTabs(pages, "phone", {}, underTopChrome = false, surface = surface)
+                } else PageTabs(pages, "phone", {}, underTopChrome = false, surface = surface)
+            }
+        }
+        val geometry = mutableMapOf<TabSurface, List<Rect>>()
+        for (s in listOf(TabSurface.Dark, TabSurface.Light)) {
+            surface = s
+            themed = false
+            compose.waitForIdle()
+            val plainBounds = bounds(PageTabsTags.STRIP)
+            val plain = crop(capture(), plainBounds)
+            geometry[s] = pages.map { bounds(PageTabsTags.tab(it.id)) }
+            themed = true
+            compose.waitForIdle()
+            assertEquals("[$s] strip bounds moved under an app theme", plainBounds, bounds(PageTabsTags.STRIP))
+            val themedPx = crop(capture(), bounds(PageTabsTags.STRIP))
+            var worst = 0f
+            for (x in 0 until plain.width) for (y in 0 until plain.height) worst = maxOf(worst, distance(plain[x, y], themedPx[x, y]))
+            assertTrue("[$s] an app theme changed the strip's pixels (worst channel delta $worst)", worst <= 3f / 255f)
+        }
+        assertEquals("the light strip has exactly the dark strip's geometry", geometry[TabSurface.Dark], geometry[TabSurface.Light])
+    }
 
     @Test
     fun `FleetChrome puts every window on SuperApp's transparent edge-to-edge chrome`() {

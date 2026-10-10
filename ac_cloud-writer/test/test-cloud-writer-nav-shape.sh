@@ -157,7 +157,7 @@ def checks(f):
     secs = {s["id"]: s for s in ui.get("sections") or []}
     bar = ui.get("bottom_nav") or []
     need("N1 ui.bottom_nav is exactly %s" % CFG["bottom"], bar == CFG["bottom"])
-    need("N1 ui.bottom_nav holds at most 5 ids", 0 < len(bar) <= 5)
+    need("N1 ui.bottom_nav holds 2..8 ids (the fleet limit since the cap of 5 was lifted)", 2 <= len(bar) <= 8)
     need("N1 every ui.bottom_nav id is a ui.sections id", all(b in secs for b in bar))
     need("N1 ui.default_section is %r and is in ui.bottom_nav" % CFG["default"],
          ui.get("default_section") == CFG["default"] and CFG["default"] in bar)

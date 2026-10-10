@@ -69,6 +69,11 @@ import androidx.compose.ui.unit.sp
  *  - a LAUNCH page (non-blank [NavPage.action]) wears a pill but is not a destination; the first
  *    one after a destination is preceded by the literal "|" divider the superapp draws.
  *
+ * [surface] is what the strip is drawn over: [TabSurface.Dark] (the default, SuperApp's white glass
+ * over its dark window) or [TabSurface.Light] (an opaque violet pill and dark ink, for a white or
+ * near-white page). Both palettes are [NavTokens]' own, so an app chooses a surface and never a
+ * colour (#872 parity); a host derives it from its declaration with [NavDecl.stripSurface].
+ *
  * [onSelect] fires for a tap on an unselected pill - including a launch pill, whose [NavPage.action]
  * the host dispatches and which it should NOT make [selectedId] - and [onReselect] for the
  * selected one. [selectedId] only MOVES the pill; it never calls back.
@@ -81,9 +86,13 @@ public fun PageTabs(
     modifier: Modifier = Modifier,
     onReselect: (NavPage) -> Unit = {},
     underTopChrome: Boolean = true,
+    surface: TabSurface = TabSurface.Dark,
 ) {
-    PageTabsImpl(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, null)
+    PageTabsImpl(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, null, surface)
 }
+
+/** What a page-tab strip is drawn over; picks one of the two lib-owned palettes in [NavTokens]. */
+public enum class TabSurface { Dark, Light }
 
 /** The one composable [PageTabs] and [PageTabsView] both render. [insets] is for tests; null = the live window's. */
 @Composable
@@ -95,10 +104,11 @@ internal fun PageTabsImpl(
     onReselect: (NavPage) -> Unit,
     underTopChrome: Boolean,
     insets: WindowInsets?,
+    surface: TabSurface = TabSurface.Dark,
 ) {
     // An app's MaterialTheme text style (line height, family) must not reach the pills.
     CompositionLocalProvider(LocalTextStyle provides TextStyle.Default) {
-        PageTabsContent(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, insets)
+        PageTabsContent(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, insets, surface)
     }
 }
 
@@ -111,9 +121,11 @@ private fun PageTabsContent(
     onReselect: (NavPage) -> Unit,
     underTopChrome: Boolean,
     insets: WindowInsets?,
+    surface: TabSurface,
 ) {
     if (pages.isEmpty()) return
     val tokens = navTokens()
+    val colors = tokens.tabColors(surface)
     val density = LocalDensity.current
     val measurer = rememberTextMeasurer()
 
@@ -181,14 +193,14 @@ private fun PageTabsContent(
                         "|",
                         // A drawn separator, not content: TalkBack would read it as "vertical bar".
                         Modifier.padding(horizontal = with(density) { dividerPad.toDp() }).clearAndSetSemantics {},
-                        style = styleAt(plan.textPx, tokens.tabsIdleText),
+                        style = styleAt(plan.textPx, colors.idleText),
                         softWrap = false,
                     )
                 }
                 val on = page.id == selectedId
                 val slotModifier = if (plan.scrollable) Modifier else Modifier.width(with(density) { slot.toDp() })
                 Box(slotModifier, contentAlignment = Alignment.Center) {
-                    Pill(page, labels[i], i, on, plan, margin, padH, tokens, { px, c -> styleAt(px, c) }, onSelect, onReselect)
+                    Pill(page, labels[i], i, on, plan, margin, padH, tokens, colors, { px, c -> styleAt(px, c) }, onSelect, onReselect)
                 }
             }
         }
@@ -205,6 +217,7 @@ private fun Pill(
     marginPx: Float,
     padHPx: Float,
     tokens: NavTokens,
+    colors: TabColors,
     style: (Float, Color) -> TextStyle,
     onSelect: (NavPage) -> Unit,
     onReselect: (NavPage) -> Unit,
@@ -214,9 +227,10 @@ private fun Pill(
     val stroke = tokens.tabsPillStroke
     val padV = tokens.tabsPillPadV
     val shape = RoundedCornerShape(radius)
-    val fill = if (on) tokens.tabsSelectedFill else tokens.tabsIdleFill
-    val line = if (on) tokens.tabsSelectedStroke else tokens.tabsIdleStroke
-    val ink = if (on) tokens.tabsSelectedText else tokens.tabsIdleText
+    val fill = if (on) colors.selectedFill else colors.idleFill
+    val line = if (on) colors.selectedStroke else colors.idleStroke
+    val ink = if (on) colors.selectedText else colors.idleText
+    val ring = colors.focusRing ?: ink
     val source = remember { MutableInteractionSource() }
     val focused by source.collectIsFocusedAsState()
     val launch = page.action.isNotBlank()
@@ -227,7 +241,7 @@ private fun Pill(
             .background(fill, shape)
             .border(stroke, line, shape)
             // Keyboard / D-pad / switch focus only: touch never focuses a pill, so it never shows.
-            .then(if (focused) Modifier.border(tokens.focusRingWidth, ink, shape) else Modifier)
+            .then(if (focused) Modifier.border(tokens.focusRingWidth, ring, shape) else Modifier)
             .clickable(interactionSource = source, indication = FleetIndication) {
                 if (on) onReselect(page) else onSelect(page)
             }

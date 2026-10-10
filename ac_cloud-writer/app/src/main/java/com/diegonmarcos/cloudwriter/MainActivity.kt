@@ -1197,6 +1197,8 @@ class MainActivity : AppCompatActivity() {
                     selectedId = selected?.id,
                     onSelect = { toolsPage.value = it.id },
                     underTopChrome = false,
+                    // build.json declares Tools' background "theme": the lib's light strip in light mode.
+                    surface = WriterNav.decl.stripSurface(WriterNav.TOOLS, WriterTheme.isDark()),
                 )
                 Column(Modifier.fillMaxWidth().padding(horizontal = PageGutter)) {
                     tools.filter { WriterNav.pageId(it.screen) == selected?.id }.forEach { page ->

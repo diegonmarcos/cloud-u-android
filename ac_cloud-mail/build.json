@@ -23,7 +23,7 @@
     "bottom_nav": ["mail", "chat", "home", "rss", "video"],
     "default_section": "home",
     "sections": [
-      {"id": "mail", "label": "Mail", "icon": "mail", "pages": [{"id": "inbox", "label": "Inbox"}]},
+      {"id": "mail", "label": "Mail", "icon": "mail", "background": "theme", "pages": [{"id": "inbox", "label": "Inbox"}]},
       {"id": "chat", "label": "Chat", "icon": "chat", "pages": [{"id": "telegram", "label": "Telegram", "action": "launch:org.telegram.messenger"}]},
       {"id": "home", "label": "Home", "icon": "home", "pages": [{"id": "home", "label": "Home"}]},
       {"id": "rss", "label": "News", "icon": "rss", "pages": [{"id": "rss", "label": "News"}]},

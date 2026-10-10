@@ -121,6 +121,8 @@ fun LazyListScope.pageHeader(state: SearchState, v: SearchConfig.Vertical) {
                 selectedId = state.subpageOf(v),
                 onSelect = { state.showSubpage(v, it.id) },
                 underTopChrome = false,
+                // The vertical's sub-strip: its page's background, else its section's ("theme" in build.json).
+                surface = NAV.stripSurface(state.sectionOf(v.id), state.dark, v.id),
             )
         }
     }

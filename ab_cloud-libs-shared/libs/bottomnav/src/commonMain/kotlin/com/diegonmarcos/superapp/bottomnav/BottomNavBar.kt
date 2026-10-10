@@ -105,7 +105,7 @@ import kotlin.math.roundToInt
  *  - ACCESSIBILITY. Every item is a Tab with its label (the icon's description while collapsed)
  *    and its selected state, inside a selectable group that carries collection info, so TalkBack
  *    reads "Mail, selected, Tab, 1 of 5". A cell is never narrower than the 48dp touch floor, and
- *    above MAX_BOTTOM items never narrower than bottom_nav_min_cell_width: a bar that would cross it
+ *    above EQUAL_CELLS_BOTTOM items never narrower than bottom_nav_min_cell_width: a bar that would cross it
  *    keeps its cells and scrolls horizontally inside the pill, the selected item scrolled into view
  *    ([planIsland]). Keyboard / D-pad / switch focus draws a ring in the item's ink; touch never
  *    focuses an item, so a tapped island is pixel for pixel what it was. NavAccessibilityTest.
@@ -218,7 +218,7 @@ private fun IslandContent(
     )
 
     // #a11y: the island keeps equal cells, and a cell is never laid out narrower than the touch
-    // floor (above MAX_BOTTOM items: than minCellWidth). A bar that would cross that floor scrolls
+    // floor (above EQUAL_CELLS_BOTTOM items: than minCellWidth). A bar that would cross that floor scrolls
     // horizontally inside its pill instead of crushing its cells (cells overlapping their 48dp
     // touch targets is what 7 items at 360dp did), and the selected item is scrolled into view.
     val selectedIndex = entries.indexOfFirst { it.id == selectedId }
@@ -332,7 +332,7 @@ private fun IslandContent(
 /**
  * How the island lays out [count] cells in [maxWidth] (#a11y). [scrolls] false = the island as it
  * always was: equal cells sharing the pill. true = every cell is [cell] wide and the row scrolls
- * horizontally inside the pill. The floor is the 48dp touch target for up to [MAX_BOTTOM] items and
+ * horizontally inside the pill. The floor is the 48dp touch target for up to [EQUAL_CELLS_BOTTOM] items and
  * [NavTokens.minCellWidth] above that, so five items on a 360dp phone (55dp cells) never scroll and
  * seven do (39dp cells would overlap each other's touch targets).
  */
@@ -342,7 +342,7 @@ internal fun planIsland(maxWidth: Dp, widthFraction: Float, endInset: Dp, count:
     val viewport = maxWidth * widthFraction
     if (count <= 0) return IslandPlan(false, 0.dp, viewport, endInset, 0)
     val equal = (viewport - endInset * 2) / count
-    val floor = if (count > MAX_BOTTOM) maxOf(tokens.minCellWidth, tokens.minTouchTarget) else tokens.minTouchTarget
+    val floor = if (count > EQUAL_CELLS_BOTTOM) maxOf(tokens.minCellWidth, tokens.minTouchTarget) else tokens.minTouchTarget
     return if (equal < floor) IslandPlan(true, floor, viewport, endInset, count) else IslandPlan(false, equal, viewport, endInset, count)
 }
 
