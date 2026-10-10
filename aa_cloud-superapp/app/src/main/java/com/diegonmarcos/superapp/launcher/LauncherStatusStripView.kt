@@ -56,8 +56,9 @@ import java.util.Locale
  *   └──────────────────────────────────────────────────────────────────┘
  *
  *   LEFT  — network labels in NetworkSections.ORDER (the popup's section
- *           order too), each over a 4-dot row (SignalDots; 5G / WiFi / WG
- *           carry a signal level, BT the count of connected devices (BtLinks,
+ *           order too), each over a 4-dot row (SignalDots; mobile / WiFi / WG
+ *           carry a signal level, GPS the fix quality (GpsFix, passive fixes
+ *           only: the strip never turns GNSS on), BT the count of connected devices (BtLinks,
  *           4 = four or more), KDE / ADB / Data / HS keep the same empty
  *           footprint so every icon stays aligned). BT's label is white while
  *           the adapter is ON (ACL / profile / adapter broadcasts). Tinted
@@ -69,7 +70,8 @@ import java.util.Locale
  *           a hub handshake under 3 min), NOT for "a VPN transport exists" —
  *           the engine's DNS-only tunnel is a VPN too. Its state + dots are
  *           re-read from the engine on every network change and on the
- *           clock's minute tick. 5G label tracks any cellular transport.
+ *           clock's minute tick. The mobile label is MobileLink's: the network
+ *           type with data on, "Call" with data off, "SOS", grey with no service.
  *   CENTER — Date + time, monospace, centred. Updated every minute via
  *           ACTION_TIME_TICK + immediate refresh on TIMEZONE_CHANGED /
  *           TIME_CHANGED.
@@ -96,10 +98,12 @@ class LauncherStatusStripView @JvmOverloads constructor(
     private val adbView: TextView
     private val hsView: TextView
     private val kdeView: TextView
+    private val gpsView: TextView
     private val cellDots = SignalDots.create(context)
     private val wifiDots = SignalDots.create(context)
     private val wgDots = SignalDots.create(context)
     private val btDots = SignalDots.create(context)
+    private val gpsDots = SignalDots.create(context)
     /** Icons with no level to show (KDE, ADB, Data, HS) still carry an empty dots row. */
     private fun emptyDots() = SignalDots.create(context)
     private val dateTimeView: TextView
@@ -144,9 +148,18 @@ class LauncherStatusStripView @JvmOverloads constructor(
     private var hasAdb = false
     private var hasHotspot = false
     private var hasKde = false
-    // Signal levels (0..4, -1 = none) for the dots under 5G / WiFi / WG.
-    private var cellLevel = SignalLevels.NONE
+    // Signal levels (0..4, -1 = none) for the dots under WiFi; the mobile ones are in [mobile].
     private var wifiLevel = SignalLevels.NONE
+    /** The mobile radio's state (MobileLink): label, tint and dots of the mobile icon. */
+    private var mobile = com.diegonmarcos.superapp.network.MobileLink.Reading(
+        com.diegonmarcos.superapp.network.MobileLink.Kind.NO_SERVICE, com.diegonmarcos.superapp.network.MobileLink.OFF_LABEL,
+        com.diegonmarcos.superapp.network.WgLink.TINT_OFF, 0, "", null)
+    /** Telephony events of the data SIM + the data / roaming / airplane switches (no polling). */
+    private val mobileWatch = com.diegonmarcos.superapp.network.MobileProbe.Watch(context) { signalOnly -> refreshMobile(signalOnly) }
+    /** The last full radio read; a signal-only event re-derives from it with the new level. */
+    private var mobileInputs: com.diegonmarcos.superapp.network.MobileLink.Inputs? = null
+    /** Location switch + passive fixes for the GPS icon; never requests a fix of its own. */
+    private val gpsWatch = com.diegonmarcos.superapp.network.GpsProbe.StripWatch(context) { applyIconTints() }
     /** The mesh's truth (WgLink), read from the engine off the main thread; OFF until the first read. */
     private var wgLink = com.diegonmarcos.superapp.network.WgLink.Reading(
         com.diegonmarcos.superapp.network.WgLink.State.OFF, SignalLevels.NONE, "")
@@ -157,8 +170,6 @@ class LauncherStatusStripView @JvmOverloads constructor(
     private val wgReading = java.util.concurrent.atomic.AtomicBoolean(false)
     /** Coalesces a burst of connectivity callbacks into one engine read. */
     private val wgRefresh = Runnable { refreshWgLevel() }
-    /** API 31+ TelephonyCallback or the older PhoneStateListener, held as Any so neither class is touched on a release that lacks it. */
-    private var signalListener: Any? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val metricsTicker = object : Runnable {
@@ -200,7 +211,7 @@ class LauncherStatusStripView @JvmOverloads constructor(
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
         }
 
-        // ── LEFT cluster: 5G · WiFi · BT · WG · KDE · ADB · Data · HS (anchored to START) ──
+        // ── LEFT cluster: mobile · WiFi · BT · WG · KDE · ADB · Data · HS · GPS (anchored to START) ──
         val leftCluster = LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -228,6 +239,8 @@ class LauncherStatusStripView @JvmOverloads constructor(
         hsView       = makeIconLabel(nl.getValue(NetworkInfoPopup.HOTSPOT))
         // KDE Connect — lit when ≥1 paired device is connected over the mesh.
         kdeView      = makeIconLabel(nl.getValue(NetworkInfoPopup.KDE))
+        // GPS — white while location is on (grey off); dots = the last passive fix's quality (GpsFix).
+        gpsView      = makeIconLabel(nl.getValue(NetworkInfoPopup.GPS))
         // Any of the left-cluster icons → NetworkInfoPopup (shared
         // popup per cluster, per Diego's "yes click any, they are a
         // cluster" answer), scrolled to the tapped icon's own section.
@@ -238,6 +251,7 @@ class LauncherStatusStripView @JvmOverloads constructor(
             wgView to NetworkInfoPopup.MESH, kdeView to NetworkInfoPopup.KDE,
             btView to NetworkInfoPopup.BLUETOOTH, adbView to NetworkInfoPopup.ADB,
             dataView to NetworkInfoPopup.DATA, hsView to NetworkInfoPopup.HOTSPOT,
+            gpsView to NetworkInfoPopup.GPS,
         )
         for ((v, focus) in focusOf) {
             v.isClickable = true
@@ -257,6 +271,7 @@ class LauncherStatusStripView @JvmOverloads constructor(
             NetworkInfoPopup.ADB to { makeToolColumn("adb", withDots(adbView, emptyDots())) },
             NetworkInfoPopup.DATA to { makeToolColumn("usb", withDots(dataView, emptyDots())) },  // the old USB pet now rides Data
             NetworkInfoPopup.HOTSPOT to { makeToolColumn("hotspot", withDots(hsView, emptyDots())) },
+            NetworkInfoPopup.GPS to { makeToolColumn("gps", withDots(gpsView, gpsDots)) },
         )
         for (column in com.diegonmarcos.superapp.network.NetworkSections.inOrder(columns)) leftCluster.addView(column())
         innerRow.addView(leftCluster)
@@ -524,6 +539,7 @@ class LauncherStatusStripView @JvmOverloads constructor(
                 refreshMetrics()
             // A WireGuard handshake ages with no event to say so: re-read its
             // level on the clock's own once-a-minute tick (no extra timer).
+            // The GPS fix ages the same way (its dots fall as it does).
             refreshWgLevel()
         }
     }
@@ -616,7 +632,8 @@ class LauncherStatusStripView @JvmOverloads constructor(
             cr.registerContentObserver(android.provider.Settings.Global.getUriFor(android.provider.Settings.Global.ADB_ENABLED), false, adbObserver)
             cr.registerContentObserver(android.provider.Settings.Global.getUriFor(ADB_WIFI), false, adbObserver)
         }
-        registerSignalListener()
+        mobileWatch.start()
+        gpsWatch.start()
         refreshAdb()
         refreshWgLevel()
         runCatching {
@@ -645,7 +662,8 @@ class LauncherStatusStripView @JvmOverloads constructor(
         runCatching { context.unregisterReceiver(btReceiver) }
         com.diegonmarcos.superapp.network.BtLinks.onProxy = null
         runCatching { context.contentResolver.unregisterContentObserver(adbObserver) }
-        unregisterSignalListener()
+        mobileWatch.stop()
+        gpsWatch.stop()
         runCatching {
             val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
             cm?.unregisterNetworkCallback(networkCallback)
@@ -730,47 +748,17 @@ class LauncherStatusStripView @JvmOverloads constructor(
         }.start()
     }
 
-    /** Cellular level of the DATA SIM, pushed by the radio (no permission needed for signal strength). */
-    private fun registerSignalListener() {
-        if (signalListener != null) return
-        runCatching {
-            val tm = dataSimTelephony() ?: return
-            if (android.os.Build.VERSION.SDK_INT >= 31) {
-                val cb = SignalCallback31 { lvl -> post { cellLevel = SignalLevels.cell(lvl); applyIconTints() } }
-                tm.registerTelephonyCallback(context.mainExecutor, cb)
-                signalListener = cb
-            } else {
-                @Suppress("DEPRECATION")
-                val l = object : android.telephony.PhoneStateListener() {
-                    @Deprecated("Deprecated in Java")
-                    override fun onSignalStrengthsChanged(ss: android.telephony.SignalStrength?) {
-                        cellLevel = SignalLevels.cell(ss?.level); applyIconTints()
-                    }
-                }
-                @Suppress("DEPRECATION")
-                tm.listen(l, android.telephony.PhoneStateListener.LISTEN_SIGNAL_STRENGTHS)
-                signalListener = l
-            }
-        }
-    }
-
-    private fun unregisterSignalListener() {
-        val l = signalListener ?: return
-        signalListener = null
-        runCatching {
-            val tm = dataSimTelephony() ?: return
-            if (android.os.Build.VERSION.SDK_INT >= 31 && l is android.telephony.TelephonyCallback) tm.unregisterTelephonyCallback(l)
-            else if (l is android.telephony.PhoneStateListener) {
-                @Suppress("DEPRECATION")
-                tm.listen(l, android.telephony.PhoneStateListener.LISTEN_NONE)
-            }
-        }
-    }
-
-    private fun dataSimTelephony(): android.telephony.TelephonyManager? {
-        val tm = context.applicationContext.getSystemService(Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager ?: return null
-        val sub = runCatching { android.telephony.SubscriptionManager.getDefaultDataSubscriptionId() }.getOrDefault(-1)
-        return if (sub >= 0) runCatching { tm.createForSubscriptionId(sub) }.getOrDefault(tm) else tm
+    /** The mobile icon's state (MobileLink) from the data SIM: pushed by its telephony callbacks,
+     *  the data / roaming / airplane switches and every connectivity change. Cheap binder reads. */
+    private fun refreshMobile(signalOnly: Boolean = false) {
+        val probe = com.diegonmarcos.superapp.network.MobileProbe
+        mobile = runCatching {
+            val prev = mobileInputs
+            val inputs = if (signalOnly && prev != null) probe.withLiveSignal(prev) else probe.read(context, hasCellular)
+            mobileInputs = inputs
+            com.diegonmarcos.superapp.network.MobileLink.derive(inputs)
+        }.getOrDefault(mobile)
+        applyIconTints()
     }
 
     /** Walk all known networks via ConnectivityManager and decide
@@ -792,6 +780,7 @@ class LauncherStatusStripView @JvmOverloads constructor(
         }
         hasWifi = wifi; hasCellular = cell; hasVpn = vpn
         refreshBluetooth(apply = false)
+        refreshMobile()
         refreshWifiLevel()   // also applies the tints
         // Any network change can take the hubs away (Wi-Fi -> cellular, a VPN swap): re-ask the
         // engine, debounced, instead of trusting the VPN transport (the DNS-only tunnel is one too).
@@ -811,7 +800,8 @@ class LauncherStatusStripView @JvmOverloads constructor(
     private fun applyIconTints() {
         val on  = com.diegonmarcos.superapp.network.WgLink.TINT_ON
         val off = com.diegonmarcos.superapp.network.WgLink.TINT_OFF
-        signal5gView.setTextColor(if (hasCellular)  on else off)
+        if (signal5gView.text.toString() != mobile.label) signal5gView.text = mobile.label
+        signal5gView.setTextColor(mobile.tint)
         wifiView    .setTextColor(if (hasWifi)      on else off)
         wgView      .setTextColor(com.diegonmarcos.superapp.network.WgLink.tint(wgLink.state))
         btView      .setTextColor(com.diegonmarcos.superapp.network.BtLinks.tint(hasBluetooth))
@@ -819,7 +809,12 @@ class LauncherStatusStripView @JvmOverloads constructor(
         dataView    .setTextColor(if (hasUsbData)   on else off)
         hsView      .setTextColor(if (hasHotspot)   on else off)
         // Signal dots take the icon's own tint (bright when active, faint when not).
-        SignalDots.set(cellDots, cellLevel, if (hasCellular) on else off)
+        // Mobile dots = the data SIM's signal, kept with data off ("Call") and for SOS; 0 with no service.
+        SignalDots.set(cellDots, mobile.level, mobile.tint)
+        // GPS: white with location on; dots = the passive / last fix's quality (0 = none).
+        val locationOn = com.diegonmarcos.superapp.network.GpsProbe.locationOn(context)
+        gpsView     .setTextColor(if (locationOn) on else off)
+        SignalDots.set(gpsDots, gpsWatch.dots(locationOn), if (locationOn) on else off)
         SignalDots.set(wifiDots, wifiLevel, if (hasWifi) on else off)
         // BT dots = connected devices (0..4, 4 = four or more); all four grey at 0.
         SignalDots.set(btDots, com.diegonmarcos.superapp.network.BtLinks.dots(btCount), com.diegonmarcos.superapp.network.BtLinks.tint(hasBluetooth))
@@ -829,7 +824,7 @@ class LauncherStatusStripView @JvmOverloads constructor(
         }.getOrDefault(false)
         kdeView     .setTextColor(if (hasKde)       on else off)
         // Pets: on → run (energetic), off → idle. on_level is data-driven.
-        updateBoolPet("cellular", hasCellular)
+        updateBoolPet("cellular", mobile.kind == com.diegonmarcos.superapp.network.MobileLink.Kind.DATA)
         updateBoolPet("wifi", hasWifi)
         updateBoolPet("vpn", wgLink.onMesh)
         updateBoolPet("bluetooth", hasBluetooth)
@@ -886,13 +881,6 @@ class LauncherStatusStripView @JvmOverloads constructor(
         /** Settings.Global.ADB_WIFI_ENABLED (@hide, API 30+). */
         const val ADB_WIFI = "adb_wifi_enabled"
     }
-}
-
-/** API 31+ signal callback, in its own class so pre-31 runtimes never load TelephonyCallback. */
-@androidx.annotation.RequiresApi(31)
-private class SignalCallback31(private val onLevel: (Int) -> Unit) :
-    android.telephony.TelephonyCallback(), android.telephony.TelephonyCallback.SignalStrengthsListener {
-    override fun onSignalStrengthsChanged(ss: android.telephony.SignalStrength) { onLevel(ss.level) }
 }
 
 /**

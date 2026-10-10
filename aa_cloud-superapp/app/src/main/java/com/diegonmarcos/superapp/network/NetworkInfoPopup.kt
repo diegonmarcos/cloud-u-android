@@ -30,9 +30,12 @@ import java.net.NetworkInterface
 
 /**
  * Status-strip network popup. Sections in NetworkSections.ORDER — the
- * strip's own icon order (mobile, WiFi, BT, WG, KDE, ADB, Data, HS),
- * then Network:
- *   1. Cellular  — carrier · type · bars+dBm · mobile RX/TX rate.
+ * strip's own icon order (mobile, WiFi, BT, WG, KDE, ADB, Data, HS, GPS),
+ * then Network, a divider between each two (NetworkSections.layout) and a
+ * "Settings ›" link at each header (NetworkSections.SETTINGS):
+ *   1. Cellular  — the strip's MobileLink state, then each SIM: carrier,
+ *                  MCC/MNC, type, signal, data, roaming, voice, Wi-Fi
+ *                  calling, preferred network, 5G type (CellularSection).
  *   2. WiFi      — SSID · channel · RSSI · link speed · WiFi RX/TX rate.
  *   3. Bluetooth — adapter state, then each connected device (name,
  *                  profiles, battery) and their count (BtLinks).
@@ -52,6 +55,8 @@ import java.net.NetworkInterface
  *                  host/device role, OTG device names, link speed.
  *   7. Hotspot   — Wi-Fi hotspot / USB / Bluetooth tethering (TetherModel);
  *                  SSID, band and clients through the shell channel.
+ *   7b. GPS      — location switch, providers, fix, constellations
+ *                  (GpsSection); live GNSS only while it is on screen.
  *   8. Network   — DNS servers from the active network's
  *                  LinkProperties + every IPv4 bound on a live
  *                  interface.
@@ -76,7 +81,7 @@ object NetworkInfoPopup {
     // Section keys: the strip passes the tapped icon's key so the bubble opens on that section.
     const val CELLULAR = NetworkSections.CELLULAR; const val WIFI = NetworkSections.WIFI; const val MESH = NetworkSections.MESH
     const val KDE = NetworkSections.KDE; const val BLUETOOTH = NetworkSections.BLUETOOTH; const val ADB = NetworkSections.ADB
-    const val DATA = NetworkSections.DATA; const val HOTSPOT = NetworkSections.HOTSPOT
+    const val DATA = NetworkSections.DATA; const val HOTSPOT = NetworkSections.HOTSPOT; const val GPS = NetworkSections.GPS
 
     /** Is the phone on the mesh: the WG icon's, dots' and this popup's one truth (see [WgLink]).
      *  Blocking (engine binder). [vpnTransport] only explains an OFF. */
@@ -123,8 +128,16 @@ object NetworkInfoPopup {
         val sections = HashMap<String, View>()
         fun mark(key: String, v: View): View { sections[key] = v; return v }
 
-        // The sections, keyed; laid out below in NetworkSections.ORDER — the strip's icon order.
-        val gap = { container.addView(spacer(ctx, (6 * d).toInt())) }
+        // The sections, keyed; laid out below by NetworkSections.layout — the strip's icon order,
+        // a divider between each two. Each header carries its "Settings ›" link (NetworkSections.SETTINGS).
+        fun header(key: String, row: View): View {
+            val t = NetworkSections.SETTINGS.getValue(key)
+            (row as? LinearLayout)?.addView(linkRow(ctx, t.label) { dismiss(); openTarget(ctx, t, MobileProbe.defaultDataSubId()) }
+                .apply { setPadding((10 * d).toInt(), paddingTop, 0, paddingBottom) })
+            return mark(key, row)
+        }
+        val grant: () -> Unit = { dismiss(); openTarget(ctx, NetworkSections.PERMISSIONS) }
+        var gpsSession: GpsProbe.LiveSession? = null
         val openAdbShell: () -> Unit = {
             dismiss()
             // Configs › Network › ADB Shell inside the shell; the lib's own activity anywhere else.
@@ -136,35 +149,35 @@ object NetworkInfoPopup {
         val section = mapOf<String, () -> Unit>(
         // ── Cellular
         CELLULAR to {
-        container.addView(mark(CELLULAR, lightRow(ctx, "Cellular", hasTransport(ctx, NetworkCapabilities.TRANSPORT_CELLULAR)) {
+        val cellular = hasTransport(ctx, NetworkCapabilities.TRANSPORT_CELLULAR)
+        container.addView(header(CELLULAR, lightRow(ctx, "Cellular", cellular) {
             dismiss(); openSettings(ctx,
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Settings.Panel.ACTION_INTERNET_CONNECTIVITY
                 else Settings.ACTION_WIRELESS_SETTINGS)
         }))
-        for (row in readCellular(ctx, sample, prev)) container.addView(valueSmall(ctx, row))
-        gap()
+        CellularSection.render(ctx, container, cellular,
+            listOf("Rate: " + fmtRate(sample.mobileRx, sample.mobileTx, prev?.mobileRx, prev?.mobileTx, sample.tsMs, prev?.tsMs)),
+            ::valueSmall, ::linkRow, ::group, grant)
         },
 
         // ── WiFi
         WIFI to {
-        container.addView(mark(WIFI, lightRow(ctx, "WiFi", wifiEnabled(ctx)) {
+        container.addView(header(WIFI, lightRow(ctx, "WiFi", wifiEnabled(ctx)) {
             dismiss(); openSettings(ctx,
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Settings.Panel.ACTION_WIFI
                 else Settings.ACTION_WIFI_SETTINGS)
         }))
         for (row in readWifi(ctx, sample, prev)) container.addView(valueSmall(ctx, row))
-        gap()
         },
 
         // ── Bluetooth — adapter light, then the connected devices (name, profiles, battery) and their
         //    count: the same BtLinks reading the strip's BT icon + dots are drawn from.
         BLUETOOTH to {
         val bt = BtLinks.read(ctx)
-        container.addView(mark(BLUETOOTH, lightRow(ctx, "Bluetooth", bt.adapterOn) {
+        container.addView(header(BLUETOOTH, lightRow(ctx, "Bluetooth", bt.adapterOn) {
             dismiss(); openSettings(ctx, Settings.ACTION_BLUETOOTH_SETTINGS)
         }))
         for (row in BtLinks.lines(bt)) container.addView(valueSmall(ctx, row))
-        gap()
         },
 
         // ── Mesh — header carries one status light PER mesh (wg0 + wg-public
@@ -173,7 +186,7 @@ object NetworkInfoPopup {
         //    a labelled block per mesh: endpoint, last talk, key, IP range.
         MESH to {
         val meshes = meshList(ctx)
-        container.addView(mark(MESH, meshHeaderRow(ctx, meshes) { dismiss(); toggleMesh(ctx) }))
+        container.addView(header(MESH, meshHeaderRow(ctx, meshes) { dismiss(); toggleMesh(ctx) }))
         val meshUp = meshUp(ctx)
         val stats = if (meshUp) runCatching { WgState.backend(ctx).getStatistics(WgState.tunnel) }.getOrNull() else null
         // The same reading the strip's WG icon + dots are drawn from, with its reason spelled out.
@@ -189,7 +202,6 @@ object NetworkInfoPopup {
                 for (row in meshDetail(m, stats)) container.addView(valueSmall(ctx, row))
             }
         }
-        gap()
         },
 
         // ── KDE Connect — status + connected device count; tap → KDE configs.
@@ -200,11 +212,10 @@ object NetworkInfoPopup {
         val kdeTotal = runCatching {
             com.diegonmarcos.superapp.kdeconnect.KdeConnectConfig.get().devices.size
         }.getOrDefault(0)
-        container.addView(mark(KDE, lightRow(ctx, "KDE Connect", kdeConn > 0) {
+        container.addView(header(KDE, lightRow(ctx, "KDE Connect", kdeConn > 0) {
             dismiss(); (ctx as? com.diegonmarcos.superapp.ShellActivity)?.openSectionPage("config", "kde")
         }))
         container.addView(valueSmall(ctx, "$kdeConn / $kdeTotal device(s) connected"))
-        gap()
         },
 
         // ── ADB — USB / Wireless debugging + the privileged shell channel.
@@ -212,38 +223,44 @@ object NetworkInfoPopup {
         val adb = AdbSection.read(ctx)
         // The light opens the ADB Shell page too: every place that would switch debugging or the
         // channel hands off to that one page (test-adb-shell-one-place.sh), never to Developer options.
-        container.addView(mark(ADB, lightRow(ctx, "ADB", adb.usb || adb.wireless, openAdbShell)))
+        container.addView(header(ADB, lightRow(ctx, "ADB", adb.usb || adb.wireless, openAdbShell)))
         AdbSection.render(ctx, adb, container, ::valueSmall)
         container.addView(linkRow(ctx, "ADB Shell ›", openAdbShell))
-        gap()
         },
 
         // ── Data (USB-C cable in a data mode, or OTG host)
         DATA to {
-        container.addView(mark(DATA, lightRow(ctx, "Data", usb.data) {
-            dismiss(); openUsbSettings(ctx)
+        container.addView(header(DATA, lightRow(ctx, "Data", usb.data) {
+            dismiss(); openTarget(ctx, NetworkSections.SETTINGS.getValue(DATA))
         }))
         for (row in readUsb(ctx, usb)) container.addView(valueSmall(ctx, row))
-        gap()
         },
 
         // ── Hotspot / tethering
         HOTSPOT to {
         val tether = readTether(ctx, usb)
-        container.addView(mark(HOTSPOT, lightRow(ctx, "Hotspot", tether.active) {
-            dismiss(); openTetherSettings(ctx)
-        }))
+        val tetherSettings = { dismiss(); openTarget(ctx, NetworkSections.SETTINGS.getValue(HOTSPOT)) }
+        container.addView(header(HOTSPOT, lightRow(ctx, "Hotspot", tether.active, tetherSettings)))
         HotspotSection.render(ctx, tether, container, ::valueSmall)
         container.addView(buttonRow(ctx,
-            "Tethering settings ›" to { dismiss(); openTetherSettings(ctx) },
+            "Tethering settings ›" to tetherSettings,
             "ADB Shell ›" to openAdbShell))
-        gap()
+        },
+
+        // ── GPS — location switch, providers, fix and satellites; live GNSS only while on screen.
+        GPS to {
+        val locationSettings = { dismiss(); openTarget(ctx, NetworkSections.SETTINGS.getValue(GPS)) }
+        container.addView(header(GPS, lightRow(ctx, "GPS", GpsProbe.locationOn(ctx), locationSettings)))
+        gpsSession = GpsSection.render(ctx, container, ::valueSmall, ::linkRow, ::group, grant, locationSettings)
         },
         )
-        NetworkSections.inOrder(section).forEach { it() }
+        for (item in NetworkSections.layout()) when (item) {
+            is NetworkSections.Item.Divider -> container.addView(divider(ctx))
+            is NetworkSections.Item.Section -> section.getValue(item.key)()
+        }
 
         // ── 8. Network (DNS + private IPs)
-        container.addView(label(ctx, "Network"))
+        container.addView(sectionTitle(ctx, "Network"))
         for (row in readNetwork(ctx)) container.addView(valueSmall(ctx, row))
 
         // Nine sections outgrow a phone screen: the bubble scrolls, capped at
@@ -269,6 +286,18 @@ object NetworkInfoPopup {
             elevation = 8 * d
         }
         popup = pw  // so a light-indicator tap can dismiss before deep-linking
+        // Live GNSS (the only location request the popup makes) runs while the GPS section is on
+        // screen: started when it scrolls into view, stopped when it leaves or the bubble closes.
+        gpsSession?.let { gs ->
+            val target = sections[GPS]
+            val check = {
+                val r = android.graphics.Rect()
+                if (pw.isShowing && target != null && target.getLocalVisibleRect(r)) gs.start() else gs.stop()
+            }
+            scroll.viewTreeObserver.addOnScrollChangedListener { check() }
+            scroll.post { check() }
+            pw.setOnDismissListener { gs.stop() }
+        }
         // Pin the BOX's LEFT EDGE to the screen's left edge,
         // matching Battery/SysInfo's right-edge alignment on the
         // other side. We stay on showAsDropDown (the same vertical
@@ -297,7 +326,7 @@ object NetworkInfoPopup {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
-        row.addView(label(ctx, title))
+        row.addView(sectionTitle(ctx, title))
         val dot = View(ctx).apply {
             val sz = (10 * d).toInt()
             layoutParams = LinearLayout.LayoutParams(sz, sz)
@@ -354,7 +383,7 @@ object NetworkInfoPopup {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             isClickable = true; setOnClickListener { onTap() }
         }
-        row.addView(label(ctx, "Mesh"))
+        row.addView(sectionTitle(ctx, "Mesh"))
         for (m in meshes) {
             val fresh = peerHandshakeFresh(ctx, m.pubkey)
             val dotBg = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(if (fresh) green else amber) }
@@ -479,35 +508,6 @@ object NetworkInfoPopup {
     }
 
     // ─────────────────────────── Cellular ───────────────────────────
-
-    private fun readCellular(ctx: Context, now: Sample, prev: Sample?): List<String> {
-        val rows = mutableListOf<String>()
-        val tm = ctx.applicationContext.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
-        if (tm == null) { rows += "—"; return rows }
-        val carrier = tm.networkOperatorName?.takeIf { it.isNotBlank() } ?: "—"
-        @Suppress("DEPRECATION")
-        val type = networkTypeLabel(runCatching { tm.networkType }.getOrDefault(TelephonyManager.NETWORK_TYPE_UNKNOWN))
-        rows += "$carrier · $type"
-        // Signal — TelephonyManager.signalStrength (API 28+). Pre-28
-        // we can only show "—" without the deprecated PhoneStateListener
-        // dance, which we deliberately avoid for a one-shot popup.
-        // Signal of the DATA SIM (the one the strip's dots follow), as the same 0..4 level.
-        if (Build.VERSION.SDK_INT >= 28) {
-            val sub = runCatching { android.telephony.SubscriptionManager.getDefaultDataSubscriptionId() }.getOrDefault(-1)
-            val dataTm = if (sub >= 0) runCatching { tm.createForSubscriptionId(sub) }.getOrDefault(tm) else tm
-            val ss = runCatching { dataTm.signalStrength }.getOrNull()
-            if (ss != null) {
-                val lvl = SignalLevels.label(SignalLevels.cell(ss.level))
-                val dbm = runCatching {
-                    ss.cellSignalStrengths.firstOrNull()?.dbm
-                }.getOrNull()
-                rows += if (dbm != null) "Signal $lvl ($dbm dBm)" else "Signal $lvl"
-            }
-        }
-        // Mobile rate from TrafficStats delta.
-        rows += "Rate: " + fmtRate(now.mobileRx, now.mobileTx, prev?.mobileRx, prev?.mobileTx, now.tsMs, prev?.tsMs)
-        return rows
-    }
 
     private fun networkTypeLabel(t: Int): String = when (t) {
         TelephonyManager.NETWORK_TYPE_LTE -> "LTE"
@@ -685,12 +685,6 @@ object NetworkInfoPopup {
         }
     }.getOrNull()
 
-    /** USB preferences (the "Use USB for" screen) where the build exposes it, else Connected devices, else Settings. */
-    private fun openUsbSettings(ctx: Context) = openFirst(ctx,
-        Intent().setClassName("com.android.settings", "com.android.settings.Settings\$UsbDetailsActivity"),
-        Intent("android.settings.CONNECTED_DEVICE_SETTINGS"),
-        Intent(Settings.ACTION_SETTINGS))
-
     // ─────────────────────────── Hotspot / tethering ───────────────────────────
 
     /** Sticky TETHER_STATE_CHANGED + WIFI_AP_STATE_CHANGED + the USB tethering function. No permission. */
@@ -705,19 +699,55 @@ object NetworkInfoPopup {
         )
     }
 
-    /** System tethering settings. There is no public action for it: the Settings component names
-     *  (AOSP + Samsung) first, then the network panel, then Settings. */
-    private fun openTetherSettings(ctx: Context) = openFirst(ctx,
-        Intent().setClassName("com.android.settings", "com.android.settings.TetherSettings"),
-        Intent().setClassName("com.android.settings", "com.android.settings.Settings\$TetherSettingsActivity"),
-        Intent(Settings.ACTION_WIRELESS_SETTINGS),
-        Intent(Settings.ACTION_SETTINGS))
-
-    private fun openFirst(ctx: Context, vararg tries: Intent) {
-        for (i in tries) {
-            if (runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
+    /**
+     * The one way a section's link opens its settings: an in-app page through its section/page
+     * route (the shell's own navigation, or MainActivity's page: shortcut from anywhere else), or
+     * the first Android screen of the target's chain that resolves on this build. Never throws.
+     */
+    private fun openTarget(ctx: Context, t: NetworkSections.Target, subId: Int = -1) {
+        when (t) {
+            is NetworkSections.Target.InApp -> openInApp(ctx, t.section, t.page)
+            is NetworkSections.Target.System -> {
+                val pm = ctx.packageManager
+                for (step in t.tries) {
+                    val i = intentOf(step) ?: continue
+                    if (t.perSim && subId >= 0) i.putExtra(EXTRA_SUB_ID, subId)
+                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    if (runCatching { i.resolveActivity(pm) }.getOrNull() == null) continue
+                    if (runCatching { ctx.startActivity(i) }.isSuccess) return
+                }
+                Toast.makeText(ctx, "No system screen for that", Toast.LENGTH_SHORT).show()
+            }
         }
-        Toast.makeText(ctx, "No system screen for that", Toast.LENGTH_SHORT).show()
+    }
+
+    /** Settings.EXTRA_SUB_ID (API 29): the SIM the mobile network page opens on. */
+    private const val EXTRA_SUB_ID = "android.provider.extra.SUB_ID"
+
+    private fun intentOf(step: String): Intent? = when {
+        step.startsWith("action:") -> Intent(step.removePrefix("action:"))
+        step.startsWith("component:") -> step.removePrefix("component:").split('/', limit = 2)
+            .takeIf { it.size == 2 }?.let { Intent().setClassName(it[0], it[1]) }
+        else -> null
+    }
+
+    private fun shellOf(ctx: Context): com.diegonmarcos.superapp.ShellActivity? {
+        var c: Context? = ctx
+        while (c != null) {
+            if (c is com.diegonmarcos.superapp.ShellActivity) return c
+            c = (c as? android.content.ContextWrapper)?.baseContext
+        }
+        return null
+    }
+
+    private fun openInApp(ctx: Context, section: String, page: String) {
+        val shell = shellOf(ctx)
+        if (shell != null) { runCatching { shell.openSectionPage(section, page) }; return }
+        runCatching {
+            ctx.startActivity(Intent(ctx, com.diegonmarcos.superapp.MainActivity::class.java)
+                .putExtra("shortcut_action", "page:$section/$page")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+        }.onFailure { Toast.makeText(ctx, "Could not open that page", Toast.LENGTH_SHORT).show() }
     }
 
     /** Live USB-tether interface(s) named rndis / usb / ncm + their IPv4. */
@@ -926,8 +956,23 @@ object NetworkInfoPopup {
         for ((t, a) in actions) addView(linkRow(ctx, t, a))
     }
 
-    private fun spacer(ctx: Context, h: Int) = View(ctx).apply {
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, h)
+    /** A vertical block of rows a section refills in place (a SIM's lines, the live GPS fix). */
+    private fun group(ctx: Context) = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+
+    /** A section header: the label's look, bold. */
+    private fun sectionTitle(ctx: Context, t: String) = label(ctx, t).apply {
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
     }
+
+    /** The full-width 1 dp line between two sections, with 8 dp above the next header. */
+    private fun divider(ctx: Context) = View(ctx).apply {
+        val d = ctx.resources.displayMetrics.density
+        setBackgroundColor(DIVIDER)
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, maxOf(1, (1 * d).toInt())).apply {
+            topMargin = (6 * d).toInt(); bottomMargin = (8 * d).toInt()
+        }
+    }
+
+    /** The divider's colour: the on-surface white at ~25 %. */
+    private const val DIVIDER = 0x40FFFFFF
 }

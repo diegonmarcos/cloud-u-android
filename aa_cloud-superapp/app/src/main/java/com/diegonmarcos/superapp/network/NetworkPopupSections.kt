@@ -133,3 +133,102 @@ internal object HotspotSection {
     private const val SPLIT = "--neigh--"
     private fun dot(b: Boolean) = if (b) "on" else "off"
 }
+
+/**
+ * The network popup's Cellular section: the strip's own reading (MobileLink) spelled out, then
+ * every SIM (carrier + MCC/MNC, network, signal, mobile data, data roaming, voice over 5G / LTE,
+ * Wi-Fi calling, preferred network, 5G NSA / SA, RSRP / RSRQ / SINR). The public API answers first;
+ * the privileged switches (VoLTE / VoNR / Wi-Fi calling, preferred network mode) come through the
+ * fleet's shell channel when one is up and read "— needs ADB Shell" otherwise, as Hotspot does.
+ */
+internal object CellularSection {
+
+    fun render(
+        ctx: Context, into: LinearLayout, cellularTransport: Boolean, extra: List<String>,
+        row: (Context, String) -> TextView, link: (Context, String, () -> Unit) -> TextView,
+        group: (Context) -> LinearLayout, onGrant: () -> Unit,
+    ) {
+        val app = ctx.applicationContext
+        val inputs = runCatching { MobileProbe.read(app, cellularTransport) }
+            .getOrElse { MobileLink.Inputs(false, emptyList(), MobileLink.NO_SUB, cellularTransport) }
+        into.addView(row(ctx, MobileLink.stateLine(MobileLink.derive(inputs))))
+        val phone = MobileProbe.phoneGranted(app)
+        val blocks = inputs.sims.map { s ->
+            val isData = s.subId == inputs.defaultDataSubId && s.subId >= 0
+            val d = runCatching { MobileProbe.detail(app, s) }.getOrDefault(MobileLink.Detail())
+            val box = group(ctx)
+            fill(ctx, box, MobileLink.simLines(s, isData, phone, d), row)
+            into.addView(box)
+            Block(s, isData, d, box)
+        }
+        if (!phone) {
+            into.addView(row(ctx, "Phone permission not granted: other SIMs, network types and carrier settings read —"))
+            into.addView(link(ctx, "Grant ›", onGrant))
+        }
+        for (e in extra) into.addView(row(ctx, e))
+        val todo = blocks.filter { b -> b.sim.subId >= 0 && (b.d.volte == null || b.d.wfc == null || b.d.vonr == null || b.d.preferredMode == null) }
+        if (todo.isEmpty()) return
+        Thread {
+            val ch = runCatching { ShellChannels.active(app) }.getOrNull()
+            val out = ch?.let { c -> runCatching { c.exec(app, MobileProbe.shellCommand(todo.map { it.sim.subId })) }.getOrNull() }
+            for (b in todo) {
+                val d2 = if (out.isNullOrBlank()) b.d.copy(needsShell = ch == null) else MobileProbe.withShell(b.d, out, b.sim.subId)
+                val lines = MobileLink.simLines(b.sim, b.isData, phone, d2)
+                b.box.post { fill(ctx, b.box, lines, row) }
+            }
+        }.start()
+    }
+
+    private class Block(val sim: MobileLink.Sim, val isData: Boolean, val d: MobileLink.Detail, val box: LinearLayout)
+
+    private fun fill(ctx: Context, box: LinearLayout, lines: List<String>, row: (Context, String) -> TextView) {
+        box.removeAllViews()
+        for (l in lines) box.addView(row(ctx, l))
+    }
+}
+
+/**
+ * The network popup's GPS section: the location switch and mode, the providers, the permission,
+ * the current / last fix (source, accuracy, age), the GNSS constellations in view / used with
+ * their bands, and whether the receiver is dual-frequency. The live part (GNSS fixes + satellite
+ * status) is a [GpsProbe.LiveSession] the popup runs only while this section is on screen.
+ */
+internal object GpsSection {
+
+    /** Renders into [into]; returns the live session for the popup to start / stop, or null when none can run. */
+    fun render(
+        ctx: Context, into: LinearLayout,
+        row: (Context, String) -> TextView, link: (Context, String, () -> Unit) -> TextView,
+        group: (Context) -> LinearLayout, onGrant: () -> Unit, onSettings: () -> Unit,
+    ): GpsProbe.LiveSession? {
+        val app = ctx.applicationContext
+        val on = GpsProbe.locationOn(app)
+        into.addView(row(ctx, "Location: " + if (on) "ON · mode ${GpsFix.modeName(GpsProbe.mode(app))}" else "OFF"))
+        into.addView(row(ctx, GpsProbe.providersLine(app)))
+        GpsProbe.scanningLine(app)?.let { into.addView(row(ctx, it)) }
+        val fine = GpsProbe.fineGranted(app)
+        if (!fine) {
+            into.addView(row(ctx, if (GpsProbe.coarseGranted(app)) "Permission: approximate only — satellites and GNSS fixes need precise location"
+                else "Permission: location not granted — fix and satellites read —"))
+            into.addView(link(ctx, "Grant ›", onGrant))
+        }
+        val live = group(ctx)
+        into.addView(live)
+        var session: GpsProbe.LiveSession? = null
+        fun paint() {
+            live.removeAllViews()
+            val s = session
+            val loc = s?.fix ?: GpsProbe.lastKnown(app)
+            val f = loc?.let { GpsProbe.fixOf(it, usedSats = if (it.provider == "gps") s?.usedSats() else null) }
+            val sats = s?.sats.orEmpty()
+            live.addView(row(ctx, "Fix quality ${SignalLevels.label(GpsFix.dots(on, f))}"))
+            live.addView(row(ctx, GpsFix.fixLine(f)))
+            for (l in GpsFix.satelliteLines(sats, f, s?.running == true)) live.addView(row(ctx, l))
+            for (l in GpsProbe.capabilityLines(app, GpsFix.dualFrequencySeen(sats))) live.addView(row(ctx, l))
+        }
+        session = if (fine && on) GpsProbe.LiveSession(app) { paint() } else null
+        paint()
+        into.addView(link(ctx, "Location settings ›", onSettings))
+        return session
+    }
+}
