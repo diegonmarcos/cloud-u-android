@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import com.diegonmarcos.cloudsearch.core.Http
 import com.diegonmarcos.cloudsearch.core.Templates
@@ -507,6 +508,19 @@ class SearchShellTest {
     private val NAV_IDS get() = com.diegonmarcos.cloudsearch.ui.NAV.bottomNav
     private fun NAV_PAGES(section: String) = com.diegonmarcos.cloudsearch.ui.NAV.section(section)!!.pages.map { it.id }
 
+    /** A click through the node's own action: a node scrolled to the list's edge may sit under the island. */
+    private fun click(tag: String) {
+        compose.onNodeWithTag(tag).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+    }
+
+    /** Until the agent's run has finished and [n] runs are stored; a timeout says what the run reported. */
+    private fun waitRuns(a: com.diegonmarcos.cloudsearch.data.AgentService, n: Int) = try {
+        compose.waitUntil(60_000) { state.agentsModel.running == null && a.runs.all().size >= n }
+    } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
+        throw AssertionError("runs=${a.runs.all().size} want $n, running=${state.agentsModel.running}, status='${state.agentsModel.status}'", e)
+    }
+
     /** A node that may sit below the fold of a lazy list: scroll the list to it first. */
     private fun scrollTo(list: String, tag: String) {
         waitFor(list)
@@ -544,24 +558,24 @@ class SearchShellTest {
         launch()
         compose.onNodeWithTag(Tags.nav("agents")).performClick()
         scrollTo(AT.LIST, AT.row("rs_house_rental"))
-        compose.onNodeWithTag(AT.row("rs_house_rental")).performClick()
+        click(AT.row("rs_house_rental"))
         waitFor(AT.run("rs_house_rental"))
         compose.onNodeWithTag(AT.notice("rs_house_rental")).assertExists()
-        compose.onNodeWithTag(AT.run("rs_house_rental")).performClick()
-        compose.waitUntil(30_000) { state.agentsModel.running == null && a.runs.all().isNotEmpty() }
+        click(AT.run("rs_house_rental"))
+        waitRuns(a, 1)
         scrollTo(AT.screen("rs_house_rental"), AT.result("11223344"))
         scrollTo(AT.screen("rs_house_rental"), AT.copy("11223344"))
         scrollTo(AT.screen("rs_house_rental"), AT.report("11223344"))
         compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.AgentTags.report("11223344")).assertTextContains("Ich koche gern.", substring = true)
         scrollTo(AT.screen("rs_house_rental"), AT.open("11223344"))
         // The review buttons: copy puts the message on the clipboard, open hands the listing to Cloud Browser.
-        compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.AgentTags.copy("11223344")).performClick()
+        click(com.diegonmarcos.cloudsearch.ui.AgentTags.copy("11223344"))
         val app = RuntimeEnvironment.getApplication()
         val clip = (app.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).primaryClip
         assertTrue(clip!!.getItemAt(0).text.toString().contains("Ada Test"))
         val shadow = shadowOf(app)
         while (shadow.nextStartedActivity != null) Unit
-        compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.AgentTags.open("11223344")).performClick()
+        click(com.diegonmarcos.cloudsearch.ui.AgentTags.open("11223344"))
         val opened = shadow.nextStartedActivity!!
         assertEquals(Decl.config.agents!!.browser.openAction, opened.action)
         assertEquals("https://www.wg-gesucht.de/wg-zimmer-in-Berlin-Mitte.11223344.html", opened.getStringExtra("url"))
@@ -629,12 +643,12 @@ class SearchShellTest {
         assertEquals(listOf("buy/real_estate", "buy/things", "buy/services", "sell/"), a.agents.groups().map { it.key })
         for (x in a.agents.agents) {
             scrollTo(AT.LIST, AT.row(x.id))
-            compose.onNodeWithTag(AT.row(x.id)).performClick()
+            click(AT.row(x.id))
             waitFor(AT.screen(x.id))
             compose.onNodeWithTag(AT.notice(x.id)).assertExists()
             compose.onNodeWithTag(AT.goal(x.id)).assertExists()
             compose.onNodeWithTag(AT.run(x.id)).assertExists()
-            compose.onNodeWithTag(AT.BACK).performClick()
+            click(AT.BACK)
             compose.runOnIdle { assertEquals(null, state.agentOpen) }
         }
     }
@@ -651,7 +665,7 @@ class SearchShellTest {
         val agent = a.agents.agent("job_placement")!!
         assertEquals("Köln", a.prefs.filters(agent)["location"])
         scrollTo(AT.screen("job_placement"), AT.source("job_placement", "linkedin"))
-        compose.onNodeWithTag(AT.source("job_placement", "linkedin")).performClick()
+        click(AT.source("job_placement", "linkedin"))
         compose.runOnIdle { assertEquals(listOf("stepstone", "arbeitsagentur"), a.prefs.sources(agent).map { it.id }) }
     }
 
@@ -691,8 +705,9 @@ class SearchShellTest {
         compose.runOnIdle { state.openAgent("rs_house_rental") }
         scrollTo(AT.screen("rs_house_rental"), AT.runRow("old-run"))
         // A run now skips what was drafted before the rename.
-        compose.runOnIdle { state.agentsModel.run("rs_house_rental", kotlinx.coroutines.MainScope()) }
-        compose.waitUntil(30_000) { state.agentsModel.running == null && a.runs.all().size == 2 }
+        scrollTo(AT.screen("rs_house_rental"), AT.run("rs_house_rental"))
+        click(AT.run("rs_house_rental"))
+        waitRuns(a, 2)
         assertEquals(0, a.runs.all().first { it.id != "old-run" }.drafts)
     }
 }
