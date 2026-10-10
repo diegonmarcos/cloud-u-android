@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.updater
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
@@ -15,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.work.ForegroundInfo
+import com.diegonmarcos.superapp.core.SilentChannels
 import com.diegonmarcos.superapp.core.StoreNotifyGate
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -111,11 +111,10 @@ object BatchForeground {
     private fun nm(ctx: Context) = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     fun notification(ctx: Context): Notification {
-        val nm = nm(ctx)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm.getNotificationChannel(CHANNEL) == null)
-            nm.createNotificationChannel(NotificationChannel(CHANNEL, "Store downloads", NotificationManager.IMPORTANCE_LOW))
+        // A pure progress line: MIN and silent in Cloud Store (a new "_silent_v2" channel), LOW elsewhere.
+        val channel = SilentChannels.ensure(ctx, CHANNEL, "Store downloads", NotificationManager.IMPORTANCE_LOW, progress = true)
         val line = runCatching { text() }.getOrNull() ?: "working…"
-        val b = NotificationCompat.Builder(ctx, CHANNEL)
+        val b = NotificationCompat.Builder(ctx, channel)
             .setSmallIcon(icon())
             .setContentTitle(ctx.applicationInfo.loadLabel(ctx.packageManager))
             .setContentText(line)

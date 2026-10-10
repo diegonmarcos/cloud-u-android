@@ -1,12 +1,10 @@
 package com.diegonmarcos.superapp.core
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -150,16 +148,16 @@ object FleetAlerts {
      *  repeat replaces it here exactly as it would in the SuperApp. */
     private fun postLocally(ctx: Context, a: Alert): Boolean = runCatching {
         val nm = nm(ctx)
-        if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(FALLBACK_CHANNEL) == null)
-            nm.createNotificationChannel(NotificationChannel(
-                FALLBACK_CHANNEL, ctx.getString(R.string.fleet_alerts_channel),
-                NotificationManager.IMPORTANCE_DEFAULT))
+        // Silent in Cloud Store (a new "_silent_v2" channel, LOW), unchanged in every other app.
+        val channel = SilentChannels.ensure(ctx, FALLBACK_CHANNEL, ctx.getString(R.string.fleet_alerts_channel),
+            NotificationManager.IMPORTANCE_DEFAULT)
         val tag = a.dedupeKey.ifBlank { a.title }
         val pi = intentFor(ctx, ctx.packageName, a.deepLink, null)?.let {
             PendingIntent.getActivity(ctx, tag.hashCode(), it,
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         }
-        nm.notify(tag, LOCAL_ID, NotificationCompat.Builder(ctx, FALLBACK_CHANNEL)
+        nm.notify(tag, LOCAL_ID, NotificationCompat.Builder(ctx, channel)
+            .apply { SilentChannels.quiet(ctx, this) }
             .setSmallIcon(R.drawable.core_ic_fleet_alert)
             .setContentTitle(a.title)
             .setContentText(a.text)

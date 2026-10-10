@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.adbdebug
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
@@ -12,6 +11,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.diegonmarcos.superapp.core.SilentChannels
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 
 /**
@@ -27,13 +27,14 @@ import com.diegonmarcos.superapp.devtools.AppDebugServer
  */
 class HostShellService : Service() {
     @Volatile private var loop: Thread? = null
+    private var channel = CHANNEL_ID
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.createNotificationChannel(NotificationChannel(CHANNEL_ID, "Cloud shell channel",
-            NotificationManager.IMPORTANCE_MIN).apply { setShowBadge(false) })
+        // A keep-alive line: MIN and silent in Cloud Store (a new "_silent_v2" channel), as before elsewhere.
+        channel = SilentChannels.ensure(this, CHANNEL_ID, "Cloud shell channel", NotificationManager.IMPORTANCE_MIN,
+            progress = true) { setShowBadge(false) }
         runCatching {
             if (Build.VERSION.SDK_INT >= 34)
                 startForeground(NOTIF_ID, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
@@ -62,12 +63,13 @@ class HostShellService : Service() {
     }
 
     private fun notification(): Notification =
-        NotificationCompat.Builder(this, CHANNEL_ID)
+        NotificationCompat.Builder(this, channel)
             .setSmallIcon(applicationInfo.icon)
             .setContentTitle("Cloud shell channel")
             .setContentText("Keeps the shell channel and the debug server up")
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
             .setSilent(true)
             .build()
 

@@ -3,8 +3,6 @@ package com.diegonmarcos.superapp.updater
 import com.diegonmarcos.superapp.updater.cache.ApkCache
 import com.diegonmarcos.superapp.updater.install.InstallGate
 import android.app.ActivityManager
-import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -14,8 +12,10 @@ import android.content.pm.PackageInstaller
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import androidx.core.app.NotificationCompat
 import com.diegonmarcos.superapp.core.FleetAlerts
 import com.diegonmarcos.superapp.core.NotificationStore
+import com.diegonmarcos.superapp.core.SilentChannels
 import com.diegonmarcos.superapp.core.StoreNotifyGate
 
 /**
@@ -421,13 +421,13 @@ class PackageInstallerReceiver : BroadcastReceiver() {
     private fun notifyConfirm(context: Context, confirm: Intent, subject: String): Boolean =
         StoreNotifyGate.mayPost(context) && runCatching {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                nm.createNotificationChannel(
-                    NotificationChannel(NOTIF_CHANNEL, "Updater", NotificationManager.IMPORTANCE_HIGH))
+            // Silent in Cloud Store (a new "_silent_v2" channel, LOW: no sound, no pop-up), unchanged elsewhere.
+            val channel = SilentChannels.ensure(context, NOTIF_CHANNEL, "Updater", NotificationManager.IMPORTANCE_HIGH)
             var flags = PendingIntent.FLAG_UPDATE_CURRENT
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags = flags or PendingIntent.FLAG_IMMUTABLE
             val pi = PendingIntent.getActivity(context, NOTIF_ID + 1, confirm, flags)
-            val notif = Notification.Builder(context, NOTIF_CHANNEL)
+            val notif = NotificationCompat.Builder(context, channel)
+                .apply { SilentChannels.quiet(context, this) }
                 .setContentTitle("$subject — tap to finish installing")
                 .setContentText("Android needs one tap from you to confirm this install.")
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
@@ -437,7 +437,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
             nm.notify(NOTIF_ID + 1, notif)
             nm.areNotificationsEnabled() &&
                 (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
-                    nm.getNotificationChannel(NOTIF_CHANNEL)?.importance != NotificationManager.IMPORTANCE_NONE)
+                    nm.getNotificationChannel(channel)?.importance != NotificationManager.IMPORTANCE_NONE)
         }.getOrDefault(false)
 
     /** #894 True the first time this exact failure (package, build, reason) is seen. */

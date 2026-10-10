@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.adbdebug
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
@@ -11,6 +10,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
+import com.diegonmarcos.superapp.core.SilentChannels
 import java.net.InetAddress
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -41,14 +41,14 @@ class AdbPairingService : Service() {
     @Volatile private var port = 0
     @Volatile private var pendingCode: String? = null
     @Volatile private var busy = false
+    private var channel = CHANNEL_ID
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.createNotificationChannel(NotificationChannel(
-            CHANNEL_ID, "Wireless debugging pairing", NotificationManager.IMPORTANCE_HIGH))
+        // Silent in Cloud Store (a new "_silent_v2" channel, LOW: no sound, no pop-up), unchanged elsewhere.
+        channel = SilentChannels.ensure(this, CHANNEL_ID, "Wireless debugging pairing", NotificationManager.IMPORTANCE_HIGH)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -151,7 +151,8 @@ class AdbPairingService : Service() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(
             RESULT_ID,
-            NotificationCompat.Builder(this, CHANNEL_ID)
+            NotificationCompat.Builder(this, channel)
+                .apply { SilentChannels.quiet(this@AdbPairingService, this) }
                 .setSmallIcon(applicationInfo.icon)
                 .setContentTitle("Wireless debugging")
                 .setContentText(text)
@@ -169,7 +170,8 @@ class AdbPairingService : Service() {
             this, 2, Intent(this, AdbPairingService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val input = RemoteInput.Builder(KEY_CODE).setLabel("Pairing code").build()
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat.Builder(this, channel)
+            .apply { SilentChannels.quiet(this@AdbPairingService, this) }
             .setSmallIcon(applicationInfo.icon)
             .setContentTitle("Wireless debugging pairing")
             .setContentText(text)

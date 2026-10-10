@@ -10,6 +10,7 @@ import com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge
 import com.diegonmarcos.superapp.appstore.StoreDns
 import com.diegonmarcos.superapp.apps.StoreShelves
 import com.diegonmarcos.superapp.appstore.StoreDebugApi
+import com.diegonmarcos.superapp.core.SilentChannels
 
 /**
  * #865 Cloud Store: hosts libs:appstore as its own app.
@@ -23,6 +24,10 @@ import com.diegonmarcos.superapp.appstore.StoreDebugApi
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
+        // Cloud Store's notifications are silent (libs:core SilentChannels): it posts on new "_silent_v2"
+        // channels, and the old ones, whose sound Android will not let an app change, are deleted here,
+        // before any service or worker of this process can post.
+        runCatching { SilentChannels.retireLegacy(this) }.onFailure { Log.w(TAG, "old channels not retired", it) }
         AppStoreHost.apply {
             launchActivity = MainActivity::class.java
             notificationIcon = R.drawable.ic_stat_notify
