@@ -51,7 +51,12 @@ class AgentService(
         val d = agents.defaults
         val settings = DraftRunner.Settings(d.maxMails, prefs.maxListings, prefs.lookbackDays, d.pageChars, d.personalMaxWords, d.maxTokens)
         val runner = DraftRunner(mail, pages, llm, ledger, clock) { UUID.randomUUID().toString() }
-        val out = runner.run(DraftRunner.Input(agent, prefs.templateBody(agent.template), prefs.profile(), settings, prefs.seen(agent.id), model, pricing(model)))
+        val out = runner.run(
+            DraftRunner.Input(
+                agent, prefs.templateBody(agent.template), prefs.profile(), settings, prefs.seen(agent.id), model, pricing(model),
+                filters = prefs.filters(agent), sources = prefs.sources(agent),
+            ),
+        )
         prefs.addSeen(agent.id, out.handled)
         runs.add(out.record)
         reports.publish(Reports.digest(agent, out))

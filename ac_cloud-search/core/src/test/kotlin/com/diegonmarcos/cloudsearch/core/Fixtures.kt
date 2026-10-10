@@ -11,8 +11,8 @@ object Fixtures {
         JSONObject(File(path).readText())
     }
 
-    /** build.json::search as a fresh object, so a test can edit its copy. */
-    fun searchJson(): JSONObject = JSONObject(buildJson.getJSONObject("search").toString())
+    /** build.json::search, with build.json::agents (the agents catalogue) under search.agents as Decl.kt puts it, as a fresh object a test can edit. */
+    fun searchJson(): JSONObject = SearchConfig.withAgents(buildJson.getJSONObject("search"), buildJson.optJSONObject("agents"))
 
     val cfg: SearchConfig by lazy { SearchConfig.parse(searchJson()) }
 

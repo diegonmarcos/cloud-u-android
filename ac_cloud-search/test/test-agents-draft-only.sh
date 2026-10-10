@@ -9,7 +9,9 @@
 #       request body, no WebView or script, no send/share/mailto/SMS intent, no form fill or click verb
 #   D2  the only POST in the whole app is a model call to OpenRouter's declared chat_url (core/agents/Llm.kt,
 #       and the existing chat's ChatFlow.kt): one `http.post(ai.chatUrl,` each, no other caller
-#   D3  every declared agent is mode draft_only and the parser refuses any other mode
+#   D3  every declared agent is mode draft_only and the parser refuses any other mode; #913b no agent or source
+#       declares an auto_* or action key (submit, send, apply, buy, ...), and the parser refuses one, and any key
+#       that is not on its list of an agent's keys
 #   D4  the agents' doors are read-only: MailSource has messages/body, PageSource has text, the browser is
 #       opened only through Ipc.openExtras with the declared open action, and nothing else is started
 #   D5  the review list offers Copy message and Open listing in Cloud Browser (and the person's own marks);
@@ -77,15 +79,27 @@ if os.path.isfile(os.path.join(C, "agents", "Llm.kt")) and '"tools"' in code(os.
 
 # D3
 bj = json.load(open(os.path.join(app, "build.json"), encoding="utf-8"))
-ag = bj["search"].get("agents") or {}
+ag = bj.get("agents") or {}  # #913b the catalogue lives in build.json::agents (Decl puts it back under search.agents)
 if not ag.get("agents"):
-    bad.append("D3 build.json::search.agents.agents is empty")
+    bad.append("D3 build.json::agents.agents is empty")
 for a in ag.get("agents") or []:
     if a.get("mode") != "draft_only":
         bad.append("D3 agent %s is mode %r — only draft_only exists" % (a.get("id"), a.get("mode")))
 cfg = code(os.path.join(C, "agents", "AgentsConfig.kt"))
 if not re.search(r'require\(a\.optString\("mode"\) == DRAFT_ONLY\)', cfg) or 'const val DRAFT_ONLY = "draft_only"' not in cfg:
     bad.append("D3 AgentsConfig does not refuse an agent that is not draft_only")
+acting = re.compile(r"^(auto|submit|send|apply|buy|post|checkout|order|book|pay|contact|reply)", re.I)
+for a in ag.get("agents") or []:
+    for k in a:
+        if acting.match(k):
+            bad.append("D3 agent %s declares %s — an agent drafts, it never acts" % (a.get("id"), k))
+    for src_ in a.get("sources") or []:
+        for k in src_:
+            if acting.match(k):
+                bad.append("D3 agent %s source %s declares %s — an agent drafts, it never acts" % (a.get("id"), src_.get("id"), k))
+if 'refuseActions(a, AGENT_KEYS,' not in cfg or 'refuseActions(s, SOURCE_KEYS,' not in cfg or "require(k in allowed)" not in cfg \
+        or not re.search(r'require\(!key\.startsWith\("auto"\) && key !in FORBIDDEN_KEYS', cfg):
+    bad.append("D3 AgentsConfig does not refuse an agent or source key that could make it act (auto_*, submit, send, ...)")
 
 # D4
 eng = code(os.path.join(C, "agents", "Engines.kt"))
@@ -204,7 +218,11 @@ mutate send-verb "$C/agents/Runner.kt" 's.replace("fun run(input: Input): Outcom
 mutate second-post "$J/data/AgentService.kt" 's.replace("val out = runner.run(", "http.post(\"https://x.example\", emptyMap(), \"\", 1); val out = runner.run(")' "D2 the POSTs in the app are"
 mutate post-elsewhere "$J/data/ChatFlow.kt" 's.replace("s.http.post(ai.chatUrl,", "s.http.post(ai.modelsUrl,")' "D2 the POSTs in the app are"
 mutate tools-in-llm "$C/agents/Llm.kt" 's.replace(".put(\"max_tokens\", req.maxTokens)", ".put(\"max_tokens\", req.maxTokens).put(\"tools\", JSONArray())")' "D2 the agents' model call carries tools"
-mutate auto-send-agent build.json 's.replace("\"mode\": \"draft_only\"", "\"mode\": \"auto_send\"")' "D3 agent house_search is mode 'auto_send'"
+mutate auto-send-agent build.json 's.replace("\"mode\": \"draft_only\"", "\"mode\": \"auto_send\"")' "D3 agent rs_house_purchase is mode 'auto_send'"
+mutate auto-submit-key build.json 's.replace("\"mode\": \"draft_only\",", "\"mode\": \"draft_only\",\n        \"auto_submit\": true,", 1)' "D3 agent rs_house_purchase declares auto_submit"
+mutate source-send-key build.json 's.replace("\"mail_subject\": \"kaufen\",", "\"mail_subject\": \"kaufen\",\n            \"send_to\": \"x\",", 1)' "D3 agent rs_house_purchase source immoscout24 declares send_to"
+mutate key-list-dropped "$C/agents/AgentsConfig.kt" 's.replace("require(k in allowed)", "require(true)")' "D3 AgentsConfig does not refuse an agent or source key"
+mutate action-keys-allowed "$C/agents/AgentsConfig.kt" 's.replace("require(!key.startsWith(\"auto\") && key !in FORBIDDEN_KEYS", "require(key !in emptySet<String>()")' "D3 AgentsConfig does not refuse an agent or source key"
 mutate mode-not-refused "$C/agents/AgentsConfig.kt" 's.replace("require(a.optString(\"mode\") == DRAFT_ONLY)", "require(true)")' "D3 AgentsConfig does not refuse"
 mutate mail-gets-a-send "$C/agents/Engines.kt" 's.replace("fun body(accountId: String, id: String): MailBody?", "fun body(accountId: String, id: String): MailBody?\n    fun deliver(to: String)")' "D4 MailSource is not exactly"
 mutate page-gets-a-form "$C/agents/Engines.kt" 's.replace("fun text(url: String, maxChars: Int): PageText", "fun text(url: String, maxChars: Int): PageText\n    fun fill(url: String)")' "D4 PageSource is not exactly"

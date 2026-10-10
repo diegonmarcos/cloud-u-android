@@ -2,10 +2,10 @@
   "_doc": "#797 THE list of Phosphor icons Cloud Search draws (the owner's mockup uses Phosphor). phosphor2vd.py fetches each SVG of `version` from the npm package @phosphor-icons/core (MIT, see NOTICE.md) and writes it as res/drawable/ph_<name with - as _>.xml; test/test-search-shell.sh S9 holds this list, the drawables on disk and every R.drawable.ph_* the Kotlin names to one another. To add an icon: add it here and run `python3 app/tools/phosphor2vd.py`.",
   "version": "2.1.1",
   "regular": [
-    "arrow-square-out", "arrow-up", "bird", "briefcase", "calculator", "caret-down", "chart-line-up",
-    "faders", "globe", "house", "key", "list", "list-dashes", "magnifying-glass", "map-pin", "moon",
+    "arrow-square-out", "arrow-up", "bird", "briefcase", "buildings", "calculator", "caret-down", "chart-line-up",
+    "faders", "globe", "handshake", "house", "key", "list", "list-dashes", "magnifying-glass", "map-pin", "moon",
     "package", "percent", "plus-circle", "robot", "seal-check", "share-network", "shield-check",
-    "shooting-star", "shopping-cart", "star", "sun", "user", "wallet", "warning", "x"
+    "shooting-star", "shopping-cart", "star", "storefront", "sun", "truck", "user", "user-circle", "wallet", "warning", "x"
   ],
   "fill": [
     "star"

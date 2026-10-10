@@ -248,47 +248,72 @@ if (bj.get("ui") or {}).get("style") != "search-html":
 vpages = code(os.path.join(app, "app/src/main/java/com/diegonmarcos/cloudsearch/ui/VerticalPages.kt"))
 if not re.search(r"PageTabs\(\s*pages = NAV\.section\(state\.sectionOf\(v\.id\)\)\?\.page\(v\.id\)", vpages):
     bad.append("S10 the vertical pages do not draw their sub-pages with PageTabs from the vertical's page in the NavDecl")
-if not re.search(r"PageTabs\(\s*pages = NAV\.section\(\"web\"\)", shell):
-    bad.append("S10 SearchShell does not draw Web Search's verticals with PageTabs from NAV.section(\"web\")")
+if not re.search(r"PageTabs\(\s*pages = NAV\.section\(section\)", shell) or not re.search(r"in state\.verticalSections -> VerticalsSection\(state, state\.section, v\)", shell):
+    bad.append("S10 SearchShell does not draw Me's and LLC's verticals with PageTabs from NAV.section(section)")
+# #913b Chat holds Search and the fleet searches that were the Cloud page: its strip is PageTabs, its pages dispatch to CloudPage.
+if not re.search(r"PageTabs\(\s*pages = NAV\.section\(\"chat\"\)", shell) or "else CloudPage(state, state.chatPage)" not in shell:
+    bad.append("S10 SearchShell does not draw Chat's strip (Search + Apps, Messages, Code) with PageTabs and CloudPage")
+cloudp = code(os.path.join(app, "app/src/main/java/com/diegonmarcos/cloudsearch/ui/CloudPages.kt"))
+for kind, fn in (("messages", "MessagesPage"), ("code", "CodePage")):
+    if not re.search(r'"%s" -> %s\(state, cloud\)' % (kind, fn), cloudp):
+        bad.append("S10 CloudPage does not open %s (%s) - a moved Cloud page is unreachable" % (kind, fn))
+if not re.search(r"else -> AppsPage\(state, cloud\)", cloudp):
+    bad.append("S10 CloudPage does not open apps (AppsPage) - a moved Cloud page is unreachable")
+# #937 + #913b a query from outside lands on Chat > Search whatever page Chat was on.
+ask = re.search(r"fun ask\(q: String, scope: CoroutineScope\) \{\s*openSection\(\"chat\"\)\s*chatPage = chatVertical", shell)
+if not ask:
+    bad.append("S10 SearchState.ask does not open Chat on Search (openSection(\"chat\"); chatPage = chatVertical)")
 gradle = open(os.path.join(app, "app", "build.gradle"), encoding="utf-8").read()
 for field in ("UI_BOTTOM_NAV", "UI_SECTIONS_B64", "UI_DEFAULT_SECTION", "UI_STYLE"):
     if field not in gradle:
         bad.append("S10 app/build.gradle does not bake %s" % field)
-# #913 the declaration: five island sections; Web Search's pages are the verticals (less the assistant's), each with its
-# subpages one strip lower; Chat is the assistant vertical; Cloud Search, Agents and Reports are pages of their own.
+# #913b the declaration: five island sections, Me, LLC, Chat, Agents, Reports. Every vertical but the assistant is a page of
+# exactly one of Me (personal) and LLC (commercial), each with its subpages one strip lower; Chat is Search (the assistant
+# vertical) then Apps, Messages and Code (once the Cloud page); Agents and Reports are pages of their own.
 ui, vs = bj.get("ui") or {}, bj["search"]["verticals"]
 secs = {x.get("id"): x for x in ui.get("sections") or []}
-if ui.get("bottom_nav") != ["web", "cloud", "chat", "agents", "reports"]:
-    bad.append("S10 ui.bottom_nav is not web, cloud, chat, agents, reports")
+if ui.get("bottom_nav") != ["me", "llc", "chat", "agents", "reports"]:
+    bad.append("S10 ui.bottom_nav is not me, llc, chat, agents, reports")
 if [x.get("id") for x in ui.get("sections") or []] != ui.get("bottom_nav"):
     bad.append("S10 ui.sections are not exactly the island's items, in order")
 labels = {q["id"]: q["label"] for q in bj["search"]["subpages"]}
 chat_v = [v for v in vs if any(kinds_.get(x) == "assistant" for x in v["subpages"])] if (kinds_ := {sp["id"]: sp["kind"] for sp in S["subpages"]}) else []
-web_v = [v for v in vs if v not in chat_v]
-web = secs.get("web") or {}
-if [q.get("id") for q in web.get("pages") or []] != [v["id"] for v in web_v]:
-    bad.append("S10 ui.sections[web] pages are not search.verticals (less the assistant), in order")
-for q, v in zip(web.get("pages") or [], web_v):
+rest_v = [v for v in vs if v not in chat_v]
+vert_pages = [q for sid in ("me", "llc") for q in (secs.get(sid) or {}).get("pages") or []]
+if sorted(q.get("id") for q in vert_pages) != sorted(v["id"] for v in rest_v):
+    bad.append("S10 ui.sections[me] and [llc] pages are not search.verticals (less the assistant), each exactly once")
+for sid in ("me", "llc"):
+    ids = [q.get("id") for q in (secs.get(sid) or {}).get("pages") or []]
+    if not ids:
+        bad.append("S10 ui.sections[%s] has no vertical" % sid)
+    if ids != [v["id"] for v in rest_v if v["id"] in ids]:
+        bad.append("S10 ui.sections[%s] pages are not in search.verticals order" % sid)
+byid = {v["id"]: v for v in rest_v}
+for q in vert_pages:
+    v = byid.get(q.get("id"))
+    if v is None:
+        continue
     if q.get("label") != v["label"]:
-        bad.append("S10 ui.sections[web] page %s label differs from search.verticals" % q.get("id"))
+        bad.append("S10 ui.sections page %s label differs from search.verticals" % q.get("id"))
     if len(v["subpages"]) > 1:
         if [z.get("id") for z in q.get("pages") or []] != v["subpages"]:
-            bad.append("S10 ui.sections[web] page %s subpages differ from search.verticals[%s]" % (q.get("id"), v["id"]))
+            bad.append("S10 ui.sections page %s subpages differ from search.verticals[%s]" % (q.get("id"), v["id"]))
         for z in q.get("pages") or []:
             if z.get("label") != labels.get(z.get("id")):
-                bad.append("S10 ui.sections[web] page %s/%s label differs from search.subpages" % (q.get("id"), z.get("id")))
+                bad.append("S10 ui.sections page %s/%s label differs from search.subpages" % (q.get("id"), z.get("id")))
     elif q.get("pages"):
-        bad.append("S10 ui.sections[web] page %s declares a second strip for a vertical with one subpage" % q.get("id"))
+        bad.append("S10 ui.sections page %s declares a second strip for a vertical with one subpage" % q.get("id"))
 chat = secs.get("chat") or {}
-if len(chat_v) != 1 or [q.get("id") for q in chat.get("pages") or []] != chat_v[0]["subpages"] or chat.get("icon") != chat_v[0].get("icon"):
-    bad.append("S10 ui.sections[chat] is not the assistant vertical's page and icon")
-if [q.get("id") for q in (secs.get("cloud") or {}).get("pages") or []] != ["apps", "messages", "code"]:
-    bad.append("S10 ui.sections[cloud] pages are not apps, messages, code")
+cpages = [q.get("id") for q in chat.get("pages") or []]
+if len(chat_v) != 1 or cpages[:1] != [chat_v[0]["id"]] or chat.get("icon") != chat_v[0].get("icon"):
+    bad.append("S10 ui.sections[chat] does not open on the assistant vertical (its id and icon)")
+if cpages[1:] != ["apps", "messages", "code"]:
+    bad.append("S10 ui.sections[chat] pages after Search are not apps, messages, code")
 if [q.get("id") for q in (secs.get("agents") or {}).get("pages") or []] != ["agents", "runs", "templates", "settings"]:
     bad.append("S10 ui.sections[agents] pages are not agents, runs, templates, settings")
 if [q.get("id") for q in (secs.get("reports") or {}).get("pages") or []] != ["reports"]:
     bad.append("S10 ui.sections[reports] pages are not reports")
-if ui.get("default_section") != ("chat" if S["default_vertical"] == (chat_v[0]["id"] if chat_v else "") else "web"):
+if ui.get("default_section") != ("chat" if S["default_vertical"] == (chat_v[0]["id"] if chat_v else "") else "me"):
     bad.append("S10 ui.default_section does not hold search.default_vertical")
 
 # S11
@@ -424,15 +449,20 @@ mutate fleet-island-back "$J/ui/SearchShell.kt" 's + "\nfun again() { BottomNavI
 mutate style-undeclared build.json 's.replace("\"style\": \"search-html\",", "\"style\": \"fleet\",")' "S10 build.json ui.style is not search-html"
 mutate style-not-baked app/build.gradle 's.replace("\"UI_STYLE\"", "\"UI_STYL\"")' "S10 app/build.gradle does not bake UI_STYLE"
 mutate strip-dropped "$J/ui/VerticalPages.kt" 's.replace("PageTabs(\n                pages = NAV.section(state.sectionOf", "SubNav(\n                pages = NAV.section(state.sectionOf")' "S10 the vertical pages do not draw their sub-pages with PageTabs"
-mutate web-strip-dropped "$J/ui/SearchShell.kt" 's.replace("PageTabs(\n                pages = NAV.section(\"web\")", "SubNav(\n                pages = NAV.section(\"web\")")' "S10 SearchShell does not draw Web Search"
+mutate web-strip-dropped "$J/ui/SearchShell.kt" 's.replace("PageTabs(\n                pages = NAV.section(section)", "SubNav(\n                pages = NAV.section(section)")' "S10 SearchShell does not draw Me's and LLC's"
+mutate chat-strip-dropped "$J/ui/SearchShell.kt" 's.replace("PageTabs(\n                pages = NAV.section(\"chat\")", "SubNav(\n                pages = NAV.section(\"chat\")")' "S10 SearchShell does not draw Chat's strip"
+mutate cloud-page-unreachable "$J/ui/SearchShell.kt" 's.replace("else CloudPage(state, state.chatPage)", "else Unit")' "S10 SearchShell does not draw Chat's strip"
+mutate messages-unreachable "$J/ui/CloudPages.kt" 's.replace("\"messages\" -> MessagesPage(state, cloud)", "\"messagez\" -> MessagesPage(state, cloud)")' "S10 CloudPage does not open messages"
+mutate ask-lands-elsewhere "$J/ui/SearchShell.kt" 's.replace("openSection(\"chat\")\n        chatPage = chatVertical", "openSection(\"chat\")")' "S10 SearchState.ask does not open Chat on Search"
+mutate vertical-in-both build.json 's.replace("\"id\": \"commercial\",\n            \"label\": \"Commercial\"\n          }", "\"id\": \"commercial\",\n            \"label\": \"Commercial\"\n          },\n          {\n            \"id\": \"house\",\n            \"label\": \"House\"\n          }")' "S10 ui.sections[me] and [llc] pages are not search.verticals"
 mutate chat-section-dropped build.json 's.replace("\"id\": \"chat\",\n        \"label\": \"Chat\"", "\"id\": \"chats\",\n        \"label\": \"Chat\"")' "S10 ui.sections are not exactly the island"
 mutate section-icon-misspelt build.json 's.replace("\"icon\": \"agents\"", "\"icon\": \"agentz\"")' "S3 ui.sections agents icon"
 mutate agents-page-dropped build.json 's.replace("\"id\": \"runs\",\n            \"label\": \"Runs\"", "\"id\": \"run\",\n            \"label\": \"Runs\"")' "S10 ui.sections[agents] pages"
-mutate cloud-pages-reordered build.json 's.replace("\"id\": \"apps\",\n            \"label\": \"Apps\"", "\"id\": \"appz\",\n            \"label\": \"Apps\"")' "S10 ui.sections[cloud] pages"
+mutate cloud-pages-reordered build.json 's.replace("\"id\": \"apps\",\n            \"label\": \"Apps\"", "\"id\": \"appz\",\n            \"label\": \"Apps\"")' "S10 ui.sections[chat] pages after Search"
 mutate agents-debug-op-dropped "$J/debugapi/SearchDebugApi.kt" 's.replace("\"runs\" -> runs(", "\"runz\" -> runs(")' "S7 /api/<group>/runs"
 mutate nav-not-baked app/build.gradle 's.replace("\"UI_SECTIONS_B64\"", "\"UI_SECTIONS\"")' "S10 app/build.gradle does not bake UI_SECTIONS_B64"
-mutate section-reordered build.json 's.replace("\"bottom_nav\": [\n      \"web\",\n      \"cloud\",", "\"bottom_nav\": [\n      \"cloud\",\n      \"web\",")' "S10 ui.bottom_nav is not web, cloud, chat, agents, reports"
-mutate section-pages-drift build.json 's.replace("\"id\": \"calculators\",\n                \"label\": \"Calculators\"", "\"id\": \"calculators\",\n                \"label\": \"Calculatorz\"")' "S10 ui.sections[web] page house/calculators label"
+mutate section-reordered build.json 's.replace("\"bottom_nav\": [\n      \"me\",\n      \"llc\",", "\"bottom_nav\": [\n      \"llc\",\n      \"me\",")' "S10 ui.bottom_nav is not me, llc, chat, agents, reports"
+mutate section-pages-drift build.json 's.replace("\"id\": \"calculators\",\n                \"label\": \"Calculators\"", "\"id\": \"calculators\",\n                \"label\": \"Calculatorz\"")' "S10 ui.sections page house/calculators label"
 mutate parser-missing "$C/Listing.kt" 's.replace("\"open_prices\" -> openPrices(body, source)", "")' "S4 a source uses parser open_prices"
 mutate dead-parser "$C/Listing.kt" 's.replace("\"ba\" -> ba(body, source)", "\"ba\" -> ba(body, source)\n        \"immo\" -> ba(body, source)")' "S4 Parsers.parse has parser immo"
 mutate series-parser-missing "$C/Market.kt" 's.replace("\"jsonstat\" -> jsonStat(body)", "")' "S4 a series uses parser jsonstat"

@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -67,6 +68,16 @@ object AgentTags {
     const val TOKEN = "agents_token_status"
     const val TOKEN_CHECK = "agents_token_check"
     const val STATUS = "agents_status"
+    const val LIST = "agents_list"
+    const val BACK = "agents_back"
+    fun group(key: String) = "agents_group_" + key.replace('/', '_')
+    fun row(agent: String) = "agents_row_$agent"
+    fun screen(agent: String) = "agents_screen_$agent"
+    fun notice(agent: String) = "agents_notice_$agent"
+    fun goal(agent: String) = "agents_goal_$agent"
+    fun filter(agent: String, id: String) = "agents_filter_${agent}_$id"
+    fun source(agent: String, id: String) = "agents_source_${agent}_$id"
+    fun result(item: String) = "agents_result_$item"
     fun run(agent: String) = "agents_run_$agent"
     fun copy(item: String) = "agents_copy_$item"
     fun open(item: String) = "agents_open_$item"
@@ -82,14 +93,14 @@ fun stampFull(ms: Long): String = DateFormat.getDateTimeInstance(DateFormat.MEDI
 
 private val listPadding = PaddingValues(start = Metrics.gutter, end = Metrics.gutter, top = Metrics.small, bottom = Metrics.contentBottom)
 
-/** The Agents section: a strip of its four pages over the selected one. */
+/** The Agents section: a strip of its four pages over the selected one (Agents opens the list, or the agent tapped). */
 @Composable
 fun AgentsSection(state: SearchState) {
     Column(Modifier.fillMaxSize().padding(top = Metrics.stripTop)) {
         PageTabs(
             pages = NAV.section("agents")?.pages.orEmpty(),
             selectedId = state.agentsPage,
-            onSelect = { state.agentsPage = it.id },
+            onSelect = { if (it.id == state.agentsPage) state.agentOpen = null; state.agentsPage = it.id },
             underTopChrome = false,
         )
         Box(Modifier.fillMaxWidth().weight(1f).testTag(Tags.page("agents_" + state.agentsPage))) {
@@ -112,38 +123,170 @@ private fun Mini(text: String, tag: String, modifier: Modifier = Modifier, style
 
 // ── Agents ──────────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * #913b the agents, grouped: Buy-Side › Real Estate, Things, Services, then Sell-Side (AgentsConfig.groups). One dense
+ * row per agent (name, what it reads, its last run); a tap opens the agent's screen: draft-only notice, goal, filters,
+ * sources, Run, results, drafts and its runs.
+ */
 @Composable
 fun AgentsPage(state: SearchState) {
+    val svc = state.services.agents!!
+    val open = state.agentOpen?.let { svc.agents.agent(it) }
+    if (open != null) { AgentScreen(state, open); return }
+    val g = LocalGlass.current
+    val m = state.agentsModel
+    val runs = remember(m.rev) { svc.runs.all() }
+    LazyColumn(Modifier.testTag(AgentTags.LIST), contentPadding = listPadding, verticalArrangement = Arrangement.spacedBy(Metrics.tiny)) {
+        item(key = "draft_only") { Text(stringResource(R.string.agents_draft_only_notice), color = g.text2, style = Type.style(Type.tiny)) }
+        for (grp in svc.agents.groups()) {
+            item(key = "h_" + grp.key) {
+                Text(
+                    grp.side.label + (grp.category?.let { " › " + it.label } ?: ""),
+                    Modifier.padding(top = Metrics.small).testTag(AgentTags.group(grp.key)),
+                    color = g.accent, style = Type.style(Type.label, FontWeight.Bold),
+                )
+            }
+            items(grp.agents, key = { it.id }) { a ->
+                val last = runs.firstOrNull { a.owns(it.agentId) }
+                val shape = RoundedCornerShape(Metrics.tileRadius)
+                Row(
+                    Modifier.fillMaxWidth().clip(shape).background(g.field).border(Metrics.hairline, g.tileBorder, shape)
+                        .clickable { state.agentOpen = a.id }.testTag(AgentTags.row(a.id)).padding(horizontal = Metrics.tilePad, vertical = Metrics.small),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Metrics.gap),
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(a.label, color = g.text, style = Type.style(Type.body, FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(a.sources.joinToString(" · ") { it.label }, color = g.text2, style = Type.style(Type.tiny), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Text(
+                        if (m.running == a.id) stringResource(R.string.agents_running)
+                        else last?.let { stampFull(it.endedAt) + " · " + it.drafts } ?: stringResource(R.string.agents_never_run),
+                        color = g.text2, style = Type.style(Type.tiny), maxLines = 1,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** One agent's screen, as the house agent's card was: what it does, what it asks for, where it reads, Run, results, drafts, runs. */
+@Composable
+private fun AgentScreen(state: SearchState, a: com.diegonmarcos.cloudsearch.core.agents.AgentsConfig.Agent) {
     val svc = state.services.agents!!
     val g = LocalGlass.current
     val m = state.agentsModel
     val scope = rememberCoroutineScope()
-    LazyColumn(contentPadding = listPadding, verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-        items(svc.agents.agents, key = { it.id }) { a ->
-            val last = remember(m.rev) { svc.runs.all().firstOrNull { it.agentId == a.id } }
-            val report = remember(m.rev) { svc.reports.newestFirst().firstOrNull { it.agentId == a.id } }
+    val p = svc.prefs
+    var filters by remember(a.id) { mutableStateOf(p.filters(a)) }
+    var sourceRev by remember(a.id) { mutableStateOf(0) }
+    val last = remember(m.rev, a.id) { svc.runs.all().filter { a.owns(it.agentId) } }
+    val report = remember(m.rev, a.id) { svc.reports.newestFirst().firstOrNull { a.owns(it.agentId) } }
+    val side = svc.agents.sides.firstOrNull { it.id == a.side }?.label.orEmpty()
+    val category = svc.agents.categories.firstOrNull { it.id == a.category }?.label
+    LazyColumn(Modifier.testTag(AgentTags.screen(a.id)), contentPadding = listPadding, verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
+        item(key = "head") {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
+                Chip(stringResource(R.string.agents_all), AgentTags.BACK) { state.agentOpen = null }
+                Text(side + (category?.let { " › $it" } ?: ""), Modifier.weight(1f), color = g.text2, style = Type.style(Type.tiny), maxLines = 1)
+            }
+        }
+        item(key = "card") {
             GlassCard {
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
                     Text(a.label, Modifier.weight(1f), color = g.text, style = Type.style(Type.cardTitle, FontWeight.Bold))
                     Badge(stringResource(R.string.agents_draft_only), g.accent)
                 }
                 Text(a.blurb, color = g.text2, style = Type.style(Type.small))
+                Text(stringResource(R.string.agents_draft_only_notice), Modifier.testTag(AgentTags.notice(a.id)), color = g.text, style = Type.style(Type.tiny, FontWeight.SemiBold))
+                FieldLabel(stringResource(R.string.agents_goal))
+                Text(com.diegonmarcos.cloudsearch.core.agents.Plan.goal(a, filters), Modifier.testTag(AgentTags.goal(a.id)), color = g.text, style = Type.style(Type.small))
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
                     Chip(if (m.running == a.id) stringResource(R.string.agents_running) else stringResource(R.string.agents_run), AgentTags.run(a.id), accent = true) {
                         if (m.running == null) m.run(a.id, scope)
                     }
                     Mini(
-                        m.status.ifBlank { last?.let { stampFull(it.endedAt) + " · " + it.status + " · " + it.drafts + " draft(s)" } ?: stringResource(R.string.agents_never_run) },
+                        m.status.takeIf { m.statusOf == a.id }.orEmpty().ifBlank {
+                            last.firstOrNull()?.let { stampFull(it.endedAt) + " · " + it.status + " · " + it.drafts + " draft(s)" } ?: stringResource(R.string.agents_never_run)
+                        },
                         AgentTags.STATUS, Modifier.weight(1f),
                     )
                 }
-                if (report != null && report.items.isNotEmpty()) {
-                    Hairline(Modifier.padding(vertical = Metrics.small))
-                    FieldLabel(stringResource(R.string.agents_review, report.items.size, stampFull(report.createdAt)))
-                    report.items.forEach { DraftRow(state, report, it) }
+            }
+        }
+        item(key = "filters") {
+            GlassCard {
+                FieldLabel(stringResource(R.string.agents_filters))
+                a.filters.mapNotNull { svc.agents.filter(it) }.chunked(2).forEach { pair ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
+                        pair.forEach { f ->
+                            GlassField(
+                                filters[f.id].orEmpty(), { v -> filters = filters + (f.id to v); p.setFilter(a.id, f.id, v) },
+                                f.label, AgentTags.filter(a.id, f.id), Modifier.weight(1f), icon = null, number = f.number,
+                            )
+                        }
+                        if (pair.size == 1) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                    }
                 }
             }
         }
+        item(key = "sources") {
+            GlassCard {
+                FieldLabel(stringResource(R.string.agents_sources))
+                key(sourceRev) {
+                    a.sources.forEach { src ->
+                        val on = p.sourceOn(a.id, src.id)
+                        var subject by remember(a.id, src.id) { mutableStateOf(p.sourceSubject(a.id, src)) }
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.small)) {
+                            Chip(src.label, AgentTags.source(a.id, src.id), selected = on) { p.setSourceOn(a.id, src.id, !on); sourceRev++ }
+                            Text(
+                                if (src.mailFrom.isBlank()) stringResource(R.string.agents_source_search_only) else stringResource(R.string.agents_source_alerts, src.mailFrom),
+                                Modifier.weight(1f), color = g.text2, style = Type.style(Type.tiny), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                            com.diegonmarcos.cloudsearch.core.agents.Plan.searchUrl(src, state.cfg.sources, filters, a.query, state.cfg.city(state.city).label)?.let { url ->
+                                Chip(stringResource(R.string.agents_source_open), AgentTags.source(a.id, src.id + "_open"), icon = R.drawable.ph_arrow_square_out) {
+                                    svc.browser.open(url, a.group)
+                                }
+                            }
+                        }
+                        if (src.mailFrom.isNotBlank() && on) GlassField(
+                            subject, { v -> subject = v; p.setSourceSubject(a.id, src.id, v) }, stringResource(R.string.agents_source_subject),
+                            AgentTags.source(a.id, src.id + "_subject"), icon = null,
+                        )
+                    }
+                }
+            }
+        }
+        if (report != null && report.items.isNotEmpty()) {
+            item(key = "results") {
+                GlassCard {
+                    FieldLabel(stringResource(R.string.agents_results, report.items.size, stampFull(report.createdAt)))
+                    report.items.forEach { it -> ResultRow(it) }
+                }
+            }
+            item(key = "drafts") { FieldLabel(stringResource(R.string.agents_review, report.items.size, stampFull(report.createdAt))) }
+            items(report.items, key = { "d_" + it.id }) { DraftRow(state, report, it) }
+        }
+        if (last.isNotEmpty()) {
+            item(key = "runs") { FieldLabel(stringResource(R.string.agents_runs_of, last.size)) }
+            items(last.take(5), key = { "r_" + it.id }) { r -> RunRow(a.label, r, false) { state.agentsPage = "runs" } }
+        }
+    }
+}
+
+/** One line of the result table: what was found, where, and whether it is still a draft. */
+@Composable
+private fun ResultRow(item: ReportItem) {
+    val g = LocalGlass.current
+    Row(Modifier.fillMaxWidth().testTag(AgentTags.result(item.id)), horizontalArrangement = Arrangement.spacedBy(Metrics.gap), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Text(item.title, Modifier.weight(1f), color = g.text, style = Type.style(Type.small), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(item.url.substringAfter("://").substringBefore('/').removePrefix("www."), color = g.text2, style = Type.style(Type.tiny), maxLines = 1)
+        Text(
+            stringResource(
+                when (item.status) { ReportItem.SENT_BY_ME -> R.string.agents_sent_by_me; ReportItem.DISMISSED -> R.string.agents_dismissed; else -> R.string.agents_draft }
+            ),
+            color = if (item.note.isNotBlank()) g.negative else g.text2, style = Type.style(Type.tiny), maxLines = 1,
+        )
     }
 }
 
@@ -265,7 +408,8 @@ fun TemplatesPage(state: SearchState) {
         items(svc.agents.templates, key = { it.id }) { t ->
             var body by remember(t.id) { mutableStateOf(svc.prefs.templateBody(t.id)) }
             var custom by remember(t.id) { mutableStateOf(svc.prefs.isCustomised(t.id)) }
-            val sample = svc.prefs.profile() + mapOf(
+            val owner = svc.agents.agent(t.agent)
+            val sample = owner?.let { svc.prefs.filters(it) }.orEmpty() + svc.prefs.profile() + mapOf(
                 "listing_title" to stringResource(R.string.agents_sample_title), "listing_url" to "https://example.org/…",
                 "listing_id" to "12345678", "personal" to stringResource(R.string.agents_sample_personal),
             )
@@ -273,11 +417,12 @@ fun TemplatesPage(state: SearchState) {
             GlassCard {
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
                     Text(t.label, Modifier.weight(1f), color = g.text, style = Type.style(Type.cardTitle, FontWeight.Bold))
+                    owner?.let { Text(it.label, color = g.text2, style = Type.style(Type.tiny), maxLines = 1) }
                     if (custom) Badge(stringResource(R.string.agents_yours), g.accent)
                 }
                 NoteField(body, { body = it; svc.prefs.setTemplate(t.id, it); custom = true }, AgentTags.template(t.id))
                 Text(
-                    stringResource(R.string.agents_vars_available, (svc.agents.profileFields.map { it.id } + svc.agents.builtinVars).joinToString { "{{$it}}" }),
+                    stringResource(R.string.agents_vars_available, (svc.agents.profileFields.map { it.id } + (owner?.filters ?: emptyList()) + svc.agents.builtinVars).joinToString { "{{$it}}" }),
                     color = g.text2, style = Type.style(Type.tiny),
                 )
                 if (preview.missing.isNotEmpty()) Text(stringResource(R.string.agents_vars_missing, preview.missing.joinToString()), color = g.negative, style = Type.style(Type.tiny))
@@ -378,11 +523,13 @@ fun AgentSettingsPage(state: SearchState) {
 class AgentsModel(private val state: SearchState) {
     var running by mutableStateOf<String?>(null)
     var status by mutableStateOf("")
+    /** The agent [status] is about. */
+    var statusOf by mutableStateOf<String?>(null)
     var rev by mutableStateOf(0)
 
     fun run(agentId: String, scope: CoroutineScope) {
         val svc = state.services.agents ?: return
-        running = agentId; status = ""
+        running = agentId; status = ""; statusOf = agentId
         scope.launch {
             val r = withContext(Dispatchers.IO) { runCatching { svc.run(agentId) } }
             running = null

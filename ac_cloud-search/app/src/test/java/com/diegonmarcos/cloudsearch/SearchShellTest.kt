@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import com.diegonmarcos.cloudsearch.core.Http
 import com.diegonmarcos.cloudsearch.core.Templates
@@ -22,6 +23,7 @@ import com.diegonmarcos.cloudsearch.debugapi.SearchDebugApi
 import com.diegonmarcos.cloudsearch.ui.SearchShell
 import com.diegonmarcos.cloudsearch.ui.SearchState
 import com.diegonmarcos.cloudsearch.ui.Tags
+import com.diegonmarcos.cloudsearch.ui.AgentTags as AT
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -120,11 +122,11 @@ class SearchShellTest {
 
     private fun launch() = compose.setContent { SearchShell(state) }
 
-    /** #913 a vertical through the app's own nav: the assistant is the island's Chat; every other one a pill of Web Search's strip. */
+    /** #913b a vertical through the app's own nav: the assistant is the island's Chat; every other one a pill of Me's or LLC's strip. */
     private fun openVertical(id: String) {
         if (id == state.chatVertical) compose.onNodeWithTag(Tags.nav("chat")).performClick()
         else {
-            compose.onNodeWithTag(Tags.nav("web")).performClick()
+            compose.onNodeWithTag(Tags.nav(state.sectionOf(id))).performClick()
             compose.waitForIdle()
             compose.onNodeWithTag(Tags.subpage(id)).performClick()
         }
@@ -147,7 +149,7 @@ class SearchShellTest {
             assertEquals(v.id, state.vertical)
             // A vertical with one subpage draws no sub-nav (the mockup's Search, Groceries, Things).
             // (Things' one subpage shares its id with Web Search's Things pill, which is always there.)
-            if (v.subpages.first() !in cfg.verticals.map { it.id })
+            if (v.subpages.first() !in cfg.verticals.map { it.id } + NAV_PAGES("chat"))
                 assertEquals(v.subpages.size > 1, compose.onAllNodesWithTag(Tags.subpage(v.subpages.first())).fetchSemanticsNodes().isNotEmpty())
             if (v.subpages.size > 1) compose.onNodeWithTag(Tags.subpage(v.subpages.last())).performClick()
             for (sub in v.subpages) {
@@ -207,7 +209,7 @@ class SearchShellTest {
         val island = bounds("bottomnav_island")
         assertEquals("the mockup's .bottom-nav is 60 dp high", 60f, island.height, 0.5f)
         val ids = com.diegonmarcos.cloudsearch.ui.NAV.bottomNav
-        assertEquals(listOf("web", "cloud", "chat", "agents", "reports"), ids)
+        assertEquals(listOf("me", "llc", "chat", "agents", "reports"), ids)
         for (selected in ids) {
             compose.onNodeWithTag(Tags.nav(selected)).performClick()
             compose.waitForIdle()
@@ -228,14 +230,13 @@ class SearchShellTest {
         assertEquals(1, compose.onAllNodesWithTag("bottomnav_island", useUnmergedTree = true).fetchSemanticsNodes().size)
     }
 
-    /** The five destinations still route, and each shows its top tabs (Web Search's verticals, Cloud's, Agents'). */
+    /** The five destinations route, and each shows its top tabs (Me's and LLC's verticals, Chat's Search + fleet searches, Agents'). */
     @Test fun theFiveDestinationsRouteAndKeepTheirTopTabs() {
         launch()
-        val decl = com.diegonmarcos.cloudsearch.ui.NAV
         val tabs = mapOf(
-            "web" to decl.section("web")!!.pages.map { it.id },
-            "cloud" to listOf("apps", "messages", "code"),
-            "chat" to emptyList(),
+            "me" to listOf("house", "jobs", "groceries", "things"),
+            "llc" to listOf("commercial", "business", "suppliers", "services"),
+            "chat" to listOf(state.chatVertical, "apps", "messages", "code"),
             "agents" to listOf("agents", "runs", "templates", "settings"),
             "reports" to emptyList(),
         )
@@ -245,7 +246,7 @@ class SearchShellTest {
             compose.runOnIdle { assertEquals(section, state.section) }
             for (id in pages) compose.onNodeWithTag(Tags.subpage(id)).assertExists()
         }
-        compose.onNodeWithTag(Tags.nav("web")).performClick()
+        compose.onNodeWithTag(Tags.nav("me")).performClick()
         compose.waitForIdle()
         waitFor(Tags.WEB_STRIP)
     }
@@ -484,22 +485,34 @@ class SearchShellTest {
     // ── #913 the island, Agents and Reports ──────────────────────────────────────────────────────
     @Test fun theIslandHoldsTheFiveSectionsAndEachOpens() {
         launch()
-        assertEquals(listOf("web", "cloud", "chat", "agents", "reports"), NAV_IDS)
+        assertEquals(listOf("me", "llc", "chat", "agents", "reports"), NAV_IDS)
         for (id in NAV_IDS) {
             compose.onNodeWithTag(Tags.nav(id)).performClick()
             compose.waitForIdle()
             assertEquals(id, state.section)
         }
-        // Web Search's strip is its verticals, Chat is the assistant.
-        compose.onNodeWithTag(Tags.nav("web")).performClick()
+        // Me's strip is the personal verticals, LLC's the commercial ones, Chat is the assistant.
+        compose.onNodeWithTag(Tags.nav("me")).performClick()
         waitFor(Tags.WEB_STRIP)
         for (v in listOf("house", "jobs", "groceries", "things")) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
+        compose.onNodeWithTag(Tags.nav("llc")).performClick()
+        waitFor(Tags.subpage("commercial"))
+        compose.runOnIdle { assertEquals("commercial", state.vertical) }
+        for (v in listOf("commercial", "business", "suppliers", "services")) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
         compose.onNodeWithTag(Tags.nav("chat")).performClick()
         waitFor(Tags.page("assistant"))
         assertEquals(state.chatVertical, state.vertical)
     }
 
     private val NAV_IDS get() = com.diegonmarcos.cloudsearch.ui.NAV.bottomNav
+    private fun NAV_PAGES(section: String) = com.diegonmarcos.cloudsearch.ui.NAV.section(section)!!.pages.map { it.id }
+
+    /** A node that may sit below the fold of a lazy list: scroll the list to it first. */
+    private fun scrollTo(list: String, tag: String) {
+        waitFor(list)
+        compose.onNodeWithTag(list).performScrollToNode(hasTestTag(tag))
+        waitFor(tag)
+    }
 
     private class FakeMail : com.diegonmarcos.cloudsearch.core.agents.MailSource {
         override fun messages(from: String, subject: String, sinceMs: Long, limit: Int) = listOf(
@@ -530,10 +543,17 @@ class SearchShellTest {
         val a = installAgents()
         launch()
         compose.onNodeWithTag(Tags.nav("agents")).performClick()
-        waitFor(com.diegonmarcos.cloudsearch.ui.AgentTags.run("house_search"))
-        compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.AgentTags.run("house_search")).performClick()
-        waitFor(com.diegonmarcos.cloudsearch.ui.AgentTags.copy("11223344"))
+        scrollTo(AT.LIST, AT.row("rs_house_rental"))
+        compose.onNodeWithTag(AT.row("rs_house_rental")).performClick()
+        waitFor(AT.run("rs_house_rental"))
+        compose.onNodeWithTag(AT.notice("rs_house_rental")).assertExists()
+        compose.onNodeWithTag(AT.run("rs_house_rental")).performClick()
+        compose.waitUntil(30_000) { state.agentsModel.running == null && a.runs.all().isNotEmpty() }
+        scrollTo(AT.screen("rs_house_rental"), AT.result("11223344"))
+        scrollTo(AT.screen("rs_house_rental"), AT.copy("11223344"))
+        scrollTo(AT.screen("rs_house_rental"), AT.report("11223344"))
         compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.AgentTags.report("11223344")).assertTextContains("Ich koche gern.", substring = true)
+        scrollTo(AT.screen("rs_house_rental"), AT.open("11223344"))
         // The review buttons: copy puts the message on the clipboard, open hands the listing to Cloud Browser.
         compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.AgentTags.copy("11223344")).performClick()
         val app = RuntimeEnvironment.getApplication()
@@ -567,13 +587,112 @@ class SearchShellTest {
         }
     }
 
-    @Test fun cloudSearchSectionHasItsThreePages() {
+    /** #913b the Cloud page's three searches moved to Chat's strip, beside Search; each still opens. */
+    @Test fun theFleetSearchesAreReachableOnChatsStrip() {
         installAgents()
         launch()
-        compose.onNodeWithTag(Tags.nav("cloud")).performClick()
+        compose.onNodeWithTag(Tags.nav("chat")).performClick()
+        waitFor(Tags.CHAT_STRIP)
+        assertEquals(listOf(state.chatVertical, "apps", "messages", "code"), NAV_PAGES("chat"))
         for (p in listOf("apps", "messages", "code")) {
             compose.onNodeWithTag(Tags.subpage(p)).performClick()
             waitFor(Tags.page("cloud_$p"))
+            compose.runOnIdle { assertEquals("chat", state.section); assertEquals(p, state.chatPage) }
         }
+        compose.onNodeWithTag(Tags.subpage(state.chatVertical)).performClick()
+        waitFor(Tags.page("assistant"))
+    }
+
+    /** #937 + #913b a query from outside still lands on Chat › Search, whichever page was showing. */
+    @Test fun anOutsideQueryLandsOnChatSearchFromAnyPage() {
+        installAgents()
+        launch()
+        compose.onNodeWithTag(Tags.nav("chat")).performClick()
+        compose.onNodeWithTag(Tags.subpage("messages")).performClick()
+        waitFor(Tags.page("cloud_messages"))
+        compose.onNodeWithTag(Tags.nav("agents")).performClick()
+        compose.runOnIdle { state.ask("kotlin jobs berlin", kotlinx.coroutines.MainScope()) }
+        waitFor(Tags.page("assistant"))
+        compose.runOnIdle {
+            assertEquals("chat", state.section); assertEquals(state.chatVertical, state.chatPage); assertEquals(state.chatVertical, state.vertical)
+        }
+        compose.waitUntil(10_000) { !state.chat.sending && state.chat.session.messages.isNotEmpty() }
+        assertEquals("kotlin jobs berlin", state.chat.session.messages.first { it.role == "user" }.content)
+    }
+
+    /** #913b the agents in their groups, Buy-Side then Sell-Side; each opens its own screen, which says it only drafts. */
+    @Test fun theAgentsPageGroupsTheTenAgentsAndEachOpens() {
+        val a = installAgents()
+        launch()
+        compose.onNodeWithTag(Tags.nav("agents")).performClick()
+        for (g in a.agents.groups()) scrollTo(AT.LIST, AT.group(g.key))
+        assertEquals(listOf("buy/real_estate", "buy/things", "buy/services", "sell/"), a.agents.groups().map { it.key })
+        for (x in a.agents.agents) {
+            scrollTo(AT.LIST, AT.row(x.id))
+            compose.onNodeWithTag(AT.row(x.id)).performClick()
+            waitFor(AT.screen(x.id))
+            compose.onNodeWithTag(AT.notice(x.id)).assertExists()
+            compose.onNodeWithTag(AT.goal(x.id)).assertExists()
+            compose.onNodeWithTag(AT.run(x.id)).assertExists()
+            compose.onNodeWithTag(AT.BACK).performClick()
+            compose.runOnIdle { assertEquals(null, state.agentOpen) }
+        }
+    }
+
+    /** An agent's filters are kept per agent and fill its goal; a source switched off is not read. */
+    @Test fun anAgentsFiltersAndSourcesAreKept() {
+        val a = installAgents()
+        launch()
+        compose.runOnIdle { state.openAgent("job_placement") }
+        waitFor(AT.screen("job_placement"))
+        scrollTo(AT.screen("job_placement"), AT.filter("job_placement", "location"))
+        compose.onNodeWithTag(AT.filter("job_placement", "location")).performTextInput("Köln")
+        compose.onNodeWithTag(AT.goal("job_placement")).assertTextContains("in Köln", substring = true)
+        val agent = a.agents.agent("job_placement")!!
+        assertEquals("Köln", a.prefs.filters(agent)["location"])
+        scrollTo(AT.screen("job_placement"), AT.source("job_placement", "linkedin"))
+        compose.onNodeWithTag(AT.source("job_placement", "linkedin")).performClick()
+        compose.runOnIdle { assertEquals(listOf("stepstone", "arbeitsagentur"), a.prefs.sources(agent).map { it.id }) }
+    }
+
+    /** #913b Me's and LLC's verticals lead to their agents. */
+    @Test fun aVerticalLeadsToItsAgents() {
+        installAgents()
+        launch()
+        openVertical("house")
+        waitFor(Tags.agentLink("rs_house_rental"))
+        compose.onNodeWithTag(Tags.agentLink("rs_house_purchase")).assertExists()
+        compose.onNodeWithTag(Tags.agentLink("rs_house_rental")).performClick()
+        waitFor(AT.screen("rs_house_rental"))
+        compose.runOnIdle { assertEquals("agents", state.section); assertEquals("rs_house_rental", state.agentOpen) }
+        openVertical("commercial")
+        compose.runOnIdle { assertEquals("llc", state.section) }
+        waitFor(Tags.agentLink("rs_commercial_stores"))
+        compose.onNodeWithTag(Tags.agentLink("rs_commercial_buildings")).assertExists()
+    }
+
+    /** #913b the house agent became RS_House-Rental: what the owner saved under house_search is still theirs. */
+    @Test fun theHouseAgentKeepsItsSavedConfigAndRuns() {
+        val app = RuntimeEnvironment.getApplication()
+        app.getSharedPreferences(Services.PREFS, android.content.Context.MODE_PRIVATE).edit()
+            .putString("agents_seen_house_search", "[\"11223344\"]")
+            .putString("agents_template_wg_gesucht_room", "Mein Text {{name}}")
+            .putString("agents_profile_name", "Ada Test").commit()
+        val runs = java.io.File(app.filesDir, "agents/runs.json")
+        runs.parentFile!!.mkdirs()
+        val old = com.diegonmarcos.cloudsearch.core.agents.RunRecord("old-run", "house_search", 10, 20, "ok", "1 alert mail(s)", 1, 1, 1, 1, 0, 0.0, emptyList())
+        runs.writeText(org.json.JSONArray(listOf(old.toJson())).toString())
+        val a = installAgents()
+        assertEquals(setOf("11223344"), a.prefs.seen("rs_house_rental"))
+        assertEquals("Mein Text {{name}}", a.prefs.templateBody("wg_gesucht_room"))
+        assertEquals("Ada Test", a.prefs.profile()["name"])
+        assertFalse(app.getSharedPreferences(Services.PREFS, android.content.Context.MODE_PRIVATE).contains("agents_seen_house_search"))
+        launch()
+        compose.runOnIdle { state.openAgent("rs_house_rental") }
+        scrollTo(AT.screen("rs_house_rental"), AT.runRow("old-run"))
+        // A run now skips what was drafted before the rename.
+        compose.runOnIdle { state.agentsModel.run("rs_house_rental", kotlinx.coroutines.MainScope()) }
+        compose.waitUntil(30_000) { state.agentsModel.running == null && a.runs.all().size == 2 }
+        assertEquals(0, a.runs.all().first { it.id != "old-run" }.drafts)
     }
 }

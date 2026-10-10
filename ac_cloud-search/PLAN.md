@@ -80,22 +80,33 @@ No marketplace offers a public search API this app may use: Kleinanzeigen, eBay 
 `/api/search/verticals`, `/query?v=&q=&city=`, `/calc?name=&…`, `/analysis?v=`, `/feed?v=` and `/things?q=&lat=&lon=|city=&radius=` run the
 same engine and cache as the screens (libs:devtools debug API, group `search`).
 
-## Navigation (#913)
+## Navigation (#913, #913b)
 
-The island is Web Search · Cloud Search · Chat · Agents · Reports (`build.json::ui`):
+The island is Me · LLC · Chat · Agents · Reports (`build.json::ui`), drawn in the owner's mockup style (SearchHtmlIsland):
 
 | Section | Pages (PageTabs) | What it is |
 |---|---|---|
-| Web Search | House · Jobs · Groceries · Things | the search verticals above, each with its own subpage strip; Things is the #903 price comparison |
-| Cloud Search | Apps · Messages · Code | Apps searches the fleet manifest and launches the app; Messages asks Cloud Mail through the read-only agent door; Code has no fleet engine yet, so it searches the owner's repositories on GitHub in Cloud Browser and opens Cloud Code |
-| Chat | Assistant | today's Search page (engine boxes + AI chat), moved as is |
-| Agents | Agents · Runs · Templates · Settings | draft-only agents |
+| Me | House · Jobs · Groceries · Things | personal search: the verticals above, each with its own subpage strip; each links its agents (House: RS_House-Rental, RS_House-Purchase; Jobs: Job-Placement; Things: Things_Housing, Things_Electronics) |
+| LLC | Commercial · Business · Suppliers · Services | commercial search, every source a site search opened in cloud-browser (no portal has an API this app may read): Commercial Real Estate (ImmoScout24, Immowelt, Kleinanzeigen Gewerbe; RS_Commercial-Stores, RS_Commercial-Buildings, Real-Estate), Buy a Business (nexxt-change, DUB), Suppliers / B2B (wer liefert was, Europages, Alibaba), Business Services (Gelbe Seiten, Malt, freelancermap; Services_General, Job-Placement) |
+| Chat | Search · Apps · Messages · Code | Search is the engine boxes + AI chat (where a query from outside lands, #937); Apps, Messages and Code are the fleet searches that were the Cloud page: Apps searches the fleet manifest and launches the app, Messages asks Cloud Mail through the read-only agent door, Code searches the owner's repositories on GitHub in Cloud Browser and opens Cloud Code |
+| Agents | Agents · Runs · Templates · Settings | draft-only agents, grouped Buy-Side › Real Estate / Things / Services, then Sell-Side |
 | Reports | list, then detail | what agents published, newest first |
 
 ## Agents (#913): draft only
 
 An agent READS and DRAFTS; a person copies the draft and sends it. Nothing is posted, submitted or sent for
 the owner, and there is no button that does. Everything is declared in `build.json::search.agents`.
+
+**Ten agents, one engine (#913b).** Buy-Side › Real Estate: RS_House-Purchase, RS_House-Rental (the house search
+below, renamed: its seen listings, filters and source switches move to the new id; its template, runs and reports stay
+its own), RS_Commercial-Stores, RS_Commercial-Buildings. Buy-Side › Things: Things_Housing, Things_Electronics. Buy-Side ›
+Services: Services_Medical, Services_General. Sell-Side: Real-Estate (your own listing text beside each comparable) and
+Job-Placement (a cover letter per job). Each is a definition in `build.json::search.agents.agents`: side, category, goal
+(filled from its filters: location, radius, price range, size, dates, keywords), sources (whose alert mails it reads, which
+links count, and the site search the person opens), template and outputs (a result table and drafts). The parser refuses
+an agent that is not `draft_only`, that names an `auto_*` or action key (submit, send, apply, buy, ...) or any key not
+on its list. Each agent's screen says it: searching, comparing, summarising and drafting are the agent's; sending,
+applying, buying and submitting are the person's, in Cloud Browser.
 
 **House search.** (1) Cloud Mail's agent door lists the mails from `wg-gesucht.de` of the look-back window;
 (2) each mail's body is read and the listing links extracted (host-checked, one per listing id, earlier runs'

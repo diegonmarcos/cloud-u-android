@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LinksTest {
-    private val rules = Fixtures.cfg.agents!!.agent("house_search")!!.links
+    private val rules = Fixtures.cfg.agents!!.agent("house_search")!!.sources.first { it.id == "wg-gesucht" }.links
     private val html = Fixtures.text("wg-gesucht-alert.html")
     private val txt = Fixtures.text("wg-gesucht-alert.txt")
 

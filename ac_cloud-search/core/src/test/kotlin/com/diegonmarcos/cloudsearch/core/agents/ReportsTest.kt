@@ -97,7 +97,7 @@ class DigestTest {
         val r = Reports.digest(agent, DraftRunner.Outcome(rec, drafts, setOf("1")))
         assertEquals("r9", r.id); assertEquals("r9", r.runId); assertEquals(agent.id, r.agentId)
         assertEquals("house_search_digest", r.kind)
-        assertEquals("House search digest", r.title)
+        assertEquals("RS_House-Rental digest", r.title)
         assertEquals(50L, r.createdAt)
         assertEquals("2 alert mail(s) · \$0.0123", r.summary)
         assertEquals(listOf("1", "2"), r.items.map { it.id })

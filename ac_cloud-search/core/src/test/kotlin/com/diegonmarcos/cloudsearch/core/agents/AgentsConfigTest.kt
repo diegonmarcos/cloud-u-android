@@ -19,9 +19,9 @@ class AgentsConfigTest {
     @Test fun theShippedDeclarationParses() {
         val a = Fixtures.cfg.agents!!
         assertTrue(a.problems().isEmpty())
-        assertEquals(listOf("house_search"), a.agents.map { it.id })
-        assertEquals(listOf("wg-gesucht.de"), a.agents[0].links.hosts)
-        assertEquals("wg_gesucht_room", a.agents[0].template)
+        val rental = a.agent("rs_house_rental")!!
+        assertEquals(listOf("wg-gesucht.de"), rental.sources.first().links.hosts)
+        assertEquals("wg_gesucht_room", rental.template)
         assertEquals(listOf("name", "about", "move_in", "phone"), a.profileFields.map { it.id })
         assertTrue(a.defaults.budgetRunUsd <= a.defaults.budgetDayUsd)
         assertTrue(a.templates[0].body.contains("{{listing_title}}"))
@@ -29,7 +29,8 @@ class AgentsConfigTest {
 
     @Test fun everyTemplateVariableIsSupplied() {
         val a = Fixtures.cfg.agents!!
-        for (t in a.templates) for (v in Template.variables(t.body)) assertTrue(v, v in a.profileFields.map { it.id } + a.builtinVars)
+        for (t in a.templates) for (v in Template.variables(t.body)) assertTrue(v, v in a.profileFields.map { it.id } + a.filters.map { it.id } + a.builtinVars)
+        for (x in a.agents) for (v in Template.variables(x.goal)) assertTrue(v, v in a.filters.map { it.id })
     }
 
     @Test fun anAgentThatIsNotDraftOnlyIsRefused() {
@@ -47,8 +48,14 @@ class AgentsConfigTest {
     }
 
     @Test fun linkRulesMustBeUsable() {
-        assertTrue(agentsAfter { it.getJSONArray("agents").getJSONObject(0).getJSONObject("links").put("hosts", org.json.JSONArray()) }.contains("allows no link host"))
-        assertTrue(agentsAfter { it.getJSONArray("agents").getJSONObject(0).getJSONObject("links").put("id_regex", "\\d+\\.html$") }.contains("capture group"))
+        fun src(o: JSONObject) = o.getJSONArray("agents").getJSONObject(0).getJSONArray("sources").getJSONObject(0)
+        assertTrue(agentsAfter { src(it).getJSONObject("links").put("hosts", org.json.JSONArray()) }.contains("allows no link host"))
+        assertTrue(agentsAfter { src(it).getJSONObject("links").put("id_regex", "\\d+\\.html$") }.contains("capture group"))
+        // Without an alert sender a source is a search the person opens: it needs no link rules, but an agent needs one mail source.
+        assertTrue(agentsAfter { a -> val x = a.getJSONArray("agents").getJSONObject(0).getJSONArray("sources")
+            for (i in 0 until x.length()) x.getJSONObject(i).put("mail_from", "").remove("links") }.contains("no source with alert mails"))
+        assertTrue(agentsAfter { it.getJSONArray("agents").getJSONObject(0).put("sources", org.json.JSONArray()) }.contains("reads no source"))
+        assertTrue(agentsAfter { val x = it.getJSONArray("agents").getJSONObject(0).getJSONArray("sources"); x.put(x.getJSONObject(0)) }.contains("names a source twice"))
     }
 
     @Test fun budgetsAndDefaultsMustBeSane() {

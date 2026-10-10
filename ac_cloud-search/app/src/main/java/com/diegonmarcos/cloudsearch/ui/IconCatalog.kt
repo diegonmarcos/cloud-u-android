@@ -24,6 +24,12 @@ object IconCatalog {
         "cloud" -> R.drawable.ph_share_network
         "agents" -> R.drawable.ph_robot
         "reports" -> R.drawable.ph_list_dashes
+        "me" -> R.drawable.ph_user_circle
+        "llc" -> R.drawable.ph_buildings
+        "commercial" -> R.drawable.ph_buildings
+        "business" -> R.drawable.ph_storefront
+        "suppliers" -> R.drawable.ph_truck
+        "services" -> R.drawable.ph_handshake
         "bird" -> R.drawable.ph_bird
         "shield-check" -> R.drawable.ph_shield_check
         "magnifying-glass" -> R.drawable.ph_magnifying_glass

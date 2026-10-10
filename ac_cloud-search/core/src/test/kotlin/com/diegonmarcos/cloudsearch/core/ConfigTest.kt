@@ -9,7 +9,7 @@ import org.junit.Test
 class ConfigTest {
     @Test fun theShippedDeclarationParses() {
         val c = Fixtures.cfg
-        assertEquals(listOf("house", "jobs", "search", "groceries", "things"), c.verticals.map { it.id })
+        assertEquals(listOf("house", "jobs", "search", "groceries", "things", "commercial", "business", "suppliers", "services"), c.verticals.map { it.id })
         assertEquals("search", c.defaultVertical)
         assertEquals("berlin", c.city(null).id)
         assertEquals("berlin", c.city("atlantis").id)

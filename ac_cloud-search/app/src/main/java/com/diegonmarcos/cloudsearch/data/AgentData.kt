@@ -27,6 +27,28 @@ import java.time.ZoneId
  * not here and never is: it is read from the fleet Account for each model call.
  */
 class AgentPrefs(private val p: SharedPreferences, private val cfg: AgentsConfig, private val defaultModelFallback: String) {
+    init { migrate() }
+
+    /**
+     * #913b an agent that was renamed (house_search is RS_House-Rental now) keeps what the owner saved under its
+     * earlier id: AgentsConfig.migratePrefs says what moves; the edit writes exactly that and nothing else.
+     */
+    private fun migrate() {
+        val before = p.all
+        val after = cfg.migratePrefs(before)
+        if (after == before) return
+        val e = p.edit()
+        before.keys.filter { it !in after }.forEach { e.remove(it) }
+        for ((k, v) in after) if (before[k] != v) when (v) {
+            is String -> e.putString(k, v)
+            is Boolean -> e.putBoolean(k, v)
+            is Int -> e.putInt(k, v)
+            is Long -> e.putLong(k, v)
+            is Float -> e.putFloat(k, v)
+        }
+        e.apply()
+    }
+
     var model: String
         get() = p.getString("agents_model", cfg.defaults.model) ?: defaultModelFallback
         set(v) = p.edit().putString("agents_model", v).apply()
@@ -61,6 +83,22 @@ class AgentPrefs(private val p: SharedPreferences, private val cfg: AgentsConfig
         val all = (seen(agent) + ids).toList().takeLast(MAX_SEEN)
         p.edit().putString("agents_seen_$agent", JSONArray(all).toString()).apply()
     }
+
+    /** #913b what the owner asked an agent for (its declared filters); a filter never set is blank. */
+    fun filters(agent: AgentsConfig.Agent): Map<String, String> = agent.filters.associateWith { p.getString("agents_filter_${agent.id}_$it", "") ?: "" }
+    fun setFilter(agent: String, id: String, value: String) = p.edit().putString("agents_filter_${agent}_$id", value).apply()
+
+    /** A source the owner switched off is not read; every source is on until then. */
+    fun sourceOn(agent: String, source: String): Boolean = p.getBoolean("agents_source_${agent}_$source", true)
+    fun setSourceOn(agent: String, source: String, on: Boolean) = p.edit().putBoolean("agents_source_${agent}_$source", on).apply()
+
+    /** The word an alert's subject must carry for this source, the owner's when set, else the declared one. */
+    fun sourceSubject(agent: String, s: AgentsConfig.Source): String = p.getString("agents_source_${agent}_${s.id}_subject", null) ?: s.mailSubject
+    fun setSourceSubject(agent: String, source: String, subject: String) = p.edit().putString("agents_source_${agent}_${source}_subject", subject).apply()
+
+    /** The sources a run reads: the ones switched on, each with the owner's subject word. */
+    fun sources(agent: AgentsConfig.Agent): List<AgentsConfig.Source> =
+        agent.sources.filter { sourceOn(agent.id, it.id) }.map { it.copy(mailSubject = sourceSubject(agent.id, it)) }
 
     /** US dollars spent today by every agent run, from the model calls' recorded costs. */
     fun spentToday(now: Long): Double = p.getFloat("agents_spent_" + BudgetLedger.dayKey(now, ZoneId.systemDefault()), 0f).toDouble()

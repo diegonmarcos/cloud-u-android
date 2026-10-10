@@ -76,12 +76,18 @@ enum class Menu { CATEGORIES, FILTERS, SESSIONS, PROFILE }
 /** Everything the shell remembers while it is up; the durable half lives in [Services.prefs]. */
 class SearchState(val services: Services) {
     val cfg: SearchConfig = services.cfg
-    /** The vertical whose page is the assistant (Chat); every other vertical lives under Web Search. */
+    /** The vertical whose page is the assistant (Chat › Search); every other vertical is a page of Me or LLC. */
     val chatVertical: String = cfg.verticals.first { v -> v.subpages.any { cfg.subpage(it)?.kind == "assistant" } }.id
-    /** #913 the island's selection: web, cloud, chat, agents or reports (ui.sections). */
+    /** #913b the island's selection: me, llc, chat, agents or reports (ui.sections). */
     var section by mutableStateOf(NAV.default()?.id ?: "chat")
     var agentsPage by mutableStateOf(NAV.section("agents")?.pages?.firstOrNull()?.id ?: "agents")
-    var cloudPage by mutableStateOf(NAV.section("cloud")?.pages?.firstOrNull()?.id ?: "apps")
+    /**
+     * #913b Chat's strip: Search (its page id is the assistant vertical's id; where a query from outside lands), then
+     * Apps, Messages and Code (once the Cloud page).
+     */
+    var chatPage by mutableStateOf(chatVertical)
+    /** The agent whose screen (config, runs, results, drafts) is open on the Agents page, or null for the list. */
+    var agentOpen by mutableStateOf<String?>(null)
     /** The report open in the Reports detail view, or null for the list. */
     var reportOpen by mutableStateOf<String?>(null)
     val agentsModel = AgentsModel(this)
@@ -110,26 +116,39 @@ class SearchState(val services: Services) {
     /** #903 the settings that place the Things search changed: every Things page asks again. */
     fun areaChanged() { thingsModels.values.forEach { it.stale = true }; areaRev++ }
 
-    /** The island section a vertical lives under: Chat for the assistant, Web Search for the rest. */
-    fun sectionOf(verticalId: String): String = if (verticalId == chatVertical) "chat" else "web"
+    /**
+     * The island section a vertical lives under: Chat for the assistant, else the section (Me or LLC) whose strip
+     * lists it (build.json::ui.sections; test-search-shell.sh S10 holds every vertical to exactly one of them).
+     */
+    fun sectionOf(verticalId: String): String =
+        if (verticalId == chatVertical) "chat" else verticalSections.firstOrNull { s -> NAV.section(s)?.pages?.any { it.id == verticalId } == true } ?: verticalSections.first()
+
+    /** The island sections whose pages are search verticals: Me (personal) and LLC (commercial). */
+    val verticalSections: List<String> = NAV.bottomNav.filter { s -> s != "chat" && NAV.section(s)?.pages?.let { p -> p.isNotEmpty() && p.all { cfg.vertical(it.id) != null } } == true }
 
     /** The mockup's switchTopic(): a vertical opens on its first subpage, menus close. */
     fun open(id: String) {
         vertical = id; section = sectionOf(id); saved = false; menu = null
+        if (id == chatVertical) chatPage = chatVertical
         cfg.vertical(id)?.let { subpages[it.id] = it.subpages.first() }
     }
 
-    /** A tap on an island item (ui.bottom_nav). Web Search keeps the vertical it was on; Chat is the assistant. */
+    /** A tap on an island item (ui.bottom_nav). Me and LLC keep the vertical they were on; Chat keeps its page. */
     fun openSection(id: String) {
         saved = false; menu = null
         when (id) {
             "chat" -> { section = id; vertical = chatVertical }
-            "web" -> {
+            in verticalSections -> {
                 section = id
-                if (vertical == chatVertical) vertical = NAV.section("web")?.pages?.firstOrNull()?.id ?: cfg.verticals.first { it.id != chatVertical }.id
+                if (sectionOf(vertical) != id) vertical = NAV.section(id)?.pages?.firstOrNull()?.id ?: cfg.verticals.first { it.id != chatVertical }.id
             }
             else -> section = id
         }
+    }
+
+    /** #913b a vertical's agent link (Me, LLC): the Agents page opens on that agent's screen. */
+    fun openAgent(id: String) {
+        openSection("agents"); agentsPage = NAV.section("agents")?.pages?.firstOrNull()?.id ?: "agents"; agentOpen = id
     }
     /**
      * #937 a query from outside (MainActivity: SuperApp's Search "<text>" in Cloud Search row, a search
@@ -139,6 +158,7 @@ class SearchState(val services: Services) {
      */
     fun ask(q: String, scope: CoroutineScope) {
         openSection("chat")
+        chatPage = chatVertical
         if (chat.sending) {
             scope.launch { snapshotFlow { chat.sending }.first { !it }; ask(q, scope) }
             return
@@ -165,6 +185,8 @@ val LocalState = staticCompositionLocalOf<SearchState> { error("SearchShell prov
 object Tags {
     const val SHELL = "search_shell"
     const val WEB_STRIP = "search_web_strip"
+    const val CHAT_STRIP = "search_chat_strip"
+    fun agentLink(id: String) = "search_agent_link_$id"
     const val MENU = "search_menu"
     const val ISLAND = "search_island"
     const val PROFILE = "search_profile"
@@ -223,10 +245,10 @@ fun SearchShell(state: SearchState) {
                     // The page under the chrome: it pads itself by contentTop / contentBottom.
                     if (state.saved) SavedPage()
                     else when (state.section) {
-                        "cloud" -> CloudSection(state)
+                        "chat" -> ChatSection(state, v)
                         "agents" -> AgentsSection(state)
                         "reports" -> ReportsSection(state)
-                        "web" -> WebSection(state, v)
+                        in state.verticalSections -> VerticalsSection(state, state.section, v)
                         else -> {
                             val sub = state.subpageOf(v)
                             key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
@@ -273,20 +295,21 @@ private fun TopBar(state: SearchState, v: SearchConfig.Vertical, modifier: Modif
         val text = when {
             state.busy > 0 || state.chat.sending || state.agentsModel.running != null -> stringResource(R.string.island_busy)
             state.saved -> stringResource(R.string.saved_items)
-            state.section == "web" || state.section == "chat" -> v.title
-            state.section == "cloud" -> stringResource(R.string.cloud_title)
+            state.section == "chat" && state.chatPage != state.chatVertical -> stringResource(R.string.cloud_title)
+            state.section == "chat" || state.section in state.verticalSections -> v.title
             else -> section?.label ?: v.title
         }
-        val icon = if (state.section == "web" || state.section == "chat") v.icon else section?.icon ?: v.icon
+        val onVertical = state.section in state.verticalSections || (state.section == "chat" && state.chatPage == state.chatVertical)
+        val icon = if (onVertical) v.icon else section?.icon ?: v.icon
         Island(if (state.saved) IconCatalog.SAVED else icon, text, Modifier.testTag(Tags.ISLAND))
         Spacer(Modifier.weight(1f))
         IconBtn(R.drawable.ph_user, stringResource(R.string.profile), Tags.PROFILE) { state.toggle(Menu.PROFILE) }
     }
 }
 
-/** #913 Web Search: a strip of its verticals (ui.sections[web].pages) over the selected vertical's page. */
+/** #913b Me (personal) and LLC (commercial): a strip of the section's verticals (ui.sections[].pages) over the selected vertical's page. */
 @Composable
-private fun WebSection(state: SearchState, v: SearchConfig.Vertical) {
+private fun VerticalsSection(state: SearchState, section: String, v: SearchConfig.Vertical) {
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().padding(top = Metrics.stripShift)) {
             val sub = state.subpageOf(v)
@@ -294,9 +317,33 @@ private fun WebSection(state: SearchState, v: SearchConfig.Vertical) {
         }
         Box(Modifier.align(Alignment.TopStart).padding(top = Metrics.stripTop).testTag(Tags.WEB_STRIP)) {
             PageTabs(
-                pages = NAV.section("web")?.pages.orEmpty(),
+                pages = NAV.section(section)?.pages.orEmpty(),
                 selectedId = state.vertical,
                 onSelect = { state.open(it.id) },
+                underTopChrome = false,
+            )
+        }
+    }
+}
+
+/**
+ * #913b Chat: Search (the assistant vertical, as before: a query from outside lands here) and, on the same strip,
+ * the fleet searches that were the Cloud page: Apps, Messages and Code (CloudPages.kt).
+ */
+@Composable
+private fun ChatSection(state: SearchState, v: SearchConfig.Vertical) {
+    Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().padding(top = Metrics.stripShift)) {
+            if (state.chatPage == state.chatVertical) {
+                val sub = state.subpageOf(v)
+                key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
+            } else CloudPage(state, state.chatPage)
+        }
+        Box(Modifier.align(Alignment.TopStart).padding(top = Metrics.stripTop).testTag(Tags.CHAT_STRIP)) {
+            PageTabs(
+                pages = NAV.section("chat")?.pages.orEmpty(),
+                selectedId = state.chatPage,
+                onSelect = { state.chatPage = it.id },
                 underTopChrome = false,
             )
         }

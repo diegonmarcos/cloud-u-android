@@ -100,11 +100,21 @@ fun day(ms: Long): String = DateFormat.getDateInstance(DateFormat.MEDIUM, Locale
 /** The page's own padding under the top bar and above the nav (the mockup's .content-area). */
 val pagePadding = PaddingValues(start = Metrics.gutter, end = Metrics.gutter, top = Metrics.contentTop, bottom = Metrics.contentBottom)
 
-/** Every vertical page starts with its title, its description and, when it has more than one, its sub-nav. */
+/**
+ * Every vertical page starts with its title, its description, the agents it leads to (#913b: Me's and LLC's
+ * verticals link their matching Buy-Side and Sell-Side agents) and, when it has more than one, its sub-nav.
+ */
 fun LazyListScope.pageHeader(state: SearchState, v: SearchConfig.Vertical) {
     item(key = "header") {
         Column {
             TopicHeader(v.title, v.blurb)
+            val agents = state.cfg.agents
+            if (agents != null && v.agents.isNotEmpty()) ChipRow {
+                Text(stringResource(R.string.vertical_agents), color = LocalGlass.current.text2, style = Type.style(Type.label))
+                v.agents.mapNotNull { agents.agent(it) }.forEach { a ->
+                    Chip(a.label, Tags.agentLink(a.id), icon = R.drawable.ph_robot) { state.openAgent(a.id) }
+                }
+            }
             // #868 the fleet's page-tab strip, from build.json::ui.sections[].pages.
             if (v.subpages.size > 1) PageTabs(
                 pages = NAV.section(state.sectionOf(v.id))?.page(v.id)?.pages.orEmpty(),

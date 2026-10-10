@@ -1,6 +1,6 @@
 {
   "name": "cloud-search",
-  "description": "Diego's Cloud Search (#779) - one app for searching what a life in Germany needs, from the owner's design mockup, on the fleet's bottom-nav island: Web Search (House, Jobs, Groceries, Things), Cloud Search (Apps, Messages, Code), Chat (web engines + AI chat), Agents (#913: draft-only agents that read your mail and pages and write drafts you send yourself) and Reports (what agents published). House and Jobs have Listing, Analysis, Feed and Calculators subpages; Search opens Google, DuckDuckGo, Brave or Qwant results in cloud-browser and holds an AI chat over OpenRouter (sessions grouped today / previous 7 days, a model picker over the live catalogue, natively web-searching models flagged, the token read from the fleet Account and never stored here). REAL DATA ONLY: every in-app listing comes from a public API this app is allowed to read (build.json::search.sources), cached on the phone so the last results stay readable offline; a portal whose terms forbid automated access is never fetched - its own search page opens in cloud-browser - and a source that cannot be used at all says why. The German payslip runs the BMF's own Lohnsteuer PAP 2026 (core/pap, generated into Kotlin by core/tools/pap2kt.py) with the 2026 social-insurance rules, golden-tested against the BMF's calculator. English is the base language (#299); dark is the default theme (#336).",
+  "description": "Diego's Cloud Search (#779) - one app for searching what a life in Germany needs, from the owner's design mockup, on the owner's mockup bottom nav: Me (personal search: House, Jobs, Groceries, Things), LLC (commercial search: Commercial Real Estate, Buy a Business, Suppliers / B2B, Business Services), Chat (web engines + AI chat, and the fleet's Apps, Messages and Code), Agents (#913: draft-only Buy-Side and Sell-Side agents that read your alert mails and pages and write drafts you send yourself) and Reports (what agents published). House and Jobs have Listing, Analysis, Feed and Calculators subpages; Search opens Google, DuckDuckGo, Brave or Qwant results in cloud-browser and holds an AI chat over OpenRouter (sessions grouped today / previous 7 days, a model picker over the live catalogue, natively web-searching models flagged, the token read from the fleet Account and never stored here). REAL DATA ONLY: every in-app listing comes from a public API this app is allowed to read (build.json::search.sources), cached on the phone so the last results stay readable offline; a portal whose terms forbid automated access is never fetched - its own search page opens in cloud-browser - and a source that cannot be used at all says why. The German payslip runs the BMF's own Lohnsteuer PAP 2026 (core/pap, generated into Kotlin by core/tools/pap2kt.py) with the 2026 social-insurance rules, golden-tested against the BMF's calculator. English is the base language (#299); dark is the default theme (#336).",
   "category": "android",
   "vendored_engine": null,
   "android": {
@@ -310,7 +310,11 @@
           "rent_vs_buy",
           "max_rent"
         ],
-        "chart_color": "chart_house"
+        "chart_color": "chart_house",
+        "agents": [
+          "rs_house_rental",
+          "rs_house_purchase"
+        ]
       },
       {
         "id": "jobs",
@@ -369,7 +373,10 @@
         "calculators": [
           "payslip"
         ],
-        "chart_color": "chart_jobs"
+        "chart_color": "chart_jobs",
+        "agents": [
+          "job_placement"
+        ]
       },
       {
         "id": "search",
@@ -441,7 +448,105 @@
         "analysis": "none",
         "feeds": [],
         "feed_keywords": [],
-        "calculators": []
+        "calculators": [],
+        "agents": [
+          "things_housing",
+          "things_electronics"
+        ]
+      },
+      {
+        "id": "commercial",
+        "label": "Commercial",
+        "title": "Commercial Real Estate",
+        "blurb": "Stores, buildings and offices to rent or buy.",
+        "icon": "commercial",
+        "placeholder": "Store, office, building...",
+        "subpages": [
+          "listing"
+        ],
+        "sources": [
+          "immoscout24-gewerbe",
+          "immowelt-gewerbe",
+          "kleinanzeigen-gewerbe"
+        ],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": [],
+        "agents": [
+          "rs_commercial_stores",
+          "rs_commercial_buildings",
+          "sell_real_estate"
+        ]
+      },
+      {
+        "id": "business",
+        "label": "Business",
+        "title": "Buy a Business",
+        "blurb": "Companies for sale and succession offers.",
+        "icon": "business",
+        "placeholder": "Sector, region, size...",
+        "subpages": [
+          "listing"
+        ],
+        "sources": [
+          "nexxt-change",
+          "dub"
+        ],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": [],
+        "agents": []
+      },
+      {
+        "id": "suppliers",
+        "label": "Suppliers",
+        "title": "Suppliers / B2B",
+        "blurb": "Manufacturers, wholesalers and B2B suppliers.",
+        "icon": "suppliers",
+        "placeholder": "Product, material, service...",
+        "subpages": [
+          "listing"
+        ],
+        "sources": [
+          "wlw",
+          "europages",
+          "alibaba"
+        ],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": [],
+        "agents": []
+      },
+      {
+        "id": "services",
+        "label": "Services",
+        "title": "Business Services",
+        "blurb": "Accountants, lawyers, agencies and freelancers for the business.",
+        "icon": "services",
+        "placeholder": "Accountant, lawyer, designer...",
+        "subpages": [
+          "listing"
+        ],
+        "sources": [
+          "gelbe-seiten",
+          "malt",
+          "freelancermap"
+        ],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": [],
+        "agents": [
+          "services_general",
+          "job_placement"
+        ]
       }
     ],
     "_doc_sources": "Every source, with what this app may do with it. kind `api`: a public API read in-app when `enabled` (parser = the core/Listing.kt Parsers branch, held to a saved real response in core/src/test/resources/fixtures). kind `link`: NEVER fetched - the site's own search (or a site: search when its URL scheme needs ids this app cannot know) opens in cloud-browser, because its terms forbid automated access or it has no public API. `why` is shown on the listing under the source's name, so nothing is silently missing. Verified 2026-10-02 from the mesh: BA Jobsuche v6 (200 with the published key and an honest user agent; v4 answers 403), Arbeitnow (200), Open Prices (2,131 Berlin prices within 30 km), search.openfoodfacts.org (200). The fleet's scraping backend was considered for the portals and is not used: crawlee-cloud is archived, and its successor scrappers-api sits behind two-factor auth and returns only a summary from /scrape (the data stays on the server) - and none of the portals below permits scraping in the first place.",
@@ -588,6 +693,118 @@
         "enabled": true,
         "url": "https://www.vinted.de/catalog?search_text={q}",
         "why": "No public API; its terms forbid automated access: its own search opens in cloud-browser."
+      },
+      "immoscout24-gewerbe": {
+        "label": "ImmoScout24 Gewerbe",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Aimmobilienscout24.de+gewerbe+{q}+{city}",
+        "why": "Its API is for contracted partners only and its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "immowelt-gewerbe": {
+        "label": "Immowelt Gewerbe",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Aimmowelt.de+gewerbe+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "kleinanzeigen-gewerbe": {
+        "label": "Kleinanzeigen Gewerbe",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Akleinanzeigen.de+gewerbeimmobilie+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "nexxt-change": {
+        "label": "nexxt-change",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Anexxt-change.org+{q}+{city}",
+        "why": "The federal business-succession exchange (BMWK, KfW) publishes no API: a site search opens in cloud-browser."
+      },
+      "dub": {
+        "label": "DUB Unternehmerbörse",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Adub.de+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "wlw": {
+        "label": "wer liefert was",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Awlw.de+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "europages": {
+        "label": "Europages",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Aeuropages.de+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "alibaba": {
+        "label": "Alibaba",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://www.alibaba.com/trade/search?SearchText={q}",
+        "why": "Its open platform is for registered partners only and its terms forbid scraping: its own search opens in cloud-browser."
+      },
+      "gelbe-seiten": {
+        "label": "Gelbe Seiten",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://www.gelbeseiten.de/suche/{q}/{city}",
+        "why": "No public API; its terms forbid automated access: its own search opens in cloud-browser."
+      },
+      "malt": {
+        "label": "Malt",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Amalt.de+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "freelancermap": {
+        "label": "freelancermap",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Afreelancermap.de+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "doctolib": {
+        "label": "Doctolib",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Adoctolib.de+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "jameda": {
+        "label": "Jameda",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Ajameda.de+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "kleinanzeigen-services": {
+        "label": "Kleinanzeigen Dienstleistungen",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://duckduckgo.com/?q=site%3Akleinanzeigen.de+dienstleistung+{q}+{city}",
+        "why": "No public API; its terms forbid automated access: a site search opens in cloud-browser."
+      },
+      "idealo": {
+        "label": "idealo",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://www.idealo.de/preisvergleich/MainSearchProductCategory.html?q={q}",
+        "why": "No public API; its terms forbid automated access: its own search opens in cloud-browser."
+      },
+      "arbeitsagentur": {
+        "label": "Jobsuche (Arbeitsagentur)",
+        "kind": "link",
+        "enabled": true,
+        "url": "https://www.arbeitsagentur.de/jobsuche/suche?was={q}&wo={city}",
+        "why": "The agency's own job search, opened in cloud-browser; the listing in this app reads its official API (Jobsuche v6)."
       }
     },
     "series": {
@@ -1436,7 +1653,7 @@
       }
     },
     "agents": {
-      "_doc": "#913 the Agents page (draft-only agents). Cloud Search READS through two read-only fleet doors (engines) and never submits, posts or sends anything: an agent produces a DRAFT and the person copies it and sends it themselves. Every agent must say mode draft_only or the declaration is refused. This block is also the contract with the engines (each engine's own constants are held equal to it by ac_cloud-mail/test/test-mail-agent-door.sh and ac_cloud-browser/test/test-browser-agent-door.sh and by the JVM suite).",
+      "_doc": "#913 the Agents page (draft-only agents). Cloud Search READS through two read-only fleet doors (engines) and never submits, posts or sends anything: an agent produces a DRAFT and the person copies it and sends it themselves. Every agent must say mode draft_only or the declaration is refused. This block is also the contract with the engines (each engine's own constants are held equal to it by ac_cloud-mail/test/test-mail-agent-door.sh and ac_cloud-browser/test/test-browser-agent-door.sh and by the JVM suite). #913b the agents are organised into two sides: Buy-Side (Real Estate, Things, Services: the owner looks for something) and Sell-Side (the owner offers something: a property, their work). Every agent is a DEFINITION run by the same engine (core/agents/Runner.kt): its sources (the alert mails each site sends, which listing links in them count, and the site search the person opens in Cloud Browser), the filters it asks for, its goal and the template its drafts start from. An agent may search, compare, summarise and draft; submitting, sending, buying or applying is always the person's own act in Cloud Browser. The parser refuses an agent that is not mode draft_only or that declares any auto_* key or an action key (submit, send, apply, buy, post, ...).",
       "engines": {
         "mail": {
           "_doc": "Cloud Mail's query-only provider (ac_cloud-mail app.sterna.agentapi). Authority is <mail package>.<authority_suffix>; the package is the fleet row `fleet`.",
@@ -1516,45 +1733,72 @@
           "hint": "left out when blank"
         }
       ],
-      "agents": [
+      "_doc_sources": "A source's mail_from is matched against the alert mail's sender (substring); mail_subject, when set, against its subject: name the saved search on the site so its alert subject carries that word (e.g. ImmoScout24 alerts named '... kaufen' feed RS_House-Purchase). The owner can switch a source off and change its subject word on the agent's screen. A source with no mail_from is a search only.",
+      "sides": [
         {
-          "id": "house_search",
-          "label": "House search",
-          "mode": "draft_only",
-          "blurb": "Reads your wg-gesucht.de alert mails, opens each new listing, and drafts an application from your template. You copy it and send it yourself.",
-          "mail_from": "wg-gesucht.de",
-          "mail_subject": "",
-          "group": "House search",
-          "template": "wg_gesucht_room",
-          "uses_llm": true,
-          "report_kind": "house_search_digest",
-          "links": {
-            "_doc": "A link counts only when its host is one of hosts (or a subdomain) and its path ends in the listing's id (id_regex group 1); the query string is dropped; a listing is one id however many links name it. exclude_paths are account and messaging pages, never a listing.",
-            "hosts": [
-              "wg-gesucht.de"
-            ],
-            "id_regex": "(?:^|[./])(\\d{5,})\\.html$",
-            "exclude_paths": [
-              "/nachricht",
-              "/mein-wg-gesucht",
-              "/abmelden",
-              "/impressum",
-              "/agb",
-              "/datenschutz",
-              "/hilfe",
-              "/anmeldung",
-              "/registrieren",
-              "/anzeigen-erstellen"
-            ]
-          }
+          "id": "buy",
+          "label": "Buy-Side"
+        },
+        {
+          "id": "sell",
+          "label": "Sell-Side"
         }
       ],
-      "templates": [
+      "categories": [
         {
-          "id": "wg_gesucht_room",
-          "agent": "house_search",
-          "label": "Room application (German)",
-          "body": "Hallo,\n\nich interessiere mich sehr für Ihr Angebot „{{listing_title}}“ ({{listing_url}}).\n\n{{personal|}}\n\nKurz zu mir: {{about}}\n\nEinzug wäre ab {{move_in|nach Absprache}} möglich. Über eine Rückmeldung oder einen Besichtigungstermin würde ich mich sehr freuen.\n\nViele Grüße\n{{name}}\n{{phone|}}"
+          "id": "real_estate",
+          "side": "buy",
+          "label": "Real Estate"
+        },
+        {
+          "id": "things",
+          "side": "buy",
+          "label": "Things"
+        },
+        {
+          "id": "services",
+          "side": "buy",
+          "label": "Services"
+        }
+      ],
+      "filters": [
+        {
+          "id": "location",
+          "label": "Location",
+          "hint": "city, district or postcode"
+        },
+        {
+          "id": "radius_km",
+          "label": "Radius (km)",
+          "hint": "around the location",
+          "number": true
+        },
+        {
+          "id": "price_min",
+          "label": "Price from (EUR)",
+          "hint": "lowest price or rent",
+          "number": true
+        },
+        {
+          "id": "price_max",
+          "label": "Price up to (EUR)",
+          "hint": "highest price or rent",
+          "number": true
+        },
+        {
+          "id": "size",
+          "label": "Size",
+          "hint": "m2, rooms or dimensions"
+        },
+        {
+          "id": "dates",
+          "label": "Dates",
+          "hint": "move-in, availability or appointment window"
+        },
+        {
+          "id": "keywords",
+          "label": "Keywords",
+          "hint": "words a listing should have; also the site search"
         }
       ]
     },
@@ -1571,6 +1815,739 @@
       }
     }
   },
+  "agents": {
+    "_doc": "#913b the agents CATALOGUE (the definitions and the templates their drafts start from) for build.json::search.agents, kept out of build.json::search because that block is baked whole into one BuildConfig string here and in Cloud Browser (SEARCH_CONFIG_B64), and a Java string constant holds at most 65535 bytes. app/build.gradle bakes this block as AGENTS_B64 and Decl.kt puts it back under search.agents (SearchConfig.withAgents) before the one parser reads it, as the JVM suite does (Fixtures.searchJson). Cloud Browser, which bakes search but not this, reads no agent.",
+    "agents": [
+      {
+        "id": "rs_house_purchase",
+        "label": "RS_House-Purchase",
+        "side": "buy",
+        "category": "real_estate",
+        "mode": "draft_only",
+        "blurb": "Reads your ImmoScout24, Immowelt and Kleinanzeigen alert mails for homes for sale, opens each new listing, and drafts a viewing request from your template.",
+        "goal": "Buy a home in {{location|your city}} (within {{radius_km|20}} km), price {{price_min|0}} to {{price_max|any}} EUR, size {{size|any}}, available {{dates|any time}}. Keywords: {{keywords|none}}.",
+        "query": "haus kaufen",
+        "filters": [
+          "location",
+          "radius_km",
+          "price_min",
+          "price_max",
+          "size",
+          "dates",
+          "keywords"
+        ],
+        "outputs": [
+          "results",
+          "drafts"
+        ],
+        "sources": [
+          {
+            "id": "immoscout24",
+            "label": "ImmoScout24",
+            "search": "immoscout24",
+            "mail_from": "immobilienscout24.de",
+            "mail_subject": "kaufen",
+            "links": {
+              "hosts": [
+                "immobilienscout24.de"
+              ],
+              "id_regex": "^/expose/(\\d{5,})/?$"
+            }
+          },
+          {
+            "id": "immowelt",
+            "label": "Immowelt",
+            "search": "immowelt",
+            "mail_from": "immowelt.de",
+            "mail_subject": "kaufen",
+            "links": {
+              "hosts": [
+                "immowelt.de"
+              ],
+              "id_regex": "(?i)^/expose/([0-9a-z]{6,})/?$"
+            }
+          },
+          {
+            "id": "kleinanzeigen",
+            "label": "Kleinanzeigen Immobilien",
+            "search": "kleinanzeigen-immo",
+            "mail_from": "kleinanzeigen.de",
+            "mail_subject": "kaufen",
+            "links": {
+              "hosts": [
+                "kleinanzeigen.de"
+              ],
+              "id_regex": "^/s-anzeige/[^/]+/(\\d{6,})-[\\d-]+$",
+              "exclude_paths": [
+                "/m-",
+                "/s-nachrichten",
+                "/s-anzeige-aufgeben"
+              ]
+            }
+          }
+        ],
+        "group": "House purchase",
+        "template": "house_purchase_viewing",
+        "uses_llm": true,
+        "report_kind": "house_purchase_digest"
+      },
+      {
+        "id": "rs_house_rental",
+        "label": "RS_House-Rental",
+        "legacy_ids": [
+          "house_search"
+        ],
+        "side": "buy",
+        "category": "real_estate",
+        "mode": "draft_only",
+        "blurb": "Reads your WG-Gesucht (and ImmoScout24, Kleinanzeigen) alert mails, opens each new listing, and drafts an application from your template. The house search agent, kept with its saved drafts, runs and template.",
+        "goal": "Rent a flat or room in {{location|your city}} (within {{radius_km|10}} km), rent {{price_min|0}} to {{price_max|any}} EUR, size {{size|any}}, moving in {{dates|as agreed}}. Keywords: {{keywords|none}}.",
+        "query": "wohnung mieten",
+        "filters": [
+          "location",
+          "radius_km",
+          "price_min",
+          "price_max",
+          "size",
+          "dates",
+          "keywords"
+        ],
+        "outputs": [
+          "results",
+          "drafts"
+        ],
+        "sources": [
+          {
+            "id": "wg-gesucht",
+            "label": "WG-Gesucht",
+            "search": "wg-gesucht",
+            "mail_from": "wg-gesucht.de",
+            "mail_subject": "",
+            "links": {
+              "_doc": "A link counts only when its host is one of hosts (or a subdomain) and its path ends in the listing's id (id_regex group 1); the query string is dropped; a listing is one id however many links name it. exclude_paths are account and messaging pages, never a listing.",
+              "hosts": [
+                "wg-gesucht.de"
+              ],
+              "id_regex": "(?:^|[./])(\\d{5,})\\.html$",
+              "exclude_paths": [
+                "/nachricht",
+                "/mein-wg-gesucht",
+                "/abmelden",
+                "/impressum",
+                "/agb",
+                "/datenschutz",
+                "/hilfe",
+                "/anmeldung",
+                "/registrieren",
+                "/anzeigen-erstellen"
+              ]
+            }
+          },
+          {
+            "id": "immoscout24",
+            "label": "ImmoScout24",
+            "search": "immoscout24",
+            "mail_from": "immobilienscout24.de",
+            "mail_subject": "mieten",
+            "links": {
+              "hosts": [
+                "immobilienscout24.de"
+              ],
+              "id_regex": "^/expose/(\\d{5,})/?$"
+            }
+          },
+          {
+            "id": "kleinanzeigen",
+            "label": "Kleinanzeigen Immobilien",
+            "search": "kleinanzeigen-immo",
+            "mail_from": "kleinanzeigen.de",
+            "mail_subject": "mieten",
+            "links": {
+              "hosts": [
+                "kleinanzeigen.de"
+              ],
+              "id_regex": "^/s-anzeige/[^/]+/(\\d{6,})-[\\d-]+$",
+              "exclude_paths": [
+                "/m-",
+                "/s-nachrichten",
+                "/s-anzeige-aufgeben"
+              ]
+            }
+          }
+        ],
+        "group": "House search",
+        "template": "wg_gesucht_room",
+        "uses_llm": true,
+        "report_kind": "house_search_digest"
+      },
+      {
+        "id": "rs_commercial_stores",
+        "label": "RS_Commercial-Stores",
+        "side": "buy",
+        "category": "real_estate",
+        "mode": "draft_only",
+        "blurb": "Reads your ImmoScout24 and Kleinanzeigen alert mails for shops and retail units, opens each new listing, and drafts an enquiry for the landlord or agent.",
+        "goal": "Find a store or retail unit in {{location|your city}} (within {{radius_km|15}} km), rent or price {{price_min|0}} to {{price_max|any}} EUR, {{size|any size}}, from {{dates|as agreed}}. Keywords: {{keywords|none}}.",
+        "query": "ladenlokal",
+        "filters": [
+          "location",
+          "radius_km",
+          "price_min",
+          "price_max",
+          "size",
+          "dates",
+          "keywords"
+        ],
+        "outputs": [
+          "results",
+          "drafts"
+        ],
+        "sources": [
+          {
+            "id": "immoscout24",
+            "label": "ImmoScout24 Gewerbe",
+            "search": "immoscout24-gewerbe",
+            "mail_from": "immobilienscout24.de",
+            "mail_subject": "Laden",
+            "links": {
+              "hosts": [
+                "immobilienscout24.de"
+              ],
+              "id_regex": "^/expose/(\\d{5,})/?$"
+            }
+          },
+          {
+            "id": "kleinanzeigen",
+            "label": "Kleinanzeigen Gewerbe",
+            "search": "kleinanzeigen-gewerbe",
+            "mail_from": "kleinanzeigen.de",
+            "mail_subject": "Laden",
+            "links": {
+              "hosts": [
+                "kleinanzeigen.de"
+              ],
+              "id_regex": "^/s-anzeige/[^/]+/(\\d{6,})-[\\d-]+$",
+              "exclude_paths": [
+                "/m-",
+                "/s-nachrichten",
+                "/s-anzeige-aufgeben"
+              ]
+            }
+          }
+        ],
+        "group": "Commercial stores",
+        "template": "commercial_store_enquiry",
+        "uses_llm": true,
+        "report_kind": "commercial_stores_digest"
+      },
+      {
+        "id": "rs_commercial_buildings",
+        "label": "RS_Commercial-Buildings",
+        "side": "buy",
+        "category": "real_estate",
+        "mode": "draft_only",
+        "blurb": "Reads your ImmoScout24 and Immowelt alert mails for commercial and investment buildings and offices, opens each new listing, and drafts a request for the expose and a viewing.",
+        "goal": "Find a commercial or investment building or office in {{location|your city}} (within {{radius_km|30}} km), price {{price_min|0}} to {{price_max|any}} EUR, {{size|any size}}. Keywords: {{keywords|none}}.",
+        "query": "anlageobjekt",
+        "filters": [
+          "location",
+          "radius_km",
+          "price_min",
+          "price_max",
+          "size",
+          "dates",
+          "keywords"
+        ],
+        "outputs": [
+          "results",
+          "drafts"
+        ],
+        "sources": [
+          {
+            "id": "immoscout24",
+            "label": "ImmoScout24 Gewerbe",
+            "search": "immoscout24-gewerbe",
+            "mail_from": "immobilienscout24.de",
+            "mail_subject": "Anlage",
+            "links": {
+              "hosts": [
+                "immobilienscout24.de"
+              ],
+              "id_regex": "^/expose/(\\d{5,})/?$"
+            }
+          },
+          {
+            "id": "immowelt",
+            "label": "Immowelt Gewerbe",
+            "search": "immowelt-gewerbe",
+            "mail_from": "immowelt.de",
+            "mail_subject": "Anlage",
+            "links": {
+              "hosts": [
+                "immowelt.de"
+              ],
+              "id_regex": "(?i)^/expose/([0-9a-z]{6,})/?$"
+            }
+          }
+        ],
+        "group": "Commercial buildings",
+        "template": "commercial_building_enquiry",
+        "uses_llm": true,
+        "report_kind": "commercial_buildings_digest"
+      },
+      {
+        "id": "things_housing",
+        "label": "Things_Housing",
+        "side": "buy",
+        "category": "things",
+        "mode": "draft_only",
+        "blurb": "Reads your Kleinanzeigen and eBay alert mails for furniture and household goods, opens each new offer, and drafts a question to the seller.",
+        "goal": "Buy furniture or household goods near {{location|your city}} (within {{radius_km|25}} km) for {{price_min|0}} to {{price_max|any}} EUR, {{size|any size}}, pick-up {{dates|any time}}. Looking for: {{keywords|furniture}}.",
+        "query": "möbel",
+        "filters": [
+          "location",
+          "radius_km",
+          "price_min",
+          "price_max",
+          "size",
+          "dates",
+          "keywords"
+        ],
+        "outputs": [
+          "results",
+          "drafts"
+        ],
+        "sources": [
+          {
+            "id": "kleinanzeigen",
+            "label": "Kleinanzeigen",
+            "search": "kleinanzeigen",
+            "mail_from": "kleinanzeigen.de",
+            "mail_subject": "",
+            "links": {
+              "hosts": [
+                "kleinanzeigen.de"
+              ],
+              "id_regex": "^/s-anzeige/[^/]+/(\\d{6,})-[\\d-]+$",
+              "exclude_paths": [
+                "/m-",
+                "/s-nachrichten",
+                "/s-anzeige-aufgeben"
+              ]
+            }
+          },
+          {
+            "id": "ebay",
+            "label": "eBay",
+            "search": "ebay",
+            "mail_from": "ebay.de",
+            "mail_subject": "",
+            "links": {
+              "hosts": [
+                "ebay.de"
+              ],
+              "id_regex": "^/itm/(?:[^/]+/)?(\\d{9,})/?$"
+            }
+          }
+        ],
+        "group": "Things housing",
+        "template": "things_seller_question",
+        "uses_llm": true,
+        "report_kind": "things_housing_digest"
+      },
+      {
+        "id": "things_electronics",
+        "label": "Things_Electronics",
+        "side": "buy",
+        "category": "things",
+        "mode": "draft_only",
+        "blurb": "Reads your idealo price alerts and eBay / Kleinanzeigen alert mails for electronics, opens each offer, and drafts a question to the seller (condition, warranty, receipt).",
+        "goal": "Buy {{keywords|an electronic device}} for {{price_min|0}} to {{price_max|any}} EUR, near {{location|your city}} (within {{radius_km|50}} km) or shipped, by {{dates|any time}}.",
+        "query": "",
+        "filters": [
+          "location",
+          "radius_km",
+          "price_min",
+          "price_max",
+          "dates",
+          "keywords"
+        ],
+        "outputs": [
+          "results",
+          "drafts"
+        ],
+        "sources": [
+          {
+            "id": "idealo",
+            "label": "idealo",
+            "search": "idealo",
+            "mail_from": "idealo.de",
+            "mail_subject": "",
+            "links": {
+              "hosts": [
+                "idealo.de"
+              ],
+              "id_regex": "^/preisvergleich/OffersOfProduct/(\\d{5,})_[^/]*\\.html$"
+            }
+          },
+          {
+            "id": "ebay",
+            "label": "eBay",
+            "search": "ebay",
+            "mail_from": "ebay.de",
+            "mail_subject": "",
+            "links": {
+              "hosts": [
+                "ebay.de"
+              ],
+              "id_regex": "^/itm/(?:[^/]+/)?(\\d{9,})/?$"
+            }
+          },
+          {
+            "id": "kleinanzeigen",
+            "label": "Kleinanzeigen",
+            "search": "kleinanzeigen",
+            "mail_from": "kleinanzeigen.de",
+            "mail_subject": "",
+            "links": {
+              "hosts": [
+                "kleinanzeigen.de"
+              ],
+              "id_regex": "^/s-anzeige/[^/]+/(\\d{6,})-[\\d-]+$",
+              "exclude_paths": [
+                "/m-",
+                "/s-nachrichten",
+                "/s-anzeige-aufgeben"
+              ]
+            }
+          }
+        ],
+        "group": "Things electronics",
+        "template": "electronics_seller_question",
+        "uses_llm": true,
+        "report_kind": "things_electronics_digest"
+      },
+      {
+        "id": "services_medical",
+        "label": "Services_Medical",
+        "side": "buy",
+        "category": "services",
+        "mode": "draft_only",
+        "blurb": "Reads your Doctolib and Jameda mails (free-slot and waiting-list alerts), opens each practice page, and drafts an appointment request. You book it yourself.",
+        "goal": "See a {{keywords|doctor}} in {{location|your city}} (within {{radius_km|10}} km), {{dates|as soon as possible}}.",
+        "query": "arzt",
+        "filters": [
+          "location",
+          "radius_km",
+          "dates",
+          "keywords"
+        ],
+        "outputs": [
+          "results",
+          "drafts"
+        ],
+        "sources": [
+          {
+            "id": "doctolib",
+            "label": "Doctolib",
+            "search": "doctolib",
+            "mail_from": "doctolib.de",
+            "mail_subject": "",
+            "links": {
+              "hosts": [
+                "doctolib.de"
+              ],
+              "id_regex": "^/([a-z-]+/[a-z-]+/[a-z0-9-]+)$",
+              "exclude_paths": [
+                "/sessions",
+                "/account",
+                "/patient",
+                "/search",
+                "/booking",
+                "/de/"
+              ]
+            }
+          },
+          {
+            "id": "jameda",
+            "label": "Jameda",
+            "search": "jameda",
+            "mail_from": "jameda.de",
+            "mail_subject": "",
+            "links": {
+              "hosts": [
+                "jameda.de"
+              ],
+              "id_regex": "^/([a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+)/?$",
+              "exclude_paths": [
+                "/login",
+                "/suche",
+                "/profil"
+              ]
+            }
+          }
+        ],
+        "group": "Medical",
+        "template": "medical_appointment_request",
+        "uses_llm": false,
+        "report_kind": "services_medical_digest"
+      },
+      {
+        "id": "services_general",
+        "label": "Services_General",
+        "side": "buy",
+        "category": "services",
+        "mode": "draft_only",
+        "blurb": "Reads your Kleinanzeigen service alerts, opens each offer, and drafts a request for a quote; Gelbe Seiten opens as a search.",
+        "goal": "Hire {{keywords|a tradesperson or service}} in {{location|your city}} (within {{radius_km|20}} km), budget {{price_min|0}} to {{price_max|open}} EUR, {{dates|any time}}.",
+        "query": "handwerker",
+        "filters": [
+          "location",
+          "radius_km",
+          "price_min",
+          "price_max",
+          "dates",
+          "keywords"
+        ],
+        "outputs": [
+          "results",
+          "drafts"
+        ],
+        "sources": [
+          {
+            "id": "kleinanzeigen",
+            "label": "Kleinanzeigen Dienstleistungen",
+            "search": "kleinanzeigen-services",
+            "mail_from": "kleinanzeigen.de",
+            "mail_subject": "",
+            "links": {
+              "hosts": [
+                "kleinanzeigen.de"
+              ],
+              "id_regex": "^/s-anzeige/[^/]+/(\\d{6,})-[\\d-]+$",
+              "exclude_paths": [
+                "/m-",
+                "/s-nachrichten",
+                "/s-anzeige-aufgeben"
+              ]
+            }
+          },
+          {
+            "id": "gelbe-seiten",
+            "label": "Gelbe Seiten",
+            "search": "gelbe-seiten",
+            "mail_from": "",
+            "mail_subject": ""
+          }
+        ],
+        "group": "Services",
+        "template": "services_quote_request",
+        "uses_llm": true,
+        "report_kind": "services_general_digest"
+      },
+      {
+        "id": "sell_real_estate",
+        "label": "Real-Estate",
+        "side": "sell",
+        "category": "",
+        "mode": "draft_only",
+        "blurb": "For a property you sell or rent out: reads alert mails for comparable listings near it, and drafts your own listing text with each comparable beside it. You publish the listing yourself.",
+        "goal": "Sell or rent out {{keywords|my property}} in {{location|your city}}, {{size|size to state}}, asking {{price_max|a price to set}} EUR, available {{dates|now}}; compare with listings within {{radius_km|5}} km.",
+        "query": "",
+        "filters": [
+          "location",
+          "radius_km",
+          "price_min",
+          "price_max",
+          "size",
+          "dates",
+          "keywords"
+        ],
+        "outputs": [
+          "results",
+          "drafts"
+        ],
+        "sources": [
+          {
+            "id": "immoscout24",
+            "label": "ImmoScout24",
+            "search": "immoscout24",
+            "mail_from": "immobilienscout24.de",
+            "mail_subject": "Vergleich",
+            "links": {
+              "hosts": [
+                "immobilienscout24.de"
+              ],
+              "id_regex": "^/expose/(\\d{5,})/?$"
+            }
+          },
+          {
+            "id": "immowelt",
+            "label": "Immowelt",
+            "search": "immowelt",
+            "mail_from": "immowelt.de",
+            "mail_subject": "Vergleich",
+            "links": {
+              "hosts": [
+                "immowelt.de"
+              ],
+              "id_regex": "(?i)^/expose/([0-9a-z]{6,})/?$"
+            }
+          },
+          {
+            "id": "kleinanzeigen",
+            "label": "Kleinanzeigen Immobilien",
+            "search": "kleinanzeigen-immo",
+            "mail_from": "kleinanzeigen.de",
+            "mail_subject": "Vergleich",
+            "links": {
+              "hosts": [
+                "kleinanzeigen.de"
+              ],
+              "id_regex": "^/s-anzeige/[^/]+/(\\d{6,})-[\\d-]+$",
+              "exclude_paths": [
+                "/m-",
+                "/s-nachrichten",
+                "/s-anzeige-aufgeben"
+              ]
+            }
+          }
+        ],
+        "group": "Sell real estate",
+        "template": "sell_listing_draft",
+        "uses_llm": false,
+        "report_kind": "sell_real_estate_digest"
+      },
+      {
+        "id": "job_placement",
+        "label": "Job-Placement",
+        "side": "sell",
+        "category": "",
+        "mode": "draft_only",
+        "blurb": "Finds jobs for you: reads your StepStone, LinkedIn and Arbeitsagentur job-alert mails, opens each new job, and drafts a cover letter from your template. You apply yourself.",
+        "goal": "A job as {{keywords|my profession}} in {{location|your city}} (within {{radius_km|30}} km), salary from {{price_min|open}} EUR, starting {{dates|as agreed}}.",
+        "query": "",
+        "filters": [
+          "location",
+          "radius_km",
+          "price_min",
+          "dates",
+          "keywords"
+        ],
+        "outputs": [
+          "results",
+          "drafts"
+        ],
+        "sources": [
+          {
+            "id": "stepstone",
+            "label": "StepStone",
+            "search": "stepstone",
+            "mail_from": "stepstone.de",
+            "mail_subject": "",
+            "links": {
+              "hosts": [
+                "stepstone.de"
+              ],
+              "id_regex": "--(\\d{6,})-inline\\.html$"
+            }
+          },
+          {
+            "id": "linkedin",
+            "label": "LinkedIn Jobs",
+            "search": "linkedin-jobs",
+            "mail_from": "linkedin.com",
+            "mail_subject": "",
+            "links": {
+              "hosts": [
+                "linkedin.com"
+              ],
+              "id_regex": "^/(?:comm/)?jobs/view/(?:[^/]*-)?(\\d{6,})/?$"
+            }
+          },
+          {
+            "id": "arbeitsagentur",
+            "label": "Jobsuche (Arbeitsagentur)",
+            "search": "arbeitsagentur",
+            "mail_from": "arbeitsagentur.de",
+            "mail_subject": "",
+            "links": {
+              "hosts": [
+                "arbeitsagentur.de"
+              ],
+              "id_regex": "^/jobsuche/jobdetail/([0-9A-Za-z-]{8,})$"
+            }
+          }
+        ],
+        "group": "Job placement",
+        "template": "job_application",
+        "uses_llm": true,
+        "report_kind": "job_placement_digest"
+      }
+    ],
+    "templates": [
+      {
+        "id": "wg_gesucht_room",
+        "agent": "rs_house_rental",
+        "label": "Room application (German)",
+        "body": "Hallo,\n\nich interessiere mich sehr für Ihr Angebot „{{listing_title}}“ ({{listing_url}}).\n\n{{personal|}}\n\nKurz zu mir: {{about}}\n\nEinzug wäre ab {{move_in|nach Absprache}} möglich. Über eine Rückmeldung oder einen Besichtigungstermin würde ich mich sehr freuen.\n\nViele Grüße\n{{name}}\n{{phone|}}"
+      },
+      {
+        "id": "house_purchase_viewing",
+        "agent": "rs_house_purchase",
+        "label": "Viewing request, purchase (German)",
+        "body": "Guten Tag,\n\nich interessiere mich für Ihr Angebot „{{listing_title}}“ ({{listing_url}}) und würde die Immobilie gern besichtigen.\n\n{{personal|}}\n\nKurz zu mir: {{about}}\n\nIch suche in {{location|der Gegend}} mit einem Budget bis {{price_max|nach Absprache}} EUR. Könnten Sie mir das Exposé und mögliche Besichtigungstermine ({{dates|flexibel}}) nennen?\n\nMit freundlichen Grüßen\n{{name}}\n{{phone|}}"
+      },
+      {
+        "id": "commercial_store_enquiry",
+        "agent": "rs_commercial_stores",
+        "label": "Store enquiry (German)",
+        "body": "Guten Tag,\n\nich interessiere mich für die Gewerbefläche „{{listing_title}}“ ({{listing_url}}).\n\n{{personal|}}\n\nKurz zu mir und meinem Vorhaben: {{about}}\n\nGesucht ist eine Fläche von {{size|passender Größe}}, Bezug ab {{dates|nach Absprache}}. Bitte senden Sie mir die Konditionen (Miete, Nebenkosten, Laufzeit) und einen Besichtigungstermin.\n\nMit freundlichen Grüßen\n{{name}}\n{{phone|}}"
+      },
+      {
+        "id": "commercial_building_enquiry",
+        "agent": "rs_commercial_buildings",
+        "label": "Building expose request (German)",
+        "body": "Guten Tag,\n\nzu Ihrem Objekt „{{listing_title}}“ ({{listing_url}}) bitte ich um das vollständige Exposé mit Mietaufstellung und Energieausweis sowie um einen Besichtigungstermin.\n\n{{personal|}}\n\nKurz zu mir: {{about}}\n\nMein Budget liegt bei bis zu {{price_max|nach Absprache}} EUR.\n\nMit freundlichen Grüßen\n{{name}}\n{{phone|}}"
+      },
+      {
+        "id": "things_seller_question",
+        "agent": "things_housing",
+        "label": "Question to the seller (German)",
+        "body": "Hallo,\n\nist „{{listing_title}}“ ({{listing_url}}) noch zu haben?\n\n{{personal|}}\n\nIch könnte es {{dates|in den nächsten Tagen}} in {{location|Ihrer Nähe}} abholen. Wären {{price_max|Ihr Preis}} EUR in Ordnung?\n\nViele Grüße\n{{name}}"
+      },
+      {
+        "id": "electronics_seller_question",
+        "agent": "things_electronics",
+        "label": "Question about a device (German)",
+        "body": "Hallo,\n\nich interessiere mich für „{{listing_title}}“ ({{listing_url}}).\n\n{{personal|}}\n\nKönnen Sie mir sagen, in welchem Zustand das Gerät ist, ob es noch Garantie hat und ob die Rechnung dabei ist? Mein Budget liegt bei {{price_max|Ihrem Preis}} EUR.\n\nViele Grüße\n{{name}}"
+      },
+      {
+        "id": "medical_appointment_request",
+        "agent": "services_medical",
+        "label": "Appointment request (German)",
+        "body": "Guten Tag,\n\nich möchte gern einen Termin ({{keywords|Sprechstunde}}) in Ihrer Praxis vereinbaren: {{listing_title}} ({{listing_url}}).\n\nMöglich wäre es mir {{dates|zu den nächsten freien Terminen}}. Kurz zu mir: {{about}}\n\nMit freundlichen Grüßen\n{{name}}\n{{phone|}}"
+      },
+      {
+        "id": "services_quote_request",
+        "agent": "services_general",
+        "label": "Request for a quote (German)",
+        "body": "Guten Tag,\n\nzu Ihrem Angebot „{{listing_title}}“ ({{listing_url}}) hätte ich gern ein Angebot.\n\n{{personal|}}\n\nEs geht um: {{keywords|die beschriebene Leistung}} in {{location|meiner Stadt}}, Zeitraum {{dates|nach Absprache}}, Budget bis {{price_max|offen}} EUR.\n\nMit freundlichen Grüßen\n{{name}}\n{{phone|}}"
+      },
+      {
+        "id": "sell_listing_draft",
+        "agent": "sell_real_estate",
+        "label": "Your listing, with a comparable (German)",
+        "body": "Vergleichsobjekt: {{listing_title}} ({{listing_url}})\n\n— Entwurf für Ihr eigenes Inserat —\n\n{{keywords|Ihre Immobilie}} in {{location|Ihrer Stadt}}\nGröße: {{size|bitte angeben}}\nPreis / Miete: {{price_max|bitte festlegen}} EUR\nVerfügbar ab: {{dates|sofort}}\n\n{{about}}\n\nKontakt: {{name}} {{phone|}}"
+      },
+      {
+        "id": "job_application",
+        "agent": "job_placement",
+        "label": "Cover letter (German)",
+        "body": "Sehr geehrte Damen und Herren,\n\nmit großem Interesse habe ich Ihre Stellenanzeige „{{listing_title}}“ ({{listing_url}}) gelesen und bewerbe mich hiermit.\n\n{{personal|}}\n\nKurz zu mir: {{about}}\n\nIch kann {{dates|nach Absprache}} beginnen. Über eine Einladung zu einem Gespräch freue ich mich.\n\nMit freundlichen Grüßen\n{{name}}\n{{phone|}}"
+      }
+    ]
+  },
   "ui": {
     "_doc": "The shell: build.json::search drives every list; ui holds only the chrome's own settings.",
     "debug_api": {
@@ -1578,19 +2555,19 @@
     },
     "_doc_debug_api": "Routes on the fleet debug API (libs:devtools AppDebugServer), for checks with the screen locked: /api/search/verticals (every vertical, subpage, source with its kind/enabled/why), /api/search/query?v=&q=&city= (the real query through the same engine and cache the screens use: listings + per-source status), /api/search/calc?name=&<field>=... (a calculator's outputs and warnings), /api/search/analysis?v= (#797: the jobs statistics or the market series, with each source's status), /api/search/feed?v= (the Feed page's headlines and each feed's status). The ops never include `state` (update-ack-guard owns GET /api/state). #913: /api/search/agents (the agents, their last run, the budget), /api/search/runs (the run log with its audit lines), /api/search/reports and /api/search/report?id= (what agents published), /api/search/cloud?kind=apps|messages&q= (the Cloud Search section).",
     "dark_default": true,
-    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island (Web Search, Cloud Search, Chat, Agents, Reports; the first two read Web and Cloud on the island because two two-word labels do not fit five cells at 360 dp - the lib's label fitting never settles - and the top pill names them in full from res/values/strings.xml), ui.sections[] what each item opens, ui.default_section where the app opens. A section's pages are its PageTabs strip: Web Search's pages are the search.verticals it covers (House, Jobs, Groceries, Things; each with its own subpage strip one level lower), Cloud Search's are Apps, Messages and Code, Chat is today's Search page (the assistant vertical), Agents has Agents, Runs, Templates and Settings, Reports lists what agents published. test-search-shell.sh S10 holds the declaration, search.verticals and search.subpages together. ui.style = \"search-html\" is the ONE declared exception to the fleet's island look: the owner's own HTML mockup (_dispatch/assets/cloud-search-mockup.html .bottom-nav: a 60 dp glass pill, 50 dp round cells, the active icon lifts 6 dp and its label fades in, the assistant's icon in the .ai-nav-icon gradient) restored as a VARIANT of libs:bottomnav (SearchHtmlIsland), not an app-local nav; 1_cicd/src/data/nav-shape.json::variants names this app and rule N8 keeps every other app on the fleet island.",
+    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island (Me, LLC, Chat, Agents, Reports, #913b), ui.sections[] what each item opens, ui.default_section where the app opens. A section's pages are its PageTabs strip: Me's pages are the personal search.verticals (House, Jobs, Groceries, Things; each with its own subpage strip one level lower), LLC's the commercial ones (Commercial Real Estate, Buy a Business, Suppliers / B2B, Business Services); every vertical other than the assistant is a page of exactly one of the two. Chat is Search (the assistant vertical: engine boxes + AI chat, where a query from outside lands) and the fleet searches that were the Cloud page (Apps, Messages, Code). Agents has Agents, Runs, Templates and Settings, Reports lists what agents published. test-search-shell.sh S10 holds the declaration, search.verticals and search.subpages together. ui.style = \"search-html\" is the ONE declared exception to the fleet's island look: the owner's own HTML mockup (_dispatch/assets/cloud-search-mockup.html .bottom-nav: a 60 dp glass pill, 50 dp round cells, the active icon lifts 6 dp and its label fades in, the assistant's icon in the .ai-nav-icon gradient) restored as a VARIANT of libs:bottomnav (SearchHtmlIsland), not an app-local nav; 1_cicd/src/data/nav-shape.json::variants names this app and rule N8 keeps every other app on the fleet island.",
     "bottom_nav": [
-      "web",
-      "cloud",
+      "me",
+      "llc",
       "chat",
       "agents",
       "reports"
     ],
     "sections": [
       {
-        "id": "web",
-        "label": "Web",
-        "icon": "globe",
+        "id": "me",
+        "label": "Me",
+        "icon": "me",
         "pages": [
           {
             "id": "house",
@@ -1655,10 +2632,37 @@
         ]
       },
       {
-        "id": "cloud",
-        "label": "Cloud",
-        "icon": "cloud",
+        "id": "llc",
+        "label": "LLC",
+        "icon": "llc",
         "pages": [
+          {
+            "id": "commercial",
+            "label": "Commercial"
+          },
+          {
+            "id": "business",
+            "label": "Business"
+          },
+          {
+            "id": "suppliers",
+            "label": "Suppliers"
+          },
+          {
+            "id": "services",
+            "label": "Services"
+          }
+        ]
+      },
+      {
+        "id": "chat",
+        "label": "Chat",
+        "icon": "assistant",
+        "pages": [
+          {
+            "id": "search",
+            "label": "Search"
+          },
           {
             "id": "apps",
             "label": "Apps"
@@ -1670,17 +2674,6 @@
           {
             "id": "code",
             "label": "Code"
-          }
-        ]
-      },
-      {
-        "id": "chat",
-        "label": "Chat",
-        "icon": "assistant",
-        "pages": [
-          {
-            "id": "assistant",
-            "label": "Assistant"
           }
         ]
       },

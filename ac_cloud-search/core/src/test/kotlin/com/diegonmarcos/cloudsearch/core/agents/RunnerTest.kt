@@ -60,8 +60,11 @@ class RunnerTest {
     private fun runner(m: MailSource = mails, p: PageSource = FakePages(allPages), llm: Llm? = FakeLlm(), ledger: BudgetLedger = BudgetLedger(Caps(1.0, 1.0), 0.0)) =
         DraftRunner(m, p, llm, ledger, { clock += 10; clock }, { "id${++ids}" })
 
+    /** The house agent's WG-Gesucht source alone: the alert mails these fixtures are. */
+    private val wg = agent.sources.filter { it.id == "wg-gesucht" }
+
     private fun input(seen: Set<String> = emptySet(), s: DraftRunner.Settings = settings, prof: Map<String, String> = profile) =
-        DraftRunner.Input(agent, template, prof, s, seen, "m/x", price)
+        DraftRunner.Input(agent, template, prof, s, seen, "m/x", price, sources = wg)
 
     private val settings = DraftRunner.Settings(maxMails = 30, maxListings = 8, lookbackDays = 14, pageChars = 6000, personalMaxWords = 70, maxTokens = 300)
 
@@ -255,7 +258,7 @@ class RunnerTest {
 
     @Test fun anAgentThatDoesNotUseTheModelNeverCallsIt() {
         val llm = FakeLlm()
-        val plain = DraftRunner.Input(agent.copy(usesLlm = false), template, profile, settings, emptySet(), "m/x", price)
+        val plain = DraftRunner.Input(agent.copy(usesLlm = false), template, profile, settings, emptySet(), "m/x", price, sources = wg)
         runner(llm = llm).run(plain)
         assertEquals(0, llm.requests.size)
     }
@@ -290,5 +293,56 @@ class RunnerTest {
         assertEquals("", Prompt.clean("https://x.example", 5))
         assertEquals("Kontakt:", Prompt.clean("Kontakt: a.b+c@d-e.example www.x.de", 5))
         assertEquals("a b", Prompt.clean("a\u0007 \u0000b", 5))
+    }
+
+    // ── #913b one engine, many definitions: several sources, the owner's filters, the goal ────────────
+
+    private class AllMail(val bySender: Map<String, List<MailHeader>>, val bodies: Map<String, MailBody?>) : MailSource {
+        val asked = ArrayList<Pair<String, String>>(); val bodyReads = ArrayList<String>()
+        override fun messages(from: String, subject: String, sinceMs: Long, limit: Int): List<MailHeader> { asked += from to subject; return bySender[from].orEmpty() }
+        override fun body(accountId: String, id: String): MailBody? { bodyReads += id; return bodies[id] }
+    }
+
+    @Test fun everySourceThatSendsAlertsIsAskedAndAMailIsReadOnce() {
+        val m = AllMail(
+            mapOf("wg-gesucht.de" to listOf(hdr("m1"), hdr("m2")), "immobilienscout24.de" to listOf(hdr("m2"), hdr("m3"))),
+            mapOf("m1" to MailBody("", html, false), "m2" to MailBody(txt, "", false), "m3" to MailBody("https://www.immobilienscout24.de/expose/155667788?ref=x", "", false)),
+        )
+        val p = FakePages(allPages + ("https://www.immobilienscout24.de/expose/155667788" to page("https://www.immobilienscout24.de/expose/155667788", "Wohnung")))
+        val out = runner(m, p).run(DraftRunner.Input(agent, template, profile, settings, emptySet(), "m/x", price))
+        assertEquals(listOf("wg-gesucht.de" to "", "immobilienscout24.de" to "mieten", "kleinanzeigen.de" to "mieten"), m.asked)
+        assertEquals(listOf("m1", "m2", "m3"), m.bodyReads)
+        assertTrue("155667788" in out.handled)
+        assertEquals(6, out.drafts.size)
+        assertEquals(3, out.record.audit.count { it.kind == AuditEvent.MAIL_QUERY })
+    }
+
+    @Test fun aSwitchedOffOrSearchOnlySourceIsNotAsked() {
+        val m = AllMail(emptyMap(), emptyMap())
+        val off = agent.sources.filter { it.id != "immoscout24" } + agent.sources.first().copy(id = "search-only", mailFrom = "")
+        runner(m).run(DraftRunner.Input(agent, template, profile, settings, emptySet(), "m/x", price, sources = off))
+        assertEquals(listOf("wg-gesucht.de", "kleinanzeigen.de"), m.asked.map { it.first })
+        val none = runner(m).run(DraftRunner.Input(agent, template, profile, settings, emptySet(), "m/x", price, sources = emptyList()))
+        assertEquals(RunRecord.OK, none.record.status); assertEquals(0, none.drafts.size)
+    }
+
+    @Test fun theMailCapHoldsAcrossSources() {
+        val m = AllMail(mapOf("wg-gesucht.de" to listOf(hdr("m1")), "immobilienscout24.de" to listOf(hdr("m2"))), mapOf("m1" to MailBody("", html, false), "m2" to MailBody(txt, "", false)))
+        runner(m).run(DraftRunner.Input(agent, template, profile, settings.copy(maxMails = 1), emptySet(), "m/x", price))
+        assertEquals(listOf("m1"), m.bodyReads)
+    }
+
+    @Test fun theFiltersFillTheDraftAndTheGoalReachesTheModelAsData() {
+        val llm = FakeLlm()
+        val t = "Ort {{location|?}} bis {{price_max|?}}: {{listing_title}}"
+        val f = mapOf("location" to "Köln", "price_max" to "900")
+        val out = runner(llm = llm).run(DraftRunner.Input(agent, t, profile, settings.copy(maxListings = 1), emptySet(), "m/x", price, filters = f, sources = wg))
+        assertTrue(out.drafts.single().message, out.drafts.single().message.startsWith("Ort Köln bis 900: "))
+        val user = llm.requests.single().user
+        assertTrue(user, user.startsWith("<owner_goal>\nRent a flat or room in Köln"))
+        assertTrue(user.contains("</owner_goal>\n<owner_notes>"))
+        // Without a goal there is no goal block.
+        assertFalse(Prompt.user("a", "t", "x").contains("owner_goal"))
+        assertEquals(DraftRunner.Input(agent, t, profile, settings, emptySet(), "m/x", price, filters = f).goal, Plan.goal(agent, f))
     }
 }

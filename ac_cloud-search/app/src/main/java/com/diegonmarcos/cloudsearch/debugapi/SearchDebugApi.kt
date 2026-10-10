@@ -151,7 +151,9 @@ object SearchDebugApi {
             .put("spent_today_usd", svc.prefs.spentToday(System.currentTimeMillis()))
             .put("agents", JSONArray(svc.agents.agents.map { a ->
                 JSONObject().put("id", a.id).put("label", a.label).put("mode", "draft_only").put("uses_llm", a.usesLlm)
-                    .put("last_run", last.firstOrNull { it.agentId == a.id }?.let { JSONObject().put("id", it.id).put("status", it.status).put("summary", it.summary).put("ended_at", it.endedAt) } ?: JSONObject.NULL)
+                    .put("side", a.side).put("category", a.category).put("legacy_ids", JSONArray(a.legacyIds))
+                    .put("sources", JSONArray(svc.prefs.sources(a).map { it.id })).put("filters", JSONObject(svc.prefs.filters(a) as Map<*, *>))
+                    .put("last_run", last.firstOrNull { a.owns(it.agentId) }?.let { JSONObject().put("id", it.id).put("status", it.status).put("summary", it.summary).put("ended_at", it.endedAt) } ?: JSONObject.NULL)
             }))
     }
 

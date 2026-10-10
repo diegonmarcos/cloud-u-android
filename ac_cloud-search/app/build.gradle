@@ -41,6 +41,10 @@ def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toStr
 // the AI chat; core/Config.kt parses and validates it on the phone (and in the JVM suite).
 if (buildJson.search == null) throw new GradleException("build.json::search missing — the app would have nothing to search")
 def searchConfigB64 = b64(buildJson.search)
+// #913b the agents catalogue (definitions + templates), build.json::agents, baked apart: one Java string constant holds at
+// most 65535 bytes, and Cloud Browser bakes build.json::search whole. Decl.kt puts it back under search.agents.
+def agentsB64 = b64(buildJson.agents ?: [:])
+[searchConfigB64, agentsB64].each { if (it.length() > 65000) throw new GradleException("a baked declaration is ${it.length()} bytes: a Java string constant holds 65535") }
 // #868 the nav declaration: ui.bottom_nav (the island), ui.sections (what each item opens), ui.default_section.
 def uiBottomNav      = (buildJson.ui?.bottom_nav ?: []).join(',')
 def uiSectionsB64    = b64(buildJson.ui?.sections ?: [])
@@ -99,6 +103,7 @@ android {
         buildConfigField "String",  "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
         buildConfigField "String",  "UI_STYLE",          "\"${uiStyle}\""
         buildConfigField "String",  "SEARCH_CONFIG_B64", "\"${searchConfigB64}\""
+        buildConfigField "String",  "AGENTS_B64",        "\"${agentsB64}\""
         buildConfigField "String",  "DEBUG_API_GROUP",   "\"${debugGroup}\""
         buildConfigField "boolean", "DARK_DEFAULT",      "${darkDefault}"
         buildConfigField "String",  "BROWSER_PACKAGE",   "\"${browserPackage}\""

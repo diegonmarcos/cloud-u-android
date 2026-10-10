@@ -2,11 +2,9 @@ package com.diegonmarcos.cloudsearch.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,12 +29,14 @@ import com.diegonmarcos.cloudsearch.core.agents.MailBody
 import com.diegonmarcos.cloudsearch.core.agents.MailHeader
 import com.diegonmarcos.cloudsearch.data.Browser
 import com.diegonmarcos.cloudsearch.data.Launch
-import com.diegonmarcos.superapp.bottomnav.PageTabs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** #913 Cloud Search: Apps, Messages and Code, the parts of the fleet this app can search honestly. */
+/**
+ * #913 the fleet searches this app can do honestly: Apps, Messages and Code. #913b they were the Cloud page; they are
+ * now pages of Chat's strip, beside Search (SearchShell.ChatSection draws the strip).
+ */
 object CloudTags {
     const val QUERY = "cloud_query"
     const val SEARCH = "cloud_search"
@@ -47,23 +47,16 @@ object CloudTags {
 
 private val cloudPadding = PaddingValues(start = Metrics.gutter, end = Metrics.gutter, top = Metrics.small, bottom = Metrics.contentBottom)
 
+/** One of Chat's fleet-search pages: [page] is apps, messages or code (build.json::ui.sections[chat].pages). */
 @Composable
-fun CloudSection(state: SearchState) {
+fun CloudPage(state: SearchState, page: String) {
     val cloud = state.cfg.cloud
-    Column(Modifier.fillMaxSize().padding(top = Metrics.stripTop)) {
-        PageTabs(
-            pages = NAV.section("cloud")?.pages.orEmpty(),
-            selectedId = state.cloudPage,
-            onSelect = { state.cloudPage = it.id },
-            underTopChrome = false,
-        )
-        Box(Modifier.fillMaxWidth().weight(1f).testTag(Tags.page("cloud_" + state.cloudPage))) {
-            if (cloud == null) Text(stringResource(R.string.cloud_none), Modifier.padding(Metrics.gutter), color = LocalGlass.current.text2)
-            else when (state.cloudPage) {
-                "messages" -> MessagesPage(state, cloud)
-                "code" -> CodePage(state, cloud)
-                else -> AppsPage(state, cloud)
-            }
+    Box(Modifier.fillMaxSize().testTag(Tags.page("cloud_$page"))) {
+        if (cloud == null) Text(stringResource(R.string.cloud_none), Modifier.padding(Metrics.gutter), color = LocalGlass.current.text2)
+        else when (page) {
+            "messages" -> MessagesPage(state, cloud)
+            "code" -> CodePage(state, cloud)
+            else -> AppsPage(state, cloud)
         }
     }
 }

@@ -43,6 +43,8 @@ data class SearchConfig(
         val placeholder: String, val subpages: List<String>, val sources: List<String>, val chips: List<ChipSpec>,
         val feeds: List<String>, val feedKeywords: List<String>, val calculators: List<String>, val analysis: String,
         val series: List<String>, val chart: String, val chartPoints: Int, val chartColor: String,
+        /** The agents this vertical leads to (the Me and LLC pages link their matching agents). */
+        val agents: List<String> = emptyList(),
     )
 
     /**
@@ -106,6 +108,19 @@ data class SearchConfig(
         /** [json] is build.json::search. Throws on a declaration that would draw a broken app. */
         fun parse(json: String): SearchConfig = parse(JSONObject(json))
 
+        /**
+         * #913b build.json::search with build.json::agents (the agents catalogue: definitions and templates) put back
+         * under search.agents, where the parser reads them. The two are baked apart (a Java string constant holds at
+         * most 65535 bytes); [catalog] null or without a search.agents block changes nothing. [search] is not modified.
+         */
+        fun withAgents(search: JSONObject, catalog: JSONObject?): JSONObject {
+            val out = JSONObject(search.toString())
+            val a = out.optJSONObject("agents") ?: return out
+            if (catalog == null) return out
+            for (k in listOf("agents", "templates")) catalog.optJSONArray(k)?.let { a.put(k, JSONArray(it.toString())) }
+            return out
+        }
+
         fun parse(o: JSONObject): SearchConfig {
             val cfg = SearchConfig(
                 userAgent = o.getString("user_agent"),
@@ -128,7 +143,7 @@ data class SearchConfig(
                         feeds = strings(v.optJSONArray("feeds")), feedKeywords = strings(v.optJSONArray("feed_keywords")),
                         calculators = strings(v.optJSONArray("calculators")), analysis = v.optString("analysis", "none"),
                         series = strings(v.optJSONArray("series")), chart = v.optString("chart"), chartPoints = v.optInt("chart_points", 0),
-                        chartColor = v.optString("chart_color"),
+                        chartColor = v.optString("chart_color"), agents = strings(v.optJSONArray("agents")),
                     )
                 },
                 sources = members(o.getJSONObject("sources")).associate { (id, s) ->
@@ -237,6 +252,16 @@ data class SearchConfig(
             if ((s.kind == KIND_LINK || !s.enabled) && s.why.isBlank()) bad += "source ${s.id} is not fetched but does not say why"
         }
         things?.let { bad += Things.problems(it) }
+        // A vertical's agent links are checked against the catalogue when there is one; an app that bakes the search
+        // block without the catalogue (Cloud Browser) shows no agent and has nothing to check.
+        val catalogue = agents?.agents.orEmpty()
+        if (catalogue.isNotEmpty()) for (v in verticals) {
+            v.agents.filter { a -> catalogue.none { it.id == a } }.forEach { bad += "vertical ${v.id} links agent $it, which is not declared" }
+        }
+        agents?.agents?.forEach { a ->
+            a.sources.filter { it.search.isNotBlank() && sources[it.search]?.kind != KIND_LINK }
+                .forEach { bad += "agent ${a.id} source ${it.id} searches ${it.search}, which is not a declared link source" }
+        }
         for (v in verticals) {
             if (v.subpages.any { subpage(it)?.kind == "things" } && things == null) bad += "vertical ${v.id} has a things page but build.json::search.things is not declared"
         }
