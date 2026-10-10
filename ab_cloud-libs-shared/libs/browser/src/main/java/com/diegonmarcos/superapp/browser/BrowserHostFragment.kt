@@ -583,6 +583,15 @@ class BrowserHostFragment : Fragment() {
     }
     private val translator = PageTranslator(translateIo) { st -> translateState.value = st }
 
+    /**
+     * Tier 2 of the fleet autofill (a0_docs/eng-specs/autofill-3-tier.md): the DOM engine for NON-SECRET
+     * profile data from the Cloud Account SOT. Logins, passwords, codes and cards stay with Cloud Vault
+     * through the Android Autofill framework, which this WebView keeps feeding (importantForAutofill).
+     */
+    private val domAutofill by lazy {
+        DomAutofill(requireContext(), { browserSettings.bool("profile_fill") != false }, { browserSettings.bool("offer_save_address") != false })
+    }
+
     private val translateMore = Runnable { translator.more() }
 
     private fun textToolsPort() = TextToolsClientPort(BrowserPageActions.textTools(requireContext()))
@@ -697,9 +706,12 @@ class BrowserHostFragment : Fragment() {
 
     private fun showStorage() {
         val st = StorageState()
+        st.host = BrowserSitePolicy.hostOf(webView?.url)
         fun measure() {
             st.items = null
             Thread { val items = BrowserStorage.breakdown(requireContext()); ui.post { if (isAdded) st.items = items } }.start()
+            // Category 3, measured apart: the Cloud Account SOT and the browser-local leftovers.
+            Thread { val a = BrowserAutofillData.summary(requireContext(), st.host); ui.post { if (isAdded) st.autofill = a } }.start()
         }
         measure()
         overlay { close ->
@@ -709,8 +721,17 @@ class BrowserHostFragment : Fragment() {
                     if ("cookies" in ids || "dom" in ids) webView?.reload()
                     measure()
                 }
-            }, onClose = close)
+            }, onClose = close,
+                onForgetAutofill = { BrowserAutofillData.clearLocal(requireContext(), domAutofill); toast("Browser-local autofill data forgotten"); measure() },
+                onOpenAccount = { openCloudAccount() })
         }
+    }
+
+    /** Cloud Account, where autofill profiles, site rules and snippets are edited (its OPEN action). */
+    private fun openCloudAccount() {
+        val i = android.content.Intent("com.diegonmarcos.cloudaccount.OPEN").setPackage(com.diegonmarcos.superapp.autofill.AutofillSot.PKG)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { startActivity(i) }.onFailure { toast("Cloud Account is not installed") }
     }
 
     // ── DETAIL mode (WebView) ────────────────────────────────────────
@@ -883,6 +904,8 @@ class BrowserHostFragment : Fragment() {
                     if (PasskeySupport.isWebAuthnFailure(name, ms)) self.post { offerSecureBrowser(self, null, true) }
                 }
             }, PasskeySupport.JS_BRIDGE)
+            // Tier 2 DOM autofill: the page engine reports focus / submit (keys and ids, never values) over this bridge.
+            domAutofill.attach(this)
             // #802 the Android Autofill Framework (Cloud Vault's service) sees the page's fields.
             importantForAutofill = if (browserSettings.bool("autofill_enabled") == false) View.IMPORTANT_FOR_AUTOFILL_NO
                 else View.IMPORTANT_FOR_AUTOFILL_YES
@@ -896,6 +919,7 @@ class BrowserHostFragment : Fragment() {
                     super.onPageStarted(view, startedUrl, favicon)
                     // A real navigation leaves reader view; the reader's own render does not.
                     if (readerPending) readerPending = false else { readerOn = false; translator.abandon() }
+                    domAutofill.dismiss()
                     // Settings, then this host's shields: a host that was shielded must not leave JS off for the next.
                     view?.let { applySettings(it, startedUrl) }
                 }
@@ -928,6 +952,8 @@ class BrowserHostFragment : Fragment() {
                     val u = finishedUrl ?: return
                     if (readerOn) return
                     probePasskey(view, u)
+                    // Tier 2: (re)install the DOM autofill engine; a private tab gets no prompts and never offers to save.
+                    view?.let { domAutofill.inject(it, u, tab.isPrivate) }
                     onCommitted(tabKey, view, u)
                     postDelayed({ if (webView === this@apply) saveTabState() }, 400)
                     // #887 an offline copy is not a visit.
@@ -996,6 +1022,13 @@ class BrowserHostFragment : Fragment() {
                 BrowserSuggestOverlay(suggestState, onPick = { s -> pickSuggestion(s) }, onDismiss = { dismissSuggestions() })
             }.apply {
                 layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            })
+            addView(ctx.kitComposeView(palette()) {
+                BrowserAutofillChip(domAutofill.chip.value, domAutofill.save.value,
+                    onFill = { t -> domAutofill.fill(t) }, onSnippet = { sn -> domAutofill.insert(sn) }, onDismiss = { domAutofill.dismiss() }, onSave = { yes -> domAutofill.confirmSave(yes) })
+            }.apply {
+                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
+                    android.view.Gravity.BOTTOM or android.view.Gravity.START)
             })
             addView(ctx.kitComposeView(palette()) {
                 BrowserTranslateChip(translateState.value, translateEngineLabel, onTap = {
@@ -1876,6 +1909,16 @@ class BrowserHostFragment : Fragment() {
                     wv?.reload()
                     done(ok().put("cleared", n).put("host", host).put("toast", "Cleared $n cookie(s) of $host"))
                 }
+            }
+            "clear_site_data" -> {
+                val host = BrowserSitePolicy.hostOf(url).ifEmpty { return needPage() }
+                overlay { close ->
+                    BrowserClearSiteScreen(host, onClear = { boxes ->
+                        close()
+                        BrowserStorage.clearSiteData(url, boxes) { r -> wv?.reload(); toast("Cleared ${boxes.size} kind(s) of data of $host") }
+                    }, onClose = close)
+                }
+                done(ok().put("host", host))
             }
             "offline_manage" -> { showOffline(); done(ok()) }
             "storage_manage" -> { showStorage(); done(ok()) }

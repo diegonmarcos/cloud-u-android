@@ -28,8 +28,12 @@ import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.uikit.KitConfirmDialog
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
-/** The storage breakdown the screen shows; null [items] = still measuring. */
-class StorageState { var items by mutableStateOf<List<SiteData.Item>?>(null) }
+/** The storage breakdown the screen shows; null [items] = still measuring. [autofill] = category 3, measured apart. */
+class StorageState {
+    var items by mutableStateOf<List<SiteData.Item>?>(null)
+    var autofill by mutableStateOf<BrowserAutofillData.Summary?>(null)
+    var host by mutableStateOf("")
+}
 
 /** The running site save the panel shows. */
 class SaveState {
@@ -42,7 +46,8 @@ class SaveState {
  * Clear selected and Clear everything — both behind a confirm that names what goes.
  */
 @Composable
-fun BrowserStorageScreen(state: StorageState, onClear: (Set<String>) -> Unit, onClose: () -> Unit) {
+fun BrowserStorageScreen(state: StorageState, onClear: (Set<String>) -> Unit, onClose: () -> Unit,
+                         onForgetAutofill: () -> Unit = {}, onOpenAccount: () -> Unit = {}) {
     val p = LocalKitPalette.current
     val items = state.items
     var picked by remember { mutableStateOf(setOf<String>()) }
@@ -73,13 +78,15 @@ fun BrowserStorageScreen(state: StorageState, onClear: (Set<String>) -> Unit, on
                 TextButton({ confirm = SiteData.everything(items) }, modifier = Modifier.testTag("browser:storage:clear-all")) { Text("Clear everything") }
             }
         }
+        BrowserAutofillDataSection(state.autofill, state.host, onForgetAutofill, onOpenAccount)
         confirm?.let { ids ->
             val list = items.orEmpty().filter { it.id in ids }
             val all = items != null && ids == SiteData.everything(items)
             KitConfirmDialog(
                 title = if (all) "Clear everything?" else "Clear ${list.size} item(s)?",
                 text = list.joinToString("\n") { "• ${it.label} (${it.bytes?.let(SiteData::human) ?: "—"})" } +
-                    "\n\nThis cannot be undone." + if ("cookies" in ids) " You will be signed out of every site." else "",
+                    "\n\nThis cannot be undone." + (if ("cookies" in ids) " You will be signed out of every site." else "") +
+                    "\nAutofill data (profiles, site rules, snippets in Cloud Account) is not touched.",
                 confirmLabel = "Clear", dismissLabel = "Cancel",
                 onConfirm = { confirm = null; onClear(ids); picked = emptySet() },
                 onDismiss = { confirm = null },
@@ -135,6 +142,63 @@ fun BrowserSavePanel(state: SaveState, onStop: () -> Unit, onClose: () -> Unit) 
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             if (pr?.done == true) TextButton(onClose) { Text("Close") } else TextButton(onStop) { Text("Stop") }
+        }
+    }
+}
+
+/**
+ * Category 3, its OWN section (a0_docs/eng-specs/autofill-3-tier.md §3.1): autofill data is not cookies and
+ * not site storage, so no box above can clear it. The SOT lives in Cloud Account — edited there, kept by
+ * Android's "Clear storage" of this app; only the browser-local leftovers can be forgotten here, behind
+ * their own confirm.
+ */
+@Composable
+fun BrowserAutofillDataSection(s: BrowserAutofillData.Summary?, host: String, onForget: () -> Unit, onOpenAccount: () -> Unit) {
+    val p = LocalKitPalette.current
+    var confirm by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().padding(top = 16.dp).testTag("browser:storage:autofill")) {
+        Text("Autofill data (this site / all sites)", color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+        Text("Not cookies, not site storage: nothing above clears it. Profiles, addresses, site rules and snippets live in Cloud Account.",
+            color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+        if (s == null) Text("Measuring…", color = p.textSecondary)
+        else {
+            if (!s.accountInstalled) Text("Cloud Account is not installed: no autofill profiles to fill from.", color = p.textSecondary, style = MaterialTheme.typography.bodyMedium)
+            else {
+                if (host.isNotBlank()) Text("This site ($host): ${s.siteRules} rule(s)", color = p.textPrimary, style = MaterialTheme.typography.bodyMedium)
+                Text("All sites: ${s.profiles} profile(s), ${s.addresses} address(es), ${s.rules} rule(s), ${s.snippets} snippet(s) — in Cloud Account, kept when this browser's storage is cleared",
+                    color = p.textPrimary, style = MaterialTheme.typography.bodyMedium)
+            }
+            Text(if (s.localBytes > 0) "Browser-local: an older imported profile (${SiteData.human(s.localBytes)}). It stays on this phone only, and Android's \"Clear storage\" of Cloud Browser deletes it."
+                else "Browser-local: nothing (only a short in-memory copy while a page is open).", color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.End) {
+                if (s.accountInstalled) TextButton(onOpenAccount, modifier = Modifier.testTag("browser:storage:autofill:account")) { Text("Edit in Cloud Account") }
+                TextButton({ confirm = true }, modifier = Modifier.testTag("browser:storage:autofill:forget")) { Text("Forget browser-local") }
+            }
+        }
+        if (confirm) KitConfirmDialog("Forget browser-local autofill data?",
+            "The older imported profile on this phone and the in-memory copy go. Cookies, site storage and everything in Cloud Account stay.",
+            "Forget", "Cancel", onConfirm = { confirm = false; onForget() }, onDismiss = { confirm = false })
+    }
+}
+
+/** Menu ▸ Clear site data: this site's cookies and storage, each its own box; autofill data is not one of them. */
+@Composable
+fun BrowserClearSiteScreen(host: String, onClear: (Set<String>) -> Unit, onClose: () -> Unit) {
+    val p = LocalKitPalette.current
+    var picked by remember { mutableStateOf(BrowserClearCategories.defaults(BrowserClearCategories.SITE_BOXES.map { it.first })) }
+    Column(Modifier.fillMaxWidth().background(p.surface).padding(12.dp).testTag("browser:clear-site")) {
+        Text("Clear site data — $host", color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+        BrowserClearCategories.SITE_BOXES.forEach { (id, label) ->
+            Row(Modifier.fillMaxWidth().clickable { picked = if (id in picked) picked - id else picked + id }, verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(id in picked, onCheckedChange = null, modifier = Modifier.padding(end = 8.dp).testTag("browser:clear-site:$id"))
+                Text(label, color = p.textPrimary, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        Text("Other sites keep everything. Autofill data for this site (Cloud Account rules and profiles) is not cleared here: Configs ▸ Data & storage ▸ Autofill data.",
+            color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClose) { Text("Cancel") }
+            TextButton({ onClear(picked) }, enabled = picked.isNotEmpty(), modifier = Modifier.testTag("browser:clear-site:go")) { Text("Clear") }
         }
     }
 }

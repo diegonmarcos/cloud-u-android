@@ -48,6 +48,8 @@ dependencies {
     // #802 "Translate page": the fleet's text-tools contract (a thin binder client; the
     // row is disabled with its reason when no app on the phone serves it).
     implementation project(':libs:text-tools')
+    // Tier 2 DOM autofill reads the Cloud Account SOT through its contract (a0_docs/eng-specs/autofill-3-tier.md).
+    implementation project(':libs:autofill')
     // #802 the autofill profile is an EncryptedSharedPreferences store (browser_autofill, class
     // secret) opened with the same MasterKey scheme FleetConfig imports it through. libs:core
     // only compileOnly-s the cipher, so the app that keeps the store ships it.

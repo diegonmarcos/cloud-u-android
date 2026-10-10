@@ -42,6 +42,7 @@
       "depends_on": [
         "libs:core",
         "libs:browser",
+        "libs:autofill",
         "libs:updater",
         "libs:text-tools",
         "libs:ui-kit",
@@ -69,6 +70,11 @@
       "type": "library",
       "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/ - settings.gradle points projectDir here instead of at a local copy. browser was three byte-identical trees (superapp, browser, vault); nothing kept them in step, so a WebView fix had to be pasted three times or it silently reached one app.",
       "dir": "../ab_cloud-libs-shared/libs/browser"
+    },
+    "libs:autofill": {
+      "type": "library",
+      "_doc": "The non-secret autofill SOT contract (a0_docs/eng-specs/autofill-3-tier.md). libs:browser reads Cloud Account's profiles and site rules through it (AUTOFILL_PROFILE_READ) and proposes a user-confirmed new address (AUTOFILL_PROFILE_WRITE).",
+      "dir": "../ab_cloud-libs-shared/libs/autofill"
     },
     "libs:updater": {
       "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/ — settings.gradle points projectDir here instead of at a local copy. Every app used to carry its own copy-pasted tree and they drifted: 6 apps sat 228 source lines behind superapp's updater. One directory, no sync step, no drift.",
@@ -233,6 +239,24 @@
           "section": "privacy",
           "class": "config",
           "doc": "Pages expose their fields to Android's Autofill Framework (Cloud Vault fills logins and cards there), and Fill from profile is offered."
+        },
+        {
+          "key": "profile_fill",
+          "type": "bool",
+          "default": true,
+          "label": "Fill contact & address forms",
+          "section": "privacy",
+          "class": "config",
+          "doc": "Tier 2 DOM autofill (a0_docs/eng-specs/autofill-3-tier.md): focusing a name, email, phone or address field offers a chip that fills the form from your Cloud Account profiles. Never passwords, codes or cards (Cloud Vault fills those), never a login form's email. Private tabs show a chip that names no profile and fill only on an explicit pick."
+        },
+        {
+          "key": "offer_save_address",
+          "type": "bool",
+          "default": true,
+          "label": "Offer to save new addresses",
+          "section": "privacy",
+          "class": "config",
+          "doc": "After you submit an address form with an address Cloud Account does not have yet, ask whether to save it there. Nothing is saved without your tap, and never from a private tab."
         },
         {
           "key": "summarize_route",
@@ -688,6 +712,15 @@
             "id": "clear_site_cookies",
             "section": "privacy",
             "label": "Clear cookies for this site",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "clear_site_data",
+            "section": "privacy",
+            "label": "Clear site data for this site…",
+            "_doc": "This site's cookies and its storage (local/session storage, IndexedDB, service workers, cache storage), each its own box. Never autofill data: that is Cloud Account's (Configs > Data & storage > Autofill data). a0_docs/eng-specs/autofill-3-tier.md 3.1.",
             "requires": [
               "page"
             ]

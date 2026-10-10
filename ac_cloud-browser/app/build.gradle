@@ -292,6 +292,8 @@ dependencies {
     implementation project(':libs:analytics')
     implementation project(':libs:core')
     implementation project(':libs:browser')
+    // Tier 2 DOM autofill: the Cloud Account SOT contract libs:browser reads (its types are in DomAutofill's API).
+    implementation project(':libs:autofill')
     implementation project(':libs:updater')
     implementation project(':libs:text-tools')
     implementation project(':search-core')

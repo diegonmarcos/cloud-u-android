@@ -4,6 +4,11 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Tier 2 DOM autofill (a0_docs/eng-specs/autofill-3-tier.md): read Cloud Account's non-secret
+         autofill SOT (profiles, site rules) and save an address only after the user confirms it.
+         Both are signature permissions libs:autofill defines: fleet-signed apps only. -->
+    <uses-permission android:name="com.diegonmarcos.cloud.permission.AUTOFILL_PROFILE_READ" />
+    <uses-permission android:name="com.diegonmarcos.cloud.permission.AUTOFILL_PROFILE_WRITE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- #802 a site may be allowed these per site (build.json::ui.browser.site_permissions);
          the app asks Android for them only when a site the user allowed first needs one. -->

@@ -21,7 +21,7 @@ object BrowserStorage {
         Triple("dom", "DOM and local storage", "localStorage, sessionStorage, Web SQL, file system. Cleared together with IndexedDB."),
         Triple("indexeddb", "IndexedDB", "Site databases. Cleared together with DOM and local storage."),
         Triple("cookies", "Cookies (all sites)", "Every site signs you out."),
-        Triple("form", "Form data", "Saved form entries."),
+        Triple("form", "WebView form data", "Entries WebView itself remembered in page forms. Not your autofill profiles or site rules: those live in Cloud Account (Autofill data, below)."),
         Triple("offline", "Offline copies", "Pages and sites saved for offline use."),
         Triple("previews", "Tab previews and icons", "Thumbnails and favicons of your tabs."),
         Triple("tabstate", "Saved tab state", "Each tab's back/forward list, kept so a tab reopens where it was."),
@@ -69,6 +69,23 @@ object BrowserStorage {
         }
         if ("cookies" in ids) CookieManager.getInstance().removeAllCookies { CookieManager.getInstance().flush(); done(out) }
         else done(out)
+    }
+
+    /**
+     * The per-site clear (menu ▸ Clear site data): [boxes] ⊆ BrowserClearCategories.SITE_BOXES — this
+     * site's cookies and/or this site's storage (WebStorage.deleteOrigin of its own origins only). Every
+     * other site keeps everything; autofill data (Cloud Account) is not part of it. MAIN THREAD.
+     */
+    fun clearSiteData(url: String, boxes: Set<String>, done: (JSONObject) -> Unit) {
+        val host = BrowserSitePolicy.hostOf(url)
+        val out = JSONObject().put("ok", host.isNotEmpty()).put("host", host)
+        if (host.isEmpty()) return done(out)
+        if (BrowserClearCategories.SITE_STORAGE in boxes) {
+            val origins = BrowserClearCategories.siteOrigins(host)
+            origins.forEach { WebStorage.getInstance().deleteOrigin(it) }
+            out.put("origins", org.json.JSONArray(origins))
+        }
+        if (BrowserClearCategories.SITE_COOKIES in boxes) clearSiteCookies(url) { n -> done(out.put("cookies", n)) } else done(out)
     }
 
     /**
