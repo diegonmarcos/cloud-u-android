@@ -82,6 +82,8 @@ class StorePhoneFragment : Fragment() {
     private var trait: StoreSourceTabs.Trait? = null
     /** The state chips, the Cloud page's: 0 All, 1 Updates, 2 Missing, 3 Installed. */
     private var stateFilter = 0
+    /** Installed only: 0 All, 1 Declared, 2 Not declared. */
+    private var declFilter = 0
     private val stateChips = ArrayList<TextView>()
     private val progress = StoreProgressPanel()
     /** The Search page (between Installed and Declared) replaces the list and its controls. */
@@ -133,7 +135,10 @@ class StorePhoneFragment : Fragment() {
             StoreControls.Control(ctx.getString(R.string.store_phone_filter_declared), "", controls.groupTab))),
             pageButtons) { StorePages.select(SECTION, PAGES[it]) }
         syncPage()
-        stopObserving = StorePages.observe(SECTION) { view?.post { syncPage(); redraw() } }
+        stopObserving = StorePages.observe(SECTION) { view?.post {
+            // Leaving Search re-reads the rows: a declare made there changes Declared.
+            val was = searchMode; syncPage(); if (was && !searchMode) reload() else redraw()
+        } }
 
         val col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -285,6 +290,7 @@ class StorePhoneFragment : Fragment() {
         val declared = LinkedHashMap<String, String>()
         declared.putAll(AppInventory.launchable(ctx).filterKeys { it !in fleet })
         resolver.apps.values.filter { it.pkg !in fleet }.forEach { declared.putIfAbsent(it.pkg, it.label) }
+        DeclaredEdits.addedPackages(ctx).filterKeys { it !in fleet }.forEach { (p, l) -> declared.putIfAbsent(p, l) }
         val shelves = AppStoreHost.classify(ctx, declared)
         states.clear()
         cached.clear()
@@ -298,7 +304,7 @@ class StorePhoneFragment : Fragment() {
         return declared.map { (pkg, label) ->
             val installed = runCatching { pm.getPackageInfo(pkg, 0) }.isSuccess
             val fa = fleet[pkg]
-            val ext = if (fa == null) SourceResolver.resolve(resolver, pkg) else null
+            val ext = if (fa == null) DeclaredEdits.apply(ctx, resolver, pkg, SourceResolver.resolve(resolver, pkg)) else null
             val actions = if (installed) PhoneAppActions.of(ctx, pkg, fa, shellReady, sources)
                           else PhoneAppActions.forMissing(ctx, ext ?: SourceResolver.resolve(resolver, pkg), fa, sources, resolver)
             states[pkg] = when {
@@ -331,6 +337,13 @@ class StorePhoneFragment : Fragment() {
                     if (sourceTab?.id != k?.id) { sourceTab = k; redraw() }
                 })
             host.addView(StoreSourceTabs.traits(ctx, trait) { t -> if (trait != t) { trait = t; redraw() } })
+            if (installedOnly) host.addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                listOf(R.string.store_phone_decl_all, R.string.store_phone_decl_yes, R.string.store_phone_decl_no).forEachIndexed { i, id ->
+                    addView(StoreBar.chip(ctx, controls.filter, ctx.getString(id), i == 0) { if (declFilter != i) { declFilter = i; redraw() } }
+                        .also { StoreBar.paint(it, i == declFilter) })
+                }
+            })
             host.addView(LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
                 stateChips.clear()
@@ -348,6 +361,7 @@ class StorePhoneFragment : Fragment() {
             .filter { if (installedOnly) it.installed else it.external?.declared == true }
             .filter { traitOk(ctx, it) }
             .filter { stateOk(it) }
+            .filter { declOk(it) }
         val missing = shown.count { !it.installed }
         val play = shown.count { !it.installed && !it.direct }
         into.addView(caption(ctx, ctx.getString(R.string.store_phone_count, shown.size) + "  ·  " +
@@ -395,6 +409,25 @@ class StorePhoneFragment : Fragment() {
         StoreSourceTabs.Trait.OPEN_SOURCE -> r.external?.openSource == true
         // An undeclared app is unknown, not private: only a declared, non-open row is.
         StoreSourceTabs.Trait.PRIVATE -> r.external?.let { it.declared && !it.openSource } == true
+    }
+
+    /** Installed's declared filter; Declared itself already is the declared rows. */
+    private fun declOk(r: Row): Boolean = when (declFilter.takeIf { installedOnly } ?: 0) {
+        1 -> r.external?.declared == true
+        2 -> r.external?.declared != true
+        else -> true
+    }
+
+    /** Where an installed app came from, as the rungs it would be declared with. */
+    private fun originKinds(ctx: Context, pkg: String): List<String> {
+        val installer = runCatching {
+            if (android.os.Build.VERSION.SDK_INT >= 30) ctx.packageManager.getInstallSourceInfo(pkg).installingPackageName
+            else @Suppress("DEPRECATION") ctx.packageManager.getInstallerPackageName(pkg)
+        }.getOrNull()
+        // The F-Droid client's package comes from the one map (its kind's `installer`), never from here.
+        val fdroidInstaller = cfg?.kind(SourceResolver.KIND_FDROID)?.installer
+        return if (installer != null && installer == fdroidInstaller) listOf(SourceResolver.KIND_FDROID, SourceResolver.KIND_PLAY_ANON)
+               else listOf(SourceResolver.KIND_PLAY_ANON)
     }
 
     /** The state chips; an update shows once Check all has probed the row. */
@@ -469,6 +502,13 @@ class StorePhoneFragment : Fragment() {
         // Detected at runtime: an UNKNOWN app this store installed that did not
         // run is marked PLAY on this phone (persisted, exported with the inventory).
         val ext = r.external
+        // Declared is the user's list: any foreign row can join or leave it.
+        if (ext != null) buttons.addView(btn(ctx, PhoneAppActions.Action(PhoneAppActions.Kind.INSTALL,
+            ctx.getString(if (ext.declared) R.string.store_phone_undeclare else R.string.store_phone_declare), null, null)) {
+            if (ext.declared) DeclaredEdits.undeclare(ctx, r.pkg)
+            else DeclaredEdits.declare(ctx, r.pkg, r.label, originKinds(ctx, r.pkg))
+            reload()
+        })
         if (r.installed && ext != null && IntegrityMarks.canReport(ctx, ext)) buttons.addView(btn(ctx,
             PhoneAppActions.Action(PhoneAppActions.Kind.INSTALL, ctx.getString(R.string.store_phone_did_not_run), null, null)) {
             IntegrityMarks.mark(ctx, r.pkg)

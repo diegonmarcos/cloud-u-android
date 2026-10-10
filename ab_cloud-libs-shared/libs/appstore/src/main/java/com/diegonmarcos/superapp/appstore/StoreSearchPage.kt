@@ -84,6 +84,8 @@ object StoreSearchPage {
         var status by remember { mutableStateOf("") }
         val results = remember { mutableStateListOf<Result>() }
         val lines = remember { mutableStateMapOf<String, String>() }
+        // Bumped on every declare/undeclare so the rows re-read DeclaredEdits.
+        var declaredTick by remember { mutableStateOf(0) }
 
         fun run() {
             val q = query.trim(); if (q.isEmpty()) return
@@ -119,17 +121,26 @@ object StoreSearchPage {
                     val from = listOfNotNull("F-Droid".takeIf { r.fdroid }, "Play".takeIf { r.play }).joinToString(" + ")
                     Text(listOf(r.pkg, r.by, from, if (r.foss) "FOSS" else "Private").filter { it.isNotBlank() }.joinToString("  ·  "),
                         color = Color(0x99FFFFFF), fontSize = StoreDensity.T_CAPTION.sp)
-                    if (installed) Text("✓ installed", color = Color(0xFF48BB78), fontSize = StoreDensity.T_CAPTION.sp)
-                    else Row {
-                        Pill("Install", false) {
-                            val c = cfg() ?: return@Pill
-                            val app = SourceResolver.External(r.pkg, r.title, listOfNotNull(
-                                SourceResolver.Source.FDroid.takeIf { r.fdroid }, SourceResolver.Source.PlayAnon.takeIf { r.play }), declared = false)
-                            lines[r.pkg] = "installing…"
-                            thread(name = "store-search-install") {
-                                val err = ExternalInstall.run(ctx, c, app)
-                                android.os.Handler(android.os.Looper.getMainLooper()).post { lines[r.pkg] = err?.let { "✗ $it" } ?: "✓ install started" }
-                            }
+                    val kinds = listOfNotNull(SourceResolver.KIND_FDROID.takeIf { r.fdroid }, SourceResolver.KIND_PLAY_ANON.takeIf { r.play })
+                    val c0 = cfg()
+                    val declared = declaredTick.let { c0 != null && DeclaredEdits.apply(ctx, c0, r.pkg, SourceResolver.resolve(c0, r.pkg)).declared }
+                    fun install(declare: Boolean) {
+                        val c = cfg() ?: return
+                        if (declare) { DeclaredEdits.declare(ctx, r.pkg, r.title, kinds); declaredTick++ }
+                        val app = SourceResolver.External(r.pkg, r.title, listOfNotNull(
+                            SourceResolver.Source.FDroid.takeIf { r.fdroid }, SourceResolver.Source.PlayAnon.takeIf { r.play }), declared = declare)
+                        lines[r.pkg] = "installing…"
+                        thread(name = "store-search-install") {
+                            val err = ExternalInstall.run(ctx, c, app)
+                            android.os.Handler(android.os.Looper.getMainLooper()).post { lines[r.pkg] = err?.let { "✗ $it" } ?: "✓ install started" }
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (installed) Text("✓ installed  ", color = Color(0xFF48BB78), fontSize = StoreDensity.T_CAPTION.sp)
+                        else { Pill("Install", false) { install(false) }; if (!declared) Pill("Install + declare", false) { install(true) } }
+                        Pill(if (declared) "− Undeclare" else "＋ Declare", false) {
+                            if (declared) DeclaredEdits.undeclare(ctx, r.pkg) else DeclaredEdits.declare(ctx, r.pkg, r.title, kinds)
+                            declaredTick++
                         }
                     }
                     lines[r.pkg]?.let { Text(it, color = Color(0xFF48BB78), fontSize = StoreDensity.T_CAPTION.sp) }
