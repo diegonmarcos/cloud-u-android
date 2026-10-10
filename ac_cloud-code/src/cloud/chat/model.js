@@ -7,35 +7,80 @@ export const KEY = "cloud-code.chat.";
 
 // ── agents ──────────────────────────────────────────────────────────────────
 
+/** The gateway's live description of one mode (GET /health.modes), or null. */
+export function liveMode(health, mode) {
+	return (Array.isArray(health?.modes) && mode && health.modes.find((m) => m.id === mode)) || null;
+}
+
 /**
  * The agent picker, in order: nav.json's declared agents (the owner's order: Hermes, OpenClaw, …),
- * then every other fleet agent the resolver found, then the direct OpenRouter backend. Each says
- * whether it can be picked and, when not, why — a declared agent the fleet does not run is
- * "not deployed", never a fake entry that fails on send.
+ * then every agent the live gateway serves that the app does not declare yet, then every other
+ * fleet agent the resolver found, then the direct OpenRouter backend. Two sources decide, never
+ * a guess: the C3 service catalogue (baked at build time: is the service deployed?) and the
+ * gateway's GET /health (live: does a request reach it now?). Each agent carries a state:
+ *   ready         deployed, and the gateway serves it (or has not been asked yet)
+ *   offline       deployed, but the gateway did not answer: still selectable, a send says why
+ *   unavailable   the gateway answers and says this agent cannot be reached now
+ *   not-deployed  neither the catalogue nor the gateway knows it
+ *   no-api        a fleet agent service no app API reaches yet
  * @param {object} chat     nav.json::chat
  * @param {object} fleet    targets.gen.json::chat
- * @param {object|null} health  the gateway's GET /health, or null when it did not answer
+ * @param {object|null|undefined} health  the gateway's GET /health; null = it did not answer;
+ *                          undefined = not asked yet
  */
 export function resolveAgents(chat, fleet, health) {
 	const byId = Object.fromEntries((fleet.agents || []).map((a) => [a.id, a]));
+	const modes = Array.isArray(health?.modes) ? health.modes : null;
 	const out = [];
-	for (const decl of chat.agents) {
-		const f = byId[decl.id] || { deployed: false };
-		let available = !!f.deployed;
-		let reason = f.deployed ? "" : "not deployed";
-		if (available && health && decl.health_key && !health.agents?.[decl.health_key]) {
-			available = false;
-			reason = "the gateway does not serve it now";
+	const seenModes = new Set();
+	const seenFleet = new Set();
+	const state = (deployed, live, decl) => {
+		if (!deployed) return ["not-deployed", false, "not deployed"];
+		if (health === null) return ["offline", true, "the gateway did not answer"];
+		if (health && modes) {
+			if (!live) return ["unavailable", false, "the gateway does not serve it yet"];
+			if (live.available === false) return ["unavailable", false, live.reason || "the gateway cannot reach it now"];
+		} else if (health && decl?.health_key && !health.agents?.[decl.health_key]) {
+			return ["unavailable", false, "the gateway does not serve it now"];
 		}
-		out.push({ id: decl.id, label: decl.label, mode: decl.mode, via: "gateway", deployed: !!f.deployed, available, reason, decl });
+		return ["ready", true, ""];
+	};
+	for (const decl of chat.agents) {
+		const live = liveMode(health, decl.mode);
+		const f = decl.fleet ? byId[decl.id] : null;
+		// An agent with no fleet service of its own (the gateway's OpenRouter face) is deployed
+		// with the gateway; any other with its catalogue row, or when the live gateway serves it.
+		const deployed = decl.fleet ? !!f?.deployed || !!live : !!fleet.gateway;
+		const [st, available, reason] = state(deployed, live, decl);
+		seenModes.add(decl.mode);
+		if (decl.fleet) seenFleet.add(decl.fleet);
+		out.push({ id: decl.id, label: decl.label, mode: decl.mode, via: "gateway", deployed, available, state: st, reason, decl, live });
+	}
+	for (const m of modes || []) {
+		if (seenModes.has(m.id)) continue;
+		const decl = { id: m.id, label: m.label || m.id, fleet: m.fleet || null, mode: m.id, health_key: null, model: { kind: "fixed" }, effort: null, permission: { via: "prompt" }, mcp: { source: "gateway" }, generic: true };
+		const [st, available, reason] = state(true, m, decl);
+		if (m.fleet) seenFleet.add(m.fleet);
+		out.push({ id: m.id, label: decl.label, mode: m.id, via: "gateway", deployed: true, available, state: st, reason, decl, live: m });
 	}
 	for (const f of fleet.agents || []) {
-		if (f.declared) continue;
+		if (f.declared || seenFleet.has(f.fleet)) continue;
 		const label = f.id.charAt(0).toUpperCase() + f.id.slice(1);
-		out.push({ id: f.id, label, mode: null, via: "none", deployed: true, available: false, reason: "no app API yet", decl: null });
+		out.push({ id: f.id, label, mode: null, via: "none", deployed: true, available: false, state: "no-api", reason: "no app API yet", decl: null, live: null });
 	}
-	out.push({ id: chat.direct.id, label: chat.direct.label, mode: null, via: "direct", deployed: true, available: true, reason: "", decl: null });
+	out.push({ id: chat.direct.id, label: chat.direct.label, mode: null, via: "direct", deployed: true, available: true, state: "ready", reason: "", decl: null, live: null });
 	return out;
+}
+
+/** One line under an agent in the picker: how it is reached, or why it cannot be. */
+export function agentSub(agent) {
+	if (agent.via === "direct") return "OpenRouter, your token";
+	if (agent.state === "offline") return "the gateway did not answer: sends will fail until the mesh is up";
+	if (!agent.available) return agent.reason;
+	const m = agent.live;
+	if (m?.native) return `its own API, via the fleet gateway${m.backend ? ` (${m.backend})` : ""}`;
+	if (m?.backend) return `via the fleet gateway (${m.backend})`;
+	return "via the fleet gateway";
 }
 
 /** The agent a send goes to: the stored one when it can still be picked, else the first that can. */
@@ -54,16 +99,62 @@ export function modelControl(agent, picked, health) {
 	if (agent.via === "direct") return { pick: true, providers: null, value: picked, label: picked };
 	const m = agent.decl?.model || { kind: "fixed" };
 	if (m.kind === "catalogue") return { pick: true, providers: m.providers || null, value: picked, label: picked };
-	const live = health?.agents?.[agent.decl?.health_key];
+	const lm = agent.live || liveMode(health, agent.mode);
+	const live = typeof lm?.model === "string" ? lm.model : health?.agents?.[agent.decl?.health_key];
 	const value = typeof live === "string" ? live : null;
 	return { pick: false, providers: null, value, label: value || `set by ${agent.label}` };
 }
 
+/**
+ * Whether a catalogue row may be picked for this agent, and when not, why (shown on the greyed row):
+ * a fixed agent runs its own model ("set by <agent>"), a provider-limited one only its providers'.
+ */
+export function rowState(agent, row, health) {
+	const c = modelControl(agent, null, health);
+	if (!c.pick) return { allowed: false, reason: `set by ${agent.label}${c.value ? ` (${c.value})` : ""}` };
+	if (!row.selectable) return { allowed: false, reason: "not on OpenRouter" };
+	if (c.providers && !c.providers.includes(row.provider)) return { allowed: false, reason: `${agent.label} runs ${c.providers.join(" / ")} models only` };
+	return { allowed: true, reason: "" };
+}
+
 /** Whether a catalogue row may be picked for this agent (a provider the backend can run). */
 export function rowAllowed(agent, row, health) {
-	const c = modelControl(agent, null, health);
-	if (!c.pick || !row.selectable) return false;
-	return !c.providers || c.providers.includes(row.provider);
+	return rowState(agent, row, health).allowed;
+}
+
+/**
+ * The chat model kept for one agent (the Model page saves it per agent), else the default model
+ * set in Profile & Config, else nav.json's.
+ */
+export function agentModel(storage, chat, agentId) {
+	const saved = readJson(storage, "models", {});
+	return saved[agentId] || readJson(storage, "settings", {}).model || chat.default_model;
+}
+
+export function setAgentModel(storage, agentId, modelId) {
+	const saved = readJson(storage, "models", {});
+	saved[agentId] = modelId;
+	writeJson(storage, "models", saved);
+	return saved;
+}
+
+/**
+ * The ONE radio the Model page checks: the first row (in page order) whose id is the chosen model.
+ * A model can sit in more than one table (an Anthropic row leads A0 and A1 alike), and a radio
+ * group must still show exactly one selection. Returns "<section>:<row id>", or null.
+ */
+export function checkedRow(sections, chosen) {
+	for (const sec of sections || []) for (const r of sec.rows || []) if (r.id === chosen) return `${sec.id}:${r.id}`;
+	return null;
+}
+
+/**
+ * The composer's controls, left to right. Model sits right after Agent (it is the agent's model);
+ * nothing comes after More. Effort and permission Mode appear only where the agent takes them.
+ */
+export function controlOrder(agent, { effort, permission } = {}) {
+	if (!agent) return ["attach", "agent"];
+	return ["attach", "agent", "model", ...(effort ? ["effort"] : []), ...(permission ? ["mode"] : []), "mcp", "more"];
 }
 
 /** The model field a request carries: the CLI id for claude-cli, none for a fixed agent. */
@@ -85,6 +176,7 @@ export function requestModel(agent, modelId) {
 export function effortControl(agent, modelId, reasoning) {
 	const e = agent.via === "direct" ? { param: "reasoning.effort", needs_reasoning: true } : agent.decl?.effort;
 	if (!e) return { shown: false, enabled: false, reason: `${agent.label} takes no effort setting` };
+	if (e.unless_native && agent.live?.native) return { shown: false, enabled: false, reason: `${agent.label} runs its own reasoning settings` };
 	if (e.needs_reasoning && reasoning && modelId && !reasoning.has(modelId))
 		return { shown: true, enabled: false, reason: `${modelId} does not reason` };
 	return { shown: true, enabled: true, reason: "" };
@@ -121,7 +213,7 @@ export function permissionInstruction(chat, agent, modeId) {
  * whose backend publishes it, else the fleet's derived .mcp.json names; none for the direct backend.
  */
 export function mcpServers(agent, live, fleetNames) {
-	if (agent.via === "direct" || !agent.decl) return { source: "none", servers: [] };
+	if (agent.via === "direct" || !agent.decl || agent.decl.mcp?.source === "none") return { source: "none", servers: [] };
 	if (agent.decl.mcp?.source === "gateway" && Array.isArray(live) && live.length)
 		return { source: "gateway", servers: live.map((s) => ({ name: s.server, tools: s.count })) };
 	return { source: "fleet", servers: (fleetNames || []).map((n) => ({ name: n, tools: null })) };
@@ -166,14 +258,23 @@ export function mcpToggle(storage, agentId, name, on) {
  */
 export function moreFor(chat, agent, health) {
 	const plugins = health?.plugins || null;
-	return chat.functions
+	const live = (agent.live || liveMode(health, agent.mode))?.functions || [];
+	const liveIds = new Set(live.map((f) => f.id));
+	// The agent's own functions, as the gateway publishes them live (GET /agents/<agent>/<fn>):
+	// Hermes' skills, toolsets, sessions and jobs once its API is wired, OpenClaw's agent targets.
+	const own = agent.via === "gateway"
+		? live.filter((f) => typeof f.path === "string" && f.path.startsWith("/agents/")).map((f) => ({ id: `live:${f.id}`, label: f.label || f.id, kind: "native", path: f.path, agents: [agent.id] }))
+		: [];
+	const declared = chat.functions
 		.filter((f) => {
 			if (f.agents === "all") return true;
 			if (f.agents === "gateway") return agent.via === "gateway";
 			return Array.isArray(f.agents) && f.agents.includes(agent.id);
 		})
 		.filter((f) => !(f.kind === "toggle" || f.kind === "select") || !plugins || f.plugin in plugins)
+		.filter((f) => !(f.unless_live && liveIds.has(f.unless_live)))
 		.map((f) => ({ ...f, offline: agent.via === "gateway" && f.agents === "gateway" && !health }));
+	return [...own, ...declared];
 }
 
 /** Per-request headers from the More toggles an agent has set ({header: value}). */

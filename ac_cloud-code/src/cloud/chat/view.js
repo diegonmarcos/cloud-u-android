@@ -20,7 +20,8 @@ const REASONING_TTL = 24 * 3600 * 1000;
 const S = {
 	sessions: [],
 	current: null,
-	health: null,
+	// undefined = the gateway not asked yet, null = it did not answer (model.js::resolveAgents)
+	health: undefined,
 	mcpLive: null,
 	reasoning: null,
 	streaming: null,
@@ -61,6 +62,11 @@ function agent() {
 	const a = M.pickAgent(agents(), s.agent);
 	if (a && a.id !== s.agent) s.agent = a.id;
 	return a;
+}
+
+/** The chat model kept for this agent (the Model page saves it per agent). */
+function modelOf(a) {
+	return M.agentModel(localStorage, chat, a?.id);
 }
 
 // ── live data: the gateway's /health and MCP status, OpenRouter's reasoning models ──
@@ -137,7 +143,7 @@ function drawMessages() {
 		const a = agent();
 		$list.replaceChildren(el("div", { className: "cloud-chat-empty" },
 			el("div", { className: "cloud-chat-hello" }, "How can I help?"),
-			el("div", { className: "cloud-muted" }, a ? `${a.label} · ${M.modelControl(a, s.model, S.health).label}` : "No agent can be reached")));
+			el("div", { className: "cloud-muted" }, a ? `${a.label} · ${M.modelControl(a, modelOf(a), S.health).label}` : "No agent can be reached")));
 		return;
 	}
 	$list.replaceChildren(...s.messages.map(bubble));
@@ -169,25 +175,29 @@ function chip(label, iconName, onclick, { disabled, title, role } = {}) {
 function drawControls() {
 	const s = current();
 	const a = agent();
-	const ctl = [];
-	ctl.push(chip("", "add", attachSheet, { title: "Attach files, photos or a voice message", role: "attach" }));
-	ctl.push(chip(a ? a.label : "Agent", "brain", agentSheet, { role: "agent" }));
-	if (a) {
-		const eff = M.effortControl(a, M.modelControl(a, s.model, S.health).value, S.reasoning);
-		if (eff.shown) {
+	// model.js::controlOrder is the one order: + · Agent · Model · Effort · Mode · MCP · More, and
+	// nothing after More.
+	const eff = a ? M.effortControl(a, M.modelControl(a, modelOf(a), S.health).value, S.reasoning) : null;
+	const perm = a ? M.permissionControl(a) : null;
+	const build = {
+		attach: () => chip("", "add", attachSheet, { title: "Attach files, photos or a voice message", role: "attach" }),
+		agent: () => chip(a ? a.label : "Agent", "brain", agentSheet, { role: "agent" }),
+		model: () => {
+			const mc = M.modelControl(a, modelOf(a), S.health);
+			return chip(shortModel(mc.label), "wand-sparkles", () => modelPage(), { title: mc.pick ? `Model: ${mc.label}` : `Model ${mc.label} (set by ${a.label})`, role: "model" });
+		},
+		effort: () => {
 			const lvl = chat.effort.levels.find((l) => l.id === s.effort) || chat.effort.levels[0];
-			ctl.push(chip(lvl.label, "tune", effortSheet, { disabled: !eff.enabled, title: eff.enabled ? "Effort" : eff.reason, role: "effort" }));
-		}
-		const perm = M.permissionControl(a);
-		if (perm.shown) {
+			return chip(lvl.label, "tune", effortSheet, { disabled: !eff.enabled, title: eff.enabled ? "Effort" : eff.reason, role: "effort" });
+		},
+		mode: () => {
 			const mode = chat.permission.modes.find((m) => m.id === s.mode) || chat.permission.modes[0];
-			ctl.push(chip(mode.short, mode.id === "plan" ? "notes" : mode.id === "accept" ? "edit" : "zap", modeSheet, { title: mode.label, role: "mode" }));
-		}
-		ctl.push(chip("MCP", "extension", mcpSheet, { role: "mcp" }));
-		ctl.push(chip("", "more_vert", moreSheet, { title: "More", role: "more" }));
-		const mc = M.modelControl(a, s.model, S.health);
-		ctl.push(chip(shortModel(mc.label), "wand-sparkles", () => modelPage(), { title: mc.pick ? "Model" : `Model ${mc.label}`, role: "model" }));
-	}
+			return chip(mode.short, mode.id === "plan" ? "notes" : mode.id === "accept" ? "edit" : "zap", modeSheet, { title: mode.label, role: "mode" });
+		},
+		mcp: () => chip("MCP", "extension", mcpSheet, { role: "mcp" }),
+		more: () => chip("", "more_vert", moreSheet, { title: "More", role: "more" }),
+	};
+	const ctl = M.controlOrder(a, { effort: !!eff?.shown, permission: !!perm?.shown }).map((id) => build[id]());
 	$controls.replaceChildren(...ctl);
 	$attach.replaceChildren(...S.pending.map((f, i) => el("span", { className: "cloud-chip" }, icon(chipIcon(f.mime)), f.name,
 		el("button", { className: "cloud-chip-x", title: "Remove", onclick: () => { S.pending.splice(i, 1); drawControls(); } }, icon("clearclose")))));
@@ -203,10 +213,12 @@ function agentSheet() {
 	const s = current();
 	const rows = agents().map((a) => option(a.label, {
 		checked: a.id === s.agent, disabled: !a.available,
-		sub: a.available ? (a.via === "direct" ? "OpenRouter, your token" : a.via === "gateway" ? "via the fleet gateway" : "") : a.reason,
+		sub: M.agentSub(a),
 		run: () => { s.agent = a.id; persist(); draw(); },
 	}));
-	sheet("Agent", rows, "From the fleet: the agents its services declare and the gateway serves.");
+	sheet("Agent", rows, S.health === null
+		? "The gateway did not answer: the fleet's declared agents are shown, marked offline."
+		: "From the fleet: the agents the C3 catalogue declares and the gateway's /health serves now.");
 }
 
 function effortSheet() {
@@ -238,7 +250,7 @@ function moreSheet() {
 	const rows = M.moreFor(chat, a, S.health).map((f) => {
 		if (f.kind === "toggle") return toggleRow(f.label, saved[f.id] ?? !!S.health?.plugins?.[f.plugin], (on) => M.setToggle(localStorage, a.id, f.id, on), f.header);
 		if (f.kind === "select") return option(`${f.label}: ${saved[f.id] ?? "server default"}`, { sub: f.header, run: () => selectValue(a, f) });
-		return option(f.label, { sub: f.offline ? "gateway offline" : f.route ? chat.gateway[f.route] : null, run: () => invoke(a, f) });
+		return option(f.label, { sub: f.offline ? "gateway offline" : f.kind === "native" ? `${a.label}, live: ${f.path}` : f.route ? chat.gateway[f.route] : null, run: () => invoke(a, f) });
 	});
 	sheet(`More · ${a.label}`, rows, S.health ? null : "The gateway did not answer: the declared list is shown.");
 }
@@ -264,6 +276,7 @@ async function invoke(a, f) {
 			if (f.id === "catalogue") return modelPage(true);
 		}
 		if (f.kind === "login") return claudeLogin();
+		if (f.kind === "native") return nativeFunction(a, f);
 		const url = fleet.gateway + chat.gateway[f.route];
 		if (f.kind === "tools") {
 			const { default: prompt } = await import("dialogs/prompt");
@@ -278,6 +291,17 @@ async function invoke(a, f) {
 	} catch (e) {
 		toast(`${f.label}: ${e?.message || e}`);
 	}
+}
+
+/** One of an agent's own functions, served by the gateway (GET /agents/<agent>/<fn>). */
+async function nativeFunction(a, f) {
+	const j = await getJson(fleet.gateway + f.path);
+	const list = Array.isArray(j) ? j : Array.isArray(j?.data) ? j.data : Array.isArray(j?.sessions) ? j.sessions : Array.isArray(j?.jobs) ? j.jobs : null;
+	if (list) {
+		const rows = list.map((it) => option(String(it.name || it.title || it.id || "item"), { sub: [it.description, it.category, it.schedule, it.updated_at || it.created_at].filter(Boolean).join(" · ") || null }));
+		return sheet(`${f.label} · ${a.label}`, rows, rows.length ? null : "Nothing listed.");
+	}
+	page(`${f.label} · ${a.label}`, null, el("pre", { className: "cloud-pre" }, JSON.stringify(j, null, 2)));
 }
 
 async function gatewaySessions(url) {
@@ -364,32 +388,41 @@ async function stopRecording() {
 	}
 }
 
-// ── the model picker: libs:model-catalogue, A0 Code only ────────────────────
+// ── the Model page: libs:model-catalogue, the four Text tables (A0–A3) ──────
 
+/**
+ * A full page, not a sheet: Cloud Search's chat model page drawn in HTML from the same lib data
+ * (this WebView app cannot run the Compose screen). One radio per row, exactly one selected;
+ * picking saves the model for the CURRENT agent (model.js::setAgentModel) and returns to Chat,
+ * Back closes without change. Rows the agent cannot run are greyed with the reason
+ * (model.js::rowState). [onPick] (Profile & Config's default model) takes any selectable row.
+ */
 export async function modelPage(refresh = false, onPick = null) {
-	const s = current();
 	const a = agent();
+	const chosen = onPick ? M.loadSettings(localStorage, chat).model : modelOf(a);
 	const body = el("div", { className: "cloud-cat" }, el("p", { className: "cloud-muted" }, "Loading the catalogue…"));
-	const pg = page("Models", null, body);
+	const pg = page(onPick ? "Default model" : `Model · ${a ? a.label : "Chat"}`, null, body);
+	pg.node.classList.add("cloud-model-page");
+	const choose = (row) => {
+		if (onPick) onPick(row.id);
+		else {
+			M.setAgentModel(localStorage, a.id, row.id);
+			draw();
+		}
+		pg.close();
+	};
 	const show = (cat) => {
-		const mc = M.modelControl(a, s.model, S.health);
+		const mc = a ? M.modelControl(a, chosen, S.health) : { pick: true, label: chosen };
+		const head = onPick || mc.pick
+			? `Selected: ${chosen}`
+			: `${a.label} runs ${mc.value || "its own model"}: the rows are shown for reference.`;
 		body.replaceChildren(
-			el("p", { className: "cloud-cat-current" }, `Current: ${mc.label}${mc.pick ? "" : " (the agent's own)"}`),
+			el("p", { className: "cloud-cat-current" }, head),
 			el("p", { className: "cloud-muted" }, `Prices as of ${cat.as_of} (${cat.origin})`),
-			...cat.groups.flatMap((g) => [
-				el("h3", {}, `${g.id}) ${g.label}`),
-				...g.sections.map((sec) => section(sec, (row) => {
-					if (onPick) onPick(row.id);
-					else {
-						s.model = row.id;
-						persist();
-						draw();
-					}
-					pg.close();
-				})),
-			]),
-			el("p", { className: "cloud-muted" }, "The fleet's model catalogue (libs:model-catalogue, shared with Cloud Search), A0 Code only. Anthropic first, then one model per provider, cheapest first. Prices are OpenRouter's, read at most daily."),
+			...cat.groups.flatMap((g) => g.sections.map((sec) => section(sec, M.checkedRow(cat.groups.flatMap((x) => x.sections), chosen)))),
+			el("p", { className: "cloud-muted" }, "The fleet's model catalogue (libs:model-catalogue, shared with Cloud Search): A0 Code, A1 Agentic, A2 Base, A3 Reasoning. Anthropic first, then providers by price. Prices are OpenRouter's, read at most daily."),
 		);
+		body.querySelector("input[type=radio]:checked")?.closest("tr")?.scrollIntoView?.({ block: "center" });
 	};
 	try {
 		show(await plugin().catalogue(chat.catalogue.sections, false));
@@ -400,16 +433,20 @@ export async function modelPage(refresh = false, onPick = null) {
 		body.replaceChildren(el("p", {}, `The catalogue could not be read: ${e?.message || e}`));
 	}
 
-	function section(sec, pickRow) {
-		const head = ["Provider", "Model", "OpenRouter ID", "Arch / Params", "License", "In $/1M", "Out $/1M (Floor)"];
+	function section(sec, checked) {
+		const cols = ["", "Provider", "Model", "OpenRouter ID", "Params", "License", "Input $/1M", "Output $/1M (Floor)"];
 		const rows = sec.rows.map((r) => {
-			const allowed = onPick ? r.selectable : M.rowAllowed(a, r, S.health);
-			const cells = [r.provider, r.name + (r.listed ? "" : " · not listed"), r.id, r.params, r.license, r.input, r.output];
-			return el("tr", { className: `${allowed ? "" : "dim"}${r.id === s.model ? " current" : ""}`, onclick: allowed ? () => pickRow(r) : null }, cells.map((c) => el("td", {}, c)));
+			const st = onPick ? { allowed: !!r.selectable, reason: r.selectable ? "" : "not on OpenRouter" } : M.rowState(a, r, S.health);
+			const radio = el("input", { type: "radio", name: "cloud-model", value: r.id, checked: checked === `${sec.id}:${r.id}`, disabled: !st.allowed, "aria-label": `${r.provider} ${r.name}` });
+			radio.addEventListener("change", () => choose(r));
+			radio.addEventListener("click", (e) => e.stopPropagation()); // the row's own tap would pick twice
+			const name = el("div", {}, r.name + (r.listed ? "" : " · not listed"), st.allowed ? null : el("div", { className: "cloud-cat-why" }, st.reason));
+			return el("tr", { className: `${st.allowed ? "" : "dim"}${checked === `${sec.id}:${r.id}` ? " current" : ""}`, onclick: st.allowed ? () => choose(r) : null },
+				el("td", {}, radio), el("td", {}, r.provider), el("td", {}, name), el("td", {}, r.id), el("td", {}, r.params), el("td", {}, r.license), el("td", {}, r.input), el("td", {}, r.output));
 		});
-		return el("div", { className: "cloud-cat-section" },
-			el("strong", {}, `${sec.id} ${sec.label}`), sec.note ? el("div", { className: "cloud-muted" }, sec.note) : null,
-			el("div", { className: "cloud-cat-scroll" }, el("table", {}, el("thead", {}, el("tr", {}, head.map((h) => el("th", {}, h)))), el("tbody", {}, rows))));
+		return el("section", { className: "cloud-cat-section", "data-section": sec.id },
+			el("div", { className: "cloud-cat-head" }, el("strong", {}, `${sec.id} ${sec.label}`), sec.note ? el("div", { className: "cloud-muted" }, sec.note) : null),
+			el("div", { className: "cloud-cat-scroll" }, el("table", {}, el("thead", {}, el("tr", {}, cols.map((h) => el("th", {}, h)))), el("tbody", {}, rows))));
 	}
 }
 
@@ -438,13 +475,13 @@ async function retry() {
 function stream(s, a) {
 	let req;
 	try {
-		req = M.buildRequest({ chat, fleet, storage: localStorage, agent: a, model: s.model, effort: s.effort, mode: s.mode, session: s, reasoning: S.reasoning, health: S.health });
+		req = M.buildRequest({ chat, fleet, storage: localStorage, agent: a, model: modelOf(a), effort: s.effort, mode: s.mode, session: s, reasoning: S.reasoning, health: S.health });
 	} catch (e) {
 		s.messages.push({ role: "assistant", content: "", error: String(e?.message || e) });
 		persist();
 		return drawMessages();
 	}
-	const reply = { role: "assistant", content: "", streaming: true, agent: a.label, model: M.modelControl(a, s.model, S.health).label };
+	const reply = { role: "assistant", content: "", streaming: true, agent: a.label, model: M.modelControl(a, modelOf(a), S.health).label };
 	s.messages.push(reply);
 	s.updated = Date.now();
 	persist();

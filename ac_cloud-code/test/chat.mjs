@@ -30,12 +30,12 @@ out(agents[agents.length - 1].id === chat.direct.id, "the direct OpenRouter back
 const claw = agents.find((a) => a.id === "openclaw");
 const fleetHasClaw = fleet.agents.find((a) => a.id === "openclaw")?.deployed;
 out(fleetHasClaw ? claw.available : !claw.available && claw.reason === "not deployed", `OpenClaw follows the fleet: deployed=${!!fleetHasClaw}, shown ${claw.available ? "available" : `disabled (${claw.reason})`}`);
-for (const a of agents.filter((x) => x.via === "gateway" && x.id !== "openclaw")) {
+for (const a of agents.filter((x) => x.via === "gateway" && x.id !== "openclaw" && x.decl.fleet)) {
 	out(fleet.agents.find((f) => f.id === a.id)?.deployed === a.deployed, `${a.label} is deployed exactly when the fleet declares ${a.decl.fleet}`);
 }
 const services = JSON.parse(read(`../${chat.fleet_services}`));
 const fleetAgents = services.filter((s) => s.name.startsWith(chat.agent_prefix)).map((s) => s.name).sort();
-const shownFleet = agents.filter((a) => a.deployed && a.via !== "direct").map((a) => (a.decl ? a.decl.fleet : `${chat.agent_prefix}${a.id}`)).sort();
+const shownFleet = agents.filter((a) => a.deployed && a.via !== "direct").map((a) => (a.decl ? a.decl.fleet : `${chat.agent_prefix}${a.id}`)).filter(Boolean).sort();
 out(JSON.stringify(fleetAgents) === JSON.stringify(shownFleet), `every fleet agent service is in the picker (${fleetAgents.join(", ")})`);
 out(fleet.gateway === `http://${services.find((s) => s.name === chat.gateway.service).private_dns}`, `the gateway address is the fleet's (${fleet.gateway})`);
 
@@ -175,7 +175,7 @@ out(a1.join("") === "Hel" && a2.join("") === "lo" && p.done, "SSE deltas are joi
 out(M.parseWhole(200, '{"choices":[{"message":{"content":"ok"}}]}').text === "ok" && /boom/.test(M.parseWhole(502, '{"error":{"message":"boom"}}').error), "a whole (gateway agent) answer and its error are read");
 
 // ── the catalogue: the shared lib, A0 Code only ─────────────────────────────
-out(JSON.stringify(chat.catalogue.sections) === '["A0"]', "the model picker asks the shared catalogue for A0 Code only");
+out(JSON.stringify(chat.catalogue.sections) === '["A0","A1","A2","A3"]', "the Model page asks the shared catalogue for the four Text tables, A0-A3");
 const cat = JSON.parse(read("../ab_cloud-libs-shared/libs/model-catalogue/src/main/assets/models/catalogue.json"));
 const a0 = cat.groups.flatMap((g2) => g2.sections).find((s) => s.id === "A0");
 out(a0?.label === "Code" && a0.kind === "chat", "A0 in the shared catalogue is the Code chat section");
@@ -184,3 +184,90 @@ const bridge = read("src/plugins/cloudchat/src/CatalogueBridge.java");
 out(/all\.only\(ids\)/.test(bridge) && /CatalogueJson\.INSTANCE\.shown\(cat,/.test(bridge) && /ModelCatalogue\.ASSET/.test(bridge), "the plugin narrows with the lib's own filter and hands over the lib's CatalogueJson (no copy)");
 const extras = read("build-extras.gradle");
 out(/ab_cloud-libs-shared\/libs\/model-catalogue/.test(extras) && /src\/main\/kotlin\/com\/diegonmarcos\/superapp\/modelcatalogue'/.test(extras) && /src\/main\/assets'/.test(extras), "build-extras compiles the lib's logic package and assets by reference");
+
+// ── every agent the fleet can run: catalogue + live /health.modes ───────────
+const modesUp = {
+	agents: { openrouter: true, claude_cli: true, goose: "deepseek/deepseek-v4", hermes: "hermes-agent", openclaw: "openclaw/default" },
+	plugins: { headroom: true },
+	modes: [
+		{ id: "hermes", label: "Hermes", fleet: "cloud-agi-hermes", backend: "hermes-agent-api", native: true, model: "hermes-agent", available: true, functions: [{ id: "skills", label: "Skills", path: "/agents/hermes/skills" }, { id: "jobs", label: "Scheduled jobs", path: "/agents/hermes/jobs" }] },
+		{ id: "openclaw", label: "OpenClaw", fleet: "cloud-agi-openclaw", backend: "openclaw-gateway", native: true, model: "openclaw/default", available: true, functions: [{ id: "agents", label: "Agent targets", path: "/agents/openclaw/agents" }] },
+		{ id: "goose", label: "Goose", fleet: "cloud-agi-goose", backend: "openrouter+mcp", native: false, model: "deepseek/deepseek-v4", available: true, functions: [] },
+		{ id: "claude-cli", label: "Claude", fleet: "cloud-agi-claude", backend: "claude-superset-api", native: true, model: null, available: true, functions: [] },
+		{ id: "openrouter", label: "OpenRouter (fleet key)", fleet: null, backend: "openrouter", native: false, model: null, available: true, functions: [] },
+		{ id: "aider", label: "Aider", fleet: "cloud-agi-aider", backend: "aider-api", native: true, model: "x/coder", available: true, functions: [{ id: "repo", label: "Repo map", path: "/agents/aider/repo" }] },
+	],
+};
+const U = M.resolveAgents(chat, fleet, modesUp);
+const uids = U.map((a) => a.id).join(",");
+out(uids.startsWith("hermes,openclaw,goose,claude,fleet-openrouter,aider") && uids.endsWith(chat.direct.id), `all agents, in the owner's order, then the gateway's undeclared ones, then OpenRouter direct (${uids})`);
+const uclaw = by(U, "openclaw");
+out(uclaw.deployed && uclaw.available && uclaw.state === "ready", "OpenClaw is deployed and ready once the live gateway serves it, even before the catalogue lists it");
+const aider = by(U, "aider");
+out(aider.available && aider.decl.generic && M.modelControl(aider, "x", modesUp).value === "x/coder" && M.moreFor(chat, aider, modesUp).some((f) => f.kind === "native" && f.path === "/agents/aider/repo"), "a mode the gateway starts serving appears with no app change: its model and functions come from /health");
+const catAider = { ...fleet, agents: [...fleet.agents, { id: "aider", fleet: "cloud-agi-aider", deployed: true, declared: false }] };
+out(M.resolveAgents(chat, catAider, modesUp).filter((a) => a.id === "aider").length === 1, "a catalogue agent the gateway serves is listed once (as served), not also as 'no app API'");
+const down = { ...modesUp, modes: modesUp.modes.map((m) => (m.id === "openclaw" ? { ...m, available: false, reason: "the OpenClaw gateway does not answer", functions: [] } : m)) };
+const dclaw = by(M.resolveAgents(chat, fleet, down), "openclaw");
+out(dclaw.state === "unavailable" && !dclaw.available && /does not answer/.test(dclaw.reason), "an agent the gateway lists as down is unavailable, with the gateway's reason");
+const noMode = { ...modesUp, modes: modesUp.modes.filter((m) => m.id !== "openclaw") };
+const nclaw = by(M.resolveAgents(chat, fleet, noMode), "openclaw");
+out(fleetHasClaw ? nclaw.state === "unavailable" : nclaw.state === "not-deployed", `without a gateway mode OpenClaw is ${fleetHasClaw ? "unavailable (deployed, not served)" : "not deployed"}`);
+const OFF = M.resolveAgents(chat, fleet, null);
+const offG = by(OFF, "goose");
+out(offG.state === "offline" && offG.available && /did not answer/.test(M.agentSub(offG)), "the gateway not answering: deployed agents are offline, still selectable, and say why");
+out(M.pickAgent(OFF, "goose").id === "goose", "offline never moves the stored agent to another");
+out(M.resolveAgents(chat, fleet, undefined).filter((a) => a.via === "gateway" && a.deployed).every((a) => a.state === "ready"), "not asked yet: deployed agents are ready");
+out(/its own API/.test(M.agentSub(by(U, "hermes"))) && /openrouter\+mcp/.test(M.agentSub(by(U, "goose"))), "the picker says which backend answers (Hermes' own API vs the gateway's MCP loop)");
+
+// per-agent capabilities, truthful to each backend
+const uh = by(U, "hermes"), ug = by(U, "goose"), uc = by(U, "claude"), uf = by(U, "fleet-openrouter"), ud = by(U, chat.direct.id);
+out(!M.effortControl(uh, "hermes-agent", null).shown && M.effortControl(by(L, "hermes"), "nousresearch/hermes-4", null).shown, "Effort: hidden once Hermes is its native API (it runs its own reasoning), shown behind the MCP loop");
+out(!M.effortControl(uclaw, null, null).shown && M.permissionControl(uclaw).via === "prompt" && M.mcpServers(uclaw, [{ server: "x", count: 1 }], fleet.mcp_fleet).source === "none", "OpenClaw: no effort field, permission as an instruction, no MCP servers");
+out(!M.modelControl(uclaw, "x/y", modesUp).pick && M.modelControl(uclaw, "x/y", modesUp).value === "openclaw/default", "OpenClaw's model is its own, shown from the gateway");
+const rc = M.buildRequest({ chat, fleet, storage: new Store(), agent: uclaw, model: "x/y", effort: "high", mode: "plan", session, reasoning, health: modesUp });
+out(rc.headers["x-agent-mode"] === "openclaw" && JSON.parse(rc.body).model === undefined && JSON.parse(rc.body).reasoning === undefined, "OpenClaw's request: X-Agent-Mode openclaw, no model, no effort");
+out(M.modelControl(uf, "qwen/q", modesUp).pick && !M.permissionControl(uf).shown && M.mcpServers(uf, null, fleet.mcp_fleet).source === "none" && uf.deployed, "the gateway's OpenRouter face: any model, no permission mode, no MCP, deployed with the gateway");
+const rf = M.buildRequest({ chat, fleet, storage: new Store(), agent: uf, model: "qwen/q", effort: "high", mode: "plan", session, reasoning: new Set(["qwen/q"]), health: modesUp });
+out(rf.url === fleet.gateway + chat.gateway.chat_path && rf.headers["x-agent-mode"] === "openrouter" && JSON.parse(rf.body).model === "qwen/q" && rf.auth === null, "its request: the gateway, X-Agent-Mode openrouter, the picked model, no token on the phone");
+
+// More: the agent's own functions, live from the gateway
+const hm = M.moreFor(chat, uh, modesUp);
+out(hm.some((f) => f.id === "live:skills" && f.path === "/agents/hermes/skills") && !hm.some((f) => f.id === "skills"), "native Hermes: More lists its real skills (live) and drops the prompt fallback");
+out(M.moreFor(chat, by(L, "hermes"), health).some((f) => f.id === "skills"), "Hermes behind the MCP loop keeps the skills prompt");
+out(M.moreFor(chat, uclaw, modesUp).some((f) => f.path === "/agents/openclaw/agents") && !M.moreFor(chat, ug, modesUp).some((f) => f.kind === "native"), "OpenClaw lists its agent targets; Goose publishes no native function");
+
+// ── the composer: Model right after Agent, nothing after More ───────────────
+for (const a of [uh, uclaw, ug, uc, uf, ud]) {
+	const e = M.effortControl(a, M.modelControl(a, chat.default_model, modesUp).value, null);
+	const order = M.controlOrder(a, { effort: e.shown, permission: M.permissionControl(a).shown });
+	out(order[order.indexOf("agent") + 1] === "model" && order[order.length - 1] === "more" && order.filter((c) => c === "model").length === 1, `${a.label}: ${order.join(" · ")}`);
+}
+const view = read("src/cloud/chat/view.js");
+out(/M\.controlOrder\(a, \{ effort: !!eff\?\.shown, permission: !!perm\?\.shown \}\)\.map\(\(id\) => build\[id\]\(\)\)/.test(view) && (view.match(/role: "model"/g) || []).length === 1, "view.js draws the composer in controlOrder's order and has exactly one Model button");
+
+// ── the Model page: A0-A3 from the catalogue, radio, per-agent, greying ─────
+out(/pg\.node\.classList\.add\("cloud-model-page"\)/.test(view) && /type: "radio", name: "cloud-model"/.test(view) && /M\.setAgentModel\(localStorage, a\.id, row\.id\)/.test(view), "the Model page is a full page with one radio group, saving per agent");
+const scss = read("src/cloud/cloud.scss");
+out(/\.cloud-page\.cloud-model-page \{\s*inset: 0;/.test(scss) && /\.cloud-cat-head \{\s*position: sticky;/.test(scss) && /\.cloud-cat-scroll \{\s*overflow-x: auto;/.test(scss), "full height, sticky section headers, each table scrolls sideways");
+const text = cat.groups.find((g2) => g2.id === "A").sections;
+out(JSON.stringify(text.map((x) => x.id)) === JSON.stringify(chat.catalogue.sections) && text.every((x) => x.rows.length > 0), `the page's sections are the catalogue's Text tables with rows (${text.map((x) => `${x.id}:${x.rows.length}`).join(" ")})`);
+const allRows = text.flatMap((x) => x.rows.map((r) => ({ ...r, selectable: true })));
+const ps = new Store();
+const radios = (agentId) => {
+	const key = M.checkedRow(text, M.agentModel(ps, chat, agentId));
+	return text.flatMap((x) => x.rows.map((r) => `${x.id}:${r.id}`)).filter((k) => k === key).length;
+};
+out(text.flatMap((x) => x.rows).filter((r) => r.id === chat.default_model).length >= 1, "the default model is a catalogue row (it may sit in several tables)");
+out(/checked: checked === `\$\{sec\.id\}:\$\{r\.id\}`/.test(view), "the page checks the radio M.checkedRow picks, never every row with the id");
+out(radios("claude") === 1, "exactly one radio is selected (the default model)");
+const a2row = text.find((x) => x.id === "A2").rows.find((r) => r.provider !== "Anthropic");
+M.setAgentModel(ps, "openrouter", a2row.id);
+out(M.agentModel(ps, chat, "openrouter") === a2row.id && radios("openrouter") === 1 && M.agentModel(ps, chat, "claude") === chat.default_model, "a pick in A2 is saved for that agent only, and stays the one selected");
+const anth = allRows.find((r) => r.provider === "Anthropic");
+const other = allRows.find((r) => r.provider !== "Anthropic");
+const cs = M.rowState(uc, other, modesUp);
+out(M.rowState(uc, anth, modesUp).allowed && !cs.allowed && /Anthropic/.test(cs.reason), "Claude: Anthropic rows only, the others greyed with the reason");
+const hs = M.rowState(ug, anth, modesUp);
+out(!hs.allowed && /set by Goose/.test(hs.reason) && !M.rowState(uh, other, modesUp).allowed, "Goose and Hermes: every row greyed, 'set by' the agent");
+out(allRows.every((r) => M.rowState(ud, r, modesUp).allowed) && allRows.every((r) => M.rowState(uf, r, modesUp).allowed), "OpenRouter (direct and fleet) can pick any row");

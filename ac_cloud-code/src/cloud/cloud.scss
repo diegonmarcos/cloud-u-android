@@ -580,7 +580,7 @@ body.cloud-nav {
   }
 }
 
-// ── the model picker (libs:model-catalogue, A0 Code) ────────────────────────
+// ── the Model page (libs:model-catalogue, the Text tables A0–A3) ─────────────
 .cloud-cat {
   font-size: 12px;
 
@@ -628,5 +628,47 @@ body.cloud-nav {
   tr.current td {
     color: var(--active-color);
     font-weight: 600;
+  }
+
+  // A tap anywhere on a selectable row picks it; the radio is the visible state.
+  tr:not(.dim) {
+    cursor: pointer;
+  }
+
+  input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    accent-color: var(--active-color);
+  }
+
+  .cloud-cat-why {
+    font-weight: 400;
+    font-size: 11px;
+    opacity: 0.9;
+    white-space: normal;
+  }
+}
+
+// The Model page is a full-height page over the bottom bar: the page scrolls vertically, each
+// section's table sideways inside its own box, and the section titles stay pinned under the top bar.
+.cloud-page.cloud-model-page {
+  inset: 0;
+  z-index: 125;
+
+  .cloud-cat-section {
+    margin-top: 12px;
+    padding: 0 8px 8px;
+  }
+
+  .cloud-cat-head {
+    position: sticky;
+    top: 48px;
+    z-index: 1;
+    margin: 0 -8px;
+    padding: 8px;
+    background-color: var(--secondary-color);
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 10px 10px 0 0;
   }
 }

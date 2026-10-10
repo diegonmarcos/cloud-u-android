@@ -84,14 +84,14 @@
     ]
   },
   "chat": {
-    "_doc": "THE ONE DECLARATION of the Chat tab (replaced Home). The page is Cloud Search's chat (Chat > Search) without the search boxes: one message list, streamed replies, one composer. Everything fleet-shaped is DERIVED at build time by tools/resolve-targets.py into src/cloud/targets.gen.json: the agents (fleet_services, every service named agent_prefix*), the gateway URL (gateway.service's private_dns) and the fleet MCP servers (fleet_mcp, names only). What is declared here is only what the fleet data cannot say: the order the owner asked for (Hermes, OpenClaw first), what each backend accepts per request (model, effort, permission mode, MCP, functions), and the words.",
+    "_doc": "THE ONE DECLARATION of the Chat tab (replaced Home). The page is Cloud Search's chat (Chat > Search) without the search boxes: one message list, streamed replies, one composer. Everything fleet-shaped is DERIVED at build time by tools/resolve-targets.py into src/cloud/targets.gen.json: the agents (fleet_services, every service named agent_prefix*), the gateway URL (gateway.service's private_dns) and the fleet MCP servers (fleet_mcp, names only). What is declared here is only what the fleet data cannot say: the order the owner asked for (Hermes, OpenClaw first; 'cloud-code will use all agents possible'), what each backend accepts per request (model, effort, permission mode, MCP, functions), and the words.",
     "fleet_services": "ac_cloud-c3/data/services_private.json",
     "_doc_fleet_services": "The fleet's private service list as this repository carries it (cloud-c3 bakes it too). An agent is a service whose name starts with agent_prefix; its private_dns is where the mesh reaches it.",
     "agent_prefix": "cloud-agi-",
     "fleet_mcp": "0_apps/src/root/mcp.json",
     "_doc_fleet_mcp": "The derived .mcp.json (cloud-infra 1_cloud-configs/dist/mcp.json via 0_apps): the fallback MCP list for an agent whose backend publishes none. Only the server NAMES are copied; urls and headers stay out of the APK.",
     "gateway": {
-      "_doc": "my-ai-api (cloud-agi-goose, WireGuard-only) is the fleet's agent gateway: one OpenAI-compatible /v1/chat/completions that picks the agent with the X-Agent-Mode header (goose | hermes | claude-cli), GET /health lists the agents it serves and its plugins, GET /v1/mcp/status its MCP servers, GET /v1/mcp/search?q= its tools, GET /sessions the cross-device sessions. Verified against cloud-u-containers user-ai_my-ai-api/src/code/server.mjs on 2026-10-10.",
+      "_doc": "my-ai-api (cloud-agi-goose, WireGuard-only) is the fleet's agent gateway: one OpenAI-compatible /v1/chat/completions that picks the agent with the X-Agent-Mode header (hermes | openclaw | goose | claude-cli | openrouter). GET /health lists them under `modes` ([{id, label, fleet, backend, native, model, available, reason, functions}]) — the live half of the agent picker, so an agent the gateway starts serving appears without an app change — plus its plugins; GET /agents/<agent>/<fn> serves each native agent's read-only functions (Hermes skills/toolsets/sessions/jobs, OpenClaw agent targets); GET /v1/mcp/status its MCP servers, GET /v1/mcp/search?q= its tools, GET /sessions the cross-device sessions. Verified against cloud-u-containers user-ai_my-ai-api/src/code/server.mjs on 2026-10-10.",
       "service": "cloud-agi-goose",
       "chat_path": "/v1/chat/completions",
       "health_path": "/health",
@@ -116,39 +116,45 @@
         "health_key": "hermes",
         "model": {
           "kind": "fixed",
-          "_doc": "the gateway answers hermes mode with ITS HERMES_MODEL; a model in the request is ignored, so the button shows that model and does not pick"
+          "_doc": "the gateway answers hermes mode with ITS model (/health.modes[hermes].model: the Hermes Agent's own once native, else HERMES_MODEL); a model in the request is ignored, so the button shows that model and does not pick"
         },
         "effort": {
           "param": "reasoning.effort",
           "needs_reasoning": true,
-          "_doc": "the gateway spreads every extra body field into its OpenRouter call (server.mjs forward: {...extra}), so reasoning.effort reaches the model when that model reasons"
+          "_doc": "Behind the gateway's MCP loop (HERMES_API_KEY not wired) the gateway spreads every extra body field into its OpenRouter call, so reasoning.effort reaches the model when that model reasons. Once the gateway reaches the Hermes Agent's own API (/health.modes[hermes].native) it forwards only the messages: the agent runs its own reasoning settings, so the control is hidden then (unless_native).",
+          "unless_native": true
         },
         "permission": {
           "via": "prompt",
           "_doc": "Hermes' own approvals.mode is a container setting (off = auto); the gateway takes no per-request switch, so the mode is applied as the instruction below"
         },
         "mcp": {
-          "source": "gateway"
+          "source": "gateway",
+          "_doc": "the gateway's live MCP list; Hermes' native API runs the same fleet MCP servers (its config.yaml mcp_servers is generated from the fleet mcp.json)"
         },
-        "_doc": "Nous Hermes Agent. The cloud-agi-hermes container serves Telegram only (its API server is off, compose.nix), so the app reaches Hermes through the gateway's hermes mode."
+        "_doc": "Nous Hermes Agent (cloud-agi-hermes). Its own API server is ON, loopback-only (127.0.0.1:8642, declared in the hermes compose since 2026-10-10), and the gateway's hermes mode reaches the REAL agent there once the gateway holds its key (HERMES_API_KEY, an owner sops edit). Until then the hermes mode is the Hermes model behind the gateway's MCP loop, and /health.modes[hermes].native says false: the picker shows which (agentSub). With the native API the More sheet gains Hermes' own skills, toolsets, sessions and scheduled jobs, live from the gateway."
       },
       {
         "id": "openclaw",
         "label": "OpenClaw",
         "fleet": "cloud-agi-openclaw",
         "mode": "openclaw",
-        "health_key": null,
+        "health_key": "openclaw",
         "model": {
-          "kind": "fixed"
+          "kind": "fixed",
+          "_doc": "OpenClaw runs the model its own config names (cloud-u-containers user-ai_openclaw build.json runtime.model, through the gateway's OpenRouter face); the request's model field is the AGENT target (openclaw/default), so the button shows /health.modes[openclaw].model and does not pick"
         },
         "effort": null,
         "permission": {
-          "via": "prompt"
+          "via": "prompt",
+          "_doc": "OpenClaw's HTTP API takes no per-request approval switch; applied as the instruction below"
         },
         "mcp": {
-          "source": "fleet"
+          "source": "none",
+          "_doc": "no MCP server is configured in the fleet's OpenClaw (its tools are its own plugins), so the MCP sheet says so instead of listing servers it cannot call"
         },
-        "_doc": "Asked for by the owner. NOT in the fleet (no cloud-agi-openclaw service, no gateway mode): shown as not deployed and disabled, never faked. It lights up when the fleet declares the service and the gateway serves the mode."
+        "_doc": "OpenClaw (MIT, github.com/openclaw/openclaw), deployed 2026-10-10 as cloud-agi-openclaw on oci-apps: upstream's image, gateway on 127.0.0.1:18789 only, reached through the fleet gateway's openclaw mode (X-Agent-Mode: openclaw). Its catalogue row arrives with the next services_private.json regeneration; until then the live gateway's /health.modes is what says it is deployed. More gains its agent targets, live.",
+        "_doc_effort": "null: the gateway forwards only the messages to OpenClaw (callNative); OpenClaw sets thinking in its own config"
       },
       {
         "id": "goose",
@@ -196,9 +202,30 @@
           "source": "fleet"
         },
         "_doc": "The claude CLI on the subscription (cloud-agi-claude), through the gateway's claude-cli mode."
+      },
+      {
+        "id": "fleet-openrouter",
+        "label": "OpenRouter · fleet",
+        "fleet": null,
+        "mode": "openrouter",
+        "health_key": "openrouter",
+        "model": {
+          "kind": "catalogue",
+          "providers": null,
+          "_doc": "any catalogue row: the gateway's openrouter mode sends the requested model to OpenRouter (X-Agent-Mode: openrouter keeps a claude-… id off the claude CLI)"
+        },
+        "effort": {
+          "param": "reasoning.effort",
+          "needs_reasoning": true
+        },
+        "permission": null,
+        "mcp": {
+          "source": "none"
+        },
+        "_doc": "The fleet gateway's own OpenAI-compatible face (my-ai-api's openrouter mode): any model, streamed, paid by the gateway's key — no token on the phone. Not an agent with tools (no permission mode, no MCP), but the fleet's OpenAI-compatible endpoint, so it is in the picker. fleet null: it is deployed with the gateway itself."
       }
     ],
-    "_doc_agents": "Listed first, in this order (the owner's: Hermes, OpenClaw, then the rest). Any OTHER fleet service named agent_prefix* is appended by the resolver as 'no app API yet' (disabled), so a new agent shows up without a code change. The direct OpenRouter backend comes last.",
+    "_doc_agents": "Listed first, in this order (the owner's: Hermes, OpenClaw, then the rest, then the gateway's own OpenRouter face). Then every mode the LIVE gateway lists in /health.modes that is not declared here (a new agent the gateway starts serving: generic controls, its model and functions from the gateway), then every OTHER fleet service named agent_prefix* that no mode reaches ('no app API yet', disabled). The direct OpenRouter backend comes last. States: ready, offline (the gateway did not answer: still selectable), unavailable (the gateway says so, with its reason), not deployed, no app API (model.js::resolveAgents).",
     "effort": {
       "_doc": "Low / Medium / High / Max, sent as OpenRouter's reasoning.effort (which accepts low, medium, high and max, verified 2026-10-10) when the backend passes it and the model reasons (its supported_parameters lists reasoning, read from direct.models_url once a day). Otherwise the control is disabled with the reason.",
       "levels": [
@@ -250,9 +277,12 @@
       "default": "auto"
     },
     "catalogue": {
-      "_doc": "The model picker is libs:model-catalogue (Cloud Search's catalogue, one implementation), narrowed to these sections by the lib's own filter.",
+      "_doc": "The Model page is libs:model-catalogue (Cloud Search's catalogue, one implementation), narrowed by the lib's own filter to the four Text sections — A0 Code, A1 Agentic, A2 Base, A3 Reasoning — the same tables Cloud Search's chat model page shows. Drawn in HTML (this WebView app has no Compose) as a full page: one radio per row, exactly one selected, saved per agent (model.js::setAgentModel); rows the agent cannot run are greyed with the reason (model.js::rowState).",
       "sections": [
-        "A0"
+        "A0",
+        "A1",
+        "A2",
+        "A3"
       ]
     },
     "default_model": "anthropic/claude-opus-5.5",
@@ -340,7 +370,9 @@
         "prompt": "List the skills and toolsets you can use right now, one line each.",
         "agents": [
           "hermes"
-        ]
+        ],
+        "unless_live": "skills",
+        "_doc": "the prompt fallback while Hermes is behind the MCP loop; hidden once the gateway publishes Hermes' real /v1/skills (live:skills)"
       },
       {
         "id": "memory",
@@ -349,6 +381,7 @@
         "prompt": "What do you remember about me and my current work? Read your memory first.",
         "agents": [
           "hermes",
+          "openclaw",
           "goose",
           "claude"
         ]

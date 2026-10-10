@@ -146,6 +146,9 @@ def chat(app_root, nav):
         raise SystemExit("resolve-targets: the gateway %r is not a fleet service with an address" % c["gateway"]["service"])
     agents, seen = [], set()
     for a in c["agents"]:
+        if not a.get("fleet"):
+            # No service of its own (the gateway's OpenRouter face): deployed with the gateway.
+            continue
         svc = services.get(a["fleet"])
         seen.add(a["fleet"])
         agents.append({"id": a["id"], "fleet": a["fleet"], "deployed": svc is not None,

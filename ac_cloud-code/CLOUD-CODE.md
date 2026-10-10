@@ -143,30 +143,41 @@ Cloud Search's chat (Chat › Search) without the search boxes: one message list
 replies, one composer. Declared in `nav.json::chat`; the fleet-shaped data is DERIVED at build
 time by `tools/resolve-targets.py` into `targets.gen.json::chat`:
 
-- **Agents** — every service named `cloud-agi-*` in `ac_cloud-c3/data/services_private.json`,
-  nav.json's declared order first (Hermes, OpenClaw, Goose, Claude), then any other (shown "no
-  app API yet"), then OpenRouter direct. OpenClaw is declared but not in the fleet, so it is
-  shown **not deployed** and disabled. The app reaches the agents through the fleet's agent
-  gateway, my-ai-api (`cloud-agi-goose`, WireGuard-only): `X-Agent-Mode` picks goose / hermes /
-  claude-cli, `/health` says which it serves now. The cloud-agi-hermes container has its own
-  API server off (Telegram only), so Hermes is the gateway's hermes mode.
-- **Model** — libs:model-catalogue (Cloud Search's catalogue, ONE implementation: its logic
-  package and assets are compiled in by reference, the plugin hands its `CatalogueJson` to the
-  page), narrowed to **A0 Code** by the lib's own section filter. Hermes and Goose answer with
-  the gateway's own model (the button shows it); Claude can pick Anthropic rows (passed as the
-  CLI id); OpenRouter direct any A0 row.
+- **Agents** — two sources, never a guess: the C3 catalogue (every `cloud-agi-*` service in
+  `ac_cloud-c3/data/services_private.json`, baked at build time) and the fleet agent gateway's
+  live `GET /health.modes` (my-ai-api, `cloud-agi-goose`, WireGuard-only). Order: nav.json's
+  declared agents (Hermes, OpenClaw, Goose, Claude, then **OpenRouter · fleet** — the gateway's
+  own OpenAI-compatible face, any model, paid by the gateway's key), then any mode the gateway
+  serves that the app does not declare (it appears with no app change: its model and functions
+  come from `/health`), then any other catalogue agent ("no app API yet"), then OpenRouter
+  direct (your token). States: ready, **offline** (the gateway did not answer: still
+  selectable), unavailable (the gateway says why), not deployed, no app API. `X-Agent-Mode`
+  picks hermes / openclaw / goose / claude-cli / openrouter. **OpenClaw** runs as
+  cloud-agi-openclaw (loopback-only, behind the gateway). **Hermes** is the real Hermes Agent API
+  once the gateway holds its key (`/health.modes[hermes].native`), else the Hermes model behind
+  the gateway's MCP loop; the picker says which.
+- **Model** — the button sits right after Agent and opens a full **page**: libs:model-catalogue
+  (Cloud Search's catalogue, ONE implementation: its logic package and assets are compiled in by
+  reference, the plugin hands its `CatalogueJson` to the page), the four Text tables **A0 Code,
+  A1 Agentic, A2 Base, A3 Reasoning** with Cloud Search's columns, one radio per row (exactly
+  one selected), saved **per agent**; Back closes without change. Rows the agent cannot run are
+  greyed with the reason: Hermes, Goose and OpenClaw run their own model ("set by …"), Claude
+  only Anthropic rows (passed as the CLI id), OpenRouter (direct or fleet) any row.
 - **Effort** Low / Medium / High / Max → OpenRouter `reasoning.effort` (the gateway passes extra
   body fields through), disabled when the model in use does not reason (OpenRouter's
-  `supported_parameters`), hidden for Claude (the CLI takes none per request).
+  `supported_parameters`), hidden for Claude, OpenClaw and native Hermes (they take none per
+  request).
 - **Permission mode** Auto / Accept / Plan, on the composer. No backend the app reaches takes a
   per-request approval switch, so it is sent as an instruction (via=prompt); hidden for
   OpenRouter direct (no tools).
-- **MCP** — the gateway's live `/v1/mcp/status` for Hermes and Goose, else the fleet's derived
+- **MCP** — none for OpenClaw and the OpenRouter backends; the gateway's live `/v1/mcp/status` for Hermes and Goose, else the fleet's derived
   `.mcp.json` names (`0_apps/src/root/mcp.json`); toggles saved per agent. The gateway has no
   per-request server switch yet, so the toggles are advisory there (the sheet says so).
 - **More** — `nav.json::chat.functions`, filtered by the gateway's live `/health.plugins`:
   gateway sessions (resume one), tool search, models, health; Headroom / RTK / Caveman /
-  Principles / compression mode as per-request headers; Hermes skills and memory; Claude's OAuth
+  Principles / compression mode as per-request headers; each agent's OWN functions, live from
+  the gateway (`GET /agents/<agent>/<fn>`: Hermes skills, toolsets, sessions, scheduled jobs;
+  OpenClaw agent targets); memory; Claude's OAuth
   login; retry, undo, refresh prices. Offline, the declared list, marked offline.
 - **+** — the Android photo picker or SAF (no storage permission), and a voice message recorded
   as 16 kHz WAV (RECORD_AUDIO, asked on first use) sent as `input_audio`. The app has no

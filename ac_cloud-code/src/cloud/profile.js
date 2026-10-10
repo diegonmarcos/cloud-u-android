@@ -86,7 +86,7 @@ function tokenSection(st, again) {
 function defaultsSection(again) {
 	const s = M.loadSettings(localStorage, chat);
 	const fleet = targets.chat;
-	const agents = M.resolveAgents(chat, fleet, null);
+	const agents = M.resolveAgents(chat, fleet, undefined);
 	const set = (k, v) => { M.saveSettings(localStorage, { ...s, [k]: v }); again(); };
 	const agentLabel = agents.find((a) => a.id === s.agent)?.label || s.agent;
 	return section("Chat defaults (new chats)",

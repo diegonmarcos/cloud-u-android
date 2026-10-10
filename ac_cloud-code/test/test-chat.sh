@@ -2,9 +2,12 @@
 # ac_cloud-code tester: the Chat tab (replaced Home) — no build, no network.
 #
 #   test/chat.mjs        the REAL src/cloud/chat/model.js and tabs.js over the REAL nav.json and the
-#                        fleet data the REAL resolver derives: the agent list (Hermes, OpenClaw first;
-#                        OpenClaw "not deployed" while the fleet lacks it), model / effort / permission
-#                        per backend capability, MCP list source and per-agent persistence, More, the
+#                        fleet data the REAL resolver derives: the agent list from the catalogue AND the
+#                        gateway's live /health.modes (Hermes, OpenClaw first; ready / offline /
+#                        unavailable / not deployed / no app API; a new gateway mode appears with no
+#                        code), model / effort / permission per backend capability, the composer order
+#                        (Model right after Agent, nothing after More), the Model page (A0-A3, one
+#                        radio, saved per agent, greyed rows with the reason), MCP list source and per-agent persistence, More, the
 #                        request each backend gets, the hamburger listing the ACTIVE page's items, the
 #                        sessions, the stream parser, and the catalogue asked for A0 Code only.
 #   test/chat_secrets.py the OpenRouter token: encrypted at rest, never logged, never handed to the
