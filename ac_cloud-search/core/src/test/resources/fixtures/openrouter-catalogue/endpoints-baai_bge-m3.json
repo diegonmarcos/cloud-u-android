@@ -1,0 +1,1 @@
+{"data":{"id":"baai/bge-m3","name":"BAAI: bge-m3","endpoints":[{"provider_name":"Parasail","pricing":{"prompt":"0.00000001","completion":"0","discount":0},"quantization":"unknown","context_length":8194},{"provider_name":"DeepInfra","pricing":{"prompt":"0.00000001","completion":"0","discount":0},"quantization":"fp32","context_length":8192}]}}

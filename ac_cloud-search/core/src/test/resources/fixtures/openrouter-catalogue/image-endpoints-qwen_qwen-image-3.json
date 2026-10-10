@@ -1,0 +1,1 @@
+{"id":"qwen/qwen-image-3","endpoints":[{"provider_name":"Alibaba Cloud Int.","pricing":[{"billable":"input_image","unit":"image","cost_usd":0.003},{"billable":"output_image","unit":"image","cost_usd":0.03,"variant":"1k"},{"billable":"output_image","unit":"image","cost_usd":0.03,"variant":"2k"}]}]}

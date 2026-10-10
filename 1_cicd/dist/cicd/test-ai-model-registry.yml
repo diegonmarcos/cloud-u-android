@@ -38,6 +38,7 @@ on:
       - "aa_cloud-superapp/test/ai-registries.json"
       - "ab_cloud-libs-shared/build.json"
       - "ac_cloud-mail/build.json"
+      - "ac_cloud-search/app/src/main/assets/models/catalogue.json"
 
 permissions:
   contents: read

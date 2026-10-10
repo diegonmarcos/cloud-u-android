@@ -18,6 +18,9 @@
 #       pricing_as_of + baked prices; and, when the catalog is reachable, every id
 #       exists there, 'open' matches hugging_face_id, and baked $/M match the live
 #       price within 1 % (a drift = bump pricing_as_of + values)
+#   T9  model catalogues (ai-registries.json::catalogues, e.g. Cloud Search's model page): one row per
+#       provider, an offline snapshot on every priced row, and, live, every curated id still listed by
+#       the OpenRouter catalogue (models / embeddings / images / videos) that prices its section
 #   T8  the AI Model Routing table: slugs non-empty and unique, every price renders
 #       #.### dollars per million -- the provider's own unit, unscaled, with a
 #       published per-token price pinned to the exact cell it must produce so no
@@ -493,6 +496,48 @@ assert not drift, "\n    ".join(drift)
 EOF
 then ok "T8 live: every registry's baked quantisation and trained_for still match OpenRouter"
 else bad "T8 live: quant/trained_for drifted from OpenRouter (each drift listed above) — refresh those fields in the registry the line names, then bump its pricing_as_of"; fi
+
+# T9 model catalogues (ai-registries.json::catalogues): curated selections an app browses, priced live
+# on the phone. The shape is static and fatal; whether every id is still listed is OpenRouter's state,
+# so it follows the T7/T8 rule above (advisory inside a release gate, fatal on the schedule).
+if python3 - "$ROOT" "$REGISTRIES" <<'EOF'
+import json, os, sys
+root, manifest = sys.argv[1], sys.argv[2]
+for c in json.load(open(manifest)).get("catalogues", []):
+    d = json.load(open(os.path.join(root, c["path"])))
+    assert all(u.startswith("https://") for u in d["urls"].values()), f"{c['label']}: a catalogue url is not https"
+    for g in d["groups"]:
+        for s in g["sections"]:
+            others = [r["provider"].lower() for r in s["rows"] if not r["id"].startswith("anthropic/")]
+            assert len(others) == len(set(others)), f"{c['label']} {s['id']}: one row per provider"
+            for r in s["rows"]:
+                assert "/" in r["id"] and r["provider"].strip(), f"{c['label']} {s['id']}: bad row {r}"
+                assert s["catalog"] == "none" or "snapshot" in r, f"{c['label']} {s['id']} {r['id']}: no offline snapshot"
+EOF
+then ok "T9 model catalogues well-formed: one row per provider, every priced row carries its snapshot"; else bad "T9 model catalogue shape"; fi
+
+if live_checks_are_advisory; then
+  echo "  skip: T9 live catalogue ids — release gate does not veto a publish on a third party's live state; the scheduled AI model registry monitor enforces this"
+elif ! curl -sS --max-time 15 -o /dev/null "$CATALOG" 2>/dev/null; then
+  echo "  skip: T9 live catalogue ids unreachable ($CATALOG) — curated ids unverified"
+elif python3 - "$ROOT" "$REGISTRIES" <<'EOF'
+import json, os, sys, urllib.request
+root, manifest = sys.argv[1], sys.argv[2]
+def ids(u):
+    with urllib.request.urlopen(u, timeout=40) as r: return {m["id"] for m in json.load(r)["data"]}
+gone = []
+for c in json.load(open(manifest)).get("catalogues", []):
+    d = json.load(open(os.path.join(root, c["path"])))
+    listed = {k: ids(d["urls"][k]) for k in ("chat", "embeddings", "images", "videos")}
+    for g in d["groups"]:
+        for s in g["sections"]:
+            where = {"chat": listed["chat"], "embeddings": listed["embeddings"], "images": listed["images"] | listed["videos"],
+                     "videos": listed["videos"], "none": set()}[s["catalog"]]
+            gone += [f"{c['label']} {s['id']} {r['id']}: not in OpenRouter's {s['catalog']} catalogue" for r in s["rows"] if r["id"] not in where]
+assert not gone, "\n    ".join(gone)
+EOF
+then ok "T9 live: every curated catalogue id is still listed by the OpenRouter catalogue that prices it"
+else bad "T9 live: a curated model is gone from OpenRouter (each listed above) — pick that provider's next model in the catalogue the line names"; fi
 
 echo "== $PASS ok, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

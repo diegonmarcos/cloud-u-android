@@ -9,6 +9,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -20,6 +24,7 @@ import com.diegonmarcos.cloudsearch.core.Chat
 import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.core.Templates
 import com.diegonmarcos.cloudsearch.data.sp
+import com.diegonmarcos.cloudsearch.models.ModelCataloguePage
 import com.diegonmarcos.superapp.searchpage.SearchChatPage
 import com.diegonmarcos.superapp.searchpage.SearchPageColors
 import com.diegonmarcos.superapp.searchpage.SearchPageIcons
@@ -43,12 +48,19 @@ fun AssistantPage(v: SearchConfig.Vertical) {
     val state = LocalState.current
     // With the keyboard up the nav is gone (SearchShell), so the input sits right on the keyboard.
     val bottom = if (imeOpen()) Metrics.small else Metrics.contentBottom
+    // The model chip opens the model catalogue (models/ModelCataloguePage) in the chat's place; back returns.
+    var catalogue by rememberSaveable { mutableStateOf(false) }
+    if (catalogue) {
+        ModelCataloguePage(state, onClose = { catalogue = false }, modifier = Modifier.padding(top = Metrics.contentTop, bottom = bottom))
+        return
+    }
     SearchChatPage(
         state.chat,
         engines = state.cfg.engines.map { SpEngine(it.id, it.label, it.icon, it.accent) },
         query = { e, q -> state.cfg.engines.firstOrNull { it.id == e.id }?.let { Templates.fill(it.url, q, state.cfg.city(state.city)) } },
         theme = searchPageTheme(),
         modifier = Modifier.padding(top = Metrics.contentTop, bottom = bottom),
+        onModel = { catalogue = true },
     ) {
         Chip(stringResource(R.string.sessions), Tags.SESSIONS, icon = R.drawable.ph_list_dashes) { state.menu = Menu.SESSIONS }
     }

@@ -137,7 +137,8 @@ data class SearchPageTheme(
  * The Search page (the mockup's renderUnifiedSearchChat): [header] (Sessions, in Cloud Search) and
  * the model on top; until the chat has a message, the greeting and one box per [engines] entry
  * (each opens [query]'s URL through the host); then the conversation in the same place. The input
- * is pinned at the bottom the whole time.
+ * is pinned at the bottom the whole time. [onModel] set: the model chip opens the host's own model
+ * page instead of the dropdown (Cloud Search's model catalogue, which carries the Web switch too).
  */
 @Composable
 fun SearchChatPage(
@@ -146,6 +147,7 @@ fun SearchChatPage(
     query: (SpEngine, String) -> String?,
     theme: SearchPageTheme,
     modifier: Modifier = Modifier,
+    onModel: (() -> Unit)? = null,
     header: @Composable RowScope.() -> Unit = {},
 ) {
     val m = theme.metrics
@@ -156,7 +158,7 @@ fun SearchChatPage(
         Row(Modifier.fillMaxWidth().padding(horizontal = m.gutter, vertical = m.small), verticalAlignment = Alignment.CenterVertically) {
             header()
             Spacer(Modifier.weight(1f))
-            ModelSelect(chat, theme)
+            ModelSelect(chat, theme, onModel)
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (chat.session.messages.isEmpty() && !chat.sending) Welcome(engines, query, chat.host(), theme)
@@ -283,9 +285,9 @@ private fun Thinking(label: String, theme: SearchPageTheme) {
     }
 }
 
-/** The model <select>: the host's catalogue, native web-search models marked, and the Web switch. */
+/** The model <select>: the host's catalogue, native web-search models marked, and the Web switch; with [onModel], a chip that opens the host's page. */
 @Composable
-private fun ModelSelect(chat: SearchChatState, theme: SearchPageTheme) {
+private fun ModelSelect(chat: SearchChatState, theme: SearchPageTheme, onModel: (() -> Unit)? = null) {
     val c = theme.colors
     val m = theme.metrics
     val s = theme.strings
@@ -296,7 +298,7 @@ private fun ModelSelect(chat: SearchChatState, theme: SearchPageTheme) {
     Box {
         Row(
             Modifier.widthIn(max = m.modelMaxWidth).clip(shape).background(c.field).border(m.hairline, c.tileBorder, shape)
-                .clickable { open = true }.testTag(SearchPageTags.MODEL).padding(horizontal = m.cardPad, vertical = m.gap),
+                .clickable { if (onModel != null) onModel() else open = true }.testTag(SearchPageTags.MODEL).padding(horizontal = m.cardPad, vertical = m.gap),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(m.small),
         ) {

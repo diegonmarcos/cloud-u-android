@@ -1,0 +1,1 @@
+{"id":"tencent/hy-image-v3.5-preview","endpoints":[{"provider_name":"Tencent Cloud","pricing":[{"billable":"output_image","unit":"token","cost_usd":1.6e-06}]}]}

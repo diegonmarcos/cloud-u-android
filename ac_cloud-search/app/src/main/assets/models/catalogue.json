@@ -1,0 +1,1325 @@
+{
+ "_doc": "Cloud Search's model catalogue (Chat > Search > the model chip): the curated SELECTION, one row per provider per section, Anthropic first as the reference and then the best open-weights model of each provider. Which model, its params and its licence are written here by hand because OpenRouter does not publish them; a value marked *_est is an estimate, not an official figure, and the page says \"est.\". Prices are NOT authored here: the app reads them live from the OpenRouter catalogues in `urls` at most once every refresh_hours, caches them on the phone and ranks each section by them. `snapshot` is the bundled offline fallback, read from those catalogues on pricing_as_of; the page shows that date whenever it is what is on screen. Every id is checked against the live catalogues by test-keyboard-ai-routing.sh T9 (the AI model registry gate) and against the recorded fixture by core ModelCatalogueTest.",
+ "_doc_fields": "section.kind: chat (selectable for the chat) | embeddings | rerank | audio | image (browsable, greyed: not a chat model). section.catalog: which OpenRouter catalogue prices the rows: chat (/models) | embeddings (/embeddings/models) | images (/images/models, priced per endpoint) | videos | none. A row whose id is not in the images catalogue is looked up in the videos one. rank_by: output | input - the price a section is ranked by (input for embeddings, where output is not billed). snapshot.unit: tokens ($ per 1M) | image | megapixel | second.",
+ "version": 1,
+ "pricing_as_of": "2026-10-10",
+ "refresh_hours": 24,
+ "urls": {
+  "chat": "https://openrouter.ai/api/v1/models",
+  "embeddings": "https://openrouter.ai/api/v1/embeddings/models",
+  "images": "https://openrouter.ai/api/v1/images/models",
+  "videos": "https://openrouter.ai/api/v1/videos/models",
+  "model_endpoints": "https://openrouter.ai/api/v1/models/{id}/endpoints",
+  "image_endpoints": "https://openrouter.ai/api/v1/images/models/{id}/endpoints"
+ },
+ "groups": [
+  {
+   "id": "A",
+   "label": "Text",
+   "sections": [
+    {
+     "id": "A0",
+     "label": "Code",
+     "kind": "chat",
+     "catalog": "chat",
+     "rank_by": "output",
+     "note": "Coding and agentic-coding models.",
+     "rows": [
+      {
+       "provider": "Anthropic",
+       "id": "anthropic/claude-fable-5.1",
+       "name": "Claude Fable 5.1",
+       "params": "undisclosed",
+       "params_est": false,
+       "license": "Proprietary",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 10.0,
+        "out": 50.0,
+        "floor_in": 10.0,
+        "floor_out": 50.0
+       }
+      },
+      {
+       "provider": "Anthropic",
+       "id": "anthropic/claude-opus-5.5",
+       "name": "Claude Opus 5.5",
+       "params": "undisclosed",
+       "params_est": false,
+       "license": "Proprietary",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 4.0,
+        "out": 20.0,
+        "floor_in": 4.0,
+        "floor_out": 20.0
+       }
+      },
+      {
+       "provider": "Mistral",
+       "id": "mistralai/codestral-2508",
+       "name": "Codestral 2508",
+       "params": "Dense, undisclosed",
+       "params_est": true,
+       "license": "Mistral (API only, no open weights)",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.3,
+        "out": 0.9,
+        "floor_in": 0.3,
+        "floor_out": 0.9
+       }
+      },
+      {
+       "provider": "Poolside",
+       "id": "poolside/laguna-s-2.1",
+       "name": "Laguna S 2.1",
+       "params": "MoE 118B / 8B",
+       "params_est": false,
+       "license": "Open weights",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.09,
+        "out": 0.18,
+        "floor_in": 0.09,
+        "floor_out": 0.18
+       }
+      },
+      {
+       "provider": "DeepSeek",
+       "id": "deepseek/deepseek-v4-flash-0731",
+       "name": "DeepSeek V4 Flash 0731",
+       "params": "MoE 284B / 13B",
+       "params_est": false,
+       "license": "MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.0126,
+        "out": 1.28,
+        "floor_in": 0.0126,
+        "floor_out": 0.18
+       }
+      },
+      {
+       "provider": "Qwen",
+       "id": "qwen/qwen3-coder",
+       "name": "Qwen3 Coder 480B A35B",
+       "params": "MoE 480B / 35B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.3,
+        "out": 1.0,
+        "floor_in": 0.22,
+        "floor_out": 1.0
+       }
+      },
+      {
+       "provider": "Meta",
+       "id": "meta-llama/llama-4-maverick",
+       "name": "Llama 4 Maverick",
+       "params": "MoE 400B / 17B",
+       "params_est": true,
+       "license": "Llama 4 Community",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.1875,
+        "out": 0.6525,
+        "floor_in": 0.1875,
+        "floor_out": 0.6525
+       }
+      },
+      {
+       "provider": "StepFun",
+       "id": "stepfun/step-5-preview",
+       "name": "Step 5 Preview",
+       "params": "MoE 600B / 27B",
+       "params_est": false,
+       "license": "Proprietary preview (no open weights yet)",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 1.0,
+        "out": 2.7,
+        "floor_in": 1.0,
+        "floor_out": 2.7
+       }
+      },
+      {
+       "provider": "Z-AI",
+       "id": "z-ai/glm-5.2",
+       "name": "GLM 5.2",
+       "params": "MoE, undisclosed",
+       "params_est": true,
+       "license": "MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.06,
+        "out": 7.0,
+        "floor_in": 0.06,
+        "floor_out": 1.68
+       }
+      },
+      {
+       "provider": "Moonshot",
+       "id": "moonshotai/kimi-k2.7-code",
+       "name": "Kimi K2.7 Code",
+       "params": "MoE ~1T / 32B",
+       "params_est": true,
+       "license": "Modified MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.6712,
+        "out": 3.35,
+        "floor_in": 0.6712,
+        "floor_out": 3.0
+       }
+      },
+      {
+       "provider": "MiniMax",
+       "id": "minimax/minimax-m2.7",
+       "name": "MiniMax M2.7",
+       "params": "MoE 230B / 10B",
+       "params_est": true,
+       "license": "Modified MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.21,
+        "out": 0.84,
+        "floor_in": 0.21,
+        "floor_out": 0.84
+       }
+      },
+      {
+       "provider": "OpenAI",
+       "id": "openai/gpt-oss-120b",
+       "name": "gpt-oss-120b",
+       "params": "MoE 117B / 5.1B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.037,
+        "out": 0.17,
+        "floor_in": 0.03,
+        "floor_out": 0.15
+       }
+      },
+      {
+       "provider": "Cohere",
+       "id": "cohere/north-mini-code:free",
+       "name": "North Mini Code",
+       "params": "MoE 30B / 3B",
+       "params_est": false,
+       "license": "Open weights",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.0,
+        "out": 0.0,
+        "floor_in": 0.0,
+        "floor_out": 0.0
+       }
+      }
+     ]
+    },
+    {
+     "id": "A1",
+     "label": "Agentic",
+     "kind": "chat",
+     "catalog": "chat",
+     "rank_by": "output",
+     "note": "Long-horizon tool use and multi-step agents.",
+     "rows": [
+      {
+       "provider": "Anthropic",
+       "id": "anthropic/claude-opus-5.5",
+       "name": "Claude Opus 5.5",
+       "params": "undisclosed",
+       "params_est": false,
+       "license": "Proprietary",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 4.0,
+        "out": 20.0,
+        "floor_in": 4.0,
+        "floor_out": 20.0
+       }
+      },
+      {
+       "provider": "Anthropic",
+       "id": "anthropic/claude-sonnet-5.5",
+       "name": "Claude Sonnet 5.5",
+       "params": "undisclosed",
+       "params_est": false,
+       "license": "Proprietary",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 2.0,
+        "out": 10.0,
+        "floor_in": 2.0,
+        "floor_out": 10.0
+       }
+      },
+      {
+       "provider": "Mistral",
+       "id": "mistralai/mistral-small-2603",
+       "name": "Mistral Small 4",
+       "params": "MoE 119B / 6B",
+       "params_est": true,
+       "license": "Apache-2.0",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.15,
+        "out": 0.6,
+        "floor_in": 0.15,
+        "floor_out": 0.6
+       }
+      },
+      {
+       "provider": "DeepSeek",
+       "id": "deepseek/deepseek-v4-pro-0813",
+       "name": "DeepSeek V4 Pro 0813",
+       "params": "MoE ~1.6T / 49B",
+       "params_est": true,
+       "license": "MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.66,
+        "out": 1.98,
+        "floor_in": 0.21912,
+        "floor_out": 0.65736
+       }
+      },
+      {
+       "provider": "Qwen",
+       "id": "qwen/qwen3.8-2.4t-a95b",
+       "name": "Qwen3.8 2.4T A95B",
+       "params": "MoE 2.4T / 95B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 2.0,
+        "out": 6.0,
+        "floor_in": 2.0,
+        "floor_out": 6.0
+       }
+      },
+      {
+       "provider": "Meta",
+       "id": "meta-llama/llama-4-maverick",
+       "name": "Llama 4 Maverick",
+       "params": "MoE 400B / 17B",
+       "params_est": true,
+       "license": "Llama 4 Community",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.1875,
+        "out": 0.6525,
+        "floor_in": 0.1875,
+        "floor_out": 0.6525
+       }
+      },
+      {
+       "provider": "StepFun",
+       "id": "stepfun/step-3.7-flash",
+       "name": "Step 3.7 Flash",
+       "params": "MoE 196B / 11B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.2,
+        "out": 1.15,
+        "floor_in": 0.2,
+        "floor_out": 1.15
+       }
+      },
+      {
+       "provider": "Z-AI",
+       "id": "z-ai/glm-5.3",
+       "name": "GLM 5.3",
+       "params": "MoE, undisclosed",
+       "params_est": true,
+       "license": "MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.039,
+        "out": 4.8,
+        "floor_in": 0.039,
+        "floor_out": 2.2
+       }
+      },
+      {
+       "provider": "Moonshot",
+       "id": "moonshotai/kimi-k3",
+       "name": "Kimi K3",
+       "params": "MoE 2.8T / undisclosed",
+       "params_est": false,
+       "license": "Modified MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.64,
+        "out": 13.5,
+        "floor_in": 0.31,
+        "floor_out": 9.9
+       }
+      },
+      {
+       "provider": "MiniMax",
+       "id": "minimax/minimax-m3",
+       "name": "MiniMax M3",
+       "params": "MoE, undisclosed",
+       "params_est": true,
+       "license": "Modified MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.3,
+        "out": 1.2,
+        "floor_in": 0.23,
+        "floor_out": 0.96
+       }
+      },
+      {
+       "provider": "NVIDIA",
+       "id": "nvidia/nemotron-3-ultra-550b-a55b",
+       "name": "Nemotron 3 Ultra",
+       "params": "Hybrid MoE 550B / 55B",
+       "params_est": false,
+       "license": "NVIDIA Open Model",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.5,
+        "out": 2.2,
+        "floor_in": 0.5,
+        "floor_out": 2.2
+       }
+      },
+      {
+       "provider": "Xiaomi",
+       "id": "xiaomi/mimo-v2.6-pro",
+       "name": "MiMo-V2.6-Pro",
+       "params": "MoE >1T / undisclosed",
+       "params_est": false,
+       "license": "MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.435,
+        "out": 0.87,
+        "floor_in": 0.43,
+        "floor_out": 0.87
+       }
+      },
+      {
+       "provider": "Tencent",
+       "id": "tencent/hy3",
+       "name": "Hy3",
+       "params": "MoE 295B / 21B",
+       "params_est": false,
+       "license": "Tencent Hunyuan Community",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.132,
+        "out": 0.528,
+        "floor_in": 0.132,
+        "floor_out": 0.528
+       }
+      }
+     ]
+    },
+    {
+     "id": "A2",
+     "label": "Base",
+     "kind": "chat",
+     "catalog": "chat",
+     "rank_by": "output",
+     "note": "General chat.",
+     "rows": [
+      {
+       "provider": "Anthropic",
+       "id": "anthropic/claude-sonnet-5.5",
+       "name": "Claude Sonnet 5.5",
+       "params": "undisclosed",
+       "params_est": false,
+       "license": "Proprietary",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 2.0,
+        "out": 10.0,
+        "floor_in": 2.0,
+        "floor_out": 10.0
+       }
+      },
+      {
+       "provider": "Anthropic",
+       "id": "anthropic/claude-haiku-5.5",
+       "name": "Claude Haiku 5.5",
+       "params": "undisclosed",
+       "params_est": false,
+       "license": "Proprietary",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.1,
+        "out": 0.5,
+        "floor_in": 0.1,
+        "floor_out": 0.5
+       }
+      },
+      {
+       "provider": "Mistral",
+       "id": "mistralai/mistral-small-3.2-24b-instruct",
+       "name": "Mistral Small 3.2 24B",
+       "params": "Dense 24B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.09375,
+        "out": 0.25,
+        "floor_in": 0.075,
+        "floor_out": 0.2
+       }
+      },
+      {
+       "provider": "DeepSeek",
+       "id": "deepseek/deepseek-v3.2",
+       "name": "DeepSeek V3.2",
+       "params": "MoE 671B / 37B",
+       "params_est": true,
+       "license": "MIT",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.259,
+        "out": 0.8,
+        "floor_in": 0.2088,
+        "floor_out": 0.3096
+       }
+      },
+      {
+       "provider": "Qwen",
+       "id": "qwen/qwen3-235b-a22b-2507",
+       "name": "Qwen3 235B A22B Instruct 2507",
+       "params": "MoE 235B / 22B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.09,
+        "out": 0.55,
+        "floor_in": 0.0875,
+        "floor_out": 0.35
+       }
+      },
+      {
+       "provider": "Meta",
+       "id": "meta-llama/llama-3.3-70b-instruct",
+       "name": "Llama 3.3 70B Instruct",
+       "params": "Dense 70B",
+       "params_est": false,
+       "license": "Llama 3.3 Community",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.22,
+        "out": 0.5,
+        "floor_in": 0.1,
+        "floor_out": 0.32
+       }
+      },
+      {
+       "provider": "Google",
+       "id": "google/gemma-4-31b-it",
+       "name": "Gemma 4 31B",
+       "params": "Dense 30.7B",
+       "params_est": false,
+       "license": "Gemma terms",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.09,
+        "out": 0.34,
+        "floor_in": 0.09,
+        "floor_out": 0.34
+       }
+      },
+      {
+       "provider": "Z-AI",
+       "id": "z-ai/glm-5.3-flash",
+       "name": "GLM 5.3 Flash",
+       "params": "Hybrid sparse, undisclosed",
+       "params_est": true,
+       "license": "MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.15,
+        "out": 0.5,
+        "floor_in": 0.04,
+        "floor_out": 0.23
+       }
+      },
+      {
+       "provider": "Moonshot",
+       "id": "moonshotai/kimi-k2.6",
+       "name": "Kimi K2.6",
+       "params": "MoE ~1T / 32B",
+       "params_est": true,
+       "license": "Modified MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.4485,
+        "out": 2.45,
+        "floor_in": 0.4484,
+        "floor_out": 1.888
+       }
+      },
+      {
+       "provider": "MiniMax",
+       "id": "minimax/minimax-m2.7",
+       "name": "MiniMax M2.7",
+       "params": "MoE 230B / 10B",
+       "params_est": true,
+       "license": "Modified MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.21,
+        "out": 0.84,
+        "floor_in": 0.21,
+        "floor_out": 0.84
+       }
+      },
+      {
+       "provider": "NVIDIA",
+       "id": "nvidia/nemotron-3-super-120b-a12b",
+       "name": "Nemotron 3 Super",
+       "params": "Hybrid MoE 120B / 12B",
+       "params_est": false,
+       "license": "NVIDIA Open Model",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.08,
+        "out": 0.45,
+        "floor_in": 0.08,
+        "floor_out": 0.4
+       }
+      },
+      {
+       "provider": "Microsoft",
+       "id": "microsoft/phi-4",
+       "name": "Phi 4",
+       "params": "Dense 14B",
+       "params_est": false,
+       "license": "MIT",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.07,
+        "out": 0.14,
+        "floor_in": 0.07,
+        "floor_out": 0.14
+       }
+      },
+      {
+       "provider": "IBM",
+       "id": "ibm-granite/granite-4.2-8b",
+       "name": "Granite 4.2 8B",
+       "params": "Dense 8B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.06,
+        "out": 0.25,
+        "floor_in": 0.06,
+        "floor_out": 0.15
+       }
+      },
+      {
+       "provider": "StepFun",
+       "id": "stepfun/step-3.5-flash",
+       "name": "Step 3.5 Flash",
+       "params": "MoE 196B / 11B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.1,
+        "out": 0.3,
+        "floor_in": 0.1,
+        "floor_out": 0.3
+       }
+      },
+      {
+       "provider": "Cohere",
+       "id": "cohere/command-a",
+       "name": "Command A",
+       "params": "Dense 111B",
+       "params_est": false,
+       "license": "CC-BY-NC-4.0",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 2.5,
+        "out": 10.0,
+        "floor_in": 2.5,
+        "floor_out": 10.0
+       }
+      }
+     ]
+    },
+    {
+     "id": "A3",
+     "label": "Reasoning",
+     "kind": "chat",
+     "catalog": "chat",
+     "rank_by": "output",
+     "note": "Thinking models: long chains of reasoning before the answer.",
+     "rows": [
+      {
+       "provider": "Anthropic",
+       "id": "anthropic/claude-fable-5.1",
+       "name": "Claude Fable 5.1",
+       "params": "undisclosed",
+       "params_est": false,
+       "license": "Proprietary",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 10.0,
+        "out": 50.0,
+        "floor_in": 10.0,
+        "floor_out": 50.0
+       }
+      },
+      {
+       "provider": "Anthropic",
+       "id": "anthropic/claude-opus-5.5",
+       "name": "Claude Opus 5.5",
+       "params": "undisclosed",
+       "params_est": false,
+       "license": "Proprietary",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 4.0,
+        "out": 20.0,
+        "floor_in": 4.0,
+        "floor_out": 20.0
+       }
+      },
+      {
+       "provider": "DeepSeek",
+       "id": "deepseek/deepseek-r1-0528",
+       "name": "DeepSeek R1 0528",
+       "params": "MoE 671B / 37B",
+       "params_est": false,
+       "license": "MIT",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.5,
+        "out": 2.15,
+        "floor_in": 0.5,
+        "floor_out": 2.15
+       }
+      },
+      {
+       "provider": "Qwen",
+       "id": "qwen/qwen3-235b-a22b-thinking-2507",
+       "name": "Qwen3 235B A22B Thinking 2507",
+       "params": "MoE 235B / 22B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.45,
+        "out": 3.5,
+        "floor_in": 0.45,
+        "floor_out": 3.5
+       }
+      },
+      {
+       "provider": "Moonshot",
+       "id": "moonshotai/kimi-k2-thinking",
+       "name": "Kimi K2 Thinking",
+       "params": "MoE 1T / 32B",
+       "params_est": true,
+       "license": "Modified MIT",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.6,
+        "out": 2.5,
+        "floor_in": 0.6,
+        "floor_out": 2.5
+       }
+      },
+      {
+       "provider": "NVIDIA",
+       "id": "nvidia/nemotron-3-ultra-550b-a55b",
+       "name": "Nemotron 3 Ultra",
+       "params": "Hybrid MoE 550B / 55B",
+       "params_est": false,
+       "license": "NVIDIA Open Model",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.5,
+        "out": 2.2,
+        "floor_in": 0.5,
+        "floor_out": 2.2
+       }
+      },
+      {
+       "provider": "Arcee",
+       "id": "arcee-ai/trinity-large-thinking",
+       "name": "Trinity Large Thinking",
+       "params": "MoE ~400B / 13B",
+       "params_est": true,
+       "license": "Apache-2.0",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.25,
+        "out": 0.8,
+        "floor_in": 0.25,
+        "floor_out": 0.8
+       }
+      },
+      {
+       "provider": "OpenAI",
+       "id": "openai/gpt-oss-120b",
+       "name": "gpt-oss-120b",
+       "params": "MoE 117B / 5.1B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.037,
+        "out": 0.17,
+        "floor_in": 0.03,
+        "floor_out": 0.15
+       }
+      },
+      {
+       "provider": "Z-AI",
+       "id": "z-ai/glm-5.3",
+       "name": "GLM 5.3",
+       "params": "MoE, undisclosed",
+       "params_est": true,
+       "license": "MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.039,
+        "out": 4.8,
+        "floor_in": 0.039,
+        "floor_out": 2.2
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "B",
+   "label": "Search",
+   "sections": [
+    {
+     "id": "B0",
+     "label": "Embeddings",
+     "kind": "embeddings",
+     "catalog": "embeddings",
+     "rank_by": "input",
+     "note": "Vectors for retrieval and semantic search; priced per 1M input tokens.",
+     "rows": [
+      {
+       "provider": "BAAI",
+       "id": "baai/bge-m3",
+       "name": "bge-m3",
+       "params": "Dense 568M",
+       "params_est": true,
+       "license": "MIT",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.01,
+        "out": 0.0,
+        "floor_in": 0.01,
+        "floor_out": 0.0
+       }
+      },
+      {
+       "provider": "Qwen",
+       "id": "qwen/qwen3-embedding-8b",
+       "name": "Qwen3 Embedding 8B",
+       "params": "Dense 8B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.01,
+        "out": 0.0,
+        "floor_in": 0.01,
+        "floor_out": 0.0
+       }
+      },
+      {
+       "provider": "Intfloat",
+       "id": "intfloat/multilingual-e5-large",
+       "name": "Multilingual-E5-Large",
+       "params": "Dense 560M",
+       "params_est": true,
+       "license": "MIT",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.01,
+        "out": 0.0,
+        "floor_in": 0.01,
+        "floor_out": 0.0
+       }
+      },
+      {
+       "provider": "Sentence Transformers",
+       "id": "sentence-transformers/all-mpnet-base-v2",
+       "name": "all-mpnet-base-v2",
+       "params": "Dense 110M",
+       "params_est": true,
+       "license": "Apache-2.0",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.005,
+        "out": 0.0,
+        "floor_in": 0.005,
+        "floor_out": 0.0
+       }
+      },
+      {
+       "provider": "Thenlper",
+       "id": "thenlper/gte-large",
+       "name": "GTE-Large",
+       "params": "Dense 335M",
+       "params_est": true,
+       "license": "MIT",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.01,
+        "out": 0.0,
+        "floor_in": 0.01,
+        "floor_out": 0.0
+       }
+      },
+      {
+       "provider": "NVIDIA",
+       "id": "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+       "name": "Llama Nemotron Embed VL 1B V2",
+       "params": "Dense 1B",
+       "params_est": false,
+       "license": "NVIDIA Open Model",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.0,
+        "out": 0.0,
+        "floor_in": 0.0,
+        "floor_out": 0.0
+       }
+      },
+      {
+       "provider": "Liquid",
+       "id": "liquid/lfm-2.5-embedding-350m:free",
+       "name": "LFM2.5-Embedding-350M",
+       "params": "Dense 350M",
+       "params_est": false,
+       "license": "LFM Open License",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.0,
+        "out": 0.0,
+        "floor_in": 0.0,
+        "floor_out": 0.0
+       }
+      }
+     ]
+    },
+    {
+     "id": "B1",
+     "label": "Decisions",
+     "kind": "chat",
+     "catalog": "chat",
+     "rank_by": "output",
+     "note": "Small, fast models for classification, routing, yes/no and tool choice.",
+     "rows": [
+      {
+       "provider": "Anthropic",
+       "id": "anthropic/claude-haiku-5.5",
+       "name": "Claude Haiku 5.5",
+       "params": "undisclosed",
+       "params_est": false,
+       "license": "Proprietary",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.1,
+        "out": 0.5,
+        "floor_in": 0.1,
+        "floor_out": 0.5
+       }
+      },
+      {
+       "provider": "Mistral",
+       "id": "mistralai/ministral-3b-2512",
+       "name": "Ministral 3 3B",
+       "params": "Dense 3B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.1,
+        "out": 0.1,
+        "floor_in": 0.1,
+        "floor_out": 0.1
+       }
+      },
+      {
+       "provider": "Meta",
+       "id": "meta-llama/llama-3.1-8b-instruct",
+       "name": "Llama 3.1 8B Instruct",
+       "params": "Dense 8B",
+       "params_est": false,
+       "license": "Llama 3.1 Community",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.05,
+        "out": 0.08,
+        "floor_in": 0.02,
+        "floor_out": 0.04
+       }
+      },
+      {
+       "provider": "Qwen",
+       "id": "qwen/qwen3.5-9b",
+       "name": "Qwen3.5-9B",
+       "params": "Dense 9B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.1,
+        "out": 0.15,
+        "floor_in": 0.08,
+        "floor_out": 0.13
+       }
+      },
+      {
+       "provider": "Google",
+       "id": "google/gemma-3-4b-it",
+       "name": "Gemma 3 4B",
+       "params": "Dense 4B",
+       "params_est": false,
+       "license": "Gemma terms",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.05,
+        "out": 0.1,
+        "floor_in": 0.05,
+        "floor_out": 0.1
+       }
+      },
+      {
+       "provider": "IBM",
+       "id": "ibm-granite/granite-4.0-h-micro",
+       "name": "Granite 4.0 Micro",
+       "params": "Dense 3B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.017,
+        "out": 0.112,
+        "floor_in": 0.017,
+        "floor_out": 0.112
+       }
+      },
+      {
+       "provider": "inclusionAI",
+       "id": "inclusionai/ling-3.0-flash",
+       "name": "Ling 3.0 Flash",
+       "params": "MoE 124B / 5.1B",
+       "params_est": false,
+       "license": "MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.021,
+        "out": 0.063,
+        "floor_in": 0.021,
+        "floor_out": 0.063
+       }
+      },
+      {
+       "provider": "OpenAI",
+       "id": "openai/gpt-oss-20b",
+       "name": "gpt-oss-20b",
+       "params": "MoE 21B / 3.6B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.018,
+        "out": 0.09,
+        "floor_in": 0.018,
+        "floor_out": 0.09
+       }
+      },
+      {
+       "provider": "NVIDIA",
+       "id": "nvidia/nemotron-3.5-lightning",
+       "name": "Nemotron 3.5 Lightning",
+       "params": "MoE 30B / 3B",
+       "params_est": false,
+       "license": "NVIDIA Open Model",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.07,
+        "out": 0.2,
+        "floor_in": 0.025,
+        "floor_out": 0.12
+       }
+      },
+      {
+       "provider": "Liquid",
+       "id": "liquid/lfm-2.5-2.6b:free",
+       "name": "LFM2.5-2.6B",
+       "params": "Dense 2.6B",
+       "params_est": false,
+       "license": "LFM Open License",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.0,
+        "out": 0.0,
+        "floor_in": 0.0,
+        "floor_out": 0.0
+       }
+      }
+     ]
+    },
+    {
+     "id": "B2",
+     "label": "Rerank",
+     "kind": "rerank",
+     "catalog": "none",
+     "rank_by": "input",
+     "note": "OpenRouter lists no rerank models (it has no rerank catalogue), so there is nothing here to price.",
+     "rows": []
+    }
+   ]
+  },
+  {
+   "id": "C",
+   "label": "Audio & Speech",
+   "sections": [
+    {
+     "id": "C0",
+     "label": "Audio",
+     "kind": "audio",
+     "catalog": "chat",
+     "rank_by": "output",
+     "note": "OpenRouter lists no speech-to-text or text-to-speech models; these are the open-weights models it serves that take audio in.",
+     "rows": [
+      {
+       "provider": "Mistral",
+       "id": "mistralai/voxtral-small-24b-2507",
+       "name": "Voxtral Small 24B 2507",
+       "params": "Dense 24B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": false,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.1,
+        "out": 0.3,
+        "floor_in": 0.1,
+        "floor_out": 0.3
+       }
+      },
+      {
+       "provider": "Xiaomi",
+       "id": "xiaomi/mimo-v2.6-flash",
+       "name": "MiMo-V2.6-Flash",
+       "params": "MoE 309B / 15B",
+       "params_est": false,
+       "license": "MIT",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.14,
+        "out": 0.28,
+        "floor_in": 0.1,
+        "floor_out": 0.28
+       }
+      },
+      {
+       "provider": "Thinking Machines",
+       "id": "thinkingmachines/inkling-small",
+       "name": "Inkling Small",
+       "params": "MoE 276B / 12B",
+       "params_est": false,
+       "license": "Open weights",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.45,
+        "out": 1.2,
+        "floor_in": 0.45,
+        "floor_out": 1.2
+       }
+      },
+      {
+       "provider": "NVIDIA",
+       "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+       "name": "Nemotron 3 Nano Omni",
+       "params": "MoE 30B / 3B",
+       "params_est": false,
+       "license": "NVIDIA Open Model",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "in": 0.0,
+        "out": 0.0,
+        "floor_in": 0.0,
+        "floor_out": 0.0
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "D",
+   "label": "Visual Media",
+   "sections": [
+    {
+     "id": "D0",
+     "label": "Image & Video",
+     "kind": "image",
+     "catalog": "images",
+     "rank_by": "output",
+     "note": "Image and video generation; priced per image, megapixel, token or second as OpenRouter bills it (ranked within each unit).",
+     "rows": [
+      {
+       "provider": "Black Forest Labs",
+       "id": "black-forest-labs/flux.2-klein-4b",
+       "name": "FLUX.2 Klein 4B",
+       "params": "Dense 4B",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": true,
+       "snapshot": {
+        "unit": "megapixel",
+        "out": 0.014,
+        "floor_out": 0.014
+       }
+      },
+      {
+       "provider": "Qwen",
+       "id": "qwen/qwen-image-3",
+       "name": "Qwen Image 3",
+       "params": "undisclosed",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": true,
+       "snapshot": {
+        "unit": "image",
+        "in": 0.003,
+        "out": 0.03,
+        "floor_in": 0.003,
+        "floor_out": 0.03
+       }
+      },
+      {
+       "provider": "Tencent",
+       "id": "tencent/hy-image-v3.5-preview",
+       "name": "Hy Image 3.5 Preview",
+       "params": "undisclosed",
+       "params_est": false,
+       "license": "Tencent Hunyuan Community",
+       "license_est": true,
+       "snapshot": {
+        "unit": "tokens",
+        "out": 1.6,
+        "floor_out": 1.6
+       }
+      },
+      {
+       "provider": "Alibaba",
+       "id": "alibaba/wan-3.0",
+       "name": "Wan 3.0 (video)",
+       "params": "undisclosed",
+       "params_est": false,
+       "license": "Apache-2.0",
+       "license_est": true,
+       "note": "video",
+       "snapshot": {
+        "unit": "second",
+        "out": 0.05,
+        "floor_out": 0.05
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
