@@ -63,6 +63,11 @@ class SearchSheet : Fragment() {
         fun searchBoxBackground(): Int = 0
         fun searchChipBackground(): Int = 0
 
+        /** The sheet's background, an ARGB colour: the app's theme surface. It is drawn at 100%
+         *  alpha whatever is returned ([opaque]): the results sit over the page they were
+         *  opened from, and a see-through list is unreadable over tiles. */
+        fun searchSurfaceColor(): Int = DEFAULT_SURFACE
+
         /** Called after a hit or command fires, to close the sheet. */
         fun dismissSearch()
     }
@@ -87,6 +92,12 @@ class SearchSheet : Fragment() {
         val root = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             val p = dp(12); setPadding(p, p, p, p)
+            // Opaque, and a layer: it covers the page it was opened over (no blur-through, no
+            // alpha on the container), takes the touches meant for it instead of passing them
+            // to the tiles below, and casts a shadow so it reads as above the page.
+            setBackgroundColor(opaque(host?.searchSurfaceColor() ?: DEFAULT_SURFACE))
+            isClickable = true
+            elevation = dp(8).toFloat()
         }
         if (host == null) {
             root.addView(emptyRow("This screen's activity does not implement SearchSheet.Host"))
@@ -240,8 +251,7 @@ class SearchSheet : Fragment() {
     private fun emptyRow(msg: String): TextView =
         TextView(requireContext()).apply {
             text = msg
-            alpha = 0.65f
-            setTextColor(0xFFFFFFFF.toInt())
+            setTextColor(SECONDARY_INK)
             val pad = dp(16); setPadding(pad, pad, pad, pad)
         }
 
@@ -264,8 +274,7 @@ class SearchSheet : Fragment() {
         if (sub.isNotBlank()) {
             row.addView(TextView(ctx).apply {
                 text = sub
-                alpha = 0.55f
-                setTextColor(0xFFFFFFFF.toInt())
+                setTextColor(SECONDARY_INK)
                 setTextAppearance(android.R.style.TextAppearance_Material_Caption)
             })
         }
@@ -361,6 +370,16 @@ class SearchSheet : Fragment() {
         /** Fragment tag AND back-stack name — the host uses it to avoid
          *  stacking two sheets on a double tap, and to pop this one. */
         const val BACK_STACK_TAG = "search_sheet"
+
+        /** A host that names no surface still gets an opaque one. */
+        const val DEFAULT_SURFACE: Int = 0xFF121212.toInt()
+
+        /** Subtitles and empty states: an opaque grey, not white at reduced alpha, so nothing
+         *  in the list is see-through. */
+        private const val SECONDARY_INK: Int = 0xFFB3B3B3.toInt()
+
+        /** [argb] with its alpha pinned to 100%. */
+        fun opaque(argb: Int): Int = argb or (0xFF shl 24)
         fun newInstance() = SearchSheet()
     }
 }

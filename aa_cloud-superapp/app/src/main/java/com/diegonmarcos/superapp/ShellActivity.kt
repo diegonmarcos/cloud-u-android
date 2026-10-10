@@ -2313,6 +2313,9 @@ open class ShellActivity : AppCompatActivity(),
     override fun searchBoxBackground() = R.drawable.bg_liquid_glass
     override fun searchChipBackground() = R.drawable.bg_liquid_glass_pill
 
+    /** The sheet covers the page it opens over, so it is the theme surface made opaque. */
+    override fun searchSurfaceColor() = com.diegonmarcos.superapp.ui.LauncherPalette.opaqueSurface(this)
+
     override fun dismissSearch() {
         supportFragmentManager.popBackStack(
             com.diegonmarcos.superapp.search.SearchSheet.BACK_STACK_TAG,

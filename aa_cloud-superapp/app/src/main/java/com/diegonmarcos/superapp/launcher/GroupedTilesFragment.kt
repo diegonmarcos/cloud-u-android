@@ -51,6 +51,8 @@ class GroupedTilesFragment : Fragment(), BackHandler {
     private val query = mutableStateOf("")
     private var grid: View? = null
     private var results: LinearLayout? = null
+    /** Grid + results, one layer: painted the opaque theme surface while results show. */
+    private var searchLayer: LinearLayout? = null
     private var searchBar: View? = null
     private var index: List<AppsSearch.Group<Entry>>? = null
     private var lastResult: AppsSearch.Result<Entry>? = null
@@ -80,11 +82,12 @@ class GroupedTilesFragment : Fragment(), BackHandler {
                 val pad = dp(12); setPadding(pad, 0, pad, pad)
                 visibility = View.GONE
             }
-            scroll.addView(LinearLayout(ctx).apply {
+            val layer = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
                 addView(col); addView(out)
-            })
-            grid = col; results = out
+            }
+            scroll.addView(layer)
+            grid = col; results = out; searchLayer = layer
         } else {
             scroll.addView(col)
         }
@@ -235,6 +238,7 @@ class GroupedTilesFragment : Fragment(), BackHandler {
             out.removeAllViews()
             out.visibility = View.GONE
             full.visibility = View.VISIBLE
+            searchLayer?.background = null
             return
         }
         val ctx = out.context
@@ -242,6 +246,8 @@ class GroupedTilesFragment : Fragment(), BackHandler {
         lastResult = r
         full.visibility = View.GONE
         out.visibility = View.VISIBLE
+        // Results are read over nothing see-through: the theme surface at 100% alpha.
+        searchLayer?.setBackgroundColor(com.diegonmarcos.superapp.ui.LauncherPalette.opaqueSurface(ctx))
         out.removeAllViews()
         // Hidden groups are simply not drawn: an empty result is the Cloud Search row alone.
         if (r.isEmpty) {
@@ -305,7 +311,7 @@ class GroupedTilesFragment : Fragment(), BackHandler {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        grid = null; results = null; searchBar = null; index = null; lastResult = null
+        grid = null; results = null; searchLayer = null; searchBar = null; index = null; lastResult = null
         query.value = ""
     }
 

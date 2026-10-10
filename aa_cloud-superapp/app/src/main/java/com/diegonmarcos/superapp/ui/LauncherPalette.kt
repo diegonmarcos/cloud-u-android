@@ -9,6 +9,7 @@ import com.diegonmarcos.superapp.uikit.KitPalette
 import android.content.Context
 import android.util.Base64
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import org.json.JSONArray
 
 /**
@@ -93,6 +94,21 @@ object LauncherPalette {
     fun kit(ctx: Context): KitPalette = of(ctx).run {
         KitPalette.fromArgb(surface, surfaceSelected, textPrimary, textSecondary, accent, hairline, tileInk,
             ok = state(ctx, R.color.cloud_state_ok), warn = state(ctx, R.color.cloud_state_warn), bad = state(ctx, R.color.cloud_state_bad))
+    }
+
+    /**
+     * The theme's [Palette.surface] made OPAQUE: the colour of a layer that must hide the page
+     * under it, the search results in the first place (the Home sheet, Cloud ▸ Apps and the Home
+     * star's search). `surface` is 13%-alpha white under the Cloud theme, so on its own it lets
+     * the tiles under a result list show through. It is laid over the theme's own opaque base —
+     * the window colour when the theme names a colour, else [Palette.tileInk], the role that is
+     * opaque by contract (the Cloud window is a gradient drawable, no one colour) — and the
+     * alpha is pinned to 100%, so no theme can hand back a see-through result list.
+     */
+    fun opaqueSurface(ctx: Context, p: Palette = of(ctx)): Int {
+        val base = runCatching { ContextCompat.getColor(ctx, p.windowRes) }.getOrNull() ?: p.tileInk
+        val opaqueBase = ColorUtils.setAlphaComponent(base, 255)
+        return ColorUtils.setAlphaComponent(ColorUtils.compositeColors(p.surface, opaqueBase), 255)
     }
 
     // The kit's three state tokens (cloud-account-ui spec 0.3), the same on every launcher theme:
