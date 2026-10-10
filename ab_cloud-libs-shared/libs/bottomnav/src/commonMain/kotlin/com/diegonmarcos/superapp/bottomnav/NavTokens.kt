@@ -37,6 +37,15 @@ public data class NavTokens(
     val widthFraction: Float = 0.8f,
     /** How long the scroll-collapse takes, milliseconds. */
     val collapseMs: Int = 220,
+    /** The accessibility touch floor (Material / Android: 48dp). No island cell is laid out
+     *  narrower than this; a bar that would crush its cells below it scrolls instead. */
+    val minTouchTarget: Dp = 48.dp,
+    /** Above [MAX_BOTTOM] items, the narrowest a cell may get before the island scrolls
+     *  horizontally instead of crushing its cells (the option the owner was offered for 6-7 items). */
+    val minCellWidth: Dp = 56.dp,
+    /** The keyboard / D-pad / switch-access focus ring, drawn in the item's own ink, only while
+     *  the item holds focus (touch never focuses an item, so a tapped island looks exactly as before). */
+    val focusRingWidth: Dp = 2.dp,
     val islandFill: Color = Color(0xFF140B26),
     val pillFill: Color = Color(0xFFE6E0E9),
     val pillInk: Color = Color(0xFF322F35),

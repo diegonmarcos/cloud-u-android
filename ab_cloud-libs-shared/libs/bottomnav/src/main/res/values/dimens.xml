@@ -26,6 +26,15 @@
     <!-- #532. How long the scroll-collapse takes, milliseconds. Zero-length under Power Saving. -->
     <integer name="bottom_nav_collapse_ms">220</integer>
 
+    <!-- Accessibility (WCAG 2.5.8 / Android's 48dp floor). The island never lays a cell out
+         narrower than bottom_nav_min_touch_target; above five items (MAX_BOTTOM) never narrower
+         than bottom_nav_min_cell_width. Either floor reached = the island scrolls horizontally,
+         keeping the selected item in view, instead of crushing its cells. The focus ring is drawn
+         only while a keyboard, D-pad or switch holds focus on an item or a tab pill. -->
+    <dimen name="bottom_nav_min_touch_target">48dp</dimen>
+    <dimen name="bottom_nav_min_cell_width">56dp</dimen>
+    <dimen name="bottom_nav_focus_ring_width">2dp</dimen>
+
     <dimen name="bottom_nav_icon_size">24dp</dimen>
     <dimen name="bottom_nav_label_text_size">12sp</dimen>
 

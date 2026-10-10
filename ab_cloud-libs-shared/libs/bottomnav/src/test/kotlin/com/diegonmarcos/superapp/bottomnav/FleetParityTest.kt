@@ -106,6 +106,11 @@ class FleetParityTest {
         assertEquals(12f, dp(R.dimen.bottom_nav_island_bottom_margin), 0f)
         assertEquals(0.8f, res.getFraction(R.fraction.bottom_nav_width_fraction, 1, 1), 1e-6f)
         assertEquals(220, res.getInteger(R.integer.bottom_nav_collapse_ms))
+        // Accessibility floors: they change no pixel of a bar that fits (five items on a 360dp phone
+        // are 55dp cells), they only decide when a crowded bar scrolls, and the ring shows on focus only.
+        assertEquals(48f, dp(R.dimen.bottom_nav_min_touch_target), 0f)
+        assertEquals(56f, dp(R.dimen.bottom_nav_min_cell_width), 0f)
+        assertEquals(2f, dp(R.dimen.bottom_nav_focus_ring_width), 0f)
         assertEquals(Color(0xFF140B26), colour(R.color.bottom_nav_island_fill))
         assertEquals(Color(0xFFE6E0E9), colour(R.color.bottom_nav_pill_fill))
         assertEquals(Color(0xFF322F35), colour(R.color.bottom_nav_pill_ink))

@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -37,7 +39,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CollectionInfo
+import androidx.compose.ui.semantics.CollectionItemInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.collectionInfo
+import androidx.compose.ui.semantics.collectionItemInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -63,6 +70,8 @@ public object SearchHtmlTokens {
     public val iconSize: Dp = 21.dp
     public val hairline: Dp = 1.dp
     public val labelSize: TextUnit = 9.6.sp
+    /** The keyboard / D-pad focus ring, drawn only while a cell holds focus. */
+    public val focusRing: Dp = 2.dp
 
     public fun fill(dark: Boolean): Color = if (dark) Color(0xB30F172A) else Color(0x99FFFFFF)
     public fun border(dark: Boolean): Color = if (dark) Color(0x1AFFFFFF) else Color(0x66FFFFFF)
@@ -120,25 +129,35 @@ public fun SearchHtmlIsland(
                 Modifier.widthIn(max = t.maxWidth).fillMaxWidth().height(t.height)
                     .testTag(TAG_ISLAND)
                     .clip(shape).background(t.fill(dark)).border(t.hairline, t.border(dark), shape)
-                    .padding(horizontal = t.innerPad),
+                    .padding(horizontal = t.innerPad)
+                    // TalkBack: a tab list of N, as on the fleet's island.
+                    .selectableGroup()
+                    .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = entries.size) },
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                entries.forEach { e ->
+                entries.forEachIndexed { index, e ->
                     val on = e.id == selectedId
                     val ink = if (on) t.accent(dark) else t.idle(dark)
+                    val source = remember { MutableInteractionSource() }
+                    val focused by source.collectIsFocusedAsState()
                     val lift by animateDpAsState(if (on) -t.lift else 0.dp, label = "search_nav_lift")
                     val label by animateFloatAsState(if (on) 1f else 0f, label = "search_nav_label")
                     Box(
                         Modifier.size(t.cell).clip(CircleShape)
                             .testTag(itemTag(e.id))
+                            // Keyboard / D-pad / switch focus only; touch never shows it.
+                            .then(if (focused) Modifier.border(SearchHtmlTokens.focusRing, ink, CircleShape) else Modifier)
                             .selectable(
                                 selected = on,
-                                interactionSource = remember { MutableInteractionSource() },
+                                interactionSource = source,
                                 indication = FleetIndication,
                                 role = Role.Tab,
                                 onClick = { onSelect(e) },
-                            ),
+                            )
+                            .semantics {
+                                collectionItemInfo = CollectionItemInfo(rowIndex = 0, rowSpan = 1, columnIndex = index, columnSpan = 1)
+                            },
                         contentAlignment = Alignment.Center,
                     ) {
                         Box(Modifier.offset(y = lift)) {

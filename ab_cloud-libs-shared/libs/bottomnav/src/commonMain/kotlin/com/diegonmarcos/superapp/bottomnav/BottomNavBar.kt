@@ -4,6 +4,21 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.semantics.CollectionInfo
+import androidx.compose.ui.semantics.CollectionItemInfo
+import androidx.compose.ui.semantics.collectionInfo
+import androidx.compose.ui.semantics.collectionItemInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -87,6 +102,13 @@ import kotlin.math.roundToInt
  *    animations removed it snaps instead ([barMotionEnabled]).
  *  - #536 the island is bottom_nav_width_fraction (80%) of the width it is given, and it is
  *    centred, so 10% stays clear on each side.
+ *  - ACCESSIBILITY. Every item is a Tab with its label (the icon's description while collapsed)
+ *    and its selected state, inside a selectable group that carries collection info, so TalkBack
+ *    reads "Mail, selected, Tab, 1 of 5". A cell is never narrower than the 48dp touch floor, and
+ *    above MAX_BOTTOM items never narrower than bottom_nav_min_cell_width: a bar that would cross it
+ *    keeps its cells and scrolls horizontally inside the pill, the selected item scrolled into view
+ *    ([planIsland]). Keyboard / D-pad / switch focus draws a ring in the item's ink; touch never
+ *    focuses an item, so a tapped island is pixel for pixel what it was. NavAccessibilityTest.
  *
  * The items are INJECTED as [BottomNavEntry]. The bar knows nothing about any app's menu.
  */
@@ -195,30 +217,59 @@ private fun IslandContent(
         label = "bottomnav_label_shown",
     )
 
-    Box(modifier.fillMaxWidth().then(liveClearance).padding(bottom = margin), contentAlignment = Alignment.BottomCenter) {
+    // #a11y: the island keeps equal cells, and a cell is never laid out narrower than the touch
+    // floor (above MAX_BOTTOM items: than minCellWidth). A bar that would cross that floor scrolls
+    // horizontally inside its pill instead of crushing its cells (cells overlapping their 48dp
+    // touch targets is what 7 items at 360dp did), and the selected item is scrolled into view.
+    val selectedIndex = entries.indexOfFirst { it.id == selectedId }
+    val scrollMotion = rememberBarMotion(selectedIndex)
+    BoxWithConstraints(modifier.fillMaxWidth().then(liveClearance).padding(bottom = margin), contentAlignment = Alignment.BottomCenter) {
+        val plan = planIsland(maxWidth, widthFraction, tokens.endInset, entries.size, tokens)
+        val scroll = rememberScrollState()
+        if (plan.scrolls) {
+            val target = with(density) { islandScrollTarget(plan, selectedIndex).toPx() }.roundToInt()
+            // The first placement jumps straight to the selected item; a later selection glides
+            // there, unless motion is held still (Power Saving / animations removed).
+            val placed = remember { BooleanArray(1) }
+            LaunchedEffect(selectedIndex, target) {
+                if (selectedIndex < 0) return@LaunchedEffect
+                if (scrollMotion && placed[0]) scroll.animateScrollTo(target) else scroll.scrollTo(target)
+                placed[0] = true
+            }
+        }
         Row(
             Modifier
                 .fillMaxWidth(widthFraction)
                 .testTag(TAG_ISLAND)
                 .clip(bottomNavPillShape)
                 .background(tokens.islandFill)
-                .padding(horizontal = tokens.endInset),
+                .then(if (plan.scrolls) Modifier.horizontalScroll(scroll) else Modifier)
+                .padding(horizontal = tokens.endInset)
+                // TalkBack: a tab list of N, so an item reads "Mail, selected, Tab, 2 of 5".
+                .selectableGroup()
+                .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = entries.size) },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            entries.forEach { entry ->
+            entries.forEachIndexed { index, entry ->
                 val selected = entry.id == selectedId
                 val ink = if (selected) tokens.pillInk else tokens.idleInk
+                val source = remember { MutableInteractionSource() }
+                val focused by source.collectIsFocusedAsState()
                 Column(
                     Modifier
-                        .weight(1f)
+                        .then(if (plan.scrolls) Modifier.width(plan.cell) else Modifier.weight(1f))
                         .padding(vertical = pillInset)
                         .testTag(itemTag(entry.id))
                         .clip(bottomNavPillShape)
                         .background(if (selected) tokens.pillFill else Color.Transparent)
+                        // Keyboard / D-pad / switch focus is drawn as a ring in the item's ink. Touch
+                        // never focuses an item, so a tapped island has no ring and its pixels are
+                        // exactly what they were.
+                        .then(if (focused) Modifier.border(tokens.focusRingWidth, ink, bottomNavPillShape) else Modifier)
                         .then(itemModifier(entry))
                         .selectable(
                             selected = selected,
-                            interactionSource = remember { MutableInteractionSource() },
+                            interactionSource = source,
                             indication = FleetIndication,
                             role = Role.Tab,
                             onClick = {
@@ -227,6 +278,9 @@ private fun IslandContent(
                                 onSelect(entry)
                             },
                         )
+                        .semantics {
+                            collectionItemInfo = CollectionItemInfo(rowIndex = 0, rowSpan = 1, columnIndex = index, columnSpan = 1)
+                        }
                         .padding(vertical = pad),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Top,
@@ -247,6 +301,8 @@ private fun IslandContent(
                         // its top, so the capsule loses height and the label leaves through the
                         // capsule's own pill clip. No clipToBounds here: that would be a
                         // rectangle inside the oval.
+                        // A label too long for its cell (a narrow scrolling cell, a 2x font) is
+                        // ellipsized on screen; its semantics keep the whole label for TalkBack.
                         Text(
                             entry.label,
                             modifier = Modifier
@@ -271,6 +327,31 @@ private fun IslandContent(
             }
         }
     }
+}
+
+/**
+ * How the island lays out [count] cells in [maxWidth] (#a11y). [scrolls] false = the island as it
+ * always was: equal cells sharing the pill. true = every cell is [cell] wide and the row scrolls
+ * horizontally inside the pill. The floor is the 48dp touch target for up to [MAX_BOTTOM] items and
+ * [NavTokens.minCellWidth] above that, so five items on a 360dp phone (55dp cells) never scroll and
+ * seven do (39dp cells would overlap each other's touch targets).
+ */
+internal data class IslandPlan(val scrolls: Boolean, val cell: Dp, val viewport: Dp, val endInset: Dp, val count: Int)
+
+internal fun planIsland(maxWidth: Dp, widthFraction: Float, endInset: Dp, count: Int, tokens: NavTokens): IslandPlan {
+    val viewport = maxWidth * widthFraction
+    if (count <= 0) return IslandPlan(false, 0.dp, viewport, endInset, 0)
+    val equal = (viewport - endInset * 2) / count
+    val floor = if (count > MAX_BOTTOM) maxOf(tokens.minCellWidth, tokens.minTouchTarget) else tokens.minTouchTarget
+    return if (equal < floor) IslandPlan(true, floor, viewport, endInset, count) else IslandPlan(false, equal, viewport, endInset, count)
+}
+
+/** The scroll offset that centres cell [index] in the island's viewport (clamped to the row). */
+internal fun islandScrollTarget(plan: IslandPlan, index: Int): Dp {
+    if (!plan.scrolls || index < 0) return 0.dp
+    val centre = plan.endInset + plan.cell * index + plan.cell / 2
+    val max = plan.endInset * 2 + plan.cell * plan.count - plan.viewport
+    return (centre - plan.viewport / 2).coerceIn(0.dp, max.coerceAtLeast(0.dp))
 }
 
 /**

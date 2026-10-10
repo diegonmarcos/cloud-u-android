@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +31,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CollectionInfo
+import androidx.compose.ui.semantics.CollectionItemInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.collectionInfo
+import androidx.compose.ui.semantics.collectionItemInfo
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -159,7 +168,10 @@ private fun PageTabsContent(
                 .fillMaxWidth()
                 .testTag(PageTabsTags.STRIP)
                 .then(if (plan.scrollable) Modifier.horizontalScroll(scroll) else Modifier)
-                .padding(with(density) { stripPad.toDp() }),
+                .padding(with(density) { stripPad.toDp() })
+                // TalkBack: a tab list of N ("Phone, selected, Tab, 2 of 3").
+                .selectableGroup()
+                .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = pages.size) },
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -167,7 +179,8 @@ private fun PageTabsContent(
                 if (i == divider) {
                     Text(
                         "|",
-                        Modifier.padding(horizontal = with(density) { dividerPad.toDp() }),
+                        // A drawn separator, not content: TalkBack would read it as "vertical bar".
+                        Modifier.padding(horizontal = with(density) { dividerPad.toDp() }).clearAndSetSemantics {},
                         style = styleAt(plan.textPx, tokens.tabsIdleText),
                         softWrap = false,
                     )
@@ -175,7 +188,7 @@ private fun PageTabsContent(
                 val on = page.id == selectedId
                 val slotModifier = if (plan.scrollable) Modifier else Modifier.width(with(density) { slot.toDp() })
                 Box(slotModifier, contentAlignment = Alignment.Center) {
-                    Pill(page, labels[i], on, plan, margin, padH, tokens, { px, c -> styleAt(px, c) }, onSelect, onReselect)
+                    Pill(page, labels[i], i, on, plan, margin, padH, tokens, { px, c -> styleAt(px, c) }, onSelect, onReselect)
                 }
             }
         }
@@ -186,6 +199,7 @@ private fun PageTabsContent(
 private fun Pill(
     page: NavPage,
     label: String,
+    index: Int,
     on: Boolean,
     plan: PillPlan,
     marginPx: Float,
@@ -203,16 +217,29 @@ private fun Pill(
     val fill = if (on) tokens.tabsSelectedFill else tokens.tabsIdleFill
     val line = if (on) tokens.tabsSelectedStroke else tokens.tabsIdleStroke
     val ink = if (on) tokens.tabsSelectedText else tokens.tabsIdleText
+    val source = remember { MutableInteractionSource() }
+    val focused by source.collectIsFocusedAsState()
+    val launch = page.action.isNotBlank()
     Box(
         Modifier
             .padding(with(density) { marginPx.toDp() })
             .then(if (plan.pillPx > 0f) Modifier.width(with(density) { plan.pillPx.toDp() }) else Modifier)
             .background(fill, shape)
             .border(stroke, line, shape)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = FleetIndication) {
+            // Keyboard / D-pad / switch focus only: touch never focuses a pill, so it never shows.
+            .then(if (focused) Modifier.border(tokens.focusRingWidth, ink, shape) else Modifier)
+            .clickable(interactionSource = source, indication = FleetIndication) {
                 if (on) onReselect(page) else onSelect(page)
             }
-            .semantics { role = Role.Tab; selected = on }
+            .semantics {
+                // A launch pill leaves the page: it is a button, not a tab that can be selected.
+                role = if (launch) Role.Button else Role.Tab
+                selected = on
+                // The label as declared, not the drawn CAPS (TalkBack spells short all-caps words
+                // out letter by letter) and never the drawn ellipsis.
+                contentDescription = page.label
+                collectionItemInfo = CollectionItemInfo(rowIndex = 0, rowSpan = 1, columnIndex = index, columnSpan = 1)
+            }
             .padding(horizontal = with(density) { padHPx.toDp() }, vertical = padV)
             .testTag(PageTabsTags.tab(page.id)),
         contentAlignment = Alignment.Center,
