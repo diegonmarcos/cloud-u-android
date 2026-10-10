@@ -59,6 +59,19 @@ object StoreSourceTabs {
         }
     }
 
+    /** The second filter row, on both pages: the vendor's terms, not the store an app comes from. */
+    enum class Trait(val label: Int) {
+        PLAY_INTEGRITY(R.string.store_trait_play), PRIVATE(R.string.store_trait_private), OPEN_SOURCE(R.string.store_trait_oss)
+    }
+
+    fun traits(ctx: Context, selected: Trait?, onSelect: (Trait?) -> Unit): View {
+        val strip = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        (listOf(null) + Trait.values().toList()).forEach { t ->
+            strip.addView(pill(ctx, if (t == null) ctx.getString(R.string.store_trait_all) else ctx.getString(t.label), t == selected) { onSelect(t) })
+        }
+        return HorizontalScrollView(ctx).apply { isHorizontalScrollBarEnabled = false; addView(strip) }
+    }
+
     private fun pill(ctx: Context, label: String, on: Boolean, onClick: () -> Unit) = TextView(ctx).apply {
         tag = TAG_PREFIX + label
         text = label

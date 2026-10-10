@@ -268,7 +268,7 @@ page = kt["StorePhoneFragment.kt"]
 if "StoreSourceTabs.render(" in page and "cfg?.kinds" in page:
     ok("Store > Phone draws the strip from the resolved kinds")
 else: bad("Store > Phone does not draw the strip from the resolved kinds")
-if "it.external?.inTab(tab)" in page and "!installedOnly || it.installed" in page:
+if "it.external?.inTab(tab)" in page and ".filter { if (installedOnly) it.installed else it.external?.declared == true }" in page:
     ok("the source tab COMPOSES with the #619 Declared/Installed filter over the same rows")
 else: bad("the source tab replaces the #619 filter instead of composing with it")
 

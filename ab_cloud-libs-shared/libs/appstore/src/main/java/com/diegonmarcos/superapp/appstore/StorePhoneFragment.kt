@@ -78,6 +78,15 @@ class StorePhoneFragment : Fragment() {
     // the SAME rows() output — so every view is a subset of Declared, by
     // construction, exactly as #619 required.
     private var sourceTab: SourceResolver.Kind? = null
+    /** The trait row's choice (Play Integrity / Private / Open source), or null for All; both pages. */
+    private var trait: StoreSourceTabs.Trait? = null
+    /** The state chips, the Cloud page's: 0 All, 1 Updates, 2 Missing, 3 Installed. */
+    private var stateFilter = 0
+    private val stateChips = ArrayList<TextView>()
+    private val progress = StoreProgressPanel()
+    // Installed owns Export and the APK cache (what is on this phone); Declared owns Import (a list to install).
+    private val installedOnlyViews = ArrayList<View>()
+    private val declaredOnlyViews = ArrayList<View>()
     // #896 Installed | Declared are the page's top tabs now (the Cloud page's strip, [StoreTabs]); the
     // bottom bar holds every other control, and the store-source strip is drawn into [sourceHost].
     private val pageButtons = ArrayList<TextView>()
@@ -135,10 +144,11 @@ class StorePhoneFragment : Fragment() {
             StoreBar.render(this@StorePhoneFragment, this, StoreBar.Verbs(
                 checkAll = { checkAll() }, installAll = { installAll() }, updateAll = { updateAll() }))
         })
+        col.addView(progress.view(ctx))
         col.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            addView(fileBtn(ctx, ctx.getString(R.string.store_export)) { exportDoc.launch(EXPORT_NAME) })
-            addView(fileBtn(ctx, ctx.getString(R.string.store_import)) { importDoc.launch(IMPORT_TYPES) })
+            addView(fileBtn(ctx, ctx.getString(R.string.store_export)) { exportDoc.launch(EXPORT_NAME) }.also { installedOnlyViews += it })
+            addView(fileBtn(ctx, ctx.getString(R.string.store_import)) { importDoc.launch(IMPORT_TYPES) }.also { declaredOnlyViews += it })
             // #625 the manual door onto the cache. The app owns eviction now, so
             // the user needs a way to say "drop it all" that does not mean
             // Settings > Clear cache - which no longer reaches these bytes, on
@@ -146,7 +156,7 @@ class StorePhoneFragment : Fragment() {
             // #666 the label states the measured count and megabytes; reload()
             // rewrites it from ApkCache.plan, so it is never an estimate.
             addView(fileBtn(ctx, ctx.getString(R.string.store_cache_clear)) { clearCache() }
-                .also { cacheBtn = it })
+                .also { cacheBtn = it; installedOnlyViews += it })
         })
         sourceHost = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         col.addView(sourceHost)
@@ -154,6 +164,7 @@ class StorePhoneFragment : Fragment() {
         val rowsView = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         list = rowsView
         col.addView(rowsView)
+        syncPage()  // again, now that the page-specific buttons exist
         return StorePage.frame(ctx, strip, ScrollView(ctx).apply { addView(col) })
     }
 
@@ -161,6 +172,8 @@ class StorePhoneFragment : Fragment() {
     private fun syncPage() {
         installedOnly = StorePages.page(SECTION, PAGE_DECLARED) == PAGE_INSTALLED
         StoreTabs.paint(pageButtons, if (installedOnly) 0 else 1)
+        installedOnlyViews.forEach { it.visibility = if (installedOnly) View.VISIBLE else View.GONE }
+        declaredOnlyViews.forEach { it.visibility = if (installedOnly) View.GONE else View.VISIBLE }
     }
 
     // Reloaded on every return: Remove and App info leave for a system
@@ -194,7 +207,8 @@ class StorePhoneFragment : Fragment() {
 
     override fun onDestroyView() {
         stopObserving?.invoke(); stopObserving = null; pageButtons.clear(); sourceHost = null
-        list = null; cacheBtn = null; stateViews.clear(); super.onDestroyView()
+        list = null; cacheBtn = null; stateViews.clear()
+        installedOnlyViews.clear(); declaredOnlyViews.clear(); stateChips.clear(); progress.detach(); super.onDestroyView()
     }
 
     /** Every launchable app, fleet included, as [AppInventory] JSON. */
@@ -296,15 +310,29 @@ class StorePhoneFragment : Fragment() {
         val kinds = cfg?.kinds.orEmpty()
         sourceHost?.let { host ->
             host.removeAllViews()
-            if (kinds.isNotEmpty()) host.addView(
+            // The store strip only on Installed: a declared app's store is not chosen yet (its ladder is).
+            if (installedOnly && kinds.isNotEmpty()) host.addView(
                 StoreSourceTabs.render(ctx, kinds, sourceTab) { k ->
                     if (sourceTab?.id != k?.id) { sourceTab = k; redraw() }
                 })
+            host.addView(StoreSourceTabs.traits(ctx, trait) { t -> if (trait != t) { trait = t; redraw() } })
+            host.addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                stateChips.clear()
+                listOf("All", "⬆ Updates", "◯ Missing", "✓ Installed").forEachIndexed { i, label ->
+                    val c = StoreBar.chip(ctx, controls.filter, label, i == 0) { if (stateFilter != i) { stateFilter = i; redraw() } }
+                    stateChips += c; addView(c)
+                }
+                stateChips.forEachIndexed { i, c -> StoreBar.paint(c, i == stateFilter) }
+            })
         }
-        val tab = sourceTab
+        val tab = sourceTab.takeIf { installedOnly }
         val shown = rows
             .filter { tab == null || it.external?.inTab(tab) == true }
-            .filter { !installedOnly || it.installed }
+            // Installed = on this phone; Declared = what the source map declares, installed or not.
+            .filter { if (installedOnly) it.installed else it.external?.declared == true }
+            .filter { traitOk(ctx, it) }
+            .filter { stateOk(it) }
         val missing = shown.count { !it.installed }
         val play = shown.count { !it.installed && !it.direct }
         into.addView(caption(ctx, ctx.getString(R.string.store_phone_count, shown.size) + "  ·  " +
@@ -343,6 +371,23 @@ class StorePhoneFragment : Fragment() {
                 into.addView(row(ctx, r))
             }
         }
+    }
+
+    /** The trait row: Play Integrity (must come from Play), Open source, Private (declared and not open). */
+    private fun traitOk(ctx: Context, r: Row): Boolean = when (trait) {
+        null -> true
+        StoreSourceTabs.Trait.PLAY_INTEGRITY -> integrity(ctx, r) == SourceResolver.Integrity.PLAY
+        StoreSourceTabs.Trait.OPEN_SOURCE -> r.external?.openSource == true
+        // An undeclared app is unknown, not private: only a declared, non-open row is.
+        StoreSourceTabs.Trait.PRIVATE -> r.external?.let { it.declared && !it.openSource } == true
+    }
+
+    /** The state chips; an update shows once Check all has probed the row. */
+    private fun stateOk(r: Row): Boolean = when (stateFilter) {
+        1 -> states[r.pkg] is SourceResolver.Check.UpdateAvailable
+        2 -> !r.installed
+        3 -> r.installed
+        else -> true
     }
 
     /** The row's integrity: declared, raised to PLAY by this phone's own "did not run". */

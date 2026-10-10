@@ -72,6 +72,10 @@
     <string name="store_cache_matches">cached build %1$d (%2$d MB) \u00b7 matches what is installed</string>
     <string name="store_cache_waiting">cached build %1$d (%2$d MB) \u00b7 installed: %3$s \u2014 kept for the install</string>
     <string name="store_cache_kept">nothing was installed; the download is kept in the cache</string>
+    <string name="store_trait_all">Any licence</string>
+    <string name="store_trait_play">Play Integrity</string>
+    <string name="store_trait_private">Private</string>
+    <string name="store_trait_oss">Open source</string>
     <string name="store_export">⇪  Export app list</string>
     <string name="store_export_done">Exported %1$d apps.</string>
     <string name="store_file_failed">App list file failed: %1$s</string>

@@ -129,6 +129,8 @@ else: bad("T5-default: the default filter is not Declared")
 # THE SUBSET CONTRACT, by construction: Declared renders the whole set rows()
 # built; Installed renders rows.filter { it.installed } — a subset of it. The
 # two branches must be exactly this, so Installed can never be a re-enumeration
+# (since 2026-10-10: Declared is the DECLARED rows, Installed the installed rows — two filters over
+# the one rows() output; Declared is no longer a superset of every installed app)
 # that could add a row Declared does not have.
 # #627 COMPOSED, still a subset. The source tab and the Declared/Installed pill
 # are two `.filter` steps over the SAME rows() output — so every view remains a
@@ -140,14 +142,14 @@ def filter_ok(text):
     m = re.search(r"val shown = rows\s*((?:\.filter \{[^\n]*\}\s*)+)", text)
     if not m: return False
     chain = m.group(1)
-    return ".filter { !installedOnly || it.installed }" in chain and "rows(" not in chain
+    return ".filter { if (installedOnly) it.installed else it.external?.declared == true }" in chain and "rows(" not in chain
 if filter_ok(phone): ok("T5-subset: every view is rows() filtered — the source tab and the Declared/Installed pill compose, and both are subsets by construction")
 else: bad("T5-subset: the filter is not the by-construction subset of the declared rows")
 
 print("== T5-mutation: an unfiltered Installed, or an Installed default, goes red ==")
 if not filter_ok(phone): bad("T5-mutation: the unmutated tree should pass the subset gate")
 # (1) Installed no longer filters — it would show the FULL set, not a subset.
-mut1 = phone.replace(".filter { !installedOnly || it.installed }", ".filter { true }")
+mut1 = phone.replace(".filter { if (installedOnly) it.installed else it.external?.declared == true }", ".filter { true }")
 if filter_ok(mut1): bad("T5-mutation: an unfiltered Installed view was NOT caught")
 else: ok("T5-mutation: an unfiltered Installed view is caught")
 # (2) the default flips to Installed — Profile ▸ Store would no longer land on Declared.

@@ -134,6 +134,12 @@ object SourceResolver {
     ) {
         /** The rungs this store can download from itself. */
         val direct: List<Source> get() = sources.filter { !it.handoff }
+        /** Open source: listed in the official F-Droid repo, or released by its publisher on GitHub.
+         *  // ponytail: derived from the ladder, not declared; add a `licence` field when a GPL app
+         *  // with neither rung needs to count. */
+        val openSource: Boolean get() = sources.any {
+            it is Source.FDroid || (it is Source.Vendor && listOfNotNull(it.feed, it.apk).any { u -> "github.com" in u })
+        }
         /** No rung we can serve: the badge, and no Install of our own. */
         val needsPlay: Boolean get() = direct.isEmpty()
         val hasPlay: Boolean get() = sources.any { it is Source.Play }
