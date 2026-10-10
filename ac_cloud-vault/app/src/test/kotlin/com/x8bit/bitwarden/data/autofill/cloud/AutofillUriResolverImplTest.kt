@@ -62,7 +62,7 @@ class AutofillUriResolverImplTest {
             assetLinks.checkDigitalAssetLinksRelations(
                 sourceWebSite = "https://login.example.com",
                 targetPackageName = otherApp,
-                targetCertificateFingerprint = "01:02:03",
+                targetCertificateFingerprint = CERT_SHA256,
                 relations = any(),
             )
         } returns linked(true)
@@ -105,3 +105,7 @@ class AutofillUriResolverImplTest {
         assertEquals(app, resolver.resolveForFill(app, "com.example.app"))
     }
 }
+
+/** SHA-256 of the fake signing cert {1, 2, 3}, as Digital Asset Links wants it. */
+private const val CERT_SHA256 =
+    "03:90:58:C6:F2:C0:CB:49:2C:53:3B:0A:4D:14:EF:77:CC:0F:78:AB:CC:CE:D5:28:7D:84:A1:A2:01:1C:FB:81"
