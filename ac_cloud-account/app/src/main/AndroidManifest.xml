@@ -97,5 +97,16 @@
             android:authorities="${applicationId}.accountdata"
             android:exported="true"
             android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+
+        <!-- The non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md): profiles,
+             per-site mapping rules and snippets, read by Cloud Browser (DOM autofill) and Cloud Keyboard
+             (candidates). AUTOFILL_PROFILE_READ / _WRITE are signature permissions libs:autofill defines;
+             the provider re-checks them, and lets only this app update or delete. Never secrets. -->
+        <provider
+            android:name=".autofill.AutofillSotProvider"
+            android:authorities="com.diegonmarcos.cloudaccount.autofill"
+            android:exported="true"
+            android:readPermission="com.diegonmarcos.cloud.permission.AUTOFILL_PROFILE_READ"
+            android:writePermission="com.diegonmarcos.cloud.permission.AUTOFILL_PROFILE_WRITE" />
     </application>
 </manifest>

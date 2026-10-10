@@ -8742,6 +8742,17 @@
         "note": "The SuperApp hands its GitHub fleet token to sibling apps so Constellation updates work without every app storing a credential."
       },
       {
+        "id": "autofill-sot",
+        "label": "Autofill SOT",
+        "kind": "provider",
+        "authority": "com.diegonmarcos.cloudaccount.autofill",
+        "permission": "com.diegonmarcos.cloud.permission.AUTOFILL_PROFILE_READ",
+        "serves": [
+          "com.diegonmarcos.cloudaccount"
+        ],
+        "note": "The non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md): profiles, per-site form rules and snippets Cloud Account owns. Cloud Browser fills contact/address forms from it and Cloud Keyboard offers its candidates; both hold the signature-level AUTOFILL_PROFILE_READ, and only the browser holds AUTOFILL_PROFILE_WRITE (a user-confirmed new address). Never secrets: those are Cloud Vault's, through the Android Autofill framework."
+      },
+      {
         "id": "translate-engine",
         "label": "Translate Engine",
         "kind": "service",

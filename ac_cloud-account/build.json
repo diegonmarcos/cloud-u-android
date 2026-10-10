@@ -35,7 +35,8 @@
         "libs:core",
         "libs:account",
         "libs:bottomnav",
-        "libs:shizuku-adb-debug-tools"
+        "libs:shizuku-adb-debug-tools",
+        "libs:autofill"
       ]
     },
     "libs:core": {
@@ -128,6 +129,11 @@
     },
     "libs:bottomnav": {
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
+    },
+    "libs:autofill": {
+      "_doc": "The non-secret autofill SOT contract (authority, permissions, columns, typed rows). Cloud Account SERVES it (AutofillSotProvider); cloud-browser and cloud-keyboard read it.",
+      "dir": "../ab_cloud-libs-shared/libs/autofill",
       "type": "library"
     }
   },
@@ -262,6 +268,11 @@
         "python3",
         "grep"
       ]
+    },
+    "unit": {
+      "_doc": "The JVM unit suites (Robolectric): Fleet Setup, the Account vault, and the non-secret autofill SOT provider (AutofillSotProviderTest: CRUD, permission enforcement, owner-only edits, signature-level manifest). Run by the ship workflow's 'JVM unit tests' step, AFTER the JDK/SDK and the vault key are set up, through build.sh test (which resolves the shared key first; the project cannot configure without it). Scoped to :app: so a sibling library's suite cannot turn this release red.",
+      "task": ":app:testDebugUnitTest",
+      "enabled": true
     }
   },
   "ui": {
@@ -287,6 +298,30 @@
           {
             "id": "connect",
             "label": "Connect",
+            "icon": "account"
+          },
+          {
+            "_doc": "The non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md): profiles (name parts, birth date, nationality) with their typed addresses (home, postal, c/o, post office), phones, emails and links. Cloud Browser fills from them, Cloud Keyboard offers them. Served by AutofillSotProvider behind AUTOFILL_PROFILE_READ/WRITE. ID documents are not here: Cloud Vault.",
+            "id": "autofill",
+            "label": "Autofill",
+            "icon": "account"
+          },
+          {
+            "_doc": "Per-site form mapping rules of the autofill SOT: domain -> form -> field -> profile field / fixed value / ignore, and the default profile per site or country domain.",
+            "id": "sites",
+            "label": "Sites",
+            "icon": "account"
+          },
+          {
+            "_doc": "Labelled multi-line free-text blocks Cloud Keyboard offers on multi-line fields and Cloud Browser on about/bio/message boxes (never auto-filled).",
+            "id": "snippets",
+            "label": "Snippets",
+            "icon": "account"
+          },
+          {
+            "_doc": "Paste text or JSON, review, then save as profiles/addresses/contacts/snippets. ID documents found in the paste are shown for Cloud Vault, never stored here.",
+            "id": "import",
+            "label": "Import",
             "icon": "account"
           }
         ]

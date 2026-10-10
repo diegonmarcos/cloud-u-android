@@ -28,6 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
+import com.diegonmarcos.cloudaccount.autofill.AutofillImportPage
+import com.diegonmarcos.cloudaccount.autofill.AutofillProfilesPage
+import com.diegonmarcos.cloudaccount.autofill.AutofillRulesPage
+import com.diegonmarcos.cloudaccount.autofill.AutofillSnippetsPage
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
@@ -124,6 +128,11 @@ class MainActivity : AppCompatActivity() {
         when (section) {
             "account" -> when (page) {
                 "connect" -> AccountConnectPage()
+                // The non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md).
+                "autofill" -> AutofillProfilesPage()
+                "sites" -> AutofillRulesPage()
+                "snippets" -> AutofillSnippetsPage()
+                "import" -> AutofillImportPage()
                 else -> AccountProfilePage(go)
             }
             "profiles" -> when (page) {

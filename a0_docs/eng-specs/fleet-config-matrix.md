@@ -19,7 +19,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | c3-morpheus | `com.diegonmarcos.morpheus` | 1 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
-| cloud-account | `com.diegonmarcos.cloudaccount` | 11 | 0 | 100% |
+| cloud-account | `com.diegonmarcos.cloudaccount` | 12 | 0 | 100% |
 | cloud-agenda | `com.diegonmarcos.cloudagenda` | 4 | 0 | 100% |
 | cloud-browser | `com.diegonmarcos.cloudbrowser` | 9 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
@@ -189,7 +189,7 @@ Coverage: 1 covered, 0 gaps.
 
 ## cloud-account — `com.diegonmarcos.cloudaccount`
 
-Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-mail, lib-net, lib-shizuku-adb-debug-tools, lib-text-tools, lib-ui-kit, lib-updater.
+Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofill, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-mail, lib-net, lib-shizuku-adb-debug-tools, lib-text-tools, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -198,6 +198,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-bottom
 | `adb_shell` | prefs | device | no | Per-install random token shared with the local adb shell server (install identity), the flag that this install was ever paired with Wireless Debugging (drives the Cloud Store channel control: not paired vs down), and channel_mode, the owner's Privileged channel choice (local \| embedded \| shizuku \| auto; default local where the app owns a local server). |
 | `apps_mesh` | prefs | config | yes | #793 the Apps Mesh page's chosen chip filter (`filter`): which members the page shows first. A view preference, so it moves with the phone; the probe cache itself is a cacheDir file and never migrates. |
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
+| `autofill_sot` | prefs | config (keys: next_id→device) | yes | The non-secret autofill Source of Truth Cloud Account owns (a0_docs/eng-specs/autofill-3-tier.md): profiles_json (names, emails, phones, postal addresses), rules_json (per-site form mapping rules), snippets_json (keyboard snippets), next_id. Served to Cloud Browser and Cloud Keyboard by AutofillSotProvider behind AUTOFILL_PROFILE_READ/WRITE. Never a password, code or card: there is no column for one. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `import_configs` | encrypted | secret (keys: app_configs_json→secret, configs_json→secret, data_json→secret, grants_json→device, grants_seeded→device) | yes | EncryptedSharedPreferences, THE Account vault's one keystore-backed file (#874): `configs_json` the Connections (the imported blob incl. auth.authelia_token and email, fleet bearer, mesh, DNS, Dagu, mail), `data_json` the identities, `app_configs_json` the Configs captured from every app; `grants_json` the per-app Secret grants (never migrates: a grant is the owner's decision on THIS phone) and `grants_seeded` its marker. Mostly credentials. |
@@ -218,7 +219,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-bottom
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
 | `vault_cockpit` | prefs | device | no | Only holds this phone's device_id used in the vault cockpit. |
 
-Coverage: 11 covered, 0 gaps.
+Coverage: 12 covered, 0 gaps.
 
 ## cloud-agenda — `com.diegonmarcos.cloudagenda`
 
@@ -246,7 +247,7 @@ Coverage: 4 covered, 0 gaps.
 
 ## cloud-browser — `com.diegonmarcos.cloudbrowser`
 
-Module `ac_cloud-browser`; libs: lib-analytics, lib-bottomnav, lib-browser, lib-core, lib-devtools, lib-fleetconfig-model, lib-search-page, lib-text-tools, lib-ui-kit, lib-updater.
+Module `ac_cloud-browser`; libs: lib-analytics, lib-autofill, lib-bottomnav, lib-browser, lib-core, lib-devtools, lib-fleetconfig-model, lib-search-page, lib-text-tools, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -484,7 +485,7 @@ Coverage: 9 covered, 4 gaps — file:filesDir/git-sync/repos.json, file:filesDir
 
 ## cloud-keyboard — `com.diegonmarcos.cloudkeyboard`
 
-Module `ac_cloud-keyboard`; libs: lib-analytics, lib-core, lib-devtools, lib-fleetconfig-model, lib-keyboard, lib-media, lib-text-tools, lib-translate, lib-voice.
+Module `ac_cloud-keyboard`; libs: lib-analytics, lib-autofill, lib-core, lib-devtools, lib-fleetconfig-model, lib-keyboard, lib-media, lib-text-tools, lib-translate, lib-voice.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

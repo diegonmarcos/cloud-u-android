@@ -132,7 +132,8 @@ PY
   python3 - "$A/build.json" <<'PY' && ok "ui.bottom_nav = account, profiles, setup, secrets, settings; ui.sections are the spec's pages" || bad "build.json ui.bottom_nav/sections are not the spec's section 3"
 import json, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
-want = {'account': ['profile', 'connect'], 'profiles': ['devices', 'working', 'diff'],
+# + autofill / sites / snippets: the non-secret autofill SOT editor (a0_docs/eng-specs/autofill-3-tier.md)
+want = {'account': ['profile', 'connect', 'autofill', 'sites', 'snippets', 'import'], 'profiles': ['devices', 'working', 'diff'],
         'setup': ['runbook', 'apps', 'configs', 'perms', 'adb-shell'], 'secrets': ['connections', 'secrets', 'grants'], 'settings': []}
 got = {s.get('id'): [p.get('id') for p in s.get('pages') or []] for s in ui.get('sections') or []}
 ok = (ui.get('bottom_nav') == list(want) and got == want and ui.get('default_section') in want

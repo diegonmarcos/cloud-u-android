@@ -62,6 +62,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/updater/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/account/**"
+      - "ab_cloud-libs-shared/libs/autofill/**"
       - "ac_cloud-account/**"
 permissions:
   contents: write
@@ -105,7 +106,7 @@ jobs:
         run: |
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
-          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
+          # unit runs below, after the JDK/SDK and the vault key: this project cannot configure without them.
 
       # Publish-if-changed gate. Android builds are not byte-reproducible, so a
       # rebuild of unchanged source published different bytes, a different
@@ -176,6 +177,17 @@ jobs:
           else
             echo "variant=debug" >> "$GITHUB_OUTPUT"
           fi
+
+      # The Robolectric suites (Fleet Setup, Account vault, the autofill SOT provider). Same env as the
+      # build step: gradle cannot even CONFIGURE this project without the shared signing key.
+      - name: JVM unit tests (fatal on failure)
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
       - name: Build APK (engine)
         if: steps.gate.outputs.skip != 'true'

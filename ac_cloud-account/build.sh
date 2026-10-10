@@ -239,7 +239,16 @@ step_dev() {
   in_nix adb shell am start -n "$(_release_var '.android.application_id')/$APP_MAIN"
 }
 
-step_test()       { log "Test: JVM unit tests"; in_nix gradle test; }
+# The task is build.json::tests.unit.task, the SAME field the CI test engine reads (one place for the
+# name). _resolve_signing first: this project cannot even CONFIGURE without the shared key, and the
+# Robolectric suites (Fleet Setup, Account vault, the autofill SOT provider) run through Gradle.
+step_test() {
+  local task; task="$(_release_var '.tests.unit.task')"
+  [ -n "$task" ] || task="test"
+  log "Test: JVM unit tests (gradle $task)"
+  _resolve_signing
+  in_nix gradle "$task"
+}
 step_instrument() { log "Test: instrumented (needs device)"; in_nix gradle connectedAndroidTest; }
 step_lint()       { log "Lint"; in_nix gradle lint; }
 step_clean()      { log "Clean"; in_nix gradle clean; rm -rf "$DIST_DIR"; }

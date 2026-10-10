@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Merged into every app that links libs:autofill (Cloud Account, Cloud Browser, Cloud Keyboard).
+
+  The non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md) is personal
+  data: names, phones, postal addresses. It gets its OWN pair of signature permissions rather
+  than CONSTELLATION_DATA, which every fleet app holds: only an app that asks for one of these
+  in its own manifest can read (AUTOFILL_PROFILE_READ: the browser, the keyboard) or propose a
+  row (AUTOFILL_PROFILE_WRITE: the browser's user-confirmed "save this address").
+
+  protectionLevel="signature": Android grants them at install time to an APK signed with the
+  constellation key (SIGNING.md: every fleet app shares it) and refuses every other APK, with
+  no prompt. Defining them here (not only in Cloud Account) means the definition exists
+  whichever of the three apps is installed first; duplicate identical definitions are accepted
+  because the apps share that key.
+
+  <uses-permission> is deliberately NOT here: each app requests only what it needs.
+  <queries> makes Cloud Account (and so its provider) visible (Android 11+ package visibility).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <permission
+        android:name="com.diegonmarcos.cloud.permission.AUTOFILL_PROFILE_READ"
+        android:label="Read Cloud Account autofill profiles"
+        android:description="@string/autofill_perm_read"
+        android:protectionLevel="signature" />
+
+    <permission
+        android:name="com.diegonmarcos.cloud.permission.AUTOFILL_PROFILE_WRITE"
+        android:label="Save to Cloud Account autofill profiles"
+        android:description="@string/autofill_perm_write"
+        android:protectionLevel="signature" />
+
+    <queries>
+        <!-- The package, not <provider android:authorities>: two <queries><provider> from different
+             libraries (libs:core declares one) collide in the manifest merger. -->
+        <package android:name="com.diegonmarcos.cloudaccount" />
+    </queries>
+
+</manifest>

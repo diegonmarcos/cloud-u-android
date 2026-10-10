@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="autofill_perm_read">Read the names, contact details, addresses and site rules Cloud Account keeps for autofill. Fleet apps only.</string>
+    <string name="autofill_perm_write">Add an address or contact to Cloud Account\'s autofill profiles after you confirm it. Fleet apps only.</string>
+</resources>

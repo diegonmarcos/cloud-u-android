@@ -1,0 +1,34 @@
+// libs:autofill — the CONTRACT of the fleet's non-secret autofill Source of Truth, and nothing else.
+//
+// Cloud Account owns the data (profiles: names, emails, phones, postal addresses; per-site
+// form mapping rules; snippets) and serves it from its `com.diegonmarcos.cloudaccount.autofill`
+// ContentProvider. Cloud Browser (Tier 2, DOM autofill) and Cloud Keyboard (Tier 3, IME
+// candidates) read it. This module holds the authority, the URIs, the columns, the two
+// signature permissions, the typed rows and the pure helpers over them (derived values,
+// candidates per field key, rule matching) — so the three apps cannot drift on any of it.
+//
+// Secrets (passwords, passkeys, OTP, cards) are NOT here and never will be: they are Cloud
+// Vault's, filled through the Android Autofill framework. See a0_docs/eng-specs/autofill-3-tier.md.
+//
+// Deliberately dependency-free beyond the platform: renders nothing (lib-classes: contract).
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.autofill'
+    compileSdk 36
+    defaultConfig {
+        minSdk 26
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+}
+
+dependencies {
+}

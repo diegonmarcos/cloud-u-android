@@ -9,6 +9,7 @@
     "analytics": "aa_cloud-superapp",
     "appstore": "ac_cloud-store",
     "auth": "aa_cloud-superapp",
+    "autofill": "ac_cloud-account",
     "bottomnav": "aa_cloud-superapp",
     "core": null,
     "databackend": "ac_cloud-contacts",

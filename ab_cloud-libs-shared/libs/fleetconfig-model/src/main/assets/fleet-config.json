@@ -77,6 +77,17 @@
         "ac_cloud-vault"
       ]
     },
+    "autofill_sot": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "The non-secret autofill Source of Truth Cloud Account owns (a0_docs/eng-specs/autofill-3-tier.md): profiles_json (names, emails, phones, postal addresses), rules_json (per-site form mapping rules), snippets_json (keyboard snippets), next_id. Served to Cloud Browser and Cloud Keyboard by AutofillSotProvider behind AUTOFILL_PROFILE_READ/WRITE. Never a password, code or card: there is no column for one.",
+      "used_by": [
+        "ac_cloud-account"
+      ],
+      "keys": {
+        "next_id": "device"
+      }
+    },
     "PUSH_NOTIFICATIONS": {
       "kind": "prefs",
       "class": "device",
@@ -2091,6 +2102,7 @@
         "lib-account",
         "lib-appstore",
         "lib-auth",
+        "lib-autofill",
         "lib-bottomnav",
         "lib-core",
         "lib-databackend",
@@ -2132,6 +2144,7 @@
       "schema_version": 1,
       "libs": [
         "lib-analytics",
+        "lib-autofill",
         "lib-bottomnav",
         "lib-browser",
         "lib-core",
@@ -2451,6 +2464,7 @@
       "schema_version": 1,
       "libs": [
         "lib-analytics",
+        "lib-autofill",
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
