@@ -76,6 +76,18 @@ class DeclarationsTest {
                 "expression" -> assertTrue("${m.id}: no keys", m.keys.isNotEmpty() && m.keys.all { r -> r.all { it.label.isNotBlank() } })
                 "catalog" -> assertTrue("${m.id}: no catalog", m.catalog.isNotEmpty())
                 "converter" -> assertTrue("${m.id}: no categories", m.categories.isNotEmpty() && (m.defaults["category"] ?: m.categories.first()) in m.categories)
+                // Network / Data: every chip is a declared unit set or the transfer chip, every pair is in its set.
+                "data_converter" -> {
+                    assertEquals("${m.id}: chips", m.unitSets.map { it.category } + listOfNotNull(m.transfer?.category), m.categories)
+                    assertTrue("${m.id}: default category", (m.defaults["category"] ?: m.categories.first()) in m.categories)
+                    m.unitSets.forEach { u ->
+                        assertTrue("${m.id}/${u.category}: ${u.from} -> ${u.to}", u.unit(u.from) != null && u.unit(u.to) != null)
+                        assertTrue("${m.id}/${u.category}: factors", u.units.all { it.factor.signum() > 0 })
+                    }
+                    m.unitSets.firstOrNull { it.category == m.defaults["category"] }?.let { u ->
+                        assertTrue("${m.id}: default pair", u.unit(m.defaults["from"].orEmpty()) != null && u.unit(m.defaults["to"].orEmpty()) != null)
+                    }
+                }
                 "form" -> assertTrue("${m.id}: no forms", m.forms.isNotEmpty())
                 "plot" -> assertTrue("${m.id}: bad range", m.plot != null && m.plot!!.xmax > m.plot!!.xmin && m.plot!!.steps > 0)
                 "meter" -> m.meter!!.let { assertTrue("${m.id}: fft ${it.fftSize}", it.fftSize > 0 && (it.fftSize and (it.fftSize - 1)) == 0) }

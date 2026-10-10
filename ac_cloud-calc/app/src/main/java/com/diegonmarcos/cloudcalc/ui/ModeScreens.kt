@@ -85,6 +85,7 @@ fun ModeScreen(mode: Declarations.Mode) {
             "expression" -> ExpressionMode(mode)
             "catalog" -> CatalogMode(mode)
             "converter" -> ConverterMode(mode)
+            "data_converter" -> DataConverterMode(mode)
             "form" -> FormMode(mode)
             "plot" -> PlotMode(mode)
             "meter" -> MeterMode(mode)
@@ -221,7 +222,7 @@ private fun ChoiceRow(choices: List<Declarations.Choice>, options: String, onPic
 }
 
 @Composable
-private fun ResultBlock(result: Logic.Result?) {
+internal fun ResultBlock(result: Logic.Result?) {
     if (result == null) return
     Column(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.gap)) {
         if (result.error.isNotBlank()) {
@@ -271,7 +272,7 @@ private fun CatalogMode(mode: Declarations.Mode) {
     }
 }
 
-// ── converter: Units, Currency ──────────────────────────────────────────────────────────────
+// ── converter: Units, Currency (Network / Data: ui/DataScreens.kt) ─────────────────────────────
 
 @Composable
 private fun ConverterMode(mode: Declarations.Mode) {
@@ -410,8 +411,13 @@ private fun ratesLine(json: String): String = runCatching {
     "Rates as of " + if (t > 0) java.time.Instant.ofEpochSecond(t).toString().take(10) else "unknown"
 }.getOrDefault(json)
 
+/** [text] is a row's label: the engine's title with its symbol, unless the mode declares its own (Network / Data). */
 @Composable
-private fun UnitPicker(units: List<Logic.Item>, selected: String, favourites: List<String>, modifier: Modifier, onPick: (String) -> Unit) {
+internal fun UnitPicker(
+    units: List<Logic.Item>, selected: String, favourites: List<String>, modifier: Modifier,
+    text: (Logic.Item?, String) -> String = { item, name -> (item?.title ?: name) + " (" + name + ")" },
+    onPick: (String) -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
         OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth().height(CalcMetrics.compactHeight), contentPadding = PaddingValues(horizontal = CalcMetrics.gap)) { Text(selected.ifBlank { "—" }) }
@@ -420,7 +426,7 @@ private fun UnitPicker(units: List<Logic.Item>, selected: String, favourites: Li
             val (fav, rest) = Fx.pinned(units.map { it.name }, favourites)
             val byName = units.associateBy { it.name }
             @Composable fun item(name: String) = DropdownMenuItem(
-                text = { Text((byName[name]?.title ?: name) + " (" + name + ")", style = MaterialTheme.typography.bodySmall) },
+                text = { Text(text(byName[name], name), style = MaterialTheme.typography.bodySmall) },
                 onClick = { onPick(name); open = false },
                 modifier = Modifier.height(CalcMetrics.compactHeight).testTag(CalcTags.pickerItem(name)),
             )

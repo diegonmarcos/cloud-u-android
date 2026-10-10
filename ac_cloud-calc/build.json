@@ -1,6 +1,6 @@
 {
   "name": "cloud-calc",
-  "description": "Diego's Cloud Calc (#767) - an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by Cloud-Lib-Calc.apk (ab_cloud-libs-shared/libs/calc), which this app BINDS after a contract handshake and never compiles (#763: an app compiles only what it renders). #770 three top-level sections (ui.sections) - Calculator, Measure and Jev - each a set of bottom-nav tabs, each tab a strip of modes declared below in ui.modes. Calculator: Calc (Standard, Scientific, Programmer, CAS, Physics & Constants), Convert (Units, Currency), Graph, Tools (Date & Time, Finance, Acoustics) and History; Measure: Sound (#772: meter/oscilloscope/tuner, Wave detection, History with waterfall and CSV/WAV export, Generator, What is it?), Camera (#772: Measure by reference object or ARCore, Level, Identify, Colour, Text-to-numbers - every image read by the shared image engine Cloud-Lib-ML-L-Image, on-device ML Kit by default or an OpenRouter decision model when Configs ▸ Image route says so) and Clock (World clock, Alarms, Timers, Stopwatch, Interval, Bedtime; #768); Jev (#770): Ask - a natural-language request routed by a decision model on OpenRouter's Decisions API to one of the app's own tools, which then computes - and Configs (Token, Routing, Models, Test). Any result can also be scored by a decision model (Ask about this result: calibrated probabilities, kept in History). A mode is DATA: its kind picks one of its renderers (expression, catalog, converter, form, plot, meter, history, and the six Clock kinds) and everything it shows - keys, options, forms, categories - is declared here. Offline by default: the network is used only by the engine's currency-rate download, on request, by the Jev section's and Sound ▸ What is it?'s calls to OpenRouter (build.json::jev; the shared libs:decisions client is the only code in this app that opens a URL), and - only when Configs ▸ Image route picks OpenRouter - by the image engine, which falls back to on-device ML Kit on any error; Calculator and Measure work without any of it, and the Clock section uses none (time zones are the device's tzdata, alarms are AlarmManager's). English is the base language (#299); dark is the default theme (#336).",
+  "description": "Diego's Cloud Calc (#767) - an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by Cloud-Lib-Calc.apk (ab_cloud-libs-shared/libs/calc) - save Convert ▸ Network / Data, whose fixed bit and byte factors the app applies itself in exact decimals - which this app BINDS after a contract handshake and never compiles (#763: an app compiles only what it renders). #770 three top-level sections (ui.sections) - Calculator, Measure and Jev - each a set of bottom-nav tabs, each tab a strip of modes declared below in ui.modes. Calculator: Calc (Standard, Scientific, Programmer, CAS, Physics & Constants), Convert (Units, Currency, Network / Data), Graph, Tools (Date & Time, Finance, Acoustics) and History; Measure: Sound (#772: meter/oscilloscope/tuner, Wave detection, History with waterfall and CSV/WAV export, Generator, What is it?), Camera (#772: Measure by reference object or ARCore, Level, Identify, Colour, Text-to-numbers - every image read by the shared image engine Cloud-Lib-ML-L-Image, on-device ML Kit by default or an OpenRouter decision model when Configs ▸ Image route says so) and Clock (World clock, Alarms, Timers, Stopwatch, Interval, Bedtime; #768); Jev (#770): Ask - a natural-language request routed by a decision model on OpenRouter's Decisions API to one of the app's own tools, which then computes - and Configs (Token, Routing, Models, Test). Any result can also be scored by a decision model (Ask about this result: calibrated probabilities, kept in History). A mode is DATA: its kind picks one of its renderers (expression, catalog, converter, data_converter, form, plot, meter, history, and the six Clock kinds) and everything it shows - keys, options, forms, categories - is declared here. Offline by default: the network is used only by the engine's currency-rate download, on request, by the Jev section's and Sound ▸ What is it?'s calls to OpenRouter (build.json::jev; the shared libs:decisions client is the only code in this app that opens a URL), and - only when Configs ▸ Image route picks OpenRouter - by the image engine, which falls back to on-device ML Kit on any error; Calculator and Measure work without any of it, and the Clock section uses none (time zones are the device's tzdata, alarms are AlarmManager's). English is the base language (#299); dark is the default theme (#336).",
   "category": "android",
   "vendored_engine": null,
   "android": {
@@ -1156,6 +1156,94 @@
           "category": "Currency",
           "from": "EUR",
           "to": "USD"
+        }
+      },
+      {
+        "id": "network",
+        "label": "Network / Data",
+        "icon": "network",
+        "short": "Net",
+        "tab": "convert",
+        "kind": "data_converter",
+        "_doc": "Data rates, data sizes and how long a transfer takes. Unlike Units these are converted by the app in exact decimals (DataUnits, BigDecimal), never by the engine and never cut to four decimals: every factor is a power of two times a power of ten, so 100 Mbit/s reads 12.5 MB/s and 11.920928955078125 MiB/s to the last digit. A factor is how many base units one of the unit is (bit/s for a rate, bit for a size); lowercase b is bits, uppercase B bytes; k M G T P are the SI x1000 prefixes, Ki Mi Gi Ti Pi the IEC x1024 ones. A label shows the symbol and its common alias. favourites are pinned first in every picker, in this order, as in Currency. transfer is the 'how long to transfer this size at this rate' chip.",
+        "categories": [
+          "Data rate",
+          "Data size",
+          "Transfer time"
+        ],
+        "favourites": [
+          "Mbit/s",
+          "MB/s",
+          "Gbit/s",
+          "MiB/s",
+          "GB",
+          "GiB",
+          "MB",
+          "TB"
+        ],
+        "unit_sets": [
+          {
+            "category": "Data rate",
+            "from": "Mbit/s",
+            "to": "MB/s",
+            "units": [
+              { "name": "bit/s", "label": "bit/s (bits per second)", "factor": "1" },
+              { "name": "kbit/s", "label": "kbit/s (kbps)", "factor": "1e3" },
+              { "name": "Mbit/s", "label": "Mbit/s (Mbps)", "factor": "1e6" },
+              { "name": "Gbit/s", "label": "Gbit/s (Gbps)", "factor": "1e9" },
+              { "name": "Tbit/s", "label": "Tbit/s (Tbps)", "factor": "1e12" },
+              { "name": "Kibit/s", "label": "Kibit/s (kibibits/s)", "factor": "1024" },
+              { "name": "Mibit/s", "label": "Mibit/s (mebibits/s)", "factor": "1048576" },
+              { "name": "Gibit/s", "label": "Gibit/s (gibibits/s)", "factor": "1073741824" },
+              { "name": "B/s", "label": "B/s (bytes/s)", "factor": "8" },
+              { "name": "kB/s", "label": "kB/s (kilobytes/s)", "factor": "8e3" },
+              { "name": "MB/s", "label": "MB/s (megabytes/s)", "factor": "8e6" },
+              { "name": "GB/s", "label": "GB/s (gigabytes/s)", "factor": "8e9" },
+              { "name": "TB/s", "label": "TB/s (terabytes/s)", "factor": "8e12" },
+              { "name": "KiB/s", "label": "KiB/s (kibibytes/s)", "factor": "8192" },
+              { "name": "MiB/s", "label": "MiB/s (mebibytes/s)", "factor": "8388608" },
+              { "name": "GiB/s", "label": "GiB/s (gibibytes/s)", "factor": "8589934592" }
+            ]
+          },
+          {
+            "category": "Data size",
+            "from": "GB",
+            "to": "GiB",
+            "units": [
+              { "name": "bit", "label": "bit (b)", "factor": "1" },
+              { "name": "kbit", "label": "kbit (kilobit)", "factor": "1e3" },
+              { "name": "Mbit", "label": "Mbit (megabit)", "factor": "1e6" },
+              { "name": "Gbit", "label": "Gbit (gigabit)", "factor": "1e9" },
+              { "name": "B", "label": "B (byte, 8 bits)", "factor": "8" },
+              { "name": "kB", "label": "kB (kilobyte)", "factor": "8e3" },
+              { "name": "MB", "label": "MB (megabyte)", "factor": "8e6" },
+              { "name": "GB", "label": "GB (gigabyte)", "factor": "8e9" },
+              { "name": "TB", "label": "TB (terabyte)", "factor": "8e12" },
+              { "name": "PB", "label": "PB (petabyte)", "factor": "8e15" },
+              { "name": "KiB", "label": "KiB (kibibyte)", "factor": "8192" },
+              { "name": "MiB", "label": "MiB (mebibyte)", "factor": "8388608" },
+              { "name": "GiB", "label": "GiB (gibibyte)", "factor": "8589934592" },
+              { "name": "TiB", "label": "TiB (tebibyte)", "factor": "8796093022208" },
+              { "name": "PiB", "label": "PiB (pebibyte)", "factor": "9007199254740992" }
+            ]
+          }
+        ],
+        "transfer": {
+          "category": "Transfer time",
+          "size": "Data size",
+          "rate": "Data rate",
+          "default": {
+            "size": "4",
+            "size_unit": "GB",
+            "rate": "100",
+            "rate_unit": "Mbit/s"
+          }
+        },
+        "default": {
+          "value": "100",
+          "category": "Data rate",
+          "from": "Mbit/s",
+          "to": "MB/s"
         }
       },
       {

@@ -367,6 +367,38 @@ class CalcShellTest {
         assertTrue(state.history.first().ts > 0)
     }
 
+    @Test fun `Network - Data opens on 100 Mbps in MB per s, swaps, times a transfer and keeps both in history`() {
+        launch()
+        val net = Declarations.modes.first { it.kind == "data_converter" }
+        compose.runOnIdle { state.tab = net.tab; state.modeByTab[net.tab] = net.id }
+        // Scoped to this mode: a pager may compose the neighbouring converter, which carries the same tags.
+        fun at(tag: String) = compose.onNode(androidx.compose.ui.test.hasTestTag(tag) and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag(CalcTags.mode(net.id))))
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag(CalcTags.CONVERT_EQ).fetchSemanticsNodes().isNotEmpty() }
+        at(CalcTags.DATA_HINT).assertTextContains("lowercase b = bits", substring = true, ignoreCase = true)
+        at(CalcTags.RESULT).assertTextContains("= 12.5 MB/s")
+        at(CalcTags.CONVERT_SWAP).performClick()
+        at(CalcTags.RESULT).assertTextContains("= 800 Mbit/s")
+        at(CalcTags.INPUT).performTextReplacement("12,5")
+        at(CalcTags.RESULT).assertTextContains("= 100 Mbit/s")
+        at(CalcTags.CONVERT_EQ).performClick()
+        compose.waitForIdle()
+        assertEquals(Logic.Entry(net.id, "12,5 MB/s to Mbit/s", "100 Mbit/s"), state.history.first().copy(ts = 0L))
+        // No engine call: these units are the app's own exact arithmetic.
+        assertTrue(synchronized(engine.evals) { engine.evals.none { "bit" in it } })
+
+        compose.onNodeWithText(net.transfer!!.category).performClick()
+        compose.waitForIdle()
+        at(CalcTags.RESULT).assertTextContains("= 5 min 20 s")
+        assertTrue(has("320 s"))
+        at(CalcTags.TRANSFER_RATE).performTextReplacement("0")
+        at(CalcTags.RESULT).assertTextContains("above zero", substring = true)
+        at(CalcTags.TRANSFER_RATE).performTextReplacement("1000")
+        at(CalcTags.RESULT).assertTextContains("= 32 s")
+        at(CalcTags.CONVERT_EQ).performClick()
+        compose.waitForIdle()
+        assertEquals(Logic.Entry(net.id, "4 GB at 1000 Mbit/s", "32 s"), state.history.first().copy(ts = 0L))
+    }
+
     private fun has(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
     private fun day(d: java.time.LocalDate) = d.atStartOfDay(java.time.ZoneOffset.UTC).toEpochSecond()
     private fun openCurrency() {

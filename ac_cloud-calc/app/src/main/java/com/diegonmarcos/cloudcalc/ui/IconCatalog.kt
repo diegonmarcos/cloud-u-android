@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Functions
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Straighten
@@ -51,6 +52,7 @@ object IconCatalog {
         "bolt" -> Icons.Filled.Bolt
         "straighten" -> Icons.Filled.Straighten
         "currency" -> Icons.Filled.CurrencyExchange
+        "network" -> Icons.Filled.NetworkCheck
         "event" -> Icons.Filled.Event
         "payments" -> Icons.Filled.Payments
         "graphic_eq" -> Icons.Filled.GraphicEq

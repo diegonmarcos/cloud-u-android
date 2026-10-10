@@ -36,6 +36,14 @@ object Declarations {
     data class Choice(val label: String, val key: String, val value: Int)
     data class CatalogSource(val kind: String, val category: String)
     data class Plot(val default: String, val xmin: Double, val xmax: Double, val steps: Int)
+    /** A unit the app converts itself (Network / Data): [factor] is how many base units (bit, bit/s) one of it is. */
+    data class DataUnit(val name: String, val label: String, val factor: java.math.BigDecimal)
+    /** One category of a data_converter: its units in picker order and the pair it opens on. */
+    data class UnitSet(val category: String, val from: String, val to: String, val units: List<DataUnit>) {
+        fun unit(name: String): DataUnit? = units.firstOrNull { it.name == name }
+    }
+    /** The "how long to transfer" chip: a size from the [size] set over a rate from the [rate] set. */
+    data class Transfer(val category: String, val size: String, val rate: String, val sizeValue: String, val sizeUnit: String, val rateValue: String, val rateUnit: String)
     /** #772 the sample rate and the calibration offset are build.json::sound's, shared by every sound mode. */
     data class Meter(val fftSize: Int, val refreshMs: Int, val aWeighting: Boolean)
 
@@ -65,6 +73,9 @@ object Declarations {
         /** The mode-row icon name (IconCatalog) and its short label; blank = the page's icon and the label. */
         val icon: String = "",
         val short: String = "",
+        /** A data_converter's own units (build.json::ui.modes[].unit_sets), exact factors, no engine. */
+        val unitSets: List<UnitSet> = emptyList(),
+        val transfer: Transfer? = null,
     )
 
     val nav: NavDecl by lazy {
@@ -133,6 +144,19 @@ object Declarations {
             clock = (m.optJSONObject("clock") ?: JSONObject()).toString(),
             icon = m.optString("icon"),
             short = m.optString("short"),
+            unitSets = (m.optJSONArray("unit_sets") ?: JSONArray()).objects().map { u ->
+                UnitSet(
+                    u.getString("category"), u.getString("from"), u.getString("to"),
+                    u.getJSONArray("units").objects().map { DataUnit(it.getString("name"), it.getString("label"), java.math.BigDecimal(it.getString("factor"))) },
+                )
+            },
+            transfer = m.optJSONObject("transfer")?.let { t ->
+                val d = t.optJSONObject("default") ?: JSONObject()
+                Transfer(
+                    t.getString("category"), t.getString("size"), t.getString("rate"),
+                    d.optString("size", "1"), d.optString("size_unit"), d.optString("rate", "1"), d.optString("rate_unit"),
+                )
+            },
         )
     }
 
