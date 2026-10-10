@@ -406,7 +406,7 @@
     "cloud_code_chat_secrets": {
       "kind": "encrypted",
       "class": "secret",
-      "doc": "Cloud Code Chat's OpenRouter token, pasted in Profile & Config: EncryptedSharedPreferences under a Keystore AES-256-GCM master key, shown masked, never handed to the WebView; plus whether to fall back to the fleet Account's key (use_fleet_account). A credential: migrates through the vault.",
+      "doc": "Cloud Code Chat's OpenRouter token, pasted in Profile & Config: EncryptedSharedPreferences under a Keystore AES-256-GCM master key, shown masked, never handed to the WebView. A credential: migrates through the vault.",
       "helper": "ac_cloud-code/src/plugins/cloudchat/src/ChatSecrets.java",
       "used_by": [
         "ac_cloud-code"

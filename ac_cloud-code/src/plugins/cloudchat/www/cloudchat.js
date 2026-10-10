@@ -14,7 +14,6 @@ module.exports = {
     tokenClear: function () { return call('tokenClear'); },
     tokenStatus: function () { return call('tokenStatus'); },
     tokenTest: function () { return call('tokenTest'); },
-    useAccount: function (on) { return call('useAccount', [!!on]); },
     catalogue: function (sections, refresh) { return call('catalogue', [sections || [], !!refresh]); },
     get: function (url, headers, auth) { return call('get', [url, headers || {}, auth || '']); },
     post: function (url, body, headers) { return call('post', [url, body || '{}', headers || {}]); },

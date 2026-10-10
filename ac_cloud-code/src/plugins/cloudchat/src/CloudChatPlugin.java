@@ -43,7 +43,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * everything; this class does only what a WebView must not or cannot:
  *
  *  - the OpenRouter token: stored encrypted ({@link ChatSecrets}), shown masked, tested, and added
- *    to a request HERE, never handed to JavaScript;
+ *    to a request HERE, never handed to JavaScript (of the fleet Account's key, only whether it
+ *    holds one is asked);
  *  - HTTP to the fleet's agent gateway (WireGuard, cleartext http on the mesh) and to OpenRouter,
  *    streamed back chunk by chunk (keepCallback) so the chat renders tokens as they arrive;
  *  - the model catalogue, through libs:model-catalogue ({@link CatalogueBridge});
@@ -93,7 +94,6 @@ public class CloudChatPlugin extends CordovaPlugin {
             case "tokenClear":
             case "tokenStatus":
             case "tokenTest":
-            case "useAccount":
             case "catalogue":
             case "get":
             case "post":
@@ -136,10 +136,6 @@ public class CloudChatPlugin extends CordovaPlugin {
                     secrets.clear();
                     cb.success(status());
                     break;
-                case "useAccount":
-                    secrets.useAccount(args.optBoolean(0, true));
-                    cb.success(status());
-                    break;
                 case "tokenStatus":
                     cb.success(status());
                     break;
@@ -167,18 +163,13 @@ public class CloudChatPlugin extends CordovaPlugin {
         }
     }
 
-    /** Never the token: whether one is set, its mask, and where a request would take it from. */
+    /** Never the token: whether one is set, its mask, and the fleet Account's key-free status. */
     private JSONObject status() throws Exception {
         String local = secrets.local();
-        boolean useAccount = secrets.usesAccount();
-        boolean connected = secrets.accountConnected();
-        boolean accountKey = useAccount && connected && local == null && secrets.fromAccount() != null;
         return new JSONObject()
             .put("set", local != null)
             .put("masked", ChatSecrets.mask(local))
-            .put("use_account", useAccount)
-            .put("account_connected", connected)
-            .put("source", local != null ? "local" : accountKey ? "account" : "none");
+            .put("account", secrets.account());
     }
 
     /** GET /api/v1/key with the token: whether OpenRouter accepts it, and its usage. The key's own label is not passed on. */
@@ -230,7 +221,7 @@ public class CloudChatPlugin extends CordovaPlugin {
         if (openrouter) {
             if (!"https".equals(scheme) || !OPENROUTER_HOST.equals(u.getHost())) throw new SecurityException("the OpenRouter token is only sent to https://" + OPENROUTER_HOST);
             token = secrets.resolve();
-            if (token == null) throw new IllegalStateException("No OpenRouter token: set one in Profile & Config, or add it to the fleet Account");
+            if (token == null) throw new IllegalStateException("No OpenRouter token: set one in Profile & Config");
         }
         HttpURLConnection c = (HttpURLConnection) u.openConnection();
         if (liveId != null && !liveId.isEmpty()) live.put(liveId, c);

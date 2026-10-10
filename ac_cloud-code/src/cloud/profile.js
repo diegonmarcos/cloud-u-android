@@ -1,5 +1,5 @@
 // cloud-code Profile & Config — the top-right page of every cloud panel. Account (the fleet
-// Account, Cloud Account), the OpenRouter token (handed straight to the CloudChat plugin, which
+// Account, Cloud Account: reachable or not, holds a key or not — never the key), the OpenRouter token (handed straight to the CloudChat plugin, which
 // stores it encrypted; this page only ever sees its mask), the Chat defaults, the storage grant
 // that used to be Home's Configs card, and About.
 import toast from "components/toast";
@@ -39,7 +39,7 @@ export function openProfile() {
 		} catch (e) {
 			st = { error: String(e?.message || e) };
 		}
-		account.replaceChildren(accountSection(st, refreshToken));
+		account.replaceChildren(accountSection(st));
 		token.replaceChildren(tokenSection(st, refreshToken));
 	};
 	refreshToken();
@@ -49,15 +49,15 @@ export function openProfile() {
 	return pg;
 }
 
-function accountSection(st, again) {
+function accountSection(st) {
 	const a = targets.chat.account;
-	const use = toggleRow("Use the fleet Account's OpenRouter key when no token is set", st?.use_account !== false, async (on) => {
-		try { await plugin().useAccount(on); again(); } catch (e) { toast(String(e?.message || e)); }
-	});
+	const acc = st?.account || {};
+	const key = acc.connected ? (acc.key_present ? `holds an OpenRouter key${acc.key_hint ? ` (…${acc.key_hint})` : ""}` : "holds no OpenRouter key") : "—";
 	return section("Account",
-		row("Fleet Account", st?.error ? st.error : st?.account_connected ? "connected (Cloud Account)" : "not connected",
+		row("Fleet Account", st?.error ? st.error : acc.connected ? "connected (Cloud Account)" : "not connected",
 			btn("Open Cloud Account", "account_box", () => system.launchApp(a.package, a.activity, null, () => {}, () => toast(`${a.id} is not installed (${a.package})`)))),
-		use);
+		row("Its OpenRouter key", key),
+		el("p", { className: "cloud-muted" }, "Chats are paid with the token below. The fleet Account's key stays in its own app: by fleet rule only its engines read it."));
 }
 
 function tokenSection(st, again) {
@@ -77,10 +77,8 @@ function tokenSection(st, again) {
 	const remove = btn("Remove", "delete", async () => {
 		try { await plugin().tokenClear(); again(); } catch (e) { toast(String(e?.message || e)); }
 	});
-	const source = { local: "this token", account: "the fleet Account's key", none: "none — chats to OpenRouter will fail" }[st?.source] || "unknown";
 	return section("OpenRouter token",
-		row("Stored", st?.set ? st.masked : "not set", test, remove),
-		row("Requests use", source),
+		row("Stored", st?.set ? st.masked : "not set — OpenRouter chats will fail", test, remove),
 		el("div", { className: "cloud-kv" }, input, save),
 		el("p", { className: "cloud-muted" }, "Kept in EncryptedSharedPreferences (Android Keystore). This page never reads it back: only its last four characters are shown."));
 }

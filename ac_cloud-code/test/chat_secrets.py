@@ -44,6 +44,8 @@ check(not any(re.search(r"get|reveal|read", a, re.I) and "token" in a.lower() fo
 check(re.search(r'!"https"\.equals\(scheme\)\s*\|\|\s*!OPENROUTER_HOST\.equals\(u\.getHost\(\)\)\) throw new SecurityException', plugin) is not None
       and 'OPENROUTER_HOST = "openrouter.ai"' in plugin,
       "the token is only ever sent to https://openrouter.ai")
+check(not any(re.search(r"\brevealAiKey\s*\(", t) for t in java.values()),
+      "the fleet Account's key is never read (decisions-use D5: only whether it holds one, via aiRoutingSnapshot)")
 check(re.search(r'"authorization"\.equalsIgnoreCase\(k\)\)\s*continue', plugin) is not None,
       "a page-supplied Authorization header is dropped")
 

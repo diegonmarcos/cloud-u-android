@@ -392,7 +392,7 @@ Module `ac_cloud-code`; libs: lib-core, lib-devtools, lib-fleetconfig-model, lib
 | `acode_sftp_profiles_v1` | encrypted | secret | yes | Acode saved SFTP connection profiles (host/user/credentials) via SftpSecurityStore; credential-bearing so secret. |
 | `acode_theme` | prefs | config | yes | Acode editor colour scheme (key per theme colour) written by System.java so the crash/launch screens match the chosen theme; a user theme choice. |
 | `ads` | encrypted | device | no | Acode RewardPassManager ad-reward pass state; per-install ad counters, not configuration. |
-| `cloud_code_chat_secrets` | encrypted | secret | yes | Cloud Code Chat's OpenRouter token, pasted in Profile & Config: EncryptedSharedPreferences under a Keystore AES-256-GCM master key, shown masked, never handed to the WebView; plus whether to fall back to the fleet Account's key (use_fleet_account). A credential: migrates through the vault. |
+| `cloud_code_chat_secrets` | encrypted | secret | yes | Cloud Code Chat's OpenRouter token, pasted in Profile & Config: EncryptedSharedPreferences under a Keystore AES-256-GCM master key, shown masked, never handed to the WebView. A credential: migrates through the vault. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |

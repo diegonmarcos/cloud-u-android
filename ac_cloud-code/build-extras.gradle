@@ -95,9 +95,9 @@ android {
     }
 }
 
-// ── cloud-code Chat: the fleet Account's OpenRouter key (Cloud Account / keyboard), over the ITextTools
-// binder (a contract lib), read per request by the CloudChat plugin when no token was pasted, exactly as
-// Cloud Search reads it. settings-extras.gradle includes it from build.json::modules.
+// ── cloud-code Chat: the fleet Account (Cloud Account / keyboard) over the ITextTools binder (a contract
+// lib): Profile & Config asks it, key-free, whether it holds an OpenRouter key. The key itself is never
+// read here. settings-extras.gradle includes it from build.json::modules.
 dependencies {
     implementation project(':libs:text-tools')
 }

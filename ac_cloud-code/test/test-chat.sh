@@ -36,7 +36,7 @@ drive() {   # drive <label> <min checks> <command...>
 }
 
 drive "chat.mjs" 60 node "$ROOT/test/chat.mjs" "$ROOT"
-drive "chat_secrets.py" 11 python3 "$ROOT/test/chat_secrets.py" "$ROOT"
+drive "chat_secrets.py" 12 python3 "$ROOT/test/chat_secrets.py" "$ROOT"
 
 # ── mutation proof: each token rule can fail ────────────────────────────────
 S="$(mktemp -d)"; trap 'rm -rf "$S"' EXIT
@@ -61,6 +61,7 @@ plant "M1 the plugin logs the token" 'edit(J + "CloudChatPlugin.java", "token = 
 plant "M2 the status hands the page the token" 'edit(J + "CloudChatPlugin.java", ".put(\"set\", local != null)", ".put(\"set\", local != null).put(\"value\", local)")'
 plant "M3 the token is stored in plain prefs" 'edit(J + "ChatSecrets.java", "prefs = EncryptedSharedPreferences.create(", "prefs = app.getSharedPreferences(PREFS, 0); Object unused = EncryptedSharedPreferences.create(")'
 plant "M4 the token may go to any host" 'edit(J + "CloudChatPlugin.java", "|| !OPENROUTER_HOST.equals(u.getHost())", "")'
+plant "M6 the plugin reads the fleet Account's key" 'edit(J + "ChatSecrets.java", "return local();", "String t = local(); return t != null ? t : client().revealAiKey(ACCOUNT_PROVIDER).getText();")'
 plant "M5 the page keeps the token in localStorage" 'edit(R + "/src/cloud/profile.js", "const v = input.value;", "const v = input.value; localStorage.setItem(\"cloud-code.token\", v);")'
 
 # ── the plugin's real mask, compiled and run ────────────────────────────────

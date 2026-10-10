@@ -132,7 +132,7 @@ this follows their shape: menu left, title, account right.
 - Backlog / Agents: Reload, Back to the entry, Edit this file, Open the repository, Folder.
 - Repos: Rescan, Root folder. Browser: the presets.
 - Profile & Config (`src/cloud/profile.js`): Account (the fleet Account: whether the Cloud
-  Account binder answers, Open Cloud Account, use its OpenRouter key when no token is set),
+  Account binder answers and whether it holds an OpenRouter key, never the key; Open Cloud Account),
   the OpenRouter token (password field, saved encrypted by the plugin, shown masked, Test,
   Remove), Chat defaults (agent, model, effort, permission mode, MCP per agent, the gateway),
   Storage (the all-files grant), About (version, commit, licences, source).
@@ -175,7 +175,8 @@ time by `tools/resolve-targets.py` into `targets.gen.json::chat`:
 `src/plugins/cloudchat` is the native half: the OpenRouter token in EncryptedSharedPreferences
 (Keystore master key; fleet manifest store `cloud_code_chat_secrets`, class secret), never
 returned to the page, never logged, added by the plugin to requests to https://openrouter.ai
-only; streamed HTTP; the catalogue; attachments. `test/test-chat.sh` holds all of it.
+only; streamed HTTP; the catalogue; attachments. The fleet Account's key is never read
+(decisions-use guard D5: no new module holds it; only `aiRoutingSnapshot`'s key_present is asked). `test/test-chat.sh` holds all of it.
 
 ## i18n (#299)
 

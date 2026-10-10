@@ -93,7 +93,7 @@
       "type": "library"
     },
     "libs:text-tools": {
-      "_doc": "The ITextTools binder (a `contract` lib): the Chat's Profile & Config shows whether the fleet Account (Cloud Account) holds an OpenRouter key, and the CloudChat plugin reads it per request (revealAiKey('openrouter'), never stored, never handed to the WebView) when no token was pasted, as Cloud Search does. Linked in build-extras.gradle.",
+      "_doc": "The ITextTools binder (a `contract` lib): Profile & Config shows whether the fleet Account (Cloud Account) answers and whether it holds an OpenRouter key, through the key-free aiRoutingSnapshot (key_present, key_hint). The key itself is never read here (decisions-use guard D5: no new module holds it); the Chat pays with the token pasted in Profile & Config. Linked in build-extras.gradle.",
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/text-tools"
     },
