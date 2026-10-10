@@ -70,8 +70,8 @@
       "shell_testers": 7,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
-      "unit_task_declared": false,
-      "unit_test_sources": 2,
+      "unit_task_declared": true,
+      "unit_test_sources": 3,
       "workflow": "ship-cloud-account.yml"
     },
     "ac_cloud-agenda": {
@@ -85,11 +85,11 @@
     },
     "ac_cloud-browser": {
       "first_test": "COVERED NOW: app/src/test/BrowserFeaturesTest.kt asserts the behaviour of the seven tab features against the SHIPPED build.json::ui.browser - the four first-run tabs arrive pinned and in order, a second launch re-seeds nothing, a pinned tab REFUSES to close, a drag stamps an order that outlives recency, and a non-URL entry resolves to Qwant. test/test-browser-config-boundary.sh holds the #209 line: the shared libs:browser carries none of his URLs and its own default pins nothing, so no other consumer can inherit them. test/test-browser-features-wired.sh proves each feature is reachable from the UI rather than merely modelled. NOT COVERED: nothing instruments the WebView itself. No test loads a page, so a URL that 404s, a viewport that renders blank, or a drag that never fires on real hardware would all still ship green - those need the androidTest source set and a device, and this app has neither.",
-      "shell_testers": 26,
+      "shell_testers": 28,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
-      "unit_test_sources": 26,
+      "unit_test_sources": 27,
       "workflow": "ship-cloud-browser.yml"
     },
     "ac_cloud-c3": {
@@ -175,7 +175,7 @@
     },
     "ac_cloud-keyboard": {
       "first_test": "Has 3 shell testers plus one COMPILED-AND-RUN Kotlin tester, all executed. The Kotlin one is 1_cicd/src/scripts/test/translate-key-handoff.test.kt, run by translate-key-handoff-guard.yml: it compiles against the shipped libs/translate KeyHandoff.kt by path and executes it, because what #355 part 2 decided is a behaviour \u2014 tapping into the host application's own text field releases the keys back to it, while typing in the translate panel does not. Both halves are asserted and the runner proves each can fail, mutating a sandbox copy twice: delete the release and case 2 goes red, disable the self-caused guard so every selection change releases and cases 3, 4 and 7 go red. Two mutations because the halves fail in opposite directions and one could only ever prove half the test was alive. STILL NOT COVERED, and this is the larger part: nothing here executes TranslateBarView, TranslateInputView or LatinIME. The engine's decision is proved; the WIRING to it is argued in code only \u2014 that onUpdateSelection with a composing span below zero is the right raise site, that every non-composing InputConnection write in the bar announces itself first, and that a touch on the panel's box reaches onClaim. Those need an emulator or a device, and the phone install is #280.",
-      "shell_testers": 7,
+      "shell_testers": 8,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
