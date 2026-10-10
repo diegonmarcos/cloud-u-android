@@ -104,6 +104,27 @@ internal object ShellInstall : InstallChannel {
                    "round trip — the channel is up but not usable"
         }
         /**
+         * A channel that cannot stream stdin (the uid-2000 local server) still EXECUTES, so the
+         * package goes by path instead: this app writes it to its external files dir, which the
+         * shell user can read, and the shell copies it to /data/local/tmp, which system_server can
+         * read (it cannot read the FUSE-backed external dir: "no access to read file context
+         * fuse"). Returns the /data/local/tmp path, or null with nothing left behind.
+         */
+        fun stageForShell(f: java.io.File, tag: String): String? {
+            val dir = ctx.getExternalFilesDir("shell-stage") ?: return null
+            val copy = java.io.File(dir, "$tag.apk")
+            return try {
+                f.copyTo(copy, overwrite = true)
+                val target = "/data/local/tmp/cloud-${ctx.packageName}-$tag.apk"
+                val out = channel.exec(ctx, "cp '${copy.absolutePath}' '$target' && chmod 644 '$target' && echo staged 2>&1")
+                if (out?.contains("staged") == true) target else null
+            } catch (t: Throwable) {
+                Log.w(TAG, "staging $tag for the shell failed", t); null
+            } finally { copy.delete() }
+        }
+        fun unstage(target: String) { runCatching { channel.exec(ctx, "rm -f '$target'") } }
+
+        /**
          * A base APK plus its splits (Google Play's delivery) in ONE `pm` session:
          * install-create, one install-write per file streamed over stdin exactly as
          * the single-APK path streams, then install-commit. A split app installed
@@ -124,7 +145,11 @@ internal object ShellInstall : InstallChannel {
                 files.forEachIndexed { i, f ->
                     val name = if (i == 0) "base.apk" else "split$i-${f.name.substringAfterLast('-')}"
                     val out = channel.execWithStdin(ctx, "pm install-write -S ${f.length()} $sid $name - 2>&1", f)?.trim()
-                        ?: return abandon("${channel.name()} cannot stream a split over stdin")
+                        ?: stageForShell(f, "$sid-$i")?.let { t ->
+                            try { channel.exec(ctx, "pm install-write -S ${f.length()} $sid $name '$t' 2>&1")?.trim() }
+                            finally { unstage(t) }
+                        }
+                        ?: return abandon("${channel.name()} can neither stream a split over stdin nor read a staged copy")
                     if (!out.startsWith("Success"))
                         return abandon("${channel.name()}: `pm install-write` of ${f.name} answered: ${out.ifBlank { "nothing" }}")
                 }
@@ -150,9 +175,11 @@ internal object ShellInstall : InstallChannel {
             val out = channel.execWithStdin(
                 ctx, "pm install -r -d -S ${src.length()} 2>&1", src,
             )?.trim()
-                ?: return "${channel.name()} cannot stream a package over stdin, and there is no " +
-                          "path on this device that this app can write and shell (uid 2000) " +
-                          "can read"
+                ?: stageForShell(src, "single-${src.nameWithoutExtension}")?.let { t ->
+                    try { channel.exec(ctx, "pm install -r -d '$t' 2>&1")?.trim() } finally { unstage(t) }
+                }
+                ?: return "${channel.name()} cannot stream a package over stdin, and staging it " +
+                          "through this app's external files dir to /data/local/tmp failed"
             Log.i(TAG, "shell install via ${channel.name()}: ${out.ifBlank { "no output" }}")
             if (out.startsWith("Success")) null
             else "${channel.name()} streamed ${src.length()} bytes to `pm install -S` and it " +
