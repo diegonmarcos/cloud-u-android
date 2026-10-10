@@ -4,7 +4,6 @@ import com.diegonmarcos.superapp.system.CrashLogger
 import com.diegonmarcos.superapp.system.AppProcessUptime
 import com.diegonmarcos.superapp.battery.PowerStateReceiver
 import com.diegonmarcos.superapp.battery.BatterySessionWorker
-import com.diegonmarcos.superapp.battery.BatterySessionStats
 
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
@@ -239,16 +238,10 @@ class App : Application(), WorkManagerConfiguration.Provider {
         runCatching { com.diegonmarcos.superapp.profile.AccountDebugApi.register(this) }
         // #794: /api/net/dns/overview — the DNS page as JSON: preset in effect or not, every app's path, every server.
         runCatching { com.diegonmarcos.superapp.network.DnsOverview.register(this) }
-        // Schedule the periodic battery-session tick (15 min cadence).
-        // Idempotent — KEEP policy ensures re-scheduling on every cold
-        // start is a no-op. Without this the discharge anchor only
-        // updates when the user OPENS a battery surface, so the rate
-        // appears to "start computing just now" hours after an actual
-        // unplug. With it, the worker runs even when the SuperApp is
-        // backgrounded / process-killed and the transition-detection
-        // path in BatterySessionStats.read catches plug/unplug events
-        // at ≤15 min granularity even when PowerStateReceiver is
-        // suppressed by Samsung Sleeping Apps.
+        // Schedule the battery SoT's low-frequency tick (15 min cadence):
+        // one history sample even when the SuperApp is backgrounded or
+        // killed and no battery surface is open (BatteryRepository.record).
+        // Idempotent — the KEEP policy makes re-scheduling a no-op.
         runCatching { BatterySessionWorker.schedule(this) }
         // Constellation AppStore — periodic fleet check across every
         // constellation APK (Configs → Constellation). Notifies when siblings

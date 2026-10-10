@@ -34,6 +34,9 @@ object BatteryRepository {
     private var cache: ArrayList<BatterySample>? = null
     private var ema: BatteryMath.Ema? = null
     private var scale = BatteryMath.CurrentScale.UNKNOWN
+    private var lastCounterUah: Long? = null
+    private var cumulativeUah = 0L
+    private var peakFullUah = 0L
 
     // ── reading ──────────────────────────────────────────────────────────
 
@@ -85,6 +88,7 @@ object BatteryRepository {
         if (learned != scale) { scale = learned; runCatching { db(ctx).putMeta(K_SCALE, learned.name) } }
         val sample = BatteryTruth.sampleOf(r, scale)
         sample.currentMa?.let { ema = BatteryMath.ema(ema, it.toDouble(), r.nowMs) }
+        countCharge(ctx, r)
         if (r.levelPct in 0..100 && BatteryHistory.shouldStore(list.lastOrNull(), sample)) {
             runCatching { db(ctx).insert(sample, r.nowMs - BatteryHistory.RETENTION_MS) }
             list += sample
@@ -94,33 +98,102 @@ object BatteryRepository {
         return list
     }
 
+    /**
+     * The counted cycles: every CHARGE_COUNTER step taken while charging adds
+     * to the charge accepted since install, and the counter at a 100% reading
+     * is the "full" it is divided by (AccuBattery's method). Kept in the db
+     * meta, so it survives restarts; under [lock].
+     */
+    private fun countCharge(ctx: Context, r: BatteryReading) {
+        val c = r.counterUah ?: return
+        val d = BatteryMath.chargeDeltaUah(lastCounterUah, c, r.charging || r.status == BatteryMath.STATUS_FULL)
+        lastCounterUah = c
+        if (d > 0L) { cumulativeUah += d; runCatching { db(ctx).putMeta(K_CUMULATIVE, cumulativeUah.toString()) } }
+        if (r.levelPct >= 100 && c > peakFullUah) { peakFullUah = c; runCatching { db(ctx).putMeta(K_PEAK, c.toString()) } }
+    }
+
     // ── the report ───────────────────────────────────────────────────────
 
     /** THE read every battery surface makes. Records the reading as a side effect. */
     fun report(ctx: Context, sticky: Intent? = null): BatteryReport? {
         val r = probe(ctx, sticky) ?: return null
-        val (rated, cycles) = extras(ctx, r.nowMs)
+        val slow = slowExtras(ctx, r)
         return synchronized(lock) {
             val list = fold(ctx, r)
             val sample = BatteryTruth.sampleOf(r, scale)
             val samples = if (list.lastOrNull()?.ts == sample.ts) list.toList() else list + sample
-            BatteryTruth.compute(r, samples, ema, BatteryExtras(ratedMah = rated, cycleEstimate = cycles, scale = scale))
+            BatteryTruth.compute(r, samples, ema, slow.copy(
+                scale = scale,
+                cycleEstimate = BatteryMath.countedCycles(cumulativeUah, peakFullUah),
+                cumulativeChargedUah = cumulativeUah, peakFullUah = peakFullUah,
+            ))
         }
     }
 
-    /** The extras change slowly and their read forks `dumpsys battery` while charging: refreshed every [EXTRAS_TTL_MS]. */
+    /** The slow extras (rated capacity, the charger, which forks `dumpsys battery`): refreshed every [EXTRAS_TTL_MS] or on a plug change. */
     const val EXTRAS_TTL_MS = 5 * 60_000L
     @Volatile private var extrasAt = 0L
-    @Volatile private var extras: Pair<Int?, Double?> = null to null
+    @Volatile private var extrasPlug = -1
+    @Volatile private var slow = BatteryExtras()
 
-    /** libs:battery keeps the CHARGE_COUNTER cycle count and the rated capacity; read, not re-derived. */
-    private fun extras(ctx: Context, now: Long): Pair<Int?, Double?> {
-        if (extrasAt != 0L && now - extrasAt in 0 until EXTRAS_TTL_MS) return extras
-        val session = runCatching { BatterySessionStats.read(ctx, now) }.getOrNull()
-        val cap = runCatching { BatteryCapacity.read(ctx, session?.peakChargeCounterUah ?: 0L) }.getOrNull()
-        extras = cap?.ratedMah?.takeIf { it > 0 } to session?.cycleCount
-        extrasAt = now
-        return extras
+    private fun slowExtras(ctx: Context, r: BatteryReading): BatteryExtras {
+        if (extrasAt != 0L && r.plugged == extrasPlug && r.nowMs - extrasAt in 0 until EXTRAS_TTL_MS) return slow
+        val cap = runCatching { BatteryCapacity.read(ctx, peakFullUah) }.getOrNull()
+        val spec = if (r.onPower) runCatching { BatteryChargerSpec.read() }.getOrNull() else null
+        slow = BatteryExtras(
+            ratedMah = cap?.ratedMah?.takeIf { it > 0 },
+            chargerLiveW = spec?.liveInputW, chargerMaxW = spec?.maxPowerW,
+            chargerSource = spec?.sourceLabel()?.takeIf { it.isNotBlank() },
+        )
+        extrasAt = r.nowMs; extrasPlug = r.plugged
+        return slow
+    }
+
+    /** Wipe the recorded history and the counters (the debug API's battery/reset_history). */
+    fun clear(ctx: Context) = synchronized(lock) {
+        runCatching { db(ctx).wipe() }
+        cache = ArrayList(); ema = null; cumulativeUah = 0L; peakFullUah = 0L; lastCounterUah = null
+    }
+
+    /**
+     * Every raw value the battery exposes, AS REPORTED (no scaling, no sign,
+     * no arithmetic): the BatteryManager properties and the sticky broadcast's
+     * extras. The debug API's battery/properties and About's deep dump print
+     * this; it is the only other place in the app that reads them.
+     */
+    fun rawDump(ctx: Context): List<Pair<String, String?>> {
+        val out = ArrayList<Pair<String, String?>>()
+        val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+        fun intProp(k: String, id: Int) { out += k to runCatching { bm?.getIntProperty(id) }.getOrNull()?.toString() }
+        fun longProp(k: String, id: Int) { out += k to runCatching { bm?.getLongProperty(id) }.getOrNull()?.toString() }
+        intProp("bm.current_now", BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
+        intProp("bm.current_average", BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE)
+        intProp("bm.capacity_pct", BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        intProp("bm.status", BatteryManager.BATTERY_PROPERTY_STATUS)
+        longProp("bm.charge_counter_uAh", BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
+        longProp("bm.energy_counter_nWh", BatteryManager.BATTERY_PROPERTY_ENERGY_COUNTER)
+        out += "bm.is_charging" to runCatching { bm?.isCharging }.getOrNull()?.toString()
+        if (Build.VERSION.SDK_INT >= 28)
+            out += "bm.charge_time_remaining_ms" to runCatching { bm?.computeChargeTimeRemaining() }.getOrNull()?.toString()
+        val i = runCatching { ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) }.getOrNull()
+        out += "sticky.present" to (i != null).toString()
+        if (i != null) {
+            fun ex(k: String, key: String) { out += k to i.getIntExtra(key, Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE }?.toString() }
+            ex("sticky.level", BatteryManager.EXTRA_LEVEL)
+            ex("sticky.scale", BatteryManager.EXTRA_SCALE)
+            ex("sticky.status", BatteryManager.EXTRA_STATUS)
+            ex("sticky.plugged", BatteryManager.EXTRA_PLUGGED)
+            ex("sticky.health", BatteryManager.EXTRA_HEALTH)
+            ex("sticky.voltage_mV", BatteryManager.EXTRA_VOLTAGE)
+            ex("sticky.temperature_dC", BatteryManager.EXTRA_TEMPERATURE)
+            out += "sticky.technology" to i.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY)
+            out += "sticky.present_battery" to i.getBooleanExtra(BatteryManager.EXTRA_PRESENT, false).toString()
+            ex("sticky.cycle_count", "android.os.extra.CYCLE_COUNT")
+            ex("sticky.charging_status", "android.os.extra.CHARGING_STATUS")
+            ex("sticky.max_charging_current_uA", "android.os.extra.MAX_CHARGING_CURRENT")
+            ex("sticky.max_charging_voltage_uV", "android.os.extra.MAX_CHARGING_VOLTAGE")
+        }
+        return out
     }
 
     /** The recorded history from [fromTs] (the stats page's graph and spreads). */
@@ -148,26 +221,37 @@ object BatteryRepository {
         val list = ArrayList(runCatching { d.since(now - BatteryHistory.RETENTION_MS) }.getOrDefault(emptyList()))
         scale = runCatching { d.meta(K_SCALE) }.getOrNull()
             ?.let { s -> BatteryMath.CurrentScale.entries.firstOrNull { it.name == s } } ?: scale
+        cumulativeUah = runCatching { d.meta(K_CUMULATIVE)?.toLongOrNull() }.getOrNull() ?: cumulativeUah
+        peakFullUah = runCatching { d.meta(K_PEAK)?.toLongOrNull() }.getOrNull() ?: peakFullUah
         if (ema == null) ema = BatteryHistory.replayEma(list.filter { it.ts >= now - BatteryMath.EMA_MAX_GAP_MS })
         cache = list
         return list
     }
 
     private const val K_SCALE = "current_scale"
+    private const val K_CUMULATIVE = "cumulative_charged_uah"
+    private const val K_PEAK = "peak_full_uah"
 
-    private class Db(ctx: Context) : SQLiteOpenHelper(ctx, NAME, null, 1) {
+    private class Db(ctx: Context) : SQLiteOpenHelper(ctx, NAME, null, 2) {
         private val app = ctx
 
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE sample (ts INTEGER PRIMARY KEY, level INTEGER, status INTEGER, plugged INTEGER, " +
                 "ma INTEGER, mv INTEGER, temp_dc INTEGER, counter INTEGER, screen INTEGER)")
             db.execSQL("CREATE TABLE meta (k TEXT PRIMARY KEY, v TEXT)")
-            runCatching { LegacyImport.into(app) { s -> write(db, s) } }
+            runCatching { LegacyImport.sessions(app) { s -> write(db, s) } }
+            runCatching { LegacyImport.counters(app) { k, v -> putMeta(db, k, v) } }
         }
 
+        /** v1 → v2: the counted-cycle counters moved into the SoT; the samples are kept. */
         override fun onUpgrade(db: SQLiteDatabase, old: Int, new: Int) {
-            db.execSQL("DROP TABLE IF EXISTS sample"); db.execSQL("DROP TABLE IF EXISTS meta"); onCreate(db)
+            if (old < 2) runCatching { LegacyImport.counters(app) { k, v -> putMeta(db, k, v) } }
         }
+
+        fun wipe() { writableDatabase.execSQL("DELETE FROM sample"); writableDatabase.execSQL("DELETE FROM meta") }
+
+        private fun putMeta(db: SQLiteDatabase, k: String, v: String) =
+            db.execSQL("INSERT OR REPLACE INTO meta VALUES (?, ?)", arrayOf<Any?>(k, v))
 
         fun insert(s: BatterySample, pruneBefore: Long) {
             val db = writableDatabase
@@ -203,19 +287,21 @@ object BatteryRepository {
     }
 
     /**
-     * One-time move of the history the SoT replaces: the completed sessions of
-     * the old "battery_history" ledger (two samples each, start and end) and the
-     * unplug anchor libs:battery holds, so "since last charge" and the cycle
-     * tables are not empty on the first day. The old ledger is cleared after.
+     * One-time move of what the SoT replaced: the completed sessions of the old
+     * "battery_history" ledger (two samples each, start and end), the unplug
+     * anchor and the counted-cycle counters of the old "battery_session" store,
+     * so "since last charge", the cycle tables and the cycle count are not
+     * empty on the first day. Both old stores are cleared after.
      */
     private object LegacyImport {
-        private const val PREFS = "battery_history"
+        private const val HISTORY = "battery_history"
+        private const val SESSION = "battery_session"
         /** The old ledger never recorded the plug type: "on power, source unknown". */
         private const val PLUG_UNKNOWN = 0x80
 
-        fun into(ctx: Context, write: (BatterySample) -> Unit) {
+        fun sessions(ctx: Context, write: (BatterySample) -> Unit) {
             val cut = System.currentTimeMillis() - BatteryHistory.RETENTION_MS
-            val sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val sp = ctx.getSharedPreferences(HISTORY, Context.MODE_PRIVATE)
             val rows = (sp.getString("sessions", "") ?: "").split('\n').mapNotNull { line ->
                 val f = line.split('|')
                 if (f.size != 5) return@mapNotNull null
@@ -232,10 +318,19 @@ object BatteryRepository {
                 write(BatterySample(r[1] as Long, r[3] as Int, st, plug))
                 write(BatterySample(r[2] as Long, r[4] as Int, st, plug))
             }
-            val anchor = runCatching { BatterySessionStats.read(ctx) }.getOrNull()
-            if (anchor != null && anchor.unplugTs > cut && anchor.unplugPct in 0..100)
-                write(BatterySample(anchor.unplugTs, anchor.unplugPct, BatteryMath.STATUS_DISCHARGING, 0))
+            val old = ctx.getSharedPreferences(SESSION, Context.MODE_PRIVATE)
+            val unplugTs = old.getLong("unplug_ts", 0L)
+            val unplugPct = old.getInt("unplug_pct", -1)
+            if (unplugTs > cut && unplugPct in 0..100)
+                write(BatterySample(unplugTs, unplugPct, BatteryMath.STATUS_DISCHARGING, 0))
             sp.edit().clear().apply()
+        }
+
+        fun counters(ctx: Context, put: (String, String) -> Unit) {
+            val old = ctx.getSharedPreferences(SESSION, Context.MODE_PRIVATE)
+            old.getLong("cumulative_charged_uah", 0L).takeIf { it > 0 }?.let { put(K_CUMULATIVE, it.toString()) }
+            old.getLong("peak_at_full_uah", 0L).takeIf { it > 0 }?.let { put(K_PEAK, it.toString()) }
+            old.edit().clear().apply()
         }
     }
 }

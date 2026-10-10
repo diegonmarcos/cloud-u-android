@@ -84,7 +84,7 @@ object BatteryChargerSpec {
             // Both values are in their canonical SI sub-units on virtually
             // every modern Android kernel: voltage in µV, current in µA.
             // Some Samsung kernels report mA in current_now though, so
-            // apply the same mA→µA rescale as BatterySessionStats.read():
+            // apply the same mA→µA rescale as BatteryMath.rawToMa:
             // |x| < 100_000 → treat as mA, multiply by 1000.
             val iUaN = if (kotlin.math.abs(iUa) < 100_000) iUa * 1000 else iUa
             val powerW = kotlin.math.abs((vUv.toLong() * iUaN.toLong()) / 1_000_000_000_000.0)

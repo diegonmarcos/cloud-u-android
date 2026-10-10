@@ -106,6 +106,21 @@ class BatteryMathTest {
         assertNull(BatteryMath.msToFull(60, -5.0))
     }
 
+    // ── counted cycles ───────────────────────────────────────────────────
+
+    @Test fun `only a charging step into the battery counts, a reset does not`() {
+        assertEquals(50_000L, BatteryMath.chargeDeltaUah(3_000_000, 3_050_000, true))
+        assertEquals(0L, BatteryMath.chargeDeltaUah(3_000_000, 3_050_000, false))
+        assertEquals(0L, BatteryMath.chargeDeltaUah(3_050_000, 3_000_000, true))
+        assertEquals("a jump is a counter reset", 0L, BatteryMath.chargeDeltaUah(100_000, 4_000_000, true))
+        assertEquals(0L, BatteryMath.chargeDeltaUah(null, 3_000_000, true))
+    }
+
+    @Test fun `cycles are charge accepted over the full counter, unknown until a 100 percent`() {
+        assertEquals(2.5, BatteryMath.countedCycles(10_000_000, 4_000_000)!!, e)
+        assertNull(BatteryMath.countedCycles(10_000_000, 0))
+    }
+
     // ── EMA ──────────────────────────────────────────────────────────────
 
     @Test fun `the first reading is the EMA`() {

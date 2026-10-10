@@ -102,7 +102,9 @@ object BatteryRows {
             Row("Full (gauge, sysfs)", sysfsFullMah?.let { "$it mAh" } ?: DASH),
             Row("Charge now", r.reading.counterUah?.takeIf { it > 0 }?.let { "${it / 1000} mAh" } ?: DASH),
             Row("Cycles (system)", (r.systemCycles ?: sysfsCycles)?.toString() ?: DASH),
-            Row("Cycles (counted)", r.cycleEstimate?.let { String.format(Locale.US, "~%.1f since install", it) } ?: DASH),
+            Row("Cycles (counted)", r.cycleEstimate?.let { String.format(Locale.US, "~%.1f since install", it) } ?: "$DASH (charge to 100% once)"),
+            Row("Full at last 100%", r.peakFullUah.takeIf { it > 0 }?.let { "${it / 1000} mAh" } ?: DASH),
+            Row("Charged since install", r.cumulativeChargedUah.takeIf { it > 0 }?.let { String.format(Locale.US, "%.1f Ah", it / 1_000_000.0) } ?: DASH),
             Row("Technology", r.reading.technology?.takeIf { it.isNotBlank() } ?: DASH),
             Row("Health", healthText(r.reading.health)),
         ))
@@ -128,6 +130,33 @@ object BatteryRows {
         fmtHm(s.durationMs),
         s.avgW?.let(::fmtW) ?: DASH,
     )
+
+    // ── power in / out, the charger ──────────────────────────────────────
+
+    fun powerFlow(f: PowerFlow): Section = Section("flow", "Power in / out", listOf(
+        Row("Net (battery)", f.netW?.let { fmtW(it) + if (it >= 0) " → battery" else " ← battery" } ?: DASH),
+        Row("Phone consumption", f.consumptionW?.let {
+            String.format(Locale.US, "%.2f W", it) + when (f.consumptionSource) {
+                "modeled" -> " (est)"; "charger" -> " (charger − battery)"; else -> ""
+            }
+        } ?: if (f.consumptionSource == "unknown" && f.onPower) "$DASH (collecting)" else DASH),
+        Row("Actual in", when {
+            !f.onPower -> "0 W (on battery)"
+            f.inW == null -> DASH
+            f.inEstimated -> String.format(Locale.US, "≈ %.2f W (est)", f.inW)
+            else -> String.format(Locale.US, "%.2f W (charger, live)", f.inW)
+        }),
+    ))
+
+    /** The charger row: live input when sysfs gives it, else the negotiated max; "—" off power or unreadable. */
+    fun charger(r: BatteryReport): String {
+        val src = r.chargerSource ?: plugText(r.reading.plugged) ?: DASH
+        return when {
+            r.chargerLiveW != null -> String.format(Locale.US, "%.1f W (%s) live", r.chargerLiveW, src)
+            r.chargerMaxW != null -> String.format(Locale.US, "%.1f W (%s) max", r.chargerMaxW, src)
+            else -> DASH
+        }
+    }
 
     // ── words ────────────────────────────────────────────────────────────
 

@@ -27,15 +27,16 @@ object ChargeSnapshot {
 
     /** Capture one snapshot, persist it, and return it as JSON. */
     fun capture(ctx: Context): JSONObject {
-        val s = BatterySessionStats.read(ctx)
+        // The native fields are the battery SoT's report (signed: + into the battery).
+        val s = BatteryRepository.report(ctx)
         val o = JSONObject()
         o.put("ts", System.currentTimeMillis())
-        o.put("level", s.curPct)
-        o.put("charging", s.isCharging)
-        o.put("current_ma", if (s.currentUa != 0) s.currentUa / 1000 else 0)
-        o.put("voltage_mv", s.voltageMv)
-        o.put("temp_c", s.batteryTempC)
-        o.put("power_w", Math.round(s.powerW * 10.0) / 10.0)
+        o.put("level", s?.levelPct ?: -1)
+        o.put("charging", s?.reading?.onPower ?: false)
+        o.put("current_ma", s?.smoothedMa?.toInt() ?: 0)
+        o.put("voltage_mv", s?.reading?.voltageMv ?: -1)
+        o.put("temp_c", s?.reading?.tempC ?: -1.0)
+        o.put("power_w", Math.round((s?.powerW ?: 0.0) * 10.0) / 10.0)
 
         val dump = runCatching { EmbeddedAdbChannel.exec(ctx, "dumpsys battery") }.getOrNull()
         if (!dump.isNullOrBlank() && !dump.startsWith("ERR") && dump.contains("Battery")) {

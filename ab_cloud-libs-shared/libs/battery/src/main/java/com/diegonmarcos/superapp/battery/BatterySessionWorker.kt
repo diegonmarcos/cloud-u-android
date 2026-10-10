@@ -9,39 +9,14 @@ import androidx.work.WorkerParameters
 import java.util.concurrent.TimeUnit
 
 /**
- * Periodic background tick that calls [BatterySessionStats.read] —
- * keeps the discharge anchor + charge-counter sample + cycle
- * accumulator fresh even when the app is fully backgrounded /
- * process-killed. The user shouldn't have to OPEN the SuperApp for
- * the battery rate to be accurate.
- *
- * Why this exists: the user's report:
- *   "the battery just now was at 100% but it started clocking and
- *    started computing just now at 86% when I requested the info,
- *    while it should be doing in background"
- *
- * Without periodic ticks the only paths that update the anchor are:
- *   • PowerStateReceiver firing on ACTION_POWER_(DIS)CONNECTED —
- *     blocked by Samsung Sleeping Apps for backgrounded apps.
- *   • read() called when the user OPENS a battery surface — too
- *     late; transition_detected anchors at "now" instead of at the
- *     real unplug moment.
- *
- * 15-minute periodic worker fixes both: even when the receiver is
- * suppressed, WorkManager wakes the process briefly every 15 min,
- * runs read(), and the transition-detection path catches the flip
- * with at most 15 min of lag (vs hours).
- *
- * 15 min is the Android-mandated minimum for PeriodicWorkRequest;
- * we use the floor for tightest accuracy. ExistingPeriodicWorkPolicy
- * .KEEP makes re-scheduling on every App.onCreate a no-op so the
- * 15-min cadence is stable across activity restarts.
- *
- * Constraints: NONE. We deliberately don't require network /
- * charging / battery-not-low — those would let the OS skip ticks
- * exactly when discharge tracking matters MOST. The work itself is
- * a ~1 ms BatterySessionStats.read() so the cost of every tick is
- * negligible vs the accuracy gain.
+ * The battery SoT's low-frequency tick: every 15 minutes (the
+ * PeriodicWorkRequest floor) it records one battery sample
+ * ([BatteryRepository.record]) and an energy-watchdog sample, so the
+ * history, "since last charge" and the cycle tables stay right while the
+ * SuperApp is backgrounded or killed and no battery surface is open. It also
+ * folds the month into the data-usage ledger. No constraints on purpose:
+ * requiring charging or battery-not-low would skip ticks exactly when the
+ * discharge history matters. The work is a few milliseconds, no wakelock.
  */
 class BatterySessionWorker(
     appContext: Context,
@@ -50,7 +25,6 @@ class BatterySessionWorker(
 
     override fun doWork(): Result {
         EnergyLedger.wake("bg.battery_worker")
-        runCatching { BatterySessionStats.read(applicationContext) }
         // The battery SoT's low-frequency tick: one history sample even when nothing else runs.
         runCatching { BatteryRepository.record(applicationContext) }
         // Piggyback the energy watchdog on the same 15-min wakeup — one

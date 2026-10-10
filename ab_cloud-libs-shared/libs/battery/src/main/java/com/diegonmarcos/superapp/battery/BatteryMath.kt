@@ -115,6 +115,22 @@ object BatteryMath {
         if (w == null || capMah == null || capMah <= 0 || mv == null || mv <= 0) null
         else w / (mv / 1000.0) / (capMah / 1000.0) * 100.0
 
+    // ── counted cycles (CHARGE_COUNTER deltas) ───────────────────────────
+
+    /** No single step between two readings accepts more than this: a larger jump is a counter reset. */
+    const val MAX_CHARGE_STEP_UAH = 1_000_000L
+
+    /** The charge one step put INTO the battery while charging (µAh); 0 otherwise or on a reset. */
+    fun chargeDeltaUah(prevUah: Long?, nowUah: Long?, charging: Boolean): Long {
+        if (!charging || prevUah == null || nowUah == null || prevUah <= 0L || nowUah <= 0L) return 0L
+        val d = nowUah - prevUah
+        return if (d in 1L..MAX_CHARGE_STEP_UAH) d else 0L
+    }
+
+    /** Cycles = charge accepted since install ÷ the charge counter at the last 100%; null until a 100% was seen. */
+    fun countedCycles(cumulativeUah: Long, peakFullUah: Long): Double? =
+        if (peakFullUah <= 0L) null else cumulativeUah.toDouble() / peakFullUah
+
     // ── estimates ────────────────────────────────────────────────────────
 
     /** Anything slower than this is "no movement", not "a year". */

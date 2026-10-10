@@ -238,7 +238,7 @@
     "battery_session": {
       "kind": "prefs",
       "class": "device",
-      "doc": "Plug/unplug anchors and charge counters of this battery.",
+      "doc": "Plug/unplug anchors and charge counters of this battery. In the SuperApp the battery SoT (libs:battery BatteryRepository) imports the unplug anchor and the counted-cycle counters into battery_sot.db once and clears it; Cloud Nav still keeps its own.",
       "used_by": [
         "ac_cloud-nav",
         "lib-battery"

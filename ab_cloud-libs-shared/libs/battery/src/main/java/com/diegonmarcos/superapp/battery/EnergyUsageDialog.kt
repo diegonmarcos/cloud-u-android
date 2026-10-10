@@ -19,7 +19,7 @@ import androidx.fragment.app.DialogFragment
  * AccuBattery-style energy page — opened from Configs/About → Battery &
  * Usage. Renders, in one scroll:
  *   1. Live discharge speed (whole-device mA / %·h from
- *      BatterySessionStats — the same snapshot the status strip uses).
+ *      the battery SoT, BatteryRepository — the same report the status strip uses).
  *   2. "Draining the device" — marginal mA per system state from the
  *      Tier-1 watchdog ([EnergyWatchdog.attribution]).
  *   3. "By foreground app" — per-app average draw + energy share while
@@ -90,7 +90,6 @@ class EnergyUsageDialog : DialogFragment() {
 
         // 1) Live discharge speed — the battery SoT's numbers (BatteryRepository),
         //    the same ones the badge, the strip popup and About › Battery print.
-        val bs = runCatching { BatterySessionStats.read(ctx) }.getOrNull()
         val rep = runCatching { BatteryRepository.report(ctx) }.getOrNull()
         card(ctx, root, "Discharging speed") { box ->
             if (rep == null) { box.addView(line(ctx, "—", "no data")); return@card }
@@ -103,20 +102,20 @@ class EnergyUsageDialog : DialogFragment() {
                 if (rep.reading.onPower) BatteryRows.toFull(rep) else BatteryRows.toEmpty(rep.toEmptyMs, "current rate")))
         }
 
-        // 1b) Power IN / OUT — ACTUAL IN = NET + CONSUMPTION. NET is measured
-        //     (battery V×I); CONSUMPTION measured on battery / modeled while
-        //     charging; wall IN derived (est) since it's unreadable here.
-        val pf = runCatching { PowerFlow.read(ctx) }.getOrNull()
+        // 1b) Power IN / OUT — the SoT's BatteryTruth.powerFlow over the same
+        //     report: NET is the battery's V×I, CONSUMPTION measured on battery
+        //     (charger − battery, or the watchdog's model, on power), IN the
+        //     charger's live input when readable, else NET + CONSUMPTION (est).
         card(ctx, root, "Power in / out") { box ->
-            if (pf == null) { box.addView(line(ctx, "—", "no data")); return@card }
-            big(ctx, box,
-                PowerFlow.fmtNet(pf),
-                if (pf.charging) "charging — power into the battery" else "on battery — power out of the cell")
-            box.addView(line(ctx, "Net (battery)", PowerFlow.fmtNet(pf)))
-            box.addView(line(ctx, "Phone consumption", PowerFlow.fmtConsumption(pf)))
-            if (showEstIn) box.addView(line(ctx, "Actual in (est wall)", PowerFlow.fmtEstIn(pf)))
-            box.addView(small(ctx, "IN = NET + CONSUMPTION. True wall watts aren't exposed on this device, so 'Actual in' is derived (est). NET is measured exactly."))
-            box.addView(pill(ctx, if (showEstIn) "Hide est. wall IN" else "Show est. wall IN") {
+            if (rep == null) { box.addView(line(ctx, "—", "no data")); return@card }
+            val modeled = if (rep.reading.onPower && rep.chargerLiveW == null)
+                runCatching { EnergyWatchdog.modeledConsumptionW(ctx, rep.reading.voltageMv) }.getOrNull() else null
+            val sec = BatteryRows.powerFlow(BatteryTruth.powerFlow(rep, modeled))
+            big(ctx, box, sec.rows.first().value,
+                if (rep.reading.onPower) "on power — into the battery" else "on battery — out of the cell")
+            for ((i, row) in sec.rows.withIndex()) if (i < 2 || showEstIn) box.addView(line(ctx, row.label, row.value))
+            box.addView(small(ctx, "IN = NET + CONSUMPTION. When the charger's live input is not readable, 'Actual in' is derived (est). NET is measured."))
+            box.addView(pill(ctx, if (showEstIn) "Hide actual IN" else "Show actual IN") {
                 showEstIn = !showEstIn
                 (view as? ScrollView)?.let { sv ->
                     val rc = sv.getChildAt(0) as LinearLayout; rc.removeAllViews(); build(ctx, rc)
@@ -124,20 +123,14 @@ class EnergyUsageDialog : DialogFragment() {
             })
         }
 
-        // 1c) Battery health (AccuBattery-grade) — capacity/health surface
-        //     from measured charge-counter + cycle data.
+        // 1c) Battery health — the SoT report's capacity section (charge
+        //     counter ÷ level vs design, the counted cycles and their counters).
         card(ctx, root, "Battery health") { box ->
-            if (bs == null) { box.addView(line(ctx, "—", "no data")); return@card }
-            box.addView(line(ctx, "Voltage", if (bs.voltageMv > 0) "${bs.voltageMv} mV" else "—"))
-            box.addView(line(ctx, "Temperature", BatterySessionStats.fmtBatteryTemp(bs)))
-            box.addView(line(ctx, "Charge counter (now)",
-                if (bs.chargeCounterUah > 0) "%.0f mAh".format(bs.chargeCounterUah / 1000.0) else "—"))
-            box.addView(line(ctx, "Est. full capacity",
-                if (bs.peakChargeCounterUah > 0) "%.0f mAh".format(bs.peakChargeCounterUah / 1000.0) else "calibrating"))
-            box.addView(line(ctx, "Total charged (install)",
-                if (bs.cumulativeChargedUah > 0) "%.1f Ah".format(bs.cumulativeChargedUah / 1_000_000.0) else "—"))
-            box.addView(line(ctx, "Cycle count", BatterySessionStats.fmtCycleCount(bs)))
-            box.addView(small(ctx, "Health = est. full ÷ design capacity. Design isn't exposed by Android; Samsung ASOC (true wear %) is available via the Shizuku/ADB dumpsys path (Dev Control → /api/adb)."))
+            if (rep == null) { box.addView(line(ctx, "—", "no data")); return@card }
+            box.addView(line(ctx, "Voltage", rep.reading.voltageMv?.let { BatteryRows.fmtV(it) } ?: "—"))
+            box.addView(line(ctx, "Temperature", rep.reading.tempC?.let { BatteryRows.fmtTemp(it) } ?: "—"))
+            for (row in BatteryRows.capacity(rep, null, null, null).rows) box.addView(line(ctx, row.label, row.value))
+            box.addView(small(ctx, "Health = est. full ÷ design capacity. Design and the gauge's own full/cycles come through the privileged shell: Configs › About › Battery."))
         }
 
         // 1d) Charging snapshots — capture the charge/PD fields on demand

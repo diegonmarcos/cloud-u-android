@@ -65,7 +65,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
 | `badge_customization` | prefs | config | yes | Per-badge notification toggles (enabled/persistent/options) the user set in the notification center. |
 | `battery_history` | prefs | device | no | The old ledger of completed battery sessions/days. Read once by the battery SoT (libs:battery BatteryRepository) to seed battery_sot.db, then cleared; hardware-specific telemetry. |
-| `battery_session` | prefs | device | no | Plug/unplug anchors and charge counters of this battery. |
+| `battery_session` | prefs | device | no | Plug/unplug anchors and charge counters of this battery. In the SuperApp the battery SoT (libs:battery BatteryRepository) imports the unplug anchor and the counted-cycle counters into battery_sot.db once and clears it; Cloud Nav still keeps its own. |
 | `charge_snapshots` | prefs | device | no | Local charge snapshots of this battery. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `cloud_webserver` | prefs | config | yes | Local web server settings: enabled, port, doc_root, loopback_only, directory_listing. |
@@ -651,7 +651,7 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtool
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
-| `battery_session` | prefs | device | no | Plug/unplug anchors and charge counters of this battery. |
+| `battery_session` | prefs | device | no | Plug/unplug anchors and charge counters of this battery. In the SuperApp the battery SoT (libs:battery BatteryRepository) imports the unplug anchor and the counted-cycle counters into battery_sot.db once and clears it; Cloud Nav still keeps its own. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `cloud_nav_cockpit` | prefs | config | yes | cloud-nav cockpit selected mode id ('mode'); a user layout choice. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |

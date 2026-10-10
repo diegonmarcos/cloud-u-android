@@ -22,7 +22,7 @@ import java.io.File
 /**
  * THE battery SoT: one computation, and the badge, the popup and the stats page
  * all print its values — the old per-surface paths (BatteryEstimator, the
- * badge's own EMA store, the popup's BatterySessionStats/PowerFlow rows) are gone.
+ * badge's own EMA store, BatterySessionStats, PowerFlow) are gone.
  */
 class BatteryTruthTest {
 
@@ -103,6 +103,41 @@ class BatteryTruthTest {
         assertEquals(8 * hour, r.toEmptyAtAvgMs)
     }
 
+    // ── power in / out ───────────────────────────────────────────────────
+
+    @Test fun `on battery the phone's consumption is the battery's own draw, measured`() {
+        val f = BatteryTruth.powerFlow(report())
+        assertEquals(-1.6, f.netW!!, 1e-9)
+        assertEquals(1.6, f.consumptionW!!, 1e-9)
+        assertEquals("measured", f.consumptionSource)
+        assertEquals(0.0, f.inW!!, 1e-9)
+        assertEquals("0 W (on battery)", BatteryRows.powerFlow(f).rows.last().value)
+    }
+
+    @Test fun `on power the charger's live input splits into battery and phone`() {
+        val c = onBattery(raw = 1_000_000, level = 50).copy(status = STATUS_CHARGING, plugged = 2, counterUah = 2_000_000L)
+        val all = history + BatteryTruth.sampleOf(c, BatteryMath.CurrentScale.UNKNOWN)
+        val r = BatteryTruth.compute(c, all, BatteryMath.Ema(1000.0, now),
+            BatteryExtras(chargerLiveW = 9.0, chargerSource = "USB-PD"))
+        val f = BatteryTruth.powerFlow(r)
+        assertEquals(4.0, f.netW!!, 1e-9)                    // +1 A at 4 V into the battery
+        assertEquals(5.0, f.consumptionW!!, 1e-9)
+        assertEquals("charger", f.consumptionSource)
+        assertEquals(9.0, f.inW!!, 1e-9)
+        assertFalse(f.inEstimated)
+        assertEquals("9.0 W (USB-PD) live", BatteryRows.charger(r))
+        val modeled = BatteryTruth.powerFlow(BatteryTruth.compute(c, all, BatteryMath.Ema(1000.0, now)), modeledConsumptionW = 1.5)
+        assertEquals("modeled", modeled.consumptionSource)
+        assertEquals(5.5, modeled.inW!!, 1e-9)
+        assertTrue(modeled.inEstimated)
+    }
+
+    @Test fun `the charger is not claimed off power`() {
+        val r = BatteryTruth.compute(onBattery(), history, null, BatteryExtras(chargerLiveW = 9.0))
+        assertNull(r.chargerLiveW)
+        assertEquals(BatteryRows.DASH, BatteryRows.charger(r))
+    }
+
     // ── one SoT, every surface ───────────────────────────────────────────
 
     @Test fun `every rate the popup prints carries both units`() {
@@ -138,6 +173,12 @@ class BatteryTruthTest {
         val lib = File(root, "ab_cloud-libs-shared/libs/battery/src/main/java/com/diegonmarcos/superapp/battery")
         assertFalse("BatteryEstimator was the badge's second calculation", File(app, "notificationcenter/BatteryEstimator.kt").exists())
         assertFalse("BatteryHistoryStore was a second session ledger", File(lib, "BatteryHistoryStore.kt").exists())
+        assertFalse("BatterySessionStats was the old rate/ETA/power calculation", File(lib, "BatterySessionStats.kt").exists())
+        assertFalse("PowerFlow read BatterySessionStats", File(lib, "PowerFlow.kt").exists())
+        val api = File(app, "devcontrol/DevControlServer.kt").readText()
+        assertTrue("the debug API's battery/state is the SoT report", api.contains("BatteryRepository.report("))
+        val usage = File(lib, "EnergyUsageDialog.kt").readText()
+        assertTrue("the power in/out card is the SoT's", usage.contains("BatteryTruth.powerFlow("))
         fun code(f: File) = f.readText().lines().filterNot { it.trim().startsWith("*") || it.trim().startsWith("//") }.joinToString("\n")
         val badge = code(File(app, "notificationcenter/BatteryBadgeService.kt"))
         assertTrue(badge.contains("BatteryRepository.report("))

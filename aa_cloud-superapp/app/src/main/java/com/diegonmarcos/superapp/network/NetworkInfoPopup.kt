@@ -2,7 +2,6 @@ package com.diegonmarcos.superapp.network
 import com.diegonmarcos.superapp.ui.SystemInfoPopup
 import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.battery.SysfsProc
-import com.diegonmarcos.superapp.battery.BatterySessionStats
 import com.diegonmarcos.superapp.battery.BatteryEstimatePopup
 
 import android.content.Context
@@ -45,8 +44,8 @@ import java.net.NetworkInterface
  *                  app's tunnel alongside ours.
  *                  (KDoc trap: never write the literal asterisk-
  *                  slash glob inside a block comment — it
- *                  terminates the doc; see also BatterySessionStats
- *                  + SysfsProc for the same engine fix.)
+ *                  terminates the doc; see also SysfsProc
+ *                  for the same engine fix.)
  *   4b. KDE      — connected / paired KDE Connect devices.
  *   5. ADB       — USB / Wireless debugging, the wireless IP:port, the
  *                  privileged shell channel (libs:shizuku-adb-debug-tools'

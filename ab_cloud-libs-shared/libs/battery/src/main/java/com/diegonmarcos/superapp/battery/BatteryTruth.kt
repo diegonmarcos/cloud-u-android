@@ -49,6 +49,30 @@ data class BatteryExtras(
     val cycleEstimate: Double? = null,
     /** The CURRENT_NOW unit this device has shown. */
     val scale: BatteryMath.CurrentScale = BatteryMath.CurrentScale.UNKNOWN,
+    /** The counters behind [cycleEstimate]: charge accepted since install, CHARGE_COUNTER at the last 100%. */
+    val cumulativeChargedUah: Long = 0L,
+    val peakFullUah: Long = 0L,
+    /** The charger, while on power: live input (sysfs) and negotiated max (dumpsys), W; null when unreadable. */
+    val chargerLiveW: Double? = null,
+    val chargerMaxW: Double? = null,
+    val chargerSource: String? = null,
+)
+
+/**
+ * Power in / out, from the report: NET is the battery's own V×I (signed),
+ * CONSUMPTION is what the phone draws (measured on battery: it is −NET; on
+ * power: charger live − NET when the charger is readable, else the energy
+ * watchdog's model), IN is the charger's live input, else NET + CONSUMPTION.
+ */
+data class PowerFlow(
+    val onPower: Boolean,
+    val netW: Double?,
+    val consumptionW: Double?,
+    /** "measured" | "charger" | "modeled" | "unknown". */
+    val consumptionSource: String,
+    val inW: Double?,
+    /** True when [inW] is derived rather than read from the charger. */
+    val inEstimated: Boolean,
 )
 
 enum class RateSource { CURRENT, LEVEL, NONE }
@@ -86,6 +110,11 @@ data class BatteryReport(
     val sessions: List<BatterySession>,
     val systemCycles: Int?,
     val cycleEstimate: Double?,
+    val cumulativeChargedUah: Long,
+    val peakFullUah: Long,
+    val chargerLiveW: Double?,
+    val chargerMaxW: Double?,
+    val chargerSource: String?,
 ) {
     val levelPct: Int get() = reading.levelPct
     /** Since-charge average as watts, from V×I where measured, else from %/h × capacity. */
@@ -156,7 +185,27 @@ object BatteryTruth {
             sessions = sessions,
             systemCycles = r.systemCycles?.takeIf { it > 0 },
             cycleEstimate = extras.cycleEstimate?.takeIf { it >= 0.0 },
+            cumulativeChargedUah = extras.cumulativeChargedUah, peakFullUah = extras.peakFullUah,
+            chargerLiveW = extras.chargerLiveW?.takeIf { r.onPower && it > 0.005 },
+            chargerMaxW = extras.chargerMaxW?.takeIf { r.onPower && it > 0.005 },
+            chargerSource = extras.chargerSource?.takeIf { r.onPower && it.isNotBlank() },
         )
+    }
+
+    /** Power in / out of [r]; [modeledConsumptionW] is the energy watchdog's estimate, used only on power without a charger reading. */
+    fun powerFlow(r: BatteryReport, modeledConsumptionW: Double? = null): PowerFlow {
+        val net = r.powerW
+        if (!r.reading.onPower) {
+            return PowerFlow(false, net, net?.let { -it }?.takeIf { it >= 0 }, if (net != null) "measured" else "unknown", 0.0, false)
+        }
+        val live = r.chargerLiveW
+        val (cons, src) = when {
+            live != null && net != null -> (live - net).coerceAtLeast(0.0) to "charger"
+            modeledConsumptionW != null && modeledConsumptionW > 0 -> modeledConsumptionW to "modeled"
+            else -> null to "unknown"
+        }
+        val inW = live ?: if (net != null && cons != null) net + cons else null
+        return PowerFlow(true, net, cons, src, inW, live == null)
     }
 
     /** The sample a reading is recorded as (the history and the report share one normalisation). */

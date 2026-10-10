@@ -16,7 +16,7 @@ import android.os.Process
  * ([android.os.BatteryStatsManager.getBatteryUsageStats] needs the
  * privileged BATTERY_STATS permission). What we CAN do without
  * privilege:
- *   • read whole-device instantaneous draw — BatterySessionStats
+ *   • read whole-device instantaneous draw — the battery SoT (BatteryRepository)
  *     already surfaces CURRENT_NOW (µA) + charge-counter deltas.
  *   • read the observable state vector each sample: screen on +
  *     brightness, the FOREGROUND app (UsageStats, already granted),
@@ -61,8 +61,10 @@ object EnergyWatchdog {
     // ── Collection ──────────────────────────────────────────────────
 
     fun sample(ctx: Context, now: Long = System.currentTimeMillis()): Sample {
-        val batt = runCatching { BatterySessionStats.read(ctx, now) }.getOrNull()
-        val drawMa = batt?.currentUa?.let { it / 1000 } ?: 0
+        // The battery SoT's report: its smoothed, sign-normalised current (+ into the
+        // battery) is turned into this table's convention (>0 discharge, <0 charge).
+        val batt = runCatching { BatteryRepository.report(ctx) }.getOrNull()
+        val drawMa = batt?.smoothedMa?.let { -it.toInt() } ?: 0
         val pm = ctx.getSystemService(Context.POWER_SERVICE) as? PowerManager
 
         val screenOn = runCatching { pm?.isInteractive == true }.getOrDefault(false)
@@ -106,10 +108,10 @@ object EnergyWatchdog {
         val s = Sample(
             ts = now,
             drawMa = drawMa,
-            powerW = batt?.powerW ?: 0.0,
-            battPct = batt?.curPct ?: -1,
-            battTempC = batt?.batteryTempC ?: 0.0,
-            charging = batt?.isCharging ?: false,
+            powerW = batt?.powerW?.let { kotlin.math.abs(it) } ?: 0.0,
+            battPct = batt?.levelPct ?: -1,
+            battTempC = batt?.reading?.tempC ?: 0.0,
+            charging = batt?.reading?.onPower ?: false,
             screenOn = screenOn,
             brightness = brightness,
             fgPkg = fgPkg,
@@ -239,6 +241,21 @@ object EnergyWatchdog {
     /** True iff Usage Access (PACKAGE_USAGE_STATS appop) is allowed —
      *  the actual gate for per-app foreground time. checkSelfPermission
      *  always returns DENIED for appop perms, so we must ask AppOps. */
+    /** The phone's own draw while charging, MODELED from these samples (idle
+     *  baseline + the screen-on marginal when the screen is on), in W at [voltageMv];
+     *  null until there are samples. Feeds BatteryTruth.powerFlow when the charger is unreadable. */
+    fun modeledConsumptionW(ctx: Context, voltageMv: Int?): Double? {
+        if (voltageMv == null || voltageMv <= 0) return null
+        val attr = runCatching { attribution(ctx) }.getOrDefault(emptyMap())
+        if (((attr["samples"] as? Int) ?: 0) <= 0) return null
+        var ma = (attr["baseline_idle_ma"] as? Int) ?: 0
+        @Suppress("UNCHECKED_CAST")
+        val states = attr["states"] as? Map<String, Map<String, Any>>
+        val pm = ctx.getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (pm?.isInteractive == true) ma += (states?.get("screen_on")?.get("marginal_ma") as? Int) ?: 0
+        return ma * voltageMv / 1_000_000.0
+    }
+
     fun hasUsageAccess(ctx: Context): Boolean = runCatching {
         val ao = ctx.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
         val mode = if (android.os.Build.VERSION.SDK_INT >= 29)
@@ -265,8 +282,8 @@ object EnergyWatchdog {
     fun perAppEstimate(ctx: Context, now: Long = System.currentTimeMillis()): List<AppEstimate> {
         val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE)
             as? UsageStatsManager ?: return emptyList()
-        val bs = runCatching { BatterySessionStats.read(ctx, now) }.getOrNull()
-        val start = (bs?.unplugTs?.takeIf { it > 0 }) ?: (now - 24 * 60 * 60_000L)
+        val bs = runCatching { BatteryRepository.report(ctx) }.getOrNull()
+        val start = (bs?.since?.fromTs?.takeIf { it > 0 }) ?: (now - 24 * 60 * 60_000L)
 
         // Per-app foreground ms over the session (merge duplicate rows).
         val fg = HashMap<String, Long>()
@@ -282,7 +299,7 @@ object EnergyWatchdog {
         val rows = runCatching { EnergyStore(ctx).all() }.getOrDefault(emptyList())
             .filter { !it.charging && it.screenOn && it.drawMa > 0 }
         val avgMa = if (rows.isNotEmpty()) rows.map { it.drawMa }.average()
-        else (bs?.currentUa?.let { kotlin.math.abs(it) / 1000.0 } ?: 0.0)
+        else (bs?.smoothedMa?.let { kotlin.math.abs(it) } ?: 0.0)
 
         val pm = ctx.packageManager
         return fg.entries

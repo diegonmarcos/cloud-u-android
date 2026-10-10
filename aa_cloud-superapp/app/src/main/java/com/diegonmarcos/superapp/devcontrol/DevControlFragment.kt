@@ -14,7 +14,6 @@ import com.diegonmarcos.superapp.battery.SysfsProc
 import com.diegonmarcos.superapp.battery.EnergyWatchdog
 import com.diegonmarcos.superapp.battery.EnergyUsageDialog
 import com.diegonmarcos.superapp.battery.EnergyLedger
-import com.diegonmarcos.superapp.battery.BatterySessionStats
 import com.diegonmarcos.superapp.battery.BatteryEstimatePopup
 import com.diegonmarcos.superapp.battery.BatteryChargerSpec
 import com.diegonmarcos.superapp.network.WgState
@@ -1165,11 +1164,8 @@ class DevControlFragment : Fragment() {
                     it.addView(small(ctx, "— ${sec.title} —"))
                     for (r in sec.rows) row(ctx, it, r.label, r.value)
                 }
-                if (rep.reading.onPower) {
-                    val bs = com.diegonmarcos.superapp.battery.BatterySessionStats.read(ctxAny)
-                    row(ctx, it, "Charger input",
-                        com.diegonmarcos.superapp.battery.BatterySessionStats.fmtChargerSpec(bs))
-                }
+                if (rep.reading.onPower)
+                    row(ctx, it, "Charger input", com.diegonmarcos.superapp.battery.BatteryRows.charger(rep))
             } else row(ctx, it, "Battery", "unavailable")
             it.addView(actionButton(ctx, "Battery stats ›", GRAY) {
                 runCatching { com.diegonmarcos.superapp.batterystats.BatteryStatsPage.open(requireActivity()) }
@@ -1178,7 +1174,7 @@ class DevControlFragment : Fragment() {
             // Deep BatteryManager / sticky-intent dump — merged in from
             // the former separate "Battery (deep)" section (one Battery
             // section, not two).
-            it.addView(small(ctx, "— Deep (BatteryManager + sticky intent) —"))
+            it.addView(small(ctx, "— Deep (raw BatteryManager + sticky intent, as reported) —"))
             renderBatteryDeep(ctx, it)
             // AccuBattery-style energy page — device state→draw
             // attribution, per-foreground-app draw, and our own subsystem
@@ -2334,71 +2330,13 @@ class DevControlFragment : Fragment() {
         clip?.setPrimaryClip(ClipData.newPlainText("about", v))
     }
 
-    /** Deep BatteryManager + sticky-intent dump — rendered inline inside
-     *  the "Battery & Usage" section (merged from the former standalone
-     *  "Battery (deep)" section so there's a single Battery section). */
+    /** Deep dump: every raw BatteryManager property and sticky-intent extra
+     *  exactly as the device reports it (no scaling, no sign, no arithmetic),
+     *  read by the battery SoT itself (BatteryRepository.rawDump) — the
+     *  computed values are the SoT rows above. */
     private fun renderBatteryDeep(ctx: Context, host: LinearLayout) {
-        val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as? android.os.BatteryManager
-        val battery = runCatching {
-            ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
-        }.getOrNull()
-        val level   = battery?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL,  -1) ?: -1
-        val scale   = battery?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE,  -1) ?: -1
-        val status  = battery?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
-        val plugged = battery?.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, -1) ?: -1
-        val tech    = battery?.getStringExtra(android.os.BatteryManager.EXTRA_TECHNOLOGY) ?: "—"
-        val tempDeci = battery?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, -1) ?: -1
-        val mvolts  = battery?.getIntExtra(android.os.BatteryManager.EXTRA_VOLTAGE, -1) ?: -1
-        val health  = battery?.getIntExtra(android.os.BatteryManager.EXTRA_HEALTH, -1) ?: -1
-
-        val pct = if (level >= 0 && scale > 0) "%d %%".format(level * 100 / scale) else "—"
-        val statusStr = when (status) {
-            android.os.BatteryManager.BATTERY_STATUS_CHARGING    -> "Charging"
-            android.os.BatteryManager.BATTERY_STATUS_DISCHARGING -> "Discharging"
-            android.os.BatteryManager.BATTERY_STATUS_FULL        -> "Full"
-            android.os.BatteryManager.BATTERY_STATUS_NOT_CHARGING -> "Not charging"
-            else -> "—"
-        }
-        val pluggedStr = when (plugged) {
-            android.os.BatteryManager.BATTERY_PLUGGED_AC       -> "AC"
-            android.os.BatteryManager.BATTERY_PLUGGED_USB      -> "USB"
-            android.os.BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless"
-            0 -> "Unplugged"
-            else -> "—"
-        }
-        val healthStr = when (health) {
-            android.os.BatteryManager.BATTERY_HEALTH_GOOD              -> "Good"
-            android.os.BatteryManager.BATTERY_HEALTH_OVERHEAT          -> "Overheat"
-            android.os.BatteryManager.BATTERY_HEALTH_DEAD              -> "Dead"
-            android.os.BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE      -> "Over voltage"
-            android.os.BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> "Failure"
-            android.os.BatteryManager.BATTERY_HEALTH_COLD              -> "Cold"
-            else -> "—"
-        }
-        row(ctx, host, "Level",       pct)
-        row(ctx, host, "Status",      statusStr)
-        row(ctx, host, "Power source", pluggedStr)
-        row(ctx, host, "Health",      healthStr)
-        row(ctx, host, "Technology",  tech)
-        row(ctx, host, "Temperature", if (tempDeci >= 0) "%.1f °C".format(tempDeci / 10.0) else "—")
-        row(ctx, host, "Voltage",     if (mvolts >= 0) "%d mV".format(mvolts) else "—")
-
-        if (bm != null) {
-            val curNowMicro = runCatching { bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CURRENT_NOW) }.getOrDefault(0)
-            val curAvgMicro = runCatching { bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE) }.getOrDefault(0)
-            val chargeCounterUah = runCatching { bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER) }.getOrDefault(0)
-            val energyCounterNwh = runCatching { bm.getLongProperty(android.os.BatteryManager.BATTERY_PROPERTY_ENERGY_COUNTER) }.getOrDefault(0L)
-            row(ctx, host, "Current (now)", if (curNowMicro != Int.MIN_VALUE) "%d mA".format(curNowMicro / 1000) else "—")
-            row(ctx, host, "Current (avg)", if (curAvgMicro != Int.MIN_VALUE) "%d mA".format(curAvgMicro / 1000) else "—")
-            row(ctx, host, "Charge counter", if (chargeCounterUah > 0) "%d mAh".format(chargeCounterUah / 1000) else "—")
-            row(ctx, host, "Energy counter", if (energyCounterNwh > 0) "%d µWh".format(energyCounterNwh) else "—")
-            if (android.os.Build.VERSION.SDK_INT >= 34) {
-                val cycles = runCatching { bm.getIntProperty(7) }.getOrDefault(-1)
-                row(ctx, host, "Cycle count", if (cycles >= 0) cycles.toString() else "—")
-            }
-            val remainingMs = runCatching { bm.computeChargeTimeRemaining() }.getOrDefault(-1L)
-            if (remainingMs > 0) row(ctx, host, "Time to full", fmtDuration(remainingMs))
-        }
+        val dump = runCatching { com.diegonmarcos.superapp.battery.BatteryRepository.rawDump(ctx) }.getOrDefault(emptyList())
+        for ((k, v) in dump) row(ctx, host, k, v ?: "—")
     }
 
     /** Big macro-section divider ("☁ CLOUD", "📱 PHONE") splitting the

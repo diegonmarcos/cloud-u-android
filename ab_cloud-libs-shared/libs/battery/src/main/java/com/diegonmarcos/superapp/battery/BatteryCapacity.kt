@@ -26,7 +26,7 @@ import java.io.File
  * nominal keeps the number stable and consistent with how capacity is
  * rated on the spec sheet.
  *
- * KDoc gotcha (same as SysfsProc.kt / BatterySessionStats.kt): never
+ * KDoc gotcha (same as SysfsProc.kt): never
  * write a literal slash-star inside this block comment — Kotlin block
  * comments are nested-aware, so it would open a nested comment and
  * swallow the rest of the file. Use `...` or `<node>` as placeholders.
@@ -49,7 +49,7 @@ object BatteryCapacity {
 
     /**
      * @param peakChargeCounterUah the empirical full capacity captured
-     *   at the last 100 % reading (BatterySessionStats tracks it via
+     *   at the last 100 % reading (the battery SoT, BatteryRepository, tracks it via
      *   BATTERY_PROPERTY_CHARGE_COUNTER). 0 when uncalibrated → we fall
      *   back to sysfs `charge_full`.
      */
@@ -69,7 +69,7 @@ object BatteryCapacity {
     }
 
     /** Current full-charge capacity in mAh. Priority: empirical peak
-     *  from CHARGE_COUNTER (BatterySessionStats) → sysfs `charge_full`.
+     *  from CHARGE_COUNTER (BatteryRepository) → sysfs `charge_full`.
      *  -1 when uncalibrated AND sysfs blocked. */
     private fun fullNowMah(peakChargeCounterUah: Long): Int {
         if (peakChargeCounterUah > 0L) return (peakChargeCounterUah / 1000L).toInt()
