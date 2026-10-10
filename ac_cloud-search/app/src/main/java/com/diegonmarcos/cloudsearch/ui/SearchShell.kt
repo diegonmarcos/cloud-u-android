@@ -32,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,7 +58,10 @@ import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.searchpage.SearchChatState
 import com.diegonmarcos.superapp.searchpage.SearchPageTags
+import com.diegonmarcos.superapp.searchpage.SpOutcome
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -125,6 +129,29 @@ class SearchState(val services: Services) {
                 if (vertical == chatVertical) vertical = NAV.section("web")?.pages?.firstOrNull()?.id ?: cfg.verticals.first { it.id != chatVertical }.id
             }
             else -> section = id
+        }
+    }
+    /**
+     * #937 a query from outside (MainActivity: SuperApp's Search "<text>" in Cloud Search row, a search
+     * intent, a share): the Search page (the search vertical, under Chat) opens on a new conversation
+     * and the query is sent at once, as if typed into its input. One answer at a time, like the input:
+     * a query that arrives while an answer is on its way is sent once that answer is in.
+     */
+    fun ask(q: String, scope: CoroutineScope) {
+        openSection("chat")
+        if (chat.sending) {
+            scope.launch { snapshotFlow { chat.sending }.first { !it }; ask(q, scope) }
+            return
+        }
+        chat.fresh()
+        val before = chat.begin(q) ?: return
+        scope.launch {
+            val out = try {
+                withContext(Dispatchers.IO) { chat.host().send(before, q, chat.model, chat.web, System.currentTimeMillis()) }
+            } catch (e: Exception) {
+                SpOutcome(chat.session, e.message ?: e.javaClass.simpleName, emptyList())
+            }
+            chat.finish(out)
         }
     }
     fun toggle(m: Menu) { menu = if (menu == m) null else m }

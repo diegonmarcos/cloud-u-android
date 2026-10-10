@@ -57,6 +57,22 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- #937 a query from outside lands on the Search page and runs (libs:fleetconfig-model
+                 CloudSearchQuery is the contract): SuperApp's Search "<text>" in Cloud Search row and
+                 any app's search intent (SearchManager.QUERY), and Share > Cloud Search of plain text. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.WEB_SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
 
         <!-- Registers /api/search/* on the fleet debug server. Not exported, not a real provider. -->

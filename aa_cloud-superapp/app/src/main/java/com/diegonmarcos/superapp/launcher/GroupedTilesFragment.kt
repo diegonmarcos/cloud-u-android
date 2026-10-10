@@ -260,7 +260,7 @@ class GroupedTilesFragment : Fragment(), BackHandler {
         if (!AppsSearch.isActive(q)) return
         val top = lastResult?.top?.value
         when (top) {
-            null -> launch(CLOUD_SEARCH_TARGET)
+            null -> searchInCloudSearch(q.trim())
             is Entry.App -> launch("app:${top.app.packageName}")
             is Entry.Tile -> if (top.tile.children.isNotEmpty()) openFolder(top.tile) else launch(top.tile.target)
         }
@@ -271,6 +271,20 @@ class GroupedTilesFragment : Fragment(), BackHandler {
         setQuery("")
         hideKeyboard()
         (activity as? TileGridFragment.TileClickListener)?.onTileClicked(target)
+    }
+
+    /** #937 the query goes to Cloud Search ([CloudSearchHandoff]); a Cloud Search that cannot take
+     *  it (not installed, or too old) is opened through its tile target, as before. */
+    private fun searchInCloudSearch(q: String) {
+        val ctx = context ?: return
+        val app = Sections.externalApp(CLOUD_SEARCH_TARGET.removePrefix("extapp:"))
+        val intent = CloudSearchHandoff.intent(ctx.packageManager, CloudSearchHandoff.packages(app), q)
+        if (intent == null || runCatching { startActivity(intent) }.isFailure) {
+            launch(CLOUD_SEARCH_TARGET)
+            return
+        }
+        setQuery("")
+        hideKeyboard()
     }
 
     private fun hideKeyboard() {
@@ -362,16 +376,16 @@ class GroupedTilesFragment : Fragment(), BackHandler {
             })
         }
 
-    /** The one row an empty result leaves: hand the query to Cloud Search. Cloud Search takes
-     *  no query by intent today, so the row opens the app (extapp:cloud-search, the AGI tile's
-     *  own target — installed or offered for install the same way). */
+    /** The one row an empty result leaves: hand the query to Cloud Search, which opens on its
+     *  Search page and runs it (#937, [searchInCloudSearch]); without a Cloud Search that takes
+     *  it, the row opens the app (extapp:cloud-search, the AGI tile's own target). */
     private fun cloudSearchRow(ctx: android.content.Context, q: String): View =
         LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
             setPadding(dp(4), dp(10), dp(4), dp(10))
             isClickable = true; isFocusable = true
-            setOnClickListener { launch(CLOUD_SEARCH_TARGET) }
+            setOnClickListener { searchInCloudSearch(q) }
             val iconRes = Sections.iconResFor(ctx, "ic_cloud_search")
             if (iconRes != 0) addView(android.widget.ImageView(ctx).apply {
                 setImageResource(iconRes)
