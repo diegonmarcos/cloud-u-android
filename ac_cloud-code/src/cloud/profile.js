@@ -1,0 +1,130 @@
+// cloud-code Profile & Config — the top-right page of every cloud panel. Account (the fleet
+// Account, Cloud Account), the OpenRouter token (handed straight to the CloudChat plugin, which
+// stores it encrypted; this page only ever sees its mask), the Chat defaults, the storage grant
+// that used to be Home's Configs card, and About.
+import toast from "components/toast";
+import nav from "./nav.json";
+import targets from "./targets.gen.json";
+import { el, icon } from "./dom";
+import { page, sheet, option, toggleRow } from "./chrome";
+import * as M from "./chat/model";
+import { modelPage, chatSettingsChanged } from "./chat/view";
+
+const chat = nav.chat;
+const plugin = () => window.CloudChat;
+
+function section(title, ...rows) {
+	return el("div", { className: "cloud-section" }, el("h3", {}, title), ...rows);
+}
+
+function row(label, value, ...actions) {
+	return el("div", { className: "cloud-kv" }, el("span", { className: "cloud-kv-k" }, label), el("span", { className: "cloud-kv-v" }, value), ...actions);
+}
+
+function btn(label, iconName, onclick) {
+	return el("button", { className: "cloud-ctl", onclick }, icon(iconName), el("span", {}, label));
+}
+
+export function openProfile() {
+	const pg = page("Profile & Config", chatSettingsChanged);
+	const account = el("div");
+	const token = el("div");
+	const defaults = el("div");
+	const storage = el("div");
+	pg.body.append(account, token, defaults, storage, about());
+	const refreshToken = async () => {
+		let st = null;
+		try {
+			st = await plugin().tokenStatus();
+		} catch (e) {
+			st = { error: String(e?.message || e) };
+		}
+		account.replaceChildren(accountSection(st, refreshToken));
+		token.replaceChildren(tokenSection(st, refreshToken));
+	};
+	refreshToken();
+	const drawDefaults = () => defaults.replaceChildren(defaultsSection(drawDefaults));
+	drawDefaults();
+	storage.replaceChildren(storageSection());
+	return pg;
+}
+
+function accountSection(st, again) {
+	const a = targets.chat.account;
+	const use = toggleRow("Use the fleet Account's OpenRouter key when no token is set", st?.use_account !== false, async (on) => {
+		try { await plugin().useAccount(on); again(); } catch (e) { toast(String(e?.message || e)); }
+	});
+	return section("Account",
+		row("Fleet Account", st?.error ? st.error : st?.account_connected ? "connected (Cloud Account)" : "not connected",
+			btn("Open Cloud Account", "account_box", () => system.launchApp(a.package, a.activity, null, () => {}, () => toast(`${a.id} is not installed (${a.package})`)))),
+		use);
+}
+
+function tokenSection(st, again) {
+	const input = el("input", { type: "password", placeholder: "Paste an OpenRouter token", autocomplete: "off", className: "cloud-token-input" });
+	const save = btn("Save", "save", async () => {
+		const v = input.value;
+		input.value = "";
+		if (!v.trim()) return;
+		try { await plugin().tokenSet(v); toast("Token saved, encrypted on this phone"); again(); } catch (e) { toast(String(e?.message || e)); }
+	});
+	const test = btn("Test", "check_circle", async () => {
+		try {
+			const r = await plugin().tokenTest();
+			toast(r.ok ? `OpenRouter accepts it${r.usage != null ? ` · usage $${r.usage}` : ""}${r.limit != null ? ` / $${r.limit}` : ""}` : `Rejected (HTTP ${r.status})`);
+		} catch (e) { toast(String(e?.message || e)); }
+	});
+	const remove = btn("Remove", "delete", async () => {
+		try { await plugin().tokenClear(); again(); } catch (e) { toast(String(e?.message || e)); }
+	});
+	const source = { local: "this token", account: "the fleet Account's key", none: "none — chats to OpenRouter will fail" }[st?.source] || "unknown";
+	return section("OpenRouter token",
+		row("Stored", st?.set ? st.masked : "not set", test, remove),
+		row("Requests use", source),
+		el("div", { className: "cloud-kv" }, input, save),
+		el("p", { className: "cloud-muted" }, "Kept in EncryptedSharedPreferences (Android Keystore). This page never reads it back: only its last four characters are shown."));
+}
+
+function defaultsSection(again) {
+	const s = M.loadSettings(localStorage, chat);
+	const fleet = targets.chat;
+	const agents = M.resolveAgents(chat, fleet, null);
+	const set = (k, v) => { M.saveSettings(localStorage, { ...s, [k]: v }); again(); };
+	const agentLabel = agents.find((a) => a.id === s.agent)?.label || s.agent;
+	return section("Chat defaults (new chats)",
+		row("Agent", agentLabel, btn("Change", "brain", () => sheet("Default agent", agents.map((a) => option(a.label, { checked: a.id === s.agent, disabled: !a.available, sub: a.reason, run: () => set("agent", a.id) }))))),
+		row("Model", s.model, btn("Change", "wand-sparkles", () => modelPage(false, (id) => set("model", id)))),
+		row("Effort", chat.effort.levels.find((l) => l.id === s.effort)?.label || s.effort, btn("Change", "tune", () => sheet("Default effort", chat.effort.levels.map((l) => option(l.label, { checked: l.id === s.effort, run: () => set("effort", l.id) }))))),
+		row("Permission mode", chat.permission.modes.find((m) => m.id === s.mode)?.label || s.mode, btn("Change", "zap", () => sheet("Default permission mode", chat.permission.modes.map((m) => option(m.label, { checked: m.id === s.mode, run: () => set("mode", m.id) }))))),
+		row("MCP", "per agent", btn("Edit", "extension", () => sheet("MCP defaults", agents.filter((a) => a.decl).map((a) => option(a.label, { run: () => mcpFor(a) }))))),
+		row("Agent gateway", fleet.gateway),
+	);
+}
+
+function mcpFor(a) {
+	const { source, servers } = M.mcpServers(a, null, targets.chat.mcp_fleet);
+	const state = M.mcpState(localStorage, a.id, servers);
+	sheet(`MCP · ${a.label}`, servers.map((sv) => toggleRow(sv.name, state[sv.name], (on) => M.mcpToggle(localStorage, a.id, sv.name, on))), source === "fleet" ? "From the fleet MCP config." : null);
+}
+
+// #575 the shared store needs all-files access, granted per app (was Home's Configs card).
+function storageSection() {
+	const status = el("span", {}, "Checking …");
+	const refresh = () => system.isExternalStorageManager(
+		(granted) => { status.textContent = granted ? "granted" : "not granted"; },
+		() => { status.textContent = "not granted"; });
+	refresh();
+	return section("Storage",
+		row("All-files access (Backlog, Repos)", status, btn("Grant", "folder_open", () => system.manageAllFiles(refresh, (e) => toast(String(e))))));
+}
+
+function about() {
+	const v = String(window.BuildInfo?.version || "");
+	const sha = /sha-([0-9a-f]+)/.exec(v)?.[1] || "unknown";
+	return section("About",
+		row("Cloud Code", v.replace(/\s*\(sha-[0-9a-f]+\)/, "") || "unknown"),
+		row("Commit", sha),
+		row("Upstream", "Acode (vendored, see CLOUD-CODE.md)"),
+		...chat.about.licences.map((l) => row(l.name, l.licence)),
+		row("Source", chat.about.source));
+}

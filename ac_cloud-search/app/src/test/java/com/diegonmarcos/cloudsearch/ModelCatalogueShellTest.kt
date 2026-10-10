@@ -16,7 +16,7 @@ import com.diegonmarcos.cloudsearch.core.Http
 import com.diegonmarcos.cloudsearch.data.Account
 import com.diegonmarcos.cloudsearch.data.Prefs
 import com.diegonmarcos.cloudsearch.data.Services
-import com.diegonmarcos.cloudsearch.models.ModelTags
+import com.diegonmarcos.superapp.modelcataloguepage.ModelTags
 import com.diegonmarcos.cloudsearch.ui.SearchShell
 import com.diegonmarcos.cloudsearch.ui.SearchState
 import com.diegonmarcos.cloudsearch.ui.Tags

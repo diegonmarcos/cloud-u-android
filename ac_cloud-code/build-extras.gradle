@@ -78,3 +78,26 @@ android {
 dependencies {
     implementation project(':libs:core')
 }
+
+// ── cloud-code Chat: the fleet's model catalogue, BY REFERENCE (one implementation with Cloud Search) ──
+// libs:model-catalogue is a Compose lib (its page is Cloud Search's), and this app is a Cordova
+// WebView with no Compose: so the lib is not included as a project. Its LOGIC package dir (the
+// selection parser, the OpenRouter pricing repository, the section filter, CatalogueJson; no UI
+// import in it) and its assets (models/catalogue.json) are compiled in by reference, as libs/sysdns'
+// bridge is above, and the CloudChat plugin hands CatalogueJson to the web page. Never a copy.
+def cloudCatalogueLib = new File(rootProject.projectDir, '../../../ab_cloud-libs-shared/libs/model-catalogue')
+android {
+    sourceSets {
+        main {
+            java.srcDirs += new File(cloudCatalogueLib, 'src/main/kotlin/com/diegonmarcos/superapp/modelcatalogue')
+            assets.srcDirs += new File(cloudCatalogueLib, 'src/main/assets')
+        }
+    }
+}
+
+// ── cloud-code Chat: the fleet Account's OpenRouter key (Cloud Account / keyboard), over the ITextTools
+// binder (a contract lib), read per request by the CloudChat plugin when no token was pasted, exactly as
+// Cloud Search reads it. settings-extras.gradle includes it from build.json::modules.
+dependencies {
+    implementation project(':libs:text-tools')
+}

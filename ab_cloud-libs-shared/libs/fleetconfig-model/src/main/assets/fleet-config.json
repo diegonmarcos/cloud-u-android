@@ -403,6 +403,15 @@
         "visitor_id": "device"
       }
     },
+    "cloud_code_chat_secrets": {
+      "kind": "encrypted",
+      "class": "secret",
+      "doc": "Cloud Code Chat's OpenRouter token, pasted in Profile & Config: EncryptedSharedPreferences under a Keystore AES-256-GCM master key, shown masked, never handed to the WebView; plus whether to fall back to the fleet Account's key (use_fleet_account). A credential: migrates through the vault.",
+      "helper": "ac_cloud-code/src/plugins/cloudchat/src/ChatSecrets.java",
+      "used_by": [
+        "ac_cloud-code"
+      ]
+    },
     "cloud_calc": {
       "kind": "prefs",
       "class": "content",
@@ -2316,7 +2325,9 @@
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-sysdns"
+        "lib-model-catalogue",
+        "lib-sysdns",
+        "lib-text-tools"
       ],
       "items": [
         {
@@ -2337,6 +2348,25 @@
           "class": "secret",
           "doc": "Saved remote connections with credentials; vault.",
           "store": "acode_sftp_profiles_v1"
+        },
+        {
+          "id": "chat-config",
+          "path": "ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.settings, .mcp.<agent>, .toggles.<agent>",
+          "class": "config",
+          "doc": "Chat defaults (agent, model, effort, permission mode), the MCP servers enabled per agent and the gateway toggles per agent; user state, copy it."
+        },
+        {
+          "id": "chat-sessions",
+          "path": "ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.sessions",
+          "class": "content",
+          "doc": "The chats kept on this phone (text and attachment names, never attachment bytes); user content."
+        },
+        {
+          "id": "chat-token",
+          "path": "encrypted prefs cloud_code_chat_secrets",
+          "class": "secret",
+          "doc": "The OpenRouter token pasted in Profile & Config; vault.",
+          "store": "cloud_code_chat_secrets"
         }
       ]
     },
@@ -2833,6 +2863,7 @@
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
+        "lib-model-catalogue",
         "lib-search-page",
         "lib-text-tools"
       ],

@@ -1,7 +1,7 @@
-package com.diegonmarcos.cloudsearch.core.models
+package com.diegonmarcos.superapp.modelcatalogue
 
-import com.diegonmarcos.cloudsearch.core.models.ModelCatalogue.Price
-import com.diegonmarcos.cloudsearch.core.models.ModelCatalogue.PriceUnit
+import com.diegonmarcos.superapp.modelcatalogue.ModelCatalogue.Price
+import com.diegonmarcos.superapp.modelcatalogue.ModelCatalogue.PriceUnit
 import org.json.JSONArray
 import org.json.JSONObject
 

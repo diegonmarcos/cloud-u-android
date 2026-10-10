@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- cloud-code Chat's native half: the encrypted OpenRouter token, streamed HTTP to the fleet's agent
+     gateway and OpenRouter, the shared model catalogue (libs:model-catalogue), and attachments
+     through the photo picker / SAF plus a recorded voice message. See src/CloudChatPlugin.java. -->
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    xmlns:android="http://schemas.android.com/apk/res/android" id="cordova-plugin-cloudchat"
+    version="1.0.0">
+    <name>Cloud Chat</name>
+
+    <js-module name="CloudChat" src="www/cloudchat.js">
+        <clobbers target="CloudChat" />
+    </js-module>
+
+    <platform name="android">
+        <config-file parent="/*" target="res/xml/config.xml">
+            <feature name="CloudChat">
+                <param name="android-package" value="com.diegonmarcos.cloudcode.chat.CloudChatPlugin" />
+            </feature>
+        </config-file>
+
+        <!-- The voice message. Asked at runtime the first time the owner records; nothing else.
+             No storage permission: files and photos come through the photo picker and SAF. -->
+        <config-file parent="/*" target="AndroidManifest.xml">
+            <uses-permission android:name="android.permission.RECORD_AUDIO" />
+        </config-file>
+
+        <framework src="androidx.security:security-crypto:1.1.0" />
+
+        <source-file src="src/CloudChatPlugin.java" target-dir="src/com/diegonmarcos/cloudcode/chat" />
+        <source-file src="src/ChatSecrets.java" target-dir="src/com/diegonmarcos/cloudcode/chat" />
+        <source-file src="src/CatalogueBridge.java" target-dir="src/com/diegonmarcos/cloudcode/chat" />
+        <source-file src="src/TokenMask.java" target-dir="src/com/diegonmarcos/cloudcode/chat" />
+    </platform>
+</plugin>

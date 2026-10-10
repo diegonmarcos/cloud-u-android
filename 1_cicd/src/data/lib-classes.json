@@ -59,6 +59,7 @@
     "ml-l-sound-yamnet":       { "class": "engine",   "why": "#798 Cloud-Lib-Ml-L-Sound-Yamnet: YAMNet (521 AudioSet classes) on LiteRT behind SoundBackendService; Cloud Calc and Cloud Camera bind it." },
     "ml-l-text-mlkit":         { "class": "engine",   "why": "Cloud-Lib-Ml-L-Text-Mlkit." },
     "ml-l-voice-vosk":         { "class": "engine",   "why": "Cloud-Lib-Ml-L-Voice-Vosk." },
+    "model-catalogue":         { "class": "gui",      "why": "The fleet's model catalogue (selection, OpenRouter pricing, section filter) and its Compose page, moved out of Cloud Search so Cloud Code's Chat shows the same catalogue (A0 Code only). Cloud Search compiles it as a module and hosts the page; Cloud Code, a Cordova WebView with no Compose, compiles its logic package and assets by reference (build-extras.gradle) and draws the table in DOM from CatalogueJson." },
     "mounts":                  { "class": "logic",    "why": "Drive's mount engine, compiled in." },
     "net":                     { "class": "contract", "why": "Typed INetBackend + Tunnel state/config types; the engine is libs:net-wg.", "budget_lines": 3200 },
     "net-wg":                  { "class": "engine",   "why": "Cloud-Lib-Net-Wg (libwg-go.so moved out of every app)." },

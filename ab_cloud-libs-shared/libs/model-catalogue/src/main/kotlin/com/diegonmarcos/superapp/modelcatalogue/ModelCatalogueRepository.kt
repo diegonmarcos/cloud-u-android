@@ -1,11 +1,9 @@
-package com.diegonmarcos.cloudsearch.core.models
+package com.diegonmarcos.superapp.modelcatalogue
 
-import com.diegonmarcos.cloudsearch.core.Cache
-import com.diegonmarcos.cloudsearch.core.Http
-import com.diegonmarcos.cloudsearch.core.models.ModelCatalogue.Catalogue
-import com.diegonmarcos.cloudsearch.core.models.ModelCatalogue.Price
-import com.diegonmarcos.cloudsearch.core.models.ModelCatalogue.PriceUnit
-import com.diegonmarcos.cloudsearch.core.models.ModelCatalogue.Source
+import com.diegonmarcos.superapp.modelcatalogue.ModelCatalogue.Catalogue
+import com.diegonmarcos.superapp.modelcatalogue.ModelCatalogue.Price
+import com.diegonmarcos.superapp.modelcatalogue.ModelCatalogue.PriceUnit
+import com.diegonmarcos.superapp.modelcatalogue.ModelCatalogue.Source
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -15,10 +13,12 @@ import java.time.ZoneOffset
  * The catalogue's prices: read live from OpenRouter at most once every [Catalogue.refreshHours],
  * kept in [cache] (filesDir, so it survives offline), and the bundled snapshot when nothing was ever
  * fetched. A failed refresh never loses what is on screen: the last stored prices stay, marked stale.
+ * The network and the disk are the host's ([CatalogueFetch], [CatalogueStore]): Cloud Search hands
+ * it its one network door, Cloud Code its Cordova plugin's (#shared since the Cloud Code chat).
  */
 class ModelCatalogueRepository(
-    private val cat: Catalogue, private val http: Http, private val cache: Cache,
-    private val clock: () -> Long, private val timeoutMs: Int,
+    private val cat: Catalogue, private val http: CatalogueFetch, private val cache: CatalogueStore,
+    private val clock: () -> Long,
 ) {
     enum class Origin { LIVE, CACHED, STALE, SNAPSHOT }
 
@@ -83,7 +83,7 @@ class ModelCatalogueRepository(
         return out
     }
 
-    private fun fetch(url: String): String? = runCatching { http.get(url, emptyMap(), timeoutMs) }.getOrNull()?.takeIf { it.code in 200..299 }?.body
+    private fun fetch(url: String): String? = runCatching { http.get(url) }.getOrNull()
 
     companion object {
         const val KEY = "model-catalogue|v1"

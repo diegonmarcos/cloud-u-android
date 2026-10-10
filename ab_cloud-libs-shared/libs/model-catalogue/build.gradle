@@ -1,0 +1,62 @@
+// libs:model-catalogue: the fleet's model catalogue, shared (moved out of Cloud Search for Cloud Code's Chat).
+//
+// The curated selection (src/main/assets/models/catalogue.json, merged into every consumer's assets),
+// its OpenRouter pricing (live once a day, cached, the bundled snapshot offline), the order and cell
+// text of every section, the section filter (Catalogue.only: Cloud Search shows all, Cloud Code A0
+// Code only) and the Compose page that draws it (modelcataloguepage/, themed and worded by the host,
+// as libs:search-page is).
+//
+// Two consumers, two ways in:
+//   ac_cloud-search  `implementation project(':libs:model-catalogue')` (build.json::modules): logic,
+//                    page and asset.
+//   ac_cloud-code    a Cordova WebView app with no Compose: its build-extras.gradle compiles the
+//                    LOGIC package dir (src/main/kotlin/.../modelcatalogue, no UI import in it) and
+//                    this asset dir BY REFERENCE, as it compiles libs/sysdns, and its Cordova plugin
+//                    hands CatalogueJson to the web page. The page package is never in that build.
+//
+// TESTED here: src/test (ModelCatalogueTest, against a RECORDED OpenRouter) runs in Cloud Search's
+// `gradle test`, which tests every project its build includes.
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.modelcatalogue'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // `api`: a consumer builds the theme (Color, TextStyle, Dp) and fills the actions slot.
+    api platform('androidx.compose:compose-bom:2025.11.01')
+    api 'androidx.compose.ui:ui'
+    api 'androidx.compose.foundation:foundation'
+    api 'androidx.compose.material3:material3'
+    // The page reads the cached prices and refreshes them off the main thread (Dispatchers.IO).
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
+    // Android's own org.json at runtime; the real library for the JVM suite.
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'junit:junit:4.13.2'
+}

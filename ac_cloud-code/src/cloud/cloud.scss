@@ -148,3 +148,485 @@ body.cloud-nav {
     color: var(--link-text-color, var(--active-color));
   }
 }
+
+// ── app chrome (Chat replaced Home): top bar, drawer, sheets, pages ─────────
+.cloud-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 48px;
+  margin: 0 -12px;
+  padding: 0 4px;
+  background-color: var(--primary-color);
+  color: var(--primary-text-color);
+  border-bottom: 1px solid var(--border-color);
+
+  .cloud-topbar-title {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+
+    h2 {
+      margin: 0;
+      font-size: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    span {
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  button {
+    border: none !important;
+  }
+}
+
+.cloud-icon-btn {
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: inherit;
+
+  .icon {
+    font-size: 22px;
+  }
+}
+
+.cloud-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120; // above the bar and panels, below Acode's dialogs (which open from sheets)
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+
+  &.cloud-overlay-bottom {
+    align-items: flex-end;
+  }
+}
+
+.cloud-drawer {
+  width: min(84vw, 320px);
+  height: 100%;
+  overflow-y: auto;
+  background-color: var(--secondary-color);
+  color: var(--secondary-text-color);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+
+  .cloud-drawer-head {
+    padding: 14px 12px 8px;
+    font-size: 15px;
+  }
+
+  .cloud-drawer-search {
+    margin: 4px 12px;
+    padding: 8px;
+    color: inherit;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+  }
+}
+
+.cloud-drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+
+  span:not(.icon) {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+  }
+}
+
+.cloud-drawer-group {
+  padding: 10px 12px 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.cloud-drawer-session {
+  display: flex;
+  align-items: center;
+}
+
+.cloud-sheet {
+  width: 100%;
+  max-height: 75vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--secondary-color);
+  color: var(--secondary-text-color);
+  border-top: 1px solid var(--border-color);
+  border-radius: 12px 12px 0 0;
+
+  .cloud-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 4px 0 12px;
+  }
+
+  .cloud-sheet-note {
+    margin: 0 12px 4px;
+    font-size: 12px;
+  }
+
+  .cloud-sheet-body {
+    overflow-y: auto;
+    padding-bottom: 8px;
+  }
+}
+
+.cloud-sheet-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 12px;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  box-sizing: border-box;
+
+  .cloud-sheet-label {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .cloud-muted {
+    font-size: 11px;
+    max-width: 50%;
+    text-align: right;
+  }
+
+  &.checked {
+    color: var(--active-color);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+  }
+
+  input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.cloud-page {
+  position: fixed;
+  inset: 0 0 var(--cloud-nav-h) 0;
+  z-index: 115;
+  overflow-y: auto;
+  padding: 0 12px 16px;
+  background-color: var(--secondary-color);
+  color: var(--secondary-text-color);
+  user-select: text;
+
+  button {
+    color: inherit;
+  }
+}
+
+.cloud-section {
+  margin-top: 12px;
+
+  h3 {
+    margin: 0 0 4px;
+    font-size: 13px;
+    text-transform: uppercase;
+    opacity: 0.75;
+  }
+}
+
+.cloud-kv {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 13px;
+
+  .cloud-kv-k {
+    flex: 0 0 38%;
+    opacity: 0.8;
+  }
+
+  .cloud-kv-v {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .cloud-token-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px;
+    color: inherit;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+  }
+}
+
+.cloud-pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+
+// ── the Chat tab: Cloud Search's chat, no search boxes ──────────────────────
+.cloud-panel.cloud-chat-panel:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.cloud-chat-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.cloud-chat-empty {
+  margin: auto;
+  text-align: center;
+
+  .cloud-chat-hello {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+}
+
+.cloud-msg {
+  max-width: 92%;
+  font-size: 14px;
+  line-height: 1.4;
+
+  &.user {
+    align-self: flex-end;
+    padding: 8px 12px;
+    border-radius: 14px 14px 4px 14px;
+    background-color: var(--active-color);
+    color: var(--primary-color);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  &.assistant {
+    align-self: flex-start;
+    width: 92%;
+
+    .cloud-msg-body > :first-child {
+      margin-top: 0;
+    }
+
+    pre {
+      overflow-x: auto;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+    }
+  }
+
+  &.error .cloud-msg-meta {
+    color: var(--error-text-color, #e66);
+  }
+
+  .cloud-msg-meta {
+    font-size: 11px;
+  }
+}
+
+.cloud-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.cloud-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 6px;
+  font-size: 11px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+
+  &.recording {
+    color: var(--error-text-color, #e66);
+  }
+
+  .cloud-chip-x {
+    border: none !important;
+    padding: 0 !important;
+  }
+}
+
+.cloud-chat-composer {
+  margin: 0 -12px;
+  padding: 6px 8px 8px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--primary-color);
+  color: var(--primary-text-color);
+
+  .cloud-chat-attach {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  .cloud-chat-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    margin: 4px 0;
+  }
+
+  .cloud-chat-input {
+    flex: 1;
+    min-width: 0;
+    max-height: 160px;
+    resize: none;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: inherit;
+    background-color: var(--secondary-color);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+  }
+
+  .cloud-chat-send {
+    width: 40px;
+    height: 40px;
+    border-radius: 50% !important;
+    border: none !important;
+    background-color: var(--active-color) !important;
+    color: var(--primary-color) !important;
+  }
+}
+
+.cloud-chat-controls {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.cloud-ctl {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 8px !important;
+  font-size: 12px;
+  color: inherit;
+  background: none;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 16px !important;
+  white-space: nowrap;
+
+  .icon {
+    font-size: 16px;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+  }
+}
+
+// ── the model picker (libs:model-catalogue, A0 Code) ────────────────────────
+.cloud-cat {
+  font-size: 12px;
+
+  h3 {
+    margin: 12px 0 4px;
+  }
+
+  .cloud-cat-current {
+    font-weight: 600;
+    margin: 8px 0 2px;
+  }
+
+  .cloud-cat-section {
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+  }
+
+  .cloud-cat-scroll {
+    overflow-x: auto;
+    margin-top: 6px;
+  }
+
+  table {
+    border-collapse: collapse;
+    min-width: 820px;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 6px 6px;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+  }
+
+  th {
+    opacity: 0.7;
+  }
+
+  tr.dim {
+    opacity: 0.45;
+  }
+
+  tr.current td {
+    color: var(--active-color);
+    font-weight: 600;
+  }
+}

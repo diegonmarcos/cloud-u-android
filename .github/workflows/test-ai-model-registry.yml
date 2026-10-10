@@ -38,7 +38,7 @@ on:
       - "aa_cloud-superapp/test/ai-registries.json"
       - "ab_cloud-libs-shared/build.json"
       - "ac_cloud-mail/build.json"
-      - "ac_cloud-search/app/src/main/assets/models/catalogue.json"
+      - "ab_cloud-libs-shared/libs/model-catalogue/src/main/assets/models/catalogue.json"
       - "ac_cloud-writer/build.json"
       - "1_cicd/src/scripts/cloud-android-ai-registry-refresh.py"
 

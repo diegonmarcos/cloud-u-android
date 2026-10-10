@@ -1,0 +1,16 @@
+{
+  "name": "cordova-plugin-cloudchat",
+  "version": "1.0.0",
+  "description": "cloud-code Chat: encrypted OpenRouter token, streamed agent-gateway HTTP, the shared model catalogue, attachments",
+  "cordova": {
+    "id": "cordova-plugin-cloudchat",
+    "platforms": [
+      "android"
+    ]
+  },
+  "keywords": [
+    "ecosystem:cordova",
+    "cordova-android"
+  ],
+  "license": "MIT"
+}

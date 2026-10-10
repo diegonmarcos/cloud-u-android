@@ -179,6 +179,9 @@ dependencies {
     implementation project(':search-core')
     // #823 the Search page (engine boxes + AI chat), shared with Cloud Browser; this app hosts and themes it.
     implementation project(':libs:search-page')
+    // The model catalogue (selection, OpenRouter pricing, the page), shared with Cloud Code's Chat,
+    // which shows only its A0 Code section; this app shows every section and hosts the page.
+    implementation project(':libs:model-catalogue')
 
     implementation platform('androidx.compose:compose-bom:2025.11.01')
     implementation 'androidx.compose.ui:ui'

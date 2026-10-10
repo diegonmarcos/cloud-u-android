@@ -23,6 +23,7 @@
     "ml-l-sound": "ac_cloud-camera",
     "ml-l-text-mlkit": "ab_cloud-libs-shared/keyboard-engines",
     "ml-l-voice-vosk": "ab_cloud-libs-shared/keyboard-engines",
+    "model-catalogue": "ac_cloud-search",
     "net": "aa_cloud-superapp",
     "ops": "aa_cloud-superapp",
     "search-page": "ac_cloud-search",

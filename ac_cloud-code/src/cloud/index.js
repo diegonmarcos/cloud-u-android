@@ -11,6 +11,10 @@
 //
 // Mounted from main.js::loadApp with ONE call (search "cloud-code seam").
 // Editor = Acode untouched: selecting it only hides these panels.
+//
+// App chrome (Chat replaced Home): every cloud panel opens with chrome.js::topBar — the
+// hamburger at the left opens a drawer of the ACTIVE page's own items (each page registers its
+// provider in MENUS; tabs.js::menuFor picks the active one), Profile & Config at the right.
 
 import "./cloud.scss";
 import fsOperation from "fileSystem";
@@ -22,23 +26,14 @@ import markdownIt from "markdown-it";
 import DOMPurify from "dompurify";
 import nav from "./nav.json";
 import targets from "./targets.gen.json";
-import { buildTabs, fitLabels, select } from "./tabs";
-import { homeStatus, listAgents, listRepos } from "./seams";
+import { buildTabs, fitLabels, menuFor, select } from "./tabs";
+import { listAgents, listRepos } from "./seams";
+import { el } from "./dom";
+import { drawer, topBar } from "./chrome";
+import { openProfile } from "./profile";
+import { chatDrawer, renderChat } from "./chat/view";
 
 const LAUNCH_VIEWS = ["myterminal"];
-
-function el(name, props = {}, ...children) {
-	const node = document.createElement(name);
-	for (const [k, v] of Object.entries(props)) {
-		if (k === "className") node.className = v;
-		else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
-		else node.setAttribute(k, v);
-	}
-	for (const c of children.flat()) {
-		if (c != null) node.append(c instanceof Node ? c : String(c));
-	}
-	return node;
-}
 
 function stored(key, fallback) {
 	return localStorage.getItem(`cloud-code.${key}`) || fallback;
@@ -48,8 +43,23 @@ function store(key, value) {
 	localStorage.setItem(`cloud-code.${key}`, value);
 }
 
+// The page's drawer items, registered by each renderer for its own tab (the hamburger reads the
+// ACTIVE tab's provider through tabs.js::menuFor). A page that registers none shows an empty drawer.
+const MENUS = {};
+
+const chrome = {
+	bar: (title, subtitle, ...actions) => topBar(title, { onMenu: openMenu, onProfile: openProfile, subtitle }, ...actions),
+	showTab: (id) => showTab(id),
+};
+
+function openMenu() {
+	const tab = tabs.find((t) => t.id === state.active);
+	const got = menuFor(state, tabs, MENUS);
+	drawer(tab ? tab.label : "Menu", got.items, ...(got.extra || []));
+}
+
 function panelHeader(title, ...actions) {
-	return el("div", { className: "cloud-panel-header" }, el("h2", {}, title), ...actions);
+	return chrome.bar(title, null, ...actions);
 }
 
 // ── #575 THE ONE shared repo store ──────────────────────────────────────────
@@ -142,6 +152,13 @@ async function renderBacklogView(panel, title, entry, ...extra) {
 		},
 	});
 	panel.replaceChildren(panelHeader(title, edit, repo, change), body, ...extra);
+	MENUS[panel.dataset.tab] = () => ({ items: [
+		{ id: "reload", label: "Reload", icon: "refresh", run: () => load(current) },
+		{ id: "entry", label: `Back to ${entry}`, icon: "home", run: () => load(entry) },
+		{ id: "edit", label: "Edit this file", icon: "edit", run: () => edit.click() },
+		{ id: "repo", label: "Open the repository", icon: "git", run: () => repo.click() },
+		{ id: "folder", label: "Backlog folder", icon: "folder_open", run: () => change.click() },
+	] });
 	await load(entry);
 }
 
@@ -165,6 +182,10 @@ async function renderRepos(panel) {
 		},
 	});
 	panel.replaceChildren(panelHeader("Repos", change), el("p", { className: "cloud-muted" }, root), list);
+	MENUS[panel.dataset.tab] = () => ({ items: [
+		{ id: "rescan", label: "Rescan", icon: "refresh", run: () => renderRepos(panel) },
+		{ id: "root", label: "Repos root folder", icon: "folder_open", run: () => change.click() },
+	] });
 	try {
 		const { items } = await listRepos(root);
 		list.replaceChildren(
@@ -200,40 +221,11 @@ async function renderAgents(panel) {
 	await renderBacklogView(panel, "Agents", nav.agents.entry, live);
 }
 
-// ── Home: one card per other tab, a Configs card, plus whatever the seam reports ──
-// #575 Backlog and Repos both read the shared store, which on Android 11+ needs
-// all-files access granted per app: the Configs card is the one place to check
-// and grant it, rather than only stumbling into the grant button on a read error.
-function configsCard() {
-	const status = el("span", { className: "cloud-muted" }, "Checking …");
-	const card = el("button", {
-		className: "cloud-card",
-		onclick: () => system.manageAllFiles(() => refresh(), (e) => toast(String(e))),
-	}, el("span", { className: "icon settings" }), el("span", {}, "Configs"), status);
-	function refresh() {
-		system.isExternalStorageManager(
-			(granted) => { status.textContent = granted ? "Storage access granted" : "Grant storage access"; },
-			() => { status.textContent = "Grant storage access"; },
-		);
-	}
-	refresh();
-	return card;
-}
-
-async function renderHome(panel) {
-	const { cards } = await homeStatus();
-	const tiles = tabs
-		.filter((t) => t.view !== "home")
-		.map((t) =>
-			el("button", { className: "cloud-card", onclick: () => showTab(t.id) },
-				el("span", { className: `icon ${t.icon}` }),
-				el("span", {}, t.label),
-			),
-		);
-	panel.replaceChildren(
-		panelHeader("Home"),
-		el("div", { className: "cloud-grid" }, tiles, configsCard(), cards.map((c) => el("div", { className: "cloud-card" }, c.title))),
-	);
+// ── Chat (replaced Home): src/cloud/chat ───────────────────────────────────
+// The Home tiles duplicated the bar; its Configs card (the all-files grant) is in Profile & Config.
+async function renderChatTab(panel) {
+	MENUS[panel.dataset.tab] = () => chatDrawer(drawer);
+	await renderChat(panel, chrome);
 }
 
 // ── Browser: local pages in Acode's own browser plugin ─────────────────────
@@ -243,6 +235,7 @@ async function renderBrowser(panel) {
 		store("browser.last", url);
 		browser.open(url);
 	};
+	MENUS[panel.dataset.tab] = () => ({ items: nav.browser.presets.map((p, i) => ({ id: `preset${i}`, label: p.label, icon: "public", run: () => open(p.url) })) });
 	panel.replaceChildren(
 		panelHeader("Browser"),
 		el("div", { className: "cloud-row" }, input, el("button", { className: "icon open_in_browser", onclick: () => open(input.value) })),
@@ -264,7 +257,7 @@ const VIEWS = {
 	editor: null,
 	backlog: renderBacklog,
 	repos: renderRepos,
-	home: renderHome,
+	chat: renderChatTab,
 	agents: renderAgents,
 	browser: renderBrowser,
 	myterminal: null,

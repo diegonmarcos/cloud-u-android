@@ -109,7 +109,8 @@
         "libs:text-tools",
         "libs:bottomnav",
         "libs:search-page",
-        "search-core"
+        "search-core",
+        "libs:model-catalogue"
       ]
     },
     "search-core": {
@@ -145,6 +146,11 @@
     "libs:bottomnav": {
       "_doc": "#868 the fleet's bottom island (BottomNavIsland) and page-tab strip (PageTabs), and NavDecl, which reads ui.bottom_nav/ui.sections as baked into BuildConfig.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
+    },
+    "libs:model-catalogue": {
+      "_doc": "The model catalogue (Chat > Search > the model chip): the curated selection (its assets models/catalogue.json, merged into this app's), the OpenRouter pricing repository, the section filter and the Compose page, moved out of this app (search-core models/, app models/) so Cloud Code's Chat shows the same catalogue (A0 Code only) from one implementation. This app supplies the theme, the words, the network door and the cache dir (models/ModelCatalogueSource.kt, models/ModelCataloguePage.kt).",
+      "dir": "../ab_cloud-libs-shared/libs/model-catalogue",
       "type": "library"
     }
   },

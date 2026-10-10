@@ -68,3 +68,18 @@ export function select(state, tab, launchViews) {
 		showPanel: tab.view === "editor" ? null : tab.id,
 	};
 }
+
+/**
+ * What the hamburger lists: the ACTIVE tab's own items, from the provider that tab's page
+ * registered ({items, extra}). Nothing is shared between pages: another tab's provider is never
+ * consulted, and a tab with none (the Editor, a launch view) gets an empty drawer.
+ * @param {{active: string}} state
+ * @param {{id: string}[]} tabs
+ * @param {Object<string, function(): {items: object[], extra?: Node[]}>} menus
+ */
+export function menuFor(state, tabs, menus) {
+	const tab = tabs.find((t) => t.id === state.active);
+	const provider = tab && Object.prototype.hasOwnProperty.call(menus, tab.id) ? menus[tab.id] : null;
+	const got = provider ? provider() : null;
+	return { tab: tab ? tab.id : null, items: (got && got.items) || [], extra: (got && got.extra) || [] };
+}

@@ -1,15 +1,11 @@
-package com.diegonmarcos.cloudsearch.core.models
+package com.diegonmarcos.superapp.modelcatalogue
 
-import com.diegonmarcos.cloudsearch.core.Cache
-import com.diegonmarcos.cloudsearch.core.Fixtures
-import com.diegonmarcos.cloudsearch.core.Http
-import com.diegonmarcos.cloudsearch.core.models.ModelCatalogue.Kind
-import com.diegonmarcos.cloudsearch.core.models.ModelCatalogue.Price
-import com.diegonmarcos.cloudsearch.core.models.ModelCatalogue.PriceUnit
-import com.diegonmarcos.cloudsearch.core.models.ModelCatalogue.RankBy
-import com.diegonmarcos.cloudsearch.core.models.ModelCatalogue.Source
-import com.diegonmarcos.cloudsearch.core.models.ModelCatalogueRepository.Origin
-import com.diegonmarcos.cloudsearch.core.repoRoot
+import com.diegonmarcos.superapp.modelcatalogue.ModelCatalogue.Kind
+import com.diegonmarcos.superapp.modelcatalogue.ModelCatalogue.Price
+import com.diegonmarcos.superapp.modelcatalogue.ModelCatalogue.PriceUnit
+import com.diegonmarcos.superapp.modelcatalogue.ModelCatalogue.RankBy
+import com.diegonmarcos.superapp.modelcatalogue.ModelCatalogue.Source
+import com.diegonmarcos.superapp.modelcatalogue.ModelCatalogueRepository.Origin
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -23,7 +19,7 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 
 /**
- * Chat › Search's model catalogue against a RECORDED OpenRouter (fixtures/openrouter-catalogue, read
+ * The shared model catalogue (Cloud Search's Chat › Search, Cloud Code's Chat) against a RECORDED OpenRouter (fixtures/openrouter-catalogue, read
  * 2026-10-10): the per-token → per-1M conversion and the floor, the order of every section
  * (Anthropic first, then ascending price), one row per provider, the daily cache and its offline
  * fallbacks, every curated id present in the catalogue that prices it, and the chat refusing what
@@ -32,9 +28,10 @@ import java.io.File
 class ModelCatalogueTest {
     @get:Rule val tmp = TemporaryFolder()
 
-    private val curatedText: String by lazy { File(repoRoot, "ac_cloud-search/app/src/main/assets/models/catalogue.json").readText() }
+    // The test task runs in this module's directory: the selection every consumer's assets merge.
+    private val curatedText: String by lazy { File("src/main/assets/" + ModelCatalogue.ASSET).readText() }
     private val cat by lazy { ModelCatalogue.parse(curatedText) }
-    private fun fx(name: String) = Fixtures.text("openrouter-catalogue/$name")
+    private fun fx(name: String) = (javaClass.getResource("/fixtures/openrouter-catalogue/$name") ?: error("missing fixture $name")).readText(Charsets.UTF_8)
     private fun section(id: String) = cat.sections.first { it.id == id }
 
     // ── conversion and floor ─────────────────────────────────────────────
@@ -254,12 +251,11 @@ class ModelCatalogueTest {
 
     // ── prices: daily, cached, offline ───────────────────────────────────
 
-    private inner class Recorded(var down: Boolean = false) : Http {
+    private inner class Recorded(var down: Boolean = false) : CatalogueFetch {
         val asked = mutableListOf<String>()
-        override fun get(url: String, headers: Map<String, String>, timeoutMs: Int): Http.Response {
+        override fun get(url: String): String? {
             asked += url
-            assertTrue("the models API needs no key", headers.isEmpty())
-            if (down) return Http.Response(503, "")
+            if (down) return null
             val name = when {
                 url == cat.urls.chat -> "models.json"
                 url == cat.urls.embeddings -> "embeddings-models.json"
@@ -268,14 +264,12 @@ class ModelCatalogueTest {
                 url.startsWith("https://openrouter.ai/api/v1/images/models/") -> "image-endpoints-" + url.removePrefix("https://openrouter.ai/api/v1/images/models/").removeSuffix("/endpoints").replace("/", "_") + ".json"
                 else -> "endpoints-" + url.removePrefix("https://openrouter.ai/api/v1/models/").removeSuffix("/endpoints").replace("/", "_") + ".json"
             }
-            val res = Fixtures::class.java.getResource("/fixtures/openrouter-catalogue/$name") ?: return Http.Response(404, "")
-            return Http.Response(200, res.readText())
+            return javaClass.getResource("/fixtures/openrouter-catalogue/$name")?.readText()
         }
-        override fun post(url: String, headers: Map<String, String>, body: String, timeoutMs: Int) = Http.Response(405, "")
     }
 
     private var now = 1_791_640_000_000L // 2026-10-10
-    private fun repo(http: Http, c: ModelCatalogue.Catalogue = cat) = ModelCatalogueRepository(c, http, Cache(tmp.root), { now }, 1000)
+    private fun repo(http: CatalogueFetch, c: ModelCatalogue.Catalogue = cat) = ModelCatalogueRepository(c, http, FileCatalogueStore(tmp.root)) { now }
 
     @Test fun aRefreshPricesEveryRowFromTheLiveCatalogues() {
         val http = Recorded()
@@ -330,11 +324,11 @@ class ModelCatalogueTest {
         assertEquals(Origin.SNAPSHOT, r.stored().origin)
         val shown = ModelCatalogue.ordered(section("A0"), p.prices, p.missing)
         assertTrue("every row still has a price offline", shown.all { it.price != null })
-        assertEquals(Origin.SNAPSHOT, ModelCatalogueRepository(cat, http, Cache(File(tmp.root, "x")).also { File(tmp.root, "x").mkdirs() }, { now }, 1).stored().origin)
+        assertEquals(Origin.SNAPSHOT, ModelCatalogueRepository(cat, http, FileCatalogueStore(File(tmp.root, "x")).also { File(tmp.root, "x").mkdirs() }) { now }.stored().origin)
     }
 
     @Test fun anUnreadableCacheFallsBackToTheSnapshot() {
-        Cache(tmp.root).put(ModelCatalogueRepository.KEY, "not json", now)
+        FileCatalogueStore(tmp.root).put(ModelCatalogueRepository.KEY, "not json", now)
         assertEquals(Origin.SNAPSHOT, repo(Recorded(down = true)).load().origin)
     }
 
@@ -353,12 +347,8 @@ class ModelCatalogueTest {
     }
 
     @Test fun aCatalogueThatFailsKeepsItsSectionsOnTheSnapshotWithoutCallingThemMissing() {
-        val partial = object : Http {
-            val inner = Recorded()
-            override fun get(url: String, headers: Map<String, String>, timeoutMs: Int) =
-                if (url == cat.urls.embeddings || url == cat.urls.images) Http.Response(500, "") else inner.get(url, headers, timeoutMs)
-            override fun post(url: String, headers: Map<String, String>, body: String, timeoutMs: Int) = Http.Response(405, "")
-        }
+        val inner = Recorded()
+        val partial = CatalogueFetch { url -> if (url == cat.urls.embeddings || url == cat.urls.images) null else inner.get(url) }
         val p = repo(partial).load()
         assertEquals(Origin.LIVE, p.origin)
         assertNull(p.prices!!["baai/bge-m3"])
@@ -378,6 +368,42 @@ class ModelCatalogueTest {
     @Test fun theCacheRoundTrips() {
         val p = ModelCatalogueRepository.Priced(mapOf("a/b" to Price(PriceUnit.MEGAPIXEL, null, 0.014, null, 0.01)), setOf("c/d"), null, Origin.LIVE)
         assertEquals(p, ModelCatalogueRepository.decode(ModelCatalogueRepository.encode(p)))
+    }
+
+    // ── the section filter (Cloud Code shows A0 Code only) ───────────────
+
+    @Test fun theSectionFilterKeepsOnlyTheAskedSections() {
+        val code = cat.only(setOf("A0"))
+        assertEquals(listOf("A0"), code.sections.map { it.id })
+        assertEquals("the group of a kept section stays, the empty ones go", listOf("A"), code.groups.map { it.id })
+        assertEquals(section("A0").rows, code.sections.single().rows)
+        assertTrue("A0 is a chat section: every listed row can be picked", ModelCatalogue.ordered(code.sections.single(), null, emptySet()).all { it.selectable })
+        assertEquals("null = every section (Cloud Search)", cat, cat.only(null))
+        assertEquals(listOf("A0", "B1"), cat.only(setOf("B1", "A0")).sections.map { it.id })
+        assertThrows(IllegalArgumentException::class.java) { cat.only(setOf("A0", "Z9")) }
+    }
+
+    @Test fun theWebExportIsWhatThePageDraws() {
+        val code = cat.only(setOf("A0"))
+        val live = OpenRouterPrices.list(fx("models.json"))
+        val priced = ModelCatalogueRepository.Priced(live, emptySet(), now, Origin.LIVE)
+        val o = CatalogueJson.shown(code, priced, "2026-10-10")
+        assertEquals("2026-10-10", o.getString("as_of"))
+        assertEquals("live", o.getString("origin"))
+        val groups = o.getJSONArray("groups")
+        assertEquals(1, groups.length())
+        val s = groups.getJSONObject(0).getJSONArray("sections").getJSONObject(0)
+        assertEquals("A0", s.getString("id"))
+        val rows = s.getJSONArray("rows")
+        val shown = ModelCatalogue.ordered(code.sections.single(), live, emptySet())
+        assertEquals(shown.size, rows.length())
+        shown.forEachIndexed { i, r ->
+            val j = rows.getJSONObject(i)
+            assertEquals(r.row.id, j.getString("id"))
+            assertEquals(ModelCatalogue.outputCell(code.sections.single(), r.price), j.getString("output"))
+            assertEquals(r.selectable, j.getBoolean("selectable"))
+        }
+        assertEquals("nothing fetched yet = the snapshot", "snapshot", CatalogueJson.shown(code, null, cat.pricingAsOf).getString("origin"))
     }
 
     private fun small(rows: String) = ModelCatalogue.parse(

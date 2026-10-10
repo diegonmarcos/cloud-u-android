@@ -1,4 +1,4 @@
-package com.diegonmarcos.cloudsearch.core.models
+package com.diegonmarcos.superapp.modelcatalogue
 
 import org.json.JSONArray
 import org.json.JSONObject
@@ -7,8 +7,11 @@ import java.math.MathContext
 import java.util.Locale
 
 /**
- * Chat › Search's model catalogue: the curated selection (app assets models/catalogue.json — which
- * model per provider per section, its params and licence) priced by OpenRouter's live catalogues.
+ * The fleet's model catalogue (libs:model-catalogue, shared by Cloud Search's Chat › Search and Cloud
+ * Code's Chat): the curated selection (this lib's assets models/catalogue.json, merged into every
+ * consumer's assets — which model per provider per section, its params and licence) priced by
+ * OpenRouter's live catalogues. A consumer may show only some sections ([Catalogue.only]): Cloud Code
+ * shows A0 Code alone.
  * Groups A Text, B Search, C Audio & Speech, D Visual Media; each section a dense table, Anthropic
  * first as the reference, then one row per provider ranked by price, low to high. Only `chat`
  * sections serve the chat; the others are browsable and greyed. Nothing here knows a network.
@@ -58,6 +61,18 @@ object ModelCatalogue {
     data class Catalogue(val version: Int, val pricingAsOf: String, val refreshHours: Int, val urls: Urls, val groups: List<Group>) {
         val sections: List<Section> get() = groups.flatMap { it.sections }
         val rows: List<Row> get() = sections.flatMap { it.rows }
+
+        /**
+         * The section filter: only the sections whose id is in [ids], each group keeping its order and
+         * a group left empty dropped. null = every section (Cloud Search); setOf("A0") = Cloud Code's
+         * code models only. An id the catalogue does not have is refused rather than shown as nothing.
+         */
+        fun only(ids: Set<String>?): Catalogue {
+            if (ids == null) return this
+            val unknown = ids - sections.map { it.id }.toSet()
+            require(unknown.isEmpty()) { "no catalogue section $unknown" }
+            return copy(groups = groups.map { g -> g.copy(sections = g.sections.filter { it.id in ids }) }.filter { it.sections.isNotEmpty() })
+        }
     }
 
     /** One row as drawn: its price (live, cached or the snapshot), whether OpenRouter still lists it, whether the chat may pick it. */
@@ -65,10 +80,13 @@ object ModelCatalogue {
 
     const val ANTHROPIC_PREFIX = "anthropic/"
 
+    /** Where the selection is, in every consumer's merged assets (and in this lib's src/main/assets). */
+    const val ASSET = "models/catalogue.json"
+
     /** Two prices closer than this are the same price: no "Floor" note, no reorder. */
     const val SAME = 0.01
 
-    /** [json] is assets/models/catalogue.json. Throws on a selection that would draw a wrong table. */
+    /** [json] is assets/[ASSET]. Throws on a selection that would draw a wrong table. */
     fun parse(json: String): Catalogue {
         val o = JSONObject(json)
         val u = o.getJSONObject("urls")

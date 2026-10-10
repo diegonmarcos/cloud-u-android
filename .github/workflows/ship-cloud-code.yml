@@ -42,11 +42,17 @@ on:
       # (1_cicd/src/data/lib-primary-consumers.json), cross-app dirs, shared
       # data manifests and this workflow file. fleet-refresh.yml (schedule
       # only) ships the app for a moved static lib or cross-app dir.
+      #   input: "0_apps/src/root/mcp.json"
       #   input: "1_cicd/src/cicd/ship-cloud-code.yml"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      #   input: "ab_cloud-libs-shared/libs/model-catalogue/**"
       #   input: "ab_cloud-libs-shared/libs/sysdns/**"
+      #   input: "ab_cloud-libs-shared/libs/text-tools/**"
+      #   input: "ac_cloud-account/app/src/main/AndroidManifest.xml"
+      #   input: "ac_cloud-account/build.json"
+      #   input: "ac_cloud-c3/data/services_private.json"
       #   input: "ac_cloud-myterminal/build.json"
       #   input: "ac_cloud-myterminal/hub/src/main/AndroidManifest.xml"
       # ── end MANAGED-PATHS-HEADER ──

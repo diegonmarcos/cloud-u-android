@@ -30,7 +30,8 @@ try {
 }
 
 // #562's order is the requirement; the RENDERED labels are what is compared.
-const required = "Backlog|Editor|Repos|Home|Agents|Browser|MyTerminal";
+// Chat replaced Home (the owner's request): same place in the bar, its own renderer.
+const required = "Backlog|Editor|Repos|Chat|Agents|Browser|MyTerminal";
 const rendered = model.map((t) => t.label).join("|");
 out(rendered === required, `rendered order ${rendered} (required ${required})`);
 
@@ -40,6 +41,11 @@ for (const t of model) {
 	const has = new RegExp(`\\.icon\\.${t.icon.replace(/[-]/g, "\\-")}\\s*:{1,2}before`).test(css);
 	out(has, `tab ${t.id} icon '${t.icon}' exists in src/res/icons/style.css`);
 }
+
+out(!model.some((t) => t.id === "home" || t.view === "home" || /home/i.test(t.label)), "no Home tab is left in the bar");
+const chatTab = model.find((t) => t.id === "chat");
+out(!!chatTab && chatTab.view === "chat" && views.includes("chat") && model.indexOf(chatTab) === 3, `Chat sits where Home was (4th), with a renderer (${chatTab?.view})`);
+out(!/renderHome|homeStatus/.test(index), "index.js keeps no Home renderer or seam call");
 
 // Measured fit: the declared narrowest viewport still gives every tab the
 // touch floor, and the device-side verdict goes compact on overflow, never clips.

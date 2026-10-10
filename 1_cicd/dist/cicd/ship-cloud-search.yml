@@ -53,6 +53,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/text-tools/**"
       # ── end MANAGED-PATHS-HEADER ──
+      - "ab_cloud-libs-shared/libs/model-catalogue/**"
       - "ab_cloud-libs-shared/libs/search-page/**"
       - "ac_cloud-search/**"
 permissions:
