@@ -77,8 +77,17 @@ object NetworkBadgeModel {
         actions = actions(s),
     )
 
-    fun title(s: Snapshot): String =
-        "Mesh · " + if (s.connected) "Connected" else "Disconnected"
+    /** On the mesh or not: the same [WgLink] rule the status strip's WG icon follows. [Snapshot.connected]
+     *  is only "the tunnel runs" (it drives Connect/Disconnect); a tunnel with no recent hub handshake is
+     *  up but OFF the mesh, and the title must not say Connected. */
+    fun link(s: Snapshot): WgLink.Reading =
+        WgLink.derive(s.connected, s.peers.map { it.lastHandshakeMs }, s.nowMs, s.path)
+
+    fun title(s: Snapshot): String = "Mesh · " + when {
+        !s.connected -> "Disconnected"
+        link(s).onMesh -> "Connected"
+        else -> "Tunnel up, off mesh"
+    }
 
     fun alwaysOnLabel(s: Snapshot) = "Always On: " + if (s.alwaysOn) "ON" else "OFF"
 
@@ -105,6 +114,7 @@ object NetworkBadgeModel {
         meshIp(s).takeIf { it.isNotEmpty() }?.let { parts += it }
         parts += peerCount(s.peers.size)
         if (s.connected && s.path.isNotBlank()) parts += s.path
+        if (s.connected && !link(s).onMesh) parts += link(s).reason
         if (s.connected) {
             parts += "↓${bytes(s.peers.sumOf { it.rx })} ↑${bytes(s.peers.sumOf { it.tx })}"
         }
@@ -116,6 +126,7 @@ object NetworkBadgeModel {
         if (s.note.isNotBlank()) l += s.note
         l += "Tunnel: ${s.tunnel.ifBlank { "-" }}" +
             if (s.profile.isNotBlank() && s.profile != s.tunnel) " (profile ${s.profile})" else ""
+        if (s.connected) l += "Mesh: " + link(s).reason
         l += "Interface: " + s.addresses.filter { it.isNotBlank() }.joinToString(", ").ifEmpty { "-" }
         if (s.path.isNotBlank()) l += "Path: ${s.path}" + if (s.pathDetail.isNotBlank()) " (${s.pathDetail})" else ""
         l += "Mesh DNS: " + s.dns.filter { it.isNotBlank() }.joinToString(", ").ifEmpty { "-" }

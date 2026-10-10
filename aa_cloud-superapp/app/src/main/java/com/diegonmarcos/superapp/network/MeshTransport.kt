@@ -91,7 +91,7 @@ object MeshTransport {
     // ── the plan a connect chose ────────────────────────────────────────
 
     enum class Path(val id: String, val label: String) {
-        DIRECT("direct", "Direct UDP"), PINNED("pinned", "Pinned IP"), DOH("doh", "DoH"), RELAY("relay", "TLS-443 relay"), NONE("none", "No path");
+        DIRECT("direct", "Direct UDP"), PINNED("pinned", "Pinned IP"), DOH("doh", "DoH"), RELAY("relay", "TLS-443 relay"), NONE("none", WgLink.NO_PATH);
         companion object { fun of(id: String?): Path? = entries.firstOrNull { it.id == id } }
     }
 

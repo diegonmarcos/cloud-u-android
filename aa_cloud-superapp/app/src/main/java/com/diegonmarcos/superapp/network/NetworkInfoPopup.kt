@@ -5,8 +5,6 @@ import com.diegonmarcos.superapp.battery.SysfsProc
 import com.diegonmarcos.superapp.battery.BatterySessionStats
 import com.diegonmarcos.superapp.battery.BatteryEstimatePopup
 
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -31,20 +29,22 @@ import com.wireguard.android.backend.Tunnel
 import java.net.NetworkInterface
 
 /**
- * Status-strip network popup. Sections, in the order the user
- * actually wants to scan:
+ * Status-strip network popup. Sections in NetworkSections.ORDER — the
+ * strip's own icon order (mobile, WiFi, BT, WG, KDE, ADB, Data, HS),
+ * then Network:
  *   1. Cellular  — carrier · type · bars+dBm · mobile RX/TX rate.
  *   2. WiFi      — SSID · channel · RSSI · link speed · WiFi RX/TX rate.
- *   3. Mesh      — every wg.../tun... interface up (NOT just the app's
+ *   3. Bluetooth — adapter state, then each connected device (name,
+ *                  profiles, battery) and their count (BtLinks).
+ *   4. Mesh      — ON / NO MESH / OFF and why (WgLink), then
+ *                  every wg.../tun... interface up (NOT just the app's
  *                  GoBackend tunnel). Catches the official WireGuard
  *                  app's tunnel alongside ours.
  *                  (KDoc trap: never write the literal asterisk-
  *                  slash glob inside a block comment — it
  *                  terminates the doc; see also BatterySessionStats
  *                  + SysfsProc for the same engine fix.)
- *   4. Bluetooth — adapter state + connected device names (HEADSET /
- *                  A2DP / GATT) via the hidden BluetoothDevice
- *                  isConnected() probe.
+ *   4b. KDE      — connected / paired KDE Connect devices.
  *   5. ADB       — USB / Wireless debugging, the wireless IP:port, the
  *                  privileged shell channel (libs:shizuku-adb-debug-tools'
  *                  own ChannelReader + ChannelState) and the ADB Shell page.
@@ -74,24 +74,23 @@ object NetworkInfoPopup {
     @Volatile private var lastSample: Sample? = null
 
     // Section keys: the strip passes the tapped icon's key so the bubble opens on that section.
-    const val CELLULAR = "cellular"; const val WIFI = "wifi"; const val MESH = "mesh"; const val KDE = "kde"
-    const val BLUETOOTH = "bluetooth"; const val ADB = "adb"; const val DATA = "data"; const val HOTSPOT = "hotspot"
+    const val CELLULAR = NetworkSections.CELLULAR; const val WIFI = NetworkSections.WIFI; const val MESH = NetworkSections.MESH
+    const val KDE = NetworkSections.KDE; const val BLUETOOTH = NetworkSections.BLUETOOTH; const val ADB = NetworkSections.ADB
+    const val DATA = NetworkSections.DATA; const val HOTSPOT = NetworkSections.HOTSPOT
 
-    /** WG link level for the strip's dots + a detail line, from the freshest peer handshake. Blocking (engine binder). */
-    fun wgSignal(ctx: Context): Pair<Int, String> {
+    /** Is the phone on the mesh: the WG icon's, dots' and this popup's one truth (see [WgLink]).
+     *  Blocking (engine binder). [vpnTransport] only explains an OFF. */
+    fun wgLink(ctx: Context, vpnTransport: Boolean = hasTransport(ctx, NetworkCapabilities.TRANSPORT_VPN)): WgLink.Reading {
         val b = WgState.backend(ctx)
         val up = runCatching { b.getState(WgState.tunnel) == Tunnel.State.UP }.getOrDefault(false)
         val stats = if (up) runCatching { b.getStatistics(WgState.tunnel) }.getOrNull() else null
-        return wgSignalOf(up, stats)
+        return wgLinkOf(ctx, up, stats, vpnTransport)
     }
 
-    private fun wgSignalOf(up: Boolean, stats: com.wireguard.android.backend.Statistics?): Pair<Int, String> {
-        if (!up) return SignalLevels.NONE to "tunnel down"
-        val newest = runCatching {
-            stats?.peers()?.maxOfOrNull { stats.peer(it)?.latestHandshakeEpochMillis() ?: 0L }
-        }.getOrNull() ?: 0L
-        val age = if (newest > 0L) (System.currentTimeMillis() - newest).coerceAtLeast(0L) else null
-        return SignalLevels.wg(true, age) to (if (age != null) "handshake ${age / 1000}s ago" else "no handshake")
+    private fun wgLinkOf(ctx: Context, up: Boolean, stats: com.wireguard.android.backend.Statistics?, vpnTransport: Boolean): WgLink.Reading {
+        val hs = runCatching { stats?.peers()?.map { stats.peer(it)?.latestHandshakeEpochMillis() ?: 0L } }.getOrNull().orEmpty()
+        val path = if (up) runCatching { MeshTransport.current(ctx)?.path?.label }.getOrNull().orEmpty() else ""
+        return WgLink.derive(up, hs, System.currentTimeMillis(), path, vpnTransport)
     }
 
     fun show(ctx: Context, anchor: View, focus: String? = null) {
@@ -124,36 +123,64 @@ object NetworkInfoPopup {
         val sections = HashMap<String, View>()
         fun mark(key: String, v: View): View { sections[key] = v; return v }
 
-        // ── 1. Cellular
+        // The sections, keyed; laid out below in NetworkSections.ORDER — the strip's icon order.
+        val gap = { container.addView(spacer(ctx, (6 * d).toInt())) }
+        val openAdbShell: () -> Unit = {
+            dismiss()
+            // Configs › Network › ADB Shell inside the shell; the lib's own activity anywhere else.
+            val shell = ctx as? com.diegonmarcos.superapp.ShellActivity
+            if (shell != null) shell.openSectionPage("config", "adb-shell")
+            else com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctx)
+        }
+        val usb = readUsbState(ctx)
+        val section = mapOf<String, () -> Unit>(
+        // ── Cellular
+        CELLULAR to {
         container.addView(mark(CELLULAR, lightRow(ctx, "Cellular", hasTransport(ctx, NetworkCapabilities.TRANSPORT_CELLULAR)) {
             dismiss(); openSettings(ctx,
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Settings.Panel.ACTION_INTERNET_CONNECTIVITY
                 else Settings.ACTION_WIRELESS_SETTINGS)
         }))
         for (row in readCellular(ctx, sample, prev)) container.addView(valueSmall(ctx, row))
-        container.addView(spacer(ctx, (6 * d).toInt()))
+        gap()
+        },
 
-        // ── 2. WiFi
+        // ── WiFi
+        WIFI to {
         container.addView(mark(WIFI, lightRow(ctx, "WiFi", wifiEnabled(ctx)) {
             dismiss(); openSettings(ctx,
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Settings.Panel.ACTION_WIFI
                 else Settings.ACTION_WIFI_SETTINGS)
         }))
         for (row in readWifi(ctx, sample, prev)) container.addView(valueSmall(ctx, row))
-        container.addView(spacer(ctx, (6 * d).toInt()))
+        gap()
+        },
 
-        // ── 3. Mesh — header carries one status light PER mesh (wg0 + wg-public
-        //      ride the single Android tunnel). Each light pings that mesh's hub
-        //      (.1 of its allowed-IP range); tap toggles the shared tunnel. Below,
-        //      a labelled block per mesh: endpoint, last talk, key, IP range.
+        // ── Bluetooth — adapter light, then the connected devices (name, profiles, battery) and their
+        //    count: the same BtLinks reading the strip's BT icon + dots are drawn from.
+        BLUETOOTH to {
+        val bt = BtLinks.read(ctx)
+        container.addView(mark(BLUETOOTH, lightRow(ctx, "Bluetooth", bt.adapterOn) {
+            dismiss(); openSettings(ctx, Settings.ACTION_BLUETOOTH_SETTINGS)
+        }))
+        for (row in BtLinks.lines(bt)) container.addView(valueSmall(ctx, row))
+        gap()
+        },
+
+        // ── Mesh — header carries one status light PER mesh (wg0 + wg-public
+        //    ride the single Android tunnel). Each light pings that mesh's hub
+        //    (.1 of its allowed-IP range); tap toggles the shared tunnel. Below,
+        //    a labelled block per mesh: endpoint, last talk, key, IP range.
+        MESH to {
         val meshes = meshList(ctx)
         container.addView(mark(MESH, meshHeaderRow(ctx, meshes) { dismiss(); toggleMesh(ctx) }))
-        val stats = runCatching {
-            val b = WgState.backend(ctx)
-            if (b.getState(WgState.tunnel) == Tunnel.State.UP) b.getStatistics(WgState.tunnel) else null
-        }.getOrNull()
-        val (wgLevel, wgDetail) = wgSignalOf(stats != null, stats)
-        container.addView(valueSmall(ctx, "Signal ${SignalLevels.label(wgLevel)} ($wgDetail)"))
+        val meshUp = meshUp(ctx)
+        val stats = if (meshUp) runCatching { WgState.backend(ctx).getStatistics(WgState.tunnel) }.getOrNull() else null
+        // The same reading the strip's WG icon + dots are drawn from, with its reason spelled out.
+        val link = wgLinkOf(ctx, meshUp, stats, hasTransport(ctx, NetworkCapabilities.TRANSPORT_VPN))
+        container.addView(valueSmall(ctx, "State: " + when (link.state) {
+            WgLink.State.ON -> "ON"; WgLink.State.NO_MESH -> "NO MESH"; WgLink.State.OFF -> "OFF" } + " — " + link.reason))
+        container.addView(valueSmall(ctx, "Signal ${SignalLevels.label(link.level)}"))
         if (meshes.isEmpty()) {
             for (row in readMesh(ctx)) container.addView(valueSmall(ctx, row))
         } else {
@@ -162,9 +189,11 @@ object NetworkInfoPopup {
                 for (row in meshDetail(m, stats)) container.addView(valueSmall(ctx, row))
             }
         }
-        container.addView(spacer(ctx, (6 * d).toInt()))
+        gap()
+        },
 
-        // ── 3b. KDE Connect — status + connected device count; tap → KDE configs.
+        // ── KDE Connect — status + connected device count; tap → KDE configs.
+        KDE to {
         val kdeConn = runCatching {
             com.diegonmarcos.superapp.kdeconnect.KdeConnectManager.connectedIds().size
         }.getOrDefault(0)
@@ -175,40 +204,31 @@ object NetworkInfoPopup {
             dismiss(); (ctx as? com.diegonmarcos.superapp.ShellActivity)?.openSectionPage("config", "kde")
         }))
         container.addView(valueSmall(ctx, "$kdeConn / $kdeTotal device(s) connected"))
-        container.addView(spacer(ctx, (6 * d).toInt()))
+        gap()
+        },
 
-        // ── 4. Bluetooth
-        container.addView(mark(BLUETOOTH, lightRow(ctx, "Bluetooth", bluetoothEnabled(ctx)) {
-            dismiss(); openSettings(ctx, Settings.ACTION_BLUETOOTH_SETTINGS)
-        }))
-        for (row in readBluetooth(ctx)) container.addView(valueSmall(ctx, row))
-        container.addView(spacer(ctx, (6 * d).toInt()))
-
-        // ── 5. ADB — USB / Wireless debugging + the privileged shell channel.
-        val openAdbShell: () -> Unit = {
-            dismiss()
-            // Configs › Network › ADB Shell inside the shell; the lib's own activity anywhere else.
-            val shell = ctx as? com.diegonmarcos.superapp.ShellActivity
-            if (shell != null) shell.openSectionPage("config", "adb-shell")
-            else com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctx)
-        }
+        // ── ADB — USB / Wireless debugging + the privileged shell channel.
+        ADB to {
         val adb = AdbSection.read(ctx)
         // The light opens the ADB Shell page too: every place that would switch debugging or the
         // channel hands off to that one page (test-adb-shell-one-place.sh), never to Developer options.
         container.addView(mark(ADB, lightRow(ctx, "ADB", adb.usb || adb.wireless, openAdbShell)))
         AdbSection.render(ctx, adb, container, ::valueSmall)
         container.addView(linkRow(ctx, "ADB Shell ›", openAdbShell))
-        container.addView(spacer(ctx, (6 * d).toInt()))
+        gap()
+        },
 
-        // ── 6. Data (USB-C cable in a data mode, or OTG host)
-        val usb = readUsbState(ctx)
+        // ── Data (USB-C cable in a data mode, or OTG host)
+        DATA to {
         container.addView(mark(DATA, lightRow(ctx, "Data", usb.data) {
             dismiss(); openUsbSettings(ctx)
         }))
         for (row in readUsb(ctx, usb)) container.addView(valueSmall(ctx, row))
-        container.addView(spacer(ctx, (6 * d).toInt()))
+        gap()
+        },
 
-        // ── 7. Hotspot / tethering
+        // ── Hotspot / tethering
+        HOTSPOT to {
         val tether = readTether(ctx, usb)
         container.addView(mark(HOTSPOT, lightRow(ctx, "Hotspot", tether.active) {
             dismiss(); openTetherSettings(ctx)
@@ -217,7 +237,10 @@ object NetworkInfoPopup {
         container.addView(buttonRow(ctx,
             "Tethering settings ›" to { dismiss(); openTetherSettings(ctx) },
             "ADB Shell ›" to openAdbShell))
-        container.addView(spacer(ctx, (6 * d).toInt()))
+        gap()
+        },
+        )
+        NetworkSections.inOrder(section).forEach { it() }
 
         // ── 8. Network (DNS + private IPs)
         container.addView(label(ctx, "Network"))
@@ -302,11 +325,6 @@ object NetworkInfoPopup {
 
     private fun wifiEnabled(ctx: Context): Boolean = runCatching {
         (ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager)?.isWifiEnabled == true
-    }.getOrDefault(false)
-
-    private fun bluetoothEnabled(ctx: Context): Boolean = runCatching {
-        (ctx.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)
-            ?.adapter?.isEnabled == true
     }.getOrDefault(false)
 
     private fun meshUp(ctx: Context): Boolean = runCatching {
@@ -430,7 +448,7 @@ object NetworkInfoPopup {
             val stats = backend.getStatistics(WgState.tunnel)
             val ps = stats.peer(com.wireguard.crypto.Key.fromBase64(publicKey))
             val hs = ps?.latestHandshakeEpochMillis() ?: 0L
-            hs > 0L && (System.currentTimeMillis() - hs) < 190_000L
+            WgLink.derive(true, listOf(hs), System.currentTimeMillis()).onMesh
         }
     }.getOrDefault(false)
 
@@ -605,42 +623,6 @@ object NetworkInfoPopup {
         }
 
         if (rows.isEmpty()) rows += "No tunnel configured"
-        return rows
-    }
-
-    // ─────────────────────────── Bluetooth ───────────────────────────
-
-    /** Adapter state + the names of every currently-connected bonded
-     *  device. Connection state is checked via the hidden
-     *  BluetoothDevice.isConnected() reflection — public API only
-     *  exposes BluetoothManager.getConnectedDevices(profile) which
-     *  needs the profile listener already set up (async). For a
-     *  popup we want it synchronous; reflection is the standard
-     *  workaround used by every system-tray network info widget. */
-    private fun readBluetooth(ctx: Context): List<String> {
-        val rows = mutableListOf<String>()
-        val mgr = ctx.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-        val adapter = mgr?.adapter
-        if (adapter == null) { rows += "Unsupported"; return rows }
-        if (!adapter.isEnabled) { rows += "OFF"; return rows }
-        val bonded = runCatching {
-            // BLUETOOTH_CONNECT (API 31+) — manifest already declares it.
-            adapter.bondedDevices ?: emptySet()
-        }.getOrDefault(emptySet())
-        val connected = bonded.mapNotNull { dev ->
-            val name = dev.name ?: dev.address
-            val isOnline = runCatching {
-                val m = dev.javaClass.getMethod("isConnected")
-                m.invoke(dev) as? Boolean ?: false
-            }.getOrDefault(false)
-            if (isOnline) name else null
-        }
-        rows += "ON · ${bonded.size} bonded · ${connected.size} connected"
-        if (connected.isEmpty()) {
-            rows += "No active links"
-        } else {
-            for (name in connected) rows += "  • $name"
-        }
         return rows
     }
 

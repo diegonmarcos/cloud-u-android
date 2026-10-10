@@ -48,6 +48,16 @@ class NetworkBadgeModelTest {
         assertEquals("wg-mesh · 10.0.0.5 · 1 peer", c.text)
     }
 
+    @Test fun `a running tunnel whose hubs stopped answering is not called connected`() {
+        val stale = up(peerA.copy(lastHandshakeMs = now - 7 * 60_000L), peerB)
+        val c = NetworkBadgeModel.card(stale)
+        assertEquals("Mesh · Tunnel up, off mesh", c.title)
+        assertTrue(c.text, c.text.contains("Tunnel up, no handshake for 7 min — off mesh"))
+        assertTrue(c.expanded, c.expanded.contains("Mesh: Tunnel up, no handshake for 7 min — off mesh"))
+        assertEquals("Disconnect", NetworkBadgeModel.toggleLabel(stale))   // the tunnel still runs
+        assertEquals("Mesh · Tunnel up, off mesh", NetworkBadgeModel.title(up(peerB)))   // never handshook
+    }
+
     @Test fun `the mesh ip is the first address without its prefix`() {
         assertEquals("10.0.0.5", NetworkBadgeModel.meshIp(up()))
         assertEquals("", NetworkBadgeModel.meshIp(up().copy(addresses = emptyList())))

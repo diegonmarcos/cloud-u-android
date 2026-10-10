@@ -50,21 +50,26 @@ import java.util.Locale
  * hidden system status bar with our own 3-cluster row + bottom hairline:
  *
  *   ┌──────────────────────────────────────────────────────────────────┐
- *   │ [5G][WiFi][WG][KDE][BT][ADB][Data][HS]  dd-MM-yyyy HH:mm  [R][S][C][Bat] │
+ *   │ [5G][WiFi][BT][WG][KDE][ADB][Data][HS]  dd-MM-yyyy HH:mm  [R][S][C][Bat] │
  *   │  ····  ····  ····   (signal dots, ~3dp)                          │
  *   │ ──────────────────────────────────────────────────────────────── │  hairline
  *   └──────────────────────────────────────────────────────────────────┘
  *
- *   LEFT  — network labels, each over a 4-dot signal row (SignalDots;
- *           5G / WiFi / WG carry a level, KDE / BT / ADB / Data / HS keep
- *           the same empty footprint so every icon stays aligned). Tinted
+ *   LEFT  — network labels in NetworkSections.ORDER (the popup's section
+ *           order too), each over a 4-dot row (SignalDots; 5G / WiFi / WG
+ *           carry a signal level, BT the count of connected devices (BtLinks,
+ *           4 = four or more), KDE / ADB / Data / HS keep the same empty
+ *           footprint so every icon stays aligned). BT's label is white while
+ *           the adapter is ON (ACL / profile / adapter broadcasts). Tinted
  *           by state, all event-driven: ConnectivityManager callback (5G /
  *           WiFi / WG), RSSI_CHANGED + the data SIM's signal callback (dots),
  *           a Settings.Global observer (ADB = USB or Wireless debugging),
  *           USB_STATE + OTG attach/detach (Data), TETHER_STATE_CHANGED +
- *           WIFI_AP_STATE_CHANGED (HS). WG's dots age with the handshake and
- *           are re-read on the clock's minute tick. 5G label tracks any
- *           cellular transport; WG any VPN transport.
+ *           WIFI_AP_STATE_CHANGED (HS). WG is lit only ON the mesh (WgLink:
+ *           a hub handshake under 3 min), NOT for "a VPN transport exists" —
+ *           the engine's DNS-only tunnel is a VPN too. Its state + dots are
+ *           re-read from the engine on every network change and on the
+ *           clock's minute tick. 5G label tracks any cellular transport.
  *   CENTER — Date + time, monospace, centred. Updated every minute via
  *           ACTION_TIME_TICK + immediate refresh on TIMEZONE_CHANGED /
  *           TIME_CHANGED.
@@ -94,7 +99,8 @@ class LauncherStatusStripView @JvmOverloads constructor(
     private val cellDots = SignalDots.create(context)
     private val wifiDots = SignalDots.create(context)
     private val wgDots = SignalDots.create(context)
-    /** Icons with no signal to show (KDE, BT, ADB, Data, HS) still carry an empty dots row. */
+    private val btDots = SignalDots.create(context)
+    /** Icons with no level to show (KDE, ADB, Data, HS) still carry an empty dots row. */
     private fun emptyDots() = SignalDots.create(context)
     private val dateTimeView: TextView
     private val ramView: TextView
@@ -132,6 +138,8 @@ class LauncherStatusStripView @JvmOverloads constructor(
     private var hasCellular = false
     private var hasVpn = false
     private var hasBluetooth = false
+    /** Connected Bluetooth devices (BtLinks), for the BT dots. */
+    private var btCount = 0
     private var hasUsbData = false
     private var hasAdb = false
     private var hasHotspot = false
@@ -139,12 +147,16 @@ class LauncherStatusStripView @JvmOverloads constructor(
     // Signal levels (0..4, -1 = none) for the dots under 5G / WiFi / WG.
     private var cellLevel = SignalLevels.NONE
     private var wifiLevel = SignalLevels.NONE
-    private var wgLevel = SignalLevels.NONE
+    /** The mesh's truth (WgLink), read from the engine off the main thread; OFF until the first read. */
+    private var wgLink = com.diegonmarcos.superapp.network.WgLink.Reading(
+        com.diegonmarcos.superapp.network.WgLink.State.OFF, SignalLevels.NONE, "")
     // Tethering inputs: the last sticky TETHER_STATE_CHANGED / WIFI_AP_STATE_CHANGED / USB_STATE.
     private var tetherIfaces: List<String> = emptyList()
     private var apState: Int? = null
     private var usbTetherFn = false
     private val wgReading = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** Coalesces a burst of connectivity callbacks into one engine read. */
+    private val wgRefresh = Runnable { refreshWgLevel() }
     /** API 31+ TelephonyCallback or the older PhoneStateListener, held as Any so neither class is touched on a release that lacks it. */
     private var signalListener: Any? = null
 
@@ -188,7 +200,7 @@ class LauncherStatusStripView @JvmOverloads constructor(
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
         }
 
-        // ── LEFT cluster: 5G · WiFi · WG (anchored to START) ────────
+        // ── LEFT cluster: 5G · WiFi · BT · WG · KDE · ADB · Data · HS (anchored to START) ──
         val leftCluster = LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -198,22 +210,24 @@ class LauncherStatusStripView @JvmOverloads constructor(
                 Gravity.START or Gravity.CENTER_VERTICAL,
             )
         }
-        signal5gView = makeIconLabel("5G")
-        wifiView     = makeIconLabel("WiFi")
-        wgView       = makeIconLabel("WG")
-        btView       = makeIconLabel("BT")
+        val nl = com.diegonmarcos.superapp.network.NetworkSections.LABELS
+        signal5gView = makeIconLabel(nl.getValue(NetworkInfoPopup.CELLULAR))
+        wifiView     = makeIconLabel(nl.getValue(NetworkInfoPopup.WIFI))
+        wgView       = makeIconLabel(nl.getValue(NetworkInfoPopup.MESH))
+        // BT — white while the adapter is ON (grey OFF); its dots count connected devices (BtLinks).
+        btView       = makeIconLabel(nl.getValue(NetworkInfoPopup.BLUETOOTH))
         // ADB — lit while USB debugging or Wireless debugging is on (the two
         // Settings.Global switches, watched by a ContentObserver).
-        adbView      = makeIconLabel("ADB")
+        adbView      = makeIconLabel(nl.getValue(NetworkInfoPopup.ADB))
         // Data — lit only when a USB-C cable is in a DATA mode (MTP/PTP/RNDIS/
         // NCM/MIDI…) or the phone is the OTG host; dim on charge-only or
         // unplugged. One rule, UsbDataModel, shared with the popup's section.
-        dataView     = makeIconLabel("Data")
+        dataView     = makeIconLabel(nl.getValue(NetworkInfoPopup.DATA))
         // HS — lit while Wi-Fi hotspot, USB or Bluetooth tethering is on
         // (TETHER_STATE_CHANGED + WIFI_AP_STATE_CHANGED, both sticky).
-        hsView       = makeIconLabel("HS")
+        hsView       = makeIconLabel(nl.getValue(NetworkInfoPopup.HOTSPOT))
         // KDE Connect — lit when ≥1 paired device is connected over the mesh.
-        kdeView      = makeIconLabel("KDE")
+        kdeView      = makeIconLabel(nl.getValue(NetworkInfoPopup.KDE))
         // Any of the left-cluster icons → NetworkInfoPopup (shared
         // popup per cluster, per Diego's "yes click any, they are a
         // cluster" answer), scrolled to the tapped icon's own section.
@@ -233,14 +247,18 @@ class LauncherStatusStripView @JvmOverloads constructor(
         // directly above its Line 1 icon, and the icon carries its signal
         // dots underneath. makeToolColumn falls back to the bare [icon, dots]
         // when pets are disabled or unconfigured for that tool.
-        leftCluster.addView(makeToolColumn("cellular", withDots(signal5gView, cellDots)))
-        leftCluster.addView(makeToolColumn("wifi", withDots(wifiView, wifiDots)))
-        leftCluster.addView(makeToolColumn("vpn", withDots(wgView, wgDots)))
-        leftCluster.addView(makeToolColumn("kde", withDots(kdeView, emptyDots())))   // mesh (WG) → KDE → BT
-        leftCluster.addView(makeToolColumn("bluetooth", withDots(btView, emptyDots())))
-        leftCluster.addView(makeToolColumn("adb", withDots(adbView, emptyDots())))
-        leftCluster.addView(makeToolColumn("usb", withDots(dataView, emptyDots())))  // the old USB pet now rides Data
-        leftCluster.addView(makeToolColumn("hotspot", withDots(hsView, emptyDots())))
+        // In NetworkSections.ORDER — the same list the popup lays its sections out by.
+        val columns = mapOf(
+            NetworkInfoPopup.CELLULAR to { makeToolColumn("cellular", withDots(signal5gView, cellDots)) },
+            NetworkInfoPopup.WIFI to { makeToolColumn("wifi", withDots(wifiView, wifiDots)) },
+            NetworkInfoPopup.BLUETOOTH to { makeToolColumn("bluetooth", withDots(btView, btDots)) },
+            NetworkInfoPopup.MESH to { makeToolColumn("vpn", withDots(wgView, wgDots)) },
+            NetworkInfoPopup.KDE to { makeToolColumn("kde", withDots(kdeView, emptyDots())) },
+            NetworkInfoPopup.ADB to { makeToolColumn("adb", withDots(adbView, emptyDots())) },
+            NetworkInfoPopup.DATA to { makeToolColumn("usb", withDots(dataView, emptyDots())) },  // the old USB pet now rides Data
+            NetworkInfoPopup.HOTSPOT to { makeToolColumn("hotspot", withDots(hsView, emptyDots())) },
+        )
+        for (column in com.diegonmarcos.superapp.network.NetworkSections.inOrder(columns)) leftCluster.addView(column())
         innerRow.addView(leftCluster)
 
         // ── CENTER: date + time, true screen-centre ────────────────
@@ -523,6 +541,13 @@ class LauncherStatusStripView @JvmOverloads constructor(
     private val tetherReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) { refreshTether(i) }
     }
+    /** Adapter on/off, ACL + profile connects/disconnects, battery levels: re-read BT. */
+    private val btReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            com.diegonmarcos.superapp.network.BtLinks.noteBattery(i)
+            refreshBluetooth()
+        }
+    }
     private val rssiReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) { refreshWifiLevel() }
     }
@@ -580,6 +605,13 @@ class LauncherStatusStripView @JvmOverloads constructor(
             context.registerReceiver(rssiReceiver, IntentFilter(android.net.wifi.WifiManager.RSSI_CHANGED_ACTION))
         }
         runCatching {
+            // System broadcasts only: NOT_EXPORTED still hears the Bluetooth stack, no other app can poke it.
+            androidx.core.content.ContextCompat.registerReceiver(context, btReceiver, IntentFilter().apply {
+                com.diegonmarcos.superapp.network.BtLinks.ACTIONS.forEach { addAction(it) }
+            }, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        }
+        com.diegonmarcos.superapp.network.BtLinks.onProxy = { post { refreshBluetooth() } }
+        runCatching {
             val cr = context.contentResolver
             cr.registerContentObserver(android.provider.Settings.Global.getUriFor(android.provider.Settings.Global.ADB_ENABLED), false, adbObserver)
             cr.registerContentObserver(android.provider.Settings.Global.getUriFor(ADB_WIFI), false, adbObserver)
@@ -610,6 +642,8 @@ class LauncherStatusStripView @JvmOverloads constructor(
         runCatching { context.unregisterReceiver(usbReceiver) }
         runCatching { context.unregisterReceiver(tetherReceiver) }
         runCatching { context.unregisterReceiver(rssiReceiver) }
+        runCatching { context.unregisterReceiver(btReceiver) }
+        com.diegonmarcos.superapp.network.BtLinks.onProxy = null
         runCatching { context.contentResolver.unregisterContentObserver(adbObserver) }
         unregisterSignalListener()
         runCatching {
@@ -617,6 +651,7 @@ class LauncherStatusStripView @JvmOverloads constructor(
             cm?.unregisterNetworkCallback(networkCallback)
         }
         mainHandler.removeCallbacks(metricsTicker)
+        removeCallbacks(wgRefresh)
     }
 
     private fun refreshTime() {
@@ -681,14 +716,17 @@ class LauncherStatusStripView @JvmOverloads constructor(
         applyIconTints()
     }
 
-    /** WG level from the freshest peer handshake the engine reports. The engine is
-     *  another process (binder), so it is read off the main thread, at most one read in flight. */
+    /** WG state + level from the engine (WgLink: tunnel state + freshest peer handshake). The engine
+     *  is another process (binder), so it is read off the main thread, at most one read in flight. */
     private fun refreshWgLevel() {
         if (!wgReading.compareAndSet(false, true)) return
         val app = context.applicationContext
+        val vpn = hasVpn
         Thread {
-            val level = try { NetworkInfoPopup.wgSignal(app).first } catch (_: Throwable) { SignalLevels.NONE } finally { wgReading.set(false) }
-            post { wgLevel = level; applyIconTints() }
+            val r = try { NetworkInfoPopup.wgLink(app, vpn) }
+                catch (_: Throwable) { com.diegonmarcos.superapp.network.WgLink.derive(false, emptyList(), 0L) }
+                finally { wgReading.set(false) }
+            post { wgLink = r; applyIconTints() }
         }.start()
     }
 
@@ -752,37 +790,40 @@ class LauncherStatusStripView @JvmOverloads constructor(
                 }
             }
         }
-        val vpnChanged = vpn != hasVpn
         hasWifi = wifi; hasCellular = cell; hasVpn = vpn
-        hasBluetooth = readBluetoothEnabled()
+        refreshBluetooth(apply = false)
         refreshWifiLevel()   // also applies the tints
-        if (vpnChanged) refreshWgLevel()
+        // Any network change can take the hubs away (Wi-Fi -> cellular, a VPN swap): re-ask the
+        // engine, debounced, instead of trusting the VPN transport (the DNS-only tunnel is one too).
+        removeCallbacks(wgRefresh)
+        postDelayed(wgRefresh, 500)
     }
 
-    /** Bluetooth adapter on/off via BluetoothManager. Wrapped in
-     *  runCatching since BluetoothManager.getAdapter requires
-     *  BLUETOOTH_CONNECT on API 31+ — already declared in the manifest
-     *  but a runtime check never hurts. Off = adapter null OR disabled. */
-    private fun readBluetoothEnabled(): Boolean = runCatching {
-        val mgr = context.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE)
-            as? android.bluetooth.BluetoothManager ?: return@runCatching false
-        mgr.adapter?.isEnabled == true
-    }.getOrDefault(false)
+    /** Adapter on/off (the BT label's tint) + connected devices (its dots), one BtLinks reading.
+     *  Without BLUETOOTH_CONNECT the count is 0; the popup's BT section says what to grant. */
+    private fun refreshBluetooth(apply: Boolean = true) {
+        val r = runCatching { com.diegonmarcos.superapp.network.BtLinks.read(context) }.getOrNull()
+        hasBluetooth = r?.adapterOn == true
+        btCount = r?.count ?: 0
+        if (apply) applyIconTints()
+    }
 
     private fun applyIconTints() {
-        val on  = 0xFFFFFFFF.toInt()
-        val off = 0x44FFFFFF.toInt()
+        val on  = com.diegonmarcos.superapp.network.WgLink.TINT_ON
+        val off = com.diegonmarcos.superapp.network.WgLink.TINT_OFF
         signal5gView.setTextColor(if (hasCellular)  on else off)
         wifiView    .setTextColor(if (hasWifi)      on else off)
-        wgView      .setTextColor(if (hasVpn)       on else off)
-        btView      .setTextColor(if (hasBluetooth) on else off)
+        wgView      .setTextColor(com.diegonmarcos.superapp.network.WgLink.tint(wgLink.state))
+        btView      .setTextColor(com.diegonmarcos.superapp.network.BtLinks.tint(hasBluetooth))
         adbView     .setTextColor(if (hasAdb)       on else off)
         dataView    .setTextColor(if (hasUsbData)   on else off)
         hsView      .setTextColor(if (hasHotspot)   on else off)
         // Signal dots take the icon's own tint (bright when active, faint when not).
         SignalDots.set(cellDots, cellLevel, if (hasCellular) on else off)
         SignalDots.set(wifiDots, wifiLevel, if (hasWifi) on else off)
-        SignalDots.set(wgDots, if (hasVpn) wgLevel else SignalLevels.NONE, if (hasVpn) on else off)
+        // BT dots = connected devices (0..4, 4 = four or more); all four grey at 0.
+        SignalDots.set(btDots, com.diegonmarcos.superapp.network.BtLinks.dots(btCount), com.diegonmarcos.superapp.network.BtLinks.tint(hasBluetooth))
+        SignalDots.set(wgDots, if (wgLink.onMesh) wgLink.level else SignalLevels.NONE, com.diegonmarcos.superapp.network.WgLink.tint(wgLink.state))
         hasKde = runCatching {
             com.diegonmarcos.superapp.kdeconnect.KdeConnectManager.connectedIds().isNotEmpty()
         }.getOrDefault(false)
@@ -790,7 +831,7 @@ class LauncherStatusStripView @JvmOverloads constructor(
         // Pets: on → run (energetic), off → idle. on_level is data-driven.
         updateBoolPet("cellular", hasCellular)
         updateBoolPet("wifi", hasWifi)
-        updateBoolPet("vpn", hasVpn)
+        updateBoolPet("vpn", wgLink.onMesh)
         updateBoolPet("bluetooth", hasBluetooth)
         updateBoolPet("usb", hasUsbData)
         updateBoolPet("adb", hasAdb)
