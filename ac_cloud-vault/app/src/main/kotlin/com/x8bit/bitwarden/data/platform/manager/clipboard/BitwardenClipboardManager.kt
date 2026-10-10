@@ -48,4 +48,11 @@ interface BitwardenClipboardManager {
         isSensitive: Boolean = true,
         toastDescriptorOverride: String? = null,
     )
+
+    /**
+     * Cloud Vault: make sure the clipboard is cleared within [seconds], even when the user's own
+     * "clear clipboard" setting is never (or longer). Used after copying a short-lived secret
+     * such as a TOTP code during autofill. The default does nothing (test fakes).
+     */
+    fun clearWithin(seconds: Int) = Unit
 }

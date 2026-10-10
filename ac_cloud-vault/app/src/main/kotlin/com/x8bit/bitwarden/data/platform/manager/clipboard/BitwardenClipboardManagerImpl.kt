@@ -76,6 +76,20 @@ class BitwardenClipboardManagerImpl(
         )
     }
 
+    override fun clearWithin(seconds: Int) {
+        val delay = clearClipboardFrequencySeconds
+            ?.takeIf { it in 1 until seconds }
+            ?: seconds
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            "ClearClipboard",
+            ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequest
+                .Builder(ClearClipboardWorker::class.java)
+                .setInitialDelay(delay.toLong(), TimeUnit.SECONDS)
+                .build(),
+        )
+    }
+
     override fun setText(text: String, isSensitive: Boolean, toastDescriptorOverride: String?) {
         setText(text.toAnnotatedString(), isSensitive, toastDescriptorOverride)
     }

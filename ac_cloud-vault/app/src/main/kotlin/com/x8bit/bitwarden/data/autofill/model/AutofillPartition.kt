@@ -63,7 +63,8 @@ sealed class AutofillPartition {
     ) : AutofillPartition() {
         override val optionalSaveIds: List<AutofillId>
             get() = views
-                .filter { it !is AutofillView.Login.Password }
+                // A one-time code is never saved: it is only valid for a few seconds.
+                .filter { it !is AutofillView.Login.Password && it !is AutofillView.Login.Totp }
                 .map { it.data.autofillId }
         override val requiredSaveIds: List<AutofillId>
             get() = views

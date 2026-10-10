@@ -79,6 +79,9 @@ class FilledDataBuilderImpl(
                         autofillCipherProvider
                             .getLoginAutofillCiphers(
                                 uri = nonNullUri,
+                                includeTotpCode = autofillRequest.partition.views.any {
+                                    it is AutofillView.Login.Totp
+                                },
                             )
                             .map { autofillCipher ->
                                 fillLoginPartition(
@@ -162,6 +165,8 @@ class FilledDataBuilderImpl(
 
                         is AutofillView.Login.Username -> autofillCipher.username
                         is AutofillView.Login.Password -> autofillCipher.password
+                        is AutofillView.Login.Totp -> autofillCipher.totpCode
+                            ?: return@mapNotNull null
                     }
                     autofillView.buildFilledItemOrNull(value = value)
                 } else {

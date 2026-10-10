@@ -31,6 +31,8 @@ private val BLOCK_LISTED_URIS: List<String> = listOf(
     "androidapp://com.x8bit.bitwarden",
     "androidapp://com.x8bit.bitwarden.beta",
     "androidapp://com.x8bit.bitwarden.dev",
+    // Cloud Vault itself (this fork's applicationId): never fill the vault's own screens.
+    "androidapp://com.diegonmarcos.cloudvault",
     "androidapp://com.oneplus.applocker",
 )
 
@@ -447,6 +449,7 @@ private fun AutofillView.updateWebsiteIfNecessary(website: String?): AutofillVie
         is AutofillView.Card.SecurityCode -> this.copy(data = this.data.copy(website = site))
         is AutofillView.Login.Email -> this.copy(data = this.data.copy(website = site))
         is AutofillView.Login.Password -> this.copy(data = this.data.copy(website = site))
+        is AutofillView.Login.Totp -> this.copy(data = this.data.copy(website = site))
         is AutofillView.Login.Username -> this.copy(data = this.data.copy(website = site))
         is AutofillView.Unused -> this.copy(data = this.data.copy(website = site))
     }

@@ -10,8 +10,10 @@ import com.bitwarden.policies.PolicyType
 import com.x8bit.bitwarden.data.autofill.builder.FillResponseBuilder
 import com.x8bit.bitwarden.data.autofill.builder.FilledDataBuilder
 import com.x8bit.bitwarden.data.autofill.builder.SaveInfoBuilder
+import com.x8bit.bitwarden.data.autofill.cloud.AutofillUriResolver
 import com.x8bit.bitwarden.data.autofill.model.AutofillAppInfo
 import com.x8bit.bitwarden.data.autofill.model.AutofillRequest
+import com.x8bit.bitwarden.data.autofill.model.AutofillSaveItem
 import com.x8bit.bitwarden.data.autofill.parser.AutofillParser
 import com.x8bit.bitwarden.data.autofill.util.createAutofillSavedItemIntentSender
 import com.x8bit.bitwarden.data.autofill.util.toAutofillSaveItem
@@ -35,6 +37,7 @@ class AutofillProcessorImpl(
     private val parser: AutofillParser,
     private val saveInfoBuilder: SaveInfoBuilder,
     private val settingsRepository: SettingsRepository,
+    private val uriResolver: AutofillUriResolver = AutofillUriResolver.Passthrough,
 ) : AutofillProcessor {
 
     /**
@@ -85,8 +88,8 @@ class AutofillProcessorImpl(
             return
         }
 
-        request
-            .fillContexts
+        val contexts = request.fillContexts
+        contexts
             .lastOrNull()
             ?.structure
             ?.let { assistStructure ->
@@ -97,9 +100,26 @@ class AutofillProcessorImpl(
 
                 when (autofillRequest) {
                     is AutofillRequest.Fillable -> {
+                        val saveItem = autofillRequest
+                            .resolveUriForSave()
+                            .toAutofillSaveItem()
+                            .withUsernameFromEarlierScreens(
+                                earlierRequests = if (contexts.size > 1) {
+                                    contexts.dropLast(1).mapNotNull { context ->
+                                        context?.structure?.let {
+                                            parser.parse(
+                                                assistStructure = it,
+                                                autofillAppInfo = autofillAppInfo,
+                                            ) as? AutofillRequest.Fillable
+                                        }
+                                    }
+                                } else {
+                                    emptyList()
+                                },
+                            )
                         val intentSender = createAutofillSavedItemIntentSender(
                             autofillAppInfo = autofillAppInfo,
-                            autofillSaveItem = autofillRequest.toAutofillSaveItem(),
+                            autofillSaveItem = saveItem,
                         )
 
                         saveCallback.onSuccess(intentSender)
@@ -112,6 +132,46 @@ class AutofillProcessorImpl(
     }
 
     /**
+     * Cloud Vault: an app that is not a trusted browser cannot make us save a login under a
+     * website it merely claims; the app's own URI is saved instead (see AutofillUriPolicy).
+     */
+    private fun AutofillRequest.Fillable.resolveUriForSave(): AutofillRequest.Fillable {
+        if (uriResolver === AutofillUriResolver.Passthrough) return this
+        val resolved = uriResolver.resolveForSave(uri = uri, packageName = packageName)
+        return if (resolved == uri) this else copy(uri = resolved)
+    }
+
+    /**
+     * Cloud Vault: a username-then-password login spans two screens. The first screen's
+     * SaveInfo carries FLAG_DELAY_SAVE (SaveInfoBuilderImpl), so the framework hands both screens
+     * to this save request; the username typed on the earlier one completes the login here.
+     */
+    private fun AutofillSaveItem.withUsernameFromEarlierScreens(
+        earlierRequests: List<AutofillRequest.Fillable>,
+    ): AutofillSaveItem {
+        if (earlierRequests.isEmpty() || this !is AutofillSaveItem.Login || username != null) {
+            return this
+        }
+        val earlierUsername = earlierRequests
+            .asReversed()
+            .firstNotNullOfOrNull { (it.toAutofillSaveItem() as? AutofillSaveItem.Login)?.username }
+            ?: return this
+        return copy(username = earlierUsername)
+    }
+
+    /**
+     * Cloud Vault: which URI the vault matches against (a non-browser app's claimed website
+     * must be backed by Digital Asset Links; see AutofillUriPolicy).
+     */
+    private suspend fun AutofillRequest.resolveUriForFill(): AutofillRequest {
+        if (this !is AutofillRequest.Fillable || uriResolver === AutofillUriResolver.Passthrough) {
+            return this
+        }
+        val resolved = uriResolver.resolveForFill(uri = uri, packageName = packageName)
+        return if (resolved == uri) this else copy(uri = resolved)
+    }
+
+    /**
      * Process the [fillRequest] and invoke the [FillCallback] with the response.
      */
     private suspend fun process(
@@ -120,10 +180,12 @@ class AutofillProcessorImpl(
         fillRequest: FillRequest,
     ) {
         // Parse the OS data into an [AutofillRequest] for easier processing.
-        val autofillRequest = parser.parse(
-            autofillAppInfo = autofillAppInfo,
-            fillRequest = fillRequest,
-        )
+        val autofillRequest = parser
+            .parse(
+                autofillAppInfo = autofillAppInfo,
+                fillRequest = fillRequest,
+            )
+            .resolveUriForFill()
         when (autofillRequest) {
             is AutofillRequest.Fillable -> {
                 Timber.d("Autofill request is Fillable -- ${fillRequest.id}")

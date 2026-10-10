@@ -19,8 +19,12 @@ interface AutofillCipherProvider {
 
     /**
      * Get all [AutofillCipher.Login]s for the current user.
+     *
+     * @param includeTotpCode Also compute each login's current TOTP code (Cloud Vault: only
+     * when the page has a one-time-code field to fill).
      */
     suspend fun getLoginAutofillCiphers(
         uri: String,
+        includeTotpCode: Boolean = false,
     ): List<AutofillCipher.Login>
 }

@@ -126,6 +126,15 @@ sealed class AutofillView {
         data class Email(
             override val data: Data,
         ) : Login()
+
+        /**
+         * A one-time-code [AutofillView] for the [Login] data partition (SMS / authenticator
+         * code). Filled with the matching login's current TOTP code, only when that login has a
+         * TOTP seed; never part of a save request.
+         */
+        data class Totp(
+            override val data: Data,
+        ) : Login()
     }
 
     /**

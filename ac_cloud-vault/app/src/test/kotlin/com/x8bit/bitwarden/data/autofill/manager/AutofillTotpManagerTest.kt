@@ -37,6 +37,7 @@ class AutofillTotpManagerTest {
     }
     private val clipboardManager: BitwardenClipboardManager = mockk {
         every { setText(text = any<String>(), toastDescriptorOverride = any<Text>()) } just runs
+        every { clearWithin(seconds = any()) } just runs
     }
     private val settingsRepository: SettingsRepository = mockk()
     private val vaultRepository: VaultRepository = mockk()
@@ -138,6 +139,8 @@ class AutofillTotpManagerTest {
                     text = TOTP_RESULT_VALUE,
                     toastDescriptorOverride = BitwardenString.verification_code_totp.asText(),
                 )
+                // Cloud Vault: the copied code is cleared within a minute.
+                clipboardManager.clearWithin(seconds = 60)
                 settingsRepository.isAutoCopyTotpDisabled
             }
             coVerify(exactly = 1) {

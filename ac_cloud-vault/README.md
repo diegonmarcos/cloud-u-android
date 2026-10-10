@@ -10,6 +10,16 @@ in-tree WebView wrapper around `vault.diegonmarcos.com` (self-hosted
 Vaultwarden), now a manual-only CI fallback (`build_webview=true` on
 workflow dispatch).
 
+## Autofill (tier 1 of 3)
+
+Cloud Vault is the phone's autofill service and (Android 14+) its passkeys & passwords
+provider; Cloud Browser and the keyboard are tiers 2 and 3. What each tier may fill, and the
+rules between them (secrets only through the framework, the browser never fills secret
+fields, the keyboard hides its strip on password fields), are in
+[`docs/autofill-tiers-contract.md`](docs/autofill-tiers-contract.md). Cloud Vault's own rules
+live in `app/src/main/kotlin/com/x8bit/bitwarden/data/autofill/cloud/`; the ship workflow runs
+the autofill JVM suites before it publishes.
+
 ## Fork: vault (Bitwarden Android — password manager)
 
 - **Upstream**: https://github.com/bitwarden/android.git, pinned tag

@@ -6,6 +6,9 @@ import android.view.autofill.AutofillId
 import android.widget.EditText
 import androidx.annotation.VisibleForTesting
 import com.bitwarden.ui.platform.base.util.orNullIfBlank
+import com.x8bit.bitwarden.data.autofill.cloud.CloudFieldClassifier
+import com.x8bit.bitwarden.data.autofill.cloud.FieldKind
+import com.x8bit.bitwarden.data.autofill.cloud.FieldSignals
 import com.x8bit.bitwarden.data.autofill.model.AutofillHint
 import com.x8bit.bitwarden.data.autofill.model.AutofillView
 
@@ -127,8 +130,14 @@ internal fun AssistStructure.ViewNode.toAutofillViewData(
  * The first supported autofill hint for this view node, or null if none are found.
  */
 private val AssistStructure.ViewNode.supportedAutofillHint: AutofillHint?
-    get() = firstSupportedAutofillHintOrNull()
-        ?: when {
+    get() {
+        // Explicit Android hints win, as upstream.
+        firstSupportedAutofillHintOrNull()?.let { return it }
+        // Cloud Vault: one-time-code fields are recognised before the upstream heuristics, which
+        // would read "the code we sent to your phone" as a username field.
+        val cloudKind = cloudFieldKindOrNull()
+        if (cloudKind == FieldKind.OTP) return AutofillHint.OTP
+        return when {
             this.isUsernameField -> AutofillHint.USERNAME
             this.isPasswordField -> AutofillHint.PASSWORD
             this.isCardExpirationMonthField -> AutofillHint.CARD_EXPIRATION_MONTH
@@ -140,6 +149,49 @@ private val AssistStructure.ViewNode.supportedAutofillHint: AutofillHint?
             this.isCardBrandField -> AutofillHint.CARD_BRAND
             else -> null
         }
+            // Cloud Vault fallback: HTML autocomplete tokens, number-password input types and
+            // the androidx hints upstream does not list.
+            ?: cloudKind?.toAutofillHintOrNull()
+    }
+
+/**
+ * Cloud Vault's classification of this node (see [CloudFieldClassifier]). A node the framework
+ * reports oddly must never abort the whole fill request, so any failure reads as "no opinion".
+ */
+private fun AssistStructure.ViewNode.cloudFieldKindOrNull(): FieldKind? =
+    runCatching { CloudFieldClassifier.classify(toFieldSignals()) }.getOrNull()
+
+/**
+ * The Android-free facts [CloudFieldClassifier] reads. Never includes the field's value.
+ */
+internal fun AssistStructure.ViewNode.toFieldSignals(): FieldSignals = FieldSignals(
+    autofillHints = autofillHints?.filterNotNull().orEmpty(),
+    inputType = inputType,
+    idEntry = idEntry,
+    hint = hint,
+    htmlTag = htmlInfo?.tag,
+    htmlAttributes = htmlInfo
+        ?.attributes
+        ?.mapNotNull { attribute ->
+            val name = attribute.first ?: return@mapNotNull null
+            val value = attribute.second ?: return@mapNotNull null
+            name.lowercase() to value
+        }
+        ?.toMap()
+        .orEmpty(),
+)
+
+private fun FieldKind.toAutofillHintOrNull(): AutofillHint? = when (this) {
+    FieldKind.USERNAME,
+    FieldKind.EMAIL,
+        -> AutofillHint.USERNAME
+
+    FieldKind.PASSWORD -> AutofillHint.PASSWORD
+    FieldKind.OTP -> AutofillHint.OTP
+    FieldKind.CARD,
+    FieldKind.NONE,
+        -> null
+}
 
 /**
  * Get the first supported autofill hint from the view node's autofillHints, or null if none are
@@ -232,6 +284,12 @@ private fun AssistStructure.ViewNode.buildAutofillView(
 
     AutofillHint.USERNAME -> {
         AutofillView.Login.Username(
+            data = autofillViewData,
+        )
+    }
+
+    AutofillHint.OTP -> {
+        AutofillView.Login.Totp(
             data = autofillViewData,
         )
     }

@@ -32,6 +32,7 @@ fun CipherView.toAutofillCipherProvider(): AutofillCipherProvider =
 
         override suspend fun getLoginAutofillCiphers(
             uri: String,
+            includeTotpCode: Boolean,
         ): List<AutofillCipher.Login> {
             val login = this@toAutofillCipherProvider.login ?: return emptyList()
             return listOf(

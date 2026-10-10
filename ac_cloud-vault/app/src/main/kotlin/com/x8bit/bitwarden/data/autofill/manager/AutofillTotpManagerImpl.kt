@@ -11,6 +11,11 @@ import com.x8bit.bitwarden.data.vault.repository.model.GenerateTotpResult
 import java.time.Clock
 
 /**
+ * How long an autofilled TOTP code may stay on the clipboard (a code lives 30 s by default).
+ */
+private const val TOTP_CLIPBOARD_CLEAR_SECONDS: Int = 60
+
+/**
  * Default implementation of the [AutofillTotpManager].
  */
 class AutofillTotpManagerImpl(
@@ -37,6 +42,9 @@ class AutofillTotpManagerImpl(
                 text = totpResult.code,
                 toastDescriptorOverride = BitwardenString.verification_code_totp.asText(),
             )
+            // Cloud Vault: the code is useless after its period; do not leave it on the
+            // clipboard for other apps to read.
+            clipboardManager.clearWithin(seconds = TOTP_CLIPBOARD_CLEAR_SECONDS)
         }
     }
 }

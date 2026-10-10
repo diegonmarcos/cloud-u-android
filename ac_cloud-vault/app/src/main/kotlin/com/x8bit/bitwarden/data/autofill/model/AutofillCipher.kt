@@ -67,6 +67,11 @@ sealed class AutofillCipher {
         val password: String,
         val username: String,
         val website: String,
+        /**
+         * The login's current TOTP code, computed only when the page has a one-time-code field
+         * (null otherwise, or when the login has no TOTP seed). A secret: never logged.
+         */
+        val totpCode: String? = null,
     ) : AutofillCipher() {
         override val iconRes: Int
             @DrawableRes get() = BitwardenDrawable.ic_globe

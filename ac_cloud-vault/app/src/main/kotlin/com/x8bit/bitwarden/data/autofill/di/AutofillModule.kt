@@ -3,6 +3,7 @@ package com.x8bit.bitwarden.data.autofill.di
 import android.content.Context
 import android.view.autofill.AutofillManager
 import com.bitwarden.core.data.manager.dispatcher.DispatcherManager
+import com.bitwarden.network.service.DigitalAssetLinkService
 import com.x8bit.bitwarden.data.auth.repository.AuthRepository
 import com.x8bit.bitwarden.data.autofill.builder.FillResponseBuilder
 import com.x8bit.bitwarden.data.autofill.builder.FillResponseBuilderImpl
@@ -10,6 +11,8 @@ import com.x8bit.bitwarden.data.autofill.builder.FilledDataBuilder
 import com.x8bit.bitwarden.data.autofill.builder.FilledDataBuilderImpl
 import com.x8bit.bitwarden.data.autofill.builder.SaveInfoBuilder
 import com.x8bit.bitwarden.data.autofill.builder.SaveInfoBuilderImpl
+import com.x8bit.bitwarden.data.autofill.cloud.AutofillUriResolver
+import com.x8bit.bitwarden.data.autofill.cloud.AutofillUriResolverImpl
 import com.x8bit.bitwarden.data.autofill.manager.AutofillCompletionManager
 import com.x8bit.bitwarden.data.autofill.manager.AutofillCompletionManagerImpl
 import com.x8bit.bitwarden.data.autofill.manager.AutofillEnabledManager
@@ -153,6 +156,7 @@ object AutofillModule {
         policyManager: PolicyManager,
         saveInfoBuilder: SaveInfoBuilder,
         settingsRepository: SettingsRepository,
+        uriResolver: AutofillUriResolver,
     ): AutofillProcessor =
         AutofillProcessorImpl(
             dispatcherManager = dispatcherManager,
@@ -162,7 +166,22 @@ object AutofillModule {
             policyManager = policyManager,
             saveInfoBuilder = saveInfoBuilder,
             settingsRepository = settingsRepository,
+            uriResolver = uriResolver,
         )
+
+    /**
+     * Cloud Vault: which URI a request is matched against (browsers and fleet apps are trusted
+     * with their web domain; other apps need Digital Asset Links). See AutofillUriPolicy.
+     */
+    @Singleton
+    @Provides
+    fun providesAutofillUriResolver(
+        @ApplicationContext context: Context,
+        digitalAssetLinkService: DigitalAssetLinkService,
+    ): AutofillUriResolver = AutofillUriResolverImpl(
+        context = context,
+        digitalAssetLinkService = digitalAssetLinkService,
+    )
 
     @Singleton
     @Provides

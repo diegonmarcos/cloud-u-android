@@ -14,9 +14,11 @@ import com.x8bit.bitwarden.data.platform.util.isActive
 import com.x8bit.bitwarden.data.platform.util.subtitle
 import com.x8bit.bitwarden.data.vault.manager.model.GetCipherResult
 import com.x8bit.bitwarden.data.vault.repository.VaultRepository
+import com.x8bit.bitwarden.data.vault.repository.model.GenerateTotpResult
 import com.x8bit.bitwarden.data.vault.repository.model.VaultUnlockData
 import com.x8bit.bitwarden.data.vault.repository.util.statusFor
 import timber.log.Timber
+import java.time.Clock
 
 /**
  * The duration, in milliseconds, we should wait while waiting for the vault status to not be
@@ -38,6 +40,7 @@ class AutofillCipherProviderImpl(
     private val cipherMatchingManager: CipherMatchingManager,
     private val vaultRepository: VaultRepository,
     private val policyManager: PolicyManager,
+    private val clock: Clock = Clock.systemDefaultZone(),
 ) : AutofillCipherProvider {
     private val activeUserId: String? get() = authRepository.activeUserId
 
@@ -98,6 +101,7 @@ class AutofillCipherProviderImpl(
 
     override suspend fun getLoginAutofillCiphers(
         uri: String,
+        includeTotpCode: Boolean,
     ): List<AutofillCipher.Login> {
         val cipherViews = getUnlockedCipherListViewsOrNull() ?: return emptyList()
         // We only care about non-deleted login ciphers.
@@ -129,8 +133,23 @@ class AutofillCipherProviderImpl(
                     subtitle = cipherView.subtitle.orEmpty(),
                     username = cipherView.login?.username.orEmpty(),
                     website = uri,
+                    totpCode = if (includeTotpCode) currentTotpCodeOrNull(cipherView) else null,
                 )
             }
+    }
+
+    /**
+     * The login's current TOTP code, under the same rule as the copy-after-fill
+     * (AutofillTotpManagerImpl): premium accounts, or organisations that allow TOTP.
+     */
+    private suspend fun currentTotpCodeOrNull(cipherView: CipherView): String? {
+        cipherView.login?.totp ?: return null
+        val cipherId = cipherView.id ?: return null
+        val isPremium = authRepository.userStateFlow.value?.activeAccount?.isPremium == true
+        if (!isPremium && !cipherView.organizationUseTotp) return null
+        return (vaultRepository.generateTotp(cipherId = cipherId, time = clock.instant())
+            as? GenerateTotpResult.Success)
+            ?.code
     }
 
     /**

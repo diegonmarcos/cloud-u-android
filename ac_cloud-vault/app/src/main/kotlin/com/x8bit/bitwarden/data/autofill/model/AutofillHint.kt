@@ -13,4 +13,10 @@ enum class AutofillHint {
     CARD_BRAND,
     PASSWORD,
     USERNAME,
+
+    /**
+     * A one-time code (SMS or authenticator app). Cloud Vault fills it with the login's current
+     * TOTP code.
+     */
+    OTP,
 }

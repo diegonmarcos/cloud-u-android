@@ -301,7 +301,7 @@ jobs:
     name: "Build + publish Bitwarden fork (build-fork vault)"
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_fork }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       WORK_DIR: ac_cloud-vault
       FORK: vault
@@ -389,6 +389,23 @@ jobs:
           path: ${{ env.WORK_DIR }}/dist/cloud-vault-vault.apk
           if-no-files-found: warn
           retention-days: 14
+
+      # The autofill tier's JVM suites, before anything is published. The fork
+      # job used to run assembleFdroidRelease and nothing else, so a green tick
+      # meant "Bitwarden compiled", never "autofill still parses a login form".
+      # Scoped to the autofill + URI-matching packages (the whole app suite is
+      # ~470 classes and not this job's question); the Cloud Vault tier lives in
+      # data.autofill.cloud and is included by the first pattern. A failure here
+      # stops the run before the APK is staged, pushed or released.
+      - name: "Test → autofill tier (parser, matching, datasets, save, provider status)"
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.BITWARDEN_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          ./gradlew --no-daemon :app:testFdroidDebugUnitTest \
+            --tests 'com.x8bit.bitwarden.data.autofill.*' \
+            --tests 'com.x8bit.bitwarden.data.platform.manager.ciphermatching.*' \
+            --tests 'com.x8bit.bitwarden.data.platform.util.StringExtensionsTest'
 
       # Rename to the constellation asset names so build.sh's oras-push /
       # gh-release stage the fork APK per variant. The fdroid release APK is
