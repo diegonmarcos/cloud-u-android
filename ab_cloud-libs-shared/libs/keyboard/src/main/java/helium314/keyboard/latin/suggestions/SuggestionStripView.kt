@@ -123,6 +123,12 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private val toolbarRow: View = findViewById(R.id.toolbar_row) // SuperApp: dedicated toolbar row
     private val secondRowKeys: ViewGroup = findViewById(R.id.second_row_keys)
     private val suggestionsStrip: ViewGroup = findViewById(R.id.suggestions_strip)
+    // Autofill rows (a0_docs/eng-specs/autofill-3-tier.md): row 1 = Vault / inline autofill only, row 2 =
+    // the keyboard's own (suggestions_row). SuggestionRows decides which show; nothing mixes them.
+    private val inlineRow: View = findViewById(R.id.inline_autofill_row)
+    private val inlineContainer: ViewGroup = findViewById(R.id.inline_autofill_container)
+    private val suggestionsRow: View = findViewById(R.id.suggestions_row)
+    private var ownRowSuppressed = false
     private val toolbarExpandKey = findViewById<ImageButton>(R.id.suggestions_strip_toolbar_key)
     private val incognitoIcon = KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.INCOGNITO.name, context)
     private val toolbarArrowIcon = KeyboardIconsSet.instance.getNewDrawable(KeyboardIconsSet.NAME_TOOLBAR_KEY, context)
@@ -387,6 +393,57 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         if (Settings.getValues().mAutoHideToolbar) setToolbarVisibility(false)
     }
 
+    /**
+     * Row 1: the inline autofill suggestions the framework handed over (Cloud Vault's logins, codes,
+     * cards), in their own horizontally scrolling row with the key glyph in front. null = none: the
+     * row collapses to zero height. Never touches row 2.
+     */
+    fun setInlineSuggestions(view: View?) {
+        inlineContainer.removeAllViews()
+        if (view != null) inlineContainer.addView(view, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        inlineRow.isVisible = view != null
+    }
+
+    val hasInlineSuggestions get() = inlineContainer.childCount > 0
+
+    /**
+     * Row 2 off (Suppression Mode: password, one-time code, card, no-personalised-learning fields):
+     * the keyboard shows none of its own chips, so only row 1 — Vault's — can show.
+     */
+    fun setOwnCandidatesSuppressed(suppressed: Boolean) {
+        ownRowSuppressed = suppressed
+        suggestionsRow.isVisible = !suppressed
+        if (suppressed) { suggestionsStrip.removeAllViews(); dismissMoreSuggestionsPanel() }
+    }
+
+    /**
+     * Row 2, Normal mode: the Cloud Account SOT chips for this field (a profile switcher, values, snippets),
+     * styled like word suggestions, scrolling on their own. Each chip carries its own tap action.
+     */
+    fun setAutofillCandidates(chips: List<Pair<String, () -> Unit>>) {
+        if (ownRowSuppressed || chips.isEmpty()) return
+        val colors = Settings.getValues().mColors
+        val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+        chips.forEach { (text, onTap) ->
+            val chip = TextView(context, null, R.attr.suggestionWordStyle)
+            chip.text = text.replace('\n', ' ')
+            chip.maxLines = 1
+            chip.ellipsize = TextUtils.TruncateAt.END
+            chip.setTextColor(colors.get(ColorType.KEY_TEXT))
+            chip.setPadding(12.dpToPx(resources), 0, 12.dpToPx(resources), 0)
+            chip.contentDescription = text
+            chip.setOnClickListener { onTap() }
+            row.addView(chip, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+        }
+        val scroll = android.widget.HorizontalScrollView(context).apply {
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = OVER_SCROLL_NEVER
+            addView(row)
+        }
+        scroll.layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+        setExternalSuggestionView(scroll, false)
+    }
+
     fun setMoreSuggestionsHeight(remainingHeight: Int) {
         layoutHelper.setMoreSuggestionsHeight(remainingHeight)
     }
@@ -407,8 +464,11 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     override fun onVisibilityChanged(view: View, visibility: Int) {
         super.onVisibilityChanged(view, visibility)
         // workaround for a bug with inline suggestions views that just keep showing up otherwise, https://github.com/HeliBorg/HeliBoard/pull/386
-        if (view === this)
+        if (view === this) {
             suggestionsStrip.visibility = visibility
+            // Same for row 1: inline suggestions are surfaces owned by the autofill service's process.
+            inlineRow.visibility = if (visibility == VISIBLE && hasInlineSuggestions) VISIBLE else GONE
+        }
     }
 
     override fun onDetachedFromWindow() {

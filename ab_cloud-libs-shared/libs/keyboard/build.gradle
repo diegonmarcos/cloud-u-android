@@ -116,6 +116,10 @@ dependencies {
 
     implementation project(':libs:translate')
 
+    // Tier 3 of the fleet autofill (a0_docs/eng-specs/autofill-3-tier.md): the Cloud Account SOT contract,
+    // read for row-2 candidates (emails, phones, postal codes, names, snippets) under AUTOFILL_PROFILE_READ.
+    implementation project(':libs:autofill')
+
     // SuperApp addition (NOT upstream): offline Vosk voice-input behind the
     // VOICE toolbar key. Injected by patches/0005-voice-input.patch; the
     // KeyCode.VOICE_INPUT handler in LatinIME calls VoiceInput.toggle.

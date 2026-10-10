@@ -33,6 +33,33 @@
         android:layout_height="wrap_content"
         android:hapticFeedbackEnabled="false"
         android:soundEffectsEnabled="false">
+        <!-- Autofill row (a0_docs/eng-specs/autofill-3-tier.md, owner's two-row rule): ONLY Cloud Vault /
+             Android inline autofill suggestions (onInlineSuggestionsResponse), drawn in the keyboard's
+             style, after a small key glyph that says where they come from. GONE (zero height) whenever
+             there are none, so normal typing has no extra row. Scrolls on its own; never holds the
+             keyboard's own candidates, which stay in suggestions_row below. -->
+        <LinearLayout
+            android:id="@+id/inline_autofill_row"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            android:gravity="center_vertical"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/config_suggestions_strip_height">
+            <ImageView
+                android:id="@+id/inline_autofill_glyph"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="4dp"
+                android:alpha="0.6"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_autofill_key" />
+            <FrameLayout
+                android:id="@+id/inline_autofill_container"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+        </LinearLayout>
         <!-- Row 1: TOOLBAR (always visible, own row) -->
         <LinearLayout
             android:id="@+id/toolbar_row"

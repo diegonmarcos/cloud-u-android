@@ -135,6 +135,9 @@ public class LatinIME extends InputMethodService implements
             DictionaryFacilitatorProvider.getDictionaryFacilitator(false);
     private final DictionaryFacilitator mOriginalDictionaryFacilitator = mDictionaryFacilitator;
     final InputLogic mInputLogic = new InputLogic(this, this, mDictionaryFacilitator);
+    // Tier 3 of the fleet autofill (a0_docs/eng-specs/autofill-3-tier.md): Suppression Mode, the two
+    // suggestion rows (row 1 = Vault inline only, row 2 = our own), and Cloud Account SOT candidates.
+    final ImeAutofillController mImeAutofill = new ImeAutofillController(this);
 
     // TODO: Move these {@link View}s to {@link KeyboardSwitcher}.
     private View mInputView;
@@ -1102,6 +1105,8 @@ public class LatinIME extends InputMethodService implements
             }
             return;
         }
+        // Tier 3 autofill: decide Normal / Suppression Mode for this field and arbitrate the two rows.
+        mImeAutofill.onStartInputView(editorInfo, isDifferentTextField, mSuggestionStripView);
         Log.i(TAG, (restarting ? "Res" : "S") +"tarting input. Cursor position = " + editorInfo.initialSelStart + "," + editorInfo.initialSelEnd);
         if (DebugFlags.DEBUG_ENABLED) {
             EditorInfoCompatUtils.INSTANCE.debugLog(editorInfo, TAG);
@@ -1251,6 +1256,7 @@ public class LatinIME extends InputMethodService implements
 
     void onFinishInputViewInternal(final boolean finishingInput) {
         super.onFinishInputView(finishingInput);
+        mImeAutofill.onFinishInputView(mSuggestionStripView);
         Log.i(TAG, "onFinishInputView");
         cleanupInternalStateForFinishInput();
     }
@@ -1570,18 +1576,19 @@ public class LatinIME extends InputMethodService implements
             return false;
         }
 
-        final List<InlineSuggestion> inlineSuggestions = response.getInlineSuggestions();
-        if (inlineSuggestions.isEmpty()) {
+        if (!hasSuggestionStripView()) {
             return false;
         }
-
+        // Owner's two-row rule (a0_docs/eng-specs/autofill-3-tier.md): Vault / inline autofill chips get
+        // ROW 1 of their own and never replace or mix with the keyboard's row 2. An empty response
+        // clears row 1, which then collapses to zero height.
+        final List<InlineSuggestion> inlineSuggestions = response.getInlineSuggestions();
+        if (inlineSuggestions.isEmpty()) {
+            mImeAutofill.onInline(null, 0, mSuggestionStripView);
+            return true;
+        }
         final View inlineSuggestionView = InlineAutofillUtils.createView(inlineSuggestions, mDisplayContext);
-
-        // Without this function the inline autofill suggestions will not be visible
-        mHandler.cancelResumeSuggestions();
-
-        mSuggestionStripView.setExternalSuggestionView(inlineSuggestionView, true);
-
+        mImeAutofill.onInline(inlineSuggestionView, inlineSuggestions.size(), mSuggestionStripView);
         return true;
     }
 
@@ -1835,6 +1842,10 @@ public class LatinIME extends InputMethodService implements
                 dismissGestureFloatingPreviewText /* dismissDelayed */);
     }
 
+    SuggestionStripView mSuggestionStripViewOrNull() {
+        return mSuggestionStripView;
+    }
+
     public boolean hasSuggestionStripView() {
         return null != mSuggestionStripView;
     }
@@ -1910,6 +1921,8 @@ public class LatinIME extends InputMethodService implements
      *  returns whether a clipboard suggestion has been set.
      */
     public boolean tryShowClipboardSuggestion() {
+        // Suppression Mode: none of the keyboard's own chips, a clipboard one included.
+        if (mImeAutofill.isSuppressed()) return false;
         final View clipboardView = mClipboardHistoryManager.getClipboardSuggestionView(getCurrentInputEditorInfo(), mSuggestionStripView);
         if (clipboardView != null && hasSuggestionStripView()) {
             mSuggestionStripView.setExternalSuggestionView(clipboardView, false);
@@ -1926,6 +1939,8 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void setNeutralSuggestionStrip() {
         final SettingsValues currentSettings = mSettings.getCurrent();
+        // Tier 3 autofill: an empty field the Cloud Account SOT has values for gets them on row 2 first.
+        if (mImeAutofill.showCandidates(mSuggestionStripView)) return;
         if (tryShowClipboardSuggestion()) {
             // clipboard suggestion has been set
             if (hasSuggestionStripView() && currentSettings.mAutoHideToolbar)

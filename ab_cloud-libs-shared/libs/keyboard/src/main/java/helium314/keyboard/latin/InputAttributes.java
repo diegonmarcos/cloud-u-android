@@ -39,6 +39,11 @@ public final class InputAttributes {
     final public boolean mShouldShowVoiceInputKey;
     final public boolean mNoLearning;
     /**
+     * Tier 3 autofill Suppression Mode (a0_docs/eng-specs/autofill-3-tier.md): a password, one-time code,
+     * card or no-personalised-learning field. Forces incognito (SettingsValues): nothing typed is learnt.
+     */
+    final public boolean mAutofillSuppressed;
+    /**
      * Whether the floating gesture preview should be disabled. If true, this should override the
      * corresponding keyboard settings preference, always suppressing the floating preview text.
      * {@link helium314.keyboard.latin.settings.SettingsValues#mGestureFloatingPreviewTextEnabled}
@@ -58,6 +63,8 @@ public final class InputAttributes {
         final int inputClass = mInputType & InputType.TYPE_MASK_CLASS;
         mIsPasswordField = InputTypeUtils.isPasswordInputType(mInputType)
                 || InputTypeUtils.isVisiblePasswordInputType(mInputType);
+        mAutofillSuppressed = editorInfo != null
+                && helium314.keyboard.latin.autofill.FieldPolicy.INSTANCE.decide(editorInfo).getSuppressed();
         if (inputClass != InputType.TYPE_CLASS_TEXT) {
             // If we are not looking at a TYPE_CLASS_TEXT field, the following strange
             // cases may arise, so we do a couple sanity checks for them. If it's a
