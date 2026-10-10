@@ -337,6 +337,11 @@ class GroupedTilesFragment : Fragment(), BackHandler {
             return LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
                 layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                // Takes the focus off the bar when the search resets (InlineSearch.reset), so the
+                // keyboard and the chips go; before its children, so opening the page focuses nothing.
+                isFocusable = true
+                isFocusableInTouchMode = true
+                descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
                 addView(search.bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 addView(frame, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             }

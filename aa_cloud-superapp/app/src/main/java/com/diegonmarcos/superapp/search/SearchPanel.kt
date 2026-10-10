@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -76,6 +77,11 @@ class SearchController(
     var query by mutableStateOf("")
     /** The bar holds focus: an inline search then shows its chips before anything is typed. */
     var focused by mutableStateOf(false)
+    /** Bumped to take the focus off the bar (Back, a pick): the bar clears its own focus. */
+    var blurs by mutableStateOf(0)
+        private set
+
+    fun blur() { focused = false; blurs++ }
     var selected by mutableStateOf(entry.selection(scopes, prefs?.load(entry)))
         private set
 
@@ -127,6 +133,8 @@ class SearchCallbacks(
  */
 @Composable
 fun SearchBox(c: SearchController, placeholder: String, onGo: () -> Unit, modifier: Modifier = Modifier) {
+    val focusManager = LocalFocusManager.current
+    LaunchedEffect(c.blurs) { if (c.blurs > 0) focusManager.clearFocus(force = true) }
     KitSearchBar(
         query = c.query,
         onQueryChange = { c.query = it },

@@ -139,9 +139,12 @@ class InlineSearch(fragment: Fragment, entry: SearchEntry, placeholder: String) 
     /** Leaving through search resets it: coming back shows the page, not a stale filter. */
     fun reset() {
         controller.query = ""
-        controller.focused = false
+        controller.blur()
         val imm = bar.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         imm?.hideSoftInputFromWindow(bar.windowToken, 0)
-        bar.clearFocus()
+        // Hand the window's focus to the page the bar sits in (made focusable for exactly this
+        // by GroupedTilesFragment.mountSearch). Clearing the bar's focus alone does not stick:
+        // Android gives the focus straight back to the first focusable view, which is the bar.
+        (bar.parent as? View)?.takeIf { it.isFocusable }?.requestFocus()
     }
 }
