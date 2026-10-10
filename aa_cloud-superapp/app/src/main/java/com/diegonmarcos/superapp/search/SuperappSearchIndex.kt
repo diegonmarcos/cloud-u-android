@@ -6,13 +6,14 @@ import com.diegonmarcos.superapp.cloud.CloudData
 import com.diegonmarcos.superapp.launcher.Sections
 
 /**
- * The superapp half of the search: everything [SearchSheet] cannot know.
+ * The superapp half of the search: everything libs:search's engine cannot know.
  *
- * The sheet, the matching, the chips and the `:`-command line moved to
- * libs:search; what stayed is this — the four index builders that are made of
- * THIS app's data (sections, tiles, pages, the consolidated cloud config) plus
- * the launcher-profile-filtered app list. A second app implements its own of
- * these and gets the same search bar for free.
+ * The matching, the sections, the chip rule and the `:`-command line are
+ * libs:search ([SearchEngine]); the panel that draws them is [SearchPanel]; what
+ * is here is the data — the four index builders made of THIS app's data
+ * (sections, tiles, pages, the consolidated cloud config) plus the
+ * launcher-profile-filtered app list, and Cloud Browser's three scopes, asked
+ * per query through its lookup provider ([BrowserLookupClient]).
  */
 object SuperappSearchIndex {
 
@@ -24,7 +25,16 @@ object SuperappSearchIndex {
         "phone_apps"    -> phoneApps(scope.id, ctx)
         "cloud_configs" -> cloudConfigs(scope.id, ctx)
         "phone_configs" -> PhoneConfigs.hits(ctx, scope.id)
+        // browser_fav / browser_history / browser_web are per query: [Source.live].
         else -> emptyList()
+    }
+
+    /** The app's [SearchSource]: the index above, Cloud Browser's scopes per query, the commands. */
+    class Source(ctx: Context) : SearchSource {
+        private val app = ctx.applicationContext
+        override fun hitsFor(scope: SearchScope) = SuperappSearchIndex.hitsFor(app, scope)
+        override fun live(scopes: List<SearchScope>, query: String) = BrowserLookupClient.live(app, scopes, query)
+        override fun commands() = SuperappSearchIndex.commands()
     }
 
     /**
@@ -55,6 +65,15 @@ object SuperappSearchIndex {
             // instead of quietly dropping them out of the index.
             for (tile in sec.tilesByPage.values.flatten()) {
                 out += SearchHit(tile.label, "${sec.label} · Tile", scopeId, target = tile.target)
+            }
+        }
+        // The grouped rows a section page draws (Cloud ▸ Apps' Quickmarks: a folder's entries
+        // included, separators not), so everything on that page can be found from its search.
+        val seen = out.mapNotNull { it.target }.toMutableSet()
+        for (sec in Sections.all().filter { !it.isMasterIndex }) {
+            for (group in sec.tileGroups) for (tile in group.destinations) {
+                if (tile.target.isBlank() || !seen.add(tile.target)) continue
+                out += SearchHit(tile.label, "${sec.label} · ${group.title}", scopeId, target = tile.target)
             }
         }
         for (act in Sections.homeActions()) {

@@ -13,8 +13,8 @@ import android.provider.Settings
  * that carry their OWN label are indexed, so the list reads "Wi-Fi",
  * "Bluetooth", "Display"… instead of dozens of identical "Settings" rows.
  *
- * Pure platform, no app policy, so it lives in the library rather than behind
- * [SearchSheet.Host]: every app that wants a phone-settings scope wants
+ * Pure platform, no app policy, so it lives in the library rather than in an
+ * app's [SearchSource]: every app that wants a phone-settings scope wants
  * exactly this. Contrast with the installed-apps scope, which stays host-side
  * because an app may filter it (a guest profile, a whitelist) and the library
  * must not quietly hand out the full app list.

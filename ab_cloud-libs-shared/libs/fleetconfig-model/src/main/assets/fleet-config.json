@@ -1392,6 +1392,14 @@
         "ac_cloud-vault"
       ]
     },
+    "search_scope_prefs": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "The SuperApp search's scope chips as each entry point was last left (scopes_home_star, scopes_home_sheet, scopes_cloud_apps_page: the build.json::ui.search_scopes ids that are on). Absent until the owner taps a chip there, so an entry never touched starts on its defaults.",
+      "used_by": [
+        "aa_cloud-superapp"
+      ]
+    },
     "secure_pdf_attempts": {
       "kind": "encrypted",
       "class": "device",

@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pure UI library: no components, no permissions. Everything it can reach
-     is reached through the host app's SearchSheet.Host. -->
+<!-- The search engine and its model: no components, no permissions, no UI. What an app's
+     results are comes from its own SearchSource; how they look is the app's own panel. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" />

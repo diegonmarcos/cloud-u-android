@@ -3,31 +3,40 @@ import com.diegonmarcos.superapp.App
 import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.ui.Haptics
-import com.diegonmarcos.superapp.ui.ShimmerBorderView
 import com.diegonmarcos.superapp.apps.SuitePhoneAppsFragment
-import com.diegonmarcos.superapp.search.SearchOpener
+import com.diegonmarcos.superapp.search.InlineSearch
+import com.diegonmarcos.superapp.search.SearchEntry
 
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.launcher.themes.cloud.Home3DFragment
 // libs:browser moved to ac_cloud-browser — no browser imports here.
 
 /**
  * Android-launcher-style "all apps" drawer revealed by pulling up from
- * [Home3DFragment]. Content:
- *   • Top spacer — double the gap to the activity-level search-bar island
- *     above (user feedback: needed breathing room).
- *   • TileGrid of every section + home actions below.
+ * [Home3DFragment]. Content, top to bottom:
+ *   • the Cloud | Phone pills (build.json::ui.home_apps_tabs);
+ *   • the SuperApp's one search ([InlineSearch], entry [SearchEntry.HOME_SHEET]);
+ *   • the body: Cloud ▸ Apps' own page (GroupedTilesFragment "cloud") or Phone ▸ Apps'
+ *     (SuitePhoneAppsFragment) — the same two pages the Cloud and Phone sections show.
  * Pull-down (or back press) closes the sheet and restores the 3D cube.
  */
-class AppDrawerSheetFragment : Fragment() {
+class AppDrawerSheetFragment : Fragment(), BackHandler {
+
+    private var search: InlineSearch? = null
+
+    /** Back with a query clears it before Back closes the sheet. */
+    override fun tryHandleBack(): Boolean = search?.handleBack() == true
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        search = null
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
@@ -41,73 +50,10 @@ class AppDrawerSheetFragment : Fragment() {
             )
         }
 
-        // ── Search bar — glassmorphism + shimmer chrome reused from the
-        //    old activity toolbar. Same fixed-height pattern the original
-        //    toolbar used (?attr/actionBarSize on both children) so the
-        //    wrap_content FrameLayout doesn't enter a measure cycle and
-        //    blow up to fill the whole screen.
-        val barHeight = dp(56)
-        val searchIsland = FrameLayout(ctx).apply {
-            background = androidx.core.content.ContextCompat.getDrawable(
-                ctx, R.drawable.bg_liquid_glass)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                barHeight,
-            ).apply { setMargins(dp(12), dp(6), dp(12), dp(10)) }
-            isClickable = true; isFocusable = true
-        }
-        val searchInner = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            val hpad = dp(16)
-            setPadding(hpad, 0, hpad, 0)
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                barHeight,
-            )
-        }
-        // App icon — LEFT. Uses ic_launcher_foreground (the unified icon reference)
-        // with an explicit black oval background so it matches the launcher icon exactly.
-        searchInner.addView(ImageView(ctx).apply {
-            setImageResource(R.drawable.ic_launcher_foreground)
-            background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(0xFF0A0A0A.toInt())
-            }
-            scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-            val sz = dp(24)
-            layoutParams = LinearLayout.LayoutParams(sz, sz).apply { marginEnd = dp(12) }
-        })
-        // Search placeholder — CENTRE (weighted so it takes the gap).
-        searchInner.addView(TextView(ctx).apply {
-            text = "Search"
-            setTextColor(0x99FFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-            layoutParams = LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f,
-            )
-        })
-        // AI sparkle (Gemini-style 4-point star + accent) — RIGHT.
-        searchInner.addView(ImageView(ctx).apply {
-            setImageResource(R.drawable.ic_ai_sparkle)
-            imageTintList = android.content.res.ColorStateList.valueOf(0xFFE9D8FD.toInt())
-            val sz = dp(20)
-            layoutParams = LinearLayout.LayoutParams(sz, sz).apply { marginStart = dp(12) }
-        })
-        searchIsland.addView(searchInner)
-        searchIsland.addView(ShimmerBorderView(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                barHeight,
-            )
-        })
-        searchIsland.setOnClickListener {
-            Haptics.tap(it)
-            (activity as? SearchOpener)?.openSearchSheet()
-        }
-        // addView deferred — bodyTabs (Cloud | Phone) goes ABOVE this so
-        // the user picks the surface first, then the shared search +
-        // chip strip apply to whichever tab is active.
+        // ── Search — the SuperApp's one search (search/SearchPanel): the same slim bar, chips,
+        //    per-type sections and engine as Cloud ▸ Apps and the Home star, placed between the
+        //    Cloud | Phone pills and the body so it serves whichever tab is showing. Its results
+        //    drop over the body on the opaque theme surface. Mounted below, around the body host.
 
         // Browser-tab chip strip removed — tabs live in Cloud-Browser (ac_cloud-browser).
 
@@ -143,11 +89,13 @@ class AppDrawerSheetFragment : Fragment() {
 
         // ── Final mount order (top → bottom):
         //   1. Cloud | Phone PageTabsView — pick surface first.
-        //   2. Search island — shared chrome.
-        //   3. Body host — HomeGroupedFragment or PhoneAppsFragment.
+        //   2. Search bar — the shared one, its dropdown layered over 3.
+        //   3. Body host — GroupedTilesFragment("cloud") or SuitePhoneAppsFragment.
         root.addView(bodyTabs)
-        root.addView(searchIsland)
-        root.addView(host)
+        val inline = InlineSearch(this, SearchEntry.HOME_SHEET, "Search")
+        search = inline
+        root.addView(GroupedTilesFragment.mountSearch(inline, host), LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
 
         fun showTab(id: String) {
             val frag: androidx.fragment.app.Fragment = when (id) {

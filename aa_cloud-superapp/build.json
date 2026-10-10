@@ -273,7 +273,7 @@
       "dir": "../ab_cloud-libs-shared/libs/search",
       "type": "library",
       "depends_on": [],
-      "comment": "Search sheet + \":\"-command line, app-agnostic. Owns the query box, matching, scope chips, grouping and dispatch; the app supplies hits, commands and the target grammar through SearchSheet.Host. Reads ui.search_scopes from the CONSUMING app's build.json into its own BuildConfig."
+      "comment": "The search ENGINE, app-agnostic and UI-free: matching, one section per scope in the declared order, the scope chips' rule and per-entry defaults (SearchEntry), the \":\"-command line. The app supplies hits, live lookups and commands through SearchSource and draws the results itself (search/SearchPanel.kt). Reads ui.search_scopes from the CONSUMING app's build.json into its own BuildConfig."
     },
     "libs:core": {
       "dir": "../ab_cloud-libs-shared/libs/core",
@@ -5198,7 +5198,7 @@
         "label": "Phone"
       }
     ],
-    "_doc_search_scopes": "Scope chips of the top search sheet (SearchSheetFragment). DECOUPLED from home_apps_tabs (renaming a search scope must NOT rename the Home-Apps body tabs). Each scope: `id` (also the result-group key), `label` (chip text), `kind` (which index builder populates its hits). Kinds: `cloud_apps` = cloud sections + tiles + home actions (navigable destinations); `phone_apps` = installed launchable apps (LauncherApps); `cloud_configs` = every section sub-page (config/settings/about surfaces) + cached consolidated.json service entries (tap copies the value); `phone_configs` = installed Android Settings activities enumerated from the device Settings package(s) (exported, self-labelled activities; tap launches that Settings screen — same spirit as the native Settings search). All chips ON by default; tapping toggles inclusion. Reorder/rename here — no Kotlin edit.",
+    "_doc_search_scopes": "Scope chips of the SuperApp's one search (search/SearchPanel.kt over libs:search's SearchEngine): the Home star (action:open_search, SearchSheetFragment), the Home swipe sheet and Cloud > Apps all show these chips. DECOUPLED from home_apps_tabs (renaming a search scope must NOT rename the Home-Apps body tabs). Each scope: `id` (also the result-section key), `label` (chip text), `section` (the title of its group of results), `kind` (which builder fills it). Results are one section per scope, in THIS order. Kinds: `cloud_apps` = cloud sections + tiles + every section's grouped rows (folder entries included) + home actions; `phone_apps` = installed launchable apps (LauncherApps); `cloud_configs` = every section sub-page + cached consolidated.json service entries (tap copies the value); `phone_configs` = installed Android Settings activities; `browser_fav` / `browser_history` = Cloud Browser's bookmarks / history matching the text, asked per query through its signature-guarded lookup provider (content://<cloud-browser>.lookup, never an incognito page), tap opens the page in Cloud Browser; `browser_web` = one row: Search the web for <text> with Cloud Browser's default engine, or Open <url> when the text is a URL or domain. No Cloud Browser (or one too old for the lookup): the browser scopes stay empty and say so once. Which chips start ON is per entry point (libs:search SearchEntry): Cloud > Apps and the swipe sheet start on the apps + configs, the Home star on the browser scopes + configs; each entry remembers its own last choice (search_scope_prefs). Reorder/rename here, no Kotlin edit.",
     "_doc_camera_apps": "Fallback camera apps for action:open_camera, in order. The FIRST attempt is always the OS resolver for MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA, which honours whatever camera the user set as default - this list is only for when nothing answers that action (some OEM cameras do not export the filter). Ordered so the OEM's own camera wins over a third-party one; a package that is not installed is skipped.",
     "camera_apps": [
       {
@@ -5234,22 +5234,44 @@
       {
         "id": "cloud-apps",
         "label": "Cloud-Apps",
-        "kind": "cloud_apps"
+        "kind": "cloud_apps",
+        "section": "Cloud apps"
       },
       {
         "id": "phone-apps",
         "label": "Phone-Apps",
-        "kind": "phone_apps"
+        "kind": "phone_apps",
+        "section": "Phone apps"
       },
       {
         "id": "cloud-configs",
         "label": "Cloud-Configs",
-        "kind": "cloud_configs"
+        "kind": "cloud_configs",
+        "section": "Cloud configs"
       },
       {
         "id": "phone-configs",
         "label": "Phone-Configs",
-        "kind": "phone_configs"
+        "kind": "phone_configs",
+        "section": "Phone configs"
+      },
+      {
+        "id": "browser-fav",
+        "label": "Browser-Fav",
+        "kind": "browser_fav",
+        "section": "Browser favourites"
+      },
+      {
+        "id": "browser-history",
+        "label": "Browser-History",
+        "kind": "browser_history",
+        "section": "Browser history"
+      },
+      {
+        "id": "browser-web",
+        "label": "Browser-Web",
+        "kind": "browser_web",
+        "section": "Web"
       }
     ],
     "_doc_swipe_walk": "Horizontal swipe (left/right) walk-list - the CIRCULAR ordered list of navigation stops the bottom-nav swipe-cycle steps through. Replaces the old 'cycle the 4 bottom-nav sections' behaviour: now it also visits each section's pages and the Home-Apps overlay. Each stop: `section` (id in ui.sections, or 'home' for the Home-Apps sheet) + ONE optional refinement - `page` (any page id of that section: apps|admin|cloud|phone|c3|...), or `sheet` (cloud|phone, opens the Home-Apps AppDrawerSheet on that body page). Left-swipe = next (down the list), right-swipe = previous; wraps at both ends. Reorder/add/remove stops here - no Kotlin edit. Consumed by MainActivity.walkStep / Sections.swipeWalk(). Entries name a REAL section + page: infos-apps/infos-admin outlived the Apps|Admin facets Projects used to have and had been walking to page:infos/apps and page:infos/admin, neither of which exists — the walk step silently fell through to the section instead of the page.",

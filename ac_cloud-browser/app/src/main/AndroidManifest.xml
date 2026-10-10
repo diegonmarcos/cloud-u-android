@@ -98,6 +98,15 @@
             android:exported="true"
             android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
 
+        <!-- The SuperApp search's browser-Fav / browser-History / browser-Web scopes
+             (provider/BrowserLookup): read-only, text in and a few rows out, never an incognito
+             page. Guarded by the SIGNATURE permission, the AgentFetchProvider pattern. -->
+        <provider
+            android:name=".provider.BrowserLookupProvider"
+            android:authorities="${applicationId}.lookup"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+
         <!-- #802 registers /api/browser/* on the fleet debug server. Not exported, not a real provider. -->
         <provider
             android:name=".debugapi.BrowserDebugApiProvider"

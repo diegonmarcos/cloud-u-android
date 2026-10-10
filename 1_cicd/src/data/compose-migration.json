@@ -289,18 +289,17 @@
       "id": "libs:search",
       "scope": "in",
       "wave": 1,
-      "ui": "views",
+      "ui": "none",
       "size": "S",
-      "screens_left": [
-        "SearchSheet"
-      ],
+      "screens_left": [],
+      "notes": "The View-built SearchSheet left the lib: libs:search is the search ENGINE only (SearchEngine, the scope model, SearchEntry), and the SuperApp draws its one search panel in Compose (search/SearchPanel.kt, SearchSheetFragment, InlineSearch).",
       "consumers": [
         "superapp"
       ],
       "baseline": {
-        "view_screens": 1,
+        "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 1,
+        "view_ui_files": 0,
         "custom_views": 0
       }
     },

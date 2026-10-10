@@ -107,7 +107,6 @@ open class ShellActivity : AppCompatActivity(),
     com.diegonmarcos.superapp.devtools.DevControlBridge.ActivityHost,
     MailHost,
     SearchOpener,
-    com.diegonmarcos.superapp.search.SearchSheet.Host,
     com.diegonmarcos.superapp.apptabs.AppTabsHost,
     LauncherNavController.NavHost {
 
@@ -2213,12 +2212,14 @@ open class ShellActivity : AppCompatActivity(),
         intent.removeExtra("shortcut_action")
     }
 
-    /** Single source of truth for "show the search sheet". Used by the
-     *  AppDrawerSheet's in-page search bar (via [SearchOpener]) and the
-     *  launcher long-press → "Search" shortcut. */
+    /** Single source of truth for "show the search sheet": the Home star
+     *  (Polaris, action:open_search), Sirius' Search and the launcher
+     *  long-press → "Search" shortcut. The sheet is the SuperApp's one search
+     *  ([com.diegonmarcos.superapp.search.SearchSheetFragment]), the same
+     *  panel Cloud ▸ Apps and the swipe sheet show inline. */
     override fun openSearchSheet() {
         // Don't stack multiple sheets if the user double-taps.
-        val tag = com.diegonmarcos.superapp.search.SearchSheet.BACK_STACK_TAG
+        val tag = com.diegonmarcos.superapp.search.SearchSheetFragment.BACK_STACK_TAG
         if (supportFragmentManager.findFragmentByTag(tag) != null) return
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(
@@ -2226,7 +2227,7 @@ open class ShellActivity : AppCompatActivity(),
                 R.anim.fade_in,      R.anim.slide_out_down,
             )
             .add(R.id.overlay_container,
-                com.diegonmarcos.superapp.search.SearchSheet.newInstance(), tag)
+                com.diegonmarcos.superapp.search.SearchSheetFragment.newInstance(), tag)
             .addToBackStack(tag)
             .commit()
     }
@@ -2292,36 +2293,6 @@ open class ShellActivity : AppCompatActivity(),
             o.optString("package") to o.optString("label")
         }.filter { it.first.isNotBlank() }
     }.getOrDefault(emptyList())
-
-    // ── SearchSheet.Host ───────────────────────────────────────────────
-    // libs:search owns the sheet, the matching and the `:`-command line; this
-    // app owns what is IN it. Everything below is a one-line hand-off, which
-    // is the point: a second app implements these five and has the same
-    // search bar.
-
-    override fun hitsFor(scope: com.diegonmarcos.superapp.search.SearchScope) =
-        com.diegonmarcos.superapp.search.SuperappSearchIndex.hitsFor(applicationContext, scope)
-
-    override fun searchCommands() =
-        com.diegonmarcos.superapp.search.SuperappSearchIndex.commands()
-
-    /** Both a hit's target and a command's target are the ordinary tile
-     *  grammar (`section:` / `page:` / `action:` / a URI), so search adds no
-     *  new vocabulary — every command is something a tile could already do. */
-    override fun openTarget(target: String) = onTileClicked(target)
-
-    override fun searchBoxBackground() = R.drawable.bg_liquid_glass
-    override fun searchChipBackground() = R.drawable.bg_liquid_glass_pill
-
-    /** The sheet covers the page it opens over, so it is the theme surface made opaque. */
-    override fun searchSurfaceColor() = com.diegonmarcos.superapp.ui.LauncherPalette.opaqueSurface(this)
-
-    override fun dismissSearch() {
-        supportFragmentManager.popBackStack(
-            com.diegonmarcos.superapp.search.SearchSheet.BACK_STACK_TAG,
-            androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE,
-        )
-    }
 
     // ── DevControlBridge.ActivityHost ────────────────────────────────────
 

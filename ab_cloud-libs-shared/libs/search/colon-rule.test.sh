@@ -2,7 +2,7 @@
 # The one rule libs:search lives or dies by: a query is a COMMAND only when its
 # very first character is a colon. Everything else — including a colon in the
 # middle of a sentence — is a search. Pure string logic, so it is checked here
-# rather than on an emulator; the Kotlin it mirrors is SearchSheet.isCommandMode
+# rather than on an emulator; the Kotlin it mirrors is SearchEngine.isCommandMode
 # / commandQuery, which are two one-liners for exactly this reason.
 set -u
 fails=0
