@@ -3139,7 +3139,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-10-10",
+        "pricing_as_of": "2026-10-11",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -3186,7 +3186,7 @@
             "open": true,
             "params_b": 31,
             "quant": ["bf16", "fp4", "fp8"],
-            "trained_for": ["roleplay", "trivia"],
+            "trained_for": ["roleplay", "translation"],
             "prompt": 0.09, "completion": 0.34,
             "note": "Translation-ranked, served at four precisions; more headroom than the 26B."
           },
@@ -3213,7 +3213,7 @@
             "name": "DeepSeek V3.2",
             "open": true,
             "quant": ["fp4", "fp8"],
-            "trained_for": ["roleplay", "translation"],
+            "trained_for": ["roleplay"],
             "prompt": 0.259, "completion": 0.8,
             "note": "Translation and roleplay ranked; mid-price open weights."
           },
@@ -3223,7 +3223,7 @@
             "open": true,
             "quant": ["fp4", "fp8"],
             "trained_for": ["academia", "finance", "health", "legal", "marketing", "marketing/seo", "programming", "roleplay", "science", "technology", "translation", "trivia"],
-            "prompt": 0.0142, "completion": 1.28,
+            "prompt": 0.018, "completion": 0.64,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
           {
