@@ -420,6 +420,16 @@
     "db_engine": null
   },
   {
+    "name": "cloud-agi-openclaw",
+    "service": "openclaw",
+    "vm": "oci-A1-f_0",
+    "private_dns": "openclaw.app:18789",
+    "port": 18789,
+    "protocol": "http",
+    "category": "agi",
+    "db_engine": null
+  },
+  {
     "name": "session-memory",
     "service": "session-memory",
     "vm": "oci-A1-f_0",
