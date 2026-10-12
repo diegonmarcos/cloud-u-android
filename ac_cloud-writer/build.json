@@ -168,7 +168,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "z-ai/glm-5.3-flash",
-        "pricing_as_of": "2026-10-11",
+        "pricing_as_of": "2026-10-12",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -209,13 +209,12 @@
               "bf16"
             ],
             "trained_for": [
-              "academia",
               "marketing",
               "roleplay",
               "translation"
             ],
-            "prompt": 0.0675,
-            "completion": 0.225,
+            "prompt": 0.09,
+            "completion": 0.3,
             "note": "Sparse 26B (4B active): translation, academia and legal at a small-model price."
           },
           {
@@ -287,6 +286,7 @@
               "fp8"
             ],
             "trained_for": [
+              "health",
               "roleplay"
             ],
             "prompt": 0.259,
@@ -315,7 +315,7 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.018,
+            "prompt": 0.016,
             "completion": 0.64,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
@@ -331,8 +331,6 @@
             ],
             "trained_for": [
               "academia",
-              "finance",
-              "health",
               "legal",
               "programming",
               "roleplay",
@@ -366,8 +364,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.15,
-            "completion": 0.5,
+            "prompt": 0.0232,
+            "completion": 1.2,
             "note": "The provider default: ranked in all twelve categories, and the cheapest all-rounder after DeepSeek."
           },
           {
