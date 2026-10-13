@@ -61,7 +61,7 @@
         "pages": [
           {
             "id": "agenda",
-            "label": "Cloud Agenda",
+            "label": "Agenda",
             "action": "launch:com.diegonmarcos.cloudagenda"
           }
         ]
@@ -84,7 +84,7 @@
         "pages": [
           {
             "id": "chat",
-            "label": "Cloud Chat",
+            "label": "Chat",
             "action": "launch:com.diegonmarcos.comms.chat"
           }
         ]
@@ -108,7 +108,7 @@
         "pages": [
           {
             "id": "contacts",
-            "label": "Cloud Contacts",
+            "label": "Contacts",
             "action": "launch:com.diegonmarcos.cloudcontacts"
           }
         ]
