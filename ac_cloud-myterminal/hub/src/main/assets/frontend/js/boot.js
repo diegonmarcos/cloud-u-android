@@ -84,8 +84,12 @@
 
   // Buttons + find bar
   document.getElementById("btn-newtab").addEventListener("click", () => Tabs.newTab());
-  document.getElementById("btn-sidebar").addEventListener("click", () =>
-    document.getElementById("sidebar").classList.toggle("hidden"));
+  // Toggling the sidebar resizes the terminal area without a window "resize";
+  // each pane's ResizeObserver refits it, and refitAll covers a WebView without one.
+  document.getElementById("btn-sidebar").addEventListener("click", () => {
+    document.getElementById("sidebar").classList.toggle("hidden");
+    MYK.refitAll();
+  });
   document.getElementById("find-next").addEventListener("click", () => Find.next());
   document.getElementById("find-prev").addEventListener("click", () => Find.prev());
   document.getElementById("find-close").addEventListener("click", () => Find.close());
@@ -94,6 +98,8 @@
     if (e.key === "Escape") Find.close();
   });
   window.addEventListener("resize", () => { if (Tabs.active) MYK._fitTab(Tabs.active); });
+  window.addEventListener("orientationchange", () => MYK.refitAll());
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", () => MYK.refitAll());
   window.addEventListener("beforeunload", () => Tabs.saveSession());
 
   // Global menu (top-right ⋮): restore session, about

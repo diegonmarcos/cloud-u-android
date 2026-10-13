@@ -20,7 +20,7 @@ const MYK = {
     const c = this.config || {}, font = c.font || {}, t = c.terminal || {};
     const term = new Terminal({
       fontFamily: font.family || "monospace",
-      fontSize: font.size || 11,
+      fontSize: this.fontSize(),
       scrollback: t.scrollback ?? 5000,
       cursorBlink: t.cursorBlink ?? true,
       theme: c.theme || {},
@@ -52,14 +52,16 @@ const MYK = {
       provideLinks: (y, cb) => cb(this._linksOnRow(term, y - 1)),
     });
     host.addEventListener("mousedown", () => this.focusPane(id));
+    this._bindPinch(id, host, term);
     host.addEventListener("click", (e) => {
       // Touch taps do not always reach xterm's own link activation; this does.
-      if (Date.now() - this._lastLinkAct < 400 || term.hasSelection()) return;
+      if (this._pinching() || Date.now() - this._lastLinkAct < 400 || term.hasSelection()) return;
       const url = this._urlAt(id, e.clientX, e.clientY);
       if (url) this._linkTap(url);
     });
     host.addEventListener("contextmenu", (e) => {
       e.preventDefault();
+      if (this._pinching()) return;   // two fingers held still read as a long-press
       this.focusPane(id);
       const url = this._urlAt(id, e.clientX, e.clientY);
       if (url) return this.openUrl(url);
@@ -67,12 +69,13 @@ const MYK = {
     });
 
     term.onData((d) => Transport.ptyWrite(id, d));
-    term.onResize(({ cols, rows }) => Transport.ptyResize(id, cols, rows));
+    term.onResize(({ cols, rows }) => this._sendSize(id, cols, rows));
     term.onTitleChange((title) => Tabs.setTitle(tabId, title));
     const unlisten = await Transport.onPty(id, (data) => term.write(data));
     await Transport.onPtyExit(id, () => this.closeView(id));
 
     this.panes.set(id, { term, fit, search, host, tabId, unlisten, marks });
+    this._watchSize(id, host);
     fit.fit();
     await Transport.ptyStart(id, term.cols, term.rows, null);
     return id;
@@ -134,6 +137,8 @@ const MYK = {
     row("Paste", clipEmpty ? "empty" : "", () => this.paste(false), { disabled: clipEmpty });
     row("Paste & Run", clipEmpty ? "empty" : "+ Enter · asks if >1 ln", () => this.paste(true), { disabled: clipEmpty });
     row("URL — Select ▸", `${urls.length}`, () => this._urlMenu(menu, urls), { disabled: !urls.length, keep: true });
+    const fs = this.fontSize(), fsDef = this.fontDefault();
+    row("Reset font size", fs === fsDef ? `${fs}px · pinch to zoom` : `${fs}px → ${fsDef}px`, () => this.resetFontSize(), { disabled: fs === fsDef });
     const sep = document.createElement("div"); sep.className = "pane-menu-sep"; menu.appendChild(sep);
     const splits = document.createElement("div");
     splits.className = "pane-menu-item pane-menu-split";
@@ -231,7 +236,7 @@ const MYK = {
         range: { start: { x: a.x + 1, y: a.y + 1 }, end: { x: z.x + 1, y: z.y + 1 } },
         text: u.url,
         decorations: { underline: true, pointerCursor: true },
-        activate: (_e, t) => { this._lastLinkAct = Date.now(); this._linkTap(t); },
+        activate: (_e, t) => { if (this._pinching()) return; this._lastLinkAct = Date.now(); this._linkTap(t); },
       });
     }
     return links.length ? links : undefined;
@@ -354,6 +359,7 @@ const MYK = {
     if (!p) return;
     Transport.ptyKill(id);
     if (p.unlisten) p.unlisten();
+    if (p.ro) p.ro.disconnect();
     p.term.dispose();
     p.host.remove();
     this.panes.delete(id);
@@ -365,6 +371,135 @@ const MYK = {
   disposeTab(tabId) { for (const id of this.paneIdsOf(tabId)) this._disposePane(id); },
   _fitTab(tabId) { for (const id of this.paneIdsOf(tabId)) this.panes.get(id)?.fit.fit(); },
   fitActive() { const p = this.panes.get(this.activePane); if (p) p.fit.fit(); },
+  // Every live pane re-measures (the sidebar toggled, the window or keyboard moved).
+  refitAll() { for (const id of this.panes.keys()) this._refitSoon(id); },
+
+  // ── Size: a pane re-measures whenever ITS OWN box changes ────────────────
+  // The grid used to be recomputed only on window "resize", a focus, a split or
+  // a close. Toggling the left sidebar resizes #terms without any of those, so a
+  // pane fitted while the sidebar was open (e.g. the keyboard came up, or a tap
+  // focused it) kept that narrow grid — and its PTY kept the narrow size — after
+  // the sidebar closed. A ResizeObserver per pane catches every cause alike:
+  // sidebar, rotation, keyboard, split/unsplit, multi-window, a tab shown again.
+  _watchSize(id, host) {
+    const RO = typeof ResizeObserver !== "undefined" ? ResizeObserver : null;
+    if (!RO) return;   // very old WebView: window resize + refitAll still run
+    const ro = new RO((entries) => {
+      const r = entries.length ? entries[entries.length - 1].contentRect : null;
+      if (r && (!r.width || !r.height)) return;   // a hidden tab has no box to fit
+      this._refitSoon(id);
+    });
+    ro.observe(host);
+    const p = this.panes.get(id);
+    if (p) p.ro = ro; else ro.disconnect();
+  },
+  // One fit per frame per pane, after layout settles. fit() resizes the terminal
+  // only when the grid changed, and term.onResize sends the PTY its new size.
+  _refitSoon(id) {
+    const p = this.panes.get(id);
+    if (!p || p.refitQueued) return;
+    p.refitQueued = true;
+    const raf = typeof requestAnimationFrame === "function" ? requestAnimationFrame : (f) => setTimeout(f, 16);
+    raf(() => {
+      p.refitQueued = false;
+      if (this.panes.get(id) !== p) return;
+      try { p.fit.fit(); } catch (e) { /* a pane torn down mid-frame */ }
+    });
+  },
+  // The PTY learns every new grid (TIOCSWINSZ on the session side) — except
+  // mid-pinch, when it learns only the final one, once, as the fingers lift.
+  _sendSize(id, cols, rows) {
+    const p = this.panes.get(id);
+    if (p && p.pinch) { p.pinch.pending = true; return; }
+    Transport.ptyResize(id, cols, rows);
+  },
+
+  // ── Font size: pinch-to-zoom, global, remembered ─────────────────────────
+  // One size for every pane (panes have no settings of their own), kept in
+  // localStorage like the rest of the frontend's settings and read back by
+  // every new pane. Default: config.json font.size.
+  FONT_KEY: "myk-term-font-size",
+  _store() { try { return typeof localStorage !== "undefined" ? localStorage : null; } catch (e) { return null; } },
+  fontDefault() { return TermText.clampFont(((this.config || {}).font || {}).size, 11); },
+  fontSize() {
+    const def = this.fontDefault();
+    let v = null;
+    try { const s = this._store(); v = s ? s.getItem(this.FONT_KEY) : null; } catch (e) { v = null; }
+    return v === null || v === "" ? def : TermText.clampFont(v, def);
+  },
+  setFontSize(n) {
+    const v = TermText.clampFont(n, this.fontDefault());
+    try {
+      const s = this._store();
+      if (s) { if (v === this.fontDefault()) s.removeItem(this.FONT_KEY); else s.setItem(this.FONT_KEY, String(v)); }
+    } catch (e) { /* storage refused: the size still applies for this run */ }
+    for (const [pid, p] of this.panes) {
+      if (p.term.options && p.term.options.fontSize !== v) p.term.options.fontSize = v;
+      this._refitSoon(pid);
+    }
+    return v;
+  },
+  resetFontSize() { const v = this.setFontSize(this.fontDefault()); this.toast(`Font ${v}px`); return v; },
+
+  // A tap, long-press or link activation is ignored while two fingers are down
+  // and for a moment after they lift (the last finger up can land as a tap).
+  _pinchAt: 0,
+  _pinchLive: 0,
+  _pinching() { return this._pinchLive > 0 || Date.now() - this._pinchAt < 500; },
+
+  // Two fingers on a pane scale its font, as Termux's ScaleGestureDetector does:
+  // the size follows the fingers in whole pixels, the pane refits live, and the
+  // PTY gets the final grid once when the gesture ends. Listeners run in the
+  // capture phase and stop two-finger events there, so xterm never sees them —
+  // no scroll, no selection, no tap. One finger is never touched: it still
+  // scrolls the scrollback.
+  _bindPinch(id, host, term) {
+    const opt = { capture: true, passive: false };
+    const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const swallow = (e) => { if (e.cancelable !== false && e.preventDefault) e.preventDefault(); if (e.stopPropagation) e.stopPropagation(); };
+    host.addEventListener("touchstart", (e) => {
+      const p = this.panes.get(id);
+      if (!p || !e.touches || e.touches.length !== 2) return;
+      const d0 = dist(e.touches);
+      if (!(d0 > 0)) return;
+      if (!p.pinch) this._pinchLive++;
+      p.pinch = { d0, size0: this.fontSize(), size: this.fontSize(), sel: term.hasSelection(), pending: false };
+      this._pinchAt = Date.now();
+      swallow(e);
+    }, opt);
+    host.addEventListener("touchmove", (e) => {
+      const p = this.panes.get(id);
+      if (!p || !p.pinch) return;
+      swallow(e);
+      if (!e.touches || e.touches.length < 2) return;
+      this._pinchAt = Date.now();
+      const size = TermText.pinchFont(p.pinch.size0, dist(e.touches) / p.pinch.d0);
+      if (size === p.pinch.size) return;
+      p.pinch.size = size;
+      term.options.fontSize = size;
+      try { p.fit.fit(); } catch (e2) { /* refit again at the end */ }
+    }, opt);
+    const end = (e) => {
+      const p = this.panes.get(id);
+      if (!p || !p.pinch) return;
+      swallow(e);
+      if (e.touches && e.touches.length >= 2) return;   // a third finger lifted: still pinching
+      const g = p.pinch;
+      p.pinch = null;
+      this._pinchLive = Math.max(0, this._pinchLive - 1);
+      this._pinchAt = Date.now();
+      if (!g.sel && term.hasSelection()) term.clearSelection();
+      this.setFontSize(g.size);
+      try { p.fit.fit(); } catch (e2) { /* the queued refit retries */ }
+      if (g.pending || g.size !== g.size0) Transport.ptyResize(id, term.cols, term.rows);
+    };
+    host.addEventListener("touchend", end, opt);
+    host.addEventListener("touchcancel", end, opt);
+    // The touch's own click / long-press, should the platform still synthesise one.
+    for (const ev of ["click", "contextmenu", "mousedown", "mouseup"]) {
+      host.addEventListener(ev, (e) => { if (this._pinchLive > 0 || Date.now() - this._pinchAt < 500) swallow(e); }, { capture: true });
+    }
+  },
 
   focusSibling(delta) {
     const p = this.panes.get(this.activePane); if (!p) return;

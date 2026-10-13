@@ -154,7 +154,9 @@ body { display: flex; flex-direction: column; }
 .split.col { flex-direction: column; }
 /* leaf pane = one terminal */
 .pane { flex: 1 1 0; min-width: 0; min-height: 0; position: relative; padding: 2px;
-  outline: 1px solid transparent; }
+  outline: 1px solid transparent; overflow: hidden;
+  /* one finger pans (xterm scrolls the scrollback); two fingers are term.js's pinch, never the page's zoom */
+  touch-action: pan-x pan-y; }
 .pane.focused { outline: 1px solid var(--accent); }
 .pane .xterm { height: 100%; }
 .browser-wrap, .fb-wrap, .editor-wrap {

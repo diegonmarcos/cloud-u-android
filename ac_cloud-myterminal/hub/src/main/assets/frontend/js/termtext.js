@@ -179,6 +179,30 @@ const TermText = {
     const lines = body ? body.split("\n").length : 0;
     return { body, lines, confirm: !!run && lines > 1, enter: !!run && lines > 0 };
   },
+
+  // ── Font size (pinch-to-zoom) ──────────────────────────────────────────
+  // xterm renders whole CSS pixels best, so a size is always an integer in
+  // [FONT_MIN, FONT_MAX]; anything else (NaN, a string, a stored "abc") falls
+  // back to [def] or, failing that, 11.
+  FONT_MIN: 6,
+  FONT_MAX: 32,
+  clampFont(n, def) {
+    const v = Math.round(Number(n));
+    if (!Number.isFinite(v) || v <= 0) return def === undefined ? 11 : this.clampFont(def);
+    return Math.min(this.FONT_MAX, Math.max(this.FONT_MIN, v));
+  },
+  // The size a pinch asks for: the size at the start of the gesture times how far
+  // the two fingers moved apart (scale = distance now / distance at start).
+  pinchFont(start, scale) {
+    if (!(scale > 0) || !Number.isFinite(scale)) return this.clampFont(start);
+    return this.clampFont(Number(start) * scale);
+  },
+  // The grid a box holds at a cell size — what xterm's FitAddon computes
+  // (at least 2 columns and 1 row).
+  grid(width, height, cellW, cellH) {
+    if (!(cellW > 0) || !(cellH > 0)) return null;
+    return { cols: Math.max(2, Math.floor(width / cellW)), rows: Math.max(1, Math.floor(height / cellH)) };
+  },
 };
 
 if (typeof window !== "undefined") window.TermText = TermText;
