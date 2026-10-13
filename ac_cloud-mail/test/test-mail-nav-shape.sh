@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # cloud-mail's navigation is ONE declaration (#868): build.json::ui, read through libs:bottomnav's NavDecl.
 #
-#   N1  ui.bottom_nav is five section ids, Home in the centre, and ui.default_section is one of them
+#   N1  ui.bottom_nav is the seven section ids Mail, News, Tasks, Home, Chat, Video, Contacts, and ui.default_section is one of them
 #   N2  every section's first page is either a DESTINATION (page id = a NavHost route SternaApp serves) or a
 #       `launch:<package>` hand-off; exactly two launch (Telegram, WhatsApp Business), none is a destination
 #   N3  app/build.gradle.kts bakes UI_BOTTOM_NAV, UI_SECTIONS_B64 and UI_DEFAULT_SECTION from build.json::ui
@@ -17,12 +17,12 @@ has() { grep -q -- "$2" "$1" && ok "$3" || bad "$3 ($1)"; }
 code() { awk '{ l=$0; sub(/^[[:space:]]+/,"",l); if (l ~ /^\/\// || l ~ /^\*/ || l ~ /^\/\*/) next; print }' "$@"; }
 
 echo "== N1/N2: the declaration =="
-python3 - "$APP/build.json" "$UI/SternaApp.kt" <<'PY' && ok "bottom_nav is the five sections, Home centred; launch pages carry launch:<package>, destinations name a served route" || bad "build.json::ui is not a valid mail nav declaration"
+python3 - "$APP/build.json" "$UI/SternaApp.kt" <<'PY' && ok "bottom_nav is the seven sections (Mail News Tasks Home Chat Video Contacts); launch pages carry launch:<package>, destinations name a served route" || bad "build.json::ui is not a valid mail nav declaration"
 import json, re, sys
 ui = json.load(open(sys.argv[1], encoding="utf-8"))["ui"]
 app = open(sys.argv[2], encoding="utf-8").read()
 bar, secs = ui["bottom_nav"], {s["id"]: s for s in ui["sections"]}
-ok = len(bar) == 5 and bar[2] == "home" and ui["default_section"] in bar and all(b in secs for b in bar)
+ok = bar == ["mail", "rss", "tasks", "home", "chat", "video", "contacts"] and ui["default_section"] in bar and all(b in secs for b in bar)
 launches = []
 for b in bar:
     p = secs[b]["pages"][0]
@@ -32,7 +32,7 @@ for b in bar:
         launches.append(a)
     else:
         ok = ok and re.search(r'composable\(\s*"%s"' % re.escape(p["id"]), app) is not None
-ok = ok and len(launches) == 2 and "launch:org.telegram.messenger" in launches and "launch:com.whatsapp.w4b" in launches
+ok = ok and sorted(launches) == sorted(["launch:com.diegonmarcos.cloudagenda", "launch:com.diegonmarcos.comms.chat", "launch:com.whatsapp.w4b", "launch:com.diegonmarcos.cloudcontacts"])
 sys.exit(0 if ok else 1)
 PY
 

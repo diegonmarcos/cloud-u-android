@@ -10,70 +10,8 @@ import java.io.File
  */
 class UnreadViewWiringLintTest {
 
-    // -- the drawer entry -------------------------------------------------------------------------
-
-    @Test
-    fun `the drawer entry says which view it selects, and selects it`() {
-        val entry = unreadEntryCall()
-        assertEquals(
-            "The drawer entry for the unread view must be wired exactly like the unified one it was " +
-                "written from, and to ITS OWN view: 'selected = ui.unified' puts the tick on the " +
-                "wrong row, and an onClick that closes the drawer without calling selectUnread() " +
-                "leaves the entry inert. Compared as whole arguments — 'selected = ui.unreadView' is " +
-                "contained in 'selected = ui.unreadView && false'. Arguments found were:" +
-                "\n${argumentsOf(entry).joinToString("\n")}",
-            EXPECTED_ENTRY_ARGUMENTS,
-            argumentsOf(entry),
-        )
-    }
-
-    @Test
-    fun `the entry carries the count, and drops it when there is none`() {
-        val block = unreadEntryBlock()
-        assertEquals(
-            "The label must be picked on the count itself. Zero unread has to fall back to the bare " +
-                "label, exactly as the unified entry does — 'Unread  (0)' is a promise of nothing. " +
-                "Compared as the whole condition. Conditions found in the entry were:" +
-                "\n${ifConditions(block).joinToString("\n")}",
-            listOf(EXPECTED_COUNT_CONDITION),
-            ifConditions(block),
-        )
-        assertEquals(
-            "The counted arm must be handed the SAME count the condition tested — a second source " +
-                "(ui.unreadCount is the unified aggregate, and is the neighbouring entry's) would " +
-                "print one account's view under another's number. ⭐ Unlike that neighbour, this " +
-                "entry carries its number whether or not it is the view on screen, and that is a " +
-                "CHOICE: K-9 and Gmail badge a mailbox permanently, and the badge is only useful " +
-                "before you tap it. The unified entry hides its own outside its view for a reason " +
-                "of its own — ui.unreadCount holds the unified total only while unified is selected. " +
-                "Compared as whole calls, in source order: counted arm first, bare label second. " +
-                "Calls found were:\n${callsTo("stringResource", block).joinToString("\n")}",
-            EXPECTED_LABEL_CALLS,
-            callsTo("stringResource", block),
-        )
-    }
-
-    /**
-     * The one difference from the unified entry, and the reason this rule exists: the unread view
-     */
-    @Test
-    fun `the entry is not hidden behind a second account`() {
-        val blocks = multiAccountBlocks()
-        assertEquals(
-            "Exactly one 'accounts.size > 1' block is expected to hold the unified entry — this rule " +
-                "is anchored on it, so any other answer means the guard moved and the rule below " +
-                "stopped guarding anything. Blocks were:\n${blocks.joinToString("\n")}",
-            1,
-            blocks.count { Regex("""\bselectUnified\s*\(""").containsMatchIn(it) },
-        )
-        assertEquals(
-            "The unread entry must stay OUT of every multi-account guard: it is one account's unread " +
-                "mail across its own folders, and a single-account install is precisely where the " +
-                "drawer has no other way to reach it. Blocks were:\n${blocks.joinToString("\n")}",
-            0,
-            blocks.count { Regex("""\bselectUnread\s*\(""").containsMatchIn(it) },
-        )
-    }
+    // The drawer entry for the unread view is gone (owner, 2026-10-13: the pane is Inbox, Starred,
+    // Assigned - see DrawerPaneViewsTest). The view itself, its state and its back rule stay.
 
     // -- the toolbar ------------------------------------------------------------------------------
 

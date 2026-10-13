@@ -69,6 +69,8 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.AllInbox
+import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Menu
@@ -256,6 +258,8 @@ fun InboxScreen(
     onOpenSearch: (query: String) -> Unit,
     /** The drawer's Starred entry: the search screen on `$flagged`, already run. Not a folder. */
     onOpenStarred: () -> Unit,
+    /** The pane's Assigned view: the mails that have a task. */
+    onOpenAssigned: () -> Unit = {},
     onOpenScheduled: () -> Unit,
     onOpenSnoozed: () -> Unit,
     onOpenOutbox: () -> Unit,
@@ -1777,6 +1781,7 @@ fun InboxScreen(
                         onOpenSettings = onOpenSettings,
                         onOpenHome = onOpenHome,
                         onOpenStarred = onOpenStarred,
+                        onOpenAssigned = onOpenAssigned,
                         onCreateFolder = { showCreateFolder = true },
                         onAddSubfolder = { folderToAddChild = it },
                         onRenameFolder = { folderToRename = it },
@@ -1806,6 +1811,7 @@ fun InboxScreen(
                         onOpenSettings = onOpenSettings,
                         onOpenHome = onOpenHome,
                         onOpenStarred = onOpenStarred,
+                        onOpenAssigned = onOpenAssigned,
                         onCreateFolder = { showCreateFolder = true },
                         onAddSubfolder = { folderToAddChild = it },
                         onRenameFolder = { folderToRename = it },
@@ -1837,6 +1843,8 @@ private fun DrawerContent(
     onOpenSettings: () -> Unit,
     onOpenHome: () -> Unit,
     onOpenStarred: () -> Unit,
+    /** The pane's Assigned view: the mails that have a task. */
+    onOpenAssigned: () -> Unit = {},
     /** The four dialogs the drawer opens live with the screen, not with the sheet: hoisted as
      *  callbacks so a dialog outlives the modal sheet closing under it. */
     onCreateFolder: () -> Unit,
@@ -1996,51 +2004,16 @@ private fun DrawerContent(
                     }
                 }
                 HorizontalDivider(Modifier.padding(bottom = MailMetrics.s12))
-                // FIRST of the drawer's navigation affordances, above "All inboxes" and well above
-                // the 28 folder rows: Home describes every account at once, so it belongs with the
-                // rows that are not one folder rather than sorted in among the ones that are. It is
-                // a DESTINATION and not a view of the list — like the Settings row at the foot of
-                // this sheet, it never draws selected and it closes the drawer behind itself.
+                // The pane's three views: Inbox, Starred, Assigned (owner, 2026-10-13). Inbox is the
+                // unified inbox when there are several accounts, else this account's own; Home, All
+                // inboxes and Unread left the pane (Home is on the bottom nav).
+                val inboxMailbox = ui.mailboxes.firstOrNull { it.role == "inbox" }
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-                    label = { DrawerLabel(stringResource(R.string.home_title)) },
-                    selected = false,
+                    icon = { Icon(Icons.Filled.Inbox, contentDescription = null) },
+                    label = { DrawerLabel(stringResource(R.string.inbox_drawer_inbox)) },
+                    selected = ui.unified || (!ui.unreadView && inboxMailbox != null && inboxMailbox.id == ui.selectedMailboxId),
                     onClick = {
-                        onOpenHome()
-                        scope.launch { drawerState.close() }
-                    },
-                    modifier = drawerRowModifier,
-                )
-                if (accounts.size > 1) {
-                    val unifiedLabel = if (ui.unified && ui.unreadCount > 0) {
-                        stringResource(R.string.inbox_all_inboxes_unread, ui.unreadCount)
-                    } else {
-                        stringResource(R.string.inbox_all_inboxes)
-                    }
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Filled.AllInbox, contentDescription = null) },
-                        label = { DrawerLabel(unifiedLabel) },
-                        selected = ui.unified,
-                        onClick = {
-                            viewModel.selectUnified()
-                            scope.launch { drawerState.close() }
-                        },
-                        modifier = drawerRowModifier,
-                    )
-                }
-                // Outside the guard above, deliberately: this is one account's unread mail across
-                // its own folders, so it means as much on a single-account install.
-                val unreadLabel = if (ui.unreadViewCount > 0) {
-                    stringResource(R.string.inbox_unread_view_unread, ui.unreadViewCount)
-                } else {
-                    stringResource(R.string.inbox_unread_view)
-                }
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.MarkEmailUnread, contentDescription = null) },
-                    label = { DrawerLabel(unreadLabel) },
-                    selected = ui.unreadView,
-                    onClick = {
-                        viewModel.selectUnread()
+                        if (accounts.size > 1) viewModel.selectUnified() else inboxMailbox?.let { viewModel.select(it) }
                         scope.launch { drawerState.close() }
                     },
                     modifier = drawerRowModifier,
@@ -2073,6 +2046,17 @@ private fun DrawerContent(
                     selected = false,
                     onClick = {
                         onOpenStarred()
+                        scope.launch { drawerState.close() }
+                    },
+                    modifier = drawerRowModifier,
+                )
+                // Assigned: the mails that have a task (deadline + target date). A destination, like Starred.
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.AssignmentTurnedIn, contentDescription = null) },
+                    label = { DrawerLabel(stringResource(R.string.assigned_title)) },
+                    selected = false,
+                    onClick = {
+                        onOpenAssigned()
                         scope.launch { drawerState.close() }
                     },
                     modifier = drawerRowModifier,

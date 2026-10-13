@@ -8,6 +8,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
@@ -19,7 +21,7 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.rememberLeaveOnce
 
 /**
- * Mail's five items as the island draws them, from the declaration ([mailNav], build.json::ui): the
+ * Mail's seven items as the island draws them, from the declaration ([mailNav], build.json::ui): the
  * ids, order and icons are the declared sections'. Labels are the localised accessible names in
  * strings.xml, keyed by section id, so a translated bar stays translated.
  */
@@ -102,8 +104,10 @@ internal fun launchInstalledApp(
 
 /** The "not installed" sentence a launch item shows when its app is absent. */
 internal fun missingResource(id: String): Int = when (id) {
-    "chat" -> R.string.nav_chat_not_installed
+    "chat" -> R.string.nav_cloud_chat_not_installed
     "video" -> R.string.nav_video_not_installed
+    "tasks" -> R.string.nav_tasks_not_installed
+    "contacts" -> R.string.nav_contacts_not_installed
     else -> R.string.nav_launch_not_installed
 }
 
@@ -114,6 +118,8 @@ internal fun itemDescription(id: String): Int = when (id) {
     "home" -> R.string.nav_bar_home
     "rss" -> R.string.nav_bar_rss
     "video" -> R.string.nav_bar_video
+    "tasks" -> R.string.nav_bar_tasks
+    "contacts" -> R.string.nav_bar_contacts
     else -> R.string.nav_bar_home
 }
 
@@ -124,5 +130,7 @@ private fun iconFor(id: String): ImageVector = when (id) {
     "home" -> Icons.Filled.Home
     "rss" -> Icons.Filled.RssFeed
     "video" -> Icons.Filled.Videocam
+    "tasks" -> Icons.Filled.TaskAlt
+    "contacts" -> Icons.Filled.Contacts
     else -> Icons.Filled.Home
 }

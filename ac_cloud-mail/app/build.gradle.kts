@@ -108,6 +108,23 @@ val mailUiSectionsB64: String = groovy.json.JsonOutput.toJson(mailUi["sections"]
     .toByteArray(Charsets.UTF_8)
     .let { Base64.getEncoder().encodeToString(it) }
 
+// THE cal ENGINE this app binds (build.json::engines.cal, as Cloud Agenda does): the fleet's task
+// store, so a task attached to a mail ("Assigned") also shows under Tasks. Its package comes from
+// the constellation fleet manifest, for BuildConfig AND the manifest's <queries> (API 30+ hides an
+// unqueried package, and invisible reads exactly like "not installed"). An unknown id fails the build.
+@Suppress("UNCHECKED_CAST")
+val mailCalEngine: Map<String, Any> = (((groovy.json.JsonSlurper()
+    .parse(rootProject.file("build.json")) as Map<String, Any>)["engines"] as Map<String, Any>?)?.get("cal") as Map<String, Any>?)
+    ?: error("build.json::engines.cal is missing: the task store Assigned writes to.")
+@Suppress("UNCHECKED_CAST")
+val calEnginePackage: String = (((groovy.json.JsonSlurper()
+    .parse(rootProject.file("../aa_cloud-superapp/data/constellation-fleet.json")) as Map<String, Any>)["apps"] as List<Map<String, Any>>)
+    .firstOrNull { it["id"] == mailCalEngine["fleet"] }?.get("package") as String?)
+    ?: error("build.json::engines.cal.fleet '${mailCalEngine["fleet"]}' is not in the constellation fleet manifest.")
+/** The manifest placeholder <queries> names the engine by. */
+fun calEnginePlaceholder(calEnginePackage: String): Map<String, Any> = mapOf("calEnginePackage" to calEnginePackage)
+val mailCalEngineAction: String = (mailCalEngine["action"] as String).replace("{package}", calEnginePackage)
+
 val mailAiRoutingB64: String = groovy.json.JsonOutput.toJson(mailAiRouting)
     .toByteArray(Charsets.UTF_8)
     // Base64, NOT java.util.Base64 — imported above and referred to by its simple
@@ -198,6 +215,10 @@ android {
         buildConfigField("String", "UI_BOTTOM_NAV", "\"$mailUiBottomNav\"")
         buildConfigField("String", "UI_SECTIONS_B64", "\"$mailUiSectionsB64\"")
         buildConfigField("String", "UI_DEFAULT_SECTION", "\"$mailUiDefaultSection\"")
+        buildConfigField("String", "CAL_ENGINE_PACKAGE", "\"$calEnginePackage\"")
+        buildConfigField("String", "CAL_ENGINE_ACTION", "\"$mailCalEngineAction\"")
+        buildConfigField("int", "CAL_ENGINE_MIN_CONTRACT", "${mailCalEngine["min_contract"]}")
+        manifestPlaceholders.putAll(calEnginePlaceholder(calEnginePackage = calEnginePackage))
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The launcher/settings/notification label. Substituted verbatim into the manifest,
         // so without -PtestApp the merged manifest still reads android:label="@string/app_name"
@@ -369,6 +390,10 @@ dependencies {
     // items/icons/labels/contract are the ONE declaration in the shared module;
     // this app never restated them and no private copy exists here.
     implementation(project(":libs:bottomnav"))
+
+    // #825 DataBackendClient: Assigned binds the fleet's cal engine (its task store) instead of
+    // compiling one, exactly as Cloud Agenda does.
+    implementation(project(":libs:databackend"))
 
     // Content scan (task #461): the ONE shared image-scan engine (ZXing barcode
     // decode + ML Kit OCR), BY REFERENCE from ab_cloud-libs-shared exactly like

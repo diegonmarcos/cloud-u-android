@@ -47,6 +47,7 @@ import app.sterna.container
 import app.sterna.core.data.account.StoredAccount
 import app.sterna.push.PushController
 import app.sterna.security.LockScreen
+import app.sterna.ui.assigned.AssignedScreen
 import app.sterna.ui.components.LoadingRing
 import app.sterna.ui.compose.ComposeScreen
 import app.sterna.ui.compose.IncognitoKeyboard
@@ -415,6 +416,7 @@ private fun MainNavHost(
                 // and already run. No mailbox id anywhere in this route — a star is a keyword, so
                 // "Starred" is a query and never a folder the app could move mail into.
                 onOpenStarred = { entry.navigateOnce { nav.navigate("search?flagged=true") } },
+                onOpenAssigned = { entry.navigateOnce { nav.navigate("assigned") } },
                 onOpenScheduled = { entry.navigateOnce { nav.navigate("scheduled") } },
                 onOpenSnoozed = { entry.navigateOnce { nav.navigate("snoozed") } },
                 onOpenOutbox = { entry.navigateOnce { nav.navigate("outbox") } },
@@ -680,6 +682,17 @@ private fun MainNavHost(
                     onOpenRss = { entry.navigateOnce { nav.navigate("rss") } },
                 )
             }
+        }
+        // Assigned: the mails that have a task (pane entry). A tap opens the mail.
+        composable("assigned") { entry ->
+            AssignedScreen(
+                onBack = { entry.navigateOnce { nav.popBackStack() } },
+                onOpenEmail = { id, accountId ->
+                    entry.navigateOnce {
+                        nav.navigate("message/${Uri.encode(id)}?accountId=${Uri.encode(accountId)}")
+                    }
+                },
+            )
         }
         composable("scheduled") { entry ->
             ScheduledSendsScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })

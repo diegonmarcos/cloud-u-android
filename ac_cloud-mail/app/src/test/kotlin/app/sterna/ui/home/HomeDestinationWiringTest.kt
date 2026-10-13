@@ -14,46 +14,11 @@ import org.junit.Test
  */
 class HomeDestinationWiringTest {
 
-    @Test fun `the drawer carries a Home row, with the navigation affordances and not among the folders`() {
+    @Test fun `Home left the side pane, which is Inbox, Starred and Assigned`() {
         assertEquals(
-            "the drawer's Home row changed shape. It must open the destination it is handed and " +
-                "close the drawer behind itself, exactly like the Settings row at the foot of the " +
-                "sheet: without the close the drawer stays open over the screen it just opened, " +
-                "and on the way back the reader is looking at the sheet again.",
-            listOf(
-                "NavigationDrawerItem(",
-                "icon = { Icon(Icons.Filled.Home, contentDescription = null) },",
-                "label = { DrawerLabel(stringResource(R.string.home_title)) },",
-                "selected = false,",
-                "onClick = {",
-                "onOpenHome()",
-                "scope.launch { drawerState.close() }",
-                "},",
-                "modifier = drawerRowModifier,",
-                ")",
-            ),
-            block(INBOX_SCREEN, "icon = { Icon(Icons.Filled.Home,", from = -1, count = 10),
-        )
-        assertEquals(
-            "the Home row moved out of the drawer's navigation affordances. It must sit between " +
-                "the divider under the account header and the \"All inboxes\" guard — the head of " +
-                "the rows that are NOT one folder. Pushed below `mailboxTree`, it is buried under " +
-                "28 folder rows, which is the placement the row exists to avoid; pushed above the " +
-                "divider it lands inside the account header.",
-            listOf(
-                "HorizontalDivider(Modifier.padding(bottom = MailMetrics.s12))",
-                "NavigationDrawerItem(",
-                "icon = { Icon(Icons.Filled.Home, contentDescription = null) },",
-            ),
-            block(INBOX_SCREEN, "HorizontalDivider(Modifier.padding(bottom = MailMetrics.s12))", count = 3),
-        )
-        assertEquals(
-            "the drawer content is drawn by TWO envelopes — the modal sheet under 1 200 dp and the " +
-                "permanent sheet above it (#103) — and each must be handed the SAME callback. One " +
-                "of the two left out, Home is missing on that window size alone, which is exactly " +
-                "the shape nobody would look for.",
-            listOf("onOpenHome = onOpenHome,", "onOpenHome = onOpenHome,"),
-            codeLines(INBOX_SCREEN).filter { it.startsWith("onOpenHome =") },
+            "the pane has a Home row again: the owner moved Home to the bottom nav (2026-10-13).",
+            emptyList<String>(),
+            codeLines(INBOX_SCREEN).filter { "R.string.home_title" in it && "DrawerLabel" in it },
         )
     }
 

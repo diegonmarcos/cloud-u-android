@@ -100,13 +100,13 @@ class StarredIsAKeywordNotAMailboxTest {
      */
     @Test fun `Starred is last of the views and above the folder tabs, so no tab can hide it`() {
         val lines = codeLines(INBOX_SCREEN)
-        val unreadView = lines.indexOfFirst { "selected = ui.unreadView" in it }
+        val unreadView = lines.indexOfFirst { "R.string.inbox_drawer_inbox" in it }
         val starred = lines.indexOfFirst { "R.string.folder_flagged" in it }
         val tabs = lines.indexOfFirst { "PageTabs(" in it }
-        assertTrue("the Unread view entry is gone from the drawer", unreadView >= 0)
+        assertTrue("the Inbox entry is gone from the drawer", unreadView >= 0)
         assertTrue("the Starred entry is gone from the drawer", starred >= 0)
         assertTrue("the All|Unread tabs are gone from the drawer", tabs >= 0)
-        assertTrue("Starred no longer sits below the Unread view entry", unreadView < starred)
+        assertTrue("Starred no longer sits below the Inbox entry", unreadView < starred)
         assertTrue("Starred fell below the folder tabs, where a tab can hide it", starred < tabs)
     }
 

@@ -84,16 +84,10 @@ class DrawerDividerMarginLintTest {
      */
     private fun accountsDividerCall(): String {
         val text = codeText(INBOX_SCREEN)
-        val guards = Regex("""\bif\s*\(\s*accounts\.size\s*>\s*1\s*\)""").findAll(text)
-            .filter { Regex("""\bselectUnified\s*\(""").containsMatchIn(balancedFrom(text, it.range.last)) }
-            .toList()
-        check(guards.size == 1) {
-            "InboxScreen.kt is expected to hold exactly ONE 'accounts.size > 1' block carrying " +
-                "selectUnified() — the unified entry, and this rule's anchor. Found ${guards.size}. " +
-                "The divider below it can no longer be told from the three others in the file, so " +
-                "this rule is guarding nothing until the anchor is repaired."
-        }
-        val anchor = guards.single().range.first
+        // Anchored on the pane's Inbox entry (the one row calling selectUnified), the first view
+        // under the account list since the pane became Inbox, Starred, Assigned.
+        val anchor = text.indexOf(entryCalling("selectUnified"))
+        check(anchor >= 0) { "the Inbox entry is not in InboxScreen.kt" }
         val before = Regex("""\bHorizontalDivider\s*\(""").findAll(text)
             .filter { it.range.first < anchor }
             .toList()
@@ -273,7 +267,7 @@ class DrawerDividerMarginLintTest {
             "HorizontalDivider(Modifier.padding(bottom = MailMetrics.s12))"
 
         /** The two rows that can sit right under it, by the view each one selects. */
-        private val ENTRY_SELECTORS = listOf("selectUnified", "selectUnread")
+        private val ENTRY_SELECTORS = listOf("selectUnified")
 
         /** The name of the one modifier every row in the drawer takes. */
         private const val SHARED_ROW_MODIFIER = "drawerRowModifier"

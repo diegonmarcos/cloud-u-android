@@ -20,14 +20,99 @@
   },
   "ui": {
     "_doc": "#868 THE navigation declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island's five ids, ui.sections the section each one opens, ui.default_section where the app opens. Each section's FIRST page is what its island item does: a page with no `action` is a DESTINATION of SternaApp's NavHost and its id IS the route (inbox / home / rss); a page whose `action` is `launch:<package>` is a LAUNCH hand-off to another app (Telegram, WhatsApp Business) that leaves mail's selected pill where it was. The labels shown on the island are the localised nav_bar_* strings keyed by section id; Home stays the centre. Reordering bottom_nav reorders the bar and changes nothing else.",
-    "bottom_nav": ["mail", "chat", "home", "rss", "video"],
+    "bottom_nav": [
+      "mail",
+      "rss",
+      "tasks",
+      "home",
+      "chat",
+      "video",
+      "contacts"
+    ],
     "default_section": "home",
     "sections": [
-      {"id": "mail", "label": "Mail", "icon": "mail", "background": "theme", "pages": [{"id": "inbox", "label": "Inbox"}]},
-      {"id": "chat", "label": "Chat", "icon": "chat", "pages": [{"id": "telegram", "label": "Telegram", "action": "launch:org.telegram.messenger"}]},
-      {"id": "home", "label": "Home", "icon": "home", "pages": [{"id": "home", "label": "Home"}]},
-      {"id": "rss", "label": "News", "icon": "rss", "pages": [{"id": "rss", "label": "News"}]},
-      {"id": "video", "label": "Video", "icon": "video", "pages": [{"id": "whatsapp", "label": "WhatsApp Business", "action": "launch:com.whatsapp.w4b"}]}
+      {
+        "id": "mail",
+        "label": "Mail",
+        "icon": "mail",
+        "background": "theme",
+        "pages": [
+          {
+            "id": "inbox",
+            "label": "Inbox"
+          }
+        ]
+      },
+      {
+        "id": "rss",
+        "label": "News",
+        "icon": "rss",
+        "pages": [
+          {
+            "id": "rss",
+            "label": "News"
+          }
+        ]
+      },
+      {
+        "id": "tasks",
+        "label": "Tasks",
+        "icon": "tasks",
+        "pages": [
+          {
+            "id": "agenda",
+            "label": "Cloud Agenda",
+            "action": "launch:com.diegonmarcos.cloudagenda"
+          }
+        ]
+      },
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "pages": [
+          {
+            "id": "home",
+            "label": "Home"
+          }
+        ]
+      },
+      {
+        "id": "chat",
+        "label": "Chat",
+        "icon": "chat",
+        "pages": [
+          {
+            "id": "chat",
+            "label": "Cloud Chat",
+            "action": "launch:com.diegonmarcos.comms.chat"
+          }
+        ]
+      },
+      {
+        "id": "video",
+        "label": "Video",
+        "icon": "video",
+        "pages": [
+          {
+            "id": "whatsapp",
+            "label": "WhatsApp Business",
+            "action": "launch:com.whatsapp.w4b"
+          }
+        ]
+      },
+      {
+        "id": "contacts",
+        "label": "Contacts",
+        "icon": "contacts",
+        "pages": [
+          {
+            "id": "contacts",
+            "label": "Cloud Contacts",
+            "action": "launch:com.diegonmarcos.cloudcontacts"
+          }
+        ]
+      }
     ]
   },
   "tests": {
@@ -108,6 +193,11 @@
       "_doc": "The fleet's self-update chain: GHCR manifest check, resumable download, digest verification, and the one serialised PackageInstaller path whose every terminal status is surfaced. This is the SAME library Constellation - the owner's app store - drives its own updates with, pulling the SAME image (forks.mail.image) the store distributes, so mail updating itself and the store updating mail are one mechanism rather than two.",
       "dir": "../ab_cloud-libs-shared/libs/updater",
       "type": "library"
+    },
+    "libs:databackend": {
+      "type": "library",
+      "_doc": "#825 the engine wire (DataBackendClient). Assigned binds the cal engine (the fleet's task store) through it.",
+      "dir": "../ab_cloud-libs-shared/libs/databackend"
     }
   },
   "forks": {
@@ -747,5 +837,13 @@
       "▪ "
     ],
     "summary_not_bullets_note": "[Asked for bullet points, the model answered in prose. Its reply is above, unchanged.]"
+  },
+  "engines": {
+    "_doc": "ENGINES THIS APP BINDS INSTEAD OF COMPILING (same shape as ac_cloud-agenda/build.json::engines). The cal engine is the fleet's task store: a task attached to a mail (Assigned) is mirrored there, so it also shows under Cloud Agenda's Tasks.",
+    "cal": {
+      "fleet": "lib-cal",
+      "action": "{package}.ENGINE",
+      "min_contract": 1
+    }
   }
 }

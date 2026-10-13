@@ -1504,6 +1504,14 @@
         "ac_cloud-mail"
       ]
     },
+    "mail_tasks": {
+      "kind": "prefs",
+      "class": "content",
+      "doc": "Mail's Assigned tasks (a task attached to a mail: deadline, target date, notes, links, location, priority, status, people, the mail's account/id and mid: link), as CalTodo JSON. Each is mirrored into the cal engine's task store, which Cloud Agenda shows under Tasks.",
+      "used_by": [
+        "ac_cloud-mail"
+      ]
+    },
     "list_view": {
       "kind": "prefs",
       "class": "config",

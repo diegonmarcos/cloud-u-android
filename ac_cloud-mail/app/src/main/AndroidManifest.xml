@@ -23,6 +23,13 @@
         <package android:name="org.sufficientlysecure.keychain" />
         <package android:name="org.sufficientlysecure.keychain.debug" />
         <package android:name="com.diegonmarcos.cloudbrowser" />
+        <!-- The cal engine (the task store Assigned mirrors to) and the bottom nav's hand-offs. -->
+        <package android:name="${calEnginePackage}" />
+        <package android:name="com.diegonmarcos.cloudagenda" />
+        <package android:name="com.diegonmarcos.comms.chat" />
+        <package android:name="com.diegonmarcos.cloudcontacts" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="com.whatsapp.w4b" />
         <package android:name="com.brave.browser" />
         <intent>
             <action android:name="org.openintents.openpgp.IOpenPgpService2" />

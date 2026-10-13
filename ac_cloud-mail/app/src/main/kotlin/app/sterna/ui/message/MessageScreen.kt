@@ -207,6 +207,10 @@ import app.sterna.ui.sender.trashFilePath
 import app.sterna.ui.snoozed.SnoozeDeadlineHeader
 import app.sterna.ui.theme.MailMetrics
 import app.sterna.ui.theme.LocalAppStyle
+import app.sterna.ui.assigned.AssignTaskDialog
+import app.sterna.ui.assigned.MailTasks
+import app.sterna.core.data.tasks.tasksOfMail
+import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import app.sterna.core.data.settings.AppStyle
 import app.sterna.util.LinkCleaner
 import app.sterna.util.MailDates
@@ -941,6 +945,29 @@ private fun MessageActions(
         TextTool.RESUME in textTools.surface.tools
     // Keyed on the settled message so an open menu never carries over across a page settle.
     var menuOpen by remember(active.emailId) { mutableStateOf(false) }
+    var assignOpen by remember(active.emailId) { mutableStateOf(false) }
+    if (assignOpen) {
+        val mail = (state as? MessageState.Loaded)?.email
+        val owner = accountId ?: mail?.accountId
+        if (mail != null && owner != null) {
+            LaunchedEffect(Unit) { MailTasks.load(context) }
+            val all by MailTasks.tasks.collectAsStateWithLifecycle()
+            val assignedMessage = stringResource(R.string.assigned_engine_missing)
+            AssignTaskDialog(
+                accountId = owner,
+                emailId = mail.id,
+                mailSubject = mail.subject.orEmpty(),
+                messageId = mail.messageId.firstOrNull(),
+                existing = tasksOfMail(all, owner, mail.id).firstOrNull(),
+                onDone = { stored ->
+                    assignOpen = false
+                    if (stored == false) android.widget.Toast.makeText(context, assignedMessage, android.widget.Toast.LENGTH_LONG).show()
+                },
+            )
+        } else {
+            assignOpen = false
+        }
+    }
     var snoozeSubmenu by remember(active.emailId) { mutableStateOf(false) }
     var movePicker by remember(active.emailId) { mutableStateOf(false) }
     // Follow (flag) toggle, promoted from the overflow menu to the bar now that
@@ -1059,6 +1086,12 @@ private fun MessageActions(
                 text = { Text(stringResource(R.string.message_forward_attachment)) },
                 leadingIcon = { Icon(Icons.Filled.AttachFile, contentDescription = null) },
                 onClick = { menuOpen = false; onReply("forwardAttachment", replyTargetId, accountId) },
+            )
+            // Assigned: attach a task (deadline + target date and details) to this mail.
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.task_assign)) },
+                leadingIcon = { Icon(Icons.Filled.AssignmentTurnedIn, contentDescription = null) },
+                onClick = { menuOpen = false; assignOpen = true },
             )
             // EVERY function is a NAMED entry in this menu (#293) — the owner's "right menu should
             // show all functions as LISTS", "LIST NAMES NOT ICONS". The reading actions are ALSO the
