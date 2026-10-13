@@ -154,7 +154,7 @@ PY
   grep -q 'StoreDensity\.' "$MA" && ok "Cloud Store's screens read StoreDensity" || bad "Cloud Store's MainActivity does not read StoreDensity"
   grep -q 'StoreDensity\.T_' "$L/StoreCloudFragment.kt" && grep -q 'StoreDensity\.T_' "$L/StorePhoneFragment.kt" && ok "the Cloud and Phone shelves draw their type from the ramp" || bad "a shelf page does not use the StoreDensity type ramp"
   # 7. #868 the fleet nav pattern: the island's five pages (#896) are build.json::ui.sections, the bar is the shared island
-  python3 - "$S/build.json" "$L/../../../../../assets/appstore-feeds.json" <<'PY' && ok "ui.bottom_nav is cloud, phone, feed, access, settings (five, each a ui.sections id), Phone's pages are installed|declared, Feed's the declared feeds, Access's mesh|android|cloud, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, feed, perms, settings"
+  python3 - "$S/build.json" "$L/../../../../../assets/appstore-feeds.json" <<'PY' && ok "ui.bottom_nav is cloud, phone, feed, access, settings (five, each a ui.sections id), Phone's pages are installed|search|declared, Feed's the declared feeds, Access's mesh|android|cloud, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, feed, perms, settings"
 import json, os, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
 secs = {s.get('id'): s for s in ui.get('sections') or []}
@@ -163,7 +163,7 @@ pg = lambda i: [p.get('id') for p in secs.get(i, {}).get('pages') or []]
 ok = (ui.get('bottom_nav') == ['cloud', 'phone', 'feed', 'access', 'settings']
       and set(ui['bottom_nav']) <= set(secs) and 'mesh' not in secs and 'perms' not in secs
       and pg('access') == ['mesh', 'android', 'cloud']
-      and pg('phone') == ['installed', 'declared']
+      and pg('phone') == ['installed', 'search', 'declared']
       and (pg('feed') == [f['id'] for f in feeds] if feeds else len(pg('feed')) >= 2)
       and ui.get('default_section') == 'cloud')
 sys.exit(0 if ok else 1)
