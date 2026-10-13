@@ -14,6 +14,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import app.sterna.core.data.settings.AppStyle
 import app.sterna.core.data.settings.ThemeMode
 
 /**
@@ -36,22 +37,40 @@ internal fun applyPureBlack(
 ): ColorScheme = if (darkTheme && pureBlack) scheme.pulledToBlack() else scheme
 
 /**
- * Material 3 theme.
+ * Material 3 theme. [appStyle] picks the whole look (Cloud Dark, Gmail Dark, Cloud E-ink); the theme
+ * mode, Material You and pure black are Cloud Dark's own options and change nothing in the other two.
  */
 @Composable
 fun SternaTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     dynamicColor: Boolean = false,
     pureBlack: Boolean = false,
+    appStyle: AppStyle = AppStyle.CLOUD_DARK,
+    content: @Composable () -> Unit,
+) = StyledSternaTheme(themeMode, dynamicColor, pureBlack, appStyle, content = { ProvideAppStyle(appStyle, content) })
+
+@Composable
+private fun StyledSternaTheme(
+    themeMode: ThemeMode,
+    dynamicColor: Boolean,
+    pureBlackSetting: Boolean,
+    appStyle: AppStyle,
     content: @Composable () -> Unit,
 ) {
-    val darkTheme = when (themeMode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-    }
+    // Pure black is a Cloud Dark option; the Gmail Dark and E-ink palettes are taken as they are.
+    val pureBlack = pureBlackSetting && appStyle == AppStyle.CLOUD_DARK
+    val darkTheme = appStyleIsDark(
+        appStyle,
+        when (themeMode) {
+            ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            ThemeMode.LIGHT -> false
+            ThemeMode.DARK -> true
+        },
+    )
 
     val colorScheme = when {
+        appStyle == AppStyle.GMAIL_DARK -> GmailDarkColorScheme
+        appStyle == AppStyle.CLOUD_EINK -> EinkColorScheme
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -63,8 +82,12 @@ fun SternaTheme(
     // The message list's own palette follows the same theme decision, and the same OLED pull: in a
     // pure-black device the pane comes down toward black with the rest, while the card and the two
     // text inks keep their read/unread difference (the card is already black; the inks must not be).
-    val mailListPalette = (if (darkTheme) PelagicMailListPalette else ArcticMailListPalette)
-        .let { if (darkTheme && pureBlack) it.pulledToBlack() else it }
+    val mailListPalette = when (appStyle) {
+        AppStyle.GMAIL_DARK -> GmailDarkMailListPalette
+        AppStyle.CLOUD_EINK -> EinkMailListPalette
+        AppStyle.CLOUD_DARK -> (if (darkTheme) PelagicMailListPalette else ArcticMailListPalette)
+            .let { if (darkTheme && pureBlack) it.pulledToBlack() else it }
+    }
 
     // Match the system bar icons to the app theme (it drives light/dark via Compose,
     // not the system, so the edge-to-edge bars must be told explicitly). In light

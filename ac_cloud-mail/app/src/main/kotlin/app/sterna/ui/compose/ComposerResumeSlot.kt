@@ -382,6 +382,15 @@ private val LETTER_OF = mapOf(Inline.BOLD to 'b', Inline.ITALIC to 'i', Inline.U
 /** Upper case, so a block group can never be mistaken for an inline one by a sloppy parser. */
 private val BLOCK_LETTER_OF = mapOf(BlockKind.BULLET to 'U', BlockKind.NUMBER to 'O')
 
+/**
+ * The families and block kinds a styling line carries, FIXED to the four and two it has always held:
+ * the line's shape is counted in sections, so a new family (the text colours) or kind (quote,
+ * heading) added here would turn every line already written unreadable. Those newer styles are not
+ * carried across a process death; the draft (HTML) carries them.
+ */
+private val SLOT_FAMILIES = listOf(Inline.BOLD, Inline.ITALIC, Inline.UNDERLINE, Inline.STRIKE)
+private val SLOT_BLOCK_KINDS = listOf(BlockKind.BULLET, BlockKind.NUMBER)
+
 /** The one section that is not a family and not a block: the links. */
 private const val LINK_LETTER = 'a'
 
@@ -390,16 +399,16 @@ private const val LINK_LETTER = 'a'
  */
 internal enum class StylingShape(val sections: Int, val hasBlocks: Boolean, val hasLinks: Boolean) {
     /** `b;i;u;s` — a `/2` line, written before either the lists or the links existed. */
-    FAMILIES(Inline.entries.size, false, false),
+    FAMILIES(SLOT_FAMILIES.size, false, false),
 
     /** `b;i;u;s;U;O` — a `/3` line as the LISTS build wrote it. */
-    FAMILIES_BLOCKS(Inline.entries.size + BlockKind.entries.size, true, false),
+    FAMILIES_BLOCKS(SLOT_FAMILIES.size + SLOT_BLOCK_KINDS.size, true, false),
 
     /** `b;i;u;s;a` — a `/3` line as the LINKS build wrote it. The two never met until now. */
-    FAMILIES_LINKS(Inline.entries.size + 1, false, true),
+    FAMILIES_LINKS(SLOT_FAMILIES.size + 1, false, true),
 
     /** `b;i;u;s;U;O;a` — the `/4` line, the only one this build writes. */
-    FAMILIES_BLOCKS_LINKS(Inline.entries.size + BlockKind.entries.size + 1, true, true),
+    FAMILIES_BLOCKS_LINKS(SLOT_FAMILIES.size + SLOT_BLOCK_KINDS.size + 1, true, true),
 }
 
 /**
@@ -410,7 +419,7 @@ internal fun stylingShapeOfLine(line: String): StylingShape? {
     val opens = { index: Int, letter: Char -> sections.getOrNull(index)?.firstOrNull() == letter }
     val bullet = BLOCK_LETTER_OF.getValue(BlockKind.BULLET)
     val number = BLOCK_LETTER_OF.getValue(BlockKind.NUMBER)
-    val families = Inline.entries.size
+    val families = SLOT_FAMILIES.size
     return when {
         sections.size == StylingShape.FAMILIES.sections -> StylingShape.FAMILIES
         sections.size == StylingShape.FAMILIES_LINKS.sections && opens(families, LINK_LETTER) ->
@@ -431,9 +440,9 @@ internal fun encodeRanges(body: RichBody, baseline: RichBody): String =
     encodeSide(body) + "|" + encodeSide(baseline)
 
 private fun encodeSide(rich: RichBody): String =
-    Inline.entries.joinToString(";") { kind ->
+    SLOT_FAMILIES.joinToString(";") { kind ->
         LETTER_OF.getValue(kind) + rich.ranges[kind].orEmpty().joinToString(",") { "${it.start}-${it.end}" }
-    } + BlockKind.entries.joinToString("") { kind ->
+    } + SLOT_BLOCK_KINDS.joinToString("") { kind ->
         ";" + BLOCK_LETTER_OF.getValue(kind) +
             rich.blocks.filter { it.kind == kind }.joinToString(",") { "${it.lines.first}-${it.lines.last}" }
     } + ";" + LINK_LETTER +
@@ -517,10 +526,10 @@ private class DecodedSide(
 private fun decodeSide(text: String, length: Int, shape: StylingShape): DecodedSide? {
     val sections = text.split(';')
     if (sections.size != shape.sections) return null
-    val ranges = decodeFamilies(sections.take(Inline.entries.size), length) ?: return null
+    val ranges = decodeFamilies(sections.take(SLOT_FAMILIES.size), length) ?: return null
     val blocks =
         if (shape.hasBlocks) {
-            decodeBlocks(sections.subList(Inline.entries.size, Inline.entries.size + BlockKind.entries.size), length)
+            decodeBlocks(sections.subList(SLOT_FAMILIES.size, SLOT_FAMILIES.size + SLOT_BLOCK_KINDS.size), length)
                 ?: return null
         } else {
             emptyList()
@@ -531,7 +540,7 @@ private fun decodeSide(text: String, length: Int, shape: StylingShape): DecodedS
 
 private fun decodeFamilies(families: List<String>, length: Int): Map<Inline, List<Span>>? {
     val out = LinkedHashMap<Inline, List<Span>>()
-    for ((kind, family) in Inline.entries.zip(families)) {
+    for ((kind, family) in SLOT_FAMILIES.zip(families)) {
         if (family.isEmpty() || family[0] != LETTER_OF.getValue(kind)) return null
         val spans = family.substring(1)
         if (spans.isEmpty()) continue
@@ -549,7 +558,7 @@ private fun decodeFamilies(families: List<String>, length: Int): Map<Inline, Lis
 
 private fun decodeBlocks(groups: List<String>, length: Int): List<Block>? {
     val blocks = ArrayList<Block>()
-    for ((kind, group) in BlockKind.entries.zip(groups)) {
+    for ((kind, group) in SLOT_BLOCK_KINDS.zip(groups)) {
         if (group.isEmpty() || group[0] != BLOCK_LETTER_OF.getValue(kind)) return null
         val runs = group.substring(1)
         if (runs.isEmpty()) continue

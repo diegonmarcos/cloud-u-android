@@ -57,12 +57,30 @@ class ProtectedHeadersEntityTest {
     /** The inside of a multipart/related: body part, inline image, closing delimiter. */
     private val relatedParts = "$related\r\n" + htmlPart + "$related\r\n" + logoPart + "$related--\r\n"
 
-    /** The inside of the outer multipart/mixed of the fourth branch (related + the file). */
+    private val alternative = "------sterna_alternative_id1examplecom"
+    private val alternativeType = "Content-Type: multipart/alternative; boundary=\"----sterna_alternative_id1examplecom\""
+    private val relatedType = "Content-Type: multipart/related; type=\"text/html\"; boundary=\"----sterna_related_id1examplecom\""
+
+    /** The plain half of every HTML message: the message's own text, first. */
+    private val textPart =
+        "Content-Type: text/plain; charset=utf-8\r\n" +
+            "Content-Transfer-Encoding: base64\r\n\r\n" +
+            "aGVsbG8=\r\n"
+
+    /** text/plain + text/html, the HTML message's body with no inline picture. */
+    private val alternativeParts = "$alternative\r\n" + textPart + "$alternative\r\n" + htmlPart + "$alternative--\r\n"
+
+    /** text/plain + related(text/html, the picture): the picture belongs to the HTML half only. */
+    private val alternativeRelatedParts =
+        "$alternative\r\n" + textPart + "$alternative\r\n" + relatedType + "\r\n\r\n" + relatedParts + "$alternative--\r\n"
+
+    /** The inside of the outer multipart/mixed with an alternative (text + html) and the file. */
+    private val mixedAlternative =
+        "$mixed\r\n" + alternativeType + "\r\n\r\n" + alternativeParts + "$mixed\r\n" + pdfPart + "$mixed--\r\n"
+
+    /** The inside of the outer multipart/mixed of the fourth branch (alternative(text, related) + the file). */
     private val nestedRelated =
-        "$mixed\r\n" +
-            "Content-Type: multipart/related; type=\"text/html\"; boundary=\"----sterna_related_id1examplecom\"\r\n\r\n" +
-            relatedParts +
-            "$mixed\r\n" + pdfPart + "$mixed--\r\n"
+        "$mixed\r\n" + alternativeType + "\r\n\r\n" + alternativeRelatedParts + "$mixed\r\n" + pdfPart + "$mixed--\r\n"
 
     private val topic = "Quarterly report"
 
@@ -78,23 +96,21 @@ class ProtectedHeadersEntityTest {
         )
     }
 
-    @Test fun mixedWithoutAProtectedSubjectIsWhatItAlwaysWas() {
+    @Test fun mixedWithoutAProtectedSubjectWrapsTheAlternative() {
         assertEquals(
-            "Content-Type: multipart/mixed; boundary=\"----sterna_mixed_id1examplecom\"\r\n\r\n" +
-                "$mixed\r\n" + htmlPart + "$mixed\r\n" + pdfPart + "$mixed--\r\n",
+            "Content-Type: multipart/mixed; boundary=\"----sterna_mixed_id1examplecom\"\r\n\r\n" + mixedAlternative,
             OutgoingMime.buildBodyEntity(html(listOf(file))),
         )
     }
 
-    @Test fun relatedWithoutAProtectedSubjectIsWhatItAlwaysWas() {
+    @Test fun anInlinePictureSitsInARelatedInsideTheAlternative() {
         assertEquals(
-            "Content-Type: multipart/related; type=\"text/html\"; boundary=\"----sterna_related_id1examplecom\"\r\n\r\n" +
-                relatedParts,
+            alternativeType + "\r\n\r\n" + alternativeRelatedParts,
             OutgoingMime.buildBodyEntity(html(listOf(image))),
         )
     }
 
-    @Test fun mixedRelatedWithoutAProtectedSubjectIsWhatItAlwaysWas() {
+    @Test fun mixedAlternativeRelatedWithoutAProtectedSubject() {
         assertEquals(
             "Content-Type: multipart/mixed; boundary=\"----sterna_mixed_id1examplecom\"\r\n\r\n" + nestedRelated,
             OutgoingMime.buildBodyEntity(html(listOf(image, file))),
@@ -128,18 +144,16 @@ class ProtectedHeadersEntityTest {
         assertEquals(
             "Subject: Quarterly report\r\n" +
                 "Content-Type: multipart/mixed; boundary=\"----sterna_mixed_id1examplecom\"; " +
-                "protected-headers=\"v1\"\r\n\r\n" +
-                "$mixed\r\n" + htmlPart + "$mixed\r\n" + pdfPart + "$mixed--\r\n",
+                "protected-headers=\"v1\"\r\n\r\n" + mixedAlternative,
             OutgoingMime.buildBodyEntity(html(listOf(file)), topic),
         )
     }
 
-    @Test fun relatedCarriesTheSubjectAboveAMarkedContentType() {
+    @Test fun alternativeCarriesTheSubjectAboveAMarkedContentType() {
         assertEquals(
             "Subject: Quarterly report\r\n" +
-                "Content-Type: multipart/related; type=\"text/html\"; " +
-                "boundary=\"----sterna_related_id1examplecom\"; protected-headers=\"v1\"\r\n\r\n" +
-                relatedParts,
+                alternativeType + "; protected-headers=\"v1\"\r\n\r\n" +
+                alternativeRelatedParts,
             OutgoingMime.buildBodyEntity(html(listOf(image)), topic),
         )
     }

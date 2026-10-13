@@ -56,6 +56,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import app.sterna.R
 import app.sterna.container
 import app.sterna.core.data.settings.PURE_BLACK_DEFAULT
+import app.sterna.core.data.settings.AppStyle
 import app.sterna.core.data.settings.ThemeMode
 import app.sterna.ui.rememberLeaveOnce
 import app.sterna.ui.theme.SternaTheme
@@ -96,7 +97,8 @@ class MiniBrowserActivity : AppCompatActivity() {
             val themeMode by settings.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
             val dynamicColor by settings.dynamicColor.collectAsState(initial = false)
             val pureBlack by settings.pureBlack.collectAsState(initial = PURE_BLACK_DEFAULT)
-            SternaTheme(themeMode = themeMode, dynamicColor = dynamicColor, pureBlack = pureBlack) {
+            val appStyle by settings.appStyle.collectAsState(initial = AppStyle.CLOUD_DARK)
+            SternaTheme(themeMode = themeMode, dynamicColor = dynamicColor, pureBlack = pureBlack, appStyle = appStyle) {
                 MiniBrowserScreen(initialUrl = url, onClose = { finish() })
             }
         }

@@ -15,6 +15,7 @@ import app.sterna.core.data.settings.LIST_MONOGRAM_DEFAULT
 import app.sterna.core.data.settings.ListDensity
 import app.sterna.core.data.settings.PreviewLines
 import app.sterna.core.data.settings.PURE_BLACK_DEFAULT
+import app.sterna.core.data.settings.AppStyle
 import app.sterna.core.data.settings.ThemeMode
 import app.sterna.ui.SternaApp
 import app.sterna.ui.compose.ComposerResumeSlot
@@ -63,7 +64,8 @@ class MainActivity : AppCompatActivity() {
             // PURE_BLACK_DEFAULT, not a literal, for the same reason: one that drifts repaints the
             // whole theme a frame after launch.
             val pureBlack by settings.pureBlack.collectAsState(initial = PURE_BLACK_DEFAULT)
-            SternaTheme(themeMode = themeMode, dynamicColor = dynamicColor, pureBlack = pureBlack) {
+            val appStyle by settings.appStyle.collectAsState(initial = AppStyle.CLOUD_DARK)
+            SternaTheme(themeMode = themeMode, dynamicColor = dynamicColor, pureBlack = pureBlack, appStyle = appStyle) {
                 CompositionLocalProvider(
                     LocalListDensity provides density,
                     LocalPreviewLines provides previewLines,

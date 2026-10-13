@@ -48,6 +48,9 @@ import app.sterna.ui.text.TextTool
 import app.sterna.ui.text.TextToolSurface
 import app.sterna.ui.text.rememberTextToolRunner
 import app.sterna.ui.theme.LocalMailListPalette
+import app.sterna.ui.theme.LocalAppStyle
+import app.sterna.core.data.settings.AppStyle
+import androidx.compose.foundation.border
 import app.sterna.ui.theme.MailListDimens
 import app.sterna.ui.theme.MailListPalette
 import app.sterna.ui.theme.MailMetrics
@@ -262,6 +265,14 @@ fun EmailListItem(
             .fillMaxWidth()
             .padding(horizontal = MailListDimens.gutterH, vertical = MailListDimens.gutterV)
             .clip(MailListDimens.shape)
+            // E-paper has no fill to tell a card from the page: a thick black rule draws the rectangle.
+            .then(
+                if (LocalAppStyle.current == AppStyle.CLOUD_EINK) {
+                    Modifier.border(MailMetrics.s3, Color.Black, MailListDimens.shape)
+                } else {
+                    Modifier
+                },
+            )
             .background(rowColor)
             .combinedClickable(onClick = onClick, onLongClick = enterSelection)
             .padding(start = MailMetrics.s16, end = MailMetrics.s4, top = rowPadding, bottom = rowPadding),

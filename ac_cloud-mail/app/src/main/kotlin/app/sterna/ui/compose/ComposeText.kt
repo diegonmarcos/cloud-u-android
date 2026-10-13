@@ -102,7 +102,7 @@ internal fun buildForwardedBlocks(
         append(htmlEscape(labels.subject)).append(": ").append(htmlEscape(subject)).append("<br>")
         append(htmlEscape(labels.date)).append(": ").append(htmlEscape(date)).append("<br>")
         append(htmlEscape(labels.to)).append(": ").append(htmlEscape(to)).append("<br><br>")
-        append(if (originalHtml != null) cleanForwardedHtml(originalHtml, carriedCids) else htmlEscapeMultiline(originalText))
+        append(if (originalHtml != null) cleanForwardedHtml(sanitiseReceivedHtml(originalHtml), carriedCids) else htmlEscapeMultiline(originalText))
     }
     return ForwardedBlocks(text, html)
 }
@@ -1038,6 +1038,8 @@ internal fun htmlBodyWithSignature(
     signatureHtml: String,
     delimiter: Boolean,
     quote: QuoteForHtml? = null,
+    /** Inline pictures put in the body: marker text -> Content-ID (see [inlineImageVerbatims]). */
+    inlineImages: Map<String, String> = emptyMap(),
 ): String {
     val verbatims = ArrayList<Pair<Span, String>>()
     // The reply's quoted original, as the original's own sanitised HTML, in place of the plain
@@ -1067,7 +1069,37 @@ internal fun htmlBodyWithSignature(
             verbatims += Span(found.start, found.end) to head + sanitiseReceivedHtml(signatureHtml.trim())
         }
     }
+    for (v in inlineImageVerbatims(body.text, inlineImages)) {
+        if (verbatims.none { it.first.start < v.first.end && it.first.end > v.first.start }) verbatims += v
+    }
     return if (verbatims.isEmpty()) toHtml(body) else toHtml(body, verbatims)
+}
+
+/** The marker an inline picture stands as in the editor: `[image: name]`, unique per picture. */
+internal fun inlineImageMarker(name: String, taken: Collection<String>): String {
+    val clean = name.replace(Regex("[\\[\\]\\n]"), "").ifBlank { "image" }
+    var marker = "[image: $clean]"
+    var n = 2
+    while (marker in taken) marker = "[image: $clean ($n)]".also { n++ }
+    return marker
+}
+
+/**
+ * Every occurrence of an inline picture's marker in [text], as the `<img src="cid:…">` that replaces
+ * it on the wire. The plain-text half keeps the marker, which reads as what it is.
+ */
+internal fun inlineImageVerbatims(text: String, images: Map<String, String>): List<Pair<Span, String>> {
+    val out = ArrayList<Pair<Span, String>>()
+    for ((marker, cid) in images) {
+        var at = text.indexOf(marker)
+        while (at >= 0) {
+            val alt = htmlEscape(marker.removePrefix("[image: ").removeSuffix("]")).replace("\"", "&quot;")
+            out += Span(at, at + marker.length) to
+                "<img src=\"cid:${htmlEscape(cid).replace("\"", "")}\" alt=\"$alt\" style=\"max-width:100%\">"
+            at = text.indexOf(marker, at + marker.length)
+        }
+    }
+    return out.sortedBy { it.first.start }
 }
 
 /**

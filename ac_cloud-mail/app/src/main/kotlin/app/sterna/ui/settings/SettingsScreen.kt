@@ -129,6 +129,7 @@ import app.sterna.core.data.settings.ListDensity
 import app.sterna.core.data.settings.MessageTextSize
 import app.sterna.core.data.settings.PreviewLines
 import app.sterna.core.data.settings.SwipeAction
+import app.sterna.core.data.settings.AppStyle
 import app.sterna.core.data.settings.ThemeMode
 import app.sterna.core.data.settings.DeliveryMode
 import app.sterna.core.data.settings.NotificationContent
@@ -488,6 +489,7 @@ private fun openUrl(context: android.content.Context, url: String): Boolean =
 @Composable
 private fun AppearanceScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val appStyle by viewModel.appStyle.collectAsStateWithLifecycle()
     val dynamicColor by viewModel.dynamicColor.collectAsStateWithLifecycle()
     val density by viewModel.listDensity.collectAsStateWithLifecycle()
     val previewLines by viewModel.previewLines.collectAsStateWithLifecycle()
@@ -512,6 +514,13 @@ private fun AppearanceScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 )
             }
             SettingsSection(stringResource(R.string.settings_theme_section)) {
+                SettingChoiceRow(
+                    title = stringResource(R.string.settings_app_style_title),
+                    options = AppStyle.entries,
+                    selected = appStyle,
+                    optionLabel = { appStyleLabel(context, it) },
+                    onSelect = viewModel::setAppStyle,
+                )
                 SettingChoiceRow(
                     title = stringResource(R.string.settings_theme_title),
                     options = listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK),
@@ -580,6 +589,12 @@ private fun languageLabel(context: Context, language: AppLanguage): String = whe
     AppLanguage.DUTCH -> context.getString(R.string.settings_language_dutch)
     AppLanguage.RUSSIAN -> context.getString(R.string.settings_language_russian)
     AppLanguage.POLISH -> context.getString(R.string.settings_language_polish)
+}
+
+private fun appStyleLabel(context: Context, style: AppStyle): String = when (style) {
+    AppStyle.CLOUD_DARK -> context.getString(R.string.settings_app_style_cloud_dark)
+    AppStyle.GMAIL_DARK -> context.getString(R.string.settings_app_style_gmail_dark)
+    AppStyle.CLOUD_EINK -> context.getString(R.string.settings_app_style_cloud_eink)
 }
 
 private fun themeLabel(context: Context, mode: ThemeMode): String = when (mode) {

@@ -1230,4 +1230,16 @@
     <string name="list_filter_auth_codes">Auth z kodami · G0 _ Auth, Ga Code</string>
     <string name="list_filter_auth_links">Linki auth · G0 _ Auth, Gb Link to auth</string>
     <string name="list_filter_auth_any">Dowolna auth · G0 _ Auth, Ga + Gb</string>
+    <string name="settings_app_style_title">Styl</string>
+    <string name="settings_app_style_cloud_dark">Cloud Dark</string>
+    <string name="settings_app_style_gmail_dark">Gmail Dark</string>
+    <string name="settings_app_style_cloud_eink">Cloud E-ink</string>
+    <string name="compose_format_quote">Cytat</string>
+    <string name="compose_format_heading">Nagłówek</string>
+    <string name="compose_format_text_color">Kolor tekstu</string>
+    <string name="compose_format_color_default">Domyślny</string>
+    <string name="compose_format_color_red">Czerwony</string>
+    <string name="compose_format_color_blue">Niebieski</string>
+    <string name="compose_format_color_green">Zielony</string>
+    <string name="compose_format_inline_image">Wstaw obraz</string>
 </resources>

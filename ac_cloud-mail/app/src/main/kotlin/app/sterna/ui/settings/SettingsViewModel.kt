@@ -17,6 +17,7 @@ import app.sterna.core.data.settings.REPLY_BAR_DEFAULT
 import app.sterna.core.data.settings.SettingsBackup
 import app.sterna.core.data.settings.SettingsBackupCodec
 import app.sterna.core.data.settings.SwipeAction
+import app.sterna.core.data.settings.AppStyle
 import app.sterna.core.data.settings.ThemeMode
 import app.sterna.core.data.settings.DeliveryMode
 import app.sterna.core.data.settings.NotificationContent
@@ -54,6 +55,16 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = ThemeMode.SYSTEM,
     )
+
+    val appStyle = settings.appStyle.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = AppStyle.CLOUD_DARK,
+    )
+
+    fun setAppStyle(style: AppStyle) {
+        viewModelScope.launch { settings.setAppStyle(style) }
+    }
 
     val dynamicColor = settings.dynamicColor.stateIn(
         scope = viewModelScope,

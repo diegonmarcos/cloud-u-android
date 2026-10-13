@@ -4,11 +4,23 @@ package app.sterna.core.data.text
  * The model of a rich body (#131): plain text plus four inline style families, each a set of
  */
 
-/** An inline style family. Declaration order is the canonical nesting order in HTML: b > i > u > s. */
-enum class Inline { BOLD, ITALIC, UNDERLINE, STRIKE }
+/**
+ * An inline style family. Declaration order is the canonical nesting order in HTML: b > i > u > s, then
+ * the three text colours (`<span style="color:…">`, see [TEXT_COLOR_OF]), innermost.
+ */
+enum class Inline { BOLD, ITALIC, UNDERLINE, STRIKE, RED, BLUE, GREEN }
 
-/** A paragraph block family: a run of lines rendered as one list. */
-enum class BlockKind { BULLET, NUMBER }
+/** The text-colour families: at most one should cover a character (the composer keeps it so). */
+val TEXT_COLORS: List<Inline> = listOf(Inline.RED, Inline.BLUE, Inline.GREEN)
+
+/** The CSS colour each text-colour family writes. Fixed values: the parser reads back exactly these. */
+val TEXT_COLOR_OF: Map<Inline, String> = mapOf(Inline.RED to "#d93025", Inline.BLUE to "#1a73e8", Inline.GREEN to "#188038")
+
+/**
+ * A paragraph block family: a run of lines rendered as one list ([BULLET], [NUMBER]), one quotation
+ * ([QUOTE], a `<blockquote>`) or headings ([HEADING], one `<h2>` per line).
+ */
+enum class BlockKind { BULLET, NUMBER, QUOTE, HEADING }
 
 /**
  * A run of consecutive lines, by INCLUSIVE line index (a line is what `\n` separates), rendered as
@@ -411,7 +423,19 @@ private val TAG_OF = mapOf(
     Inline.BOLD to "b", Inline.ITALIC to "i", Inline.UNDERLINE to "u", Inline.STRIKE to "s",
 )
 
-private val LIST_TAG = mapOf(BlockKind.BULLET to "ul", BlockKind.NUMBER to "ol")
+/** The exact opening tag of a text-colour family — the one shape [fromHtml] reads back. */
+private fun colorOpenTag(kind: Inline): String = "<span style=\"color:" + TEXT_COLOR_OF.getValue(kind) + "\">"
+
+/** Each block kind's container element and the element of one of its lines. */
+private val CONTAINER_TAG = mapOf(
+    BlockKind.BULLET to "ul", BlockKind.NUMBER to "ol", BlockKind.QUOTE to "blockquote", BlockKind.HEADING to "header",
+)
+private val ITEM_TAG = mapOf(
+    BlockKind.BULLET to "li", BlockKind.NUMBER to "li", BlockKind.QUOTE to "div", BlockKind.HEADING to "h2",
+)
+private fun blockOpen(kind: BlockKind) = "<" + CONTAINER_TAG.getValue(kind) + "><" + ITEM_TAG.getValue(kind) + ">"
+private fun blockSep(kind: BlockKind) = "</" + ITEM_TAG.getValue(kind) + "><" + ITEM_TAG.getValue(kind) + ">"
+private fun blockClose(kind: BlockKind) = "</" + ITEM_TAG.getValue(kind) + "></" + CONTAINER_TAG.getValue(kind) + ">"
 
 /**
  * The body as HTML: escaped text, `\n` as `<br>`, and `<a> <b> <i> <u> <s>` always nested in that
@@ -440,7 +464,7 @@ fun toHtml(body: RichBody, verbatims: List<Pair<Span, String>>): String {
     val positions = cuts.toList()
 
     val sb = StringBuilder(text.length + 16)
-    kinds[0]?.let { sb.append('<').append(LIST_TAG.getValue(it)).append("><li>") }
+    kinds[0]?.let { sb.append(blockOpen(it)) }
     val stack = ArrayList<Any>()
     for ((i, p) in positions.withIndex()) {
         val active: List<Any> = listOfNotNull(body.links.firstOrNull { it.span.start <= p && p < it.span.end }) +
@@ -464,7 +488,7 @@ fun toHtml(body: RichBody, verbatims: List<Pair<Span, String>>): String {
             }
         }
     }
-    kinds[kinds.size - 1]?.let { sb.append("</li></").append(LIST_TAG.getValue(it)).append('>') }
+    kinds[kinds.size - 1]?.let { sb.append(blockClose(it)) }
     return sb.toString()
 }
 
@@ -472,24 +496,24 @@ fun toHtml(body: RichBody, verbatims: List<Pair<Span, String>>): String {
 private fun listBreak(kinds: Array<BlockKind?>, line: Int): String {
     val prev = kinds[line]
     val next = kinds[line + 1]
-    if (prev != null && prev == next) return "</li><li>"
+    if (prev != null && prev == next) return blockSep(prev)
     val sb = StringBuilder()
-    if (prev != null) sb.append("</li></").append(LIST_TAG.getValue(prev)).append('>')
+    if (prev != null) sb.append(blockClose(prev))
     sb.append("<br>")
-    if (next != null) sb.append('<').append(LIST_TAG.getValue(next)).append("><li>")
+    if (next != null) sb.append(blockOpen(next))
     return sb.toString()
 }
 
 /** `<b>` … or the anchor, whose URL is escaped for an ATTRIBUTE: the three text characters, plus
  *  the quote that would end the value and the two line breaks that would break the tag open. */
 private fun openTagOf(element: Any): String = when (element) {
-    is Inline -> "<" + TAG_OF.getValue(element) + ">"
+    is Inline -> TAG_OF[element]?.let { "<$it>" } ?: colorOpenTag(element)
     is Link -> "<a href=\"" + escapeAttribute(element.url) + "\">"
     else -> error("not an html element: $element")
 }
 
 private fun closeTagOf(element: Any): String =
-    if (element is Inline) "</" + TAG_OF.getValue(element) + ">" else "</a>"
+    if (element is Inline) (TAG_OF[element]?.let { "</$it>" } ?: "</span>") else "</a>"
 
 private fun escapeAttribute(url: String): String =
     htmlEscape(url).replace("\"", "&quot;").replace("\n", "&#10;").replace("\r", "&#13;")
@@ -500,8 +524,11 @@ private val FAMILY_OF_TAG = mapOf(
     "u" to Inline.UNDERLINE,
     "s" to Inline.STRIKE, "strike" to Inline.STRIKE, "del" to Inline.STRIKE,
 )
-private val LIST_OF_TAG = mapOf("ul" to BlockKind.BULLET, "ol" to BlockKind.NUMBER)
-private val TAG = Regex("<(/?)([A-Za-z]+)>")
+private val LIST_OF_TAG = CONTAINER_TAG.entries.associate { (k, v) -> v to k }
+private val ITEM_TAGS = ITEM_TAG.values.toSet()
+private val COLOR_OF_OPEN_TAG = TEXT_COLORS.associateBy { colorOpenTag(it) }
+private const val SPAN_CLOSE = "</span>"
+private val TAG = Regex("<(/?)([A-Za-z][A-Za-z0-9]*)>")
 private val BR = Regex("<[bB][rR]( ?/)?>")
 private val ENTITY = Regex("&(amp|lt|gt|quot|#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6});")
 
@@ -568,6 +595,21 @@ fun fromHtml(html: String): RichBody? {
                     i += closer.value.length
                     continue
                 }
+                val color = COLOR_OF_OPEN_TAG.entries.firstOrNull { html.startsWith(it.key, i) }
+                if (color != null) {
+                    if (list != null && !inItem) return null
+                    open.add(OpenTag(kind = color.value, url = null, start = text.length))
+                    i += color.key.length
+                    continue
+                }
+                if (html.startsWith(SPAN_CLOSE, i)) {
+                    val top = open.removeLastOrNull() ?: return null
+                    val kind = top.kind ?: return null
+                    if (kind !in TEXT_COLORS) return null
+                    ranges.getOrPut(kind) { ArrayList() }.add(Span(top.start, text.length))
+                    i += SPAN_CLOSE.length
+                    continue
+                }
                 val m = TAG.matchAt(html, i) ?: return null
                 val closing = m.groupValues[1].isNotEmpty()
                 val name = m.groupValues[2].lowercase()
@@ -591,8 +633,8 @@ fun fromHtml(html: String): RichBody? {
                             list = listKind; listFrom = line; items = 0
                         }
                     }
-                    name == "li" -> {
-                        if (list == null) return null
+                    name in ITEM_TAGS -> {
+                        if (list == null || ITEM_TAG[list] != name) return null
                         if (closing) {
                             if (!inItem || open.isNotEmpty()) return null
                             inItem = false
@@ -781,7 +823,12 @@ fun toPlainText(body: RichBody): String {
     for (b in body.blocks) {
         var n = 1
         for (l in b.lines) {
-            marker[l] = if (b.kind == BlockKind.BULLET) "- " else "$n. "
+            marker[l] = when (b.kind) {
+                BlockKind.BULLET -> "- "
+                BlockKind.NUMBER -> "$n. "
+                BlockKind.QUOTE -> "> "
+                BlockKind.HEADING -> ""
+            }
             n++
         }
     }
@@ -801,4 +848,17 @@ fun toPlainText(body: RichBody): String {
         if (c == '\n') { line++; marker[line]?.let { out.append(it) } }
     }
     return out.toString()
+}
+
+/**
+ * [body] with [selection] in ONE text colour: every colour family taken off it, then [color] laid on
+ * (null = the default ink). The composer's colour menu, so two colours never stack on one character.
+ */
+fun withTextColor(body: RichBody, selection: Span, color: Inline?): RichBody {
+    require(color == null || color in TEXT_COLORS) { "not a text colour: $color" }
+    if (selection.isEmpty) return body
+    val out = LinkedHashMap(body.ranges)
+    for (c in TEXT_COLORS) out[c]?.let { out[c] = subtract(it, selection) }
+    if (color != null) out[color] = out[color].orEmpty() + selection
+    return RichBody(body.text, out, body.blocks, body.links)
 }

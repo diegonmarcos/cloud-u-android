@@ -842,6 +842,41 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /** Inline pictures put in the body: their marker text -> the Content-ID their staged part carries. */
+    private val inlineImages = LinkedHashMap<String, String>()
+
+    /**
+     * Stage a picked picture as an INLINE part (its own Content-ID) and hand the screen the marker to
+     * put at the caret; the send replaces that marker with `<img src="cid:…">` (multipart/related).
+     */
+    fun attachInlineImage(uri: Uri, onMarker: (String) -> Unit) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            _attachmentStatus.value = app.getString(R.string.status_attaching)
+            try {
+                val credentials = credentials() ?: error(app.getString(R.string.status_no_saved_account))
+                val resolver = app.contentResolver
+                val type = resolver.getType(uri)?.takeIf { it.startsWith("image/") } ?: "image/png"
+                val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                    ?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: "image"
+                val bytes = withContext(Dispatchers.IO) {
+                    resolver.openInputStream(uri)?.use { it.readBytes() }
+                } ?: error(app.getString(R.string.status_read_file_failed))
+                val cid = "img${System.nanoTime()}@cloud-mail"
+                val part = stageOutgoing(credentials, bytes, type, name, disposition = "inline", cid = cid)
+                val marker = inlineImageMarker(name, inlineImages.keys)
+                inlineImages[marker] = cid
+                _attachments.value = _attachments.value + part
+                _attachmentsTouched.value = true
+                _attachmentStatus.value = null
+                onMarker(marker)
+            } catch (t: Throwable) {
+                Log.w(TAG, "Inline image failed", t)
+                _attachmentStatus.value = app.getString(R.string.status_attach_failed, t.message ?: "error")
+            }
+        }
+    }
+
     fun removeAttachment(part: EmailBodyPart) {
         _attachments.value = _attachments.value.filterNot { it == part }
         _attachmentsTouched.value = true
@@ -1789,7 +1824,7 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
     private suspend fun bodiesForSend(userBody: RichBody, identity: StoredIdentity?): Pair<String, String?> {
         val html = htmlBodyWithSignature(
             userBody, signatureTextOf(identity), signatureHtmlOf(identity),
-            settings.signatureDelimiter.first(), lastQuote,
+            settings.signatureDelimiter.first(), lastQuote, inlineImages.toMap(),
         )
         val fwd = forwarded ?: return toPlainText(userBody) to html
         return "${toPlainText(userBody)}\n\n${fwd.text}" to "$html<br><br>${fwd.html}"

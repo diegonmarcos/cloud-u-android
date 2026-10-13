@@ -24,3 +24,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 }
+
+// CI runs `testReleaseUnitTest` (build.json tests.unit.task), a task only the Android modules have,
+// so this plain-JVM module's tests never ran — which is how a multipart/alternative test sat red,
+// unseen, while the send path still wrote one text/html part. The alias puts them in that run.
+tasks.register("testReleaseUnitTest") { dependsOn(tasks.named("test")) }

@@ -166,10 +166,11 @@ class OutgoingMimeTest {
     )
 
     @Test
-    fun noAttachmentsStaysSinglePart() {
+    fun noAttachmentsIsAnAlternativeOfTextAndHtml() {
         val mime = OutgoingMime.build(htmlMsg(emptyList()))
-        assertFalse("no multipart", mime.contains("multipart/"))
-        assertTrue("html content type", mime.contains("Content-Type: text/html; charset=utf-8"))
+        assertTrue("alternative", mime.contains("Content-Type: multipart/alternative;"))
+        assertFalse("no mixed, no related", mime.contains("multipart/mixed") || mime.contains("multipart/related"))
+        assertTrue("text first", mime.indexOf("Content-Type: text/plain; charset=utf-8") in 0 until mime.indexOf("Content-Type: text/html; charset=utf-8"))
     }
 
     @Test
@@ -184,7 +185,8 @@ class OutgoingMimeTest {
     @Test
     fun inlineOnlyEmitsMultipartRelatedWithContentIdAndInlineDisposition() {
         val mime = OutgoingMime.build(htmlMsg(listOf(image)))
-        assertTrue("related is the top-level body", mime.contains("Content-Type: multipart/related;"))
+        assertTrue("the alternative is the top-level body", mime.contains("Content-Type: multipart/alternative;"))
+        assertTrue("related inside it", mime.indexOf("multipart/alternative") < mime.indexOf("Content-Type: multipart/related;"))
         assertFalse("no mixed wrapper", mime.contains("multipart/mixed"))
         assertTrue("html part present", mime.contains("Content-Type: text/html; charset=utf-8"))
         assertTrue("Content-ID with angle brackets", mime.contains("Content-ID: <logo@x>"))

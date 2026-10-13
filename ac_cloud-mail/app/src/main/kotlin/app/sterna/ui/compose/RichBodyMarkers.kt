@@ -58,13 +58,21 @@ fun listKindAt(body: RichBody, selection: Span): BlockKind? {
 }
 
 /** The marker each line is drawn with, `""` for a line no block covers. */
+/** The quotation bar drawn at the start of each [BlockKind.QUOTE] line. */
+internal const val QUOTE_MARKER = "\u2503 "
+
 private fun markersOf(lineCount: Int, blocks: List<Block>): List<String> {
     val out = MutableList(lineCount) { "" }
     for (block in blocks) {
         var n = 1
         for (line in block.lines) {
             if (line in 0 until lineCount) {
-                out[line] = if (block.kind == BlockKind.BULLET) BULLET_MARKER else "$n. "
+                out[line] = when (block.kind) {
+                    BlockKind.BULLET -> BULLET_MARKER
+                    BlockKind.NUMBER -> "$n. "
+                    BlockKind.QUOTE -> QUOTE_MARKER
+                    BlockKind.HEADING -> ""
+                }
             }
             n++
         }

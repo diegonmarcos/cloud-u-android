@@ -771,7 +771,7 @@
     "datastore:settings": {
       "kind": "datastore",
       "class": "config",
-      "doc": "Mail (sterna) settings: theme, density, swipe actions, signature, PGP provider, notification content, quiet hours, image allowlist, RSS feeds. Same file name used by gallery.",
+      "doc": "Mail (sterna) settings: theme, app_style (CLOUD_DARK default, GMAIL_DARK, CLOUD_EINK - the whole-app look), density, swipe actions, signature, PGP provider, notification content, quiet hours, image allowlist, RSS feeds. Same file name used by gallery.",
       "used_by": [
         "ac_cloud-mail",
         "ac_cloud-gallery"

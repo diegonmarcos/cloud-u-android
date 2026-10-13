@@ -1233,4 +1233,16 @@
     <string name="list_filter_auth_codes">Авторизация с кодами · G0 _ Auth, Ga Code</string>
     <string name="list_filter_auth_links">Ссылки авторизации · G0 _ Auth, Gb Link to auth</string>
     <string name="list_filter_auth_any">Любая авторизация · G0 _ Auth, Ga + Gb</string>
+    <string name="settings_app_style_title">Стиль</string>
+    <string name="settings_app_style_cloud_dark">Cloud Dark</string>
+    <string name="settings_app_style_gmail_dark">Gmail Dark</string>
+    <string name="settings_app_style_cloud_eink">Cloud E-ink</string>
+    <string name="compose_format_quote">Цитата</string>
+    <string name="compose_format_heading">Заголовок</string>
+    <string name="compose_format_text_color">Цвет текста</string>
+    <string name="compose_format_color_default">По умолчанию</string>
+    <string name="compose_format_color_red">Красный</string>
+    <string name="compose_format_color_blue">Синий</string>
+    <string name="compose_format_color_green">Зелёный</string>
+    <string name="compose_format_inline_image">Вставить изображение</string>
 </resources>

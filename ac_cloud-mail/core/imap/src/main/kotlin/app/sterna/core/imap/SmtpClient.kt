@@ -87,7 +87,7 @@ data class OutgoingMessage(
     val bcc: List<String> = emptyList(),
     val subject: String,
     val body: String,
-    /** Optional HTML body; when set the message is sent as text/html. */
+    /** Optional HTML body; when set the message leaves as multipart/alternative (text/plain + text/html). */
     val html: String? = null,
     val inReplyTo: String? = null,
     val references: String? = null,
@@ -352,114 +352,87 @@ object OutgoingMime {
              * The message's MIME entity WITHOUT the top-level message headers, starting at its own
              */
     fun buildBodyEntity(m: OutgoingMessage, protectedSubject: String? = null): String {
-        return buildString {
-            val bodyContent = m.html ?: m.body
-            val bodyType = if (m.html != null) "text/html" else "text/plain"
-            val inlineParts = m.attachments.filter { it.inline }
-            val fileParts = m.attachments.filter { !it.inline }
-                // Both empty when there is no protected subject, so the four branches below emit
-                // exactly the bytes they always did. [encodeHeader] is the same door the envelope
-                // subject goes through, so no header line of this block can be split in two.
-            val subjectField = protectedSubject?.let { "Subject: ${encodeHeader(it)}\r\n" }.orEmpty()
-            val protectedParam = if (protectedSubject != null) "; protected-headers=\"v1\"" else ""
-            when {
-                    // Plain body, nothing carried — single part.
-                inlineParts.isEmpty() && fileParts.isEmpty() -> {
-                    append(subjectField)
-                    append("Content-Type: $bodyType; charset=utf-8$protectedParam\r\n")
-                    append("Content-Transfer-Encoding: base64\r\n")
-                    append("\r\n")
-                    append(base64(bodyContent.toByteArray(Charsets.UTF_8)))
-                }
-                    // File attachments only — multipart/mixed.
-                inlineParts.isEmpty() -> {
-                    val boundary = boundary(m, "mixed")
-                    append(subjectField)
-                    append("Content-Type: multipart/mixed; boundary=\"$boundary\"$protectedParam\r\n\r\n")
-                    append("--$boundary\r\n")
-                    appendBodyPart(bodyType, bodyContent)
-                    for (att in fileParts) {
-                        append("--$boundary\r\n")
-                        appendAttachmentPart(att)
-                    }
-                    append("--$boundary--\r\n")
-                }
-                // Inline images, no files — the message body is a multipart/related.
-                fileParts.isEmpty() -> {
-                    val related = boundary(m, "related")
-                    append(subjectField)
-                    append(
-                        "Content-Type: multipart/related; type=\"$bodyType\"; " +
-                            "boundary=\"$related\"$protectedParam\r\n\r\n",
-                    )
-                    appendRelatedParts(related, bodyType, bodyContent, inlineParts)
-                }
-                // Inline images AND files — multipart/mixed( multipart/related(html, images), files ).
-                else -> {
-                    val mixed = boundary(m, "mixed")
-                    val related = boundary(m, "related")
-                    append(subjectField)
-                    append("Content-Type: multipart/mixed; boundary=\"$mixed\"$protectedParam\r\n\r\n")
-                    append("--$mixed\r\n")
-                    // The NESTED related is a sub-part: no protected-headers parameter here.
-                    append("Content-Type: multipart/related; type=\"$bodyType\"; boundary=\"$related\"\r\n\r\n")
-                    appendRelatedParts(related, bodyType, bodyContent, inlineParts)
-                    for (att in fileParts) {
-                        append("--$mixed\r\n")
-                        appendAttachmentPart(att)
-                    }
-                    append("--$mixed--\r\n")
-                }
-            }
-        }
+        val inlineParts = m.attachments.filter { it.inline }
+        val fileParts = m.attachments.filter { !it.inline }
+            // Both empty when there is no protected subject. [encodeHeader] is the same door the
+            // envelope subject goes through, so no header line of this block can be split in two.
+        val subjectField = protectedSubject?.let { "Subject: ${encodeHeader(it)}\r\n" }.orEmpty()
+        val protectedParam = if (protectedSubject != null) "; protected-headers=\"v1\"" else ""
+        val root = bodyTree(m, inlineParts, fileParts)
+        return subjectField + "Content-Type: ${root.contentType}$protectedParam\r\n" + root.headers + "\r\n" + root.body
     }
 
-    /** Unique-per-message boundary, tagged so a nested mixed/related pair never collide. */
-    private fun boundary(m: OutgoingMessage, tag: String): String =
-        "----sterna_${tag}_${m.messageId.filter { it.isLetterOrDigit() }.take(24)}"
+    /**
+     * The body as a MIME tree. An HTML message ALWAYS leaves as multipart/alternative — a text/plain
+     * rendering first (the composer's own plain text, or one derived from the HTML), the text/html last —
+     * so every client gets a body it can show and an HTML-capable one shows the formatting:
+     *
+     *   mixed( alternative( text/plain, related( text/html, cid images ) ), files )
+     *
+     * Each level appears only when needed: no files, no mixed; no inline image, no related. A message
+     * with no HTML keeps the single text/plain part (or related/mixed around it) it always had.
+     */
+    private fun bodyTree(m: OutgoingMessage, inlineParts: List<OutgoingAttachment>, fileParts: List<OutgoingAttachment>): MimeNode {
+        val html = m.html
+        val text = if (html != null) m.body.ifBlank { htmlToPlainText(html) } else m.body
+        val textLeaf = leaf("text/plain; charset=utf-8", text)
+        val core = if (html == null) {
+            if (inlineParts.isEmpty()) textLeaf
+            else multipart(m, "related", listOf(textLeaf) + inlineParts.map(::inlineLeaf), "type=\"text/plain\"; ")
+        } else {
+            val htmlLeaf = leaf("text/html; charset=utf-8", html)
+            val htmlSide = if (inlineParts.isEmpty()) htmlLeaf
+            else multipart(m, "related", listOf(htmlLeaf) + inlineParts.map(::inlineLeaf), "type=\"text/html\"; ")
+            multipart(m, "alternative", listOf(textLeaf, htmlSide))
+        }
+        return if (fileParts.isEmpty()) core else multipart(m, "mixed", listOf(core) + fileParts.map(::attachmentLeaf))
+    }
 
-    /** The text/html (or text/plain) body part of a multipart entity. */
-    private fun StringBuilder.appendBodyPart(bodyType: String, bodyContent: String) {
-        append("Content-Type: $bodyType; charset=utf-8\r\n")
-        append("Content-Transfer-Encoding: base64\r\n\r\n")
-        append(base64(bodyContent.toByteArray(Charsets.UTF_8)))
-        append("\r\n")
+    /** One MIME entity: its Content-Type value, its other header lines (each CRLF-ended), its body. */
+    private class MimeNode(val contentType: String, val headers: String, val body: String, val isLeaf: Boolean)
+
+    private fun leaf(contentType: String, content: String) =
+        MimeNode(contentType, "Content-Transfer-Encoding: base64\r\n", base64(content.toByteArray(Charsets.UTF_8)), true)
+
+    private fun multipart(m: OutgoingMessage, subtype: String, parts: List<MimeNode>, typeParam: String = ""): MimeNode {
+        val boundary = boundary(m, subtype)
+        val body = buildString {
+            for (p in parts) {
+                append("--$boundary\r\n")
+                append("Content-Type: ${p.contentType}\r\n").append(p.headers).append("\r\n").append(p.body)
+                if (p.isLeaf) append("\r\n")
+            }
+            append("--$boundary--\r\n")
+        }
+        return MimeNode("multipart/$subtype; ${typeParam}boundary=\"$boundary\"", "", body, false)
     }
 
     /** A file attachment part (Content-Disposition: attachment). */
-    private fun StringBuilder.appendAttachmentPart(att: OutgoingAttachment) {
+    private fun attachmentLeaf(att: OutgoingAttachment): MimeNode {
         val safeName = headerSafe(att.name).replace("\"", "")
         val safeType = headerSafe(att.type).replace("\"", "")
-        append("Content-Type: $safeType; name=\"$safeName\"\r\n")
-        append("Content-Transfer-Encoding: base64\r\n")
-        append("Content-Disposition: attachment; filename=\"$safeName\"\r\n\r\n")
-        append(base64(att.bytes))
-        append("\r\n")
+        return MimeNode(
+            "$safeType; name=\"$safeName\"",
+            "Content-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"$safeName\"\r\n",
+            base64(att.bytes), true,
+        )
     }
 
-    /** The body part plus each inline image (Content-ID + Content-Disposition: inline) of a related entity. */
-    private fun StringBuilder.appendRelatedParts(
-        related: String,
-        bodyType: String,
-        bodyContent: String,
-        inlineParts: List<OutgoingAttachment>,
-    ) {
-        append("--$related\r\n")
-        appendBodyPart(bodyType, bodyContent)
-        for (att in inlineParts) {
-            val safeName = headerSafe(att.name).replace("\"", "")
-            val safeType = headerSafe(att.type).replace("\"", "")
-            val safeCid = headerSafe(att.cid ?: "").trim().trim('<', '>').replace("\"", "")
-            append("--$related\r\n")
-            append("Content-Type: $safeType; name=\"$safeName\"\r\n")
-            append("Content-Transfer-Encoding: base64\r\n")
-            append("Content-ID: <$safeCid>\r\n")
-            append("Content-Disposition: inline; filename=\"$safeName\"\r\n\r\n")
-            append(base64(att.bytes))
-            append("\r\n")
-        }
-        append("--$related--\r\n")
+    /** An inline image of a related entity: Content-ID (what the HTML's `cid:` names) + inline disposition. */
+    private fun inlineLeaf(att: OutgoingAttachment): MimeNode {
+        val safeName = headerSafe(att.name).replace("\"", "")
+        val safeType = headerSafe(att.type).replace("\"", "")
+        val safeCid = headerSafe(att.cid ?: "").trim().trim('<', '>').replace("\"", "")
+        return MimeNode(
+            "$safeType; name=\"$safeName\"",
+            "Content-Transfer-Encoding: base64\r\nContent-ID: <$safeCid>\r\nContent-Disposition: inline; filename=\"$safeName\"\r\n",
+            base64(att.bytes), true,
+        )
     }
+
+    /** Unique-per-message boundary, tagged so nested mixed/alternative/related never collide. */
+    private fun boundary(m: OutgoingMessage, tag: String): String =
+        "----sterna_${tag}_${m.messageId.filter { it.isLetterOrDigit() }.take(24)}"
 
             /**
              * MIME base64: 76-column lines separated by CRLF, which `Base64.getMimeEncoder()` already

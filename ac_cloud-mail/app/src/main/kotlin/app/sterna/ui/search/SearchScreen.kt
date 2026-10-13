@@ -99,6 +99,7 @@ fun SearchScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val form by viewModel.form.collectAsStateWithLifecycle()
     val accounts by viewModel.accounts.collectAsStateWithLifecycle()
+    val openingAttachment by viewModel.openingAttachment.collectAsStateWithLifecycle()
     val query = form.query
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -351,6 +352,11 @@ fun SearchScreen(
                                             onClick = { onOpenEmail(email.id, email.accountId) },
                                             originLabel = owner?.label(),
                                             originColor = accountColorOf(owner?.color),
+                                            // The SAME row as every folder (Starred is this screen):
+                                            // the star toggle in the right slot, the attachment chips.
+                                            onToggleFavourite = { viewModel.toggleFlag(email) },
+                                            onOpenAttachment = { part -> viewModel.openAttachment(email, part) },
+                                            openingAttachmentKey = openingAttachment,
                                         )
                                     }
                                 }

@@ -206,6 +206,8 @@ import app.sterna.ui.rememberLeaveOnce
 import app.sterna.ui.sender.trashFilePath
 import app.sterna.ui.snoozed.SnoozeDeadlineHeader
 import app.sterna.ui.theme.MailMetrics
+import app.sterna.ui.theme.LocalAppStyle
+import app.sterna.core.data.settings.AppStyle
 import app.sterna.util.LinkCleaner
 import app.sterna.util.MailDates
 import kotlinx.coroutines.delay
@@ -2268,6 +2270,7 @@ private fun ConversationBody(
                 text = scheme.onSurface.toCssHex(),
                 link = scheme.primary.toCssHex(),
                 dark = dark,
+                eink = LocalAppStyle.current == AppStyle.CLOUD_EINK,
             )
             // The document carries a transparent TOP spacer of the header's height, so the collapsing
             // header overlays blank space and the content begins right below it. We wait for BOTH
@@ -5190,6 +5193,7 @@ internal fun buildHtmlDocument(
           $FIT_CSS
           a { color: $link; }
           pre.plain { white-space: pre-wrap; word-wrap: break-word; font-family: sans-serif; }
+          ${einkReaderCss(theme)}
           /* The "text derived from HTML" line (#149). Only ever reached here: a derived body is
              painted by us, so it is never in the inverted branch above. */
           p.s-note { margin: 0 0 12px; font-size: 0.85em; opacity: 0.7; }
@@ -5209,7 +5213,22 @@ internal fun buildHtmlDocument(
 }
 
 /** Resolved theme colours (CSS hex) handed to the email WebView so it matches the app. */
-internal data class EmailTheme(val background: String, val text: String, val link: String, val dark: Boolean)
+internal data class EmailTheme(
+    val background: String,
+    val text: String,
+    val link: String,
+    val dark: Boolean,
+    /** Cloud E-ink: a larger serif reading face, no colour (rich mail greyscaled), underlined black links. */
+    val eink: Boolean = false,
+)
+
+/** The extra reading CSS of the Cloud E-ink style, or nothing for the other styles. */
+internal fun einkReaderCss(theme: EmailTheme): String = if (!theme.eink) "" else """
+          html { filter: grayscale(1) contrast(1.15); }
+          body { font-family: Georgia, 'Noto Serif', serif !important; font-size: 1.2em !important; line-height: 1.6 !important; }
+          pre.plain { font-family: Georgia, 'Noto Serif', serif !important; }
+          a { color: #000000 !important; text-decoration: underline !important; }
+          * { animation: none !important; transition: none !important; box-shadow: none !important; }"""
 
 // escapeHtml() lived here; it was character-for-character `core.data.text.htmlEscape`, which the
 // body decision now uses (see ReaderBody.kt). One escaper, not two.

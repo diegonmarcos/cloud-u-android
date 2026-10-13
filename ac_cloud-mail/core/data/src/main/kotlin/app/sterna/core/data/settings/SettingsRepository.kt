@@ -17,6 +17,17 @@ import kotlinx.coroutines.flow.map
 /** How the app picks light vs dark colours. */
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+/**
+ * The whole app's look (list, reader, compose, chrome). [CLOUD_DARK] is the look the app always had,
+ * and still honours [ThemeMode]; [GMAIL_DARK] is a Gmail-dark replica (always dark); [CLOUD_EINK] is
+ * an e-paper look (always light: black on white, no colour, no motion, serif reading).
+ */
+enum class AppStyle { CLOUD_DARK, GMAIL_DARK, CLOUD_EINK }
+
+/** The stored [AppStyle] name read back; anything unknown or absent is the default, [AppStyle.CLOUD_DARK]. */
+fun appStyleFrom(stored: String?): AppStyle =
+    stored?.let { runCatching { AppStyle.valueOf(it) }.getOrNull() } ?: AppStyle.CLOUD_DARK
+
 /** Vertical density of message-list rows. */
 enum class ListDensity { COMPACT, NORMAL, SPACED }
 
@@ -65,6 +76,13 @@ class SettingsRepository(context: Context) {
 
     suspend fun setThemeMode(mode: ThemeMode) {
         dataStore.edit { it[KEY_THEME_MODE] = mode.name }
+    }
+
+    /** The app style (Cloud Dark, Gmail Dark, Cloud E-ink), persisted as `app_style`. */
+    val appStyle: Flow<AppStyle> = dataStore.data.map { prefs -> appStyleFrom(prefs[KEY_APP_STYLE]) }
+
+    suspend fun setAppStyle(style: AppStyle) {
+        dataStore.edit { it[KEY_APP_STYLE] = style.name }
     }
 
     /** Use Material You (wallpaper-derived) colours instead of Sterna's brand palette. Off by default. */
@@ -458,6 +476,7 @@ class SettingsRepository(context: Context) {
         }
 
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        private val KEY_APP_STYLE = stringPreferencesKey("app_style")
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         private val KEY_LIST_DENSITY = stringPreferencesKey("list_density")
         private val KEY_PREVIEW_LINES = stringPreferencesKey("preview_lines")

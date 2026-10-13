@@ -268,7 +268,7 @@ class PureBlackWiringTest {
         const val EXPECTED_ACTIVITY_COLLECT =
             "val pureBlack by settings.pureBlack.collectAsState(initial = PURE_BLACK_DEFAULT)"
         const val EXPECTED_THEME_CALL =
-            "SternaTheme(themeMode = themeMode, dynamicColor = dynamicColor, pureBlack = pureBlack) {"
+            "SternaTheme(themeMode = themeMode, dynamicColor = dynamicColor, pureBlack = pureBlack, appStyle = appStyle) {"
 
         val EXPECTED_SWITCH = listOf(
             "SettingSwitch(",

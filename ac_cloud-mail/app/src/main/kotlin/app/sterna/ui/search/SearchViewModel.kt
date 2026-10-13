@@ -8,6 +8,11 @@ import app.sterna.container
 import app.sterna.R
 import app.sterna.core.data.account.StoredAccount
 import app.sterna.core.jmap.model.Email
+import app.sterna.core.jmap.model.EmailBodyPart
+import app.sterna.core.data.account.AccountCredentials
+import app.sterna.core.data.mail.emailKey
+import app.sterna.ui.components.attachmentKey
+import app.sterna.ui.attachment.AttachmentOpen
 import app.sterna.core.jmap.model.SearchQuery
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +31,26 @@ sealed interface SearchState {
         val complete: Boolean = true,
     ) : SearchState
     data class Error(val message: String) : SearchState
+}
+
+/**
+ * A search hit drawn as the list's own row: a hit from the full-text index carries no parts, so its
+ * attachments are taken from the cached copy of the same message when the phone holds one — the row
+ * then shows the same chips as in its folder (Starred is this screen).
+ */
+internal fun withCachedParts(results: List<Email>, cached: List<Email>): List<Email> {
+    if (cached.isEmpty()) return results
+    val byKey = cached.associateBy { searchResultKey(it) }
+    return results.map { hit ->
+        val copy = byKey[searchResultKey(hit)]
+        if (hit.attachments.isEmpty() && copy != null && copy.attachments.isNotEmpty()) hit.copy(attachments = copy.attachments) else hit
+    }
+}
+
+/** [results] with the star of the row keyed [key] set to [flagged] — the optimistic half of a toggle. */
+internal fun withFlag(results: List<Email>, key: String, flagged: Boolean): List<Email> = results.map { m ->
+    if (searchResultKey(m) != key) m
+    else m.copy(keywords = m.keywords.toMutableMap().apply { if (flagged) put("\$flagged", true) else remove("\$flagged") })
 }
 
 /**
@@ -168,9 +193,49 @@ class SearchViewModel(
                     error(getApplication<Application>().getString(R.string.status_no_saved_account))
                 }
                 val result = repo.search(credentials, query, SEARCH_LIMIT)
-                _state.value = SearchState.Results(query, result.emails, result.complete)
+                val cached = runCatching { repo.cachedEmailsByIds(result.emails.map { it.emailKey() }) }.getOrDefault(emptyList())
+                _state.value = SearchState.Results(query, withCachedParts(result.emails, cached), result.complete)
             } catch (t: Throwable) {
                 _state.value = SearchState.Error(t.message ?: t.javaClass.simpleName)
+            }
+        }
+    }
+
+    private val storage = getApplication<Application>().container.storageRepository
+    private val _openingAttachment = MutableStateFlow<String?>(null)
+    val openingAttachment: StateFlow<String?> = _openingAttachment.asStateFlow()
+
+    private fun credentialsFor(email: Email): AccountCredentials? =
+        email.accountId?.let { store.credentials(it) } ?: store.load()
+
+    /** The row's star, as in every folder: flipped on screen at once, then on the server. */
+    fun toggleFlag(email: Email) {
+        val flagged = !email.isFlagged
+        (_state.value as? SearchState.Results)?.let { r ->
+            _state.value = r.copy(emails = withFlag(r.emails, searchResultKey(email), flagged))
+        }
+        viewModelScope.launch {
+            val credentials = credentialsFor(email) ?: return@launch
+            runCatching { repo.setFlagged(credentials, email.id, flagged) }
+                .onFailure { android.util.Log.w("SternaSearch", "setFlagged failed", it) }
+        }
+    }
+
+    /** A row's attachment chip, opened in another app without opening the message. */
+    fun openAttachment(email: Email, part: EmailBodyPart) {
+        if (_openingAttachment.value != null) return
+        val credentials = credentialsFor(email) ?: return
+        val app = getApplication<Application>()
+        _openingAttachment.value = attachmentKey(email, part)
+        viewModelScope.launch {
+            try {
+                AttachmentOpen.openExternally(app, repo, storage, credentials, part, email.id)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (t: Throwable) {
+                android.util.Log.w("SternaSearch", "opening attachment failed", t)
+            } finally {
+                _openingAttachment.value = null
             }
         }
     }

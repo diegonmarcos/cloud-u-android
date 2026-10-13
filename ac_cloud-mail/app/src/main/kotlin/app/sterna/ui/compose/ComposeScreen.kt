@@ -63,6 +63,14 @@ import androidx.compose.material.icons.filled.FormatStrikethrough
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.Title
+import androidx.compose.material.icons.filled.FormatColorText
+import androidx.compose.material.icons.filled.InsertPhoto
+import androidx.compose.ui.graphics.Color
+import app.sterna.core.data.text.TEXT_COLORS
+import app.sterna.core.data.text.TEXT_COLOR_OF
+import app.sterna.core.data.text.withTextColor
 import app.sterna.ui.text.rememberTextToolRunner
 import app.sterna.ui.text.TextToolScope
 import app.sterna.ui.text.TextToolPanel
@@ -272,6 +280,12 @@ fun ComposeScreen(
     val context = LocalContext.current
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let(viewModel::attach)
+    }
+    // An inline picture: staged as an inline part with its own Content-ID, and a marker line put at
+    // the caret, which the send replaces with the `<img src="cid:…">` (see [inlineImageVerbatims]).
+    var inlineImageMarker by remember { mutableStateOf<String?>(null) }
+    val inlineImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { viewModel.attachInlineImage(it) { marker -> inlineImageMarker = marker } }
     }
     // OpenKeychain's passphrase/key dialog round-trip during a PGP send.
     val pgpLauncher = rememberPgpInteractionLauncher { data -> viewModel.retryPgpSend(data) }
@@ -484,6 +498,20 @@ fun ComposeScreen(
     // selected; `null` = no instruction. Transient on purpose: a gesture in flight, not a value worth
     // parking across a rotation.
     var pending by remember { mutableStateOf<Set<Inline>?>(null) }
+    LaunchedEffect(inlineImageMarker) {
+        val marker = inlineImageMarker ?: return@LaunchedEffect
+        inlineImageMarker = null
+        val current = RichBody(body.text, ranges, blocks, links)
+        val at = body.selection.max.coerceIn(0, body.text.length)
+        val insert = (if (at > 0 && body.text[at - 1] != '\n') "\n" else "") + marker + "\n"
+        val nextText = body.text.substring(0, at) + insert + body.text.substring(at)
+        val caret = at + insert.length
+        val remapped = remapAfterEdit(current, nextText, span(body.selection), Span(caret, caret), null)
+        ranges = remapped.ranges
+        blocks = remapped.blocks
+        links = remapped.links
+        body = TextFieldValue(nextText, TextRange(caret))
+    }
     // Whether the link dialog is up (#131). `rememberSaveable`, like the composer's own dialogs: a
     // rotation with it open brings the DIALOG back. It says nothing about what was typed INSIDE it:
     // the two fields are plain `remember`s, so an address half typed is lost to a rotation — measured
@@ -1759,6 +1787,20 @@ fun ComposeScreen(
                         val sel = span(body.selection)
                         if (!sel.isEmpty) ranges = clearFormatting(current, sel).ranges else pending = emptySet()
                     },
+                    onColor = { color ->
+                        // ONE colour per character: the others are taken off the selection first, then
+                        // the chosen one laid on (null = the default ink, nothing laid on).
+                        var current = RichBody(body.text, ranges, blocks, links)
+                        val sel = span(body.selection)
+                        if (!sel.isEmpty) {
+                            current = withTextColor(current, sel, color)
+                            ranges = current.ranges
+                        } else {
+                            val base = (pending ?: stylesAt(current, sel)) - TEXT_COLORS.toSet()
+                            pending = if (color == null) base else base + color
+                        }
+                    },
+                    onInlineImage = { inlineImagePicker.launch("image/*") },
                 )
             }
             if (linkDialog) {
@@ -2329,6 +2371,10 @@ private fun pgpModeLabel(mode: PgpMode): Int = when (mode) {
     PgpMode.ENCRYPT_UNSIGNED -> R.string.compose_pgp_encrypt_unsigned
 }
 
+/** The on-screen colour of a text-colour family: the very value its HTML writes. */
+private fun textColorOf(kind: Inline): Color =
+    Color(0xFF000000L or TEXT_COLOR_OF.getValue(kind).removePrefix("#").toLong(16))
+
 /**
  * The eight formatting buttons under the body (#131). Placed DOWN HERE on purpose:
  */
@@ -2341,7 +2387,10 @@ private fun FormattingBar(
     onToggle: (Inline) -> Unit,
     onToggleList: (BlockKind) -> Unit,
     onClear: () -> Unit,
+    onColor: (Inline?) -> Unit,
+    onInlineImage: () -> Unit,
 ) {
+    var colorMenu by remember { mutableStateOf(false) }
     // SCROLLABLE, since the bar went from five buttons to eight: 8 × 48 dp + 8 = 392 dp of fixed
     // width. It no longer fits a 360 dp phone, let alone a multi-window pane or a large "display size"
     // setting — where "clear formatting" would be off the screen with no way to reach it. Scrolling is
@@ -2358,6 +2407,37 @@ private fun FormattingBar(
         FormattingButton(Inline.STRIKE, Icons.Filled.FormatStrikethrough, R.string.compose_format_strikethrough, active, onToggle)
         ListButton(BlockKind.BULLET, Icons.Filled.FormatListBulleted, R.string.compose_format_list_bulleted, activeList, onToggleList)
         ListButton(BlockKind.NUMBER, Icons.Filled.FormatListNumbered, R.string.compose_format_list_numbered, activeList, onToggleList)
+        ListButton(BlockKind.QUOTE, Icons.Filled.FormatQuote, R.string.compose_format_quote, activeList, onToggleList)
+        ListButton(BlockKind.HEADING, Icons.Filled.Title, R.string.compose_format_heading, activeList, onToggleList)
+        Box {
+            val activeColor = TEXT_COLORS.lastOrNull { it in active }
+            IconButton(onClick = { colorMenu = true }, modifier = Modifier.size(MailMetrics.s48).semantics { selected = activeColor != null }) {
+                Icon(
+                    Icons.Filled.FormatColorText,
+                    contentDescription = stringResource(R.string.compose_format_text_color),
+                    tint = activeColor?.let { textColorOf(it) } ?: LocalContentColor.current,
+                )
+            }
+            DropdownMenu(expanded = colorMenu, onDismissRequest = { colorMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.compose_format_color_default)) },
+                    onClick = { colorMenu = false; onColor(null) },
+                )
+                for ((kind, label) in listOf(
+                    Inline.RED to R.string.compose_format_color_red,
+                    Inline.BLUE to R.string.compose_format_color_blue,
+                    Inline.GREEN to R.string.compose_format_color_green,
+                )) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(label), color = textColorOf(kind)) },
+                        onClick = { colorMenu = false; onColor(kind) },
+                    )
+                }
+            }
+        }
+        IconButton(onClick = onInlineImage, modifier = Modifier.size(MailMetrics.s48)) {
+            Icon(Icons.Filled.InsertPhoto, contentDescription = stringResource(R.string.compose_format_inline_image))
+        }
         // The link is not a family: it carries an address, so it opens a dialog instead of toggling,
         // and it is lit by `linkAt` rather than by the `active` set.
         IconButton(onClick = onLink, modifier = Modifier.size(MailMetrics.s48).semantics { selected = linkActive }) {
