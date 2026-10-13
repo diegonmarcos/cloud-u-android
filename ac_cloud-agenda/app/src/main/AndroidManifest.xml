@@ -7,12 +7,17 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+    <!-- Agents ▸ Screenshot events: read Cloud Drive's Screenshot agent results through its
+         provider (signature permission; contract ac_cloud-drive/data/agent-screenshots-contract.json). -->
+    <uses-permission android:name="com.diegonmarcos.clouddrive.permission.READ_AGENT_RESULTS" />
 
     <queries>
         <package android:name="com.diegonmarcos.cloudagenda" />
         <!-- The cal ENGINE (build.json::engines.cal): without this line the engine is
              invisible on API 30+ and Agenda would say "install it" with it installed. -->
         <package android:name="${calEnginePackage}" />
+        <!-- Cloud Drive: its Screenshot agent provider feeds Agents ▸ Screenshot events. -->
+        <package android:name="com.diegonmarcos.clouddrive" />
     </queries>
 
     <application

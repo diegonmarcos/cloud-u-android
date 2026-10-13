@@ -231,6 +231,7 @@ Module `ac_cloud-agenda`; libs: lib-analytics, lib-core, lib-databackend, lib-de
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
+| `cal_agents` | prefs | content | no | Agenda agents: the screenshot agent's on/off switch, last scan time, dismissed candidate keys and the events the user accepted from screenshots; user decisions, not config. |
 | `cal_bridge` | prefs | device | no | Agenda one-time 'seeded' flag for legacy todo import. |
 | `cal_legacy_todos` | prefs | content | no | Agenda legacy local todos JSON that is read once and seeded into the calendar engine; user data, not config. |
 | `caldav_secure_prefs` | encrypted | secret | yes | Agenda EncryptedSharedPreferences holding CalDAV url/username/password; mostly credentials (url+username are the account link, migrate via vault with the password). |

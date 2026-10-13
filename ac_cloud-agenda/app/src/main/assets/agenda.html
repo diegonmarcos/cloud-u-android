@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Calendar</title>
     <script src="vendor/tailwind.js"></script>
+    <script src="agents.js"></script>
     <style>
         :root {
             --sat: env(safe-area-inset-top, 0px);
@@ -347,6 +348,8 @@
                     <h1 class="text-xl font-medium">Invites</h1>
                 </header>
                 <div class="px-6" id="invites-error-mount"></div>
+                <!-- Candidates the screenshot agent found (Configs > Agents). -->
+                <div class="px-6 mt-2" id="agent-invites"></div>
                 <div class="px-6 mt-2 panel-scroll-pad" id="invites-body"></div>
             </section>
 
@@ -382,6 +385,12 @@
                             <button data-mode="off">Off</button>
                         </div>
                         <div id="demo-mode-status" class="text-[12.5px] text-gray-500 mt-2"></div>
+                    </div>
+
+                    <div>
+                        <span class="text-[11px] font-semibold text-gray-400 tracking-widest uppercase">Agents</span>
+                        <p class="text-[11.5px] text-gray-400 mt-1 mb-3">Agents read what your other apps already know and suggest events. You decide on each one under Invites.</p>
+                        <div id="agents-config"></div>
                     </div>
 
                     <div>
@@ -1192,11 +1201,17 @@ function loadCalendarsIntoState() {
     cals.forEach(function (cal) {
         State.calendarsById[cal.id] = cal;
         if (!haveVis && cal.enabled) freshVis.add(cal.id);
+        // A calendar this device has never seen before (e.g. the agents'
+        // "Accepted from screenshots") starts visible instead of hidden.
+        if (haveVis && cal.enabled && !KnownCalendars.has(cal.id)) { State.visibleCalendars.add(cal.id); KnownCalendars.add(cal.id); }
         var catId = cal.category || 'other';
         if (!byCat.has(catId)) byCat.set(catId, { id: catId, label: catId.charAt(0).toUpperCase() + catId.slice(1), color: cal.color, subs: [] });
         byCat.get(catId).subs.push({ id: cal.id, label: cal.name, color: cal.color });
     });
-    if (!haveVis) { State.visibleCalendars = freshVis; persistVisibility(); }
+    if (!haveVis) { State.visibleCalendars = freshVis; }
+    persistVisibility();
+    cals.forEach(function (cal) { KnownCalendars.add(cal.id); });
+    KnownCalendars.save();
     State.calCategoryModel = Array.from(byCat.values());
     return true;
 }
@@ -1773,15 +1788,231 @@ function initTodoTab() {
 /* =====================================================================
    Invites tab
    ===================================================================== */
+/* =====================================================================
+   Agents — the screenshot agent (parser: agents.js)
+   Decisions (dismiss / accept / remove) always go to the real bridge when
+   it exists, whatever the demo mode: they are the user's own choices.
+   ===================================================================== */
+var KnownCalendars = (function () {
+    var set = null;
+    function load() {
+        if (set) return set;
+        set = new Set();
+        try { var raw = localStorage.getItem('cc_known_calendars'); if (raw) set = new Set(JSON.parse(raw)); }
+        catch (e) { /* localStorage unavailable — every calendar counts as known */ set.unknownStorage = true; }
+        return set;
+    }
+    return {
+        has: function (id) { var s = load(); return s.unknownStorage || s.size === 0 || s.has(id); },
+        add: function (id) { load().add(id); },
+        save: function () { try { localStorage.setItem('cc_known_calendars', JSON.stringify(Array.from(load()))); } catch (e) { /* ignore */ } }
+    };
+})();
+
+var AgentMock = (function () {
+    var now = new Date();
+    function day(off) { var d = new Date(now); d.setDate(d.getDate() + off); return d; }
+    function dmy(d) { return d.getDate() + '.' + (d.getMonth() + 1) + '.' + d.getFullYear(); }
+    var st = { enabled: true, lastScan: 0, feedReady: true, feedReason: '', dismissed: [], accepted: [] };
+    return {
+        state: function () { return JSON.parse(JSON.stringify(st)); },
+        records: function () {
+            st.lastScan = Date.now();
+            return [
+                { id: 'demo-1', takenAt: Date.now(), place: 'Berlin', source: 'Screenshot_concert.png',
+                  text: 'Tickets\nJazz Night at Quasimodo\n' + dmy(day(4)) + ', 20:00 - 23:00\nKantstra\u00dfe 12, 10623 Berlin' },
+                { id: 'demo-2', takenAt: Date.now(), place: 'Kreuzberg', source: 'Screenshot_chat.png',
+                  text: 'Ana\nDinner at Markthalle Neun?\n' + dmy(day(2)) + ' 19:30' },
+                { id: 'demo-3', takenAt: Date.now(), place: '', source: 'Screenshot_chat_2.png',
+                  text: 'Dinner at Markthalle Neun?\n' + dmy(day(2)) + ' 19:30' }
+            ];
+        },
+        setEnabled: function (v) { st.enabled = v; return { ok: true }; },
+        dismiss: function (k) { st.dismissed.push(k); return { ok: true }; },
+        accept: function (e) { e.calendarId = 'agents-screenshots'; e.id = 'agent-' + e.key; st.accepted = st.accepted.filter(function (x) { return x.key !== e.key; }).concat([e]); return { ok: true }; },
+        remove: function (k) { st.accepted = st.accepted.filter(function (x) { return x.key !== k; }); st.dismissed.push(k); return { ok: true }; }
+    };
+})();
+
+var AgentApi = {
+    _call: function (method, args, mockFn) {
+        var r = rawBridgeCall(method, args);
+        if (r.noBridge) return mockFn();
+        return r.ok ? r.data : { ok: false, error: r.error };
+    },
+    state: function () { return this._call('agentsState', [], AgentMock.state); },
+    records: function () { return this._call('agentsRecords', [], AgentMock.records); },
+    setEnabled: function (on) { return this._call('agentsSetEnabled', [String(!!on)], function () { return AgentMock.setEnabled(!!on); }); },
+    dismiss: function (key) { return this._call('agentsDismiss', [key], function () { return AgentMock.dismiss(key); }); },
+    accept: function (ev) { return this._call('agentsAccept', [JSON.stringify(ev)], function () { return AgentMock.accept(JSON.parse(JSON.stringify(ev))); }); },
+    remove: function (key) { return this._call('agentsRemove', [key], function () { return AgentMock.remove(key); }); }
+};
+
+var Agents = { state: null, candidates: [], editing: null, error: '' };
+
+function agentsScan() {
+    var st = AgentApi.state();
+    if (!st || st.error) { Agents.error = (st && st.error) || 'agents unavailable'; Agents.state = null; Agents.candidates = []; return; }
+    Agents.error = '';
+    Agents.state = st;
+    if (!st.enabled || !st.feedReady || !window.AgendaAgents) { Agents.candidates = []; return; }
+    var records = AgentApi.records();
+    if (!Array.isArray(records)) { Agents.error = (records && records.error) || 'could not read screenshots'; Agents.candidates = []; return; }
+    var now = Date.now();
+    var existing = Api.events(now - 86400000, now + 400 * 86400000);
+    Agents.state = AgentApi.state() || st;
+    Agents.candidates = window.AgendaAgents.scan(records, {
+        dismissed: Agents.state.dismissed || [],
+        accepted: Agents.state.accepted || [],
+        existing: Array.isArray(existing) ? existing : []
+    });
+}
+
+function agentWhen(c) {
+    return (c.allDay ? 'All day' : fmtTime(c.start)) + ' \u00b7 ' + fmtShortDate(c.start);
+}
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function toDateInput(ms) { var d = new Date(ms); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function toTimeInput(ms) { var d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+
+function renderAgentInvites() {
+    var mount = document.getElementById('agent-invites');
+    if (!mount) return;
+    if (Agents.error) { mount.innerHTML = errorBanner(Agents.error); return; }
+    var st = Agents.state;
+    if (!st || !st.enabled) { mount.innerHTML = ''; return; }
+    var parts = ['<div class="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mt-1 mb-1">From screenshots</div>'];
+    if (!st.feedReady) {
+        parts.push('<div class="text-[12.5px] text-gray-400 py-2">' + esc(st.feedReason || 'The screenshot feed is not available yet.') + '</div>');
+    } else if (!Agents.candidates.length) {
+        parts.push('<div class="text-[12.5px] text-gray-400 py-2">Nothing new found in your screenshots.</div>');
+    }
+    Agents.candidates.forEach(function (c) {
+        if (Agents.editing === c.key) {
+            parts.push('<div class="py-3 border-b border-gray-50 space-y-2" data-agent-edit="' + esc(c.key) + '">' +
+                '<input class="field-input" data-f="title" value="' + esc(c.title) + '" placeholder="Title">' +
+                '<div class="flex gap-2"><input class="field-input" type="date" data-f="date" value="' + toDateInput(c.start) + '">' +
+                '<input class="field-input" type="time" data-f="time" value="' + (c.allDay ? '' : toTimeInput(c.start)) + '" placeholder="all day"></div>' +
+                '<input class="field-input" data-f="location" value="' + esc(c.location) + '" placeholder="Place">' +
+                '<div class="flex gap-2"><button class="btn-dark" data-agent-act="save" data-key="' + esc(c.key) + '">Add to calendar</button>' +
+                '<button class="btn-light" data-agent-act="cancel" data-key="' + esc(c.key) + '">Cancel</button></div></div>');
+            return;
+        }
+        parts.push('<div class="py-2.5 border-b border-gray-50">' +
+            '<div class="flex items-start gap-3">' +
+            '<span class="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5" style="background:#7E57C2"></span>' +
+            '<span class="flex-1 min-w-0">' +
+                '<div class="text-[13.5px] font-medium truncate">' + esc(c.title) + '</div>' +
+                '<div class="text-[11.5px] text-gray-400 truncate mt-0.5">' + esc(agentWhen(c)) + (c.location ? ' \u00b7 ' + esc(c.location) : '') + '</div>' +
+                '<div class="text-[11px] text-gray-300 truncate mt-0.5">' + esc(c.snippet) + (c.count > 1 ? ' \u00b7 seen in ' + c.count + ' screenshots' : '') + '</div>' +
+            '</span></div>' +
+            '<div class="flex gap-2 mt-2 pl-5">' +
+                '<button class="btn-dark" style="padding:6px 12px;font-size:12.5px" data-agent-act="accept" data-key="' + esc(c.key) + '">Accept</button>' +
+                '<button class="btn-light" style="padding:6px 12px;font-size:12.5px" data-agent-act="edit" data-key="' + esc(c.key) + '">Edit</button>' +
+                '<button class="btn-light" style="padding:6px 12px;font-size:12.5px" data-agent-act="dismiss" data-key="' + esc(c.key) + '">Dismiss</button>' +
+            '</div></div>');
+    });
+    var upcoming = (st.accepted || []).filter(function (e) { return +e.end >= Date.now(); })
+        .sort(function (a, b) { return a.start - b.start; });
+    if (upcoming.length) {
+        parts.push('<div class="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mt-4 mb-1">Added from screenshots</div>');
+        upcoming.forEach(function (e) {
+            parts.push('<div class="flex items-center gap-3 py-2 border-b border-gray-50">' +
+                '<span class="flex-1 min-w-0"><div class="text-[13px] truncate">' + esc(e.title) + '</div>' +
+                '<div class="text-[11.5px] text-gray-400 truncate">' + esc(agentWhen(e)) + '</div></span>' +
+                '<button class="btn-light" style="padding:5px 10px;font-size:12px" data-agent-act="remove" data-key="' + esc(e.key) + '">Remove</button></div>');
+        });
+    }
+    mount.innerHTML = parts.join('');
+}
+
+function agentCandidate(key) {
+    return Agents.candidates.find(function (c) { return c.key === key; });
+}
+
+function agentAfterChange(res) {
+    if (res && res.ok === false) { Agents.error = res.error || 'that did not work'; renderAgentInvites(); return; }
+    agentsScan();
+    renderAgentInvites();
+    renderAgentsConfig();
+    // The calendar shows accepted events; refresh what it has loaded.
+    fetchMonthEvents(State.cal.year, State.cal.month);
+    renderMonthGrid();
+    renderListView();
+}
+
+function onAgentAction(ev) {
+    var btn = ev.target.closest('[data-agent-act]');
+    if (!btn) return;
+    var key = btn.dataset.key, act = btn.dataset.agentAct, c = agentCandidate(key);
+    if (act === 'dismiss') { agentAfterChange(AgentApi.dismiss(key)); }
+    else if (act === 'remove') { agentAfterChange(AgentApi.remove(key)); }
+    else if (act === 'edit') { Agents.editing = key; renderAgentInvites(); }
+    else if (act === 'cancel') { Agents.editing = null; renderAgentInvites(); }
+    else if (act === 'accept' && c) {
+        agentAfterChange(AgentApi.accept({ key: c.key, title: c.title, location: c.location, start: c.start, end: c.end, allDay: c.allDay,
+            description: 'Found by the screenshot agent' + (c.source ? ' in ' + c.source : '') }));
+    } else if (act === 'save' && c) {
+        var box = btn.closest('[data-agent-edit]');
+        function f(n) { return box.querySelector('[data-f="' + n + '"]').value.trim(); }
+        var date = f('date'), time = f('time');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) date = toDateInput(c.start);
+        var p = date.split('-').map(Number), allDay = !/^\d{1,2}:\d{2}$/.test(time);
+        var start = allDay ? new Date(p[0], p[1] - 1, p[2]) : new Date(p[0], p[1] - 1, p[2], +time.split(':')[0], +time.split(':')[1]);
+        var dur = c.allDay ? 3600e3 : Math.max(c.end - c.start, 15 * 60e3);
+        var end = allDay ? new Date(p[0], p[1] - 1, p[2] + 1) : new Date(start.getTime() + dur);
+        Agents.editing = null;
+        // The candidate's key stays the one the parser derived, so the same
+        // screenshot never offers this event again after an edited accept.
+        agentAfterChange(AgentApi.accept({ key: c.key, title: f('title') || c.title, location: f('location'),
+            start: start.getTime(), end: end.getTime(), allDay: allDay,
+            description: 'Found by the screenshot agent' + (c.source ? ' in ' + c.source : '') }));
+    }
+}
+
+function renderAgentsConfig() {
+    var mount = document.getElementById('agents-config');
+    if (!mount) return;
+    var st = Agents.state || AgentApi.state();
+    if (!st || st.error) { mount.innerHTML = errorBanner((st && st.error) || 'agents unavailable'); return; }
+    var status = !st.enabled ? 'Off'
+        : !st.feedReady ? (st.feedReason || 'Waiting for its source')
+        : (Agents.candidates.length + ' suggestion' + (Agents.candidates.length === 1 ? '' : 's') + ' waiting under Invites');
+    var last = st.lastScan ? ('Last scan ' + fmtShortDate(st.lastScan) + ' ' + fmtTime(st.lastScan)) : 'Not scanned yet';
+    mount.innerHTML = '<div class="py-2">' +
+        '<div class="flex items-center justify-between gap-3">' +
+            '<span class="min-w-0"><div class="text-[14px] font-medium">Screenshot events</div>' +
+            '<div class="text-[11.5px] text-gray-400">Reads the text and details Cloud Drive pulls out of your screenshots and suggests dates, times and places as events.</div></span>' +
+            '<div class="seg" id="agents-enabled-toggle"><button data-on="true" class="' + (st.enabled ? 'active' : '') + '">On</button><button data-on="false" class="' + (st.enabled ? '' : 'active') + '">Off</button></div>' +
+        '</div>' +
+        '<div class="text-[12.5px] text-gray-500 mt-2">' + esc(status) + '</div>' +
+        '<div class="text-[11.5px] text-gray-400 mt-0.5">' + esc(last) + ' \u00b7 ' + (st.dismissed || []).length + ' dismissed \u00b7 ' + (st.accepted || []).length + ' accepted</div>' +
+        '<div class="mt-3"><button id="agents-scan-btn" class="btn-light">Scan now</button></div></div>';
+}
+
+function initAgents() {
+    document.getElementById('agent-invites').addEventListener('click', onAgentAction);
+    document.getElementById('agents-config').addEventListener('click', function (ev) {
+        var t = ev.target.closest('button[data-on]');
+        if (t) { AgentApi.setEnabled(t.dataset.on === 'true'); agentAfterChange(null); return; }
+        if (ev.target.closest('#agents-scan-btn')) { agentAfterChange(null); }
+    });
+    agentsScan();
+    renderAgentsConfig();
+}
+
 function loadInvitesTab() {
     // Invites ride in on the same feed as the Events tab, so reuse that loader
     // and only report its failures into this tab's own banner.
-    if (!State.events.items.length && !loadEventsTab('invites-error-mount')) return;
+    if (!State.events.items.length && !loadEventsTab('invites-error-mount')) { agentsScan(); renderAgentInvites(); return; }
     document.getElementById('invites-error-mount').innerHTML = '';
     renderInvitesBody();
 }
 
 function renderInvitesBody() {
+    agentsScan();
+    renderAgentInvites();
     var mount = document.getElementById('invites-body');
     var items = State.events.items.filter(function (e) {
         var cal = State.events.calendarsById[e.calendarId];
@@ -2103,6 +2334,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initTodoTab();
     initEventsTab();
     initConfigsTab();
+    initAgents();
     renderDemoBanner();
 
     switchTab('calendar');

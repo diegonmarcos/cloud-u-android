@@ -303,6 +303,14 @@
         "lib-browser"
       ]
     },
+    "cal_agents": {
+      "kind": "prefs",
+      "class": "content",
+      "doc": "Agenda agents: the screenshot agent's on/off switch, last scan time, dismissed candidate keys and the events the user accepted from screenshots; user decisions, not config.",
+      "used_by": [
+        "ac_cloud-agenda"
+      ]
+    },
     "cal_bridge": {
       "kind": "prefs",
       "class": "device",

@@ -5,6 +5,9 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.webkit.JavascriptInterface
+import com.diegonmarcos.cloudagenda.agents.AgentStore
+import com.diegonmarcos.cloudagenda.agents.DriveScreenshotFeed
+import com.diegonmarcos.cloudagenda.agents.ScreenshotFeed
 import com.diegonmarcos.superapp.core.DataBackendClient
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -27,11 +30,20 @@ class CalBridge(private val ctx: Context) {
 
     private val executor = Executors.newSingleThreadExecutor()
 
+    // ── Agents ───────────────────────────────────────────────────────────────
+    // The screenshot agent reads Cloud Drive's screenshot records through
+    // [ScreenshotFeed]; the page parses them (assets/agents.js) and the
+    // decisions the user takes on the Invites tab land in [AgentStore].
+    private val agents = AgentStore(ctx)
+    private val screenshotFeed: ScreenshotFeed = DriveScreenshotFeed(ctx)
+
     private companion object {
         /** The engine CONTRACT meta-data key (libs/cal's manifest). */
         const val CONTRACT_KEY = "com.diegonmarcos.cloud.engine.CONTRACT"
         /** The engine method that takes the one-time handover (CalBackendService). */
         const val SEED = "seed"
+        /** The calendar id accepted screenshot events carry. */
+        const val AGENTS_CALENDAR = "agents-screenshots"
     }
 
     @Volatile private var syncRunning = false
@@ -118,7 +130,13 @@ class CalBridge(private val ctx: Context) {
 
     @JavascriptInterface
     fun calendars(): String {
-        return ask("calendars")
+        val raw = ask("calendars")
+        val arr = runCatching { JSONArray(raw) }.getOrNull() ?: return raw
+        arr.put(JSONObject()
+            .put("id", AGENTS_CALENDAR).put("name", "Accepted from screenshots")
+            .put("category", "agents").put("color", "#7E57C2").put("enabled", true)
+            .put("lastSync", agents.lastScan))
+        return arr.toString()
     }
 
     // fromUtcMillis/toUtcMillis are taken as String and parsed to Long here:
@@ -127,7 +145,89 @@ class CalBridge(private val ctx: Context) {
     // them before passing across the bridge.
     @JavascriptInterface
     fun events(fromUtcMillis: String, toUtcMillis: String): String {
-        return ask("events", fromUtcMillis, toUtcMillis)
+        val raw = ask("events", fromUtcMillis, toUtcMillis)
+        val arr = runCatching { JSONArray(raw) }.getOrNull() ?: return raw
+        val from = fromUtcMillis.toLongOrNull() ?: Long.MIN_VALUE
+        val to = toUtcMillis.toLongOrNull() ?: Long.MAX_VALUE
+        val accepted = agents.accepted()
+        for (i in 0 until accepted.length()) {
+            val e = accepted.optJSONObject(i) ?: continue
+            val start = e.optLong("start"); val end = e.optLong("end", start)
+            if (end >= from && start <= to) arr.put(e)
+        }
+        return arr.toString()
+    }
+
+    // ======================================================================
+    // Agents (screenshot events)
+    // ======================================================================
+
+    /** {enabled, lastScan, feedReady, feedReason, dismissed:[key], accepted:[event]} */
+    @JavascriptInterface
+    fun agentsState(): String {
+        val reason = screenshotFeed.unavailableReason()
+        return JSONObject()
+            .put("enabled", agents.enabled)
+            .put("lastScan", agents.lastScan)
+            .put("feedReady", reason == null)
+            .put("feedReason", reason ?: "")
+            .put("dismissed", JSONArray(agents.dismissed().toList()))
+            .put("accepted", agents.accepted())
+            .toString()
+    }
+
+    /** The raw screenshot records (see [ScreenshotFeed]); stamps the scan time. */
+    @JavascriptInterface
+    fun agentsRecords(): String {
+        if (!agents.enabled) return JSONArray().toString()
+        val records = screenshotFeed.records()
+        agents.lastScan = System.currentTimeMillis()
+        return records.toString()
+    }
+
+    /** enabled is "true"/"false" (bridge string convention). */
+    @JavascriptInterface
+    fun agentsSetEnabled(enabled: String): String {
+        agents.enabled = enabled == "true"
+        return okErr(true, "")
+    }
+
+    @JavascriptInterface
+    fun agentsDismiss(key: String): String {
+        agents.dismiss(key)
+        return okErr(true, "")
+    }
+
+    /** Accepts one candidate as an event: {key,title,location,start,end,allDay,description}. */
+    @JavascriptInterface
+    fun agentsAccept(json: String): String {
+        return try {
+            val o = JSONObject(json)
+            val key = o.optString("key")
+            val start = o.optLong("start", 0L)
+            if (key.isBlank() || start <= 0L) return okErr(false, "the event needs a date")
+            val event = JSONObject()
+                .put("id", "agent-" + key.hashCode().toUInt().toString(16))
+                .put("key", key)
+                .put("calendarId", AGENTS_CALENDAR)
+                .put("title", o.optString("title").ifBlank { "Event" })
+                .put("description", o.optString("description"))
+                .put("location", o.optString("location"))
+                .put("start", start)
+                .put("end", o.optLong("end", start).coerceAtLeast(start))
+                .put("allDay", o.optBoolean("allDay", false))
+            agents.accept(event)
+            okErr(true, "")
+        } catch (e: Exception) {
+            okErr(false, e.message ?: e.javaClass.simpleName)
+        }
+    }
+
+    /** Takes an accepted event back out of the calendar; it will not be offered again. */
+    @JavascriptInterface
+    fun agentsRemove(key: String): String {
+        agents.remove(key)
+        return okErr(true, "")
     }
 
     @JavascriptInterface
