@@ -18,6 +18,10 @@ import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +39,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Rotate90DegreesCw
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -60,6 +65,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import com.diegonmarcos.clouddrive.agents.ScreenshotAgent
+import com.diegonmarcos.clouddrive.agents.ScreenshotRecord
 import androidx.core.content.FileProvider
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.files.ConfirmDialog
@@ -112,6 +123,7 @@ class ImageViewerActivity : ComponentActivity() {
         var sheet by remember { mutableStateOf<Sheet?>(null) }
         var confirmDelete by remember { mutableStateOf(false) }
         var version by remember { mutableIntStateOf(0) }
+        var textLayer by remember { mutableStateOf(true) }
         val current = paths.getOrNull(pager.currentPage)
         fun say(msg: String) { scope.launch { snackbar.showSnackbar(msg) } }
 
@@ -122,12 +134,16 @@ class ImageViewerActivity : ComponentActivity() {
                 leading = { IslandAction(Icons.Filled.Close, stringResource(R.string.chrome_close)) { finish() } },
             )
             HorizontalPager(state = pager, modifier = Modifier.weight(1f).fillMaxWidth(), key = { paths[it] }) { page ->
-                ZoomableImage(paths[page], version)
+                ZoomableImage(paths[page], version, textLayer)
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.pad, vertical = DriveMetrics.pad), horizontalArrangement = Arrangement.SpaceEvenly) {
                 IslandAction(Icons.Filled.Rotate90DegreesCw, stringResource(R.string.viewer_rotate), tint = Color.White) { current?.let { rotate(File(it)); version++ } }
                 IslandAction(Icons.Filled.QrCodeScanner, stringResource(R.string.viewer_scan), tint = Color.White) { sheet = Sheet.SCAN }
                 IslandAction(Icons.Filled.DocumentScanner, stringResource(R.string.viewer_ocr), tint = Color.White) { sheet = Sheet.OCR }
+                IslandAction(Icons.Filled.TextFields, stringResource(R.string.viewer_text_layer), tint = if (textLayer) MaterialTheme.colorScheme.primary else Color.White) {
+                    textLayer = !textLayer
+                    if (textLayer && current != null && ScreenshotAgent.store().forFile(File(current)) == null) say(getString(R.string.viewer_text_layer_none))
+                }
                 IslandAction(Icons.Filled.Info, stringResource(R.string.viewer_info), tint = Color.White) { sheet = Sheet.INFO }
                 IslandAction(Icons.Filled.Share, stringResource(R.string.viewer_share), tint = Color.White) { current?.let { share(File(it)) } }
                 IslandAction(Icons.Filled.Delete, stringResource(R.string.viewer_delete), tint = Color.White) { confirmDelete = true }
@@ -151,7 +167,7 @@ class ImageViewerActivity : ComponentActivity() {
     private enum class Sheet { INFO, SCAN, OCR }
 
     @Composable
-    private fun ZoomableImage(path: String, version: Int) {
+    private fun ZoomableImage(path: String, version: Int, textLayer: Boolean) {
         var scale by remember { mutableStateOf(1f) }
         var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
         val transform = rememberTransformableState { zoom, pan, _ ->
@@ -159,6 +175,8 @@ class ImageViewerActivity : ComponentActivity() {
             offset = if (scale > 1f) offset + pan else androidx.compose.ui.geometry.Offset.Zero
         }
         val bitmap by produceState<Bitmap?>(null, path, version) { value = withContext(Dispatchers.IO) { decodeForScreen(File(path)) } }
+        // The Screenshot agent's record for this exact file (path + size + mtime), when it has read it.
+        val record by produceState<ScreenshotRecord?>(null, path, version) { value = withContext(Dispatchers.IO) { runCatching { ScreenshotAgent.store().forFile(File(path)) }.getOrNull() } }
         Box(
             Modifier.fillMaxSize()
                 .transformable(transform)
@@ -167,11 +185,47 @@ class ImageViewerActivity : ComponentActivity() {
         ) {
             val b = bitmap
             if (b == null) CircularProgressIndicator()
-            else Image(
-                b.asImageBitmap(), contentDescription = path.substringAfterLast('/'),
-                modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y },
-                contentScale = ContentScale.Fit,
-            )
+            else Box(Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y }) {
+                Image(b.asImageBitmap(), contentDescription = path.substringAfterLast('/'), modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                val r = record
+                if (textLayer && r != null && r.width > 0 && r.height > 0) TextLayer(r)
+            }
+        }
+    }
+
+    /**
+     * The SELECTABLE TEXT LAYER: every OCR line of the agent's record, placed over the picture where
+     * the line is (ContentScale.Fit geometry, so it zooms and pans with the image) as transparent
+     * text sized to the line's box, inside one SelectionContainer — long-press and drag selects
+     * across lines like any text field, Copy / Share come from the system's selection toolbar.
+     * A faint tint marks where text was found.
+     */
+    @Composable
+    private fun TextLayer(r: ScreenshotRecord) {
+        val density = LocalDensity.current
+        val tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val cw = constraints.maxWidth.toFloat(); val ch = constraints.maxHeight.toFloat()
+            val k = minOf(cw / r.width, ch / r.height)
+            val dx = (cw - r.width * k) / 2f; val dy = (ch - r.height * k) / 2f
+            SelectionContainer(Modifier.fillMaxSize()) {
+                Box(Modifier.fillMaxSize()) {
+                    r.blocks.flatMap { it.lines }.forEach { line ->
+                        val (l, t, rr, bb) = line.bbox.takeIf { it.size == 4 } ?: return@forEach
+                        val w = (rr - l) * k; val h = (bb - t) * k
+                        if (w <= 0f || h <= 0f) return@forEach
+                        with(density) {
+                            Text(
+                                line.text,
+                                Modifier.offset { IntOffset((dx + l * k).toInt(), (dy + t * k).toInt()) }.size(w.toDp(), h.toDp()).background(tint),
+                                color = Color.Transparent,
+                                style = TextStyle(fontSize = (h * 0.8f).toSp(), lineHeight = h.toSp()),
+                                maxLines = 1, softWrap = false, overflow = TextOverflow.Clip,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -282,7 +336,7 @@ class ImageViewerActivity : ComponentActivity() {
 
     @Composable
     private fun OcrSheet(engine: ImageScanEngine, file: File, say: (String) -> Unit, close: () -> Unit) {
-        val result by produceState<Pair<String?, String?>?>(null, file) { value = withContext(Dispatchers.IO) { runCatching { val r = engine.recognizeText(file); r.text to r.error }.getOrElse { null to (it.message ?: it.toString()) } } }
+        val result by produceState<Pair<String?, String?>?>(null, file) { value = withContext(Dispatchers.IO) { runCatching { ScreenshotAgent.store().forFile(file)?.takeIf { it.text.isNotBlank() }?.let { return@runCatching it.text to null }; val r = engine.recognizeText(file); r.text to r.error }.getOrElse { null to (it.message ?: it.toString()) } } }
         Column(Modifier.padding(DriveMetrics.padWide).padding(bottom = DriveMetrics.padWide), verticalArrangement = Arrangement.spacedBy(DriveMetrics.pad)) {
             val r = result
             when {

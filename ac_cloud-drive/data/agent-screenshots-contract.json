@@ -17,18 +17,31 @@
     "source_mtime_ms": "long, file last-modified, epoch ms",
     "taken_at_ms": "long, capture time: EXIF DateTimeOriginal, else the timestamp in the file name, else source_mtime_ms",
     "processed_at_ms": "long, epoch ms the agent wrote this record",
-    "width": "int", "height": "int",
+    "width": "int",
+    "height": "int",
     "text": "string, the full OCR text, blocks joined by newlines in reading order ('' when none)",
     "lang": "string, BCP-47 of the recognizer used (e.g. 'und-Latn')",
     "blocks": "array of {text, bbox:[left,top,right,bottom] in source pixels, lines:[{text, bbox, confidence?}]}",
-    "labels": "array of {label, confidence 0..1, source: 'image-labeling'|'object-detection'|'heuristic'}, sorted by confidence desc",
+    "labels": "array of {label, confidence 0..1, source: 'image-labeling'|'object-detection'|'heuristic'}: image-labeling and object-detection labels merged (best confidence per label) sorted by confidence desc, then the agent's heuristic labels (confidence 1): 'Dark UI'|'Light UI'|'Mixed UI', 'Has text'|'Text-heavy', 'QR code'|'Barcode'",
     "objects": "array of {bbox, labels:[{label, confidence}]}",
     "entities": "array of {type: 'date'|'time'|'url'|'email'|'phone'|'address', text, start, end} found in `text` by the agent's extractor (offsets into text)",
     "engine": "object {ocr, labeling, objects, agent_version}",
-    "error": "string|null, set when a stage failed; the other fields hold what succeeded"
+    "error": "string|null, set when a stage failed; the other fields hold what succeeded",
+    "colours": "(v1.1, additive) array of {hex '#rrggbb', share 0..1}: the five biggest colour buckets, biggest first",
+    "barcode": "(v1.1, additive) {format, raw} of the first barcode / QR code found, or null",
+    "source_app": "(v1.1, additive) string|null: the app the screenshot was taken in when the file name carries it (Pixel 'Screenshot_..._Chrome.png', One UI 'Screenshot_..._com.whatsapp.jpg')"
   },
   "index_line": "one JSON object per line, append-only: {id, source_path, taken_at_ms, processed_at_ms, has_text}. A later line for the same id supersedes an earlier one.",
-  "state": "{version, last_scan_ms, processed, failed, cursor_mtime_ms}: agent bookkeeping, consumers may read processed_at_ms > their own cursor from index.jsonl instead",
+  "state": "{version, last_scan_ms, processed, failed, cursor_mtime_ms, total, pending}: agent bookkeeping (total = screenshots on the phone at the last pass, pending = still unread). Consumers read index.jsonl past their own processed_at_ms cursor instead",
   "atomicity": "every file is written to <name>.tmp then renamed; a reader never sees a partial record",
-  "deletion": "when a screenshot is deleted its record is removed on the next pass and a line {id, deleted:true} is appended to index.jsonl"
+  "deletion": "when a screenshot is deleted its record is removed on the next pass and a line {id, deleted:true} is appended to index.jsonl",
+  "provider": {
+    "_doc": "The same records SERVED, for a reader that would rather not walk shared storage. Read-only; guarded by a signature-level permission, so only an app signed with the fleet key can read it.",
+    "authority": "{applicationId}.agents.screenshots  (com.diegonmarcos.clouddrive.agents.screenshots)",
+    "permission": "{applicationId}.permission.READ_AGENT_RESULTS  (com.diegonmarcos.clouddrive.permission.READ_AGENT_RESULTS): declare <uses-permission> and a <queries><package android:name=\"com.diegonmarcos.clouddrive\"/></queries>",
+    "records": "content://{authority}/records?since=<processed_at_ms>&limit=<n> -> rows (id, source_path, taken_at_ms, processed_at_ms, has_text 0|1, text, labels comma-joined, json = the whole record) for live records processed after `since`, in processing order",
+    "record": "content://{authority}/records/<id> -> the same row for one id; openInputStream on this uri streams the record's JSON file",
+    "state": "content://{authority}/state -> one row (version, last_scan_ms, processed, failed, cursor_mtime_ms, total, pending)"
+  },
+  "engines": "On device only: Cloud-Lib-Ml-L-Image-Mlkit.apk through libs:ml-l-image (ML Kit Latin text recognition read in overlapping full-width bands so small text keeps its resolution, ML Kit image labelling, ML Kit object detection with the full-label classifier, ZXing). Nothing is sent off the phone."
 }
