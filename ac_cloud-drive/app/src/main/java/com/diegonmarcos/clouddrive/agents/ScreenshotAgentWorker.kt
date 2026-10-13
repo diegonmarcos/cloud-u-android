@@ -34,7 +34,7 @@ class ScreenshotAgentWorker(context: Context, params: WorkerParameters) : Corout
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val ctx = applicationContext
         if (!ScreenshotAgentPrefs.enabled(ctx) && !inputData.getBoolean(KEY_MANUAL, false)) return@withContext Result.success()
-        val s = ScreenshotAgent.run(ctx, shouldStop = { isStopped }, retryFailed = inputData.getBoolean(KEY_RETRY_FAILED, false))
+        val s = ScreenshotAgent.runPass(ctx, shouldStop = { isStopped }, retryFailed = inputData.getBoolean(KEY_RETRY_FAILED, false))
         ScreenshotAgentPrefs.recordRun(ctx, s)
         // Only the watch re-arms itself (a content trigger fires once); any other pass keeps the armed one.
         if (ScreenshotAgentPrefs.enabled(ctx)) watch(ctx, if (WATCH in tags) ExistingWorkPolicy.APPEND_OR_REPLACE else ExistingWorkPolicy.KEEP)

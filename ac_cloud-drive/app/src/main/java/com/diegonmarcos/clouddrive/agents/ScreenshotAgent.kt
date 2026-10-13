@@ -89,7 +89,7 @@ object ScreenshotAgent {
      * One pass. [shouldStop] (the worker's isStopped) is polled per screenshot along with Stop.
      * [retryFailed] first drops every record that carries an error so it is read again.
      */
-    fun run(ctx: Context, shouldStop: () -> Boolean = { false }, retryFailed: Boolean = false): Status {
+    fun runPass(ctx: Context, shouldStop: () -> Boolean = { false }, retryFailed: Boolean = false): Status {
         if (!busy.compareAndSet(false, true)) return _status.value
         stop.set(false)
         try {
