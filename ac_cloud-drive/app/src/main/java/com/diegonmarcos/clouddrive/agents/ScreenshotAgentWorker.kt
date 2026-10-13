@@ -88,7 +88,8 @@ class ScreenshotAgentWorker(context: Context, params: WorkerParameters) : Corout
 
 /** The agent's on/off switch and its last-run line (the record files are the contract; these are not). */
 object ScreenshotAgentPrefs {
-    private const val PREFS = "cloud_drive_agents"
+    /** The app's one prefs file (declared in fleet-config.json); the agent's keys sit under agents.screenshots.* */
+    private const val PREFS = "cloud-drive-prefs"
 
     private fun p(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -101,13 +102,13 @@ object ScreenshotAgentPrefs {
     }
 
     fun recordRun(ctx: Context, s: ScreenshotAgent.Status) {
-        p(ctx).edit().putLong("last_run_ms", System.currentTimeMillis()).putInt("last_done", s.done).putInt("last_failed", s.failed)
-            .putString("last_message", s.message).apply()
+        p(ctx).edit().putLong("agents.screenshots.last_run_ms", System.currentTimeMillis()).putInt("agents.screenshots.last_done", s.done).putInt("agents.screenshots.last_failed", s.failed)
+            .putString("agents.screenshots.last_message", s.message).apply()
     }
 
     data class LastRun(val atMs: Long, val done: Int, val failed: Int, val message: String?)
 
-    fun lastRun(ctx: Context): LastRun? = p(ctx).takeIf { it.contains("last_run_ms") }?.let {
-        LastRun(it.getLong("last_run_ms", 0), it.getInt("last_done", 0), it.getInt("last_failed", 0), it.getString("last_message", null))
+    fun lastRun(ctx: Context): LastRun? = p(ctx).takeIf { it.contains("agents.screenshots.last_run_ms") }?.let {
+        LastRun(it.getLong("agents.screenshots.last_run_ms", 0), it.getInt("agents.screenshots.last_done", 0), it.getInt("agents.screenshots.last_failed", 0), it.getString("agents.screenshots.last_message", null))
     }
 }
