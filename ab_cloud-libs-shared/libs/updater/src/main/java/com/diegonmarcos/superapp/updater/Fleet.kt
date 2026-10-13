@@ -1266,6 +1266,18 @@ object Fleet {
                 // the only honest answer would be "unknown".
                 val candidateCode = ApkIntegrity.identify(ctx, apk.file)?.versionCode
                 val candidateSha = runCatching { ApkIntegrity.sha256(apk.file) }.getOrNull()
+                // #975 ONCE PER ACTUAL CHANGE. These exact bytes already wait on a tap from an
+                // earlier unattended pass: committing them again only re-posts the same
+                // "tap to finish installing". A new build (another sha256) is offered again.
+                if (mode == Mode.AUTO && candidateSha != null &&
+                    PassLedgerStore.offeredBefore(ctx, app.pkg, candidateSha)) {
+                    pending++
+                    // Same entry as last pass, so the one summary keeps its signature and stays put.
+                    PassLedgerStore.record(ctx, PassLedger.Outcome.NEEDS_TAP, app.pkg, (candidateCode ?: 0L).toString())
+                    Log.i(TAG, "AUTO does not re-offer ${app.id} (${app.pkg}): build " +
+                               "${candidateSha.take(12)} already waits on a tap")
+                    return@forEachIndexed
+                }
                 val used = commit(ctx, app, apk)
                 usedChannels += used
                 // ASK THE PACKAGE MANAGER, DO NOT BELIEVE THE COMMIT.
@@ -1292,6 +1304,7 @@ object Fleet {
                     acted++
                     PassLedgerStore.record(ctx, PassLedger.Outcome.INSTALLED, app.pkg, (candidateCode ?: 0L).toString())
                     PassLedgerStore.clearFailure(ctx, app.pkg)
+                    PassLedgerStore.clearOffered(ctx, app.pkg)
                     // #774 STAGE 3, CLEAR. The session path is reaped by
                     // PackageInstallerReceiver on success; a shell install has
                     // no receiver, so its cached APK used to stay forever. Same
@@ -1302,6 +1315,7 @@ object Fleet {
                 } else {
                     pending++
                     PassLedgerStore.record(ctx, PassLedger.Outcome.NEEDS_TAP, app.pkg, (candidateCode ?: 0L).toString())
+                    if (mode == Mode.AUTO && candidateSha != null) PassLedgerStore.markOffered(ctx, app.pkg, candidateSha)
                     Log.w(TAG, "NOT installed: ${app.kind} ${app.id} (${app.pkg}) " +
                                "[${i + 1}/${staged.size}] committed via $used but the device " +
                                "still reports ${nowCode ?: "no build"} (candidate " +

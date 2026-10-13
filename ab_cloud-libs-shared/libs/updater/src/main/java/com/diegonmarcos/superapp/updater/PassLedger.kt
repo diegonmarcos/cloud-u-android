@@ -171,6 +171,21 @@ object PassLedgerStore {
         if (p.getString("last:$pkg", null) == sig) false else { p.edit().putString("last:$pkg", sig).commit(); true }
     }.getOrDefault(true)
 
+    /** #975 Did an unattended pass already hand exactly these bytes ([sha256]) of [pkg] to the installer? */
+    @Synchronized fun offeredBefore(ctx: Context, pkg: String, sha256: String): Boolean = runCatching {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("offered:$pkg", null)
+            .equals(sha256, ignoreCase = true)
+    }.getOrDefault(false)
+
+    /** Remembers the bytes now waiting on a tap; commit(), the next pass may be a cold process. */
+    @Synchronized fun markOffered(ctx: Context, pkg: String, sha256: String) {
+        runCatching { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("offered:$pkg", sha256.lowercase()).commit() }
+    }
+
+    @Synchronized fun clearOffered(ctx: Context, pkg: String) {
+        runCatching { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove("offered:$pkg").commit() }
+    }
+
     /** A package that installed clears its remembered failure, so a later one is news again. */
     @Synchronized fun clearFailure(ctx: Context, pkg: String) {
         runCatching { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove("last:$pkg").commit() }

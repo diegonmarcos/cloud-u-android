@@ -188,6 +188,15 @@ class UpdateWorker(
      * cost this app its own update, which is the whole reason for the catch.
      */
     private fun updateFleet() {
+        // #975 ONE OWNER. Every fleet app compiles this worker in and bakes the whole fleet, so
+        // Mail, Drive, Account... each ran this pass on every process start (Updater.start's kick):
+        // each downloaded the ~400 MB rootfs libs into its own cache, and with no privileged
+        // channel committed them again and again - a "tap to finish installing" for the rootfs
+        // libs from every app, in a loop. The fleet is Cloud Store's: here it is the only host.
+        if (!ownsFleetPass(applicationContext.packageName)) {
+            Log.i("Updater/Worker", "fleet pass is Cloud Store's - ${applicationContext.packageName} updates only itself")
+            return
+        }
         val fleet = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
         if (fleet.isEmpty()) return
         runCatching {
@@ -259,5 +268,8 @@ class UpdateWorker(
     companion object {
         const val KEY_FORCE = "force"
         const val KEY_CONSENTED = "consented"
+
+        /** #975 The one package whose unattended pass updates the OTHER apps and the libs. */
+        fun ownsFleetPass(packageName: String): Boolean = packageName == StoreNotifyGate.STORE_PKG
     }
 }
