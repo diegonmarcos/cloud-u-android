@@ -2707,10 +2707,11 @@
                 "target": "extapp:cloud-gallery"
               },
               {
-                "id": "music",
-                "label": "Music",
+                "_doc": "Media Center — the Data Apps tile for cloud-media-center (ac_cloud-media-center, com.diegonmarcos.cloudmediacenter), the Tauri media hub: music (TIDAL playlists), videos, gallery (Pinterest boards), books, the feed, movies and documentaries. It REPLACES the old Music tile, which launched TIDAL itself (app://com.aspiro.tidal); TIDAL is not removed from the phone — every track in the Media Center's music page opens a TIDAL search through the system, so the app is still one tap away. Resolved through ui.external_apps[cloud-media-center]: installed launches it, absent offers the install. Not to be confused with cloud-gallery (the Gallery tile above, com.diegonmarcos.mediacenter), which held the name cloud-media-center until 2026-10.",
+                "id": "mediacenter",
+                "label": "Media",
                 "icon": "ic_music",
-                "target": "app://com.aspiro.tidal?fallback=https%3A%2F%2Ftidal.com"
+                "target": "extapp:cloud-media-center"
               },
               {
                 "_doc": "Cloud-Vault — the dedicated Vaultwarden client app (ac_cloud-vault). libs:vault (KeePassDX stub) was replaced by Cloud-Vault, a standalone constellation APK hosting vault.diegonmarcos.com (self-hosted Vaultwarden). target=extapp:cloud-vault → MainActivity.launchExternalApp opens com.diegonmarcos.cloudvault if installed, else downloads + installs ui.external_apps[id=cloud-vault].install_apk_url. Lives in Data Apps rather than Tools Primary: the vault is one of the data stores, alongside Drive and Sheets.",
@@ -8285,6 +8286,15 @@
         "hub_package": "com.diegonmarcos.cloudwebserver",
         "install_package": "com.diegonmarcos.cloudwebserver",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-C3-WebServer.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "cloud-media-center — the Tauri media hub (ac_cloud-media-center, com.diegonmarcos.cloudmediacenter): seven static pages built from diegonmarcos.github.io's media data. The Data Apps tile 'Media' targets it, and Cloud Me's Media tiles resolve the same id through ac_cloud-me/build.json::ui.external_apps. NO `label`: the id is the application's one name. install_apk_url mirrors ac_cloud-media-center/build.json::release.gh_release.asset_name (cloud-media-center.apk, the arm64 rolling-latest asset) — the asset name the gallery used before its rename to cloud-gallery, now carrying this different package.",
+        "id": "cloud-media-center",
+        "folder": "media_video",
+        "hub_package": "com.diegonmarcos.cloudmediacenter",
+        "install_package": "com.diegonmarcos.cloudmediacenter",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-media-center.apk",
         "forks": {}
       },
       {

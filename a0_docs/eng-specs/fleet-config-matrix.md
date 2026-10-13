@@ -23,6 +23,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-agenda | `com.diegonmarcos.cloudagenda` | 4 | 0 | 100% |
 | cloud-browser | `com.diegonmarcos.cloudbrowser` | 9 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
+| cloud-media-center | `com.diegonmarcos.cloudmediacenter` | 1 | 0 | 100% |
 | cloud-c3 | `com.diegonmarcos.cloudc3` | 6 | 0 | 100% |
 | cloud-calc | `com.diegonmarcos.cloudcalc` | 11 | 0 | 100% |
 | cloud-camera | `cld.camera` | 8 | 0 | 100% |
@@ -48,7 +49,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **200** | **36** | **84%** |
+| **fleet** | | **201** | **36** | **84%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -287,6 +288,22 @@ Module `ac_cloud-c3-webserver`; libs: lib-core, lib-devtools, lib-fleetconfig-mo
 | file | class | doc |
 |---|---|---|
 | `-` | device | keeps no configuration of its own on device; Tauri/server tree configured by build.json. |
+
+Coverage: 1 covered, 0 gaps.
+
+## cloud-media-center — `com.diegonmarcos.cloudmediacenter`
+
+Module `ac_cloud-media-center`; libs: lib-core, lib-devtools, lib-fleetconfig-model.
+
+| store | kind | class | migrates | doc |
+|---|---|---|---|---|
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+
+| file | class | doc |
+|---|---|---|
+| `-` | device | keeps no configuration of its own on device; its pages and their data are bundled in the APK from build.json and web/. |
 
 Coverage: 1 covered, 0 gaps.
 

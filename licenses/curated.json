@@ -242,6 +242,12 @@
    "what": "Tauri 2 Android web server (Rust + web)",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
   },
+  "ac_cloud-media-center": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Tauri 2 Android media hub (Rust + static web)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
   "ac_cloud-calc": {
    "licence": "LicenseRef-NoLicenseGranted",
    "kind": "own",
@@ -581,6 +587,10 @@
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
   },
   "ac_cloud-c3-webserver/src-tauri/gen/android/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-media-center/src-tauri/gen/android/gradle/wrapper/gradle-wrapper.jar": {
    "licence": "Apache-2.0",
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
   },

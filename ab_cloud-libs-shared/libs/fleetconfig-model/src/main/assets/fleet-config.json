@@ -2192,6 +2192,24 @@
         }
       ]
     },
+    "media-center": {
+      "package": "com.diegonmarcos.cloudmediacenter",
+      "module": "ac_cloud-media-center",
+      "schema_version": 1,
+      "libs": [
+        "lib-core",
+        "lib-devtools",
+        "lib-fleetconfig-model"
+      ],
+      "items": [
+        {
+          "id": "none",
+          "path": "-",
+          "class": "device",
+          "doc": "keeps no configuration of its own on device; its pages and their data are bundled in the APK from build.json and web/."
+        }
+      ]
+    },
     "c3": {
       "package": "com.diegonmarcos.cloudc3",
       "module": "ac_cloud-c3",

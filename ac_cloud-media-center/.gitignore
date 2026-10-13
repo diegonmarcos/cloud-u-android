@@ -1,0 +1,5 @@
+build/
+dist/
+.gradle/
+src-tauri/gen/schemas/
+src-tauri/target/

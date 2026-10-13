@@ -1,0 +1,9 @@
+{
+  "identifier": "default",
+  "description": "The one window may ask the system to open https links (opener:default) and nothing else.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default"
+  ]
+}
