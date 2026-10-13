@@ -21,6 +21,8 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 LIBREL="ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore"
 KC="$(command -v kotlinc || true)"
+# Reads ALL its input (never has on a pipe: an early exit SIGPIPEs the writer).
+has() { grep "$@" >/dev/null; }
 
 strip() {
   python3 - "$1" <<'PY'
@@ -49,7 +51,7 @@ check() {
         local res; res="$(java -cp "$out/c:$(dirname "$(dirname "$(readlink -f "$KC")")")/lib/kotlin-stdlib.jar" StoreSizesCheckKt 2>&1)"
         printf '%s\n' "$res"
         fails=$((fails + $(printf '%s\n' "$res" | grep -c '  FAIL:')))
-        printf '%s' "$res" | grep -q '  PASS:' || bad "the StoreSizes check printed nothing"
+        printf '%s' "$res" | has '  PASS:' || bad "the StoreSizes check printed nothing"
       else
         sed 's/^/    /' "$out/log" | head -20; bad "StoreSizes.kt does not compile with the check"
       fi
@@ -62,32 +64,32 @@ check() {
   ph="$(strip "$PH")"; cl="$(strip "$CL")"; pr="$(strip "$PR")"; bar="$(strip "$BAR")"; mf="$(cat "$MF")"
 
   # 2. no-permission state
-  printf '%s' "$ph" | grep -q 'if (StoreSizes.needsGrantRow(sizeGranted))' && ok "Phone draws the grant row by StoreSizes.needsGrantRow" || bad "Phone's grant row is not gated by StoreSizes.needsGrantRow"
-  printf '%s' "$ph" | grep -q 'StoreSizeProbe.grantIntents(ctx)' && ok "the grant row opens the usage-access screen" || bad "the grant row does not open StoreSizeProbe.grantIntents"
-  printf '%s' "$pr" | grep -q 'PermsGrant.settingsAction(PERMISSION)' && ok "usage access opens through Android Perms' own PermsGrant.settingsAction" || bad "the probe has its own settings action, not PermsGrant's"
-  printf '%s' "$pr" | grep -q 'const val PERMISSION = "android.permission.PACKAGE_USAGE_STATS"' && ok "the probe's permission is PACKAGE_USAGE_STATS" || bad "the probe names another permission"
-  printf '%s' "$pr" | grep -q 'queryStatsForPackage' && ok "full sizes come from StorageStatsManager.queryStatsForPackage" || bad "no queryStatsForPackage"
-  printf '%s' "$pr" | grep -q 'ai.sourceDir' && printf '%s' "$pr" | grep -q 'splitSourceDirs' && printf '%s' "$pr" | grep -q 'StoreSizes.Size.apkOnly' && printf '%s' "$pr" | grep -q '?: apk(ctx, pkg)' \
+  printf '%s' "$ph" | has 'if (StoreSizes.needsGrantRow(sizeGranted))' && ok "Phone draws the grant row by StoreSizes.needsGrantRow" || bad "Phone's grant row is not gated by StoreSizes.needsGrantRow"
+  printf '%s' "$ph" | has 'StoreSizeProbe.grantIntents(ctx)' && ok "the grant row opens the usage-access screen" || bad "the grant row does not open StoreSizeProbe.grantIntents"
+  printf '%s' "$pr" | has 'PermsGrant.settingsAction(PERMISSION)' && ok "usage access opens through Android Perms' own PermsGrant.settingsAction" || bad "the probe has its own settings action, not PermsGrant's"
+  printf '%s' "$pr" | has 'const val PERMISSION = "android.permission.PACKAGE_USAGE_STATS"' && ok "the probe's permission is PACKAGE_USAGE_STATS" || bad "the probe names another permission"
+  printf '%s' "$pr" | has 'queryStatsForPackage' && ok "full sizes come from StorageStatsManager.queryStatsForPackage" || bad "no queryStatsForPackage"
+  printf '%s' "$pr" | has 'ai.sourceDir' && printf '%s' "$pr" | has 'splitSourceDirs' && printf '%s' "$pr" | has 'StoreSizes.Size.apkOnly' && printf '%s' "$pr" | has '?: apk(ctx, pkg)' \
     && ok "without the grant the probe falls back to sourceDir + splitSourceDirs (apkOnly)" || bad "the APK fallback is missing"
-  printf '%s' "$mf" | grep -q 'android.permission.PACKAGE_USAGE_STATS' && ok "Cloud Store declares PACKAGE_USAGE_STATS (so Android Perms tracks it)" || bad "Cloud Store does not declare PACKAGE_USAGE_STATS"
-  printf '%s' "$ph" | grep -q 'StoreSizes.rowLabel(StoreSizeProbe.cached(r.pkg))' && ok "the row's size slot is StoreSizes.rowLabel" || bad "the row's size is not StoreSizes.rowLabel"
-  printf '%s' "$ph" | grep -q 'StoreSizes.breakdown(StoreSizeProbe.cached(r.pkg))' && ok "the row's detail shows the breakdown" || bad "no size breakdown in the row's detail"
+  printf '%s' "$mf" | has 'android.permission.PACKAGE_USAGE_STATS' && ok "Cloud Store declares PACKAGE_USAGE_STATS (so Android Perms tracks it)" || bad "Cloud Store does not declare PACKAGE_USAGE_STATS"
+  printf '%s' "$ph" | has 'StoreSizes.rowLabel(StoreSizeProbe.cached(r.pkg))' && ok "the row's size slot is StoreSizes.rowLabel" || bad "the row's size is not StoreSizes.rowLabel"
+  printf '%s' "$ph" | has 'StoreSizes.breakdown(StoreSizeProbe.cached(r.pkg))' && ok "the row's detail shows the breakdown" || bad "no size breakdown in the row's detail"
 
   # 3. off the main thread, cached, refreshed on package changes
-  printf '%s' "$ph" | sed -n '/private fun measureSizes/,/^    }/p' | grep -q 'thread(name = "store-phone-sizes")' && ok "sizes are measured on a worker thread" || bad "sizes are measured on the main thread"
-  printf '%s' "$pr" | grep -q 'ConcurrentHashMap<String, StoreSizes.Size>' && ok "sizes are cached" || bad "sizes are not cached"
-  printf '%s' "$ph" | grep -q 'StoreSizeProbe.watch(ctx)' && printf '%s' "$pr" | grep -q 'ACTION_PACKAGE_REPLACED' && ok "a package change drops its size" || bad "sizes are never refreshed on package changes"
-  printf '%s' "$ph" | grep -q 'StoreSizes.comparator(sort,' && printf '%s' "$ph" | grep -q 'StoreSizes.saveSort(sortStore, sort)' && printf '%s' "$ph" | grep -q 'StoreSizes.loadSort(sortStore)' \
+  printf '%s' "$ph" | sed -n '/private fun measureSizes/,/^    }/p' | has 'thread(name = "store-phone-sizes")' && ok "sizes are measured on a worker thread" || bad "sizes are measured on the main thread"
+  printf '%s' "$pr" | has 'ConcurrentHashMap<String, StoreSizes.Size>' && ok "sizes are cached" || bad "sizes are not cached"
+  printf '%s' "$ph" | has 'StoreSizeProbe.watch(ctx)' && printf '%s' "$pr" | has 'ACTION_PACKAGE_REPLACED' && ok "a package change drops its size" || bad "sizes are never refreshed on package changes"
+  printf '%s' "$ph" | has 'StoreSizes.comparator(sort,' && printf '%s' "$ph" | has 'StoreSizes.saveSort(sortStore, sort)' && printf '%s' "$ph" | has 'StoreSizes.loadSort(sortStore)' \
     && ok "the list sorts by StoreSizes.comparator and persists the choice" || bad "the size sort is not wired or not persisted"
 
   # 4. one row layout
   for part in 'StoreRow.card(ctx)' 'StoreRow.head(ctx,' 'StoreRow.actions(ctx,' 'StoreRow.filters(ctx,'; do
-    printf '%s' "$ph" | grep -qF "$part" && printf '%s' "$cl" | grep -qF "$part" && ok "Phone and Cloud both draw $part" || bad "Phone and Cloud do not share $part"
+    printf '%s' "$ph" | has -F "$part" && printf '%s' "$cl" | has -F "$part" && ok "Phone and Cloud both draw $part" || bad "Phone and Cloud do not share $part"
   done
-  printf '%s' "$bar" | grep -q '^object StoreRow' && ok "StoreRow is the one shared component" || bad "no shared StoreRow"
-  ! printf '%s' "$ph" | grep -q 'HorizontalScrollView' && ok "Phone's buttons are expanded, no sideways scroller" || bad "Phone hides buttons in a HorizontalScrollView"
-  ! printf '%s' "$ph" | grep -q 'setBackgroundColor(0xFF1C1C24' && ok "Phone has no card of its own" || bad "Phone draws its own card"
-  ! printf '%s' "$ph$cl$bar" | grep -qi 'minHeight' && ok "no minHeight in the Store rows" || bad "a minHeight in the Store rows"
+  printf '%s' "$bar" | has '^object StoreRow' && ok "StoreRow is the one shared component" || bad "no shared StoreRow"
+  ! printf '%s' "$ph" | has 'HorizontalScrollView' && ok "Phone's buttons are expanded, no sideways scroller" || bad "Phone hides buttons in a HorizontalScrollView"
+  ! printf '%s' "$ph" | has 'setBackgroundColor(0xFF1C1C24' && ok "Phone has no card of its own" || bad "Phone draws its own card"
+  ! printf '%s' "$ph$cl$bar" | has -i 'minHeight' && ok "no minHeight in the Store rows" || bad "a minHeight in the Store rows"
   return $fails
 }
 
