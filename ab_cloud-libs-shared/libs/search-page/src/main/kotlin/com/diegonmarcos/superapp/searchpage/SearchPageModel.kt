@@ -13,6 +13,9 @@ data class SpSession(val id: String, val title: String, val model: String, val u
 /** One model of the host's catalogue: [nativeWeb] = it searches the web by itself; [free] = no cost. */
 data class SpModel(val id: String, val name: String, val nativeWeb: Boolean, val free: Boolean)
 
+/** One agent of the chat's Agent field: [sub] says what it can do (from the shared descriptor). "" id = no agent (the model directly). */
+data class SpAgent(val id: String, val label: String, val sub: String)
+
 /** One declared search engine: its box on the page. [icon]/[accent] are names the theme resolves. */
 data class SpEngine(val id: String, val label: String, val icon: String, val accent: String)
 
@@ -33,6 +36,11 @@ interface SearchPageHost {
     fun models(): List<SpModel>
     fun send(session: SpSession, text: String, model: String, web: Boolean, now: Long): SpOutcome
     fun openUrl(url: String)
+    /** The Agent field's choices; empty (the default) hides the field, as in a host with no agent gateway. */
+    fun agents(): List<SpAgent> = emptyList()
+    /** The agent he last picked ("" = none); the host's [send] routes through it. */
+    fun agent(): String = ""
+    fun pickAgent(id: String) {}
 }
 
 /** The chat's live state: the open session, what is being sent, the last error, the catalogue. */
@@ -44,6 +52,9 @@ class SearchChatState(private val host: SearchPageHost) {
     var models by mutableStateOf<List<SpModel>>(emptyList())
     var model by mutableStateOf(host.model)
     var web by mutableStateOf(host.web)
+    var agent by mutableStateOf(host.agent())
+
+    fun chooseAgent(id: String) { agent = id; host.pickAgent(id) }
 
     fun pick(id: String) { model = id; host.model = id }
     fun toggleWeb() { web = !web; host.web = web }
@@ -78,5 +89,7 @@ object SearchPageTags {
     const val NEW_CHAT = "search_new_chat"
     const val MODEL = "search_model"
     const val WEB = "search_web_toggle"
+    const val AGENT = "search_agent"
+    fun agent(id: String) = "search_agent_$id"
     fun engine(id: String) = "search_engine_$id"
 }

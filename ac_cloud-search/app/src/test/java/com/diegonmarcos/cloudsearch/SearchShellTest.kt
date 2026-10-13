@@ -91,8 +91,10 @@ class SearchShellTest {
                 else -> Http.Response(503, "")
             }
         }
+        val posted = mutableListOf<Triple<String, Map<String, String>, String>>()
         override fun post(url: String, headers: Map<String, String>, body: String, timeoutMs: Int): Http.Response {
-            synchronized(asked) { asked += url }
+            synchronized(asked) { asked += url; posted += Triple(url, headers, body) }
+            if (headers["X-Agent-Mode"] != null) return Http.Response(200, """{"choices":[{"message":{"role":"assistant","content":"harness answer"}}]}""")
             return Http.Response(503, "")
         }
     }
@@ -194,6 +196,34 @@ class SearchShellTest {
         compose.waitUntil(10_000) { compose.onAllNodesWithText("no token in this test", substring = true).fetchSemanticsNodes().isNotEmpty() }
         assertFalse("nothing is posted without a token", synchronized(http.asked) { http.asked.any { it == Decl.config.ai.chatUrl } })
         assertEquals("What is the Grundfreibetrag?", services.sessions.all().single().messages.single().content)
+    }
+
+    /**
+     * The chat's Agent field lists the shared descriptor's agents (DeepSeek Harness with its real capabilities);
+     * picking it routes the send through the fleet agent gateway with X-Agent-Mode: deepseek and a DeepSeek model,
+     * and needs no OpenRouter token on the phone.
+     */
+    @Test fun deepSeekHarnessIsPickedFromTheSharedDescriptorAndRoutesThroughTheGateway() {
+        launch()
+        openVertical("search")
+        waitFor(Tags.CHAT_INPUT)
+        compose.onNodeWithTag(com.diegonmarcos.superapp.searchpage.SearchPageTags.AGENT).performClick()
+        compose.waitForIdle()
+        val tag = com.diegonmarcos.superapp.searchpage.SearchPageTags.agent("deepseek")
+        compose.onNodeWithTag(tag).assertTextContains("DeepSeek Harness", substring = true)
+        compose.onNodeWithTag(tag).assertTextContains("tools (MCP) · reasoning · text only", substring = true)
+        listOf("claude", "hermes", "goose").forEach { compose.onNodeWithTag(com.diegonmarcos.superapp.searchpage.SearchPageTags.agent(it)).assertExists() }
+        compose.onNodeWithTag(tag).performClick()
+        compose.waitForIdle()
+        assertEquals("deepseek", services.prefs.agent)
+        compose.onNodeWithTag(Tags.CHAT_INPUT).performTextInput("Plan my week")
+        compose.onNodeWithTag(Tags.CHAT_SEND).performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("harness answer", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        val (url, headers, body) = synchronized(http.asked) { http.posted.single() }
+        assertEquals(BuildConfig.AGENT_GATEWAY_URL + "/v1/chat/completions", url)
+        assertEquals("deepseek", headers["X-Agent-Mode"])
+        assertFalse("no OpenRouter token goes to the gateway", headers.containsKey("Authorization"))
+        assertTrue(org.json.JSONObject(body).getString("model").startsWith("deepseek/"))
     }
 
     /**

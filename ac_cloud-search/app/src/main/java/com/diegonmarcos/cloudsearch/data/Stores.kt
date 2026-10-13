@@ -44,6 +44,10 @@ class Prefs(private val prefs: SharedPreferences, private val cfg: SearchConfig)
     var web: Boolean
         get() = prefs.getBoolean("web", true)
         set(v) = prefs.edit().putBoolean("web", v).apply()
+    /** The chat's Agent field: a shared-descriptor agent id, "" = the model directly (OpenRouter). */
+    var agent: String
+        get() = prefs.getString("agent", "") ?: ""
+        set(v) = prefs.edit().putString("agent", v).apply()
 
     /** #903 Things: the search radius, in km; the person's typed city (used when location is off or has no fix). */
     var radiusKm: Int

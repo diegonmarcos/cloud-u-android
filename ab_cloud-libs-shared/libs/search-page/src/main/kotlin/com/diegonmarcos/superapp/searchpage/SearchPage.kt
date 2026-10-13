@@ -107,6 +107,8 @@ data class SearchPageStrings(
     val chatError: String = "No answer: %1\$s",
     val askAnything: String = "Ask anything…",
     val send: String = "Send",
+    /** The Agent field: "no agent" is the model directly. */
+    val agentNone: String = "No agent",
 )
 
 /** The icons the page draws, by name; the consumer maps each to its own icon set. */
@@ -158,6 +160,7 @@ fun SearchChatPage(
         Row(Modifier.fillMaxWidth().padding(horizontal = m.gutter, vertical = m.small), verticalAlignment = Alignment.CenterVertically) {
             header()
             Spacer(Modifier.weight(1f))
+            AgentSelect(chat, theme)
             ModelSelect(chat, theme, onModel)
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -282,6 +285,40 @@ private fun Thinking(label: String, theme: SearchPageTheme) {
         AiAvatar(theme)
         theme.icon(SearchPageIcons.GLOBE, theme.metrics.iconSm, theme.colors.accent, null)
         Text(label, color = theme.colors.accent, style = theme.type.style(theme.type.greetingSub, FontWeight.Medium))
+    }
+}
+
+/** The Agent field: the host's gateway agents (shared descriptor) with what each can do; hidden when the host has none. */
+@Composable
+private fun AgentSelect(chat: SearchChatState, theme: SearchPageTheme) {
+    val agents = remember { chat.host().agents() }
+    if (agents.isEmpty()) return
+    val c = theme.colors
+    val m = theme.metrics
+    val t = theme.type
+    var open by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(m.cardRadius)
+    Box(Modifier.padding(end = m.small)) {
+        Text("🤖 " + (agents.firstOrNull { it.id == chat.agent }?.label ?: theme.strings.agentNone), color = c.text,
+            style = t.style(t.label, FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.clip(shape).background(c.field).border(m.hairline, c.tileBorder, shape)
+                .clickable { open = true }.testTag(SearchPageTags.AGENT).padding(horizontal = m.cardPad, vertical = m.gap))
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text(theme.strings.agentNone, style = t.style(t.small)) },
+                onClick = { chat.chooseAgent(""); open = false }, modifier = Modifier.testTag(SearchPageTags.agent("none")))
+            agents.forEach { a ->
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(a.label, style = t.style(t.small, FontWeight.SemiBold), color = if (a.id == chat.agent) c.accent else c.text)
+                            Text(a.sub, style = t.style(t.small), color = c.text2)
+                        }
+                    },
+                    onClick = { chat.chooseAgent(a.id); open = false },
+                    modifier = Modifier.testTag(SearchPageTags.agent(a.id)),
+                )
+            }
+        }
     }
 }
 

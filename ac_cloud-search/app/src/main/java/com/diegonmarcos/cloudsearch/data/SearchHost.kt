@@ -1,7 +1,9 @@
 package com.diegonmarcos.cloudsearch.data
 
 import com.diegonmarcos.cloudsearch.core.Chat
+import com.diegonmarcos.superapp.modelcatalogue.AgentCatalogue
 import com.diegonmarcos.superapp.searchpage.SearchPageHost
+import com.diegonmarcos.superapp.searchpage.SpAgent
 import com.diegonmarcos.superapp.searchpage.SpModel
 import com.diegonmarcos.superapp.searchpage.SpMsg
 import com.diegonmarcos.superapp.searchpage.SpOutcome
@@ -29,6 +31,11 @@ class SearchHost(private val s: Services) : SearchPageHost {
         ChatFlow.send(s.app, s, session.chat(), text, model, web, now).let { SpOutcome(it.session.sp(), it.error, it.citations) }
 
     override fun openUrl(url: String) = Browser.open(s.app, url)
+
+    override fun agents(): List<SpAgent> = AgentRoute.catalogue(s.app)?.agents.orEmpty()
+        .map { SpAgent(it.id, it.label, AgentCatalogue.subtitle(it)) }
+    override fun agent(): String = s.prefs.agent
+    override fun pickAgent(id: String) { s.prefs.agent = id }
 }
 
 /** A stored session as the page shows it, and back. */

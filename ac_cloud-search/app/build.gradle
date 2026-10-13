@@ -73,6 +73,14 @@ def agentMailRow = fleetManifest.apps.find { it.id == agentMailFleet }
 if (agentMailRow == null)
     throw new GradleException("build.json::search.agents.engines.mail.fleet '${agentMailFleet}' is not in the constellation fleet manifest ($fleetAppsFile)")
 def mailPackage = agentMailRow.package.toString()
+// The fleet agent gateway the chat's Agent field routes through: the shared descriptor
+// (libs:model-catalogue assets/agents/agents.json) names its service, the C3 private catalogue its mesh address.
+def agentsDescFile = new File(rootDir, '../ab_cloud-libs-shared/libs/model-catalogue/src/main/assets/agents/agents.json')
+def agentGatewayService = new groovy.json.JsonSlurper().parse(agentsDescFile).gateway.service
+def privateServices = new groovy.json.JsonSlurper().parse(new File(rootDir, '../ac_cloud-c3/data/services_private.json'))
+def gatewayRow = (privateServices instanceof List ? privateServices : (privateServices.services ?: privateServices.values())).find { it.name == agentGatewayService }
+if (gatewayRow?.private_dns == null) throw new GradleException("agent gateway '${agentGatewayService}' has no private_dns in ac_cloud-c3/data/services_private.json")
+def agentGatewayUrl = "${gatewayRow.protocol ?: 'http'}://${gatewayRow.private_dns}"
 def fleetAppsB64 = b64(fleetManifest.apps.findAll { it.kind == 'app' }.collect { [id: it.id, label: it.label, package: it.package] })
 
 android {
@@ -108,6 +116,7 @@ android {
         buildConfigField "boolean", "DARK_DEFAULT",      "${darkDefault}"
         buildConfigField "String",  "BROWSER_PACKAGE",   "\"${browserPackage}\""
         buildConfigField "String",  "MAIL_PACKAGE",      "\"${mailPackage}\""
+        buildConfigField "String",  "AGENT_GATEWAY_URL", "\"${agentGatewayUrl}\""
         buildConfigField "String",  "FLEET_APPS_B64",    "\"${fleetAppsB64}\""
         manifestPlaceholders = [browserPackage: browserPackage, mailPackage: mailPackage]
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'

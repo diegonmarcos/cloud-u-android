@@ -1,0 +1,62 @@
+{
+  "_doc": "THE shared agent descriptors of the fleet's agent gateway (my-ai-api, service cloud-agi-goose, WireGuard-only): the ONE list Cloud Search's chat Agent field and Cloud Code's agent picker read, so an agent is described once. Each id is the gateway's X-Agent-Mode value and its /health.modes id; capabilities say what the gateway really does for it (verified against cloud-u-containers user-ai_my-ai-api/src/code/server.mjs on 2026-10-13). Read by libs:model-catalogue AgentCatalogue (logic package, compiled by both apps).",
+  "gateway": {
+    "service": "cloud-agi-goose",
+    "chat_path": "/v1/chat/completions",
+    "health_path": "/health",
+    "mode_header": "X-Agent-Mode",
+    "mesh_only": true
+  },
+  "agents": [
+    {
+      "id": "claude",
+      "label": "Claude",
+      "mode": "claude-cli",
+      "health_key": "claude_cli",
+      "fleet": "cloud-agi-claude",
+      "backend": "claude-superset-api",
+      "model": { "kind": "catalogue", "providers": ["Anthropic"], "prefix": "anthropic/" },
+      "capabilities": { "tools": true, "mcp": true, "images": false, "reasoning": true, "web": false },
+      "_doc": "the subscription claude CLI behind claude-superset-api; an Anthropic catalogue row is passed as the CLI model"
+    },
+    {
+      "id": "hermes",
+      "label": "Hermes",
+      "mode": "hermes",
+      "health_key": "hermes",
+      "fleet": "cloud-agi-hermes",
+      "backend": "openrouter+mcp",
+      "model": { "kind": "fixed" },
+      "capabilities": { "tools": true, "mcp": true, "images": false, "reasoning": true, "web": false },
+      "_doc": "Nous Hermes Agent (native API once HERMES_API_KEY is wired, else the Hermes model behind the gateway's MCP loop); the gateway picks the model"
+    },
+    {
+      "id": "goose",
+      "label": "Goose",
+      "mode": "goose",
+      "health_key": "goose",
+      "fleet": "cloud-agi-goose",
+      "backend": "openrouter+mcp",
+      "model": { "kind": "fixed" },
+      "capabilities": { "tools": true, "mcp": true, "images": false, "reasoning": true, "web": false },
+      "_doc": "Block's goose, the gateway's default agent; GOOSE_MODEL"
+    },
+    {
+      "id": "deepseek",
+      "label": "DeepSeek Harness",
+      "mode": "deepseek",
+      "health_key": "deepseek",
+      "fleet": null,
+      "backend": "openrouter+mcp",
+      "model": {
+        "kind": "catalogue",
+        "providers": ["DeepSeek"],
+        "prefix": "deepseek/",
+        "default": "deepseek/deepseek-v4-pro-0813",
+        "_doc": "the gateway runs only a deepseek/... model in this mode (v4-pro, v4-flash, r1); any other pick falls back to its DEEPSEEK_MODEL, so the app sends the default instead"
+      },
+      "capabilities": { "tools": true, "mcp": true, "images": false, "reasoning": true, "web": false },
+      "_doc": "The DeepSeek harness: a gateway MODE (no service of its own, fleet null), DeepSeek's models on OpenRouter driven through the gateway's MCP tool loop (callOpenRouterAgentic). Text only: DeepSeek's chat models take no images. No native web search; web comes from the fleet MCP tools when present."
+    }
+  ]
+}
