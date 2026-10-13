@@ -146,7 +146,7 @@ time by `tools/resolve-targets.py` into `targets.gen.json::chat`:
 - **Agents** — two sources, never a guess: the C3 catalogue (every `cloud-agi-*` service in
   `ac_cloud-c3/data/services_private.json`, baked at build time) and the fleet agent gateway's
   live `GET /health.modes` (my-ai-api, `cloud-agi-goose`, WireGuard-only). Order: nav.json's
-  declared agents (Hermes, OpenClaw, Goose, Claude, then **OpenRouter · fleet** — the gateway's
+  declared agents (Hermes, OpenClaw, Goose, Claude, **DeepSeek** (the gateway's deepseek mode: DeepSeek models with its MCP tools; only DeepSeek rows can be picked), then **OpenRouter · fleet** — the gateway's
   own OpenAI-compatible face, any model, paid by the gateway's key), then any mode the gateway
   serves that the app does not declare (it appears with no app change: its model and functions
   come from `/health`), then any other catalogue agent ("no app API yet"), then OpenRouter

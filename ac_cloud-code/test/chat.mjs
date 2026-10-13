@@ -192,6 +192,7 @@ const modesUp = {
 	modes: [
 		{ id: "hermes", label: "Hermes", fleet: "cloud-agi-hermes", backend: "hermes-agent-api", native: true, model: "hermes-agent", available: true, functions: [{ id: "skills", label: "Skills", path: "/agents/hermes/skills" }, { id: "jobs", label: "Scheduled jobs", path: "/agents/hermes/jobs" }] },
 		{ id: "openclaw", label: "OpenClaw", fleet: "cloud-agi-openclaw", backend: "openclaw-gateway", native: true, model: "openclaw/default", available: true, functions: [{ id: "agents", label: "Agent targets", path: "/agents/openclaw/agents" }] },
+		{ id: "deepseek", label: "DeepSeek", fleet: null, backend: "openrouter+mcp", native: false, model: "deepseek/deepseek-v4-pro-0813", model_choice: { providers: ["DeepSeek"] }, available: true, functions: [] },
 		{ id: "goose", label: "Goose", fleet: "cloud-agi-goose", backend: "openrouter+mcp", native: false, model: "deepseek/deepseek-v4", available: true, functions: [] },
 		{ id: "claude-cli", label: "Claude", fleet: "cloud-agi-claude", backend: "claude-superset-api", native: true, model: null, available: true, functions: [] },
 		{ id: "openrouter", label: "OpenRouter (fleet key)", fleet: null, backend: "openrouter", native: false, model: null, available: true, functions: [] },
@@ -200,7 +201,7 @@ const modesUp = {
 };
 const U = M.resolveAgents(chat, fleet, modesUp);
 const uids = U.map((a) => a.id).join(",");
-out(uids.startsWith("hermes,openclaw,goose,claude,fleet-openrouter,aider") && uids.endsWith(chat.direct.id), `all agents, in the owner's order, then the gateway's undeclared ones, then OpenRouter direct (${uids})`);
+out(uids.startsWith("hermes,openclaw,goose,claude,deepseek,fleet-openrouter,aider") && uids.endsWith(chat.direct.id), `all agents, in the owner's order, then the gateway's undeclared ones, then OpenRouter direct (${uids})`);
 const uclaw = by(U, "openclaw");
 out(uclaw.deployed && uclaw.available && uclaw.state === "ready", "OpenClaw is deployed and ready once the live gateway serves it, even before the catalogue lists it");
 const aider = by(U, "aider");
@@ -271,3 +272,15 @@ out(M.rowState(uc, anth, modesUp).allowed && !cs.allowed && /Anthropic/.test(cs.
 const hs = M.rowState(ug, anth, modesUp);
 out(!hs.allowed && /set by Goose/.test(hs.reason) && !M.rowState(uh, other, modesUp).allowed, "Goose and Hermes: every row greyed, 'set by' the agent");
 out(allRows.every((r) => M.rowState(ud, r, modesUp).allowed) && allRows.every((r) => M.rowState(uf, r, modesUp).allowed), "OpenRouter (direct and fleet) can pick any row");
+
+// ── the DeepSeek harness (the gateway's deepseek mode) ──────────────────────
+const uds = by(U, "deepseek");
+out(uds.available && uds.state === "ready" && /openrouter\+mcp/.test(M.agentSub(uds)), "DeepSeek sits next to Claude, ready when the gateway serves its mode");
+const dsRow = allRows.find((r) => r.provider === "DeepSeek");
+out(M.rowState(uds, dsRow, modesUp).allowed && !M.rowState(uds, anth, modesUp).allowed && /DeepSeek models only/.test(M.rowState(uds, anth, modesUp).reason), "DeepSeek can pick only the catalogue's DeepSeek rows (A0-A3), others greyed with the reason");
+const rds = M.buildRequest({ chat, fleet, storage: new Store(), agent: uds, model: dsRow.id, effort: "high", mode: "plan", session, reasoning: new Set([dsRow.id]), health: modesUp });
+const rdb = JSON.parse(rds.body);
+out(rds.headers["x-agent-mode"] === "deepseek" && rdb.model === dsRow.id && rdb.reasoning?.effort === "high" && rdb.messages[0].role === "system", "its request: X-Agent-Mode deepseek, the picked DeepSeek model, effort, permission as an instruction");
+out(M.permissionControl(uds).shown && M.mcpServers(uds, [{ server: "cloud-infra", count: 3 }], fleet.mcp_fleet).source === "gateway", "DeepSeek has tools: permission mode and the gateway's MCP list");
+const dsOld = by(M.resolveAgents(chat, fleet, { ...modesUp, modes: modesUp.modes.filter((m) => m.id !== "deepseek") }), "deepseek");
+out(dsOld.state === "unavailable" && !dsOld.available, "a gateway without the deepseek mode: DeepSeek is shown, unavailable, never faked");

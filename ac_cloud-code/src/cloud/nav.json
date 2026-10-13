@@ -91,7 +91,7 @@
     "fleet_mcp": "0_apps/src/root/mcp.json",
     "_doc_fleet_mcp": "The derived .mcp.json (cloud-infra 1_cloud-configs/dist/mcp.json via 0_apps): the fallback MCP list for an agent whose backend publishes none. Only the server NAMES are copied; urls and headers stay out of the APK.",
     "gateway": {
-      "_doc": "my-ai-api (cloud-agi-goose, WireGuard-only) is the fleet's agent gateway: one OpenAI-compatible /v1/chat/completions that picks the agent with the X-Agent-Mode header (hermes | openclaw | goose | claude-cli | openrouter). GET /health lists them under `modes` ([{id, label, fleet, backend, native, model, available, reason, functions}]) — the live half of the agent picker, so an agent the gateway starts serving appears without an app change — plus its plugins; GET /agents/<agent>/<fn> serves each native agent's read-only functions (Hermes skills/toolsets/sessions/jobs, OpenClaw agent targets); GET /v1/mcp/status its MCP servers, GET /v1/mcp/search?q= its tools, GET /sessions the cross-device sessions. Verified against cloud-u-containers user-ai_my-ai-api/src/code/server.mjs on 2026-10-10.",
+      "_doc": "my-ai-api (cloud-agi-goose, WireGuard-only) is the fleet's agent gateway: one OpenAI-compatible /v1/chat/completions that picks the agent with the X-Agent-Mode header (hermes | openclaw | deepseek | goose | claude-cli | openrouter). GET /health lists them under `modes` ([{id, label, fleet, backend, native, model, available, reason, functions}]) — the live half of the agent picker, so an agent the gateway starts serving appears without an app change — plus its plugins; GET /agents/<agent>/<fn> serves each native agent's read-only functions (Hermes skills/toolsets/sessions/jobs, OpenClaw agent targets); GET /v1/mcp/status its MCP servers, GET /v1/mcp/search?q= its tools, GET /sessions the cross-device sessions. Verified against cloud-u-containers user-ai_my-ai-api/src/code/server.mjs on 2026-10-10.",
       "service": "cloud-agi-goose",
       "chat_path": "/v1/chat/completions",
       "health_path": "/health",
@@ -202,6 +202,31 @@
           "source": "fleet"
         },
         "_doc": "The claude CLI on the subscription (cloud-agi-claude), through the gateway's claude-cli mode."
+      },
+      {
+        "id": "deepseek",
+        "label": "DeepSeek",
+        "fleet": null,
+        "mode": "deepseek",
+        "health_key": null,
+        "model": {
+          "kind": "catalogue",
+          "providers": [
+            "DeepSeek"
+          ],
+          "_doc": "the gateway's deepseek mode runs the requested deepseek/… model (v4-pro, v4-flash, v3.2, r1) and refuses any other (falls back to its DEEPSEEK_MODEL), so only the catalogue's DeepSeek rows can be picked"
+        },
+        "effort": {
+          "param": "reasoning.effort",
+          "needs_reasoning": true
+        },
+        "permission": {
+          "via": "prompt"
+        },
+        "mcp": {
+          "source": "gateway"
+        },
+        "_doc": "The DeepSeek harness (owner request): the fleet runs no DeepSeek agent of its own, so it is the gateway's deepseek mode — DeepSeek's models on OpenRouter inside the gateway's MCP tool loop, like goose and hermes. fleet null: it lives in the gateway; its live descriptor is /health.modes[deepseek] (shared with Cloud Search), and until the gateway serves it the picker says so."
       },
       {
         "id": "fleet-openrouter",
