@@ -132,6 +132,25 @@ class FilledPartitionExtensionsTest {
         }
     }
 
+    @Test
+    fun `a dataset without an inline spec still has the field presentation and no inline one`() {
+        val autofillAppInfo = AutofillAppInfo(context = context, packageName = PACKAGE_NAME, sdkInt = 34)
+        val noInline = filledPartition.copy(inlinePresentationSpec = null)
+        every {
+            buildAutofillRemoteViews(autofillAppInfo = autofillAppInfo, autofillCipher = autofillCipher)
+        } returns remoteViews
+        mockBuilder<Presentations.Builder> { it.setMenuPresentation(remoteViews) }
+        every { anyConstructed<Presentations.Builder>().build() } returns presentations
+        every {
+            filledItem.applyToDatasetPostTiramisu(datasetBuilder = any(), presentations = presentations)
+        } just runs
+
+        noInline.buildDataset(authIntentSender = null, autofillAppInfo = autofillAppInfo)
+
+        verify(exactly = 1) { anyConstructed<Presentations.Builder>().setMenuPresentation(remoteViews) }
+        verify(exactly = 0) { anyConstructed<Presentations.Builder>().setInlinePresentation(any()) }
+    }
+
     @Suppress("MaxLineLength")
     @Test
     fun `buildDataset should applyToDatasetPostTiramisu and doesn't set auth when sdkInt is at least 33 and null authIntentSender`() {

@@ -307,7 +307,11 @@ class SettingsRepositoryImpl(
     override var isInlineAutofillEnabled: Boolean
         get() = activeUserId
             ?.let { settingsDiskSource.getInlineAutofillEnabled(userId = it) }
-            ?: true
+            // Cloud Vault: default to the dropdown/popup under the field, not the keyboard
+            // strip. The key is only ever written when the user picks a style in Settings, so
+            // an absent value means "never chosen" and existing installs move to the new
+            // default while an explicit choice (either way) is kept.
+            ?: false
         set(value) {
             val userId = activeUserId ?: return
             settingsDiskSource.storeInlineAutofillEnabled(

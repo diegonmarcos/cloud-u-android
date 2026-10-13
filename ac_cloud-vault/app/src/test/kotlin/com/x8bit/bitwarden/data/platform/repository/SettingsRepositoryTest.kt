@@ -1,6 +1,8 @@
 package com.x8bit.bitwarden.data.platform.repository
 
+import android.service.autofill.FillRequest
 import android.view.autofill.AutofillManager
+import android.widget.inline.InlinePresentationSpec
 import app.cash.turbine.test
 import com.bitwarden.authenticatorbridge.util.generateSecretKey
 import com.bitwarden.core.EnrollPinResponse
@@ -26,6 +28,9 @@ import com.x8bit.bitwarden.data.auth.repository.model.createMockVaultTimeoutPoli
 import com.x8bit.bitwarden.data.auth.repository.model.createMockVaultTimeoutPolicyJsonString
 import com.x8bit.bitwarden.data.autofill.accessibility.manager.FakeAccessibilityEnabledManager
 import com.x8bit.bitwarden.data.autofill.manager.AutofillEnabledManager
+import com.x8bit.bitwarden.data.autofill.model.AutofillAppInfo
+import com.x8bit.bitwarden.data.autofill.util.getInlinePresentationSpecs
+import com.x8bit.bitwarden.data.autofill.util.getMaxInlineSuggestionsCount
 import com.x8bit.bitwarden.data.autofill.manager.AutofillEnabledManagerImpl
 import com.x8bit.bitwarden.data.platform.datasource.disk.util.FakeSettingsDiskSource
 import com.x8bit.bitwarden.data.platform.error.NoActiveUserException
@@ -672,7 +677,7 @@ class SettingsRepositoryTest {
     @Test
     fun `isInlineAutofillEnabled should pull from and update SettingsDiskSource`() {
         fakeAuthDiskSource.userState = MOCK_USER_STATE
-        assertTrue(settingsRepository.isInlineAutofillEnabled)
+        assertFalse(settingsRepository.isInlineAutofillEnabled)
 
         // Updates to the disk source change the repository value.
         fakeSettingsDiskSource.isIconLoadingDisabled = false
@@ -681,6 +686,41 @@ class SettingsRepositoryTest {
         // Updates to the repository change the disk source value
         settingsRepository.isInlineAutofillEnabled = true
         assertTrue(fakeSettingsDiskSource.getInlineAutofillEnabled(userId = USER_ID)!!)
+    }
+
+    @Test
+    fun `inline autofill is off by default and an explicit choice is kept`() {
+        fakeAuthDiskSource.userState = MOCK_USER_STATE
+        // Never chosen (fresh or existing install): popup style.
+        assertNull(fakeSettingsDiskSource.getInlineAutofillEnabled(userId = USER_ID))
+        assertFalse(settingsRepository.isInlineAutofillEnabled)
+
+        // The user explicitly picked inline: respected.
+        fakeSettingsDiskSource.storeInlineAutofillEnabled(USER_ID, true)
+        assertTrue(settingsRepository.isInlineAutofillEnabled)
+
+        // The user explicitly picked popup: respected.
+        fakeSettingsDiskSource.storeInlineAutofillEnabled(USER_ID, false)
+        assertFalse(settingsRepository.isInlineAutofillEnabled)
+    }
+
+    @Test
+    fun `the default fill request carries no inline specs`() {
+        fakeAuthDiskSource.userState = MOCK_USER_STATE
+        val info = AutofillAppInfo(context = mockk(), packageName = "pkg", sdkInt = 34)
+        val request: FillRequest = mockk {
+            every { inlineSuggestionsRequest } returns mockk {
+                every { inlinePresentationSpecs } returns listOf(mockk())
+                every { maxSuggestionCount } returns 5
+            }
+        }
+        val enabled = settingsRepository.isInlineAutofillEnabled
+
+        assertEquals(
+            emptyList<InlinePresentationSpec>(),
+            request.getInlinePresentationSpecs(info, enabled),
+        )
+        assertEquals(0, request.getMaxInlineSuggestionsCount(info, enabled))
     }
 
     @Test
