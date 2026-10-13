@@ -1,11 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A calculator body with a display and a 3x3 key grid, inside the 66dp adaptive safe zone. -->
+<!--
+  Cloud Calc launcher glyph, and the SOURCE OF TRUTH for the Cloud SuperApp
+  Cloud > Tools Primary Calc tile (aa_cloud-superapp .../drawable/ic_calc.xml
+  copies the path below verbatim; test-calc-icon.sh pins that they match).
+
+  ONE PATH, THE DISPLAY AND THE NINE KEYS CUT OUT OF THE BODY (evenOdd).
+  The SuperApp tile paints this flat: every bind overwrites imageTintList with
+  a single colour, so only the SHAPE survives. The earlier art drew the display
+  and keys as separate dark fills on top of the body; flat-tinted, those
+  vanished and the tile was a bare rounded rectangle. As holes they stay
+  visible under any tint, and here on the launcher the dark adaptive
+  background shows through them, which is the same look as before.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#FFB794F4" android:pathData="M38,28h32a4,4 0,0 1,4 4v44a4,4 0,0 1,-4 4h-32a4,4 0,0 1,-4 -4v-44a4,4 0,0 1,4 -4z" />
-    <path android:fillColor="#FF14082B" android:pathData="M40,33h28v10h-28z" />
-    <path android:fillColor="#FF14082B" android:pathData="M40,48h7v7h-7zM50.5,48h7v7h-7zM61,48h7v7h-7zM40,58.5h7v7h-7zM50.5,58.5h7v7h-7zM61,58.5h7v7h-7zM40,69h7v7h-7zM50.5,69h7v7h-7zM61,69h7v7h-7z" />
+    <path
+        android:fillColor="#FFB794F4"
+        android:fillType="evenOdd"
+        android:pathData="M38,28h32a4,4 0,0 1,4 4v44a4,4 0,0 1,-4 4h-32a4,4 0,0 1,-4 -4v-44a4,4 0,0 1,4 -4zM40,33h28v10h-28zM40,48h7v7h-7zM50.5,48h7v7h-7zM61,48h7v7h-7zM40,58.5h7v7h-7zM50.5,58.5h7v7h-7zM61,58.5h7v7h-7zM40,69h7v7h-7zM50.5,69h7v7h-7zM61,69h7v7h-7z" />
 </vector>
