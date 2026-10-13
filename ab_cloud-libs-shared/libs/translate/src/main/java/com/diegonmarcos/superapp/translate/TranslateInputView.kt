@@ -53,6 +53,11 @@ class TranslateInputView(context: Context) : TextView(context) {
             TypedValue.COMPLEX_UNIT_DIP, 1.5f, resources.displayMetrics)
     }
 
+    /** The caret's colour — the host bar's palette sets it, so it reads on a light box too. */
+    var caretColor: Int
+        get() = caretPaint.color
+        set(value) { if (caretPaint.color != value) { caretPaint.color = value; invalidate() } }
+
     /** Buffer offset to draw the caret at, or -1 to draw none (empty buffer / active selection). */
     var caret: Int = -1
         set(value) { if (field != value) { field = value; invalidate() } }
@@ -189,7 +194,13 @@ class TranslateInputView(context: Context) : TextView(context) {
  * the cap unreachable rather than merely off-screen. Shared rather than copied —
  * libs:keyboard already depends on this module, so EnhanceBarView uses this one too.
  */
-class CappedScrollView(context: Context, private val maxHeight: Int) : ScrollView(context) {
+class CappedScrollView(context: Context, maxHeight: Int) : ScrollView(context) {
+    /**
+     * Settable so a host can shrink the window to fit the space it has. The translate bar
+     * sets it from inside its own onMeasure, which is why this asks for no layout itself.
+     */
+    var maxHeight: Int = maxHeight
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val size = MeasureSpec.getSize(heightMeasureSpec)
         val mode = MeasureSpec.getMode(heightMeasureSpec)

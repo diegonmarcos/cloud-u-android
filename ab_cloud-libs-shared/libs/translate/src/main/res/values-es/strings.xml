@@ -42,6 +42,8 @@
     <string name="translate_bar_paste">Pegar</string>
     <string name="translate_bar_copy">Copiar</string>
     <string name="translate_bar_clear">Borrar</string>
+    <string name="translate_bar_close">Cerrar el traductor y volver al teclado</string>
+    <string name="translate_bar_swap">Intercambiar idiomas</string>
     <string name="translate_bar_no_field">No hay ningún campo de texto donde escribir: toca primero donde lo quieras</string>
     <string name="translate_bar_type_first">Escribe algo para traducir primero</string>
     <string name="translate_bar_no_detection">Todavía no se ha detectado ningún idioma: escribe algo o elige uno en lugar de Auto</string>

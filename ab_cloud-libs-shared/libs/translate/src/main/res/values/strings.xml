@@ -60,6 +60,8 @@
     <string name="translate_bar_paste">Paste</string>
     <string name="translate_bar_copy">Copy</string>
     <string name="translate_bar_clear">Clear</string>
+    <string name="translate_bar_close">Close translate and go back to the keyboard</string>
+    <string name="translate_bar_swap">Swap languages</string>
     <string name="translate_bar_no_field">No text field to write into — tap where you want it first</string>
     <string name="translate_bar_type_first">Type something to translate first</string>
     <string name="translate_bar_no_detection">No language detected yet — type something, or choose one instead of Auto</string>

@@ -781,6 +781,81 @@ public class LatinIME extends InputMethodService implements
         mInsetsUpdater = ViewOutlineProviderUtilsKt.setInsetsOutlineProvider(view);
         KtxKt.updateSoftInputWindowLayoutParameters(this, mInputView);
         updateSuggestionStripView(view);
+        rehostPanels();
+    }
+
+    /**
+     * The vertical LinearLayout of the CURRENT input view that the bars are hosted in
+     * (the parent of strip_container), or null before there is one.
+     */
+    @Nullable
+    private android.widget.LinearLayout panelFrame() {
+        if (mInputView == null) return null;
+        final View strip = mInputView.findViewById(R.id.strip_container);
+        return strip != null && strip.getParent() instanceof android.widget.LinearLayout
+                ? (android.widget.LinearLayout) strip.getParent() : null;
+    }
+
+    /**
+     * Make [panel] the first child of the CURRENT keyboard frame.
+     *
+     * THE BLACK TRANSLATE BOX. The bars are created once and kept, but the input view
+     * they live in is not: a day/night switch, a keyboard theme change, a rotation and
+     * the locked-config re-inflation of #776 all build a NEW input view and hand it to
+     * setInputView. The toggles used to add a bar to the frame only when they created
+     * it, so after any of those the bar stayed a child of the OLD, detached frame.
+     * Tapping Translate then made an invisible view VISIBLE; onComputeInsets still
+     * subtracted its remembered height, so the app was pushed up over an empty strip
+     * of IME window that nothing draws in - a black box - and every key went into a
+     * text box nobody could see, with no close button to get out. Every bar is now
+     * re-parented here, on each open and on each new input view.
+     */
+    private static void hostPanel(@Nullable final View panel, @Nullable final android.widget.LinearLayout frame) {
+        if (panel == null || frame == null || panel.getParent() == frame) return;
+        if (panel.getParent() instanceof android.view.ViewGroup)
+            ((android.view.ViewGroup) panel.getParent()).removeView(panel);
+        frame.addView(panel, 0);
+    }
+
+    /** A bar counts as up only while it is visible INSIDE the current frame - never a stale one. */
+    private boolean isPanelUp(@Nullable final View panel) {
+        return panel != null && panel.getVisibility() == View.VISIBLE && panel.getParent() != null
+                && panel.getParent() == panelFrame();
+    }
+
+    /** setInputView: carry every bar, open or not, into the new input view, re-themed. */
+    private void rehostPanels() {
+        final android.widget.LinearLayout frame = panelFrame();
+        hostPanel(mTranslateBar, frame);
+        hostPanel(mVoiceBar, frame);
+        hostPanel(mEmojiSearchBar, frame);
+        hostPanel(mEnhanceBar, frame);
+        if (mTranslateBar != null) {
+            mTranslateBar.setPalette(translatePalette());
+            mTranslateBar.setMaxHeight(translateBarMaxHeight());
+        }
+    }
+
+    /** The translate bar's colours, from the keyboard theme in force right now. */
+    private com.diegonmarcos.superapp.translate.TranslatePalette translatePalette() {
+        final helium314.keyboard.latin.common.Colors colors = mSettings.getCurrent().mColors;
+        if (colors == null) return com.diegonmarcos.superapp.translate.TranslatePalette.Companion.getDARK();
+        return com.diegonmarcos.superapp.translate.TranslatePalette.Companion.fromKeyboard(
+                colors.get(ColorType.MAIN_BACKGROUND),
+                colors.get(ColorType.KEY_TEXT),
+                colors.get(ColorType.KEY_BACKGROUND),
+                colors.get(ColorType.TOOL_BAR_KEY_ENABLED_BACKGROUND));
+    }
+
+    /**
+     * The translate bar may be as tall as the keys under it and no taller, so the
+     * keyboard and the bar together never cover more than twice the keyboard. Before
+     * the keys have been laid out, 40% of the screen stands in.
+     */
+    private int translateBarMaxHeight() {
+        final View keys = mKeyboardSwitcher.getWrapperView();
+        final int h = keys != null ? keys.getHeight() : 0;
+        return h > 0 ? h : (int) (getResources().getDisplayMetrics().heightPixels * 0.4f);
     }
 
     public void updateSuggestionStripView(View view) {
@@ -807,15 +882,16 @@ public class LatinIME extends InputMethodService implements
         final View strip = mInputView.findViewById(R.id.strip_container);
         if (strip == null || !(strip.getParent() instanceof android.widget.LinearLayout)) return;
         final android.widget.LinearLayout frame = (android.widget.LinearLayout) strip.getParent();
-        final boolean opening = mTranslateBar == null || mTranslateBar.getVisibility() != View.VISIBLE;
+        final boolean opening = !isPanelUp(mTranslateBar);
         if (opening) { hideEmojiSearchBar(); hideVoiceBar(); hideEnhanceBar(); }
-        if (mTranslateBar == null) {
+        if (mTranslateBar == null)
             mTranslateBar = new com.diegonmarcos.superapp.translate.TranslateBarView(this);
-            frame.addView(mTranslateBar, 0);
-        }
-        if (mTranslateBar.getVisibility() == View.VISIBLE) {
+        hostPanel(mTranslateBar, frame);
+        if (!opening) {
             hideTranslateBar();
         } else {
+            mTranslateBar.setPalette(translatePalette());
+            mTranslateBar.setMaxHeight(translateBarMaxHeight());
             // Commit whatever word was mid-compose in the field before the bar opens.
             // The bar composes its own text there, and setComposingText would otherwise
             // REPLACE the user's half-typed word with a translation of something else.
@@ -849,7 +925,7 @@ public class LatinIME extends InputMethodService implements
         final View strip = mInputView.findViewById(R.id.strip_container);
         if (strip == null || !(strip.getParent() instanceof android.widget.LinearLayout)) return;
         final android.widget.LinearLayout frame = (android.widget.LinearLayout) strip.getParent();
-        final boolean opening = mEmojiSearchBar == null || mEmojiSearchBar.getVisibility() != View.VISIBLE;
+        final boolean opening = !isPanelUp(mEmojiSearchBar);
         if (opening) { hideTranslateBar(); hideVoiceBar(); hideEnhanceBar(); }
         if (mEmojiSearchBar == null) {
             mEmojiSearchBar = new helium314.keyboard.keyboard.emoji.EmojiSearchBarView(this);
@@ -858,9 +934,9 @@ public class LatinIME extends InputMethodService implements
                     info -> mKeyboardActionListener.onContent(info),
                     loc != null ? loc : java.util.Locale.getDefault(),
                     this::hideEmojiSearchBar);
-            frame.addView(mEmojiSearchBar, 0);
         }
-        if (mEmojiSearchBar.getVisibility() == View.VISIBLE) {
+        hostPanel(mEmojiSearchBar, frame);
+        if (!opening) {
             hideEmojiSearchBar();
         } else {
             mEmojiSearchBar.setVisibility(View.VISIBLE);
@@ -875,13 +951,13 @@ public class LatinIME extends InputMethodService implements
     /** SuperApp (patch 0011): true while the emoji search bar is shown — LatinIME
      *  routes key presses into it instead of the app field. */
     public boolean isEmojiSearchBarActive() {
-        return mEmojiSearchBar != null && mEmojiSearchBar.getVisibility() == View.VISIBLE;
+        return isPanelUp(mEmojiSearchBar);
     }
 
     /** SuperApp (patch 0001): true while the translate bar is shown — LatinIME
      *  routes key presses into it instead of the app field. */
     public boolean isTranslateBarActive() {
-        return mTranslateBar != null && mTranslateBar.getVisibility() == View.VISIBLE;
+        return isPanelUp(mTranslateBar);
     }
 
     /**
@@ -897,14 +973,14 @@ public class LatinIME extends InputMethodService implements
         final View strip = mInputView.findViewById(R.id.strip_container);
         if (strip == null || !(strip.getParent() instanceof android.widget.LinearLayout)) return;
         final android.widget.LinearLayout frame = (android.widget.LinearLayout) strip.getParent();
-        final boolean opening = mEnhanceBar == null || mEnhanceBar.getVisibility() != View.VISIBLE;
+        final boolean opening = !isPanelUp(mEnhanceBar);
         if (opening) { hideTranslateBar(); hideVoiceBar(); hideEmojiSearchBar(); }
         if (mEnhanceBar == null) {
             mEnhanceBar = new EnhanceBarView(this);
             mEnhanceBar.bind(this::getRichInputConnection, this::hideEnhanceBar);
-            frame.addView(mEnhanceBar, 0);
         }
-        if (mEnhanceBar.getVisibility() == View.VISIBLE) {
+        hostPanel(mEnhanceBar, frame);
+        if (!opening) {
             hideEnhanceBar();
         } else {
             mEnhanceBar.setVisibility(View.VISIBLE);
@@ -919,7 +995,7 @@ public class LatinIME extends InputMethodService implements
     /** SuperApp: true while the Text Enhancements bar is shown — LatinIME routes key
      *  presses into its output box instead of the app field. */
     public boolean isEnhanceBarActive() {
-        return mEnhanceBar != null && mEnhanceBar.getVisibility() == View.VISIBLE;
+        return isPanelUp(mEnhanceBar);
     }
 
     /**
@@ -942,16 +1018,16 @@ public class LatinIME extends InputMethodService implements
         final View strip = mInputView.findViewById(R.id.strip_container);
         if (strip == null || !(strip.getParent() instanceof android.widget.LinearLayout)) return;
         final android.widget.LinearLayout frame = (android.widget.LinearLayout) strip.getParent();
-        final boolean opening = mVoiceBar == null || mVoiceBar.getVisibility() != View.VISIBLE;
+        final boolean opening = !isPanelUp(mVoiceBar);
         if (opening) { hideTranslateBar(); hideEmojiSearchBar(); hideEnhanceBar(); }
         if (mVoiceBar == null) {
             mVoiceBar = new com.diegonmarcos.superapp.voice.VoiceBarView(this);
             final java.util.Locale loc = mRichImm.getCurrentSubtypeLocale();
             final String tag = (loc != null) ? loc.toLanguageTag() : "en-us";
             mVoiceBar.bind(this::getCurrentInputConnection, tag, this::hideVoiceBar);
-            frame.addView(mVoiceBar, 0);
         }
-        if (mVoiceBar.getVisibility() == View.VISIBLE) {
+        hostPanel(mVoiceBar, frame);
+        if (!opening) {
             hideVoiceBar();
         } else {
             mVoiceBar.setVisibility(View.VISIBLE);
@@ -1449,19 +1525,21 @@ public class LatinIME extends InputMethodService implements
         // touchable region is computed — so BOTH the touch region (taps on From/To
         // land inside the IME, not dismissing it) AND the content inset (host app
         // reflows UP, Gboard-style) cover the bar.
-        else if (mTranslateBar != null && mTranslateBar.getVisibility() == View.VISIBLE) {
+        // Only a bar that is up in the CURRENT frame: a stale one left in a detached view
+        // has a height and draws nothing, and reserving it was the black box.
+        else if (isPanelUp(mTranslateBar)) {
             visibleTopY -= mTranslateBar.getHeight();
         }
         // SuperApp (patch 0005): the voice bar is opaque IME UI above the strip too.
-        else if (mVoiceBar != null && mVoiceBar.getVisibility() == View.VISIBLE) {
+        else if (isPanelUp(mVoiceBar)) {
             visibleTopY -= mVoiceBar.getHeight();
         }
         // SuperApp (patch 0011): same treatment for the emoji/sticker/GIF search bar.
-        else if (mEmojiSearchBar != null && mEmojiSearchBar.getVisibility() == View.VISIBLE) {
+        else if (isPanelUp(mEmojiSearchBar)) {
             visibleTopY -= mEmojiSearchBar.getHeight();
         }
         // SuperApp: and for the Text Enhancements bar.
-        else if (mEnhanceBar != null && mEnhanceBar.getVisibility() == View.VISIBLE) {
+        else if (isPanelUp(mEnhanceBar)) {
             visibleTopY -= mEnhanceBar.getHeight();
         }
 
@@ -2057,6 +2135,12 @@ public class LatinIME extends InputMethodService implements
         if (keyCode == KeyEvent.KEYCODE_BACK && keyEvent.getRepeatCount() == 0
                 && mKeyboardSwitcher.closePanelIfOpen("system back"))
             return true;
+        // The translate bar is an exit too: back closes it and leaves the keyboard up,
+        // instead of hiding the whole keyboard with the bar still open behind it.
+        if (keyCode == KeyEvent.KEYCODE_BACK && keyEvent.getRepeatCount() == 0 && isTranslateBarActive()) {
+            hideTranslateBar();
+            return true;
+        }
         if (mKeyboardActionListener.onKeyDown(keyCode, keyEvent))
             return true;
         return super.onKeyDown(keyCode, keyEvent);
