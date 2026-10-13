@@ -1,0 +1,34 @@
+{
+  "_doc": "THE OUTPUT CONTRACT of Cloud Drive's Screenshot agent (Agents tab). Producers: ac_cloud-drive only. Consumers: any fleet app holding all-files access (first: Cloud Calendar's event agent). Human description: ac_cloud-drive/docs/screenshot-agent-contract.md. The location is RELATIVE TO SHARED STORAGE (/storage/emulated/0 on a single-user phone) under storage.shared_root, never an absolute path. Bump `version` and the directory together on any breaking change; additive fields do not bump it.",
+  "contract": "cloud-drive.agent.screenshots",
+  "version": 1,
+  "root": "{shared_root}/.agents/screenshots/v1",
+  "files": {
+    "records": "records/{id}.json",
+    "index": "index.jsonl",
+    "state": "state.json"
+  },
+  "id": "first 16 hex chars of sha256(source_path + '\\n' + source_size + '\\n' + source_mtime_ms)",
+  "record": {
+    "schema": "string = 'cloud-drive.agent.screenshots/1'",
+    "id": "string",
+    "source_path": "string, absolute path of the screenshot on this device",
+    "source_size": "long, bytes",
+    "source_mtime_ms": "long, file last-modified, epoch ms",
+    "taken_at_ms": "long, capture time: EXIF DateTimeOriginal, else the timestamp in the file name, else source_mtime_ms",
+    "processed_at_ms": "long, epoch ms the agent wrote this record",
+    "width": "int", "height": "int",
+    "text": "string, the full OCR text, blocks joined by newlines in reading order ('' when none)",
+    "lang": "string, BCP-47 of the recognizer used (e.g. 'und-Latn')",
+    "blocks": "array of {text, bbox:[left,top,right,bottom] in source pixels, lines:[{text, bbox, confidence?}]}",
+    "labels": "array of {label, confidence 0..1, source: 'image-labeling'|'object-detection'|'heuristic'}, sorted by confidence desc",
+    "objects": "array of {bbox, labels:[{label, confidence}]}",
+    "entities": "array of {type: 'date'|'time'|'url'|'email'|'phone'|'address', text, start, end} found in `text` by the agent's extractor (offsets into text)",
+    "engine": "object {ocr, labeling, objects, agent_version}",
+    "error": "string|null, set when a stage failed; the other fields hold what succeeded"
+  },
+  "index_line": "one JSON object per line, append-only: {id, source_path, taken_at_ms, processed_at_ms, has_text}. A later line for the same id supersedes an earlier one.",
+  "state": "{version, last_scan_ms, processed, failed, cursor_mtime_ms}: agent bookkeeping, consumers may read processed_at_ms > their own cursor from index.jsonl instead",
+  "atomicity": "every file is written to <name>.tmp then renamed; a reader never sees a partial record",
+  "deletion": "when a screenshot is deleted its record is removed on the next pass and a line {id, deleted:true} is appended to index.jsonl"
+}
