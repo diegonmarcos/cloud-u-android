@@ -319,7 +319,19 @@ fun AutofillSnippetsPage() {
 // ── Import ───────────────────────────────────────────────────────────────
 
 @Composable
-fun AutofillImportPage() {
+fun AutofillImportPage(pickFile: (((String) -> Unit) -> Unit)? = null) {
+    Page("Import", "Paste your data as text (labelled lines, one block per profile) or JSON. Nothing is saved until you review it. ID documents found in the paste are NOT stored here: they belong in Cloud Vault as Identity items.") {
+        AutofillImportBody(pickFile)
+    }
+}
+
+/**
+ * The Import flow without its page frame, so Home ▸ Import configs draws the very same review (and the same
+ * routing of ID documents to Cloud Vault) inside its own scroll. [pickFile] adds "Pick file": the file's text
+ * lands in the paste box, then Review as usual.
+ */
+@Composable
+fun AutofillImportBody(pickFile: (((String) -> Unit) -> Unit)? = null) {
     val ctx = LocalContext.current
     val store = remember { AutofillStore(ctx) }
     var text by remember { mutableStateOf("") }
@@ -330,12 +342,13 @@ fun AutofillImportPage() {
     var sent by remember { mutableStateOf<Set<Int>>(emptySet()) }
     val vaultTakesIds = remember(parsed, ids) { VaultIdentityHandoff.isAvailable(ctx) }
 
-    Page("Import", "Paste your data as text (labelled lines, one block per profile) or JSON. Nothing is saved until you review it. ID documents found in the paste are NOT stored here: they belong in Cloud Vault as Identity items.") {
+    Column(Modifier.fillMaxWidth()) {
         Field("Paste text or JSON", text, "autofill:import:text", single = false) { text = it; parsed = null; saved = null }
-        KitActionBar(listOf(
+        KitActionBar(listOfNotNull(
             KitAction("Review", "autofill:import:review", enabled = text.isNotBlank()) {
                 parsed = AutofillImport.parse(text).also { ids = it.ids; sent = emptySet() }
             },
+            pickFile?.let { pick -> KitAction("Pick file", "autofill:import:file") { pick { t -> text = t; parsed = null; saved = null } } },
             KitAction("Format help", "autofill:import:help") { text = AutofillImport.EXAMPLE },
         ))
         saved?.let { Text(it, color = LocalKitPalette.current.textPrimary, fontSize = KitDensity.body, modifier = Modifier.testTag("autofill:import:saved")) }

@@ -14,12 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +32,12 @@ import com.diegonmarcos.cloudaccount.autofill.AutofillImportPage
 import com.diegonmarcos.cloudaccount.autofill.AutofillProfilesPage
 import com.diegonmarcos.cloudaccount.autofill.AutofillRulesPage
 import com.diegonmarcos.cloudaccount.autofill.AutofillSnippetsPage
+import com.diegonmarcos.cloudaccount.hub.AppProfilesPage
+import com.diegonmarcos.cloudaccount.hub.HomePage
+import com.diegonmarcos.cloudaccount.hub.HubNav
+import com.diegonmarcos.cloudaccount.hub.LocalDeviceAuth
+import com.diegonmarcos.cloudaccount.hub.SecretsProvidersPage
+import com.diegonmarcos.cloudaccount.hub.SystemDeviceAuth
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
@@ -57,15 +63,16 @@ import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.updater.Updater
 
 /**
- * Cloud Account redesign task 3 (a0_docs/eng-specs/cloud-account-redesign.md sections 3, 4.1,
- * 4.2, 4.11): the five islands of build.json::ui.bottom_nav (Account, Profiles, Setup, Secrets,
- * Settings) drawn by libs:bottomnav exactly as Cloud Store's shell is, the section's pages as
- * the PageTabs strip, and every (section, page) mapped to ONE composable in [Page]. The old
- * ProfileFragment host is gone.
+ * Cloud Account, reorganised: four islands of build.json::ui.bottom_nav, Profiles, Secrets, Home, Configs,
+ * drawn by libs:bottomnav (island + PageTabs) from the baked NavDecl, every (section, page) mapped to ONE
+ * composable in [Page]. Setup is no island: each app profile (Profiles ▸ Apps) and each provider
+ * (Secrets ▸ Providers) has its own Setup, and Home has Setup all. Links from libs:account pages that
+ * still name the old islands ("setup", "account", "settings") go through [HubNav.resolve].
  *
- * Pages a later task owns draw a placeholder that names the task; where an existing
- * libs:account composable already does that page's job it is shown under the placeholder
- * until its task lands (Profiles ▸ working/diff, Setup ▸ configs, Secrets ▸ connections/secrets).
+ * Where each old page went: Account ▸ profile/connect/import -> Home ▸ account/connect/import;
+ * Account ▸ autofill/sites/snippets -> Profiles ▸ personal/sites/snippets; Profiles ▸ devices/working/diff
+ * stay; Setup ▸ runbook/apps/configs/perms/adb-shell -> Configs ▸ the same ids; Secrets ▸
+ * connections/secrets/grants stay (beside the new Providers page); Settings -> Configs ▸ settings.
  */
 class MainActivity : AppCompatActivity() {
     // Secrets ▸ connections: real file pickers behind ConnectionsTab's pickBundle / export callbacks.
@@ -80,12 +87,24 @@ class MainActivity : AppCompatActivity() {
         if (uri != null && pending != null) contentResolver.openOutputStream(uri)?.use { it.write(pending.second.toByteArray()) }
     }
 
+    // Reveal / copy of a secret: the keyguard confirm screen on phones older than BiometricPrompt-with-PIN (API 29).
+    private var pendingConfirm: ((Boolean) -> Unit)? = null
+    private val confirmLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        val done = pendingConfirm; pendingConfirm = null
+        done?.invoke(r.resultCode == RESULT_OK)
+    }
+    private val deviceAuth by lazy { SystemDeviceAuth(this) { intent, done -> pendingConfirm = done; confirmLauncher.launch(intent) } }
+
+    private fun pickText(onText: (String) -> Unit) { pendingPick = onText; pickLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
         setContent {
             CloudKitTheme(AccountHost.palette(this)) {
-                Surface(Modifier.fillMaxSize()) { AccountShell() }
+                CompositionLocalProvider(LocalDeviceAuth provides deviceAuth) {
+                    Surface(Modifier.fillMaxSize()) { AccountShell() }
+                }
             }
         }
         Updater.start(this)
@@ -95,7 +114,8 @@ class MainActivity : AppCompatActivity() {
     private fun AccountShell() {
         var selected by remember { mutableStateOf<String?>(NAV.default()?.id) }
         var selectedPage by remember { mutableStateOf<String?>(null) }
-        val go: (String, String) -> Unit = { s, p -> selected = s; selectedPage = p }
+        // libs:account pages still link with the old island ids; HubNav maps them to where the page lives now.
+        val go: (String, String) -> Unit = { s, p -> HubNav.resolve(s, p).let { (ns, np) -> selected = ns; selectedPage = np } }
         Box(Modifier.fillMaxSize().statusBarsPadding()) {
             BottomNavHost(
                 entries = NAV.islandEntries { rememberVectorPainter(iconFor(it)) },
@@ -126,28 +146,15 @@ class MainActivity : AppCompatActivity() {
         val ctx = LocalContext.current
         val model = remember { AccountModel.get(ctx) }
         when (section) {
-            "account" -> when (page) {
-                "connect" -> AccountConnectPage()
-                // The non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md).
-                "autofill" -> AutofillProfilesPage()
+            "profiles" -> when (page) {
+                // The non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md): personal data.
+                "personal" -> AutofillProfilesPage()
                 "sites" -> AutofillRulesPage()
                 "snippets" -> AutofillSnippetsPage()
-                "import" -> AutofillImportPage()
-                else -> AccountProfilePage(go)
-            }
-            "profiles" -> when (page) {
                 "devices" -> ProfilesDevicesPage()
                 "working" -> ProfilesWorkingPage()
                 "diff" -> ProfilesDiffPage(model)
-                else -> AccountPlaceholderPage(section, page, "task 4")
-            }
-            "setup" -> when (page) {
-                "configs" -> FleetSetupPage(model)
-                "apps" -> AppsPage()
-                "perms" -> AccountPermsPage(go)
-                "runbook" -> RunbookPage(go)
-                "adb-shell" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { com.diegonmarcos.superapp.adbdebug.AdbShellPage() }
-                else -> AccountPlaceholderPage(section, page, "no task: undeclared page")
+                else -> AppProfilesPage()
             }
             "secrets" -> when (page) {
                 "connections" -> ConnectionsTab(
@@ -156,14 +163,27 @@ class MainActivity : AppCompatActivity() {
                 )
                 "secrets" -> SecretsTab(openVault = { AccountHost.route(this, "extapp:cloud-vault") })
                 "grants" -> GrantsTab()
-                else -> AccountPlaceholderPage(section, page, "no task: undeclared page")
+                else -> SecretsProvidersPage(go)
             }
-            "settings" -> AccountSettingsPage("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA} · built ${BuildConfig.BUILD_TIMESTAMP}")
+            "home" -> when (page) {
+                "account" -> AccountProfilePage(go)
+                "connect" -> AccountConnectPage()
+                "import" -> AutofillImportPage(::pickText)
+                else -> HomePage(go, ::pickText)
+            }
+            "configs" -> when (page) {
+                "runbook" -> RunbookPage(go)
+                "apps" -> AppsPage()
+                "configs" -> FleetSetupPage(model)
+                "perms" -> AccountPermsPage(go)
+                "adb-shell" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { com.diegonmarcos.superapp.adbdebug.AdbShellPage() }
+                else -> AccountSettingsPage("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA} · built ${BuildConfig.BUILD_TIMESTAMP}")
+            }
             else -> AccountPlaceholderPage(section, page, "no task: undeclared section")
         }
     }
 
-    /** Setup ▸ configs (spec 4.8): FleetSetupTab as it is, in a scrolling page. */
+    /** Configs ▸ configs (was Setup ▸ configs, spec 4.8): FleetSetupTab as it is, in a scrolling page. */
     @Composable
     private fun FleetSetupPage(model: AccountModel) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) { FleetSetupTab(model) }
@@ -177,10 +197,9 @@ class MainActivity : AppCompatActivity() {
 
         /** The declared icon name → the glyph the island draws. */
         private fun iconFor(name: String): ImageVector = when (name) {
-            "profiles" -> Icons.Filled.PhoneAndroid
-            "setup" -> Icons.Filled.Build
             "secrets" -> Icons.Filled.Key
-            "settings" -> Icons.Filled.Settings
+            "home" -> Icons.Filled.Home
+            "configs" -> Icons.Filled.Settings
             else -> Icons.Filled.AccountCircle
         }
     }

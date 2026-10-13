@@ -16,7 +16,7 @@
 #  4. One package name: SuperApp's hand-off, the library, this app's build.json, the
 #     external_apps row and the fleet manifest row agree, and the OPEN action SuperApp
 #     sends is the one this manifest declares.
-#  5. (redesign task 3) the five islands: build.json::ui is the spec's section 3, the
+#  5. the four islands (Profiles, Secrets, Home, Configs; Setup lives in each profile/provider): build.json::ui, the
 #     shell is the shared island + PageTabs fed by NavDecl, every declared (section,
 #     page) id is a branch of MainActivity's Page(), the debug API's tabs op answers the
 #     islands, and Account ▸ connect dispatches every declared way on its kind
@@ -129,14 +129,16 @@ PY
   grep -q "<action android:name=\"$action\" */>" "$MF" && ok "manifest answers SuperApp's $action" || bad "manifest does not declare the action SuperApp sends ('$action')"
 
   # 5. redesign task 3: five islands declared in build.json::ui, drawn by the shared island + strips
-  python3 - "$A/build.json" <<'PY' && ok "ui.bottom_nav = account, profiles, setup, secrets, settings; ui.sections are the spec's pages" || bad "build.json ui.bottom_nav/sections are not the spec's section 3"
+  python3 - "$A/build.json" <<'PY' && ok "ui.bottom_nav = profiles, secrets, home, configs; ui.sections hold every page" || bad "build.json ui.bottom_nav/sections are not the reorganised four islands"
 import json, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
-# + autofill / sites / snippets: the non-secret autofill SOT editor (a0_docs/eng-specs/autofill-3-tier.md)
-want = {'account': ['profile', 'connect', 'autofill', 'sites', 'snippets', 'import'], 'profiles': ['devices', 'working', 'diff'],
-        'setup': ['runbook', 'apps', 'configs', 'perms', 'adb-shell'], 'secrets': ['connections', 'secrets', 'grants'], 'settings': []}
+# personal / sites / snippets: the non-secret autofill SOT editor (a0_docs/eng-specs/autofill-3-tier.md)
+want = {'profiles': ['apps', 'personal', 'sites', 'snippets', 'devices', 'working', 'diff'],
+        'secrets': ['providers', 'secrets', 'grants', 'connections'],
+        'home': ['home', 'account', 'connect', 'import'],
+        'configs': ['settings', 'runbook', 'apps', 'configs', 'perms', 'adb-shell']}
 got = {s.get('id'): [p.get('id') for p in s.get('pages') or []] for s in ui.get('sections') or []}
-ok = (ui.get('bottom_nav') == list(want) and got == want and ui.get('default_section') in want
+ok = (ui.get('bottom_nav') == list(want) and got == want and ui.get('default_section') == 'home'
       and isinstance(ui.get('account', {}).get('forges'), list)
       and ui.get('account', {}).get('connect', {}).get('file', {}).get('kind') == 'vault_file')
 sys.exit(0 if ok else 1)
@@ -246,11 +248,11 @@ mutate "OPEN action dropped" acc/app/src/main/AndroidManifest.xml '<action andro
 mutate "island replaced by a plain box" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'BottomNavHost(' 'Box(' || M=$((M+1))
 mutate "island no longer fed by NavDecl" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'NavDecl.fromBuildConfig(' 'NavDeclx.fromBuildConfig(' || M=$((M+1))
 mutate "an island leaves build.json" acc/build.json '"secrets",
-      "settings"' '"settings"' || M=$((M+1))
+      "home"' '"home"' || M=$((M+1))
 mutate "a page leaves build.json" acc/build.json '          {
             "id": "connect",
             "label": "Connect",
-            "icon": "account"
+            "icon": "home"
           }' '' || M=$((M+1))
 mutate "connect dispatch replaced by a literal" lib/profile/ConnectWays.kt 'fun handler(kind: String): Handler = when (kind) {' 'fun handler(kind: String): Handler = Handler.File
     private fun handlerOld(kind: String): Handler = when (kind) {' || M=$((M+1))
