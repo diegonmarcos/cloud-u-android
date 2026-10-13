@@ -338,7 +338,7 @@
 
             </FrameLayout>
 
-            <!-- Third column: the gallery thumbnail, with the Media Center button stacked
+            <!-- Third column: the gallery thumbnail, with the Gallery button stacked
                  directly beneath it. The extra height is owned by this column alone — the
                  flip and capture buttons above are bottom-anchored so the row growing
                  upward (its bottom edge is pinned above camera_mode_tabs) leaves them
@@ -353,7 +353,7 @@
                 android:orientation="vertical">
 
             <!-- Hidden on the idle camera screen. This frame used to be the big gallery
-                 circle in the bottom right, and the two Media Center buttons below open
+                 circle in the bottom right, and the two Gallery buttons below open
                  that same folder now, so it had become a third way to do what two buttons
                  already do.
 
@@ -420,7 +420,7 @@
 
             </FrameLayout>
 
-                <!-- The two Media Center buttons. Everything that decides how they look
+                <!-- The two Gallery buttons. Everything that decides how they look
                      lives in the one shared style, so they differ only by icon, id and
                      description - the point of the pair is that neither reads as the
                      odd one out.
@@ -430,24 +430,24 @@
                      change that has to split the folder first. Two buttons onto one
                      folder is deliberate, not a stub. -->
                 <ImageButton
-                    android:id="@+id/open_media_center_video"
-                    style="@style/Widget.Camera.MediaCenterButton"
+                    android:id="@+id/open_cloud_gallery_video"
+                    style="@style/Widget.Camera.CloudGalleryButton"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_gravity="center_horizontal"
                     android:src="@drawable/videocam"
-                    android:tooltipText="@string/open_media_center_video"
-                    android:contentDescription="@string/open_media_center_video"/>
+                    android:tooltipText="@string/open_cloud_gallery_video"
+                    android:contentDescription="@string/open_cloud_gallery_video"/>
 
                 <ImageButton
-                    android:id="@+id/open_media_center_photo"
-                    style="@style/Widget.Camera.MediaCenterButton"
+                    android:id="@+id/open_cloud_gallery_photo"
+                    style="@style/Widget.Camera.CloudGalleryButton"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_gravity="center_horizontal"
                     android:src="@drawable/photo"
-                    android:tooltipText="@string/open_media_center_photo"
-                    android:contentDescription="@string/open_media_center_photo"/>
+                    android:tooltipText="@string/open_cloud_gallery_photo"
+                    android:contentDescription="@string/open_cloud_gallery_photo"/>
 
             </LinearLayout>
 

@@ -71,7 +71,7 @@ files, 52 custom Views.**
 
 - **Web wrappers:** agenda, contacts and news. Each is a single WebView layout plus a JS bridge.
 - **Vendored trees:**
-  - Compose already: mail (sterna), matrix (Element X), media-center (ReFra) and vault
+  - Compose already: mail (sterna), matrix (Element X), gallery (ReFra) and vault
     (Bitwarden).
   - React Native: chat (Mattermost).
   - WebView: notes (AFFiNE), office (Collabora) and code (Acode).
@@ -85,7 +85,7 @@ These pieces are what app migrations build on:
 
 - **libs:bottomnav.** Already Compose (#531/#565). `BottomNavIslandView` is the View
   interop host that XML shells drop in.
-- **libs:scrollbar.** The Compose half is shared. The View half stays until media-center's
+- **libs:scrollbar.** The Compose half is shared. The View half stays until gallery's
   RecyclerView grids go.
 - **libs:ui-kit** (new in #773). Contents:
   - `CloudKitTheme(KitPalette)` over the launcher palette roles.

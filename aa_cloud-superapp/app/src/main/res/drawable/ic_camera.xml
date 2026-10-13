@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Cloud ▸ Apps ▸ Tools Primary "Camera" tile. Its own drawable rather than a
-     reuse of ic_photos, which the Media Center tile already carries: an icon
+     reuse of ic_photos, which the Gallery tile already carries: an icon
      name that resolves to nothing falls back to ic_link_tile in silence
      (Sections.iconResFor), and two tiles sharing one glyph is the same class of
      defect read the other way round — both look deliberate on a phone. -->

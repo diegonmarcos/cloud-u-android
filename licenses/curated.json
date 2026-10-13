@@ -308,10 +308,10 @@
    "what": "Cloud Me app",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
   },
-  "ac_cloud-media-center": {
+  "ac_cloud-gallery": {
    "licence": "Apache-2.0",
    "kind": "upstream-fork",
-   "upstream_module": "media-center",
+   "upstream_module": "gallery",
    "what": "ReFra/Gallery fork"
   },
   "ac_cloud-myterminal": {
@@ -604,7 +604,7 @@
    "licence": "Apache-2.0",
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
   },
-  "ac_cloud-media-center/gradle/wrapper/gradle-wrapper.jar": {
+  "ac_cloud-gallery/gradle/wrapper/gradle-wrapper.jar": {
    "licence": "Apache-2.0",
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
   },

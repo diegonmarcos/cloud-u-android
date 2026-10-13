@@ -6,7 +6,7 @@
 # What this certifies: that a captured photo's CONTENT can be scanned through
 # the single shared image-scan engine (libs:ml-l-image:
 # ImageScanEngine = ZXing barcode decode + ML Kit OCR), exactly as
-# cloud-drive and cloud-media-center consume it — and NOT through a private
+# cloud-drive and cloud-gallery consume it — and NOT through a private
 # copy of the decode path (#170/#261). The camera already decodes barcodes in
 # the live preview via QRAnalyzer (that is the live viewfinder, a different
 # surface); this tester is about reading a CAPTURED photograph's contents.

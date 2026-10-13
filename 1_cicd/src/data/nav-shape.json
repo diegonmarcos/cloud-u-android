@@ -91,7 +91,7 @@
     "ac_cloud-dialer": "Exempt by class (#868 nav plan): fork of an upstream dialer; navigation is the upstream's.",
     "ac_cloud-keyboard": "Exempt by class (#868 nav plan): input method; the keyboard is the UI and has no bottom navigation.",
     "ac_cloud-matrix": "Exempt by class (#868 nav plan): fork of an upstream Matrix client; navigation is the upstream's.",
-    "ac_cloud-media-center": "Exempt by class (#868 nav plan): fork of an upstream media centre; navigation is the upstream's.",
+    "ac_cloud-gallery": "Exempt by class (#868 nav plan): fork of an upstream gallery; navigation is the upstream's.",
     "ac_cloud-myterminal": "Exempt by class (#868 nav plan): terminal emulator; its UI is the terminal.",
     "ac_cloud-news": "Single WebView page (#868 decided 2026-10-06): the app hosts one web page with no native pages to navigate between; revisit if it gains native screens.",
     "ac_cloud-nix-on-droid": "Exempt by class (#868 nav plan): terminal emulator; its UI is the terminal.",

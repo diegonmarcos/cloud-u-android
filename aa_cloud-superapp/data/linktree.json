@@ -683,8 +683,8 @@
               "item": 7
             },
             {
-              "label": "Media Center",
-              "url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/aa_cloud-media-center",
+              "label": "Gallery",
+              "url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-gallery",
               "icon": "headphones.svg",
               "item": 8
             },

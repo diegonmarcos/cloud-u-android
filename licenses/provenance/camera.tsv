@@ -84,7 +84,7 @@ ac_cloud-camera/app/src/main/java/cld/camera/util/BitmapUtils.kt	modified	app/sr
 ac_cloud-camera/app/src/main/java/cld/camera/util/CameraControl.kt	modified	app/src/main/java/app/grapheneos/camera/util/CameraControl.kt	18	2	txt
 ac_cloud-camera/app/src/main/java/cld/camera/util/ImageDecoderUtils.kt	modified	app/src/main/java/app/grapheneos/camera/util/ImageDecoderUtils.kt	11	1	txt
 ac_cloud-camera/app/src/main/java/cld/camera/util/IntentUtils.kt	modified	app/src/main/java/app/grapheneos/camera/util/IntentUtils.kt	10	1	txt
-ac_cloud-camera/app/src/main/java/cld/camera/util/MediaCenter.kt	new		0	83	txt
+ac_cloud-camera/app/src/main/java/cld/camera/util/CloudGallery.kt	new		0	83	txt
 ac_cloud-camera/app/src/main/java/cld/camera/util/PackageManagerUtils.kt	modified	app/src/main/java/app/grapheneos/camera/util/PackageManagerUtils.kt	12	23	txt
 ac_cloud-camera/app/src/main/java/cld/camera/util/SharedPrefs.kt	modified	app/src/main/java/app/grapheneos/camera/util/SharedPrefs.kt	135	1	txt
 ac_cloud-camera/app/src/main/java/cld/camera/util/Utils.kt	modified	app/src/main/java/app/grapheneos/camera/util/Utils.kt	80	5	txt
@@ -226,5 +226,5 @@ ac_cloud-camera/settings.gradle.kts	modified	settings.gradle.kts	15	27	txt
 ac_cloud-camera/test/test-camera-identify.sh	new		0	158	txt
 ac_cloud-camera/test/test-camera-image-route.sh	new		0	163	txt
 ac_cloud-camera/test/test-camera-scan-engine.sh	new		0	199	txt
-ac_cloud-camera/test/test-media-center-button.sh	new		0	583	txt
+ac_cloud-camera/test/test-gallery-button.sh	new		0	583	txt
 ac_cloud-camera/test/test-recognition-routes.sh	new		0	143	txt

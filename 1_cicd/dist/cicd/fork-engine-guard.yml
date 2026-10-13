@@ -1,7 +1,7 @@
 # Fork-engine guard (#368).
 #
 # Six applications ship through a `cloud-*-fork-engine.sh` — chat, dialer,
-# matrix, media-center, nix-on-droid, termux. Two testers for those engines
+# matrix, gallery, nix-on-droid, termux. Two testers for those engines
 # have existed under 1_cicd/src/scripts/test/ since the engines did, and no
 # workflow named either of them, so neither had ever been executed by CI. In
 # this repository a tester is registered by a workflow naming its filename;
@@ -9,7 +9,7 @@
 #
 # What they cover is not cosmetic. test-fork-key-hyphen.sh is the regression
 # guard for GHA run 30528694044, where a fork key containing a hyphen was
-# shell-interpolated straight into a jq path — `.forks.media-center.build` is
+# shell-interpolated straight into a jq path — `.forks.gallery.build` is
 # arithmetic on two undefined functions, not a lookup, so the prepare steps
 # silently resolved to empty and the fork built without them. That is the
 # fail-green shape again: jq exits 0, the engine gets an empty list, the build

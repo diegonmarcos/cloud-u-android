@@ -26,7 +26,7 @@ shape), from the declarations alone:
   K5  the client reads the same CONTRACT key the engine declares;
   K6  no app compiles or watches an engine: no build.json::modules entry points
       at an engine module's directory, no app's settings/gradle file or other
-      module map names it (Camera, Media Center and Office wire modules there),
+      module map names it (Camera, Gallery and Office wire modules there),
       and no ship workflow watches it. Any of them
       one makes an engine change republish that app again -- the coupling the
       split removed (engine-apk-split: Cloud Agenda kept declaring libs:cal long

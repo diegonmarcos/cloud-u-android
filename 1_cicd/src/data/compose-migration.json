@@ -156,7 +156,7 @@
       "wave": 1,
       "ui": "mixed",
       "size": "S",
-      "notes": "Compose LazyVerticalGridScrollbar plus the View VerticalScrollbarLayout/GridScrollbarController for media-center's RecyclerView grids. Retire the View half when its last consumer is Compose. Not counted: its View half builds no widgets.",
+      "notes": "Compose LazyVerticalGridScrollbar plus the View VerticalScrollbarLayout/GridScrollbarController for gallery's RecyclerView grids. Retire the View half when its last consumer is Compose. Not counted: its View half builds no widgets.",
       "baseline": {
         "view_screens": 0,
         "layout_xml": 0,
@@ -987,7 +987,7 @@
       "reason": "Vendored Element X (Compose); our patches are rebrand only."
     },
     {
-      "id": "ac_cloud-media-center",
+      "id": "ac_cloud-gallery",
       "scope": "out",
       "reason": "Vendored ReFra (Compose); our cloud/ additions are Compose. 4 layouts are upstream's."
     },
@@ -1029,7 +1029,7 @@
     {
       "id": "ac_cloud-camera",
       "scope": "out",
-      "reason": "Vendored GrapheneOS Camera; our additions (voice shutter, scanner, media-center hand-off) have no UI of their own. Upstream androidTests drive its View screens."
+      "reason": "Vendored GrapheneOS Camera; our additions (voice shutter, scanner, gallery hand-off) have no UI of their own. Upstream androidTests drive its View screens."
     }
   ]
 }

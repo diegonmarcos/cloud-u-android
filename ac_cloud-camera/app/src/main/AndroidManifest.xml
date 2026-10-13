@@ -35,17 +35,17 @@
         -->
         <package android:name="com.diegonmarcos.cloudbrowser" />
         <!--
-            Cloud Media Center, for the "open capture folder" button under the gallery
+            Cloud Gallery, for the "open capture folder" button under the gallery
             thumbnail. Without this the app is invisible to package queries on
-            targetSdk 30+, Intent.resolveActivity() returns null even when Media Center
+            targetSdk 30+, Intent.resolveActivity() returns null even when Gallery
             IS installed, and the button would report "not installed" forever. The
             <intent> filter above does not cover it: that one is scoped to ACTION_VIEW,
             and this is a private action.
         -->
         <package android:name="com.diegonmarcos.mediacenter" />
         <!--
-            Constellation, the fleet installer. The Media Center buttons offer it as the
-            recovery when Media Center is missing or too old to open a folder; without
+            Constellation, the fleet installer. The Gallery buttons offer it as the
+            recovery when Gallery is missing or too old to open a folder; without
             this entry getLaunchIntentForPackage() returns null on targetSdk 30+ and the
             snackbar silently drops its action.
         -->

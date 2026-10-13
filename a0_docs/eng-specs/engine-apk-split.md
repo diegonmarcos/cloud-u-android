@@ -38,7 +38,7 @@ before any module moved, and it records the decisions that move or keep each mod
 | chat | GUI | 3.49 / – / – / 8.69 | superapp | – | stays |
 | contacts | engine, already serves `IDataBackend` | 2.27 / – / – / 5.61 | contacts | – | **blocked**: `READ_CONTACTS` is per package — the engine would read its own, ungranted permission |
 | core | contract + platform | 2.23 / – / – / 5.54 | every app | – | **stays** — it IS the contract (`IDataBackend`, `CONSTELLATION_DATA`, crash provider) both sides link |
-| cropper, gesture, panoramaviewer, scrollbar | GUI (upstream) | excluded from lib APKs | media-center | per frame | stay |
+| cropper, gesture, panoramaviewer, scrollbar | GUI (upstream) | excluded from lib APKs | gallery | per frame | stay |
 | datamanager | engine + fragment | 3.50 / – / – / 7.45 | superapp | – | **blocked**: `PACKAGE_USAGE_STATS` is special access, granted per package |
 | devtools | in-process debug API | 2.19 / – / – / 5.46 | every app (via core) | – | **stays** — it inspects the host process |
 | **feed** | engine | 2.24 / – / – / 5.55 | nothing (superapp binds it by handshake) | per refresh | **MOVE 4** (stage 4); closes F3 for feed |
@@ -55,7 +55,7 @@ before any module moved, and it records the decisions that move or keep each mod
 | mail (lib) | GUI (fragments, layouts) | 7.33 / – / – / 14.23 | superapp | – | stays |
 | maps | GUI (MapLibre view) | 37.75 / 11.26 / 19.51 / 15.33 | nav | per frame | stays (draws in the host) |
 | media | mixed: sticker/GIF payload + panel | 9.36 / – / 5.73 / 8.79 | keyboard, keyboard-engines | panel per keystroke | stays |
-| **ml-l-image-mlkit** | engine (ZXing + ML Kit OCR) | 28.48 / 11.06 / 1.49 / 9.87 | nothing (drive, mail, camera, media-center, office compile the contract `libs:ml-l-image`) | per image | **MOVE 6** (stage 4): contract/engine split, the image crosses as a file descriptor |
+| **ml-l-image-mlkit** | engine (ZXing + ML Kit OCR) | 28.48 / 11.06 / 1.49 / 9.87 | nothing (drive, mail, camera, gallery, office compile the contract `libs:ml-l-image`) | per image | **MOVE 6** (stage 4): contract/engine split, the image crosses as a file descriptor |
 | ml-l-text-mlkit | engine | 40.78 / 17.38 / 0.32 / 9.21 | keyboard-engines only | – | already separate (Cloud-Keyboard-Libs) |
 | ml-l-voice-vosk | engine | 21.20 / 9.03 / – / 5.74 | keyboard-engines only | – | already separate |
 | mounts | mixed: SFTP/SMB/WebDAV + `MountsScreen` | 21.42 / – / – / 64.94 | drive | per browse/transfer | blocked like git-sync: transfers land in per-package storage |
@@ -243,7 +243,7 @@ the previous guard.
 ## Move 6 — ml-l-image-mlkit: five apps reach the image scan through a contract, and the image crosses as a file descriptor
 
 Stage 3 skipped this module: its consumers hand it a `File` in their own storage (Drive,
-Mail's attachment cache), a `content://` Uri (Camera, Media Center) or a `Bitmap` (Office's
+Mail's attachment cache), a `content://` Uri (Camera, Gallery) or a `Bitmap` (Office's
 page capture), none of which an engine in another uid can open, and core's `IDataBackend`
 carries strings only. The standard Android answer: the **caller** opens the image and hands
 the engine a `ParcelFileDescriptor` over binder.
@@ -254,22 +254,22 @@ the engine a `ParcelFileDescriptor` over binder.
 | client | `ImageScanEngine` | File → `ParcelFileDescriptor.open`, Uri → `openFileDescriptor`, Bitmap → PNG in the caller's cache (unlinked once open); handshake first; keeps the old result contract (null barcode for none/unreadable, OCR `error` as tiebreaker — now also "install / update the engine") |
 | declaration | `libs/ml-l-image/engine-client.json` | same shape as `build.json::engines`; the module's `build.gradle` resolves the package from fleet row `lib-ml-l-image-mlkit` into its BuildConfig and its own manifest's `<queries>` (a library's placeholders are substituted by `ProcessLibraryManifest`, verified in AGP 8.7.3's source), so every consumer — Office's patched upstream tree included — merges the query |
 | engine | `libs/ml-l-image-mlkit` | `ImageScanBackendService` (exported, `CONSTELLATION_DATA`, `${applicationId}.ENGINE`, CONTRACT 1, methods `barcode`, `ocr`); reads the descriptor to the end (64 MB cap) and runs ZXing / ML Kit in its own process |
-| unlinked | Drive, Mail, Camera (build.json + gradle + settings), Media Center (settings + gradle), Office (`build.modules`, patch 0005, native-lib allowance), 4 ship workflows ×3 | no app compiles ZXing, ML Kit or `libmlkit_google_ocr_pipeline.so`; an engine edit ships Cloud-Lib-Ml-L-Image-Mlkit.apk alone. Media Center's ship now watches the contract it compiles (it never watched the module before) |
+| unlinked | Drive, Mail, Camera (build.json + gradle + settings), Gallery (settings + gradle), Office (`build.modules`, patch 0005, native-lib allowance), 4 ship workflows ×3 | no app compiles ZXing, ML Kit or `libmlkit_google_ocr_pipeline.so`; an engine edit ships Cloud-Lib-Ml-L-Image-Mlkit.apk alone. Gallery's ship now watches the contract it compiles (it never watched the module before) |
 
 **Checks.** Contract guard: client declarations are read from a shared module's
 `engine-client.json` as well as apps' `build.json`; K7 accepts a typed-wire bind
 (`bindService`) after the floor; **K6 also reads settings/gradle files and other module maps**
-(Camera, Media Center and Office wire modules there and K6 never saw them — on the pre-move
+(Camera, Gallery and Office wire modules there and K6 never saw them — on the pre-move
 tree it reports all five consumers). Five new guard cases, each failing against the previous
 guard. Engine tester: E4 accepts a typed-wire engine whose stub answers `methods()` with
 `methodNames()`; E8 requires the image engine (19 mutations).
 
 ## Stage 3 — what was not moved, and why
 
-- **ml-l-image-mlkit — skipped in stage 3, moved in stage 4 (move 6).** Five consumers (Drive, Mail, Camera, Media Center and
+- **ml-l-image-mlkit — skipped in stage 3, moved in stage 4 (move 6).** Five consumers (Drive, Mail, Camera, Gallery and
   Office's materialized tree, which stage 1 did not count) hand the engine a `File` in
   their own storage (Drive, Mail's attachment cache) or a `content://` URI (Camera,
-  Media Center). An engine in its own uid cannot open the first and needs a per-call URI
+  Gallery). An engine in its own uid cannot open the first and needs a per-call URI
   grant for the second; core's `IDataBackend` carries strings only. Moving it needs a
   new crossing mechanism (FileProvider grants or a file-descriptor method on the
   contract) plus the contract/engine split of `BarcodePayload`, which is outside "the

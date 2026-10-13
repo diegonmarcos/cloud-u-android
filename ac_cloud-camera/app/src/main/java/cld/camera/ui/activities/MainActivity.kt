@@ -83,7 +83,7 @@ import cld.camera.databinding.ScanResultDialogBinding
 import cld.camera.ktx.SystemSettingsObserver
 import cld.camera.ktx.applyPreviewRatio
 import cld.camera.notifier.SensorOrientationChangeNotifier
-import cld.camera.util.MediaCenter
+import cld.camera.util.CloudGallery
 import cld.camera.util.isPackageInstalled
 import cld.camera.ui.ModeNav
 import cld.camera.ui.CountDownTimerUI
@@ -159,8 +159,8 @@ open class MainActivity : AppCompatActivity(),
     lateinit var cancelButtonView: ImageView
     lateinit var modeNav: ModeNav
     lateinit var thirdCircle: ImageView
-    lateinit var openMediaCenterVideo: ImageButton
-    lateinit var openMediaCenterPhoto: ImageButton
+    lateinit var openCloudGalleryVideo: ImageButton
+    lateinit var openCloudGalleryPhoto: ImageButton
     lateinit var captureButton: ImageButton
 
     private lateinit var scaleGestureDetector: ScaleGestureDetector
@@ -437,42 +437,42 @@ open class MainActivity : AppCompatActivity(),
     }
 
     /**
-     * Opens the folder this camera saves into, in Cloud Media Center.
+     * Opens the folder this camera saves into, in Cloud Gallery.
      *
      * Four outcomes, all of them distinguishable, and none of them a guess.
      *
      * The one this exists to kill: resolveActivity() returning null used to be reported
-     * as "Cloud Media Center is not installed", and that sentence was wrong every time
+     * as "Cloud Gallery is not installed", and that sentence was wrong every time
      * the app WAS installed and merely predated the intent-filter it publishes now. It
      * sent the owner looking for a missing app that was on his home screen, while the
      * actual fix - install the newer artefact - was never named. resolveActivity() and
      * "installed" are two different questions, so this asks both.
      *
-     * It must never quietly land on Media Center's home screen either: that looks enough
+     * It must never quietly land on Gallery's home screen either: that looks enough
      * like success to hide a broken folder lookup, so there is no generic-VIEW fallback.
      */
-    private fun openCaptureFolderInMediaCenter() {
-        val relativePath = MediaCenter.captureFolderRelativePath(camConfig.storageLocation)
+    private fun openCaptureFolderInCloudGallery() {
+        val relativePath = CloudGallery.captureFolderRelativePath(camConfig.storageLocation)
         if (relativePath == null) {
             Log.i(TAG, "capture folder is not addressable by MediaStore path")
-            showMessage(R.string.media_center_folder_unavailable)
+            showMessage(R.string.cloud_gallery_folder_unavailable)
             return
         }
 
-        val intent = MediaCenter.viewFolderIntent(relativePath)
+        val intent = CloudGallery.viewFolderIntent(relativePath)
 
         // The manifest declares a <queries> entry for the package, without which BOTH
         // this and isPackageInstalled() below answer "absent" on targetSdk 30+ for an
         // app that is installed.
         if (packageManager.resolveActivity(intent, 0L) == null) {
-            val installed = packageManager.isPackageInstalled(MediaCenter.PACKAGE)
+            val installed = packageManager.isPackageInstalled(CloudGallery.PACKAGE)
             Log.i(
                 TAG,
-                "Media Center did not resolve $relativePath (package installed: $installed)"
+                "Gallery did not resolve $relativePath (package installed: $installed)"
             )
-            showMediaCenterRecovery(
-                if (installed) R.string.media_center_outdated
-                else R.string.media_center_not_installed,
+            showCloudGalleryRecovery(
+                if (installed) R.string.cloud_gallery_outdated
+                else R.string.cloud_gallery_not_installed,
                 if (installed) R.string.update else R.string.install
             )
             return
@@ -480,13 +480,13 @@ open class MainActivity : AppCompatActivity(),
 
         try {
             startActivity(intent)
-            Log.i(TAG, "Opening Media Center on $relativePath")
+            Log.i(TAG, "Opening Gallery on $relativePath")
         } catch (e: Exception) {
             // It resolved a moment ago, so this is not absence - a disabled component, a
             // profile split, a dead activity. Saying "not installed" here was the same
             // lie by a second route.
-            Log.e(TAG, "unable to open Media Center", e)
-            showMessage(R.string.media_center_open_failed)
+            Log.e(TAG, "unable to open Gallery", e)
+            showMessage(R.string.cloud_gallery_open_failed)
         }
     }
 
@@ -497,9 +497,9 @@ open class MainActivity : AppCompatActivity(),
      * that throws ActivityNotFoundException would be one more thing lying about what is
      * on the phone.
      */
-    private fun showMediaCenterRecovery(@StringRes message: Int, @StringRes action: Int) {
+    private fun showCloudGalleryRecovery(@StringRes message: Int, @StringRes action: Int) {
         val installer = packageManager
-            .getLaunchIntentForPackage(MediaCenter.CONSTELLATION_PACKAGE)
+            .getLaunchIntentForPackage(CloudGallery.CONSTELLATION_PACKAGE)
 
         if (installer == null) {
             showMessage(message)
@@ -854,12 +854,12 @@ open class MainActivity : AppCompatActivity(),
         // Both buttons open the same folder on purpose: this camera writes photos and
         // videos into one capture folder, so two destinations would need the folder split
         // first. The pair exists now so that split is a change of target, not of layout.
-        openMediaCenterVideo = binding.openMediaCenterVideo
-        openMediaCenterPhoto = binding.openMediaCenterPhoto
-        for (button in listOf(openMediaCenterVideo, openMediaCenterPhoto)) {
+        openCloudGalleryVideo = binding.openCloudGalleryVideo
+        openCloudGalleryPhoto = binding.openCloudGalleryPhoto
+        for (button in listOf(openCloudGalleryVideo, openCloudGalleryPhoto)) {
             button.setOnClickListener {
                 resetAutoSleep()
-                openCaptureFolderInMediaCenter()
+                openCaptureFolderInCloudGallery()
             }
         }
 
@@ -1529,8 +1529,8 @@ open class MainActivity : AppCompatActivity(),
         rotateView(thirdOption, iconRotation)
         // Sits in the same column as thirdOption and must turn with it, otherwise the
         // folder glyph stays upright while every icon around it rotates.
-        rotateView(openMediaCenterVideo, iconRotation)
-        rotateView(openMediaCenterPhoto, iconRotation)
+        rotateView(openCloudGalleryVideo, iconRotation)
+        rotateView(openCloudGalleryPhoto, iconRotation)
 
         rotateView(exposurePlusIcon, iconRotation)
         rotateView(exposureNegIcon, iconRotation)

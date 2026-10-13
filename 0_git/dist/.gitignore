@@ -146,14 +146,14 @@ build.log
 ## EXCEPTION: ac_cloud-vault/libs/ — the FIFTH time this blanket rule has
 !ac_cloud-vault/libs/
 !ac_cloud-vault/libs/**
-## EXCEPTION: ac_cloud-media-center/libs/ — the SIXTH time. Path updated when
+## EXCEPTION: ac_cloud-gallery/libs/ — the SIXTH time. Path updated when
 ## upstream/ was flattened to the app root (2026-08-29): the old
-## !ac_cloud-media-center/upstream/libs/ stopped matching after the move, which
+## !ac_cloud-gallery/upstream/libs/ stopped matching after the move, which
 ## would have let the blanket libs/ rule swallow 68 tracked files on the next
 ## git add — silently, because git add never reports what it ignored. This one
-## as !ac_cloud-media-center/libs/ would not have matched it.
-!ac_cloud-media-center/libs/
-!ac_cloud-media-center/libs/**
+## as !ac_cloud-gallery/libs/ would not have matched it.
+!ac_cloud-gallery/libs/
+!ac_cloud-gallery/libs/**
 aa_cloud-superapp/**/*.keystore
 aa_cloud-superapp/**/*.jks
 ea_cloud-comms/**/*.keystore
@@ -179,8 +179,8 @@ ac_cloud-vault/**/*.keystore
 ac_cloud-vault/**/*.jks
 ac_cloud-contacts/**/*.keystore
 ac_cloud-contacts/**/*.jks
-ac_cloud-media-center/**/*.keystore
-ac_cloud-media-center/**/*.jks
+ac_cloud-gallery/**/*.keystore
+ac_cloud-gallery/**/*.jks
 ## `ea_*-*/` blanket rule removed 2026-07-10; 93fdc30c re-added explicit ignores
 ## that were later lost. If any becomes a real app, whitelist it like ac_cloud-*.
 ac_keyboard-dicts/
@@ -212,9 +212,9 @@ ac_cloud-myterminal/**/build/
 ac_cloud-nav/.gradle/
 ac_cloud-nav/build/
 ac_cloud-nav/**/build/
-ac_cloud-media-center/.gradle/
-ac_cloud-media-center/build/
-ac_cloud-media-center/**/build/
+ac_cloud-gallery/.gradle/
+ac_cloud-gallery/build/
+ac_cloud-gallery/**/build/
 ## ac_cloud-agenda was added after this list and never got its entries, so a
 ## ~3M-line aa_cloud-superapp cache commit (264c09f2). Added 2026-08-09.
 ac_cloud-agenda/.gradle/
@@ -284,8 +284,8 @@ ac_cloud-browser/dist/
 ac_cloud-browser/**/*.apk
 ac_cloud-vault/dist/
 ac_cloud-vault/**/*.apk
-ac_cloud-media-center/dist/
-ac_cloud-media-center/**/*.apk
+ac_cloud-gallery/dist/
+ac_cloud-gallery/**/*.apk
 ac_cloud-agenda/dist/
 ac_cloud-agenda/**/*.apk
 ## ae-tool_termux-boot + c_devices/garmin-watchface arrived from cloud-infra-desktop

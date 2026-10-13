@@ -95,8 +95,8 @@
    "upstream": "Element X Android",
    "licence": "AGPL-3.0-only OR LicenseRef-Element-Commercial"
   },
-  "media-center": {
-   "path": "ac_cloud-media-center",
+  "gallery": {
+   "path": "ac_cloud-gallery",
    "upstream": "ReFra (ex-Gallery by IacobIonut01)",
    "licence": "Apache-2.0"
   },
@@ -147,22 +147,22 @@
   },
   "lib-cropper": {
    "path": "ab_cloud-libs-shared/libs/cropper",
-   "upstream": "ReFra libs/cropper (media-center's upstream)",
+   "upstream": "ReFra libs/cropper (gallery's upstream)",
    "licence": "Apache-2.0"
   },
   "lib-gesture": {
    "path": "ab_cloud-libs-shared/libs/gesture",
-   "upstream": "ReFra libs/gesture (media-center's upstream)",
+   "upstream": "ReFra libs/gesture (gallery's upstream)",
    "licence": "Apache-2.0"
   },
   "lib-panoramaviewer": {
    "path": "ab_cloud-libs-shared/libs/panoramaviewer",
-   "upstream": "ReFra libs/panoramaviewer (media-center's upstream)",
+   "upstream": "ReFra libs/panoramaviewer (gallery's upstream)",
    "licence": "Apache-2.0"
   },
   "lib-scrollbar": {
    "path": "ab_cloud-libs-shared/libs/scrollbar",
-   "upstream": "ReFra libs/scrollbar (media-center's upstream)",
+   "upstream": "ReFra libs/scrollbar (gallery's upstream)",
    "licence": "Apache-2.0"
   },
   "gitsync": {
@@ -1359,77 +1359,77 @@
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)",
    "within_upstream_module": "matrix"
   },
-  "asset:ac_cloud-media-center/app/src/main/res/font/google_sans_bold.ttf": {
+  "asset:ac_cloud-gallery/app/src/main/res/font/google_sans_bold.ttf": {
    "kind": "asset",
    "declared_in": [
-    "ac_cloud-media-center/app/src/main/res/font/google_sans_bold.ttf"
+    "ac_cloud-gallery/app/src/main/res/font/google_sans_bold.ttf"
    ],
    "licence": "Apache-2.0",
-   "licence_source": "inherits ac_cloud-media-center",
-   "within_upstream_module": "media-center"
+   "licence_source": "inherits ac_cloud-gallery",
+   "within_upstream_module": "gallery"
   },
-  "asset:ac_cloud-media-center/app/src/main/res/font/google_sans_bold_italic.ttf": {
+  "asset:ac_cloud-gallery/app/src/main/res/font/google_sans_bold_italic.ttf": {
    "kind": "asset",
    "declared_in": [
-    "ac_cloud-media-center/app/src/main/res/font/google_sans_bold_italic.ttf"
+    "ac_cloud-gallery/app/src/main/res/font/google_sans_bold_italic.ttf"
    ],
    "licence": "Apache-2.0",
-   "licence_source": "inherits ac_cloud-media-center",
-   "within_upstream_module": "media-center"
+   "licence_source": "inherits ac_cloud-gallery",
+   "within_upstream_module": "gallery"
   },
-  "asset:ac_cloud-media-center/app/src/main/res/font/google_sans_italic.ttf": {
+  "asset:ac_cloud-gallery/app/src/main/res/font/google_sans_italic.ttf": {
    "kind": "asset",
    "declared_in": [
-    "ac_cloud-media-center/app/src/main/res/font/google_sans_italic.ttf"
+    "ac_cloud-gallery/app/src/main/res/font/google_sans_italic.ttf"
    ],
    "licence": "Apache-2.0",
-   "licence_source": "inherits ac_cloud-media-center",
-   "within_upstream_module": "media-center"
+   "licence_source": "inherits ac_cloud-gallery",
+   "within_upstream_module": "gallery"
   },
-  "asset:ac_cloud-media-center/app/src/main/res/font/google_sans_medium.ttf": {
+  "asset:ac_cloud-gallery/app/src/main/res/font/google_sans_medium.ttf": {
    "kind": "asset",
    "declared_in": [
-    "ac_cloud-media-center/app/src/main/res/font/google_sans_medium.ttf"
+    "ac_cloud-gallery/app/src/main/res/font/google_sans_medium.ttf"
    ],
    "licence": "Apache-2.0",
-   "licence_source": "inherits ac_cloud-media-center",
-   "within_upstream_module": "media-center"
+   "licence_source": "inherits ac_cloud-gallery",
+   "within_upstream_module": "gallery"
   },
-  "asset:ac_cloud-media-center/app/src/main/res/font/google_sans_medium_italic.ttf": {
+  "asset:ac_cloud-gallery/app/src/main/res/font/google_sans_medium_italic.ttf": {
    "kind": "asset",
    "declared_in": [
-    "ac_cloud-media-center/app/src/main/res/font/google_sans_medium_italic.ttf"
+    "ac_cloud-gallery/app/src/main/res/font/google_sans_medium_italic.ttf"
    ],
    "licence": "Apache-2.0",
-   "licence_source": "inherits ac_cloud-media-center",
-   "within_upstream_module": "media-center"
+   "licence_source": "inherits ac_cloud-gallery",
+   "within_upstream_module": "gallery"
   },
-  "asset:ac_cloud-media-center/app/src/main/res/font/google_sans_regular.ttf": {
+  "asset:ac_cloud-gallery/app/src/main/res/font/google_sans_regular.ttf": {
    "kind": "asset",
    "declared_in": [
-    "ac_cloud-media-center/app/src/main/res/font/google_sans_regular.ttf"
+    "ac_cloud-gallery/app/src/main/res/font/google_sans_regular.ttf"
    ],
    "licence": "Apache-2.0",
-   "licence_source": "inherits ac_cloud-media-center",
-   "within_upstream_module": "media-center"
+   "licence_source": "inherits ac_cloud-gallery",
+   "within_upstream_module": "gallery"
   },
-  "asset:ac_cloud-media-center/app/src/main/res/font/google_sans_semibold.ttf": {
+  "asset:ac_cloud-gallery/app/src/main/res/font/google_sans_semibold.ttf": {
    "kind": "asset",
    "declared_in": [
-    "ac_cloud-media-center/app/src/main/res/font/google_sans_semibold.ttf"
+    "ac_cloud-gallery/app/src/main/res/font/google_sans_semibold.ttf"
    ],
    "licence": "Apache-2.0",
-   "licence_source": "inherits ac_cloud-media-center",
-   "within_upstream_module": "media-center"
+   "licence_source": "inherits ac_cloud-gallery",
+   "within_upstream_module": "gallery"
   },
-  "asset:ac_cloud-media-center/gradle/wrapper/gradle-wrapper.jar": {
+  "asset:ac_cloud-gallery/gradle/wrapper/gradle-wrapper.jar": {
    "kind": "asset",
    "declared_in": [
-    "ac_cloud-media-center/gradle/wrapper/gradle-wrapper.jar"
+    "ac_cloud-gallery/gradle/wrapper/gradle-wrapper.jar"
    ],
    "licence": "Apache-2.0",
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "asset:ac_cloud-nix-on-droid/gradle/wrapper/gradle-wrapper.jar": {
    "kind": "asset",
@@ -2371,7 +2371,7 @@
    "licence": "LicenseRef-NoLicenseGranted",
    "licence_source": "licenses/curated.json"
   },
-  "dir:ac_cloud-media-center": {
+  "dir:ac_cloud-gallery": {
    "kind": "dir",
    "declared_in": [
     "(tree)"
@@ -2553,7 +2553,7 @@
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-search/app/build.gradle",
     "ac_cloud-vault/gradle/libs.versions.toml",
@@ -2639,7 +2639,7 @@
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-me/app/build.gradle",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-myterminal/hub/build.gradle",
     "ac_cloud-nav/app/build.gradle",
     "ac_cloud-news/app/build.gradle",
@@ -2685,20 +2685,20 @@
   "maven:androidx.benchmark:benchmark-macro-junit4": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.5.0-alpha07",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.biometric:biometric": {
    "kind": "maven",
    "declared_in": [
     "ac_cloud-mail/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "1.1.0",
@@ -2843,7 +2843,7 @@
     "ab_cloud-libs-shared/libs/health/build.gradle",
     "ab_cloud-libs-shared/libs/wallet/build.gradle",
     "ac_cloud-drive/app/build.gradle",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "scope": "shipped",
@@ -2870,7 +2870,7 @@
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-me/app/build.gradle",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-search/app/build.gradle"
    ],
    "scope": "shipped",
@@ -2893,7 +2893,7 @@
   "maven:androidx.compose.material3.adaptive:adaptive": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "1.2.0",
@@ -2901,31 +2901,31 @@
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.compose.material3.adaptive:adaptive-layout": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.2.0",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.compose.material3.adaptive:adaptive-navigation": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.2.0",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.compose.material3:material3": {
    "kind": "maven",
@@ -2948,7 +2948,7 @@
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
     "ac_cloud-me/app/build.gradle",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-search/app/build.gradle",
     "ac_cloud-vault/gradle/libs.versions.toml",
@@ -2976,7 +2976,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "scope": "catalog",
    "version": "1.5.0-alpha23",
@@ -2997,7 +2997,7 @@
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-writer/app/build.gradle"
    ],
@@ -3012,7 +3012,7 @@
    "declared_in": [
     "ab_cloud-libs-shared/libs/health/build.gradle",
     "ab_cloud-libs-shared/libs/wallet/build.gradle",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "scope": "shipped",
@@ -3052,7 +3052,7 @@
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
     "ac_cloud-me/app/build.gradle",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-search/app/build.gradle",
     "ac_cloud-vault/gradle/libs.versions.toml",
     "ac_cloud-writer/app/build.gradle"
@@ -3067,7 +3067,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-mail/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml",
     "ac_cloud-writer/app/build.gradle"
    ],
@@ -3089,7 +3089,7 @@
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-me/app/build.gradle",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-search/app/build.gradle",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -3114,7 +3114,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -3141,7 +3141,7 @@
     "ab_cloud-libs-shared/libs/keyboard/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml",
     "ac_cloud-writer/app/build.gradle"
@@ -3159,7 +3159,7 @@
     "ab_cloud-libs-shared/libs/keyboard/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml",
     "ac_cloud-writer/app/build.gradle"
@@ -3342,7 +3342,7 @@
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
     "ac_cloud-me/app/build.gradle",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-myterminal/hub/build.gradle",
     "ac_cloud-nav/app/build.gradle",
     "ac_cloud-news/app/build.gradle",
@@ -3362,7 +3362,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -3426,7 +3426,7 @@
    "declared_in": [
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml"
    ],
    "version": "1.1.1",
@@ -3454,7 +3454,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.4.2",
    "scope": "catalog",
@@ -3525,14 +3525,14 @@
   "maven:androidx.graphics:graphics-shapes": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.1.0",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.health.connect:connect-client": {
    "kind": "maven",
@@ -3548,19 +3548,19 @@
   "maven:androidx.hilt:hilt-common": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.4.0",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.hilt:hilt-compiler": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml"
    ],
    "version": "1.4.0",
@@ -3568,12 +3568,12 @@
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.hilt:hilt-navigation-compose": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "1.4.0",
@@ -3581,12 +3581,12 @@
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.hilt:hilt-work": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml"
    ],
    "version": "1.4.0",
@@ -3594,7 +3594,7 @@
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.javascriptengine:javascriptengine": {
    "kind": "maven",
@@ -3613,7 +3613,7 @@
    "declared_in": [
     "ac_cloud-c3-webserver/src-tauri/gen/android/app/build.gradle.kts",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "2.10.0",
@@ -3632,7 +3632,7 @@
     "ab_cloud-libs-shared/libs/rclone/build.gradle",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -3650,7 +3650,7 @@
     "ab_cloud-libs-shared/libs/mail/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "2.8.6",
@@ -3711,7 +3711,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.10.1",
    "scope": "catalog",
@@ -3723,26 +3723,26 @@
   "maven:androidx.media3:media3-exoplayer-dash": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.10.1",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.media3:media3-exoplayer-hls": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.10.1",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.media3:media3-exoplayer-midi": {
    "kind": "maven",
@@ -3759,14 +3759,14 @@
   "maven:androidx.media3:media3-session": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.10.1",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.media3:media3-transformer": {
    "kind": "maven",
@@ -3784,7 +3784,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.10.1",
    "scope": "catalog",
@@ -3796,14 +3796,14 @@
   "maven:androidx.media3:media3-ui-compose": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.10.1",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.media:media": {
    "kind": "maven",
@@ -3822,7 +3822,7 @@
     "ab_cloud-libs-shared/libs/bottomnav/build.gradle",
     "ab_cloud-libs-shared/libs/keyboard/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -3898,7 +3898,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-mail/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.4.0",
    "scope": "catalog",
@@ -3926,7 +3926,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-mail/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "2.6.1",
@@ -3940,7 +3940,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-mail/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "2.6.1",
@@ -3966,7 +3966,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-mail/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "2.6.1",
@@ -3991,7 +3991,7 @@
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-chat/libraries/@mattermost/secure-pdf-viewer/android/build.gradle",
     "ac_cloud-drive/app/build.gradle",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "1.1.0-alpha06",
@@ -4004,7 +4004,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "2.6.2",
    "scope": "catalog",
@@ -4017,7 +4017,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.2.0",
    "scope": "catalog",
@@ -4042,7 +4042,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-c3-webserver/src-tauri/gen/android/app/build.gradle.kts",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-nav/app/build.gradle",
     "ac_cloud-nix-on-droid/termux-shared/build.gradle",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
@@ -4070,7 +4070,7 @@
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-matrix/gradle/libs.versions.toml",
     "ac_cloud-me/app/build.gradle",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-myterminal/hub/build.gradle",
     "ac_cloud-nav/app/build.gradle",
     "ac_cloud-news/app/build.gradle",
@@ -4101,14 +4101,14 @@
   "maven:androidx.test.uiautomator:uiautomator": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "2.4.0",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[androidx]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:androidx.test:core": {
    "kind": "maven",
@@ -4285,7 +4285,7 @@
     "ac_cloud-keyboard/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-myterminal/hub/build.gradle",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -4415,7 +4415,7 @@
     "ac_cloud-chat/libraries/@mattermost/rnutils/android/build.gradle",
     "ac_cloud-chat/libraries/@mattermost/secure-pdf-viewer/android/build.gradle",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-nix-on-droid/build.gradle",
     "ac_cloud-notes/packages/frontend/apps/android/App/capacitor-cordova-android-plugins/build.gradle",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
@@ -4438,7 +4438,7 @@
     "ab_cloud-libs-shared/libs/keyboard/build.gradle",
     "ac_cloud-keyboard/app/build.gradle",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-nix-on-droid/app/build.gradle",
     "ac_cloud-nix-on-droid/termux-shared/build.gradle"
    ],
@@ -4548,50 +4548,50 @@
   "maven:com.caverock:androidsvg-aar": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.4",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 1.4",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.composables:core": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.49.9",
    "scope": "catalog",
    "licence": "MIT",
    "licence_source": "POM 1.49.9",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.drewnoakes:metadata-extractor": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "2.20.0",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 2.20.0",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.emc.ecs:nfs-client": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.1.0",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 1.1.0",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.facebook.fresco:animated-gif": {
    "kind": "maven",
@@ -4691,14 +4691,14 @@
   "maven:com.gemalto.jp2:jp2-android": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.0.3",
    "scope": "catalog",
    "licence": "NOASSERTION",
    "licence_source": "no POM found for com.gemalto.jp2:jp2-android:1.0.3 in curated.maven_repos",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.github.MuntashirAkon:libadb-android": {
    "kind": "maven",
@@ -4714,31 +4714,31 @@
   "maven:com.github.Tgo1014:JP2ForAndroid": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.0.4",
    "scope": "catalog",
    "licence": "BSD-2-Clause",
    "licence_source": "POM 1.0.4",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.github.awxkee:aire": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "0.18.1",
    "scope": "catalog",
    "licence": "MIT",
    "licence_source": "POM 0.18.1",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.github.bumptech.glide:compose": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "1.0.0-beta09",
@@ -4746,12 +4746,12 @@
    "licence": "BSD-2-Clause AND Apache-2.0",
    "licence_source": "POM 1.0.0-beta09",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.github.bumptech.glide:ksp": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "5.0.7",
@@ -4759,7 +4759,7 @@
    "licence": "BSD-2-Clause AND Apache-2.0",
    "licence_source": "POM 5.0.7",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.github.bumptech.glide:okhttp3-integration": {
    "kind": "maven",
@@ -4776,14 +4776,14 @@
   "maven:com.github.jens-muenker:fuzzywuzzy-kotlin": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.0.1",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 1.0.1",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.github.matrix-org:matrix-analytics-events": {
    "kind": "maven",
@@ -4837,20 +4837,20 @@
   "maven:com.google.accompanist:accompanist-drawablepainter": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "0.37.3",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 0.37.3",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.google.accompanist:accompanist-permissions": {
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "0.37.3",
    "scope": "catalog",
@@ -4903,7 +4903,7 @@
     "ac_cloud-contacts/app/build.gradle",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-me/app/build.gradle",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-myterminal/hub/build.gradle",
     "ac_cloud-nav/app/build.gradle",
     "ac_cloud-news/app/build.gradle",
@@ -4995,7 +4995,7 @@
   "maven:com.google.dagger:hilt-android": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -5004,12 +5004,12 @@
    "licence": "Apache-2.0",
    "licence_source": "POM 2.60",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.google.dagger:hilt-android-compiler": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -5018,7 +5018,7 @@
    "licence": "Apache-2.0",
    "licence_source": "POM 2.60",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.google.dagger:hilt-android-testing": {
    "kind": "maven",
@@ -5387,14 +5387,14 @@
   "maven:com.hierynomus:smbj": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "0.14.0",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 0.14.0",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.hierynomus:sshj": {
    "kind": "maven",
@@ -5436,14 +5436,14 @@
   "maven:com.microsoft.onnxruntime:onnxruntime-android": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.27.0",
    "scope": "catalog",
    "licence": "MIT",
    "licence_source": "POM 1.27.0",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.pinterest.ktlint:ktlint-cli": {
    "kind": "maven",
@@ -5485,7 +5485,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -5501,7 +5501,7 @@
    "declared_in": [
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/app/build.gradle",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -5518,7 +5518,7 @@
     "ab_cloud-libs-shared/libs/mounts/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -5569,20 +5569,20 @@
   "maven:com.squareup.retrofit2:converter-gson": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "3.0.0",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "curated.maven_group_licences[com.squareup]",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.squareup.retrofit2:converter-kotlinx-serialization": {
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "scope": "catalog",
@@ -5596,7 +5596,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "scope": "catalog",
@@ -5681,14 +5681,14 @@
   "maven:com.valentinilk.shimmer:compose-shimmer": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.4.0",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 1.4.0",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:com.vanniktech:blurhash": {
    "kind": "maven",
@@ -5718,7 +5718,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.7.2",
    "scope": "catalog",
@@ -5731,7 +5731,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.7.2",
    "scope": "catalog",
@@ -5935,158 +5935,158 @@
   "maven:io.github.awxkee:avif-coder-coil": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "2.2.1",
    "scope": "catalog",
    "licence": "Apache-2.0 AND BSD-3-Clause",
    "licence_source": "POM 2.2.1",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.awxkee:jxl-coder-coil": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "2.6.1",
    "scope": "catalog",
    "licence": "Apache-2.0 AND BSD-3-Clause",
    "licence_source": "POM 2.6.1",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.panpf.sketch4:sketch-animated-gif": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "4.6.0-alpha01",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 4.6.0-alpha01",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.panpf.sketch4:sketch-animated-heif": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "4.6.0-alpha01",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 4.6.0-alpha01",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.panpf.sketch4:sketch-animated-webp": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "4.6.0-alpha01",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 4.6.0-alpha01",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.panpf.sketch4:sketch-compose": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "4.6.0-alpha01",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 4.6.0-alpha01",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.panpf.sketch4:sketch-extensions-compose": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "4.6.0-alpha01",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 4.6.0-alpha01",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.panpf.sketch4:sketch-http-ktor3": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "4.6.0-alpha01",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 4.6.0-alpha01",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.panpf.sketch4:sketch-svg": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "4.6.0-alpha01",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 4.6.0-alpha01",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.panpf.sketch4:sketch-video": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "4.6.0-alpha01",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 4.6.0-alpha01",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.panpf.sketch4:sketch-view": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "4.6.0-alpha01",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 4.6.0-alpha01",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.panpf.zoomimage:zoomimage-compose-glide": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.6.0-alpha01",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 1.6.0-alpha01",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.panpf.zoomimage:zoomimage-compose-sketch4": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "1.6.0-alpha01",
    "scope": "catalog",
    "licence": "Apache-2.0",
    "licence_source": "POM 1.6.0-alpha01",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:io.github.sergio-sastre.ComposablePreviewScanner:android": {
    "kind": "maven",
@@ -6371,7 +6371,7 @@
    "declared_in": [
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml"
    ],
    "version": "4.13.2",
@@ -6420,14 +6420,14 @@
   "maven:mil.nga:tiff": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "3.0.0",
    "scope": "catalog",
    "licence": "MIT",
    "licence_source": "POM 3.0.0",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:net.java.dev.jna:jna": {
    "kind": "maven",
@@ -6458,7 +6458,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "4.16.0",
    "scope": "catalog",
@@ -6658,7 +6658,7 @@
    "kind": "maven",
    "declared_in": [
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "0.4.0",
@@ -6686,7 +6686,7 @@
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-drive/app/build.gradle",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-myterminal/hub/build.gradle",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-search/app/build.gradle",
@@ -6704,7 +6704,7 @@
     "ac_cloud-chat/android/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "1.7.3",
@@ -6732,7 +6732,7 @@
     "ab_cloud-libs-shared/libs/health/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
    "version": "1.8.1",
@@ -6769,7 +6769,7 @@
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml",
+    "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -6920,7 +6920,7 @@
    "declared_in": [
     "ab_cloud-libs-shared/libs/maps/build.gradle",
     "ac_cloud-matrix/gradle/libs.versions.toml",
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "11.7.0",
    "scope": "shipped",
@@ -6955,14 +6955,14 @@
   "maven:org.nanohttpd:nanohttpd": {
    "kind": "maven",
    "declared_in": [
-    "ac_cloud-media-center/gradle/libs.versions.toml"
+    "ac_cloud-gallery/gradle/libs.versions.toml"
    ],
    "version": "2.3.1",
    "scope": "catalog",
    "licence": "BSD-3-Clause",
    "licence_source": "POM 2.3.1",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
-   "within_upstream_module": "media-center"
+   "within_upstream_module": "gallery"
   },
   "maven:org.robolectric:robolectric": {
    "kind": "maven",

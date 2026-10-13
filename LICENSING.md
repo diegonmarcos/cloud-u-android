@@ -51,7 +51,7 @@ Limits of the inventory, stated so it is not read as more than it is:
 | `ac_cloud-vault` | GPL-3.0-only | Bitwarden Android fork (`LICENSE.txt`, `NOTICE.md`); ships the `fdroid` flavour (no Firebase/ML Kit/Play Billing, `ac_cloud-vault/build.json`) |
 | `ac_cloud-matrix` | AGPL-3.0-only OR Element commercial | Element X fork (`LICENSE`, `LICENSE-COMMERCIAL`) |
 | `ac_cloud-chat` | Apache-2.0 | Mattermost Mobile fork (`LICENSE.txt`, `NOTICE.txt`) |
-| `ac_cloud-media-center` | Apache-2.0 | ReFra/Gallery fork (`LICENSE`, `NOTICE.md`) |
+| `ac_cloud-gallery` | Apache-2.0 | ReFra/Gallery fork (`LICENSE`, `NOTICE.md`) |
 | `ac_cloud-camera` | MIT | GrapheneOS Camera fork (`LICENSE`) |
 | `ac_cloud-code` | MIT | Acode fork (`license.txt`); `codemirror-lsp-client/` MIT; some `src/plugins/*` carry their own licence files |
 | `ac_cloud-notes` | MIT | AFFiNE fork, MIT part only; the Enterprise-licensed dirs are pruned and `licence-guard.yml` keeps them out |
@@ -63,7 +63,7 @@ Limits of the inventory, stated so it is not read as more than it is:
 | ↳ `libs/gitsync` | GPL-3.0 | GitSync vendored (`LICENSE.md`, `VENDORED.md`); fonts: Atkinson Hyperlegible OFL-1.1, Roboto Mono Apache-2.0 |
 | ↳ `libs/firewall/firestack` | MPL-2.0 | celzero/firestack (`LICENSE`) |
 | ↳ `libs/net`, `libs/net-wg` | Apache-2.0 | wireguard-android `tunnel/` |
-| ↳ `libs/cropper`, `libs/gesture`, `libs/panoramaviewer`, `libs/scrollbar` | Apache-2.0 | from ReFra (media-center's upstream) |
+| ↳ `libs/cropper`, `libs/gesture`, `libs/panoramaviewer`, `libs/scrollbar` | Apache-2.0 | from ReFra (gallery's upstream) |
 | ↳ `libs/calc` native engine | GPL-3.0-or-later (as shipped) | statically links libqalculate (GPL-2.0-or-later), GMP, MPFR — `ac_cloud-calc/NOTICE.md` |
 | ↳ `libs/contacts/.../SocialImport.kt` | own (clean-room, #828) | the Fossify-derived port was deleted and rewritten clean-room: spec first (`a0_docs/eng-specs/social-import.md`, from the callers and the public LinkedIn/Instagram export formats), black-box tests against it, then a fresh implementation written without the original body |
 | ↳ every other `libs/*`, `lib-apks`, `keyboard-engines` | NoLicenseGranted (own) | `aa_cloud-superapp/build.json::upstreams` declares FairEmail, DAVx5, Feeder, KDE Connect and RethinkDNS as *reference* upstreams; `kde-connect` and `firewall` are stated clean-room. `libs/mail`, `libs/cal`, `libs/feed` carry no upstream header and were not measured against those projects |
@@ -95,7 +95,7 @@ what the owner wrote). Per-file detail: `licenses/provenance/<id>.tsv`.
 | camera | `ac_cloud-camera` | GrapheneOS Camera | MIT | 80ff01a955d3 | 85.6% | 129/80/20 of 229 | 31,441 / 5,269 |
 | lib-net | `ab_cloud-libs-shared/libs/net` | wireguard-android `tunnel/` | Apache-2.0 | **none recorded**; closest 1.0.20251231 (`a494c62bd9`, 17 identical files) | 88.7% | 17/2/3 of 22 | 2,391 / 304 |
 | mail | `ac_cloud-mail` | Sterna Mail | GPL-3.0-only | 6941b3ae50ef | 91.8% | 1058/117/96 of 1271 | 271,574 / 24,222 |
-| media-center | `ac_cloud-media-center` | ReFra (ex-Gallery) | Apache-2.0 | 5.1.1-51101-nightly | 94.5% | 197/984/33 of 1214 | 396,095 / 23,169 |
+| gallery | `ac_cloud-gallery` | ReFra (ex-Gallery) | Apache-2.0 | 5.1.1-51101-nightly | 94.5% | 197/984/33 of 1214 | 396,095 / 23,169 |
 | keyboard | `ab_cloud-libs-shared/libs/keyboard` | HeliBoard | GPL-3.0-only | **none recorded**; closest v4.0-alpha2-4-gf6d66644 (1306 identical files) | 95.3% | 1306/107/43 of 1456 | 138,622 / 6,785 |
 | code | `ac_cloud-code` | Acode | MIT | b7dbe3d69dcf | 99.2% | 1038/12/15 of 1065 | 213,632 / 1,750 |
 | lib-scrollbar | `ab_cloud-libs-shared/libs/scrollbar` | ReFra | Apache-2.0 | 5.1.1-51101-nightly | 99.3% | 2/5/0 of 7 | 698 / 5 |
@@ -148,7 +148,7 @@ So `libs/core` and `libs/devtools` already ship under GPL/AGPL inside five APKs,
 `libs/text-tools`, `libs/ml-l-image`, `libs/updater`, `libs/bottomnav`, `libs/analytics` inside
 one or two. That does not stop the owner from licensing the same source files differently in the
 own apps (as copyright holder), but every recipient of those GPL APKs is entitled to that source
-under the GPL. MIT/Apache apps (camera, code, notes, chat, media-center) impose no such effect.
+under the GPL. MIT/Apache apps (camera, code, notes, chat, gallery) impose no such effect.
 
 **PROPOSED (owner decides, #815):** license the own code under **PolyForm Noncommercial 1.0.0**
 (default proposal) or **Business Source License 1.1** (with a change date to an open licence),

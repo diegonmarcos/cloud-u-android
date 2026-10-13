@@ -8,7 +8,7 @@
  * Kit OCR) over a captured image's content Uri, off whatever thread the
  * caller chooses. It is deliberately a thin shell: the engine, the typed
  * payload parser and the failure vocabulary all live in the one shared
- * module that cloud-drive and cloud-media-center already compile in — a
+ * module that cloud-drive and cloud-gallery already compile in — a
  * private copy of the decode path is the exact defect #170/#261 this fleet
  * fixed, so there is none here.
  *

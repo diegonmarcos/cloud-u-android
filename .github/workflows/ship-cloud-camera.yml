@@ -8,7 +8,7 @@ name: "Ship → Cloud Camera APK (build + push to GHCR via ORAS + attach to GH R
 # app root with the package identity renamed app.grapheneos.camera → cld.camera
 # so this APK coexists with an officially-signed GrapheneOS Camera install.
 #
-# Shape is ship-cloud-media-center.yml minus the ABI matrix: GrapheneOS Camera
+# Shape is ship-cloud-gallery.yml minus the ABI matrix: GrapheneOS Camera
 # has NO native code (no externalNativeBuild, no JNI, no NDK), so one universal
 # APK covers every device and a build matrix would just publish duplicates.
 #

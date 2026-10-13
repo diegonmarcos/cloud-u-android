@@ -612,7 +612,7 @@ class InAppGallery : AppCompatActivity() {
      * wraps ImageScanEngine = ZXing barcode decode + ML Kit OCR). This is the
      * camera's natural visual trigger: a camera's captured image is the thing
      * meant to be read, and [ImageContentScanner] runs the same engine
-     * cloud-drive and cloud-media-center run — no private decode path here.
+     * cloud-drive and cloud-gallery run — no private decode path here.
      * Runs off the main thread on [asyncImageLoader] and reports the OCR text
      * and any decoded barcode, or the specific nothing-found/read-failed
      * reason — a silent empty box is the defect this fleet bans.

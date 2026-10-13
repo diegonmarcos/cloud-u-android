@@ -32,7 +32,7 @@ of these MUST share the single key above:
 
 Concretely: **every** `ac_cloud-*` app whose `build.json` declares
 `signing.vault_keystore` — 17 of them as of 2026-08-26, including their forks
-(mail/FairEmail, dialer/Fossify, ide, media-center, …). The list is not
+(mail/FairEmail, dialer/Fossify, ide, gallery, …). The list is not
 maintained here; it *is* the set of build.json files that declare the key:
 
 ```sh

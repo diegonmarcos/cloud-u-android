@@ -35,7 +35,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-mail | `com.diegonmarcos.comms.mail` | 8 | 1 | 88% |
 | cloud-matrix | `com.diegonmarcos.comms.matrix` | 1 | 9 | 10% |
 | cloud-me | `com.diegonmarcos.cloudme` | 3 | 0 | 100% |
-| cloud-media-center | `com.diegonmarcos.mediacenter` | 4 | 1 | 80% |
+| cloud-gallery | `com.diegonmarcos.mediacenter` | 4 | 1 | 80% |
 | cloud-myterminal | `com.diegonmarcos.ide` | 6 | 0 | 100% |
 | cloud-nav | `com.diegonmarcos.cloudnav` | 10 | 0 | 100% |
 | cloud-news | `com.diegonmarcos.cloudnews` | 3 | 1 | 75% |
@@ -516,7 +516,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetco
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
 | `body_cache_upgrade` | prefs | device | no | Sterna purge-once migration marker (purgedForVersion). |
 | `cloud_image_recognition` | prefs | config | yes | Chosen image recognition route (on-device vs openrouter) and decision model. |
-| `datastore:settings` | datastore | config (keys: album_last_sort_obj→device, album_last_view_obj→device, album_media_sort_obj→device, forced_last_screen→device, has_primed_contacts→device, has_seen_welcome→device, header_banner_dismissed→device, last_screen→device, last_seen_version→device, search_history_v2→content, setup_completed_version→device) | GAP | Mail (sterna) settings: theme, density, swipe actions, signature, PGP provider, notification content, quiet hours, image allowlist, RSS feeds. Same file name used by media-center. |
+| `datastore:settings` | datastore | config (keys: album_last_sort_obj→device, album_last_view_obj→device, album_media_sort_obj→device, forced_last_screen→device, has_primed_contacts→device, has_seen_welcome→device, header_banner_dismissed→device, last_screen→device, last_seen_version→device, search_history_v2→content, setup_completed_version→device) | GAP | Mail (sterna) settings: theme, density, swipe actions, signature, PGP provider, notification content, quiet hours, image allowlist, RSS feeds. Same file name used by gallery. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `list_view` | prefs | config | yes | Mail list view choices per account and folder (key account\|folder): group mode (subject, sender, none), rank (newest, sender, subject) and the combinable filters (starred, unread, attachments, codes), stored as group;rank;FILTERS. Unset means the global conversation-view and sort settings apply. |
@@ -599,24 +599,24 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-databack
 
 Coverage: 3 covered, 0 gaps.
 
-## cloud-media-center — `com.diegonmarcos.mediacenter`
+## cloud-gallery — `com.diegonmarcos.mediacenter`
 
-Module `ac_cloud-media-center`; libs: lib-analytics, lib-core, lib-cropper, lib-devtools, lib-fleetconfig-model, lib-gesture, lib-ml-l-image, lib-panoramaviewer, lib-scrollbar.
+Module `ac_cloud-gallery`; libs: lib-analytics, lib-core, lib-cropper, lib-devtools, lib-fleetconfig-model, lib-gesture, lib-ml-l-image, lib-panoramaviewer, lib-scrollbar.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `cloud_image_recognition` | prefs | config | yes | Chosen image recognition route (on-device vs openrouter) and decision model. |
-| `datastore:settings` | datastore | config (keys: album_last_sort_obj→device, album_last_view_obj→device, album_media_sort_obj→device, forced_last_screen→device, has_primed_contacts→device, has_seen_welcome→device, header_banner_dismissed→device, last_screen→device, last_seen_version→device, search_history_v2→content, setup_completed_version→device) | GAP | Mail (sterna) settings: theme, density, swipe actions, signature, PGP provider, notification content, quiet hours, image allowlist, RSS feeds. Same file name used by media-center. |
+| `datastore:settings` | datastore | config (keys: album_last_sort_obj→device, album_last_view_obj→device, album_media_sort_obj→device, forced_last_screen→device, has_primed_contacts→device, has_seen_welcome→device, header_banner_dismissed→device, last_screen→device, last_seen_version→device, search_history_v2→content, setup_completed_version→device) | GAP | Mail (sterna) settings: theme, density, swipe actions, signature, PGP provider, notification content, quiet hours, image allowlist, RSS feeds. Same file name used by gallery. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `encrypted_datastore_flags` | prefs | device | no | Migration-done flag for the encrypted DataStore. |
 | `encrypted_db_prefs` | prefs | device | no | Keystore-wrapped DB passphrase and encryption/migration flags; bound to this device's Keystore, cannot be moved. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `gallery_widget_prefs` | prefs | device | no | Per-appWidgetId widget media URI lists; widget ids and content URIs are tied to this install. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
-| `room:InternalDatabase` | room | content | no | Media-center encrypted gallery database: media metadata, albums, favorites, vault index; user data and keyed to this device's Keystore. |
-| `security_flags` | prefs | device | no | media-center flag whether DB is currently encrypted; install state. |
-| `ui_settings` | prefs | config | yes | media-center UI cell/grid size choices for albums and timeline. |
+| `room:InternalDatabase` | room | content | no | Gallery encrypted gallery database: media metadata, albums, favorites, vault index; user data and keyed to this device's Keystore. |
+| `security_flags` | prefs | device | no | gallery flag whether DB is currently encrypted; install state. |
+| `ui_settings` | prefs | config | yes | gallery UI cell/grid size choices for albums and timeline. |
 | `vault_cleanup_prefs` | prefs | device | no | One-shot legacy_filesdir_cleanup_done migration marker. |
 
 | file | class | doc |

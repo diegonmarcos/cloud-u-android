@@ -771,10 +771,10 @@
     "datastore:settings": {
       "kind": "datastore",
       "class": "config",
-      "doc": "Mail (sterna) settings: theme, density, swipe actions, signature, PGP provider, notification content, quiet hours, image allowlist, RSS feeds. Same file name used by media-center.",
+      "doc": "Mail (sterna) settings: theme, density, swipe actions, signature, PGP provider, notification content, quiet hours, image allowlist, RSS feeds. Same file name used by gallery.",
       "used_by": [
         "ac_cloud-mail",
-        "ac_cloud-media-center"
+        "ac_cloud-gallery"
       ],
       "keys": {
         "album_last_sort_obj": "device",
@@ -818,7 +818,7 @@
       "class": "device",
       "doc": "Migration-done flag for the encrypted DataStore.",
       "used_by": [
-        "ac_cloud-media-center"
+        "ac_cloud-gallery"
       ]
     },
     "encrypted_db_prefs": {
@@ -826,7 +826,7 @@
       "class": "device",
       "doc": "Keystore-wrapped DB passphrase and encryption/migration flags; bound to this device's Keystore, cannot be moved.",
       "used_by": [
-        "ac_cloud-media-center"
+        "ac_cloud-gallery"
       ]
     },
     "events_cache": {
@@ -908,7 +908,7 @@
       "class": "device",
       "doc": "Per-appWidgetId widget media URI lists; widget ids and content URIs are tied to this install.",
       "used_by": [
-        "ac_cloud-media-center"
+        "ac_cloud-gallery"
       ]
     },
     "gh_feed_cache": {
@@ -1359,9 +1359,9 @@
     "room:InternalDatabase": {
       "kind": "room",
       "class": "content",
-      "doc": "Media-center encrypted gallery database: media metadata, albums, favorites, vault index; user data and keyed to this device's Keystore.",
+      "doc": "Gallery encrypted gallery database: media metadata, albums, favorites, vault index; user data and keyed to this device's Keystore.",
       "used_by": [
-        "ac_cloud-media-center"
+        "ac_cloud-gallery"
       ]
     },
     "room:PasswordHistoryDatabase": {
@@ -1423,9 +1423,9 @@
     "security_flags": {
       "kind": "prefs",
       "class": "device",
-      "doc": "media-center flag whether DB is currently encrypted; install state.",
+      "doc": "gallery flag whether DB is currently encrypted; install state.",
       "used_by": [
-        "ac_cloud-media-center"
+        "ac_cloud-gallery"
       ]
     },
     "stack_filters": {
@@ -1540,9 +1540,9 @@
     "ui_settings": {
       "kind": "prefs",
       "class": "config",
-      "doc": "media-center UI cell/grid size choices for albums and timeline.",
+      "doc": "gallery UI cell/grid size choices for albums and timeline.",
       "used_by": [
-        "ac_cloud-media-center"
+        "ac_cloud-gallery"
       ]
     },
     "unifiedpush_state": {
@@ -1586,7 +1586,7 @@
       "class": "device",
       "doc": "One-shot legacy_filesdir_cleanup_done migration marker.",
       "used_by": [
-        "ac_cloud-media-center"
+        "ac_cloud-gallery"
       ]
     },
     "vault_cockpit": {
@@ -1941,7 +1941,7 @@
       "store": "datastore:session_<hash>_preferences",
       "why": "factory scope param; session preferences"
     },
-    "serializer@ac_cloud-media-center/app/src/main/kotlin/com/diegonmarcos/mediacenter/core/encryption/EncryptedDataStoreProvider.kt": {
+    "serializer@ac_cloud-gallery/app/src/main/kotlin/com/diegonmarcos/mediacenter/core/encryption/EncryptedDataStoreProvider.kt": {
       "store": "datastore:settings",
       "why": "EncryptedDataStoreProvider wraps the same 'settings' Preferences DataStore with an encrypting serializer; keys already covered"
     },
@@ -2607,9 +2607,9 @@
         }
       ]
     },
-    "media-center": {
+    "gallery": {
       "package": "com.diegonmarcos.mediacenter",
-      "module": "ac_cloud-media-center",
+      "module": "ac_cloud-gallery",
       "schema_version": 1,
       "libs": [
         "lib-analytics",

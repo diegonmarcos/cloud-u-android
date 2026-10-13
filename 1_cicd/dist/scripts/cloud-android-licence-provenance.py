@@ -50,7 +50,7 @@ def resolve_pin(root, m):
         return m["repo"], m.get("ref", ""), "licenses/upstreams.json"
     path, key = m["pin_from"].split("#", 1)
     o = json.load(open(os.path.join(root, path)))
-    # keys contain '-' (forks.media-center) but never '.', so split on '.' is safe
+    # keys contain '-' (forks.gallery) but never '.', so split on '.' is safe
     for k in key.split("."):
         o = o[k]
     repo = next(o[k] for k in REPO_KEYS if o.get(k))

@@ -279,7 +279,7 @@ PYWASM
 # projectDir from settings.gradle.kts, and ab_cloud-libs-shared/lib-apks
 # legitimately builds EVERY shared module — an input set no map expresses. A
 # derivation that replaced the block silently deleted five real triggers from
-# media-center on its first run, which is the exact failure mode (a workflow
+# gallery on its first run, which is the exact failure mode (a workflow
 # watching nothing real never runs and reports no error) this section exists
 # to prevent.
 #

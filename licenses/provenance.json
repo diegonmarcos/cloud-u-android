@@ -265,10 +265,10 @@
       "measured_sha": "a0df1bd0e8dda309d66b6021209cc2e496d3e809",
       "path": "ab_cloud-libs-shared/libs/cropper",
       "pin": "5.1.1-51101-nightly",
-      "pin_source": "ac_cloud-media-center/build.json#forks.media-center",
+      "pin_source": "ac_cloud-gallery/build.json#forks.gallery",
       "repo": "https://github.com/IacobIonut01/ReFra.git",
       "tree_measured_at": "fe93fb7c4",
-      "upstream": "ReFra libs/cropper (media-center's upstream)",
+      "upstream": "ReFra libs/cropper (gallery's upstream)",
       "upstream_files_not_in_tree": 0,
       "upstream_licence": "Apache-2.0"
     },
@@ -294,10 +294,10 @@
       "measured_sha": "a0df1bd0e8dda309d66b6021209cc2e496d3e809",
       "path": "ab_cloud-libs-shared/libs/gesture",
       "pin": "5.1.1-51101-nightly",
-      "pin_source": "ac_cloud-media-center/build.json#forks.media-center",
+      "pin_source": "ac_cloud-gallery/build.json#forks.gallery",
       "repo": "https://github.com/IacobIonut01/ReFra.git",
       "tree_measured_at": "fe93fb7c4",
-      "upstream": "ReFra libs/gesture (media-center's upstream)",
+      "upstream": "ReFra libs/gesture (gallery's upstream)",
       "upstream_files_not_in_tree": 0,
       "upstream_licence": "Apache-2.0"
     },
@@ -391,10 +391,10 @@
       "measured_sha": "a0df1bd0e8dda309d66b6021209cc2e496d3e809",
       "path": "ab_cloud-libs-shared/libs/panoramaviewer",
       "pin": "5.1.1-51101-nightly",
-      "pin_source": "ac_cloud-media-center/build.json#forks.media-center",
+      "pin_source": "ac_cloud-gallery/build.json#forks.gallery",
       "repo": "https://github.com/IacobIonut01/ReFra.git",
       "tree_measured_at": "fe93fb7c4",
-      "upstream": "ReFra libs/panoramaviewer (media-center's upstream)",
+      "upstream": "ReFra libs/panoramaviewer (gallery's upstream)",
       "upstream_files_not_in_tree": 0,
       "upstream_licence": "Apache-2.0"
     },
@@ -420,10 +420,10 @@
       "measured_sha": "a0df1bd0e8dda309d66b6021209cc2e496d3e809",
       "path": "ab_cloud-libs-shared/libs/scrollbar",
       "pin": "5.1.1-51101-nightly",
-      "pin_source": "ac_cloud-media-center/build.json#forks.media-center",
+      "pin_source": "ac_cloud-gallery/build.json#forks.gallery",
       "repo": "https://github.com/IacobIonut01/ReFra.git",
       "tree_measured_at": "fe93fb7c4",
-      "upstream": "ReFra libs/scrollbar (media-center's upstream)",
+      "upstream": "ReFra libs/scrollbar (gallery's upstream)",
       "upstream_files_not_in_tree": 0,
       "upstream_licence": "Apache-2.0"
     },
@@ -485,7 +485,7 @@
       "upstream_files_not_in_tree": 33,
       "upstream_licence": "AGPL-3.0-only OR LicenseRef-Element-Commercial"
     },
-    "media-center": {
+    "gallery": {
       "detected_base": null,
       "files": {
         "modified": 984,
@@ -505,9 +505,9 @@
       },
       "measured_on": "2026-10-03",
       "measured_sha": "a0df1bd0e8dda309d66b6021209cc2e496d3e809",
-      "path": "ac_cloud-media-center",
+      "path": "ac_cloud-gallery",
       "pin": "5.1.1-51101-nightly",
-      "pin_source": "ac_cloud-media-center/build.json#forks.media-center",
+      "pin_source": "ac_cloud-gallery/build.json#forks.gallery",
       "repo": "https://github.com/IacobIonut01/ReFra.git",
       "tree_measured_at": "fe93fb7c4",
       "upstream": "ReFra (ex-Gallery by IacobIonut01)",

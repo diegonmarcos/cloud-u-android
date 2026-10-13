@@ -15,13 +15,13 @@
   },
   "category": "android",
   "mode": "single-app",
-  "_doc_mode": "Hub-less single-fork app, exactly like ac_cloud-media-center: there is no hub module and no IPC contract — the single forks.<key> entry IS the app, built through the engine's step_build_fork machinery.",
+  "_doc_mode": "Hub-less single-fork app, exactly like ac_cloud-gallery: there is no hub module and no IPC contract — the single forks.<key> entry IS the app, built through the engine's step_build_fork machinery.",
   "build": {
     "type": "gradle",
     "entry": "build.sh"
   },
   "modules": {
-    "_doc": "Task #461 — the ONE shared image-scan engine (ZXing barcode decode + ML Kit OCR + typed-payload parsing), consumed BY REFERENCE from ab_cloud-libs-shared exactly like cloud-drive and cloud-media-center. Declared here so the ship workflow watches it and the publish gate hashes it: a fix to the shared engine must trigger a camera rebuild, not silently ride along or skip one.",
+    "_doc": "Task #461 — the ONE shared image-scan engine (ZXing barcode decode + ML Kit OCR + typed-payload parsing), consumed BY REFERENCE from ab_cloud-libs-shared exactly like cloud-drive and cloud-gallery. Declared here so the ship workflow watches it and the publish gate hashes it: a fix to the shared engine must trigger a camera rebuild, not silently ride along or skip one.",
     "libs:ml-l-image": {
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/ml-l-image"
@@ -62,7 +62,7 @@
     "_doc_version": "version_name mirrors upstream's release tag ('93'); app/build.gradle.kts reads it. version_code is the DECLARED code the fleet manifest carries; the APK's own versionCode is the fleet build stamp (#789: 3,000,000 + minutes since 2026-01-01), because a constant 93 never moved across our builds.",
     "abi_filters": []
   },
-  "_doc_abi_filters": "EMPTY ON PURPOSE. GrapheneOS Camera has no native code (no externalNativeBuild, no JNI) so it produces ONE universal APK that runs on every ABI — unlike ac_cloud-media-center, which needs an ABI build matrix because ReFra compiles libheif/libde265.",
+  "_doc_abi_filters": "EMPTY ON PURPOSE. GrapheneOS Camera has no native code (no externalNativeBuild, no JNI) so it produces ONE universal APK that runs on every ABI — unlike ac_cloud-gallery, which needs an ABI build matrix because ReFra compiles libheif/libde265.",
   "signing": {
     "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks (OU=Cloud Constellation) + A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml.",
     "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
@@ -70,7 +70,7 @@
   },
   "forks": {
     "camera": {
-      "_doc": "Plural 'forks.<key>' map — same shape as ac_cloud-media-center/build.json::forks.'media-center'. Exactly one key because this app IS the fork (no separate thin hub), matching top-level mode:'single-app'.",
+      "_doc": "Plural 'forks.<key>' map — same shape as ac_cloud-gallery/build.json::forks.'gallery'. Exactly one key because this app IS the fork (no separate thin hub), matching top-level mode:'single-app'.",
       "upstream_repo": "https://github.com/GrapheneOS/Camera.git",
       "tracker_dir": "ac_cloud-camera",
       "tracker_dir_note": "VENDORED: the upstream tree sits at the app root (no .git), so materialize-fork returns early and build-fork uses the committed source as-is. upstream_repo/pinned_tag/pinned_commit are provenance; re-vendoring means cloning a newer tag by hand and re-applying the cld.camera rename.",
@@ -93,7 +93,7 @@
     }
   },
   "release": {
-    "_doc": "Per-APK distribution, same data-driven pattern as ac_cloud-media-center::release. {sha} → git short sha, {version_name} → android.version_name.",
+    "_doc": "Per-APK distribution, same data-driven pattern as ac_cloud-gallery::release. {sha} → git short sha, {version_name} → android.version_name.",
     "artifact": {
       "debug": "Cloud-Camera-debug.apk",
       "release": "Cloud-Camera.apk"

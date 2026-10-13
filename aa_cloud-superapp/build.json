@@ -474,7 +474,7 @@
           "target": "action:open_camera"
         },
         {
-          "_doc": "Opens the DCIM/Screenshots folder directly (DocumentsUI tree URI — vendor-neutral, no root). Was 'Gallery'→media-center; the full gallery keeps its own Data Apps tile.",
+          "_doc": "Opens the DCIM/Screenshots folder directly (DocumentsUI tree URI — vendor-neutral, no root). Was 'Gallery'→gallery; the full gallery keeps its own Data Apps tile.",
           "label": "Screenshots",
           "target": "action:open_screenshots"
         },
@@ -555,7 +555,7 @@
       {
         "id": "right",
         "edge": "right",
-        "_doc_order": "THE OWNER'S SECOND BLOCK, 2026-09-10: Brave / Me / Media Center / Camera / Translator Google / Google Maps, read top to bottom. Six names for seven sectors because `center` is not one of them: a straight-in swipe is Back on BOTH handles and always has been, so the six travel down the remaining sectors in declared order — top_outer, top, top_middle, (center=back), down_middle, down, down_outer. Media Center appears HERE and only here; the first block's fifth entry is cloud-drive, which the owner corrected in a follow-up message after writing 'cloud media center' by mistake. test-onehand-edge-order.sh pins both facts, because the message a future agent finds in the history is the uncorrected one.",
+        "_doc_order": "THE OWNER'S SECOND BLOCK, 2026-09-10: Brave / Me / Gallery / Camera / Translator Google / Google Maps, read top to bottom. Six names for seven sectors because `center` is not one of them: a straight-in swipe is Back on BOTH handles and always has been, so the six travel down the remaining sectors in declared order — top_outer, top, top_middle, (center=back), down_middle, down, down_outer. Gallery appears HERE and only here, as app:com.diegonmarcos.mediacenter — the cloud-gallery app, whose applicationId kept its old media-center spelling through the 2026-10 rename, so this target did not change while the picker label did. The first block's fifth entry is cloud-drive, which the owner corrected in a follow-up message after writing 'cloud gallery' by mistake. test-onehand-edge-order.sh pins both facts, because the message a future agent finds in the history is the uncorrected one.",
         "position_pct": 50,
         "gestures": {
           "top_outer": "app:com.brave.browser",
@@ -570,7 +570,7 @@
       {
         "id": "left",
         "edge": "left",
-        "_doc_order": "THE OWNER'S FIRST BLOCK, 2026-09-10: AI Claude / Mail / Instagram / Whatsapp Business / Drive / Gemini, read top to bottom, over the same six non-center sectors the right handle uses. AI Claude moved from down_outer (the last slot, where tasks #111 and #127 put it) to top_outer (the first) — that move is what identifies this block as the LEFT menu rather than the right one. Its target string did NOT change and must not: it is the working Telegram-bot URI documented below. Drive is app:com.diegonmarcos.clouddrive — task 302/304 lifted the SuperApp's own Drive section out into a real Android application, so there IS one to launch now, and the sector points at the package rather than at a section that no longer exists. The media centre remains the right handle's business.",
+        "_doc_order": "THE OWNER'S FIRST BLOCK, 2026-09-10: AI Claude / Mail / Instagram / Whatsapp Business / Drive / Gemini, read top to bottom, over the same six non-center sectors the right handle uses. AI Claude moved from down_outer (the last slot, where tasks #111 and #127 put it) to top_outer (the first) — that move is what identifies this block as the LEFT menu rather than the right one. Its target string did NOT change and must not: it is the working Telegram-bot URI documented below. Drive is app:com.diegonmarcos.clouddrive — task 302/304 lifted the SuperApp's own Drive section out into a real Android application, so there IS one to launch now, and the sector points at the package rather than at a section that no longer exists. The gallery remains the right handle's business.",
         "position_pct": 50,
         "gestures": {
           "top_outer": "action:intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end",
@@ -654,7 +654,7 @@
         "package": "com.diegonmarcos.cloudme"
       },
       {
-        "label": "cloud-media-center",
+        "label": "cloud-gallery",
         "package": "com.diegonmarcos.mediacenter"
       },
       {
@@ -2695,11 +2695,11 @@
                 "target": "extapp:cloud-office"
               },
               {
-                "_doc": "Cloud Media Center — our Google-Photos/Samsung-Gallery replacement (local gallery + PhotoPrism cloud library + backup). Registered in ui.external_apps[cloud-media-center]; this tile is what makes it VISIBLE in the launcher — an external_apps entry alone only makes an app installable/openable BY ID and shows nothing. The former sibling 'photos' tile (app://com.google.android.apps.photos) was removed 2026-08-30 now that this one ships a green APK — Media Center is the sole photo entry point.",
-                "id": "mediacenter",
-                "label": "Media Center",
+                "_doc": "Gallery — the Data Apps tile for cloud-gallery (ac_cloud-gallery, applicationId com.diegonmarcos.mediacenter), our Google-Photos/Samsung-Gallery replacement (local gallery + PhotoPrism cloud library + backup). Registered in ui.external_apps[cloud-gallery]; this tile is what makes it VISIBLE in the launcher — an external_apps entry alone only makes an app installable/openable BY ID and shows nothing. The app was called cloud-media-center until 2026-10 and this tile's id was mediacenter; both were renamed to gallery so that the name cloud-media-center could go to the new Tauri media app (ac_cloud-media-center, com.diegonmarcos.cloudmediacenter). The applicationId did NOT change, because the app is installed on phones and a new package id would be a different app to Android. The former sibling 'photos' tile (app://com.google.android.apps.photos) was removed 2026-08-30 — Gallery is the sole photo entry point.",
+                "id": "gallery",
+                "label": "Gallery",
                 "icon": "ic_photos",
-                "target": "extapp:cloud-media-center"
+                "target": "extapp:cloud-gallery"
               },
               {
                 "id": "music",
@@ -2767,7 +2767,7 @@
                 "target": "extapp:cloud-nav"
               },
               {
-                "_doc": "Camera — the fleet's OWN camera (ac_cloud-camera, applicationId cld.camera, our signed build of GrapheneOS Camera), not a third-party one. The owner asked for it 'as last' in this row on 2026-09-10, and LAST HERE IS ARRAY POSITION: GroupedTilesFragment walks group.tiles in declared order and applies no sort of any kind, so appending is what makes it last and reordering this array is the only way to move it. There is no `order` field to set and none is wanted — a second way to express position is a second thing to disagree with the first. target=extapp:cloud-camera → MainActivity.launchExternalApp opens cld.camera if installed, else downloads + installs ui.external_apps[id=cloud-camera].install_apk_url. icon ic_camera is its own drawable rather than ic_photos, which the Media Center tile already carries; Sections.iconResFor falls back to ic_link_tile without complaining when a name resolves to nothing, so a shared or misspelt icon is a silent defect and test-camera-tiles.sh pins the file's existence.",
+                "_doc": "Camera — the fleet's OWN camera (ac_cloud-camera, applicationId cld.camera, our signed build of GrapheneOS Camera), not a third-party one. The owner asked for it 'as last' in this row on 2026-09-10, and LAST HERE IS ARRAY POSITION: GroupedTilesFragment walks group.tiles in declared order and applies no sort of any kind, so appending is what makes it last and reordering this array is the only way to move it. There is no `order` field to set and none is wanted — a second way to express position is a second thing to disagree with the first. target=extapp:cloud-camera → MainActivity.launchExternalApp opens cld.camera if installed, else downloads + installs ui.external_apps[id=cloud-camera].install_apk_url. icon ic_camera is its own drawable rather than ic_photos, which the Gallery tile already carries; Sections.iconResFor falls back to ic_link_tile without complaining when a name resolves to nothing, so a shared or misspelt icon is a silent defect and test-camera-tiles.sh pins the file's existence.",
                 "id": "camera",
                 "label": "Camera",
                 "icon": "ic_camera",
@@ -6145,7 +6145,7 @@
         "title": "Cloud Apps",
         "group": "Dev",
         "include_constellation": true,
-        "_doc": "The constellation fleet's REAL apps (superapp, browser, vault, wallet, nav, ide, office, media-center, drive, comms.*, cld.* …) — each declared kind=app in its own build.json::release.kind. Driven from the CENTRAL classification (data/regen.sh → constellation-fleet.json → BuildConfig.CONSTELLATION_FLEET_B64) by the fleet_kind rule, NOT a hand-maintained package list: a new app that declares kind=app lands here and in nothing else, and a library reclassified lib leaves automatically. THIS FOLDER'S ENTIRE CONTENT IS THE FLEET'S OWN APKS, so on the merged Suite→Phone page it declares include_constellation: true — it is the EXCEPTION to that page's master exclusion that drops constellation packages, and the flag lets it see the full list while every other smart folder still filters them out. Declared here next to the folder, never hardcoded by id in Kotlin.",
+        "_doc": "The constellation fleet's REAL apps (superapp, browser, vault, wallet, nav, ide, office, gallery, drive, comms.*, cld.* …) — each declared kind=app in its own build.json::release.kind. Driven from the CENTRAL classification (data/regen.sh → constellation-fleet.json → BuildConfig.CONSTELLATION_FLEET_B64) by the fleet_kind rule, NOT a hand-maintained package list: a new app that declares kind=app lands here and in nothing else, and a library reclassified lib leaves automatically. THIS FOLDER'S ENTIRE CONTENT IS THE FLEET'S OWN APKS, so on the merged Suite→Phone page it declares include_constellation: true — it is the EXCEPTION to that page's master exclusion that drops constellation packages, and the flag lets it see the full list while every other smart folder still filters them out. Declared here next to the folder, never hardcoded by id in Kotlin.",
         "rule": {
           "type": "fleet_kind",
           "values": [
@@ -8283,13 +8283,13 @@
         "forks": {}
       },
       {
-        "_doc": "Cloud Media Center — standalone gallery app (ac_cloud-media-center), a Google-Photos/Samsung-Gallery replacement: on-device MediaStore gallery + PhotoPrism cloud library (WebDAV) + camera-roll auto-backup, plus YouTube (NewPipeExtractor) and mirrored-Instagram profiles. Single-app fork (forkless), so extapp:cloud-media-center resolves straight to hub_package. NOT YET SHIPPED: ac_cloud-media-center has no build engine/CI wired yet (ship-cloud-media-center.yml EXISTS at 1_cicd/src/cicd/ but is not yet regenerated into .github/workflows/, and no build.sh engine exists for the app yet, so nothing builds; no release published), so install_apk_url below is the intended rolling-latest location mirrored from release.gh_release.asset_name but currently 404s until CI produces an artifact. Do not treat this URL as live.",
-        "id": "cloud-media-center",
+        "_doc": "Cloud Gallery — standalone gallery app (ac_cloud-gallery, applicationId com.diegonmarcos.mediacenter), a Google-Photos/Samsung-Gallery replacement: on-device MediaStore gallery + PhotoPrism cloud library (WebDAV) + camera-roll auto-backup, plus YouTube (NewPipeExtractor) and mirrored-Instagram profiles. Single-app fork (forkless), so extapp:cloud-gallery resolves straight to hub_package. Built and published by ship-cloud-gallery.yml as cloud-gallery.apk (arm64) and cloud-gallery-x86_64.apk on the rolling latest release. RENAMED 2026-10 from cloud-media-center (directory, workflow, release assets, GHCR image, fork key and extapp id all moved); hub_package/install_package keep the original applicationId on purpose, so phones that already have it installed see the same app and update it in place. The name cloud-media-center now belongs to a different app, the Tauri media hub (ui.external_apps[cloud-media-center]).",
+        "id": "cloud-gallery",
         "service": "photoprism_app",
         "folder": "media_video",
         "hub_package": "com.diegonmarcos.mediacenter",
         "install_package": "com.diegonmarcos.mediacenter",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-media-center.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-gallery.apk",
         "forks": {}
       },
       {

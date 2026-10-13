@@ -2002,7 +2002,7 @@ class CamConfig(private val mActivity: MainActivity) {
             mActivity.scheduleNoBarcodeHint()
             // Idle visibility, not a hardcoded INVISIBLE: on the main camera screen the circle is
             // already gone, and INVISIBLE would re-reserve its 96dp and open a blank gap above the
-            // Media Center buttons for as long as the scanner is up.
+            // Gallery buttons for as long as the scanner is up.
             mActivity.thirdOption.visibility = mActivity.thirdOptionIdleVisibility
 
             if (scanAllCodes) {

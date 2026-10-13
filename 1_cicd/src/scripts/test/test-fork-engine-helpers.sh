@@ -4,7 +4,7 @@
 #
 # Proves the fork-engine's hub-vs-hub-less branching is purely data-driven
 # from build.json (never app-name based):
-#   - a hub-less fixture (build.json::mode=="single-app", media-center shape)
+#   - a hub-less fixture (build.json::mode=="single-app", gallery shape)
 #     must resolve gradle task / apk path / launcher activity WITHOUT any
 #     ":hub:" or "com.diegonmarcos.comms" literal.
 #   - a hub-based fixture (mail shape, no "mode" key) must still resolve the
@@ -60,15 +60,15 @@ run_in_fixture() {
   )
 }
 
-echo "== hub-less fixture (media-center shape) =="
+echo "== hub-less fixture (gallery shape) =="
 HUBLESS_JSON='{
-  "name": "cloud-media-center",
+  "name": "cloud-gallery",
   "mode": "single-app",
   "launcher_activity": "com.diegonmarcos.mediacenter.MainActivity",
   "android": { "application_id": "com.diegonmarcos.mediacenter" },
-  "release": { "artifact": { "debug": "cloud-media-center-debug.apk", "release": "cloud-media-center.apk" } },
+  "release": { "artifact": { "debug": "cloud-gallery-debug.apk", "release": "cloud-gallery.apk" } },
   "forks": {
-    "media-center": {
+    "gallery": {
       "upstream_repo": "https://github.com/IacobIonut01/ReFra.git",
       "tracker_dir": "ac_upstreams-sources/media-refra",
       "pinned_tag": "5.1.1-51101-nightly",
@@ -86,7 +86,7 @@ out="$(run_in_fixture "$HUBLESS_JSON" '
 ')"
 eval "$out"
 assert_eq "hub-less: _is_hubless true" "yes" "$is_hubless"
-assert_eq "hub-less: single fork key" "media-center" "$key"
+assert_eq "hub-less: single fork key" "gallery" "$key"
 assert_not_contains "hub-less: gradle task has no :hub:" ":hub:" "$gradle_task"
 assert_eq "hub-less: gradle task is the fork's own" "assembleArm64V8aNoMLRelease" "$gradle_task"
 assert_not_contains "hub-less: launcher activity is not comms hub's" "com.diegonmarcos.comms" "$launcher"

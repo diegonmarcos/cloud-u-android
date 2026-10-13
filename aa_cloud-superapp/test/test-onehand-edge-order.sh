@@ -8,11 +8,11 @@
 #   1. ORDER IS THE WHOLE TASK. A test that checks all twelve targets are
 #      PRESENT passes while the sequence — the only thing he asked to change —
 #      is wrong. Every assertion here is by position.
-#   2. THE CORRECTION HE SENT SECOND. He wrote "Drive (cloud media center)" and
-#      then corrected it to "Drive (is cloud-drive, not cloud-media-center)".
+#   2. THE CORRECTION HE SENT SECOND. He wrote "Drive (cloud gallery)" and
+#      then corrected it to "Drive (is cloud-drive, not cloud-gallery)".
 #      The message a future agent finds first in the history is the WRONG one,
 #      so the correction has to live here as a permanent guard: Drive is the
-#      SuperApp's own Drive section, and the media centre appears exactly once,
+#      SuperApp's own Drive section, and the gallery appears exactly once,
 #      on the other handle.
 #   3. A SLOT THAT LOOKS FINE AND DOES NOTHING. An edge sector holding a target
 #      no dispatcher understands is a dead slot: the owner swipes and the phone
@@ -102,7 +102,7 @@ RIGHT_ORDER=$(q "print('|'.join(h['right']['gestures'][k] for k in
   ('top_outer','top','top_middle','down_middle','down','down_outer')))")
 RIGHT_WANT='app:com.brave.browser|app:com.diegonmarcos.cloudme|app:com.diegonmarcos.mediacenter|app:cld.camera|app:com.google.android.apps.translate|app:com.google.android.apps.maps'
 if [ "$RIGHT_ORDER" = "$RIGHT_WANT" ]; then
-  ok "right = Brave · Me · Media Center · Camera · Translator Google · Google Maps, by position"
+  ok "right = Brave · Me · Gallery · Camera · Translator Google · Google Maps, by position"
 else
   bad "right order is wrong"
   echo "        want: $RIGHT_WANT"
@@ -113,11 +113,11 @@ fi
   || bad "right center is no longer Back"
 
 echo "== T3: the owner's own correction, turned into a guard =="
-# "Drive (is cloud-drive, not cloud-media-center)" — his second message wins.
+# "Drive (is cloud-drive, not cloud-gallery)" — his second message wins.
 DRIVE=$(q "print(h['left']['gestures']['down'])")
 case "$DRIVE" in
-  *mediacenter*|*media-center*|*media_center*)
-     bad "Drive points at the media centre — this is the exact mistake the owner corrected" ;;
+  *mediacenter*|*gallery*|*media_center*)
+     bad "Drive points at the gallery — this is the exact mistake the owner corrected" ;;
   app:com.diegonmarcos.clouddrive)
      ok "Drive launches the cloud-drive application" ;;
   action:section:drive)
@@ -128,13 +128,24 @@ MC_COUNT=$(q "
 n = sum(1 for x in oh['handles'] for v in x['gestures'].values() if 'mediacenter' in v)
 print(n)")
 [ "$MC_COUNT" = "1" ] \
-  && ok "the media centre appears exactly once across both handles" \
-  || bad "the media centre appears $MC_COUNT times across the handles — the owner named it once"
+  && ok "the gallery appears exactly once across both handles" \
+  || bad "the gallery appears $MC_COUNT times across the handles — the owner named it once"
 MC_SIDE=$(q "
 print(next(x['id'] for x in oh['handles'] for v in x['gestures'].values() if 'mediacenter' in v))")
 [ "$MC_SIDE" = "right" ] \
   && ok "and it is on the right handle, the block it was named in" \
-  || bad "the media centre is on the '$MC_SIDE' handle — the owner put it in the second block"
+  || bad "the gallery is on the '$MC_SIDE' handle — the owner put it in the second block"
+# The gallery app was renamed cloud-media-center -> cloud-gallery in 2026-10, but
+# its applicationId stayed com.diegonmarcos.mediacenter because it is installed on
+# phones. So the gesture target must NOT follow the rename, while the label the
+# picker shows for that package must.
+[ "$(q "print(h['right']['gestures']['top_middle'])")" = "app:com.diegonmarcos.mediacenter" ] \
+  && ok "the gallery gesture still targets the installed package com.diegonmarcos.mediacenter" \
+  || bad "the gallery gesture target moved off com.diegonmarcos.mediacenter — the rename must not change the applicationId"
+GAL_LABEL=$(q "print('|'.join(a['label'] for a in oh['apps'] if a.get('package') == 'com.diegonmarcos.mediacenter'))")
+[ "$GAL_LABEL" = "cloud-gallery" ] \
+  && ok "the picker labels com.diegonmarcos.mediacenter as cloud-gallery" \
+  || bad "the picker label for com.diegonmarcos.mediacenter is '$GAL_LABEL', want cloud-gallery"
 # Drive used to be a SuperApp section; #302/#304 moved it out into its own APK,
 # so the gesture now names a package. The package has to be a REAL fleet entry —
 # an app: target that resolves to nothing looks identical to a working one until

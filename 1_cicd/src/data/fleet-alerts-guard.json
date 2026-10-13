@@ -145,7 +145,7 @@
       "why": "Running timers with pause/+1 min/reset controls, and the bedtime reminder the user set — the clock app's own product, like a ringing alarm, not a fleet alert."
     },
     {
-      "path": "ac_cloud-media-center/app/src/main/kotlin/com/diegonmarcos/mediacenter/cloud/sync/CloudIndexProgressManager.kt",
+      "path": "ac_cloud-gallery/app/src/main/kotlin/com/diegonmarcos/mediacenter/cloud/sync/CloudIndexProgressManager.kt",
       "kind": "progress",
       "notify_calls": 1,
       "why": "Ongoing indexing progress bar (setOngoing(true)). The backup FAILURE goes through FleetAlerts."

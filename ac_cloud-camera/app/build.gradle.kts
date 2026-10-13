@@ -175,7 +175,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
 
     // Task #461 — the ONE shared image-scan engine, consumed by reference the
-    // same way cloud-drive and cloud-media-center consume it. One engine, no
+    // same way cloud-drive and cloud-gallery consume it. One engine, no
     // private copy to drift (#170/#261).
     implementation(project(":libs:ml-l-image"))
     // #798 the CONTRACT half of sound identification (Identify's Sound mode, /api/sound/classify);

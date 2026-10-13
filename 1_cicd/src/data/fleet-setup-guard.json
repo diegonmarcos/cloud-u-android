@@ -49,7 +49,7 @@
       "datastore:session_<hash>_preferences": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it.",
       "datastore:vector_analytics": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it."
     },
-    "ac_cloud-media-center": {
+    "ac_cloud-gallery": {
       "datastore:settings": "a Preferences DataStore the app holds a live in-memory copy of: a handler has to write through the app's own DataStore instance, so it is registered by the app (SetupStores.register in App.kt) - not yet; describe reports served:false and Fleet Setup names it."
     },
     "ac_cloud-notes": {

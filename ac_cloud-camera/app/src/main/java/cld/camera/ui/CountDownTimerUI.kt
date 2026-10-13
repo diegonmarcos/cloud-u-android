@@ -104,7 +104,7 @@ class CountDownTimerUI @JvmOverloads constructor(
 
         mActivity.settingsIcon.visibility = View.INVISIBLE
         // Already hidden on the idle camera screen, and INVISIBLE here would be a downgrade:
-        // it re-reserves the circle's 96dp and pushes the Media Center buttons down for the
+        // it re-reserves the circle's 96dp and pushes the Gallery buttons down for the
         // length of the countdown.
         mActivity.thirdOption.visibility = mActivity.thirdOptionIdleVisibility
         mActivity.flipCameraCircle.visibility = View.INVISIBLE
