@@ -119,6 +119,10 @@ dependencies {
     compileOnly 'androidx.compose.foundation:foundation'
     compileOnly 'androidx.compose.material3:material3'
     compileOnly 'androidx.compose.runtime:runtime'
+    // The Compose compiler plugin runs on the unit-test source set too, and compileOnly is not on its
+    // classpath: a host whose ship runs every module's unit tests (Cloud Drive) needs the runtime here.
+    testImplementation platform('androidx.compose:compose-bom:2025.11.01')
+    testImplementation 'androidx.compose.runtime:runtime'
     // AdbShellActivity (the page opened from a status chip) is a ComponentActivity hosting the Compose
     // page: every consumer already has androidx.activity (AppCompat / activity-compose), so it is not bundled here.
     compileOnly 'androidx.activity:activity:1.9.3'
