@@ -76,7 +76,7 @@ private val DATE = DateTimeFormatter.ofPattern("yyyyMMdd")
 
 private fun escape(s: String): String = buildString {
     for (c in s) when (c) {
-        '\\' -> append("\\\\"); ';' -> append("\;"); ',' -> append("\\,"); '\n' -> append("\\n"); '\r' -> Unit
+        '\\' -> append("\\\\"); ';' -> append("\\;"); ',' -> append("\\,"); '\n' -> append("\\n"); '\r' -> Unit
         else -> append(c)
     }
 }
