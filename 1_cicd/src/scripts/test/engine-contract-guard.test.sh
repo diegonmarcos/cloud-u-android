@@ -182,10 +182,14 @@ assert bind in s and first in s
 open(p, "w").write(s.replace(bind, "").replace(first, first + bind.replace("service.packageName, service.name", "BuildConfig.FEED_ENGINE_PACKAGE, \"planted.Service\"")))
 PYTHON
 landed "$SAFEED" 'planted.Service' && red "K7 the client binds by class name before the handshake accepts the engine" "K7"
-stage; sub "$DRIVEMF" '<package android:name="${ghEnginePackage}" />' ''
+# Cloud Drive holds QUERY_ALL_PACKAGES (Manage ▸ Apps lists every app), which makes every engine
+# visible; the per-package query is what these two cases prove, so the permission is planted out first.
+stage; sub "$DRIVEMF" 'android:name="android.permission.QUERY_ALL_PACKAGES"' 'android:name="android.permission.PLANTED_NOT_QUERY_ALL"'
+sub "$DRIVEMF" '<package android:name="${ghEnginePackage}" />' ''
 python3 -c 'import sys; sys.exit(0 if "${ghEnginePackage}" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$DRIVEMF" \
     && red "K8 the app does not query the engine's package (invisible on Android 11+, finding F2)" "K8"
-stage; sub "$DRIVEGRADLE" 'ghEnginePackage: ghEnginePackage]' 'ghEnginePackage: "com.example.planted"]'
+stage; sub "$DRIVEMF" 'android:name="android.permission.QUERY_ALL_PACKAGES"' 'android:name="android.permission.PLANTED_NOT_QUERY_ALL"'
+sub "$DRIVEGRADLE" 'ghEnginePackage: ghEnginePackage]' 'ghEnginePackage: "com.example.planted"]'
 landed "$DRIVEGRADLE" 'com.example.planted' && red "K8 the queried placeholder is not the package the build resolved" "K8"
 stage; sub "$SAMF" 'android:name="android.permission.QUERY_ALL_PACKAGES"' 'android:name="android.permission.PLANTED_NOT_QUERY_ALL"'
 landed "$SAMF" 'PLANTED_NOT_QUERY_ALL' && red "K8 an app that drops QUERY_ALL_PACKAGES and queries nothing cannot see its engines" "K8"
