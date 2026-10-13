@@ -88,7 +88,9 @@ json.dump(d, open(p, "w"), indent=2)
 PYTHON
 out="$(python3 "$WORK/t/$GUARD_COPY_DIR/cloud-android-debug-ports-guard.py" "$WORK/t")"; rc=$?
 # (the full-table roots' slices are then stale, P5, which is not what this case is about: only P3 is judged)
-if ! grep -q "^FAIL P3" <<<"$out" && grep -q "161 ports" <<<"$out"; then ok "seventy more RETIRED numbers do not count against the fallback (P3 counts live members)"
+# The expected count is the real table's plus the 70 planted: a new app's port must not turn this case red.
+want=$(( $(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["ports"]))' "$ROOT/$PORTS") + 70 ))
+if ! grep -q "^FAIL P3" <<<"$out" && grep -q "── $want ports" <<<"$out"; then ok "seventy more RETIRED numbers do not count against the fallback (P3 counts live members)"
 else fail "retired numbers exhausted the fallback (rc=$rc)"; printf '%s\n' "$out" | tail -3; fi
 stage; python3 - "$WORK/t/$PORTS" "$WORK/t/$FLEET" <<'PYTHON'
 import json, sys
