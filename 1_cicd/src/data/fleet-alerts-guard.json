@@ -43,6 +43,12 @@
   },
   "posters": [
     {
+      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/extinstall/ExtInstallNotifier.kt",
+      "kind": "progress",
+      "notify_calls": 1,
+      "why": "#960 the extapp install's own progress notification (silent LOW channel, setOnlyAlertOnce, throttled): Downloading x% / Verifying / Installing, then its terminal Done / Failed line with Retry / Restart on the same id, drawn from the one install store the tile ring reads. A per-job progress indicator, not an alert about the fleet."
+    },
+    {
       "path": "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/AdbPairingService.kt",
       "kind": "user_action",
       "notify_calls": 2,
