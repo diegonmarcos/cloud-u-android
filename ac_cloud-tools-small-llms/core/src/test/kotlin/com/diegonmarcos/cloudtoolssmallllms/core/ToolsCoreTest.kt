@@ -77,9 +77,10 @@ class ToolsCoreTest {
         (cfg.tasks.map { it.worker } + cfg.router.chatModels).forEach { assertTrue("$it is not a catalogue chat row", it in chatIds) }
         registry.entries.forEach { e ->
             assertTrue(e.task.id, e.price != null && e.estimate != null)
-            assertEquals(e.task.id, (cfg.typicalIn * e.price!!.inPerM + cfg.typicalOut * e.price!!.outPerM) / 1e6, e.estimate!!, 1e-12)
+            val p = e.price!!
+            assertEquals(e.task.id, (cfg.typicalIn * p.inPerM + cfg.typicalOut * p.outPerM) / 1e6, e.estimate!!, 1e-12)
             // Small and cheap only: no worker above $1 per 1M tokens either way.
-            assertTrue(e.task.id, e.price!!.inPerM <= 1.0 && e.price!!.outPerM <= 1.0)
+            assertTrue(e.task.id, p.inPerM <= 1.0 && p.outPerM <= 1.0)
         }
         // An override the catalogue does not price is ignored; a priced one wins.
         val r = TaskRegistry(cfg, book, mapOf("translate" to "nobody/none", "summarize" to "google/gemma-3-4b-it"))
@@ -87,8 +88,10 @@ class ToolsCoreTest {
         assertEquals("google/gemma-3-4b-it", r.entry("summarize")!!.worker)
         assertNull(r.entry("nope"))
         // A worker the catalogue does not price is a problem, named.
-        val broken = TaskRegistry(cfg, PriceBook { if (it == cfg.task("qa")!!.worker) null else Price(0.1, 0.1) })
-        assertTrue(broken.problems().single().startsWith("qa: worker"))
+        val qa = cfg.task("qa")!!.worker
+        val broken = TaskRegistry(cfg, PriceBook { if (it == qa) null else Price(0.1, 0.1) })
+        val sharing = cfg.tasks.filter { it.worker == qa }.map { it.id }
+        assertEquals(sharing.map { "$it: worker $qa is not priced by the catalogue" }, broken.problems().filter { !it.startsWith("router:") })
         val noRouter = TaskRegistry(cfg, PriceBook { if (it == cfg.router.chatDefault) null else Price(0.1, 0.1) })
         assertTrue(noRouter.problems().any { it.startsWith("router:") })
     }

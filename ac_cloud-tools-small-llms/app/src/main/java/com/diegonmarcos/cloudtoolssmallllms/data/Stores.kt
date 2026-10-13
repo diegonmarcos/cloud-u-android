@@ -40,7 +40,7 @@ class Stores(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     fun messages(): List<Msg> = runCatching {
-        val a = JSONArray(prefs.getString(MESSAGES, "[]"))
+        val a = JSONArray(prefs.getString(MESSAGES, null) ?: "[]")
         (0 until a.length()).map { Msg.fromJson(a.getJSONObject(it)) }
     }.getOrDefault(emptyList())
 
