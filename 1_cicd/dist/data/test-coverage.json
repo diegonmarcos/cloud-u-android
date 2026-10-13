@@ -76,7 +76,7 @@
     },
     "ac_cloud-agenda": {
       "first_test": "Five-tab WebView shell: assert every tab id in build.json::ui has a data file and every data file a tab \u2014 the same page/data drift ac_cloud-me's tester catches.",
-      "shell_testers": 0,
+      "shell_testers": 1,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
@@ -381,6 +381,6 @@
       "workflow": "ship-lib-calc-native.yml"
     }
   },
-  "with_executed_tests": 27,
-  "with_no_tests_at_all": 15
+  "with_executed_tests": 28,
+  "with_no_tests_at_all": 14
 }
