@@ -2470,6 +2470,7 @@
         "lib-ml-l-image",
         "lib-mounts",
         "lib-rclone",
+        "lib-shizuku-adb-debug-tools",
         "lib-sysdns",
         "lib-updater"
       ],

@@ -455,10 +455,11 @@ Coverage: 3 covered, 0 gaps.
 
 ## cloud-drive — `com.diegonmarcos.clouddrive`
 
-Module `ac_cloud-drive`; libs: lib-analytics, lib-auth, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-disk, lib-disk-scan, lib-file-editor, lib-fleetconfig-model, lib-git-sync, lib-ml-l-image, lib-mounts, lib-rclone, lib-sysdns, lib-updater.
+Module `ac_cloud-drive`; libs: lib-analytics, lib-auth, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-disk, lib-disk-scan, lib-file-editor, lib-fleetconfig-model, lib-git-sync, lib-ml-l-image, lib-mounts, lib-rclone, lib-shizuku-adb-debug-tools, lib-sysdns, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `adb_shell` | prefs | device | no | Per-install random token shared with the local adb shell server (install identity), the flag that this install was ever paired with Wireless Debugging (drives the Cloud Store channel control: not paired vs down), and channel_mode, the owner's Privileged channel choice (local \| embedded \| shizuku \| auto; default local where the app owns a local server). |
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
 | `cloud-drive-pdf-reader` | prefs | config (keys: last:*→device) | yes | PDF reader night-mode and paged-mode toggles are viewing preferences; per-document last page ('last:<source>') is device. |
 | `cloud-drive-prefs` | prefs | config (keys: mirror.result.*→device, sync.test.*→device) | yes | cloud-drive file sort, hidden, dual-pane, thumbnails, bookmarks and sync rule enables are settings; mirror.result.* and sync.test.* are last-run results. |
