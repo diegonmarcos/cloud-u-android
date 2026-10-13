@@ -145,7 +145,7 @@ d3() {
 import json, re, sys
 bj = json.load(open(sys.argv[1])); cat = open(sys.argv[2], encoding="utf-8").read()
 ui = bj["ui"]
-declared = set(s["icon"] for s in ui["sections"]) | set(p["icon"] for s in ui["sections"] for p in s.get("pages", [])) | set(x["icon"] for x in ui["files"]["sections"]) | set(p["icon"] for p in ui["files"]["places"]) | set(f["icon"] for f in ui["files"]["filters"]) | {ui["icons"]["_default"]}
+declared = set(s["icon"] for s in ui["sections"]) | set(p["icon"] for s in ui["sections"] for p in s.get("pages", [])) | set(q["icon"] for s in ui["sections"] for p in s.get("pages", []) for q in p.get("pages", [])) | set(x["icon"] for x in ui["files"]["sections"]) | set(p["icon"] for p in ui["files"]["places"]) | set(f["icon"] for f in ui["files"]["filters"]) | {ui["icons"]["_default"]}
 block = re.search(r"fun vector\(name: String\): ImageVector\? = when \(name\) \{(.*?)\n    \}", cat, re.S)
 if not block: print("    IconCatalog.vector has no `when (name)`"); sys.exit(1)
 known = set(re.findall(r'^\s*"([a-z_]+)" -> Icons\.', block.group(1), re.M))
@@ -255,8 +255,8 @@ import json, sys
 ui = json.load(open(sys.argv[1]))["ui"]
 bad = 0
 tabs = ui["bottom_nav"]
-if tabs != ["files", "volumes", "home", "sync", "configs"]:
-    print("    ui.bottom_nav is %s, not the #609 order files/volumes/home/sync/configs" % tabs); bad = 1
+if tabs != ["explorer", "manage", "agents", "home", "sync", "configs"]:
+    print("    ui.bottom_nav is %s, not the owner's order explorer/manage/agents/home/sync/configs" % tabs); bad = 1
 if "backups" in ui:
     print("    ui still carries a top-level backups block: it moved into ui.configs at #603"); bad = 1
 cfg_pages = next(s for s in ui["sections"] if s["id"] == "configs")["pages"]
@@ -329,10 +329,10 @@ import json, re, sys
 ui = json.load(open(sys.argv[1]))["ui"]; src = open(sys.argv[2], encoding="utf-8").read()
 bad = 0
 vol = ui.get("volumes") or {}
-classes = next(s for s in ui["sections"] if s["id"] == "volumes").get("pages") or []
+classes = next(p for p in next(s for s in ui["sections"] if s["id"] == "explorer")["pages"] if p["id"] == "cloud").get("pages") or []
 ids = [c.get("id") for c in classes]
 if ids != ["constellation", "containers", "machines", "s3"]:
-    print("    ui.sections[volumes].pages is %s, not the #604 order constellation/containers/machines/s3" % ids); bad = 1
+    print("    ui.sections[explorer].pages[cloud].pages is %s, not the #604 order constellation/containers/machines/s3" % ids); bad = 1
 if any(not c.get("label") or not c.get("icon") for c in classes):
     print("    a volume class lacks a label or an icon"); bad = 1
 m = re.search(r"when \(id\) \{(.*?)\n\s*\}", src, re.S)
@@ -432,7 +432,7 @@ d12_machines "$BJ" "$CONN_JSON" && pass "every connection's machine kind is a cl
 for f in UI_VOLUMES_B64 UI_CONSTELLATION_B64 SYNC_RULES_B64; do
     if grep -qE "buildConfigField \"String\", *\"$f\"" "$GRADLE" && grep -qE "BuildConfig\.$f" "$DECL"; then pass "$f baked and decoded"; else fail "$f not baked in build.gradle or not read in Declarations.kt"; fi
 done
-if grep -qE 'throw new GradleException\("build\.json::ui\.sections\[volumes\]\.pages must declare' "$GRADLE"; then pass "a missing ui.sections[volumes].pages fails the build"; else fail "build.gradle does not refuse a missing ui.sections[volumes].pages"; fi
+if grep -qE 'throw new GradleException\("build\.json::ui\.sections\[explorer\]\.pages\[cloud\]\.pages must declare' "$GRADLE"; then pass "a missing ui.sections[explorer].pages[cloud].pages fails the build"; else fail "build.gradle does not refuse a missing ui.sections[explorer].pages[cloud].pages"; fi
 if grep -qE 'connections: List<Declarations\.ConnectionDecl> = Declarations\.connections' "$SRC/sync/RcloneMountsScreens.kt"; then pass "Cloud-Containers is the SAME MountsSyncScreen, scoped — not a second mounts screen"; else fail "MountsSyncScreen is not scopeable: Volumes must reuse it, never copy it"; fi
 if grep -qE 'fun job\(rule: Declarations\.SyncRuleDecl\): RcloneJob' "$SRC/sync/SyncRules.kt" && ! grep -qE 'ProcessBuilder|exec\(' "$SRC/sync/SyncRules.kt"; then pass "a sync rule runs as ONE RcloneJob on the existing engine, never its own process"; else fail "SyncRules does not map a rule onto libs:rclone's job model"; fi
 
@@ -444,7 +444,7 @@ import json, sys
 _ui = json.load(open(sys.argv[1]))["ui"]
 vol = _ui["volumes"]
 bad = 0
-classes = [c.get("id") for c in (next(s for s in _ui["sections"] if s["id"] == "volumes").get("pages") or [])]
+classes = [c.get("id") for c in (next(p for p in next(s for s in _ui["sections"] if s["id"] == "explorer")["pages"] if p["id"] == "cloud").get("pages") or [])]
 sections = vol.get("sections") or []
 ids = [s.get("id") for s in sections]
 if ids != ["constellation", "personal"]:
@@ -463,7 +463,7 @@ if (by.get("constellation") or {}).get("auth"):
 # NOTHING LOST: every declared class is claimed by exactly one section.
 claimed = [c for s in sections for c in (s.get("classes") or [])]
 if sorted(claimed) != sorted(classes):
-    print("    the sections' classes %s do not cover ui.sections[volumes].pages %s (a class would be lost or double-listed)" % (sorted(claimed), sorted(classes))); bad = 1
+    print("    the sections' classes %s do not cover ui.sections[explorer].pages[cloud].pages %s (a class would be lost or double-listed)" % (sorted(claimed), sorted(classes))); bad = 1
 # the auth deep-link is declared: a fleet id (resolved to a package at build time) or a package, plus a target and the extra it travels as.
 pa = vol.get("personal_auth") or {}
 if not (pa.get("fleet") or pa.get("package")):
@@ -495,8 +495,8 @@ cmp -s "$SYNC_KT" "$TMP/sync.kt" && fail "the sync mutation changed nothing (tes
 d2s "$BJ" "$TMP/sync.kt" >/dev/null && fail "D2s passed a misdispatched page (tester is vacuous)" || pass "a page id misspelt in SyncScreen → D2s RED"
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); [r.update(seed=True) for r in d["repos"] if r.get("private")]; json.dump(d,open(sys.argv[2],"w"))' "$REPOS" "$TMP/seed-private.json"
 d11_seed "$TMP/seed-private.json" >/dev/null && fail "D11 passed a PRIVATE repository marked for seeding (tester is vacuous)" || pass "a private repository marked seed → D11 RED"
-python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); [s.update(pages=s["pages"][1:]) for s in b["ui"]["sections"] if s["id"]=="volumes"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-constellation.json"
-d12_classes "$TMP/no-constellation.json" "$VOLUMES_KT" >/dev/null && fail "D12 passed a declaration that dropped a volume class (tester is vacuous)" || pass "a class dropped from ui.sections[volumes].pages → D12 RED"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); [p.update(pages=p["pages"][1:]) for s in b["ui"]["sections"] if s["id"]=="explorer" for p in s["pages"] if p["id"]=="cloud"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-constellation.json"
+d12_classes "$TMP/no-constellation.json" "$VOLUMES_KT" >/dev/null && fail "D12 passed a declaration that dropped a volume class (tester is vacuous)" || pass "a class dropped from ui.sections[explorer].pages[cloud].pages → D12 RED"
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); [a["route"].update(page="backups") for a in d["apps"] if a.get("label")=="RSync"]; json.dump(d,open(sys.argv[2],"w"))' "$APPS_JSON" "$TMP/rsync-backups.json"
 d12_rsync "$BJ" "$TMP/rsync-backups.json" >/dev/null && fail "D12 passed an RSync tile still routing to Backups (tester is vacuous)" || pass "Apps ▸ RSync routed back to Backups → D12 RED"
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["rules"][0]["local_path"]="/somewhere-else"; json.dump(d,open(sys.argv[2],"w"))' "$RULES_JSON" "$TMP/rule-moved.json"

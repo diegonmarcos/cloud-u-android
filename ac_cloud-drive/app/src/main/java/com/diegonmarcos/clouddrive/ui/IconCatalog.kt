@@ -3,6 +3,8 @@ package com.diegonmarcos.clouddrive.ui
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.Screenshot
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.BarChart
@@ -117,6 +119,8 @@ object IconCatalog {
         "swap" -> Icons.Filled.SwapHoriz
         "extension" -> Icons.Filled.Extension
         "play_arrow" -> Icons.Filled.PlayArrow
+        "smart_toy" -> Icons.Filled.SmartToy
+        "screenshot" -> Icons.Filled.Screenshot
         else -> null
     }
 

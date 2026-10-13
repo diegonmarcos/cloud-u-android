@@ -24,7 +24,6 @@ import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.SharedStore
 import com.diegonmarcos.clouddrive.apps.AppsGrid
-import com.diegonmarcos.clouddrive.disk.DiskScreen
 import com.diegonmarcos.clouddrive.files.FileOps
 import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
 import com.diegonmarcos.clouddrive.ui.DriveCard
@@ -65,16 +64,8 @@ fun HomeScreen(
     page: String? = null,
     onPageConsumed: () -> Unit = {},
 ) {
-    // #813 Home's one sub-page: Disk Management (the Apps tile routes {tab: home, page: disk}).
-    // It opens over the overview and Back returns; the request is consumed once, like Sync's.
-    var sub by rememberSaveable { mutableStateOf<String?>(null) }
-    LaunchedEffect(page) {
-        if (page != null) { if (page == PAGE_DISK) sub = PAGE_DISK; onPageConsumed() }
-    }
-    if (sub == PAGE_DISK) {
-        DiskScreen(actions, onClose = { sub = null }, modifier = modifier)
-        return
-    }
+    // Disk Management left Home for the Manage tab (Apps / Data); Home has no sub-page now.
+    LaunchedEffect(page) { if (page != null) onPageConsumed() }
     val sections = Declarations.files.sections
     val connections = Declarations.connections
     val containerConnections = remember(connections) { connections.filter { it.machine == Declarations.MACHINE_CONTAINER } }
@@ -162,4 +153,3 @@ private fun statOf(dir: File?): Pair<Long, Long>? =
     if (dir == null) null else runCatching { StatFs(dir.absolutePath).let { it.availableBytes to it.totalBytes } }.getOrNull()
 
 /** #813 the declared Home sub-page id (data/drive-apps.json `route.page`). */
-const val PAGE_DISK = "disk"

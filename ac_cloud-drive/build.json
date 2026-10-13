@@ -55,41 +55,72 @@
   },
   "ui": {
     "_doc": "#868 THE NAVIGATION IS ONE DECLARATION (libs:bottomnav's NavDecl): ui.bottom_nav = the island's ids, ui.sections[] = each one's label/icon and its `pages` (the strip PageTabs draws), ui.default_section = where the app opens. Volumes' four classes, Sync's three pages and Configs' three pages are those `pages` now (they were the keys ui.volumes.classes, ui.sync.pages and ui.configs.pages; ui.tabs and ui.default_tab are gone). #603/#609 THE STRUCTURE OF THE CHROME, declared. Kotlin holds no tab list, no caption, no page list, no section list, no place list and no icon name: DriveShell renders ui.bottom_nav, SyncScreen renders ui.sections[sync].pages, ConfigsScreen renders ui.sections[configs].pages, the Files Places sheet renders ui.files.sections and ui.files.places, the Files filter pills render ui.files.filters. Every `icon` here is a name IconCatalog.kt resolves to a Material glyph; a name it does not know renders ui.icons._default and test/test-drive-shell.sh fails the build. Baked by app/build.gradle as UI_SECTIONS_B64 / UI_BOTTOM_NAV / UI_DEFAULT_SECTION / UI_SYNC_B64 / UI_FILES_B64 / UI_ICON_DEFAULT and decoded ONCE by Declarations.kt. #603 replaced #579's five tabs (files/apps/sync/backups/configs) with files/volumes/home/apps/configs, moving Sync's three pages and Backups into Configs. #609 REVERSED HALF OF THAT: Apps stopped being a tab (its grid moved into Home, ui.home below) and the freed slot is now Sync, carrying Git/Rclone/Mounts back out of Configs into their own tab — the five tabs are now files/volumes/home/sync/configs. #608 REDESIGNED THE SYNC ▸ GIT SUB-PAGE and declared it whole in ui.sync.git below: two sections (the owner's PUBLIC cloud*/front* set, which needs no login, and Personal, which signs in through libs:auth for the `repo` scope and splits the account's own listing into Public and Private), one DENSE row per repository, and fourteen per-repository operations collapsed behind each row's disclosure — every one of them a verb of libs:git-sync, force push and force pull included.",
-    "bottom_nav": ["files", "volumes", "home", "sync", "configs"],
-    "default_section": "files",
+    "bottom_nav": ["explorer", "manage", "agents", "home", "sync", "configs"],
+    "default_section": "explorer",
     "sections": [
       {
-        "id": "files",
-        "label": "Files",
-        "icon": "folder"
-      },
-      {
-        "id": "volumes",
-        "label": "Volumes",
-        "icon": "storage",
-        "_doc": "#604 THE FOUR CLASSES OF VOLUME, in this order, as this section's page strip (#868; they were ui.sections[volumes].pages). Details of each class live in ui.volumes.",
+        "id": "explorer",
+        "label": "Explorer",
+        "icon": "folder",
+        "_doc": "Owner restructure: Files is renamed Explorer and carries two sub-pages drawn by PageTabs. Local is the X-plore-class manager over shared storage and the shared store (ui.files). Cloud is the former Volumes tab, moved here whole: its four volume classes are Cloud's own sub-pages (VolumesScreen draws them per ui.volumes.sections), so Declarations.classesOf reads ui.sections[explorer].pages[cloud].pages.",
         "pages": [
           {
-            "id": "constellation",
-            "label": "Cloud-Constellation",
+            "id": "local",
+            "label": "Local",
+            "icon": "smartphone"
+          },
+          {
+            "id": "cloud",
+            "label": "Cloud",
+            "icon": "cloud",
+            "pages": [
+              {
+                "id": "constellation",
+                "label": "Cloud-Constellation",
+                "icon": "apps"
+              },
+              {
+                "id": "containers",
+                "label": "Cloud-Containers",
+                "icon": "dns"
+              },
+              {
+                "id": "machines",
+                "label": "Cloud-Machines",
+                "icon": "computer"
+              },
+              {
+                "id": "s3",
+                "label": "S3",
+                "icon": "cloud"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "manage",
+        "label": "Manage",
+        "icon": "storage",
+        "_doc": "Owner restructure: the slot Volumes freed. Disk Management moved here from Home's sub-page and split into two sub-pages. Apps is a table of every installed app ranked by total size (StorageStatsManager behind usage access; running state and PSS from ActivityManager for this app and from the privileged shell channel, dumpsys meminfo and ps, for the rest; a dash plus a hint otherwise). Data is everything in shared storage and the shared store that is not an app, ranked by size, filtered by the groups and subtypes declared in manage/FileClassifier.kt (default: Media only; the filter persists in cloud-drive-prefs).",
+        "pages": [
+          {
+            "id": "apps",
+            "label": "Apps",
             "icon": "apps"
           },
           {
-            "id": "containers",
-            "label": "Cloud-Containers",
-            "icon": "dns"
-          },
-          {
-            "id": "machines",
-            "label": "Cloud-Machines",
-            "icon": "computer"
-          },
-          {
-            "id": "s3",
-            "label": "S3",
-            "icon": "cloud"
+            "id": "data",
+            "label": "Data",
+            "icon": "bar_chart"
           }
         ]
+      },
+      {
+        "id": "agents",
+        "label": "Agents",
+        "icon": "smart_toy",
+        "_doc": "Owner addition: on-device agents. The first, Screenshots, OCRs every screenshot and labels it with on-device ML (libs:ml-l-image's engine, detect modes text/labels/objects), incrementally, and writes the contract in data/agent-screenshots-contract.json (docs/screenshot-agent-contract.md) for other fleet apps (Cloud Calendar first)."
       },
       {
         "id": "home",
@@ -705,7 +736,16 @@
         "libs:mounts",
         "libs:bottomnav",
         "libs:auth",
-        "libs:disk"
+        "libs:disk",
+        "libs:shizuku-adb-debug-tools"
+      ]
+    },
+    "libs:shizuku-adb-debug-tools": {
+      "_doc_dir": "Manage ▸ Apps reads running state and RAM of OTHER apps through the fleet's privileged shell (ps -A -o NAME, dumpsys meminfo): Android 5.1+ shows an app only its own processes. Shared BY REFERENCE; build.json::shizuku_client puts the SuperApp bridge first.",
+      "dir": "../ab_cloud-libs-shared/libs/shizuku-adb-debug-tools",
+      "type": "library",
+      "depends_on": [
+        "libs:core"
       ]
     },
     "libs:core": {
@@ -893,5 +933,12 @@
       "endpoint": "https://analytics.diegonmarcos.com/matomo",
       "site_id": "1"
     }
+  },
+  "shizuku_client": {
+    "_doc": "Cloud Drive is a shell CLIENT (Manage ▸ Apps: ps + dumpsys meminfo), never a server owner: the ladder tries the SuperApp's privilege plane first, then stock Shizuku. No rish here.",
+    "providers": [
+      "com.diegonmarcos.superapp",
+      "moe.shizuku.privileged.api"
+    ]
   }
 }

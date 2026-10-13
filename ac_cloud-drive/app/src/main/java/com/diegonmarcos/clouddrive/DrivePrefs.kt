@@ -76,7 +76,25 @@ class DrivePrefs(context: Context) {
     fun ruleEnabled(id: String, declared: Boolean): Boolean = prefs.getBoolean(KEY_RULE_PREFIX + id, declared)
     fun setRuleEnabled(id: String, on: Boolean) = edit { putBoolean(KEY_RULE_PREFIX + id, on) }
 
+    /** Manage ▸ Data's filter (DataFilter.encode); absent = the default, Media only. */
+    fun dataFilter(): String? = prefs.getString(KEY_DATA_FILTER, null)
+    fun setDataFilter(encoded: String) = edit { putString(KEY_DATA_FILTER, encoded) }
+    /** Manage ▸ Data: list files (false) or folders (true). */
+    fun dataFolders(): Boolean = prefs.getBoolean(KEY_DATA_FOLDERS, false)
+    fun setDataFolders(on: Boolean) = edit { putBoolean(KEY_DATA_FOLDERS, on) }
+    /** Manage ▸ Apps: the sorted column (AppColumn name) and its direction. */
+    fun appsSort(): Pair<String?, Boolean> = prefs.getString(KEY_APPS_SORT, null) to prefs.getBoolean(KEY_APPS_DESC, true)
+    fun setAppsSort(column: String, descending: Boolean) = edit { putString(KEY_APPS_SORT, column); putBoolean(KEY_APPS_DESC, descending) }
+    /** Agents ▸ Screenshots: whether the agent runs on its own schedule. On by default. */
+    fun screenshotAgentEnabled(): Boolean = prefs.getBoolean(KEY_AGENT_SHOTS, true)
+    fun setScreenshotAgentEnabled(on: Boolean) = edit { putBoolean(KEY_AGENT_SHOTS, on) }
+
     private companion object {
+        const val KEY_DATA_FILTER = "manage.data.filter"
+        const val KEY_DATA_FOLDERS = "manage.data.folders"
+        const val KEY_APPS_SORT = "manage.apps.sort"
+        const val KEY_APPS_DESC = "manage.apps.desc"
+        const val KEY_AGENT_SHOTS = "agents.screenshots.enabled"
         const val KEY_SORT = "files.sort"
         const val KEY_HIDDEN = "files.hidden"
         const val KEY_DUAL = "files.dual"

@@ -258,8 +258,13 @@ if (!(uiDecl.files?.places instanceof List) || uiDecl.files.places.isEmpty()) {
 if (!(uiDecl.files?.sections instanceof List) || uiDecl.files.sections.isEmpty()) {
     throw new GradleException("build.json::ui.files.sections must declare the Files navigator's sections (#603)")
 }
-if (!(navPages('volumes') instanceof List) || navPages('volumes').isEmpty()) {
-    throw new GradleException("build.json::ui.sections[volumes].pages must declare the Volumes tab's classes (#604)")
+// Owner restructure: the four volume classes are Explorer ▸ Cloud's own sub-pages now.
+def cloudClasses = navPages('explorer')?.find { it.id == 'cloud' }?.pages
+if (!(cloudClasses instanceof List) || cloudClasses.isEmpty()) {
+    throw new GradleException("build.json::ui.sections[explorer].pages[cloud].pages must declare the volume classes (#604)")
+}
+['explorer', 'manage'].each { id ->
+    if (!(navPages(id) instanceof List) || navPages(id).isEmpty()) throw new GradleException("build.json::ui.sections[${id}].pages must declare its strip")
 }
 def uiSectionsB64    = b64(uiDecl.sections)
 def uiBottomNav      = uiDecl.bottom_nav.join(',')
@@ -615,6 +620,8 @@ dependencies {
     // #813 the Disk Management engine (Home ▸ Apps ▸ Disk Management, /api/disk/*); pinned to
     // this app's own grants, so it is compiled in (1_cicd/src/data/lib-classes.json).
     implementation project(':libs:disk')
+    // Manage ▸ Apps: running state + PSS of other apps through the fleet's privileged shell channel.
+    implementation project(':libs:shizuku-adb-debug-tools')
     // #646 THE DECLARED GIT AUTH+OPS CHAIN, one ordered declaration (libs-shared
     // build.json::auth.git_chain: fleet, then github) walked by libs:git-sync's
     // GitAuthChain. #705 neither of its binaries is linked here: gh runs in

@@ -34,6 +34,9 @@ import com.diegonmarcos.clouddrive.backups.MirrorRunner
 import com.diegonmarcos.clouddrive.configs.ConfigsScreen
 import com.diegonmarcos.clouddrive.files.FilesController
 import com.diegonmarcos.clouddrive.files.FilesScreen
+import com.diegonmarcos.clouddrive.files.ExplorerScreen
+import com.diegonmarcos.clouddrive.manage.ManageScreen
+import com.diegonmarcos.clouddrive.agents.AgentsScreen
 import com.diegonmarcos.clouddrive.files.FilesUiState
 import com.diegonmarcos.clouddrive.files.Places
 import com.diegonmarcos.clouddrive.home.HomeScreen
@@ -141,14 +144,15 @@ class MainActivity : ComponentActivity(), DriveActions {
         var jumpTab by remember { mutableStateOf<String?>(null) }
         var jumpPage by remember { mutableStateOf<String?>(null) }
         val jump: (String, String) -> Unit = { tab, page -> jumpPage = page.ifBlank { null }; jumpTab = tab }
-        val openPath: (String) -> Unit = { path -> filesController?.reveal(path); jumpTab = "files" }
+        val openPath: (String) -> Unit = { path -> filesController?.reveal(path); jumpPage = Declarations.PAGE_LOCAL; jumpTab = Declarations.SECTION_EXPLORER }
         val syncAll: () -> Unit = { git.repos.value.filter { it.autoSync }.forEach { git.syncNow(it) } }
 
         DriveShell(select = jumpTab, onSelected = { jumpTab = null }) { tabId, _ ->
             when (tabId) {
-                "files" -> FilesScreen(files, this, hasAccess)
-                "volumes" -> VolumesScreen(rclone, prefs, this, openPath)
-                "home" -> HomeScreen(git, this, onOpenFiles = { jumpTab = "files" }, onOpenVolumes = { jumpTab = "volumes" }, onOpenSync = { jumpTab = "sync" }, onRoute = jump, onSyncAll = syncAll, page = jumpPage, onPageConsumed = { jumpPage = null })
+                "explorer" -> ExplorerScreen(jumpPage, onPageConsumed = { jumpPage = null }, local = { FilesScreen(files, this, hasAccess) }, cloud = { VolumesScreen(rclone, prefs, this, openPath) })
+                "manage" -> ManageScreen(this, prefs, onShowInExplorer = openPath, page = jumpPage, onPageConsumed = { jumpPage = null })
+                "agents" -> AgentsScreen()
+                "home" -> HomeScreen(git, this, onOpenFiles = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_LOCAL) }, onOpenVolumes = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_CLOUD) }, onOpenSync = { jumpTab = "sync" }, onRoute = jump, onSyncAll = syncAll, page = jumpPage, onPageConsumed = { jumpPage = null })
                 "sync" -> SyncScreen(git, rclone, prefs, this, jumpPage, onPageConsumed = { jumpPage = null })
                 "configs" -> ConfigsScreen(mirrors, prefs, this, hasAccess, rcloneVersion, jumpPage, onPageConsumed = { jumpPage = null })
                 else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "", Modifier)

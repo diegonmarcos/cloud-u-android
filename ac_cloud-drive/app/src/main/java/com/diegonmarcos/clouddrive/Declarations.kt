@@ -333,9 +333,17 @@ object Declarations {
     /** A section's declared pages as the lib's [NavPage]s — what PageTabs draws. */
     fun navPages(sectionId: String): List<NavPage> = nav.section(sectionId)?.pages.orEmpty()
 
-    /** The four volume classes: ui.sections[volumes].pages. */
+    /** The four volume classes: Explorer ▸ Cloud's sub-pages (ui.sections[explorer].pages[cloud].pages; Cloud is the former Volumes tab). */
     fun classesOf(nav: NavDecl): List<VolumeClassDecl> =
-        nav.section("volumes")?.pages.orEmpty().map { VolumeClassDecl(it.id, it.label, it.icon) }
+        nav.section(SECTION_EXPLORER)?.pages.orEmpty().firstOrNull { it.id == PAGE_CLOUD }?.pages.orEmpty().map { VolumeClassDecl(it.id, it.label, it.icon) }
+
+    const val SECTION_EXPLORER = "explorer"
+    const val PAGE_LOCAL = "local"
+    const val PAGE_CLOUD = "cloud"
+    const val SECTION_MANAGE = "manage"
+    const val PAGE_APPS = "apps"
+    const val PAGE_DATA = "data"
+    const val SECTION_AGENTS = "agents"
 
     /** #609 the Sync strip: Git/Rclone/Mounts ([pages], ui.sections[sync].pages). #608 carries the Git page too. */
     fun parseSync(text: String, pages: List<PageDecl> = emptyList()): SyncDecl {

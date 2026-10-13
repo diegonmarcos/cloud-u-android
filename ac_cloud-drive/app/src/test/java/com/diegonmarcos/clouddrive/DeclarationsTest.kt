@@ -15,6 +15,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.json.JSONArray
 import org.junit.Test
@@ -47,12 +48,13 @@ class DeclarationsTest {
     private fun sync() = Declarations.parseSync(section("sync"), Declarations.pagesOf(nav(), "sync"))
     private fun volumes() = Declarations.parseVolumes(section("volumes"), Declarations.classesOf(nav()))
 
-    @Test fun tabsDeclareTheFiveKnownShellTabs() {
+    @Test fun tabsDeclareTheOwnersNavOrder() {
         val tabs = Declarations.tabsOf(nav())
-        // #609 Sync is a tab again (Apps is not: its grid moved into Home); Backups stays a Configs sub-page.
-        assertEquals(listOf("files", "volumes", "home", "sync", "configs"), tabs.map { it.id })
+        // Owner restructure: Files → Explorer, Volumes' slot → Manage, Agents beside them; Home, Sync, Configs unchanged.
+        assertEquals(listOf("explorer", "manage", "agents", "home", "sync", "configs"), tabs.map { it.id })
+        assertEquals(listOf("Explorer", "Manage", "Agents", "Home", "Sync", "Configs"), tabs.map { it.label })
         assertTrue(tabs.all { it.label.isNotBlank() && it.icon.isNotBlank() })
-        assertEquals("files", nav().default()?.id)
+        assertEquals("explorer", nav().default()?.id)
         assertTrue(tabs.map { it.id }.contains(nav().default()?.id))
     }
 
@@ -86,6 +88,17 @@ class DeclarationsTest {
         assertTrue(sync.gitPeriodsMinutes.isNotEmpty())
         assertTrue("every period is at or above WorkManager's floor", sync.gitPeriodsMinutes.all { it >= 15 })
         assertEquals(sync.gitPeriodsMinutes.sorted(), sync.gitPeriodsMinutes)
+    }
+
+    @Test fun volumesAreReachableUnderExplorerCloud() {
+        val explorer = requireNotNull(nav().section(Declarations.SECTION_EXPLORER))
+        assertEquals(listOf("local", "cloud"), explorer.pages.map { it.id })
+        assertEquals(listOf("Local", "Cloud"), explorer.pages.map { it.label })
+        val cloud = explorer.pages.first { it.id == Declarations.PAGE_CLOUD }
+        assertEquals(listOf("constellation", "containers", "machines", "s3"), cloud.pages.map { it.id })
+        assertEquals(cloud.pages.map { it.id }, Declarations.classesOf(nav()).map { it.id })
+        assertNull("Volumes is no longer a tab of its own", nav().section("volumes"))
+        assertEquals(listOf("apps", "data"), nav().section(Declarations.SECTION_MANAGE)?.pages?.map { it.id })
     }
 
     @Test fun volumesDeclaresTheFourClassesAndTheirRules() {

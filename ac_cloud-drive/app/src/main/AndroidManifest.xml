@@ -34,7 +34,12 @@
          browser's package resolved from the constellation manifest by app/build.gradle. -->
     <uses-permission android:name="${authMissionPermission}" />
 
+    <!-- Manage ▸ Apps lists every installed app with its sizes. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <queries>
+        <package android:name="moe.shizuku.privileged.api" />
+        <package android:name="com.diegonmarcos.superapp" />
         <package android:name="com.diegonmarcos.clouddrive" />
         <!-- #642 the terminal is resolved by package to tell "not installed" apart from
              "refused": on API 30+ an unqueried package is INVISIBLE, and invisible reads
@@ -151,5 +156,14 @@
             android:name=".debugapi.DriveDebugApiProvider"
             android:authorities="${applicationId}.drivedebugapi"
             android:exported="false" />
+        <!-- Shizuku client provider (libs:shizuku-adb-debug-tools, build.json::shizuku_client): lets
+             Manage ▸ Apps bind Shizuku as the fallback shell for ps / dumpsys meminfo. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
     </application>
 </manifest>

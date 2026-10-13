@@ -95,6 +95,9 @@ object DriveMetrics {
     val appGlyph = 40.dp
     val dialogList = 220.dp
     val wide = 600.dp
+    /** Manage ▸ Apps table: the app column and every numeric column, so the table scrolls sideways at phone width. */
+    val tableName = 160.dp
+    val tableCell = 76.dp
     val textScale = 0.85f
     /** The two glyph sizes drawn as TEXT (the Apps tile emoji and its status dot) — declared here for the same reason. */
     val tileGlyphText = 20.sp
@@ -192,6 +195,27 @@ object DriveTags {
     const val APPS_GRID = "apps_grid"
     /** #813 one tile of the Apps grid, by its declared label. */
     fun appTile(label: String) = "apps_tile_$label"
+    /** Explorer (Local / Cloud), Manage (Apps / Data) and Agents. */
+    const val EXPLORER = "explorer"
+    const val EXPLORER_STRIP = "explorer_strip"
+    fun explorerPage(id: String) = "explorer_page_$id"
+    const val MANAGE = "manage"
+    const val MANAGE_STRIP = "manage_strip"
+    fun managePage(id: String) = "manage_page_$id"
+    const val APPS_TABLE = "manage_apps_table"
+    const val APPS_HEADER = "manage_apps_header"
+    fun appsHeader(column: String) = "manage_apps_header_$column"
+    const val APPS_ROW = "manage_apps_row"
+    const val APPS_USAGE_GRANT = "manage_apps_usage_grant"
+    const val APPS_SHELL_HINT = "manage_apps_shell_hint"
+    const val DATA_FILTERS = "manage_data_filters"
+    fun dataGroup(id: String) = "manage_data_group_$id"
+    fun dataKind(id: String) = "manage_data_kind_$id"
+    const val DATA_ROW = "manage_data_row"
+    const val DATA_PROGRESS = "manage_data_progress"
+    const val AGENTS = "agents"
+    const val AGENT_CARD = "agents_card"
+    const val VIEWER_TEXT_LAYER = "viewer_text_layer"
     const val DISK_SCREEN = "disk_screen"
     const val DISK_SECTION = "disk_section"
     const val BACKUPS_MIRROR_CARD = "backups_mirror_card"

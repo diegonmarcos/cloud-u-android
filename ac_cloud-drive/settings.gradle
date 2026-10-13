@@ -13,6 +13,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // JitPack: libadb-android, pulled by :libs:shizuku-adb-debug-tools (Manage ▸ Apps' shell reads).
+        maven { url 'https://jitpack.io' }
     }
 }
 

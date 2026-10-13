@@ -1,0 +1,318 @@
+package com.diegonmarcos.clouddrive.manage
+
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TriStateCheckbox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.diegonmarcos.clouddrive.Declarations
+import com.diegonmarcos.clouddrive.DriveActions
+import com.diegonmarcos.clouddrive.DrivePrefs
+import com.diegonmarcos.clouddrive.R
+import com.diegonmarcos.clouddrive.files.ConfirmDialog
+import com.diegonmarcos.clouddrive.files.FileOps
+import com.diegonmarcos.clouddrive.files.Places
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
+import com.diegonmarcos.clouddrive.ui.DriveTags
+import com.diegonmarcos.clouddrive.ui.EmptyState
+import com.diegonmarcos.clouddrive.ui.Hairline
+import com.diegonmarcos.clouddrive.ui.IconCatalog
+import com.diegonmarcos.clouddrive.ui.LoadingState
+import com.diegonmarcos.clouddrive.ui.Pill
+import com.diegonmarcos.clouddrive.ui.PillRow
+import com.diegonmarcos.clouddrive.ui.ToolbarIsland
+import com.diegonmarcos.clouddrive.ui.topIslandInsets
+import com.diegonmarcos.cloudlib.disk.AppSizes
+import com.diegonmarcos.superapp.adbdebug.ShellAccess
+import com.diegonmarcos.superapp.bottomnav.PageTabs
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/**
+ * MANAGE: the slot the Volumes tab freed. Disk Management moved here from Home and split into the
+ * two sub-pages of ui.sections[manage].pages: Apps (every installed app ranked by total size) and
+ * Data (everything in shared storage and the shared store that is not an app, ranked by size, with
+ * the owner's group/subtype filter). The `when` is the ONE place Kotlin names the two page ids.
+ */
+@Composable
+fun ManageScreen(actions: DriveActions, prefs: DrivePrefs, onShowInExplorer: (String) -> Unit, page: String? = null, onPageConsumed: () -> Unit = {}, modifier: Modifier = Modifier) {
+    val pages = Declarations.navPages(Declarations.SECTION_MANAGE)
+    var current by rememberSaveable { mutableStateOf(pages.firstOrNull()?.id ?: "") }
+    LaunchedEffect(page) {
+        if (page != null && pages.any { it.id == page }) current = page
+        if (page != null) onPageConsumed()
+    }
+    Column(modifier.fillMaxSize().testTag(DriveTags.MANAGE)) {
+        PageTabs(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gap).testTag(DriveTags.MANAGE_STRIP))
+        Box(Modifier.weight(1f).consumeWindowInsets(topIslandInsets()).testTag(DriveTags.managePage(current))) {
+            when (current) {
+                "apps" -> AppsPage(prefs)
+                "data" -> DataPage(actions, prefs, onShowInExplorer)
+                else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "")
+            }
+        }
+    }
+}
+
+// ── Apps ─────────────────────────────────────────────────────────────────────
+
+@Composable
+fun AppsPage(prefs: DrivePrefs, collect: (android.content.Context) -> AppSnapshot.Snapshot = { AppSnapshot.collect(it) }) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var snap by remember { mutableStateOf<AppSnapshot.Snapshot?>(null) }
+    var tick by remember { mutableStateOf(0) }
+    var shellNote by remember { mutableStateOf<String?>(null) }
+    val saved = remember { prefs.appsSort() }
+    var column by rememberSaveable { mutableStateOf(saved.first?.let { n -> AppColumn.entries.firstOrNull { it.name == n } } ?: AppTable.DEFAULT_SORT) }
+    var descending by rememberSaveable { mutableStateOf(saved.second) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val obs = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_RESUME) tick++ }
+        lifecycle.addObserver(obs)
+        onDispose { lifecycle.removeObserver(obs) }
+    }
+    LaunchedEffect(tick) { snap = withContext(Dispatchers.IO) { runCatching { collect(ctx) }.getOrNull() } ?: snap }
+    Column(Modifier.fillMaxSize()) {
+        ToolbarIsland(title = stringResource(R.string.manage_apps_title), subtitle = snap?.let { stringResource(R.string.manage_apps_subtitle, it.rows.size, it.shell ?: stringResource(R.string.manage_apps_no_shell)) })
+        val s = snap
+        if (s == null) { LoadingState(Modifier.weight(1f)); return@Column }
+        if (!s.usageAccess) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter, vertical = DriveMetrics.gap).testTag(DriveTags.APPS_USAGE_GRANT), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.manage_apps_usage_missing), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                Pill(stringResource(R.string.disk_grant_usage), { AppSizes.grantIntents(ctx).firstOrNull { runCatching { ctx.startActivity(it) }.isSuccess } }, filled = true)
+            }
+        }
+        if (s.shell == null) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter, vertical = DriveMetrics.gap).testTag(DriveTags.APPS_SHELL_HINT), verticalAlignment = Alignment.CenterVertically) {
+                Text(shellNote ?: stringResource(R.string.manage_apps_shell_hint), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                Pill(stringResource(R.string.manage_apps_shell_connect), { scope.launch { shellNote = withContext(Dispatchers.IO) { runCatching { ShellAccess.ensure(ctx) { tick++ } }.getOrElse { it.message } }; tick++ } })
+            }
+        }
+        val rows = remember(s, column, descending) { AppTable.sort(s.rows, column, descending) }
+        AppsTable(rows, column, descending, onSort = { c ->
+            if (c == column) descending = !descending else { column = c; descending = c != AppColumn.NAME }
+            prefs.setAppsSort(column.name, descending)
+        }, onOpen = { pkg -> runCatching { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } })
+    }
+}
+
+/** The labels of the seven columns, in order; NAME is the wide one. */
+@Composable
+private fun columnLabel(c: AppColumn): String = stringResource(when (c) {
+    AppColumn.NAME -> R.string.manage_apps_col_name
+    AppColumn.TOTAL -> R.string.manage_apps_col_total
+    AppColumn.APP -> R.string.manage_apps_col_app
+    AppColumn.DATA -> R.string.manage_apps_col_data
+    AppColumn.CACHE -> R.string.manage_apps_col_cache
+    AppColumn.RUNNING -> R.string.manage_apps_col_running
+    AppColumn.RAM -> R.string.manage_apps_col_ram
+})
+
+/** Sticky header, sortable columns, one horizontal scroll shared by header and rows (the table is wider than a phone). */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun AppsTable(rows: List<AppRow>, column: AppColumn, descending: Boolean, onSort: (AppColumn) -> Unit, onOpen: (String) -> Unit) {
+    val hs = rememberScrollState()
+    val yes = stringResource(R.string.manage_yes); val no = stringResource(R.string.manage_no)
+    Box(Modifier.fillMaxSize().horizontalScroll(hs)) {
+        LazyColumn(Modifier.width(DriveMetrics.tableName + DriveMetrics.tableCell * (AppColumn.entries.size - 1)).testTag(DriveTags.APPS_TABLE)) {
+            stickyHeader {
+                Row(Modifier.background(MaterialTheme.colorScheme.surfaceVariant).heightIn(min = DriveMetrics.tap).testTag(DriveTags.APPS_HEADER), verticalAlignment = Alignment.CenterVertically) {
+                    AppColumn.entries.forEach { c ->
+                        val arrow = if (c == column) (if (descending) " ▼" else " ▲") else ""
+                        Text(columnLabel(c) + arrow, cellModifier(c).clickable { onSort(c) }.testTag(DriveTags.appsHeader(c.name)), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, textAlign = if (c == AppColumn.NAME) TextAlign.Start else TextAlign.End, maxLines = 1)
+                    }
+                }
+            }
+            items(rows, key = { it.pkg }) { r ->
+                Row(Modifier.heightIn(min = DriveMetrics.rowHeight).clickable { onOpen(r.pkg) }.testTag(DriveTags.APPS_ROW), verticalAlignment = Alignment.CenterVertically) {
+                    Column(cellModifier(AppColumn.NAME)) {
+                        Text(r.label, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(r.pkg, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Num(AppTable.size(r.totalBytes), AppColumn.TOTAL, bold = true)
+                    Num(AppTable.size(r.appBytes), AppColumn.APP)
+                    Num(AppTable.size(r.dataBytes), AppColumn.DATA)
+                    Num(AppTable.size(r.cacheBytes), AppColumn.CACHE)
+                    Num(AppTable.running(r.running, yes, no), AppColumn.RUNNING)
+                    Num(AppTable.ram(r.ramKb), AppColumn.RAM)
+                }
+                Hairline()
+            }
+        }
+    }
+}
+
+private fun cellModifier(c: AppColumn): Modifier = Modifier.width(if (c == AppColumn.NAME) DriveMetrics.tableName else DriveMetrics.tableCell).padding(horizontal = DriveMetrics.gap)
+
+@Composable
+private fun Num(text: String, c: AppColumn, bold: Boolean = false) =
+    Text(text, cellModifier(c), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, fontWeight = if (bold) FontWeight.SemiBold else null, textAlign = TextAlign.End, maxLines = 1)
+
+// ── Data ─────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun groupLabel(g: DataGroup): String = stringResource(when (g) {
+    DataGroup.MEDIA -> R.string.manage_group_media
+    DataGroup.OFFICE -> R.string.manage_group_office
+    DataGroup.STRUCTURE -> R.string.manage_group_structure
+    DataGroup.BINS -> R.string.manage_group_bins
+})
+
+@Composable
+private fun kindLabel(k: DataKind): String = stringResource(when (k) {
+    DataKind.VIDEOS -> R.string.manage_kind_videos
+    DataKind.PICTURES -> R.string.manage_kind_pictures
+    DataKind.MUSIC -> R.string.manage_kind_music
+    DataKind.PDF -> R.string.manage_kind_pdf
+    DataKind.OFFICE -> R.string.manage_kind_office
+    DataKind.STRUCTURED -> R.string.manage_kind_structured
+    DataKind.MARKDOWN -> R.string.manage_kind_markdown
+    DataKind.TEXT -> R.string.manage_kind_text
+    DataKind.CODE -> R.string.manage_kind_code
+    DataKind.BINARIES -> R.string.manage_kind_binaries
+    DataKind.APK -> R.string.manage_kind_apk
+    DataKind.ARCHIVES -> R.string.manage_kind_archives
+    DataKind.SCRIPTS -> R.string.manage_kind_scripts
+})
+
+/** The filter block: per group a tri-state toggle (on / partial / off) and one pill per subtype. */
+@Composable
+fun DataFilters(filter: DataFilter, onChange: (DataFilter) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter).testTag(DriveTags.DATA_FILTERS), verticalArrangement = Arrangement.spacedBy(DriveMetrics.tight)) {
+        DataGroup.entries.forEach { g ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val st = when (filter.groupState(g)) { GroupState.ALL -> ToggleableState.On; GroupState.PARTIAL -> ToggleableState.Indeterminate; GroupState.NONE -> ToggleableState.Off }
+                TriStateCheckbox(state = st, onClick = { onChange(filter.toggleGroup(g)) }, modifier = Modifier.size(DriveMetrics.tapSmall).testTag(DriveTags.dataGroup(g.name)))
+                Text(groupLabel(g), Modifier.width(DriveMetrics.tabLabel).padding(start = DriveMetrics.gap), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                PillRow(Modifier.weight(1f)) {
+                    DataKind.inGroup(g).forEach { k -> Pill(kindLabel(k), { onChange(filter.toggle(k)) }, modifier = Modifier.testTag(DriveTags.dataKind(k.name)), filled = k in filter.on) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DataPage(actions: DriveActions, prefs: DrivePrefs, onShowInExplorer: (String) -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val controller = remember { DataScanController.get(ctx) }
+    val state by controller.state.collectAsState()
+    var filter by remember { mutableStateOf(DataFilter.decode(prefs.dataFilter())) }
+    var folders by remember { mutableStateOf(prefs.dataFolders()) }
+    var menuFor by remember { mutableStateOf<String?>(null) }
+    var confirm by remember { mutableStateOf<String?>(null) }
+    val hasAccess = remember { Places.hasAllFilesAccess(ctx) }
+    LaunchedEffect(hasAccess) { if (hasAccess && state.scannedAt == 0L) controller.scan(scope) }
+
+    val shown = remember(state.items, filter) { DataScanner.filtered(state.items, filter) }
+    val rows: List<Pair<String, Long>> = remember(shown, folders) { if (folders) DataScanner.folders(shown) else shown.map { it.path to it.size } }
+    val total = remember(shown) { shown.sumOf { it.size } }
+
+    Column(Modifier.fillMaxSize()) {
+        ToolbarIsland(title = stringResource(R.string.manage_data_title), subtitle = stringResource(R.string.manage_data_subtitle, rows.size, FileOps.humanBytes(total)))
+        if (!hasAccess) { EmptyState(IconCatalog.vectorOrDefault("lock"), stringResource(R.string.manage_data_no_access), "", Modifier.weight(1f), stringResource(R.string.disk_grant_files)) { actions.requestStorageAccess() }; return@Column }
+        DataFilters(filter) { f -> filter = f; prefs.setDataFilter(f.encode()) }
+        PillRow(Modifier.padding(horizontal = DriveMetrics.gutter, vertical = DriveMetrics.gap)) {
+            Pill(stringResource(R.string.manage_data_files), { folders = false; prefs.setDataFolders(false) }, filled = !folders)
+            Pill(stringResource(R.string.manage_data_folders), { folders = true; prefs.setDataFolders(true) }, filled = folders)
+            if (state.running) Pill(stringResource(R.string.chrome_cancel), { controller.cancel() })
+            else Pill(stringResource(R.string.manage_data_rescan), { controller.scan(scope, full = true) })
+        }
+        if (state.running) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter).testTag(DriveTags.DATA_PROGRESS)) {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+                val p = state.progress
+                Text(if (p == null) stringResource(R.string.manage_data_scanning) else stringResource(R.string.manage_data_progress, p.dirs, p.files, FileOps.humanBytes(p.bytes), p.current), style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (rows.isEmpty() && !state.running) { EmptyState(IconCatalog.vectorOrDefault("bar_chart"), stringResource(R.string.manage_data_empty), "", Modifier.weight(1f)); return@Column }
+        LazyColumn(Modifier.weight(1f)) {
+            items(rows, key = { it.first }) { (path, size) ->
+                Box {
+                    Row(Modifier.fillMaxWidth().heightIn(min = DriveMetrics.rowHeight).clickable { menuFor = path }.padding(horizontal = DriveMetrics.gutter).testTag(DriveTags.DATA_ROW), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(path.substringAfterLast('/'), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(path.substringBeforeLast('/'), style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Text(FileOps.humanBytes(size), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold)
+                    }
+                    DropdownMenu(expanded = menuFor == path, onDismissRequest = { menuFor = null }) {
+                        val isDir = folders
+                        if (!isDir) DropdownMenuItem(text = { Text(stringResource(R.string.manage_data_open)) }, onClick = { menuFor = null; open(actions, path) })
+                        if (!isDir) DropdownMenuItem(text = { Text(stringResource(R.string.viewer_share)) }, onClick = { menuFor = null; actions.share(listOf(path)) })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.manage_data_show)) }, onClick = { menuFor = null; onShowInExplorer(path) })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.chrome_delete)) }, onClick = { menuFor = null; confirm = path })
+                    }
+                }
+                Hairline()
+            }
+        }
+    }
+    confirm?.let { path ->
+        ConfirmDialog(stringResource(R.string.viewer_delete_title, path.substringAfterLast('/')), stringResource(R.string.files_delete_body), stringResource(R.string.chrome_delete), { confirm = null }) {
+            confirm = null
+            scope.launch {
+                val ok = withContext(Dispatchers.IO) { val f = File(path); if (f.isDirectory) f.deleteRecursively() else f.delete() }
+                if (ok) controller.forget(path)
+            }
+        }
+    }
+}
+
+private fun open(actions: DriveActions, path: String) {
+    when (FileClassifier.classify(path.substringAfterLast('/'))) {
+        DataKind.PICTURES -> actions.openImage(path, listOf(path))
+        DataKind.PDF -> actions.openPdf(path)
+        else -> actions.openWith(path)
+    }
+}
