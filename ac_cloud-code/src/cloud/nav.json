@@ -88,6 +88,8 @@
     "fleet_services": "ac_cloud-c3/data/services_private.json",
     "_doc_fleet_services": "The fleet's private service list as this repository carries it (cloud-c3 bakes it too). An agent is a service whose name starts with agent_prefix; its private_dns is where the mesh reaches it.",
     "agent_prefix": "cloud-agi-",
+    "shared_agents": "ab_cloud-libs-shared/libs/model-catalogue/src/main/assets/agents/agents.json",
+    "_doc_shared_agents": "THE ONE agent descriptor list (libs:model-catalogue assets/agents/agents.json), read by Cloud Search's Agent field too. An agent's identity — label, X-Agent-Mode, health_key, fleet service, model kind/providers/default — comes from there (tools/resolve-targets.py merges it at build time into targets.gen.json chat.agent_decls); the entries below keep only the picker order and what is Cloud Code's own (effort, permission mode, MCP source, the claude CLI id map). An agent only in this file (OpenRouter · fleet) is Cloud Code's alone. The live gateway (/health.modes) stays the runtime check.",
     "fleet_mcp": "0_apps/src/root/mcp.json",
     "_doc_fleet_mcp": "The derived .mcp.json (cloud-infra 1_cloud-configs/dist/mcp.json via 0_apps): the fallback MCP list for an agent whose backend publishes none. Only the server NAMES are copied; urls and headers stay out of the APK.",
     "gateway": {
@@ -110,12 +112,7 @@
     "agents": [
       {
         "id": "hermes",
-        "label": "Hermes",
-        "fleet": "cloud-agi-hermes",
-        "mode": "hermes",
-        "health_key": "hermes",
         "model": {
-          "kind": "fixed",
           "_doc": "the gateway answers hermes mode with ITS model (/health.modes[hermes].model: the Hermes Agent's own once native, else HERMES_MODEL); a model in the request is ignored, so the button shows that model and does not pick"
         },
         "effort": {
@@ -136,12 +133,7 @@
       },
       {
         "id": "openclaw",
-        "label": "OpenClaw",
-        "fleet": "cloud-agi-openclaw",
-        "mode": "openclaw",
-        "health_key": "openclaw",
         "model": {
-          "kind": "fixed",
           "_doc": "OpenClaw runs the model its own config names (cloud-u-containers user-ai_openclaw build.json runtime.model, through the gateway's OpenRouter face); the request's model field is the AGENT target (openclaw/default), so the button shows /health.modes[openclaw].model and does not pick"
         },
         "effort": null,
@@ -158,12 +150,7 @@
       },
       {
         "id": "goose",
-        "label": "Goose",
-        "fleet": "cloud-agi-goose",
-        "mode": "goose",
-        "health_key": "goose",
         "model": {
-          "kind": "fixed",
           "_doc": "GOOSE_MODEL, as for hermes"
         },
         "effort": {
@@ -181,15 +168,7 @@
       },
       {
         "id": "claude",
-        "label": "Claude",
-        "fleet": "cloud-agi-claude",
-        "mode": "claude-cli",
-        "health_key": "claude_cli",
         "model": {
-          "kind": "catalogue",
-          "providers": [
-            "Anthropic"
-          ],
           "map": "claude-cli",
           "_doc": "claude-superset-api runs the subscription claude CLI: an Anthropic row of the catalogue is passed as the CLI id (anthropic/claude-opus-5.5 -> claude-opus-5-5); other providers cannot be picked"
         },
@@ -205,15 +184,7 @@
       },
       {
         "id": "deepseek",
-        "label": "DeepSeek",
-        "fleet": null,
-        "mode": "deepseek",
-        "health_key": null,
         "model": {
-          "kind": "catalogue",
-          "providers": [
-            "DeepSeek"
-          ],
           "_doc": "the gateway's deepseek mode runs the requested deepseek/… model (v4-pro, v4-flash, v3.2, r1) and refuses any other (falls back to its DEEPSEEK_MODEL), so only the catalogue's DeepSeek rows can be picked"
         },
         "effort": {

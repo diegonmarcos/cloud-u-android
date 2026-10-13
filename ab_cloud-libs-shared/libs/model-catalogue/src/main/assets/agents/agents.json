@@ -42,6 +42,17 @@
       "_doc": "Block's goose, the gateway's default agent; GOOSE_MODEL"
     },
     {
+      "id": "openclaw",
+      "label": "OpenClaw",
+      "mode": "openclaw",
+      "health_key": "openclaw",
+      "fleet": "cloud-agi-openclaw",
+      "backend": "openclaw-gateway",
+      "model": { "kind": "fixed" },
+      "capabilities": { "tools": true, "mcp": false, "images": false, "reasoning": false, "web": false },
+      "_doc": "OpenClaw (MIT), cloud-agi-openclaw on oci-apps since 2026-10-13: its gateway on 127.0.0.1:18789 only, reached through the fleet gateway's openclaw mode, which forwards only the messages and the agent target (openclaw/default). It runs the model its own config names (the fleet model through the gateway's OpenRouter face), with its own tool plugins; no fleet MCP servers are configured in it, and the gateway sends no reasoning field."
+    },
+    {
       "id": "deepseek",
       "label": "DeepSeek Harness",
       "mode": "deepseek",

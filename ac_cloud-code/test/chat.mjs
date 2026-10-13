@@ -284,3 +284,14 @@ out(rds.headers["x-agent-mode"] === "deepseek" && rdb.model === dsRow.id && rdb.
 out(M.permissionControl(uds).shown && M.mcpServers(uds, [{ server: "cloud-infra", count: 3 }], fleet.mcp_fleet).source === "gateway", "DeepSeek has tools: permission mode and the gateway's MCP list");
 const dsOld = by(M.resolveAgents(chat, fleet, { ...modesUp, modes: modesUp.modes.filter((m) => m.id !== "deepseek") }), "deepseek");
 out(dsOld.state === "unavailable" && !dsOld.available, "a gateway without the deepseek mode: DeepSeek is shown, unavailable, never faked");
+
+// ── one source of truth: the shared agent descriptors (libs:model-catalogue agents.json) ──
+const sharedFile = JSON.parse(read(`../${chat.shared_agents}`));
+for (const s of sharedFile.agents) {
+	const d = fleet.agent_decls.find((x) => x.id === s.id);
+	out(!!d && d.label === s.label && d.mode === s.mode && (d.fleet ?? null) === (s.fleet ?? null) && d.model.kind === s.model.kind, `${s.label}: label, mode, fleet and model kind come from the shared agents.json`);
+	const navEntry = chat.agents.find((x) => x.id === s.id);
+	out(!!navEntry && !("label" in navEntry) && !("mode" in navEntry) && !("fleet" in navEntry), `${s.id}: nav.json does not restate the shared identity (order and app fields only)`);
+}
+out(sharedFile.agents.some((a) => a.id === "openclaw") && sharedFile.agents.some((a) => a.id === "deepseek"), "the shared file lists OpenClaw and the DeepSeek Harness, so Cloud Search sees them too");
+out(M.resolveAgents(chat, fleet, undefined).find((a) => a.id === "deepseek").label === sharedFile.agents.find((a) => a.id === "deepseek").label, "the picker shows the shared label");

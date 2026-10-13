@@ -26,7 +26,7 @@ class AgentCatalogueTest {
     }
 
     @Test fun theGatewayAgentsKeepTheirOrderAndGateway() {
-        assertEquals(listOf("claude", "hermes", "goose", "deepseek"), cat.agents.map { it.id })
+        assertEquals(listOf("claude", "hermes", "goose", "openclaw", "deepseek"), cat.agents.map { it.id })
         assertEquals("cloud-agi-goose", cat.gateway.service)
         assertEquals("X-Agent-Mode", cat.gateway.modeHeader)
         assertTrue(cat.gateway.meshOnly)

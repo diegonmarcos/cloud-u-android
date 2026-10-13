@@ -45,7 +45,9 @@ export function resolveAgents(chat, fleet, health) {
 		}
 		return ["ready", true, ""];
 	};
-	for (const decl of chat.agents) {
+	// The shared descriptor's identity merged with nav.json's own fields (resolve-targets.py);
+	// nav.json alone only when an older targets file has no agent_decls.
+	for (const decl of fleet.agent_decls || chat.agents) {
 		const live = liveMode(health, decl.mode);
 		const f = decl.fleet ? byId[decl.id] : null;
 		// An agent with no fleet service of its own (the gateway's OpenRouter face) is deployed

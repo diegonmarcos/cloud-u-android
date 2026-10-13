@@ -137,8 +137,36 @@ def base_url(service):
     return "http://" + dns
 
 
+def shared_agents(app_root, c):
+    """The ONE agent descriptor list (libs:model-catalogue assets/agents/agents.json), identity only."""
+    repo = os.path.dirname(os.path.abspath(app_root))
+    try:
+        data = json.load(open(os.path.join(repo, c["shared_agents"])))
+    except (OSError, ValueError, KeyError) as e:
+        raise SystemExit("resolve-targets: cannot read the shared agent descriptors (%s)" % e)
+    keep = ("id", "label", "mode", "health_key", "fleet", "backend", "model", "capabilities")
+    return [{k: a[k] for k in keep if k in a} for a in data["agents"]]
+
+
+def merged_agents(app_root, c):
+    """nav.json's order and Cloud Code's own fields, the shared file's identity (it wins)."""
+    shared = {a["id"]: a for a in shared_agents(app_root, c)}
+    out = []
+    for a in c["agents"]:
+        s = shared.get(a["id"])
+        if s:
+            m = dict(a.get("model") or {}); m.update(s.get("model") or {})
+            a = {**a, **{k: v for k, v in s.items() if k != "model"}, "model": m}
+        for k in ("label", "mode", "model"):
+            if k not in a:
+                raise SystemExit("resolve-targets: agent %r has no %s (neither nav.json nor the shared file)" % (a["id"], k))
+        out.append(a)
+    return out
+
+
 def chat(app_root, nav):
-    c = nav["chat"]
+    c = dict(nav["chat"])
+    c["agents"] = merged_agents(app_root, c)
     services = fleet_services(app_root, c["fleet_services"])
     prefix = c["agent_prefix"]
     gateway = services.get(c["gateway"]["service"])
@@ -167,6 +195,7 @@ def chat(app_root, nav):
     return {"agents": agents,
             "gateway": base_url(gateway),
             "claude_api": base_url(services.get(claude["fleet"])) if claude else None,
+            "agent_decls": c["agents"],
             "mcp_fleet": mcp,
             "account": resolve(app_root, c["account"]["app"])}
 
