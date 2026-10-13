@@ -501,15 +501,13 @@ fun ComposeScreen(
     LaunchedEffect(inlineImageMarker) {
         val marker = inlineImageMarker ?: return@LaunchedEffect
         inlineImageMarker = null
-        val current = RichBody(body.text, ranges, blocks, links)
-        val at = body.selection.max.coerceIn(0, body.text.length)
-        val insert = (if (at > 0 && body.text[at - 1] != '\n') "\n" else "") + marker + "\n"
-        val nextText = body.text.substring(0, at) + insert + body.text.substring(at)
-        val caret = at + insert.length
-        val withMarker = remapAfterEdit(current, nextText, span(body.selection), Span(caret, caret), null)
-        ranges = withMarker.ranges
-        blocks = withMarker.blocks
-        links = withMarker.links
+        // Put at the END of the body, on a line of its own: text added after everything leaves every
+        // span, list line and link exactly where it was, so no remap is needed (the screen's one
+        // remap is the keystroke's).
+        val text = body.text
+        val insert = (if (text.isNotEmpty() && !text.endsWith("\n")) "\n" else "") + marker + "\n"
+        val nextText = text + insert
+        val caret = nextText.length
         body = TextFieldValue(nextText, TextRange(caret))
     }
     // Whether the link dialog is up (#131). `rememberSaveable`, like the composer's own dialogs: a
