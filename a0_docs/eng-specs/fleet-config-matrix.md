@@ -49,7 +49,8 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| **fleet** | | **201** | **36** | **84%** |
+| cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 0 | 100% |
+| **fleet** | | **206** | **36** | **85%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -928,4 +929,26 @@ Module `ac_cloud-writer`; libs: lib-bottomnav, lib-core, lib-decisions, lib-devt
 | `text_tools` | prefs | config (keys: seeded_from_keyboard→device, seeded_from_serving_app→device) | yes | Mail AI text-tools choices: provider, per-provider model, enhance/summary style, translate target language (a language picker, default en), auto_translate_incoming and auto_summary_incoming switches (off by default), summary_language (default en), answer_prompt (the Answer Prediction prompt shared by the composer and the summary box suggested reply; empty means the built-in default). |
 
 Coverage: 2 covered, 0 gaps.
+
+## cloud-tools-small-llms — `com.diegonmarcos.cloudtoolssmallllms`
+
+Module `ac_cloud-tools-small-llms`; libs: lib-bottomnav, lib-core, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-text-tools.
+
+| store | kind | class | migrates | doc |
+|---|---|---|---|---|
+| `cloud_tools_small_llms` | prefs | content (keys: jev_checked_at→device, jev_listed→device, jev_price_in→device, router→config, workers→config) | no | Cloud Tools Small LLMs: the chat (messages, small JSON list), the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The chat and ledger are the user's content; router and workers are configuration; the Jev read is a cache of this phone's last network check. |
+| `cloud_tools_small_llms_secrets` | encrypted | secret | yes | Cloud Tools Small LLMs' OpenRouter token (openrouter_token), pasted in Settings: EncryptedSharedPreferences under a Keystore AES-256-GCM master key, shown masked, never logged. The fleet Account's key is never read (decisions-use guard D5). A credential: migrates through the vault. |
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+
+| file | class | doc |
+|---|---|---|
+| `EncryptedSharedPreferences cloud_tools_small_llms_secrets:openrouter_token` | secret | The user's own OpenRouter token, pasted in Settings; pays for the router and every worker call. |
+| `SharedPreferences cloud_tools_small_llms:router (default build.json::tools.router.default)` | config | The router: auto (Jev while OpenRouter lists it, else the default chat router), jev, or one chat router. |
+| `SharedPreferences cloud_tools_small_llms:workers` | config | Per-task worker overrides (task id -> catalogue model id); absent = the task's declared worker. |
+| `SharedPreferences cloud_tools_small_llms:messages` | content | The chat: requests, answers with task, model and cost, questions back. |
+| `SharedPreferences cloud_tools_small_llms:ledger` | content | Every priced call (time, dollars, task, model): the day and month totals on Costs. |
+
+Coverage: 5 covered, 0 gaps.
 

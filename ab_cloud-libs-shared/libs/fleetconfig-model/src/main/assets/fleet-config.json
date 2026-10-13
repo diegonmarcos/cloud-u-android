@@ -1726,6 +1726,29 @@
       "used_by": [
         "aa_cloud-superapp"
       ]
+    },
+    "cloud_tools_small_llms": {
+      "kind": "prefs",
+      "class": "content",
+      "doc": "Cloud Tools Small LLMs: the chat (messages, small JSON list), the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The chat and ledger are the user's content; router and workers are configuration; the Jev read is a cache of this phone's last network check.",
+      "used_by": [
+        "ac_cloud-tools-small-llms"
+      ],
+      "keys": {
+        "router": "config",
+        "workers": "config",
+        "jev_listed": "device",
+        "jev_price_in": "device",
+        "jev_checked_at": "device"
+      }
+    },
+    "cloud_tools_small_llms_secrets": {
+      "kind": "encrypted",
+      "class": "secret",
+      "doc": "Cloud Tools Small LLMs' OpenRouter token (openrouter_token), pasted in Settings: EncryptedSharedPreferences under a Keystore AES-256-GCM master key, shown masked, never logged. The fleet Account's key is never read (decisions-use guard D5). A credential: migrates through the vault.",
+      "used_by": [
+        "ac_cloud-tools-small-llms"
+      ]
     }
   },
   "bundle": {
@@ -3090,6 +3113,57 @@
         "lib-ui-kit"
       ],
       "items": []
+    },
+    "tools-small-llms": {
+      "package": "com.diegonmarcos.cloudtoolssmallllms",
+      "module": "ac_cloud-tools-small-llms",
+      "schema_version": 1,
+      "libs": [
+        "lib-bottomnav",
+        "lib-core",
+        "lib-decisions",
+        "lib-devtools",
+        "lib-fleetconfig-model",
+        "lib-model-catalogue",
+        "lib-text-tools"
+      ],
+      "items": [
+        {
+          "id": "token",
+          "path": "EncryptedSharedPreferences cloud_tools_small_llms_secrets:openrouter_token",
+          "class": "secret",
+          "doc": "The user's own OpenRouter token, pasted in Settings; pays for the router and every worker call.",
+          "store": "cloud_tools_small_llms_secrets"
+        },
+        {
+          "id": "router",
+          "path": "SharedPreferences cloud_tools_small_llms:router (default build.json::tools.router.default)",
+          "class": "config",
+          "doc": "The router: auto (Jev while OpenRouter lists it, else the default chat router), jev, or one chat router.",
+          "store": "cloud_tools_small_llms"
+        },
+        {
+          "id": "workers",
+          "path": "SharedPreferences cloud_tools_small_llms:workers",
+          "class": "config",
+          "doc": "Per-task worker overrides (task id -> catalogue model id); absent = the task's declared worker.",
+          "store": "cloud_tools_small_llms"
+        },
+        {
+          "id": "chat",
+          "path": "SharedPreferences cloud_tools_small_llms:messages",
+          "class": "content",
+          "doc": "The chat: requests, answers with task, model and cost, questions back.",
+          "store": "cloud_tools_small_llms"
+        },
+        {
+          "id": "ledger",
+          "path": "SharedPreferences cloud_tools_small_llms:ledger",
+          "class": "content",
+          "doc": "Every priced call (time, dollars, task, model): the day and month totals on Costs.",
+          "store": "cloud_tools_small_llms"
+        }
+      ]
     }
   },
   "libs": {

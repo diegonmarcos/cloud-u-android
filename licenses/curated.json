@@ -370,6 +370,12 @@
    "what": "Cloud Store app (#865, the Store split out of cloud-superapp)",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
   },
+  "ac_cloud-tools-small-llms": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud Tools Small LLMs app (small-model text tools over OpenRouter)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
   "ac_cloud-termux": {
    "licence": "GPL-3.0-only",
    "kind": "upstream-fork",

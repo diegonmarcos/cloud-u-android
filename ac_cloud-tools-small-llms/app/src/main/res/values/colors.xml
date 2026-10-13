@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The fleet palette (the cloud-calc / cloud-c3 values): dark by default (#336). -->
+    <color name="tools_background">#FF0F0B1A</color>
+    <color name="tools_surface">#FF17122A</color>
+    <color name="tools_surface_raised">#FF221B3B</color>
+    <color name="tools_text">#FFECE8F7</color>
+    <color name="tools_text_secondary">#FFA79FC2</color>
+    <color name="tools_outline">#FF3A3157</color>
+    <color name="tools_accent">#FFB794F4</color>
+    <color name="tools_on_accent">#FF14082B</color>
+    <color name="tools_user_bubble">#FF2D2350</color>
+    <color name="tools_error">#FFFF8A80</color>
+    <color name="tools_ok">#FF7EE2A8</color>
+</resources>

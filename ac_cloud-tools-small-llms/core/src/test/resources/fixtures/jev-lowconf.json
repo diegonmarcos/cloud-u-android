@@ -1,0 +1,1 @@
+{"id":"dec-1760342700-JevLow0000000000","model":"typesafe/jev-1.13","answers":{"task":{"type":"choice","choice":"summarize","probabilities":{"summarize":0.38,"keywords":0.31,"qa":0.2,"titles":0.04,"none":0.07}}},"usage":{"input_tokens":1175,"output_tokens":0,"cost":0.0000494}}

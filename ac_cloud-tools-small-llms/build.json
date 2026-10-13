@@ -1,0 +1,506 @@
+{
+  "name": "cloud-tools-small-llms",
+  "description": "Cloud Tools Small LLMs - an AI chat that does simple, direct text jobs with small, cheap models only, calling OpenRouter directly with the user's own token. A router reads each request and names the task (Jev, TypeSafe's decision model on OpenRouter's Decisions API, while it is listed; else a small JSON chat model), and one small worker model per task answers it with a fixed prompt: translate, summarize, rewrite, fix grammar, extract, classify, reply drafts, explain simply, quick maths, JSON/CSV fix, regex/command, titles and hashtags, sentiment, keywords, Q&A on pasted text. Every answer shows its task, model and actual cost (from OpenRouter's usage, router included); Costs keeps the day and month totals; Tasks lists what it can do with each worker's $/1M and the estimated cost of a typical call, priced by the shared libs:model-catalogue. The token lives in EncryptedSharedPreferences and is shown masked; of the fleet Account's key only whether it holds one is shown (decisions-use guard D5). English is the base language (#299); dark is the default theme (#336).",
+  "category": "android",
+  "android": {
+    "application_id": "com.diegonmarcos.cloudtoolssmallllms",
+    "_doc_application_id": "The fleet name with its separators dropped, as cloudcalc / cloudsearch.",
+    "compile_sdk": 36,
+    "min_sdk": 26,
+    "target_sdk": 35,
+    "version_code": 1,
+    "version_name": "0.1.0-dev",
+    "abi_filters": [
+      "arm64-v8a"
+    ]
+  },
+  "build": {
+    "type": "gradle",
+    "entry": "build.sh"
+  },
+  "signing": {
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks (OU=Cloud Constellation) + A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml.",
+    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
+  },
+  "diagnostics": {
+    "log_sink_url": "",
+    "log_sink_stream": "cloud-tools-small-llms"
+  },
+  "release": {
+    "artifact": {
+      "debug": "Cloud-Tools-Small-LLMs.apk",
+      "release": "Cloud-Tools-Small-LLMs-release.apk"
+    },
+    "variants": [
+      {
+        "id": "arm64",
+        "abis": [
+          "arm64-v8a"
+        ],
+        "supported_abis": [
+          "arm64-v8a",
+          "armeabi-v7a"
+        ],
+        "artifact_debug": "Cloud-Tools-Small-LLMs.apk",
+        "gh_asset": "Cloud-Tools-Small-LLMs.apk",
+        "ghcr_tag_suffix": "",
+        "update_tag": "latest"
+      },
+      {
+        "id": "x86_64",
+        "abis": [
+          "x86_64"
+        ],
+        "supported_abis": [
+          "x86_64",
+          "x86"
+        ],
+        "artifact_debug": "Cloud-Tools-Small-LLMs-x86_64.apk",
+        "gh_asset": "Cloud-Tools-Small-LLMs-x86_64.apk",
+        "ghcr_tag_suffix": "-x86_64",
+        "update_tag": "latest-x86_64"
+      }
+    ],
+    "auto_update": {
+      "enabled": false,
+      "tag": "latest",
+      "interval_hours": 6,
+      "require_unmetered_network": true,
+      "require_charging": false,
+      "install_mode": "silent",
+      "_doc_max_installs_per_pass": "Most install sessions ONE unattended background pass may open. A background pass cannot show the system install dialog (Android 10+ blocks background activity starts), so each install it starts leaves a tap-to-install notification holding a PackageInstaller session until the user answers it. Unbounded, one pass over the 40-entry fleet opens 40 and the installer hits Android's 50-session cap - 'Too many active sessions for UID'. The remainder is picked up by the next pass. User-initiated 'Update all' is NOT capped: it runs in the foreground where the dialog appears and sessions resolve at once.",
+      "max_installs_per_pass": 3,
+      "_doc_enabled": "Off because this app compiles no libs:updater: the Store updates it, as it does Cloud Calc and Cloud Search."
+    },
+    "ghcr": {
+      "enabled": true,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-tools-small-llms",
+      "media_type": "application/vnd.android.package-archive",
+      "tags": [
+        "latest",
+        "sha-{sha}",
+        "v{version_name}"
+      ]
+    },
+    "gh_release": {
+      "enabled": true,
+      "rolling_tag": "latest",
+      "asset_name": "Cloud-Tools-Small-LLMs.apk",
+      "draft": false,
+      "prerelease": false,
+      "generate_release_notes": false
+    },
+    "phone_install": {
+      "default_tag": "latest",
+      "target_dir": "~/storage/downloads",
+      "asset_name": "Cloud-Tools-Small-LLMs.apk"
+    }
+  },
+  "modules": {
+    "_doc": "Single source of truth for the Gradle module graph; settings.gradle iterates it. No `logic` lib is compiled in (lib-classes L4): the Store installs and updates this app, as it does Cloud Calc.",
+    "app": {
+      "type": "application",
+      "depends_on": [
+        "libs:core",
+        "libs:bottomnav",
+        "libs:model-catalogue",
+        "libs:decisions",
+        "libs:text-tools",
+        "tools-core"
+      ]
+    },
+    "tools-core": {
+      "_doc": "Everything the app decides or computes, as a plain-JVM Kotlin module (core/): the build.json::tools parser, the task registry priced by the catalogue, the Jev and chat router requests and the parsing of their decisions (valid / invalid / low confidence -> clarify), the worker request and reply, the cost of a call from OpenRouter's usage and the day / month ledger, the token vault's rules. Its suite runs against recorded OpenRouter JSON (core/src/test/resources/fixtures) and the shared catalogue.json, never the network; PIT mutation-tests it on every `gradle test`.",
+      "type": "library",
+      "dir": "core",
+      "_doc_dir": "Gradle path :tools-core, not :core, so it can never be confused with :libs:core."
+    },
+    "libs:core": {
+      "dir": "../ab_cloud-libs-shared/libs/core",
+      "type": "library"
+    },
+    "libs:devtools": {
+      "_doc_dir": "Not linked in app/build.gradle: libs:core pulls it in with an `api` dependency, which makes this app a fleet mesh member with the debug API.",
+      "dir": "../ab_cloud-libs-shared/libs/devtools",
+      "type": "library"
+    },
+    "libs:fleetconfig-model": {
+      "_doc": "#873 libs:core `api`s this module (the setup provider every app serves); listed so settings.gradle resolves the path.",
+      "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
+      "type": "library"
+    },
+    "libs:bottomnav": {
+      "_doc": "#868 the fleet's bottom island and NavDecl, which reads ui.bottom_nav/ui.sections as baked into BuildConfig.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
+    },
+    "libs:model-catalogue": {
+      "_doc": "The fleet's model catalogue: every worker and chat router is one of its rows, priced by its OpenRouter pricing repository (live once a day, cached, the snapshot offline: 'Prices as of'). No price fetcher of this app's own.",
+      "dir": "../ab_cloud-libs-shared/libs/model-catalogue",
+      "type": "library"
+    },
+    "libs:decisions": {
+      "_doc": "The fleet's Decisions API client (Http, UrlHttp, Decisions.post): the Jev router call, and the one HTTP door this app's chat calls go through too. Called with this app's OWN token, never the Account's.",
+      "dir": "../ab_cloud-libs-shared/libs/decisions",
+      "type": "library"
+    },
+    "libs:text-tools": {
+      "_doc": "The ITextTools binder (a `contract` lib): Settings asks the fleet Account, key-free, through aiRoutingSnapshot whether it answers and whether it holds an OpenRouter key (key_present, key_hint). The key itself is never read here (decisions-use guard D5); every call is paid with the token pasted in Settings.",
+      "dir": "../ab_cloud-libs-shared/libs/text-tools",
+      "type": "library"
+    }
+  },
+  "tests": {
+    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds.",
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3",
+        "grep"
+      ]
+    },
+    "unit": {
+      "_doc": "`gradle test`: tools-core's JVM suite (this build.json through the parser, the registry against the shared catalogue.json, router decisions from recorded Jev and chat answers, worker replies and costs from recorded usage, the ledger, the token vault) and its PIT gate.",
+      "task": "test",
+      "enabled": true
+    }
+  },
+  "tools": {
+    "_doc": "THE declaration of this app (core/ToolsConfig.kt parses and validates it; app/build.gradle bakes it into BuildConfig.TOOLS_CONFIG_B64; the JVM suite reads this file). No task, prompt, worker model, router model, URL or parameter is spelled in Kotlin. Every worker and the fallback routers are rows of libs:model-catalogue's catalogue.json, so their prices come from that lib (its live OpenRouter pricing, cached, the snapshot offline) and the Tasks page shows the same 'Prices as of' date Cloud Search does.",
+    "openrouter": {
+      "_doc": "OpenRouter direct, paid with the token the user pastes in Settings (EncryptedSharedPreferences, Keystore). chat_url answers the workers and the chat routers; decisions_url is the Decisions API Jev answers on; decision_models_url lists the decision models (Jev is used automatically while it is listed there); key_url is Settings' Test button (GET, spends nothing).",
+      "chat_url": "https://openrouter.ai/api/v1/chat/completions",
+      "decisions_url": "https://openrouter.ai/api/alpha/decisions",
+      "decision_models_url": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+      "key_url": "https://openrouter.ai/api/v1/key",
+      "timeout_ms": 30000
+    },
+    "router": {
+      "_doc": "The router reads a request and names a task, its parameters and a confidence. auto = Jev (jev_model on the Decisions API: one choice question over the tasks + none, one choice question per parameter, calibrated probabilities) while decision_models_url lists it, else the default chat router. Verified 2026-10-13: typesafe/jev-1.13 is listed there and its endpoints API shows a live TypeSafe endpoint ($0.042/1M input, output free); typesafe/jev-router is a chat auto-router with no endpoints and no price, so it is not used. The chat routers are B1 Decisions rows of the shared catalogue that support response_format; they answer one JSON object {task, confidence, params}. Below threshold (or a confident none) the app asks a one-line question and offers the top candidates (P >= candidate_min_p) as chips.",
+      "default": "auto",
+      "jev_model": "typesafe/jev-1.13",
+      "jev_price_in": 0.042,
+      "_doc_jev_price_in": "$ per 1M input tokens of jev_model (decisions bill no output), shown before the first live read of decision_models_url replaces it.",
+      "chat_default": "meta-llama/llama-3.1-8b-instruct",
+      "chat_models": [
+        "meta-llama/llama-3.1-8b-instruct",
+        "mistralai/ministral-3b-2512",
+        "google/gemma-3-4b-it",
+        "openai/gpt-oss-20b"
+      ],
+      "threshold": 0.6,
+      "candidates": 3,
+      "candidate_min_p": 0.05,
+      "max_tokens": 150,
+      "instructions": "Which one of this app's quick text tasks does `request` ask for? Pick none when it is none of them.",
+      "none_criterion": "The request is not one of these quick tasks: open conversation, research, long writing or anything needing current facts.",
+      "clarify": "Not sure what you want - pick a task:"
+    },
+    "typical": {
+      "_doc": "The typical call each task's estimate is priced at (input and output tokens).",
+      "in": 300,
+      "out": 200
+    },
+    "params": {
+      "language": {
+        "label": "Target language",
+        "instructions": "Into which language should the text be translated?",
+        "default": "en",
+        "options": {
+          "en": "English",
+          "de": "German",
+          "es": "Spanish",
+          "fr": "French",
+          "it": "Italian",
+          "pt": "Portuguese",
+          "nl": "Dutch",
+          "pl": "Polish",
+          "tr": "Turkish",
+          "ru": "Russian",
+          "zh": "Chinese",
+          "ja": "Japanese",
+          "ar": "Arabic"
+        }
+      },
+      "tone": {
+        "label": "Tone",
+        "instructions": "Which style does the user want the rewrite in?",
+        "default": "formal",
+        "options": {
+          "formal": "more formal",
+          "casual": "more casual",
+          "friendly": "friendlier",
+          "shorter": "shorter",
+          "longer": "longer"
+        }
+      },
+      "target": {
+        "label": "What to extract",
+        "instructions": "Which kind of item does the user want extracted?",
+        "default": "all",
+        "options": {
+          "all": "emails, phone numbers, dates, addresses and to-dos",
+          "emails": "email addresses",
+          "phones": "phone numbers",
+          "dates": "dates and times",
+          "addresses": "postal addresses",
+          "todos": "to-dos and action items"
+        }
+      },
+      "format": {
+        "label": "Output format",
+        "instructions": "Which output format does the user want?",
+        "default": "list",
+        "options": {
+          "list": "list",
+          "json": "json",
+          "csv": "csv"
+        }
+      },
+      "channel": {
+        "label": "Reply as",
+        "instructions": "Is the reply an email or a chat message?",
+        "default": "message",
+        "options": {
+          "message": "short chat message",
+          "email": "email"
+        }
+      }
+    },
+    "tasks": [
+      {
+        "id": "translate",
+        "label": "Translate",
+        "icon": "translate",
+        "blurb": "Translate text into another language.",
+        "example": "Translate to German: see you tomorrow at 9",
+        "worker": "mistralai/mistral-small-3.2-24b-instruct",
+        "params": [
+          "language"
+        ],
+        "max_tokens": 600,
+        "criterion": "The user wants text translated into another language.",
+        "system": "You are a translator. Translate the user's text into {language}. Keep meaning, tone, names and formatting. Reply with the translation only."
+      },
+      {
+        "id": "summarize",
+        "label": "Summarize",
+        "icon": "summarize",
+        "blurb": "Shorten a long text to its key points.",
+        "example": "Summarize: <paste an article>",
+        "worker": "meta-llama/llama-3.1-8b-instruct",
+        "params": [],
+        "max_tokens": 300,
+        "criterion": "The user wants a long text shortened to its main points.",
+        "system": "Summarize the user's text in at most 5 short bullet points, in the text's own language. No preamble."
+      },
+      {
+        "id": "rewrite",
+        "label": "Rewrite",
+        "icon": "edit",
+        "blurb": "Rewrite text in another tone or length.",
+        "example": "Make this more formal: hey, can't come today",
+        "worker": "mistralai/mistral-small-3.2-24b-instruct",
+        "params": [
+          "tone"
+        ],
+        "max_tokens": 500,
+        "criterion": "The user wants their own text rewritten: more formal, more casual, shorter or longer.",
+        "system": "Rewrite the user's text. Style: {tone}. Keep the meaning and the language. Reply with the rewritten text only."
+      },
+      {
+        "id": "grammar",
+        "label": "Fix grammar",
+        "icon": "spellcheck",
+        "blurb": "Correct spelling, grammar and punctuation.",
+        "example": "Fix: their going too the park tomorow",
+        "worker": "google/gemma-3-4b-it",
+        "params": [],
+        "max_tokens": 500,
+        "criterion": "The user wants spelling, grammar or punctuation corrected.",
+        "system": "Correct the spelling, grammar and punctuation of the user's text. Change nothing else. Reply with the corrected text only."
+      },
+      {
+        "id": "extract",
+        "label": "Extract",
+        "icon": "list",
+        "blurb": "Pull emails, phones, dates, addresses or to-dos out of text.",
+        "example": "Extract the dates: meeting on 3 May, call on the 7th",
+        "worker": "mistralai/ministral-3b-2512",
+        "params": [
+          "target",
+          "format"
+        ],
+        "max_tokens": 400,
+        "criterion": "The user wants specific items (emails, phone numbers, dates, addresses, to-dos) pulled out of a text.",
+        "system": "Extract every {target} from the user's text. Output format: {format}. For json reply with one JSON object whose keys are the item kinds and whose values are arrays of strings. For list reply with one item per line, prefixed '- '. Nothing else."
+      },
+      {
+        "id": "classify",
+        "label": "Classify / tag",
+        "icon": "label",
+        "blurb": "Put text into a category and suggest tags.",
+        "example": "Tag this: invoice overdue, please pay by Friday",
+        "worker": "google/gemma-3-4b-it",
+        "params": [],
+        "max_tokens": 120,
+        "criterion": "The user wants a text categorised or tagged.",
+        "system": "Classify the user's text. Reply on two lines: 'Category: <one short category>' and 'Tags: <3 to 6 comma-separated tags>'."
+      },
+      {
+        "id": "reply",
+        "label": "Reply draft",
+        "icon": "reply",
+        "blurb": "Draft a short reply to an email or message.",
+        "example": "Reply yes to: are you free for lunch Thursday?",
+        "worker": "mistralai/mistral-small-3.2-24b-instruct",
+        "params": [
+          "channel"
+        ],
+        "max_tokens": 400,
+        "criterion": "The user wants a short reply drafted to an email or message.",
+        "system": "Draft a short reply to the message the user pasted, as a {channel}, in the message's language. Follow any instruction the user adds. Reply with the draft only."
+      },
+      {
+        "id": "explain",
+        "label": "Explain simply",
+        "icon": "school",
+        "blurb": "Explain something in plain words.",
+        "example": "Explain simply: what is inflation?",
+        "worker": "microsoft/phi-4",
+        "params": [],
+        "max_tokens": 350,
+        "criterion": "The user wants something explained simply.",
+        "system": "Explain the user's topic or text in plain words a 12-year-old understands, in at most 6 short sentences, in the user's language."
+      },
+      {
+        "id": "math",
+        "label": "Quick math",
+        "icon": "calculate",
+        "blurb": "Worded maths and unit conversions.",
+        "example": "How many km is 26.2 miles?",
+        "worker": "openai/gpt-oss-20b",
+        "params": [],
+        "max_tokens": 600,
+        "criterion": "The user asks for a calculation or a unit conversion in words.",
+        "system": "Solve the user's worded maths or unit conversion. Show at most 3 short steps, then the final answer on its own line starting 'Answer:'."
+      },
+      {
+        "id": "data",
+        "label": "JSON / CSV fix",
+        "icon": "data",
+        "blurb": "Repair and format JSON or CSV.",
+        "example": "Fix this JSON: {name: 'a', age: 3,}",
+        "worker": "meta-llama/llama-3.1-8b-instruct",
+        "params": [
+          "format"
+        ],
+        "max_tokens": 800,
+        "criterion": "The user pasted JSON or CSV that should be repaired or formatted.",
+        "system": "Repair the user's {format} so it is valid, then pretty-print it. Keep every value. Reply with the fixed data only, in one code block."
+      },
+      {
+        "id": "regex",
+        "label": "Regex / command",
+        "icon": "terminal",
+        "blurb": "Write a regex or a shell command.",
+        "example": "Regex for a German postcode",
+        "worker": "openai/gpt-oss-20b",
+        "params": [],
+        "max_tokens": 400,
+        "criterion": "The user wants a regular expression or a shell / CLI command written or explained.",
+        "system": "Write the regular expression or shell command the user describes. Reply with it in one code block, then one line explaining it."
+      },
+      {
+        "id": "titles",
+        "label": "Titles & hashtags",
+        "icon": "tag",
+        "blurb": "Suggest titles and hashtags.",
+        "example": "Titles for a post about my first marathon",
+        "worker": "google/gemma-3-4b-it",
+        "params": [],
+        "max_tokens": 250,
+        "criterion": "The user wants titles, headlines or hashtags.",
+        "system": "Suggest 5 short titles and 8 hashtags for the user's text, in its language. Two sections: 'Titles' and 'Hashtags'."
+      },
+      {
+        "id": "sentiment",
+        "label": "Sentiment",
+        "icon": "mood",
+        "blurb": "Is the text positive, neutral or negative?",
+        "example": "Sentiment: the delivery was late again",
+        "worker": "ibm-granite/granite-4.0-h-micro",
+        "params": [],
+        "max_tokens": 60,
+        "criterion": "The user wants to know the sentiment or mood of a text.",
+        "system": "Rate the sentiment of the user's text. Reply on one line: '<positive|neutral|negative|mixed> - <confidence 0-100>% - <five-word reason>'."
+      },
+      {
+        "id": "keywords",
+        "label": "Keywords",
+        "icon": "key",
+        "blurb": "List the key terms of a text.",
+        "example": "Keywords: <paste a paragraph>",
+        "worker": "ibm-granite/granite-4.0-h-micro",
+        "params": [],
+        "max_tokens": 120,
+        "criterion": "The user wants the keywords or key terms of a text.",
+        "system": "List the 5 to 10 most important keywords of the user's text, most important first, comma-separated, in its language. Nothing else."
+      },
+      {
+        "id": "qa",
+        "label": "Q&A on text",
+        "icon": "question",
+        "blurb": "Answer a question about text you paste.",
+        "example": "<paste text> Question: who signed it?",
+        "worker": "mistralai/mistral-small-3.2-24b-instruct",
+        "params": [],
+        "max_tokens": 400,
+        "criterion": "The user pasted a text and asks a question about it.",
+        "system": "Answer the user's question using ONLY the text they pasted. If the text does not say, reply 'The text does not say.' Quote the sentence you used."
+      }
+    ]
+  },
+  "ui": {
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): four sections on the island, each one page.",
+    "bottom_nav": [
+      "chat",
+      "tasks",
+      "costs",
+      "settings"
+    ],
+    "default_section": "chat",
+    "sections": [
+      {
+        "id": "chat",
+        "label": "Chat",
+        "icon": "chat",
+        "pages": []
+      },
+      {
+        "id": "tasks",
+        "label": "Tasks",
+        "icon": "tasks",
+        "pages": []
+      },
+      {
+        "id": "costs",
+        "label": "Costs",
+        "icon": "costs",
+        "pages": []
+      },
+      {
+        "id": "settings",
+        "label": "Settings",
+        "icon": "settings",
+        "pages": []
+      }
+    ],
+    "debug_api": {
+      "group": "tools"
+    }
+  }
+}

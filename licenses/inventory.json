@@ -2542,6 +2542,14 @@
    "licence": "LicenseRef-NoLicenseGranted",
    "licence_source": "licenses/curated.json"
   },
+  "dir:ac_cloud-tools-small-llms": {
+   "kind": "dir",
+   "declared_in": [
+    "(tree)"
+   ],
+   "licence": "LicenseRef-NoLicenseGranted",
+   "licence_source": "licenses/curated.json"
+  },
   "dir:ac_cloud-termux": {
    "kind": "dir",
    "declared_in": [

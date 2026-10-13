@@ -1,0 +1,90 @@
+{
+ "data": [
+  {
+   "id": "liquid/d1",
+   "name": "LiquidAI: d1",
+   "created": 1790878711,
+   "context_length": 65536,
+   "architecture": {
+    "modality": "text->decisions",
+    "input_modalities": [
+     "text"
+    ],
+    "output_modalities": [
+     "decisions"
+    ],
+    "tokenizer": "Other",
+    "instruct_type": null
+   },
+   "pricing": {
+    "prompt": "0.00000002",
+    "completion": "0",
+    "input_cache_read": "0.00000002"
+   }
+  },
+  {
+   "id": "inception/mercury-decide:free",
+   "name": "Inception: Mercury Decide (free)",
+   "created": 1790789334,
+   "context_length": 65536,
+   "architecture": {
+    "modality": "text+image->decisions",
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "decisions"
+    ],
+    "tokenizer": "Other",
+    "instruct_type": null
+   },
+   "pricing": {
+    "prompt": "0",
+    "completion": "0"
+   }
+  },
+  {
+   "id": "~typesafe/jev-latest",
+   "name": "TypeSafe: Jev Latest",
+   "created": 1789689685,
+   "context_length": 64000,
+   "architecture": {
+    "modality": "text->decisions",
+    "input_modalities": [
+     "text"
+    ],
+    "output_modalities": [
+     "decisions"
+    ],
+    "tokenizer": "Router",
+    "instruct_type": null
+   },
+   "pricing": {
+    "prompt": "0.000000042",
+    "completion": "0"
+   }
+  },
+  {
+   "id": "typesafe/jev-1.13",
+   "name": "TypeSafe: Jev 1.13",
+   "created": 1789689684,
+   "context_length": 64000,
+   "architecture": {
+    "modality": "text->decisions",
+    "input_modalities": [
+     "text"
+    ],
+    "output_modalities": [
+     "decisions"
+    ],
+    "tokenizer": "Other",
+    "instruct_type": null
+   },
+   "pricing": {
+    "prompt": "0.000000042",
+    "completion": "0"
+   }
+  }
+ ]
+}

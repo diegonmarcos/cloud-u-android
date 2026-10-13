@@ -581,7 +581,7 @@
           "down": "app:com.diegonmarcos.clouddrive",
           "down_outer": "app:com.google.android.apps.bard"
         },
-        "_doc_top_outer": "top_outer is AI Claude — the same Telegram-bot target the Cloud > Apps tile uses (@Cloud_agent_claude_bot). GestureAction.parse only understands app:/action:/bare-OneHandAction, so the intent:// URL has to travel as an action: payload: parse strips the action: prefix, openInHost forwards the rest verbatim in the shortcut_action extra, and ShellActivity's tile grammar recognises the intent: prefix and hands it to Intent.parseUri. Keep the two targets identical — if the bot handle changes, change it here as well. NOTE: search left this handle in the same commit that reordered it — top_outer used to be action:open_search, which is now the Polaris star at the top of the home screen (onehand.search_star)."
+        "_doc_top_outer": "top_outer is AI Claude — the same Telegram-bot target the Cloud > Apps > Inboxes tile uses (moved there from the B-LLM folder, 2026-10-13) (@Cloud_agent_claude_bot). GestureAction.parse only understands app:/action:/bare-OneHandAction, so the intent:// URL has to travel as an action: payload: parse strips the action: prefix, openInHost forwards the rest verbatim in the shortcut_action extra, and ShellActivity's tile grammar recognises the intent: prefix and hands it to Intent.parseUri. Keep the two targets identical — if the bot handle changes, change it here as well. NOTE: search left this handle in the same commit that reordered it — top_outer used to be action:open_search, which is now the Polaris star at the top of the home screen (onehand.search_star)."
       }
     ],
     "_doc_retired_targets": "#537 (third report of the same Drive defect, after #404 and #284). A sector's DEFAULT lives in handles[], but an override the owner once picked lives in OneHandPrefs on the phone and BEATS the default forever. The left `down` default was action:section:drive from 2026-09-10 until #302/#304 lifted Drive into its own APK on 2026-09-13; any override written in that window still names a section that no longer exists, so the edge drew a title-cased raw target with no glyph and the tap opened nothing — while every tester, all reading handles[], stayed green. This map is old target -> its successor, applied by OneHandConfig.effective() to STORED overrides only, so a destination that was retired is followed to where it moved instead of pinning the phone to a dead one. It never touches a live choice: only a key listed here is rewritten. Keys are written exactly as OneHandPrefs stores a value (GestureAction.serialize(): `action:<target>`, `app:<pkg>`, or a bare global id). Add a row whenever a sector target is retired.",
@@ -2649,6 +2649,13 @@
                 "target": "intent://resolve?domain=Cloud_bot_C3_Infra_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_bot_C3_Infra_bot;end"
               },
               {
+                "_doc": "AI Claude, the one hosted Telegram agent kept as a tile when the B-LLM folder left Cloud > Apps > AGI (2026-10-13). It is here, beside C3-Bot (the other Telegram bot), because the left edge menu's first sector (onehand.handles[left].gestures.top_outer) opens this exact bot URI and draws this tile's label and glyph: the launcher-onehand build derives its action catalogue from the tiles and FAILS the build on a sector that resolves to no tile (test-onehand-sector-resolution.sh, test-onehand-edge-order.sh T5). AI Hermes and AI Goose went with the folder.",
+                "id": "ai-tlg-claude",
+                "label": "AI Claude",
+                "icon": "ic_ai_chat",
+                "target": "intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end"
+              },
+              {
                 "id": "news",
                 "label": "News",
                 "icon": "ic_rss",
@@ -2785,7 +2792,7 @@
             "title": "AGI",
             "tiles": [
               {
-                "_doc": "#779 Search — hands off to the standalone Cloud Search app (ac_cloud-search, com.diegonmarcos.cloudsearch, read from ITS android.application_id and app/build.gradle namespace). #803: the owner moved SuperApp to the Configs row, so AGI now STARTS with Search: Search, Code, B-LLM, S-LLM, MyTerminal, Terminal. GroupedTilesFragment walks group.tiles in declared order with no sort, so array position is that placement, and test-agi-tiles.sh T1 pins the row. target=extapp:cloud-search → launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-search].install_apk_url (ABI-resolved through the fleet assets map). icon ic_cloud_search is Cloud Search's own launcher foreground, byte for byte (test-agi-tiles.sh T3) — #803 the Phosphor shooting-star in the mockup's .ai-nav-icon gradient (Cloud Search's app/tools/phosphor.json::launcher generates it; Phosphor is MIT, recorded in ac_cloud-search/NOTICE.md). `tint: false` keeps that gradient: every other tile glyph is drawn white, which would flatten this one to a silhouette (test-agi-tiles.sh T6).",
+                "_doc": "#779 Search — hands off to the standalone Cloud Search app (ac_cloud-search, com.diegonmarcos.cloudsearch, read from ITS android.application_id and app/build.gradle namespace). #803: the owner moved SuperApp to the Configs row, so AGI now STARTS with Search: Search, Code, Tools, MyTerminal, Terminal (B-LLM and S-LLM removed, Tools in S-LLM's place, 2026-10-13). GroupedTilesFragment walks group.tiles in declared order with no sort, so array position is that placement, and test-agi-tiles.sh T1 pins the row. target=extapp:cloud-search → launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-search].install_apk_url (ABI-resolved through the fleet assets map). icon ic_cloud_search is Cloud Search's own launcher foreground, byte for byte (test-agi-tiles.sh T3) — #803 the Phosphor shooting-star in the mockup's .ai-nav-icon gradient (Cloud Search's app/tools/phosphor.json::launcher generates it; Phosphor is MIT, recorded in ac_cloud-search/NOTICE.md). `tint: false` keeps that gradient: every other tile glyph is drawn white, which would flatten this one to a silhouette (test-agi-tiles.sh T6).",
                 "id": "search",
                 "label": "Search",
                 "icon": "ic_cloud_search",
@@ -2800,151 +2807,11 @@
                 "target": "extapp:cloud-code"
               },
               {
-                "_doc": "B-LLM - the three Telegram agent bots behind one icon instead of three tiles in the row. The icon is ic_ai_sparkle, the same one S-LLM carries: the two folders are siblings on the same row and the owner reads them as one pair, so a generic folder glyph on one and an AI glyph on the other told the eye they were different kinds of thing. 'B' is for big: Hermes, Goose and Claude each answer from a full-size hosted model. A tile that carries a nested 'tiles' array IS a folder - GroupedTilesFragment opens the popup instead of dispatching 'target' - which is why this entry has no target of its own. Giving a folder a target as well would make the first tap ambiguous: open, or navigate?",
-                "id": "b-llm",
-                "label": "B-LLM",
-                "icon": "ic_ai_sparkle",
-                "tiles": [
-                  {
-                    "id": "ai-tlg-hermes",
-                    "label": "AI Hermes",
-                    "icon": "ic_ai_chat",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot;end"
-                  },
-                  {
-                    "id": "ai-tlg-goose",
-                    "label": "AI Goose",
-                    "icon": "ic_ai_chat",
-                    "target": "intent://resolve?domain=Cloud_agent_goose_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_goose_bot;end"
-                  },
-                  {
-                    "id": "ai-tlg-claude",
-                    "label": "AI Claude",
-                    "icon": "ic_ai_chat",
-                    "target": "intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end"
-                  }
-                ]
-              },
-              {
-                "_doc": "S-LLM - the small task-specific models, laid out as a TABLE rather than a grid of icons. Sixteen rows cannot be told apart by picture: what identifies a row is its task and the model answering it, so 'children_ui': 'table' switches the popup to one line per entry showing category, task, slug and model. Every row opens the SAME Hermes chat as B-LLM's first tile with '?start=<slug>' appended, so the bot picks that row's model. The slugs are the bot's own task names; Telegram start payloads allow letters, digits, underscore and hyphen, which is why they may stay hyphenated here rather than being rewritten for the link.",
-                "id": "s-llm",
-                "label": "S-LLM",
-                "icon": "ic_ai_sparkle",
-                "children_ui": "table",
-                "tiles": [
-                  {
-                    "id": "writer-grammar",
-                    "label": "Grammar & Rewriting",
-                    "caption": "Writing & Editing",
-                    "note": "MiniCPM-3B",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=writer-grammar#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dwriter-grammar;end"
-                  },
-                  {
-                    "id": "writer-social",
-                    "label": "Personal & Social Message Drafting",
-                    "caption": "Communication",
-                    "note": "Llama-3.2-3B-Instruct",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=writer-social#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dwriter-social;end"
-                  },
-                  {
-                    "id": "writer-translate",
-                    "label": "Real-Time Translation",
-                    "caption": "Translation",
-                    "note": "Yi-1.5-6B",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=writer-translate#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dwriter-translate;end"
-                  },
-                  {
-                    "id": "writer-email",
-                    "label": "Email Drafting & Digest",
-                    "caption": "Email & Summarization",
-                    "note": "InternLM2.5-7B",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=writer-email#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dwriter-email;end"
-                  },
-                  {
-                    "id": "voice-home",
-                    "label": "Voice Commands & Smart Home",
-                    "caption": "Smart Home",
-                    "note": "Qwen2.5-7B-Instruct",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=voice-home#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dvoice-home;end"
-                  },
-                  {
-                    "id": "doc-ocr",
-                    "label": "PDF & Invoice OCR",
-                    "caption": "Vision & Extraction",
-                    "note": "Qwen2.5-VL-3B",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=doc-ocr#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Ddoc-ocr;end"
-                  },
-                  {
-                    "id": "calendar-parse",
-                    "label": "Calendar & Event Parsing",
-                    "caption": "Productivity",
-                    "note": "Llama-3.2-3B-Instruct",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=calendar-parse#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dcalendar-parse;end"
-                  },
-                  {
-                    "id": "code-complete",
-                    "label": "Code Completion",
-                    "caption": "Software Development",
-                    "note": "Qwen2.5-Coder-7B",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=code-complete#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dcode-complete;end"
-                  },
-                  {
-                    "id": "home-diy",
-                    "label": "DIY & Home Repair Troubleshooting",
-                    "caption": "Technical Support",
-                    "note": "DeepSeek-R1-Distill-Qwen-7B",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=home-diy#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dhome-diy;end"
-                  },
-                  {
-                    "id": "math-budget",
-                    "label": "Math & Household Budgeting",
-                    "caption": "Finance & Math",
-                    "note": "DeepSeek-R1-Distill-Qwen-7B",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=math-budget#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dmath-budget;end"
-                  },
-                  {
-                    "id": "study-cards",
-                    "label": "Study Guides & Flashcard Creation",
-                    "caption": "Education",
-                    "note": "Gemma-2-9B-it",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=study-cards#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dstudy-cards;end"
-                  },
-                  {
-                    "id": "meal-plan",
-                    "label": "Meal Planning & Recipes",
-                    "caption": "Food & Cooking",
-                    "note": "Qwen2.5-3B-Instruct",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=meal-plan#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dmeal-plan;end"
-                  },
-                  {
-                    "id": "travel-plan",
-                    "label": "Travel & Local Itineraries",
-                    "caption": "Travel & Planning",
-                    "note": "GLM-4-9B-Chat",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=travel-plan#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dtravel-plan;end"
-                  },
-                  {
-                    "id": "fitness-plan",
-                    "label": "Fitness & Workout Routines",
-                    "caption": "Health & Fitness",
-                    "note": "Yi-1.5-6B",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=fitness-plan#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dfitness-plan;end"
-                  },
-                  {
-                    "id": "search-summary",
-                    "label": "Web Search & Summary",
-                    "caption": "Search & Research",
-                    "note": "GLM-4-9B-Chat",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=search-summary#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dsearch-summary;end"
-                  },
-                  {
-                    "id": "shop-compare",
-                    "label": "Gift Ideas & Product Comparisons",
-                    "caption": "Shopping & Review",
-                    "note": "InternLM2.5-7B",
-                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=shop-compare#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dshop-compare;end"
-                  }
-                ]
+                "_doc": "Tools - hands off to the standalone Cloud Tools Small LLMs app (ac_cloud-tools-small-llms, com.diegonmarcos.cloudtoolssmallllms, read from ITS android.application_id and app/build.gradle namespace): an AI chat that does quick text jobs with small, cheap OpenRouter models only, a router (Jev, else a small JSON model) picking the task and its worker. It REPLACES the S-LLM folder in S-LLM's place (the owner, 2026-10-13), and the B-LLM folder (the three hosted Telegram agents) is gone from the row, so AGI reads Search, Code, Tools, MyTerminal, Terminal (test-agi-tiles.sh T1). target=extapp:cloud-tools-small-llms -> launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-tools-small-llms].install_apk_url. icon ic_tools_small_llms is that app's launcher foreground, byte for byte (test-agi-tiles.sh T3); Sections.iconResFor falls back to ic_link_tile in silence when a name resolves to nothing, so the drawable's existence is pinned there too.",
+                "id": "tools-small-llms",
+                "label": "Tools",
+                "icon": "ic_tools_small_llms",
+                "target": "extapp:cloud-tools-small-llms"
               },
               {
                 "_doc": "#571. MyTerminal opens cloud-myterminal's own applicationId (com.diegonmarcos.ide, kept by the #561 rename so installs survive). The forkless extapp:cloud-myterminal resolves to hub_package; it used to name the '/files' fork, a separate APK the rename did not make the app.",
@@ -8360,6 +8227,15 @@
         "hub_package": "com.diegonmarcos.cloudsearch",
         "install_package": "com.diegonmarcos.cloudsearch",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Search.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "Cloud Tools Small LLMs (ac_cloud-tools-small-llms, published by ship-cloud-tools-small-llms.yml). Added for the Cloud > Apps > AGI 'Tools' tile: every extapp:<id> must resolve here (test-app-identity-resolves.sh T1). package read from ac_cloud-tools-small-llms/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors its arm64 release asset; x86_64 devices are resolved through the fleet assets map. folder=prod_ai ('@AI') is the taxonomy half of the same record - PhoneFolders derives the pkg: keyword from it, so NO literal keyword for com.diegonmarcos.cloudtoolssmallllms may be added to ui.phone_folders.",
+        "id": "cloud-tools-small-llms",
+        "folder": "prod_ai",
+        "hub_package": "com.diegonmarcos.cloudtoolssmallllms",
+        "install_package": "com.diegonmarcos.cloudtoolssmallllms",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Tools-Small-LLMs.apk",
         "forks": {}
       },
       {

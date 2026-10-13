@@ -1,0 +1,1 @@
+{"id":"gen-1760342100-QrStUvWxYz012345","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion","created":1760342100,"choices":[{"finish_reason":"stop","index":0,"message":{"role":"assistant","content":"- Revenue grew 12%\n- Costs fell"}}],"usage":{"prompt_tokens":1000,"completion_tokens":500,"total_tokens":1500}}

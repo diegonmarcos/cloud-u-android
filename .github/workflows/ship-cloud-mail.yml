@@ -34,6 +34,7 @@ on:
       #   input: "1_cicd/src/cicd/ship-cloud-mail.yml"
       #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
+      #   input: "ab_cloud-libs-shared/libs/databackend/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/ml-l-image/**"

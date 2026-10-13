@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- English is the fleet's base language (#299). app_name comes from build.json::name. -->
+    <string name="chat_hint">Paste text, say what to do…</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_task_auto">Auto</string>
+    <string name="chat_task_picker">Task</string>
+    <string name="chat_empty_title">Small, cheap models for quick text jobs</string>
+    <string name="chat_empty_body">Type or paste a request. A router picks the task and the small model that does it best; every answer shows its task, model and cost.</string>
+    <string name="chat_no_token">No OpenRouter token yet - add yours in Settings.</string>
+    <string name="chat_working">Working…</string>
+    <string name="chat_router_unsure">Not sure what you want - pick a task:</string>
+    <string name="chat_pick_other">Other task…</string>
+    <string name="chat_failed">Failed: %1$s</string>
+    <string name="chat_clear">Clear chat</string>
+    <string name="chat_copy">Copy</string>
+    <string name="chat_copied">Copied</string>
+    <string name="chip_cost">%1$s · %2$s · %3$s</string>
+    <string name="chip_router">router %1$s %2$s</string>
+    <string name="chip_confidence">%1$d%%</string>
+
+    <string name="tasks_title">What I can do</string>
+    <string name="tasks_prices_as_of">Prices as of %1$s · estimate = %2$d in / %3$d out tokens</string>
+    <string name="tasks_example">e.g. %1$s</string>
+    <string name="tasks_price">%1$s in · %2$s out /1M</string>
+    <string name="tasks_estimate">~%1$s per call</string>
+    <string name="tasks_try">Try</string>
+    <string name="tasks_unpriced">not priced by the catalogue</string>
+    <string name="tasks_problems">Catalogue gaps: %1$s</string>
+
+    <string name="costs_title">Costs</string>
+    <string name="costs_today">Today</string>
+    <string name="costs_month">This month</string>
+    <string name="costs_calls">%1$d calls</string>
+    <string name="costs_by_task">This month by task</string>
+    <string name="costs_history">History</string>
+    <string name="costs_empty">No paid calls yet.</string>
+    <string name="costs_clear">Clear history and totals</string>
+
+    <string name="settings_token">OpenRouter token</string>
+    <string name="settings_token_stored">Stored: %1$s</string>
+    <string name="settings_token_none">Not set - calls will fail</string>
+    <string name="settings_token_hint">Paste your sk-or-… key</string>
+    <string name="settings_save">Save</string>
+    <string name="settings_test">Test</string>
+    <string name="settings_remove">Remove</string>
+    <string name="settings_token_note">Kept in EncryptedSharedPreferences under an Android Keystore key; only its last four characters are ever shown, and it is never logged.</string>
+    <string name="settings_test_ok">Works · %1$s · used %2$s</string>
+    <string name="settings_test_failed">Test failed: %1$s</string>
+    <string name="settings_saved">Saved</string>
+    <string name="settings_invalid">Not a token: empty or with spaces</string>
+    <string name="settings_account">Fleet Account</string>
+    <string name="settings_account_connected">Cloud Account answers</string>
+    <string name="settings_account_absent">Cloud Account does not answer</string>
+    <string name="settings_account_key">holds an OpenRouter key %1$s</string>
+    <string name="settings_account_no_key">holds no OpenRouter key</string>
+    <string name="settings_account_note">This app pays with your own token above. The fleet Account\'s key stays in its own app: by fleet rule only its engines read it.</string>
+    <string name="settings_router">Router</string>
+    <string name="settings_router_auto">Auto - Jev while OpenRouter lists it, else %1$s</string>
+    <string name="settings_router_jev">Jev (%1$s), falling back to %2$s</string>
+    <string name="settings_jev_status_listed">Jev is listed on OpenRouter now (%1$s /1M in)</string>
+    <string name="settings_jev_status_unlisted">Jev is not listed on OpenRouter now</string>
+    <string name="settings_jev_status_unknown">Jev availability not checked yet</string>
+    <string name="settings_refresh">Refresh</string>
+    <string name="settings_workers">Workers</string>
+    <string name="settings_worker_default">default</string>
+    <string name="settings_about">About</string>
+    <string name="settings_about_line">%1$s · sha %2$s · built %3$s</string>
+</resources>

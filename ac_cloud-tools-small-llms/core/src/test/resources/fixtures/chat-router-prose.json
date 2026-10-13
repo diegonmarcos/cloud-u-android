@@ -1,0 +1,1 @@
+{"id":"gen-1760342400-RouterProse00000","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion","created":1760342400,"choices":[{"finish_reason":"stop","index":0,"message":{"role":"assistant","content":"I think the user wants a translation."}}],"usage":{"prompt_tokens":605,"completion_tokens":9,"total_tokens":614,"cost":0.0000310}}
