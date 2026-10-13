@@ -955,7 +955,7 @@
     "ide_prefs": {
       "kind": "prefs",
       "class": "config",
-      "doc": "cloud-myterminal IdePrefs: terminal_backend choice, per-backend ssh host/user (terminal_<backend>_host/_user), dev_api_enabled and the #787 wake_lock_wanted toggle; all user choices, except battery_exemption_asked, which records that the one-time battery-optimization prompt was shown.",
+      "doc": "cloud-myterminal IdePrefs: terminal_backend choice, per-backend ssh host/user (terminal_<backend>_host/_user), dev_api_enabled, the #787 wake_lock_wanted toggle and the pinch-zoom terminal_font_size (px, 6..32; the frontend reads it through the AndroidTerm bridge and migrates its old localStorage myk-term-font-size into it, so \"apply all\" carries the size to a new phone); all user choices, except battery_exemption_asked, which records that the one-time battery-optimization prompt was shown.",
       "used_by": [
         "ac_cloud-myterminal"
       ],

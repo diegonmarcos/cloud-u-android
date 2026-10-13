@@ -81,6 +81,26 @@ object IdePrefs {
         sp(ctx).edit().putBoolean(KEY_EXEMPTION_ASKED, true).apply()
     }
 
+    // ── Terminal font size (pinch-to-zoom), a declared fleet-config preference ─
+    private const val KEY_FONT_SIZE = "terminal_font_size"
+    const val FONT_MIN = 6
+    const val FONT_MAX = 32
+
+    /** The pinched font size in px, or 0 when none was chosen (the frontend then
+     *  uses config.json font.size). Declared in fleet-config.json (ide_prefs), so
+     *  "apply all" carries it to a new phone. */
+    fun terminalFontSize(ctx: Context): Int {
+        val v = sp(ctx).getInt(KEY_FONT_SIZE, 0)
+        return if (v in FONT_MIN..FONT_MAX) v else 0
+    }
+
+    /** Store [v] (clamped to 6..32); 0 or less forgets it (back to the default). */
+    fun setTerminalFontSize(ctx: Context, v: Int) {
+        val e = sp(ctx).edit()
+        if (v <= 0) e.remove(KEY_FONT_SIZE) else e.putInt(KEY_FONT_SIZE, v.coerceIn(FONT_MIN, FONT_MAX))
+        e.apply()
+    }
+
     /** Remove all connection overrides for [backend], reverting to baked defaults. */
     fun clearTerminalConn(ctx: Context, backend: String) {
         sp(ctx).edit()

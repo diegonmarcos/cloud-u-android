@@ -415,23 +415,39 @@ const MYK = {
   },
 
   // ── Font size: pinch-to-zoom, global, remembered ─────────────────────────
-  // One size for every pane (panes have no settings of their own), kept in
-  // localStorage like the rest of the frontend's settings and read back by
-  // every new pane. Default: config.json font.size.
+  // One size for every pane (panes have no settings of their own), read back by
+  // every new pane. Default: config.json font.size. The native store (ide_prefs
+  // terminal_font_size, via AndroidTerm) is the home: it is a declared fleet-config
+  // preference, so "apply all" carries it to a new phone. localStorage is the
+  // fallback (no bridge, or the bridge refuses) and is still written; a size found
+  // only there is migrated into the native store once.
   FONT_KEY: "myk-term-font-size",
   _store() { try { return typeof localStorage !== "undefined" ? localStorage : null; } catch (e) { return null; } },
+  _native() { try { const a = window.AndroidTerm; return a && a.getFontSize && a.setFontSize ? a : null; } catch (e) { return null; } },
   fontDefault() { return TermText.clampFont(((this.config || {}).font || {}).size, 11); },
+  _nativeFont() {
+    const a = this._native();
+    if (!a) return null;
+    try { const n = Number(a.getFontSize()); return n > 0 ? TermText.clampFont(n) : 0; } catch (e) { return null; }
+  },
   fontSize() {
     const def = this.fontDefault();
+    const nat = this._nativeFont();          // null: no bridge; 0: nothing stored natively
+    if (nat) return nat;
     let v = null;
     try { const s = this._store(); v = s ? s.getItem(this.FONT_KEY) : null; } catch (e) { v = null; }
-    return v === null || v === "" ? def : TermText.clampFont(v, def);
+    if (v === null || v === "") return def;
+    const size = TermText.clampFont(v, def);
+    if (nat === 0 && size !== def) { try { this._native().setFontSize(size); } catch (e) { /* retried on the next read */ } }
+    return size;
   },
   setFontSize(n) {
     const v = TermText.clampFont(n, this.fontDefault());
+    const dflt = v === this.fontDefault();
+    try { const a = this._native(); if (a) a.setFontSize(dflt ? 0 : v); } catch (e) { /* the localStorage copy still holds it */ }
     try {
       const s = this._store();
-      if (s) { if (v === this.fontDefault()) s.removeItem(this.FONT_KEY); else s.setItem(this.FONT_KEY, String(v)); }
+      if (s) { if (dflt) s.removeItem(this.FONT_KEY); else s.setItem(this.FONT_KEY, String(v)); }
     } catch (e) { /* storage refused: the size still applies for this run */ }
     for (const [pid, p] of this.panes) {
       if (p.term.options && p.term.options.fontSize !== v) p.term.options.fontSize = v;

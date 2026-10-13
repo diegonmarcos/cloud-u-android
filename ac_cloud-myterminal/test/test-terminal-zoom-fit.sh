@@ -27,6 +27,9 @@
 #   Z6  sidebar open → close restores the full grid and the full PTY size (RED on the old code)
 #   Z7  a pinch fires no tap, long-press menu, link or selection; one finger still reaches xterm
 #   Z8  the tap menu keeps its items and offers Reset font size, which resets and refits
+#   Z10 the size is a declared fleet-config preference: bridged to the native store (ide_prefs
+#       terminal_font_size) so "apply all" carries it to a new phone; localStorage stays the
+#       fallback and a size found only there is migrated once
 #   Z9  wiring: the sidebar toggle refits, .pane takes two fingers from the page, scripts in order
 #   MUT each property broken on a copy must turn its check red (incl. the old fit-on-resize-only code)
 set -u
@@ -34,15 +37,18 @@ APP="$(cd "$(dirname "$0")/.." && pwd)"
 command -v node >/dev/null || { echo "ERROR: node required" >&2; exit 2; }
 FE="$APP/hub/src/main/assets/frontend"
 
-exec node - "$FE" <<'JS'
+exec node - "$FE" "$APP" <<'JS'
 const fs = require("fs"), path = require("path"), vm = require("vm");
-const [FE] = process.argv.slice(2);
+const [FE, APP] = process.argv.slice(2);
 const SRC = {
   text: fs.readFileSync(path.join(FE, "js/termtext.js"), "utf8"),
   term: fs.readFileSync(path.join(FE, "js/term.js"), "utf8"),
   boot: fs.readFileSync(path.join(FE, "js/boot.js"), "utf8"),
   css: fs.readFileSync(path.join(FE, "css/style.css"), "utf8"),
   html: fs.readFileSync(path.join(FE, "index.html"), "utf8"),
+  bridge: fs.readFileSync(path.join(APP, "hub/src/main/java/com/diegonmarcos/ide/TerminalBridge.kt"), "utf8"),
+  prefs: fs.readFileSync(path.join(APP, "hub/src/main/java/com/diegonmarcos/ide/IdePrefs.kt"), "utf8"),
+  fleet: fs.readFileSync(path.join(APP, "../ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json"), "utf8"),
 };
 let pass = 0, fail = 0;
 const ok = (m) => { pass++; console.log("  PASS: " + m); };
@@ -57,7 +63,7 @@ const fitGrid = (w, h, font) => ({ cols: Math.max(2, Math.floor(w / CELL(font).w
 function makeStorage() { const m = new Map(); return { m, getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; }
 
 // A page: term.js + termtext.js in a fresh context sharing [storage] with earlier pages.
-function page(textSrc, termSrc, storage) {
+function page(textSrc, termSrc, storage, native) {
   const observers = [];
   const raf = [];
   const el = (tag) => ({ tag, id: "", className: "", textContent: "", title: "", hidden: false, style: {}, children: [], parent: null, dataset: {},
@@ -115,6 +121,11 @@ function page(textSrc, termSrc, storage) {
   };
   sb.window = sb; sb.innerWidth = 800; sb.innerHeight = 600;
   sb.AndroidTerm = { clipboardSet: (t) => copies.push(t), clipboardHas: () => false, openUrl: (u) => copies.push("open:" + u) };
+  // native: the bridge's font-size store ({ v }, or { v, throws } for a bridge that refuses)
+  if (native) {
+    sb.AndroidTerm.getFontSize = () => { if (native.throws) throw new Error("bridge refused"); return native.v; };
+    sb.AndroidTerm.setFontSize = (n) => { if (native.throws) throw new Error("bridge refused"); native.v = n; };
+  }
   vm.createContext(sb);
   vm.runInContext(textSrc, sb);
   vm.runInContext(termSrc + "\n;this.MYK = MYK;", sb);
@@ -259,6 +270,49 @@ async function verdict(textSrc, termSrc) {
     const resetRow2 = menu2 && menu2.children.find((c) => c.children[0] && c.children[0].textContent === "Reset font size");
     r.z8disabled = !!resetRow2 && resetRow2.className.includes("disabled");
   } catch (e) { r.crash = (r.crash || "") + " " + e.message; }
+
+  // Z10: the native store. A pinch lands in it (and still in localStorage, the fallback).
+  try {
+    const nat = { v: 0 }, ls = makeStorage();
+    const A = page(textSrc, termSrc, ls, nat);
+    const a = await newPane(A, 660, 480);
+    A.MYK.setFontSize(20);
+    r.z10write = nat.v === 20 && ls.getItem(A.MYK.FONT_KEY) === "20";
+    // a NEW phone: the native store came over with "apply all", localStorage is empty
+    const B = page(textSrc, termSrc, makeStorage(), { v: 20 });
+    const b = await newPane(B, 660, 480);
+    r.z10newphone = B.MYK.fontSize() === 20 && b.p.term.options.fontSize === 20;
+    // the native value wins over a stale localStorage one
+    const lsC = makeStorage(); lsC.setItem("myk-term-font-size", "15");
+    r.z10wins = page(textSrc, termSrc, lsC, { v: 24 }).MYK.fontSize() === 24;
+    // a size only in localStorage (set before this build) is migrated into the native store
+    const natD = { v: 0 }, lsD = makeStorage(); lsD.setItem("myk-term-font-size", "18");
+    const D = page(textSrc, termSrc, lsD, natD);
+    r.z10migrate = D.MYK.fontSize() === 18 && natD.v === 18 && lsD.getItem("myk-term-font-size") === "18";
+    // nothing stored anywhere: the default, and nothing invented in the native store
+    const natE = { v: 0 };
+    r.z10none = page(textSrc, termSrc, makeStorage(), natE).MYK.fontSize() === 11 && natE.v === 0;
+    // reset forgets it natively too
+    A.MYK.resetFontSize();
+    r.z10reset = nat.v === 0 && ls.getItem(A.MYK.FONT_KEY) === null && A.MYK.fontSize() === 11;
+    // a bridge that refuses: localStorage carries it, nothing throws
+    const natF = { v: 0, throws: true }, lsF = makeStorage();
+    const F = page(textSrc, termSrc, lsF, natF);
+    F.MYK.setFontSize(16);
+    r.z10refuse = F.MYK.fontSize() === 16 && lsF.getItem("myk-term-font-size") === "16";
+    // no bridge method at all (an older shell): localStorage only
+    const lsG = makeStorage(); lsG.setItem("myk-term-font-size", "13");
+    r.z10nobridge = page(textSrc, termSrc, lsG).MYK.fontSize() === 13;
+  } catch (e) { r.crash = (r.crash || "") + " z10: " + e.message; }
+  // wiring: the Kotlin side and the fleet-config declaration
+  r.z10kotlin = /@JavascriptInterface\s+fun getFontSize\(\)[^\n]*IdePrefs\.terminalFontSize/.test(SRC.bridge)
+    && /@JavascriptInterface\s+fun setFontSize\(px: Int\)[^\n]*IdePrefs\.setTerminalFontSize/.test(SRC.bridge)
+    && /KEY_FONT_SIZE = "terminal_font_size"/.test(SRC.prefs) && /FONT_MIN = 6/.test(SRC.prefs) && /FONT_MAX = 32/.test(SRC.prefs);
+  try {
+    const ide = JSON.parse(SRC.fleet).stores.ide_prefs;
+    r.z10decl = !!ide && ide.class === "config" && ide.kind === "prefs" && /terminal_font_size/.test(ide.doc)
+      && !(ide.keys && ide.keys.terminal_font_size);   // a key narrowed to device would NOT migrate
+  } catch (e) { r.z10decl = false; }
   return r;
 }
 
@@ -297,6 +351,17 @@ async function verdict(textSrc, termSrc) {
   check(r.z8hint, "Z8 Reset font size says what it does (22px → 11px)");
   check(r.z8reset, "Z8 Reset font size goes back to the default, forgets the stored size, refits and resizes the PTY");
   check(r.z8disabled, "Z8 at the default size it is disabled");
+  console.log("== Z10: a declared fleet-config preference ==");
+  check(r.z10write, "Z10 a size is written to the native store (and still to localStorage)");
+  check(r.z10newphone, "Z10 a new phone (native store applied, localStorage empty) opens panes at the size");
+  check(r.z10wins, "Z10 the native size wins over a stale localStorage one");
+  check(r.z10migrate, "Z10 a size only in localStorage is migrated into the native store, localStorage kept");
+  check(r.z10none, "Z10 nothing stored: the default, nothing invented natively");
+  check(r.z10reset, "Z10 Reset forgets the size natively and in localStorage");
+  check(r.z10refuse, "Z10 a bridge that refuses falls back to localStorage without throwing");
+  check(r.z10nobridge, "Z10 a shell without the bridge methods reads localStorage");
+  check(r.z10kotlin, "Z10 TerminalBridge exposes get/setFontSize to IdePrefs terminal_font_size, clamped 6..32");
+  check(r.z10decl, "Z10 fleet-config.json declares it in ide_prefs (class config, not narrowed to device)");
   console.log("== Z9: wiring ==");
   check(/btn-sidebar"\)\.addEventListener\("click", \(\) => \{[^}]*classList\.toggle\("hidden"\);\s*MYK\.refitAll\(\);/.test(SRC.boot), "Z9 the sidebar toggle refits the panes");
   check(/visualViewport/.test(SRC.boot) && /orientationchange/.test(SRC.boot), "Z9 keyboard (visualViewport) and rotation refit too");
@@ -314,6 +379,11 @@ async function verdict(textSrc, termSrc) {
     ["term", "a long-press during a pinch opens the menu", "if (this._pinching()) return;   // two fingers", "if (0) return;   // two fingers", (x) => x.z7menu && x.z7tap],
     ["term", "the last finger up taps", "if (this._pinching() || Date.now() - this._lastLinkAct", "if (Date.now() - this._lastLinkAct", (x) => x.z7tap && x.z7xterm],
     ["term", "no Reset font size in the menu", 'row("Reset font size"', 'if (0) row("Reset font size"', (x) => x.z8items],
+    ["term", "the size is not written natively", "if (a) a.setFontSize(dflt ? 0 : v);", "", (x) => x.z10write && x.z10newphone],
+    ["term", "the native size is ignored on read", "if (nat) return nat;", "", (x) => x.z10newphone && x.z10wins],
+    ["term", "no migration of the localStorage size", "if (nat === 0 && size !== def) {", "if (0) {", (x) => x.z10migrate],
+    ["term", "reset keeps the native size", "a.setFontSize(dflt ? 0 : v)", "a.setFontSize(v)", (x) => x.z10reset],
+    ["term", "a refusing bridge throws out of the read", "try { const n = Number(a.getFontSize()); return n > 0 ? TermText.clampFont(n) : 0; } catch (e) { return null; }", "const n = Number(a.getFontSize()); return n > 0 ? TermText.clampFont(n) : 0;", (x) => x.z10refuse],
     ["text", "no clamp", "return Math.min(this.FONT_MAX, Math.max(this.FONT_MIN, v));", "return v;", (x) => x.z1],
   ];
   let hollow = 0;

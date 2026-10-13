@@ -658,7 +658,7 @@ Module `ac_cloud-myterminal`; libs: lib-analytics, lib-core, lib-devtools, lib-f
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
-| `ide_prefs` | prefs | config (keys: battery_exemption_asked→device) | yes | cloud-myterminal IdePrefs: terminal_backend choice, per-backend ssh host/user (terminal_<backend>_host/_user), dev_api_enabled and the #787 wake_lock_wanted toggle; all user choices, except battery_exemption_asked, which records that the one-time battery-optimization prompt was shown. |
+| `ide_prefs` | prefs | config (keys: battery_exemption_asked→device) | yes | cloud-myterminal IdePrefs: terminal_backend choice, per-backend ssh host/user (terminal_<backend>_host/_user), dev_api_enabled, the #787 wake_lock_wanted toggle and the pinch-zoom terminal_font_size (px, 6..32; the frontend reads it through the AndroidTerm bridge and migrates its old localStorage myk-term-font-size into it, so "apply all" carries the size to a new phone); all user choices, except battery_exemption_asked, which records that the one-time battery-optimization prompt was shown. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 
 | file | class | doc |

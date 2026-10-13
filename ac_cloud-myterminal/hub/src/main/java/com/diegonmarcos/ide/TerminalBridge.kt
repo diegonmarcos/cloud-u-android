@@ -160,6 +160,18 @@ class TerminalBridge(
         executor.submit { if (TerminalSessions.owns(id)) TerminalSessions.kill(activity, id) else ssh.kill(id) }
     }
 
+    // ── Font size (pinch-to-zoom) kept in ide_prefs, so the fleet-config contract
+    //    ("apply all") carries it to a new phone; the WebView's localStorage is only
+    //    the fallback and the source of the one-time migration ─────────────────────
+
+    /** The stored font size in px, 0 when none. */
+    @JavascriptInterface
+    fun getFontSize(): Int = IdePrefs.terminalFontSize(activity)
+
+    /** Store the font size in px; 0 forgets it (the default applies). */
+    @JavascriptInterface
+    fun setFontSize(px: Int) { IdePrefs.setTerminalFontSize(activity, px) }
+
     // ── Clipboard + links (the pane menu: Copy All / Copy Last / Paste / URLs) ──
 
     /** Put [text] on the system clipboard; the WebView's navigator.clipboard may be refused
