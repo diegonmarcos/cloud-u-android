@@ -506,10 +506,10 @@ fun ComposeScreen(
         val insert = (if (at > 0 && body.text[at - 1] != '\n') "\n" else "") + marker + "\n"
         val nextText = body.text.substring(0, at) + insert + body.text.substring(at)
         val caret = at + insert.length
-        val remapped = remapAfterEdit(current, nextText, span(body.selection), Span(caret, caret), null)
-        ranges = remapped.ranges
-        blocks = remapped.blocks
-        links = remapped.links
+        val withMarker = remapAfterEdit(current, nextText, span(body.selection), Span(caret, caret), null)
+        ranges = withMarker.ranges
+        blocks = withMarker.blocks
+        links = withMarker.links
         body = TextFieldValue(nextText, TextRange(caret))
     }
     // Whether the link dialog is up (#131). `rememberSaveable`, like the composer's own dialogs: a

@@ -249,6 +249,8 @@ fun EmailListItem(
         if (onOpenAttachment == null) emptyList() else email.fileAttachmentParts()
     }
     val chipBackground = chipFill(MaterialTheme.colorScheme)
+    // E-paper has no fill to tell a card from the page: a thick black rule draws the rectangle.
+    val einkRule = if (LocalAppStyle.current == AppStyle.CLOUD_EINK) Modifier.border(MailMetrics.s3, Color.Black, MailListDimens.shape) else Modifier
     val rowColor = rowBackground(
         scheme = MaterialTheme.colorScheme,
         selected = selected,
@@ -265,14 +267,7 @@ fun EmailListItem(
             .fillMaxWidth()
             .padding(horizontal = MailListDimens.gutterH, vertical = MailListDimens.gutterV)
             .clip(MailListDimens.shape)
-            // E-paper has no fill to tell a card from the page: a thick black rule draws the rectangle.
-            .then(
-                if (LocalAppStyle.current == AppStyle.CLOUD_EINK) {
-                    Modifier.border(MailMetrics.s3, Color.Black, MailListDimens.shape)
-                } else {
-                    Modifier
-                },
-            )
+            .then(einkRule)
             .background(rowColor)
             .combinedClickable(onClick = onClick, onLongClick = enterSelection)
             .padding(start = MailMetrics.s16, end = MailMetrics.s4, top = rowPadding, bottom = rowPadding),

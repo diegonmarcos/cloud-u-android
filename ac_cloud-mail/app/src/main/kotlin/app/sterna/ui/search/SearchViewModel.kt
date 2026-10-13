@@ -229,6 +229,8 @@ class SearchViewModel(
         _openingAttachment.value = attachmentKey(email, part)
         viewModelScope.launch {
             try {
+                // unguarded: `_openingAttachment` above is this call's leave guard, set before the
+                // launch and cleared in the `finally` below (the same rule as the folder list's).
                 AttachmentOpen.openExternally(app, repo, storage, credentials, part, email.id)
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
