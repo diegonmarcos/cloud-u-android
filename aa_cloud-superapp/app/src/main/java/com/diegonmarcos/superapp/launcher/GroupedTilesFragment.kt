@@ -312,6 +312,7 @@ class GroupedTilesFragment : Fragment(), BackHandler {
                 gravity = android.view.Gravity.CENTER
             })
         }
+        com.diegonmarcos.superapp.extinstall.ExtTileRing.attach(cell, tile.target)
         return cell
     }
 

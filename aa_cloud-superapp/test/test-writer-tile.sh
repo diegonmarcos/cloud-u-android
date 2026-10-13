@@ -140,11 +140,11 @@ codehas() {
 }
 codehas 'AbiUpdateTag'        "install path selects with AbiUpdateTag, not a second ABI rule"
 codehas '.currentFrom(f.assets, f.asset)' "…driven by the fleet entry's per-ABI assets map"
-codehas 'this, installUrl, app.installPackage, app.label,' \
-        "Updater.installApk receives the RESOLVED url, not app.installApkUrl"
+codehas 'this, app.installPackage, app.label, installUrl,' \
+        "the install (ExtAppInstalls.start -> Updater.installApk) receives the RESOLVED url, not app.installApkUrl"
 # Fail closed: the old flat call must be gone, or both exist and the wrong
 # one could still be the live call.
-grep -qF 'this, app.installApkUrl, app.installPackage, app.label,' "$CODE" \
+grep -qE 'this, (app\.installApkUrl, app\.installPackage, app\.label|app\.installPackage, app\.label, app\.installApkUrl),' "$CODE" \
   && bad "the flat arm64 install call is still present" \
   || ok "the flat arm64 install call is gone"
 

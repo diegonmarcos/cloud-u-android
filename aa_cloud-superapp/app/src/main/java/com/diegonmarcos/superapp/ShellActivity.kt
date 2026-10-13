@@ -1744,6 +1744,9 @@ open class ShellActivity : AppCompatActivity(),
             if (ok) return
         }
         // Nothing installed → install the companion APK (user-confirmed).
+        // Already downloading/installing it: the tap opens Cancel / Restart / Details instead.
+        if (app.installPackage.isNotBlank() &&
+            com.diegonmarcos.superapp.extinstall.ExtTileRing.handleBusyTap(this, app.installPackage)) return
         if (app.installApkUrl.isBlank() || app.installPackage.isBlank()) {
             findViewById<View>(R.id.fragment_container)
                 .snack(getString(R.string.phone_install_no_source, app.label))
@@ -1785,8 +1788,8 @@ open class ShellActivity : AppCompatActivity(),
                 else app.installApkUrl.removeSuffix(f.asset) + picked
             }
             ?: app.installApkUrl
-        com.diegonmarcos.superapp.updater.Updater.installApk(
-            this, installUrl, app.installPackage, app.label,
+        com.diegonmarcos.superapp.extinstall.ExtAppInstalls.start(
+            this, app.installPackage, app.label, installUrl,
         )
         findViewById<View>(R.id.fragment_container)
             .snack(getString(R.string.phone_install_downloading, app.label))
@@ -2313,6 +2316,9 @@ open class ShellActivity : AppCompatActivity(),
 
     override fun onResume() {
         super.onResume()
+        // First-run (and while still missing): Install unknown apps, then Default home.
+        com.diegonmarcos.superapp.system.FirstRunPerms.maybeAsk(this)
+        com.diegonmarcos.superapp.extinstall.ExtAppInstalls.refresh(this)
         // Coming back from another app can land on any surface — re-ask rather
         // than trusting whatever the stars were left showing.
         refreshStars()

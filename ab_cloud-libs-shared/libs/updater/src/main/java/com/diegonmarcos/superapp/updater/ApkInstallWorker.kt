@@ -68,7 +68,16 @@ class ApkInstallWorker(
             // which is how a truncated download became
             // "INSTALL_PARSE_FAILED_NOT_APK" rather than "the download stopped".
             UpdateProgress.stage(UpdateProgress.STAGE_VERIFYING)
-            val verified = VerifiedApk.bySize(apk, declared)
+            // The fleet publishes `<asset>.sha256` next to every release APK.
+            // When it is there, the digest is the evidence and a mismatch is a
+            // failure; when it is not (a vendor URL, a 404), fall through to
+            // the declared length / structure exactly as before.
+            val sidecar = runCatching { fetchSidecar(url) }.getOrNull()
+            val verified = (if (sidecar != null)
+                VerifiedApk.byDigest(apk, sidecar)
+                    ?: error("sha256 mismatch for $pkg (sidecar ${sidecar.take(12)}…)")
+                else null)
+                ?: VerifiedApk.bySize(apk, declared)
                 ?: VerifiedApk.structural(apk)
                 ?: error("companion APK for $pkg failed verification (${apk.length()} B)")
             Log.i(TAG, "downloaded $label (${apk.length()} bytes, ${verified.evidence}) → installing $pkg")
@@ -95,7 +104,21 @@ class ApkInstallWorker(
         }
     }
 
+    /** The `<url>.sha256` sidecar's digest, or null when there is none. */
+    private fun fetchSidecar(url: String): String? {
+        val f = ApkCache.file(applicationContext, "sidecar-${url.hashCode()}.sha256")
+        f.delete(); java.io.File(f.parentFile, f.name + ".part").delete()
+        return try {
+            Download.toFile(url = "$url.sha256", target = f, shouldCancel = { isStopped })
+            parseSha256(f.readText())
+        } finally { f.delete() }
+    }
+
     companion object {
+        /** First 64-hex token of a `sha256sum`-style sidecar, lower-cased; null when absent. */
+        fun parseSha256(text: String): String? =
+            Regex("\\b[0-9a-fA-F]{64}\\b").find(text)?.value?.lowercase()
+
         private const val TAG = "Updater/ApkInstall"
         const val KEY_URL = "url"
         const val KEY_PKG = "pkg"

@@ -537,21 +537,42 @@ class PermissionsFragment : Fragment() {
                 com.diegonmarcos.superapp.fleetconfig.CredentialProviderStatus.open(ctx, st.nextStep)
             })
         } else emptyList()
-        return vault + listOf(
+        // The two special permissions the first-run step also asks for (SpecialPerms): one live
+        // read each, one tap to the exact grant (unknown-sources page / ROLE_HOME request).
+        val special = com.diegonmarcos.superapp.system.SpecialPerms.facts(ctx).let { f ->
+            com.diegonmarcos.superapp.system.SpecialPerms.Kind.values().map { k ->
+                val g = com.diegonmarcos.superapp.system.SpecialPerms.granted(k, f)
+                PageItem(com.diegonmarcos.superapp.system.SpecialPerms.label(k), g,
+                    com.diegonmarcos.superapp.system.SpecialPerms.stateText(k, g)) {
+                    com.diegonmarcos.superapp.system.SpecialPerms.request(requireActivity(), k)
+                }
+            }
+        }
+        specialAtBuild = com.diegonmarcos.superapp.system.SpecialPerms.snapshot(ctx)
+        return special + vault + listOf(
             PageItem("Battery optimization (no-optim)", grantedBatteryOptim(ctx), specialAccessBattery(ctx)) { openBatteryOptimizationSettings() },
-            PageItem("Default launcher", specialAccessLauncher(ctx).let(::ok), specialAccessLauncher(ctx)) { openDefaultAppsSettings() },
             PageItem("Usage stats", EnergyWatchdog.hasUsageAccess(ctx), specialAccessUsageStats(ctx)) { openUsageAccessSettings() },
             PageItem("Notification listener (read)", grantedNotifRead(ctx), specialAccessNotifListener(ctx)) { openNotificationListenerSettings() },
             PageItem("Manage all files", grantedFiles(), specialAccessManageStorage()) { openManageAllFilesSettings() },
             PageItem("Display over other apps", android.provider.Settings.canDrawOverlays(ctx), specialAccessOverlay(ctx)) { openOverlaySettings() },
             PageItem("Modify system settings", android.provider.Settings.System.canWrite(ctx), specialAccessWriteSettings(ctx)) { openWriteSettings() },
-            PageItem("Install unknown apps", com.diegonmarcos.superapp.updater.AutoUpdatePrefs.canInstallSilently(ctx), "") { openUnknownAppSourcesSettings() },
             PageItem("Accessibility (lock screen, preferred)", ScreenLocker.isAccessibilityEnabled(ctx), ScreenLocker.statusStringAccessibility(ctx)) { ScreenLocker.openSystemAccessibilitySettings(ctx) },
             PageItem("Device admin (lock fallback)", ScreenLocker.isActive(ctx), ScreenLocker.statusString(ctx)) { if (ScreenLocker.isActive(ctx)) ScreenLocker.openSystemDeviceAdminSettings(ctx) else ScreenLocker.requestActivation(requireActivity()) },
             PageItem("Samsung never-sleeping", null, "unknown until opened") { openSamsungNeverSleepingSettings() },
             PageItem("Dumpsys (DUMP, adb only)", specialAccessDumpGranted(ctx), specialAccessDump(ctx)) { openAppSettings() },
             PageItem("App info / settings", null, "") { openAppSettings() },
         ) + roles + device
+    }
+
+    // The special-permission rows re-check on resume. Rebuilt ONLY when their state
+    // actually changed since this view was built, so the rebuild's own onResume finds
+    // nothing new and stops — never the detach/attach loop described below.
+    private var specialAtBuild: Map<com.diegonmarcos.superapp.system.SpecialPerms.Kind, Boolean>? = null
+    override fun onResume() {
+        super.onResume()
+        val before = specialAtBuild ?: return
+        if (com.diegonmarcos.superapp.system.SpecialPerms.snapshot(requireContext()) != before)
+            view?.post { if (isAdded) rebuildFragment() }
     }
 
     // NO onResume->rebuildFragment: rebuildFragment() detaches+attaches this

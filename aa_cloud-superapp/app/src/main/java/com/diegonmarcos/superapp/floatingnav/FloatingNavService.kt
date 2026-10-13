@@ -27,7 +27,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.diegonmarcos.superapp.R
-import com.diegonmarcos.superapp.updater.Updater
 
 /**
  * Floating Top Nav Bar — a SYSTEM_ALERT_WINDOW overlay shown whenever the
@@ -478,7 +477,7 @@ class FloatingNavService : Service() {
             val app = Sections.externalApp(installApp)
             if (app != null && app.installApkUrl.isNotBlank() && app.installPackage.isNotBlank()) {
                 runCatching {
-                    Updater.installApk(applicationContext, app.installApkUrl, app.installPackage, app.label)
+                    com.diegonmarcos.superapp.extinstall.ExtAppInstalls.start(applicationContext, app.installPackage, app.label, app.installApkUrl)
                 }
                 return
             }

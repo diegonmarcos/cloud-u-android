@@ -50,6 +50,8 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // on the very first inflation.
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         super.onCreate()
+        // extapp: install progress — listening before any resumed install worker publishes.
+        com.diegonmarcos.superapp.extinstall.ExtAppInstalls.init(this)
         // The island's haptics are the lib's; "Vibration on tap" (Configs -> Launcher -> Others) still gates them.
         com.diegonmarcos.superapp.bottomnav.FleetHaptics.enabled = { ctx ->
             runCatching { com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(ctx).toggle("haptics") }.getOrDefault(true)

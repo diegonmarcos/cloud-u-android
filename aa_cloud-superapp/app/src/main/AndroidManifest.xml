@@ -190,6 +190,10 @@
         </provider>
 
         <!-- Quick-action handler for the persistent "Cloud SA - KDE" notification. -->
+        <!-- extapp: install progress notification actions (Cancel / Retry / Restart / Open). -->
+        <receiver
+            android:name=".extinstall.ExtInstallActionReceiver"
+            android:exported="false" />
         <receiver
             android:name=".system.PrivilegedPlaneBootReceiver"
             android:exported="true">

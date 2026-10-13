@@ -61,8 +61,8 @@ object AppInstall {
                     context.getString(R.string.phone_install_no_source, label),
                 )
             }
-            com.diegonmarcos.superapp.updater.Updater.installApk(
-                context, fleet.installApkUrl, fleet.installPackage, fleet.label,
+            com.diegonmarcos.superapp.extinstall.ExtAppInstalls.start(
+                context, fleet.installPackage, fleet.label, fleet.installApkUrl,
             )
             return Outcome(
                 true,

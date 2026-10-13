@@ -40,5 +40,9 @@ class PermAskTracker(context: Context) {
         if (cur.addAll(perms)) sp.edit().putStringSet(KEY, cur).apply()
     }
 
-    companion object { private const val KEY = "asked_set" }
+    /** First-run special-permission steps ([FirstRunPerms]): how often each was skipped. */
+    fun skips(id: String): Int = sp.getInt(SKIPS + id, 0)
+    fun setSkips(id: String, n: Int) { sp.edit().putInt(SKIPS + id, n).apply() }
+
+    companion object { private const val KEY = "asked_set"; private const val SKIPS = "skips_" }
 }

@@ -198,6 +198,7 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
             v.startAnimation(press)
             (activity as? TileClickListener)?.onTileClicked(tileId)
         }
+        com.diegonmarcos.superapp.extinstall.ExtTileRing.attach(tileView, tileId)
     }
 
     /** A `separator` page as a CHARACTER: the same TextView the Data Apps row draws

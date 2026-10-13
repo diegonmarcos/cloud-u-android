@@ -212,6 +212,7 @@ class HomeGroupedFragment : Fragment(R.layout.fragment_home_grouped) {
                 v.startAnimation(press)
                 (ctx as? TileGridFragment.TileClickListener)?.onTileClicked(tileId)
             }
+            com.diegonmarcos.superapp.extinstall.ExtTileRing.attach(tileView, tileId)
         }
 
         private fun tilePalette(ctx: Context): List<Pair<Int, Int>> = emptyList()
