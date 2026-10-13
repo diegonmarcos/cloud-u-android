@@ -596,6 +596,17 @@ android {
     kotlinOptions { jvmTarget = '17' }
 }
 
+// ONE BouncyCastle in the APK: libs:mounts (sshj) brings the jdk18on artifacts and
+// libs:shizuku-adb-debug-tools (libadb-android) the jdk15to18 ones, the same classes under two
+// coordinates (checkDuplicateClasses). The jdk18on line is the newer one; libadb only uses API both carry.
+configurations.configureEach {
+    resolutionStrategy.dependencySubstitution {
+        ['bcprov', 'bcpkix', 'bcutil'].each { a ->
+            substitute(module("org.bouncycastle:${a}-jdk15to18")).using(module("org.bouncycastle:${a}-jdk18on:1.84"))
+        }
+    }
+}
+
 dependencies {
     implementation project(':libs:analytics')
     implementation project(':libs:core')
