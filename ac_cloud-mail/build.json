@@ -230,7 +230,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-10-12",
+        "pricing_as_of": "2026-10-13",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -306,6 +306,7 @@
               "fp8"
             ],
             "trained_for": [
+              "health",
               "roleplay",
               "translation"
             ],
@@ -323,8 +324,8 @@
               "bf16",
               "fp16"
             ],
-            "prompt": 0.22,
-            "completion": 0.5,
+            "prompt": 0.59,
+            "completion": 0.79,
             "note": "70B open weights, no category ranking — a general fallback, not a specialist."
           },
           {
@@ -426,8 +427,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.0232,
-            "completion": 1.2,
+            "prompt": 0.0261,
+            "completion": 0.9,
             "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
           },
           {
