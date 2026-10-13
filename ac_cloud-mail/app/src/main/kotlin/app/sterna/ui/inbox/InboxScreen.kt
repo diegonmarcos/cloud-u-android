@@ -2007,13 +2007,12 @@ private fun DrawerContent(
                 // The pane's three views: Inbox, Starred, Assigned (owner, 2026-10-13). Inbox is the
                 // unified inbox when there are several accounts, else this account's own; Home, All
                 // inboxes and Unread left the pane (Home is on the bottom nav).
-                val inboxMailbox = ui.mailboxes.firstOrNull { it.role == "inbox" }
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Filled.Inbox, contentDescription = null) },
                     label = { DrawerLabel(stringResource(R.string.inbox_drawer_inbox)) },
-                    selected = ui.unified || (!ui.unreadView && inboxMailbox != null && inboxMailbox.id == ui.selectedMailboxId),
+                    selected = ui.unified || (!ui.unreadView && ui.mailboxes.any { it.role == "inbox" && it.id == ui.selectedMailboxId }),
                     onClick = {
-                        if (accounts.size > 1) viewModel.selectUnified() else inboxMailbox?.let { viewModel.select(it) }
+                        if (accounts.size > 1) viewModel.selectUnified() else ui.mailboxes.firstOrNull { it.role == "inbox" }?.let { viewModel.select(it) }
                         scope.launch { drawerState.close() }
                     },
                     modifier = drawerRowModifier,

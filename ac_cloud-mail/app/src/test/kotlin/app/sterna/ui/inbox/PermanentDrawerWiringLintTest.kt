@@ -142,6 +142,7 @@ class PermanentDrawerWiringLintTest {
             "onOpenSettings = onOpenSettings,",
             "onOpenHome = onOpenHome,",
             "onOpenStarred = onOpenStarred,",
+            "onOpenAssigned = onOpenAssigned,",
             "onCreateFolder = { showCreateFolder = true },",
             "onAddSubfolder = { folderToAddChild = it },",
             "onRenameFolder = { folderToRename = it },",

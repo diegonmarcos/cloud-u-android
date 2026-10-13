@@ -530,7 +530,7 @@ Coverage: 4 covered, 0 gaps.
 
 ## cloud-mail — `com.diegonmarcos.comms.mail`
 
-Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-text-tools, lib-updater.
+Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-text-tools, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

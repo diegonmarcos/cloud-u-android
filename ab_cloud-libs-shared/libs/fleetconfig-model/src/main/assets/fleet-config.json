@@ -2583,6 +2583,7 @@
       "libs": [
         "lib-bottomnav",
         "lib-core",
+        "lib-databackend",
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-ml-l-image",

@@ -118,7 +118,7 @@ val mailCalEngine: Map<String, Any> = (((groovy.json.JsonSlurper()
     ?: error("build.json::engines.cal is missing: the task store Assigned writes to.")
 @Suppress("UNCHECKED_CAST")
 val calEnginePackage: String = (((groovy.json.JsonSlurper()
-    .parse(rootProject.file("../aa_cloud-superapp/data/constellation-fleet.json")) as Map<String, Any>)["apps"] as List<Map<String, Any>>)
+    .parse(rootDir.resolve("../aa_cloud-superapp/data/constellation-fleet.json")) as Map<String, Any>)["apps"] as List<Map<String, Any>>)
     .firstOrNull { it["id"] == mailCalEngine["fleet"] }?.get("package") as String?)
     ?: error("build.json::engines.cal.fleet '${mailCalEngine["fleet"]}' is not in the constellation fleet manifest.")
 /** The manifest placeholder <queries> names the engine by. */
