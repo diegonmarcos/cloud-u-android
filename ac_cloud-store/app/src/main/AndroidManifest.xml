@@ -18,6 +18,11 @@
          no Play distribution, same as cloud-superapp. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+    <!-- Phone tab: each app's size (app + data + cache) through StorageStatsManager. Special
+         access the user grants on the usage-access screen (the row's one-tap Grant), and listed
+         on Access > Android Perms; without it the rows show the APK size, labelled APK. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
 
     <!-- #894 Cloud Store's own shell channel. Wireless-debugging pairing runs in a foreground
          service (the lib's AdbPairingService, declared below), which needs the notification, the

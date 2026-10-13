@@ -416,23 +416,12 @@ class StoreCloudFragment : Fragment() {
     /** Filter chips. With two dozen libs the answer to "too much scrolling" is
      *  to stop scrolling: pick the slice you came for. Counts come from the
      *  cached [states], so a chip is instant and never re-checks. */
-    private fun filterBar(ctx: Context, list: List<Fleet.App>): View {
-        val bar = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dp(ctx, StoreDensity.S6)) }
+    private fun filterBar(ctx: Context, list: List<Fleet.App>): View =
+        // #793 the shared chip (StoreBar.chip), the same one Apps Mesh filters with; the line is
+        // StoreRow.filters, the one the Phone page draws its state chips with.
+        StoreRow.filters(ctx, controls.filter, listOf("All", "⬆ Updates", "◯ Missing", "✓ Installed"), filter, filterChips) { i ->
+            if (filter != i) { filter = i; paintFilter(); renderList(ctx, list) }
         }
-        filterChips.clear()
-        // #793 the shared chip (StoreBar.chip), the same one Apps Mesh filters with.
-        listOf("All", "⬆ Updates", "◯ Missing", "✓ Installed").forEachIndexed { i, label ->
-            val c = StoreBar.chip(ctx, controls.filter, label, i == 0) {
-                if (filter != i) { filter = i; paintFilter(); renderList(ctx, list) }
-            }
-            filterChips.add(c); bar.addView(c)
-        }
-        paintFilter()
-        return bar
-    }
 
     private fun paintFilter() = filterChips.forEachIndexed { i, c -> StoreBar.paint(c, i == filter) }
 
@@ -642,59 +631,23 @@ class StoreCloudFragment : Fragment() {
     // only ever inspect (package, image, sha, links, permissions) into a detail
     // pane. Nothing is dropped - it moves behind the chevron.
     private fun fleetRow(ctx: Context, app: Fleet.App): View {
-        val card = LinearLayout(ctx).apply {
+        // THE Store row (StoreRow), the same card and head the Phone page draws.
+        val card = StoreRow.card(ctx)
+        val detail = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xFF1C1C24.toInt())
-            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            lp.setMargins(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2)); layoutParams = lp
+            setPadding(dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
         }
-
-        val head = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
-            isClickable = true
+        detailBody(ctx, app, detail)
+        val h = StoreRow.head(ctx, app.label, detail, { expanded.contains(app.id) }) { open ->
+            if (open) expanded.add(app.id) else expanded.remove(app.id)
         }
-        val dot = TextView(ctx).apply {
-            text = "·"; textSize = StoreDensity.T_BODY; setTextColor(cDim); setPadding(0, 0, dp(ctx, StoreDensity.S8), 0)
-        }
-        val name = TextView(ctx).apply {
-            text = app.label; textSize = StoreDensity.T_TITLE; setTextColor(0xFFFFFFFF.toInt())
-            typeface = Typeface.DEFAULT_BOLD
-            maxLines = 1; ellipsize = TextUtils.TruncateAt.END
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        val meta = TextView(ctx).apply { text = "checking…"; textSize = StoreDensity.T_CAPTION; setTextColor(cDim); maxLines = 1 }
+        val head = h.view; val dot = h.dot; val meta = h.meta; val quick = h.quick
+        meta.text = "checking…"
         // The per-app action, on the collapsed row on purpose: updating ONE app
         // is the common case, and making it expand-then-tap would cost two taps
         // for the thing people do most. Hidden when the app is up to date, so
         // the column only ever shows actionable rows.
-        val quick = TextView(ctx).apply {
-            textSize = StoreDensity.T_BODY; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(0xFFFFFFFF.toInt())
-            setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S4))
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(ctx, StoreDensity.S8), 0, 0, 0) }
-            setOnClickListener { next(ctx, app) }
-        }
-        val chev = TextView(ctx).apply {
-            text = if (expanded.contains(app.id)) "⌄" else "›"
-            textSize = StoreDensity.T_TITLE; setTextColor(cDim); setPadding(dp(ctx, StoreDensity.S8), 0, 0, 0)
-        }
-        head.addView(dot); head.addView(name); head.addView(meta); head.addView(quick); head.addView(chev)
-
-        val detail = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
-            visibility = if (expanded.contains(app.id)) View.VISIBLE else View.GONE
-        }
-        detailBody(ctx, app, detail)
-        head.setOnClickListener {
-            val open = !expanded.contains(app.id)
-            if (open) expanded.add(app.id) else expanded.remove(app.id)
-            detail.visibility = if (open) View.VISIBLE else View.GONE
-            chev.text = if (open) "⌄" else "›"
-        }
+        quick.setOnClickListener { next(ctx, app) }
 
         dots[app.id] = dot; statusViews[app.id] = meta; quickBtns[app.id] = quick
         errBoxes[app.id] = errorArea(ctx, app)
@@ -794,12 +747,12 @@ class StoreCloudFragment : Fragment() {
         into.addView(status)
         if (reference != null) return
 
-        val actions = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        actionRows[app.id] = actions
         // Order and captions are appstore-fleet-actions.json; this only says
         // what each declared id DOES. Direct install lives on the Details
         // sheet now (still one tap from here), and Stop sits before Uninstall.
-        for (a in FleetActions.row(ctx)) rowAction(ctx, app, a)?.let { actions.addView(it) }
+        // Laid out by StoreRow.actions, the Phone page's own button lines.
+        val actions = StoreRow.actions(ctx, FleetActions.row(ctx).mapNotNull { rowAction(ctx, app, it) })
+        actionRows[app.id] = actions
         into.addView(actions)
     }
     // #878 who uses which lib: data/lib-consumers.json (its `group` names the tab that carries the

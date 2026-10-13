@@ -1457,6 +1457,14 @@
         "lib-appstore"
       ]
     },
+    "store_phone_view": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "Store > Phone: how the app list is sorted (shelf, or size largest / smallest first); a view preference of this phone, not state a new phone needs.",
+      "used_by": [
+        "lib-appstore"
+      ]
+    },
     "store_lib_groups": {
       "kind": "prefs",
       "class": "device",

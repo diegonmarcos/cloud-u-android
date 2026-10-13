@@ -12,6 +12,12 @@
     <string name="store_phone_decl_no">Not declared</string>
     <string name="store_phone_filter_installed">Installed</string>
     <string name="store_phone_loading">Loading…</string>
+    <string name="store_phone_sort_shelf">Shelf</string>
+    <string name="store_phone_sort_size_desc">Size ↓ largest</string>
+    <string name="store_phone_sort_size_asc">Size ↑ smallest</string>
+    <string name="store_phone_size_grant">Show full sizes: grant usage access</string>
+    <string name="store_phone_size_grant_caption">Without usage access the sizes are the APK alone (labelled APK); data and cache need it.</string>
+    <string name="store_phone_size_grant_failed">No usage-access screen on this phone</string>
     <string name="store_phone_count">%1$d apps</string>
     <string name="store_phone_list_failed">Could not list apps: %1$s</string>
     <string name="store_phone_other">Other</string>

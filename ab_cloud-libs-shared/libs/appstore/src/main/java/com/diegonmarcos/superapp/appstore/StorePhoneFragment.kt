@@ -10,7 +10,6 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -115,6 +114,19 @@ class StorePhoneFragment : Fragment() {
     // purpose — leaving the tab does not un-warn the user — and is cleared by the
     // discard itself, or as soon as a later install proves an entry redundant.
     private var armedToDiscard = false
+    // Sizes (StoreSizes / StoreSizeProbe): the list's order, persisted per phone; whether usage access
+    // is granted (no grant: "—" until the APK fallback lands, and the one-tap grant row); which rows
+    // have their detail open; the package-change watch that drops a stale size.
+    private val viewPrefs by lazy { requireContext().getSharedPreferences(VIEW_PREFS, Context.MODE_PRIVATE) }
+    private val sortStore = object : StoreSizes.Store {
+        override fun get(key: String) = runCatching { viewPrefs.getString(key, null) }.getOrNull()
+        override fun put(key: String, value: String) { runCatching { viewPrefs.edit().putString(key, value).apply() } }
+    }
+    private var sort = StoreSizes.Sort.SHELF
+    private val sortChips = ArrayList<TextView>()
+    private var sizeGranted = true
+    private val openRows = HashSet<String>()
+    private var stopSizeWatch: (() -> Unit)? = null
 
     // #565 export / import. Registered at construction, as the Activity Result
     // API requires; the system picker owns where the file lives.
@@ -140,6 +152,8 @@ class StorePhoneFragment : Fragment() {
             val was = searchMode; syncPage(); if (was && !searchMode) reload() else redraw()
         } }
 
+        sort = StoreSizes.loadSort(sortStore)
+        stopSizeWatch = StoreSizeProbe.watch(ctx) { view?.post { if (isAdded) measureSizes() } }
         val col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             val p = dp(ctx, StoreDensity.S12); setPadding(p, p, p, p)
@@ -156,20 +170,18 @@ class StorePhoneFragment : Fragment() {
                 checkAll = { checkAll() }, installAll = { installAll() }, updateAll = { updateAll() }))
         })
         col.addView(progress.view(ctx))
-        col.addView(LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            listViews += this
-            addView(fileBtn(ctx, ctx.getString(R.string.store_export)) { exportDoc.launch(EXPORT_NAME) }.also { installedOnlyViews += it })
-            addView(fileBtn(ctx, ctx.getString(R.string.store_import)) { importDoc.launch(IMPORT_TYPES) }.also { declaredOnlyViews += it })
+        // The page's file verbs: the SAME shared action buttons, laid out by StoreRow.actions as every row's are.
+        col.addView(StoreRow.actions(ctx, listOf(
+            fileBtn(ctx, ctx.getString(R.string.store_export)) { exportDoc.launch(EXPORT_NAME) }.also { installedOnlyViews += it },
+            fileBtn(ctx, ctx.getString(R.string.store_import)) { importDoc.launch(IMPORT_TYPES) }.also { declaredOnlyViews += it },
             // #625 the manual door onto the cache. The app owns eviction now, so
             // the user needs a way to say "drop it all" that does not mean
             // Settings > Clear cache - which no longer reaches these bytes, on
             // purpose, because the OS doing that silently WAS the bug.
             // #666 the label states the measured count and megabytes; reload()
             // rewrites it from ApkCache.plan, so it is never an estimate.
-            addView(fileBtn(ctx, ctx.getString(R.string.store_cache_clear)) { clearCache() }
-                .also { cacheBtn = it; installedOnlyViews += it })
-        })
+            fileBtn(ctx, ctx.getString(R.string.store_cache_clear)) { clearCache() }
+                .also { cacheBtn = it; installedOnlyViews += it })).also { listViews += it })
         sourceHost = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         col.addView(sourceHost)
         val cap = caption(ctx, ctx.getString(R.string.store_phone_caption))
@@ -219,14 +231,14 @@ class StorePhoneFragment : Fragment() {
             into.post {
                 if (!isAdded) return@post
                 into.removeAllViews()
-                built.onSuccess { rows = it; render(ctx, into, it); refreshCacheLabel(); then?.invoke() }
+                built.onSuccess { rows = it; render(ctx, into, it); refreshCacheLabel(); measureSizes(); then?.invoke() }
                     .onFailure { into.addView(caption(ctx, ctx.getString(R.string.store_phone_list_failed, it.message))) }
             }
         }
     }
 
     override fun onDestroyView() {
-        stopObserving?.invoke(); stopObserving = null; pageButtons.clear(); sourceHost = null
+        stopObserving?.invoke(); stopObserving = null; stopSizeWatch?.invoke(); stopSizeWatch = null; sortChips.clear(); pageButtons.clear(); sourceHost = null
         list = null; cacheBtn = null; stateViews.clear()
         installedOnlyViews.clear(); declaredOnlyViews.clear(); listViews.clear(); searchHost = null; stateChips.clear(); progress.detach(); super.onDestroyView()
     }
@@ -314,7 +326,7 @@ class StorePhoneFragment : Fragment() {
                 else -> SourceResolver.Check.NotInstalled(SourceResolver.VIA_FLEET, needsPlay = false)
             }
             Row(pkg, label, shelves[pkg], fa, ext, installed, actions)
-        }.sortedWith(compareBy({ it.shelf?.order ?: UNSHELVED }, { it.label.lowercase() }))
+        }.sortedWith(SHELF_ORDER)
     }
 
     private fun render(ctx: Context, into: LinearLayout, rows: List<Row>) {
@@ -344,15 +356,24 @@ class StorePhoneFragment : Fragment() {
                         .also { StoreBar.paint(it, i == declFilter) })
                 }
             })
-            host.addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                stateChips.clear()
-                listOf("All", "⬆ Updates", "◯ Missing", "✓ Installed").forEachIndexed { i, label ->
-                    val c = StoreBar.chip(ctx, controls.filter, label, i == 0) { if (stateFilter != i) { stateFilter = i; redraw() } }
-                    stateChips += c; addView(c)
-                }
-                stateChips.forEachIndexed { i, c -> StoreBar.paint(c, i == stateFilter) }
+            // The state chips: the Cloud page's line, drawn by the same StoreRow.filters.
+            host.addView(StoreRow.filters(ctx, controls.filter, listOf("All", "⬆ Updates", "◯ Missing", "✓ Installed"),
+                stateFilter, stateChips) { i -> if (stateFilter != i) { stateFilter = i; redraw() } })
+            // The sort: the page's shelf order, or size (tap again to flip largest / smallest first). Persisted.
+            val sizeLabel = if (sort == StoreSizes.Sort.SIZE_ASC) ctx.getString(R.string.store_phone_sort_size_asc)
+                            else ctx.getString(R.string.store_phone_sort_size_desc)
+            host.addView(StoreRow.filters(ctx, controls.filter,
+                listOf(ctx.getString(R.string.store_phone_sort_shelf), sizeLabel),
+                if (sort == StoreSizes.Sort.SHELF) 0 else 1, sortChips) { i ->
+                sort = if (i == 0) StoreSizes.Sort.SHELF else if (sort == StoreSizes.Sort.SHELF) StoreSizes.Sort.SIZE_DESC
+                       else StoreSizes.toggleSize(sort)
+                StoreSizes.saveSort(sortStore, sort); redraw()
             })
+            // No usage access: sizes are the APK's alone, and ONE tap opens the screen that grants it.
+            if (StoreSizes.needsGrantRow(sizeGranted)) host.addView(StoreRow.actions(ctx, listOf(
+                StoreBar.button(ctx, controls.action, ctx.getString(R.string.store_phone_size_grant), GRANT_FILL) { grantUsageAccess(ctx) }
+                    .also { it.tag = GRANT_TAG }))
+                .also { it.addView(caption(ctx, ctx.getString(R.string.store_phone_size_grant_caption))) })
         }
         val tab = sourceTab.takeIf { installedOnly }
         val shown = rows
@@ -362,6 +383,7 @@ class StorePhoneFragment : Fragment() {
             .filter { traitOk(ctx, it) }
             .filter { stateOk(it) }
             .filter { declOk(it) }
+            .sortedWith(StoreSizes.comparator(sort, { r: Row -> StoreSizeProbe.cached(r.pkg)?.totalBytes }, SHELF_ORDER))
         val missing = shown.count { !it.installed }
         val play = shown.count { !it.installed && !it.direct }
         into.addView(caption(ctx, ctx.getString(R.string.store_phone_count, shown.size) + "  ·  " +
@@ -391,6 +413,8 @@ class StorePhoneFragment : Fragment() {
             into.addView(header)
             var heading: String? = null
             for (r in group) {
+                // Sorted by size, the rows are one ranking: no shelf headings cutting it up.
+                if (sort != StoreSizes.Sort.SHELF) { into.addView(row(ctx, r)); continue }
                 val here = r.shelf?.heading ?: if (heading != null) ctx.getString(R.string.store_phone_other) else null
                 if (here != null && here != heading) into.addView(TextView(ctx).apply {
                     text = here; textSize = StoreDensity.T_META; setTextColor(cHead)
@@ -450,72 +474,104 @@ class StorePhoneFragment : Fragment() {
         render(ctx, into, rows)
     }
 
-    private fun row(ctx: Context, r: Row) = LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        setBackgroundColor(0xFF1C1C24.toInt())
-        setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6))
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2)) }
-        addView(TextView(ctx).apply {
-            text = r.label; textSize = StoreDensity.T_TITLE; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(0xFFFFFFFF.toInt()); maxLines = 1; ellipsize = TextUtils.TruncateAt.END
-        })
-        addView(TextView(ctx).apply {
+    /** THE Store row ([StoreRow]), as the Cloud page draws it: the head (name, size, chevron), the row's
+     *  state lines, its buttons EXPANDED in full-width lines, and behind the chevron the package and
+     *  the size breakdown. */
+    private fun row(ctx: Context, r: Row): View {
+        val card = StoreRow.card(ctx)
+        val detail = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
+        }
+        detail.addView(TextView(ctx).apply {
             text = r.pkg; textSize = StoreDensity.T_CAPTION; typeface = Typeface.MONOSPACE; setTextColor(cDim)
             maxLines = 1; ellipsize = TextUtils.TruncateAt.MIDDLE
         })
-        // The state line: version / update / not installed / needs Play. Tagged
-        // with the package so a test reads the rendered verdict, not this source.
-        addView(TextView(ctx).apply {
-            tag = STATE_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION
-            stateViews[r.pkg] = this
-            paint(ctx, this, states[r.pkg] ?: SourceResolver.Check.Unknown(null, ""), r)
+        detail.addView(TextView(ctx).apply {
+            tag = SIZE_DETAIL_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION; setTextColor(cDim)
+            text = if (r.installed) StoreSizes.breakdown(StoreSizeProbe.cached(r.pkg)) else StoreSizes.NONE
         })
-        // The Play Integrity badge: an app the vendor ties to Google Play. We
-        // still install it; the badge says it may refuse to run. Tagged so a
-        // test reads the rendered badge.
-        if (integrity(ctx, r) == SourceResolver.Integrity.PLAY) addView(TextView(ctx).apply {
-            tag = INTEGRITY_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION
-            text = ctx.getString(R.string.store_phone_integrity_badge); setTextColor(cBadge)
-        })
-        // #625 cached-vs-installed, per row. "cached, matches what is
-        // installed" is the state in which the bytes are about to be reaped;
-        // "cached, NOT installed" is a download waiting for its install — the
-        // thing that used to disappear.
-        cached[r.pkg]?.let { e ->
-            val rec = e.record ?: return@let
-            val here = SourceResolver.installed(ctx, r.pkg)?.second
+        val h = StoreRow.head(ctx, r.label, detail, { r.pkg in openRows }) { o -> if (o) openRows.add(r.pkg) else openRows.remove(r.pkg) }
+        // The size slot: "48 MB", "48 MB APK" (no usage access), or "—" (not installed / not measured yet).
+        h.meta.tag = SIZE_TAG_PREFIX + r.pkg
+        h.meta.text = if (r.installed) StoreSizes.rowLabel(StoreSizeProbe.cached(r.pkg)) else StoreSizes.NONE
+        card.addView(h.view)
+        val body = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S6))
+        }
+        card.addView(body)
+        body.apply {
+            // The state line: version / update / not installed / needs Play. Tagged
+            // with the package so a test reads the rendered verdict, not this source.
             addView(TextView(ctx).apply {
-                tag = CACHE_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION
-                val mb = (e.bytes / 1_000_000).coerceAtLeast(1L)
-                text = if (here == rec.versionCode)
-                    ctx.getString(R.string.store_cache_matches, rec.versionCode, mb)
-                else ctx.getString(R.string.store_cache_waiting, rec.versionCode, mb, here?.toString() ?: "—")
-                setTextColor(if (here == rec.versionCode) cUp else cUpd)
+                tag = STATE_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION
+                stateViews[r.pkg] = this
+                paint(ctx, this, states[r.pkg] ?: SourceResolver.Check.Unknown(null, ""), r)
             })
+            // The Play Integrity badge: an app the vendor ties to Google Play. We
+            // still install it; the badge says it may refuse to run. Tagged so a
+            // test reads the rendered badge.
+            if (integrity(ctx, r) == SourceResolver.Integrity.PLAY) addView(TextView(ctx).apply {
+                tag = INTEGRITY_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION
+                text = ctx.getString(R.string.store_phone_integrity_badge); setTextColor(cBadge)
+            })
+            // #625 cached-vs-installed, per row. "cached, matches what is
+            // installed" is the state in which the bytes are about to be reaped;
+            // "cached, NOT installed" is a download waiting for its install — the
+            // thing that used to disappear.
+            cached[r.pkg]?.let { e ->
+                val rec = e.record ?: return@let
+                val here = SourceResolver.installed(ctx, r.pkg)?.second
+                addView(TextView(ctx).apply {
+                    tag = CACHE_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION
+                    val mb = (e.bytes / 1_000_000).coerceAtLeast(1L)
+                    text = if (here == rec.versionCode)
+                        ctx.getString(R.string.store_cache_matches, rec.versionCode, mb)
+                    else ctx.getString(R.string.store_cache_waiting, rec.versionCode, mb, here?.toString() ?: "—")
+                    setTextColor(if (here == rec.versionCode) cUp else cUpd)
+                })
+            }
         }
-        val buttons = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(ctx, StoreDensity.S4), 0, 0)
-        }
-        r.actions.forEach { a -> buttons.addView(btn(ctx, a) { act(ctx, r, a) }) }
+        val buttons = ArrayList<View>()
+        r.actions.forEach { a -> buttons += btn(ctx, a) { act(ctx, r, a) } }
         // Detected at runtime: an UNKNOWN app this store installed that did not
         // run is marked PLAY on this phone (persisted, exported with the inventory).
         val ext = r.external
         // Declared is the user's list: any foreign row can join or leave it.
-        if (ext != null) buttons.addView(btn(ctx, PhoneAppActions.Action(PhoneAppActions.Kind.INSTALL,
+        if (ext != null) buttons += btn(ctx, PhoneAppActions.Action(PhoneAppActions.Kind.INSTALL,
             ctx.getString(if (ext.declared) R.string.store_phone_undeclare else R.string.store_phone_declare), null, null)) {
             if (ext.declared) DeclaredEdits.undeclare(ctx, r.pkg)
             else DeclaredEdits.declare(ctx, r.pkg, r.label, originKinds(ctx, r.pkg))
             reload()
-        })
-        if (r.installed && ext != null && IntegrityMarks.canReport(ctx, ext)) buttons.addView(btn(ctx,
+        }
+        if (r.installed && ext != null && IntegrityMarks.canReport(ctx, ext)) buttons += btn(ctx,
             PhoneAppActions.Action(PhoneAppActions.Kind.INSTALL, ctx.getString(R.string.store_phone_did_not_run), null, null)) {
             IntegrityMarks.mark(ctx, r.pkg)
             Toast.makeText(ctx, ctx.getString(R.string.store_phone_marked_play, r.label), Toast.LENGTH_LONG).show()
             redraw()
-        })
-        addView(HorizontalScrollView(ctx).apply { isHorizontalScrollBarEnabled = false; addView(buttons) })
+        }
+        // EXPANDED, as the Cloud page lays its buttons out: never a sideways scroller hiding half of them.
+        body.addView(StoreRow.actions(ctx, buttons))
+        card.addView(detail)
+        return card
+    }
+
+    /** Sizes for every installed row, measured off the main thread (cached; see [StoreSizeProbe]), then repainted. */
+    private fun measureSizes() {
+        val app = context?.applicationContext ?: return
+        val pkgs = rows.filter { it.installed }.map { it.pkg }
+        thread(name = "store-phone-sizes") {
+            val granted = StoreSizeProbe.granted(app)
+            runCatching { StoreSizeProbe.measure(app, pkgs) }
+            view?.post { if (isAdded) { sizeGranted = granted; redraw() } }
+        }
+    }
+
+    /** The one-tap grant: the usage-access screen (this app's own toggle first, the list as fallback). */
+    private fun grantUsageAccess(ctx: Context) {
+        for (i in StoreSizeProbe.grantIntents(ctx)) if (runCatching { startActivity(i) }.isSuccess) return
+        Toast.makeText(ctx, ctx.getString(R.string.store_phone_size_grant_failed), Toast.LENGTH_LONG).show()
     }
 
     /** One [SourceResolver.Check] → the row's state line and colour. */
@@ -754,26 +810,16 @@ class StorePhoneFragment : Fragment() {
     private fun caption(ctx: Context, t: String) = TextView(ctx).apply {
         text = t; textSize = StoreDensity.T_META; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, StoreDensity.S8))
     }
-    /** Dimmed, not hidden, when it cannot work here: the reason is one tap away. */
-    private fun btn(ctx: Context, a: PhoneAppActions.Action, onClick: () -> Unit) = TextView(ctx).apply {
-        text = a.label; textSize = StoreDensity.T_META; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
-        setTextColor(0xFFFFFFFF.toInt()); setBackgroundColor(0xFF2A2A33.toInt())
-        alpha = if (a.disabledReason == null) 1f else 0.4f
-        contentDescription = a.disabledReason?.let { "${a.label}: $it" } ?: a.label
-        setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, dp(ctx, StoreDensity.S4), 0) }
-        isClickable = true; setOnClickListener { onClick() }
-    }
+    /** THE Store action button ([StoreBar.button], the Cloud rows' own). Dimmed, not hidden, when it
+     *  cannot work here: the reason is one tap away. */
+    private fun btn(ctx: Context, a: PhoneAppActions.Action, onClick: () -> Unit) =
+        StoreBar.button(ctx, controls.action, a.label, null, onClick).apply {
+            alpha = if (a.disabledReason == null) 1f else 0.4f
+            contentDescription = a.disabledReason?.let { "${a.label}: $it" } ?: a.label
+        }
 
-    private fun fileBtn(ctx: Context, label: String, onClick: () -> Unit) = TextView(ctx).apply {
-        text = label; textSize = StoreDensity.T_META; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
-        setTextColor(0xFFFFFFFF.toInt()); setBackgroundColor(0xFF2B6CB0.toInt())
-        setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
-        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            .apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S4)) }
-        isClickable = true; setOnClickListener { onClick() }
-    }
+    private fun fileBtn(ctx: Context, label: String, onClick: () -> Unit) =
+        StoreBar.button(ctx, controls.action, label, FILE_FILL, onClick)
 
     companion object {
         /** The Play Integrity badge of a row, tagged [INTEGRITY_TAG_PREFIX] + package. */
@@ -784,6 +830,18 @@ class StorePhoneFragment : Fragment() {
          *  Absent when nothing for that package is in the cache — a test reads
          *  the rendered answer rather than this source. */
         const val CACHE_TAG_PREFIX = "store-phone-cache:"
+        /** The row's size slot ("48 MB" / "48 MB APK" / "—"), tagged [SIZE_TAG_PREFIX] + package. */
+        const val SIZE_TAG_PREFIX = "store-phone-size:"
+        /** The size breakdown behind the chevron, tagged [SIZE_DETAIL_TAG_PREFIX] + package. */
+        const val SIZE_DETAIL_TAG_PREFIX = "store-phone-size-detail:"
+        /** The one-tap usage-access grant row, drawn only while the grant is missing. */
+        const val GRANT_TAG = "store-phone-size-grant"
+        /** This page's view prefs (the sort). Device-local: declared in fleet-config.json. */
+        const val VIEW_PREFS = "store_phone_view"
+        private const val FILE_FILL = 0xFF2B6CB0.toInt()
+        private const val GRANT_FILL = 0xFFB7791F.toInt()
+        /** The page's base order: shelf, then label; unshelved last. A size sort breaks ties with it. */
+        private val SHELF_ORDER: Comparator<Row> = compareBy({ it.shelf?.order ?: UNSHELVED }, { it.label.lowercase() })
         /** The build.json::ui section id this page is, and its two child pages (#896). */
         const val SECTION = "phone"
         const val PAGE_INSTALLED = "installed"

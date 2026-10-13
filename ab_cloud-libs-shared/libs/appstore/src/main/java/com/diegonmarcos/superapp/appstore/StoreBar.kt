@@ -270,6 +270,94 @@ object StoreBar {
     private const val DISABLED = 0xFF3A3A44.toInt()
 }
 
+/**
+ * THE Store row and its page parts - one builder for the Cloud page's fleet rows AND the Phone
+ * page's app rows, so the two pages cannot drift into two looks again. Before this each page drew
+ * its own card: Cloud a dense head (state dot, name, meta, quick verb, chevron) with its buttons as
+ * full-width shared action buttons, Phone a taller card whose buttons sat in a sideways-scrolling
+ * strip, half of them off-screen. Both now ask this object for:
+ *  - [card]     the row's background and spacing;
+ *  - [head]     dot · name · meta · quick verb · chevron; the chevron opens [detail] (and says so);
+ *  - [actions]  the row's buttons, EXPANDED: weight-1 lines of at most [PER_LINE], never a scroller;
+ *  - [filters]  a line of the shared filter chips, painted for [selected].
+ * test-store-phone-sizes.sh holds that both fragments draw rows only through these.
+ */
+object StoreRow {
+    const val PER_LINE = 4
+
+    class Head(val view: LinearLayout, val dot: TextView, val name: TextView, val meta: TextView,
+               val quick: TextView, val chevron: TextView)
+
+    fun card(ctx: Context) = LinearLayout(ctx).apply {
+        orientation = LinearLayout.VERTICAL
+        setBackgroundColor(0xFF1C1C24.toInt())
+        val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        lp.setMargins(0, StoreDensity.dp(ctx, StoreDensity.S2), 0, StoreDensity.dp(ctx, StoreDensity.S2)); layoutParams = lp
+    }
+
+    /** The row's head. [detail] is shown or hidden by the chevron; [isOpen]/[setOpen] keep the page's memory of it. */
+    fun head(ctx: Context, label: String, detail: View, isOpen: () -> Boolean, setOpen: (Boolean) -> Unit): Head {
+        fun dp(v: Int) = StoreDensity.dp(ctx, v)
+        val dim = 0x99FFFFFF.toInt()
+        val row = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(StoreDensity.S12), dp(StoreDensity.S8), dp(StoreDensity.S12), dp(StoreDensity.S8))
+            isClickable = true
+        }
+        val dot = TextView(ctx).apply {
+            text = "·"; textSize = StoreDensity.T_BODY; setTextColor(dim); setPadding(0, 0, dp(StoreDensity.S8), 0)
+        }
+        val name = TextView(ctx).apply {
+            text = label; textSize = StoreDensity.T_TITLE; setTextColor(0xFFFFFFFF.toInt())
+            typeface = Typeface.DEFAULT_BOLD
+            maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val meta = TextView(ctx).apply { textSize = StoreDensity.T_CAPTION; setTextColor(dim); maxLines = 1 }
+        val quick = TextView(ctx).apply {
+            textSize = StoreDensity.T_BODY; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(0xFFFFFFFF.toInt())
+            setPadding(dp(StoreDensity.S12), dp(StoreDensity.S4), dp(StoreDensity.S12), dp(StoreDensity.S4))
+            visibility = View.GONE
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(StoreDensity.S8), 0, 0, 0) }
+        }
+        val chev = TextView(ctx).apply {
+            textSize = StoreDensity.T_TITLE; setTextColor(dim); setPadding(dp(StoreDensity.S8), 0, 0, 0)
+        }
+        row.addView(dot); row.addView(name); row.addView(meta); row.addView(quick); row.addView(chev)
+        fun show(open: Boolean) { detail.visibility = if (open) View.VISIBLE else View.GONE; chev.text = if (open) "⌄" else "›" }
+        show(isOpen())
+        row.setOnClickListener { val open = !isOpen(); setOpen(open); show(open) }
+        return Head(row, dot, name, meta, quick, chev)
+    }
+
+    /** The row's buttons, all visible: lines of at most [PER_LINE] buttons sharing the width. */
+    fun actions(ctx: Context, buttons: List<View>): LinearLayout = LinearLayout(ctx).apply {
+        orientation = LinearLayout.VERTICAL
+        tag = ACTIONS
+        buttons.chunked(PER_LINE).forEach { line ->
+            addView(LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; line.forEach { addView(it) } })
+        }
+    }
+
+    const val ACTIONS = "store-row:actions"
+
+    /** One line of the shared filter chips; [chips] is filled in order and painted for [selected]. */
+    fun filters(ctx: Context, style: StoreControls.Style, labels: List<String>, selected: Int,
+                chips: MutableList<TextView>, onPick: (Int) -> Unit): LinearLayout = LinearLayout(ctx).apply {
+        orientation = LinearLayout.HORIZONTAL
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, StoreDensity.dp(ctx, StoreDensity.S6)) }
+        chips.clear()
+        labels.forEachIndexed { i, label ->
+            val c = StoreBar.chip(ctx, style, label, i == 0) { onPick(i) }
+            chips += c; addView(c)
+        }
+        chips.forEachIndexed { i, c -> StoreBar.paint(c, i == selected) }
+    }
+}
+
 /** The Store's page frame: the tab strip on top (when this page draws it) and the page's scrolling
  *  content below it; a page's action bar is the first thing IN that content, under the tabs, as the
  *  Cloud page's header is (#896.3). */
