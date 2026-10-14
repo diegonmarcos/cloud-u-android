@@ -76,9 +76,11 @@ pages = next(s for s in json.load(open('$BJ'))['ui']['sections']
              if s['id'] == 'config')['pages']
 print(','.join(p['id'] for p in pages if p.get('tabs')))
 ")
-[ -z "$OWNERS" ] \
-  && ok "no Configs page declares tabs (Store opens Cloud Store since #865)" \
-  || bad "Configs declares tab strips again: [$OWNERS] - give them a check of their own"
+# Agents (Configs ▸ Apps ▸ Agents: SuperApp agents | Fleet agents) is the one strip
+# with a check of its own: test-configs-agents-page.sh A2.
+[ "$OWNERS" = "agents" ] \
+  && ok "the only Configs tab strip is Agents, checked by test-configs-agents-page.sh (Store opens Cloud Store since #865)" \
+  || bad "Configs tab strips are [$OWNERS], expected only [agents] - a new one must bring a check of its own"
 
 echo "== T3: the One-Hand id SURVIVES (page:config/onehand must still resolve) =="
 check "$(python3 - "$BJ" <<'PY'
