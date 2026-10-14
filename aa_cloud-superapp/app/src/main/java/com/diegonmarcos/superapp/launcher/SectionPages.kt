@@ -102,6 +102,8 @@ object SectionPages {
         // #733 the Store's Apps Mesh page, reached from Configs ▸ Mesh too —
         // the same AppsMesh.page, hosted on its own (no copy).
         sectionId == "config" && pageId == "apps-mesh"      -> com.diegonmarcos.superapp.apps.CloudStoreHandoff.page(pageId)
+        // #ipc Configs > Network > IPC: the fleet's IPC Mesh, libs:appstore's shared IpcMeshPage (Cloud Store > Access > IPC draws the same).
+        sectionId == "config" && pageId == "ipc"            -> com.diegonmarcos.superapp.appstore.IpcMeshFragment()
         // Configs > Network > ADB Shell: the privileged channel's full control (lib AdbShellPage).
         sectionId == "config" && pageId == "adb-shell"      -> com.diegonmarcos.superapp.configs.AdbShellFragment.newInstance()
         sectionId == "config" && pageId == "wg"             -> WireGuardFragment.newInstance()

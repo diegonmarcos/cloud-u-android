@@ -4813,6 +4813,14 @@
             "subgroup": "Network"
           },
           {
+            "_doc": "#ipc IPC — the fleet's IPC Mesh: every IPC endpoint each fleet member exposes to the others on this phone (the fleet IPC layer's ops on content://<pkg>.fleet, signature-guarded providers, bound services and their AIDL, intent actions, deep links), the permission guarding each, who calls it, and whether it resolves and answers here. ONE shared composable, libs:appstore IpcMeshPage, the same page Cloud Store > Access > IPC draws (SectionPages hosts it with IpcMeshFragment); data: the generated registry data/ipc-mesh.json (1_cicd/src/scripts/cloud-android-ipc-mesh.py). a0_docs/eng-specs/fleet-ipc.md.",
+            "id": "ipc",
+            "label": "IPC",
+            "icon": "ic_mode_apps",
+            "group": "Setup",
+            "subgroup": "Network"
+          },
+          {
             "_doc": "ADB SHELL - THE page for the privileged channel (libs:shizuku-adb-debug-tools AdbShellPage), the same one Cloud Store (Settings), Cloud Account (Setup), the terminals (Settings) and every status chip draw. Six sections: the status table (Developer options, Wireless debugging, embedded adb, the local server on 38099, Shizuku, the active route and mode, each with a colour dot and when it was probed), Connect (the method that applies to the chosen mode, run step by step with the step that failed named), Active connection (Disconnect / Reconnect / Restart server / Stop server / Test round-trip, each disabled when it does not apply), Logs (an in-memory ring, tokens redacted, Copy and Clear), Declared needs (this app's privileged_channel above) and Setup (the checklist, each item opening its exact settings screen). The label is this one string: rename it here and nowhere else. Sits right after Apps Mesh.",
             "id": "adb-shell",
             "label": "ADB Shell",
