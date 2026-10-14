@@ -1,0 +1,22 @@
+{
+  "_doc": "Setup-schema coverage ratchet (test-setup-schema-coverage.sh): every fleet app item fleet-config.json classes config or secret must name the declared store that carries it (`store`) or how it comes back (`via: install | connect`), so Cloud Account's Fleet Setup (libs:account SetupPlan over the declared stores and bundle routes) can place it and Profiles > Apps can show its state. An item that has neither is a setting Cloud Account cannot set up yet. Each one is listed here, by `<app id>/<item id>`, with the reason; the tester fails on a gap that is not listed (name it or fix it), on a listed gap that no longer exists (stale: delete it) and on Cloud Chat (fixed 2026-10-14: chat_setup). The list only shrinks.",
+  "code/editor-config": "Acode keeps it in the WebView's localStorage / files: no SharedPreferences store the setup contract can write; needs a native helper first.",
+  "code/projects": "Acode keeps it in the WebView's localStorage / files: no SharedPreferences store the setup contract can write; needs a native helper first.",
+  "code/chat-config": "Acode keeps it in the WebView's localStorage / files: no SharedPreferences store the setup contract can write; needs a native helper first.",
+  "matrix/matrix-session-db": "Element X keeps the session (homeserver, user id, tokens) in an SQLDelight database: the contract has no `room`/`sqldelight` handler yet (fleet-config.json kinds).",
+  "news/news-sources-json": "the news engine holds sources and topics in its own files: no declared store yet.",
+  "nix-on-droid/nix-on-droid-nix": "a dotfile or config file in the Nix $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "nix-on-droid/termux-properties": "a dotfile or config file in the Nix $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "nix-on-droid/home-dotfiles": "a dotfile or config file in the Nix $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "nix-on-droid/claude-config": "a dotfile or config file in the Nix $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "nix-on-droid/goose-config": "a dotfile or config file in the Nix $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "nix-on-droid/hermes-config": "a dotfile or config file in the Nix $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "nix-on-droid/ssh-dir": "a dotfile or config file in the Nix $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "termux/termux-properties": "a dotfile or config file in the Termux $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "termux/termux-style": "a dotfile or config file in the Termux $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "termux/home-dotfiles": "a dotfile or config file in the Termux $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "termux/claude-config": "a dotfile or config file in the Termux $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "termux/goose-config": "a dotfile or config file in the Termux $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "termux/hermes-config": "a dotfile or config file in the Termux $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet.",
+  "termux/ssh-dir": "a dotfile or config file in the Termux $HOME: the contract moves prefs stores, not home files; a `file` handler is not declared yet."
+}

@@ -1,5 +1,6 @@
 package com.diegonmarcos.cloudaccount
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,19 +30,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
-import com.diegonmarcos.cloudaccount.autofill.AutofillImportPage
 import com.diegonmarcos.cloudaccount.autofill.AutofillProfilesPage
 import com.diegonmarcos.cloudaccount.autofill.AutofillRulesPage
 import com.diegonmarcos.cloudaccount.autofill.AutofillSnippetsPage
 import com.diegonmarcos.cloudaccount.hub.AppProfilesPage
-import com.diegonmarcos.cloudaccount.hub.HomePage
+import com.diegonmarcos.cloudaccount.hub.ConnectionsPage
 import com.diegonmarcos.cloudaccount.hub.HubNav
+import com.diegonmarcos.cloudaccount.hub.ImportPage
 import com.diegonmarcos.cloudaccount.hub.LocalDeviceAuth
 import com.diegonmarcos.cloudaccount.hub.SecretsProvidersPage
 import com.diegonmarcos.cloudaccount.hub.SystemDeviceAuth
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.NavSection
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.profile.AccountConnectPage
@@ -63,19 +67,18 @@ import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.updater.Updater
 
 /**
- * Cloud Account, reorganised: four islands of build.json::ui.bottom_nav, Profiles, Secrets, Home, Configs,
- * drawn by libs:bottomnav (island + PageTabs) from the baked NavDecl, every (section, page) mapped to ONE
- * composable in [Page]. Setup is no island: each app profile (Profiles ▸ Apps) and each provider
- * (Secrets ▸ Providers) has its own Setup, and Home has Setup all. Links from libs:account pages that
- * still name the old islands ("setup", "account", "settings") go through [HubNav.resolve].
+ * Cloud Account: the four islands of build.json::ui.bottom_nav (Profiles, Secrets, Home, Configs), drawn by
+ * libs:bottomnav (island + PageTabs) from the baked NavDecl. A section's pages are its top strip; a page with
+ * pages of its own (Profiles ▸ Autofill, Profiles ▸ Phone, Configs ▸ Setup) gets a second strip under it, so
+ * every leaf is at most two taps from the island. Every leaf (section, page) is mapped to ONE composable in
+ * [Page]; nothing is drawn in two places (a0_docs/eng-specs/cloud-account-ia.md).
  *
- * Where each old page went: Account ▸ profile/connect/import -> Home ▸ account/connect/import;
- * Account ▸ autofill/sites/snippets -> Profiles ▸ personal/sites/snippets; Profiles ▸ devices/working/diff
- * stay; Setup ▸ runbook/apps/configs/perms/adb-shell -> Configs ▸ the same ids; Secrets ▸
- * connections/secrets/grants stay (beside the new Providers page); Settings -> Configs ▸ settings.
+ * Links from libs:account pages that still name the old islands ("setup", "account", "settings"), the
+ * 2026-10-13 ids ("home/home", "secrets/connections") and an OPEN intent's `section` / `page` extras all go
+ * through [HubNav.resolve], so every old page and deep link lands where that page lives now.
  */
 class MainActivity : AppCompatActivity() {
-    // Secrets ▸ connections: real file pickers behind ConnectionsTab's pickBundle / export callbacks.
+    // Secrets ▸ bundle: real file pickers behind ConnectionsTab's pickBundle / export callbacks.
     private var pendingPick: ((String) -> Unit)? = null
     private var pendingExport: Pair<String, String>? = null
     private val pickLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -95,11 +98,15 @@ class MainActivity : AppCompatActivity() {
     }
     private val deviceAuth by lazy { SystemDeviceAuth(this) { intent, done -> pendingConfirm = done; confirmLauncher.launch(intent) } }
 
+    /** The place an OPEN intent asked for (extras [EXTRA_SECTION] / [EXTRA_PAGE], old ids welcome); null = the default. */
+    private val requested = mutableStateOf<Pair<String, String?>?>(null)
+
     private fun pickText(onText: (String) -> Unit) { pendingPick = onText; pickLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
+        requested.value = deepLink(intent)
         setContent {
             CloudKitTheme(AccountHost.palette(this)) {
                 CompositionLocalProvider(LocalDeviceAuth provides deviceAuth) {
@@ -110,12 +117,19 @@ class MainActivity : AppCompatActivity() {
         Updater.start(this)
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        deepLink(intent)?.let { requested.value = it }
+    }
+
     @Composable
     private fun AccountShell() {
         var selected by remember { mutableStateOf<String?>(NAV.default()?.id) }
         var selectedPage by remember { mutableStateOf<String?>(null) }
         // libs:account pages still link with the old island ids; HubNav maps them to where the page lives now.
         val go: (String, String) -> Unit = { s, p -> HubNav.resolve(s, p).let { (ns, np) -> selected = ns; selectedPage = np } }
+        val asked = requested.value
+        LaunchedEffect(asked) { if (asked != null) { selected = asked.first; selectedPage = asked.second; requested.value = null } }
         Box(Modifier.fillMaxSize().statusBarsPadding()) {
             BottomNavHost(
                 entries = NAV.islandEntries { rememberVectorPainter(iconFor(it)) },
@@ -124,40 +138,60 @@ class MainActivity : AppCompatActivity() {
             ) {
                 Column(Modifier.fillMaxSize()) {
                     val section = NAV.section(selected)
-                    val pages = section?.pages.orEmpty()
-                    val page = section?.page(selectedPage)?.id.orEmpty()
-                    if (pages.size > 1) {
-                        PageTabs(
-                            pages = pages,
-                            selectedId = page,
-                            onSelect = { p -> selectedPage = p.id },
-                            underTopChrome = false,
-                        )
-                    }
-                    Page(selected.orEmpty(), page, go)
+                    val path = if (section == null) emptyList() else section.path(section.page(selectedPage)?.id)
+                    val leaf = path.lastOrNull()?.leaf()?.id.orEmpty()
+                    if (section != null) Strips(section, path) { selectedPage = it }
+                    Page(selected.orEmpty(), leaf, go)
                 }
             }
         }
     }
 
-    /** (section, page) → its composable. Ids are build.json::ui.sections'; nothing here names a label. */
+    /**
+     * The section's top strip and, under a container page, its second strip. A tap on a container pill opens
+     * its first leaf; each strip's surface is the declared background (build.json ui.sections[].background)
+     * through NavDecl.stripSurface, never a colour of this app's.
+     */
+    @Composable
+    private fun Strips(section: NavSection, path: List<NavPage>, select: (String) -> Unit) {
+        if (section.pages.size > 1) {
+            PageTabs(
+                pages = section.pages,
+                selectedId = path.firstOrNull()?.id,
+                onSelect = { p -> select(p.leaf().id) },
+                underTopChrome = false,
+                surface = NAV.stripSurface(section.id, darkTheme = true),
+            )
+        }
+        val container = path.firstOrNull()?.takeIf { it.pages.size > 1 } ?: return
+        PageTabs(
+            pages = container.pages,
+            selectedId = path.getOrNull(1)?.id ?: container.leaf().id,
+            onSelect = { p -> select(p.leaf().id) },
+            underTopChrome = false,
+            surface = NAV.stripSurface(section.id, darkTheme = true, pageId = container.id),
+        )
+    }
+
+    /** (section, leaf page) → its composable. Ids are build.json::ui.sections'; nothing here names a label. */
     @Composable
     private fun Page(section: String, page: String, go: (String, String) -> Unit) {
         val ctx = LocalContext.current
         val model = remember { AccountModel.get(ctx) }
         when (section) {
             "profiles" -> when (page) {
-                // The non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md): personal data.
+                // Autofill: the non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md).
                 "personal" -> AutofillProfilesPage()
                 "sites" -> AutofillRulesPage()
                 "snippets" -> AutofillSnippetsPage()
+                // Phone: the per-device profile files.
                 "devices" -> ProfilesDevicesPage()
                 "working" -> ProfilesWorkingPage()
                 "diff" -> ProfilesDiffPage(model)
                 else -> AppProfilesPage()
             }
             "secrets" -> when (page) {
-                "connections" -> ConnectionsTab(
+                "bundle" -> ConnectionsTab(
                     pickBundle = { onText -> pendingPick = onText; pickLauncher.launch(arrayOf("application/json", "text/plain")) },
                     export = { name, text -> pendingExport = name to text; exportLauncher.launch(name) },
                 )
@@ -166,10 +200,10 @@ class MainActivity : AppCompatActivity() {
                 else -> SecretsProvidersPage(go)
             }
             "home" -> when (page) {
-                "account" -> AccountProfilePage(go)
+                "connections" -> ConnectionsPage(go)
                 "connect" -> AccountConnectPage()
-                "import" -> AutofillImportPage(::pickText)
-                else -> HomePage(go, ::pickText)
+                "import" -> ImportPage(::pickText)
+                else -> AccountProfilePage(go)
             }
             "configs" -> when (page) {
                 "runbook" -> RunbookPage(go)
@@ -183,16 +217,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Configs ▸ configs (was Setup ▸ configs, spec 4.8): FleetSetupTab as it is, in a scrolling page. */
+    /** Configs ▸ Setup ▸ Push (was Setup ▸ configs, spec 4.8): FleetSetupTab as it is, in a scrolling page. */
     @Composable
     private fun FleetSetupPage(model: AccountModel) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) { FleetSetupTab(model) }
     }
 
     companion object {
+        /** OPEN intent extras: a section id and, optionally, a page id; old ids are translated by [HubNav]. */
+        const val EXTRA_SECTION = "section"
+        const val EXTRA_PAGE = "page"
+
         /** build.json::ui as baked into BuildConfig: the island's items and the section ids. */
         val NAV: NavDecl by lazy {
             NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
+        }
+
+        /** The (section, page) an intent asks for, resolved to a current place; null when it asks for none. */
+        fun deepLink(intent: Intent?): Pair<String, String?>? {
+            val s = intent?.getStringExtra(EXTRA_SECTION)?.trim().orEmpty()
+            if (s.isEmpty()) return null
+            return HubNav.resolve(s, intent?.getStringExtra(EXTRA_PAGE)?.trim()?.ifEmpty { null })
         }
 
         /** The declared icon name → the glyph the island draws. */

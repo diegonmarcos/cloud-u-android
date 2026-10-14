@@ -16,8 +16,8 @@
 #  4. One package name: SuperApp's hand-off, the library, this app's build.json, the
 #     external_apps row and the fleet manifest row agree, and the OPEN action SuperApp
 #     sends is the one this manifest declares.
-#  5. the four islands (Profiles, Secrets, Home, Configs; Setup lives in each profile/provider): build.json::ui, the
-#     shell is the shared island + PageTabs fed by NavDecl, every declared (section,
+#  5. the four islands (Profiles, Secrets, Home, Configs; a0_docs/eng-specs/cloud-account-ia.md): build.json::ui, the
+#     shell is the shared island + PageTabs fed by NavDecl, every declared leaf (section,
 #     page) id is a branch of MainActivity's Page(), the debug API's tabs op answers the
 #     islands, and Account ▸ connect dispatches every declared way on its kind
 #     (ConnectWays.handler has a branch per declared kind, none left unwired).
@@ -132,13 +132,15 @@ PY
   python3 - "$A/build.json" <<'PY' && ok "ui.bottom_nav = profiles, secrets, home, configs; ui.sections hold every page" || bad "build.json ui.bottom_nav/sections are not the reorganised four islands"
 import json, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
-# personal / sites / snippets: the non-secret autofill SOT editor (a0_docs/eng-specs/autofill-3-tier.md)
-want = {'profiles': ['apps', 'personal', 'sites', 'snippets', 'devices', 'working', 'diff'],
-        'secrets': ['providers', 'secrets', 'grants', 'connections'],
-        'home': ['home', 'account', 'connect', 'import'],
-        'configs': ['settings', 'runbook', 'apps', 'configs', 'perms', 'adb-shell']}
+# a0_docs/eng-specs/cloud-account-ia.md: a page's own `pages` is a second strip (Autofill, Phone, Setup)
+want = {'profiles': ['apps', 'autofill', 'phone'],
+        'secrets': ['providers', 'secrets', 'grants', 'bundle'],
+        'home': ['account', 'connections', 'connect', 'import'],
+        'configs': ['setup', 'adb-shell', 'settings']}
+strips = {'autofill': ['personal', 'sites', 'snippets'], 'phone': ['devices', 'working', 'diff'], 'setup': ['runbook', 'apps', 'configs', 'perms']}
 got = {s.get('id'): [p.get('id') for p in s.get('pages') or []] for s in ui.get('sections') or []}
-ok = (ui.get('bottom_nav') == list(want) and got == want and ui.get('default_section') == 'home'
+gotstrips = {p.get('id'): [q.get('id') for q in p.get('pages')] for s in ui.get('sections') or [] for p in s.get('pages') or [] if p.get('pages')}
+ok = (ui.get('bottom_nav') == ['profiles', 'secrets', 'home', 'configs'] and got == want and gotstrips == strips and ui.get('default_section') == 'home'
       and isinstance(ui.get('account', {}).get('forges'), list)
       and ui.get('account', {}).get('connect', {}).get('file', {}).get('kind') == 'vault_file')
 sys.exit(0 if ok else 1)
@@ -146,7 +148,7 @@ PY
   local bg; bg="$(cat "$A/app/build.gradle")"
   printf '%s' "$bg" | grep -q 'UI_BOTTOM_NAV' && printf '%s' "$bg" | grep -q 'UI_SECTIONS_B64' && printf '%s' "$bg" | grep -q "project(':libs:bottomnav')" && ok "build.gradle bakes the declaration and links libs:bottomnav" || bad "build.gradle does not bake UI_BOTTOM_NAV/UI_SECTIONS_B64 or link libs:bottomnav"
   local ma; ma="$(strip "$MA")"
-  printf '%s' "$ma" | grep -q 'BottomNavHost(' && printf '%s' "$ma" | grep -q 'NavDecl.fromBuildConfig(' && printf '%s' "$ma" | grep -q 'islandEntries' && printf '%s' "$ma" | grep -q 'PageTabs(' && ok "MainActivity draws the island and the page strip from the baked NavDecl" || bad "MainActivity does not feed the shared island/strip from NavDecl"
+  printf '%s' "$ma" | grep -q 'BottomNavHost(' && printf '%s' "$ma" | grep -q 'NavDecl.fromBuildConfig(' && printf '%s' "$ma" | grep -q 'islandEntries' && [ "$(printf '%s' "$ma" | grep -c 'PageTabs(')" -ge 2 ] && ok "MainActivity draws the island, the page strip and the second strip from the baked NavDecl" || bad "MainActivity does not feed the shared island/strips from NavDecl"
   python3 - "$A/build.json" "$MA" <<'PY' && ok "every declared section is a branch of MainActivity's Page() and every page branch names a declared page" || bad "MainActivity's Page() and build.json::ui.sections disagree"
 import json, re, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8'))['ui']
@@ -154,9 +156,13 @@ src = open(sys.argv[2], encoding='utf-8').read()
 body = src[src.index('private fun Page('):src.index('companion object')]
 secs = re.findall(r'^            "(\w+)" -> ', body, flags=re.M)
 pages = re.findall(r'^                "(\w+)" -> ', body, flags=re.M)
-decl = {s['id']: [p['id'] for p in s.get('pages') or []] for s in ui['sections']}
-# every declared section has its branch; a page branch names a declared page (an undeclared one
-# is dead code the island can never reach); a section's remaining pages fall to its `else`
+def leaves(pages):
+    for p in pages:
+        if p.get('pages'): yield from leaves(p['pages'])
+        else: yield p['id']
+decl = {s['id']: list(leaves(s.get('pages') or [])) for s in ui['sections']}
+# every declared section has its branch; a page branch names a declared LEAF page (an undeclared one
+# is dead code the island can never reach); a section's remaining leaves fall to its `else`
 ok = set(secs) == set(decl) and bool(pages) and all(any(p in ps for ps in decl.values()) for p in pages)
 sys.exit(0 if ok else 1)
 PY
@@ -249,11 +255,12 @@ mutate "island replaced by a plain box" acc/app/src/main/java/com/diegonmarcos/c
 mutate "island no longer fed by NavDecl" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'NavDecl.fromBuildConfig(' 'NavDeclx.fromBuildConfig(' || M=$((M+1))
 mutate "an island leaves build.json" acc/build.json '"secrets",
       "home"' '"home"' || M=$((M+1))
-mutate "a page leaves build.json" acc/build.json '          {
-            "id": "connect",
-            "label": "Connect",
-            "icon": "home"
-          }' '' || M=$((M+1))
+mutate "a page leaves build.json" acc/build.json '              {
+                "id": "working",
+                "label": "Working",
+                "icon": "profiles"
+              },' '' || M=$((M+1))
+mutate "a strip leaves build.json" acc/build.json '"id": "setup",' '"id": "setupx",' || M=$((M+1))
 mutate "connect dispatch replaced by a literal" lib/profile/ConnectWays.kt 'fun handler(kind: String): Handler = when (kind) {' 'fun handler(kind: String): Handler = Handler.File
     private fun handlerOld(kind: String): Handler = when (kind) {' || M=$((M+1))
 mutate "a declared kind loses its branch" lib/profile/ConnectWays.kt '        GITEA_TOKEN -> Handler.GiteaToken

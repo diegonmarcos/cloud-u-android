@@ -23,6 +23,9 @@ import com.diegonmarcos.cloudaccount.hub.StepKind
 import com.diegonmarcos.cloudaccount.hub.StepResult
 import com.diegonmarcos.cloudaccount.hub.SystemDeviceAuth
 import com.diegonmarcos.cloudaccount.hub.TokenImport
+import com.diegonmarcos.superapp.fleetconfig.FleetPolicy
+import com.diegonmarcos.superapp.profile.AccountFleet
+import com.diegonmarcos.superapp.profile.SetupPlan
 import com.diegonmarcos.superapp.settings.AccountVault
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import org.json.JSONObject
@@ -76,11 +79,15 @@ class HubTest {
 
     @Test fun everyOldPageIsReachable() {
         val old = mapOf(
-            "account" to listOf("profile", "connect", "autofill", "sites", "snippets", "import"),
-            "profiles" to listOf("devices", "working", "diff"),
-            "setup" to listOf("runbook", "apps", "configs", "perms", "adb-shell"),
-            "secrets" to listOf("connections", "secrets", "grants"),
+            // the redesign's five islands
+            "account" to listOf("", "profile", "connect", "autofill", "sites", "snippets", "import"),
+            "profiles" to listOf("", "devices", "working", "diff"),
+            "setup" to listOf("", "runbook", "apps", "configs", "perms", "adb-shell"),
+            "secrets" to listOf("", "connections", "secrets", "grants"),
             "settings" to listOf(""),
+            // the four islands of 2026-10-13 (#964)
+            "home" to listOf("", "home", "account", "connect", "import"),
+            "configs" to listOf("", "settings", "runbook", "apps", "configs", "perms", "adb-shell"),
         )
         for ((s, pages) in old) for (p in pages) {
             val (ns, np) = HubNav.resolve(s, p)
@@ -89,12 +96,61 @@ class HubTest {
             assertTrue("$s/$p -> $ns/$np: not a page", np == null || sec!!.allPages().any { it.id == np })
             assertTrue("$s/$p has an explicit place", HubNav.LEGACY.containsKey(s to p))
         }
+        // every LEGACY target is a declared LEAF (a container pill is no destination)
+        for ((from, to) in HubNav.LEGACY) {
+            val page = MainActivity.NAV.section(to.first)?.allPages()?.firstOrNull { it.id == to.second }
+            assertNotNull("$from -> $to: not a declared page", page)
+            assertTrue("$from -> $to: a container, not a leaf", page!!.pages.isEmpty())
+        }
         // the links libs:account pages send with the old ids
         assertEquals("configs" to "adb-shell", HubNav.resolve("setup", "adb-shell"))
         assertEquals("home" to "connect", HubNav.resolve("account", "connect"))
         assertEquals("configs" to "perms", HubNav.resolve("setup", "perms"))
-        // a current id passes through
+        assertEquals("configs" to "apps", HubNav.resolve("setup", "apps"))
+        assertEquals("profiles" to "working", HubNav.resolve("profiles", "working"))
+        // the 2026-10-13 ids: Home's one page became four, Bundle got its own id
+        assertEquals("home" to "account", HubNav.resolve("home", "home"))
+        assertEquals("home" to "import", HubNav.resolve("home", "import"))
+        assertEquals("secrets" to "bundle", HubNav.resolve("secrets", "connections"))
+        // a current id passes through, an unknown island opens the default
         assertEquals("secrets" to "providers", HubNav.resolve("secrets", "providers"))
+        assertEquals("profiles" to "sites", HubNav.resolve("profiles", "sites"))
+        assertEquals("home" to null, HubNav.resolve("nowhere", "x"))
+    }
+
+    @Test fun strippedPagesSitUnderOneContainerEach() {
+        val nav = MainActivity.NAV
+        fun path(section: String, page: String) = nav.section(section)!!.path(page).map { it.id }
+        assertEquals(listOf("autofill", "personal"), path("profiles", "personal"))
+        assertEquals(listOf("autofill", "sites"), path("profiles", "sites"))
+        assertEquals(listOf("phone", "diff"), path("profiles", "diff"))
+        assertEquals(listOf("setup", "runbook"), path("configs", "runbook"))
+        assertEquals(listOf("setup", "perms"), path("configs", "perms"))
+        assertEquals(listOf("adb-shell"), path("configs", "adb-shell"))
+        // a container opens on its first leaf; a section opens on its first page's leaf
+        assertEquals("personal", nav.section("profiles")!!.page("autofill")!!.leaf().id)
+        assertEquals("runbook", nav.section("configs")!!.page(null)!!.leaf().id)
+        assertEquals("account", nav.section("home")!!.page(null)!!.leaf().id)
+        // one place per thing: no leaf id repeats inside a section, and the two "apps" are in different islands
+        for (s in nav.sections) {
+            val ids = s.allPages().filter { it.pages.isEmpty() }.map { it.id }
+            assertEquals("${s.id}: a leaf id repeats", ids.size, ids.toSet().size)
+        }
+        assertTrue(nav.problems().isEmpty())
+    }
+
+    @Test fun openIntentDeepLinksResolveThroughTheSameMap() {
+        fun i(section: String?, page: String?) = android.content.Intent("com.diegonmarcos.cloudaccount.OPEN").apply {
+            if (section != null) putExtra(MainActivity.EXTRA_SECTION, section)
+            if (page != null) putExtra(MainActivity.EXTRA_PAGE, page)
+        }
+        assertNull("no extras = the default", MainActivity.deepLink(i(null, null)))
+        assertNull(MainActivity.deepLink(null))
+        assertEquals("configs" to "adb-shell", MainActivity.deepLink(i("setup", "adb-shell")))
+        assertEquals("secrets" to "bundle", MainActivity.deepLink(i("secrets", "connections")))
+        assertEquals("home" to "account", MainActivity.deepLink(i("home", "")))
+        assertEquals("profiles" to "snippets", MainActivity.deepLink(i("account", "snippets")))
+        assertEquals("home" to null, MainActivity.deepLink(i("bogus", "x")))
     }
 
     // ── Connections table ────────────────────────────────────────────────
@@ -299,6 +355,45 @@ class HubTest {
         assertEquals(listOf("auto_sync=true"), r.sync)
         assertFalse("a credential is reported as present, never carried", r.toString().contains("fake-mail-value"))
         assertEquals("not installed", AppProfiles.row(AppProfiles.App("x", "X", "p"), false, null, 0).state)
+    }
+
+    // ── Cloud Chat's setup schema (#991) ─────────────────────────────────
+
+    /** The fleet manifest as the SuperApp bakes it: the file in the tree when the test runs there, else this APK's. */
+    private fun fleetManifest(): FleetPolicy.Manifest {
+        val f = File("../../ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json")
+        return if (f.exists()) FleetPolicy.Manifest(JSONObject(f.readText())) else FleetPolicy.manifest(ctx)
+    }
+
+    @Test fun cloudChatHasASetupSchema() {
+        // Profiles ▸ Apps lists the fleet's apps: Cloud Chat is one of them
+        assertTrue("Cloud Chat is a fleet app", AccountFleet.fleetApps().any { it.id == "chat" })
+        val m = fleetManifest()
+        val chat = m.apps.getValue("chat")
+        assertEquals("com.diegonmarcos.comms.chat", chat.pkg)
+        val store = m.stores.getValue("chat_setup")
+        assertEquals("prefs", store.kind)
+        assertTrue("ac_cloud-chat" in store.usedBy)
+        // the schema: Cloud Account's chat.server_url / chat.server_name land in chat_setup, nothing else is pushed
+        val plan = SetupPlan.build(m, JSONObject("""{"chat":{"server_url":"https://chat.example.invalid","server_name":"Cloud"}}"""), null)
+        val ap = plan.of("chat")
+        assertNotNull("the plan has an entry for Cloud Chat", ap)
+        assertEquals(setOf("chat_setup.server_url", "chat_setup.server_name"), ap!!.items.map { "${it.store}.${it.key}" }.toSet())
+        assertEquals("com.diegonmarcos.comms.chat", ap.items.first().pkg)
+        // its Setup: login = installed, endpoint = the server link, test = the push's answer
+        val endpoints = ap.items.filter { it.key.endsWith("url") }.map { "${it.store}.${it.key}" }
+        val done = AppSetup("app:chat", "Cloud Chat", { true }, { endpoints }, { true to "2 key(s)" }).run()
+        assertTrue(done.line, done.ok)
+        assertEquals("chat_setup.server_url", done.steps[1].line)
+        val absent = AppSetup("app:chat", "Cloud Chat", { false }, { endpoints }, { true to "x" }).run()
+        assertFalse(absent.ok)
+        // and the row Profiles ▸ Apps draws once the link is captured: configured, endpoint shown, no credential
+        val captured = JSONObject("""{"chat_setup":{"chat_setup":{"server_url":"https://chat.example.invalid","server_name":"Cloud"}}}""")
+        val row = AppProfiles.row(AppProfiles.App("chat", "Cloud Chat", chat.pkg), true, captured, ap.items.size)
+        assertEquals("configured", row.state)
+        assertEquals("https://chat.example.invalid", row.endpoint)
+        assertEquals(listOf("chat_setup"), row.stores)
+        assertEquals(2, row.planned)
     }
 
     // ── nothing secret in a log ──────────────────────────────────────────

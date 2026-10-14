@@ -46,6 +46,8 @@ class MainApplication : NavigationApplication(), INotificationsApplication {
                         // add(MyReactNativePackage())
                         add(RNNotificationsPackage(this@MainApplication))
                         add(WatermelonDBJSIPackage())
+                        // Cloud fleet: the server link Cloud Account's Fleet Setup pushed (store chat_setup).
+                        add(FleetSetupPackage())
                     }
 
                 override fun getJSMainModuleName(): String = "index"

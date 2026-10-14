@@ -1,8 +1,5 @@
 package com.diegonmarcos.cloudaccount.hub
 
-import android.graphics.BitmapFactory
-import android.net.Uri
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,6 +15,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -28,23 +26,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.cloudaccount.autofill.AutofillImportBody
-import com.diegonmarcos.superapp.profile.ProfilePrefs
 import com.diegonmarcos.superapp.settings.AccountVault
 import com.diegonmarcos.superapp.uikit.KitAction
 import com.diegonmarcos.superapp.uikit.KitActionBar
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitConfirmDialog
 import com.diegonmarcos.superapp.uikit.KitDensity
+import com.diegonmarcos.superapp.uikit.KitEmptyState
 import com.diegonmarcos.superapp.uikit.KitFingerprint
-import com.diegonmarcos.superapp.uikit.KitHero
 import com.diegonmarcos.superapp.uikit.KitListRow
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
 import com.diegonmarcos.superapp.uikit.KitStatTile
@@ -63,8 +58,13 @@ val LocalDeviceAuth = staticCompositionLocalOf<DeviceAuth> { DeviceAuth { _, don
 typealias PickText = ((String) -> Unit) -> Unit
 
 object HubTags {
-    const val HOME = "hub:home"
+    const val PAGE_CONNECTIONS = "hub:page:connections"
+    const val PAGE_IMPORT = "hub:page:import"
+    const val PAGE_PROVIDERS = "hub:page:providers"
+    const val PAGE_APPS = "hub:page:apps"
     const val CONNECTIONS = "hub:connections"
+    const val APPS_LOADING = "hub:apps:loading"
+    const val APPS_NO_PLAN = "hub:apps:no-plan"
     const val SETUP_ALL = "hub:setup-all"
     const val TOKENS_IMPORT = "hub:tokens:import"
     const val TOKENS_IMPORT_ALL = "hub:tokens:import-all"
@@ -89,6 +89,17 @@ private fun Scroll(tag: String, content: @Composable () -> Unit) {
 
 @Composable
 private fun Caption(text: String) = Text(text, color = LocalKitPalette.current.textSecondary, fontSize = KitDensity.caption)
+
+/** Every hub page opens the same way: one scroll, [KitDensity.large] gutters, a title with one sentence under it. */
+@Composable
+private fun PageFrame(tag: String, title: String, subtitle: String, content: @Composable () -> Unit) = Scroll(tag) {
+    KitSectionHeader(title, subtitle)
+    content()
+}
+
+/** A list with nothing in it yet says so in one place (ui-kit's empty state), never as a blank card. */
+@Composable
+private fun Empty(title: String, caption: String, tag: String) = KitCard(Modifier.testTag(tag)) { KitEmptyState(title, caption) }
 
 // ── one secret: masked, reveal / copy behind device auth, edit / rotate / delete ─────────────────────────────
 
@@ -150,23 +161,32 @@ fun ProviderCard(p: Provider, entries: List<SecretEntry>, go: (String, String) -
     var result by remember(p.id) { mutableStateOf<SetupResult?>(null) }
     var busy by remember(p.id) { mutableStateOf(false) }
     var connecting by remember(p.id) { mutableStateOf(false) }
+    // Status first, details on demand: the card opens on a tap, or by itself when something needs doing.
+    val expired = entries.count { it.expired }
+    val attention = entries.isEmpty() || expired > 0
+    var open by remember(p.id) { mutableStateOf(attention) }
+    val pill = when { entries.isEmpty() -> "missing" to KitState.WARN; expired > 0 -> "expired" to KitState.BAD; else -> "connected" to KitState.OK }
+    val next = when { entries.isEmpty() -> "next: connect or import a token"; expired > 0 -> "next: re-auth $expired expired"; else -> "${entries.size} stored" }
     KitCard(Modifier.testTag(HubTags.provider(p.id))) {
-        KitListRow(p.label, tag = "provider:${p.id}", secondary = "${entries.size} stored · " + p.methods.joinToString { it.label },
-            pill = when { entries.isEmpty() -> "missing" to KitState.WARN; entries.any { it.expired } -> "expired" to KitState.BAD; else -> "connected" to KitState.OK })
+        KitListRow(p.label, tag = "provider:${p.id}", leading = p.label.take(1).uppercase(),
+            secondary = next + " · " + p.methods.joinToString { it.label }, pill = pill, onClick = { open = !open })
+        if (!open) return@KitCard
+        if (entries.isEmpty()) Caption("Nothing stored for ${p.label} yet: Connect pastes a token, Re-auth signs in.")
         for (e in entries) SecretLine(e, onChanged)
         KitSectionHeader("Setup", "", eyebrow = true)
         result?.let { r -> for (s in r.steps) KitListRow(s.kind.label, tag = "setup:${p.id}:${s.kind.name}", secondary = s.line,
             pill = (if (s.ok) "ok" else "failed") to (if (s.ok) KitState.OK else KitState.BAD)) }
+            ?: Caption(if (busy) "Testing ${p.label}…" else "Connect, test the stored credential, or re-auth.")
         KitActionBar(listOf(
             KitAction("Connect", "hub:provider:connect:${p.id}") { connecting = !connecting },
-            KitAction(if (busy) "Testing…" else "Test", "hub:provider:test:${p.id}", enabled = !busy) {
+            KitAction(if (busy) "Testing…" else "Test", "hub:provider:test:${p.id}", enabled = !busy && entries.isNotEmpty()) {
                 busy = true
                 scope.launch { result = withContext(Dispatchers.IO) { HubAndroid.providerTarget(ctx, p).run() }; busy = false }
             },
             KitAction("Re-auth", "hub:provider:reauth:${p.id}") {
                 if (AuthMethod.WEB_OAUTH in p.methods && p.id in setOf("github", "gitea", "cloud-authelia")) go("home", "connect") else connecting = true
             },
-        ), filledFirst = false)
+        ), filledFirst = entries.isEmpty())
         if (connecting) ConnectToken(p) { connecting = false; onChanged() }
     }
 }
@@ -188,15 +208,18 @@ private fun ConnectToken(p: Provider, done: () -> Unit) {
     }))
 }
 
-// ── Secrets ▸ providers ──────────────────────────────────────────────────────────────────────────────────────
+// ── Secrets ▸ providers: THE token list ──────────────────────────────────────────────────────────────────────
 
 @Composable
 fun SecretsProvidersPage(go: (String, String) -> Unit) {
     val ctx = LocalContext.current
     var tick by remember { mutableStateOf(0) }
     val groups = remember(tick) { Providers.secrets(HubAndroid.connections(ctx)).filter { (p, s) -> p.core || s.isNotEmpty() } }
-    Scroll("hub:secrets") {
-        KitSectionHeader("Secrets", "SSH keys, tokens, passwords and logins this account keeps, by provider. Masked; reveal and copy ask for your fingerprint or screen lock; a copy clears itself.")
+    val stored = groups.values.sumOf { it.size }
+    PageFrame(HubTags.PAGE_PROVIDERS, "Providers",
+        "Every SSH key, token, password and login this account keeps, by provider. Masked; reveal and copy ask for your fingerprint or screen lock; a copy clears itself after ${SecretClipboard.CLEAR_AFTER_MS / 1000} s.") {
+        if (stored == 0) KitStatusBanner("No credential stored yet: connect a provider below, or paste tokens on Home ▸ Import.", KitState.WARN, tag = "providers:empty",
+            action = KitAction("Import tokens", "hub:providers:import") { go("home", "import") })
         for ((p, entries) in groups) ProviderCard(p, entries, go) { tick++ }
     }
 }
@@ -209,144 +232,175 @@ fun AppProfilesPage() {
     val scope = rememberCoroutineScope()
     var open by remember { mutableStateOf<String?>(null) }
     var tick by remember { mutableStateOf(0) }
-    val plan = remember(tick) { HubAndroid.plan(ctx) }
-    val rows = remember(tick) { HubAndroid.appRows(ctx, plan) }
+    // The plan reads every app's captured settings: off the main thread, with the page saying so meanwhile.
+    var plan by remember { mutableStateOf<com.diegonmarcos.superapp.profile.SetupPlan.Plan?>(null) }
+    var rows by remember { mutableStateOf<List<AppProfiles.Row>?>(null) }
+    LaunchedEffect(tick) {
+        rows = null
+        val p = withContext(Dispatchers.IO) { HubAndroid.plan(ctx) }
+        rows = withContext(Dispatchers.IO) { HubAndroid.appRows(ctx, p) }
+        plan = p
+    }
     val results = remember { mutableStateMapOf<String, SetupResult>() }
     var busy by remember { mutableStateOf(false) }
-    Scroll("hub:profiles:apps") {
-        val o = rows.firstOrNull { it.id == open }
+    Scroll(HubTags.PAGE_APPS) {
+        val list = rows
+        val o = list?.firstOrNull { it.id == open }
         if (o == null) {
             KitSectionHeader("App profiles", "Each fleet app's account and configuration as Cloud Account holds it. Tap an app for its profile and its own Setup.")
-            KitCard {
-                for (r in rows) KitListRow(r.label, Modifier.testTag(HubTags.app(r.id)), tag = r.id, leading = r.label.take(1).uppercase(),
-                    secondary = listOfNotNull(r.endpoint, "${r.captured} setting(s)", r.sync.takeIf { it.isNotEmpty() }?.joinToString()).joinToString(" · "),
-                    pill = r.state to when (r.state) { "signed in", "configured" -> KitState.OK; "signed out" -> KitState.WARN; else -> KitState.IDLE },
-                    onClick = { open = r.id })
+            when {
+                list == null -> KitStatusBanner("Reading the app profiles…", KitState.BUSY, tag = HubTags.APPS_LOADING)
+                list.isEmpty() -> Empty("No fleet app declared", "The fleet manifest lists no app for this phone; nothing to profile yet.", "hub:apps:empty")
+                else -> {
+                    if (plan == null) KitStatusBanner("The setup plan could not be read: states are shown, pushed counts are not.", KitState.WARN, tag = HubTags.APPS_NO_PLAN)
+                    val signedIn = list.count { it.state == "signed in" || it.state == "configured" }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(KitDensity.small)) {
+                        KitStatTile("$signedIn", "set up", if (signedIn > 0) KitState.OK else KitState.IDLE, Modifier.weight(1f), tag = "apps:ready")
+                        KitStatTile("${list.size - signedIn}", "to set up", if (list.size - signedIn > 0) KitState.WARN else KitState.OK, Modifier.weight(1f), tag = "apps:todo")
+                    }
+                    KitCard {
+                        for (r in list) KitListRow(r.label, Modifier.testTag(HubTags.app(r.id)), tag = r.id, leading = r.label.take(1).uppercase(),
+                            secondary = listOfNotNull(r.endpoint, "${r.captured} setting(s)", r.sync.takeIf { it.isNotEmpty() }?.joinToString()).joinToString(" · "),
+                            pill = r.state to when (r.state) { "signed in", "configured" -> KitState.OK; "signed out" -> KitState.WARN; else -> KitState.IDLE },
+                            onClick = { open = r.id })
+                    }
+                }
             }
         } else {
             TextButton(onClick = { open = null }, modifier = Modifier.testTag("hub:app:back")) { Text("‹ All apps") }
             KitSectionHeader(o.label, o.pkg)
             KitCard {
-                KitListRow("State", secondary = o.state, tag = "app:${o.id}:state")
+                KitListRow("State", secondary = o.state, tag = "app:${o.id}:state",
+                    pill = o.state to when (o.state) { "signed in", "configured" -> KitState.OK; "signed out" -> KitState.WARN; else -> KitState.IDLE })
                 KitListRow("Server / endpoint", secondary = o.endpoint ?: "none captured", tag = "app:${o.id}:endpoint")
                 KitListRow("Sync", secondary = o.sync.joinToString().ifEmpty { "no sync settings captured" }, tag = "app:${o.id}:sync")
-                KitListRow("Stores it owns", secondary = o.stores.joinToString().ifEmpty { "none captured yet (Configs ▸ Fleet push captures them)" }, tag = "app:${o.id}:stores")
+                KitListRow("Stores it owns", secondary = o.stores.joinToString().ifEmpty { "none captured yet (Configs ▸ Setup ▸ Push captures them)" }, tag = "app:${o.id}:stores")
                 KitListRow("Settings captured", secondary = "${o.captured} · ${o.planned} would be pushed", tag = "app:${o.id}:counts")
             }
             KitSectionHeader("Setup", "", eyebrow = true)
-            results[o.id]?.let { r -> for (s in r.steps) KitListRow(s.kind.label, tag = "setup:${o.id}:${s.kind.name}", secondary = s.line,
-                pill = (if (s.ok) "ok" else "failed") to (if (s.ok) KitState.OK else KitState.BAD)) }
-            KitActionBar(listOf(
-                KitAction(if (busy) "Running…" else "Set up ${o.label}", "hub:app:setup:${o.id}", enabled = !busy) {
-                    busy = true
-                    scope.launch {
-                        val app = AppProfiles.App(o.id, o.label, o.pkg)
-                        results[o.id] = withContext(Dispatchers.IO) { HubAndroid.appTarget(ctx, app, plan).run() }
-                        busy = false; tick++
-                    }
-                },
-                KitAction("Open app", "hub:app:open:${o.id}", enabled = o.installed) {
-                    ctx.packageManager.getLaunchIntentForPackage(o.pkg)?.let { ctx.startActivity(it) }
-                },
-            ))
+            KitCard {
+                results[o.id]?.let { r -> for (s in r.steps) KitListRow(s.kind.label, tag = "setup:${o.id}:${s.kind.name}", secondary = s.line,
+                    pill = (if (s.ok) "ok" else "failed") to (if (s.ok) KitState.OK else KitState.BAD)) }
+                    ?: Caption("Login, endpoint and test: pushes this app's settings through its setup contract and reads them back.")
+                KitActionBar(listOf(
+                    KitAction(if (busy) "Running…" else "Set up ${o.label}", "hub:app:setup:${o.id}", enabled = !busy) {
+                        busy = true
+                        scope.launch {
+                            val app = AppProfiles.App(o.id, o.label, o.pkg)
+                            results[o.id] = withContext(Dispatchers.IO) { HubAndroid.appTarget(ctx, app, plan).run() }
+                            busy = false; tick++
+                        }
+                    },
+                    KitAction("Open app", "hub:app:open:${o.id}", enabled = o.installed) {
+                        ctx.packageManager.getLaunchIntentForPackage(o.pkg)?.let { ctx.startActivity(it) }
+                    },
+                ))
+            }
         }
     }
 }
 
-// ── Home ─────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Home ▸ connections: the status of every provider, and Setup all ──────────────────────────────────────────
 
 @Composable
-fun HomePage(go: (String, String) -> Unit, pickText: PickText) {
+fun ConnectionsPage(go: (String, String) -> Unit) {
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
     var tick by remember { mutableStateOf(0) }
     val blob = remember(tick) { HubAndroid.connections(ctx) }
     val groups = remember(tick) { Providers.secrets(blob) }
     val matrix = remember(tick) { Providers.matrix(blob) }
-    val profile = remember(tick) { ProfilePrefs(ctx) }
     val summary = remember(tick) { runCatching { AccountVault(ctx).summary() }.getOrNull() }
-    Scroll(HubTags.HOME) {
-        // a) picture + summary, once there is data
+    PageFrame(HubTags.PAGE_CONNECTIONS, "Connections", "Which providers this account can reach. Each row leads with its worst state and the next thing to do; tap it for every sign-in way (Web OAuth, API token, SSH) and its own action.") {
         val creds = groups.values.sumOf { it.size }
         val expired = groups.values.sumOf { l -> l.count { it.expired } }
-        if (profile.name.isNotBlank() || creds > 0) {
-            val pic = remember(profile.pictureUri) {
-                runCatching { ctx.contentResolver.openInputStream(Uri.parse(profile.pictureUri))?.use { BitmapFactory.decodeStream(it) } }.getOrNull()
-            }
-            KitHero(profile.name.ifBlank { "Account" }, listOf(profile.email).filter { it.isNotBlank() }, profile.name.take(2), tag = "home",
-                onClick = { go("home", "account") },
-                avatar = pic?.let { b -> @Composable { Image(b.asImageBitmap(), "profile picture", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) } })
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(KitDensity.small)) {
-                KitStatTile("$creds", "credentials", if (creds > 0) KitState.OK else KitState.WARN, Modifier.weight(1f), tag = "home:creds")
-                KitStatTile("$expired", "expired", if (expired > 0) KitState.BAD else KitState.OK, Modifier.weight(1f), tag = "home:expired")
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(KitDensity.small)) {
-                KitStatTile("${summary?.optInt("connections") ?: 0}", "connection values", KitState.IDLE, Modifier.weight(1f), tag = "home:connections")
-                KitStatTile("${summary?.optInt("configs") ?: 0}", "app settings", KitState.IDLE, Modifier.weight(1f), tag = "home:configs")
-            }
-        } else {
-            KitStatusBanner("Nothing imported yet: import your configs or tokens below, or connect on Home ▸ Connect.", KitState.WARN, tag = "home:empty")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(KitDensity.small)) {
+            KitStatTile("$creds", "credentials", if (creds > 0) KitState.OK else KitState.WARN, Modifier.weight(1f), tag = "home:creds") { go("secrets", "providers") }
+            KitStatTile("$expired", "expired", if (expired > 0) KitState.BAD else KitState.OK, Modifier.weight(1f), tag = "home:expired") { go("secrets", "providers") }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(KitDensity.small)) {
+            KitStatTile("${summary?.optInt("connections") ?: 0}", "connection values", KitState.IDLE, Modifier.weight(1f), tag = "home:connections") { go("secrets", "bundle") }
+            KitStatTile("${summary?.optInt("configs") ?: 0}", "app settings", KitState.IDLE, Modifier.weight(1f), tag = "home:configs") { go("profiles", "apps") }
+        }
+        val needing = matrix.count { it.worst != CellStatus.CONNECTED }
+        when {
+            creds == 0 -> KitStatusBanner("Nothing connected yet: sign in on Connect, or paste tokens on Import.", KitState.WARN, tag = "home:empty",
+                action = KitAction("Connect", "hub:connections:connect") { go("home", "connect") })
+            expired > 0 -> KitStatusBanner("$expired credential(s) expired: re-auth them under Secrets ▸ Providers.", KitState.BAD, tag = "home:expired-banner",
+                action = KitAction("Re-auth", "hub:connections:reauth") { go("secrets", "providers") })
+            needing > 0 -> KitStatusBanner("$needing provider(s) have a sign-in way still to set up; the rest are connected.", KitState.WARN, tag = "home:todo")
+            else -> KitStatusBanner("Every provider is connected.", KitState.OK, tag = "home:ok")
         }
 
-        // b) Connections
         KitSectionHeader("Connections", "", eyebrow = true)
-        ConnectionsTable(matrix, go) { tick++ }
+        if (matrix.isEmpty()) Empty("No provider yet", "Rows appear as soon as a credential is stored.", "hub:connections:empty")
+        else ConnectionsList(matrix, go) { tick++ }
 
-        // c) Import configs
-        KitSectionHeader("Import configs", "", eyebrow = true)
-        KitCard { AutofillImportBody(pickText) }
-
-        // d) Import tokens
-        KitSectionHeader("Import tokens", "", eyebrow = true)
-        KitCard { TokenImporter(pickText) { tick++ } }
-
-        // e) Tokens
-        KitSectionHeader("Tokens", "", eyebrow = true)
-        KitCard {
-            val all = groups.values.flatten()
-            if (all.isEmpty()) Caption("No token stored yet.")
-            for (e in all) SecretLine(e) { tick++ }
-        }
-
-        // f) Setup all
         KitSectionHeader("Setup all", "", eyebrow = true)
         SetupAllCard { tick++ }
     }
 }
 
+// ── Home ▸ import: THE importer (personal data, then tokens) ─────────────────────────────────────────────────
+
 @Composable
-private fun ConnectionsTable(rows: List<ConnectionRow>, go: (String, String) -> Unit, changed: () -> Unit) {
+fun ImportPage(pickText: PickText) {
+    var tick by remember { mutableStateOf(0) }
+    PageFrame(HubTags.PAGE_IMPORT, "Import", "Paste or pick a file; nothing is saved until you review it. Personal data lands under Profiles ▸ Autofill, tokens under Secrets ▸ Providers.") {
+        KitSectionHeader("Personal data", "", eyebrow = true)
+        KitCard { AutofillImportBody(pickText) }
+        KitSectionHeader("Tokens", "", eyebrow = true)
+        KitCard { TokenImporter(pickText) { tick++ } }
+        if (tick > 0) KitStatusBanner("Imported: the Connections table and Secrets ▸ Providers show them now.", KitState.OK, tag = "import:done")
+    }
+}
+
+/**
+ * One row per provider: its worst state as the pill and the next action as the line; a tap opens the three
+ * sign-in ways (Web OAuth, API token, SSH) as rows of their own, each with the one thing to do. A list, never
+ * a wide grid: it reads on a 360 dp phone without scrolling sideways.
+ */
+@Composable
+private fun ConnectionsList(rows: List<ConnectionRow>, go: (String, String) -> Unit, changed: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val tested = remember { mutableStateMapOf<String, SetupResult>() }
+    var open by remember { mutableStateOf<String?>(null) }
     KitCard(Modifier.testTag(HubTags.CONNECTIONS)) {
-        Row(Modifier.fillMaxWidth()) {
-            Text("Provider", Modifier.weight(1.3f), color = LocalKitPalette.current.textSecondary, fontSize = KitDensity.caption)
-            for (m in AuthMethod.values()) Text(m.label, Modifier.weight(1f), color = LocalKitPalette.current.textSecondary, fontSize = KitDensity.caption)
-        }
         for (r in rows) {
-            Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(r.provider.label, Modifier.weight(1.3f), color = LocalKitPalette.current.textPrimary, fontSize = KitDensity.body)
+            val worst = r.worst
+            val next = when (worst) {
+                CellStatus.CONNECTED -> "every way connected · tap to test"
+                CellStatus.EXPIRED -> "next: re-auth " + r.cells.filter { it.value.status == CellStatus.EXPIRED }.keys.joinToString { it.label }
+                CellStatus.MISSING -> "next: set up " + r.cells.filter { it.value.status == CellStatus.MISSING }.keys.joinToString { it.label }
+                CellStatus.NOT_USED -> "not used"
+            }
+            KitListRow(r.provider.label, Modifier.testTag("hub:connections:${r.provider.id}"), tag = "connections:${r.provider.id}",
+                leading = r.provider.label.take(1).uppercase(), secondary = next, pill = worst.word to stateOf(worst),
+                onClick = { open = if (open == r.provider.id) null else r.provider.id })
+            if (open == r.provider.id) {
                 for (m in AuthMethod.values()) {
                     val c = r.cells.getValue(m)
-                    Column(Modifier.weight(1f).testTag(HubTags.cell(r.provider.id, m)).clickable(enabled = c.status != CellStatus.NOT_USED) {
-                        when (c.status) {
-                            CellStatus.CONNECTED -> scope.launch {
-                                tested[r.provider.id] = withContext(Dispatchers.IO) { HubAndroid.providerTarget(ctx, r.provider).run() }
-                            }
-                            CellStatus.MISSING, CellStatus.EXPIRED ->
-                                if (m == AuthMethod.WEB_OAUTH && r.provider.id in setOf("github", "gitea", "cloud-authelia")) go("home", "connect")
-                                else go("secrets", "providers")
-                            CellStatus.NOT_USED -> {}
+                    val action = when (c.status) { CellStatus.CONNECTED -> "Test"; CellStatus.EXPIRED -> "Re-auth"; CellStatus.MISSING -> "Set up"; CellStatus.NOT_USED -> "" }
+                    val act: (@Composable () -> Unit)? = if (action.isEmpty()) null else {
+                        {
+                            TextButton(onClick = {
+                                when (c.status) {
+                                    CellStatus.CONNECTED -> scope.launch {
+                                        tested[r.provider.id] = withContext(Dispatchers.IO) { HubAndroid.providerTarget(ctx, r.provider).run() }
+                                    }
+                                    CellStatus.MISSING, CellStatus.EXPIRED ->
+                                        if (m == AuthMethod.WEB_OAUTH && r.provider.id in setOf("github", "gitea", "cloud-authelia")) go("home", "connect")
+                                        else go("secrets", "providers")
+                                    CellStatus.NOT_USED -> {}
+                                }
+                            }, modifier = Modifier.testTag("hub:cell:action:${r.provider.id}:${m.name}")) { Text(action) }
                         }
-                    }) {
-                        KitStatePill(c.status.word, stateOf(c.status))
-                        val action = when (c.status) { CellStatus.CONNECTED -> "test"; CellStatus.EXPIRED -> "re-auth"; CellStatus.MISSING -> "set up"; else -> "" }
-                        if (action.isNotEmpty()) Caption(action)
                     }
+                    KitListRow(m.label, Modifier.testTag(HubTags.cell(r.provider.id, m)).padding(start = KitDensity.large), tag = "cell:${r.provider.id}:${m.name}",
+                        secondary = if (c.paths.isEmpty()) "" else c.paths.joinToString(), pill = c.status.word to stateOf(c.status), trailing = act)
                 }
+                tested[r.provider.id]?.let { t -> KitListRow("Test ${r.provider.label}", tag = "tested:${r.provider.id}", secondary = t.line, pill = (if (t.ok) "ok" else "failed") to stateOf(t)) }
             }
-            tested[r.provider.id]?.let { t -> KitListRow("Test ${r.provider.label}", tag = "tested:${r.provider.id}", secondary = t.line, pill = (if (t.ok) "ok" else "failed") to stateOf(t)) }
         }
         TextButton(onClick = changed, modifier = Modifier.testTag("hub:connections:refresh")) { Text("Refresh") }
     }

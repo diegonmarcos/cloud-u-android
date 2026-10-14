@@ -1757,6 +1757,14 @@
       "used_by": [
         "ac_cloud-tools-small-llms"
       ]
+    },
+    "chat_setup": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Chat's (Mattermost mobile fork) account link as Cloud Account sets it up: server_url and server_name. Written by Fleet Setup through the default prefs handler; read at launch by the fork's native CloudFleetSetup module and used by the server screen exactly as a managed (EMM) config's serverUrl / serverName would be, so an empty phone opens Cloud Chat on the fleet's server. The session token is not here: Mattermost mobile signs in interactively (SSO / password) and keeps its token in the Keychain (apps[chat].items mm-servers), so Test reads the link back and checks the server answers.",
+      "used_by": [
+        "ac_cloud-chat"
+      ]
     }
   },
   "bundle": {
@@ -1892,6 +1900,18 @@
         "store": "wireguard_prefs",
         "key": "tunnel_enabled",
         "pull": "aa_cloud-superapp"
+      }
+    ],
+    "chat.server_url": [
+      {
+        "store": "chat_setup",
+        "key": "server_url"
+      }
+    ],
+    "chat.server_name": [
+      {
+        "store": "chat_setup",
+        "key": "server_name"
       }
     ]
   },
@@ -2369,6 +2389,13 @@
       ],
       "items": [
         {
+          "id": "server-link",
+          "path": "shared_prefs/chat_setup.xml (server_url, server_name)",
+          "class": "config",
+          "doc": "The fleet server Cloud Account pushes (bundle chat.server_url / chat.server_name -> chat_setup): the server screen pre-fills and connects to it. The migrating part of mm-servers.",
+          "store": "chat_setup"
+        },
+        {
           "id": "mm-watermelon",
           "path": "databases/ (WatermelonDB SQLite per server) and files/",
           "class": "content",
@@ -2378,7 +2405,8 @@
           "id": "mm-servers",
           "path": "app-managed server list in the app database (server URL, display name) and Keychain/Keystore tokens",
           "class": "secret",
-          "doc": "Server URLs are the account link (config); session tokens are secrets in the secure keystore. Not verified in native Kotlin; lives in the RN layer."
+          "doc": "Server URLs are the account link (config: pushed as chat_setup by Fleet Setup, see server-link); session tokens are secrets in the secure keystore, obtained by signing in and never pushed. Lives in the RN layer.",
+          "via": "connect"
         }
       ]
     },

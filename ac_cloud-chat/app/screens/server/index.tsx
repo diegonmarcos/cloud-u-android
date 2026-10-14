@@ -26,6 +26,7 @@ import {getServerByDisplayName, getServerByIdentifier} from '@queries/app/server
 import Background from '@screens/background';
 import {dismissModal, goToScreen, loginAnimationOptions, popTopScreen} from '@screens/navigation';
 import {getErrorMessage} from '@utils/errors';
+import {getFleetSetup, type FleetSetupConfig} from '@utils/fleet_setup';
 import {canReceiveNotifications} from '@utils/push_proxy';
 import {loginOptions} from '@utils/server';
 import {changeOpacity, makeStyleSheetFromTheme} from '@utils/theme';
@@ -87,6 +88,21 @@ const Server = ({
 }: ServerProps) => {
     const intl = useIntl();
     const managedConfig = useManagedConfig<ManagedConfig>();
+
+    // Cloud fleet: the server Cloud Account's Fleet Setup pushed (native CloudFleetSetup, store chat_setup);
+    // used after the managed config and before the local defaults, so an empty phone opens on the fleet's server.
+    const [fleetSetup, setFleetSetup] = useState<FleetSetupConfig>({});
+    useEffect(() => {
+        let mounted = true;
+        getFleetSetup().then((cfg) => {
+            if (mounted) {
+                setFleetSetup(cfg);
+            }
+        });
+        return () => {
+            mounted = false;
+        };
+    }, []);
     const keyboardAwareRef = useRef<KeyboardAwareScrollView>(null);
     const [connecting, setConnecting] = useState(false);
     const [displayName, setDisplayName] = useState<string>('');
@@ -110,8 +126,8 @@ const Server = ({
     const animatedStyles = useScreenTransitionAnimation(componentId, animated);
 
     useEffect(() => {
-        let serverName: string | undefined = defaultDisplayName || managedConfig?.serverName || LocalConfig.DefaultServerName;
-        let serverUrl: string | undefined = defaultServerUrl || managedConfig?.serverUrl || LocalConfig.DefaultServerUrl;
+        let serverName: string | undefined = defaultDisplayName || managedConfig?.serverName || fleetSetup.serverName || LocalConfig.DefaultServerName;
+        let serverUrl: string | undefined = defaultServerUrl || managedConfig?.serverUrl || fleetSetup.serverUrl || LocalConfig.DefaultServerUrl;
         let autoconnect = managedConfig?.allowOtherServers === 'false' || LocalConfig.AutoSelectServerUrl;
 
         if (launchType === Launch.DeepLink || launchType === Launch.AddServerFromDeepLink) {
@@ -144,12 +160,12 @@ const Server = ({
 
         if (serverUrl && serverName && autoconnect) {
             // If no other servers are allowed or the local config for AutoSelectServerUrl is set, attempt to connect
-            handleConnect(managedConfig?.serverUrl || LocalConfig.DefaultServerUrl);
+            handleConnect(managedConfig?.serverUrl || fleetSetup.serverUrl || LocalConfig.DefaultServerUrl);
         }
 
         // We only want to handle connect when a smaller set of variables change
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [managedConfig?.allowOtherServers, managedConfig?.serverUrl, managedConfig?.serverName, defaultServerUrl]);
+    }, [managedConfig?.allowOtherServers, managedConfig?.serverUrl, managedConfig?.serverName, defaultServerUrl, fleetSetup.serverUrl, fleetSetup.serverName]);
 
     useEffect(() => {
         if (url && displayName && !urlError && !preauthSecretError) {

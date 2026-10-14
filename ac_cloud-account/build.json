@@ -276,7 +276,7 @@
     }
   },
   "ui": {
-    "_doc": "Cloud Account reorganised (owner request, 2026-10): four islands Profiles, Secrets, Home, Configs (libs:bottomnav NavDecl). Setup is no island: each app profile (profiles/apps) and each provider (secrets/providers) has its own Setup, Home has Setup all. MainActivity maps every (section, page) to one composable; hub/HubNav.LEGACY maps every old (section, page) id to its new place so libs:account links keep working.",
+    "_doc": "Cloud Account's information architecture (a0_docs/eng-specs/cloud-account-ia.md, owner request 2026-10-14; supersedes the 2026-10-13 four-island layout of #964): four islands Home, Profiles, Secrets, Configs (libs:bottomnav NavDecl), one place per thing. Home = this person and phone (Account), the provider status list with Setup all (Connections), sign-in to the vault (Connect) and the ONE importer for personal data and tokens (Import). Profiles = app profiles (Apps), the non-secret autofill SOT under one Autofill strip (Personal, Sites, Snippets) and the device files under one Phone strip (Devices, Working, Diff). Secrets = the credentials by provider (Providers, the only token list), Fleet keys, Grants, Bundle. Configs = the Setup strip (Runbook, Install, Push, Perms), ADB Shell, Settings. A page's `pages` is a second strip (NavPage.pages); every section's `background` is declared ('dark': the app's palette is dark) and reaches PageTabs through NavDecl.stripSurface. MainActivity maps every leaf (section, page) to one composable; hub/HubNav.LEGACY maps every old (section, page) id, the 2026-10-13 ones included, to its place now, so libs:account links and OPEN intents (extras section/page) keep working.",
     "bottom_nav": [
       "profiles",
       "secrets",
@@ -285,9 +285,42 @@
     ],
     "sections": [
       {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "background": "dark",
+        "pages": [
+          {
+            "_doc": "The person and this phone (libs:account AccountProfilePage): picture, name, device card, the four profile tiles, Backup / Restore / Migrate, About. Was Home > Home's picture + summary and Home > Account.",
+            "id": "account",
+            "label": "Account",
+            "icon": "home"
+          },
+          {
+            "_doc": "Credential tiles, a status banner with the next action, one row per provider (worst state + next action; a tap opens its Web OAuth / API token / SSH ways, each with Test / Re-auth / Set up) and Setup all. Was the middle of Home > Home.",
+            "id": "connections",
+            "label": "Connections",
+            "icon": "home"
+          },
+          {
+            "_doc": "Sign in to the vault: the declared forge ways (ui.account.forges[].ways) and the offline file.",
+            "id": "connect",
+            "label": "Connect",
+            "icon": "home"
+          },
+          {
+            "_doc": "THE importer: personal data (paste text or JSON, review, save as profiles / addresses / contacts / snippets; ID documents are shown for Cloud Vault, never stored here) and tokens (JSON / .env / key=value, masked table, per-row or Import all). Was Home > Home's Import configs + Import tokens and Home > Import.",
+            "id": "import",
+            "label": "Import",
+            "icon": "home"
+          }
+        ]
+      },
+      {
         "id": "profiles",
         "label": "Profiles",
         "icon": "profiles",
+        "background": "dark",
         "pages": [
           {
             "_doc": "Per fleet app: account/config state (signed in, endpoint, sync, the fleet-config stores it owns); tap for its profile and its own Setup (login, endpoint, test).",
@@ -296,37 +329,53 @@
             "icon": "profiles"
           },
           {
-            "_doc": "The non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md): profiles (name parts, birth date, nationality) with their typed addresses (home, postal, c/o, post office), phones, emails and links. Cloud Browser fills from them, Cloud Keyboard offers them. Served by AutofillSotProvider behind AUTOFILL_PROFILE_READ/WRITE. ID documents are not here: Cloud Vault.",
-            "id": "personal",
-            "label": "Personal",
-            "icon": "profiles"
+            "_doc": "The non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md), served by AutofillSotProvider behind AUTOFILL_PROFILE_READ/WRITE. ID documents are not here: Cloud Vault.",
+            "id": "autofill",
+            "label": "Autofill",
+            "icon": "profiles",
+            "pages": [
+              {
+                "_doc": "Profiles (name parts, birth date, nationality) with their typed addresses, phones, emails and links. Cloud Browser fills from them, Cloud Keyboard offers them.",
+                "id": "personal",
+                "label": "Personal",
+                "icon": "profiles"
+              },
+              {
+                "_doc": "Per-site form mapping rules: domain -> form -> field -> profile field / fixed value / ignore, and the default profile per site or country domain.",
+                "id": "sites",
+                "label": "Sites",
+                "icon": "profiles"
+              },
+              {
+                "_doc": "Labelled multi-line free-text blocks Cloud Keyboard offers on multi-line fields and Cloud Browser on about/bio/message boxes (never auto-filled).",
+                "id": "snippets",
+                "label": "Snippets",
+                "icon": "profiles"
+              }
+            ]
           },
           {
-            "_doc": "Per-site form mapping rules of the autofill SOT: domain -> form -> field -> profile field / fixed value / ignore, and the default profile per site or country domain.",
-            "id": "sites",
-            "label": "Sites",
-            "icon": "profiles"
-          },
-          {
-            "_doc": "Labelled multi-line free-text blocks Cloud Keyboard offers on multi-line fields and Cloud Browser on about/bio/message boxes (never auto-filled).",
-            "id": "snippets",
-            "label": "Snippets",
-            "icon": "profiles"
-          },
-          {
-            "id": "devices",
-            "label": "Devices",
-            "icon": "profiles"
-          },
-          {
-            "id": "working",
-            "label": "Working",
-            "icon": "profiles"
-          },
-          {
-            "id": "diff",
-            "label": "Diff",
-            "icon": "profiles"
+            "_doc": "The per-device profile files in the vault (cloud-account-redesign.md 4.3-4.5).",
+            "id": "phone",
+            "label": "Phone",
+            "icon": "profiles",
+            "pages": [
+              {
+                "id": "devices",
+                "label": "Devices",
+                "icon": "profiles"
+              },
+              {
+                "id": "working",
+                "label": "Working",
+                "icon": "profiles"
+              },
+              {
+                "id": "diff",
+                "label": "Diff",
+                "icon": "profiles"
+              }
+            ]
           }
         ]
       },
@@ -334,9 +383,10 @@
         "id": "secrets",
         "label": "Secrets",
         "icon": "secrets",
+        "background": "dark",
         "pages": [
           {
-            "_doc": "SSH keys, tokens, passwords and logins grouped per provider (Cloudflare, Google, GitHub, Cloud-Authelia, OpenRouter, others held). Masked; reveal and copy behind device auth; copy auto-clears; edit/rotate/delete; per-provider Setup (connect, test, re-auth).",
+            "_doc": "THE token list: SSH keys, tokens, passwords and logins grouped per provider (Cloudflare, Google, GitHub, Cloud-Authelia, OpenRouter, others held). Masked; reveal and copy behind device auth; copy auto-clears; edit/rotate/delete; per-provider Setup (connect, test, re-auth).",
             "id": "providers",
             "label": "Providers",
             "icon": "secrets"
@@ -352,39 +402,10 @@
             "icon": "secrets"
           },
           {
-            "_doc": "The encrypted account bundle: import and export (was Secrets > Connections).",
-            "id": "connections",
+            "_doc": "The encrypted account bundle: import and export (was Secrets > Connections, id `connections`).",
+            "id": "bundle",
             "label": "Bundle",
             "icon": "secrets"
-          }
-        ]
-      },
-      {
-        "id": "home",
-        "label": "Home",
-        "icon": "home",
-        "pages": [
-          {
-            "_doc": "Picture + summary once data is imported, the Connections table (providers x Web OAuth / API token / SSH), Import configs, Import tokens, the masked token list, Setup all.",
-            "id": "home",
-            "label": "Home",
-            "icon": "home"
-          },
-          {
-            "id": "account",
-            "label": "Account",
-            "icon": "home"
-          },
-          {
-            "id": "connect",
-            "label": "Connect",
-            "icon": "home"
-          },
-          {
-            "_doc": "Paste text or JSON, review, then save as profiles/addresses/contacts/snippets. ID documents found in the paste are shown for Cloud Vault, never stored here.",
-            "id": "import",
-            "label": "Import",
-            "icon": "home"
           }
         ]
       },
@@ -392,36 +413,48 @@
         "id": "configs",
         "label": "Configs",
         "icon": "configs",
+        "background": "dark",
         "pages": [
           {
-            "id": "settings",
-            "label": "Settings",
-            "icon": "configs"
-          },
-          {
-            "id": "runbook",
-            "label": "Runbook",
-            "icon": "configs"
-          },
-          {
-            "id": "apps",
-            "label": "Apps",
-            "icon": "configs"
-          },
-          {
-            "id": "configs",
-            "label": "Fleet push",
-            "icon": "configs"
-          },
-          {
-            "id": "perms",
-            "label": "Perms",
-            "icon": "configs"
+            "_doc": "Make this phone match the loaded profile, step by step (was the Setup island): the runbook and its three page-sized steps.",
+            "id": "setup",
+            "label": "Setup",
+            "icon": "configs",
+            "pages": [
+              {
+                "id": "runbook",
+                "label": "Runbook",
+                "icon": "configs"
+              },
+              {
+                "_doc": "The fleet app inventory: install what is missing through Cloud Store, capture what is here (libs:account AppsPage; was Configs > Apps, which collided with Profiles > Apps).",
+                "id": "apps",
+                "label": "Install",
+                "icon": "configs"
+              },
+              {
+                "_doc": "Fleet push: the settings the profile pushes to each app (libs:account FleetSetupTab; was Configs > Fleet push).",
+                "id": "configs",
+                "label": "Push",
+                "icon": "configs"
+              },
+              {
+                "id": "perms",
+                "label": "Perms",
+                "icon": "configs"
+              }
+            ]
           },
           {
             "_doc": "ADB Shell - THE page for the privileged channel (libs:shizuku-adb-debug-tools AdbShellPage), the same one the SuperApp (Configs > Network), Cloud Store (Settings) and every status chip draw: status table, connect, active connection, logs, this app's declared needs (privileged_channel above), setup checklist.",
             "id": "adb-shell",
             "label": "ADB Shell",
+            "icon": "configs"
+          },
+          {
+            "_doc": "This app's own settings: device id, default forge, auto-backup, fleet token, debug API, version.",
+            "id": "settings",
+            "label": "Settings",
             "icon": "configs"
           }
         ]

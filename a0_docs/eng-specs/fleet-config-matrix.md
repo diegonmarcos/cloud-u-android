@@ -27,7 +27,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-c3 | `com.diegonmarcos.cloudc3` | 6 | 0 | 100% |
 | cloud-calc | `com.diegonmarcos.cloudcalc` | 11 | 0 | 100% |
 | cloud-camera | `cld.camera` | 8 | 0 | 100% |
-| cloud-chat | `com.diegonmarcos.comms.chat` | 2 | 1 | 66% |
+| cloud-chat | `com.diegonmarcos.comms.chat` | 5 | 0 | 100% |
 | cloud-code | `com.diegonmarcos.code` | 7 | 3 | 70% |
 | cloud-contacts | `com.diegonmarcos.cloudcontacts` | 4 | 0 | 100% |
 | cloud-dialer | `com.diegonmarcos.comms.dialer` | 3 | 0 | 100% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 0 | 100% |
-| **fleet** | | **206** | **36** | **85%** |
+| **fleet** | | **209** | **35** | **85%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -390,6 +390,7 @@ Module `ac_cloud-chat`; libs: lib-analytics, lib-core, lib-devtools, lib-fleetco
 |---|---|---|---|---|
 | `PUSH_NOTIFICATIONS` | prefs | device | no | Mattermost per-notification-group JSON used to dedupe/clear delivered notifications; transient. |
 | `VERSION_PREFERENCE` | prefs | device | no | Mattermost app-version marker that resets the notification cache on upgrade. |
+| `chat_setup` | prefs | config | yes | Cloud Chat's (Mattermost mobile fork) account link as Cloud Account sets it up: server_url and server_name. Written by Fleet Setup through the default prefs handler; read at launch by the fork's native CloudFleetSetup module and used by the server screen exactly as a managed (EMM) config's serverUrl / serverName would be, so an empty phone opens Cloud Chat on the fleet's server. The session token is not here: Mattermost mobile signs in interactively (SSO / password) and keeps its token in the Keychain (apps[chat].items mm-servers), so Test reads the link back and checks the server answers. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
@@ -398,10 +399,11 @@ Module `ac_cloud-chat`; libs: lib-analytics, lib-core, lib-devtools, lib-fleetco
 
 | file | class | doc |
 |---|---|---|
+| `shared_prefs/chat_setup.xml (server_url, server_name)` | config | The fleet server Cloud Account pushes (bundle chat.server_url / chat.server_name -> chat_setup): the server screen pre-fills and connects to it. The migrating part of mm-servers. |
 | `databases/ (WatermelonDB SQLite per server) and files/` | content | Mattermost local cache of teams/channels/posts; server holds the data. |
-| `app-managed server list in the app database (server URL, display name) and Keychain/Keystore tokens` | secret | Server URLs are the account link (config); session tokens are secrets in the secure keystore. Not verified in native Kotlin; lives in the RN layer. |
+| `app-managed server list in the app database (server URL, display name) and Keychain/Keystore tokens` | secret | Server URLs are the account link (config: pushed as chat_setup by Fleet Setup, see server-link); session tokens are secrets in the secure keystore, obtained by signing in and never pushed. Lives in the RN layer. |
 
-Coverage: 2 covered, 1 gaps — file:app-managed server list in the app database (server URL, display name) and Keychain/Keystore tokens.
+Coverage: 5 covered, 0 gaps.
 
 ## cloud-code — `com.diegonmarcos.code`
 
