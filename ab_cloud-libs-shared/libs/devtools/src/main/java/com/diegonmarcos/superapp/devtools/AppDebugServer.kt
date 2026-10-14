@@ -357,39 +357,43 @@ object AppDebugServer {
                 return
             }
 
-            when (op) {
-                "docs" -> reply(writer, "200 OK", docsJson(ctx), "application/json")
-                "system/ping" -> reply(writer, "200 OK", "pong ${ctx.packageName}\n")
-                "system/info" -> reply(writer, "200 OK", infoJson(ctx), "application/json")
-                "diagnostics/logcat" -> {
-                    val n = (query["n"]?.toIntOrNull() ?: DEFAULT_LINES).coerceIn(1, MAX_LINES)
-                    reply(writer, "200 OK", readLogcat(n))
-                }
-                "diagnostics/crashes" -> reply(writer, "200 OK", readCrashes(ctx))
-                "fleet/peers" -> reply(writer, "200 OK", peersJson(ctx), "application/json")
-                "net/dns" -> reply(writer, "200 OK", "{${dnsFields(ctx)}}", "application/json")
-                "net/resolve" -> reply(writer, "200 OK", resolveJson(ctx, query["host"].orEmpty()), "application/json")
-                "fleet/wake" -> {
-                    val pkg = query["pkg"].orEmpty()
-                    if (pkg.isBlank()) {
-                        reply(writer, "400 Bad Request", "need ?pkg=<applicationId>\n")
-                    } else {
-                        val ok = FleetPeers.wake(ctx, pkg)
-                        reply(
-                            writer,
-                            if (ok) "200 OK" else "502 Bad Gateway",
-                            """{"pkg":"${esc(pkg)}","woken":$ok}""",
-                            "application/json",
-                        )
-                    }
-                }
-                else -> {
-                    val out = appRoute(op, withBody(query, body))
-                    if (out != null) reply(writer, "200 OK", out, "application/json")
-                    else reply(writer, "404 Not Found", "not found — see /api/docs\n")
+            val r = dispatch(ctx, op, withBody(query, body))
+            reply(writer, statusLine(r.status), r.body, r.type)
+        }
+    }
+
+    /**
+     * #ipc THE route table, one answer for both doors: the loopback socket above and the
+     * fleet IPC provider ([FleetIpc.serve]). Auth is the door's: the bearer token here, the
+     * signature permission there. [query] already carries `_body` when there was one.
+     */
+    fun dispatch(ctx: Context, op: String, query: Map<String, String>): FleetIpcWire.Reply {
+        fun ok(body: String, type: String = "text/plain") = FleetIpcWire.Reply(200, body, type, FleetIpcWire.Via.SELF)
+        val json = "application/json"
+        return when (op) {
+            "docs" -> ok(docsJson(ctx), json)
+            "system/ping" -> ok("pong ${ctx.packageName}\n")
+            "system/info" -> ok(infoJson(ctx), json)
+            "diagnostics/logcat" -> ok(readLogcat((query["n"]?.toIntOrNull() ?: DEFAULT_LINES).coerceIn(1, MAX_LINES)))
+            "diagnostics/crashes" -> ok(readCrashes(ctx))
+            "fleet/peers" -> ok(peersJson(ctx), json)
+            "net/dns" -> ok("{${dnsFields(ctx)}}", json)
+            "net/resolve" -> ok(resolveJson(ctx, query["host"].orEmpty()), json)
+            "fleet/wake" -> {
+                val pkg = query["pkg"].orEmpty()
+                if (pkg.isBlank()) FleetIpcWire.Reply(400, "need ?pkg=<applicationId>\n")
+                else FleetPeers.wake(ctx, pkg).let { woke ->
+                    FleetIpcWire.Reply(if (woke) 200 else 502, """{"pkg":"${esc(pkg)}","woken":$woke}""", json)
                 }
             }
+            else -> appRoute(op, query)?.let { ok(it, json) }
+                ?: FleetIpcWire.Reply(404, "not found — see /api/docs\n")
         }
+    }
+
+    private fun statusLine(code: Int) = "$code " + when (code) {
+        200 -> "OK"; 400 -> "Bad Request"; 401 -> "Unauthorized"; 403 -> "Forbidden"; 404 -> "Not Found"
+        413 -> "Payload Too Large"; 502 -> "Bad Gateway"; 503 -> "Service Unavailable"; 504 -> "Gateway Timeout"; else -> "Status"
     }
 
     /** #802 a request may carry at most this many body bytes; past it, 413. */

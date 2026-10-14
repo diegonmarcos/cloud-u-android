@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
+import android.os.Bundle
 
 /**
  * Hands this app's fleet token to sibling apps — the mesh handshake.
@@ -16,8 +17,12 @@ import android.net.Uri
  * signature comparison would only re-implement, worse, what the package manager
  * already enforces.
  *
- * Every member ships one so the library needs no per-app manifest work, but in
- * practice only [FleetToken.AUTHORITY_PKG]'s copy is ever read.
+ * Every member ships one so the library needs no per-app manifest work; only
+ * [FleetToken.AUTHORITY_PKG]'s token row is ever read.
+ *
+ * #ipc It is also every member's IPC door: `call(fleet.ipc.v1, <op>, <query>)` is
+ * [FleetIpc.serve], which re-checks the caller — `call()` is the one provider entry the
+ * framework does NOT permission-check.
  */
 class FleetTokenProvider : ContentProvider() {
 
@@ -35,6 +40,9 @@ class FleetTokenProvider : ContentProvider() {
             addRow(arrayOf(DevControlPrefs(ctx).token))
         }
     }
+
+    override fun call(method: String, arg: String?, extras: Bundle?): Bundle? =
+        context?.let { FleetIpc.serve(it, method, arg, extras) }
 
     override fun getType(uri: Uri): String = "vnd.android.cursor.item/fleet-token"
 
