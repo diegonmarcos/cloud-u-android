@@ -220,10 +220,23 @@ class LocalDraftListWiringLintTest {
                 "this order, and no others. Lines found:",
             listOf(
                 "onToggleFavourite: (() -> Unit)? = null,",
+                "onToggleFavourite = onToggleFavourite,",
                 "if (onToggleFavourite != null) {",
                 ".clickable(onClick = onToggleFavourite)",
             ),
             codeLines(EMAIL_LIST_ITEM).map { it.trim() }.filter { "onToggleFavourite" in it },
+        )
+        // ...and in Gmail Dark the same value is relayed, whole, to Gmail's row (the second line
+        // above), which declares it with NO default and gates its star on the same condition.
+        assertEquals(
+            "GmailEmailRow must take onToggleFavourite nullable with no default, gate its star on " +
+                "'if (onToggleFavourite != null) {' and hand that very value to the star. Lines found:",
+            listOf(
+                "onToggleFavourite: (() -> Unit)?,",
+                "if (onToggleFavourite != null) {",
+                "GmailStar(flagged = email.isFlagged, onToggle = onToggleFavourite, lineStyle = bodyStyle)",
+            ),
+            codeLines(GMAIL_ROW).map { it.trim() }.filter { "onToggleFavourite" in it },
         )
     }
 
@@ -420,6 +433,7 @@ class LocalDraftListWiringLintTest {
         val STERNA_APP: File by lazy { repoFile("app/src/main/kotlin/app/sterna/ui/SternaApp.kt") }
         val LOCAL_DRAFT_ROWS: File by lazy { repoFile("app/src/main/kotlin/app/sterna/ui/inbox/LocalDraftRows.kt") }
         val EMAIL_LIST_ITEM: File by lazy { repoFile("app/src/main/kotlin/app/sterna/ui/components/EmailListItem.kt") }
+        val GMAIL_ROW: File by lazy { repoFile("app/src/main/kotlin/app/sterna/ui/components/GmailEmailRow.kt") }
 
         private fun repoFile(path: String): File =
             generateSequence(File("").absoluteFile) { it.parentFile }

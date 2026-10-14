@@ -612,6 +612,10 @@
    "licence": "Apache-2.0",
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
   },
+  "ac_cloud-mail/app/src/main/res/font/google_sans_flex.ttf": {
+   "licence": "OFL-1.1",
+   "licence_source": "Google Sans Flex (github.com/googlefonts/googlesans-flex, via google/fonts ofl/googlesansflex) under the SIL Open Font License 1.1, no Reserved Font Name; subset to wght 400-700 and Latin and Latin Extended (Cyrillic and other scripts fall back to the system face) for Cloud Mail's Gmail Dark style. Licence text shipped as app/src/main/assets/licenses/google_sans_flex_OFL.txt"
+  },
   "ac_cloud-mail/gradle/wrapper/gradle-wrapper.jar": {
    "licence": "Apache-2.0",
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"

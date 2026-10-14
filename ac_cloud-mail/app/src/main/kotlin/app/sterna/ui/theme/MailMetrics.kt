@@ -83,6 +83,60 @@ internal object MailMetrics {
     // -- Text tokens for the two places that are not a Material style -------------------------------
     val t13: TextUnit = (13 * TEXT_SCALE).sp
     val t20: TextUnit = (20 * TEXT_SCALE).sp
+
+    // -- Gmail Dark's conversation row ---------------------------------------------------------------
+    // The one style that copies another app: these are Gmail's own measurements on Android, NOT steps
+    // of the dense ladder above, because "looks exactly like Gmail" is the whole point of that style.
+    // Read only by GmailEmailRow; Cloud Dark and Cloud E-ink never see them.
+    /** The rounded card's corner. */
+    val gmailCardCorner: Dp = 16.dp
+
+    /** Page left visible each side of a card. */
+    val gmailCardInsetH: Dp = 8.dp
+
+    /** Half the thin gap between two cards (each card keeps this much above and below). */
+    val gmailCardGap: Dp = 1.dp
+
+    /** Card padding: start/end and top/bottom. */
+    val gmailRowPadH: Dp = 16.dp
+    val gmailRowPadV: Dp = 12.dp
+
+    /** The avatar circle, and the gap between it and the text column. */
+    val gmailAvatar: Dp = 40.dp
+    val gmailAvatarGap: Dp = 16.dp
+
+    /** The filled unread dot right of the time, and its gap from it. */
+    val gmailUnreadDot: Dp = 8.dp
+    val gmailDotGap: Dp = 6.dp
+
+    /** The outline star's glyph, and the box it is tapped in. */
+    val gmailStar: Dp = 24.dp
+    val gmailStarBox: Dp = 40.dp
+
+    /** Attachment-style chips on the fourth line: height, corner, side padding, icon, gaps, outline. */
+    val gmailChipHeight: Dp = 32.dp
+    val gmailChipCorner: Dp = 16.dp
+    val gmailChipPadH: Dp = 12.dp
+    val gmailChipIcon: Dp = 18.dp
+    val gmailChipGap: Dp = 8.dp
+    val gmailChipLineTop: Dp = 8.dp
+    val gmailChipBorder: Dp = 1.dp
+
+    /** The label chip at the end of the snippet line. */
+    val gmailLabelCorner: Dp = 4.dp
+    val gmailLabelPadH: Dp = 6.dp
+    val gmailLabelGap: Dp = 8.dp
+
+    /** Small inline gaps: the count after the sender, the importance marker before it. */
+    val gmailInlineGap: Dp = 4.dp
+
+    /** Gmail's type sizes: sender; subject and snippet; time, count, labels and chips. */
+    val gmailSender: TextUnit = 16.sp
+    val gmailSenderLine: TextUnit = 22.sp
+    val gmailBody: TextUnit = 14.sp
+    val gmailBodyLine: TextUnit = 20.sp
+    val gmailSmall: TextUnit = 12.sp
+    val gmailSmallLine: TextUnit = 16.sp
 }
 
 /** One [TextStyle] with its size, line height and tracking multiplied by [scale]; floor [MailMetrics.MIN_TEXT_SP]. */

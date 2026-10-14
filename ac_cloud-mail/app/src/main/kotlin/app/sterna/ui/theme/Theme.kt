@@ -38,7 +38,8 @@ internal fun applyPureBlack(
 
 /**
  * Material 3 theme. [appStyle] picks the whole look (Cloud Dark, Gmail Dark, Cloud E-ink); the theme
- * mode, Material You and pure black are Cloud Dark's own options and change nothing in the other two.
+ * mode, the Material You switch and pure black are Cloud Dark's own options and change nothing in the
+ * other two. Gmail Dark takes Material You on its own, as Gmail does ([gmailDarkColorScheme]).
  */
 @Composable
 fun SternaTheme(
@@ -69,7 +70,7 @@ private fun StyledSternaTheme(
     )
 
     val colorScheme = when {
-        appStyle == AppStyle.GMAIL_DARK -> GmailDarkColorScheme
+        appStyle == AppStyle.GMAIL_DARK -> gmailDarkColorScheme(LocalContext.current)
         appStyle == AppStyle.CLOUD_EINK -> EinkColorScheme
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
@@ -83,7 +84,7 @@ private fun StyledSternaTheme(
     // pure-black device the pane comes down toward black with the rest, while the card and the two
     // text inks keep their read/unread difference (the card is already black; the inks must not be).
     val mailListPalette = when (appStyle) {
-        AppStyle.GMAIL_DARK -> GmailDarkMailListPalette
+        AppStyle.GMAIL_DARK -> gmailDarkMailListPalette(colorScheme)
         AppStyle.CLOUD_EINK -> EinkMailListPalette
         AppStyle.CLOUD_DARK -> (if (darkTheme) PelagicMailListPalette else ArcticMailListPalette)
             .let { if (darkTheme && pureBlack) it.pulledToBlack() else it }

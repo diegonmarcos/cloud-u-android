@@ -189,6 +189,35 @@ fun EmailListItem(
     // null and the actions fall back to the row as it stands.
     onLoadMessage: (suspend (Email) -> Email)? = null,
 ) {
+    // Gmail Dark draws Gmail's own conversation row (GmailEmailRow.kt), handed every parameter as it
+    // came; Cloud Dark and Cloud E-ink go on below, unchanged.
+    if (LocalAppStyle.current == AppStyle.GMAIL_DARK) {
+        GmailEmailRow(
+            email = email,
+            onClick = onClick,
+            modifier = modifier,
+            originLabel = originLabel,
+            originColor = originColor,
+            onToggleFavourite = onToggleFavourite,
+            selected = selected,
+            current = current,
+            onLongClick = onLongClick,
+            unread = unread,
+            threadCount = threadCount,
+            threadExpandable = threadExpandable,
+            onToggleExpand = onToggleExpand,
+            expanded = expanded,
+            highlighted = highlighted,
+            onHighlightShown = onHighlightShown,
+            showRecipients = showRecipients,
+            showDraftBadge = showDraftBadge,
+            showNotUploadedBadge = showNotUploadedBadge,
+            onOpenAttachment = onOpenAttachment,
+            openingAttachmentKey = openingAttachmentKey,
+            onLoadMessage = onLoadMessage,
+        )
+        return
+    }
     val senderName = email.from.firstOrNull()?.display() ?: stringResource(R.string.message_unknown_sender)
     val recipient = if (showRecipients) email.to.firstOrNull() else null
     val nameLine = if (recipient != null) {
@@ -650,12 +679,12 @@ private fun ListRowActions(
  * fails, falls back to [row] and the tools say what they always say about a message with nothing
  * in it — which is honest, where summarising the preview was not.
  */
-private suspend fun rowMessage(row: Email, onLoadMessage: (suspend (Email) -> Email)?): Email =
+internal suspend fun rowMessage(row: Email, onLoadMessage: (suspend (Email) -> Email)?): Email =
     onLoadMessage?.invoke(row) ?: row
 
     /** How many chips a row draws before it stops and says how many are left. Four files is already
      *  an unusual message; twenty is a row six lines tall in a list meant to be scanned. */
-private const val MAX_ATTACHMENT_CHIPS = 3
+internal const val MAX_ATTACHMENT_CHIPS = 3
 
     /** Longest filename a chip spells out before [attachmentChipLabel] shortens it. */
 private const val MAX_CHIP_NAME = 22

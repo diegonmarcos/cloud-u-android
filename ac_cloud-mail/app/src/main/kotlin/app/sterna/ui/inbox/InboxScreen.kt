@@ -95,6 +95,11 @@ import app.sterna.core.jmap.model.EmailBodyPart
 import app.sterna.ui.message.snoozePresets
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import app.sterna.core.data.settings.AppStyle
+import app.sterna.ui.theme.LocalAppStyle
+import androidx.compose.material3.contentColorFor
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.HorizontalDivider
 import app.sterna.ui.components.Icon
 import app.sterna.ui.components.IconButton
@@ -1254,18 +1259,24 @@ fun InboxScreen(
                 }
             },
             floatingActionButton = {
+                // Gmail Dark wears Gmail's Compose button: the outlined pen on the (wallpaper's)
+                // secondary container, in the extended FAB's 16dp-cornered shape.
+                val gmail = LocalAppStyle.current == AppStyle.GMAIL_DARK
                 ExtendedFloatingActionButton(
                     text = { Text(stringResource(R.string.inbox_compose)) },
                     // When collapsed (scrolled) only the icon shows, so it must carry the
                     // label; when expanded the text already provides it.
                     icon = {
                         Icon(
-                            Icons.Filled.Create,
+                            if (gmail) Icons.Outlined.Edit else Icons.Filled.Create,
                             contentDescription = if (fabExpanded) null else stringResource(R.string.inbox_compose),
                         )
                     },
                     expanded = fabExpanded,
                     onClick = onCompose,
+                    shape = if (gmail) MaterialTheme.shapes.large else FloatingActionButtonDefaults.extendedFabShape,
+                    containerColor = if (gmail) MaterialTheme.colorScheme.secondaryContainer else FloatingActionButtonDefaults.containerColor,
+                    contentColor = if (gmail) MaterialTheme.colorScheme.onSecondaryContainer else contentColorFor(FloatingActionButtonDefaults.containerColor),
                 )
             },
         ) { padding ->

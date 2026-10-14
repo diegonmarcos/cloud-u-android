@@ -12,6 +12,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import app.sterna.contacts.AndroidContacts
 import app.sterna.contacts.ContactPhotos
 import app.sterna.contacts.SenderAvatarLoader
@@ -26,7 +27,8 @@ val ContactAvatarSize = MailMetrics.s40
  *  1. the device address book's photo for [email] — local and free, so it is always first;
  *  2. the sender DOMAIN's brand logo, fetched from the sender's own host and cached on disk
  *     (`app.sterna.contacts.SenderAvatarLoader` — metered-gated, and never a third-party service);
- *  3. the monogram, the fallback that was always there and stays the floor.
+ *  3. the monogram, the fallback that was always there and stays the floor — or [placeholder]
+ *     instead, for a style that draws no letter circles (Gmail Dark's grey silhouette).
  *
  * Privacy is the design constraint, not an afterthought: the only network this avatar ever makes is
  * to the sender's OWN domain, and it sends only the domain — never an individual address, and
@@ -38,6 +40,8 @@ fun ContactAvatar(
     name: String?,
     photoUri: String?,
     modifier: Modifier = Modifier,
+    size: Dp = ContactAvatarSize,
+    placeholder: (@Composable () -> Unit)? = null,
 ) {
     val context = LocalContext.current
     // Starts from whatever the cache already holds (no monogram flash on a re-typed character),
@@ -50,15 +54,17 @@ fun ContactAvatar(
     ) {
         value = resolve(context, email, photoUri)
     }
-    Box(modifier.size(ContactAvatarSize)) {
+    Box(modifier.size(size)) {
         val image = resolved
         if (image != null) {
             Image(
                 bitmap = image,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(ContactAvatarSize).clip(CircleShape),
+                modifier = Modifier.size(size).clip(CircleShape),
             )
+        } else if (placeholder != null) {
+            placeholder()
         } else {
             Monogram(seed = email, label = name ?: email)
         }
