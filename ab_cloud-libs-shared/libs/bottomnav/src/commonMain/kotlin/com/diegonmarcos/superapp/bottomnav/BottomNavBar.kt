@@ -5,20 +5,19 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.semantics.CollectionInfo
 import androidx.compose.ui.semantics.CollectionItemInfo
 import androidx.compose.ui.semantics.collectionInfo
 import androidx.compose.ui.semantics.collectionItemInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,6 +65,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import kotlin.math.roundToInt
@@ -104,11 +104,17 @@ import kotlin.math.roundToInt
  *    centred, so 10% stays clear on each side.
  *  - ACCESSIBILITY. Every item is a Tab with its label (the icon's description while collapsed)
  *    and its selected state, inside a selectable group that carries collection info, so TalkBack
- *    reads "Mail, selected, Tab, 1 of 5". A cell is never narrower than the 48dp touch floor, and
- *    above EQUAL_CELLS_BOTTOM items never narrower than bottom_nav_min_cell_width: a bar that would cross it
- *    keeps its cells and scrolls horizontally inside the pill, the selected item scrolled into view
- *    ([planIsland]). Keyboard / D-pad / switch focus draws a ring in the item's ink; touch never
- *    focuses an item, so a tapped island is pixel for pixel what it was. NavAccessibilityTest.
+ *    reads "Mail, selected, Tab, 1 of 5". Keyboard / D-pad / switch focus draws a ring in the item's
+ *    ink; touch never focuses an item, so a tapped island is pixel for pixel what it was.
+ *    NavAccessibilityTest.
+ *  - FIT, never scroll. Every item is always on screen ([planIsland]). A bar whose equal cells clear
+ *    the full-size floor (48dp up to EQUAL_CELLS_BOTTOM items, bottom_nav_min_cell_width above) is
+ *    drawn exactly as it always was. A more crowded bar first widens its island past 80% (down to
+ *    bottom_nav_min_side_margin each side) until its cells reach the 48dp touch floor, then, only
+ *    if that is still short, narrows its end insets (down to bottom_nav_min_end_inset); its icon,
+ *    label and icon-label gap scale down with the cell to the bottom_nav_fit_* minimums. The
+ *    capsule's vertical inset, its colours and the focus ring are untouched (the island draws no
+ *    badge of its own), and the icon keeps its 24dp slot, so the touch target keeps its full height.
  *
  * The items are INJECTED as [BottomNavEntry]. The bar knows nothing about any app's menu.
  */
@@ -217,34 +223,31 @@ private fun IslandContent(
         label = "bottomnav_label_shown",
     )
 
-    // #a11y: the island keeps equal cells, and a cell is never laid out narrower than the touch
-    // floor (above EQUAL_CELLS_BOTTOM items: than minCellWidth). A bar that would cross that floor scrolls
-    // horizontally inside its pill instead of crushing its cells (cells overlapping their 48dp
-    // touch targets is what 7 items at 360dp did), and the selected item is scrolled into view.
-    val selectedIndex = entries.indexOfFirst { it.id == selectedId }
-    val scrollMotion = rememberBarMotion(selectedIndex)
+    // #a11y FIT: every item is always on screen, in equal cells. A bar that fits is the island it
+    // always was; a crowded one widens, then scales its icon / label / gap down ([planIsland]).
     BoxWithConstraints(modifier.fillMaxWidth().then(liveClearance).padding(bottom = margin), contentAlignment = Alignment.BottomCenter) {
         val plan = planIsland(maxWidth, widthFraction, tokens.endInset, entries.size, tokens)
-        val scroll = rememberScrollState()
-        if (plan.scrolls) {
-            val target = with(density) { islandScrollTarget(plan, selectedIndex).toPx() }.roundToInt()
-            // The first placement jumps straight to the selected item; a later selection glides
-            // there, unless motion is held still (Power Saving / animations removed).
-            val placed = remember { BooleanArray(1) }
-            LaunchedEffect(selectedIndex, target) {
-                if (selectedIndex < 0) return@LaunchedEffect
-                if (scrollMotion && placed[0]) scroll.animateScrollTo(target) else scroll.scrollTo(target)
-                placed[0] = true
-            }
-        }
+        // A bar that fits draws the tokens themselves (pixel parity); only a fitted one scales them.
+        val cellIcon = if (plan.fitted) lerpDp(tokens.fitIconSize, iconSize, plan.scale) else iconSize
+        val cellGap = if (plan.fitted) lerpDp(tokens.fitIconLabelGap, gap, plan.scale) else gap
+        val cellLabelStyle = if (plan.fitted) labelStyle.copy(fontSize = lerpSp(tokens.fitLabelTextSize, tokens.labelTextSize, plan.scale)) else labelStyle
+        // The smaller glyph stays centred in the full icon slot, so the capsule (and with it the
+        // touch target) keeps its full height however far the icon shrinks.
+        val iconSlotPad = (iconSize - cellIcon) / 2
+        // A fitted label keeps clear of the capsule's round ends (a label as wide as its cell has its
+        // outer letters shaved by the pill clip), and a label too long for that width shrinks, alone,
+        // toward bottom_nav_fit_label_min_text_size before it ellipsizes. Never hidden: the selected
+        // item always keeps its label.
+        val labelInset = if (plan.fitted) tokens.fitLabelInset else 0.dp
+        val measurer = rememberTextMeasurer()
+        val labelRoom = with(density) { (plan.cell - labelInset * 2).toPx() }
         Row(
             Modifier
-                .fillMaxWidth(widthFraction)
+                .then(if (plan.fitted) Modifier.width(plan.islandWidth) else Modifier.fillMaxWidth(widthFraction))
                 .testTag(TAG_ISLAND)
                 .clip(bottomNavPillShape)
                 .background(tokens.islandFill)
-                .then(if (plan.scrolls) Modifier.horizontalScroll(scroll) else Modifier)
-                .padding(horizontal = tokens.endInset)
+                .padding(horizontal = plan.endInset)
                 // TalkBack: a tab list of N, so an item reads "Mail, selected, Tab, 2 of 5".
                 .selectableGroup()
                 .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = entries.size) },
@@ -257,7 +260,7 @@ private fun IslandContent(
                 val focused by source.collectIsFocusedAsState()
                 Column(
                     Modifier
-                        .then(if (plan.scrolls) Modifier.width(plan.cell) else Modifier.weight(1f))
+                        .weight(1f)
                         .padding(vertical = pillInset)
                         .testTag(itemTag(entry.id))
                         .clip(bottomNavPillShape)
@@ -290,8 +293,16 @@ private fun IslandContent(
                         // With the label hidden, the icon has to carry the item's name.
                         contentDescription = if (collapsed) entry.label else null,
                         tint = ink,
-                        modifier = Modifier.size(iconSize).testTag(iconTag(entry.id)),
+                        modifier = Modifier
+                            .then(if (plan.fitted) Modifier.padding(vertical = iconSlotPad) else Modifier)
+                            .size(cellIcon)
+                            .testTag(iconTag(entry.id)),
                     )
+                    val entryStyle = if (!plan.fitted) cellLabelStyle else remember(entry.label, cellLabelStyle, labelRoom, density) {
+                        labelStyleToFit(cellLabelStyle, tokens.fitLabelMinTextSize) { style ->
+                            measurer.measure(entry.label, style, maxLines = 1, softWrap = false).size.width <= labelRoom
+                        }
+                    }
                     if (labelShown > 0f) {
                         // Laid out across the whole capsule and centred, not at its own
                         // intrinsic width. A one-line ellipsized paragraph exactly as wide as its
@@ -301,8 +312,9 @@ private fun IslandContent(
                         // its top, so the capsule loses height and the label leaves through the
                         // capsule's own pill clip. No clipToBounds here: that would be a
                         // rectangle inside the oval.
-                        // A label too long for its cell (a narrow scrolling cell, a 2x font) is
-                        // ellipsized on screen; its semantics keep the whole label for TalkBack.
+                        // A label too long for its cell (a fitted cell, a 2x font) is ellipsized on
+                        // screen; its semantics keep the whole label for TalkBack. Labels are never
+                        // hidden for width, so the selected item always keeps its label.
                         Text(
                             entry.label,
                             modifier = Modifier
@@ -313,11 +325,12 @@ private fun IslandContent(
                                     }
                                 }
                                 .graphicsLayer { alpha = labelShown }
-                                .padding(top = gap)
+                                .padding(top = cellGap)
                                 .fillMaxWidth()
+                                .then(if (plan.fitted) Modifier.padding(horizontal = labelInset) else Modifier)
                                 .testTag(labelTag(entry.id)),
                             color = ink,
-                            style = labelStyle,
+                            style = entryStyle,
                             textAlign = TextAlign.Center,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -330,29 +343,83 @@ private fun IslandContent(
 }
 
 /**
- * How the island lays out [count] cells in [maxWidth] (#a11y). [scrolls] false = the island as it
- * always was: equal cells sharing the pill. true = every cell is [cell] wide and the row scrolls
- * horizontally inside the pill. The floor is the 48dp touch target for up to [EQUAL_CELLS_BOTTOM] items and
- * [NavTokens.minCellWidth] above that, so five items on a 360dp phone (55dp cells) never scroll and
- * seven do (39dp cells would overlap each other's touch targets).
+ * How the island lays out [count] cells in [maxWidth] (#a11y): always every item, in equal cells,
+ * never a scroll.
+ *
+ * [fitted] false = the island as it always was: [widthFraction] of the width, the token end inset,
+ * full-size icon and label ([scale] 1). That holds while the equal cell clears [fullSizeCell]: the
+ * 48dp touch floor up to [EQUAL_CELLS_BOTTOM] items, [NavTokens.minCellWidth] above, so every bar that
+ * did not scroll before draws exactly the same pixels (five items on a 360dp phone: 55.2dp cells).
+ *
+ * [fitted] true = a crowded bar, in this order:
+ *  1. the island widens past the fraction toward full-size cells, keeping
+ *     [NavTokens.fitSideMargin] clear on each side (it still floats);
+ *  2. cells still under the 48dp touch floor: it widens on, only as far as 48dp needs, down to
+ *     [NavTokens.minSideMargin] each side;
+ *  3. still short of 48dp: the end insets narrow toward [NavTokens.minEndInset] (the end arcs then
+ *     stop being exactly concentric; the capsule's vertical inset does not change);
+ *  4. the icon, the label and the icon-label gap scale with [scale], 1 at [fullSizeCell] down to 0
+ *     at [NavTokens.fitMinCell] (the bottom_nav_fit_* sizes).
+ * On a 360dp phone: 6 items (Cloud Drive) = a 344dp island, 55.3dp cells, type at 94%; 7 items
+ * (Mail) = 348dp, 48dp cells; 8 items = 356dp, 2dp end insets, 44dp cells, the one case that cannot
+ * reach 48dp (8 x 48 = 384 > 360): its targets keep their full height and do not overlap. The
+ * continuity is exact: at the [fullSizeCell] boundary the fitted island is the classic one.
  */
-internal data class IslandPlan(val scrolls: Boolean, val cell: Dp, val viewport: Dp, val endInset: Dp, val count: Int)
+internal data class IslandPlan(
+    val fitted: Boolean,
+    val islandWidth: Dp,
+    val endInset: Dp,
+    val cell: Dp,
+    val scale: Float,
+    val count: Int,
+)
+
+/** The narrowest equal cell that still draws full-size type: the touch floor up to
+ *  [EQUAL_CELLS_BOTTOM] items (the five-item bar's rule since #473), bottom_nav_min_cell_width above. */
+internal fun fullSizeCell(count: Int, tokens: NavTokens): Dp =
+    if (count > EQUAL_CELLS_BOTTOM) maxOf(tokens.minCellWidth, tokens.minTouchTarget) else tokens.minTouchTarget
 
 internal fun planIsland(maxWidth: Dp, widthFraction: Float, endInset: Dp, count: Int, tokens: NavTokens): IslandPlan {
-    val viewport = maxWidth * widthFraction
-    if (count <= 0) return IslandPlan(false, 0.dp, viewport, endInset, 0)
-    val equal = (viewport - endInset * 2) / count
-    val floor = if (count > EQUAL_CELLS_BOTTOM) maxOf(tokens.minCellWidth, tokens.minTouchTarget) else tokens.minTouchTarget
-    return if (equal < floor) IslandPlan(true, floor, viewport, endInset, count) else IslandPlan(false, equal, viewport, endInset, count)
+    val classic = maxWidth * widthFraction
+    if (count <= 0) return IslandPlan(false, classic, endInset, 0.dp, 1f, 0)
+    val equal = (classic - endInset * 2) / count
+    val full = fullSizeCell(count, tokens)
+    if (equal >= full) return IslandPlan(false, classic, endInset, equal, 1f, count)
+    // 1. widen toward full-size cells, the island still floating clear of the sides.
+    val roomy = maxOf(classic, maxWidth - tokens.fitSideMargin * 2)
+    var island = (full * count + endInset * 2).coerceIn(classic, roomy)
+    // 2. under the touch floor: widen on, only as far as 48dp needs, down to the side-margin floor.
+    if ((island - endInset * 2) / count < tokens.minTouchTarget) {
+        val widest = maxOf(roomy, maxWidth - tokens.minSideMargin * 2)
+        island = (tokens.minTouchTarget * count + endInset * 2).coerceIn(island, widest)
+    }
+    // 3. still short: give the end insets up, down to their floor.
+    val end = if ((island - endInset * 2) / count >= tokens.minTouchTarget) endInset
+    else ((island - tokens.minTouchTarget * count) / 2).coerceIn(minOf(tokens.minEndInset, endInset), endInset)
+    val cell = (island - end * 2) / count
+    // 4. the type follows the cell.
+    val span = (full - tokens.fitMinCell).value
+    val scale = if (span <= 0f) 1f else ((cell - tokens.fitMinCell).value / span).coerceIn(0f, 1f)
+    return IslandPlan(true, island, end, cell, scale, count)
 }
 
-/** The scroll offset that centres cell [index] in the island's viewport (clamped to the row). */
-internal fun islandScrollTarget(plan: IslandPlan, index: Int): Dp {
-    if (!plan.scrolls || index < 0) return 0.dp
-    val centre = plan.endInset + plan.cell * index + plan.cell / 2
-    val max = plan.endInset * 2 + plan.cell * plan.count - plan.viewport
-    return (centre - plan.viewport / 2).coerceIn(0.dp, max.coerceAtLeast(0.dp))
+/** [style] as is when the label [fits]; else the largest size, in quarter-sp steps, at which it does,
+ *  never below [min] (where it then ellipsizes). Stepped, because glyph advances are hinted: a width
+ *  does not scale linearly with the size. */
+internal fun labelStyleToFit(style: TextStyle, min: TextUnit, fits: (TextStyle) -> Boolean): TextStyle {
+    if (fits(style)) return style
+    var size = style.fontSize.value - 0.25f
+    while (size > min.value) {
+        val smaller = style.copy(fontSize = size.sp)
+        if (fits(smaller)) return smaller
+        size -= 0.25f
+    }
+    return style.copy(fontSize = min)
 }
+
+internal fun lerpDp(min: Dp, max: Dp, t: Float): Dp = min + (max - min) * t
+
+internal fun lerpSp(min: TextUnit, max: TextUnit, t: Float): TextUnit = (min.value + (max.value - min.value) * t).sp
 
 /**
  * Whether the collapse may animate: off when the reader removed animations (animator duration

@@ -106,10 +106,20 @@ class FleetParityTest {
         assertEquals(12f, dp(R.dimen.bottom_nav_island_bottom_margin), 0f)
         assertEquals(0.8f, res.getFraction(R.fraction.bottom_nav_width_fraction, 1, 1), 1e-6f)
         assertEquals(220, res.getInteger(R.integer.bottom_nav_collapse_ms))
-        // Accessibility floors: they change no pixel of a bar that fits (five items on a 360dp phone
-        // are 55dp cells), they only decide when a crowded bar scrolls, and the ring shows on focus only.
+        // Accessibility floors and the FIT: they change no pixel of a bar that fits (five items on a
+        // 360dp phone are 55dp cells); they only decide how a crowded bar widens and scales down to
+        // keep every item on screen (it never scrolls), and the ring shows on focus only.
         assertEquals(48f, dp(R.dimen.bottom_nav_min_touch_target), 0f)
         assertEquals(56f, dp(R.dimen.bottom_nav_min_cell_width), 0f)
+        assertEquals(8f, dp(R.dimen.bottom_nav_fit_side_margin), 0f)
+        assertEquals(2f, dp(R.dimen.bottom_nav_min_side_margin), 0f)
+        assertEquals(2f, dp(R.dimen.bottom_nav_min_end_inset), 0f)
+        assertEquals(44f, dp(R.dimen.bottom_nav_fit_min_cell), 0f)
+        assertEquals(20f, dp(R.dimen.bottom_nav_fit_icon_size), 0f)
+        assertEquals(10f, dp(R.dimen.bottom_nav_fit_label_text_size), 0f)
+        assertEquals(4f, dp(R.dimen.bottom_nav_fit_icon_label_gap), 0f)
+        assertEquals(6f, dp(R.dimen.bottom_nav_fit_label_inset), 0f)
+        assertEquals(8f, dp(R.dimen.bottom_nav_fit_label_min_text_size), 0f)
         assertEquals(2f, dp(R.dimen.bottom_nav_focus_ring_width), 0f)
         assertEquals(Color(0xFF140B26), colour(R.color.bottom_nav_island_fill))
         assertEquals(Color(0xFFE6E0E9), colour(R.color.bottom_nav_pill_fill))
@@ -235,6 +245,50 @@ class FleetParityTest {
         assertEquals("label is regular weight", FontWeight.Normal, style.fontWeight)
         assertTrue("no letter spacing is inherited", style.letterSpacing == androidx.compose.ui.unit.TextUnit.Unspecified)
         assertTrue("no line height is inherited", style.lineHeight == androidx.compose.ui.unit.TextUnit.Unspecified)
+    }
+
+    /**
+     * Pixel parity for every bar that fits: up to five items whose equal cells clear 48dp (and six to
+     * eight whose cells clear 56dp) the plan is the classic island, at every width the fleet runs at,
+     * and the rendered five-item bar on a 360dp phone is SuperApp's geometry and type exactly.
+     */
+    @Test
+    fun `a bar that fits is drawn exactly as before the fit - five items keep SuperApp's island`() {
+        val t = NavTokens()
+        for (n in MIN_BOTTOM..MAX_BOTTOM) for (w in 240..1600) {
+            val p = planIsland(androidx.compose.ui.unit.Dp(w.toFloat()), t.widthFraction, t.endInset, n, t)
+            val equal = (w * 0.8f - 12f) / n
+            val fits = equal >= (if (n <= EQUAL_CELLS_BOTTOM) 48f else 56f)
+            assertEquals("$n items on ${w}dp: fitted", !fits, p.fitted)
+            if (fits) {
+                assertEquals("$n items on ${w}dp: the classic 80% island", w * 0.8f, p.islandWidth.value, 0.01f)
+                assertEquals("$n items on ${w}dp: the token end inset", 6f, p.endInset.value, 0f)
+                assertEquals("$n items on ${w}dp: full-size type", 1f, p.scale, 0f)
+            }
+        }
+        val five = listOf("Mail", "Chat", "Home", "News", "Video")
+        compose.setContent {
+            hostView = LocalView.current
+            Box(Modifier.fillMaxSize().background(Color.Black).testTag("root")) {
+                BottomNavIsland(
+                    five.map { BottomNavEntry(it.lowercase(), it, painterResource(android.R.drawable.ic_menu_add)) }, "home", {},
+                    Modifier.align(androidx.compose.ui.Alignment.BottomCenter),
+                )
+            }
+        }
+        compose.waitForIdle()
+        val island = bounds(TAG_ISLAND)
+        assertEquals("island width is 80% of the screen", 288f, island.width, 1f)
+        assertEquals("island is centred", 36f, island.left, 1f)
+        five.forEachIndexed { i, label ->
+            val id = label.lowercase()
+            val cell = bounds(itemTag(id))
+            assertEquals("$id: an equal 55.2dp cell", 6f + 55.2f * i, cell.left - island.left, 1f)
+            assertEquals("$id: an equal 55.2dp cell", 55.2f, cell.width, 1f)
+            assertEquals("$id: the icon is 24dp", 24f, bounds(iconTag(id)).width, 0.5f)
+            assertEquals("$id: icon to label gap", 8f, bounds(labelTag(id)).top - bounds(iconTag(id)).bottom, 1f)
+            assertEquals("$id: label is 12sp", 12f, textLayout(labelTag(id)).layoutInput.style.fontSize.value, 0.01f)
+        }
     }
 
     @Test

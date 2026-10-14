@@ -28,20 +28,20 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  */
 
 /**
- * The most items the island holds (the owner lifted the old cap of 5, 2026-10). The island keeps
- * equal cells while they fit and above [EQUAL_CELLS_BOTTOM] items scrolls in 56dp cells
- * (bottom_nav_min_cell_width) inside its 80% pill, so a count is a discoverability limit, not a
- * layout one: on a 360dp phone the pill shows about five cells, and at 8 the bar is already
- * 448dp of cells, three of them off-screen at any time. A 9th item would put ~45% of the bar out of
- * sight, which is a menu, not a bar. Cloud Code (7, its own Cordova nav) is the widest declaration.
+ * The most items the island holds (the owner lifted the old cap of 5, 2026-10). The island never
+ * scrolls: a crowded bar widens and scales down to FIT ([planIsland]), so every item is always on
+ * screen. 8 is where that stops being comfortable: on a 360dp phone 8 items are 44dp cells, the one
+ * case already under the 48dp touch floor (8 x 48 = 384 > 360), and a 9th would be 39dp. Mail (7) is
+ * the widest fleet bar; Cloud Code (7, its own Cordova nav) is exempt.
  */
 public const val MAX_BOTTOM: Int = 8
 
 /** The fewest items the island holds: one item is no choice, so it is no navigation. */
 public const val MIN_BOTTOM: Int = 2
 
-/** Up to this many items the island's cells only have to clear the 48dp touch floor; above it a
- *  cell that would fall under bottom_nav_min_cell_width (56dp) makes the island scroll instead. */
+/** Up to this many items a cell draws full-size type down to the 48dp touch floor; above it, down to
+ *  bottom_nav_min_cell_width (56dp). A narrower cell is FITTED (the island widens, then scales its
+ *  icon and label down, [planIsland]); every bar that fits draws exactly the pixels it always did. */
 public const val EQUAL_CELLS_BOTTOM: Int = 5
 
 /**

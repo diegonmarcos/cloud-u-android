@@ -134,7 +134,7 @@ mutate "the lib loses PageTabsView.kt's class"  "$LIB/src/main/kotlin/com/diegon
     "s=s.replace('class PageTabsView','class Gone')" "N0 $LIB: PageTabsView.kt no longer declares"
 mutate "the lib loses PageTabs.kt's function (#876: it lives in commonMain)" "$LIB/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt" \
     "s=s.replace('fun PageTabs(','fun Gone(')" "N0 $LIB: PageTabs.kt no longer declares"
-# N1 limits: the owner lifted the cap of 5 (2026-10); the island scrolls above 5, the bar holds 2..8.
+# N1 limits: the owner lifted the cap of 5 (2026-10); the bar holds 2..8, and above 5 the island fits (widens, scales down), never scrolls.
 BAR() { printf "ids=list('%s'); d['ui']['sections'] += [{'id': i, 'label': i.upper(), 'icon': 'x'} for i in ids[2:]]; d['ui']['bottom_nav'] = ids" "$1"; }
 for ids in abcdef abcdefg abcdefgh; do
     green "${#ids} ids on the bar" "$FIX/build.json" "$(J "$(BAR "$ids")")"

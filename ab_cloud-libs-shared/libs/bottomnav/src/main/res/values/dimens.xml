@@ -26,13 +26,31 @@
     <!-- #532. How long the scroll-collapse takes, milliseconds. Zero-length under Power Saving. -->
     <integer name="bottom_nav_collapse_ms">220</integer>
 
-    <!-- Accessibility (WCAG 2.5.8 / Android's 48dp floor). The island never lays a cell out
-         narrower than bottom_nav_min_touch_target; above five items (MAX_BOTTOM) never narrower
-         than bottom_nav_min_cell_width. Either floor reached = the island scrolls horizontally,
-         keeping the selected item in view, instead of crushing its cells. The focus ring is drawn
-         only while a keyboard, D-pad or switch holds focus on an item or a tab pill. -->
+    <!-- Accessibility (WCAG 2.5.8 / Android's 48dp floor) and FIT: every item is always on
+         screen, the island never scrolls (planIsland). A bar whose equal cells clear the full-size
+         floor (bottom_nav_min_touch_target up to five items, EQUAL_CELLS_BOTTOM; above five
+         bottom_nav_min_cell_width) is drawn exactly as before. A more crowded bar widens its island
+         past 80% toward full-size cells, keeping bottom_nav_fit_side_margin from each side; if its
+         cells are still under the touch target it widens on, as far as that needs, down to
+         bottom_nav_min_side_margin; still short, its end insets narrow to bottom_nav_min_end_inset;
+         and its icon,
+         label and gap scale down to the bottom_nav_fit_* values, reached at a
+         bottom_nav_fit_min_cell cell (8 items on a 360dp phone, the one case under 48dp wide; its
+         targets keep their full height and never overlap). The focus ring is drawn only while a
+         keyboard, D-pad or switch holds focus on an item or a tab pill. -->
     <dimen name="bottom_nav_min_touch_target">48dp</dimen>
     <dimen name="bottom_nav_min_cell_width">56dp</dimen>
+    <dimen name="bottom_nav_fit_side_margin">8dp</dimen>
+    <dimen name="bottom_nav_min_side_margin">2dp</dimen>
+    <dimen name="bottom_nav_min_end_inset">2dp</dimen>
+    <dimen name="bottom_nav_fit_min_cell">44dp</dimen>
+    <dimen name="bottom_nav_fit_icon_size">20dp</dimen>
+    <dimen name="bottom_nav_fit_label_text_size">10sp</dimen>
+    <dimen name="bottom_nav_fit_icon_label_gap">4dp</dimen>
+    <!-- A fitted label keeps this clear of each round end of its capsule, and a label too long for
+         what is left shrinks, alone, down to bottom_nav_fit_label_min_text_size, then ellipsizes. -->
+    <dimen name="bottom_nav_fit_label_inset">6dp</dimen>
+    <dimen name="bottom_nav_fit_label_min_text_size">8sp</dimen>
     <dimen name="bottom_nav_focus_ring_width">2dp</dimen>
 
     <dimen name="bottom_nav_icon_size">24dp</dimen>

@@ -37,12 +37,31 @@ public data class NavTokens(
     val widthFraction: Float = 0.8f,
     /** How long the scroll-collapse takes, milliseconds. */
     val collapseMs: Int = 220,
-    /** The accessibility touch floor (Material / Android: 48dp). No island cell is laid out
-     *  narrower than this; a bar that would crush its cells below it scrolls instead. */
+    /** The accessibility touch floor (Material / Android: 48dp). A crowded island widens until its
+     *  cells reach it ([planIsland]); up to [EQUAL_CELLS_BOTTOM] items it is also the narrowest cell
+     *  that draws full-size type. */
     val minTouchTarget: Dp = 48.dp,
-    /** Above [EQUAL_CELLS_BOTTOM] items, the narrowest a cell may get before the island scrolls
-     *  horizontally instead of crushing its cells (the option the owner was offered for 6-7 items). */
+    /** Above [EQUAL_CELLS_BOTTOM] items, the narrowest cell that still draws full-size icon and
+     *  label; a narrower one scales them down (the island never scrolls). */
     val minCellWidth: Dp = 56.dp,
+    // ── the fitted island ([planIsland]): the floors a crowded bar shrinks to, never below ──
+    /** The clearance a crowded island keeps from each side while it widens toward full-size cells. */
+    val fitSideMargin: Dp = 8.dp,
+    /** The least clearance it keeps when even that leaves its cells under [minTouchTarget]. */
+    val minSideMargin: Dp = 2.dp,
+    /** The narrowest end inset, given up only when a widened island still has cells under 48dp. */
+    val minEndInset: Dp = 2.dp,
+    /** The cell width at which the icon, label and gap reach their fit minimums (8 items on 360dp). */
+    val fitMinCell: Dp = 44.dp,
+    val fitIconSize: Dp = 20.dp,
+    val fitLabelTextSize: TextUnit = 10.sp,
+    val fitIconLabelGap: Dp = 4.dp,
+    /** A fitted label's clearance from each side of its capsule, so the pill's round ends never shave
+     *  its outer letters. */
+    val fitLabelInset: Dp = 6.dp,
+    /** The smallest a fitted label shrinks to, alone, to show its whole word (the page-tab strip's
+     *  minimum, page_tabs_text_min_size); a label still too long ellipsizes. */
+    val fitLabelMinTextSize: TextUnit = 8.sp,
     /** The keyboard / D-pad / switch-access focus ring, drawn in the item's own ink, only while
      *  the item holds focus (touch never focuses an item, so a tapped island looks exactly as before). */
     val focusRingWidth: Dp = 2.dp,

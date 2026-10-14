@@ -49,14 +49,15 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CollectionInfo
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Density
@@ -87,7 +88,9 @@ import org.robolectric.annotation.GraphicsMode
  *  - TalkBack: every item is a Tab with a name and a selected state, inside a tab list that carries
  *    its collection info (so TalkBack can say "2 of 7"); the name survives an ellipsized label.
  *  - Touch: every item's touch target is at least 48dp x 48dp and no two overlap, collapsed or not,
- *    at five items AND at seven (Cloud Code's declaration), which is what the scroll fallback is for.
+ *    at five, six (Cloud Drive) and seven items (Mail, Cloud Code) on a 360dp phone, all of them on
+ *    screen at once: the island FITS, it never scrolls. Eight items on 360dp are the one trade-off
+ *    (8 x 48 = 384 > 360): 44dp wide, full height, still apart.
  *  - Keyboard / D-pad / switch access: focus walks the items left to right, Enter selects, and the
  *    focused item draws a ring you can see on the dark island.
  *  - Font scale 1.3 and 2.0: nothing crashes, overlaps or leaves its cell.
@@ -171,10 +174,17 @@ class NavAccessibilityTest {
     private fun node(tag: String): SemanticsNode = compose.onNodeWithTag(tag).fetchSemanticsNode()
     private fun bounds(tag: String): Rect = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
 
-    /** Where the node is laid out, NOT clipped by a scrolling island: an item scrolled out of view
-     *  still has its real width here. */
+    /** Where the node is laid out, unclipped. The island never scrolls, so for an island item this
+     *  is also what is on screen ([assertAllOnScreen] proves it). */
     private fun laidOut(tag: String): Rect =
         compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot().let { Rect(it.left.value, it.top.value, it.right.value, it.bottom.value) }
+
+    private fun textLayout(tag: String): TextLayoutResult {
+        val out = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult].action!!.invoke(out)
+        return out.single()
+    }
 
     /** What TalkBack reads for a merged node: its content description, else its text. */
     private fun spoken(n: SemanticsNode): String =
@@ -193,28 +203,43 @@ class NavAccessibilityTest {
         maxOf(abs(a.red - b.red), abs(a.green - b.green), abs(a.blue - b.blue))
 
     /**
-     * Every touch target at least 48 x 48, and no two overlap. A touch target is what Compose hit-tests
-     * and reports to TalkBack: the node's own bounds, grown to the 48dp minimum around its centre when
-     * smaller. It is computed from the UNCLIPPED layout bounds, so an item scrolled out of a scrolling
-     * island is judged too; an item fully in view is also checked against Compose's own touchBoundsInRoot.
+     * Every touch target at least [minWidth] wide (the 48dp floor unless the case under test is the
+     * documented 8-on-360dp trade-off) and 48dp tall, and no two overlap (island items and page-tab
+     * pills alike). A touch target is what
+     * Compose hit-tests and reports to TalkBack: the node's own bounds, grown to the floor around its
+     * centre where they are smaller (the collapsed capsule is 36dp tall and Compose grows it to 48).
+     * Checked against the layout AND against Compose's own touchBoundsInRoot.
      */
-    private fun assertTouchTargets(why: String, tags: List<String>) {
+    private fun assertTouchTargets(why: String, tags: List<String>, minWidth: Float = px(R.dimen.bottom_nav_min_touch_target)) {
         val floor = px(R.dimen.bottom_nav_min_touch_target)
         val touch = tags.map { tag ->
-            val r = compose.onNodeWithTag(tag).getUnclippedBoundsInRoot().let { Rect(it.left.value, it.top.value, it.right.value, it.bottom.value) }
-            val w = maxOf(r.width, floor); val h = maxOf(r.height, floor)
+            val r = laidOut(tag)
+            val w = maxOf(r.width, minWidth); val h = maxOf(r.height, floor)
             Rect(r.center.x - w / 2, r.center.y - h / 2, r.center.x + w / 2, r.center.y + h / 2)
         }
         println("#a11y MEASURED $why touch targets: " + touch.joinToString { "${it.width.roundToInt()}x${it.height.roundToInt()}@${it.left.roundToInt()}" })
         touch.zipWithNext().forEachIndexed { i, (a, b) ->
             assertTrue("$why: the touch targets of ${tags[i]} ($a) and ${tags[i + 1]} ($b) overlap", a.right <= b.left + 0.5f)
         }
-        tags.forEachIndexed { i, tag ->
+        tags.forEach { tag ->
             val n = compose.onNodeWithTag(tag).fetchSemanticsNode()
-            // Partly or wholly scrolled out of the island: its on-screen touch area is what is in view.
-            if (n.boundsInRoot.width < compose.onNodeWithTag(tag).getUnclippedBoundsInRoot().let { it.right - it.left }.value - 0.5f) return@forEachIndexed
+            // A page-tab pill partly scrolled out of its strip (the strip scrolls; the island never
+            // does): its on-screen touch area is what is in view.
+            if (n.boundsInRoot.width < laidOut(tag).width - 0.5f) return@forEach
             val t = n.touchBoundsInRoot
-            assertTrue("$why: $tag touch target ${t.width}x${t.height} is under ${floor}dp", t.width >= floor - 0.5f && t.height >= floor - 0.5f)
+            assertTrue("$why: $tag touch target ${t.width}x${t.height} is under ${minWidth}x${floor}dp", t.width >= minWidth - 0.5f && t.height >= floor - 0.5f)
+        }
+    }
+
+    /** No scrolling: every item lies inside the island and inside the screen, unclipped. */
+    private fun assertAllOnScreen(why: String, tags: List<String>) {
+        val island = bounds(TAG_ISLAND)
+        val root = bounds(ROOT)
+        assertTrue("$why: the island ($island) leaves the screen ($root)", island.left >= root.left - 0.5f && island.right <= root.right + 0.5f)
+        for (tag in tags) {
+            val item = laidOut(tag)
+            assertTrue("$why: $tag ($item) is outside the island ($island)", item.left >= island.left - 0.5f && item.right <= island.right + 0.5f)
+            assertEquals("$why: $tag is clipped, so part of it is off screen", item.width, bounds(tag).width, 0.5f)
         }
     }
 
@@ -277,57 +302,97 @@ class NavAccessibilityTest {
     }
 
     @Test
-    fun `a11y a tap on each of seven items selects exactly that item`() {
-        showIsland(CLOUD_CODE, "editor")
-        for (e in CLOUD_CODE) {
-            // An item scrolled out of the island is scrolled in first, as a finger would swipe to it.
-            val item = compose.onNodeWithTag(itemTag(e.first))
-            if (item.fetchSemanticsNode().boundsInRoot.width < laidOut(itemTag(e.first)).width - 0.5f) item.performScrollTo()
-            item.performClick()
+    fun `a11y a tap on each of eight items selects exactly that item, no swipe needed`() {
+        showIsland(EIGHT, "editor")
+        for (e in EIGHT) {
+            compose.onNodeWithTag(itemTag(e.first)).performClick()
             compose.waitForIdle()
         }
-        assertEquals(CLOUD_CODE.map { it.first }, picked)
+        assertEquals(EIGHT.map { it.first }, picked)
     }
 
-    // ── narrow width: the scroll fallback ─────────────────────────────────────────────────
+    // ── narrow width: FIT, never scroll ───────────────────────────────────────────────────
 
     @Test
-    fun `a11y the plan keeps equal cells while they fit and scrolls below the floor`() {
+    fun `a11y the plan keeps the classic island while it fits and fits a crowded one without scrolling`() {
         val t = NavTokens()
         fun plan(width: Int, n: Int) = planIsland(width.dp, t.widthFraction, t.endInset, n, t)
-        // 360dp: the island is 288dp, 276dp of cells.
-        assertFalse("five items on 360dp keep equal 55dp cells", plan(360, 5).scrolls)
-        assertEquals(55.2f, plan(360, 5).cell.value, 0.01f)
-        assertTrue("six items on 360dp (46dp) are under the 56dp floor: scroll", plan(360, 6).scrolls)
-        assertTrue("seven items on 360dp (39dp) scroll", plan(360, 7).scrolls)
-        assertEquals("a scrolling cell is minCellWidth", t.minCellWidth, plan(360, 7).cell)
-        assertTrue("seven items on a 412dp phone (45dp) still scroll", plan(412, 7).scrolls)
-        assertFalse("seven items on a 600dp tablet (67dp) keep equal cells", plan(600, 7).scrolls)
-        assertTrue("five items in a 280dp split window (44dp) fall to the 48dp floor and scroll", plan(280, 5).scrolls)
-        assertEquals(t.minTouchTarget, plan(280, 5).cell)
-        // The selected cell is centred, clamped to the row's ends.
-        val p = plan(360, 7)
-        assertEquals(0f, islandScrollTarget(p, 0).value, 0.01f)
-        val max = (p.endInset * 2 + p.cell * 7 - p.viewport).value
-        assertEquals(max, islandScrollTarget(p, 6).value, 0.01f)
-        assertEquals(6f + 56f * 3 + 28f - 144f, islandScrollTarget(p, 3).value, 0.01f)
+        fun check(why: String, p: IslandPlan, fitted: Boolean, island: Float, end: Float, cell: Float, scale: Float) {
+            assertEquals("$why fitted", fitted, p.fitted)
+            assertEquals("$why island", island, p.islandWidth.value, 0.01f)
+            assertEquals("$why end inset", end, p.endInset.value, 0.01f)
+            assertEquals("$why cell", cell, p.cell.value, 0.01f)
+            assertEquals("$why scale", scale, p.scale, 0.01f)
+            assertEquals("$why: the cells fill the island exactly", p.islandWidth.value, p.endInset.value * 2 + p.cell.value * p.count, 0.01f)
+        }
+        // 360dp: the classic island is 288dp, 276dp of cells.
+        check("5 on 360 (classic, as always)", plan(360, 5), false, 288f, 6f, 55.2f, 1f)
+        check("6 on 360 (Cloud Drive)", plan(360, 6), true, 344f, 6f, 332f / 6, (332f / 6 - 44f) / 12f)
+        check("7 on 360 (Mail)", plan(360, 7), true, 348f, 6f, 48f, 4f / 12f)
+        check("8 on 360 (the trade-off)", plan(360, 8), true, 356f, 2f, 44f, 0f)
+        check("7 on a 412dp phone", plan(412, 7), true, 396f, 6f, 384f / 7, (384f / 7 - 44f) / 12f)
+        check("7 on a 600dp tablet (67dp, classic)", plan(600, 7), false, 480f, 6f, 468f / 7, 1f)
+        check("5 in a 280dp split window", plan(280, 5), true, 252f, 6f, 48f, 1f)
+        // Continuity: 7 x 56dp cells need a 404dp island, the classic one at 505dp. 1dp under that
+        // the fitted island is 404dp (0.8dp wider than the classic would be), full-size, not a jump.
+        check("7 on 505dp (the boundary, classic)", plan(505, 7), false, 404f, 6f, 56f, 1f)
+        check("7 on 504dp (just under it, fitted)", plan(504, 7), true, 404f, 6f, 56f, 1f)
+        for (n in MIN_BOTTOM..MAX_BOTTOM) for (w in 240..1200 step 4) {
+            val p = plan(w, n)
+            assertTrue("$n on ${w}dp: the island ${p.islandWidth} leaves the screen", p.islandWidth.value <= w - 2 * t.minSideMargin.value + 0.01f || !p.fitted)
+            assertTrue("$n on ${w}dp: scale ${p.scale}", p.scale in 0f..1f)
+            if (w >= 360) assertTrue("$n on ${w}dp: a cell (${p.cell}) under the 44dp fit floor", p.cell.value >= 44f - 0.01f)
+        }
     }
 
     @Test
-    fun `a11y seven items scroll in 56dp cells inside the 80 percent pill and keep the selected item in view`() {
-        showIsland(CLOUD_CODE, "editor")
+    fun `a11y seven items on 360dp all fit in 48dp cells, no scroll, the type scaled down`() {
+        showIsland(MAIL7, "mail")
         val island = bounds(TAG_ISLAND)
-        assertEquals("the island is still 80% of the screen", bounds(ROOT).width * 0.8f, island.width, 1f)
-        for (e in CLOUD_CODE) {
-            assertEquals("cell ${e.first} is minCellWidth wide, not crushed", px(R.dimen.bottom_nav_min_cell_width), laidOut(itemTag(e.first)).width, 1f)
+        assertEquals("the island widened to 348dp (6dp clear each side)", 348f, island.width, 1f)
+        assertAllOnScreen("7 items", MAIL7.map { itemTag(it.first) })
+        for (e in MAIL7) assertEquals("cell ${e.first} is 48dp", 48f, laidOut(itemTag(e.first)).width, 1f)
+        val icon = laidOut(iconTag("mail"))
+        assertTrue("the icon scaled down (${icon.width})", icon.width < px(R.dimen.bottom_nav_icon_size) - 0.5f && icon.width >= px(R.dimen.bottom_nav_fit_icon_size) - 0.5f)
+        // Every label shows its whole word (a long one shrinks alone, never under 8sp), clear of
+        // the capsule's round ends.
+        val inset = px(R.dimen.bottom_nav_fit_label_inset)
+        for (e in MAIL7) {
+            val layout = textLayout(labelTag(e.first))
+            assertFalse("${e.first}'s label is ellipsized", layout.isLineEllipsized(0))
+            assertTrue("${e.first}'s label is under 8sp", layout.layoutInput.style.fontSize.value >= res.getDimension(R.dimen.bottom_nav_fit_label_min_text_size) - 0.01f)
+            val cell = laidOut(itemTag(e.first)); val label = laidOut(labelTag(e.first))
+            assertTrue("${e.first}'s label ($label) reaches into the capsule's round ends ($cell)", label.left >= cell.left + inset - 0.5f && label.right <= cell.right - inset + 0.5f)
         }
-        for (sel in listOf("myterminal", "chat", "backlog", "browser")) {
+        val contacts = textLayout(labelTag("contacts")).layoutInput.style.fontSize.value
+        val mail = textLayout(labelTag("mail")).layoutInput.style.fontSize.value
+        println("#a11y MEASURED 7 items: label sizes mail=$mail contacts=$contacts")
+        assertTrue("the short labels keep the bar's size ($mail), only the long one shrinks ($contacts)", contacts <= mail)
+        // Every selection keeps every item where it is: nothing slides, nothing scrolls.
+        val before = MAIL7.map { laidOut(itemTag(it.first)) }
+        for (sel in listOf("contacts", "rss", "video")) {
             selectedId = sel
             compose.waitForIdle()
-            val item = laidOut(itemTag(sel))
-            println("#a11y MEASURED selected $sel at ${item.left}..${item.right} in island ${island.left}..${island.right}")
-            assertTrue("selected $sel ($item) is scrolled out of the island ($island)",
-                item.left >= island.left - 0.5f && item.right <= island.right + 0.5f)
+            assertEquals("selecting $sel moved the items", before, MAIL7.map { laidOut(itemTag(it.first)) })
+        }
+        for (state in listOf(false, true)) {
+            collapsed = state
+            compose.waitForIdle()
+            assertTouchTargets("7 items ${if (state) "collapsed" else "expanded"}", MAIL7.map { itemTag(it.first) })
+        }
+    }
+
+    @Test
+    fun `a11y six items on 360dp (Cloud Drive) fit with near full-size type`() {
+        showIsland(DRIVE, "home")
+        val island = bounds(TAG_ISLAND)
+        assertEquals("the island widened to 344dp (8dp clear each side)", 344f, island.width, 1f)
+        assertAllOnScreen("6 items", DRIVE.map { itemTag(it.first) })
+        for (e in DRIVE) assertEquals("cell ${e.first}", 332f / 6, laidOut(itemTag(e.first)).width, 1f)
+        assertTouchTargets("6 items", DRIVE.map { itemTag(it.first) })
+        for (e in DRIVE) {
+            assertEquals("${e.first}'s label is not cut", 1, textLayout(labelTag(e.first)).lineCount)
+            assertFalse("${e.first}'s label is ellipsized", textLayout(labelTag(e.first)).isLineEllipsized(0))
         }
     }
 
@@ -336,54 +401,71 @@ class NavAccessibilityTest {
         showIsland(MAIL, "home")
         val island = bounds(TAG_ISLAND)
         val inset = px(R.dimen.bottom_nav_end_inset)
+        assertEquals("the island is still 80% of the screen", bounds(ROOT).width * 0.8f, island.width, 1f)
         val cells = MAIL.map { bounds(itemTag(it.first)).width }
         for (w in cells) assertEquals("five equal cells", (island.width - 2 * inset) / 5, w, 1f)
+        for (e in MAIL) assertEquals("full-size icon", px(R.dimen.bottom_nav_icon_size), laidOut(iconTag(e.first)).width, 0.5f)
     }
 
     // ── the lifted cap: up to MAX_BOTTOM (8) items ────────────────────────────────────────
 
     @Test
-    fun `limits - seven items on 360dp scroll in 56dp cells, the plan agrees, every target is 48dp and apart`() {
+    fun `limits - seven items on 360dp fit, the plan agrees, every target is 48dp and apart`() {
         showIsland(CLOUD_CODE, "chat")
         val t = NavTokens()
-        assertTrue("the plan scrolls seven items on 360dp", planIsland(360.dp, t.widthFraction, t.endInset, 7, t).scrolls)
+        val plan = planIsland(360.dp, t.widthFraction, t.endInset, 7, t)
+        assertTrue("the plan fits seven items on 360dp", plan.fitted)
         val island = bounds(TAG_ISLAND)
-        assertEquals("the island is still 80% of the screen", bounds(ROOT).width * 0.8f, island.width, 1f)
-        for (e in CLOUD_CODE) assertEquals("cell ${e.first} is minCellWidth", px(R.dimen.bottom_nav_min_cell_width), laidOut(itemTag(e.first)).width, 1f)
-        val chat = laidOut(itemTag("chat"))
-        assertTrue("the selected item is in view", chat.left >= island.left - 0.5f && chat.right <= island.right + 0.5f)
+        assertEquals("the island is the plan's", plan.islandWidth.value, island.width, 1f)
+        for (e in CLOUD_CODE) assertEquals("cell ${e.first} is the plan's", plan.cell.value, laidOut(itemTag(e.first)).width, 1f)
+        assertAllOnScreen("7 items at 360dp", CLOUD_CODE.map { itemTag(it.first) })
         assertTouchTargets("7 items at 360dp", CLOUD_CODE.map { itemTag(it.first) })
+        // The longest label ellipsizes in its cell and keeps its whole name for TalkBack.
+        assertEquals("MyTerminal", spoken(node(itemTag("myterminal"))))
     }
 
     @Test
-    fun `limits - eight items, the new maximum, scroll on 360dp and keep the selected last item in view`() {
-        showIsland(EIGHT, "notes")
-        val island = bounds(TAG_ISLAND)
-        for (e in EIGHT) assertEquals("cell ${e.first} is minCellWidth", px(R.dimen.bottom_nav_min_cell_width), laidOut(itemTag(e.first)).width, 1f)
-        val last = laidOut(itemTag("notes"))
-        println("#a11y MEASURED 8 items: selected last at ${last.left}..${last.right} in island ${island.left}..${island.right}")
-        assertTrue("the selected 8th item is scrolled into view", last.left >= island.left - 0.5f && last.right <= island.right + 0.5f)
-        assertTouchTargets("8 items at 360dp", EIGHT.map { itemTag(it.first) })
+    fun `limits - eight items, the new maximum, all fit on 360dp in 44dp full-height targets that never overlap`() {
+        for (state in listOf(false, true)) {
+            collapsed = state
+            showIsland(EIGHT, "notes")
+            val why = "8 items at 360dp ${if (state) "collapsed" else "expanded"}"
+            val island = bounds(TAG_ISLAND)
+            println("#a11y MEASURED $why: island ${island.left}..${island.right} (${island.width}x${island.height})")
+            assertEquals("$why: the island widened to 356dp (2dp clear each side)", 356f, island.width, 1f)
+            assertAllOnScreen(why, EIGHT.map { itemTag(it.first) })
+            for (e in EIGHT) assertEquals("$why: cell ${e.first} is 44dp", px(R.dimen.bottom_nav_fit_min_cell), laidOut(itemTag(e.first)).width, 1f)
+            assertEquals("$why: the end inset gave way to 2dp", px(R.dimen.bottom_nav_min_end_inset), laidOut(itemTag("backlog")).left - island.left, 1f)
+            assertTouchTargets(why, EIGHT.map { itemTag(it.first) }, minWidth = px(R.dimen.bottom_nav_fit_min_cell))
+            assertTrue("$why: the island (${island.height}) is under the 48dp touch height", island.height >= px(R.dimen.bottom_nav_min_touch_target) - 0.5f)
+        }
+        collapsed = false
+        compose.waitForIdle()
+        assertEquals("the icon is at its fit minimum", px(R.dimen.bottom_nav_fit_icon_size), laidOut(iconTag("notes")).width, 0.5f)
+        assertEquals("the label is at its fit minimum", res.getDimension(R.dimen.bottom_nav_fit_label_text_size), textLayout(labelTag("notes")).layoutInput.style.fontSize.value, 0.01f)
         assertEquals("TalkBack hears a list of 8 tabs", 8, node(TAG_ISLAND).config.getOrNull(SemanticsProperties.CollectionInfo)?.columnCount)
     }
 
     @Test
     @Config(qualifiers = "w720dp-h640dp-mdpi")
-    fun `limits - seven items on a 720dp screen keep equal cells and do not scroll`() {
-        showIsland(CLOUD_CODE, "editor")
-        val island = bounds(TAG_ISLAND)
-        assertEquals("the island is 80% of 720dp", 576f, island.width, 1f)
-        val inset = px(R.dimen.bottom_nav_end_inset)
-        val equal = (island.width - 2 * inset) / 7
-        assertTrue("an equal cell ($equal) clears the 56dp floor", equal >= px(R.dimen.bottom_nav_min_cell_width))
-        for (e in CLOUD_CODE) {
-            val cell = bounds(itemTag(e.first))
-            assertEquals("cell ${e.first} is an equal share, not a 56dp scroll cell", equal, cell.width, 1f)
-            assertTrue("cell ${e.first} is fully on screen", cell.left >= island.left - 0.5f && cell.right <= island.right + 0.5f)
+    fun `limits - seven and eight items on a 720dp screen keep the classic equal cells`() {
+        for (fixture in listOf(CLOUD_CODE, EIGHT)) {
+            showIsland(fixture, "editor")
+            val island = bounds(TAG_ISLAND)
+            assertEquals("the island is 80% of 720dp", 576f, island.width, 1f)
+            val inset = px(R.dimen.bottom_nav_end_inset)
+            val equal = (island.width - 2 * inset) / fixture.size
+            assertTrue("an equal cell ($equal) clears the 56dp floor", equal >= px(R.dimen.bottom_nav_min_cell_width))
+            for (e in fixture) {
+                val cell = bounds(itemTag(e.first))
+                assertEquals("cell ${e.first} is an equal share", equal, cell.width, 1f)
+                assertEquals("${e.first} has the full-size icon", px(R.dimen.bottom_nav_icon_size), laidOut(iconTag(e.first)).width, 0.5f)
+            }
+            assertAllOnScreen("${fixture.size} items at 720dp", fixture.map { itemTag(it.first) })
         }
         val t = NavTokens()
-        assertFalse(planIsland(720.dp, t.widthFraction, t.endInset, 7, t).scrolls)
-        assertFalse(planIsland(720.dp, t.widthFraction, t.endInset, 8, t).scrolls)
+        assertFalse(planIsland(720.dp, t.widthFraction, t.endInset, 7, t).fitted)
+        assertFalse(planIsland(720.dp, t.widthFraction, t.endInset, 8, t).fitted)
     }
 
     // ── font scale ────────────────────────────────────────────────────────────────────────
@@ -411,6 +493,7 @@ class NavAccessibilityTest {
         assertEquals(1.3f, res.configuration.fontScale, 0.01f)
         assertNoOverlapAtThisFontScale(MAIL)
         assertNoOverlapAtThisFontScale(CLOUD_CODE)
+        assertNoOverlapAtThisFontScale(EIGHT)
     }
 
     @Test
@@ -419,6 +502,7 @@ class NavAccessibilityTest {
         assertEquals(2.0f, res.configuration.fontScale, 0.01f)
         assertNoOverlapAtThisFontScale(MAIL)
         assertNoOverlapAtThisFontScale(CLOUD_CODE)
+        assertNoOverlapAtThisFontScale(EIGHT)
         showPageTabs(THREE, "phone")
         THREE.forEach { assertEquals(it.label, spoken(node(PageTabsTags.tab(it.id)))) }
     }
@@ -475,13 +559,23 @@ class NavAccessibilityTest {
     }
 
     @Test
-    fun `a11y seven items - D-pad focus on an off-screen item scrolls it into the island`() {
-        showIsland(CLOUD_CODE, "backlog")
+    fun `a11y eight items - D-pad focus walks every item, all on screen, and the ring shows in a fitted cell`() {
+        showIsland(EIGHT, "backlog")
         keyboardMode()
-        assertEquals(CLOUD_CODE.map { itemTag(it.first) }, walk(CLOUD_CODE.size))
-        val island = bounds(TAG_ISLAND)
-        val item = laidOut(itemTag("myterminal"))
-        assertTrue("the focused last item ($item) is outside the island ($island)", item.right <= island.right + 0.5f && item.left >= island.left - 0.5f)
+        val order = walk(EIGHT.size)
+        val tags = EIGHT.map { itemTag(it.first) }
+        // Left to right, every item once (wherever keyboard mode put focus first, it wraps around).
+        val start = tags.indexOf(order.first())
+        assertEquals("focus order", tags.drop(start) + tags.take(start), order)
+        assertAllOnScreen("8 items under D-pad focus", tags)
+        // Focus on an idle item: its ring must show in the narrow fitted cell too.
+        if (focusedTag() == itemTag("backlog")) { compose.runOnUiThread { focus.moveFocus(FocusDirection.Previous) }; compose.waitForIdle() }
+        val ringed = focusedTag()!!
+        assertTrue("focus is on the selected item", ringed != itemTag("backlog"))
+        val cell = bounds(ringed)
+        val probe = pixels(cell)[1, (cell.height / 2).roundToInt()]
+        val fill = Color(res.getColor(R.color.bottom_nav_island_fill, null))
+        assertTrue("no visible focus in a fitted cell: the edge is $probe, the island fill is $fill", distance(probe, fill) > 0.25f)
     }
 
     // ── PageTabs ──────────────────────────────────────────────────────────────────────────
@@ -683,6 +777,21 @@ class NavAccessibilityTest {
             Triple("repos", "Repos", Icons.Filled.Build), Triple("chat", "Chat", Icons.Filled.ChatBubble),
             Triple("agents", "Agents", Icons.Filled.Star), Triple("browser", "Browser", Icons.Filled.Public),
             Triple("myterminal", "MyTerminal", Icons.Filled.Terminal),
+        )
+
+        /** Mail's seven, as ac_cloud-mail/build.json::ui.bottom_nav declares them (a fixture, #870). */
+        val MAIL7 = listOf(
+            Triple("mail", "Mail", Icons.Filled.Mail), Triple("rss", "News", Icons.Filled.RssFeed),
+            Triple("tasks", "Tasks", Icons.Filled.Star), Triple("home", "Home", Icons.Filled.Home),
+            Triple("chat", "Chat", Icons.Filled.ChatBubble), Triple("video", "Video", Icons.Filled.Videocam),
+            Triple("contacts", "Contacts", Icons.Filled.Inbox),
+        )
+
+        /** Cloud Drive's six, as ac_cloud-drive/build.json::ui.bottom_nav declares them (a fixture, #870). */
+        val DRIVE = listOf(
+            Triple("explorer", "Explorer", Icons.Filled.Inbox), Triple("manage", "Manage", Icons.Filled.Build),
+            Triple("agents", "Agents", Icons.Filled.Star), Triple("home", "Home", Icons.Filled.Home),
+            Triple("sync", "Sync", Icons.Filled.Public), Triple("configs", "Configs", Icons.Filled.Code),
         )
 
         /** The new maximum: Cloud Code's seven plus one. */

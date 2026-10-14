@@ -9,7 +9,8 @@ DECLARATION  1_cicd/src/data/nav-shape.json (the rules, the forbidden widgets, a
 
   N0  libs:bottomnav still ships NavDecl, PageTabs and PageTabsView
   N1  ui.bottom_nav is min_bottom..max_bottom ids (2..8; the owner lifted the old cap of 5,
-      the island scrolls in 56dp cells above 5), each one a ui.sections id;
+      and the island never scrolls: a crowded bar widens and scales down so every item fits,
+      8 on a 360dp phone being 44dp cells), each one a ui.sections id;
       ui.default_section is one of them
   N2  the app compiles libs:bottomnav
   N3  no hand-rolled nav widget (BottomNavigationView, NavigationBar, NavigationRail,
