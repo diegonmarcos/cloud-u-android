@@ -168,7 +168,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "z-ai/glm-5.3-flash",
-        "pricing_as_of": "2026-10-13",
+        "pricing_as_of": "2026-10-14",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -332,13 +332,14 @@
             ],
             "trained_for": [
               "academia",
+              "finance",
               "legal",
               "programming",
               "roleplay",
               "science",
               "technology"
             ],
-            "prompt": 0.06,
+            "prompt": 0.05,
             "completion": 7,
             "note": "Ranked in ten categories including translation; the formal-register GLM."
           },
@@ -365,7 +366,7 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.0261,
+            "prompt": 0.036,
             "completion": 0.9,
             "note": "The provider default: ranked in all twelve categories, and the cheapest all-rounder after DeepSeek."
           },
@@ -383,9 +384,7 @@
           {
             "id": "anthropic/claude-haiku-4.5",
             "name": "Claude Haiku 4.5",
-            "trained_for": [
-              "health"
-            ],
+            "trained_for": [],
             "prompt": 1.0,
             "completion": 5.0,
             "note": "Dearest row. Pick it when following a fussy instruction matters more than price."
