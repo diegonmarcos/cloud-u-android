@@ -26,12 +26,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Snooze
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AssistChip
@@ -98,6 +100,8 @@ fun HomeScreen(
     onOpenOutbox: () -> Unit,
     onOpenMailBySender: () -> Unit,
     onOpenRss: () -> Unit,
+    onOpenWorkflows: () -> Unit,
+    onOpenAi: () -> Unit,
     viewModel: HomeViewModel = viewModel(),
 ) {
     val ui by viewModel.state.collectAsStateWithLifecycle()
@@ -117,6 +121,8 @@ fun HomeScreen(
                     HomeDestination.OUTBOX -> onOpenOutbox()
                     HomeDestination.BY_SENDER -> onOpenMailBySender()
                     HomeDestination.NEWS -> onOpenRss()
+                    HomeDestination.WORKFLOWS -> onOpenWorkflows()
+                    HomeDestination.AI -> onOpenAi()
                 }
             },
             modifier = Modifier.padding(padding),
@@ -196,6 +202,8 @@ internal enum class HomeDestination(val kind: Kind, val icon: ImageVector, @Stri
     COMPOSE(Kind.SHORTCUT, Icons.Filled.Create, R.string.inbox_compose),
     SEARCH(Kind.SHORTCUT, Icons.Filled.Search, R.string.inbox_search),
     SETTINGS(Kind.SHORTCUT, Icons.Filled.Settings, R.string.inbox_settings),
+    WORKFLOWS(Kind.SHORTCUT, Icons.Filled.AccountTree, R.string.home_workflows),
+    AI(Kind.SHORTCUT, Icons.Filled.SmartToy, R.string.home_ai),
     STARRED(Kind.QUICKMARK, Icons.Filled.Star, R.string.folder_flagged),
     SCHEDULED(Kind.QUICKMARK, Icons.Filled.Schedule, R.string.inbox_scheduled),
     SNOOZED(Kind.QUICKMARK, Icons.Filled.Snooze, R.string.inbox_snoozed),
@@ -224,10 +232,10 @@ internal data class HomeAction(val icon: ImageVector, val label: String, val onC
 internal fun ShortcutsRow(actions: List<HomeAction>) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
-        horizontalArrangement = Arrangement.spacedBy(MailMetrics.s24),
     ) {
+        // Five shortcuts: equal cells (not fixed gaps) so they fit a 360 dp phone in every language.
         actions.forEach { action ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     Modifier
                         .size(MailMetrics.s48)
@@ -240,7 +248,7 @@ internal fun ShortcutsRow(actions: List<HomeAction>) {
                 ) {
                     Icon(action.icon, contentDescription = action.label, tint = MaterialTheme.colorScheme.primary)
                 }
-                Text(action.label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = MailMetrics.s4))
+                Text(action.label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = MailMetrics.s4))
             }
         }
     }

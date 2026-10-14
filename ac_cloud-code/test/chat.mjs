@@ -142,8 +142,8 @@ out(M.moreFor(chat, direct, health).every((f) => f.agents === "all"), "the direc
 
 // ── the hamburger lists the ACTIVE page's items ─────────────────────────────
 const tabs = T.buildTabs(nav, nav.tabs.map((t) => t.view));
-const menus = { chat: () => ({ items: M.chatMenu() }), repos: () => ({ items: [{ id: "rescan" }] }) };
-const chatItems = T.menuFor({ active: "chat" }, tabs, menus).items.map((i) => i.id);
+const menus = { ai: () => ({ items: M.chatMenu() }), repos: () => ({ items: [{ id: "rescan" }] }) };
+const chatItems = T.menuFor({ active: "ai" }, tabs, menus).items.map((i) => i.id);
 out(JSON.stringify(chatItems) === JSON.stringify(M.chatMenu().map((i) => i.id)), `Chat's drawer is Chat's own items (${chatItems.join(", ")})`);
 for (const need of ["new", "history", "search", "pinned", "export"]) out(chatItems.includes(need), `Chat's drawer has ${need}`);
 out(T.menuFor({ active: "repos" }, tabs, menus).items[0].id === "rescan", "Repos' drawer is Repos' own items");

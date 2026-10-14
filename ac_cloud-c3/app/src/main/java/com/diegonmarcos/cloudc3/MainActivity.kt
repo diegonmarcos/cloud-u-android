@@ -77,6 +77,25 @@ class MainActivity : AppCompatActivity(),
             ?: Declarations.defaultTab.takeIf { d -> Declarations.tabs.any { it.id == d } }
             ?: Declarations.tabs.firstOrNull()?.id
         initial?.let { show(it) }
+        if (savedInstanceState == null) handleDeepLink(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleDeepLink(intent)
+    }
+
+    /**
+     * The fleet's launcher deep-link contract (the string extra [EXTRA_TARGET], same name the
+     * SuperApp's shortcuts use): a sibling app opens a page here by sending its `page:` id, e.g.
+     * Cloud Mail's Home "Workflows" sends `page:c3/dagu`. The target goes through the same seam
+     * a stack tile uses, so an id this app does not ship is stated, not ignored.
+     */
+    private fun handleDeepLink(intent: Intent?) {
+        val target = intent?.getStringExtra(EXTRA_TARGET)?.takeIf { it.startsWith("page:") } ?: return
+        intent.removeExtra(EXTRA_TARGET)
+        onTargetClicked(target)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -178,5 +197,6 @@ class MainActivity : AppCompatActivity(),
 
     private companion object {
         const val STATE_TAB = "c3_selected_tab"
+        const val EXTRA_TARGET = "shortcut_action"
     }
 }

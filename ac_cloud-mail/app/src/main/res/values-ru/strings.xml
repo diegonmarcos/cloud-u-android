@@ -123,6 +123,9 @@
     <string name="inbox_delete_folder_recursive_body">«%1$s» содержит вложенные папки. Все они будут удалены вместе с письмами.</string>
     <string name="inbox_folder_deleted">Удаление папки «%1$s»…</string>
     <string name="inbox_settings">Настройки</string>
+    <string name="home_workflows">Workflows</string>
+    <string name="home_ai">AI</string>
+    <string name="home_workflows_not_installed">Cloud C3 is not installed, opening Workflows in the browser</string>
     <string name="inbox_cancel_selection">Отменить выбор</string>
     <string name="inbox_selected_count">Выбрано: %1$d</string>
     <string name="inbox_mark_unread">Отметить непрочитанным</string>

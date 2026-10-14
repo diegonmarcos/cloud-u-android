@@ -416,6 +416,12 @@ body.cloud-nav {
   padding-bottom: 0;
 }
 
+.cloud-mattermost {
+  flex: 1;
+  width: 100%;
+  border: 0;
+}
+
 .cloud-chat-list {
   flex: 1;
   overflow-y: auto;

@@ -1,6 +1,6 @@
 // cloud-code Profile & Config — the top-right page of every cloud panel. Account (the fleet
 // Account, Cloud Account: reachable or not, holds a key or not — never the key), the OpenRouter token (handed straight to the CloudChat plugin, which
-// stores it encrypted; this page only ever sees its mask), the Chat defaults, the storage grant
+// stores it encrypted; this page only ever sees its mask), the AI defaults, the storage grant
 // that used to be Home's Configs card, and About.
 import toast from "components/toast";
 import nav from "./nav.json";
@@ -57,7 +57,7 @@ function accountSection(st) {
 		row("Fleet Account", st?.error ? st.error : acc.connected ? "connected (Cloud Account)" : "not connected",
 			btn("Open Cloud Account", "account_box", () => system.launchApp(a.package, a.activity, null, () => {}, () => toast(`${a.id} is not installed (${a.package})`)))),
 		row("Its OpenRouter key", key),
-		el("p", { className: "cloud-muted" }, "Chats are paid with the token below. The fleet Account's key stays in its own app: by fleet rule only its engines read it."));
+		el("p", { className: "cloud-muted" }, "AI is paid with the token below. The fleet Account's key stays in its own app: by fleet rule only its engines read it."));
 }
 
 function tokenSection(st, again) {
@@ -89,7 +89,7 @@ function defaultsSection(again) {
 	const agents = M.resolveAgents(chat, fleet, undefined);
 	const set = (k, v) => { M.saveSettings(localStorage, { ...s, [k]: v }); again(); };
 	const agentLabel = agents.find((a) => a.id === s.agent)?.label || s.agent;
-	return section("Chat defaults (new chats)",
+	return section("AI defaults (new conversations)",
 		row("Agent", agentLabel, btn("Change", "brain", () => sheet("Default agent", agents.map((a) => option(a.label, { checked: a.id === s.agent, disabled: !a.available, sub: a.reason, run: () => set("agent", a.id) }))))),
 		row("Model", s.model, btn("Change", "wand-sparkles", () => modelPage(false, (id) => set("model", id)))),
 		row("Effort", chat.effort.levels.find((l) => l.id === s.effort)?.label || s.effort, btn("Change", "tune", () => sheet("Default effort", chat.effort.levels.map((l) => option(l.label, { checked: l.id === s.effort, run: () => set("effort", l.id) }))))),

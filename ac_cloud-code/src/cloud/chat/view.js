@@ -123,7 +123,7 @@ export async function renderChat(panel, chrome) {
 	$controls = el("div", { className: "cloud-chat-controls" });
 	const composer = el("div", { className: "cloud-chat-composer" }, $attach, el("div", { className: "cloud-chat-row" }, $input, $send), $controls);
 	panel.classList.add("cloud-chat-panel");
-	panel.replaceChildren(chrome.bar("Chat"), $list, composer);
+	panel.replaceChildren(chrome.bar("AI"), $list, composer);
 	draw();
 	refreshLive().catch(() => {});
 }
@@ -132,7 +132,7 @@ function draw() {
 	if (!S.panel) return;
 	const s = current();
 	const a = agent();
-	S.panel.querySelector(".cloud-topbar")?.replaceWith(S.chrome.bar(a ? a.label : "Chat", M.title(s)));
+	S.panel.querySelector(".cloud-topbar")?.replaceWith(S.chrome.bar(a ? a.label : "AI", M.title(s)));
 	drawMessages();
 	drawControls();
 }
@@ -401,7 +401,7 @@ export async function modelPage(refresh = false, onPick = null) {
 	const a = agent();
 	const chosen = onPick ? M.loadSettings(localStorage, chat).model : modelOf(a);
 	const body = el("div", { className: "cloud-cat" }, el("p", { className: "cloud-muted" }, "Loading the catalogue…"));
-	const pg = page(onPick ? "Default model" : `Model · ${a ? a.label : "Chat"}`, null, body);
+	const pg = page(onPick ? "Default model" : `Model · ${a ? a.label : "AI"}`, null, body);
 	pg.node.classList.add("cloud-model-page");
 	const choose = (row) => {
 		if (onPick) onPick(row.id);

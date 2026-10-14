@@ -123,6 +123,9 @@
     <string name="inbox_delete_folder_recursive_body">« %1$s » contient des sous-dossiers. Ils seront tous supprimés, ainsi que leurs messages.</string>
     <string name="inbox_folder_deleted">Suppression du dossier « %1$s »…</string>
     <string name="inbox_settings">Paramètres</string>
+    <string name="home_workflows">Workflows</string>
+    <string name="home_ai">AI</string>
+    <string name="home_workflows_not_installed">Cloud C3 is not installed, opening Workflows in the browser</string>
     <string name="inbox_cancel_selection">Annuler la sélection</string>
     <string name="inbox_selected_count">%1$d sélectionné(s)</string>
     <string name="inbox_mark_unread">Marquer comme non lu</string>

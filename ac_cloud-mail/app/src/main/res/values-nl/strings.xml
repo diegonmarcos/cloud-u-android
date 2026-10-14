@@ -123,6 +123,9 @@
     <string name="inbox_delete_folder_recursive_body">"%1$s" bevat submappen. Ze worden allemaal verwijderd, samen met hun berichten.</string>
     <string name="inbox_folder_deleted">Map "%1$s" verwijderen…</string>
     <string name="inbox_settings">Instellingen</string>
+    <string name="home_workflows">Workflows</string>
+    <string name="home_ai">AI</string>
+    <string name="home_workflows_not_installed">Cloud C3 is not installed, opening Workflows in the browser</string>
     <string name="inbox_cancel_selection">Selectie annuleren</string>
     <string name="inbox_selected_count">%1$d geselecteerd</string>
     <string name="inbox_mark_unread">Als ongelezen markeren</string>

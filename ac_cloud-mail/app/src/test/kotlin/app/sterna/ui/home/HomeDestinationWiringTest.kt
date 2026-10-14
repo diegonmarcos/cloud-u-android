@@ -41,6 +41,8 @@ class HomeDestinationWiringTest {
                 "is a tap that does nothing, silently.",
             listOf(
                 """composable("home") { entry ->""",
+                "val homeContext = LocalContext.current",
+                "val leaveOnce = rememberLeaveOnce(entry)",
                 """BottomNavBar(nav = nav, currentRoute = "home") {""",
                 "HomeScreen(",
                 "onBack = { entry.navigateOnce { nav.popBackStack() } },",
@@ -53,9 +55,11 @@ class HomeDestinationWiringTest {
                 """onOpenOutbox = { entry.navigateOnce { nav.navigate("outbox") } },""",
                 """onOpenMailBySender = { entry.navigateOnce { nav.navigate("bysender") } },""",
                 """onOpenRss = { entry.navigateOnce { nav.navigate("rss") } },""",
+                "onOpenWorkflows = { leaveOnce { openWorkflows(homeContext) } },",
+                "onOpenAi = { leaveOnce { openHermesAi(homeContext) } },",
                 ")",
             ),
-            block(STERNA_APP, """composable("home")""", count = 14),
+            block(STERNA_APP, """composable("home")""", count = 18),
         )
     }
 

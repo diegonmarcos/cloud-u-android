@@ -123,6 +123,9 @@
     <string name="inbox_delete_folder_recursive_body">«%1$s» contiene subcarpetas. Se eliminarán todas junto con sus mensajes.</string>
     <string name="inbox_folder_deleted">Eliminando la carpeta «%1$s»…</string>
     <string name="inbox_settings">Ajustes</string>
+    <string name="home_workflows">Workflows</string>
+    <string name="home_ai">AI</string>
+    <string name="home_workflows_not_installed">Cloud C3 is not installed, opening Workflows in the browser</string>
     <string name="inbox_cancel_selection">Cancelar selección</string>
     <string name="inbox_selected_count">%1$d seleccionados</string>
     <string name="inbox_mark_unread">Marcar como no leído</string>

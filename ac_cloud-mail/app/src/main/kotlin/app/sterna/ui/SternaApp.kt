@@ -54,6 +54,8 @@ import app.sterna.ui.compose.IncognitoKeyboard
 import app.sterna.ui.connect.ConnectScreen
 import app.sterna.core.jmap.model.Email
 import app.sterna.ui.home.HomeScreen
+import app.sterna.ui.home.openHermesAi
+import app.sterna.ui.home.openWorkflows
 import app.sterna.ui.inbox.InboxScreen
 import app.sterna.ui.inbox.InboxViewModel
 import app.sterna.ui.inbox.MessageAnchor
@@ -668,6 +670,8 @@ private fun MainNavHost(
         // The mail statistics of every configured account. A destination like "snoozed" and not a
         // start destination: the app still opens on the inbox, which is what the reader came for.
         composable("home") { entry ->
+            val homeContext = LocalContext.current
+            val leaveOnce = rememberLeaveOnce(entry)
             BottomNavBar(nav = nav, currentRoute = "home") {
                 HomeScreen(
                     onBack = { entry.navigateOnce { nav.popBackStack() } },
@@ -680,6 +684,8 @@ private fun MainNavHost(
                     onOpenOutbox = { entry.navigateOnce { nav.navigate("outbox") } },
                     onOpenMailBySender = { entry.navigateOnce { nav.navigate("bysender") } },
                     onOpenRss = { entry.navigateOnce { nav.navigate("rss") } },
+                    onOpenWorkflows = { leaveOnce { openWorkflows(homeContext) } },
+                    onOpenAi = { leaveOnce { openHermesAi(homeContext) } },
                 )
             }
         }

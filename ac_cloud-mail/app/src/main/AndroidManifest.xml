@@ -29,6 +29,7 @@
         <package android:name="com.diegonmarcos.comms.chat" />
         <package android:name="com.diegonmarcos.cloudcontacts" />
         <package android:name="org.telegram.messenger" />
+        <package android:name="com.diegonmarcos.cloudc3" />
         <package android:name="com.whatsapp.w4b" />
         <package android:name="com.brave.browser" />
         <intent>

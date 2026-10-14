@@ -51,8 +51,8 @@ class DeclarationsTest {
     @Test fun tabsDeclareTheOwnersNavOrder() {
         val tabs = Declarations.tabsOf(nav())
         // Owner restructure: Files → Explorer, Volumes' slot → Manage, Agents beside them; Home, Sync, Configs unchanged.
-        assertEquals(listOf("explorer", "manage", "agents", "home", "sync", "configs"), tabs.map { it.id })
-        assertEquals(listOf("Explorer", "Manage", "Agents", "Home", "Sync", "Configs"), tabs.map { it.label })
+        assertEquals(listOf("explorer", "manage", "sync", "home", "agents", "chat", "configs"), tabs.map { it.id })
+        assertEquals(listOf("Explorer", "Manage", "Sync", "Home", "Agents", "Chat", "Configs"), tabs.map { it.label })
         assertTrue(tabs.all { it.label.isNotBlank() && it.icon.isNotBlank() })
         assertEquals("explorer", nav().default()?.id)
         assertTrue(tabs.map { it.id }.contains(nav().default()?.id))

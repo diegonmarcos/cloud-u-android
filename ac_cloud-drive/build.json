@@ -55,7 +55,7 @@
   },
   "ui": {
     "_doc": "#868 THE NAVIGATION IS ONE DECLARATION (libs:bottomnav's NavDecl): ui.bottom_nav = the island's ids, ui.sections[] = each one's label/icon and its `pages` (the strip PageTabs draws), ui.default_section = where the app opens. Volumes' four classes, Sync's three pages and Configs' three pages are those `pages` now (they were the keys ui.volumes.classes, ui.sync.pages and ui.configs.pages; ui.tabs and ui.default_tab are gone). #603/#609 THE STRUCTURE OF THE CHROME, declared. Kotlin holds no tab list, no caption, no page list, no section list, no place list and no icon name: DriveShell renders ui.bottom_nav, SyncScreen renders ui.sections[sync].pages, ConfigsScreen renders ui.sections[configs].pages, the Files Places sheet renders ui.files.sections and ui.files.places, the Files filter pills render ui.files.filters. Every `icon` here is a name IconCatalog.kt resolves to a Material glyph; a name it does not know renders ui.icons._default and test/test-drive-shell.sh fails the build. Baked by app/build.gradle as UI_SECTIONS_B64 / UI_BOTTOM_NAV / UI_DEFAULT_SECTION / UI_SYNC_B64 / UI_FILES_B64 / UI_ICON_DEFAULT and decoded ONCE by Declarations.kt. #603 replaced #579's five tabs (files/apps/sync/backups/configs) with files/volumes/home/apps/configs, moving Sync's three pages and Backups into Configs. #609 REVERSED HALF OF THAT: Apps stopped being a tab (its grid moved into Home, ui.home below) and the freed slot is now Sync, carrying Git/Rclone/Mounts back out of Configs into their own tab — the five tabs are now files/volumes/home/sync/configs. #608 REDESIGNED THE SYNC ▸ GIT SUB-PAGE and declared it whole in ui.sync.git below: two sections (the owner's PUBLIC cloud*/front* set, which needs no login, and Personal, which signs in through libs:auth for the `repo` scope and splits the account's own listing into Public and Private), one DENSE row per repository, and fourteen per-repository operations collapsed behind each row's disclosure — every one of them a verb of libs:git-sync, force push and force pull included.",
-    "bottom_nav": ["explorer", "manage", "agents", "home", "sync", "configs"],
+    "bottom_nav": ["explorer", "manage", "sync", "home", "agents", "chat", "configs"],
     "default_section": "explorer",
     "sections": [
       {
@@ -148,6 +148,16 @@
             "label": "Mounts",
             "icon": "lan"
           }
+        ]
+      },
+      {
+        "id": "chat",
+        "label": "Chat",
+        "icon": "chat",
+        "module": "libs:chat",
+        "_doc": "Owner: Chat = Mattermost (human chat), libs:chat's MattermostFragment hosted with AndroidFragment. AI/agent chat is called AI, never Chat. The one page carries the server libs:chat/build.gradle bakes as BuildConfig.MATTERMOST_DEFAULT_SERVER.",
+        "pages": [
+          { "id": "mattermost", "label": "Mattermost", "icon": "chat", "mattermost_default_server": "https://chat.diegonmarcos.com" }
         ]
       },
       {
@@ -735,6 +745,7 @@
         "libs:rclone",
         "libs:mounts",
         "libs:bottomnav",
+        "libs:chat",
         "libs:auth",
         "libs:disk",
         "libs:shizuku-adb-debug-tools"
@@ -814,6 +825,11 @@
     "libs:auth": {
       "_doc_dir": "#587 THE sign-in of the fleet, the SAME module cloud-superapp's Profile > Connect hosts, shared BY REFERENCE like every module here: Configs > Sign in offers the four declared ways (Authelia bearer, Authelia web-auth, GitHub, Google) from ONE declaration (ab_cloud-libs-shared/build.json::auth) and hands this app the consolidated artifact; DriveAuthApply then writes only the DRIVE-relevant sections (auth.applies below).",
       "dir": "../ab_cloud-libs-shared/libs/auth",
+      "type": "library"
+    },
+    "libs:chat": {
+      "_doc_dir": "Chat = Mattermost: the Chat tab hosts libs:chat's MattermostFragment. Shared BY REFERENCE.",
+      "dir": "../ab_cloud-libs-shared/libs/chat",
       "type": "library"
     },
     "libs:bottomnav": {

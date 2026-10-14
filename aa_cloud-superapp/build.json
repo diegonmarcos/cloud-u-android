@@ -466,7 +466,7 @@
           "target": "https://linktree.diegonmarcos.com/qrcode.html"
         },
         {
-          "label": "AI Chat",
+          "label": "AI",
           "target": "intent://resolve?domain=Cloud_agent_hermes_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot;end"
         },
         {
