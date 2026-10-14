@@ -620,7 +620,7 @@ object AppsMesh {
             val l = live
             thread(name = "apps-mesh-details") {
                 val port = l?.reachable?.get(app.id)
-                val info = port?.let { StoreMesh.get(it, "/api/system/info", FleetToken.get(appCtx)) }
+                val info = port?.let { p -> Fleet.installedId(appCtx, app)?.let { StoreMesh.ask(appCtx, it, p, "system/info") } }
                 val t = details(appCtx, app, links, l, info)
                 out.post { body = t; out.text = t }
             }
@@ -693,8 +693,8 @@ object AppsMesh {
         try {
             live.reachable.filterKeys { it !in docs }.map { (id, port) ->
                 pool.submit(java.util.concurrent.Callable {
-                    val self = fleet.firstOrNull { it.id == id }?.let { Fleet.installedId(ctx, it) } == ctx.packageName
-                    StoreMesh.docs(ctx, port, self)?.let { docs[id] = it; docsAt[id] = System.currentTimeMillis() }
+                    fleet.firstOrNull { it.id == id }?.let { Fleet.installedId(ctx, it) }
+                        ?.let { pkg -> StoreMesh.docs(ctx, pkg, port) }?.let { docs[id] = it; docsAt[id] = System.currentTimeMillis() }
                     onEach(id)
                 })
             }.forEach { runCatching { it.get() } }
@@ -851,11 +851,11 @@ object AppsMesh {
                 }
                 panel.text = "⟳ fetching /api/docs…"
                 thread(name = "apps-mesh-api") {
-                    val body = StoreMesh.docs(appCtx, port, pkg == ctx.packageName)
+                    val body = pkg?.let { StoreMesh.docs(appCtx, it, port) }
                     ui {
                         if (body != null) { row.docs[app.id] = body; row.docsAt[app.id] = System.currentTimeMillis(); row.saved() }
                         panel.text = body?.let { endpoints(it, port) }
-                            ?: "127.0.0.1:$port did not answer /api/docs with the fleet token."
+                            ?: "${StoreMesh.address(app, port)} did not answer docs."
                     }
                 }
             }
@@ -868,7 +868,8 @@ object AppsMesh {
     fun endpoints(docs: String, port: Int): String = runCatching {
         val o = JSONObject(docs)
         buildString {
-            appendLine("base http://127.0.0.1:$port · Bearer <fleet token> · loopback only")
+            appendLine(if (port == StoreMesh.IPC_PORT) "over IPC: content://<pkg>.fleet call fleet.ipc.v1 · signature-guarded · remote: the SuperApp gateway"
+                else "base http://127.0.0.1:$port · Bearer <fleet token> · loopback only")
             fun list(arr: org.json.JSONArray?) {
                 for (i in 0 until (arr?.length() ?: 0)) {
                     val e = arr!!.getJSONObject(i)

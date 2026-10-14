@@ -113,8 +113,11 @@ for a in api start stop open details; do
   printf '%s' "$act" | grep -qE "^\s+\"$a\" ->" && ok "act() handles $a" || bad "act() has no branch for $a"
 done
 branch() { printf '%s' "$act" | awk -v a="\"$1\" ->" 'index($0,a){f=1} f{print} f && /^            "[a-z]+" ->/ && !index($0,a){exit}'; }
-branch api     | grep -qF 'StoreMesh.docs(' && fn "$SMESH" docs | grep -qF '"/api/docs"' && fn "$SMESH" docs | grep -qF 'FleetToken.get' \
-  && ok "Docs fetches /api/docs with the fleet bearer"   || bad "Docs does not fetch /api/docs with the fleet token"
+# #ipc docs ride the fleet IPC layer (StoreMesh.ask -> FleetIpc.call); only a pre-IPC build is asked over
+# its loopback port, with the fleet bearer.
+branch api     | grep -qF 'StoreMesh.docs(' && fn "$SMESH" docs | grep -qF 'ask(ctx, pkg, port, "docs")' \
+  && fn "$SMESH" ask | grep -qF 'FleetIpc.call(' && fn "$SMESH" ask | grep -qF 'FleetToken.get' \
+  && ok "Docs fetches docs over IPC, a pre-IPC build over HTTP with the fleet bearer" || bad "Docs does not fetch docs over the fleet IPC layer (HTTP + bearer only as the fallback)"
 branch api     | grep -qF 'row.docs[app.id]?.let { body ->' && branch api | grep -qF 'row.panel' \
   && ok "Docs unfolds in the card and reuses the fetched copy" || bad "Docs does not unfold in the card from a cached copy"
 branch start   | grep -qF 'FleetPeers.wake('  && branch start | grep -qF 'row.reprobe(app)' \

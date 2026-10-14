@@ -267,9 +267,11 @@ need('app', 'com.diegonmarcos.superapp.net.AidlBackend.ENGINE_PKG', 'the package
 need('app', 'DnsOverview.register(this)', '/api/net/dns/overview is not registered')
 need('ov', 'AppDebugServer.route("net"', 'the overview is not served under /api/net')
 need('ov', 'op == "dns/overview"', 'the overview op is not dns/overview')
-for path in ('"/api/net/dns"', '"/api/sysdns/state"', '"/api/diagnostics/crashes"'):
+for path in ('"net/dns"', '"sysdns/state"', '"diagnostics/crashes"'):
     need('ov', path, 'the overview no longer asks each member ' + path)
-need('ov', 'StoreMesh.locate(FleetPeers.list(ctx)', 'the overview no longer finds every fleet peer the way Apps Mesh does')
+# #ipc every installed fleet peer, asked over the fleet IPC layer (StoreMesh.ask), not a loopback sweep
+need('ov', 'FleetPeers.list(ctx).filter { it != ctx.packageName }', 'the overview no longer asks every fleet peer')
+need('ov', 'StoreMesh.ask(ctx, pkg, port, op)', 'the overview no longer asks members over the fleet IPC layer')
 need('bridge', 'public String stateJson()', 'the bridge has no state')
 need('bridge', 'asked();', 'a UDP or TCP query is not counted', 2)
 need('bridge', 'answered.incrementAndGet()', 'answers are not counted')
@@ -323,8 +325,9 @@ frag|s.replace('FleetDns.syncAndCheck(ctx, raiseNow = !FirewallController.isEnab
 frag|s.replace('status.setTextColor(if (v.ok) 0xFFFFFFFF.toInt() else com.diegonmarcos.superapp.ui.StatusLight.colour(ctx, com.diegonmarcos.superapp.ui.StatusLight.State.OFF))', 'status.setTextColor(0xFFFFFFFF.toInt())')
 app|s.replace('addAction(android.content.Intent.ACTION_PACKAGE_REPLACED)', '')
 app|s.replace('DnsOverview.register(this)', 'toString()')
-ov|s.replace('"/api/sysdns/state"', '"/api/sysdns/nothing"')
-ov|s.replace('"/api/diagnostics/crashes"', '"/api/diagnostics/none"')
+ov|s.replace('"sysdns/state"', '"sysdns/nothing"')
+ov|s.replace('"diagnostics/crashes"', '"diagnostics/none"')
+ov|s.replace('StoreMesh.ask(ctx, pkg, port, op)', 'StoreMesh.get(port, op)')
 bridge|s.replace('            asked();\n', '', 1)
 bridge|s.replace('error("sysdns: an answer failed', 'log.line("sysdns: an answer failed')
 txapi|s.replace('CloudDnsBridge.state()', 'null')

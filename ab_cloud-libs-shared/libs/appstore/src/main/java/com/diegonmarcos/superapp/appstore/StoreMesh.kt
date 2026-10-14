@@ -8,6 +8,8 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.diegonmarcos.superapp.devtools.AppDebugServer
+import com.diegonmarcos.superapp.devtools.FleetIpc
+import com.diegonmarcos.superapp.devtools.FleetIpcWire
 import com.diegonmarcos.superapp.devtools.FleetPeers
 import com.diegonmarcos.superapp.devtools.FleetToken
 import com.diegonmarcos.superapp.updater.Fleet
@@ -32,7 +34,12 @@ import org.json.JSONObject
  *
  * The LIVE half reuses what the fleet already serves, no new protocol:
  *   - installed + version: the PackageManager, through [Fleet.installedId]
- *   - reachable: every member's AppDebugServer answers the open
+ *   - #ipc asked (Wake, Re-probe of a row): every member over the fleet IPC layer
+ *     ([FleetIpc], a provider call on `<pkg>.fleet`, signature-guarded, which also starts a
+ *     stopped member); reachable over IPC is recorded as port [IPC_PORT]. Only a member
+ *     with no IPC door (a build from before it) is asked on its loopback port below.
+ *   - looked at (the page opening, Re-probe): nothing is started. A running member
+ *     still on a build with a loopback debug API answers the open
  *     `/api/system/ping` with `pong <applicationId>` on its assigned port
  *     ([AppDebugServer.portOf], #792), or — for a build from before #792 or a
  *     member that fell back — somewhere in
@@ -55,6 +62,8 @@ object StoreMesh {
     const val CONTRACT_KEY = "com.diegonmarcos.cloud.engine.CONTRACT"
 
     const val TAG_NODE = "store-mesh-node:"
+    /** #ipc the "port" of a member that answered over the fleet IPC layer, not a socket. */
+    const val IPC_PORT = 0
     const val TAG_LINK = "store-mesh-link:"
 
     /** One app -> engine edge, exactly as the app's build.json::engines declares it. */
@@ -158,9 +167,8 @@ object StoreMesh {
      *  with stopped members woken, then every reachable member's /api/docs. */
     fun probe(ctx: Context, fleet: List<Fleet.App>, links: List<Link>, wake: Boolean = true): Live {
         val live = probeEach(ctx, fleet, links, wake)
-        val selfId = fleet.firstOrNull { Fleet.installedId(ctx, it) == ctx.packageName }?.id
         return Live(live.installed, live.reachable, live.peers, live.contracts, live.shares, live.granted,
-            live.peerViews, live.woken, docsOf(ctx, live.reachable, selfId), live.asleep)
+            live.peerViews, live.woken, docsOf(ctx, fleet, live.reachable), live.asleep)
     }
 
     /** #793 how many members are probed at once, and the per-member bound is
@@ -233,7 +241,6 @@ object StoreMesh {
         }
         emit(emptyList())
 
-        val token = FleetToken.get(ctx)
         // #792 this process answers for itself without a socket: probed from
         // the debug server's own accept thread (/api/fleet/endpoints), a
         // loopback ping of our own port would wait on the thread sending it.
@@ -241,7 +248,7 @@ object StoreMesh {
         fun found(id: String, port: Int) {
             reachable[id] = port
             if (pkgOf[id] == self) { peerViews[id] = peers; return }
-            val body = get(port, "/api/fleet/peers", token) ?: return
+            val body = ask(ctx, pkgOf.getValue(id), port, "fleet/peers") ?: return
             runCatching {
                 val arr = JSONObject(body).getJSONArray("peers")
                 peerViews[id] = (0 until arr.length()).mapNotNull { idOf[arr.getJSONObject(it).optString("pkg")] }.toSet()
@@ -255,7 +262,16 @@ object StoreMesh {
         try {
             fun eachOn(ids: Collection<String>, work: (String) -> Unit) =
                 ids.map { id -> pool.submit(Callable { runCatching { work(id) }; Unit }) }.forEach { runCatching { it.get() } }
-            eachOn(todo) { id ->
+            // #ipc asking (wake): over the IPC layer first, which needs no port and starts
+            // a stopped member; a member that answers is reachable at [IPC_PORT].
+            if (wake) eachOn(todo) { id ->
+                val pkg = pkgOf[id] ?: return@eachOn
+                val r = if (pkg == self) null else FleetIpc.call(ctx, pkg, "system/ping", httpFallback = false)
+                if (r != null && r.ok && PONG.find(r.body)?.groupValues?.get(1) == pkg) {
+                    found(id, IPC_PORT); emit(listOf(id))
+                }
+            }
+            eachOn(todo - reachable.keys) { id ->
                 val port = pkgOf[id]?.let { onAssigned(it) }
                 if (port != null) { found(id, port); emit(listOf(id)) }
             }
@@ -284,17 +300,30 @@ object StoreMesh {
         return snapshot()
     }
 
-    /** #792 one member's own /api/docs; this process answers from memory. */
-    fun docs(ctx: Context, port: Int, self: Boolean): String? =
-        if (self) AppDebugServer.docs(ctx) else get(port, "/api/docs", FleetToken.get(ctx))
+    /** #792 one member's own /api/docs; this process answers from memory, the others over
+     *  IPC ([ask]), a pre-IPC build on its loopback [port]. */
+    fun docs(ctx: Context, pkg: String, port: Int): String? =
+        if (pkg == ctx.packageName) AppDebugServer.docs(ctx) else ask(ctx, pkg, port, "docs")
+
+    /**
+     * #ipc one read-only op of a member: over the fleet IPC layer; only a member with no IPC
+     * door (a build from before it) is asked over HTTP, on the loopback [port] it answered
+     * on ([IPC_PORT] = none). The body on 200, else null.
+     */
+    fun ask(ctx: Context, pkg: String, port: Int, op: String, query: Map<String, String> = emptyMap()): String? {
+        val r = FleetIpc.call(ctx, pkg, op, query, httpFallback = false)
+        if (r.via != FleetIpcWire.Via.NONE || port == IPC_PORT) return r.body.takeIf { r.ok }
+        return FleetIpcWire.httpGet(port, FleetIpcWire.path(op, query), FleetToken.get(ctx))?.takeIf { it.ok }?.body
+    }
 
     /** #792 every reachable member's /api/docs, fetched in parallel. */
-    private fun docsOf(ctx: Context, reachable: Map<String, Int>, selfId: String?): Map<String, String> {
+    private fun docsOf(ctx: Context, fleet: List<Fleet.App>, reachable: Map<String, Int>): Map<String, String> {
+        val pkgs = fleet.mapNotNull { a -> Fleet.installedId(ctx, a)?.let { a.id to it } }.toMap()
         val pool = Executors.newFixedThreadPool(8)
         return try {
-            reachable.map { (id, port) ->
-                pool.submit(Callable { docs(ctx, port, id == selfId)?.let { id to it } })
-            }.mapNotNull { runCatching { it.get() }.getOrNull() }.toMap()
+            reachable.mapNotNull { (id, port) -> pkgs[id]?.let { pkg ->
+                pool.submit(Callable { docs(ctx, pkg, port)?.let { id to it } }) } }
+                .mapNotNull { runCatching { it.get() }.getOrNull() }.toMap()
         } finally { pool.shutdownNow() }
     }
 
@@ -323,22 +352,6 @@ object StoreMesh {
         return reachable
     }
 
-    /**
-     * #733 One authenticated GET on a member's loopback debug API — the body,
-     * or null when it did not answer 200. Raw socket for the same reason as
-     * [ping]. Blocking; call off the main thread.
-     */
-    fun get(port: Int, path: String, token: String): String? = runCatching {
-        Socket().use { s ->
-            s.connect(InetSocketAddress("127.0.0.1", port), 400)
-            s.soTimeout = 3000
-            s.getOutputStream().write(("GET $path HTTP/1.0\r\nHost: 127.0.0.1\r\n" +
-                "Authorization: Bearer $token\r\n\r\n").toByteArray())
-            val raw = s.getInputStream().bufferedReader().readText()
-            if (!raw.startsWith("HTTP/1.0 200") && !raw.startsWith("HTTP/1.1 200")) null
-            else raw.substringAfter("\r\n\r\n", "")
-        }
-    }.getOrNull()
 
     private fun contractOf(pm: PackageManager, action: String, pkg: String): Int =
         runCatching {
@@ -516,6 +529,7 @@ object StoreMesh {
      *  debug-ports.json gives it — the port it should have had, so a fallback
      *  (or a build from before #792) is visible rather than silently fine. */
     fun address(app: Fleet.App, port: Int): String {
+        if (port == IPC_PORT) return "IPC content://${FleetIpc.authority(app.pkg)} (signature-guarded)"
         val assigned = AppDebugServer.portOf(app.pkg)
         return "http://127.0.0.1:$port" + when {
             assigned == null -> " (no assigned port)"

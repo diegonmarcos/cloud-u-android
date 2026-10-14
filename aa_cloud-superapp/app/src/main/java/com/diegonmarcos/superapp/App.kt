@@ -240,6 +240,8 @@ class App : Application(), WorkManagerConfiguration.Provider {
         runCatching { com.diegonmarcos.superapp.profile.AccountDebugApi.register(this) }
         // #794: /api/net/dns/overview — the DNS page as JSON: preset in effect or not, every app's path, every server.
         runCatching { com.diegonmarcos.superapp.network.DnsOverview.register(this) }
+        // #ipc the SuperApp bridge (adb/exec) over the fleet IPC layer: terminals and Drive call it.
+        runCatching { com.diegonmarcos.superapp.devcontrol.AdbBridgeApi.register(this) }
         // Schedule the battery SoT's low-frequency tick (15 min cadence):
         // one history sample even when the SuperApp is backgrounded or
         // killed and no battery surface is open (BatteryRepository.record).

@@ -102,6 +102,7 @@ has "$RB" 'FleetToken.get(ctx)' "RishBridge writes the fleet token (no secret in
 SB="$LIB/src/main/java/com/diegonmarcos/superapp/adbdebug/SuperappBridgeChannel.kt"
 has "$SB" 'com.diegonmarcos.superapp' "SuperappBridgeChannel is the superapp provider"
 has "$SB" 'Authorization' "SuperappBridgeChannel authenticates with the fleet token"
+has "$SB" 'FleetIpc.call(ctx, SUPERAPP_PROVIDER, "adb/exec"' "#ipc SuperappBridgeChannel asks the SuperApp over the fleet IPC layer first"
 SC="$LIB/src/main/java/com/diegonmarcos/superapp/adbdebug/ShellChannel.kt"
 has "$SC" 'RishBridge.providers' "the ladder orders channels by the DATA (provider order)"
 has "$SC" 'SuperappBridgeChannel' "the ladder includes the superapp bridge channel"

@@ -6,8 +6,8 @@ import android.net.NetworkCapabilities
 import com.diegonmarcos.cloudlib.sysdns.FleetDnsBridge
 import com.diegonmarcos.superapp.appstore.StoreMesh
 import com.diegonmarcos.superapp.devtools.AppDebugServer
+import com.diegonmarcos.superapp.devtools.FleetIpc
 import com.diegonmarcos.superapp.devtools.FleetPeers
-import com.diegonmarcos.superapp.devtools.FleetToken
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.InetSocketAddress
@@ -21,9 +21,10 @@ import java.util.concurrent.Executors
  * renders [collect]'s JSON as text, so the screen and a screen-locked curl
  * cannot disagree.
  *
- * Per app, every fleet member answers for ITSELF through its own debug API
- * (libs:devtools AppDebugServer, fleet token), found the way Store ▸ Apps Mesh
- * finds it ([StoreMesh.locate], every installed fleet peer): GET /api/net/dns is the network and DNS
+ * Per app, every fleet member answers for ITSELF over the fleet IPC layer (#ipc,
+ * libs:devtools FleetIpc: a signature-guarded provider call on `<pkg>.fleet`, which also
+ * starts a stopped member; a build from before it is asked on its old loopback port,
+ * [StoreMesh.ask]), every installed fleet peer: net/dns is the network and DNS
  * servers that member's uid gets (#758); GET /api/sysdns/state is its terminal
  * DNS bridge (libs:sysdns SystemDnsBridge) — a 404 means it has none; and a
  * bridge holder's /api/diagnostics/crashes is read for the #791 class (a
@@ -189,20 +190,21 @@ object DnsOverview {
     }.getOrDefault(emptyList())
 
     private fun members(ctx: Context): List<Member> {
-        val token = FleetToken.get(ctx)
         val own = AppDebugServer.boundPort()
         val pm = ctx.packageManager
         fun label(pkg: String) = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
-        fun json(port: Int, path: String) = StoreMesh.get(port, path, token)?.let { runCatching { JSONObject(it) }.getOrNull() }
+        // #ipc no port to find: a member is asked by package; StoreMesh.IPC_PORT when it
+        // answered over IPC, its assigned loopback port only for a pre-IPC build.
+        fun json(pkg: String, port: Int, op: String) = StoreMesh.ask(ctx, pkg, port, op)?.let { runCatching { JSONObject(it) }.getOrNull() }
         val pool = Executors.newFixedThreadPool(8)
         val others = try {
-            // This app's own server is the one serving this very request when it
-            // came in over the debug API: asking it would wait out the timeout.
-            StoreMesh.locate(FleetPeers.list(ctx).filter { it != ctx.packageName }).filter { (_, port) -> port != own }
-                .map { (pkg, port) -> pool.submit(Callable {
-                    val bridge = json(port, "/api/sysdns/state")
-                    val crashes = if (bridge == null) 0 else bridgeCrashes(StoreMesh.get(port, "/api/diagnostics/crashes", token))
-                    Member(pkg, label(pkg), port, json(port, "/api/net/dns"), bridge, crashes)
+            FleetPeers.list(ctx).filter { it != ctx.packageName }
+                .map { pkg -> pool.submit(Callable {
+                    val port = if (FleetIpc.hasDoor(ctx, pkg)) StoreMesh.IPC_PORT else AppDebugServer.portOf(pkg) ?: StoreMesh.IPC_PORT
+                    val dns = json(pkg, port, "net/dns") ?: return@Callable null
+                    val bridge = json(pkg, port, "sysdns/state")
+                    val crashes = if (bridge == null) 0 else bridgeCrashes(StoreMesh.ask(ctx, pkg, port, "diagnostics/crashes"))
+                    Member(pkg, label(pkg), port, dns, bridge, crashes)
                 }) }
                 .mapNotNull { runCatching { it.get() }.getOrNull() }
         } finally { pool.shutdownNow() }
