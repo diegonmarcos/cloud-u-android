@@ -1083,6 +1083,10 @@ object Sections {
         else -> page.group.ifBlank { GROUP_PAGES } to page.subgroup
     }
 
+    /** Renamed Cloud tile ids, old -> new, `<section>/<tile id>`. Mirrors
+     *  ui.retired_tile_ids in build.json (test-agi-tiles.sh checks they agree). */
+    private val RETIRED_TILE_IDS = mapOf("cloud/ai-tlg-claude" to "cloud/ai-chat")
+
     /**
      * The app row [page] declares — [Page.appsFromTileGroup]'s whole group in
      * its declared order, then [Page.appsExtraTileIds] appended in theirs.
@@ -1112,7 +1116,9 @@ object Sections {
             }
             .orEmpty()
 
-        val extras = page.appsExtraTileIds.mapNotNull { ref ->
+        val extras = page.appsExtraTileIds.mapNotNull { rawRef ->
+            // Follow a renamed tile id (ui.retired_tile_ids in build.json).
+            val ref = RETIRED_TILE_IDS[rawRef] ?: rawRef
             ref.split('/', limit = 2)
                 .takeIf { it.size == 2 && it.none(String::isBlank) }
                 ?.let { (sectionId, tileId) -> tilesOf(sectionId).firstOrNull { it.id == tileId } }
