@@ -6,11 +6,13 @@ import android.content.SharedPreferences
 /**
  * Per-user override of each swipe's action, persisted on-device. build.json
  * seeds the DEFAULT action for every slot; the user re-maps any slot here and
- * the override wins. Key = "<handleId>.<slotKey>" → OneHandAction.name.
+ * the override wins. Key = "<handleId>.<slotKey>" → GestureAction.serialize().
  * Absent key = fall back to the baked default.
  */
 object OneHandPrefs {
     private const val FILE = "onehand_prefs"
+    /** Stored for a slot the user deliberately unmapped. */
+    private const val NONE = "NONE"
 
     private fun prefs(ctx: Context) =
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -23,7 +25,7 @@ object OneHandPrefs {
 
     fun setAction(ctx: Context, handleId: String, slotKey: String, action: GestureAction?) {
         val e = prefs(ctx).edit()
-        if (action == null) e.putString("$handleId.$slotKey", OneHandAction.NONE.name)
+        if (action == null) e.putString("$handleId.$slotKey", NONE)
         else e.putString("$handleId.$slotKey", action.serialize())
         e.apply()
     }
@@ -102,7 +104,7 @@ object OneHandPrefs {
         val e = p.edit()
         for ((k, v) in p.all) {
             // "<handleId>.<slotKey>" entries only — never `enabled` / `trigger`.
-            if (k.contains('.') && v == OneHandAction.NONE.name) e.remove(k)
+            if (k.contains('.') && v == NONE) e.remove(k)
         }
         e.putBoolean(PRUNED_KEY, true).apply()
     }

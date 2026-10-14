@@ -3,7 +3,7 @@ package com.diegonmarcos.superapp.floatingnav
 import android.content.Context
 import android.provider.Settings
 import com.diegonmarcos.superapp.devtools.AppDebugServer
-import com.diegonmarcos.superapp.onehand.OneHandAccessibilityService
+import com.diegonmarcos.superapp.onehand.OneHandOverlayService
 import com.diegonmarcos.superapp.onehand.OneHandPrefs
 import org.json.JSONArray
 import org.json.JSONObject
@@ -31,7 +31,7 @@ object OverlaysDebugApi {
         val windows = JSONArray()
         if (FloatingNavService.bubbleDrawn) windows.put("floating_nav.bubble")
         if (FloatingNavService.barDrawn) windows.put("floating_nav.bar")
-        val handles = OneHandAccessibilityService.instance?.handleCount ?: 0
+        val handles = OneHandOverlayService.instance?.handleCount ?: 0
         repeat(handles) { windows.put("onehand.handle") }
         if (ScreensaverService.drawn) windows.put("screensaver.cover")
         return JSONObject()
@@ -47,7 +47,7 @@ object OverlaysDebugApi {
                 .put("bar", FloatingNavService.barDrawn))
             .put("onehand", JSONObject()
                 .put("toggle", OneHandPrefs.isEnabled(ctx))
-                .put("accessibility_connected", OneHandAccessibilityService.isConnected)
+                .put("service_running", OneHandOverlayService.isRunning)
                 .put("handles", handles))
             .put("screensaver", JSONObject()
                 .put("allowed", ScreensaverService.allowed(ctx))

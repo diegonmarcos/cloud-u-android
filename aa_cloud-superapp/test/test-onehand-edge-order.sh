@@ -93,9 +93,9 @@ else
   echo "        want: $LEFT_WANT"
   echo "        got : $LEFT_ORDER"
 fi
-[ "$(q "print(h['left']['gestures']['center'])")" = "back" ] \
-  && ok "left center is still Back — a straight-in swipe never became one of the twelve" \
-  || bad "left center is no longer Back"
+[ "$(q "print('center' in h['left']['gestures'])")" = "False" ] \
+  && ok "left center is unmapped — Back needed Accessibility and is gone" \
+  || bad "left center is mapped again — a global action needs an Accessibility service"
 
 echo "== T2: the RIGHT handle is the owner's SECOND block, in his order =="
 RIGHT_ORDER=$(q "print('|'.join(h['right']['gestures'][k] for k in
@@ -108,9 +108,9 @@ else
   echo "        want: $RIGHT_WANT"
   echo "        got : $RIGHT_ORDER"
 fi
-[ "$(q "print(h['right']['gestures']['center'])")" = "back" ] \
-  && ok "right center is still Back" \
-  || bad "right center is no longer Back"
+[ "$(q "print('center' in h['right']['gestures'])")" = "False" ] \
+  && ok "right center is unmapped — Back needed Accessibility and is gone" \
+  || bad "right center is mapped again — a global action needs an Accessibility service"
 
 echo "== T3: the owner's own correction, turned into a guard =="
 # "Drive (is cloud-drive, not cloud-gallery)" — his second message wins.

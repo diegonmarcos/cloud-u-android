@@ -50,7 +50,7 @@ PREFS="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/On
 CONFIG="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/OneHandConfig.kt"
 GESTURE="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/GestureAction.kt"
 CONTROLLER="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/OneHandController.kt"
-SERVICE="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/OneHandAccessibilityService.kt"
+SERVICE="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/OneHandOverlayService.kt"
 HOMESWIPE="$APP/app/src/main/java/com/diegonmarcos/superapp/settings/HomeSwipePrefs.kt"
 FLOATPREFS="$APP/app/src/main/java/com/diegonmarcos/superapp/floatingnav/FloatingNavPrefs.kt"
 STRINGS="$APP/app/src/main/res/values/strings.xml"
@@ -365,9 +365,10 @@ grep -qF 'removeAllViews()' <<<"$FILLBODY" \
   && ok "and clears the old pickers first, so a Spinner cannot keep its old selection" \
   || bad "fillHandleEditors does not clear the old views — the columns would be drawn twice"
 REFRESHBODY="$(body "$CONTROLLER" refresh)"
-grep -qF 'showHandles()' <<<"$REFRESHBODY" \
-  && ok "refresh() reaches the service's showHandles()" \
-  || bad "OneHandController.refresh no longer calls showHandles"
+grep -qF 'startIfEnabled(ctx)' <<<"$REFRESHBODY" \
+  && grep -qF 'showHandles()' <<<"$(body "$SERVICE" onStartCommand)" \
+  && ok "refresh() restarts the service, whose onStartCommand reaches showHandles()" \
+  || bad "OneHandController.refresh no longer reaches the service's showHandles()"
 SHOWBODY="$(body "$SERVICE" showHandles)"
 grep -qF 'OneHandConfig.effective(this)' <<<"$SHOWBODY" \
   && ok "and showHandles() re-reads the effective config, so the overlay picks the reset up live" \

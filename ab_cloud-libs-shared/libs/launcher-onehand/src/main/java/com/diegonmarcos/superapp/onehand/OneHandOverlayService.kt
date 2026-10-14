@@ -1,7 +1,14 @@
 package com.diegonmarcos.superapp.onehand
 
-import android.accessibilityservice.AccessibilityService
-import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.IBinder
+import android.provider.Settings
 import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
@@ -13,96 +20,88 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.HapticFeedbackConstants
-import android.view.accessibility.AccessibilityEvent
 import kotlin.math.hypot
 
 /**
- * Hosts the edge handles (WindowManager overlay), the live gesture-preview arrow,
- * AND the global-action dispatch. Being system-bound it needs no foreground
- * service / notification. One Hand Operation+ mechanic: swipe INWARD, the tilt
- * of the drag (diagonal) picks the direction; an arrow follows the finger and
- * shows the action about to fire; release triggers it. Hold = press + dwell.
+ * Hosts the edge handles (WindowManager overlay) and the live gesture-preview
+ * arrow. A plain foreground service: it needs ONLY "Display over other apps"
+ * (TYPE_APPLICATION_OVERLAY) — no Accessibility grant. One Hand Operation+
+ * mechanic: swipe INWARD, the tilt of the drag (diagonal) picks the direction;
+ * an arrow follows the finger and shows the action about to fire; release
+ * triggers it. Every action is an app / in-host launch; nothing here performs
+ * a system global action.
+ *
+ * #775 — OFF STAYS OFF: the service refuses to draw (and stops itself) unless
+ * [OneHandPrefs.isEnabled] and the overlay permission both hold, checked at
+ * every start and again inside [showHandles].
  */
-class OneHandAccessibilityService : AccessibilityService() {
+class OneHandOverlayService : Service() {
 
     private var windowManager: WindowManager? = null
     private val views = mutableListOf<View>()
     private var preview: GesturePreviewView? = null
     private var cfg: OneHandConfig? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private var testOff: Runnable? = null
 
     private var downX = 0f
     private var downY = 0f
     private var activated = false
 
-    override fun onServiceConnected() {
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
         instance = this
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        Log.i(TAG, "onServiceConnected: enabled=${OneHandPrefs.isEnabled(this)} sdk=${android.os.Build.VERSION.SDK_INT}")
-        // NEVER request global motion events (FLAG_SEND_MOTION_EVENTS): on some
-        // devices that INTERCEPTS the whole touchscreen and freezes all input.
-        // We only ever add a small touchable handle window, and only when the
-        // user has explicitly enabled the feature (default OFF → not auto-active).
-        if (OneHandPrefs.isEnabled(this)) showHandles()
+        startForegroundCompat()
     }
 
-    // ── Two-finger radial menu (observe-only via onMotionEvent) ──────────
-    private val handler = Handler(Looper.getMainLooper())
-    private var radialView: RadialMenuView? = null
-    private var radialOpen = false
-    private var radialPending: Runnable? = null
-    private var rcx = 0f; private var rcy = 0f
-    private var radialActive = -1
-
-    // Observe-only DISABLED: FLAG_SEND_MOTION_EVENTS froze all input on real devices.
-
-    private fun cancelRadialPending() {
-        radialPending?.let { handler.removeCallbacks(it) }; radialPending = null
-    }
-
-    private fun openRadial(c: OneHandConfig) {
-        radialPending = null
-        val wm = windowManager ?: return
-        val its = c.radial.items.map {
-            RadialMenuView.Item(labelForAction(it), (it as? GestureAction.OpenApp)?.let { a -> appIcon(a.pkg) })
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_TEST) {
+            val ms = intent.getLongExtra(EXTRA_MS, 30_000L)
+            OneHandPrefs.setEnabled(this, true)
+            testOff?.let { handler.removeCallbacks(it) }
+            testOff = Runnable {
+                OneHandPrefs.setEnabled(this, false)
+                Log.i(TAG, "testActivate: auto-disabled after ${ms}ms")
+                stopSelf()
+            }.also { handler.postDelayed(it, ms) }
+            Log.i(TAG, "testActivate: on for ${ms}ms")
         }
-        val v = RadialMenuView(this)
-        val lp = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT,
-        )
-        lp.alpha = OVERLAY_ALPHA
-        runCatching { wm.addView(v, lp) }
-        radialView = v; radialOpen = true; radialActive = -1
-        v.open(rcx, rcy, dp(c.radial.radiusDp).toFloat(), its)
-        Log.i(TAG, "radial OPEN at ${rcx.toInt()},${rcy.toInt()} items=${its.size}")
+        // #775: off stays off, and no overlay permission means nothing to host.
+        if (!OneHandPrefs.isEnabled(this) || !Settings.canDrawOverlays(this)) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        showHandles()
+        return START_STICKY
     }
 
-    private fun fireRadial(c: OneHandConfig) {
-        val idx = radialActive
-        Log.i(TAG, "radial FIRE idx=$idx")
-        c.radial.items.getOrNull(idx)?.let { it.perform(this, labelForAction(it)) }
-        closeRadial()
-    }
-
-    private fun closeRadial() {
-        radialView?.let { it.close(); runCatching { windowManager?.removeView(it) } }
-        radialView = null; radialOpen = false; radialActive = -1
-        cancelRadialPending()
+    private fun startForegroundCompat() {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            nm.createNotificationChannel(
+                NotificationChannel(CHANNEL, "Edge menus", NotificationManager.IMPORTANCE_MIN))
+        }
+        val n = (if (android.os.Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL)
+                 else @Suppress("DEPRECATION") Notification.Builder(this))
+            .setSmallIcon(applicationInfo.icon)
+            .setContentTitle("Edge menus on")
+            .setOngoing(true)
+            .build()
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else startForeground(NOTIF_ID, n)
     }
 
     override fun onDestroy() {
+        testOff?.let { handler.removeCallbacks(it) }
         hideHandles(); if (instance === this) instance = null; super.onDestroy()
     }
 
     /** Edge-handle windows currently added (read by the app's /api/overlays). */
     val handleCount: Int get() = views.size
-
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) { /* no-op */ }
-    override fun onInterrupt() { /* no-op */ }
 
     fun showHandles() {
         hideHandles()
@@ -117,19 +116,6 @@ class OneHandAccessibilityService : AccessibilityService() {
         // FLAG_NOT_TOUCHABLE) covering the whole screen makes One UI's untrusted-
         // touch policy drop taps to the app below (this is what killed Bitwarden).
         // The preview veil is created lazily in activate() and torn down on end.
-    }
-
-    /** Enable the handles for [ms] then auto-disable — safe way to test without
-     *  leaving it on. Persists disabled so it never auto-activates after a crash. */
-    fun testActivate(ms: Long) {
-        OneHandPrefs.setEnabled(this, true)
-        showHandles()
-        handler.postDelayed({
-            OneHandPrefs.setEnabled(this, false)
-            hideHandles()
-            Log.i(TAG, "testActivate: auto-disabled after ${ms}ms")
-        }, ms)
-        Log.i(TAG, "testActivate: on for ${ms}ms")
     }
 
     fun hideHandles() {
@@ -252,42 +238,12 @@ class OneHandAccessibilityService : AccessibilityService() {
                     val key = SwipeClassifier.classify(h.edge, e.rawX - downX, e.rawY - downY, dp(c.swipeThresholdDp))
                     key?.let { slot -> h.gestures[slot]?.let { it.perform(this, labelForAction(it)) } }
                     endPreview()
-                } else if (hypot(e.rawX - downX, e.rawY - downY) < dp(12)) {
-                    // Plain tap on the handle: Android never re-dispatches a consumed
-                    // touch to the window below, so we replay it — window goes
-                    // untouchable for a beat, dispatchGesture injects the tap, restore.
-                    replayTap(view, downX, downY)
                 }
                 activated = false
             }
             MotionEvent.ACTION_CANCEL -> { endPreview(); activated = false }
         }
         return true
-    }
-
-    /** Pass a consumed tap through to the app below: make the handle window
-     *  untouchable, inject the tap via accessibility, then restore touchability. */
-    private fun replayTap(view: View, x: Float, y: Float) {
-        val wm = windowManager ?: return
-        val lp = view.layoutParams as WindowManager.LayoutParams
-        lp.flags = lp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-        runCatching { wm.updateViewLayout(view, lp) }
-        val restore = {
-            handler.post {
-                lp.flags = lp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
-                runCatching { wm.updateViewLayout(view, lp) }
-            }
-        }
-        val path = android.graphics.Path().apply { moveTo(x, y) }
-        val gesture = android.accessibilityservice.GestureDescription.Builder()
-            .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 40))
-            .build()
-        val ok = dispatchGesture(gesture, object : GestureResultCallback() {
-            override fun onCompleted(g: android.accessibilityservice.GestureDescription?) { restore() }
-            override fun onCancelled(g: android.accessibilityservice.GestureDescription?) { restore() }
-        }, handler)
-        if (!ok) restore()
-        Log.i(TAG, "replayTap at ${x.toInt()},${y.toInt()} dispatched=$ok")
     }
 
     private fun activate(h: OneHandConfig.Handle) {
@@ -338,9 +294,6 @@ class OneHandAccessibilityService : AccessibilityService() {
         cfg?.appActions?.firstOrNull { it.key == "action:" + action.target.removePrefix("action:") }
 
     private fun labelForAction(action: GestureAction): String = when (action) {
-        is GestureAction.Global ->
-            action.action.name.lowercase().split('_')
-                .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
         is GestureAction.OpenApp ->
             cfg?.apps?.firstOrNull { it.pkg == action.pkg }?.label ?: action.pkg
         is GestureAction.AppTarget ->
@@ -401,7 +354,7 @@ class OneHandAccessibilityService : AccessibilityService() {
     private fun handleBackground(transparency: Int): android.graphics.drawable.GradientDrawable =
         android.graphics.drawable.GradientDrawable().apply {
             cornerRadius = dp(10).toFloat()
-            if (OneHandPrefs.debugVisible(this@OneHandAccessibilityService)) {
+            if (OneHandPrefs.debugVisible(this@OneHandOverlayService)) {
                 // Debug: bright bar + outline so placement/size is obvious on-device.
                 setColor(Color.argb(120, 255, 0, 0))
                 setStroke(dp(2), Color.argb(230, 255, 60, 60))
@@ -419,8 +372,12 @@ class OneHandAccessibilityService : AccessibilityService() {
         // Keep our overlay windows under the 0.8 opacity threshold of Android 12+
         // "block untrusted touches", so taps still reach the app underneath.
         private const val OVERLAY_ALPHA = 0.6f
-        @Volatile var instance: OneHandAccessibilityService? = null
+        const val ACTION_TEST = "com.diegonmarcos.superapp.onehand.TEST"
+        const val EXTRA_MS = "ms"
+        private const val CHANNEL = "onehand_overlay"
+        private const val NOTIF_ID = 7750
+        @Volatile var instance: OneHandOverlayService? = null
             private set
-        val isConnected: Boolean get() = instance != null
+        val isRunning: Boolean get() = instance != null
     }
 }

@@ -109,8 +109,8 @@ class CentaurusStar(
      * app's task from Overview, so "close all" is killBackgroundProcesses over
      * the apps on this ring — their background work dies, the task cards stay.
      * ponytail: that IS the ceiling of a non-system launcher; clearing the
-     * cards needs an accessibility script per OEM Overview UI, so the card
-     * view is offered instead and the user swipes.
+     * cards needs an accessibility script per OEM Overview UI, which the edge
+     * menus no longer ask for, so the user swipes the cards away themselves.
      *
      * killBackgroundProcesses only touches CACHED processes — an app you just
      * switched away from is often still in a warm/visible-adjacent state, not
@@ -123,14 +123,6 @@ class CentaurusStar(
     private fun recentsAction(what: String) {
         val am = activity.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
         when (what) {
-            // GLOBAL_ACTION_RECENTS needs the accessibility service; without
-            // it granted there is nothing to fall back to, so say so.
-            "cards" -> {
-                val fired = OneHandAccessibilityService.instance
-                    ?.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS)
-                    ?: false
-                if (!fired) toast("Enable Accessibility (Configs › Permissions) to open Overview")
-            }
             "close_all" -> {
                 val pkgs = RecentAppsSource.last9(activity).map { it.first }
                 pkgs.forEach { pkg -> runCatching { am?.killBackgroundProcesses(pkg) } }

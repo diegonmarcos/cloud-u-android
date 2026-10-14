@@ -21,7 +21,6 @@ import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.onehand.ArcMenu
 import com.diegonmarcos.superapp.onehand.CircularMenu
 import com.diegonmarcos.superapp.onehand.GestureAction
-import com.diegonmarcos.superapp.onehand.OneHandAction
 import com.diegonmarcos.superapp.onehand.OneHandConfig
 import com.diegonmarcos.superapp.onehand.OneHandController
 import com.diegonmarcos.superapp.onehand.OneHandPrefs
@@ -211,7 +210,7 @@ class OneHandFragment : Fragment() {
                 if (on) {
                     if (OneHandController.ready(ctx)) OneHandController.enable(ctx)
                     else { isChecked = false; Toast.makeText(ctx,
-                        "Grant 'Display over apps' + Accessibility in Configs › Permissions",
+                        "Grant 'Display over apps' in Configs › Permissions",
                         Toast.LENGTH_LONG).show() }
                 } else OneHandController.disable(ctx)
             }
@@ -314,7 +313,7 @@ class OneHandFragment : Fragment() {
                 val ok = OneHandController.testActivate(ctx, 30_000L)
                 Toast.makeText(ctx,
                     if (ok) "One-Hand ON for 30s, then auto-off"
-                    else "Grant Display-over-apps + Accessibility first (Configs › Permissions)",
+                    else "Grant Display-over-apps first (Configs › Permissions)",
                     Toast.LENGTH_LONG).show()
             }
         })
@@ -370,7 +369,7 @@ class OneHandFragment : Fragment() {
                 val removed = OneHandPrefs.clearEdgeMenuOverrides(ctx)
                 // Both surfaces that draw these entries, because they are two
                 // different windows: the pickers on this page, and the overlay
-                // the accessibility service owns on top of every other app.
+                // the edge-menu service owns on top of every other app.
                 fillHandleEditors(ctx)
                 OneHandController.refresh(ctx)
                 Toast.makeText(ctx, getString(R.string.onehand_edge_reset_done, removed),
@@ -382,8 +381,8 @@ class OneHandFragment : Fragment() {
     // ───────────────────────── 3. Floating menu ─────────────────────────
 
     /**
-     * A separate service from the edge handles: different permission (overlay
-     * only, no accessibility) and a different lifetime. It is a START_STICKY
+     * A separate service from the edge handles: different lifetime (both need only the
+     * overlay permission). It is a START_STICKY
      * foreground service, so once on it OUTLIVES the SuperApp — closing the app
      * does not take the button with it, which is the whole point of it and the
      * reason it needs an off switch that sticks just as hard.
@@ -510,10 +509,6 @@ class OneHandFragment : Fragment() {
                     ?.let { r -> ctx.getDrawable(r) },
             ))
         }
-        // Config / global actions.
-        OneHandAction.entries
-            .filter { it != OneHandAction.NONE && it.supported }
-            .forEach { add(Option(prettify(it.name), GestureAction.Global(it))) }
         val pm = ctx.packageManager
         val seen = HashSet<String>()
         // Curated favourites first (from build.json), with their nice labels.
@@ -660,16 +655,12 @@ class OneHandFragment : Fragment() {
         })
     }
 
-    private fun prettify(name: String) =
-        name.lowercase().split('_').joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
-
     override fun onResume() {
         super.onResume()
         val ctx = requireContext()
         val overlay = if (OneHandController.canDrawOverlay(ctx)) "✓" else "✗"
-        val a11y = if (OneHandController.accessibilityEnabled()) "✓" else "✗"
         status.text = "Requires (grant in Configs › Permissions):\n" +
-            "Display over apps: $overlay\nAccessibility service: $a11y"
+            "Display over apps: $overlay"
         toggle.isChecked = OneHandController.isOn(ctx)
         // Only assign when it differs: Switch fires its listener on a real
         // change, and re-applying the same value would pointlessly restart the

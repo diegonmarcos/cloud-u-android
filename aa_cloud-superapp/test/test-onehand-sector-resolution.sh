@@ -54,7 +54,7 @@ STRINGS="$APP/app/src/main/res/values/strings.xml"
 STRINGS_ES="$APP/app/src/main/res/values-es/strings.xml"
 OH_GRADLE="$LIBS/launcher-onehand/build.gradle"
 OH_CONFIG="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/OneHandConfig.kt"
-OH_SVC="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/OneHandAccessibilityService.kt"
+OH_SVC="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/OneHandOverlayService.kt"
 DRAWABLE="$APP/app/src/main/res/drawable"
 
 # FAIL CLOSED. Four testers in this repository once passed only because the tool

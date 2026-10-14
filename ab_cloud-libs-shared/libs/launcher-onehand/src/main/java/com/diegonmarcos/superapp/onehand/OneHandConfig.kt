@@ -12,7 +12,7 @@ import org.json.JSONObject
  * Each side handle has 7 sectors keyed `top_outer` | `top` | `top_middle` |
  * `center` | `down_middle` | `down` | `down_outer` (center = straight inward,
  * top/down = tilt up/down). Bottom edge → `left`|`center`|`right`.
- * Gesture values are [GestureAction] strings: an action id ("back") or "app:<pkg>".
+ * Gesture values are [GestureAction] strings: "app:<pkg>" or "action:<target>".
  */
 data class OneHandConfig(
     val handles: List<Handle>,

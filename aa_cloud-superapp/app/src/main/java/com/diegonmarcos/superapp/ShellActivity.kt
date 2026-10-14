@@ -2334,6 +2334,7 @@ open class ShellActivity : AppCompatActivity(),
         // circle never shows here (the in-app trigger is the Sirius Star).
         com.diegonmarcos.superapp.floatingnav.FloatingNavService.hostEnter()
         com.diegonmarcos.superapp.floatingnav.FloatingNavService.startIfPermitted(this)
+        com.diegonmarcos.superapp.onehand.OneHandController.startIfEnabled(this)
         com.diegonmarcos.superapp.devtools.DevControlBridge.register(this)
         com.diegonmarcos.superapp.updater.UpdateProgress.setListener { state ->
             runOnUiThread { handleUpdateState(state) }

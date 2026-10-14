@@ -1,16 +1,16 @@
 package com.diegonmarcos.superapp.onehand
 
-import android.accessibilityservice.AccessibilityService
 import android.content.Context
 
 /**
- * What a swipe does: either a global accessibility action, or launch an app by
- * package. Stored/serialized as a string — a bare action id ("back") or
- * "app:<package>" ("app:com.brave.browser"). This is the single value type for
+ * What a swipe does: launch an app by package, or open a target in the host
+ * app. Stored/serialized as a string — "app:<package>"
+ * ("app:com.brave.browser") or "action:<target>". There are no system global
+ * actions (Back/Home/Recents/...): those need an Accessibility service, and the
+ * edge menus run on "Display over other apps" alone. This is the single value type for
  * both build.json defaults and per-swipe user overrides ([OneHandPrefs]).
  */
 sealed class GestureAction {
-    data class Global(val action: OneHandAction) : GestureAction()
     data class OpenApp(val pkg: String) : GestureAction()
 
     /**
@@ -28,7 +28,6 @@ sealed class GestureAction {
 
     /** Round-trips through [OneHandPrefs] and matches spinner selections. */
     fun serialize(): String = when (this) {
-        is Global -> action.name
         is OpenApp -> "app:$pkg"
         is AppTarget -> "action:$target"
     }
@@ -38,11 +37,10 @@ sealed class GestureAction {
      * is used for one thing only: SAYING which app is missing when the launch
      * cannot happen. The package id is a correct answer and an unreadable one.
      */
-    fun perform(svc: AccessibilityService, label: String? = null) {
+    fun perform(ctx: Context, label: String? = null) {
         when (this) {
-            is Global -> if (action.supported) svc.performGlobalAction(action.globalAction)
-            is OpenApp -> launch(svc, pkg, label)
-            is AppTarget -> openInHost(svc, target)
+            is OpenApp -> launch(ctx, pkg, label)
+            is AppTarget -> openInHost(ctx, target)
         }
     }
 
@@ -50,10 +48,10 @@ sealed class GestureAction {
         fun parse(s: String?): GestureAction? {
             if (s.isNullOrBlank()) return null
             if (s.startsWith("app:")) return OpenApp(s.removePrefix("app:"))
-            // "action:" before the bare-id lookup: no OneHandAction is spelled
-            // with a colon, so the prefixed form can never be a global action.
             if (s.startsWith("action:")) return AppTarget(s.removePrefix("action:"))
-            return OneHandAction.from(s)?.let { Global(it) }
+            // A bare id ("back", "home", ...) was a global accessibility action
+            // and no longer exists; a stored one parses to null = unmapped.
+            return null
         }
 
         /** Wake the host app on the given target. [Context.getPackageName] is

@@ -52,7 +52,7 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 BJ="$APP/build.json"
 FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/OneHandFragment.kt"
 OH_GRADLE="$LIBS/launcher-onehand/build.gradle"
-OH_SVC="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/OneHandAccessibilityService.kt"
+OH_SVC="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/OneHandOverlayService.kt"
 OH_ACT="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/GestureAction.kt"
 DRAWABLE="$APP/app/src/main/res/drawable"
 
@@ -399,7 +399,7 @@ echo "$ACT" | grep -q 'is not installed' \
   && ok "and it tells the user the app is not installed" \
   || bad "nothing in GestureAction says an app is not installed — the failure is still invisible"
 
-echo "$ACT" | grep -q 'fun perform(svc: AccessibilityService, label: String? = null)' \
+echo "$ACT" | grep -q 'fun perform(ctx: Context, label: String? = null)' \
   && ok "perform() carries the sector's own label, so the message can name Drive rather than a package id" \
   || bad "perform() takes no label — a not-installed message could only print the raw package id"
 

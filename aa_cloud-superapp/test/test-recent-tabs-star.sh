@@ -107,9 +107,9 @@ echo "== T3: Recent Tabs is this app's PAGES, never the phone's apps =="
 grep -qF 'filterNot { it is AppTabPrefs.Entry.ExternalAppEntry }' "$RECENT" \
   && ok "external Android apps are dropped — distinct from Centauri and Active Apps" \
   || bad "external apps can reach the Recent Tabs arc — three lists that look alike"
-grep -qF 'recents:cards' "$APP/build.json" \
-  && ok "Active Apps still belongs to Centauri's inner ring, untouched" \
-  || bad "the Active Apps action vanished from onehand.recents_menu"
+! grep -qF 'recents:cards' "$APP/build.json" \
+  && ok "Active Apps is gone from Centauri's inner ring — it needed Accessibility" \
+  || bad "recents:cards is back in onehand.recents_menu — it needs an Accessibility service"
 grep -qF 'RecentAppsSource.last9' "$CENTAURI" \
   && ok "Centauri still sources Android apps, not the page history" \
   || bad "Centauri's content source changed — the two stars may now show the same list"
