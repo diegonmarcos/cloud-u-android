@@ -79,6 +79,26 @@ object FleetIpcWire {
         }
     }
 
+    /** Exactly [bytes] UTF-8 bytes off [reader] (which already holds what followed the headers),
+     *  or null when there is no body. Counted in bytes, not chars: Content-Length is bytes. The
+     *  gateway's (SuperApp DevControlServer) request-body reader. */
+    fun readBody(reader: java.io.Reader, bytes: Int): String? {
+        if (bytes <= 0) return null
+        val sb = StringBuilder()
+        var n = 0
+        while (n < bytes) {
+            val c = reader.read()
+            if (c < 0) break
+            sb.append(c.toChar())
+            n += when {
+                c < 0x80 -> 1
+                c < 0x800 || Character.isSurrogate(c.toChar()) -> 2
+                else -> 3
+            }
+        }
+        return sb.toString()
+    }
+
     /** `path?k=v` for the HTTP rung, from an op and its query. */
     fun path(op: String, query: Map<String, String>): String =
         "/api/" + op.trim('/') + if (query.isEmpty()) "" else "?" + query.entries.joinToString("&") {

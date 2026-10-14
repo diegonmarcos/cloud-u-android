@@ -190,7 +190,7 @@ object DnsOverview {
     }.getOrDefault(emptyList())
 
     private fun members(ctx: Context): List<Member> {
-        val own = AppDebugServer.boundPort()
+        val own = StoreMesh.IPC_PORT
         val pm = ctx.packageManager
         fun label(pkg: String) = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
         // #ipc no port to find: a member is asked by package; StoreMesh.IPC_PORT when it

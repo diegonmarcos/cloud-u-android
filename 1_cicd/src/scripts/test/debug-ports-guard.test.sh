@@ -22,7 +22,10 @@ CLOSURE=1_cicd/src/scripts/cloud_android_lib_closure.py
 GRADLE=ab_cloud-libs-shared/libs/devtools/build.gradle
 SERVER=ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt
 PROBE=ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreMesh.kt
-for f in "$GUARD" "$ROOT/$FLEET" "$ROOT/$PORTS" "$ROOT/$GRADLE" "$ROOT/$SERVER" "$ROOT/$PROBE"; do
+FLEETIPC=ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/FleetIpc.kt
+DEVCONTROL=aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/devcontrol/DevControlServer.kt
+GATEWAY=aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/devcontrol/MeshGateway.kt
+for f in "$GUARD" "$ROOT/$FLEET" "$ROOT/$PORTS" "$ROOT/$GRADLE" "$ROOT/$SERVER" "$ROOT/$PROBE" "$ROOT/$FLEETIPC" "$ROOT/$DEVCONTROL" "$ROOT/$GATEWAY"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
 
@@ -33,7 +36,7 @@ WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 stage() {
     rm -rf "$WORK/t"; mkdir -p "$WORK/t"
-    (cd "$ROOT" && cp --parents -t "$WORK/t" $(printf '%s\n' 1_cicd/src/scripts/cloud-android-debug-ports-guard.py "$FLEET" "$PORTS" "$GRADLE" "$SERVER" "$PROBE" "$GEN" "$CLOSURE" \
+    (cd "$ROOT" && cp --parents -t "$WORK/t" $(printf '%s\n' 1_cicd/src/scripts/cloud-android-debug-ports-guard.py "$FLEET" "$PORTS" "$GRADLE" "$SERVER" "$PROBE" "$FLEETIPC" "$DEVCONTROL" "$GATEWAY" "$GEN" "$CLOSURE" \
         $(ls -d a[ac]_*/build.json ab_cloud-libs-shared/*/build.json a_solutions/*/build.json \
                 a[ac]_*/debug-api.json ab_cloud-libs-shared/*/debug-api.json 2>/dev/null) \
         $(ls ab_cloud-libs-shared/libs/*/build.gradle) \
@@ -118,15 +121,21 @@ mutate "a root's slice is stale (its port moved in the table)" "$PORTS" \
 mutate "a root's slice was hand-edited" "ac_cloud-news/debug-api.json" \
     "d=json.loads(s); d['ports']['com.diegonmarcos.cloudnews']=38299; $W" \
     "P5 ac_cloud-news/debug-api.json is not what the generator produces"
-mutate "the fallback scan goes back over the whole range" "$SERVER" \
-    "s=s.replace('fallbackPorts(FALLBACK_FIRST, FALLBACK_LAST, PORTS.values)', 'fallbackPorts(PORT_FIRST, PORT_LAST, PORTS.values)', 1)" \
-    "P4 AppDebugServer.bindOwn no longer binds portOf(pkg) first"
-mutate "the server goes back to first-free" "$SERVER" \
-    "s=s.replace('val sock = bindOwn(app.packageName)', 'val sock = bindFirstFree()', 1)" \
-    "P4 AppDebugServer.start does not bind through bindOwn"
-mutate "bindOwn stops trying the assigned port" "$SERVER" \
-    "s=s.replace('val own = portOf(pkg)', 'val own: Int? = null', 1)" \
-    "P4 AppDebugServer.bindOwn no longer binds portOf(pkg) first"
+mutate "#ipc a member binds a port of its own again" "$SERVER" \
+    "s=s.replace('    fun stop() {', '    private fun listen() = java.net.ServerSocket(38154)\n\n    fun stop() {', 1)" \
+    "P4 AppDebugServer binds a port again"
+mutate "#ipc the gateway is undeclared" "$PORTS" \
+    "d=json.loads(s); d.pop('gateway'); $W" \
+    "the one mesh door is undeclared"
+mutate "#ipc the gateway port moves into the per-app range" "$PORTS" \
+    "d=json.loads(s); d['gateway']['port']=38200; $W" \
+    "P4 the gateway port 38200 is inside the per-app range"
+mutate "#ipc FleetIpc and the table disagree on the gateway" "$FLEETIPC" \
+    "s=s.replace('GATEWAY_PORT = 38080', 'GATEWAY_PORT = 38081', 1)" \
+    "P4 FleetIpc.GATEWAY_PKG/GATEWAY_PORT differ"
+mutate "#ipc DevControlServer stops forwarding /app/" "$DEVCONTROL" \
+    "s=s.replace('path.startsWith(MeshGateway.PREFIX)', 'path.startsWith(\"/nowhere/\")', 1)" \
+    "P4 the SuperApp's DevControlServer no longer forwards"
 mutate "devtools stops baking the root's slice" "$GRADLE" \
     "s=s.replace(\"'debug-api.json'\", \"'ports.json'\", 1)" \
     "P4 libs/devtools/build.gradle no longer bakes the root's debug-api.json"

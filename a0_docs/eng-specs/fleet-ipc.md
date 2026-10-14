@@ -1,6 +1,6 @@
 # Fleet IPC: app to app on one phone is Android IPC
 
-Status: phases 1 to 3 shipped (layer, call sites, guard, IPC page). Phase 4, the SuperApp gateway, is described below.
+Status: shipped — the layer, the migrated call sites, the guard, the IPC page and (phase 4) the SuperApp mesh gateway.
 
 ## The rule
 
@@ -79,7 +79,7 @@ The registry lists all of them.
   - SuperApp `IpcMeshPageTest`: every declared endpoint is baked and drawn, and the page is reachable from Configs.
   - `test-ipc-mesh-page.sh` (SuperApp) and `test-store-ipc-page.sh` (Store).
 
-## Phase 4: one mesh gateway per phone
+## Phase 4: one mesh gateway per phone (shipped)
 
 - **One listener.** The SuperApp's DevControlServer is the only fleet listener: one port (38080), one fleet token, bound to loopback (the mesh reaches it over ssh and curl, as today).
 - **Routing.** `/app/<id|pkg>/api/<op>` is forwarded to the target app over `FleetIpc`, which wakes the app and is signature-checked. `/api/fleet/apps` lists what is behind the door.

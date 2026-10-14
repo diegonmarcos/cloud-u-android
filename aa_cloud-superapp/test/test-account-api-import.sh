@@ -30,6 +30,8 @@ MD="$LIB/account/src/main/java/com/diegonmarcos/superapp/profile/AccountModel.kt
 PF="$LIB/account/src/main/java/com/diegonmarcos/superapp/profile/ConnectWays.kt"
 HOST="$LIB/account/src/main/java/com/diegonmarcos/superapp/profile/AccountHost.kt"
 SRV="$LIB/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
+DOOR="$LIB/devtools/src/main/java/com/diegonmarcos/superapp/devtools/FleetIpc.kt"
+GW="$ROOT/app/src/main/java/com/diegonmarcos/superapp/devcontrol/MeshGateway.kt"
 
 echo "T1 the route exists, documented, body-fed, with its own ceiling"
 has "$DBG" 'Op("import", "POST body = the decrypted vault export' "import is a documented Op of /api/account"
@@ -37,7 +39,7 @@ has "$DBG" 'maxBody = IMPORT_MAX_BODY' "...declaring its own body ceiling"
 has "$DBG" 'const val IMPORT_MAX_BODY = 4 * 1024 * 1024' "...4 MiB (the bundle is ~2 MB)"
 has "$DBG" '"import" -> importBundle(ctx, q["_body"].orEmpty(), q, m)' "the op reads the body (_body), never a query value"
 has "$SRV" 'val maxBody: Int = MAX_BODY_BYTES' "Op carries maxBody, default = the server ceiling"
-has "$SRV" 'internal const val MAX_BODY_BYTES = 256 * 1024' "...which stays 256 KiB for every other op"
+has "$SRV" 'const val MAX_BODY_BYTES = 256 * 1024' "...which stays 256 KiB for every other op"
 has "$SRV" 'if (o.maxBody != MAX_BODY_BYTES) append(""""max_body":${o.maxBody},""")' "/api/docs shows a raised ceiling"
 
 echo "T2 the same gates as the Import File line"
@@ -65,10 +67,12 @@ codehasnt "$DBG" 'Log.' "AccountDebugApi logs nothing"
 n=$(code "$DBG" | grep -c '"_body"'); [ "$n" = "1" ] && ok "_body is read in exactly one place (the dispatch)" || bad "_body read sites: $n"
 codehasnt "$DBG" 'put("text", text' "the request text is never put into an answer"
 
-echo "T5 the raised ceiling is for a fleet caller only"
-has "$SRV" 'val limit = if (fleet) bodyLimit(op) else MAX_BODY_BYTES' "an unauthenticated request keeps the default ceiling"
-has "$SRV" 'internal fun bodyLimit(op: String): Int =' "bodyLimit reads the op's declared maxBody"
-has "$SRV" 'if (op !in OPEN_OPS && !fleet) {' "the token check is the same decision"
+echo "T5 the raised ceiling is for a fleet caller only (#ipc: the IPC door and the SuperApp gateway)"
+has "$DOOR" 'val limit = AppDebugServer.bodyLimit(o)' "the IPC door holds each op to its own ceiling"
+has "$DOOR" 'if ((q[FleetIpcWire.K_BODY_IN]?.length ?: 0) > limit) Reply(413' "...and refuses a body past it (413)"
+has "$SRV" 'fun bodyLimit(op: String): Int =' "bodyLimit reads the op's declared maxBody"
+has "$DOOR" 'val r = FleetIpcWire.gate(granted) ?: runCatching {' "only a fleet caller (signature re-check) reaches the body at all"
+has "$GW" 'if (!authed) return FleetIpcWire.Reply(401' "the gateway forwards nothing without the fleet token"
 
 # The terminals' TerminalDebugApi.java constructs Op(op, params, description): a Kotlin default
 # parameter (maxBody) needs @JvmOverloads or the terminal does not compile (CI 2026-10-08).

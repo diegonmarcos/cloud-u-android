@@ -92,8 +92,14 @@ ok("HostShell.debugServerAllowed = { com.diegonmarcos.superapp.profile.DebugApiS
 ok('AppDebugServer.route("adb", listOf(' in api and 'Op("exec", "cmd=' in api and 'Op("status"' in api, "Account serves /api/adb/exec and /api/adb/status (in /api/docs)", "Account has no adb route group")
 ad = api.split("private fun adb(")[1] if "private fun adb(" in api else ""
 ok('"exec" ->' in ad and "shell.active(ctx)?.exec(ctx, cmd)" in ad, "adb/exec runs over ShellChannels.active", "adb/exec does not run over the active channel")
-srv = rd("ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt")
-ok('OPEN_OPS = setOf("system/ping")' in srv and "if (op !in OPEN_OPS && !fleet)" in srv, "route groups (adb/exec included) sit behind the fleet token", "adb/exec reachable without the fleet token")
+# #ipc no app listens any more: a route group is reached through the app's IPC door (signature re-check)
+# or the SuperApp gateway (fleet token) -- a0_docs/eng-specs/fleet-ipc.md
+door = rd("ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/FleetIpc.kt")
+gw = rd("aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/devcontrol/MeshGateway.kt")
+ok("FleetIpcWire.gate(granted) ?:" in door and "checkCallingPermission(FleetToken.PERMISSION)" in door
+   and 'if (!authed) return FleetIpcWire.Reply(401' in gw,
+   "route groups (adb/exec included) sit behind the IPC door's signature check and the gateway's fleet token",
+   "adb/exec reachable without the signature check or the fleet token")
 # the device id: never a fabricated 404, derived from the model, set only to a declared id
 pr = rb.split("private fun runProfile")[1].split("private fun workingProfile")[0]
 ok('if (id.isBlank()) return State.Failed("this phone has no device id' in pr and pr.index("id.isBlank()") < pr.index("v.load(id)"),
@@ -145,6 +151,8 @@ ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt
 ac_cloud-store/app/src/main/AndroidManifest.xml
 ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShellService.kt
 ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt
+ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/FleetIpc.kt
+aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/devcontrol/MeshGateway.kt
 ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/DeviceVault.kt
 ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/SetupPlan.kt"
 mutate() {  # mutate <label> <file> <old> <new>
@@ -194,7 +202,8 @@ mutate "service missing from Store manifest" ac_cloud-store/app/src/main/Android
 mutate "service never started at boot" ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/HostShell.kt '            HostShellService.start(context.applicationContext)' '' || M=$((M+1))
 mutate "exec route missing" $P/AccountDebugApi.kt 'Op("exec", "cmd=' 'Op("execX", "cmd=' || M=$((M+1))
 mutate "exec not over the channel" $P/AccountDebugApi.kt 'shell.active(ctx)?.exec(ctx, cmd)' 'null' || M=$((M+1))
-mutate "exec not token-gated" $D/AppDebugServer.kt 'OPEN_OPS = setOf("system/ping")' 'OPEN_OPS = setOf("system/ping", "adb/exec")' || M=$((M+1))
+mutate "exec not gated at the IPC door" $D/FleetIpc.kt 'FleetIpcWire.gate(granted) ?: ' '' || M=$((M+1))
+mutate "exec not token-gated at the gateway" aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/devcontrol/MeshGateway.kt 'if (!authed) return FleetIpcWire.Reply(401' 'if (false) return FleetIpcWire.Reply(401' || M=$((M+1))
 mutate "blank id still reaches the forge" $P/SetupRunbook.kt 'if (id.isBlank()) return State.Failed("this phone has no device id' 'if (false) return State.Failed("this phone has no device id' || M=$((M+1))
 mutate "derivation ignores the model" $P/AccountPages.kt 'if (m != null && m in want) out += id' 'out += id' || M=$((M+1))
 mutate "device?set= accepts an undeclared id without new" $P/AccountDebugApi.kt 'if (set !in known && q["new"] != "1")' 'if (false)' || M=$((M+1))

@@ -142,7 +142,11 @@ object DevControlServer {
     }
 
     private fun handle(ctx: Context, socket: Socket, token: String) {
-        socket.use { s ->
+        // #ipc a gateway request DETACHES the socket to [gatewayPool] (it waits on the target
+        // app, up to 30 s with a cold start); everything else is answered inline, as before.
+        var detached = false
+        try {
+            val s = socket
             val reader = BufferedReader(InputStreamReader(s.getInputStream()))
             val writer = PrintWriter(s.getOutputStream(), false)
 
@@ -170,6 +174,25 @@ object DevControlServer {
                 ?.removePrefix("bearer ")
                 ?.trim().orEmpty()
             val authed = auth == token
+
+            // #ipc THE MESH GATEWAY (MeshGateway): /app/<id|pkg>/api/<op> forwarded to that app over
+            // the fleet IPC layer, and /api/fleet/apps. The one door to every fleet app's routes.
+            if (path.startsWith(MeshGateway.PREFIX) || path.trimEnd('/') == "/api/fleet/apps") {
+                val len = headers["content-length"]?.toIntOrNull() ?: 0
+                if (len > MeshGateway.MAX_BODY) { reply(writer, "413 Payload Too Large", "body over ${MeshGateway.MAX_BODY} bytes\n"); return }
+                val body = com.diegonmarcos.superapp.devtools.FleetIpcWire.readBody(reader, len)
+                detached = true
+                gatewayPool.execute {
+                    try {
+                        val r = MeshGateway.handle(ctx, path, query, body, authed)
+                            ?: com.diegonmarcos.superapp.devtools.FleetIpcWire.Reply(404, "not found\n")
+                        reply(writer, statusOf(r.status), r.body, r.type)
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "gateway: $t")
+                    } finally { runCatching { socket.close() } }
+                }
+                return
+            }
 
             // Normalise both legacy flat paths AND the new /api/{group}/{op}
             // layout to a single canonical op name. The op name is what
@@ -464,7 +487,20 @@ object DevControlServer {
                 }
                 else -> reply(writer, "404 Not Found", "not found — see /api/docs\n")
             }
+        } finally {
+            if (!detached) runCatching { socket.close() }
         }
+    }
+
+    /** #ipc the mesh gateway's workers: forwarded requests wait on IPC, never on the accept loop. */
+    private val gatewayPool = java.util.concurrent.Executors.newFixedThreadPool(6) { r ->
+        Thread(r, "mesh-gateway").apply { isDaemon = true }
+    }
+
+    private fun statusOf(code: Int) = "$code " + when (code) {
+        200 -> "OK"; 400 -> "Bad Request"; 401 -> "Unauthorized"; 403 -> "Forbidden"; 404 -> "Not Found"
+        413 -> "Payload Too Large"; 500 -> "Internal Server Error"; 502 -> "Bad Gateway"
+        503 -> "Service Unavailable"; 504 -> "Gateway Timeout"; else -> "Status"
     }
 
     /** Map both `/ping` (legacy flat) and `/api/system/ping` (new) to
@@ -531,6 +567,7 @@ object DevControlServer {
             Spec("energy/samples",      "GET",  true,  "Raw recent energy-watchdog samples (last 200): per-sample whole-device draw_ma + state vector (screen, brightness, foreground pkg, cpu load, signal, wifi, audio).", ""),
             Spec("energy/reset",        "GET",  true,  "Clear the intra-app ledger + the watchdog sample store to start a fresh measurement window.", ""),
             Spec("energy/shizuku",      "GET",  true,  "EXACT per-app mAh via Shizuku (Tier 2) — runs `dumpsys batterystats --charged` in shell context (uid 2000) through the bound ShizukuUserService and parses the per-uid 'Estimated power use (mAh)' section. Returns available/granted/status + the per-app list, or apps=null while binding / when Shizuku isn't running. Ground truth the Tier-1 correlation calibrates against.", ""),
+            Spec("fleet/apps",          "GET",  true,  "#ipc THE MESH GATEWAY: this server is the phone's one fleet door. Lists every fleet app installed behind it (id, pkg, label, IPC door). Each app's own routes are /app/<id|pkg>/api/<op> on this port (GET, or POST with a body), forwarded to that app over the fleet IPC layer (signature-guarded, waking it); its /app/<pkg>/api/docs is its catalog. Bearer token on every gateway route.", ""),
             Spec("adb/status",          "GET",  true,  "libs:shizuku-adb-debug-tools shell-channel ladder: per-channel ready/status for 'embedded-adb' (PRIMARY — our on-device adb client paired to localhost Wireless Debugging, the self-contained 'we ARE Shizuku' path), 'local-server' (our app_process server), and 'shizuku' (fallback); which is active, whether DUMP is held, and the data-driven bundle ids.", ""),
             Spec("adb/pair",            "GET",  true,  "Embedded adb client, the Shizuku way: starts AdbPairingService, which discovers the pairing port over mDNS (_adb-tls-pairing._tcp — never typed), posts the 'Enter pairing code' notification, pairs in a foreground service, then discovers _adb-tls-connect._tcp, connects and starts the privileged plane. code= optional (6 digits from 'Pair device with pairing code'); omitted, type it into the notification.", "code=<6digits>"),
             Spec("adb/connect",         "GET",  true,  "Embedded adb client: connect to the local adbd after pairing. host=IP from the main Wireless-debugging screen (default 127.0.0.1), port=the CONNECT port (distinct from the pairing port). On success the 'embedded-adb' channel goes ready and diagnostics run with zero third-party deps.", "host=<ip>&port=<connectPort>"),

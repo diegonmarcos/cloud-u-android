@@ -10,10 +10,12 @@
 # make that safe and honest, and MUTATION-PROVES each one: a check that stays
 # green when its property is broken proves nothing.
 #
-#   D1  LOOPBACK ONLY. The shared server binds 127.0.0.1 and nothing else, and
-#       this app opens NO second server socket of its own.
-#   D2  BEARER ON EVERY ROUTE. App route groups run behind FleetToken.matches;
-#       the open set is exactly system/ping — none of our groups is in it.
+#   D1  NO LISTENER (#ipc, a0_docs/eng-specs/fleet-ipc.md). The shared debug API
+#       binds nothing (the SuperApp gateway is the phone's one door), and this
+#       app opens NO server socket of its own.
+#   D2  GATED ON EVERY ROUTE. App route groups are reached only through the IPC
+#       door, which re-checks the caller's CONSTELLATION_DATA (signature) through
+#       FleetIpcWire.gate, and through the gateway, which demands the fleet token.
 #   D3  NO SECRET IN A RESPONSE. No token, cookie value or full remote URL is
 #       ever interpolated into a reply: session answers a boolean, state and
 #       clone report the URL's HOST only, the listing carries no URLs, and the
@@ -43,6 +45,7 @@ API="$APP/app/src/main/java/com/diegonmarcos/clouddrive/debugapi/DriveDebugApi.k
 PROVIDER="$APP/app/src/main/java/com/diegonmarcos/clouddrive/debugapi/DriveDebugApiProvider.kt"
 MANIFEST="$APP/app/src/main/AndroidManifest.xml"
 SERVER="$SHARED/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
+DOOR="$SHARED/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/FleetIpc.kt"
 BJ="$APP/build.json"
 DEBUGLOG="$APP/app/src/main/java/com/diegonmarcos/clouddrive/DriveDebugLog.kt"
 WIRING="$APP/app/src/main/java/com/diegonmarcos/clouddrive/configs/DriveGitChain.kt"
@@ -55,7 +58,7 @@ fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 # so a comment DOCUMENTING a forbidden shape never matches as the shape itself.
 _code() { grep -vE '^[[:space:]]*(\*|//|/\*)' "$1"; }
 
-for required in "$API" "$PROVIDER" "$MANIFEST" "$SERVER" "$BJ" "$DEBUGLOG" "$WIRING"; do
+for required in "$API" "$PROVIDER" "$MANIFEST" "$SERVER" "$DOOR" "$BJ" "$DEBUGLOG" "$WIRING"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 
@@ -64,31 +67,24 @@ done
 # d1 <AppDebugServer.kt> <DriveDebugApi.kt> <DriveDebugApiProvider.kt>
 d1() {
     local server="$1" api="$2" provider="$3"
-    [ "$(grep -c 'InetAddress.getByName("127.0.0.1")' "$server")" -ge 1 ] || return 1
-    # no other bind address anywhere in the server's code
-    [ "$(_code "$server" | grep -c '0\.0\.0\.0')" -eq 0 ] || return 1
-    [ "$(_code "$server" | grep -c 'InetAddress.getLocalHost')" -eq 0 ] || return 1
-    # this app opens no second server socket
+    # #ipc the shared debug API listens nowhere: no server socket, no bind
+    [ "$(_code "$server" | grep -cE 'ServerSocket|\.bind\(|\.accept\(')" -eq 0 ] || return 1
+    # this app opens no server socket of its own
     [ "$(cat "$api" "$provider" | grep -vE '^[[:space:]]*(\*|//|/\*)' | grep -cE 'ServerSocket|\.bind\(')" -eq 0 ] || return 1
 }
 
-# d2 <AppDebugServer.kt> <DriveDebugApi.kt> : token gate + open set is exactly system/ping
+# d2 <FleetIpc.kt> <DriveDebugApi.kt> : the IPC door re-checks the caller through the gate
 d2() {
-    local server="$1" api="$2"
-    python3 - "$server" "$api" <<'PYTHON'
-import re, sys
-server = open(sys.argv[1], encoding="utf-8").read()
+    local door="$1" api="$2"
+    python3 - "$door" "$api" <<'PYTHON'
+import sys
+door = open(sys.argv[1], encoding="utf-8").read()
 api = open(sys.argv[2], encoding="utf-8").read()
-code = "\n".join(l for l in server.splitlines() if not l.strip().startswith(("*", "//", "/*")))
-m = re.search(r'OPEN_OPS\s*=\s*setOf\(([^)]*)\)', code)
-if not m: sys.exit(1)
-ops = re.findall(r'"([^"]+)"', m.group(1))
-if ops != ["system/ping"]: sys.exit(1)                     # the ONLY open route
-if 'op !in OPEN_OPS && !FleetToken.matches(ctx, bearer)' not in code: sys.exit(1)
-if '401 Unauthorized' not in code: sys.exit(1)             # the liveness banner
-# none of our groups can be smuggled into the open set
-for g in ("health", "git", "session", "log", "net"):
-    if g in ops: sys.exit(1)
+code = "\n".join(l for l in door.splitlines() if not l.strip().startswith(("*", "//", "/*")))
+serve = code[code.find("fun serve("):code.find("fun call(")]
+if "checkCallingPermission(FleetToken.PERMISSION) == PackageManager.PERMISSION_GRANTED" not in serve: sys.exit(1)
+if "FleetIpcWire.gate(granted) ?:" not in serve: sys.exit(1)
+if "AppDebugServer.dispatch(" not in serve: sys.exit(1)         # every route behind the gate
 # and the api registers exactly through the gated extension point
 if api.count('AppDebugServer.route(') < 4: sys.exit(1)
 sys.exit(0)
@@ -183,8 +179,8 @@ PYTHON
 }
 
 echo "── #669 drive loopback debug API ──"
-d1 "$SERVER" "$API" "$PROVIDER" && pass "D1 loopback-only bind, no second server" || fail "D1 loopback-only bind, no second server"
-d2 "$SERVER" "$API"             && pass "D2 fleet Bearer on every app route; only system/ping is open" || fail "D2 bearer gate"
+d1 "$SERVER" "$API" "$PROVIDER" && pass "D1 no listener: the shared API binds nothing and this app opens no server socket" || fail "D1 a listener in the shared API or this app"
+d2 "$DOOR" "$API"               && pass "D2 every app route behind the IPC door's signature re-check (the gateway adds the fleet token)" || fail "D2 IPC gate"
 d3 "$API"                       && pass "D3 no token/cookie/URL ever leaves in a response" || fail "D3 no-secret rule"
 d4 "$API"                       && pass "D4 the clone route drives the page's cloneInto, no second clone" || fail "D4 clone path reuse"
 d5 "$MANIFEST" "$PROVIDER" "$BJ" && pass "D5 provider registered (not exported) and API declared in build.json" || fail "D5 registration + declaration"
@@ -206,6 +202,7 @@ _stage() {
     cp "$PROVIDER" "$W/DriveDebugApiProvider.kt"
     cp "$MANIFEST" "$W/AndroidManifest.xml"
     cp "$SERVER" "$W/AppDebugServer.kt"
+    cp "$DOOR" "$W/FleetIpc.kt"
     cp "$BJ" "$W/drive.json"
     cp "$WIRING" "$W/DriveGitChain.kt"
 }
@@ -233,19 +230,20 @@ _red() {
 }
 
 _stage && _green "d1" d1 "$W/AppDebugServer.kt" "$W/DriveDebugApi.kt" "$W/DriveDebugApiProvider.kt" && {
-    _sub "$W/AppDebugServer.kt" 'InetAddress.getByName("127.0.0.1")' 'InetAddress.getByName("0.0.0.0")'
-    _red "D1 the shared server rebound to every interface" d1 "$W/AppDebugServer.kt" "$W/DriveDebugApi.kt" "$W/DriveDebugApiProvider.kt"; }
+    _sub "$W/AppDebugServer.kt" '    fun stop() { served.set(false) }' '    fun stop() { served.set(false) }
+    private val back = java.net.ServerSocket(38154)'
+    _red "D1 the shared API listens on a port again" d1 "$W/AppDebugServer.kt" "$W/DriveDebugApi.kt" "$W/DriveDebugApiProvider.kt"; }
 _stage && _green "d1" d1 "$W/AppDebugServer.kt" "$W/DriveDebugApi.kt" "$W/DriveDebugApiProvider.kt" && {
     _sub "$W/DriveDebugApi.kt" 'private const val POLL_MS = 250L' 'private const val POLL_MS = 250L
     private val rogue = java.net.ServerSocket(38200)'
-    _red "D1 this app grows a second server socket of its own" d1 "$W/AppDebugServer.kt" "$W/DriveDebugApi.kt" "$W/DriveDebugApiProvider.kt"; }
+    _red "D1 this app grows a server socket of its own" d1 "$W/AppDebugServer.kt" "$W/DriveDebugApi.kt" "$W/DriveDebugApiProvider.kt"; }
 
-_stage && _green "d2" d2 "$W/AppDebugServer.kt" "$W/DriveDebugApi.kt" && {
-    _sub "$W/AppDebugServer.kt" 'setOf("system/ping")' 'setOf("system/ping", "git/state")'
-    _red "D2 a git route smuggled into the open set" d2 "$W/AppDebugServer.kt" "$W/DriveDebugApi.kt"; }
-_stage && _green "d2" d2 "$W/AppDebugServer.kt" "$W/DriveDebugApi.kt" && {
-    _sub "$W/AppDebugServer.kt" 'op !in OPEN_OPS && !FleetToken.matches(ctx, bearer)' 'false'
-    _red "D2 the token check deleted — every route answers unauthenticated" d2 "$W/AppDebugServer.kt" "$W/DriveDebugApi.kt"; }
+_stage && _green "d2" d2 "$W/FleetIpc.kt" "$W/DriveDebugApi.kt" && {
+    _sub "$W/FleetIpc.kt" 'ctx.checkCallingPermission(FleetToken.PERMISSION) == PackageManager.PERMISSION_GRANTED' 'true'
+    _red "D2 the door stops re-checking the caller's signature permission" d2 "$W/FleetIpc.kt" "$W/DriveDebugApi.kt"; }
+_stage && _green "d2" d2 "$W/FleetIpc.kt" "$W/DriveDebugApi.kt" && {
+    _sub "$W/FleetIpc.kt" 'FleetIpcWire.gate(granted) ?: ' ''
+    _red "D2 the gate deleted — every route answers any caller" d2 "$W/FleetIpc.kt" "$W/DriveDebugApi.kt"; }
 
 _stage && _green "d3" d3 "$W/DriveDebugApi.kt" && {
     _sub "$W/DriveDebugApi.kt" '"""{"ok":true,"session_present":${FleetSession.present}}"""' \

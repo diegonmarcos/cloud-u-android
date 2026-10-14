@@ -296,6 +296,8 @@ def ops_called(corpus, top, known):
     """Ops named in the files under top that talk the fleet IPC layer."""
     out = set()
     for p in corpus.files(top):
+        if f"/{DEVTOOLS}/" in p:
+            continue  # the layer itself: it serves the ops, it does not call them
         s = strip_comments(read(p))
         if not IPC_TALK.search(s):
             continue

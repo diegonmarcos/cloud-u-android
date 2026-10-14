@@ -32,6 +32,11 @@ import org.robolectric.shadows.ShadowBinder
  *   I3 the fallback works: a member with no IPC door (a build from before the layer) is asked
  *      on its old loopback debug port, through a real socket
  *   I4 the SuperApp bridge's route (adb/exec) is served over the door
+ *   G1 a request through the mesh gateway (MeshGateway, the SuperApp's one fleet door) reaches
+ *      the app over IPC, a large POST body included (it rides a pipe)
+ *   G2 the gateway refuses a request without the fleet token, names an unknown app, and leaves
+ *      every other path to DevControlServer; a non-fleet IPC caller is refused behind it too
+ *   G3 there are no per-app listening ports: starting the debug API binds nothing
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -89,6 +94,50 @@ class FleetIpcTest {
             assertEquals("pong $pkg\n", r.body)
         } finally { t.join(3000); server.close() }
         assertEquals("no door and nothing listening", 503, FleetIpc.call(ctx, "com.example.nothing", "system/ping").status)
+    }
+
+    private val roster = listOf(MeshGateway.Member("peer", peer, "Peer"))
+
+    @Test
+    fun `G1 a request through the gateway reaches the app over IPC`() {
+        Robolectric.setupContentProvider(FleetTokenProvider::class.java, FleetIpc.authority(peer))
+        val r = MeshGateway.handle(ctx, "/app/peer/api/system/ping", emptyMap(), null, authed = true, roster = roster)!!
+        assertEquals(200, r.status)
+        assertEquals(Via.IPC, r.via)
+        assertEquals("pong ${ctx.packageName}\n", r.body)
+        assertEquals("by package too", 200, MeshGateway.handle(ctx, "/app/$peer/api/docs", emptyMap(), null, true, roster)!!.status)
+
+        AppDebugServer.route("ipcbody", listOf(AppDebugServer.Op("echo", "", "", maxBody = 1024 * 1024))) { _, q -> q["_body"]?.length?.toString() }
+        val big = "x".repeat(300_000)
+        val post = MeshGateway.handle(ctx, "/app/peer/api/ipcbody/echo", emptyMap(), big, true, roster)!!
+        assertEquals(200, post.status)
+        assertEquals("300000", post.body)
+        assertEquals("over the op's own limit", 413,
+            MeshGateway.handle(ctx, "/app/peer/api/system/info", emptyMap(), big, true, roster)!!.status)
+    }
+
+    @Test
+    fun `G2 the gateway refuses without the token and leaves other paths alone`() {
+        Robolectric.setupContentProvider(FleetTokenProvider::class.java, FleetIpc.authority(peer))
+        assertEquals(401, MeshGateway.handle(ctx, "/app/peer/api/system/ping", emptyMap(), null, authed = false, roster = roster)!!.status)
+        assertEquals(401, MeshGateway.handle(ctx, "/api/fleet/apps", emptyMap(), null, authed = false, roster = roster)!!.status)
+        assertEquals(404, MeshGateway.handle(ctx, "/app/nobody/api/system/ping", emptyMap(), null, true, roster)!!.status)
+        assertEquals(400, MeshGateway.handle(ctx, "/app/peer", emptyMap(), null, true, roster)!!.status)
+        assertEquals("not the gateway's", null, MeshGateway.handle(ctx, "/api/system/ping", emptyMap(), null, true, roster))
+        assertEquals(Pair("peer", "net/dns"), MeshGateway.split("/app/peer/api/net/dns"))
+        ShadowBinder.setCallingUid(Process.myUid() + 4242)
+        assertEquals("a non-fleet IPC caller is refused behind the gateway", 403,
+            MeshGateway.handle(ctx, "/app/peer/api/system/info", emptyMap(), null, true, roster)!!.status)
+    }
+
+    @Test
+    fun `G3 no app listens on a port of its own`() {
+        AppDebugServer.start(ctx)
+        assertTrue(AppDebugServer.isRunning())
+        assertEquals(-1, AppDebugServer.boundPort())
+        val own = AppDebugServer.portOf(ctx.packageName)!!
+        val refused = runCatching { java.net.Socket().use { it.connect(java.net.InetSocketAddress("127.0.0.1", own), 300) } }.isFailure
+        assertTrue("something listens on ${ctx.packageName}'s old port $own", refused)
     }
 
     @Test

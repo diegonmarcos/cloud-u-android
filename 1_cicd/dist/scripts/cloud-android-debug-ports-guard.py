@@ -19,10 +19,14 @@ HOLDS
   P2  ports are unique, inside `range`, and outside `fallback` (which is inside `range`)
   P3  `fallback` can absorb every LIVE member (a package with a fleet row) falling back at once;
       retired packages keep their number reserved but run nothing, so they are not counted
-  P4  the source still binds the table: AppDebugServer binds portOf(pkg) first
-      and falls back over fallbackPorts(FALLBACK_FIRST, FALLBACK_LAST, ...);
-      devtools' build.gradle bakes the root's debug-api.json; the Apps Mesh
-      probe pings AppDebugServer.portOf
+  P4  #ipc ONE DOOR PER PHONE (a0_docs/eng-specs/fleet-ipc.md): no app binds a
+      port of its own (AppDebugServer opens no ServerSocket); the table is the
+      VERSION-SKEW map where a pre-gateway build still listens, so AppDebugServer
+      still reads BuildConfig.DEBUG_PORTS, devtools' build.gradle still bakes the
+      root's debug-api.json and the Apps Mesh probe still asks
+      AppDebugServer.portOf; the gateway is declared (`gateway`: the SuperApp,
+      outside `range`, the same pkg/port FleetIpc names) and the SuperApp's
+      DevControlServer routes /app/ to MeshGateway, which forwards over FleetIpc
   P5  every slice on disk is what the generator produces from the table, and
       no copy of the table is left inside libs/devtools
 A port whose package left the fleet is NOT an error: ports are never reused,
@@ -47,6 +51,15 @@ OLD_PORTS = "ab_cloud-libs-shared/libs/devtools/debug-ports.json"
 GRADLE = "ab_cloud-libs-shared/libs/devtools/build.gradle"
 SERVER = "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
 PROBE = "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreMesh.kt"
+FLEETIPC = "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/FleetIpc.kt"
+DEVCONTROL = "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/devcontrol/DevControlServer.kt"
+GATEWAY = "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/devcontrol/MeshGateway.kt"
+
+
+def code(path):
+    s = open(path, encoding="utf-8").read()
+    s = re.sub(r"/\*.*?\*/", "", s, flags=re.S)
+    return re.sub(r'(?m)(^|[^:"])//[^\n]*', r"\1", s)
 
 
 def violations(root):
@@ -86,11 +99,21 @@ def violations(root):
                    f"({len(ports)} numbers reserved): a fleet-wide fallback would exhaust the range again")
 
     server = open(os.path.join(root, SERVER)).read()
-    bind = re.search(r"private fun bindOwn\(.*?\n    }\n", server, re.S)
-    if not bind or "portOf(pkg)" not in bind.group(0) or "fallbackPorts(FALLBACK_FIRST, FALLBACK_LAST" not in bind.group(0):
-        out.append("P4 AppDebugServer.bindOwn no longer binds portOf(pkg) first with a fallbackPorts(FALLBACK_FIRST, FALLBACK_LAST, ...) scan")
-    if not re.search(r"^\s*val sock = bindOwn\(", server, re.M):
-        out.append("P4 AppDebugServer.start does not bind through bindOwn")
+    if re.search(r"\bServerSocket\s*\(|\.accept\(\)", code(os.path.join(root, SERVER))):
+        out.append("P4 AppDebugServer binds a port again: no app listens, the SuperApp gateway is the one door")
+    gw = decl.get("gateway") or {}
+    ipc = open(os.path.join(root, FLEETIPC)).read()
+    if not gw.get("pkg") or not isinstance(gw.get("port"), int):
+        out.append(f"P4 {PORTS} declares no `gateway` (pkg, port): the one mesh door is undeclared")
+    else:
+        if first <= gw["port"] <= last:
+            out.append(f"P4 the gateway port {gw['port']} is inside the per-app range {first}..{last}")
+        if f'GATEWAY_PKG = "{gw["pkg"]}"' not in ipc or f"GATEWAY_PORT = {gw['port']}" not in ipc:
+            out.append(f"P4 FleetIpc.GATEWAY_PKG/GATEWAY_PORT differ from {PORTS}::gateway ({gw['pkg']}:{gw['port']})")
+    dc = code(os.path.join(root, DEVCONTROL)) if os.path.exists(os.path.join(root, DEVCONTROL)) else ""
+    mg = code(os.path.join(root, GATEWAY)) if os.path.exists(os.path.join(root, GATEWAY)) else ""
+    if "path.startsWith(MeshGateway.PREFIX)" not in dc or "MeshGateway.handle(" not in dc or "FleetIpc.call(" not in mg:
+        out.append("P4 the SuperApp's DevControlServer no longer forwards /app/<pkg>/api/<op> through MeshGateway over FleetIpc")
     if "BuildConfig.DEBUG_PORTS" not in server:
         out.append("P4 AppDebugServer does not read the baked BuildConfig.DEBUG_PORTS table")
     gradle = open(os.path.join(root, GRADLE)).read()

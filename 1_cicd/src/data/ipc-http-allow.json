@@ -1,17 +1,53 @@
 {
   "_doc": "#ipc the ratchet behind cloud-android-ipc-mesh.py I3 (a0_docs/eng-specs/fleet-ipc.md). Rule: two fleet apps on the same phone talk over Android IPC (libs:devtools FleetIpc, a provider, a bound service, an intent), never over a loopback socket. Every Kotlin/Java file under a[abc]_* that holds a loopback HTTP client shape (a socket to 127.0.0.1/localhost, an http(s)/ws URL on loopback, the FleetIpcWire.httpGet rung, URL(RishBridge.bridgeUrl())) must be listed here with the most it may hold and WHY it is not an app-to-app call on the phone. A new file, or one more shape in a listed file, fails the guard; a file that drops below its count must lower it (the list only shrinks).",
   "files": {
-    "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/FleetIpcWire.kt": {"max": 1, "why": "THE version-skew rung (httpGet): a member built before the fleet IPC layer is asked on its old loopback debug port; FleetIpc.call reaches it only when the provider call returned nothing"},
-    "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/FleetIpc.kt": {"max": 1, "why": "calls the version-skew rung (FleetIpcWire.httpGet) when the callee has no IPC door"},
-    "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt": {"max": 1, "why": "the 'base' string /api/docs prints for an EXTERNAL caller; a label, not a client"},
-    "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreMesh.kt": {"max": 3, "why": "Apps Mesh's version-skew rung: the open ping of a pre-IPC member's assigned port (looking without waking), its range sweep, and StoreMesh.ask's HTTP fallback for a member with no IPC door"},
-    "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/AppsMesh.kt": {"max": 2, "why": "addresses PRINTED for external callers (the endpoints catalogue's base and the markdown export); labels, not clients"},
-    "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/LocalShellChannel.kt": {"max": 3, "why": "this app's OWN app_process shell server (uid 2000, started by adb), not a fleet app"},
-    "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/SuperappBridgeChannel.kt": {"max": 1, "why": "version skew only: a SuperApp from before the IPC adb/exec route is asked on its loopback DevControlServer (asked over FleetIpc first)"},
-    "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/configs/DevControlServer.kt": {"max": 1, "why": "the 'base' string Cloud Nav's own (opt-in) dev server prints in its /api/docs; a label"},
-    "ac_cloud-myterminal/hub/src/main/java/com/diegonmarcos/ide/DevControlActivity.kt": {"max": 2, "why": "the address of MyTerminal's own opt-in dev API, shown in its own UI; a label"},
-    "ac_cloud-code/src/plugins/browser/android/com/foxdebug/browser/Browser.java": {"max": 1, "why": "upstream Acode: its in-app browser previews the user's own localhost dev server; no fleet app"},
-    "ac_cloud-code/src/plugins/terminal/src/android/ProcessServer.java": {"max": 1, "why": "upstream Acode: its own terminal process server inside Cloud Code; no fleet app"},
-    "ac_cloud-vault/app/src/main/kotlin/com/x8bit/bitwarden/ui/auth/feature/removepassword/RemovePasswordScreen.kt": {"max": 1, "why": "upstream Bitwarden: a sample domain string in a Compose preview; not a client"}
+    "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/devcontrol/MeshGateway.kt": {
+      "max": 1,
+      "why": "the gateway's own address in /api/fleet/apps, for external callers; a label"
+    },
+    "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/AppsMesh.kt": {
+      "max": 5,
+      "why": "addresses PRINTED for external callers: the gateway's (catalogue, markdown) and a pre-gateway build's own port (catalogue base, markdown); labels, not clients"
+    },
+    "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreMesh.kt": {
+      "max": 3,
+      "why": "Apps Mesh's version-skew rung: the open ping of a pre-IPC member's assigned port (looking without waking), its range sweep, and StoreMesh.ask's HTTP fallback for a member with no IPC door"
+    },
+    "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/FleetIpc.kt": {
+      "max": 2,
+      "why": "calls the version-skew rung (FleetIpcWire.httpGet) when the callee has no IPC door, and names the gateway's address (gatewayBase) for external callers; a label"
+    },
+    "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/FleetIpcWire.kt": {
+      "max": 1,
+      "why": "THE version-skew rung (httpGet): a member built before the fleet IPC layer is asked on its old loopback debug port; FleetIpc.call reaches it only when the provider call returned nothing"
+    },
+    "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/LocalShellChannel.kt": {
+      "max": 3,
+      "why": "this app's OWN app_process shell server (uid 2000, started by adb), not a fleet app"
+    },
+    "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/SuperappBridgeChannel.kt": {
+      "max": 1,
+      "why": "version skew only: a SuperApp from before the IPC adb/exec route is asked on its loopback DevControlServer (asked over FleetIpc first)"
+    },
+    "ac_cloud-code/src/plugins/browser/android/com/foxdebug/browser/Browser.java": {
+      "max": 1,
+      "why": "upstream Acode: its in-app browser previews the user's own localhost dev server; no fleet app"
+    },
+    "ac_cloud-code/src/plugins/terminal/src/android/ProcessServer.java": {
+      "max": 1,
+      "why": "upstream Acode: its own terminal process server inside Cloud Code; no fleet app"
+    },
+    "ac_cloud-myterminal/hub/src/main/java/com/diegonmarcos/ide/DevControlActivity.kt": {
+      "max": 2,
+      "why": "the address of MyTerminal's own opt-in dev API, shown in its own UI; a label"
+    },
+    "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/configs/DevControlServer.kt": {
+      "max": 1,
+      "why": "the 'base' string Cloud Nav's own (opt-in) dev server prints in its /api/docs; a label"
+    },
+    "ac_cloud-vault/app/src/main/kotlin/com/x8bit/bitwarden/ui/auth/feature/removepassword/RemovePasswordScreen.kt": {
+      "max": 1,
+      "why": "upstream Bitwarden: a sample domain string in a Compose preview; not a client"
+    }
   }
 }

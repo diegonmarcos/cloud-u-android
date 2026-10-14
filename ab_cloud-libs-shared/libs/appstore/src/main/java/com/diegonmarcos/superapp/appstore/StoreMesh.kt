@@ -255,7 +255,7 @@ object StoreMesh {
             }
         }
         fun onAssigned(pkg: String): Int? =
-            if (pkg == self) AppDebugServer.boundPort().takeIf { it > 0 }
+            if (pkg == self) IPC_PORT
             else AppDebugServer.portOf(pkg)?.takeIf { ping(it) == pkg }
 
         val pool = Executors.newFixedThreadPool(POOL)
@@ -529,7 +529,7 @@ object StoreMesh {
      *  debug-ports.json gives it — the port it should have had, so a fallback
      *  (or a build from before #792) is visible rather than silently fine. */
     fun address(app: Fleet.App, port: Int): String {
-        if (port == IPC_PORT) return "IPC content://${FleetIpc.authority(app.pkg)} (signature-guarded)"
+        if (port == IPC_PORT) return "${FleetIpc.gatewayBase(app.pkg)} (the SuperApp gateway) · IPC content://${FleetIpc.authority(app.pkg)}"
         val assigned = AppDebugServer.portOf(app.pkg)
         return "http://127.0.0.1:$port" + when {
             assigned == null -> " (no assigned port)"
