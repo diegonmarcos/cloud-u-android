@@ -87,6 +87,12 @@ object SectionPages {
         sectionId == "config" && pageId == "presets" -> LauncherPresetsFragment.newInstance()
         sectionId == "config" && pageId == "controls" -> LauncherConfigFragment.newInstance()
         sectionId == "config" && pageId == "kde"            -> com.diegonmarcos.superapp.kdeconnect.KdeConnectFragment.newInstance()
+        // Configs ▸ Apps ▸ Agents: the `agents` page declares `tabs`, so the strip branch at the top
+        // answered it; these are its two tabs, one fragment over the consolidated agent registry.
+        sectionId == "config" && pageId == "agents-superapp" ->
+            com.diegonmarcos.superapp.agents.AgentsFragment.newInstance(com.diegonmarcos.superapp.agents.AgentsFragment.SCOPE_SUPERAPP)
+        sectionId == "config" && pageId == "agents-fleet"    ->
+            com.diegonmarcos.superapp.agents.AgentsFragment.newInstance(com.diegonmarcos.superapp.agents.AgentsFragment.SCOPE_FLEET)
         // Store's two tabs (#563). The `store` page itself declares `tabs`, so
         // the strip branch at the top already answered it.
         // #865 each Store page is wrapped: once Cloud Store is installed it shows

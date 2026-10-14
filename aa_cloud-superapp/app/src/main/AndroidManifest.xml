@@ -151,6 +151,12 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!-- Configs ▸ Apps ▸ Agents reads Cloud Drive's Screenshot agent state
+         (content://com.diegonmarcos.clouddrive.agents.screenshots/state), the
+         read-only provider ac_cloud-drive/data/agent-screenshots-contract.json
+         declares. Signature-level: granted because both APKs carry the fleet key. -->
+    <uses-permission android:name="com.diegonmarcos.clouddrive.permission.READ_AGENT_RESULTS" />
+
     <!-- READ_LOGS — Configs → About → Logcat, "All Apps" / "Select a App".
          Android hands an unprivileged app only its OWN log lines, which made
          the log viewer able to see everything except the app you are usually

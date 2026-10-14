@@ -114,5 +114,9 @@
         "src"
       ]
     }
-  }
+  },
+  "_doc_fleet_agents": "This app's agents, in the fleet agent registry's one shape (aa_cloud-superapp/build.json::_doc_fleet_agents). Consolidated into aa_cloud-superapp/data/fleet-agents.json by 1_cicd/src/scripts/cloud-android-fleet-agents.py and shown in Cloud SuperApp ▸ Configs ▸ Apps ▸ Agents ▸ Fleet agents.",
+  "fleet_agents": [
+    {"from": "ab_cloud-libs-shared/libs/model-catalogue/src/main/assets/agents/agents.json", "path": "agents", "kind": "remote gateway agent", "trigger": "on demand (a chat turn in Cloud Code Agents or Chat, or Cloud Search chat)", "summary_key": "_doc", "used_by": ["cloud-code", "cloud-search"], "open": "page:agents", "status": {"source": "none", "reason": "live state is the gateway /health over the mesh (HTTP); the SuperApp does not call it"}}
+  ]
 }

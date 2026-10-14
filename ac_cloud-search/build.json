@@ -2724,5 +2724,9 @@
     ],
     "style": "search-html",
     "default_section": "chat"
-  }
+  },
+  "_doc_fleet_agents": "This app's agents, in the fleet agent registry's one shape (aa_cloud-superapp/build.json::_doc_fleet_agents). Consolidated into aa_cloud-superapp/data/fleet-agents.json by 1_cicd/src/scripts/cloud-android-fleet-agents.py and shown in Cloud SuperApp ▸ Configs ▸ Apps ▸ Agents ▸ Fleet agents.",
+  "fleet_agents": [
+    {"from": "ac_cloud-search/build.json", "path": "agents.agents", "kind": "in-app agent", "trigger": "on demand (Run on the agent page); reads alert mail and listings, writes drafts only", "summary_key": "blurb", "open": "page:agents/agents", "status": {"source": "none", "reason": "runs and drafts are kept inside Cloud Search; it exposes no provider for them yet"}}
+  ]
 }

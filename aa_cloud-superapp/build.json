@@ -1177,6 +1177,59 @@
       }
     }
   },
+  "_doc_fleet_agents": "THE AGENT REGISTRY (Configs ▸ Apps ▸ Agents). Every fleet app declares the agents it runs here, top level, in this ONE shape: {id, name, kind, trigger, open, status, summary}. kind is one of on-device worker | on-device service | agent door | in-app agent | remote gateway agent | bound engine. trigger says what starts it (a schedule or an event). open is where its page is: a page: target of the declaring app, which the consolidator turns into extapp:<app>#page:... for every app but this one. status names the LOCAL channel live status is read through: workmanager (unique work name), workmanager_tag, service (a service class of this app), provider (a fleet app's own read-only provider: authority_suffix + path, one row), provider_presence (the provider is there or not), installed (a fleet row's package), or none with the reason it is not exposed yet. No status source is ever an HTTP call between apps. A row may instead be {from, path, ...defaults}: one row per item of a list declared elsewhere (Cloud Search's agents catalogue, the shared agents.json), so a list is never restated. 1_cicd/src/scripts/cloud-android-fleet-agents.py consolidates every app's block into data/fleet-agents.json (regen.sh runs it; fleet-agents-guard.yml fails when the file is stale).",
+  "fleet_agents": [
+    { "id": "auto-update", "name": "Fleet updater", "kind": "on-device worker",
+      "trigger": "periodic (build.json auto_update interval) plus a kick 30 s after launch",
+      "summary": "libs:updater UpdateWorker: checks every fleet app against the release and updates what is newer.",
+      "open": "page:config/store-cloud",
+      "status": { "source": "workmanager", "unique": "superapp-auto-update" } },
+    { "id": "update-now", "name": "Update now", "kind": "on-device worker",
+      "trigger": "on demand (Store ▸ Update, the update notification)",
+      "summary": "libs:updater one-shot UpdateWorker run when the owner asks for an update.",
+      "open": "page:config/store-cloud",
+      "status": { "source": "workmanager", "unique": "superapp-update-now" } },
+    { "id": "companion-install", "name": "App installer", "kind": "on-device worker",
+      "trigger": "on demand (an Install or Update tap on a fleet app)",
+      "summary": "libs:updater ApkInstallWorker: downloads a fleet APK, verifies it and installs it.",
+      "open": "page:config/store-cloud",
+      "status": { "source": "workmanager_tag", "tag": "companion-install" } },
+    { "id": "batch-update", "name": "Update All", "kind": "on-device service",
+      "trigger": "on demand (Configs ▸ Actions ▸ Update All)",
+      "summary": "libs:updater BatchForegroundService: runs a whole-fleet update in the foreground.",
+      "open": "page:config/store-cloud",
+      "status": { "source": "service", "class": "com.diegonmarcos.superapp.updater.BatchForegroundService" } },
+    { "id": "privileged-plane", "name": "Privileged plane", "kind": "on-device worker",
+      "trigger": "app start, boot and every ADB pairing",
+      "summary": "PrivilegedPlaneWorker: connects the shell channel and grants the declared privileged permissions.",
+      "open": "page:config/adb-shell",
+      "status": { "source": "workmanager", "unique": "privileged-plane" } },
+    { "id": "wireless-debug-keeper", "name": "Wireless debugging keeper", "kind": "on-device worker",
+      "trigger": "periodic while the keep-alive switch is on",
+      "summary": "WirelessDebugKeeper: re-arms Wireless debugging and reconnects the channel when the platform clears it.",
+      "open": "page:config/adb-shell",
+      "status": { "source": "workmanager", "unique": "wireless-debug-keeper" } },
+    { "id": "notification-listener", "name": "Notification listener", "kind": "on-device service",
+      "trigger": "always on once notification access is granted",
+      "summary": "PhoneNotificationListenerService: feeds the phone's notifications into Notify and the badges.",
+      "open": "page:config/notify",
+      "status": { "source": "service", "class": "com.diegonmarcos.superapp.notificationcenter.PhoneNotificationListenerService" } },
+    { "id": "kde-status", "name": "Peer Control status", "kind": "on-device service",
+      "trigger": "while a KDE Connect peer is paired",
+      "summary": "KdeStatusService: keeps the peer link and its status notification up.",
+      "open": "page:config/kde",
+      "status": { "source": "service", "class": "com.diegonmarcos.superapp.notificationcenter.KdeStatusService" } },
+    { "id": "engine-gh", "name": "GitHub engine", "kind": "bound engine",
+      "trigger": "on demand (Account ▸ GitHub, the Store's Commits feeds)",
+      "summary": "Cloud-Lib-Gh.apk, bound by handshake (build.json engines.gh).",
+      "open": "page:config/profile",
+      "status": { "source": "installed", "fleet": "lib-gh" } },
+    { "id": "engine-feed", "name": "Feed engine", "kind": "bound engine",
+      "trigger": "on demand (the RSS pane)",
+      "summary": "Cloud-Lib-Feed.apk, bound by handshake (build.json engines.feed).",
+      "open": "page:config/notify",
+      "status": { "source": "installed", "fleet": "lib-feed" } }
+  ],
   "engines": {
     "_doc": "#713 ENGINES THIS APP BINDS INSTEAD OF COMPILING — same contract as ac_cloud-drive/build.json::engines (#705): `fleet` is the Store row in data/constellation-fleet.json whose package app/build.gradle resolves (an unknown id fails the build), `action` finds the engine service in it, `min_contract` is the lowest engine CONTRACT that answers every method profile/GhEngine.kt calls (read through PackageManager before any bind), `login_poll_ms` / `login_max_ms` pace gh's device-flow sign-in, which the engine runs on its own thread and the client polls. The Account page's GitHub ▸ WebAuth is this engine's `gh auth login` — GitHub CLI's own public client inside gh, never an OAuth app of the fleet's. 1_cicd engine-contract-guard holds every app's client to the engine it binds.",
     "gh": {
@@ -4637,11 +4690,11 @@
         "module": null,
         "_doc_grid_columns": "Icons per row of the Configs page grid: a fixed 8, declared here, NOT the Cloud/Phone stepper (GridColumns.cloud). 8 is GridColumns.MAX; at 360 dp a cell is 45 dp, the icon is 27 dp (cell minus 18 dp of margin, padding and the inline separator) and labels autosize 9 sp and end-ellipsize. A `separator` page takes no cell: it is a wrap_content character between tiles, as in Data Apps.",
         "grid_columns": 8,
-        "_doc_pages_order": "Order here is the single source of truth \u2014 it drives the Configs page-grid, its SECTION and SUBSECTION headings, and (via home_groups tiles_from_section: 'config') the Home Apps Configs row. TWO LEVELS, DECLARED PER PAGE (#649): `group` is the section heading a tile sits under and `subgroup` is the heading below it, both rendered verbatim by TileGridFragment \u2014 the words \"Launcher\", \"Setup\", \"Apps\", \"Network\" and \"Observability\" appear in no Kotlin file, which is the same contract `label` already keeps for a page name. There is deliberately no parallel group map: a run of consecutive pages carrying the same group/subgroup IS the group, so moving an entry in this array moves it on the screen and a group with no pages left simply stops being drawn. A page that declares no group falls under the default Pages heading, which is every other section in this file. #649 replaced the old flat shape (Account/WireGuard/KDE/AI/Permissions \u2014 Launcher \u2014 Store/About, held together by `row_break`): Launcher stopped being a page wearing four tabs and became the TITLE over its four subpages as direct tiles, and the rest became Setup \u25b8 Apps + Setup \u25b8 Observability. `row_break: true` still starts a fresh grid row at a tile without printing a heading; no page in this section needs it any more, because every row break here is now a group boundary. ACTIONS ARE UNCHANGED: the trailing `is_action` entries are the same three, rendered under the same Actions heading from the same flag, and they carry no group \u2014 the grid appends them last whatever their position in this array. #723 (#878 relabelled: group Watchdog is now Setup, subgroups Setup/Mesh are Apps/Network): the Setup group has THREE sub-sections in this order — Apps (Account · Permissions · Store), Network (WireGuard · Peer Control) and Observability (About) — and the AI page is gone (see removed_pages). #733: Network is Cloud Mesh (the wg page, relabelled) · Peer Control · Apps Mesh (the Store's mesh page, reached from here too).",
+        "_doc_pages_order": "Order here is the single source of truth \u2014 it drives the Configs page-grid, its SECTION and SUBSECTION headings, and (via home_groups tiles_from_section: 'config') the Home Apps Configs row. TWO LEVELS, DECLARED PER PAGE (#649): `group` is the section heading a tile sits under and `subgroup` is the heading below it, both rendered verbatim by TileGridFragment \u2014 the words \"Launcher\", \"Setup\", \"Apps\", \"Network\" and \"Observability\" appear in no Kotlin file, which is the same contract `label` already keeps for a page name. There is deliberately no parallel group map: a run of consecutive pages carrying the same group/subgroup IS the group, so moving an entry in this array moves it on the screen and a group with no pages left simply stops being drawn. A page that declares no group falls under the default Pages heading, which is every other section in this file. #649 replaced the old flat shape (Account/WireGuard/KDE/AI/Permissions \u2014 Launcher \u2014 Store/About, held together by `row_break`): Launcher stopped being a page wearing four tabs and became the TITLE over its four subpages as direct tiles, and the rest became Setup \u25b8 Apps + Setup \u25b8 Observability. `row_break: true` still starts a fresh grid row at a tile without printing a heading; no page in this section needs it any more, because every row break here is now a group boundary. ACTIONS ARE UNCHANGED: the trailing `is_action` entries are the same three, rendered under the same Actions heading from the same flag, and they carry no group \u2014 the grid appends them last whatever their position in this array. #723 (#878 relabelled: group Watchdog is now Setup, subgroups Setup/Mesh are Apps/Network): OWNER REGROUP (Agents): the order is Launcher, Apps, Setup. Apps is a group with no subgroup and holds C3 · Peer Control · Agents (C3 and Peer Control moved out of Setup ▸ Network with their ids unchanged, so page:config/c3 and page:config/kde are the same links; the Network separator went with them, see removed_pages). Before that regroup, the Setup group had THREE sub-sections in this order — Apps (Account · Permissions · Store), Network (WireGuard · Peer Control) and Observability (About) — and the AI page is gone (see removed_pages). #733: Network is Cloud Mesh (the wg page, relabelled) · Peer Control · Apps Mesh (the Store's mesh page, reached from here too).",
         "_doc_retired_pages": "#697. A config page id that no longer exists, mapped to the pages its content lives on now. The page set is guarded: test-configs-two-sections.sh T9 holds the ids as they stood before #649 regrouped this section and fails if any of them is missing from `pages` without being named here, or if a page named here is still declared, or if one of its successors is not. So a page cannot be dropped by a regroup — removing one is a declared act with a declared destination. `launcher` is the only entry: #649 dissolved the page that wore four tabs and made those four tabs direct pages under the Launcher heading. Read by the tester only; the app routes by `pages` and never needs to know what was retired.",
         "retired_pages": { "launcher": ["presets", "controls", "onehand", "notify"] },
         "_doc_removed_pages": "#723. A config page id that was DELETED rather than moved, with the reason. Distinct from retired_pages on purpose: a retired page names the visible pages its content lives on now, and these have none in Configs — the owner removed the AI page outright because AI tokens are managed in Account (the vault cockpit AI card applies them), so the five-tab AI strip and every tab under it went with it, and the Account card's link to the page was removed rather than left pointing at nothing. Guarded by test-configs-two-sections.sh T9 (the id may not be declared, must have existed, must carry a reason) and T12 (no route, page: target or Kotlin branch may still name it). Read by the tester only.",
-        "removed_pages": { "ai": "AI page deleted; AI tokens are managed in Account", "websearch": "tab of the deleted AI page (an unbuilt agent placeholder)", "localsearch": "tab of the deleted AI page (an unbuilt agent placeholder)", "textenhance": "tab of the deleted AI page; each app keeps its own Text Enhance editor", "library": "tab of the deleted AI page (an unbuilt agent placeholder)", "tokens": "tab of the deleted AI page; AI tokens are managed in Account" },
+        "removed_pages": { "ai": "AI page deleted; AI tokens are managed in Account", "websearch": "tab of the deleted AI page (an unbuilt agent placeholder)", "localsearch": "tab of the deleted AI page (an unbuilt agent placeholder)", "textenhance": "tab of the deleted AI page; each app keeps its own Text Enhance editor", "library": "tab of the deleted AI page (an unbuilt agent placeholder)", "tokens": "tab of the deleted AI page; AI tokens are managed in Account", "network-sep-1": "the Setup ▸ Network separator divided C3 and Peer Control from the network engines; both moved to the Configs ▸ Apps group, so it had nothing left to divide" },
         "pages": [
           {
             "_doc": "Tab 1 of Launcher — the PRESETS: things you pick in one tap. Three groups, declared in ui.launcher_presets (order, names and which declaration feeds each group): Sandboxes (ui.launcher_profiles — Work · Personal · Guest), Themes (ui.launcher_themes — Cloud Purple · Cloud Minimalistic) and Modes (ui.launcher_modes — Power · Focus · Saving Energy). LauncherPresetsFragment draws them and owns no name of its own. Its id is `presets`, not `profile`, because `profile` is already this section's own top-level page (the owner's identity) and a section cannot hold two pages under one id. Nothing persisted moves with the rename: LauncherProfilePrefs/LauncherThemePrefs/LauncherModePrefs key off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
@@ -4674,6 +4727,29 @@
             "group": "Launcher"
           },
           {
+            "_doc": "C3 — the Cloud Control Center app (ac_cloud-c3), reached from Configs ▸ Apps (it moved there from Setup ▸ Network; the id `c3` did not change, so page:config/c3 and every existing link still land on it) like Store is from Setup ▸ Apps: action extapp:cloud-c3 opens the app or offers the install through ui.external_apps[id=cloud-c3]. Same target as the C3 tile of the Cloud ▸ Apps Configs group; no second C3.",
+            "id": "c3",
+            "label": "C3",
+            "icon": "ic_p_watchdog",
+            "action": "extapp:cloud-c3",
+            "group": "Apps"
+          },
+          {
+            "_doc_label": "#723 RENAMED KDE → Peer Control and moved, with WireGuard, out of Setup ▸ Apps into the new Setup ▸ Network sub-section. Only the label moved: the id stays `kde` because page:config/kde is spoken by KdeStatusNotifier and KdeConfigsPageTest, and a page id is identity, not a caption. Moved again, with C3, into the Configs ▸ Apps group (Launcher, Apps, Setup): the id is unchanged, so page:config/kde still opens it.",
+            "id": "kde",
+            "label": "Peer Control",
+            "icon": "ic_kde",
+            "group": "Apps"
+          },
+          {
+            "_doc": "Configs ▸ Apps ▸ Agents: every agent the fleet runs, in one place. Status first (a dot and a word per row), the details on tap, and a tap on Open goes to the agent's own page in its app (extapp:<app>#page:..., or a page: of this app). Two tabs: SuperApp agents (the workers, services and engines this app runs, declared in this file's fleet_agents) and Fleet agents (every app's fleet_agents, consolidated by 1_cicd/src/scripts/cloud-android-fleet-agents.py into data/fleet-agents.json, baked as BuildConfig.FLEET_AGENTS_B64). Live status is read only through local, existing channels (this app's own WorkManager and services, PackageManager, and a fleet app's own read-only provider); an agent with none says 'not exposed' instead of guessing. No HTTP between apps.",
+            "id": "agents",
+            "label": "Agents",
+            "icon": "ic_robot",
+            "tabs": ["agents-superapp", "agents-fleet"],
+            "group": "Apps"
+          },
+          {
             "_doc": "Profile now owns config import. The old `import` page entry (action:import_configs) was REMOVED from this list and its two entries live inside ProfileFragment instead: 'Import · file · paste' (re-fires action:import_configs through MainActivity, so the launcher shortcut in res/xml/shortcuts.xml and the radial menu still reach ImportConfigsFragment unchanged) and 'OWebAuth Authelia · Auto Import Configs' (paste a bearer, fetch ui.config_source, apply via ConfigAutoImport).",
             "_doc_label": "#626 RENAMED Profile → Account. This is the ONE declaration of the words: the Configs tile, the Home-Apps Configs row entry and the page title all read `label`, so the rename is this string and nothing else. The `id` deliberately stays `profile` — it is the page's IDENTITY, not a user-visible label (#380/#381/#499 is the rule that an identity string must not sit in a label, not that the two must be spelled the same). Renaming it would break three things that name it and have no reason to change: SectionPages.kt's route, the launcher-shortcut deep link, and ac_cloud-drive/build.json::…personal_auth.target = `page:config/profile`, which is another SHIPPED app's cross-app contract.",
             "id": "profile",
@@ -4701,31 +4777,6 @@
           "_doc_865": "#865 the Store is its own app (ac_cloud-store, com.diegonmarcos.cloudstore). This entry opens it: its action extapp:cloud-store is the tile's target. Not is_action, so the tile keeps its place under Setup ▸ Apps instead of moving to the Actions row, and when it is not installed ui.external_apps[id=cloud-store].install_apk_url is offered. The two tab pages below stay, hidden, for page: links (the update notification, Update All); CloudStoreHandoff shows Open Cloud Store on them once the app is installed.",
             "group": "Setup",
             "subgroup": "Apps"
-          },
-          {
-            "_doc": "C3 — the Cloud Control Center app (ac_cloud-c3), reached from Network like Store is from Setup ▸ Apps: action extapp:cloud-c3 opens the app or offers the install through ui.external_apps[id=cloud-c3]. Same target as the C3 tile of the Cloud ▸ Apps Configs group; no second C3.",
-            "id": "c3",
-            "label": "C3",
-            "icon": "ic_p_watchdog",
-            "action": "extapp:cloud-c3",
-            "group": "Setup",
-            "subgroup": "Network"
-          },
-          {
-            "_doc_label": "#723 RENAMED KDE → Peer Control and moved, with WireGuard, out of Setup ▸ Apps into the new Setup ▸ Network sub-section. Only the label moved: the id stays `kde` because page:config/kde is spoken by KdeStatusNotifier and KdeConfigsPageTest, and a page id is identity, not a caption.",
-            "id": "kde",
-            "label": "Peer Control",
-            "icon": "ic_kde",
-            "group": "Setup",
-            "subgroup": "Network"
-          },
-          {
-            "_doc": "The same separator element as Cloud ▸ Apps ▸ Data Apps (`separator: true`, label \"|\"): divides C3 and Peer Control (the peers/controllers) from the network engines below. Not a destination; the Home Configs row skips it.",
-            "id": "network-sep-1",
-            "label": "|",
-            "separator": true,
-            "group": "Setup",
-            "subgroup": "Network"
           },
           {
             "_doc": "Firewall — the no-root per-app firewall (libs:firewall, firestack VPN) as a Network page. SectionPages embeds the engine's FirewallDialog (master switch, VPN consent, per-app rules) as the page; Configs ▸ Observability ▸ About keeps only a read-only status summary with a 'Manage in Network ▸ Firewall' link. First in Network: it owns the one VPN slot the Cloud Mesh and DNS below depend on.",
@@ -4781,6 +4832,20 @@
             "id": "battery",
             "label": "Battery",
             "icon": "ic_settings",
+            "hidden": true
+          },
+          {
+            "_doc": "Agents tab 1: the agents Cloud SuperApp itself runs (fleet_agents rows whose app is cloud-superapp). hidden = reached through the Agents strip, not as its own Configs tile.",
+            "id": "agents-superapp",
+            "label": "SuperApp agents",
+            "icon": "ic_robot",
+            "hidden": true
+          },
+          {
+            "_doc": "Agents tab 2: every agent declared across the fleet (data/fleet-agents.json). hidden = reached through the Agents strip, not as its own Configs tile.",
+            "id": "agents-fleet",
+            "label": "Fleet agents",
+            "icon": "ic_robot",
             "hidden": true
           },
           {

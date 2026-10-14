@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Tester: #649/#723 — Configs is TWO declared sections, Launcher and Setup,
+# Tester: #649/#723 + the Agents regroup — Configs is THREE declared sections, Launcher, Apps
+# (C3 · Peer Control · Agents) and Setup,
 # and Setup has THREE subsections, Apps, Network and Observability (#878 relabelled; was Watchdog ▸ Setup/Mesh). #723 moved
 # WireGuard and KDE (now labelled Peer Control) out of Setup into Mesh and deleted
 # the AI page outright. Actions is untouched.
@@ -57,11 +58,11 @@ for p in pages:
     if p.get('hidden') or p.get('is_action'): continue
     key = (p.get('group', ''), p.get('subgroup', ''))
     if key != last: shape.append(key); last = key
-want = [('Launcher', ''), ('Setup', 'Apps'), ('Setup', 'Network'),
+want = [('Launcher', ''), ('Apps', ''), ('Setup', 'Apps'), ('Setup', 'Network'),
         ('Setup', 'Observability')]
 print('OK' if shape == want else 'heading runs = %r' % (shape,))
 PY
-)" "Launcher, then Setup ▸ Apps, ▸ Network, ▸ Observability — each appearing ONCE"
+)" "Launcher, then Apps, then Setup ▸ Apps, ▸ Network, ▸ Observability — each appearing ONCE"
 
 echo "== T2: each heading holds exactly the pages the owner named =="
 check "$(python3 - "$BJ" <<'PY'
@@ -74,15 +75,16 @@ def members(g, s=''):
             and p.get('group', '') == g and p.get('subgroup', '') == s]
 want = {
     ('Launcher', ''):                  ['Presets', 'Controls', 'One-Hand', 'Notify'],
+    ('Apps', ''):                      ['C3', 'Peer Control', 'Agents'],
     ('Setup', 'Apps'):             ['Account', 'Permissions', 'Store'],
-    ('Setup', 'Network'):              ['C3', 'Peer Control', '|', 'Firewall', 'DNS', 'Cloud Mesh', 'Apps Mesh', 'ADB Shell'],
+    ('Setup', 'Network'):              ['Firewall', 'DNS', 'Cloud Mesh', 'Apps Mesh', 'ADB Shell'],
     ('Setup', 'Observability'):     ['About'],
 }
 problems = ['%s%s = %r' % (g, ' ▸ ' + s if s else '', members(g, s))
             for (g, s), exp in want.items() if members(g, s) != exp]
 print('; '.join(problems) or 'OK')
 PY
-)" "Launcher = Presets/Controls/One-Hand/Notify; Apps = Account/Permissions/Store; Network = C3/Peer Control/|/Firewall/DNS/Cloud Mesh/Apps Mesh/ADB Shell (#733, #740); Observability = About"
+)" "Launcher = Presets/Controls/One-Hand/Notify; Apps = C3/Peer Control/Agents; Setup ▸ Apps = Account/Permissions/Store; Network = Firewall/DNS/Cloud Mesh/Apps Mesh/ADB Shell (#733, #740); Observability = About"
 
 echo "== T3: Store is the former Constellation, and Cloud Constellation is INSIDE it =="
 # #563 renamed the Constellation page Store; the word survives as the label of
@@ -170,7 +172,7 @@ w |= {p['label'] for p in pages if not p.get('hidden') and not p.get('is_action'
 print(len(w))
 ")
 [ "$WORDS" = 21 ] \
-  && ok "T4 derived 21 words from the declaration (2 groups + 3 subgroups + 16 page labels (ADB Shell, C3 and the separator); #733 added Apps Mesh, #740 DNS, Firewall page)" \
+  && ok "T4 derived 21 words from the declaration (Launcher, Apps, Setup, Network, Observability — Apps is both a group and a Setup subgroup — + 16 page labels: the Agents regroup added Agents and dropped the | separator)" \
   || bad "T4 derived $WORDS words, expected 21 — it is checking a different set than it claims"
 
 # The ONE heading Kotlin may still name is the fallback for a section that
@@ -222,9 +224,9 @@ import json
 print(len(next(s for s in json.load(open('$BJ'))['ui']['sections']
                if s['id'] == 'config')['pages']))
 ")
-[ "$COUNT" = 22 ] \
-  && ok "22 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery)" \
-  || bad "$COUNT config pages, expected 22 — a page was added or DELETED, and T5 cannot report a page that is gone"
+[ "$COUNT" = 24 ] \
+  && ok "24 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs)" \
+  || bad "$COUNT config pages, expected 24 — a page was added or DELETED, and T5 cannot report a page that is gone"
 
 echo "== T6: ACTIONS IS UNTOUCHED =="
 # The owner said to keep it as it is. Three things make that true: the same three
@@ -308,6 +310,7 @@ BEFORE = {'presets', 'controls', 'onehand', 'notify', 'launcher',
           'c3', 'network-sep-1',   # added on purpose: Network's C3 entry and its separator
           'firewall',   # added on purpose: Configs ▸ Network ▸ Firewall hosts the firewall engine's controls (About keeps a summary)
           'dns',        # #740 added on purpose: Configs ▸ Mesh ▸ DNS (the fleet resolver)
+          'agents', 'agents-superapp', 'agents-fleet',  # added on purpose: Configs ▸ Apps ▸ Agents and its two tabs
           'battery'}    # added on purpose: Configs ▸ About ▸ Battery, the battery SoT's stats page (hidden, page:config/battery)
 sec     = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
                if s['id'] == 'config')
@@ -342,8 +345,8 @@ import json
 sec = next(s for s in json.load(open('$BJ'))['ui']['sections'] if s['id'] == 'config')
 print(','.join(sorted(sec.get('removed_pages', {}))))
 ")
-[ "$REMOVED" = "ai,library,localsearch,textenhance,tokens,websearch" ] \
-  && ok "removed_pages is exactly the AI page and its five tabs — nothing else left Configs by deletion" \
+[ "$REMOVED" = "ai,library,localsearch,network-sep-1,textenhance,tokens,websearch" ] \
+  && ok "removed_pages is exactly the AI page, its five tabs and the Network separator — nothing else left Configs by deletion" \
   || bad "removed_pages = [$REMOVED] — the deletion escape hatch now covers a different set than #723 declared"
 
 echo "== T10: the rail and the drawer list Configs under the SAME declared headings as the grid (#697) =="
@@ -400,9 +403,10 @@ for g, s, label, icon in tiles:
     out.append('%s[%s]' % (label, icon))
 want = ['H:LAUNCHER',
         'Presets[ic_p_sol_personal]', 'Controls[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
+        'H:APPS',         'C3[ic_p_watchdog]', 'Peer Control[ic_kde]', 'Agents[ic_robot]',
         'H:SETUP',
         'S:APPS',         'Account[ic_settings]', 'Permissions[ic_settings]', 'Store[ic_refresh]',
-        'S:NETWORK',          'C3[ic_p_watchdog]', 'Peer Control[ic_kde]', '|[None]', 'Firewall[ic_lock]', 'DNS[ic_world]', 'Cloud Mesh[ic_wg]', 'Apps Mesh[ic_mode_apps]', 'ADB Shell[ic_settings]',
+        'S:NETWORK',          'Firewall[ic_lock]', 'DNS[ic_world]', 'Cloud Mesh[ic_wg]', 'Apps Mesh[ic_mode_apps]', 'ADB Shell[ic_settings]',
         'S:OBSERVABILITY', 'About[ic_settings]',
         'H:ACTIONS',
         'Update All[ic_refresh]', 'KDE Connect[ic_kde]', 'Animations[ic_mode_apps]']
@@ -412,7 +416,7 @@ else:
     print('rendered != spec: ' + ' | '.join(l for l in difflib.unified_diff(want, out, lineterm='', n=0)
                                            if l[:1] in '+-' and l[:3] not in ('+++', '---')))
 PY
-)" "grid = LAUNCHER[Presets,Controls,One-Hand,Notify] SETUP ▸ APPS[Account,Permissions,Store] ▸ NETWORK[C3,Peer Control,|,Firewall,DNS,Cloud Mesh,Apps Mesh,ADB Shell] ▸ OBSERVABILITY[About] ACTIONS[Update All,KDE Connect,Animations]"
+)" "grid = LAUNCHER[Presets,Controls,One-Hand,Notify] APPS[C3,Peer Control,Agents] SETUP ▸ APPS[Account,Permissions,Store] ▸ NETWORK[Firewall,DNS,Cloud Mesh,Apps Mesh,ADB Shell] ▸ OBSERVABILITY[About] ACTIONS[Update All,KDE Connect,Animations]"
 
 echo "== T12: THE AI PAGE IS GONE, not hidden — no route, target or tile names it (#723) =="
 # Deleting a declaration and leaving its door behind is the dead-tile failure:

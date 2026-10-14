@@ -1357,5 +1357,10 @@
       "endpoint": "https://analytics.diegonmarcos.com/matomo",
       "site_id": "1"
     }
-  }
+  },
+  "_doc_fleet_agents": "This app's agents, in the fleet agent registry's one shape (aa_cloud-superapp/build.json::_doc_fleet_agents). Consolidated into aa_cloud-superapp/data/fleet-agents.json by 1_cicd/src/scripts/cloud-android-fleet-agents.py and shown in Cloud SuperApp ▸ Configs ▸ Apps ▸ Agents ▸ Fleet agents.",
+  "fleet_agents": [
+    {"id": "page-agent", "name": "Browser AI agent", "kind": "in-app agent", "trigger": "on demand (AI chat on the open page)", "summary": "Reads and acts on the open page with the declared tools; every tool that changes something asks first.", "open": "page:browser", "status": {"source": "none", "reason": "the agent runs inside the open tab; Cloud Browser exposes no status for it"}},
+    {"id": "agent-door", "name": "Browser agent door", "kind": "agent door", "trigger": "called by Cloud Search agents", "summary": "agentapi: opens a URL for the person, or reads a page text read-only (#913).", "open": "page:browser", "status": {"source": "provider_presence", "authority_suffix": "agentapi"}}
+  ]
 }

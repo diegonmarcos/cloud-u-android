@@ -12,6 +12,7 @@
     "decisions-use-guard.yml": "#881: scans every app and lib tree for a DecisionsLink call site and for a new reader of the OpenRouter key; the commit it must catch can be any source file anywhere",
     "engine-contract-guard.yml": "reads every app's binder calls against every engine's contract, app and lib trees alike",
     "fleet-manifest-guard.yml": "reads every app's build inputs and the fleet roster",
+    "fleet-agents-guard.yml": "reads every app's build.json fleet_agents to consolidate the Agents page; the commit it must catch can be any app's build.json",
     "lib-consumers-guard.yml": "reads every app's build.json module map and every manifest to name who calls each lib; the commit it must catch can be any app's module list",
     "generated-up-to-date.yml": "its inputs are every source the generator reads, including every build.json and app directory; see the NO PATH FILTER note in the workflow",
     "i18n-guard.yml": "reads the resources of every app and lib",

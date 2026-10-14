@@ -845,5 +845,9 @@
       "action": "{package}.ENGINE",
       "min_contract": 1
     }
-  }
+  },
+  "_doc_fleet_agents": "This app's agents, in the fleet agent registry's one shape (aa_cloud-superapp/build.json::_doc_fleet_agents). Consolidated into aa_cloud-superapp/data/fleet-agents.json by 1_cicd/src/scripts/cloud-android-fleet-agents.py and shown in Cloud SuperApp ▸ Configs ▸ Apps ▸ Agents ▸ Fleet agents.",
+  "fleet_agents": [
+    {"id": "agent-door", "name": "Mail agent door", "kind": "agent door", "trigger": "called by Cloud Search agents", "summary": "AgentMailProvider: read-only messages and bodies for the draft agents (#913).", "open": "page:mail/inbox", "status": {"source": "provider_presence", "authority_suffix": "agentmail"}}
+  ]
 }

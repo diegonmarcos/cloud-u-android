@@ -1,0 +1,37 @@
+name: "fleet agents guard — Configs ▸ Apps ▸ Agents still lists every agent the fleet declares"
+
+# Cloud SuperApp's Agents page (Configs ▸ Apps ▸ Agents) reads ONE generated file,
+# aa_cloud-superapp/data/fleet-agents.json, consolidated by
+# 1_cicd/src/scripts/cloud-android-fleet-agents.py from every app's
+# build.json::fleet_agents (and the lists those rows expand: Cloud Search's agents
+# catalogue, the shared agents.json). data/regen.sh rewrites it on every build; this
+# guard regenerates it from the declarations and fails when the committed file
+# differs, or when a declaration is malformed (unknown kind, a status source that is
+# not a local channel, an open target that is not a page: of its app, an app the
+# SuperApp cannot open).
+#
+# EVERY PUSH, NO PATH FILTER: the commit that makes the file stale can be any app's
+# build.json.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fleet-agents:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tester first: it breaks the declarations on a copy and requires the check
+      # to fail naming each break, and pins the agents the owner named.
+      - name: The guard still fails when the data and the build.json files disagree
+        run: bash 1_cicd/src/scripts/test/fleet-agents-guard.test.sh
+
+      - name: fleet-agents.json matches the build.json files
+        run: python3 1_cicd/src/scripts/cloud-android-fleet-agents.py check .
