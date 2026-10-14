@@ -312,7 +312,8 @@ object AppsMesh {
                     .put("running", matches("running", app, links, live))
                     .put("reachable", matches("reachable", app, links, live))
                     .put("port", port ?: JSONObject.NULL)
-                    .put("base", port?.let { "http://127.0.0.1:$it" } ?: JSONObject.NULL)
+                    .put("base", port?.let { if (it == StoreMesh.IPC_PORT) com.diegonmarcos.superapp.devtools.FleetIpc.gatewayBase(app.pkg) else "http://127.0.0.1:$it" } ?: JSONObject.NULL)
+                    .put("via", port?.let { if (it == StoreMesh.IPC_PORT) "gateway" else "legacy-port" } ?: JSONObject.NULL)
                     .put("shares", org.json.JSONArray(live.shares[app.id].orEmpty()))
                     .put("endpoints", org.json.JSONArray(live.docs[app.id]?.let { endpointList(it) }.orEmpty()))
             }
@@ -322,7 +323,9 @@ object AppsMesh {
             .put("range", org.json.JSONArray(listOf(
                 com.diegonmarcos.superapp.devtools.AppDebugServer.PORT_FIRST,
                 com.diegonmarcos.superapp.devtools.AppDebugServer.PORT_LAST)))
-            .put("bind", "127.0.0.1").put("auth", "Bearer <fleet token> on every route but /api/system/ping")
+            .put("gateway", "http://127.0.0.1:${com.diegonmarcos.superapp.devtools.FleetIpc.GATEWAY_PORT}")
+            .put("route", "/app/<id|pkg>/api/<op>")
+            .put("bind", "127.0.0.1").put("auth", "Bearer <fleet token> at the gateway; `range` is where a pre-gateway build still listens")
             .put("mesh_addresses", org.json.JSONArray(mesh)).put("mesh_reachable", false)
             .put("exposure", exposure)
             .put("summary", "${fleet.size} members · ${live.installed.size} installed · " +
@@ -336,11 +339,13 @@ object AppsMesh {
     fun markdown(fleet: List<Fleet.App>, live: StoreMesh.Live): String = buildString {
         appendLine("# Fleet endpoints")
         appendLine()
-        appendLine("${fleet.size} members · ${live.reachable.size} reachable · loopback only, Bearer <fleet token>")
+        appendLine("${fleet.size} members · ${live.reachable.size} reachable · one door: the SuperApp gateway " +
+            "http://127.0.0.1:${com.diegonmarcos.superapp.devtools.FleetIpc.GATEWAY_PORT}/app/<pkg>/api/<op>, Bearer <fleet token>")
         for (app in fleet) {
             val port = live.reachable[app.id] ?: continue
             appendLine()
-            appendLine("## ${app.label} (${app.id}) — http://127.0.0.1:$port")
+            appendLine("## ${app.label} (${app.id}) — " + if (port == StoreMesh.IPC_PORT)
+                com.diegonmarcos.superapp.devtools.FleetIpc.gatewayBase(app.pkg) else "http://127.0.0.1:$port (pre-gateway build)")
             val eps = live.docs[app.id]?.let { endpointList(it) }
             if (eps == null) { appendLine("_endpoints not fetched_"); continue }
             for (e in eps) {
@@ -868,8 +873,8 @@ object AppsMesh {
     fun endpoints(docs: String, port: Int): String = runCatching {
         val o = JSONObject(docs)
         buildString {
-            appendLine(if (port == StoreMesh.IPC_PORT) "over IPC: content://<pkg>.fleet call fleet.ipc.v1 · signature-guarded · remote: the SuperApp gateway"
-                else "base http://127.0.0.1:$port · Bearer <fleet token> · loopback only")
+            appendLine(if (port == StoreMesh.IPC_PORT) "through the SuperApp gateway: ${o.optString("base")} · Bearer <fleet token> · on the phone: IPC content://<pkg>.fleet"
+                else "base http://127.0.0.1:$port · Bearer <fleet token> · a pre-gateway build's own port")
             fun list(arr: org.json.JSONArray?) {
                 for (i in 0 until (arr?.length() ?: 0)) {
                     val e = arr!!.getJSONObject(i)

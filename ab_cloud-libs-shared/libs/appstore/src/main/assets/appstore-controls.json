@@ -227,7 +227,7 @@
       "close": "Close",
       "copy": "Copy"
     },
-    "exposure": "Every member's debug API binds 127.0.0.1 on its own port (libs:devtools debug-ports.json) and wants the fleet Bearer token on everything but /api/system/ping. It is NOT served on this phone's mesh address ({mesh}): from the mesh, ssh to the phone and curl the loopback address there.",
+    "exposure": "One door: the SuperApp gateway, 127.0.0.1:38080, is the only fleet app that listens. Each member's routes are /app/<pkg>/api/<op> there, with the fleet Bearer token, forwarded to the member over Android IPC (signature-checked, waking it); no member binds a port of its own (a pre-gateway build still answers on its old one). Not served on this phone's mesh address ({mesh}): from the mesh, ssh to the phone and curl the gateway there.",
     "gaps": {
       "NO_PROVIDER": {
         "label": "not a mesh member: ships no signature-guarded fleet provider, so it serves no debug API and /api/fleet/peers never lists it",
