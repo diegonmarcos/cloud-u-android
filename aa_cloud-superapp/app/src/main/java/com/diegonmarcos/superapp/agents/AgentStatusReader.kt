@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import kotlinx.coroutines.flow.first
 import com.diegonmarcos.superapp.uikit.KitState
 import java.text.DateFormat
 import java.util.Date
@@ -15,7 +16,7 @@ import java.util.Date
  * Drive's Screenshot agent `state`). No HTTP call to another app or to the gateway is made; an
  * agent whose declaration says `none` is shown as "not exposed" with the declared reason.
  *
- * Blocking (WorkManager futures, a provider query): call off the main thread.
+ * Suspends on WorkManager's flows and blocks on a provider query: call it off the main thread.
  */
 object AgentStatusReader {
 
@@ -24,20 +25,21 @@ object AgentStatusReader {
     const val NOT_EXPOSED = "not exposed"
     const val NOT_INSTALLED = "app not installed"
 
-    fun read(ctx: Context, a: FleetAgents.Agent): Live = runCatching { readOrThrow(ctx, a) }
-        .getOrElse { Live("error", KitState.BAD, listOf("Error" to (it.message ?: it.javaClass.simpleName))) }
+    suspend fun read(ctx: Context, a: FleetAgents.Agent): Live = try { readOrThrow(ctx, a) }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: Exception) { Live("error", KitState.BAD, listOf("Error" to (e.message ?: e.javaClass.simpleName))) }
 
     private fun installed(ctx: Context, pkg: String): Boolean = pkg.isNotBlank() &&
         runCatching { ctx.packageManager.getPackageInfo(pkg, 0); true }.getOrDefault(false)
 
-    private fun readOrThrow(ctx: Context, a: FleetAgents.Agent): Live {
+    private suspend fun readOrThrow(ctx: Context, a: FleetAgents.Agent): Live {
         val s = a.status
         // An agent of another app says nothing while that app is absent, whatever its channel.
         if (!a.isSelf && s.source != "installed" && !installed(ctx, a.packageName))
             return Live(NOT_INSTALLED, KitState.IDLE, listOf("Package" to a.packageName))
         return when (s.source) {
-            "workmanager" -> work(WorkManager.getInstance(ctx).getWorkInfosForUniqueWork(s.unique).get(), "Work" to s.unique)
-            "workmanager_tag" -> work(WorkManager.getInstance(ctx).getWorkInfosByTag(s.tag).get(), "Tag" to s.tag)
+            "workmanager" -> work(WorkManager.getInstance(ctx).getWorkInfosForUniqueWorkFlow(s.unique).first(), "Work" to s.unique)
+            "workmanager_tag" -> work(WorkManager.getInstance(ctx).getWorkInfosByTagFlow(s.tag).first(), "Tag" to s.tag)
             "service" -> service(ctx, s.serviceClass)
             "provider" -> provider(ctx, a.packageName, s.authoritySuffix, s.path)
             "provider_presence" -> {
