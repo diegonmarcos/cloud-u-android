@@ -64,6 +64,21 @@ class ObservFragment : PagedFragment() {
     }
 }
 
+/**
+ * APPS - the bottom-nav tab (id unchanged) as three pages in the owner's order: Agents (the
+ * launchable C3 siblings; the local webserver stays there as a launch tile, it is a cloud-c3
+ * sub-app and not a fleet service), Services (composites) and Tools (each engine alone).
+ */
+class AppsFragment : PagedFragment() {
+    override fun pages(): List<NavPage> = Declarations.appsPages
+    override fun pageFragment(pageId: String): Fragment? = when (pageId) {
+        "agents" -> AgentsFragment()
+        "services" -> CatalogFragment.newInstance(CatalogFragment.KIND_SERVICES)
+        "tools" -> CatalogFragment.newInstance(CatalogFragment.KIND_TOOLS)
+        else -> null
+    }
+}
+
 /** CONFIGS — this app's own settings. About is real because everything it shows is baked. */
 class ConfigsFragment : PagedFragment() {
     override fun pages(): List<NavPage> = Declarations.configsPages

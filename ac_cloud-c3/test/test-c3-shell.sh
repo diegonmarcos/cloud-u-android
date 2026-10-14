@@ -249,7 +249,7 @@ bad = []
 
 # (a) each paged tab's DECLARED pages must each resolve to a real fragment, and every
 #     dispatched page id must be declared. Read out of each pageFragment() when-block.
-for tab, cls in (("topology", "TopologyFragment"), ("observ", "ObservFragment"),
+for tab, cls in (("topology", "TopologyFragment"), ("observ", "ObservFragment"), ("apps", "AppsFragment"),
                  ("configs", "ConfigsFragment")):
     sec = next((s for s in (ui.get("sections") or []) if s.get("id") == tab), {})
     declared = [p["id"] for p in (sec.get("pages") or [])]
@@ -291,7 +291,7 @@ for dirpath, _d, files in os.walk(srcdir):
                            % (os.path.relpath(p, srcdir), b))
 
 # (c) no escape-hatch flag in the declaration: `implemented`, `stub`, `wip`, `placeholder`
-for tab in ("topology", "observ", "configs"):
+for tab in ("topology", "observ", "apps", "configs"):
     sec = next((s for s in (ui.get("sections") or []) if s.get("id") == tab), {})
     for p in (sec.get("pages") or []):
         for k in p:
@@ -383,6 +383,36 @@ PYTHON
 }
 
 echo "── #648 cloud-c3: declared, implemented, and not drawing under the cutout ──"
+# t9 <build.json> <AppsCatalog.kt> <infra_slice.json> : Services/Tools declaration is closed
+t9() {
+    python3 - "$1" "$2" "$3" <<'PYTHON'
+import json, re, sys
+ap = json.load(open(sys.argv[1], encoding="utf-8"))["ui"].get("apps_page") or {}
+kt = open(sys.argv[2], encoding="utf-8").read()
+sl = json.load(open(sys.argv[3], encoding="utf-8"))
+tools = [t["id"] for t in ap.get("tools") or []]
+svcs = ap.get("services") or []
+m = re.search(r"VIEW_IDS = listOf\((.*?)\n    \)", kt, re.S)
+views = set(re.findall(r'"([a-z_]+)"', m.group(1))) if m else set()
+bad = []
+if not tools or not svcs: bad.append("ui.apps_page declares no tools or no services")
+used = set()
+for s in svcs:
+    for t in s.get("tools") or []:
+        used.add(t)
+        if t not in tools: bad.append("service %r uses tool %r which ui.apps_page.tools does not declare" % (s.get("id"), t))
+    for v in s.get("views") or []:
+        if v not in views: bad.append("service %r declares view %r with no renderer in AppsCatalog.VIEW_IDS" % (s.get("id"), v))
+for t in tools:
+    if t not in used: bad.append("tool %r is used by no service - unreachable from Services" % t)
+    if t not in (sl.get("tools") or {}): bad.append("tool %r is missing from data/infra_slice.json - rerun gen_infra_slice.py" % t)
+declared_views = {v for s in svcs for v in s.get("views") or []}
+for v in views - declared_views: bad.append("renderer %r exists but no service declares it" % v)
+for b in bad: print("    " + b)
+sys.exit(1 if bad else 0)
+PYTHON
+}
+
 t1 "$BJ"                              && pass "T1 ui.bottom_nav is the five declared tabs, in order, Home centre" || fail "T1 the tab declaration is wrong"
 t2 "$BJ" "$MAIN"                      && pass "T2 declaration <-> shell dispatch agree BOTH ways: no orphan either side" || fail "T2 declaration and dispatch disagree"
 t3 "$BJ" "$SRC"                       && pass "T3 no parallel list of tab ids" || fail "T3 a second list of tab ids exists"
@@ -390,6 +420,7 @@ t4 "$BJ" "$DRAWABLE" "$SRC"           && pass "T4 every declared icon is a real 
 t5 "$BJ" "$MANIFEST" "$ROOT"          && pass "T5 the Apps tab launches the REAL siblings + cloud-c3-webserver, each queried, none renamed" || fail "T5 an Apps tile cannot open what it names"
 t6 "$BJ" "$TABS" "$SRC"               && pass "T6 NO PLACEHOLDER: every declared page resolves to a real fragment, and no not-built body exists" || fail "T6 a shipped tab can render a placeholder"
 t7 "$MAIN" "$NAVKT" "$SRC"            && pass "T7 the shell HOSTS FRAGMENTS and reuses libs:bottomnav's View contract" || fail "T7 the shell is not a fragment host, or forks the nav"
+t9 "$BJ" "$SRC/AppsCatalog.kt" "$APP/data/infra_slice.json" && pass "T9 Services/Tools declaration is closed: tools, views and the derived slice agree" || fail "T9 apps_page and its renderers or slice disagree"
 t8 "$MAIN" "$SHELL_XML"               && pass "T8 the top inset is READ (systemBars u displayCutout) and never consumed" || fail "T8 the top-overflow fix is not the declared one"
 
 # ── MUTATION PROOF ─────────────────────────────────────────────────────────
@@ -556,4 +587,4 @@ if [ "$FAILURES" -ne 0 ] || [ "$MUT_FAIL" -ne 0 ]; then
     echo "FAIL  $FAILURES assertion(s) red, $MUT_FAIL mutation(s) void or hollow"
     exit 1
 fi
-echo "PASS  8 properties asserted, 18 mutations each proved able to go red"
+echo "PASS  9 properties asserted, 18 mutations each proved able to go red"

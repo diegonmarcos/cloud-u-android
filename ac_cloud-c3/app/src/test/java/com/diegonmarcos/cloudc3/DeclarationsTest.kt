@@ -168,4 +168,25 @@ class DeclarationsTest {
         assertTrue("an icon name is a bare drawable name, never a path or an @reference",
             names.all { it.isNotBlank() && !it.contains('/') && !it.startsWith("@") })
     }
+
+    @Test
+    fun `every declared service view renders rows from the derived slice`() {
+        val decl = AppsCatalog.parse(ui()["apps_page"]!!.toString())
+        var dir = File("").absoluteFile
+        while (dir.parentFile != null && !File(dir, "data/infra_slice.json").isFile) dir = dir.parentFile
+        val slice = Json.parseToJsonElement(File(dir, "data/infra_slice.json").readText()).jsonObject
+        assertEquals(listOf("security_network", "dns_routing", "mail"), decl.services.map { it.id })
+        for (s in decl.services) for (v in s.views) {
+            val blocks = AppsCatalog.view(slice, v)
+            assertTrue("view $v of ${s.id} rendered nothing", blocks.isNotEmpty() && blocks.any { it.rows.isNotEmpty() })
+        }
+        for (t in decl.tools) assertTrue("tool ${t.id} has no detail", AppsCatalog.toolBlocks(slice, t.id).isNotEmpty())
+        assertTrue("caddy is used by more than one service", decl.usedBy("caddy").size >= 2)
+        assertTrue("no secret value may be carried", !slice.toString().contains("wg_public_key"))
+    }
+
+    @Test
+    fun `the Apps tab declares Agents then Services then Tools`() {
+        assertEquals(listOf("agents", "services", "tools"), pageIds("apps"))
+    }
 }

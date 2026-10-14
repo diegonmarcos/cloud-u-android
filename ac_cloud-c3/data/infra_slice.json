@@ -1,0 +1,1231 @@
+{
+ "_meta": {
+  "generated_by": "data/gen_infra_slice.py",
+  "source": "cloud-infra 1_cloud-configs/dist/_cloud-data-consolidated.json",
+  "note": "peer/secret NAMES only - no key or password value is ever carried"
+ },
+ "tools": {
+  "authelia": {
+   "description": "SSO and 2FA authentication portal",
+   "vm": "gcp-E2-f_0",
+   "domain": "auth.diegonmarcos.com",
+   "dns": "authelia.app",
+   "port": 9091,
+   "images": [
+    "authelia/authelia:4.39.15",
+    "redis:7-bookworm",
+    "ghcr.io/diegonmarcos/postlite:latest"
+   ],
+   "health": "/api/health",
+   "auth": "bypass",
+   "wg_only": null,
+   "ports": [],
+   "well_known": [],
+   "secret_names": [
+    "AUTHELIA_JWT_SECRET",
+    "AUTHELIA_OIDC_CLIENT_C3_MCP_SECRET",
+    "AUTHELIA_OIDC_CLIENT_CLAUDE_HAIKU_SECRET",
+    "AUTHELIA_OIDC_CLIENT_CLAUDE_OPUS_SECRET",
+    "AUTHELIA_OIDC_CLIENT_CLAUDE_SECRET",
+    "AUTHELIA_OIDC_CLIENT_CLAUDE_SONNET_SECRET",
+    "AUTHELIA_OIDC_CLIENT_CLI_SECRET",
+    "AUTHELIA_OIDC_CLIENT_CLOUDFLARE_SECRET",
+    "AUTHELIA_OIDC_CLIENT_CLOUD_ADMIN_SECRET",
+    "AUTHELIA_OIDC_CLIENT_DAGU_CC_SECRET",
+    "AUTHELIA_OIDC_CLIENT_DAGU_SECRET",
+    "AUTHELIA_OIDC_CLIENT_MATTERMOST_CC_SECRET",
+    "AUTHELIA_OIDC_CLIENT_MATTERMOST_SECRET",
+    "AUTHELIA_OIDC_CLIENT_MONITORING_SECRET",
+    "AUTHELIA_OIDC_CLIENT_NOCODB_SECRET",
+    "AUTHELIA_OIDC_CLIENT_NPM_SECRET",
+    "AUTHELIA_OIDC_HMAC_SECRET",
+    "AUTHELIA_OIDC_JWKS_KEY",
+    "AUTHELIA_REDIS_PASSWORD",
+    "AUTHELIA_SESSION_SECRET",
+    "AUTHELIA_SMTP_PASSWORD",
+    "AUTHELIA_STORAGE_ENCRYPTION_KEY",
+    "AUTHELIA_USER_DIEGO_HASH",
+    "AUTHELIA_USER_ME_TOTP_SECRET"
+   ]
+  },
+  "introspect-proxy": {
+   "description": "OIDC token introspection sidecar for Caddy Bearer auth",
+   "vm": "gcp-E2-f_0",
+   "domain": null,
+   "dns": "introspect-proxy.app",
+   "port": 4182,
+   "images": [
+    "ghcr.io/diegonmarcos/introspect-proxy:latest"
+   ],
+   "health": "/health",
+   "auth": null,
+   "wg_only": null,
+   "ports": [],
+   "well_known": [],
+   "secret_names": []
+  },
+  "caddy": {
+   "description": "Caddy reverse proxy + security dashboard (gcp-proxy, wg0 bind)",
+   "vm": "gcp-E2-f_0",
+   "domain": "proxy.diegonmarcos.com",
+   "dns": "caddy.app",
+   "port": 443,
+   "images": [
+    "ghcr.io/diegonmarcos/caddy-l4"
+   ],
+   "health": null,
+   "auth": null,
+   "wg_only": null,
+   "ports": [],
+   "well_known": [
+    "/.well-known/jmap",
+    "/jmap/*"
+   ],
+   "secret_names": [
+    "AUTHELIA_CLI_SECRET",
+    "CF_API_TOKEN",
+    "MESH_CA_CERT",
+    "MESH_CA_KEY",
+    "NTFY_ADMIN_AUTH"
+   ]
+  },
+  "caddy-public": {
+   "description": "Caddy public-edge L7 allowlist on oci-analytics. Terminates TLS on :8443, serves ONLY the declared-public allowlist (build-caddy-public.json: gh-pages, no-auth subdomains, well-kno",
+   "vm": "oci-E2-f_1",
+   "domain": null,
+   "dns": "caddy-public.app",
+   "port": 443,
+   "images": [
+    "ghcr.io/diegonmarcos/caddy-public:latest"
+   ],
+   "health": null,
+   "auth": null,
+   "wg_only": null,
+   "ports": [],
+   "well_known": [],
+   "secret_names": [
+    "CF_API_TOKEN"
+   ]
+  },
+  "wireguard-mesh": {
+   "description": "Read-only data-driven control panel for the WireGuard mesh + wstunnel TCP/443 fallback. Mimics Headscale's UI shape but holds zero state and exposes zero mutations — pure observabi",
+   "vm": "oci-A1-f_0",
+   "domain": "mesh.diegonmarcos.com",
+   "dns": "wireguard-mesh.app",
+   "port": 8080,
+   "images": [],
+   "health": {
+    "test": [
+     "CMD",
+     "wget",
+     "-qO-",
+     "http://127.0.0.1:8080/"
+    ],
+    "interval": "30s",
+    "timeout": "5s",
+    "retries": 3
+   },
+   "auth": "two_factor",
+   "wg_only": null,
+   "ports": [],
+   "well_known": [],
+   "secret_names": []
+  },
+  "wireguard-mesh-ws-tunnel": {
+   "description": "WireGuard-over-TCP/443 fallback for hostile networks (airport / hotel / corporate guest Wi-Fi blocking UDP). Sibling to bb-net_wireguard-mesh (the panel) — this folder owns the wst",
+   "vm": "gcp-E2-f_0",
+   "domain": "vpn.diegonmarcos.com",
+   "dns": "wireguard-mesh-ws-tunnel.app",
+   "port": 8080,
+   "images": [
+    "ghcr.io/erebe/wstunnel:latest"
+   ],
+   "health": null,
+   "auth": "none",
+   "wg_only": false,
+   "ports": [],
+   "well_known": [],
+   "secret_names": [
+    "WSTUNNEL_PATH_PREFIX"
+   ]
+  },
+  "wireguard-public": {
+   "description": "Owner of the wg-public mesh topology + client list. Data-only entry (enabled=false → no container/compose). Replaces the previous wireguard_public block that lived in config.json (",
+   "vm": "local",
+   "domain": null,
+   "dns": null,
+   "port": null,
+   "images": [],
+   "health": null,
+   "auth": null,
+   "wg_only": null,
+   "ports": [],
+   "well_known": [],
+   "secret_names": []
+  },
+  "docker": {
+   "description": "Docker bridge subnet, iptables managed by firewall.nix",
+   "subnet": "172.16.0.0/12",
+   "iptables": false
+  },
+  "hickory-dns": {
+   "description": "Internal DNS server for WireGuard mesh (per-service .app zones)",
+   "vm": "gcp-E2-f_0",
+   "domain": "dns.internal",
+   "dns": "hickory-dns.app",
+   "port": 53,
+   "images": [
+    "hickorydns/hickory-dns:latest"
+   ],
+   "health": null,
+   "auth": null,
+   "wg_only": null,
+   "ports": [],
+   "well_known": [],
+   "secret_names": []
+  },
+  "unbound-dns64": {
+   "description": "DNS64 resolver for NAT64 — synthesises AAAA records for IPv4-only names so IPv6-only clients can reach the internet via the Tayga NAT64 translator",
+   "vm": "oci-E2-f_1",
+   "domain": "dns64.internal",
+   "dns": "unbound-dns64.app",
+   "port": 53,
+   "images": [
+    "ghcr.io/diegonmarcos/unbound-dns64:latest"
+   ],
+   "health": null,
+   "auth": null,
+   "wg_only": null,
+   "ports": [],
+   "well_known": [],
+   "secret_names": []
+  },
+  "cloudflare-worker": {
+   "description": "Cloudflare Email Worker — inbound mail forwarder. Triple-delivers to Maddy (via http-to-smtp-proxy-api), Google Workspace (Gmail API), and live.com (disaster backup).",
+   "vm": "local",
+   "domain": null,
+   "dns": null,
+   "port": null,
+   "images": [],
+   "health": null,
+   "auth": null,
+   "wg_only": null,
+   "ports": [],
+   "well_known": [],
+   "secret_names": [
+    "C3_BEARER_TOKEN",
+    "GOOGLE_SA_KEY",
+    "HTTP_TO_SMTP_PROXY_API_KEY"
+   ]
+  },
+  "maddy": {
+   "description": "Maddy Mail Server (mail.diegonmarcos.com)",
+   "vm": "oci-E2-f_0",
+   "domain": "mail.diegonmarcos.com",
+   "dns": "maddy.app",
+   "port": null,
+   "images": [
+    "ghcr.io/diegonmarcos/maddy:latest"
+   ],
+   "health": null,
+   "auth": "two_factor",
+   "wg_only": null,
+   "ports": [
+    {
+     "port": 25,
+     "protocol": "tcp",
+     "service": "smtp_mx",
+     "desc": "MX delivery endpoint — dual-bind wg0+wg-public; CF Worker → Caddy → http-to-smtp-proxy-api → SMTP over WG is the public bridge (Phase 5)"
+    },
+    {
+     "port": 465,
+     "protocol": "tls",
+     "service": "smtp_ssl",
+     "desc": "SMTPS — dual-bind wg0+wg-public, reached via Caddy L4 from oci-analytics"
+    },
+    {
+     "port": 993,
+     "protocol": "tls",
+     "service": "imap_ssl",
+     "desc": "IMAPS — dual-bind wg0+wg-public, reached via Caddy L4 from oci-analytics"
+    },
+    {
+     "port": 143,
+     "protocol": "tcp",
+     "service": "imap_plain",
+     "desc": "IMAP plain — dual-bind wg0+wg-public"
+    }
+   ],
+   "well_known": [],
+   "secret_names": [
+    "ADMIN_PASSWORD",
+    "AWS_RELAYPASSWORD",
+    "AWS_RELAYUSER",
+    "DKIM_PRIVATE_KEY_B64",
+    "MAIL_DEFAULT_PASSWORD",
+    "ME_PASSWORD",
+    "NOREPLY_PASSWORD",
+    "OCI_RELAYPASSWORD",
+    "OCI_RELAYUSER"
+   ]
+  },
+  "stalwart": {
+   "description": "Stalwart Mail Server — JMAP webmail backend (jmap.diegonmarcos.com)",
+   "vm": "oci-E2-f_0",
+   "domain": "jmap.diegonmarcos.com",
+   "dns": "stalwart.app",
+   "port": 2443,
+   "images": [
+    "stalwartlabs/stalwart:v0.16.5",
+    "ghcr.io/diegonmarcos/stalwart-sorter-binaries:latest"
+   ],
+   "health": "/",
+   "auth": "none",
+   "wg_only": null,
+   "ports": [
+    {
+     "port": 2025,
+     "protocol": "starttls",
+     "service": "smtp_shadow",
+     "desc": "SMTP shadow (host:2025 → stalwart:25)"
+    },
+    {
+     "port": 2443,
+     "protocol": "tls",
+     "service": "jmap_tls",
+     "desc": "HTTPS admin/JMAP (host:2443 → stalwart:443)"
+    },
+    {
+     "port": 2465,
+     "protocol": "tls",
+     "service": "smtp_ssl",
+     "desc": "SMTPS (host:2465 → stalwart:465)"
+    },
+    {
+     "port": 2993,
+     "protocol": "tls",
+     "service": "imap_ssl",
+     "desc": "IMAPS (host:2993 → stalwart:993)"
+    },
+    {
+     "port": 6190,
+     "protocol": "tls",
+     "service": "manage_sieve",
+     "desc": "ManageSieve (host:6190 → stalwart:4190)"
+    }
+   ],
+   "well_known": [
+    "/.well-known/jmap",
+    "/jmap/*",
+    "/"
+   ],
+   "secret_names": [
+    "ADMIN_PASSWORD",
+    "DKIM_PRIVATE_KEY_B64",
+    "MAIL_DEFAULT_PASSWORD",
+    "ME_PASSWORD",
+    "NOREPLY_PASSWORD",
+    "OCI_RELAYPASSWORD",
+    "OCI_RELAYUSER"
+   ]
+  },
+  "mail-puller": {
+   "description": "Rust sidecar — IMAP-IDLE pulls from external providers (Gmail, Outlook/Live, …) and delivers into Maddy via SMTP submission (:465 implicit TLS; Maddy dual-writes to Stalwart). Decl",
+   "vm": "oci-E2-f_0",
+   "domain": "mail-puller.diegonmarcos.com",
+   "dns": "mail-puller.app",
+   "port": null,
+   "images": [
+    "ghcr.io/diegonmarcos/mail-puller-binaries:latest"
+   ],
+   "health": null,
+   "auth": null,
+   "wg_only": null,
+   "ports": [],
+   "well_known": [],
+   "secret_names": [
+    "GMAIL_APP_PASSWORD",
+    "GMAIL_CLIENT_ID",
+    "GMAIL_CLIENT_SECRET",
+    "GMAIL_REFRESH_TOKEN",
+    "GWS_CLIENT_ID",
+    "GWS_CLIENT_SECRET",
+    "GWS_REFRESH_TOKEN",
+    "LOCAL_DELIVERY_PASSWORD",
+    "LOCAL_DELIVERY_USER",
+    "OUTLOOK_CLIENT_ID",
+    "OUTLOOK_CLIENT_SECRET",
+    "OUTLOOK_REFRESH_TOKEN"
+   ]
+  },
+  "cloud-webmail": {
+   "description": "Cloud Webmail — Stalwart-native JMAP webmail with multi-account/multi-server (webmail.diegonmarcos.com); OUR build of bulwarkmail/webmail 1.9.2. Replaces SnappyMail.",
+   "vm": "oci-A1-f_0",
+   "domain": "webmail.diegonmarcos.com",
+   "dns": "webmail.app",
+   "port": 3000,
+   "images": [
+    "ghcr.io/diegonmarcos/cloud-webmail-binaries:latest"
+   ],
+   "health": "/api/health",
+   "auth": "two_factor",
+   "wg_only": null,
+   "ports": [],
+   "well_known": [],
+   "secret_names": [
+    "SESSION_SECRET"
+   ]
+  },
+  "http-to-smtp-proxy-api": {
+   "description": "HTTP-to-SMTP bridge sidecar of Caddy on gcp-proxy. CF Worker POSTs JSON email payloads to this container (because GCP blocks outbound TCP/25); container speaks SMTP over WG to madd",
+   "vm": "gcp-E2-f_0",
+   "domain": "api.diegonmarcos.com/http-to-smtp-proxy-api",
+   "dns": "http-to-smtp-proxy-api.app",
+   "port": 8090,
+   "images": [],
+   "health": null,
+   "auth": null,
+   "wg_only": null,
+   "ports": [],
+   "well_known": [],
+   "secret_names": [
+    "API_KEY",
+    "LISTEN_PORT",
+    "SMTP_HOST",
+    "SMTP_PORT"
+   ]
+  }
+ },
+ "hosts": [
+  {
+   "host": "analytics.diegonmarcos.com",
+   "service": "umami",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "api.diegonmarcos.com",
+   "service": "scrappers-api",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "auth.diegonmarcos.com",
+   "service": "authelia",
+   "vm": "gcp-E2-f_0",
+   "auth": "bypass",
+   "wg_only": false
+  },
+  {
+   "host": "cal.diegonmarcos.com",
+   "service": "calendar-radicale",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "chat.diegonmarcos.com",
+   "service": "chat-mattermost",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "contacts.diegonmarcos.com",
+   "service": "contacts-radicale",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "crowdsec.diegonmarcos.com",
+   "service": "crowdsec",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "db.diegonmarcos.com",
+   "service": "dbgate",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "git.diegonmarcos.com",
+   "service": "gitea",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "ide.diegonmarcos.com",
+   "service": "code-server",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "jmap.diegonmarcos.com",
+   "service": "stalwart",
+   "vm": "oci-E2-f_0",
+   "auth": "none",
+   "wg_only": false
+  },
+  {
+   "host": "languagetool.diegonmarcos.com",
+   "service": "languagetool",
+   "vm": "oci-A1-f_0",
+   "auth": "none",
+   "wg_only": true
+  },
+  {
+   "host": "mail.diegonmarcos.com",
+   "service": "maddy",
+   "vm": "oci-E2-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "matrix.diegonmarcos.com",
+   "service": "matrix-continuwuity",
+   "vm": "oci-A1-f_0",
+   "auth": "none",
+   "wg_only": false
+  },
+  {
+   "host": "mesh.diegonmarcos.com",
+   "service": "wireguard-mesh",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "messenger.diegonmarcos.com",
+   "service": "matrix-element",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "photos.diegonmarcos.com",
+   "service": "photoprism",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": true
+  },
+  {
+   "host": "playlist.diegonmarcos.com",
+   "service": "playlist-syncer",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "rss.diegonmarcos.com",
+   "service": "ntfy",
+   "vm": "oci-A1-f_0",
+   "auth": "ntfy-3tier",
+   "wg_only": false
+  },
+  {
+   "host": "send.diegonmarcos.com",
+   "service": "send",
+   "vm": "oci-A1-f_0",
+   "auth": "none",
+   "wg_only": false
+  },
+  {
+   "host": "sheets.diegonmarcos.com",
+   "service": "grist",
+   "vm": "oci-A1-f_0",
+   "auth": "none",
+   "wg_only": false
+  },
+  {
+   "host": "vault.diegonmarcos.com",
+   "service": "vaultwarden",
+   "vm": "oci-A1-f_0",
+   "auth": "none",
+   "wg_only": false
+  },
+  {
+   "host": "vpn.diegonmarcos.com",
+   "service": "wireguard-mesh-ws-tunnel",
+   "vm": "gcp-E2-f_0",
+   "auth": "none",
+   "wg_only": false
+  },
+  {
+   "host": "webmail.diegonmarcos.com",
+   "service": "cloud-webmail",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  },
+  {
+   "host": "workflows.diegonmarcos.com",
+   "service": "dagu",
+   "vm": "oci-A1-f_0",
+   "auth": "two_factor",
+   "wg_only": false
+  }
+ ],
+ "dns": {
+  "primary": "10.0.0.1",
+  "fallback": "1.1.1.1",
+  "description": "Hickory DNS on gcp-proxy (WG IP) + Cloudflare fallback",
+  "entries": [
+   {
+    "name": "alerts-api.app",
+    "type": "A",
+    "value": "10.0.0.4",
+    "service": "alerts-api"
+   },
+   {
+    "name": "languagetool.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "languagetool"
+   },
+   {
+    "name": "c3-infra-api.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "c3-infra-api"
+   },
+   {
+    "name": "c3-public-api.app",
+    "type": "A",
+    "value": "10.0.0.4",
+    "service": "c3-public-api"
+   },
+   {
+    "name": "c3-services-api.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "c3-services-api"
+   },
+   {
+    "name": "drive-mcp.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "cloud-drive-mcp"
+   },
+   {
+    "name": "c3-infra-mcp.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "cloud-infra-mcp"
+   },
+   {
+    "name": "mail-mcp.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "cloud-mail-mcp"
+   },
+   {
+    "name": "mattermost-mcp.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "cloud-mattermost-mcp"
+   },
+   {
+    "name": "c3-services-mcp.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "cloud-services-mcp"
+   },
+   {
+    "name": "superapp-mcp.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "cloud-superapp-mcp"
+   },
+   {
+    "name": "vault-mcp.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "cloud-vault-mcp"
+   },
+   {
+    "name": "git-proxy-api.app",
+    "type": "A",
+    "value": "10.0.0.4",
+    "service": "git-proxy-api"
+   },
+   {
+    "name": "g-personal-mcp.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "google-personal-mcp"
+   },
+   {
+    "name": "g-workspace-mcp.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "google-workspace-mcp"
+   },
+   {
+    "name": "http-to-smtp-proxy-api.app",
+    "type": "A",
+    "value": "10.0.0.1",
+    "service": "http-to-smtp-proxy-api"
+   },
+   {
+    "name": "gitea.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "gitea"
+   },
+   {
+    "name": "redis.app",
+    "type": "A",
+    "value": "10.0.0.1",
+    "service": "redis"
+   },
+   {
+    "name": "hickory-dns.app",
+    "type": "A",
+    "value": "10.0.0.1",
+    "service": "hickory-dns"
+   },
+   {
+    "name": "unbound-dns64.app",
+    "type": "A",
+    "value": "10.0.0.4",
+    "service": "unbound-dns64"
+   },
+   {
+    "name": "c3-spec.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "cloud-spec"
+   },
+   {
+    "name": "dagu.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "dagu"
+   },
+   {
+    "name": "dbgate.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "dbgate"
+   },
+   {
+    "name": "matomo.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "matomo"
+   },
+   {
+    "name": "ntfy.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "ntfy"
+   },
+   {
+    "name": "openobserve.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "openobserve"
+   },
+   {
+    "name": "umami.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "umami"
+   },
+   {
+    "name": "umami-db.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "umami"
+   },
+   {
+    "name": "umami-setup.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "umami"
+   },
+   {
+    "name": "authelia.app",
+    "type": "A",
+    "value": "10.0.0.1",
+    "service": "authelia"
+   },
+   {
+    "name": "authelia-redis.app",
+    "type": "A",
+    "value": "10.0.0.1",
+    "service": "authelia"
+   },
+   {
+    "name": "caddy.app",
+    "type": "A",
+    "value": "10.0.0.1",
+    "service": "caddy"
+   },
+   {
+    "name": "caddy-public.app",
+    "type": "A",
+    "value": "10.0.0.4",
+    "service": "caddy-public"
+   },
+   {
+    "name": "crowdsec.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "crowdsec"
+   },
+   {
+    "name": "introspect-proxy.app",
+    "type": "A",
+    "value": "10.0.0.1",
+    "service": "introspect-proxy"
+   },
+   {
+    "name": "cloud-cgc-pub-mcp.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "cloud-cgc-pub-mcp"
+   },
+   {
+    "name": "hermes-agent.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "hermes-agent"
+   },
+   {
+    "name": "my-ai-api.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "my-ai-api"
+   },
+   {
+    "name": "my-ai-claude-api.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "my-ai_claude-api"
+   },
+   {
+    "name": "session-memory.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "session-memory"
+   },
+   {
+    "name": "mattermost.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "chat-mattermost"
+   },
+   {
+    "name": "mattermost-postgres.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "chat-mattermost"
+   },
+   {
+    "name": "mattermost-bots.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "chat-mattermost"
+   },
+   {
+    "name": "webmail.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "cloud-webmail"
+   },
+   {
+    "name": "matrix-continuwuity.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "matrix-continuwuity"
+   },
+   {
+    "name": "matrix-element.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "matrix-element"
+   },
+   {
+    "name": "matrix-mautrix-whatsapp.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "matrix-mautrix-whatsapp"
+   },
+   {
+    "name": "maddy.app",
+    "type": "A",
+    "value": "10.0.0.3",
+    "service": "maddy"
+   },
+   {
+    "name": "stalwart.app",
+    "type": "A",
+    "value": "10.0.0.3",
+    "service": "stalwart"
+   },
+   {
+    "name": "scrappers-api.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "scrappers-api"
+   },
+   {
+    "name": "fin-api.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "fin-api"
+   },
+   {
+    "name": "photoprism.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "photoprism"
+   },
+   {
+    "name": "playlist-syncer.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "playlist-syncer"
+   },
+   {
+    "name": "calendar.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "calendar-radicale"
+   },
+   {
+    "name": "code-server.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "code-server"
+   },
+   {
+    "name": "contacts.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "contacts-radicale"
+   },
+   {
+    "name": "etherpad.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "etherpad"
+   },
+   {
+    "name": "etherpad-db.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "etherpad"
+   },
+   {
+    "name": "filebrowser.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "filebrowser"
+   },
+   {
+    "name": "grist.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "grist"
+   },
+   {
+    "name": "hedgedoc.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "hedgedoc"
+   },
+   {
+    "name": "hedgedoc-db.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "hedgedoc"
+   },
+   {
+    "name": "revealmd.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "revealmd"
+   },
+   {
+    "name": "send.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "send"
+   },
+   {
+    "name": "vaultwarden.app",
+    "type": "A",
+    "value": "10.0.0.6",
+    "service": "vaultwarden"
+   }
+  ],
+  "cloudflare_records": 0
+ },
+ "firewalls": {
+  "global": {
+   "docker_iptables": true,
+   "forward_policy": "DROP",
+   "docker_subnet": "172.16.0.0/12",
+   "wg_subnet": "10.0.0.0/24",
+   "forward_rules": [],
+   "nat_rules": []
+  },
+  "vms": {
+   "oci-analytics": [
+    {
+     "port": 443,
+     "proto": "tcp",
+     "source": "0.0.0.0/0",
+     "desc": "HTTPS (public ingress — caddy-public layer4 SNI mux: mail→maddy, public→L7, rest→gcp-proxy)",
+     "owned_by": "caddy-public"
+    },
+    {
+     "port": 51821,
+     "proto": "udp",
+     "source": "0.0.0.0/0",
+     "desc": "WireGuard wg-public hub — handshake ingress (open enrollment mesh)",
+     "owned_by": "wireguard-public"
+    }
+   ],
+   "gcp-proxy": [
+    {
+     "port": 25,
+     "proto": "tcp",
+     "source": "10.0.0.0/24",
+     "desc": "SMTP MX (Caddy L4 → maddy:25 via WG) — wg0 mesh source",
+     "owned_by": "caddy"
+    },
+    {
+     "port": 25,
+     "proto": "tcp",
+     "source": "10.1.0.0/24",
+     "desc": "SMTP MX — wg-public mesh source (oci-analytics → gcp-proxy via wg-public)",
+     "owned_by": "caddy"
+    },
+    {
+     "port": 443,
+     "proto": "tcp",
+     "source": "10.0.0.0/24",
+     "desc": "HTTPS (Caddy + caddy-l4 SNI mux for IMAPS/SMTPS) — wg0 mesh source",
+     "owned_by": "caddy"
+    },
+    {
+     "port": 443,
+     "proto": "tcp",
+     "source": "10.1.0.0/24",
+     "desc": "HTTPS — wg-public mesh source (oci-analytics → gcp-proxy via wg-public)",
+     "owned_by": "caddy"
+    },
+    {
+     "port": 443,
+     "proto": "udp",
+     "source": "10.0.0.0/24",
+     "desc": "WG fallback (NAT redirect → 51820/udp on hub) — wg0 mesh source. Operator decision 2026-05-22: WG handshake (51820/udp) is the ONLY public port; 443/udp fallback is no longer needed since the only external entry points are oci-analytics. Peers behind networks blocking 51820/udp lose the fallback path — accepted tradeoff.",
+     "owned_by": "wireguard"
+    },
+    {
+     "port": 443,
+     "proto": "udp",
+     "source": "10.1.0.0/24",
+     "desc": "WG fallback — wg-public mesh source",
+     "owned_by": "wireguard"
+    }
+   ]
+  }
+ },
+ "wireguard": {
+  "wg0": {
+   "subnet": "10.0.0.0/24",
+   "port": 51820,
+   "hub": "gcp-E2-f_0",
+   "peers": [
+    {
+     "name": "oci-mail",
+     "wg_ip": "10.0.0.3",
+     "role": "spoke"
+    },
+    {
+     "name": "oci-analytics",
+     "wg_ip": "10.0.0.4",
+     "role": "spoke"
+    },
+    {
+     "name": "oci-apps",
+     "wg_ip": "10.0.0.6",
+     "role": "spoke"
+    },
+    {
+     "name": "gcp-proxy",
+     "wg_ip": "10.0.0.1",
+     "role": "hub"
+    },
+    {
+     "name": "desktop-nixos",
+     "wg_ip": "10.0.0.5",
+     "role": "client"
+    },
+    {
+     "name": "termux-galaxy",
+     "wg_ip": "10.0.0.9",
+     "role": "client"
+    },
+    {
+     "name": "samsung-a37",
+     "wg_ip": "10.0.0.10",
+     "role": "client"
+    },
+    {
+     "name": "gha-runner",
+     "wg_ip": "10.0.0.200",
+     "role": "client"
+    },
+    {
+     "name": "health-runner",
+     "wg_ip": "10.0.0.201",
+     "role": "client"
+    },
+    {
+     "name": "vault-backup",
+     "wg_ip": "10.0.0.202",
+     "role": "client"
+    }
+   ]
+  },
+  "wg_public": {
+   "subnet": "10.1.0.0/24",
+   "port": 51821,
+   "hub": "oci-E2-f_1",
+   "peers": [
+    {
+     "name": "oci-analytics",
+     "wg_ip": "10.1.0.1",
+     "role": "hub"
+    },
+    {
+     "name": "gcp-proxy",
+     "wg_ip": "10.1.0.2",
+     "role": "spoke"
+    },
+    {
+     "name": "oci-mail",
+     "wg_ip": "10.1.0.3",
+     "role": "spoke"
+    },
+    {
+     "name": "oci-apps",
+     "wg_ip": "10.1.0.4",
+     "role": "spoke"
+    },
+    {
+     "name": "surface",
+     "wg_ip": "10.1.0.5",
+     "role": "client"
+    },
+    {
+     "name": "termux",
+     "wg_ip": "10.1.0.9",
+     "role": "client"
+    },
+    {
+     "name": "termux-share",
+     "wg_ip": "10.1.0.10",
+     "role": "client"
+    },
+    {
+     "name": "health-runner",
+     "wg_ip": "10.1.0.11",
+     "role": "client"
+    },
+    {
+     "name": "samsung-a37",
+     "wg_ip": "10.1.0.12",
+     "role": "client"
+    }
+   ]
+  }
+ },
+ "caddy": {
+  "wg_cidrs": "10.0.0.0/24 fd0c:1d00::/64",
+  "rate_limit": {
+   "events": 100,
+   "window": "1m",
+   "key": "{remote_host}",
+   "zone": "global"
+  },
+  "bot_agents": 14,
+  "scanner_paths": 11,
+  "hsts_max_age": 31536000
+ },
+ "mail": {
+  "routes": [
+   {
+    "name": "oci-relay",
+    "address": "smtp.email.eu-marseille-1.oci.oraclecloud.com",
+    "port": 587,
+    "default": true,
+    "desc": "OCI Email Delivery (eu-marseille-1) — primary outbound relay; SMTP creds shared with maddy (same vault user/pass, region-bound)"
+   },
+   {
+    "name": "maddy-relay",
+    "address": "10.0.0.3",
+    "port": 465,
+    "default": false,
+    "desc": "Maddy submission co-located on oci-mail. Selected when the envelope MAIL FROM is me+maddy@diegonmarcos.com (the cloud-webmail 'me@ (via Maddy)' identity's return-path). Maddy strips the +tag, DKIM-sig"
+   }
+  ],
+  "mta_sts": {
+   "domain": "mta-sts.diegonmarcos.com",
+   "policy_path": "/.well-known/mta-sts.txt",
+   "mode": "enforce",
+   "mx": [
+    "route1.mx.cloudflare.net",
+    "route2.mx.cloudflare.net",
+    "route3.mx.cloudflare.net"
+   ],
+   "max_age": 604800
+  },
+  "dkim_secret_names": [
+   "DKIM_PRIVATE_KEY_B64"
+  ],
+  "hosts": [
+   {
+    "service": "maddy",
+    "host": "mail.diegonmarcos.com",
+    "vm": "oci-E2-f_0"
+   },
+   {
+    "service": "stalwart",
+    "host": "jmap.diegonmarcos.com",
+    "vm": "oci-E2-f_0"
+   },
+   {
+    "service": "cloud-webmail",
+    "host": "webmail.diegonmarcos.com",
+    "vm": "oci-A1-f_0"
+   },
+   {
+    "service": "mail-puller",
+    "host": "mail-puller.diegonmarcos.com",
+    "vm": "oci-E2-f_0"
+   }
+  ]
+ },
+ "containers_per_vm": {
+  "oci-E2-f_1": 5,
+  "oci-A1-f_0": 67,
+  "gcp-E2-f_0": 16,
+  "local": 7,
+  "all": 1,
+  "oci-E2-f_0": 4
+ }
+}

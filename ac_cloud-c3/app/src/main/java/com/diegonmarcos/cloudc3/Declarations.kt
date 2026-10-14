@@ -75,6 +75,11 @@ object Declarations {
     val topologyPages: List<NavPage> get() = pages("topology")
     val observPages: List<NavPage> get() = pages("observ")
     val configsPages: List<NavPage> get() = pages("configs")
+    val appsPages: List<NavPage> get() = pages("apps")
+
+    /** ui.apps_page (the Services/Tools declaration) and the derived data/infra_slice.json. */
+    val appsCatalog: AppsCatalog.Decl by lazy { AppsCatalog.parse(decode(BuildConfig.UI_APPS_PAGE_B64)) }
+    val infraSlice: JsonObject by lazy { element(decode(BuildConfig.INFRA_SLICE_B64)) as? JsonObject ?: JsonObject(emptyMap()) }
     val opsBaseUrl: String get() = BuildConfig.C3_OPS_BASE_URL
 
     // ── parsing ───────────────────────────────────────────────────────────

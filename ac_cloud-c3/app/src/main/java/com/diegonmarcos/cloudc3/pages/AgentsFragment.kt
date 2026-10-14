@@ -18,7 +18,7 @@ import com.diegonmarcos.cloudc3.Declarations
 import com.diegonmarcos.cloudc3.R
 
 /**
- * #648 THE APPS TAB — the three C3 sibling APKs.
+ * #648 THE AGENTS PAGE (Apps tab, first page) - the C3 sibling APKs, and the local webserver.
  *
  * All three are already standalone fleet members with their own directory, build.json, ship
  * workflow and applicationId, so this tab LAUNCHES them and declares no page of its own.
@@ -33,7 +33,7 @@ import com.diegonmarcos.cloudc3.R
  * The printed name is DERIVED from the fleet name ([Declarations.ExternalAppDecl.display]):
  * c3-watchdog reads "Watchdog". No display label is stored anywhere (#351/#224).
  */
-class AppsFragment : Fragment() {
+class AgentsFragment : Fragment() {
 
     private lateinit var list: LinearLayout
 
