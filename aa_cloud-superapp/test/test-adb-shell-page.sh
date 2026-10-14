@@ -19,14 +19,16 @@ b = json.load(open(sys.argv[1]))
 pages = next(s for s in b['ui']['sections'] if s['id'] == 'config')['pages']
 net = [p['id'] for p in pages if p.get('subgroup') == 'Network' and not p.get('hidden')]
 by = {p['id']: p for p in pages}
-print('AFTER', net[net.index('apps-mesh') + 1] if 'apps-mesh' in net else 'none')
+# #ipc the mesh pages sit together (Apps Mesh, then its IPC sibling); ADB Shell follows them
+mesh = [i for i in ('apps-mesh', 'ipc') if i in net]
+print('AFTER', net[net.index(mesh[-1]) + 1] if mesh and net.index(mesh[-1]) + 1 < len(net) else 'none')
 print('LABEL', by.get('adb-shell', {}).get('label'))
 print('ONCE', sum(1 for p in pages if p['id'] == 'adb-shell'))
 print('OWN', 'local_server' in b.get('shizuku_diagnostics', {}))
 print('NEEDS', len((b.get('privileged_channel') or {}).get('needs') or []))
 PY
 )"
-echo "$out" | grep -qx 'AFTER adb-shell' && ok "ADB Shell comes right after Apps Mesh" || bad "ADB Shell is not right after Apps Mesh"
+echo "$out" | grep -qx 'AFTER adb-shell' && ok "ADB Shell comes right after the mesh pages (Apps Mesh, IPC)" || bad "ADB Shell is not right after the mesh pages (Apps Mesh, IPC)"
 echo "$out" | grep -qx 'LABEL ADB Shell' && ok "the label is ADB Shell (build.json, one place)" || bad "the label is not ADB Shell"
 echo "$out" | grep -qx 'ONCE 1' && ok "declared once" || bad "declared 0 or 2+ times"
 echo "$out" | grep -qx 'OWN True' && ok "the SuperApp declares its own local server, so its default mode is Local server" || bad "no local_server in the SuperApp's build.json"

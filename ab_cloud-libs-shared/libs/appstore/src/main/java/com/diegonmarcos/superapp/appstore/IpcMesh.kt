@@ -81,7 +81,7 @@ object IpcMesh {
         val address = when (kind) {
             "op" -> "${e.getString("name")} · content://$pkg.fleet call $method"
             "provider" -> "content://$authority"
-            "deeplink" -> uris.joinToString(" · ")
+            "deep_link" -> uris.joinToString(" · ")
             else -> actions.joinToString(" · ").ifEmpty { sub(e.optString("component")) }
         }
         return Endpoint(sub(e.getString("id")), kind, e.optString("name"), address,
@@ -132,7 +132,7 @@ object IpcMesh {
             "provider" -> e.authority!!.split(";").all { pm.resolveContentProvider(it, 0) != null }
             "service" -> e.actions.any { pm.queryIntentServices(i(it), 0).isNotEmpty() }
             "receiver" -> e.actions.any { pm.queryBroadcastReceivers(i(it), 0).isNotEmpty() }
-            "deeplink" -> e.uris.any { pm.queryIntentActivities(Intent(Intent.ACTION_VIEW, Uri.parse(it)).setPackage(m.pkg), 0).isNotEmpty() }
+            "deep_link" -> e.uris.any { pm.queryIntentActivities(Intent(Intent.ACTION_VIEW, Uri.parse(it)).setPackage(m.pkg), 0).isNotEmpty() }
             else -> e.actions.any { pm.queryIntentActivities(i(it), 0).isNotEmpty() }
         }
     }.getOrDefault(false)
@@ -190,7 +190,7 @@ object IpcMesh {
     /** One endpoint, in words: kind, address, guard, callers, live. */
     fun line(e: Endpoint, resolves: Boolean?): String = buildString {
         append(when (e.kind) { "op" -> "op"; "provider" -> "provider"; "service" -> "service"; "receiver" -> "receiver"
-            "deeplink" -> "deep link"; else -> "intent" })
+            "deep_link" -> "deep link"; else -> "intent" })
         append("  ").append(e.address)
         e.aidl.forEach { a -> append("\n    AIDL ").append(a.iface).append(": ").append(a.methods.joinToString(", ")) }
         append("\n    ").append(if (e.permission != null) "${e.permission.substringAfterLast('.')} (${e.level})" else "no permission (${e.level})")

@@ -334,12 +334,12 @@ def endpoint(c, pkg, levels, corpus, tops, aidl):
         deep = [u for u in c["uris"] if CUSTOM_SCHEME.match(u)]
         acts = [a for a in c["actions"] if FLEET_ACTION.match(a)]
         needles = acts + [u.rstrip("/") for u in deep]
-        e.update(id=("deeplink:" if deep else "intent:") + tmpl(c["name"]), kind="deeplink" if deep else "intent",
+        e.update(id=("deep_link:" if deep else "intent:") + tmpl(c["name"]), kind="deep_link" if deep else "intent",
                  name=short, actions=[tmpl(x) for x in acts], uris=deep)
     return e, [n for n in needles if n and n != '"']
 
 
-ORDER = ["op", "provider", "service", "receiver", "intent", "deeplink"]
+ORDER = ["op", "provider", "service", "receiver", "intent", "deep_link"]
 
 
 def generate(root):

@@ -88,3 +88,17 @@ jobs:
 
       - name: Every app ships on what it owns and every scenario is isolated (#870)
         run: python3 1_cicd/src/scripts/cloud-android-rebuild-isolation-guard.py --scenarios 1_cicd/src/data/rebuild-scenarios.json
+
+      # #ipc (a0_docs/eng-specs/fleet-ipc.md): two fleet apps on one phone talk over
+      # Android IPC (libs:devtools FleetIpc on content://<pkg>.fleet, providers, bound
+      # services, intents), never over a loopback socket; HTTP is for callers off the
+      # phone. The commit that adds a sibling-to-sibling HTTP call can be any source file,
+      # which is this guard's every-push reason. Tester first (it plants each break and
+      # requires red), then: the IPC door is signature-guarded and re-checks the caller,
+      # no loopback client outside 1_cicd/src/data/ipc-http-allow.json, and the
+      # generated registry aa_cloud-superapp/data/ipc-mesh.json is current.
+      - name: The IPC guard still fails on each way app-to-app traffic leaves IPC (#ipc)
+        run: bash 1_cicd/src/scripts/test/ipc-mesh-guard.test.sh
+
+      - name: App to app on the phone is IPC, and the IPC registry is current (#ipc)
+        run: python3 1_cicd/src/scripts/cloud-android-ipc-mesh.py check .

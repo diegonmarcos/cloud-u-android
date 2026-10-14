@@ -155,7 +155,7 @@ private fun StoreAction(style: StoreControls.Style, text: String, modifier: Modi
     val fill = (if (active) style.fillActive else style.fill)?.let { Color(it) } ?: Color.Transparent
     val stroke = (if (active) style.strokeActive ?: style.stroke else style.stroke)?.let { Color(it) }
     var m = modifier.clip(shape).background(fill)
-    if (stroke != null) m = m.border(1.dp, stroke, shape)
+    if (stroke != null) m = m.border(StoreDensity.dpValue(StoreDensity.S1).dp, stroke, shape)
     Text(text, m.clickable(onClick = onClick).padding(StoreDensity.dpValue(StoreDensity.S6).dp),
         color = Color(if (active) style.textActive else style.text), textAlign = TextAlign.Center, maxLines = 1,
         fontWeight = if (style.bold) FontWeight.Bold else FontWeight.Normal, fontSize = StoreDensity.T_META.sp)

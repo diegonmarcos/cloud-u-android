@@ -78,8 +78,8 @@ echo "$out" | grep -qx 'WG Cloud Mesh section:wg' && ok "the wg page reads Cloud
   || bad "the wg page is not 'Cloud Mesh' opening section:wg"
 echo "$out" | grep -qx 'APPS Apps Mesh | Apps Mesh' && ok "Configs apps-mesh and Store's mesh entry both read Apps Mesh" \
   || bad "the two entry points to the Apps Mesh page do not both read 'Apps Mesh'"
-echo "$out" | grep -qx 'ORDER firewall,dns,wg,apps-mesh,adb-shell' && ok "Setup ▸ Network = Firewall · DNS (#740) · Cloud Mesh · Apps Mesh · ADB Shell" \
-  || bad "Setup ▸ Network is not firewall, dns, wg, apps-mesh, adb-shell in that order"
+echo "$out" | grep -qx 'ORDER firewall,dns,wg,apps-mesh,ipc,adb-shell' && ok "Setup ▸ Network = Firewall · DNS (#740) · Cloud Mesh · Apps Mesh · IPC (#ipc) · ADB Shell" \
+  || bad "Setup ▸ Network is not firewall, dns, wg, apps-mesh, ipc, adb-shell in that order"
 
 echo "== C2: one page, two entry points =="
 code "$FRAG" | grep -qF 'AppsMesh.page(this, col)' && ok "AppsMeshFragment hosts AppsMesh.page" \
