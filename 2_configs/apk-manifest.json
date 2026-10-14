@@ -1,0 +1,273 @@
+{
+  "_generated_by": "1_cicd/src/scripts/cloud-android-apk-manifest.sh",
+  "_doc": "GENERATED. Declared Android apps, from each module build.json. Do not edit; change the module build.json and re-run the generator.",
+  "schema": "apk-manifest/v1",
+  "apps": [
+    {
+      "name": "cloud-account",
+      "module": "ac_cloud-account",
+      "application_id": "com.diegonmarcos.cloudaccount",
+      "description": "Diego's Cloud Account — turns an empty phone into the owner's phone and keeps it that way: the account and its sign-in ways, the per-device profile backed up to",
+      "web": null
+    },
+    {
+      "name": "cloud-browser",
+      "module": "ac_cloud-browser",
+      "application_id": "com.diegonmarcos.cloudbrowser",
+      "description": "Diego's Cloud Browser — standalone WebView-based browser Android app. Lifted from Cloud SuperApp's libs:browser into its own focused APK. Multi-tab session pers",
+      "web": null
+    },
+    {
+      "name": "cloud-c3",
+      "module": "ac_cloud-c3",
+      "application_id": "com.diegonmarcos.cloudc3",
+      "description": "Diego's Cloud C3 - the fleet's command-and-control surface as its own APK, lifted out of the SuperApp's C3 section (#648). A five-tab shell drawn by the fleet's",
+      "web": null
+    },
+    {
+      "name": "cloud-c3-morpheus",
+      "module": "ac_c3-morpheus",
+      "application_id": "com.diegonmarcos.morpheus",
+      "description": "c3-morpheus on a phone: the cloud's workflow orchestrator. Four panels — the Dagu workflow list, the probe registry that declares what 'healthy' means, the flee",
+      "web": null
+    },
+    {
+      "name": "cloud-c3-watchdog",
+      "module": "ac_c3-watchdog",
+      "application_id": "com.diegonmarcos.watchdog",
+      "description": "The c3-watchdog panel as an Android app: a WebView showing the REAL dashboard, drawn by c3-watchdog-tui inside nix-on-droid and transcribed to HTML.",
+      "web": null
+    },
+    {
+      "name": "cloud-c3-watchtower",
+      "module": "ac_c3-watchtower",
+      "application_id": "com.diegonmarcos.watchtower",
+      "description": "c3-watchtower on a phone: ANALYTICS over the cloud's delivery pipeline. Watchdog watches what is running, Morpheus decides what runs, WatchTower counts what ran",
+      "web": null
+    },
+    {
+      "name": "cloud-calc",
+      "module": "ac_cloud-calc",
+      "application_id": "com.diegonmarcos.cloudcalc",
+      "description": "Diego's Cloud Calc (#767) - an all-in-one calculator over libqalculate, the engine behind Qalculate!. Every number is computed by Cloud-Lib-Calc.apk (ab_cloud-l",
+      "web": null
+    },
+    {
+      "name": "cloud-camera",
+      "module": "ac_cloud-camera",
+      "application_id": "cld.camera",
+      "description": "Diego's Cloud Camera — our own signed build of GrapheneOS Camera. Modern CameraX (photo, video, QR/barcode scan, timer, zoom/exposure bars, in-app gallery), pur",
+      "web": null
+    },
+    {
+      "name": "cloud-chat",
+      "module": "ac_cloud-chat",
+      "application_id": null,
+      "description": null,
+      "web": {
+        "kind": "container",
+        "target": "mattermost"
+      }
+    },
+    {
+      "name": "cloud-code",
+      "module": "ac_cloud-code",
+      "application_id": "com.diegonmarcos.code",
+      "description": "Cloud Code — our own signed build of Acode (the Android code editor), vendored at ac_cloud-code/ as owned code (#562), with a 7-tab bottom nav over it: Backlog ",
+      "web": null
+    },
+    {
+      "name": "cloud-contacts",
+      "module": "ac_cloud-contacts",
+      "application_id": "com.diegonmarcos.cloudcontacts",
+      "description": "Diego's Cloud Contacts — standalone Android multi-channel people hub. NOT a dialer-first address book: each person is a set of reachable CHANNELS (WhatsApp, Tel",
+      "web": {
+        "kind": "container",
+        "target": "contacts-radicale"
+      }
+    },
+    {
+      "name": "cloud-dialer",
+      "module": "ac_cloud-dialer",
+      "application_id": null,
+      "description": null,
+      "web": null
+    },
+    {
+      "name": "cloud-drive",
+      "module": "ac_cloud-drive",
+      "application_id": "com.diegonmarcos.clouddrive",
+      "description": "Diego's Cloud Drive — standalone Android storage app, lifted out of the SuperApp's Cloud▸Apps▸Drive pages so the phone's storage surface is its own icon. #609 R",
+      "web": null
+    },
+    {
+      "name": "cloud-gallery",
+      "module": "ac_cloud-gallery",
+      "application_id": "com.diegonmarcos.mediacenter",
+      "description": "Cloud Gallery — a photo/video gallery app forked from IacobIonut01/ReFra (ex-com.diegonmarcos.mediacenter). Single-app fork (NOT a hub+forks constellation like ",
+      "web": {
+        "kind": "container",
+        "target": "photoprism_app"
+      }
+    },
+    {
+      "name": "cloud-keyboard",
+      "module": "ac_cloud-keyboard",
+      "application_id": "com.diegonmarcos.cloudkeyboard",
+      "description": "Cloud Keyboard — IME with on-device translation, voice input, and bundled sticker packs. Standalone constellation APK.",
+      "web": null
+    },
+    {
+      "name": "cloud-mail",
+      "module": "ac_cloud-mail",
+      "application_id": null,
+      "description": null,
+      "web": {
+        "kind": "container",
+        "target": "cloud-webmail"
+      }
+    },
+    {
+      "name": "cloud-matrix",
+      "module": "ac_cloud-matrix",
+      "application_id": null,
+      "description": null,
+      "web": {
+        "kind": "container",
+        "target": "matrix-element"
+      }
+    },
+    {
+      "name": "cloud-me",
+      "module": "ac_cloud-me",
+      "application_id": "com.diegonmarcos.cloudme",
+      "description": "Diego's Cloud Me — the personal-administration half of the constellation. Where Cloud SuperApp is the launcher for everything the cloud runs, Cloud Me is the la",
+      "web": null
+    },
+    {
+      "name": "cloud-media-center",
+      "module": "ac_cloud-media-center",
+      "application_id": "com.diegonmarcos.cloudmediacenter",
+      "description": "The fleet's media hub, as an APK, in Rust and static web only: a Tauri 2 app whose one webview shows seven mobile-first pages — music, videos, gallery, books, f",
+      "web": null
+    },
+    {
+      "name": "cloud-myterminal",
+      "module": "ac_cloud-myterminal",
+      "application_id": "com.diegonmarcos.ide",
+      "description": "cloud-myterminal — constellation of three minimally-forked upstream developer apps (Acode code editor / Amaze File Manager / Amaze File Utilities) plus a thin o",
+      "web": null
+    },
+    {
+      "name": "cloud-nav",
+      "module": "ac_cloud-nav",
+      "application_id": "com.diegonmarcos.cloudnav",
+      "description": "Diego's Cloud Nav — dedicated maps/navigation/tracker Android app. Single APK, gradle multi-module (app/ Google-Maps-style shell + libs/{core,maps}). MapLibre N",
+      "web": null
+    },
+    {
+      "name": "cloud-news",
+      "module": "ac_cloud-news",
+      "application_id": "com.diegonmarcos.cloudnews",
+      "description": "Diego's Cloud News — standalone Android news app. WebView UI over GDELT-backed topic feeds (economy, technology, geopolitics, climate, finance, AI, energy, heal",
+      "web": null
+    },
+    {
+      "name": "cloud-notes",
+      "module": "ac_cloud-notes",
+      "application_id": "com.diegonmarcos.cloudnotes",
+      "description": "Cloud Notes — our own signed build of AFFiNE (the local-first notes/whiteboard app), vendored at ac_cloud-notes/ as owned code. AFFiNE is the UPSTREAM PROJECT, ",
+      "web": null
+    },
+    {
+      "name": "cloud-office",
+      "module": "ac_cloud-office",
+      "application_id": "com.diegonmarcos.cloudoffice",
+      "description": null,
+      "web": null
+    },
+    {
+      "name": "cloud-search",
+      "module": "ac_cloud-search",
+      "application_id": "com.diegonmarcos.cloudsearch",
+      "description": "Diego's Cloud Search (#779) - one app for searching what a life in Germany needs, from the owner's design mockup, on the owner's mockup bottom nav: Me (personal",
+      "web": null
+    },
+    {
+      "name": "cloud-store",
+      "module": "ac_cloud-store",
+      "application_id": "com.diegonmarcos.cloudstore",
+      "description": "Diego's Cloud Store — the constellation app store as its own APK (#865). Hosts libs:appstore: the Cloud fleet list (install, update, download-all, auto-update o",
+      "web": {
+        "_doc": "#876 the store as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-store-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-store-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`, then diegonmarcos.github.io is told (repository_dispatch cloud-web-refresh). portal_slug is the tile's apps/<slug>/ folder on the cloud-web portal; entry is the page inside it. The APK's own ship ignores this directory.",
+        "dir": "web",
+        "host": "ubuntu-latest",
+        "artifact": "Cloud-Store.wasm.zip",
+        "gh_asset": "Cloud-Store.wasm.zip",
+        "portal_slug": "cloud-store",
+        "entry": "index.html",
+        "tester": "test-store-web.sh",
+        "size_budget_mb": 20
+      }
+    },
+    {
+      "name": "cloud-superapp",
+      "module": "aa_cloud-superapp",
+      "application_id": "com.diegonmarcos.superapp",
+      "description": "Diego's Cloud SuperApp — modularized monolith Android app. Single APK, gradle multi-module: app/ (launcher shell) + libs/{core,mail,cal,feed,net,ops,vault,chat}",
+      "web": null
+    },
+    {
+      "name": "cloud-tasks",
+      "module": "ac_cloud-tasks",
+      "application_id": "com.diegonmarcos.cloudagenda",
+      "description": "Diego's Cloud Tasks (formerly Cloud Agenda, before that Cloud Calendar) — standalone Android task, calendar and event app. The applicationId stays com.diegonmar",
+      "web": {
+        "kind": "container",
+        "target": "calendar-radicale"
+      }
+    },
+    {
+      "name": "cloud-terminal-nix",
+      "module": "ac_cloud-nix-on-droid",
+      "application_id": null,
+      "description": null,
+      "web": null
+    },
+    {
+      "name": "cloud-terminal-termux",
+      "module": "ac_cloud-termux",
+      "application_id": null,
+      "description": null,
+      "web": null
+    },
+    {
+      "name": "cloud-tools-small-llms",
+      "module": "ac_cloud-tools-small-llms",
+      "application_id": "com.diegonmarcos.cloudtoolssmallllms",
+      "description": "Cloud Tools Small LLMs - an AI chat that does simple, direct text jobs with small, cheap models only, calling OpenRouter directly with the user's own token. A r",
+      "web": null
+    },
+    {
+      "name": "cloud-vault",
+      "module": "ac_cloud-vault",
+      "application_id": "com.diegonmarcos.cloudvault",
+      "description": "Diego's Cloud Vault — standalone Vaultwarden client Android app. Hosts vault.diegonmarcos.com (self-hosted Vaultwarden) in a dedicated BrowserHostFragment APK w",
+      "web": null
+    },
+    {
+      "name": "cloud-wallet",
+      "module": "ac_cloud-wallet",
+      "application_id": "com.diegonmarcos.cloudwallet",
+      "description": "Diego's Cloud Wallet — standalone cards/passes/tickets Android app. Lifted from Cloud SuperApp's libs:wallet into its own focused APK. Compose-based deck UI: vC",
+      "web": null
+    },
+    {
+      "name": "cloud-writer",
+      "module": "ac_cloud-writer",
+      "application_id": "com.diegonmarcos.cloudwriter",
+      "description": "Cloud Writer - the application the owner asked for: one place that owns Text Enhance, Translate, Grammar Check and Summary (Resume), with its own model choice f",
+      "web": null
+    }
+  ]
+}

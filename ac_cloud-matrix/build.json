@@ -85,5 +85,9 @@
       "prerelease": false,
       "generate_release_notes": false
     }
+  },
+  "web": {
+    "kind": "container",
+    "target": "matrix-element"
   }
 }

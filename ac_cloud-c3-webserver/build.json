@@ -186,5 +186,6 @@
       ],
       "_doc_requires": "node runs the shell's pure render block to prove the tabs draw exactly what the route table says. A tester that shells out to a tool which is not installed does not fail, it answers from the tool's absence, so a missing one is fatal at the engine's preflight."
     }
-  }
+  },
+  "apk": false
 }

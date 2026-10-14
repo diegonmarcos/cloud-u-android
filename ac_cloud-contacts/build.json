@@ -297,5 +297,9 @@
       "endpoint": "https://analytics.diegonmarcos.com/matomo",
       "site_id": "1"
     }
+  },
+  "web": {
+    "kind": "container",
+    "target": "contacts-radicale"
   }
 }

@@ -160,5 +160,6 @@
   "_doc_fleet_agents": "This app's agents, in the fleet agent registry's one shape (aa_cloud-superapp/build.json::_doc_fleet_agents). Consolidated into aa_cloud-superapp/data/fleet-agents.json by 1_cicd/src/scripts/cloud-android-fleet-agents.py and shown in Cloud SuperApp ▸ Configs ▸ Apps ▸ Agents ▸ Fleet agents.",
   "fleet_agents": [
     {"id": "screenshot-events", "name": "Screenshot events agent", "kind": "on-device worker", "trigger": "new Screenshot agent records from Cloud Drive (read past its own cursor)", "summary": "Finds events in Cloud Drive screenshot records and offers them under Invites; accepted ones land in the agents calendar.", "open": "page:configs/agents", "status": {"source": "none", "reason": "its on/off switch and last scan live in Cloud Tasks private preferences; Cloud Tasks has no provider for them yet"}}
-  ]
+  ],
+  "web": {"kind": "container", "target": "calendar-radicale"}
 }
