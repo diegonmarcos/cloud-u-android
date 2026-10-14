@@ -817,7 +817,7 @@ Coverage: 2 covered, 0 gaps.
 
 ## cloud-store — `com.diegonmarcos.cloudstore`
 
-Module `ac_cloud-store`; libs: lib-appstore, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-shizuku-adb-debug-tools, lib-sysdns, lib-updater.
+Module `ac_cloud-store`; libs: lib-appstore, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-shizuku-adb-debug-tools, lib-sysdns, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

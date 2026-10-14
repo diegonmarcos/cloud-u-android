@@ -343,6 +343,16 @@ object StoreRow {
 
     const val ACTIONS = "store-row:actions"
 
+    /** The row's detail: the column the head's chevron shows and hides (facts, reasons, [actions]). */
+    fun detail(ctx: Context) = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+
+    /** One line of a row's detail or under its head (facts, a reason, an install's progress), caption scale. */
+    fun line(ctx: Context, text: String, color: Int = 0x99FFFFFF.toInt()) = TextView(ctx).apply {
+        this.text = text; textSize = StoreDensity.T_CAPTION; setTextColor(color)
+        val h = StoreDensity.dp(ctx, StoreDensity.S12); val v = StoreDensity.dp(ctx, StoreDensity.S2)
+        setPadding(h, v, h, v)
+    }
+
     /** One line of the shared filter chips; [chips] is filled in order and painted for [selected]. */
     fun filters(ctx: Context, style: StoreControls.Style, labels: List<String>, selected: Int,
                 chips: MutableList<TextView>, onPick: (Int) -> Unit): LinearLayout = LinearLayout(ctx).apply {

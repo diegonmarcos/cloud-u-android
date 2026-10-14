@@ -44,6 +44,9 @@ object SourceResolver {
     // on them, not because they are a list of the stores that exist.
     const val KIND_VENDOR = "vendor"
     const val KIND_FDROID = "fdroid"
+    /** IzzyOnDroid: an F-Droid-format repo of its own (its own signed index-v1 and signing key), read by
+     *  the same [FDroidIndex] code with `resolver.izzy` in place of `resolver.fdroid`. */
+    const val KIND_IZZY = "izzy"
     const val KIND_PLAY = "play"
     /** Google Play's own servers, reached with an anonymous session ([PlayAnonFetcher]). */
     const val KIND_PLAY_ANON = "play-anon"
@@ -96,6 +99,8 @@ object SourceResolver {
             val versionRe: Regex?,
         ) : Source(KIND_VENDOR)
         object FDroid : Source(KIND_FDROID)
+        /** Fetches like [FDroid], from IzzyOnDroid's signed index, verified against its own pinned key. */
+        object Izzy : Source(KIND_IZZY)
         /** Fetches: the bytes come from Play's CDN, each split checked against
          *  the sha256 Play's delivery gives. NOT a hand-off, so an app with this
          *  rung is installable by this store and carries no 'needs Play' badge. */
@@ -138,7 +143,7 @@ object SourceResolver {
          *  // ponytail: derived from the ladder, not declared; add a `licence` field when a GPL app
          *  // with neither rung needs to count. */
         val openSource: Boolean get() = sources.any {
-            it is Source.FDroid || (it is Source.Vendor && listOfNotNull(it.feed, it.apk).any { u -> "github.com" in u })
+            it is Source.FDroid || it is Source.Izzy || (it is Source.Vendor && listOfNotNull(it.feed, it.apk).any { u -> "github.com" in u })
         }
         /** No rung we can serve: the badge, and no Install of our own. */
         val needsPlay: Boolean get() = direct.isEmpty()
@@ -171,6 +176,8 @@ object SourceResolver {
         val apps: Map<String, External>,
         /** `resolver.play_anon`; null when the map declares no play-anon kind. */
         val playAnon: PlayAnonFetcher.Config? = null,
+        /** `resolver.izzy` (same shape as [fdroid]); null when the map declares no izzy kind. */
+        val izzy: JSONObject? = null,
     ) {
         /** #627 one declared kind by id, for a label or an installer. */
         fun kind(id: String?): Kind? = kinds.firstOrNull { it.id == id }
@@ -213,7 +220,12 @@ object SourceResolver {
             "resolver.kinds names '$KIND_PLAY_ANON' iff resolver.play_anon is declared"
         }
         val playAnon = r.optJSONObject("play_anon")?.let { PlayAnonFetcher.config(it) }
-        return Config(order, kinds, r.getJSONObject("fdroid"), r.getJSONObject("play").getString("installer"), parsed, playAnon)
+        // Same closed-at-both-ends rule for IzzyOnDroid: a kind with no repo, or a repo nothing ranks.
+        require((KIND_IZZY in named) == r.has(KIND_IZZY)) {
+            "resolver.kinds names '$KIND_IZZY' iff resolver.$KIND_IZZY is declared"
+        }
+        return Config(order, kinds, r.getJSONObject("fdroid"), r.getJSONObject("play").getString("installer"), parsed, playAnon,
+            r.optJSONObject(KIND_IZZY))
     }
 
     /** The declared ladder, or the Play rung alone for a package the map does not know. */
@@ -247,6 +259,10 @@ object SourceResolver {
 
     private fun source(o: JSONObject, kinds: Map<String, Kind>): Source = when (val kind = o.getString("kind")) {
         KIND_FDROID -> Source.FDroid
+        KIND_IZZY -> {
+            require(o.length() == 1) { "an izzy source carries nothing but its kind: $o" }
+            Source.Izzy
+        }
         KIND_PLAY_ANON -> {
             // The URLs come from Play's delivery at fetch time; a rung that
             // names one is a guess about where Play keeps today's bytes.
@@ -381,6 +397,7 @@ object SourceResolver {
     }
 
     private fun playAnon(cfg: Config) = cfg.playAnon ?: error("resolver.play_anon is not declared")
+    fun izzy(cfg: Config) = cfg.izzy ?: error("resolver.$KIND_IZZY is not declared")
 
     private fun remoteVersion(ctx: Context, cfg: Config, app: External, src: Source): Remote? = when (src) {
         is Source.Vendor -> src.feed?.let { url ->
@@ -391,6 +408,8 @@ object SourceResolver {
         }
         is Source.FDroid -> FDroidIndex.suggested(cfg.fdroid, app.pkg)?.let { Remote(it.first, it.second) }
             ?: error("${app.pkg} is not in the F-Droid api")
+        is Source.Izzy -> FDroidIndex.suggested(izzy(cfg), app.pkg)?.let { Remote(it.first, it.second) }
+            ?: error("${app.pkg} is not in the IzzyOnDroid api")
         is Source.PlayAnon -> PlayAnonFetcher.details(ctx, playAnon(cfg), app.pkg).let { Remote(it.versionName, it.versionCode) }
         is Source.Play -> null
         // No public version endpoint exists for these — Galaxy Store's API is
@@ -417,6 +436,7 @@ object SourceResolver {
     fun fetch(ctx: Context, cfg: Config, app: External, src: Source): VerifiedApk = when (src) {
         is Source.Vendor -> fetchVendor(ctx, app, src)
         is Source.FDroid -> identity(ctx, app.pkg, FDroidIndex.fetch(ctx, cfg.fdroid, app.pkg))
+        is Source.Izzy -> identity(ctx, app.pkg, FDroidIndex.fetch(ctx, izzy(cfg), app.pkg))
         is Source.PlayAnon -> identity(ctx, app.pkg, PlayAnonFetcher.fetch(ctx, playAnon(cfg), app.pkg))
         is Source.Play -> error("${app.label} publishes no APK outside Google Play")
         is Source.Store -> error("${app.label} publishes no APK outside ${src.kind} — that store " +

@@ -53,6 +53,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       #   input: "ab_cloud-libs-shared/libs/sysdns/**"
+      #   input: "ab_cloud-libs-shared/libs/ui-kit/**"
       #   input: "ab_cloud-libs-shared/libs/updater/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/appstore/**"

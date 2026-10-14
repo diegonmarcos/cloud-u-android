@@ -3001,6 +3001,7 @@
         "lib-fleetconfig-model",
         "lib-shizuku-adb-debug-tools",
         "lib-sysdns",
+        "lib-ui-kit",
         "lib-updater"
       ],
       "items": []

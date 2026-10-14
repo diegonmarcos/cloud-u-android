@@ -6,7 +6,8 @@
 #     resolver.apps of the install-source map: a ladder, or an explicit
 #     "unresolved": "<why>". Nothing is undeclared.
 #  2. Every ladder is a subsequence of resolver.order, and the order is the
-#     declared one: vendor, fdroid, play-anon, samsung, aurora, play.
+#     declared one: vendor, fdroid, izzy, play-anon, samsung, aurora, play
+#     (izzy = IzzyOnDroid, a second signed F-Droid-format repo, ranked with fdroid).
 #  3. play-anon is a FETCHING kind with its config declared (dispensers in
 #     order, https; a device profile that exists in libs/gplayapi/profiles and
 #     matches the pin's sha256; a positive token TTL).
@@ -63,7 +64,7 @@ elif empty: bad(f"rows with neither a ladder nor an unresolved reason: {empty[:5
 else: ok(f"all {len(want)} upstream packages are declared")
 
 # 2
-if order == ["vendor", "fdroid", "play-anon", "samsung", "aurora", "play"]: ok("order is the declared ladder")
+if order == ["vendor", "fdroid", "izzy", "play-anon", "samsung", "aurora", "play"]: ok("order is the declared ladder")
 else: bad(f"order is {order}")
 badl = []
 for p, a in apps.items():

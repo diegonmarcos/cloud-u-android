@@ -72,9 +72,10 @@ object StoreDebugApi {
                 "Store ▸ Phone's import from a terminal: the plan against THIS phone (installed / direct = vendor or F-Droid rung / store = needs its store / manual), package names only; run=1 installs the direct ones in the background through the Phone page's own installMissing. Fleet apps are the Cloud page's and never installed here."),
             AppDebugServer.Op("progress", "",
                 "the Store bar's line now: app, version, stage, bytes/total, %, batch position, next, error"),
-            AppDebugServer.Op("search", "q=… · play=0 / fdroid=0 (optional: leave a source out)",
-                "Store ▸ Phone ▸ Search from a terminal: Google Play (play-anon) and F-Droid, merged by package, each " +
-                "with its sources and FOSS / Private; plus any source's error"),
+            AppDebugServer.Op("search", "q=… · <source>=0 (optional: leave a source out, e.g. play=0, github=0)",
+                "Store ▸ Phone ▸ Search from a terminal: every source declared under `search` in the install-source " +
+                "map (our fleet, our declared list, F-Droid, IzzyOnDroid, GitHub, Play), merged by package, each " +
+                "result with its sources and FOSS / Private; plus each source's state (N found, off, or failed: why)"),
         )) { op, q -> route(app, op, q) }
         // #792 /api/fleet/endpoints — the Apps Mesh catalogue, off the same probe
         // the page runs. fleet/peers and fleet/wake are AppDebugServer's own and
@@ -99,13 +100,13 @@ object StoreDebugApi {
         }
     }
 
-    private fun search(ctx: Context, query: String, play: Boolean, fdroid: Boolean): JSONObject {
+    private fun search(ctx: Context, query: String, q: Map<String, String>): JSONObject {
         if (query.isBlank()) return JSONObject().put("ok", false).put("error", "q= is required")
         val cfg = PhoneAppActions.resolver(PhoneAppActions.sources(ctx))
-        val (hits, notes) = StoreSearchPage.search(ctx, cfg, query, play, fdroid)
-        return JSONObject().put("ok", true).put("query", query).put("count", hits.size).put("notes", JSONArray(notes))
+        val (hits, states) = StoreSearchPage.search(ctx, cfg, query) { q[it] != "0" }
+        return JSONObject().put("ok", true).put("query", query).put("count", hits.size).put("sources", JSONObject(states))
             .put("results", JSONArray(hits.map { r -> JSONObject().put("pkg", r.pkg).put("title", r.title).put("by", r.by)
-                .put("fdroid", r.fdroid).put("play", r.play).put("foss", r.foss) }))
+                .put("sources", JSONArray(r.sources)).put("foss", r.foss).put("link", r.link) }))
     }
 
     /** #793 an unknown filter is an error, not "all": a typo must not look like a full answer. */
@@ -126,7 +127,7 @@ object StoreDebugApi {
         "batch" -> (lastBatch(ctx) ?: JSONObject().put("ok", true).put("batch", JSONObject.NULL)).toString()
         "auto" -> if (q["pkg"].isNullOrEmpty()) auto(ctx, q["run"] == "1").toString() else verb(ctx, q)
         "progress" -> progress().toString()
-        "search" -> search(ctx, q["q"].orEmpty(), q["play"] != "0", q["fdroid"] != "0").toString()
+        "search" -> search(ctx, q["q"].orEmpty(), q).toString()
         "import" -> importInventory(ctx, q["_body"].orEmpty(), q["run"] == "1").toString()
         "feeds" -> feeds(ctx, q["load"] == "1").toString()
         "stage", "download", "install", "clear" -> verb(ctx, q, op)

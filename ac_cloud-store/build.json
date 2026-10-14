@@ -73,13 +73,18 @@
         "libs:shizuku-adb-debug-tools"
       ]
     },
+    "libs:ui-kit": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit",
+      "type": "library"
+    },
     "libs:appstore": {
       "dir": "../ab_cloud-libs-shared/libs/appstore",
       "type": "library",
       "depends_on": [
         "libs:core",
         "libs:updater",
-        "libs:shizuku-adb-debug-tools"
+        "libs:shizuku-adb-debug-tools",
+        "libs:ui-kit"
       ]
     },
     "libs:bottomnav": {

@@ -268,24 +268,13 @@ class PhoneAppsFragment : Fragment() {
             //    (System _, Services -, Tools A ., Tools B >). Each section
             //    gets a subhead + its own grid below. Folders whose label
             //    starts with no known prefix fall through to "Other" so they
-            //    don't disappear silently.
-            val sections = PhoneSections.loadFromBuildConfig()
-            val byPrefix = LinkedHashMap<String, MutableList<PhoneFolders.Folder>>()
-            for (sec in sections) byPrefix[sec.title] = mutableListOf()
-            val otherBucket = mutableListOf<PhoneFolders.Folder>()
-            for (folder in visible) {
-                val sec = sections.firstOrNull { folder.label.startsWith(it.prefix) }
-                if (sec != null) byPrefix.getValue(sec.title).add(folder) else otherBucket.add(folder)
-            }
-            for (sec in sections) {
-                val list = byPrefix[sec.title].orEmpty()
-                if (list.isEmpty()) continue
-                rootCol.addView(subhead(ctx, sec.title))
-                renderFolderGrid(rootCol, ctx, list, grouped, columns)
-            }
-            if (otherBucket.isNotEmpty()) {
-                rootCol.addView(subhead(ctx, "Other"))
-                renderFolderGrid(rootCol, ctx, otherBucket, grouped, columns)
+            //    don't disappear silently. The bucketing is the shared
+            //    PhoneTaxonomyLayout.bucket, the SAME call Cloud Store ▸ Phone ▸
+            //    Search's landing makes, so the two list the taxonomy in one order.
+            val sections = PhoneSections.loadFromBuildConfig().map { it.title to it.prefix }
+            for (group in PhoneTaxonomyLayout.bucket(sections, visible) { it.label }) {
+                rootCol.addView(subhead(ctx, group.title ?: "Other"))
+                renderFolderGrid(rootCol, ctx, group.folders, grouped, columns)
             }
         }
 

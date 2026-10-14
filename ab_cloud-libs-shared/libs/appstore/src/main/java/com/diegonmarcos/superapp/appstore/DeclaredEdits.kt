@@ -61,6 +61,7 @@ object DeclaredEdits {
         val sources = (0 until kinds.length()).mapNotNull { i ->
             when (kinds.getString(i)) {
                 SourceResolver.KIND_FDROID -> SourceResolver.Source.FDroid
+                SourceResolver.KIND_IZZY -> SourceResolver.Source.Izzy
                 SourceResolver.KIND_PLAY_ANON -> SourceResolver.Source.PlayAnon
                 else -> null
             }

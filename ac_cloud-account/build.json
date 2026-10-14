@@ -68,7 +68,8 @@
       "depends_on": [
         "libs:core",
         "libs:updater",
-        "libs:shizuku-adb-debug-tools"
+        "libs:shizuku-adb-debug-tools",
+        "libs:ui-kit"
       ]
     },
     "libs:databackend": {

@@ -30,6 +30,7 @@
     "order": [
       "vendor",
       "fdroid",
+      "izzy",
       "play-anon",
       "samsung",
       "aurora",
@@ -44,6 +45,11 @@
       "fdroid": {
         "label": "F-Droid",
         "installer": "org.fdroid.fdroid",
+        "fetches": true
+      },
+      "izzy": {
+        "label": "IzzyOnDroid",
+        "_doc": "IzzyOnDroid (apt.izzysoft.de): an F-Droid-format repo of its own, mostly apps whose developers publish APKs on GitHub/GitLab releases that the official repo has not built. Same verification as `fdroid`, with its OWN pinned key: index-v1.jar is opened as a verifying JarFile and its signer must be `resolver.izzy.cert_sha256` (the repo fingerprint IzzyOnDroid publishes, 3BF0D6AB…F628937A; checked 2026-10-14 from this container with keytool -printcert -jarfile on the live index), and each APK must match the signed index's sha256. Ranked right after fdroid: a reproducible official build is preferred, a signed third-party repo comes before any Play path.",
         "fetches": true
       },
       "play-anon": {
@@ -78,6 +84,13 @@
       "index_entry": "index-v1.json",
       "api": "https://f-droid.org/api/v1/packages/{pkg}",
       "cert_sha256": "43238d512c1e5eb2d6569f4a3afbf5523418b82e0a3ed1552770abb9a9c9ccab"
+    },
+    "izzy": {
+      "repo": "https://apt.izzysoft.de/fdroid/repo/",
+      "index": "index-v1.jar",
+      "index_entry": "index-v1.json",
+      "api": "https://apt.izzysoft.de/fdroid/api/v1/packages/{pkg}",
+      "cert_sha256": "3bf0d6abfeae2f401707b6d966be743bf0eee49c2561b9ba39073711f628937a"
     },
     "play": {
       "installer": "com.android.vending"
@@ -2235,6 +2248,9 @@
       "moe.shizuku.privileged.api": {
         "sources": [
           {
+            "kind": "izzy"
+          },
+          {
             "kind": "play-anon"
           },
           {
@@ -2480,5 +2496,43 @@
         "integrity": "unknown"
       }
     }
+  },
+  "search": {
+    "_doc": "Store > Phone > Search: the sources a query runs against, IN THE ORDER their result groups are drawn and their badges read (StoreSearchPage). Each runs on its own thread and reports its own state (searching / N found / failed with the reason / off), so one source failing never blanks the others. A package found by several sources is ONE result carrying every source's badge (StoreSuggest.merge, by package name) and sits in the group of the first source here that found it. `fleet` = the constellation manifest baked into this APK (our own apps; Install is the fleet's release path); `declared` = resolver.apps plus this phone's DeclaredEdits (the owner's curated list; Install is the declared ladder); `fdroid` / `izzy` = that resolver kind's signed index-v1; `github` = GitHub's repository search, READ-ONLY: a repository joins the package whose F-Droid / IzzyOnDroid `sourceCode` it is, otherwise it is a link to its releases page (a repository names no package, so there is nothing to verify or install); `play` = Google Play's search through the anonymous play-anon session (Aurora's method: metadata only until Install). No source calls a sibling fleet app: what the phone has comes from the PackageManager and the baked manifest. `label` is optional for an id that is a resolver kind (its kind label is used). `foss` = the sources whose every result is free software.",
+    "sources": [
+      {
+        "id": "fleet",
+        "label": "Cloud"
+      },
+      {
+        "id": "declared",
+        "label": "Our list"
+      },
+      {
+        "id": "fdroid"
+      },
+      {
+        "id": "izzy"
+      },
+      {
+        "id": "github",
+        "label": "GitHub",
+        "url": "https://api.github.com/search/repositories?q={q}+topic:android&sort=stars&order=desc&per_page=15",
+        "items": "items",
+        "title": "{full_name}",
+        "subtitle": "{description}",
+        "repo": "{html_url}",
+        "link": "{html_url}/releases"
+      },
+      {
+        "id": "play",
+        "label": "Play (Aurora)"
+      }
+    ],
+    "foss": [
+      "fdroid",
+      "izzy",
+      "github"
+    ]
   }
 }

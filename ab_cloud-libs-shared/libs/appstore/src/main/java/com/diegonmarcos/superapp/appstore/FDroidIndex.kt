@@ -53,7 +53,7 @@ object FDroidIndex {
     fun fetch(ctx: Context, cfg: JSONObject, pkg: String): VerifiedApk {
         val repo = cfg.getString("repo")
         val index = verifiedIndex(ctx, repo + cfg.getString("index"), cfg.getString("index_entry"), cfg.getString("cert_sha256"))
-        val entry = lookup(index.inputStream(), pkg) ?: error("$pkg is not in the F-Droid index")
+        val entry = lookup(index.inputStream(), pkg) ?: error("$pkg is not in the index of $repo")
         val abis = Build.SUPPORTED_ABIS.toList()
         val v = entry.versions.filter { it.versionCode == entry.suggestedVersionCode }
             .firstOrNull { it.nativecode.isEmpty() || it.nativecode.any { a -> a in abis } }
@@ -66,13 +66,20 @@ object FDroidIndex {
         }
         return VerifiedApk.byDigest(target, v.sha256) ?: run {
             ApkCache.drop(target)
-            error("F-Droid ${v.apkName}: digest mismatch against the signed index")
+            error("${v.apkName}: digest mismatch against the signed index of $repo")
         }
     }
 
-    /** The bytes of [entryName] out of the repo's signed index, verified. */
+    /**
+     * The bytes of [entryName] out of the repo's signed index, verified. One cached jar PER REPO
+     * (named by a hash of its URL): the official repo and IzzyOnDroid are two indexes signed by two
+     * keys, and sharing one file would make every search of one re-download the other.
+     */
     internal fun verifiedIndex(ctx: Context, url: String, entryName: String, certSha256: String): ByteArray {
-        val jar = File(ctx.cacheDir, "fdroid-index-v1.jar")
+        // The single pre-IzzyOnDroid cache name, retired: its bytes are the official index under
+        // a name nothing reads any more.
+        File(ctx.cacheDir, LEGACY_JAR).takeIf { it.isFile }?.delete()
+        val jar = File(ctx.cacheDir, "repo-index-" + sha256Hex(url.toByteArray()).take(12) + ".jar")
         // ponytail: the jar is reused for a day; the signature is re-checked on
         // every read, so a stale cache can only be OLD, never forged. Upgrade
         // path if index-v1 is retired: entry.jar → index-v2.json (61 MB).
@@ -92,13 +99,15 @@ object FDroidIndex {
             val signers = e.codeSigners ?: error("${jar.name}: $entryName is not signed")
             val fingerprints = signers.flatMap { it.signerCertPath.certificates }.map { sha256Hex(it.encoded) }
             if (certSha256.lowercase() !in fingerprints)
-                error("${jar.name}: signed by ${fingerprints.joinToString()} — not the pinned F-Droid certificate")
+                error("${jar.name}: signed by ${fingerprints.joinToString()} — not the pinned repo certificate")
             return bytes
         }
     }
 
-    /** One app in the official F-Droid repo, as search returns it. Every one is free and open source. */
-    class Hit(val pkg: String, val name: String, val summary: String, val license: String)
+    /** One app of an F-Droid-format repo (the official one, IzzyOnDroid), as search returns it. Every
+     *  one is free and open source. [sourceCode] is the app's declared source repository, which is
+     *  how a GitHub result is matched to its package. */
+    class Hit(val pkg: String, val name: String, val summary: String, val license: String, val sourceCode: String = "")
 
     /** Search the signed index's apps by name, summary or package, case-insensitive; at most [limit]. */
     fun search(ctx: Context, cfg: JSONObject, query: String, limit: Int = 60): List<Hit> {
@@ -113,13 +122,14 @@ object FDroidIndex {
             r.beginObject()
             while (r.hasNext()) when (r.nextName()) {
                 "apps" -> { r.beginArray(); while (r.hasNext()) {
-                    var p = ""; var name = ""; var sum = ""; var lic = ""
+                    var p = ""; var name = ""; var sum = ""; var lic = ""; var src = ""
                     r.beginObject()
                     while (r.hasNext()) when (r.nextName()) {
                         "packageName" -> p = r.str()
                         "name" -> name = r.str()
                         "summary" -> sum = r.str()
                         "license" -> lic = r.str()
+                        "sourceCode" -> src = r.str()
                         "localized" -> { r.beginObject(); while (r.hasNext()) { val loc = r.nextName(); r.beginObject()
                             while (r.hasNext()) when (r.nextName()) {
                                 "name" -> r.str().let { if (name.isEmpty() || loc.startsWith("en")) name = it }
@@ -130,7 +140,7 @@ object FDroidIndex {
                     }
                     r.endObject()
                     if (out.size < limit && (q in p.lowercase() || q in name.lowercase() || q in sum.lowercase()))
-                        out += Hit(p, name.ifEmpty { p }, sum, lic)
+                        out += Hit(p, name.ifEmpty { p }, sum, lic, src)
                 }; r.endArray() }
                 else -> r.skipValue()
             }
@@ -139,11 +149,12 @@ object FDroidIndex {
         return out
     }
 
-    @Volatile private var pkgCache: Set<String>? = null
+    private val pkgCache = java.util.concurrent.ConcurrentHashMap<String, Set<String>>()
 
-    /** Every package in the signed index, read once per process: what makes a Play hit FOSS. */
-    fun packages(ctx: Context, cfg: JSONObject): Set<String> = pkgCache ?: run {
-        val index = verifiedIndex(ctx, cfg.getString("repo") + cfg.getString("index"), cfg.getString("index_entry"), cfg.getString("cert_sha256"))
+    /** Every package in the repo's signed index, read once per process per repo: what makes a Play hit FOSS. */
+    fun packages(ctx: Context, cfg: JSONObject): Set<String> = pkgCache[cfg.getString("repo")] ?: run {
+        val url = cfg.getString("repo") + cfg.getString("index")
+        val index = verifiedIndex(ctx, url, cfg.getString("index_entry"), cfg.getString("cert_sha256"))
         val out = HashSet<String>()
         JsonReader(InputStreamReader(index.inputStream(), Charsets.UTF_8)).use { r ->
             r.beginObject()
@@ -153,7 +164,7 @@ object FDroidIndex {
             }
             r.endObject()
         }
-        out.also { pkgCache = it }
+        out.also { pkgCache[cfg.getString("repo")] = it }
     }
 
     private fun JsonReader.str(): String = if (peek() == JsonToken.NULL) { nextNull(); "" } else nextString()
@@ -214,4 +225,5 @@ object FDroidIndex {
         MessageDigest.getInstance("SHA-256").digest(b).joinToString("") { "%02x".format(it) }
 
     private const val INDEX_MAX_AGE_MS = 24L * 60 * 60 * 1000
+    private const val LEGACY_JAR = "fdroid-index-v1.jar"
 }
