@@ -2,7 +2,7 @@
 
 Cloud Drive's **Agents** tab runs the Screenshot agent. It OCRs every screenshot on the phone and
 writes on-device ML metadata. Other fleet apps read the result as plain files in the shared store.
-The first reader is Cloud Calendar's event agent.
+The first reader is Cloud Tasks' event agent.
 
 Machine-readable source of truth: `ac_cloud-drive/data/agent-screenshots-contract.json`.
 

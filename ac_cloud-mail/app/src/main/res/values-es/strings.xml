@@ -1280,7 +1280,7 @@
     <string name="compose_format_inline_image">Insertar imagen</string>
     <string name="nav_bar_tasks">Tareas</string>
     <string name="nav_bar_contacts">Contactos</string>
-    <string name="nav_tasks_not_installed">Cloud Agenda is not installed</string>
+    <string name="nav_tasks_not_installed">Cloud Tasks is not installed</string>
     <string name="nav_contacts_not_installed">Cloud Contacts is not installed</string>
     <string name="nav_cloud_chat_not_installed">Cloud Chat is not installed</string>
     <string name="inbox_drawer_inbox">Recibidos</string>

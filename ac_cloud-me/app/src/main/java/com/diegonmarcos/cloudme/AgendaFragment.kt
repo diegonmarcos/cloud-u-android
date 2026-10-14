@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Both come from the cal ENGINE (Cloud-Lib-Cal.apk, reached through
  * [CalEngineClient]; this app no longer compiles libs:cal): events from its
  * cache of the ICS subscriptions, tasks from its CalDAV VTODO mirror — the
- * same engine and the same data Cloud Agenda shows. The engine answers from
+ * same engine and the same data Cloud Tasks shows. The engine answers from
  * its cache, never the network, but the bind itself waits on the main thread,
  * so the rows are fetched on a worker and drawn when they arrive.
  *

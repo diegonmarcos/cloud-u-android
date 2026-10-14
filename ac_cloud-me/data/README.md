@@ -56,7 +56,7 @@ stories about the same card.
 
 Cloud Me used to compile `libs:cal`, which bakes its subscription list from
 `${rootDir}/data/calendars.json`, so this directory carried a symlink into
-`ac_cloud-agenda/data/`. Agenda now binds the cal engine (Cloud-Lib-Cal.apk,
+`ac_cloud-tasks/data/`. Agenda now binds the cal engine (Cloud-Lib-Cal.apk,
 `build.json::engines.cal`) instead of compiling it, and the engine bakes the
-one list in `ac_cloud-agenda/data/calendars.json` when lib-apks builds it, so
+one list in `ac_cloud-tasks/data/calendars.json` when lib-apks builds it, so
 the symlink went with the module.

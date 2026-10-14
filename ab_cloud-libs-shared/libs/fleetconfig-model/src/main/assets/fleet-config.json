@@ -306,33 +306,33 @@
     "cal_agents": {
       "kind": "prefs",
       "class": "content",
-      "doc": "Agenda agents: the screenshot agent's on/off switch, last scan time, dismissed candidate keys and the events the user accepted from screenshots; user decisions, not config.",
+      "doc": "Cloud Tasks agents: the screenshot agent's on/off switch, last scan time, dismissed candidate keys and the events the user accepted from screenshots; user decisions, not config.",
       "used_by": [
-        "ac_cloud-agenda"
+        "ac_cloud-tasks"
       ]
     },
     "cal_bridge": {
       "kind": "prefs",
       "class": "device",
-      "doc": "Agenda one-time 'seeded' flag for legacy todo import.",
+      "doc": "Cloud Tasks one-time 'seeded' flag for legacy todo import.",
       "used_by": [
-        "ac_cloud-agenda"
+        "ac_cloud-tasks"
       ]
     },
     "cal_legacy_todos": {
       "kind": "prefs",
       "class": "content",
-      "doc": "Agenda legacy local todos JSON that is read once and seeded into the calendar engine; user data, not config.",
+      "doc": "Cloud Tasks legacy local todos JSON that is read once and seeded into the calendar engine; user data, not config.",
       "used_by": [
-        "ac_cloud-agenda"
+        "ac_cloud-tasks"
       ]
     },
     "caldav_secure_prefs": {
       "kind": "encrypted",
       "class": "secret",
-      "doc": "Agenda EncryptedSharedPreferences holding CalDAV url/username/password; mostly credentials (url+username are the account link, migrate via vault with the password).",
+      "doc": "Cloud Tasks EncryptedSharedPreferences holding CalDAV url/username/password; mostly credentials (url+username are the account link, migrate via vault with the password).",
       "used_by": [
-        "ac_cloud-agenda"
+        "ac_cloud-tasks"
       ]
     },
     "calendar_cache": {
@@ -1515,7 +1515,7 @@
     "mail_tasks": {
       "kind": "prefs",
       "class": "content",
-      "doc": "Mail's Assigned tasks (a task attached to a mail: deadline, target date, notes, links, location, priority, status, people, the mail's account/id and mid: link), as CalTodo JSON. Each is mirrored into the cal engine's task store, which Cloud Agenda shows under Tasks.",
+      "doc": "Mail's Assigned tasks (a task attached to a mail: deadline, target date, notes, links, location, priority, status, people, the mail's account/id and mid: link), as CalTodo JSON. Each is mirrored into the cal engine's task store, which Cloud Tasks shows under Tasks.",
       "used_by": [
         "ac_cloud-mail"
       ]
@@ -2185,9 +2185,9 @@
       ],
       "items": []
     },
-    "agenda": {
+    "tasks": {
       "package": "com.diegonmarcos.cloudagenda",
-      "module": "ac_cloud-agenda",
+      "module": "ac_cloud-tasks",
       "schema_version": 1,
       "libs": [
         "lib-analytics",

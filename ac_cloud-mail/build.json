@@ -60,8 +60,8 @@
         "icon": "tasks",
         "pages": [
           {
-            "id": "agenda",
-            "label": "Agenda",
+            "id": "tasks",
+            "label": "Tasks",
             "action": "launch:com.diegonmarcos.cloudagenda"
           }
         ]
@@ -839,7 +839,7 @@
     "summary_not_bullets_note": "[Asked for bullet points, the model answered in prose. Its reply is above, unchanged.]"
   },
   "engines": {
-    "_doc": "ENGINES THIS APP BINDS INSTEAD OF COMPILING (same shape as ac_cloud-agenda/build.json::engines). The cal engine is the fleet's task store: a task attached to a mail (Assigned) is mirrored there, so it also shows under Cloud Agenda's Tasks.",
+    "_doc": "ENGINES THIS APP BINDS INSTEAD OF COMPILING (same shape as ac_cloud-tasks/build.json::engines). The cal engine is the fleet's task store: a task attached to a mail (Assigned) is mirrored there, so it also shows under Cloud Tasks' Tasks.",
     "cal": {
       "fleet": "lib-cal",
       "action": "{package}.ENGINE",

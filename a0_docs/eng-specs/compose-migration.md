@@ -69,7 +69,7 @@ files, 52 custom Views.**
 
 **Out of scope.** Each unit is listed with its reason in the JSON:
 
-- **Web wrappers:** agenda, contacts and news. Each is a single WebView layout plus a JS bridge.
+- **Web wrappers:** tasks (ex-agenda), contacts and news. Each is a single WebView layout plus a JS bridge.
 - **Vendored trees:**
   - Compose already: mail (sterna), matrix (Element X), gallery (ReFra) and vault
     (Bitwarden).

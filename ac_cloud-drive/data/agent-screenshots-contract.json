@@ -1,5 +1,5 @@
 {
-  "_doc": "THE OUTPUT CONTRACT of Cloud Drive's Screenshot agent (Agents tab). Producers: ac_cloud-drive only. Consumers: any fleet app holding all-files access (first: Cloud Calendar's event agent). Human description: ac_cloud-drive/docs/screenshot-agent-contract.md. The location is RELATIVE TO SHARED STORAGE (/storage/emulated/0 on a single-user phone) under storage.shared_root, never an absolute path. Bump `version` and the directory together on any breaking change; additive fields do not bump it.",
+  "_doc": "THE OUTPUT CONTRACT of Cloud Drive's Screenshot agent (Agents tab). Producers: ac_cloud-drive only. Consumers: any fleet app holding all-files access (first: Cloud Tasks' event agent). Human description: ac_cloud-drive/docs/screenshot-agent-contract.md. The location is RELATIVE TO SHARED STORAGE (/storage/emulated/0 on a single-user phone) under storage.shared_root, never an absolute path. Bump `version` and the directory together on any breaking change; additive fields do not bump it.",
   "contract": "cloud-drive.agent.screenshots",
   "version": 1,
   "root": "{shared_root}/.agents/screenshots/v1",

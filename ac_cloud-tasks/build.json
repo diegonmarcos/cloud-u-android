@@ -1,6 +1,6 @@
 {
-  "name": "cloud-agenda",
-  "description": "Diego's Cloud Agenda — standalone Android calendar, task and event app. WebView UI with a five-tab shell (Tasks, Events, Calendar, Projects, Configs): a colourful month grid with per-calendar arc indicators plus an agenda list view, an analog clock face, public-ICS feed sync (holidays, moon phases, sports, Berlin events), and CalDAV/VTODO tasks against a self-hosted Radicale. Build via Nix devShell, one APK out.",
+  "name": "cloud-tasks",
+  "description": "Diego's Cloud Tasks (formerly Cloud Agenda, before that Cloud Calendar) — standalone Android task, calendar and event app. The applicationId stays com.diegonmarcos.cloudagenda so installed phones update in place. WebView UI with a five-tab shell (Tasks, Events, Calendar, Invites, Configs) that opens on Tasks: a colourful month grid with per-calendar arc indicators plus an agenda list view, an analog clock face, public-ICS feed sync (holidays, moon phases, sports, Berlin events), and CalDAV/VTODO tasks against a self-hosted Radicale. Build via Nix devShell, one APK out.",
   "category": "android",
   "build": {
     "type": "gradle",
@@ -25,7 +25,7 @@
   "diagnostics": {
     "_doc": "On-device DevControlServer diagnostics → cloud sink.",
     "log_sink_url": "https://api.diegonmarcos.com/pub/analytics/openobserve",
-    "log_sink_stream": "cloud-agenda"
+    "log_sink_stream": "cloud-tasks"
   },
   "modules": {
     "_doc": "Single source of truth for the Gradle module graph. settings.gradle iterates this list.",
@@ -75,8 +75,8 @@
   },
   "release": {
     "artifact": {
-      "debug": "Cloud-Agenda.apk",
-      "release": "Cloud-Agenda-release.apk"
+      "debug": "Cloud-Tasks.apk",
+      "release": "Cloud-Tasks-release.apk"
     },
     "variants": [
       {
@@ -88,8 +88,8 @@
           "arm64-v8a",
           "armeabi-v7a"
         ],
-        "artifact_debug": "Cloud-Agenda.apk",
-        "gh_asset": "Cloud-Agenda.apk",
+        "artifact_debug": "Cloud-Tasks.apk",
+        "gh_asset": "Cloud-Tasks.apk",
         "ghcr_tag_suffix": "",
         "update_tag": "latest"
       },
@@ -102,8 +102,8 @@
           "x86_64",
           "x86"
         ],
-        "artifact_debug": "Cloud-Agenda-x86_64.apk",
-        "gh_asset": "Cloud-Agenda-x86_64.apk",
+        "artifact_debug": "Cloud-Tasks-x86_64.apk",
+        "gh_asset": "Cloud-Tasks-x86_64.apk",
         "ghcr_tag_suffix": "-x86_64",
         "update_tag": "latest-x86_64"
       }
@@ -122,7 +122,7 @@
       "enabled": true,
       "registry": "ghcr.io",
       "namespace": "diegonmarcos",
-      "image": "cloud-agenda",
+      "image": "cloud-tasks",
       "media_type": "application/vnd.android.package-archive",
       "tags": [
         "latest",
@@ -133,7 +133,7 @@
     "gh_release": {
       "enabled": true,
       "rolling_tag": "latest",
-      "asset_name": "Cloud-Agenda.apk",
+      "asset_name": "Cloud-Tasks.apk",
       "draft": false,
       "prerelease": false,
       "generate_release_notes": false
@@ -141,13 +141,13 @@
     "phone_install": {
       "default_tag": "latest",
       "target_dir": "~/storage/downloads",
-      "asset_name": "Cloud-Agenda.apk"
+      "asset_name": "Cloud-Tasks.apk"
     }
   },
   "analytics": {
     "_doc": "Consumed by :libs:analytics, which reads THIS file (rootDir) at build time and bakes the values into BuildConfig. Both backends are single-site today, so every app reports into the same site and is told apart by .app — give each app its own site_id once per-app sites exist in Umami/Matomo.",
     "enabled": true,
-    "app": "ac_cloud-agenda",
+    "app": "ac_cloud-tasks",
     "umami": {
       "endpoint": "https://analytics.diegonmarcos.com/umami",
       "site_id": "937cbde7-5ec2-450c-9d6a-8117423ac12f"

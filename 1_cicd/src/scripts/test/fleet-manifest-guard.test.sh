@@ -310,10 +310,10 @@ widen_the_chunk_step() {
 # so an edit aimed at a path it does not contain is a mutation that silently does
 # NOTHING and a case that passes for no reason.
 _write_agenda_tree_bake() {   # $1 root, $2 the right-hand side of the assignment
-    mkdir -p "$1/ac_cloud-agenda/app"
+    mkdir -p "$1/ac_cloud-tasks/app"
     printf 'def stackTreeB64 = %s\nandroid { defaultConfig {\n    buildConfigField "String", "UI_STACK_FOLDER_TREE_B64", "\\"${stackTreeB64}\\""\n} }\n' \
-        "$2" > "$1/ac_cloud-agenda/app/build.gradle"
-    grep -q 'UI_STACK_FOLDER_TREE_B64' "$1/ac_cloud-agenda/app/build.gradle" \
+        "$2" > "$1/ac_cloud-tasks/app/build.gradle"
+    grep -q 'UI_STACK_FOLDER_TREE_B64' "$1/ac_cloud-tasks/app/build.gradle" \
         || { echo "MUTATION DID NOT APPLY: no agenda bake written" >&2; exit 2; }
 }
 add_placeholder_tree_bake() {

@@ -20,7 +20,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
 | cloud-account | `com.diegonmarcos.cloudaccount` | 12 | 0 | 100% |
-| cloud-agenda | `com.diegonmarcos.cloudagenda` | 4 | 0 | 100% |
+| cloud-tasks | `com.diegonmarcos.cloudagenda` | 4 | 0 | 100% |
 | cloud-browser | `com.diegonmarcos.cloudbrowser` | 9 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
 | cloud-media-center | `com.diegonmarcos.cloudmediacenter` | 1 | 0 | 100% |
@@ -224,17 +224,17 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofi
 
 Coverage: 12 covered, 0 gaps.
 
-## cloud-agenda — `com.diegonmarcos.cloudagenda`
+## cloud-tasks — `com.diegonmarcos.cloudagenda`
 
-Module `ac_cloud-agenda`; libs: lib-analytics, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-updater.
+Module `ac_cloud-tasks`; libs: lib-analytics, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
-| `cal_agents` | prefs | content | no | Agenda agents: the screenshot agent's on/off switch, last scan time, dismissed candidate keys and the events the user accepted from screenshots; user decisions, not config. |
-| `cal_bridge` | prefs | device | no | Agenda one-time 'seeded' flag for legacy todo import. |
-| `cal_legacy_todos` | prefs | content | no | Agenda legacy local todos JSON that is read once and seeded into the calendar engine; user data, not config. |
-| `caldav_secure_prefs` | encrypted | secret | yes | Agenda EncryptedSharedPreferences holding CalDAV url/username/password; mostly credentials (url+username are the account link, migrate via vault with the password). |
+| `cal_agents` | prefs | content | no | Cloud Tasks agents: the screenshot agent's on/off switch, last scan time, dismissed candidate keys and the events the user accepted from screenshots; user decisions, not config. |
+| `cal_bridge` | prefs | device | no | Cloud Tasks one-time 'seeded' flag for legacy todo import. |
+| `cal_legacy_todos` | prefs | content | no | Cloud Tasks legacy local todos JSON that is read once and seeded into the calendar engine; user data, not config. |
+| `caldav_secure_prefs` | encrypted | secret | yes | Cloud Tasks EncryptedSharedPreferences holding CalDAV url/username/password; mostly credentials (url+username are the account link, migrate via vault with the password). |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
@@ -545,7 +545,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-databackend, lib-devt
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `list_view` | prefs | config | yes | Mail list view choices per account and folder (key account\|folder): group mode (subject, sender, none), rank (newest, sender, subject) and the combinable filters (starred, unread, attachments, codes), stored as group;rank;FILTERS. Unset means the global conversation-view and sort settings apply. |
 | `mail_notifications` | prefs | config | yes | Mail new-message notification actions: remind_delay_minutes (default 60) is how long the Remind button waits before re-posting the notification. |
-| `mail_tasks` | prefs | content | no | Mail's Assigned tasks (a task attached to a mail: deadline, target date, notes, links, location, priority, status, people, the mail's account/id and mid: link), as CalTodo JSON. Each is mirrored into the cal engine's task store, which Cloud Agenda shows under Tasks. |
+| `mail_tasks` | prefs | content | no | Mail's Assigned tasks (a task attached to a mail: deadline, target date, notes, links, location, priority, status, people, the mail's account/id and mid: link), as CalTodo JSON. Each is mirrored into the cal engine's task store, which Cloud Tasks shows under Tasks. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `push_baselines` | prefs | device | no | Sterna new-mail notification baselines (seen ids, last pass timestamp). |

@@ -112,7 +112,7 @@
     "ac_cloud-browser/app": {
       "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory."
     },
-    "ac_cloud-agenda/app": {
+    "ac_cloud-tasks/app": {
       "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory."
     },
     "ac_cloud-contacts/app": {

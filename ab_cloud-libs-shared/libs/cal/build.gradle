@@ -7,7 +7,7 @@ plugins {
 // BuildConfig, so the subscription list is baked into THIS module.
 //
 // AN ENGINE, NOT A LIBRARY AN APP COMPILES: lib-apks (Cloud-Lib-Cal.apk) is
-// the only build that compiles this module. Cloud Agenda and Cloud Me bind
+// the only build that compiles this module. Cloud Tasks and Cloud Me bind
 // CalBackendService over core's IDataBackend, so a change here republishes
 // Cloud-Lib-Cal.apk and no app. Do not add it back to an app's
 // build.json::modules (a0_docs/eng-specs/engine-apk-split.md, move 3).
@@ -24,9 +24,9 @@ plugins {
 // the device.
 def calendarsFile = [
     file("${rootDir}/data/calendars.json"),
-    file("${projectDir}/../../../ac_cloud-agenda/data/calendars.json"),
+    file("${projectDir}/../../../ac_cloud-tasks/data/calendars.json"),
 ].find { it.exists() }
-if (calendarsFile == null) throw new GradleException("libs:cal: no calendars.json under ${rootDir}/data or ac_cloud-agenda/data — refusing to bake an empty calendar engine")
+if (calendarsFile == null) throw new GradleException("libs:cal: no calendars.json under ${rootDir}/data or ac_cloud-tasks/data — refusing to bake an empty calendar engine")
 def calendarsB64  = calendarsFile.text.bytes.encodeBase64().toString()
 
 android {

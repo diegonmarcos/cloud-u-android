@@ -11,7 +11,7 @@ import org.json.JSONObject
  * The calendar, REACHED, NOT CARRIED (engine-apk-split, move 3). Agenda used to compile
  * libs:cal and run CalEngine in this process, so every calendar change republished Cloud Me.
  * The engine now runs only in Cloud-Lib-Cal.apk (CalBackendService, installed by the Store) —
- * the same engine Cloud Agenda binds — and this is the thin client Agenda talks to instead.
+ * the same engine Cloud Tasks binds — and this is the thin client Agenda talks to instead.
  * Same shape as cloud-drive's GhEngine.
  *
  * THE HANDSHAKE COMES FIRST AND COSTS NO BIND: [check] asks PackageManager for the service

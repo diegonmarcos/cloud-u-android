@@ -30,7 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * OUTPUT: the published contract, data/agent-screenshots-contract.json (records/<id>.json,
  * index.jsonl, state.json under <shared_root>/.agents/screenshots/v1), also served by
- * ScreenshotAgentProvider. Cloud Calendar's event agent is the first reader.
+ * ScreenshotAgentProvider. Cloud Tasks' event agent is the first reader.
  *
  * INCREMENTAL: a screenshot whose contract id (path + size + mtime) already has a record is
  * skipped, so a pass only works on what is new or edited, newest first; a record whose source is

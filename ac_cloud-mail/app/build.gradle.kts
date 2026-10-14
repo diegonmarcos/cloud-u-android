@@ -108,7 +108,7 @@ val mailUiSectionsB64: String = groovy.json.JsonOutput.toJson(mailUi["sections"]
     .toByteArray(Charsets.UTF_8)
     .let { Base64.getEncoder().encodeToString(it) }
 
-// THE cal ENGINE this app binds (build.json::engines.cal, as Cloud Agenda does): the fleet's task
+// THE cal ENGINE this app binds (build.json::engines.cal, as Cloud Tasks does): the fleet's task
 // store, so a task attached to a mail ("Assigned") also shows under Tasks. Its package comes from
 // the constellation fleet manifest, for BuildConfig AND the manifest's <queries> (API 30+ hides an
 // unqueried package, and invisible reads exactly like "not installed"). An unknown id fails the build.
@@ -392,7 +392,7 @@ dependencies {
     implementation(project(":libs:bottomnav"))
 
     // #825 DataBackendClient: Assigned binds the fleet's cal engine (its task store) instead of
-    // compiling one, exactly as Cloud Agenda does.
+    // compiling one, exactly as Cloud Tasks does.
     implementation(project(":libs:databackend"))
 
     // Content scan (task #461): the ONE shared image-scan engine (ZXing barcode

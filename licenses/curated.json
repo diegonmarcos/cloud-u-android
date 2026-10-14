@@ -218,10 +218,10 @@
    "what": "Cloud Account app (#867, the Account page split out of cloud-superapp)",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
   },
-  "ac_cloud-agenda": {
+  "ac_cloud-tasks": {
    "licence": "LicenseRef-NoLicenseGranted",
    "kind": "own",
-   "what": "Cloud Agenda app",
+   "what": "Cloud Tasks app",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
   },
   "ac_cloud-browser": {

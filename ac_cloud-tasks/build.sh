@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║ Cloud Agenda — Universal Build Dispatcher                            ║
+# ║ Cloud Tasks — Universal Build Dispatcher                            ║
 # ║                                                                  ║
 # ║ Standalone WebView calendar app. Single-screen HTML/Tailwind UI.      ║
 # ║ Single APK, gradle multi-module. All toolchain (AGP, gradle,      ║
@@ -480,7 +480,7 @@ step_oras_pull() {
     "https://$registry/v2/$repo/manifests/$tag")"
   digest="$(jq -r '.layers[0].digest' <<<"$manifest")"
   size="$(jq -r '.layers[0].size' <<<"$manifest")"
-  asset_title="$(jq -r '.layers[0].annotations["org.opencontainers.image.title"] // "cloud-agenda.apk"' <<<"$manifest")"
+  asset_title="$(jq -r '.layers[0].annotations["org.opencontainers.image.title"] // "cloud-tasks.apk"' <<<"$manifest")"
   [ -n "$digest" ] && [ "$digest" != "null" ] || { errlog "manifest has no layers"; exit 1; }
 
   local out="$DIST_DIR/$asset_title"

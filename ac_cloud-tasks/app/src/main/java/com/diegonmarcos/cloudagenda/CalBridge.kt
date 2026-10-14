@@ -17,11 +17,11 @@ import java.util.UUID
 import java.util.concurrent.Executors
 
 /**
- * JS bridge exposed to agenda.html as `window.CalBridge`.
+ * JS bridge exposed to tasks.html as `window.CalBridge`.
  *
  * SECURITY: this bridge is only safe to attach because the WebView it
  * is registered on loads a LOCAL asset we control
- * (file:///android_asset/agenda.html) — see MainActivity. Never
+ * (file:///android_asset/tasks.html) — see MainActivity. Never
  * attach a JavascriptInterface bridge to a WebView that can navigate
  * to remote/attacker-controlled content: any page loaded there would
  * gain the same Java-callable surface as our own UI.

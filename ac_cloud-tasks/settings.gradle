@@ -16,7 +16,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "cloud-agenda"
+rootProject.name = "cloud-tasks"
 
 def buildJson = new groovy.json.JsonSlurper().parse(file('build.json'))
 buildJson.modules.each { name, _spec ->

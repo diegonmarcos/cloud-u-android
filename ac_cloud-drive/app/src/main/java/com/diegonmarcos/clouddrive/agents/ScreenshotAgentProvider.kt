@@ -20,7 +20,7 @@ import kotlinx.serialization.json.longOrNull
 /**
  * The Screenshot agent's contract, SERVED: the same records the files under
  * <shared_root>/.agents/screenshots/v1 hold, for a fleet app that would rather not walk shared
- * storage (Cloud Calendar's event agent). Read-only, and guarded by a SIGNATURE permission
+ * storage (Cloud Tasks' event agent). Read-only, and guarded by a SIGNATURE permission
  * (${applicationId}.permission.READ_AGENT_RESULTS): only an app signed with the fleet key reads it.
  *
  *  content://<applicationId>.agents.screenshots/records[?since=<processed_at_ms>&limit=<n>]

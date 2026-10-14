@@ -574,7 +574,7 @@
         "integrity": "unknown"
       },
       "com.diegonmarcos.cloudcalendar": {
-        "unresolved": "retired Cloud fleet package, replaced by cloud-agenda: installs from the Cloud page, never here",
+        "unresolved": "retired Cloud fleet package, replaced by cloud-tasks: installs from the Cloud page, never here",
         "integrity": "none"
       },
       "com.diegonmarcos.comms.contacts": {

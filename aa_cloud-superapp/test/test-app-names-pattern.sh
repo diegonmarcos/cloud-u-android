@@ -6,7 +6,7 @@
 # THE FAILURE THIS EXISTS FOR. Configs ▸ Constellation listed
 #   "Cloud Chat (Mattermost)", "Cloud Dialer (Fossify)", "Cloud Mail",
 #   "Cloud Office", "Cloud Terminal (Nix)", "Cloud Terminal (Termux)", "Messenger"
-# beside cloud-agenda, cloud-browser and the rest. The owner had asked for the
+# beside cloud-tasks, cloud-browser and the rest. The owner had asked for the
 # pattern twice before. The root cause was not the list: fork-apps declared their
 # name in .forks.<key>.label while top-level apps used .name, and the superapp
 # restated every name again in ui.external_apps, onehand.apps,
@@ -295,7 +295,11 @@ print("== T9: a retired brand stays retired, and no caption collides inside its 
 # (renaming those orphans a job, the user's channel settings or their files).
 # The applicationId com.diegonmarcos.ide is identity, not brand: #405/#495
 # measured that moving it forces a manual reinstall, so it stays.
-retired = re.compile(r"(?i)(?<![a-z0-9])(cloud[-_ ]?ide|my[-_ ]?ide)(?![a-z0-9])")
+# cloud-calendar -> cloud-agenda (#315) -> cloud-tasks: the calendar app's two
+# earlier brands join the ledger. Its applicationId com.diegonmarcos.cloudagenda
+# is identity, like com.diegonmarcos.ide, and stays: a match may not start
+# right after a '.', so a package name never reads as a brand.
+retired = re.compile(r"(?i)(?<![a-z0-9.])(cloud[-_ ]?ide|my[-_ ]?ide|cloud[-_ ]?agenda|cloud[-_ ]?calendar)(?![a-z0-9])")
 PROSE = ("description", "comment")
 def values(node, path=""):
     if isinstance(node, dict):

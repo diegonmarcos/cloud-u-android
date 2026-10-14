@@ -29,7 +29,7 @@ shape), from the declarations alone:
       module map names it (Camera, Gallery and Office wire modules there),
       and no ship workflow watches it. Any of them
       one makes an engine change republish that app again -- the coupling the
-      split removed (engine-apk-split: Cloud Agenda kept declaring libs:cal long
+      split removed (engine-apk-split: Cloud Tasks kept declaring libs:cal long
       after it stopped linking it, so every calendar edit re-shipped it). This
       covers apps with no testers of their own, which is why it lives here;
   K7  the client handshakes before it binds: it resolves the declared action in
@@ -42,7 +42,7 @@ shape), from the declarations alone:
       QUERY_ALL_PACKAGES. On Android 11+ an unqueried package is invisible and
       reads exactly like "not installed" (engine-apk-split F2);
   K9  no app binds an engine it has not declared: every DataBackendClient an
-      app's own source builds is in a declared engine's client. Cloud Agenda
+      app's own source builds is in a declared engine's client. Cloud Tasks
       and Cloud News each built one by typed package and class name, outside
       build.json::engines -- so K1..K8 never looked at them, and F2 shipped.
 

@@ -12,7 +12,7 @@
       {
         "label": "Calendar",
         "icon": "ic_nav_agenda",
-        "target": "extapp:cloud-agenda"
+        "target": "extapp:cloud-tasks"
       },
       {
         "label": "Maps",

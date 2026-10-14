@@ -120,7 +120,7 @@
         "id": "agents",
         "label": "Agents",
         "icon": "smart_toy",
-        "_doc": "Owner addition: on-device agents. The first, Screenshots, OCRs every screenshot and labels it with on-device ML (libs:ml-l-image's engine, detect modes text/labels/objects), incrementally, and writes the contract in data/agent-screenshots-contract.json (docs/screenshot-agent-contract.md) for other fleet apps (Cloud Calendar first)."
+        "_doc": "Owner addition: on-device agents. The first, Screenshots, OCRs every screenshot and labels it with on-device ML (libs:ml-l-image's engine, detect modes text/labels/objects), incrementally, and writes the contract in data/agent-screenshots-contract.json (docs/screenshot-agent-contract.md) for other fleet apps (Cloud Tasks first)."
       },
       {
         "id": "home",

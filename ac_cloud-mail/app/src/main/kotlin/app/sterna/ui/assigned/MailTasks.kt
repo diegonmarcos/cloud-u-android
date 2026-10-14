@@ -24,7 +24,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Mail's Assigned tasks. Kept in Mail's own `mail_tasks` file (what the Assigned list reads, so it works
- * with or without the engine) and MIRRORED into the fleet's task store, the cal engine Cloud Agenda
+ * with or without the engine) and MIRRORED into the fleet's task store, the cal engine Cloud Tasks
  * binds, so every task also shows under Tasks.
  */
 object MailTasks {
@@ -91,7 +91,7 @@ object MailTasks {
 
     /**
      * The cal engine, bound; null when it is not installed or serves a contract below the one this
-     * build needs. The same handshake as Cloud Agenda's: resolve the declared action in the declared
+     * build needs. The same handshake as Cloud Tasks': resolve the declared action in the declared
      * package with its meta-data, refuse a contract below the floor, only then build the client.
      * Call off the main thread.
      */

@@ -2673,10 +2673,11 @@
                 "separator": true
               },
               {
+                "_doc": "Cloud Tasks (ac_cloud-tasks, com.diegonmarcos.cloudagenda): tasks first, with the calendar, events and invites one tab away. Captioned by function, Tasks, since cloud-calendar became cloud-agenda (#315) and then cloud-tasks. The tile id stays `calendar` because the Home tile rows address tiles by id.",
                 "id": "calendar",
-                "label": "Calendar",
+                "label": "Tasks",
                 "icon": "ic_calendar",
-                "target": "extapp:cloud-agenda"
+                "target": "extapp:cloud-tasks"
               },
               {
                 "_doc": "Opens the standalone Cloud-Contacts app (ac_cloud-contacts, com.diegonmarcos.cloudcontacts, native multi-channel people hub) via extapp:cloud-contacts — installed → launches; absent → install via Configs ▸ Constellation. Replaces the old Google Contacts launcher.",
@@ -8046,12 +8047,12 @@
         "forks": {}
       },
       {
-        "id": "cloud-agenda",
+        "id": "cloud-tasks",
         "service": "calendar-radicale",
         "folder": "prod_plan",
         "hub_package": "com.diegonmarcos.cloudagenda",
         "install_package": "com.diegonmarcos.cloudagenda",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Agenda.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Tasks.apk",
         "forks": {}
       },
       {

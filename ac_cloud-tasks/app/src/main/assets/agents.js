@@ -1,4 +1,4 @@
-/* Cloud Agenda agents: the screenshot-event parser.
+/* Cloud Tasks agents: the screenshot-event parser.
  *
  * Input: screenshot records as CalBridge.agentsRecords() hands them over
  *   { id, text, takenAt (epoch ms or 0), place, lat, lon, source }

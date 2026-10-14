@@ -93,7 +93,7 @@ into Drive and called by nothing.
   its `.so` uncompressed, so Android never extracts it, and an engine that *execs* a
   binary (gh, gix, rclone, watchdog) finds `nativeLibraryDir` empty. Fixed for gh as
   part of move 1 (`lib_apks.exec_native`, per module, in data).
-- **F2 — two apps cannot see their engines.** Cloud-News and Cloud-Agenda target SDK
+- **F2 — two apps cannot see their engines.** Cloud-News and Cloud-Tasks target SDK
   35 and bind `com.diegonmarcos.cloudlib.news` / `.cal`, but neither declares that
   package in `<queries>` (only their own id). Android 11+ hides an unqueried package,
   so `DataBackendClient.isInstalled()` reads "not installed" with the engine
@@ -161,7 +161,7 @@ published asset size only.
 ## Move 3 — cal: Cloud Me binds it, and no app declares it any more (stage 3)
 
 Cloud Me compiled libs:cal and ran `CalEngine` in its own process for the Agenda
-section; Cloud Agenda already bound Cloud-Lib-Cal.apk but still declared the module
+section; Cloud Tasks already bound Cloud-Lib-Cal.apk but still declared the module
 (F3), so a calendar change republished both apps. Both couplings are gone.
 
 | piece | where | what changed |
@@ -170,7 +170,7 @@ section; Cloud Agenda already bound Cloud-Lib-Cal.apk but still declared the mod
 | client | `ac_cloud-me/…/CalEngineClient.kt` | the GhEngine shape: PackageManager handshake before any bind, `NotInstalled` / `TooOld` naming Store ▸ Cloud Constellation ▸ Libs; an `{"error"}` answer is thrown, never drawn as an empty agenda |
 | page | `AgendaFragment.kt` | loads on a worker (a bind waits on the main thread) and draws the rows, or the missing / too-old / failed line |
 | declaration | Me `build.json::engines.cal`, `app/build.gradle`, manifest `<queries>` | package resolved from the fleet row `lib-cal`; unknown id fails the build |
-| unlinked | Me and Agenda `build.json::modules`, Me `app/build.gradle`, `ship-cloud-me.yml` + `ship-cloud-agenda.yml` (3 copies each), Me's `data/calendars.json` symlink | a libs/cal change republishes Cloud-Lib-Cal.apk only |
+| unlinked | Me and Agenda `build.json::modules`, Me `app/build.gradle`, `ship-cloud-me.yml` + `ship-cloud-tasks.yml` (3 copies each), Me's `data/calendars.json` symlink | a libs/cal change republishes Cloud-Lib-Cal.apk only |
 
 **State.** Agenda's events were a cache of the ICS subscriptions and refetch on first
 open; Cloud Me never wrote tasks (no CalDAV config lives in Cloud Me), so nothing is
@@ -180,7 +180,7 @@ orphaned. Both apps now show the engine's one cache and one task mirror.
 `test-engine-services.sh` E8: the cal engine must be found among the contract-declaring
 services (red on the pre-move tree). The contract guard pairs Me's calls with the
 engine's `methodNames()` and gains **K6**: no app's `build.json::modules` may point at an
-engine module and no ship workflow may watch one — the check that covers Cloud Agenda,
+engine module and no ship workflow may watch one — the check that covers Cloud Tasks,
 which has no testers of its own, and gh/Drive retroactively. K6 is red on the pre-move
 tree (4 findings: both apps' modules, both workflows).
 
@@ -225,13 +225,13 @@ const (NewsBridge names its 24 methods inline; without this K4 would have seen o
 `seed` and passed). New guard-test cases: K4-literal (fails against the previous guard),
 K6 ×2 for news, K8 for News. E8 requires the news engine (15 mutations).
 
-## F2 closed for Cloud Agenda (stage 4)
+## F2 closed for Cloud Tasks (stage 4)
 
-Cloud Agenda stopped declaring libs:cal in move 3 but still bound
+Cloud Tasks stopped declaring libs:cal in move 3 but still bound
 `com.diegonmarcos.cloudlib.cal` by class name with no `<queries>` entry. It now declares
 `build.json::engines.cal` (fleet row `lib-cal`), queries `${calEnginePackage}`, and
 `CalBridge` routes every call through `ask(...)` — handshake, one-time task seed, call — so a
-missing or old engine is named on the page as install or update. Cloud Me and Cloud Agenda
+missing or old engine is named on the page as install or update. Cloud Me and Cloud Tasks
 bind the same engine at the same contract.
 
 **K9** (contract guard): every `DataBackendClient` an app's own source builds must sit in a
@@ -275,7 +275,7 @@ guard. Engine tester: E4 accepts a typed-wire engine whose stub answers `methods
   contract) plus the contract/engine split of `BarcodePayload`, which is outside "the
   gh pattern, no new mechanism".
 - **feed, news — not touched in stage 3**; closed by moves 4 and 5.
-- **F2 (Cloud Agenda / Cloud News cannot see their engine on Android 11+)** — closed in
+- **F2 (Cloud Tasks / Cloud News cannot see their engine on Android 11+)** — closed in
   stage 4 (move 5 for News; the section above for Agenda).
 - Everything stage 1 marked **stays** or **blocked** is re-examined in stage 4, below.
 

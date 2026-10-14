@@ -11,7 +11,7 @@ import org.junit.Test
 
 /**
  * The Screenshot agent's pure half: the contract id, the capture time, the source app, the
- * entity extractor, the record's JSON round trip and the store's files (what Cloud Calendar
+ * entity extractor, the record's JSON round trip and the store's files (what Cloud Tasks
  * reads), and the OCR band geometry that lets a tall screenshot be read near full resolution.
  */
 class ScreenshotAgentLogicTest {

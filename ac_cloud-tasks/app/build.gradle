@@ -47,7 +47,7 @@ def buildTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'")
     format(new java.util.Date())
 }
 def logSinkUrl    = (buildJson.diagnostics?.log_sink_url    ?: '')
-def logSinkStream = (buildJson.diagnostics?.log_sink_stream ?: 'cloud-agenda')
+def logSinkStream = (buildJson.diagnostics?.log_sink_stream ?: 'cloud-tasks')
 
 def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toString() }
 def uiPermissionsRuntimeB64 = b64(buildJson.ui?.permissions?.runtime ?: [])
@@ -119,13 +119,13 @@ def calendarsB64  = calendarsJson.bytes.encodeBase64().toString()
 def fleetAppsFile = new File(rootDir, '../aa_cloud-superapp/data/constellation-fleet.json')
 def calEngineDecl = buildJson.engines?.cal
 if (calEngineDecl == null) {
-    throw new GradleException("build.json::engines.cal is not declared — Agenda would bind nothing")
+    throw new GradleException("build.json::engines.cal is not declared — Cloud Tasks would bind nothing")
 }
 def calEngineFleet = new groovy.json.JsonSlurper().parse(fleetAppsFile).apps.find { it.id == calEngineDecl.fleet }
 if (calEngineFleet == null) {
     throw new GradleException(
         "build.json::engines.cal.fleet '${calEngineDecl.fleet}' is not in the constellation fleet manifest " +
-        "($fleetAppsFile) — Agenda would bind a package no Store row installs.")
+        "($fleetAppsFile) — Cloud Tasks would bind a package no Store row installs.")
 }
 def calEnginePackage = calEngineFleet.package.toString()
 def calEngineAction  = calEngineDecl.action.toString().replace('{package}', calEnginePackage)
@@ -138,7 +138,7 @@ def buildHistorySecs = []
 try {
     def ghOut = providers.exec {
         commandLine 'gh', 'run', 'list',
-            '--workflow=ship-cloud-agenda.yml',
+            '--workflow=ship-cloud-tasks.yml',
             '--limit', '10', '--status', 'success',
             '--json', 'startedAt,updatedAt'
         ignoreExitValue = true

@@ -20,7 +20,7 @@ import java.time.format.DateTimeFormatter
 
 /**
  * A task attached to one mail ("Assigned"). It is a VTODO of the fleet's task store (the cal engine,
- * which Cloud Agenda shows under Tasks): [deadlineMillis] is its DUE, [targetMillis] its DTSTART, and
+ * which Cloud Tasks shows under Tasks): [deadlineMillis] is its DUE, [targetMillis] its DTSTART, and
  * the details no VTODO field names travel as properties the engine preserves verbatim
  * (`unknownLines`): LOCATION, URL (the link back to the mail, `mid:`), ATTENDEE, X-CLOUD-LINK and
  * X-CLOUD-MAIL (account + message id, what reopens the mail).

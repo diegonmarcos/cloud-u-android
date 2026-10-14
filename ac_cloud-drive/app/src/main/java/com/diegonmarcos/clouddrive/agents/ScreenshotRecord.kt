@@ -19,7 +19,7 @@ import kotlinx.serialization.json.put
 
 /**
  * The Screenshot agent's record, exactly as data/agent-screenshots-contract.json (v1) and
- * docs/screenshot-agent-contract.md publish it for other fleet apps (Cloud Calendar first).
+ * docs/screenshot-agent-contract.md publish it for other fleet apps (Cloud Tasks first).
  * Pure Kotlin: the id, the capture time, the entity extractor and the JSON round trip are
  * JVM-tested (ScreenshotRecordTest). A field added here is added to the contract in the same
  * commit; a field renamed or removed is a v2.

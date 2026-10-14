@@ -68,7 +68,7 @@ Limits of the inventory, stated so it is not read as more than it is:
 | ↳ `libs/contacts/.../SocialImport.kt` | own (clean-room, #828) | the Fossify-derived port was deleted and rewritten clean-room: spec first (`a0_docs/eng-specs/social-import.md`, from the callers and the public LinkedIn/Instagram export formats), black-box tests against it, then a fresh implementation written without the original body |
 | ↳ every other `libs/*`, `lib-apks`, `keyboard-engines` | NoLicenseGranted (own) | `aa_cloud-superapp/build.json::upstreams` declares FairEmail, DAVx5, Feeder, KDE Connect and RethinkDNS as *reference* upstreams; `kde-connect` and `firewall` are stated clean-room. `libs/mail`, `libs/cal`, `libs/feed` carry no upstream header and were not measured against those projects |
 | `aa_cloud-superapp` | NoLicenseGranted (own) | |
-| `ac_cloud-calc`, `ac_cloud-search`, `ac_cloud-me`, `ac_cloud-drive`, `ac_cloud-nav`, `ac_cloud-wallet`, `ac_cloud-writer`, `ac_cloud-news`, `ac_cloud-agenda`, `ac_cloud-browser`, `ac_cloud-contacts`, `ac_cloud-c3`, `ac_cloud-c3-webserver`, `ac_c3-morpheus`, `ac_c3-watchdog`, `ac_c3-watchtower` | NoLicenseGranted (own) | `ac_cloud-calc/NOTICE.md` and `ac_cloud-search/NOTICE.md` list their third-party parts and data terms |
+| `ac_cloud-calc`, `ac_cloud-search`, `ac_cloud-me`, `ac_cloud-drive`, `ac_cloud-nav`, `ac_cloud-wallet`, `ac_cloud-writer`, `ac_cloud-news`, `ac_cloud-tasks`, `ac_cloud-browser`, `ac_cloud-contacts`, `ac_cloud-c3`, `ac_cloud-c3-webserver`, `ac_c3-morpheus`, `ac_c3-watchdog`, `ac_c3-watchtower` | NoLicenseGranted (own) | `ac_cloud-calc/NOTICE.md` and `ac_cloud-search/NOTICE.md` list their third-party parts and data terms |
 | `a_solutions` | NoLicenseGranted (own) | `ae-tool_termux-boot` is stated not a termux-boot fork |
 | `1_cicd`, `9_others`, `0_apps`, `ab_cloud-terminal-store`, `ab_cloud-libs`, `ab_cloud-keyboard-libs`, `b_infra`, `c_devices`, `.github` | NoLicenseGranted (own) | build system, CI, guards |
 | `a0_docs`, `a0_tasks`, `2_sops`, `2_configs`, `0_git`, `3_secrets`, `4_reports`, `licenses`, dot-dirs | NoLicenseGranted | docs, configuration, encrypted secrets, reports |
@@ -129,7 +129,7 @@ licence as long as they live in those files.
 ## 4. The owner's own code, and where it is compiled into a copyleft binary
 
 Own code (no upstream origin): the SuperApp, every `ab_cloud-libs-shared/libs/*` not named in
-section 2, the engines and lib-apks, Cloud Calc/Search/Me/Drive/Nav/Wallet/Writer/News/Agenda/
+section 2, the engines and lib-apks, Cloud Calc/Search/Me/Drive/Nav/Wallet/Writer/News/Tasks/
 Browser/Contacts, the C3 apps, `a_solutions`, and the build/CI system (`1_cicd`, `9_others`).
 
 `licenses/inventory.json::linkage` lists, per app, the shared modules its `build.json::modules`

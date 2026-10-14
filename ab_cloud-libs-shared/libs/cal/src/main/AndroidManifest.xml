@@ -11,7 +11,7 @@
              handshaking client FINDS the service, and CONTRACT is the version
              it reads through PackageManager before binding (engine-apk-split,
              move 3: Cloud Me binds this instead of compiling libs:cal).
-             Cloud Agenda still binds by class name; both keep working. -->
+             Cloud Tasks still binds by class name; both keep working. -->
         <service
             android:name="com.diegonmarcos.superapp.cal.CalBackendService"
             android:exported="true"

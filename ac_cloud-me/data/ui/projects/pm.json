@@ -12,7 +12,7 @@
       {
         "label": "Month",
         "icon": "ic_p_cal_day",
-        "target": "extapp:cloud-agenda"
+        "target": "extapp:cloud-tasks"
       },
       {
         "label": "Agenda",

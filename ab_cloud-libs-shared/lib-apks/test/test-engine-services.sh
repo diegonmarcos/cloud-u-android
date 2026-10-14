@@ -33,7 +33,7 @@
 #       gh polls GitHub while the user is in the browser; Android 15 cuts the
 #       network of a backgrounded process and the poll died as a DNS failure.
 #   E8  every engine an app BINDS by handshake is found here: gh (Cloud Drive),
-#       cal (Cloud Me and Cloud Agenda, engine-apk-split move 3), feed (SuperApp,
+#       cal (Cloud Me and Cloud Tasks, engine-apk-split move 3), feed (SuperApp,
 #       move 4), news (Cloud News, move 5) and ml-l-image-mlkit (the image scan
 #       Drive, Mail, Camera, Media Center and Office reach through libs:ml-l-image,
 #       move 6), calc (Cloud Calc, #767) and ml-l-sound-yamnet (the sound identification

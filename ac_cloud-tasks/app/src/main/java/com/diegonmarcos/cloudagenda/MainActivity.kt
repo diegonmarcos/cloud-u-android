@@ -16,14 +16,14 @@ class MainActivity : AppCompatActivity() {
     /**
      * The last measured inset script. Kept because the window hands us insets
      * before the page exists, so the same script has to be replayed once
-     * agenda.html has finished loading.
+     * tasks.html has finished loading.
      */
     private var insetScript = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // agenda.html paints a full-bleed shell and reserves room for the system
+        // tasks.html paints a full-bleed shell and reserves room for the system
         // bars through the --sat/--sab/--sal/--sar custom properties. Chromium on
         // Android only ever reports the display cutout through
         // env(safe-area-inset-*), never the status bar, so those properties
@@ -60,7 +60,7 @@ class MainActivity : AppCompatActivity() {
             windowInsets
         }
         webView.addJavascriptInterface(CalBridge(this), "CalBridge")
-        webView.loadUrl("file:///android_asset/agenda.html")
+        webView.loadUrl("file:///android_asset/tasks.html")
         Updater.start(this)
     }
 

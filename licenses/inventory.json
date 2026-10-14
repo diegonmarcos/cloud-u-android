@@ -264,7 +264,7 @@
     "ab_cloud-libs-shared/libs/updater"
    ]
   },
-  "ac_cloud-agenda": {
+  "ac_cloud-tasks": {
    "app_licence": "LicenseRef-NoLicenseGranted",
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/analytics",
@@ -2342,7 +2342,7 @@
    "licence": "LicenseRef-NoLicenseGranted",
    "licence_source": "licenses/curated.json"
   },
-  "dir:ac_cloud-agenda": {
+  "dir:ac_cloud-tasks": {
    "kind": "dir",
    "declared_in": [
     "(tree)"
@@ -2743,7 +2743,7 @@
     "ac_c3-watchdog/app/build.gradle",
     "ac_c3-watchtower/app/build.gradle",
     "ac_cloud-account/app/build.gradle",
-    "ac_cloud-agenda/app/build.gradle",
+    "ac_cloud-tasks/app/build.gradle",
     "ac_cloud-browser/app/build.gradle",
     "ac_cloud-c3-webserver/src-tauri/gen/android/app/build.gradle.kts",
     "ac_cloud-c3/app/build.gradle",
@@ -3502,7 +3502,7 @@
     "ac_c3-watchdog/app/build.gradle",
     "ac_c3-watchtower/app/build.gradle",
     "ac_cloud-account/app/build.gradle",
-    "ac_cloud-agenda/app/build.gradle",
+    "ac_cloud-tasks/app/build.gradle",
     "ac_cloud-browser/app/build.gradle",
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
@@ -4165,7 +4165,7 @@
     "ab_cloud-libs-shared/libs/mounts/build.gradle",
     "ab_cloud-libs-shared/libs/ops/build.gradle",
     "ac_cloud-account/app/build.gradle",
-    "ac_cloud-agenda/app/build.gradle",
+    "ac_cloud-tasks/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-chat/libraries/@mattermost/secure-pdf-viewer/android/build.gradle",
     "ac_cloud-drive/app/build.gradle",
@@ -4240,7 +4240,7 @@
     "ab_cloud-libs-shared/libs/health/build.gradle",
     "ab_cloud-libs-shared/libs/kde-connect/build.gradle",
     "ac_cloud-account/app/build.gradle",
-    "ac_cloud-agenda/app/build.gradle",
+    "ac_cloud-tasks/app/build.gradle",
     "ac_cloud-browser/app/build.gradle",
     "ac_cloud-c3-webserver/src-tauri/gen/android/app/build.gradle.kts",
     "ac_cloud-c3/app/build.gradle",
@@ -4341,7 +4341,7 @@
     "ab_cloud-libs-shared/libs/health/build.gradle",
     "ab_cloud-libs-shared/libs/kde-connect/build.gradle",
     "ac_cloud-account/app/build.gradle",
-    "ac_cloud-agenda/app/build.gradle",
+    "ac_cloud-tasks/app/build.gradle",
     "ac_cloud-browser/app/build.gradle",
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
@@ -5095,7 +5095,7 @@
     "ab_cloud-libs-shared/libs/mail/build.gradle",
     "ab_cloud-libs-shared/libs/maps/build.gradle",
     "ac_cloud-account/app/build.gradle",
-    "ac_cloud-agenda/app/build.gradle",
+    "ac_cloud-tasks/app/build.gradle",
     "ac_cloud-browser/app/build.gradle",
     "ac_cloud-c3-webserver/src-tauri/gen/android/app/build.gradle.kts",
     "ac_cloud-c3/app/build.gradle",

@@ -37,7 +37,7 @@
         emulatorSdk = emulatorEnv.androidsdk;
       in {
         devShells.default = pkgs.mkShell {
-          name = "cloud-agenda-devshell";
+          name = "cloud-tasks-devshell";
           buildInputs = with pkgs; [
             jdk17
             gradle_8
@@ -56,12 +56,12 @@
             export ANDROID_HOME="${androidSdk}/libexec/android-sdk"
             export ANDROID_SDK_ROOT="$ANDROID_HOME"
             export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools/bin:$PATH"
-            echo "[cloud-agenda devshell] ANDROID_HOME=$ANDROID_HOME"
+            echo "[cloud-tasks devshell] ANDROID_HOME=$ANDROID_HOME"
           '';
         };
 
         devShells.emulator = pkgs.mkShell {
-          name = "cloud-agenda-emulator-devshell";
+          name = "cloud-tasks-emulator-devshell";
           buildInputs = with pkgs; [ jdk17 gradle_8 emulatorSdk android-tools ];
           shellHook = ''
             export ANDROID_HOME="${emulatorSdk}/libexec/android-sdk"

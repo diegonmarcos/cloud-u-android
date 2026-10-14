@@ -87,7 +87,7 @@
     }
   },
   "engines": {
-    "_doc": "ENGINES THIS APP BINDS INSTEAD OF COMPILING (engine-apk-split, move 3; same shape as ac_cloud-drive/build.json::engines). Each is a Cloud-Lib-*.apk the Store installs (a fleet row of kind lib) whose service answers core's IDataBackend; this app links nothing of the engine's module, so an engine change republishes that one APK and not this app. `fleet` is the Store row in aa_cloud-superapp/data/constellation-fleet.json from which app/build.gradle resolves the package (an id the manifest lacks fails the build); `action` finds the service in that package ({package} substituted at build time, matching the engine manifest's ${applicationId}.ENGINE); `min_contract` is the lowest engine CONTRACT that answers every method this app calls, read through PackageManager BEFORE binding so an engine too old for this build is named as such. The engine keeps its own cache: Agenda here and Cloud Agenda share one synced calendar and one task mirror.",
+    "_doc": "ENGINES THIS APP BINDS INSTEAD OF COMPILING (engine-apk-split, move 3; same shape as ac_cloud-drive/build.json::engines). Each is a Cloud-Lib-*.apk the Store installs (a fleet row of kind lib) whose service answers core's IDataBackend; this app links nothing of the engine's module, so an engine change republishes that one APK and not this app. `fleet` is the Store row in aa_cloud-superapp/data/constellation-fleet.json from which app/build.gradle resolves the package (an id the manifest lacks fails the build); `action` finds the service in that package ({package} substituted at build time, matching the engine manifest's ${applicationId}.ENGINE); `min_contract` is the lowest engine CONTRACT that answers every method this app calls, read through PackageManager BEFORE binding so an engine too old for this build is named as such. The engine keeps its own cache: Agenda here and Cloud Tasks share one synced calendar and one task mirror.",
     "cal": {
       "fleet": "lib-cal",
       "action": "{package}.ENGINE",
@@ -272,7 +272,7 @@
         "package": "com.diegonmarcos.ide"
       },
       {
-        "id": "cloud-agenda",
+        "id": "cloud-tasks",
         "package": "com.diegonmarcos.cloudagenda"
       },
       {

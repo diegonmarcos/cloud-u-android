@@ -203,7 +203,7 @@
       ],
       "consumers": [
         "superapp",
-        "agenda",
+        "tasks",
         "browser",
         "c3",
         "contacts",
@@ -962,7 +962,7 @@
       }
     },
     {
-      "id": "ac_cloud-agenda",
+      "id": "ac_cloud-tasks",
       "scope": "out",
       "reason": "Pure web wrapper: one WebView layout + a JS bridge. Out by the #773 brief."
     },
