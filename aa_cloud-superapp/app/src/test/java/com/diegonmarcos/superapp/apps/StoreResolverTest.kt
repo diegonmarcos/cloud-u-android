@@ -75,8 +75,15 @@ class StoreResolverTest {
         assertTrue("no external apps declared", c.apps.isNotEmpty())
         assertTrue("the declaration must hold at least one app no rung of ours can fetch, to keep the hand-off honest",
             c.apps.values.any { it.needsPlay })
+        // Between fdroid and the hand-offs, not right after fdroid: the signed F-Droid-format repos
+        // (fdroid, then IzzyOnDroid) rank above it, every store that only hands off ranks below.
+        val anon = c.order.indexOf(SourceResolver.KIND_PLAY_ANON)
         assertTrue("play-anon must be a declared kind ranked between fdroid and the hand-offs",
-            c.order.indexOf(SourceResolver.KIND_PLAY_ANON) == c.order.indexOf(SourceResolver.KIND_FDROID) + 1)
+            anon > c.order.indexOf(SourceResolver.KIND_FDROID) &&
+                c.kinds.filter { !it.fetches }.all { c.order.indexOf(it.id) > anon })
+        assertTrue("izzy, when declared, is a fetching repo ranked between fdroid and play-anon",
+            SourceResolver.KIND_IZZY !in c.order || (c.kind(SourceResolver.KIND_IZZY)?.fetches == true &&
+                c.order.indexOf(SourceResolver.KIND_IZZY) in (c.order.indexOf(SourceResolver.KIND_FDROID) + 1) until anon))
         assertNotNull("play-anon needs its declared dispensers", c.playAnon)
         for (app in c.apps.values) if (app.sources.any { it is SourceResolver.Source.PlayAnon })
             assertFalse("${app.pkg} has a play-anon rung but still needs Play", app.needsPlay)
