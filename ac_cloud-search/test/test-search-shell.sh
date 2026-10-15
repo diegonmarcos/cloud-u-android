@@ -489,7 +489,7 @@ mutate monochrome-dropped app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.x
 mutate search-split build.json 's.replace("\"subpages\": [\n          \"assistant\"\n        ]", "\"subpages\": [\n          \"assistant\",\n          \"listing\"\n        ]")' "S12 vertical search declares subpages"
 mutate assistant-twice build.json 's.replace("\"subpages\": [\n          \"listing\"\n        ],\n        \"sources\": [\n          \"open-prices\"", "\"subpages\": [\n          \"assistant\"\n        ],\n        \"sources\": [\n          \"open-prices\"")' "S12 2 verticals hold the assistant subpage"
 SP=ai/src/main/kotlin/com/diegonmarcos/superapp/ai
-mutate chat-moved-out "$SP/AiPage.kt" 's.replace("        ChatBar(\n            text,", "        NoBar(\n            text,")' "S12 AiChatPage does not draw ChatBar"
+mutate chat-moved-out "$SP/AiPage.kt" 's.replace("        ChatBar(\n            chat.draft,", "        NoBar(\n            chat.draft,")' "S12 AiChatPage does not draw ChatBar"
 mutate engines-moved-out "$SP/AiPage.kt" 's.replace("if (chat.session.messages.isEmpty() && !chat.sending) Welcome(", "if (chat.session.messages.isEmpty() && !chat.sending) Unit; if (false) Wx(")' "S12 AiChatPage does not draw Welcome"
 mutate engine-boxes-dropped "$SP/AiPage.kt" 's.replace("engines.forEachIndexed", "emptyList<AiEngine>().forEachIndexed")' "S12 Welcome does not draw a box per declared engine"
 mutate page-not-shared "$J/ui/AssistantPages.kt" 's.replace("    AiChatPage(\n", "    OwnPage(\n")' "S12 AssistantPage does not draw libs:ai"

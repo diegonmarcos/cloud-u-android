@@ -55,17 +55,15 @@ class AiProtocolTest {
         }
     }
 
+    /** Structural equality (Android's org.json stub has no `similar`, and may order keys differently). */
+    private fun same(a: Any?, b: Any?): Boolean = when {
+        a is JSONObject && b is JSONObject -> a.length() == b.length() && a.keys().asSequence().all { b.has(it) && same(a.get(it), b.get(it)) }
+        a is JSONArray && b is JSONArray -> a.length() == b.length() && (0 until a.length()).all { same(a.get(it), b.get(it)) }
+        else -> a.toString() == b.toString()
+    }
+
     private fun subset(want: JSONObject, got: JSONObject, name: String) {
-        for (k in want.keys()) {
-            val a = want.get(k)
-            val b = got.get(k)
-            val same = when {
-                a is JSONObject && b is JSONObject -> a.similar(b)
-                a is JSONArray && b is JSONArray -> a.similar(b)
-                else -> a == b
-            }
-            assertTrue("$name: $k is $b, wanted $a", same)
-        }
+        for (k in want.keys()) assertTrue("$name: $k is ${got.opt(k)}, wanted ${want.get(k)}", got.has(k) && same(want.get(k), got.get(k)))
     }
 
     @Test fun requestCasesAgreeWithTheSharedFile() {
