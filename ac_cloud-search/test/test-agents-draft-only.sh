@@ -7,10 +7,10 @@
 #   D1  no code path posts or submits to an external site: across the agent code (core/agents, the Agents,
 #       Reports and Cloud pages, data/AgentData.kt, AgentService.kt, the debug API) there is no POST, no
 #       request body, no WebView or script, no send/share/mailto/SMS intent, no form fill or click verb
-#   D2  the only POST in the whole app is a model call to OpenRouter's declared chat_url (core/agents/Llm.kt,
-#       and the existing chat's ChatFlow.kt): one `http.post(ai.chatUrl,` each, plus the chat's one model call to the
-#       fleet agent gateway when the person picked a chat agent (ChatFlow.kt `req.url`, built ONLY by
-#       data/AgentRoute.kt from the gateway's declared chat_path), no other caller
+#   D2  the only POST in the whole app is a model call: the agents' to OpenRouter's declared chat_url
+#       (core/agents/Llm.kt: `http.post(ai.chatUrl,`) and the chat's, which is libs:ai's two backends (OpenRouter
+#       and, when the person picked a chat agent, the fleet agent gateway at the baked address, the path and the
+#       mode header from the shared ai.json) reaching the network only through data/SearchAi.kt's one Http door; no other caller
 #   D3  every declared agent is mode draft_only and the parser refuses any other mode; #913b no agent or source
 #       declares an auto_* or action key (submit, send, apply, buy, ...), and the parser refuses one, and any key
 #       that is not on its list of an agent's keys
@@ -73,13 +73,13 @@ posts = []
 for p in sorted(glob.glob(os.path.join(K, "**", "*.kt"), recursive=True)) + sorted(glob.glob(os.path.join(C, "**", "*.kt"), recursive=True)):
     for m in re.finditer(r'\.post\(([^,]*),', code(p)):
         posts.append((os.path.relpath(p, app), m.group(1).strip()))
-want = [("app/src/main/java/com/diegonmarcos/cloudsearch/data/ChatFlow.kt", "ai.chatUrl"), ("core/src/main/kotlin/com/diegonmarcos/cloudsearch/core/agents/Llm.kt", "ai.chatUrl"),
-        ("app/src/main/java/com/diegonmarcos/cloudsearch/data/ChatFlow.kt", "req.url")]
+want = [("app/src/main/java/com/diegonmarcos/cloudsearch/data/SearchAi.kt", "url"), ("core/src/main/kotlin/com/diegonmarcos/cloudsearch/core/agents/Llm.kt", "ai.chatUrl")]
 if sorted(posts) != sorted(want):
-    bad.append("D2 the POSTs in the app are %s; only the two model calls to ai.chatUrl and the chat's agent-gateway call are allowed" % posts)
-route = os.path.join(K, "data", "AgentRoute.kt")
-if not os.path.isfile(route) or "cat.gateway.chatPath" not in code(route) or "AgentRoute.request(" not in code(os.path.join(K, "data", "ChatFlow.kt")):
-    bad.append("D2 the chat's agent-gateway POST is not built by AgentRoute.request from the gateway's declared chat_path")
+    bad.append("D2 the POSTs in the app are %s; only the agents' model call to ai.chatUrl and the chat's one Http door (libs:ai's backends) are allowed" % posts)
+sai = os.path.join(K, "data", "SearchAi.kt")
+sai_code = code(sai) if os.path.isfile(sai) else ""
+if "AiGatewayBackend(cfg, BuildConfig.AGENT_GATEWAY_URL, http)" not in sai_code or "direct = AiOpenRouterBackend(" not in sai_code:
+    bad.append("D2 the chat's POSTs do not go through libs:ai's two backends (OpenRouter, and the fleet gateway at the baked address)")
 if os.path.isfile(os.path.join(C, "agents", "Llm.kt")) and '"tools"' in code(os.path.join(C, "agents", "Llm.kt")):
     bad.append("D2 the agents' model call carries tools — a model may only answer in text")
 
@@ -222,8 +222,8 @@ mutate send-intent "$J/ui/AgentsPages.kt" 's + "\nprivate val s = android.conten
 mutate mailto "$J/ui/ReportsPages.kt" 's + "\nprivate const val M = \"mailto:x@y\"\n"' "D1 ReportsPages.kt has a send/share/mail/SMS action"
 mutate send-verb "$C/agents/Runner.kt" 's.replace("fun run(input: Input): Outcome {", "fun sendReply() {}\n\n    fun run(input: Input): Outcome {")' "D1 Runner.kt has a send/submit/reply verb"
 mutate second-post "$J/data/AgentService.kt" 's.replace("val out = runner.run(", "http.post(\"https://x.example\", emptyMap(), \"\", 1); val out = runner.run(")' "D2 the POSTs in the app are"
-mutate post-elsewhere "$J/data/ChatFlow.kt" 's.replace("s.http.post(ai.chatUrl,", "s.http.post(ai.modelsUrl,")' "D2 the POSTs in the app are"
-mutate gateway-anywhere "$J/data/AgentRoute.kt" 's.replace("cat.gateway.chatPath", "\"/anything\"")' "D2 the chat's agent-gateway POST is not built by AgentRoute.request"
+mutate post-elsewhere "$J/data/SearchAi.kt" 's.replace("s.http.post(url,", "s.http.post(cfg.modelsUrl,")' "D2 the POSTs in the app are"
+mutate gateway-anywhere "$J/data/SearchAi.kt" 's.replace("AiGatewayBackend(cfg, BuildConfig.AGENT_GATEWAY_URL, http)", "AiGatewayBackend(cfg, \"http://x.example\", http)")' "D2 the chat's POSTs do not go through libs:ai's two backends"
 mutate tools-in-llm "$C/agents/Llm.kt" 's.replace(".put(\"max_tokens\", req.maxTokens)", ".put(\"max_tokens\", req.maxTokens).put(\"tools\", JSONArray())")' "D2 the agents' model call carries tools"
 mutate auto-send-agent build.json 's.replace("\"mode\": \"draft_only\"", "\"mode\": \"auto_send\"")' "D3 agent rs_house_purchase is mode 'auto_send'"
 mutate auto-submit-key build.json 's.replace("\"mode\": \"draft_only\",", "\"mode\": \"draft_only\",\n        \"auto_submit\": true,", 1)' "D3 agent rs_house_purchase declares auto_submit"
