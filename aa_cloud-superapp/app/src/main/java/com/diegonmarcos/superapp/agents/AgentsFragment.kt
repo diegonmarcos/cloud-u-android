@@ -40,7 +40,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Configs ▸ Apps ▸ Agents ▸ SuperApp agents | Fleet agents — one fragment, two scopes, hosted by the
+ * Configs ▸ Fleet ▸ Agents ▸ SuperApp agents | Fleet agents — one fragment, two scopes, hosted by the
  * Agents page's PageTabs strip (build.json `tabs`, SectionTabsFragment).
  *
  * STATUS FIRST: a banner with the counts, then one row per agent whose pill is its live state.

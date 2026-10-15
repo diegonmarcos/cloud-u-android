@@ -569,7 +569,7 @@ regen_constellation() {
         && jq -e '.build_time | length > 0' "$HERE/lib-consumers.json" >/dev/null \
         || { echo "ERROR: lib-consumers.json did not generate" >&2; return 1; }
     # fleet-agents.json: every agent each app declares in its build.json::fleet_agents,
-    # consolidated by the script fleet-agents-guard.yml re-runs (Configs ▸ Apps ▸ Agents).
+    # consolidated by the script fleet-agents-guard.yml re-runs (Configs ▸ Fleet ▸ Agents).
     # After the fleet file, because it reads the packages from it.
     python3 "$UNIX/1_cicd/src/scripts/cloud-android-fleet-agents.py" write "$UNIX" \
         || { echo "ERROR: fleet-agents.json did not generate" >&2; return 1; }

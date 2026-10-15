@@ -50,14 +50,14 @@ if any(p['id'] == 'launcher' for p in pages):
     print('a `launcher` page is declared again — #649 made Launcher a heading, '
           'and a page of that name would tile beside its own four members')
     sys.exit()
-run = [p['id'] for p in pages if p.get('group') == 'Launcher']
+run = [p['id'] for p in pages if p.get('group') == 'Setup' and p.get('subgroup') == 'Launcher']
 if run != ['presets', 'controls', 'onehand', 'notify']:
-    print('group Launcher = %r' % (run,)); sys.exit()
+    print('Setup ▸ Launcher = %r' % (run,)); sys.exit()
 ids   = [p['id'] for p in pages]
 first = ids.index('presets')
 if ids[first:first + 4] != run:
     print('the four are not CONSECUTIVE: %r' % (ids[first:first + 6],)); sys.exit()
-hidden = [p['id'] for p in pages if p.get('group') == 'Launcher' and p.get('hidden')]
+hidden = [p['id'] for p in pages if p.get('subgroup') == 'Launcher' and p.get('hidden')]
 if hidden:
     print('still hidden, so it draws no tile of its own: %r' % (hidden,)); sys.exit()
 print('OK')
@@ -76,7 +76,7 @@ pages = next(s for s in json.load(open('$BJ'))['ui']['sections']
              if s['id'] == 'config')['pages']
 print(','.join(p['id'] for p in pages if p.get('tabs')))
 ")
-# Agents (Configs ▸ Apps ▸ Agents: SuperApp agents | Fleet agents) is the one strip
+# Agents (Configs ▸ Fleet ▸ Agents: SuperApp agents | Fleet agents) is the one strip
 # with a check of its own: test-configs-agents-page.sh A2.
 [ "$OWNERS" = "agents" ] \
   && ok "the only Configs tab strip is Agents, checked by test-configs-agents-page.sh (Store opens Cloud Store since #865)" \
@@ -215,14 +215,14 @@ elif pages['profile'].get('hidden'):
     print("'profile' went hidden — the owner's identity tile vanished from Configs")
 elif pages['presets'].get('hidden'):
     print("'presets' went hidden — #649 promoted it to a direct Launcher tile")
-elif pages['profile'].get('group') == pages['presets'].get('group'):
+elif (pages['profile'].get('group'), pages['profile'].get('subgroup')) == (pages['presets'].get('group'), pages['presets'].get('subgroup')):
     print("'profile' and 'presets' landed under one heading (%r) — the owner's "
           "identity is Watchdog setup, the launcher preset is not"
           % (pages['profile'].get('group'),))
 else:
     print('OK')
 PY
-)" "profile (Setup ▸ Apps) and presets (Launcher) are two visible pages under two headings"
+)" "profile (Setup ▸ Apps) and presets (Setup ▸ Launcher) are two visible pages under two headings"
 
 grep -qF 'pageId == "presets" -> LauncherPresetsFragment.newInstance()' "$PAGES" \
   && ok "the presets tab routes to its own fragment" \

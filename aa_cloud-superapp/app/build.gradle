@@ -399,7 +399,7 @@ try {
 def constellationFleetFile = file("../data/constellation-fleet.json")
 def constellationFleetJson = leanJson(constellationFleetFile, "{\"version\":1,\"apps\":[]}")
 def constellationFleetB64  = constellationFleetJson.bytes.encodeBase64().toString()
-// Configs ▸ Apps ▸ Agents: every agent the fleet declares (build.json::fleet_agents of
+// Configs ▸ Fleet ▸ Agents: every agent the fleet declares (build.json::fleet_agents of
 // every app), consolidated into data/fleet-agents.json by regen.sh above through
 // 1_cicd/src/scripts/cloud-android-fleet-agents.py; fleet-agents-guard.yml keeps the
 // committed file equal to the declarations. Deflated like ui.sections (Sections.unbake).

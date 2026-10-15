@@ -16,7 +16,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 /**
- * Configs ▸ Apps ▸ Agents.
+ * Configs ▸ Fleet ▸ Agents.
  *
  *   G1 the baked registry is data/fleet-agents.json, every agent present
  *   G2 Configs: Agents is in the Apps group, after Peer Control and before About, over two tabs

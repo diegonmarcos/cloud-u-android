@@ -47,7 +47,7 @@ check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages  = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
               if s['id'] == 'config')['pages']
-group  = [p for p in pages if p.get('group') == 'Launcher']
+group  = [p for p in pages if p.get('subgroup') == 'Launcher']
 labels = [p['label'] for p in group]
 print('OK' if labels == ['Presets', 'Controls', 'One-Hand', 'Notify']
       else 'Launcher group labels = %r' % (labels,))

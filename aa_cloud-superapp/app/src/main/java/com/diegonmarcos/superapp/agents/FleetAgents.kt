@@ -5,7 +5,7 @@ import com.diegonmarcos.superapp.launcher.Sections
 import org.json.JSONObject
 
 /**
- * Configs ▸ Apps ▸ Agents — the agent registry as this app reads it.
+ * Configs ▸ Fleet ▸ Agents — the agent registry as this app reads it.
  *
  * Every app declares its agents in its own build.json::fleet_agents; the CI script
  * 1_cicd/src/scripts/cloud-android-fleet-agents.py consolidates them into

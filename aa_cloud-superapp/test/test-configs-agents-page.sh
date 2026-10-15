@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Tester: Configs ▸ Apps ▸ Agents — every agent the fleet runs, in one page with two tabs.
+# Tester: Configs ▸ Fleet ▸ Agents — every agent the fleet runs, in one page with two tabs.
 #
 #   A1 Configs reads Launcher, Apps, Setup; Apps = C3 · Peer Control · Agents; Agents comes
-#      before About in the grid (About stays alone under Setup ▸ Observability)
+#      before About in the grid (About stays alone under Observability)
 #   A2 Agents is a page over exactly two tabs, SuperApp agents then Fleet agents, both hidden
 #      pages of their own (reached through the strip), and the nav rule holds (2..8 tabs)
 #   A3 both tabs route to AgentsFragment with their own scope; the page is drawn by PageTabs
@@ -36,7 +36,7 @@ for f in "$BJ" "$PAGES" "$FRAG" "$READER" "$MODEL" "$DATA" "$GEN" "$APP/app/buil
   [ -f "$f" ] || { echo "  ABORT: no such file: $f — a check over nothing passes"; exit 2; }
 done
 
-echo "== A1: Launcher, Apps, Setup; Agents before About =="
+echo "== A1: Setup, Fleet, Observability; Agents before About =="
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['id'] == 'config')['pages']
@@ -46,17 +46,17 @@ for p in vis:
     g = p.get('group', '')
     if not groups or groups[-1] != g: groups.append(g)
 probs = []
-if groups != ['Launcher', 'Apps', 'Setup']: probs.append('groups = %r' % groups)
-apps = [p['label'] for p in vis if p.get('group') == 'Apps']
-if apps != ['C3', 'Peer Control', 'Agents']: probs.append('Apps = %r' % apps)
+if groups != ['Setup', 'Fleet', 'Observability']: probs.append('groups = %r' % groups)
+apps = [p['label'] for p in vis if p.get('group') == 'Fleet']
+if apps != ['C3', 'Peer Control', 'Agents']: probs.append('Fleet = %r' % apps)
 ids = [p['id'] for p in vis]
 if 'agents' not in ids or 'about' not in ids or ids.index('agents') > ids.index('about'):
     probs.append('Agents is not before About: %r' % ids)
-obs = [p['label'] for p in vis if p.get('subgroup') == 'Observability']
+obs = [p['label'] for p in vis if p.get('group') == 'Observability']
 if obs != ['About']: probs.append('Observability = %r' % obs)
 print('; '.join(probs) or 'OK')
 PY
-)" "Configs = Launcher, Apps[C3, Peer Control, Agents], Setup; Agents before About; Observability keeps About alone"
+)" "Configs = Setup, Fleet[C3, Peer Control, Agents], Observability; Agents before About; Observability keeps About alone"
 
 echo "== A2: Agents is a strip over SuperApp agents | Fleet agents =="
 check "$(python3 - "$BJ" <<'PY'

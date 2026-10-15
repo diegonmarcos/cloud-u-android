@@ -1,6 +1,6 @@
-name: "fleet agents guard — Configs ▸ Apps ▸ Agents still lists every agent the fleet declares"
+name: "fleet agents guard — Configs ▸ Fleet ▸ Agents still lists every agent the fleet declares"
 
-# Cloud SuperApp's Agents page (Configs ▸ Apps ▸ Agents) reads ONE generated file,
+# Cloud SuperApp's Agents page (Configs ▸ Fleet ▸ Agents) reads ONE generated file,
 # aa_cloud-superapp/data/fleet-agents.json, consolidated by
 # 1_cicd/src/scripts/cloud-android-fleet-agents.py from every app's
 # build.json::fleet_agents (and the lists those rows expand: Cloud Search's agents

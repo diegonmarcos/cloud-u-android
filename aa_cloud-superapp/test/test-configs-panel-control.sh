@@ -91,7 +91,7 @@ pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
 ids  = [p['id'] for p in pages]
 gone = [i for i in ('home', 'push', 'panel', 'control', 'launcher') if i in ids]
-run  = [p['id'] for p in pages if p.get('group') == 'Launcher']
+run  = [p['id'] for p in pages if p.get('subgroup') == 'Launcher']
 if gone:                     print('retired page(s) still declared: %r' % gone)
 elif run[-2:] != ['onehand', 'notify']:
                              print('Notify is not the page right after One-Hand: %r' % (run,))
@@ -117,7 +117,7 @@ for pid in ('presets', 'controls', 'onehand', 'notify'):
     p = by_id.get(pid)
     if p is None:                       problems.append('page %r is GONE — its target dead-ends' % pid)
     elif p.get('hidden'):               problems.append('page %r is hidden — #649 gave it its own tile' % pid)
-    elif p.get('group') != 'Launcher':  problems.append('page %r left the Launcher group: %r' % (pid, p.get('group')))
+    elif p.get('subgroup') != 'Launcher':  problems.append('page %r left the Launcher group: %r' % (pid, p.get('subgroup')))
 if by_id.get('notify', {}).get('mirror_page') != 'communication/my-rss':
     problems.append('notify stopped mirroring communication/my-rss — a second '
                     'notification centre is exactly what #497/#515 deleted')
