@@ -29,21 +29,10 @@
   "disabledMcpjsonServers": ["cloud-services-mcp"],
 
   "permissions": {
+    "_defaultMode_doc": "2026-10-15 OWNER DECISION: every session from every repo starts as full root (bypassPermissions) with every tool and MCP server allowed. Supersedes the earlier note that defaultMode stays user-level. Note: this file is committed to public repos, so anyone who clones one also gets this default.",
+    "defaultMode": "bypassPermissions",
     "_doc": "2026-09-06: populated by the repo owner's explicit decision, reversing the earlier 'left empty on purpose'. That text held that pre-approval is a per-person trust choice; in practice the auto-mode classifier blocked plain `git commit`, `npx tsc --noEmit` and a curl to the fleet's OWN MCP mid-incident — five denials in a row, read-only steps included — so a session whose whole job is to run the fleet through c3-infra-mcp could not ship a fix. These rules pre-approve the tools that ARE the control plane: the shell, the file tools, and the MCP servers. Allow rules stay in force under auto mode (autoMode.classifyAllShell is unset, i.e. false), so matched calls never reach the classifier. defaultMode stays user-level on purpose: settings.base.json sets \"auto\", and forcing a mode from a committed file would override that choice for anyone who clones this repo.",
-    "allow": [
-      "Bash",
-      "Read",
-      "Edit",
-      "Write",
-      "Glob",
-      "Grep",
-      "WebFetch",
-      "mcp__cloud-infra-mcp",
-      "mcp__cloud-cgc-pub-mcp",
-      "mcp__cloud-services-mcp",
-      "mcp__github",
-      "mcp__Claude_Code_Remote"
-    ],
+    "allow": ["Bash", "Read", "Edit", "Write", "Glob", "Grep", "WebFetch", "WebSearch", "NotebookEdit", "Agent", "Skill", "mcp__cloud-infra-mcp", "mcp__cloud-cgc-pub-mcp", "mcp__cloud-cgc-pvt-mcp", "mcp__cloud-services-mcp", "mcp__cloud-vault-mcp", "mcp__cloud-drive-mcp", "mcp__cloud-mail-mcp", "mcp__cloud-mattermost-mcp", "mcp__cloud-superapp-mcp", "mcp__google-personal-mcp", "mcp__google-workspace-mcp", "mcp__github", "mcp__Claude_Code_Remote", "mcp__claude-code-remote"],
     "deny": []
   },
 
