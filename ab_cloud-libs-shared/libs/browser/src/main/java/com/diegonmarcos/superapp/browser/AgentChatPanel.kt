@@ -69,7 +69,7 @@ fun AgentChatPanel(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Assistant", color = p.textPrimary, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            Text("AI", color = p.textPrimary, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
             TextButton(onNewChat, Modifier.testTag("browser:agent:new"), enabled = !state.busy && state.pending == null) { Text("New chat") }
             TextButton(onClose, Modifier.testTag("browser:agent:close")) { Text("✕") }
         }

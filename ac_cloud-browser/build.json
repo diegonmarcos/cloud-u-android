@@ -909,13 +909,13 @@
             },
             {
               "id": "search_chat",
-              "label": "Search & AI chat"
+              "label": "Search & AI"
             }
           ]
         },
         {
           "id": "ai",
-          "label": "AI chat",
+          "label": "AI",
           "doc": "An assistant that reads and acts on the open page with the declared tools. Reading tools run freely; every tool that clicks, types, navigates or changes tabs or bookmarks asks first, naming the action and the site. It never fills passwords or card data and never sees the vault or the autofill profile.",
           "default_enabled": true,
           "permissions": [

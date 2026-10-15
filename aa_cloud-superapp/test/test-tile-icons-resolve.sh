@@ -142,7 +142,7 @@ fi
 
 echo "== T3: the genuine AI tile was NOT swept up in the change =="
 # 2026-10-13: the B-LLM folder (AI Hermes, AI Goose, AI Claude) left Cloud > Apps > AGI; AI Claude
-# alone stays (2026-10-14: renamed AI Chat, moved to AGI after Search), because the left edge menu's first sector draws it. So the
+# alone stays (2026-10-14: renamed AI, moved to AGI after Search), because the left edge menu's first sector draws it. So the
 # count of genuine AI tiles is now one.
 # Guard against the over-broad fix. The owner named one tile; a sed over the
 # file would have retargeted Chat GPT / Claude / Gemini too, and nobody asked.
@@ -161,9 +161,9 @@ walk(d.get('ui') or {})
 print(n)
 " 2>/dev/null)"
 if [ "$AI_COUNT" = "1" ]; then
-  ok "exactly 1 tile still carries ic_ai_chat (AI Chat, the real AI one)"
+  ok "exactly 1 tile still carries ic_ai_chat (AI, the real AI one)"
 else
-  bad "expected 1 remaining ic_ai_chat tile (AI Chat), found '$AI_COUNT' — c3-bot's AI sibling must keep its glyph"
+  bad "expected 1 remaining ic_ai_chat tile (AI), found '$AI_COUNT' — c3-bot's AI sibling must keep its glyph"
 fi
 
 echo "== T4: the lookup this tester models is still the lookup the app uses =="

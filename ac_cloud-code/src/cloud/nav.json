@@ -1,6 +1,6 @@
 {
-  "_doc": "THE ONE DECLARATION of cloud-code's bottom navigation (#562). tabs.js builds the bar from this list in this order and nothing else restates it: the tester (test/test-cloud-nav.sh) renders the bar through the same tabs.js and reads the order back off the rendered model. `view` selects the renderer in index.js::VIEWS; `icon` is a class of Acode's own icon font (src/res/icons/style.css) and the tester proves each one exists there. The Editor tab is Acode itself (Chat = Mattermost, AI = the agent gateway chat; AI replaced Home: every Home tile was a duplicate of a tab, and its Configs card moved to the top-right Profile & Config page), untouched: selecting it hides every cloud panel and nothing else.",
-  "default_tab": "chat",
+  "_doc": "THE ONE DECLARATION of cloud-code's bottom navigation (#562). tabs.js builds the bar from this list in this order and nothing else restates it: the tester (test/test-cloud-nav.sh) renders the bar through the same tabs.js and reads the order back off the rendered model. `view` selects the renderer in index.js::VIEWS; `icon` is a class of Acode's own icon font (src/res/icons/style.css) and the tester proves each one exists there. The Editor tab is Acode itself (AI, the agent chat, replaced Home and is the default tab: every Home tile was a duplicate of a tab, and its Configs card moved to the top-right Profile & Config page), untouched: selecting it hides every cloud panel and nothing else.",
+  "default_tab": "ai",
   "tabs": [
     {
       "id": "backlog",
@@ -21,15 +21,9 @@
       "view": "repos"
     },
     {
-      "id": "chat",
-      "label": "Chat",
-      "icon": "chat_bubble",
-      "view": "mattermost"
-    },
-    {
       "id": "ai",
       "label": "AI",
-      "icon": "wand-sparkles",
+      "icon": "chat_bubble",
       "view": "chat"
     },
     {
@@ -52,11 +46,11 @@
     }
   ],
   "nav": {
-    "_doc": "Measured fit (#562): eight tabs (Chat = Mattermost was added next to AI, 2026-10-14) is the fleet nav-shape ledger's maximum, and at 360 px a tab is 45 px: above the 44 px floor that ledger allows for eight cells, below the 48 px floor of fewer. Was: seven tabs is more than any fleet nav. At 360 px CSS width (the narrowest phone the owner's fleet targets) a tab is 51.4 px wide, above the 48 px touch floor, but 'MyTerminal' at 10 px is wider than its tab. So the bar does not truncate: tabs.js::fitLabels measures every label against its own tab on the device, and if ANY label overflows the bar switches to compact mode (icons for all tabs, the label only under the active one). min_viewport_px is the width the tester holds the touch floor to.",
+    "_doc": "Measured fit (#562): seven tabs is more than any fleet nav. At 360 px CSS width (the narrowest phone the owner's fleet targets) a tab is 51.4 px wide, above the 48 px touch floor, but 'MyTerminal' at 10 px is wider than its tab. So the bar does not truncate: tabs.js::fitLabels measures every label against its own tab on the device, and if ANY label overflows the bar switches to compact mode (icons for all tabs, the label only under the active one). min_viewport_px is the width the tester holds the touch floor to.",
     "height_px": 56,
     "label_font_px": 10,
     "icon_font_px": 22,
-    "min_touch_target_px": 44,
+    "min_touch_target_px": 48,
     "min_viewport_px": 360
   },
   "shared_store": {
@@ -88,10 +82,6 @@
         "url": "http://localhost:8765/"
       }
     ]
-  },
-  "mattermost": {
-    "_doc": "The Chat tab: Mattermost's own web client (human chat; AI/agent chat is the AI tab) in an iframe on the fleet's existing Mattermost host, the same host libs:chat pre-fills in the native apps (ab_cloud-libs-shared/build.json::ui.sections[chat].pages[mattermost].mattermost_default_server). The default tab opens here.",
-    "url": "https://chat.diegonmarcos.com"
   },
   "chat": {
     "_doc": "THE ONE DECLARATION of the Chat tab (replaced Home). The page is Cloud Search's chat (Chat > Search) without the search boxes: one message list, streamed replies, one composer. Everything fleet-shaped is DERIVED at build time by tools/resolve-targets.py into src/cloud/targets.gen.json: the agents (fleet_services, every service named agent_prefix*), the gateway URL (gateway.service's private_dns) and the fleet MCP servers (fleet_mcp, names only). What is declared here is only what the fleet data cannot say: the order the owner asked for (Hermes, OpenClaw first; 'cloud-code will use all agents possible'), what each backend accepts per request (model, effort, permission mode, MCP, functions), and the words.",

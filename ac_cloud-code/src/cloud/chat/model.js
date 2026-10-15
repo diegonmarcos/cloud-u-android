@@ -461,7 +461,7 @@ export function searchSessions(sessions, q) {
 export function exportMarkdown(session, agentLabel) {
 	const lines = [`# ${title(session)}`, "", `Agent: ${agentLabel || session.agent} · ${new Date(session.created).toISOString()}`, ""];
 	for (const m of session.messages) {
-		lines.push(`## ${m.role === "user" ? "You" : "Assistant"}`, "", m.content || "", "");
+		lines.push(`## ${m.role === "user" ? "You" : "AI"}`, "", m.content || "", "");
 		for (const a of m.attachments || []) lines.push(`- attached: ${a.name} (${a.mime})`);
 	}
 	return lines.join("\n");

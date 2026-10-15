@@ -221,19 +221,6 @@ async function renderAgents(panel) {
 	await renderBacklogView(panel, "Agents", nav.agents.entry, live);
 }
 
-// ── Chat = Mattermost: the web client on the fleet's existing host ─────────
-// Human chat. The agent chat is the AI tab below; the two never share a name.
-async function renderMattermost(panel) {
-	const url = nav.mattermost.url;
-	MENUS[panel.dataset.tab] = () => ({ items: [{ id: "browser", label: "Open in browser", icon: "open_in_browser", run: () => browser.open(url) }] });
-	if (panel.querySelector("iframe")) return; // keep the session and scroll position across tab switches
-	panel.classList.add("cloud-chat-panel");
-	panel.replaceChildren(
-		panelHeader("Chat", el("button", { className: "icon open_in_browser", title: "Open in browser", onclick: () => browser.open(url) })),
-		el("iframe", { className: "cloud-mattermost", src: url, title: "Mattermost", allow: "clipboard-write; fullscreen; microphone; camera", referrerpolicy: "strict-origin-when-cross-origin" }),
-	);
-}
-
 // ── AI (was Chat, replaced Home): src/cloud/chat ────────────────────────────
 // The Home tiles duplicated the bar; its Configs card (the all-files grant) is in Profile & Config.
 async function renderChatTab(panel) {
@@ -270,7 +257,6 @@ const VIEWS = {
 	editor: null,
 	backlog: renderBacklog,
 	repos: renderRepos,
-	mattermost: renderMattermost,
 	chat: renderChatTab,
 	agents: renderAgents,
 	browser: renderBrowser,

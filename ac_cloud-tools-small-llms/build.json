@@ -476,7 +476,7 @@
     "sections": [
       {
         "id": "chat",
-        "label": "Chat",
+        "label": "AI",
         "icon": "chat",
         "pages": []
       },

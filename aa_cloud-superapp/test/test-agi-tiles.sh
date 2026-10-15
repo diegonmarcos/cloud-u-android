@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tester (#571, #779, #803): Cloud ▸ Apps ▸ AGI is exactly Search | AI Chat | Code | Tools |
+# Tester (#571, #779, #803): Cloud ▸ Apps ▸ AGI is exactly Search | AI | Code | Tools |
 # MyTerminal | Terminal, SuperApp sits in Configs right before Store, and each launching tile
 # LANDS on the app it is named for. (2026-10-13: the B-LLM and S-LLM folders are gone; Tools, the
 # Cloud Tools Small LLMs app, took S-LLM's place. test-agi-llm-folders.sh, which pinned the two
@@ -17,7 +17,7 @@
 #
 #   T0  AGI is the tile group immediately after Tools Primary
 #   T1  the group's tiles, in order, are the six the owner asked for, with these ids (#803:
-#       SuperApp moved out, so AGI starts with Search; 2026-10-14: AI Chat, the Claude bot tile, moved in from Inboxes right after Search; 2026-10-13: no B-LLM, Tools for S-LLM)
+#       SuperApp moved out, so AGI starts with Search; 2026-10-14: AI, the Claude bot tile, moved in from Inboxes right after Search; 2026-10-13: no B-LLM, Tools for S-LLM)
 #   T2  Search/Tools/Terminal/MyTerminal/Code resolve to ac_cloud-search / ac_cloud-tools-small-llms /
 #       ac_cloud-nix-on-droid / ac_cloud-myterminal / ac_cloud-code's own package, and install from
 #       that app's release_url (#563 follow-up: Terminal moved from ac_cloud-termux to ac_cloud-nix-on-droid)
@@ -77,7 +77,7 @@ check("AGI" in titles and "Tools Primary" in titles and titles.index("AGI") == t
 
 print("== T1: the AGI row is the six tiles the owner asked for, in order ==")
 got = [t.get("label") for t in tiles]
-want = ["Search", "AI Chat", "Code", "Tools", "MyTerminal", "Terminal"]
+want = ["Search", "AI", "Code", "Tools", "MyTerminal", "Terminal"]
 check(got == want, "AGI captions are %s (want %s)" % (got, want))
 ids = [t.get("id") for t in tiles]
 check(ids == ["search", "ai-chat", "code", "tools-small-llms", "drive", "ai-tmx"], "AGI tile ids are %s" % ids)
@@ -87,18 +87,18 @@ check(not any(isinstance(t.get("tiles"), list) for t in tiles), "no AGI tile is 
 check((by_label := {t.get("label"): t for t in tiles}).get("Tools", {}).get("target") == "extapp:cloud-tools-small-llms",
       "the Tools tile launches extapp:cloud-tools-small-llms")
 by = {t.get("label"): t for t in tiles}
-chat = by.get("AI Chat", {})
+chat = by.get("AI", {})
 check(chat.get("id") == "ai-chat" and chat.get("icon") == "ic_ai_chat"
       and chat.get("target", "").startswith("intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;"),
-      "AI Chat keeps the Claude bot launch target and the ic_ai_chat glyph")
-check(os.path.isfile(os.path.join(app, "app/src/main/res/drawable/ic_ai_chat.xml")), "AI Chat's icon is a drawable")
+      "AI keeps the Claude bot launch target and the ic_ai_chat glyph")
+check(os.path.isfile(os.path.join(app, "app/src/main/res/drawable/ic_ai_chat.xml")), "AI's icon is a drawable")
 check(bj["ui"].get("retired_tile_ids", {}).get("cloud/ai-tlg-claude") == "cloud/ai-chat",
       "ui.retired_tile_ids maps the old id cloud/ai-tlg-claude to cloud/ai-chat")
 check('"cloud/ai-tlg-claude" to "cloud/ai-chat"' in read(os.path.join(app, "app/src/main/java/com/diegonmarcos/superapp/launcher/Sections.kt")),
       "Sections.kt follows the same old -> new tile id")
 inbox = list(groups(bj["ui"]["sections"], "Inboxes"))
 check(inbox and not any(t.get("id") in ("ai-tlg-claude", "ai-chat") for t in inbox[0]["tiles"]),
-      "the AI Chat tile is no longer in Inboxes")
+      "the AI tile is no longer in Inboxes")
 
 print("== T2: each launching tile resolves to its app's OWN package ==")
 def first_candidate(target):

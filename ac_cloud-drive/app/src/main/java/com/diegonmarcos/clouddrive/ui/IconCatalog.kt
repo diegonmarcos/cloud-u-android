@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudSync
@@ -120,7 +119,6 @@ object IconCatalog {
         "swap" -> Icons.Filled.SwapHoriz
         "extension" -> Icons.Filled.Extension
         "play_arrow" -> Icons.Filled.PlayArrow
-        "chat" -> Icons.Filled.Chat
         "smart_toy" -> Icons.Filled.SmartToy
         "screenshot" -> Icons.Filled.Screenshot
         else -> null

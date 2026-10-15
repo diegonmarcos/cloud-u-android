@@ -163,9 +163,9 @@ echo "== T2: the two sectors he reported, by what they RESOLVE to =="
 CLAUDE=$(q "
 r = resolve(next(h for h in oh['handles'] if h['id']=='left')['gestures']['top_outer'])
 print('%s|%s' % r if r else 'NONE|NONE')")
-[ "${CLAUDE%%|*}" = "AI Chat" ] \
-  && ok "left top_outer resolves to the label 'AI Chat' (got: ${CLAUDE%%|*})" \
-  || bad "left top_outer resolves to '${CLAUDE%%|*}', not 'AI Chat' — this is the reported symptom"
+[ "${CLAUDE%%|*}" = "AI" ] \
+  && ok "left top_outer resolves to the label 'AI' (got: ${CLAUDE%%|*})" \
+  || bad "left top_outer resolves to '${CLAUDE%%|*}', not 'AI' — this is the reported symptom"
 CLAUDE_ICON="${CLAUDE##*|}"
 [ -n "$CLAUDE_ICON" ] && [ "$CLAUDE_ICON" != "NONE" ] \
   && ok "left top_outer resolves to an icon ($CLAUDE_ICON)" \

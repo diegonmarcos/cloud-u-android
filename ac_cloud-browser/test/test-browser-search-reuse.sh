@@ -54,7 +54,7 @@ def check(root, ok):
        "the page is libs:search-page's, on cloud-search's declared engines")
     ok("search.send(session.id, text, model, web) { SearchAddon.accountToken(" in page, "its chat is the add-on's send, the token read per send")
     ok('"search_chat" -> { showSearchPage()' in frag and "openEntryUrl(url)" in frag[frag.find("private fun showSearchPage("):][:400],
-       "the Search & AI chat row is wired, and a result opens as a tab")
+       "the Search & AI row is wired, and a result opens as a tab")
     ok("SearchPageScreen.install(" in api, "the app installs the page at start-up")
 
 BJ = "ac_cloud-browser/build.json"

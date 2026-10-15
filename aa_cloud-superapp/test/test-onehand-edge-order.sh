@@ -87,7 +87,7 @@ LEFT_ORDER=$(q "print('|'.join(h['left']['gestures'][k] for k in
   ('top_outer','top','top_middle','down_middle','down','down_outer')))")
 LEFT_WANT='action:intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end|app:com.diegonmarcos.comms.mail|app:com.instagram.android|app:com.whatsapp.w4b|app:com.diegonmarcos.clouddrive|app:com.google.android.apps.bard'
 if [ "$LEFT_ORDER" = "$LEFT_WANT" ]; then
-  ok "left = AI Chat · Mail · Instagram · Whatsapp Business · Drive · Gemini, by position"
+  ok "left = AI · Mail · Instagram · Whatsapp Business · Drive · Gemini, by position"
 else
   bad "left order is wrong"
   echo "        want: $LEFT_WANT"
@@ -222,7 +222,7 @@ else
   bad "unresolved edge-menu targets: $UNRESOLVED"
 fi
 
-echo "== T5: AI Chat's URI was kept, not re-derived =="
+echo "== T5: AI's URI was kept, not re-derived =="
 # The working target is the Cloud > Apps tile's. Both are read from data here,
 # so this compares two live strings rather than a copy of one of them.
 SAME=$(q "
@@ -231,11 +231,11 @@ tile = [t['target'] for s in d['ui']['sections'] for g in s.get('tile_groups', [
 print('yes' if len(tile) == 1 and h['left']['gestures']['top_outer'] == 'action:' + tile[0] else 'no')")
 [ "$SAME" = "yes" ] \
   && ok "the edge gesture is 'action:' + the exact Cloud > Apps tile target, byte for byte" \
-  || bad "the AI Chat gesture and the Cloud > Apps tile no longer carry the same bot URI"
+  || bad "the AI gesture and the Cloud > Apps tile no longer carry the same bot URI"
 q "print('yes' if h['left']['gestures']['top_outer'].startswith('action:intent://') else 'no')" \
   | grep -q yes \
   && ok "it travels as an action: payload, the only form GestureAction.parse forwards verbatim" \
-  || bad "the AI Chat target lost its action: prefix — GestureAction.parse would not forward it"
+  || bad "the AI target lost its action: prefix — GestureAction.parse would not forward it"
 
 echo "== T6: Polaris, the Search star — declared, on top, colliding with nothing =="
 q "print(oh['search_star']['enabled'])" | grep -q True \

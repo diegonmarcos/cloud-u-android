@@ -78,7 +78,7 @@
     <string name="search_the_web">Search the Web…</string>
     <string name="search_with">Search %1$s…</string>
     <string name="sessions">Sessions</string>
-    <string name="chat_sessions">Chat Sessions</string>
+    <string name="chat_sessions">AI Sessions</string>
     <string name="no_sessions">No chats yet.</string>
     <string name="today">Today</string>
     <string name="previous_7_days">Previous 7 Days</string>

@@ -256,7 +256,7 @@
       },
       {
         "id": "assistant",
-        "label": "Assistant",
+        "label": "AI",
         "kind": "assistant"
       },
       {
@@ -387,7 +387,7 @@
       {
         "id": "search",
         "label": "Search",
-        "title": "Assistant",
+        "title": "AI",
         "blurb": "Search the web or ask the AI.",
         "icon": "assistant",
         "placeholder": "Ask anything...",
@@ -2664,7 +2664,7 @@
       },
       {
         "id": "chat",
-        "label": "Chat",
+        "label": "AI",
         "icon": "assistant",
         "background": "theme",
         "pages": [

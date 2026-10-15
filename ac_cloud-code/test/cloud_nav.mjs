@@ -31,7 +31,7 @@ try {
 
 // #562's order is the requirement; the RENDERED labels are what is compared.
 // Chat replaced Home (the owner's request): same place in the bar, its own renderer.
-const required = "Backlog|Editor|Repos|Chat|AI|Agents|Browser|MyTerminal";
+const required = "Backlog|Editor|Repos|AI|Agents|Browser|MyTerminal";
 const rendered = model.map((t) => t.label).join("|");
 out(rendered === required, `rendered order ${rendered} (required ${required})`);
 
@@ -43,12 +43,10 @@ for (const t of model) {
 }
 
 out(!model.some((t) => t.id === "home" || t.view === "home" || /home/i.test(t.label)), "no Home tab is left in the bar");
-const chatTab = model.find((t) => t.id === "chat");
-out(!!chatTab && chatTab.view === "mattermost" && views.includes("mattermost") && model.indexOf(chatTab) === 3, `Chat (Mattermost) sits where Home was (4th), with a renderer (${chatTab?.view})`);
 const aiTab = model.find((t) => t.id === "ai");
-out(!!aiTab && aiTab.label === "AI" && aiTab.view === "chat" && model.indexOf(aiTab) === 4, `AI (the agent chat) follows Chat, with its renderer (${aiTab?.view})`);
-out(nav.default_tab === "chat", `the app opens on the Chat tab (default_tab ${nav.default_tab})`);
-out(/^https:\/\/chat\.diegonmarcos\.com$/.test(nav.mattermost?.url || ""), `Chat shows the fleet's Mattermost host (${nav.mattermost?.url})`);
+out(!!aiTab && aiTab.label === "AI" && aiTab.view === "chat" && views.includes("chat") && model.indexOf(aiTab) === 3, `AI (the agent chat) sits where Home was (4th), with a renderer (${aiTab?.view})`);
+out(nav.default_tab === "ai", `the app opens on the AI tab (default_tab ${nav.default_tab})`);
+out(!model.some((t) => t.label === "Chat"), "no tab is labelled Chat: Chat means Mattermost, which this app does not host");
 out(!model.some((t) => /chatbot|ai chat/i.test(t.label)), "no tab is labelled ChatBot or AI Chat");
 out(!/renderHome|homeStatus/.test(index), "index.js keeps no Home renderer or seam call");
 

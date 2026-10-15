@@ -7,7 +7,7 @@
 # "Drive renders with no icon" is the second half of #111/#127/#284. The first
 # half (AI Claude) was fixed on 2026-09-11 by deriving an `action_catalogue` at
 # build time, and the published APK proves it worked: left `top_outer` resolves
-# to label 'AI Chat' (was 'AI Claude' until 2026-10-14) + icon 'ic_ai_chat'. Drive did not come with it.
+# to label 'AI' (was 'AI Claude' until 2026-10-14) + icon 'ic_ai_chat'. Drive did not come with it.
 #
 # Drive was EXTRACTED into its own APK (#302/#304). That rewrote its sector from
 # an in-app `action:` target to an external `app:com.diegonmarcos.clouddrive`,

@@ -10,10 +10,7 @@ import android.os.Bundle
 import android.provider.DocumentsContract
 import android.provider.Settings
 import android.webkit.MimeTypeMap
-import androidx.fragment.app.FragmentActivity
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.fragment.compose.AndroidFragment
-import com.diegonmarcos.superapp.chat.MattermostFragment
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -63,7 +60,7 @@ import androidx.compose.ui.platform.LocalContext
  * FileProvider hand-offs, the system intents. Nothing here draws; nothing in a screen
  * builds an Intent.
  */
-class MainActivity : FragmentActivity(), DriveActions {
+class MainActivity : ComponentActivity(), DriveActions {
 
     private lateinit var prefs: DrivePrefs
     /** #730 the all-files grant as last seen, so onResume can tell the moment it ARRIVES. */
@@ -155,7 +152,6 @@ class MainActivity : FragmentActivity(), DriveActions {
                 "explorer" -> ExplorerScreen(jumpPage, onPageConsumed = { jumpPage = null }, local = { FilesScreen(files, this, hasAccess) }, cloud = { VolumesScreen(rclone, prefs, this, openPath) })
                 "manage" -> ManageScreen(this, prefs, onShowInExplorer = openPath, page = jumpPage, onPageConsumed = { jumpPage = null })
                 "agents" -> AgentsScreen()
-                "chat" -> AndroidFragment<MattermostFragment>(Modifier.fillMaxSize())
                 "home" -> HomeScreen(git, this, onOpenFiles = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_LOCAL) }, onOpenVolumes = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_CLOUD) }, onOpenSync = { jumpTab = "sync" }, onRoute = jump, onSyncAll = syncAll, page = jumpPage, onPageConsumed = { jumpPage = null })
                 "sync" -> SyncScreen(git, rclone, prefs, this, jumpPage, onPageConsumed = { jumpPage = null })
                 "configs" -> ConfigsScreen(mirrors, prefs, this, hasAccess, rcloneVersion, jumpPage, onPageConsumed = { jumpPage = null })
