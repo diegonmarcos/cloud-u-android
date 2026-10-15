@@ -178,7 +178,7 @@ Coverage: 1 covered, 0 gaps.
 
 ## c3-watchtower — `com.diegonmarcos.watchtower`
 
-Module `ac_c3-watchtower`; libs: lib-core, lib-devtools, lib-fleetconfig-model.
+Module `ac_c3-watchtower`; libs: lib-core, lib-devtools, lib-fleetconfig-model, lib-ui-kit.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

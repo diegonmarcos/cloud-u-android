@@ -89,6 +89,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      #   input: "ab_cloud-libs-shared/libs/ui-kit/**"
       # ── end MANAGED-PATHS-HEADER ──
       # NO shared lib entry: build.json::modules declares exactly one module,
       # :app, so there is no ab_cloud-libs-shared directory this APK consumes

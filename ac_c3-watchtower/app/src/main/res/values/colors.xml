@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- WatchTower's palette as the fleet kit's ROLES (KitPalette), so no colour is spelled in
+         Kotlin. Same lavender-on-night look the View screen had. -->
+    <color name="kit_surface">#0b0e14</color>
+    <color name="kit_surface_selected">#331a0033</color>
+    <color name="kit_text_primary">#e9d8fd</color>
+    <color name="kit_text_secondary">#99ffffff</color>
+    <color name="kit_accent">#78c8ff</color>
+    <color name="kit_hairline">#22ffffff</color>
+    <color name="kit_tile_ink">#0b0e14</color>
+    <color name="kit_bad">#55b91c1c</color>
+</resources>
