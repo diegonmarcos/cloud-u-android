@@ -168,7 +168,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "z-ai/glm-5.3-flash",
-        "pricing_as_of": "2026-10-14",
+        "pricing_as_of": "2026-10-15",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -195,8 +195,8 @@
               "fp8",
               "bf16"
             ],
-            "prompt": 0.0938,
-            "completion": 0.25,
+            "prompt": 0.075,
+            "completion": 0.2,
             "note": "24B open weights, no category ranking; cheap European-language rewriting."
           },
           {
@@ -248,8 +248,8 @@
               "roleplay",
               "translation"
             ],
-            "prompt": 0.09,
-            "completion": 0.34,
+            "prompt": 0.2,
+            "completion": 0.4,
             "note": "Translation-ranked, served at four precisions; more headroom than the 26B."
           },
           {
@@ -327,19 +327,16 @@
             "quant": [
               "fp4",
               "fp8",
-              "mxfp4",
               "nvfp4"
             ],
             "trained_for": [
-              "academia",
-              "finance",
               "legal",
               "programming",
               "roleplay",
               "science",
               "technology"
             ],
-            "prompt": 0.05,
+            "prompt": 0.02,
             "completion": 7,
             "note": "Ranked in ten categories including translation; the formal-register GLM."
           },
@@ -366,8 +363,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.036,
-            "completion": 0.9,
+            "prompt": 0.15,
+            "completion": 0.5,
             "note": "The provider default: ranked in all twelve categories, and the cheapest all-rounder after DeepSeek."
           },
           {
@@ -405,8 +402,7 @@
             "trained_for": [
               "finance",
               "health",
-              "marketing",
-              "translation"
+              "marketing"
             ],
             "prompt": 0.3,
             "completion": 2.5,

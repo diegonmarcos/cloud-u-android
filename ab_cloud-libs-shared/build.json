@@ -3139,7 +3139,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-10-14",
+        "pricing_as_of": "2026-10-15",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -3157,7 +3157,7 @@
             "open": true,
             "params_b": 24,
             "quant": ["fp8", "bf16"],
-            "prompt": 0.0938, "completion": 0.25,
+            "prompt": 0.075, "completion": 0.2,
             "note": "24B open weights, no category ranking; cheap European-language rewriting."
           },
           {
@@ -3187,7 +3187,7 @@
             "params_b": 31,
             "quant": ["bf16", "fp4", "fp8"],
             "trained_for": ["health", "roleplay", "translation"],
-            "prompt": 0.09, "completion": 0.34,
+            "prompt": 0.2, "completion": 0.4,
             "note": "Translation-ranked, served at four precisions; more headroom than the 26B."
           },
           {
@@ -3230,9 +3230,9 @@
             "id": "z-ai/glm-5.2",
             "name": "GLM 5.2",
             "open": true,
-            "quant": ["fp4", "fp8", "mxfp4", "nvfp4"],
-            "trained_for": ["academia", "finance", "legal", "programming", "roleplay", "science", "technology"],
-            "prompt": 0.05, "completion": 7,
+            "quant": ["fp4", "fp8", "nvfp4"],
+            "trained_for": ["legal", "programming", "roleplay", "science", "technology"],
+            "prompt": 0.02, "completion": 7,
             "note": "Ranked in ten categories including translation; the formal-register GLM."
           },
           {
@@ -3241,7 +3241,7 @@
             "open": true,
             "quant": ["fp4", "fp8", "nvfp4"],
             "trained_for": ["academia", "finance", "health", "legal", "marketing", "marketing/seo", "programming", "roleplay", "science", "technology", "translation", "trivia"],
-            "prompt": 0.036, "completion": 0.9,
+            "prompt": 0.15, "completion": 0.5,
             "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
           },
           {
@@ -3269,7 +3269,7 @@
           {
             "id": "google/gemini-2.5-flash",
             "name": "Gemini 2.5 Flash",
-            "trained_for": ["finance", "health", "marketing", "translation"],
+            "trained_for": ["finance", "health", "marketing"],
             "prompt": 0.3, "completion": 2.5,
             "note": "The default: translation-ranked plus eight more categories, and still cheap."
           }
