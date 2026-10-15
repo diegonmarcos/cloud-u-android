@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Cloud Keyboard Libs</string>
+    <string name="feature_pack_title">Cloud Keyboard — Feature Pack</string>
+    <string name="feature_pack_body">• Stickers / GIF (libs:media)\n• Voice input (libs:voice)\n• On-device translate (libs:translate)</string>
+    <string name="feature_pack_update">Update</string>
 </resources>

@@ -58,6 +58,11 @@
       "_doc_dir": "#792 this APK runs engine services and providers, so it is a full mesh member: libs:core defines and holds CONSTELLATION_DATA and carries libs:devtools (fleet provider, MESH_MEMBER, the debug API on this package's port in libs/devtools/debug-ports.json). Before this it was installable but the Store could not wake, list or read it.",
       "dir": "../libs/core"
     },
+    "libs:ui-kit": {
+      "type": "library",
+      "_doc_dir": "2026-10-15 owner decision: all apps must be Compose. Shared BY REFERENCE: the fleet's Compose kit (CloudKitTheme + KitPalette) MainActivity paints with.",
+      "dir": "../libs/ui-kit"
+    },
     "libs:devtools": {
       "type": "library",
       "_doc_dir": "Pulled in by libs:core with an api dependency; declared because core references it by project path.",

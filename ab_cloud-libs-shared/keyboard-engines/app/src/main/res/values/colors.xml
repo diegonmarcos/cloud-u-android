@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher screen's palette as the fleet kit's ROLES (KitPalette), so no colour is spelled in Kotlin. -->
+<resources>
+    <color name="kit_surface">#FF0B0E14</color>
+    <color name="kit_surface_selected">#FF101520</color>
+    <color name="kit_text_primary">#FFE9D8FD</color>
+    <color name="kit_text_secondary">#99FFFFFF</color>
+    <color name="kit_accent">#FF7C3AED</color>
+    <color name="kit_hairline">#33FFFFFF</color>
+    <color name="kit_tile_ink">#FFFFFFFF</color>
+</resources>

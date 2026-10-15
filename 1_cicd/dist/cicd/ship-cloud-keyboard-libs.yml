@@ -62,6 +62,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/media/**"
       #   input: "ab_cloud-libs-shared/libs/translate/**"
+      #   input: "ab_cloud-libs-shared/libs/ui-kit/**"
       #   input: "ab_cloud-libs-shared/libs/voice/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-keyboard-libs/**"

@@ -1,6 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    // 2026-10-15 owner decision: all apps must be Compose; the compiler is declared in the root build.gradle.
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 // keyboard_media config → base64 → BuildConfig (mirrors superapp pattern).
@@ -106,6 +108,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        compose = true
         aidl true
     }
 
@@ -124,6 +127,10 @@ android {
 dependencies {
     // #792 mesh membership (CONSTELLATION_DATA, fleet provider, debug API) — see build.json::modules.libs:core.
     implementation project(':libs:core')
+    // 2026-10-15 owner decision: all apps must be Compose. The launcher screen is a Compose host under the
+    // fleet's CloudKitTheme, shared BY REFERENCE like the modules above.
+    implementation project(':libs:ui-kit')
+    implementation 'androidx.activity:activity-compose:1.9.3'
     implementation project(':libs:media')
     implementation project(':libs:translate')
     // ML Kit engine (LocalTranslateEngineClient) — registered in App.onCreate

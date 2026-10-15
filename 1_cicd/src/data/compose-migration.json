@@ -938,16 +938,14 @@
       "id": "ab_cloud-libs-shared",
       "scope": "in",
       "wave": 5,
-      "ui": "views",
+      "ui": "compose",
       "size": "S",
-      "screens_left": [
-        "lib-apks / keyboard-engines MainActivity"
-      ],
+      "screens_left": [],
       "notes": "The engine-APK hosts' launcher activity (outside libs/, each lib is its own unit).",
       "baseline": {
-        "view_screens": 1,
+        "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 1,
+        "view_ui_files": 0,
         "custom_views": 0
       }
     },
