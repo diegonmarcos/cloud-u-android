@@ -10,13 +10,25 @@
       "type": "http",
       "url": "https://mcp.diegonmarcos.com/cloud-cgc-pub-mcp/mcp"
     },
+    "cloud-cgc-pub-mcp-mesh": {
+      "type": "http",
+      "url": "https://c3-cloud-cgc-pub-mcp.app/mcp"
+    },
     "cloud-cgc-pvt-mcp": {
       "type": "http",
       "url": "http://10.0.0.6:3107/mcp"
     },
+    "cloud-cgc-pvt-mcp-mesh": {
+      "type": "http",
+      "url": "https://c3-cloud-cgc-pvt-mcp.app/mcp"
+    },
     "cloud-drive-mcp": {
       "type": "http",
       "url": "https://mcp.diegonmarcos.com/cloud-drive-mcp/mcp"
+    },
+    "cloud-drive-mcp-mesh": {
+      "type": "http",
+      "url": "https://c3-cloud-drive-mcp.app/mcp"
     },
     "cloud-infra-mcp": {
       "type": "http",
@@ -26,33 +38,65 @@
       },
       "headersHelper": "sh \"${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-auth-headers.sh\""
     },
+    "cloud-infra-mcp-mesh": {
+      "type": "http",
+      "url": "https://c3-cloud-infra-mcp.app/mcp"
+    },
     "cloud-mail-mcp": {
       "type": "http",
       "url": "https://mcp.diegonmarcos.com/mail-mcp/mcp"
+    },
+    "cloud-mail-mcp-mesh": {
+      "type": "http",
+      "url": "https://c3-cloud-mail-mcp.app/mcp"
     },
     "cloud-mattermost-mcp": {
       "type": "http",
       "url": "https://mcp.diegonmarcos.com/mattermost-mcp/mcp"
     },
+    "cloud-mattermost-mcp-mesh": {
+      "type": "http",
+      "url": "https://c3-cloud-mattermost-mcp.app/mcp"
+    },
     "cloud-services-mcp": {
       "type": "http",
       "url": "https://mcp.diegonmarcos.com/c3-services-mcp/mcp"
+    },
+    "cloud-services-mcp-mesh": {
+      "type": "http",
+      "url": "https://c3-cloud-services-mcp.app/mcp"
     },
     "cloud-superapp-mcp": {
       "type": "http",
       "url": "https://mcp.diegonmarcos.com/cloud-superapp-mcp/mcp"
     },
+    "cloud-superapp-mcp-mesh": {
+      "type": "http",
+      "url": "https://c3-cloud-superapp-mcp.app/mcp"
+    },
     "cloud-vault-mcp": {
       "type": "http",
       "url": "http://10.0.0.6:3111/mcp"
+    },
+    "cloud-vault-mcp-mesh": {
+      "type": "http",
+      "url": "https://c3-cloud-vault-mcp.app/mcp"
     },
     "google-personal-mcp": {
       "type": "http",
       "url": "https://mcp.diegonmarcos.com/g-personal/mcp"
     },
+    "google-personal-mcp-mesh": {
+      "type": "http",
+      "url": "https://c3-google-personal-mcp.app/mcp"
+    },
     "google-workspace-mcp": {
       "type": "http",
       "url": "https://mcp.diegonmarcos.com/g-workspace/mcp"
+    },
+    "google-workspace-mcp-mesh": {
+      "type": "http",
+      "url": "https://c3-google-workspace-mcp.app/mcp"
     }
   }
 }
