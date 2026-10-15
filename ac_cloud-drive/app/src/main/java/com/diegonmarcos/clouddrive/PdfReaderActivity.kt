@@ -5,8 +5,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.CancellationSignal
@@ -17,26 +15,72 @@ import android.print.PrintDocumentAdapter
 import android.print.PrintDocumentInfo
 import android.print.PrintManager
 import android.provider.OpenableColumns
-import android.text.InputType
-import android.util.TypedValue
-import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
-import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.PopupMenu
-import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.displayCutoutPadding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
+import com.diegonmarcos.clouddrive.ui.DriveTheme
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -54,17 +98,29 @@ import java.util.concurrent.Executors
  * The document is opened from a file descriptor on a background thread, so a 500 MB PDF shows its
  * first page as fast as a 50 KB one: nothing here reads the file into memory.
  */
-internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
+internal class PdfReaderActivity : ComponentActivity(), PdfReaderView.Host {
 
+    /** The pdfium surface; a View kept on purpose (gestures, tiles and caches) and hosted by [ReaderScreen]. */
     private lateinit var reader: PdfReaderView
-    private lateinit var titleView: TextView
-    private lateinit var status: TextView
-    private lateinit var pill: TextView
-    private lateinit var searchBar: LinearLayout
-    private lateinit var searchInput: EditText
-    private lateinit var searchCount: TextView
-    private lateinit var nightButton: TextView
-    private lateinit var modeButton: TextView
+
+    // What the Compose chrome shows. Everything the old View bar held lives here as state.
+    private var titleText by mutableStateOf("")
+    private var statusText by mutableStateOf<String?>(null)
+    private var pageLabel by mutableStateOf<String?>(null)
+    private var searchOpen by mutableStateOf(false)
+    private var searchQuery by mutableStateOf("")
+    private var searchCountText by mutableStateOf("")
+    private var nightOn by mutableStateOf(false)
+    private var pagedOn by mutableStateOf(false)
+    private var dialog by mutableStateOf<ReaderDialog?>(null)
+
+    private sealed interface ReaderDialog {
+        data class Password(val retry: Boolean) : ReaderDialog
+        data class Outline(val items: List<PdfEngine.OutlineItem>) : ReaderDialog
+        data object GoTo : ReaderDialog
+        data object ConvertTargets : ReaderDialog
+        data class Message(val text: String) : ReaderDialog
+    }
 
     private val io = Executors.newSingleThreadExecutor()
     private val searchExec = Executors.newSingleThreadExecutor()
@@ -98,10 +154,11 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
         sourceFile = file
         displayName = file?.name ?: queryName(data) ?: "document.pdf"
 
+        titleText = displayName
         buildUi()
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (searchBar.visibility == View.VISIBLE) closeSearch() else finish()
+                if (searchOpen) closeSearch() else finish()
             }
         })
         openDocument(null)
@@ -154,39 +211,27 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
             return
         }
         engine = opened
-        status.visibility = View.GONE
+        statusText = null
         val night = prefs.getBoolean(NIGHT, false)
         val paged = prefs.getBoolean(PAGED, false)
-        nightButton.alpha = if (night) 1f else 0.55f
-        modeButton.text = if (paged) "📄" else "📜"
+        nightOn = night
+        pagedOn = paged
         reader.open(opened, first, if (sourceFile != null) prefs.getInt(LAST_PAGE + source, 0) else 0, paged, night)
-        titleView.text = displayName
+        titleText = displayName
     }
 
     private fun askPassword(retry: Boolean) {
-        val input = EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            setSingleLine()
-        }
-        AlertDialog.Builder(this)
-            .setTitle(if (retry) "Wrong password — try again" else "This PDF is password protected")
-            .setView(input)
-            .setCancelable(false)
-            .setPositiveButton("Open") { _, _ -> openDocument(input.text.toString()) }
-            .setNegativeButton("Cancel") { _, _ -> finish() }
-            .show()
+        dialog = ReaderDialog.Password(retry)
     }
 
     private fun showStatus(text: String) {
-        status.text = text
-        status.visibility = View.VISIBLE
+        statusText = text
     }
 
     // ── host callbacks ───────────────────────────────────────────────────────────────────────
 
     override fun onPageChanged(page: Int, count: Int) {
-        pill.text = "${page + 1} / $count"
-        pill.visibility = if (count > 1) View.VISIBLE else View.GONE
+        pageLabel = if (count > 1) getString(R.string.pdf_page_pill, page + 1, count) else null
     }
 
     override fun onWordSelected(text: String) {
@@ -212,14 +257,14 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
     private fun toggleNight() {
         val on = !reader.night
         reader.setNight(on)
-        nightButton.alpha = if (on) 1f else 0.55f
+        nightOn = on
         prefs.edit().putBoolean(NIGHT, on).apply()
     }
 
     private fun toggleMode() {
         val paged = !reader.paged
         reader.setPaged(paged)
-        modeButton.text = if (paged) "📄" else "📜"
+        pagedOn = paged
         prefs.edit().putBoolean(PAGED, paged).apply()
     }
 
@@ -233,31 +278,14 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
                     Toast.makeText(this, "This PDF has no outline.", Toast.LENGTH_SHORT).show()
                     return@runOnUiThread
                 }
-                val labels = items.map { "    ".repeat(it.depth) + it.title }.toTypedArray()
-                AlertDialog.Builder(this)
-                    .setTitle("Outline")
-                    .setItems(labels) { _, which -> reader.goToPage(items[which].page) }
-                    .show()
+                dialog = ReaderDialog.Outline(items)
             }
         }
     }
 
     private fun askPage() {
-        val e = engine ?: return
-        val input = EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER
-            hint = "1 – ${e.pageCount}"
-            setSingleLine()
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Go to page")
-            .setView(input)
-            .setPositiveButton("Go") { _, _ ->
-                val n = input.text.toString().trim().toIntOrNull()
-                if (n != null) reader.goToPage(n - 1)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        if (engine == null) return
+        dialog = ReaderDialog.GoTo
     }
 
     private fun share() {
@@ -333,17 +361,10 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
 
     private fun chooseConversion() {
         if (sourceFile == null) {
-            AlertDialog.Builder(this)
-                .setMessage("A document handed in from another app has no folder to save next to — copy it into Files first.")
-                .setPositiveButton("OK", null)
-                .show()
+            dialog = ReaderDialog.Message(getString(R.string.pdf_convert_no_folder))
             return
         }
-        val targets = PdfConvert.TARGETS
-        AlertDialog.Builder(this)
-            .setTitle("Convert to")
-            .setItems(targets.toTypedArray()) { _, which -> convert(targets[which]) }
-            .show()
+        dialog = ReaderDialog.ConvertTargets
     }
 
     private fun convert(target: String) {
@@ -355,7 +376,7 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
                 outcome.onSuccess { toast("Saved as " + it.name + " next to the original.") }
-                    .onFailure { AlertDialog.Builder(this).setMessage(it.message ?: "conversion failed").setPositiveButton("OK", null).show() }
+                    .onFailure { dialog = ReaderDialog.Message(it.message ?: "conversion failed") }
             }
         }
     }
@@ -363,9 +384,7 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
     // ── search ───────────────────────────────────────────────────────────────────────────────
 
     private fun openSearch() {
-        searchBar.visibility = View.VISIBLE
-        searchInput.requestFocus()
-        (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(searchInput, 0)
+        searchOpen = true
     }
 
     private fun closeSearch() {
@@ -373,10 +392,8 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
         hits.clear()
         currentHit = -1
         reader.setHits(searchGen, emptyList(), -1)
-        searchBar.visibility = View.GONE
-        searchCount.text = ""
-        (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
-            .hideSoftInputFromWindow(searchInput.windowToken, 0)
+        searchOpen = false
+        searchCountText = ""
     }
 
     private fun startSearch(query: String) {
@@ -386,10 +403,10 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
         currentHit = -1
         reader.setHits(id, emptyList(), -1)
         if (query.isBlank()) {
-            searchCount.text = ""
+            searchCountText = ""
             return
         }
-        searchCount.text = "…"
+        searchCountText = "…"
         val from = reader.currentPageIndex()
         searchExec.execute {
             val n = e.pageCount
@@ -419,7 +436,7 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
         if (first) currentHit = 0
         reader.setHits(id, ArrayList(hits), currentHit)
         if (first) reader.showHit(0)
-        searchCount.text = when {
+        searchCountText = when {
             hits.isEmpty() -> if (done) "No matches" else "…"
             else -> "${currentHit + 1} / ${hits.size}" + if (done) "" else "+"
         }
@@ -429,135 +446,203 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
         if (hits.isEmpty()) return
         currentHit = (currentHit + delta + hits.size) % hits.size
         reader.showHit(currentHit)
-        searchCount.text = "${currentHit + 1} / ${hits.size}"
+        searchCountText = "${currentHit + 1} / ${hits.size}"
     }
 
     // ── UI ───────────────────────────────────────────────────────────────────────────────────
 
     private fun buildUi() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        val root = FrameLayout(this).apply { setBackgroundColor(CHROME) }
-        val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        root.addView(column, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-
-        val bar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(CHROME)
-        }
-        bar.addView(iconButton("‹", "Back") { finish() })
-        titleView = TextView(this).apply {
-            setTextColor(TEXT)
-            textSize = 16f
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            text = displayName
-        }
-        bar.addView(titleView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        bar.addView(iconButton("🔍", "Search") { openSearch() })
-        bar.addView(iconButton("☰", "Outline") { showOutline() })
-        nightButton = iconButton("🌙", "Night mode") { toggleNight() }
-        bar.addView(nightButton)
-        modeButton = iconButton("📜", "Continuous or paged") { toggleMode() }
-        bar.addView(modeButton)
-        val more = iconButton("⋮", "More", null)
-        more.setOnClickListener { showMore(more) }
-        bar.addView(more)
-        column.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
-
-        searchBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(CHROME)
-            visibility = View.GONE
-        }
-        searchInput = EditText(this).apply {
-            hint = "Search in document"
-            setHintTextColor(HINT)
-            setTextColor(TEXT)
-            setSingleLine()
-            imeOptions = EditorInfo.IME_ACTION_SEARCH
-            setOnEditorActionListener { view, actionId, _ ->
-                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                    startSearch(text.toString())
-                    (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
-                        .hideSoftInputFromWindow(view.windowToken, 0)
-                    true
-                } else false
-            }
-        }
-        searchBar.addView(searchInput, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(12) })
-        searchCount = TextView(this).apply { setTextColor(HINT); textSize = 13f; setPadding(dp(8), 0, dp(8), 0) }
-        searchBar.addView(searchCount)
-        searchBar.addView(iconButton("▲", "Previous match") { stepHit(-1) })
-        searchBar.addView(iconButton("▼", "Next match") { stepHit(1) })
-        searchBar.addView(iconButton("✕", "Close search") { closeSearch() })
-        column.addView(searchBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
-
         reader = PdfReaderView(this).also { it.host = this }
-        column.addView(reader, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-
-        pill = TextView(this).apply {
-            setTextColor(Color.WHITE)
-            textSize = 13f
-            setPadding(dp(14), dp(6), dp(14), dp(6))
-            background = GradientDrawable().apply { setColor(0xCC000000.toInt()); cornerRadius = dp(16).toFloat() }
-            visibility = View.GONE
-        }
-        root.addView(pill, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(24) })
-
-        status = TextView(this).apply {
-            setTextColor(TEXT)
-            textSize = 15f
-            gravity = Gravity.CENTER
-            setPadding(dp(24), 0, dp(24), 0)
-        }
-        root.addView(status, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
-
-        setContentView(root)
-        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
-            insets
-        }
+        setContent { DriveTheme { ReaderScreen() } }
     }
 
-    private fun showMore(anchor: View) {
-        val menu = PopupMenu(this, anchor)
-        menu.menu.add(0, MENU_SHARE, 0, "Share")
-        menu.menu.add(0, MENU_PRINT, 1, "Print")
-        menu.menu.add(0, MENU_GOTO, 2, "Go to page…")
-        menu.menu.add(0, MENU_CONVERT, 3, "Convert…")
-        menu.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                MENU_SHARE -> share()
-                MENU_PRINT -> printDocument()
-                MENU_GOTO -> askPage()
-                MENU_CONVERT -> chooseConversion()
+    @Composable
+    private fun ReaderScreen() {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).systemBarsPadding().displayCutoutPadding()) {
+            Column(Modifier.fillMaxSize()) {
+                ReaderBar()
+                if (searchOpen) SearchBar()
+                AndroidView(factory = { reader }, modifier = Modifier.fillMaxWidth().weight(1f))
             }
-            true
+            pageLabel?.let { label ->
+                Text(
+                    label,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = DriveMetrics.listBottom)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f), RoundedCornerShape(DriveMetrics.cardRadius))
+                        .padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.gapWide),
+                )
+            }
+            statusText?.let { text ->
+                Text(
+                    text,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = DriveMetrics.padWide),
+                )
+            }
+            dialog?.let { ReaderDialogs(it) }
         }
-        menu.show()
     }
 
-    private fun iconButton(glyph: String, description: String, onClick: (() -> Unit)?): TextView {
-        val value = TypedValue()
-        theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, value, true)
-        return TextView(this).apply {
-            text = glyph
-            textSize = 20f
-            setTextColor(TEXT)
-            gravity = Gravity.CENTER
-            minWidth = dp(44)
-            contentDescription = description
-            setBackgroundResource(value.resourceId)
-            if (onClick != null) setOnClickListener { onClick() }
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT)
+    @Composable
+    private fun ReaderBar() {
+        var more by remember { mutableStateOf(false) }
+        Row(Modifier.fillMaxWidth().height(DriveMetrics.islandHeight), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { finish() }, modifier = Modifier.size(DriveMetrics.tap)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.pdf_back)) }
+            Text(
+                titleText,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = { openSearch() }, modifier = Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.Search, stringResource(R.string.pdf_search)) }
+            IconButton(onClick = { showOutline() }, modifier = Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.Menu, stringResource(R.string.pdf_outline)) }
+            IconButton(onClick = { toggleNight() }, modifier = Modifier.size(DriveMetrics.tap).alpha(if (nightOn) 1f else 0.55f)) {
+                Icon(Icons.Filled.DarkMode, stringResource(R.string.pdf_night))
+            }
+            IconButton(onClick = { toggleMode() }, modifier = Modifier.size(DriveMetrics.tap)) {
+                Icon(if (pagedOn) Icons.Filled.Description else Icons.Filled.ViewList, stringResource(R.string.pdf_mode))
+            }
+            Box {
+                IconButton(onClick = { more = true }, modifier = Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.MoreVert, stringResource(R.string.pdf_more)) }
+                DropdownMenu(expanded = more, onDismissRequest = { more = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.pdf_share)) }, onClick = { more = false; share() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.pdf_print)) }, onClick = { more = false; printDocument() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.pdf_goto)) }, onClick = { more = false; askPage() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.pdf_convert)) }, onClick = { more = false; chooseConversion() })
+                }
+            }
         }
     }
 
-    private fun dp(value: Int): Int = Math.round(value * resources.displayMetrics.density)
+    @Composable
+    private fun SearchBar() {
+        val focus = remember { FocusRequester() }
+        val focusManager = LocalFocusManager.current
+        LaunchedEffect(Unit) { focus.requestFocus() }
+        Row(Modifier.fillMaxWidth().height(DriveMetrics.rowHeight + DriveMetrics.padWide).padding(start = DriveMetrics.padWide), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text(stringResource(R.string.pdf_search_hint)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = {
+                    startSearch(searchQuery)
+                    focusManager.clearFocus()
+                }),
+                modifier = Modifier.weight(1f).focusRequester(focus),
+            )
+            Text(
+                searchCountText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = DriveMetrics.pad),
+            )
+            IconButton(onClick = { stepHit(-1) }, modifier = Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.KeyboardArrowUp, stringResource(R.string.pdf_prev_match)) }
+            IconButton(onClick = { stepHit(1) }, modifier = Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.KeyboardArrowDown, stringResource(R.string.pdf_next_match)) }
+            IconButton(onClick = { closeSearch() }, modifier = Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.Close, stringResource(R.string.pdf_close_search)) }
+        }
+    }
+
+    @Composable
+    private fun ReaderDialogs(shown: ReaderDialog) {
+        val close = { dialog = null }
+        when (shown) {
+            is ReaderDialog.Password -> {
+                var password by remember { mutableStateOf("") }
+                AlertDialog(
+                    onDismissRequest = {},
+                    properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+                    title = {
+                        Text(stringResource(if (shown.retry) R.string.pdf_password_retry else R.string.pdf_password_title))
+                    },
+                    text = {
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { close(); openDocument(password) }) { Text(stringResource(R.string.pdf_open)) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { close(); finish() }) { Text(stringResource(R.string.pdf_cancel)) }
+                    },
+                )
+            }
+            is ReaderDialog.Outline -> AlertDialog(
+                onDismissRequest = close,
+                title = { Text(stringResource(R.string.pdf_outline)) },
+                text = {
+                    LazyColumn {
+                        items(shown.items) { item ->
+                            Text(
+                                "    ".repeat(item.depth) + item.title,
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable { close(); reader.goToPage(item.page) }
+                                    .padding(vertical = DriveMetrics.padWide),
+                            )
+                        }
+                    }
+                },
+                confirmButton = {},
+            )
+            ReaderDialog.GoTo -> {
+                var number by remember { mutableStateOf("") }
+                val count = engine?.pageCount ?: 0
+                AlertDialog(
+                    onDismissRequest = close,
+                    title = { Text(stringResource(R.string.pdf_goto_title)) },
+                    text = {
+                        OutlinedTextField(
+                            value = number,
+                            onValueChange = { number = it },
+                            placeholder = { Text(stringResource(R.string.pdf_goto_hint, count)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            close()
+                            val n = number.trim().toIntOrNull()
+                            if (n != null) reader.goToPage(n - 1)
+                        }) { Text(stringResource(R.string.pdf_go)) }
+                    },
+                    dismissButton = { TextButton(onClick = close) { Text(stringResource(R.string.pdf_cancel)) } },
+                )
+            }
+            ReaderDialog.ConvertTargets -> AlertDialog(
+                onDismissRequest = close,
+                title = { Text(stringResource(R.string.pdf_convert_title)) },
+                text = {
+                    Column {
+                        PdfConvert.TARGETS.forEach { target ->
+                            Text(
+                                target,
+                                modifier = Modifier.fillMaxWidth().clickable { close(); convert(target) }.padding(vertical = DriveMetrics.padWide),
+                            )
+                        }
+                    }
+                },
+                confirmButton = {},
+            )
+            is ReaderDialog.Message -> AlertDialog(
+                onDismissRequest = close,
+                text = { Text(shown.text) },
+                confirmButton = { TextButton(onClick = close) { Text(stringResource(R.string.pdf_ok)) } },
+            )
+        }
+    }
 
     private fun toast(text: String) = Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
 
@@ -594,16 +679,7 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
         private const val LAST_PAGE = "last:"
         private const val BATCH_MS = 150L
 
-        private const val MENU_SHARE = 1
-        private const val MENU_PRINT = 2
-        private const val MENU_GOTO = 3
-        private const val MENU_CONVERT = 4
-
         private val SAFE_LINK_SCHEMES = setOf("http", "https", "mailto", "tel")
-
-        private val CHROME = 0xFF1B1F24.toInt()
-        private val TEXT = 0xFFE6EAEE.toInt()
-        private val HINT = 0xFF8A949E.toInt()
 
         /** The intent the Files tab uses: an explicit launch of this reader on a path it listed. */
         fun intent(context: Context, path: String): Intent =

@@ -25,8 +25,9 @@
 #   D5  libs:bottomnav is declared, depended on, linked, and DriveShell draws
 #       BottomNavHost (the island, its collapse and its insets) with the declared entries.
 #   D6  the WebView shell is gone: no drive.html, no tailwind.js, no FilesBridge,
-#       no Material Views widget, no WebView and no JavascriptInterface at all; the
-#       one AppCompatActivity left is #577's native pdfium reader.
+#       no Material Views widget, no WebView and no JavascriptInterface at all; no
+#       AppCompatActivity anywhere (2026-10-15 owner decision: all apps must be Compose,
+#       so #577's pdfium reader is a ComponentActivity with Compose chrome too).
 #   D7  no colour literal and no caption literal in the chrome's Kotlin; every
 #       R.string the chrome names exists, and no string is dead.
 #   D8  StatusLight: four states, three glyph shapes, colours and words with the
@@ -192,7 +193,9 @@ done
 JSI="$(grep -rl '@JavascriptInterface' "$SRC" || true)"
 if [ -z "$JSI" ]; then pass "no JavascriptInterface anywhere: nothing calls Kotlin by string name any more"; else fail "a JavascriptInterface is back: $JSI"; fi
 APPCOMPAT="$(grep -rlE 'AppCompatActivity' "$SRC" --include='*.kt' || true)"
-if [ "$APPCOMPAT" = "$SRC/PdfReaderActivity.kt" ]; then pass "the only AppCompatActivity is #577's PDF reader; the chrome is a ComponentActivity"; else fail "an AppCompatActivity outside the PDF reader: $APPCOMPAT"; fi
+if [ -z "$APPCOMPAT" ]; then pass "no AppCompatActivity anywhere: the chrome and #577's PDF reader are ComponentActivities"; else fail "an AppCompatActivity is back: $APPCOMPAT"; fi
+if grep -qE 'class PdfReaderActivity : ComponentActivity\(\)' "$SRC/PdfReaderActivity.kt" && grep -qE 'setContent \{ DriveTheme \{ ReaderScreen\(\) \} \}' "$SRC/PdfReaderActivity.kt"; then pass "the PDF reader is a Compose host under DriveTheme"; else fail "the PDF reader is not a ComponentActivity hosting ReaderScreen under DriveTheme"; fi
+if grep -qE 'AlertDialog\.Builder|PopupMenu|\bEditText\(|\bTextView\(|\bsetContentView\(' "$SRC/PdfReaderActivity.kt"; then fail "the PDF reader builds a View widget again (its pdfium surface PdfReaderView is the one View, hosted by AndroidView)"; else pass "the PDF reader builds no View widget: dialogs, menu, fields and bars are Compose"; fi
 if grep -qE "^import com\.google\.android\.material\." -r "$SRC"; then fail "a Material Views widget in the chrome"; else pass "no Material Views widget in Kotlin (the material dependency only supplies the AppCompat-descended dark theme the reader needs)"; fi
 if grep -rqE 'android\.webkit\.WebView' "$SRC" --include='*.kt'; then fail "a WebView is back in the chrome (the PDF reader is native pdfium, #577)"; else pass "no WebView anywhere: the chrome is Compose, the PDF reader is native (#577)"; fi
 for gone in "$APP/app/src/main/assets/reader.html" "$APP/app/src/main/assets/vendor"; do [ -e "$gone" ] && fail "still present: ${gone#$APP/}" || pass "gone: ${gone#$APP/}"; done

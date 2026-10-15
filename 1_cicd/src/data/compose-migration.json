@@ -94,17 +94,15 @@
       "wave": 0,
       "ui": "compose",
       "size": "S",
-      "screens_left": [
-        "PdfReaderActivity (+ PdfReaderView, a PdfRenderer canvas view)"
-      ],
-      "notes": "Compose app. One View screen left: PdfReaderActivity. Keep PdfReaderView as an AndroidView inside a Compose scaffold — a canvas renderer gains nothing from a rewrite.",
+      "screens_left": [],
+      "notes": "All Compose (2026-10-15): PdfReaderActivity is a ComponentActivity under DriveTheme; its toolbar, search bar, menu, dialogs and status are composables. PdfReaderView stays the one custom View, hosted by AndroidView \u2014 a canvas renderer gains nothing from a rewrite.",
       "risks": [
         "PdfRenderer page cache lifecycle must survive the move into a composable"
       ],
       "baseline": {
-        "view_screens": 1,
+        "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 1,
+        "view_ui_files": 0,
         "custom_views": 1
       }
     },
