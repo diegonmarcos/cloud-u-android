@@ -41,7 +41,7 @@ object WirelessDebugKeepAlive {
     /**
      * @param ready the shell channel answered at the end of this tick.
      * @param needsOwner Wireless Debugging is off and nothing this app holds
-     *   can turn it on — the owner has to, which is what the notification says.
+     *   can turn it on — the owner has to; recorded as status only, no notification.
      */
     data class Outcome(
         val ready: Boolean,

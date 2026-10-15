@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.system
 
 import android.content.Context
-import android.content.Intent
 import android.database.ContentObserver
 import android.net.ConnectivityManager
 import android.net.Network
@@ -68,7 +67,9 @@ class WirelessDebugKeeper(ctx: Context, params: WorkerParameters) : Worker(ctx, 
         }
         Log.i(TAG, "tick[$trigger]: $o")
         if (o.cause != WirelessDebugKeepAlive.CAUSE_OFF) Status.record(ctx, o)
-        if (o.needsOwner) notifyOwner(ctx) else cancelNotice(ctx)
+        // The "needs owner" state is only recorded (Status); no alert is posted.
+        // Withdraw any alert an older build left behind.
+        cancelNotice(ctx)
         return Result.success()
     }
 
@@ -216,26 +217,7 @@ class WirelessDebugKeeper(ctx: Context, params: WorkerParameters) : Worker(ctx, 
             }.onFailure { Log.w(TAG, "setting observer: ${it.message}") }
         }
 
-        /** The one thing shell can never do: switch it on with no Wi-Fi, on a
-         *  network the owner has not allowed, or before this app holds
-         *  WRITE_SECURE_SETTINGS. Say so — #777: as a fleet alert — and land
-         *  on the page that can. */
-        private fun notifyOwner(ctx: Context) {
-            val open = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
-                // AOSP's preference key for the Wireless debugging row; Settings
-                // scrolls to and highlights it. A build that ignores it still
-                // lands on Developer options.
-                .putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
-            FleetAlerts.raise(ctx, FleetAlerts.Alert(
-                title = "Wireless debugging is off",
-                text = WirelessDebugKeepAlive.CAUSE_REJECTED + ". Tap to open Developer options ▸ " +
-                    "Wireless debugging; the shell channel reconnects by itself once it is on.",
-                severity = FleetAlerts.WARN,
-                deepLink = open.toUri(Intent.URI_INTENT_SCHEME),
-                dedupeKey = ALERT_KEY,
-            ))
-        }
-
+        /** Withdraws the "Wireless debugging is off" alert older builds posted. */
         private fun cancelNotice(ctx: Context) = FleetAlerts.withdraw(ctx, ALERT_KEY)
     }
 }

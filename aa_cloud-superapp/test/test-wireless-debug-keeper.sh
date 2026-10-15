@@ -27,8 +27,8 @@
 #   T7  App start and BOOT_COMPLETED both go through sync().
 #   T8  PrivilegedPlaneWorker's own boot-time write honours the switch — else
 #       OFF is undone on every launch — and it is never on a period.
-#   T9  the owner notice deep-links into Developer options and stays until withdrawn
-#       (#777: a fleet alert under one dedupe key, not a channel of its own).
+#   T9  nothing posts a "Wireless debugging is off" alert: doWork only withdraws
+#       stale ones (cancelNotice); the needs-owner state is recorded as status.
 #   T10 switching Wireless debugging itself from the panel moves the keep-alive
 #       with it, so the watchdog never fights the owner's hand.
 #   T11 the switch is declared in build.json with its shipped default.
@@ -90,7 +90,6 @@ DOWORK="$(body "$KEEPER" 'fun doWork')"
 SYNC="$(body "$KEEPER" 'fun sync(')"
 KICK="$(body "$KEEPER" 'private fun kick(')"
 CALLBACKS="$(body "$KEEPER" 'private fun registerCallbacks(')"
-NOTIFY="$(body "$KEEPER" 'private fun notifyOwner(')"
 
 # T1
 n_tick=$(grep -c 'WirelessDebugKeepAlive\.tick(' <<<"$DOWORK")
@@ -171,12 +170,11 @@ else
 fi
 
 # T9
-if grep -q 'ACTION_APPLICATION_DEVELOPMENT_SETTINGS' <<<"$NOTIFY" && grep -q 'FleetAlerts.raise' <<<"$NOTIFY" \
-   && grep -q 'deepLink' <<<"$NOTIFY" && grep -q 'dedupeKey' <<<"$NOTIFY" \
-   && grep -q 'FleetAlerts.withdraw' "$KEEPER" && grep -q 'notifyOwner(ctx)' <<<"$DOWORK"; then
-  ok "T9 a rejected re-arm raises an alert that opens Developer options and is withdrawn once fixed"
+if ! grep -q 'notifyOwner\|FleetAlerts\.raise\|ACTION_APPLICATION_DEVELOPMENT_SETTINGS' "$KEEPER" \
+   && grep -q 'cancelNotice(ctx)' <<<"$DOWORK" && grep -q 'FleetAlerts.withdraw' "$KEEPER"; then
+  ok "T9 nothing posts the Wireless-debugging-off alert; doWork only withdraws stale ones"
 else
-  bad "T9 the owner alert is missing, not one tap from Developer options, or never withdrawn"
+  bad "T9 the keeper still posts (or can post) an owner alert, or no longer withdraws stale ones"
 fi
 
 # T10

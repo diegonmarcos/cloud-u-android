@@ -81,14 +81,23 @@ class OneHandOverlayService : Service() {
     private fun startForegroundCompat() {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (android.os.Build.VERSION.SDK_INT >= 26) {
+            nm.deleteNotificationChannel(OLD_CHANNEL)
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL, "Edge menus", NotificationManager.IMPORTANCE_MIN))
+                NotificationChannel(CHANNEL, "Edge menus", NotificationManager.IMPORTANCE_MIN).apply {
+                    setShowBadge(false)
+                    lockscreenVisibility = Notification.VISIBILITY_SECRET
+                    setSound(null, null)
+                    enableVibration(false)
+                    enableLights(false)
+                })
         }
         val n = (if (android.os.Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL)
                  else @Suppress("DEPRECATION") Notification.Builder(this))
             .setSmallIcon(applicationInfo.icon)
             .setContentTitle("Edge menus on")
-            .setOngoing(true)
+            .setOngoing(false)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .setVisibility(Notification.VISIBILITY_SECRET)
             .build()
         if (android.os.Build.VERSION.SDK_INT >= 34) {
             startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
@@ -374,7 +383,8 @@ class OneHandOverlayService : Service() {
         private const val OVERLAY_ALPHA = 0.6f
         const val ACTION_TEST = "com.diegonmarcos.superapp.onehand.TEST"
         const val EXTRA_MS = "ms"
-        private const val CHANNEL = "onehand_overlay"
+        private const val OLD_CHANNEL = "onehand_overlay"
+        private const val CHANNEL = "onehand_overlay_min"
         private const val NOTIF_ID = 7750
         @Volatile var instance: OneHandOverlayService? = null
             private set
