@@ -1,0 +1,66 @@
+# libs:ai
+
+The fleet's one AI chat (`com.diegonmarcos.superapp.ai`), shared by reference. It replaces `libs:search-page`
+and is the page **and** everything behind it, so no Kotlin app draws a chat of its own
+(`1_cicd/src/scripts/cloud-android-ai-chat-guard.py` holds them to that). The label is **AI**, everywhere.
+
+## What is in it
+
+| Piece | Where |
+|---|---|
+| Chat page: greeting, conversation, answer **streaming** in, Agent picker, Model picker, Sessions, input | `AiPage.kt` (`AiChatPage`, `AiTheme`, `materialAiTheme`) |
+| Consent card a mutating tool waits on (Allow / Deny) | `AiPage.kt` (`AiConsentCard`) |
+| State: open session, streaming text, pending consent | `AiChatState.kt` |
+| Host seam and the standard host (sessions, prefs, backends, tool loop) | `AiHost.kt` (`AiHost`, `AiStandardHost`, `AiAgents`) |
+| Backends: fleet gateway, OpenRouter, or an app's own | `AiBackend.kt` (`AiBackend`, `AiGatewayBackend`, `AiOpenRouterBackend`, `AiUrlHttp`) |
+| Tool-plugin interface (no tool ships here) | `AiTool.kt` |
+| Wire: bodies, SSE parser, answer parser | `AiProtocol.kt` |
+| Sessions: stores and Today / Previous 7 days / Older | `AiSessions.kt` |
+| The shared contract | `src/main/assets/ai/ai.json` |
+| The shared protocol cases | `src/main/assets/ai/protocol-cases.json` |
+
+## The contract (`assets/ai/ai.json`)
+
+One file, read by every consumer: Kotlin apps through `AiConfig`, Cloud Code (JS) through
+`ac_cloud-code/tools/resolve-targets.py`, which copies the `gateway` and `openrouter` blocks into
+`targets.gen.json`. Nobody restates an endpoint, a path or the `X-Agent-Mode` header name; Cloud Code's
+`nav.json::chat` no longer carries `gateway` or `direct`. The agents themselves (identity, mode,
+capabilities) stay in `libs:model-catalogue` `assets/agents/agents.json`, which `AiAgents` turns into the picker.
+
+## Backends
+
+* **Gateway** (`AiGatewayBackend`): my-ai-api, WireGuard-only, an OpenAI-style `/v1/chat/completions` that
+  picks the agent with the `X-Agent-Mode` header. No token on the phone. The app bakes the gateway's mesh
+  address (`ai-gateway.gradle` does it from the fleet catalogue for apps that have no gateway code yet).
+* **OpenRouter** (`AiOpenRouterBackend`): the token comes from an `AiTokenSource` the *app* supplies, read at
+  the moment of each send. The lib never reads the fleet Account (decisions-use-guard D5) and never stores or
+  logs a token.
+* **Your own**: implement `AiBackend` (Cloud Tools Small LLMs wraps its task router).
+
+`AiStandardHost` sends through the gateway when an agent is picked, otherwise through `direct`. Streaming is used
+when the app's `AiHttp` can hand over chunks (`AiUrlHttp` can; an app's fakeable client gets the whole answer).
+
+## Using it
+
+```kotlin
+val cfg = AiConfig.load(context)
+val host = AiStandardHost(
+    cfg, AiFileSessions(File(filesDir, "ai-sessions.json")), AiMemoryPrefs(cfg.defaultModel),
+    direct = AiOpenRouterBackend(cfg, "my-app", AiTokenSource { /* the app's token read */ AiToken(value, why) }),
+    gateway = AiGatewayBackend(cfg, BuildConfig.AI_GATEWAY_URL),
+    agents = AiAgents.load(context),
+)
+val chat = AiChatState(host)
+// in Compose:
+AiChatPage(chat, materialAiTheme())
+```
+
+`AiStandardHost` takes `AiTool`s too: a model-called tool that is `mutating` waits for the consent card
+(`AiSink.consent`), runs only after Allow, and is told "denied" on Deny. There is no tool in the lib: per-app
+tools come with the apps that need them.
+
+## Tests
+
+`AiProtocolTest` (JVM, runs in the consumers' `gradle test`) feeds `protocol-cases.json` to the Kotlin wire.
+Cloud Code's `test/chat.mjs` feeds the same file to the JS wire; add a case once and both sides fail until
+both implement it.

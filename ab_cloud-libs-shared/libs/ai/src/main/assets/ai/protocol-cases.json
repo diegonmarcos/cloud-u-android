@@ -1,0 +1,117 @@
+{
+  "_doc": "THE SHARED PROTOCOL TEST CASES of libs:ai: the OpenAI-style wire both families speak, as data. libs:ai's AiProtocolTest (Kotlin, run by the Gradle unit phase of every consumer that carries it) and Cloud Code's test/chat.mjs (JS, run by test-chat.sh) feed the same cases to their own implementations and must agree: `sse` = a streamed answer cut at arbitrary chunk boundaries; `whole` = a non-streamed answer or an error; `request` = what a backend puts on the wire. A case is added here once and both sides fail until both implement it.",
+  "sse": [
+    {
+      "name": "deltas are joined across chunk boundaries",
+      "chunks": ["data: {\"choices\":[{\"delta\":{\"content\":\"Hel\"}}]}\n\ndata: {\"choices\":[{\"del", "ta\":{\"content\":\"lo\"}}]}\n\ndata: [DONE]\n"],
+      "text": "Hello",
+      "done": true,
+      "error": null
+    },
+    {
+      "name": "a keep-alive comment and a partial event are ignored",
+      "chunks": [": keep-alive\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"a\"}}]}\n", "data: not json\n", "data: {\"choices\":[{\"delta\":{\"content\":\"b\"}}]}\r\n", "data: [DONE]\n"],
+      "text": "ab",
+      "done": true,
+      "error": null
+    },
+    {
+      "name": "an error event is reported with its message",
+      "chunks": ["data: {\"error\":{\"message\":\"rate limited\"}}\n\n"],
+      "text": "",
+      "done": false,
+      "error": "rate limited"
+    },
+    {
+      "name": "a stream that has not ended is not done",
+      "chunks": ["data: {\"choices\":[{\"delta\":{\"content\":\"x\"}}]}\n"],
+      "text": "x",
+      "done": false,
+      "error": null
+    }
+  ],
+  "whole": [
+    {
+      "name": "an OpenAI-shaped answer",
+      "status": 200,
+      "body": "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"ok\"}}]}",
+      "text": "ok",
+      "error": null
+    },
+    {
+      "name": "an error object wins over a 200",
+      "status": 200,
+      "body": "{\"error\":{\"message\":\"no credit\"}}",
+      "text": null,
+      "error": "no credit"
+    },
+    {
+      "name": "a gateway error status carries the error message",
+      "status": 502,
+      "body": "{\"error\":{\"message\":\"boom\"}}",
+      "text": null,
+      "error": "boom"
+    },
+    {
+      "name": "an error status with no message says its code",
+      "status": 503,
+      "body": "{}",
+      "text": null,
+      "error": "HTTP 503"
+    },
+    {
+      "name": "a non-JSON error body is cut and prefixed with its code",
+      "status": 500,
+      "body": "upstream down",
+      "text": null,
+      "error": "HTTP 500: upstream down"
+    },
+    {
+      "name": "a gateway message shape is read",
+      "status": 200,
+      "body": "{\"message\":{\"content\":\"from the agent\"}}",
+      "text": "from the agent",
+      "error": null
+    },
+    {
+      "name": "url citations are collected once each",
+      "status": 200,
+      "body": "{\"choices\":[{\"message\":{\"content\":\"see\",\"annotations\":[{\"url_citation\":{\"url\":\"https://a.example\"}},{\"url_citation\":{\"url\":\"https://a.example\"}},{\"url_citation\":{\"url\":\"https://b.example\"}}]}}]}",
+      "text": "see",
+      "error": null,
+      "citations": ["https://a.example", "https://b.example"]
+    }
+  ],
+  "request": [
+    {
+      "name": "a gateway agent with a fixed model sends no model and names its mode",
+      "backend": "gateway",
+      "mode": "goose",
+      "model": null,
+      "messages": [{"role": "user", "content": "hi"}],
+      "headers": {"X-Agent-Mode": "goose"},
+      "body": {"stream": true, "messages": [{"role": "user", "content": "hi"}]},
+      "absent": ["model", "plugins", "web_search_options"]
+    },
+    {
+      "name": "the gateway's openrouter mode sends the picked model",
+      "backend": "gateway",
+      "mode": "openrouter",
+      "model": "qwen/q",
+      "messages": [{"role": "user", "content": "hi"}],
+      "headers": {"X-Agent-Mode": "openrouter"},
+      "body": {"stream": true, "model": "qwen/q"},
+      "absent": ["plugins"]
+    },
+    {
+      "name": "OpenRouter direct sends the picked model and asks the token from the caller",
+      "backend": "openrouter",
+      "mode": null,
+      "model": "anthropic/claude-opus-5.5",
+      "messages": [{"role": "user", "content": "hi"}],
+      "headers": {},
+      "body": {"stream": true, "model": "anthropic/claude-opus-5.5"},
+      "absent": ["plugins"]
+    }
+  ]
+}

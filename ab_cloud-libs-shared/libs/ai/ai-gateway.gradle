@@ -1,0 +1,14 @@
+// Applied by an app's app/build.gradle that talks to the fleet agent gateway through libs:ai:
+//
+//     apply from: "$rootDir/../ab_cloud-libs-shared/libs/ai/ai-gateway.gradle"
+//     ...  buildConfigField "String", "AI_GATEWAY_URL", "\"${aiGatewayUrl}\""
+//
+// The gateway's SERVICE is named by the shared contract (assets/ai/ai.json::gateway.service); its mesh
+// address comes from the fleet's private catalogue (ac_cloud-c3/data/services_private.json, read only).
+// Nothing here restates either, so a moved gateway is one data edit in the catalogue.
+def aiContract = new groovy.json.JsonSlurper().parse(new File(rootDir, '../ab_cloud-libs-shared/libs/ai/src/main/assets/ai/ai.json'))
+def aiPrivate = new groovy.json.JsonSlurper().parse(new File(rootDir, '../ac_cloud-c3/data/services_private.json'))
+def aiRow = (aiPrivate instanceof List ? aiPrivate : (aiPrivate.services ?: aiPrivate.values())).find { it.name == aiContract.gateway.service }
+if (aiRow?.private_dns == null)
+    throw new GradleException("AI gateway '${aiContract.gateway.service}' has no private_dns in ac_cloud-c3/data/services_private.json")
+ext.aiGatewayUrl = "${aiRow.protocol ?: 'http'}://${aiRow.private_dns}"

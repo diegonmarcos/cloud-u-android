@@ -1,0 +1,65 @@
+// libs:ai: the fleet's one AI chat (package com.diegonmarcos.superapp.ai), shared by reference. It
+// replaces libs:search-page, which drew only Cloud Search's page; this lib is the page AND everything
+// behind it, so no app carries a chat of its own (cloud-android-ai-chat-guard.py holds them to that):
+//   - the chat page: greeting, conversation, answer streaming in, Agent and Model pickers, Sessions,
+//     the input, and the consent card a mutating tool waits on (AiChatPage, AiConsentCard);
+//   - AiHost / AiStandardHost: sessions in a store, the model and agent in prefs, pluggable backends;
+//   - backends: the fleet gateway (my-ai-api, OpenAI-style /v1/chat/completions, the agent chosen by the
+//     X-Agent-Mode header, no token on the phone) and OpenRouter (the token handed in per send by the
+//     app, never stored here); an app may bring its own (Cloud Tools Small LLMs' router);
+//   - the tool-plugin interface (AiTool). The lib ships no tool: per-app tools come later;
+//   - the shared contract assets/ai/ai.json (endpoints, paths, header, knobs: Cloud Code reads it too
+//     through tools/resolve-targets.py) and assets/ai/protocol-cases.json (the wire cases both
+//     AiProtocolTest and Cloud Code's test/chat.mjs run).
+//
+// It reads no OpenRouter key itself (decisions-use-guard D5): the app passes an AiTokenSource.
+// It declares no store of its own: sessions go in the AiSessionStore the host gives it.
+// Dependencies: libs:model-catalogue for the shared agent descriptor (AgentCatalogue) the Agent picker lists.
+//
+// Same sparse-version shape as libs:ui-kit: it builds under whichever AGP the consuming app pulls it in with.
+// TESTED here by AiProtocolTest (JVM) and through the consumers (Cloud Search's SearchShellTest drives the page).
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.ai'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // `api`: a consumer builds the theme (Color, Brush, Dp, TextUnit) and fills composable slots, and
+    // reads AgentCatalogue for the Agent picker.
+    api platform('androidx.compose:compose-bom:2025.11.01')
+    api 'androidx.compose.ui:ui'
+    api 'androidx.compose.foundation:foundation'
+    api 'androidx.compose.material3:material3'
+    api project(':libs:model-catalogue')
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
+    // Android's own org.json at runtime; the real library for the JVM suite.
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'junit:junit:4.13.2'
+}
