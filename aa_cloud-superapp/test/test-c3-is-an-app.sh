@@ -98,10 +98,10 @@ cloud = next(s for s in d["ui"]["sections"] if s.get("id") == "cloud")
 grp = None
 for g in cloud.get("tile_groups") or []:
     labels = [t.get("label") for t in (g.get("tiles") or [])]
-    if "Store" in labels and "Configs" in labels:
+    if "Store" in labels and "Controls" in labels:
         grp = g; break
 if grp is None:
-    print("    no Cloud tile_group holds both Store and Configs — the #324 group this ticket "
+    print("    no Cloud tile_group holds both Store and Controls — the #324 group this ticket "
           "links C3 from is gone or renamed"); sys.exit(1)
 tiles = [t for t in grp["tiles"] if t.get("id") == "c3"]
 if not tiles:
@@ -241,7 +241,7 @@ p=sys.argv[1]; d=json.load(open(p),object_pairs_hook=collections.OrderedDict)
 cloud=next(s for s in d["ui"]["sections"] if s.get("id")=="cloud")
 for g in cloud["tile_groups"]:
     labels=[t.get("label") for t in g.get("tiles") or []]
-    if "Store" in labels and "Configs" in labels:
+    if "Store" in labels and "Controls" in labels:
         for t in g["tiles"]:
             if t.get("id")=="c3": t["target"]="page:c3/topology"
 json.dump(d,open(p,"w"),indent=2)

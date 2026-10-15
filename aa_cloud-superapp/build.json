@@ -534,7 +534,7 @@
         {
           "label": "C3",
           "icon": "ic_p_c3_stack",
-          "target": "page:cloud/c3"
+          "target": "extapp:cloud-c3"
         }
       ]
     },
@@ -2534,15 +2534,6 @@
             "url": "https://linktree.diegonmarcos.com"
           },
           {
-            "id": "c3",
-            "label": "C3",
-            "icon": "ic_p_c3_stack",
-            "facet": true,
-            "_doc": "Cloud Control Center. The page id used to be `admin` ONLY because LauncherNavController.syncModeForPage inferred ModePrefs from it - rename the id and nothing ever selected admin mode again. That coupling is gone: `mode` below declares it, so the id is free to say what the page is. This tab now MIRRORS the c3 section (`mirror_section`), which is tabbed, so its body is C3's own Observability | Topology strip — the same relationship Cloud ▸ Configs has with the Configs section. Cloud ▸ C3 owns no tiles_c3 / stack_c3 of its own any more: it was a second copy of C3 sitting beside the section that already owned those pages, and the copy is what kept drifting.",
-            "mirror_section": "c3",
-            "mode": "admin"
-          },
-          {
             "id": "configs",
             "label": "Configs",
             "icon": "ic_settings",
@@ -2587,7 +2578,7 @@
             "id": "c3",
             "label": "C3",
             "icon": "ic_p_c3_stack",
-            "target": "page:cloud/c3"
+            "target": "extapp:cloud-c3"
           },
           {
             "id": "data-ml",
@@ -2997,12 +2988,6 @@
                 "target": "page:config/profile"
               },
               {
-                "_doc": "The Configs section itself. section: and action:section: resolve identically (see test-onehand-sector-resolution.sh), so the shorter spelling is used here for the same reason the floating nav uses it.",
-                "label": "Configs",
-                "icon": "ic_settings",
-                "target": "section:config"
-              },
-              {
                 "_doc": "Rule between tile groups (owner order: SuperApp | Account | Store, Controls, Firewall | C3 | About).",
                 "id": "configs-sep-2",
                 "label": "|",
@@ -3058,7 +3043,7 @@
           }
         ],
         "_doc_tiles_labs": "Master Lab index — 6 icon tiles, one per subject Lab. Read by home_groups[title=Labs] via tiles_from_section='cloud/labs'. The key keeps the name `labs` on purpose: it is the SUBJECT labs, which is not what the Linktree tab became. No page `labs` exists, so this list is the Home face only — each icon opens page:cloud/<lab-id>.",
-        "_doc_pages": "Cloud: Apps (the cloud apps) | Linktree (the site, embedded) | C3 (Cloud Control Center) | Configs.",
+        "_doc_pages": "Cloud: Apps (the cloud apps) | Linktree (the site, embedded) | Configs. The C3 subpage tab was removed (owner, 2026-10): C3 is the extapp:cloud-c3 tile in the Configs group, and every former page:cloud/c3 link now targets it.",
         "stack_lnktree": [
           {
             "kind": "link_grid",
