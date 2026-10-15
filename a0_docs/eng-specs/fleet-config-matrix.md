@@ -162,7 +162,7 @@ Coverage: 1 covered, 0 gaps.
 
 ## c3-watchdog — `com.diegonmarcos.watchdog`
 
-Module `ac_c3-watchdog`; libs: lib-core, lib-devtools, lib-fleetconfig-model, lib-watchdog.
+Module `ac_c3-watchdog`; libs: lib-core, lib-devtools, lib-fleetconfig-model, lib-ui-kit, lib-watchdog.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -311,7 +311,7 @@ Coverage: 1 covered, 0 gaps.
 
 ## cloud-c3 — `com.diegonmarcos.cloudc3`
 
-Module `ac_cloud-c3`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-ops, lib-updater.
+Module `ac_cloud-c3`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-ops, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

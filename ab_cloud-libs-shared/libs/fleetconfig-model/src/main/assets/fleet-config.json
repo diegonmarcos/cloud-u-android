@@ -2152,6 +2152,7 @@
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
+        "lib-ui-kit",
         "lib-watchdog"
       ],
       "items": [
@@ -2293,6 +2294,7 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-ops",
+        "lib-ui-kit",
         "lib-updater"
       ],
       "items": []
