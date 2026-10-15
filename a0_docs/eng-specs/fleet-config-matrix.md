@@ -33,7 +33,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-dialer | `com.diegonmarcos.comms.dialer` | 3 | 0 | 100% |
 | cloud-drive | `com.diegonmarcos.clouddrive` | 9 | 4 | 69% |
 | cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 4 | 0 | 100% |
-| cloud-mail | `com.diegonmarcos.comms.mail` | 8 | 1 | 88% |
+| cloud-mail | `com.diegonmarcos.comms.mail` | 8 | 2 | 80% |
 | cloud-matrix | `com.diegonmarcos.comms.matrix` | 1 | 9 | 10% |
 | cloud-me | `com.diegonmarcos.cloudme` | 3 | 0 | 100% |
 | cloud-gallery | `com.diegonmarcos.mediacenter` | 4 | 1 | 80% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 0 | 100% |
-| **fleet** | | **209** | **35** | **85%** |
+| **fleet** | | **209** | **36** | **85%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -87,7 +87,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `gitea_feed_cache` | prefs | device | no | 15-minute TTL cache of Gitea commit feed responses (GiteaFeed PREFS constant), pure cache. |
 | `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `home_swipe_prefs` | prefs | config | yes | User's chosen action for swipe up/left/right/down on the launcher home. |
-| `import_configs` | encrypted | secret (keys: app_configs_json→secret, configs_json→secret, data_json→secret, grants_json→device, grants_seeded→device) | yes | EncryptedSharedPreferences, THE Account vault's one keystore-backed file (#874): `configs_json` the Connections (the imported blob incl. auth.authelia_token and email, fleet bearer, mesh, DNS, Dagu, mail), `data_json` the identities, `app_configs_json` the Configs captured from every app; `grants_json` the per-app Secret grants (never migrates: a grant is the owner's decision on THIS phone) and `grants_seeded` its marker. Mostly credentials. |
+| `import_configs` | encrypted | secret (keys: app_configs_json→secret, configs_json→secret, data_json→secret, grants_json→device, grants_seeded→device, mail_signatures→device) | yes | EncryptedSharedPreferences, THE Account vault's one keystore-backed file (#874): `configs_json` the Connections (the imported blob incl. auth.authelia_token and email, fleet bearer, mesh, DNS, Dagu, mail), `data_json` the identities, `app_configs_json` the Configs captured from every app; `grants_json` the per-app Secret grants (never migrates: a grant is the owner's decision on THIS phone) and `grants_seeded` its marker. Mostly credentials. `mail_signatures` is the copy of Mail's signatures the vault last held for the bundle (Mail's own store is the source of truth and travels through mail_signatures). |
 | `kdeconnect_clipboard` | prefs | content | no | Clipboard history exchanged with the peer. |
 | `kdeconnect_device_overrides` | prefs | config | yes | Per-device host/port/label overrides for paired KDE Connect peers. |
 | `kdeconnect_identity` | prefs | device | no | This install's KDE Connect device_id; identity. |
@@ -203,7 +203,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofi
 | `autofill_sot` | prefs | config (keys: next_id→device) | yes | The non-secret autofill Source of Truth Cloud Account owns (a0_docs/eng-specs/autofill-3-tier.md): profiles_json (names, emails, phones, postal addresses), rules_json (per-site form mapping rules), snippets_json (keyboard snippets), next_id. Served to Cloud Browser and Cloud Keyboard by AutofillSotProvider behind AUTOFILL_PROFILE_READ/WRITE. Never a password, code or card: there is no column for one. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
-| `import_configs` | encrypted | secret (keys: app_configs_json→secret, configs_json→secret, data_json→secret, grants_json→device, grants_seeded→device) | yes | EncryptedSharedPreferences, THE Account vault's one keystore-backed file (#874): `configs_json` the Connections (the imported blob incl. auth.authelia_token and email, fleet bearer, mesh, DNS, Dagu, mail), `data_json` the identities, `app_configs_json` the Configs captured from every app; `grants_json` the per-app Secret grants (never migrates: a grant is the owner's decision on THIS phone) and `grants_seeded` its marker. Mostly credentials. |
+| `import_configs` | encrypted | secret (keys: app_configs_json→secret, configs_json→secret, data_json→secret, grants_json→device, grants_seeded→device, mail_signatures→device) | yes | EncryptedSharedPreferences, THE Account vault's one keystore-backed file (#874): `configs_json` the Connections (the imported blob incl. auth.authelia_token and email, fleet bearer, mesh, DNS, Dagu, mail), `data_json` the identities, `app_configs_json` the Configs captured from every app; `grants_json` the per-app Secret grants (never migrates: a grant is the owner's decision on THIS phone) and `grants_seeded` its marker. Mostly credentials. `mail_signatures` is the copy of Mail's signatures the vault last held for the bundle (Mail's own store is the source of truth and travels through mail_signatures). |
 | `mail_jmap_prefs` | encrypted | config (keys: password→secret) | yes | JMAP server and email are account links; password is a credential. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
@@ -545,6 +545,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-databackend, lib-devt
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `list_view` | prefs | config | yes | Mail list view choices per account and folder (key account\|folder): group mode (subject, sender, none), rank (newest, sender, subject) and the combinable filters (starred, unread, attachments, codes), stored as group;rank;FILTERS. Unset means the global conversation-view and sort settings apply. |
 | `mail_notifications` | prefs | config | yes | Mail new-message notification actions: remind_delay_minutes (default 60) is how long the Remind button waits before re-posting the notification. |
+| `mail_signatures` | file | config | GAP | Mail signatures, one per sending identity (named, HTML source plus derived plain text, and which one is the default), keyed by the identity's ADDRESS because account ids are minted per install. Not a file of its own: a view onto the identities in the accounts blob (sterna_account) that composing reads, served by Mail's registered SetupStores handler (SignaturesSetupHandler) so Cloud Account's bundle export captures them and its import hands them back. The key * addresses every identity (a bare .html file imported on Cloud Account's Connections page). |
 | `mail_tasks` | prefs | content | no | Mail's Assigned tasks (a task attached to a mail: deadline, target date, notes, links, location, priority, status, people, the mail's account/id and mid: link), as CalTodo JSON. Each is mirrored into the cal engine's task store, which Cloud Tasks shows under Tasks. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
@@ -564,7 +565,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-databackend, lib-devt
 | `shared_prefs/sterna_account.xml accounts JSON` | secret | Mail account server/IMAP/SMTP/JMAP settings and credentials; account link is config but travels with the secret through the vault; passwords encrypted with a device Keystore key and cannot be copied raw. |
 | `Room SternaDatabase tables (mailboxes watched/muted/collapsed in account JSON)` | device | No settings tables in Room; per-account watched, muted (the Inbox's Notify about new mail, default on) and collapsed folders live in the account JSON. |
 
-Coverage: 8 covered, 1 gaps — datastore:settings.
+Coverage: 8 covered, 2 gaps — datastore:settings, mail_signatures.
 
 ## cloud-matrix — `com.diegonmarcos.comms.matrix`
 

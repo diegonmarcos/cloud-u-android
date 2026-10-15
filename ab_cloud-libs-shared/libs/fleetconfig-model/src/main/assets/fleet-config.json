@@ -985,7 +985,7 @@
     "import_configs": {
       "kind": "encrypted",
       "class": "secret",
-      "doc": "EncryptedSharedPreferences, THE Account vault's one keystore-backed file (#874): `configs_json` the Connections (the imported blob incl. auth.authelia_token and email, fleet bearer, mesh, DNS, Dagu, mail), `data_json` the identities, `app_configs_json` the Configs captured from every app; `grants_json` the per-app Secret grants (never migrates: a grant is the owner's decision on THIS phone) and `grants_seeded` its marker. Mostly credentials.",
+      "doc": "EncryptedSharedPreferences, THE Account vault's one keystore-backed file (#874): `configs_json` the Connections (the imported blob incl. auth.authelia_token and email, fleet bearer, mesh, DNS, Dagu, mail), `data_json` the identities, `app_configs_json` the Configs captured from every app; `grants_json` the per-app Secret grants (never migrates: a grant is the owner's decision on THIS phone) and `grants_seeded` its marker. Mostly credentials. `mail_signatures` is the copy of Mail's signatures the vault last held for the bundle (Mail's own store is the source of truth and travels through mail_signatures).",
       "used_by": [
         "lib-account"
       ],
@@ -994,7 +994,8 @@
         "data_json": "secret",
         "app_configs_json": "secret",
         "grants_json": "device",
-        "grants_seeded": "device"
+        "grants_seeded": "device",
+        "mail_signatures": "device"
       }
     },
     "kdeconnect_clipboard": {
@@ -1510,6 +1511,17 @@
       "doc": "Mail new-message notification actions: remind_delay_minutes (default 60) is how long the Remind button waits before re-posting the notification.",
       "used_by": [
         "ac_cloud-mail"
+      ]
+    },
+    "mail_signatures": {
+      "kind": "file",
+      "class": "config",
+      "doc": "Mail signatures, one per sending identity (named, HTML source plus derived plain text, and which one is the default), keyed by the identity's ADDRESS because account ids are minted per install. Not a file of its own: a view onto the identities in the accounts blob (sterna_account) that composing reads, served by Mail's registered SetupStores handler (SignaturesSetupHandler) so Cloud Account's bundle export captures them and its import hands them back. The key * addresses every identity (a bare .html file imported on Cloud Account's Connections page).",
+      "used_by": [
+        "ac_cloud-mail"
+      ],
+      "files": [
+        "mail_signatures"
       ]
     },
     "mail_tasks": {

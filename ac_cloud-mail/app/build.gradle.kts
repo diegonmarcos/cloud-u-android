@@ -411,6 +411,9 @@ dependencies {
     // notification needs and which merges the constellation's signature-level
     // permission into this app.
     implementation(project(":libs:updater"))
+    // The fleet setup contract's handler registry (SetupStores): the signatures store is served from here.
+    // libs:core `api`s it, but libs:updater only `implementation`s core, so it is not on this app's compile path.
+    implementation(project(":libs:fleetconfig-model"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.work.runtime.ktx)

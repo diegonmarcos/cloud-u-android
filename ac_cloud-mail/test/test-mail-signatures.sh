@@ -12,6 +12,10 @@
 #       path the "From" picker uses, so the two cannot drift
 #   N5  the render path sanitises the signature: on the wire AND in the editor's own preview
 #   N6  every label this feature added exists in all nine languages
+#   N7  the HTML source editor: a toolbar that edits the SOURCE, highlighting, undo/redo, a sanitised
+#       JavaScript-off preview with the derived plain text, and no Import HTML button any more
+#   N8  the signatures travel: the mail_signatures store is declared, served by a registered handler,
+#       and the transfer is keyed by ADDRESS
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 UI="$APP/app/src/main/kotlin/app/sterna/ui"
@@ -23,6 +27,12 @@ EDITOR="$UI/settings/SignatureEditor.kt"
 TEXT="$UI/compose/ComposeText.kt"
 VM="$UI/compose/ComposeViewModel.kt"
 SCREEN="$UI/compose/ComposeScreen.kt"
+TOOLS="$UI/settings/SignatureHtmlTools.kt"
+SETTINGS="$UI/settings/SettingsScreen.kt"
+TRANSFER="$DATA/account/SignatureTransfer.kt"
+HANDLER="$APP/app/src/main/kotlin/app/sterna/fleet/SignaturesSetupHandler.kt"
+APPLICATION="$APP/app/src/main/kotlin/app/sterna/SternaApplication.kt"
+MANIFEST="$APP/../ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json"
 RES="$APP/app/src/main/res"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  ok: $1"; }
@@ -37,8 +47,10 @@ echo "== cloud-mail: named signatures, HTML for real, and the migration of the e
 # text, so markup the owner typed was redrawn as plain words and lost on the next keystroke.
 has "$SIGNATURE" 'fun source(): String = html.ifBlank { text }' \
   "N1 a signature's editable source is its HTML when it has one"
-has "$EDITOR" 'value = signature.source(),' \
-  "N1 the signature field is bound to the SOURCE, not to the flattened text"
+has "$EDITOR" 'val initial = remember(signature.id) { signature.source() }' \
+  "N1 the signature field starts from the SOURCE, not from the flattened text"
+has "$EDITOR" 'onSource(v.text)' \
+  "N1 every keystroke is handed up as the new SOURCE (re-classified by StoredSignature.of)"
 absent "$EDITOR" 'value = signature.text' \
   "N1 nothing binds the field to the flattened text"
 
@@ -200,12 +212,20 @@ has "$SIGNATURE" 'fun renderableHtml(): String = if (isHtml) sanitiseReceivedHtm
   "N5 a signature's renderable markup is sanitised at the accessor"
 has "$EDITOR" 'signature.renderableHtml()' \
   "N5 the editor's preview shows the SANITISED markup, so a drop is visible to the owner"
-# #193: an HTML signature must RENDER as HTML. The preview used to print the sanitised markup as
-# monospace source, so no surface in the application ever drew an HTML signature as HTML.
-has "$EDITOR" 'AnnotatedString.fromHtml(html)' \
+# #193: an HTML signature must RENDER as HTML. The preview is a WebView with JavaScript OFF that is
+# given the sanitised string, never the typed one.
+has "$EDITOR" 'SignatureHtmlPreview(html, Modifier' \
   "N5 the editor's preview RENDERS the sanitised HTML signature (#193)"
-has "$EDITOR" 'fontFamily = if (signature.isHtml) null else FontFamily.Monospace' \
-  "N5 only the plain-text preview is drawn as monospace source (#193)"
+has "$EDITOR" 'settings.javaScriptEnabled = false' \
+  "N5 the preview WebView runs no JavaScript"
+absent "$EDITOR" 'javaScriptEnabled = true' \
+  "N5 nothing turns JavaScript on in the editor"
+has "$EDITOR" 'settings.allowFileAccess = false' \
+  "N5 the preview WebView reads no files"
+has "$TOOLS" "default-src 'none'" \
+  "N5 the preview document forbids everything but pictures"
+absent "$EDITOR" 'previewDocument(signature.source' \
+  "N5 the preview is never fed the raw source"
 # A plain-text signature must not be put through any of it.
 has "$SIGNATURE" 'if (isHtml) sanitiseReceivedHtml(html) else ""' \
   "N5 a plain-text signature is never handed to the HTML pass"
@@ -220,7 +240,12 @@ python3 - "$RES" <<'STRINGS'
 import os, re, sys
 res = sys.argv[1]
 added = ['compose_signature', 'compose_choose_signature',
-         'settings_signature_name_label', 'settings_signature_add', 'settings_signature_default']
+         'settings_signature_name_label', 'settings_signature_add', 'settings_signature_default',
+         'settings_signature_undo', 'settings_signature_redo', 'settings_signature_bold',
+         'settings_signature_italic', 'settings_signature_underline', 'settings_signature_link',
+         'settings_signature_image', 'settings_signature_colour', 'settings_signature_image_title',
+         'settings_signature_colour_title', 'settings_signature_image_url_label',
+         'settings_signature_colour_hex_label', 'settings_signature_plain_title']
 langs = [d for d in sorted(os.listdir(res)) if d == 'values' or re.fullmatch(r'values-[a-z]{2}', d)]
 missing = []
 for d in langs:
@@ -235,6 +260,81 @@ if missing:
     sys.exit(1)
 print('  ok: N6 all %d labels this feature added exist in all %d languages' % (len(added), len(langs)))
 STRINGS
+[ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
+
+# ── N7 the HTML source editor ──
+# The toolbar edits the SOURCE the field holds, so the stored value is exactly the text in the field.
+for t in bold italic underline; do
+  has "$EDITOR" "SignatureHtmlTools.$t(field.text" "N7 the $t button edits the source"
+done
+has "$EDITOR" 'SignatureHtmlTools.link(field.text' "N7 the link button edits the source"
+has "$EDITOR" 'SignatureHtmlTools.image(field.text' "N7 the image-by-URL button edits the source"
+has "$EDITOR" 'SignatureHtmlTools.colour(field.text' "N7 the colour button edits the source"
+has "$EDITOR" 'visualTransformation = transformation' "N7 the source is highlighted"
+has "$EDITOR" 'fontFamily = FontFamily.Monospace' "N7 the source is monospace"
+has "$EDITOR" 'history.undo()' "N7 undo"
+has "$EDITOR" 'history.redo()' "N7 redo"
+has "$EDITOR" 'SignatureHtmlTools.plainText(signature.source())' \
+  "N7 the derived plain text is shown under the preview"
+# Saving goes through the SAME constructor as before, so the (text, html) pair sending reads is unchanged.
+has "$EDITOR" 'StoredSignature.of(it.id, it.name, v)' "N7 saving still goes through StoredSignature.of"
+# The import button is gone, and nothing is left wired to it.
+absent "$EDITOR" 'onImportHtml' "N7 the editor has no import callback"
+absent "$SETTINGS" 'onImportHtml' "N7 Settings passes no import callback"
+absent "$SETTINGS" 'importLauncher.launch("text/html")' "N7 Settings opens no HTML picker for a signature"
+absent "$RES/values/strings.xml" 'name="settings_import_html"' "N7 the Import HTML label is gone"
+# Only an address a signature may carry reaches the field: EXECUTED over the allowlists in the Kotlin.
+python3 - "$TOOLS" <<'URLS'
+import re, sys
+src = open(sys.argv[1], encoding='utf-8').read()
+m = re.search(r'LINK_SCHEMES = setOf\(([^)]*)\)', src)
+c = re.search(r'COLOUR = Regex\("([^"]*)"\)', src)
+if not m or not c:
+    print('  FAIL: N7 the link allowlist or the colour pattern is no longer where this check reads it')
+    sys.exit(1)
+schemes = set(re.findall(r'"([a-z]+)"', m.group(1)))
+colour = re.compile(c.group(1))
+fails = []
+if schemes != {'http', 'https', 'mailto', 'tel'}:
+    fails.append('link schemes are %s' % sorted(schemes))
+for ok in ('#cc0000', '#CC0000'):
+    if not colour.fullmatch(ok): fails.append('colour %s rejected' % ok)
+for bad in ('red', '#fff', '#cc0000;x', 'url(x)', '#cc00001'):
+    if colour.fullmatch(bad): fails.append('colour %s accepted' % bad)
+if 'javascript' in schemes or 'data' in schemes:
+    fails.append('a script-bearing scheme is allowed')
+if fails:
+    for f in fails: print('  FAIL: N7 ' + f)
+    sys.exit(1)
+print('  ok: N7 links are %s only and colours are #rrggbb only (executed)' % '/'.join(sorted(schemes)))
+URLS
+[ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
+
+# ── N8 the signatures travel ──
+has "$TRANSFER" 'fun keyOf(email: String): String = email.trim().lowercase()' \
+  "N8 a signature travels by ADDRESS, never by an account id minted per install"
+has "$HANDLER" 'SetupStores.SetupHandler' "N8 the store is served by a setup handler"
+has "$HANDLER" 'store.setIdentities(id, account.identities)' \
+  "N8 an apply writes through the store the editor saves with"
+has "$APPLICATION" 'SignaturesSetupHandler.register(container.accountStore)' \
+  "N8 the application registers it with ITS account store"
+python3 - "$MANIFEST" "$HANDLER" <<'STORE'
+import json, re, sys
+m = json.load(open(sys.argv[1], encoding='utf-8'))
+s = m['stores'].get('mail_signatures')
+fails = []
+if s is None: fails.append('the mail_signatures store is not declared')
+else:
+    if s.get('class') != 'config': fails.append('class is %r, signatures are configuration' % s.get('class'))
+    if s.get('used_by') != ['ac_cloud-mail']: fails.append('used_by is %r' % s.get('used_by'))
+    if s.get('kind') == 'prefs': fails.append('declared as a prefs file the code never opens')
+if not re.search(r'SetupStores\.register\(\s*"mail_signatures"', open(sys.argv[2], encoding='utf-8').read()):
+    fails.append('no SetupStores.register("mail_signatures", ...) in the handler')
+if fails:
+    for f in fails: print('  FAIL: N8 ' + f)
+    sys.exit(1)
+print('  ok: N8 mail_signatures is declared (config, Mail) and registered under that exact name')
+STORE
 [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
 
 echo

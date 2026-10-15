@@ -1834,20 +1834,6 @@ private fun AccountDetailScreen(
                     markEdited()
                 }
 
-                // One file picker shared by every row; the pending action captures which row applies.
-                var pendingImport by remember(accountId) { mutableStateOf<((String) -> Unit)?>(null) }
-                val importLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.GetContent(),
-                ) { uri ->
-                    val apply = pendingImport
-                    if (uri != null && apply != null) {
-                        runCatching {
-                            context.contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() }
-                        }.getOrNull()?.let(apply)
-                    }
-                    pendingImport = null
-                }
-
                 // --- From your server (email read-only; name + signature editable, #79) ---
                 if (serverIdentities.isNotEmpty()) {
                     Text(
@@ -1906,10 +1892,6 @@ private fun AccountDetailScreen(
                                     },
                                     onDefaultChange = { id ->
                                         overrideServer(server) { it.copy(defaultSignatureId = id) }
-                                    },
-                                    onImportHtml = { apply ->
-                                        pendingImport = apply
-                                        importLauncher.launch("text/html")
                                     },
                                     newId = { java.util.UUID.randomUUID().toString() },
                                 )
@@ -1993,10 +1975,6 @@ private fun AccountDetailScreen(
                                 delimiter = signatureDelimiter,
                                 onChange = { list -> update { it.copy(signatures = list) } },
                                 onDefaultChange = { id -> update { it.copy(defaultSignatureId = id) } },
-                                onImportHtml = { apply ->
-                                    pendingImport = apply
-                                    importLauncher.launch("text/html")
-                                },
                                 newId = { java.util.UUID.randomUUID().toString() },
                             )
                             Row(

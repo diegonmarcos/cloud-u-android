@@ -192,7 +192,7 @@ class MainActivity : AppCompatActivity() {
             }
             "secrets" -> when (page) {
                 "bundle" -> ConnectionsTab(
-                    pickBundle = { onText -> pendingPick = onText; pickLauncher.launch(arrayOf("application/json", "text/plain")) },
+                    pickBundle = { onText -> pendingPick = onText; pickLauncher.launch(arrayOf("application/json", "text/plain", "text/html")) },
                     export = { name, text -> pendingExport = name to text; exportLauncher.launch(name) },
                 )
                 "secrets" -> SecretsTab(openVault = { AccountHost.route(this, "extapp:cloud-vault") })

@@ -87,6 +87,28 @@ class AccountVault(context: Context) {
 
     private fun profileValues() = ctx.getSharedPreferences("profile_prefs", Context.MODE_PRIVATE).all.size
 
+    // ── Mail signatures ──────────────────────────────────────────────────
+
+    /**
+     * Mail's signatures as the bundle's `signatures` section: live from Mail when it answers (and kept as
+     * the held copy), else the copy this vault last held, else null. BLOCKS (a provider call).
+     */
+    fun signatures(): JSONObject? {
+        MailSignatures.capture(ctx)?.let { live ->
+            val doc = MailSignatures.document(live)
+            prefs.putText(K_SIGNATURES, doc.toString())
+            return doc
+        }
+        return parse(prefs.text(K_SIGNATURES)).takeIf { it.length() > 0 }
+    }
+
+    /** Holds [doc] and hands it to Mail; Mail not being there is not a failed import, the copy is kept for the next export. */
+    fun takeSignatures(doc: JSONObject): MailSignatures.Handed {
+        prefs.putText(K_SIGNATURES, doc.toString())
+        val values = MailSignatures.valuesOf(doc) ?: return MailSignatures.Handed(false, 0, "not a signature document")
+        return MailSignatures.handBack(ctx, values)
+    }
+
     // ── the whole bundle ─────────────────────────────────────────────────
 
     /** Every section as the plaintext document [exportBundle] encrypts. */
@@ -101,6 +123,7 @@ class AccountVault(context: Context) {
                 .put("slots", slots))
             .put("configs", appConfigs())
             .put("secrets", JSONObject().put("grants", grants.asJson()))
+            .also { b -> signatures()?.let { b.put("signatures", it) } }
     }
 
     /** The encrypted, versioned bundle text: PBKDF2-HMAC-SHA256 -> AES-256-GCM, the header bound as AAD. */
@@ -133,6 +156,7 @@ class AccountVault(context: Context) {
         }
         b.optJSONObject("configs")?.let { putAppConfigs(it); done += "configs" }
         b.optJSONObject("secrets")?.optJSONObject("grants")?.let { grants.replace(it); done += "secrets" }
+        b.optJSONObject("signatures")?.let { takeSignatures(it); done += "signatures" }
         return ImportResult(true, done)
     }
 
@@ -153,6 +177,7 @@ class AccountVault(context: Context) {
     companion object {
         const val KIND = "cloud-account-bundle"
         private const val K_SEEDED = "grants_seeded"
+        private const val K_SIGNATURES = "mail_signatures"
 
         /** Where the S/R/L files are; the JVM suite hands in plain files (the phone's are EncryptedFile). */
         @Volatile var storeSource: (Context) -> com.diegonmarcos.superapp.profile.AccountStore = { AccountModel.get(it).store }

@@ -181,6 +181,13 @@
     <string name="vault_export">Export bundle</string>
     <string name="vault_import">Import bundle</string>
     <string name="vault_exported">Encrypted bundle written.</string>
+    <string name="vault_signatures_export">Export signatures</string>
+    <string name="vault_signatures_import">Import signatures</string>
+    <string name="vault_signatures_exported">Signatures of %1$d address(es) written.</string>
+    <string name="vault_signatures_imported">Signatures for %1$d address(es) handed to Mail.</string>
+    <string name="vault_signatures_none">Mail has no signatures to export, or Mail is not reachable.</string>
+    <string name="vault_signatures_unreadable">That file is neither a signature export nor an HTML file.</string>
+    <string name="vault_signatures_refused">Mail did not take them: %1$s</string>
     <string name="vault_imported">Bundle imported: %1$s</string>
     <string name="vault_migrate">Take in what SuperApp kept</string>
     <string name="vault_migrated">%1$d filled: %2$s</string>

@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.account.R
 import com.diegonmarcos.superapp.settings.AccountVault
+import com.diegonmarcos.superapp.settings.MailSignatures
 import com.diegonmarcos.superapp.uikit.KitAction
 import com.diegonmarcos.superapp.uikit.KitActionBar
 import com.diegonmarcos.superapp.uikit.KitCard
@@ -57,6 +58,8 @@ object VaultTags {
     const val PASS = "vault:bundle:pass"
     const val PASS_OK = "vault:bundle:pass_ok"
     const val MIGRATE = "vault:migrate"
+    const val SIGNATURES_EXPORT = "vault:signatures:export"
+    const val SIGNATURES_IMPORT = "vault:signatures:import"
     const val RESULT = "vault:result"
     fun row(path: String) = "vault:row:$path"
     fun grant(pkg: String, key: String) = "vault:grant:$pkg:$key"
@@ -118,6 +121,29 @@ fun ConnectionsTab(pickBundle: ((String) -> Unit) -> Unit, export: (String, Stri
                         val r = withContext(Dispatchers.Default) { vault.importBundle(text, pass) }
                         result = if (r.ok) Said(KitState.OK, ctx.getString(R.string.vault_imported, r.sections.joinToString(", "))) else Said(KitState.BAD, r.why); tick++
                     } }
+                }
+            },
+            KitAction(stringResource(R.string.vault_signatures_export), VaultTags.SIGNATURES_EXPORT) {
+                scope.launch {
+                    val values = withContext(Dispatchers.IO) { MailSignatures.capture(ctx) }
+                    if (values == null) result = Said(KitState.WARN, ctx.getString(R.string.vault_signatures_none))
+                    else {
+                        export("cloud-mail-signatures.json", MailSignatures.document(values).toString(2))
+                        result = Said(KitState.OK, ctx.getString(R.string.vault_signatures_exported, values.size))
+                    }
+                }
+            },
+            KitAction(stringResource(R.string.vault_signatures_import), VaultTags.SIGNATURES_IMPORT) {
+                pickBundle { text ->
+                    scope.launch {
+                        val values = MailSignatures.parseImport(text)
+                        result = if (values == null) Said(KitState.BAD, ctx.getString(R.string.vault_signatures_unreadable))
+                        else {
+                            val r = withContext(Dispatchers.IO) { MailSignatures.handBack(ctx, values) }
+                            if (r.ok) Said(KitState.OK, ctx.getString(R.string.vault_signatures_imported, r.count))
+                            else Said(KitState.BAD, ctx.getString(R.string.vault_signatures_refused, r.why))
+                        }
+                    }
                 }
             },
             KitAction(stringResource(R.string.vault_migrate), VaultTags.MIGRATE) {

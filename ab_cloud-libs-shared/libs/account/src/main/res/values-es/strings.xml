@@ -148,6 +148,13 @@
     <string name="vault_export">Exportar paquete</string>
     <string name="vault_import">Importar paquete</string>
     <string name="vault_exported">Paquete cifrado escrito.</string>
+    <string name="vault_signatures_export">Exportar firmas</string>
+    <string name="vault_signatures_import">Importar firmas</string>
+    <string name="vault_signatures_exported">Firmas de %1$d dirección(es) escritas.</string>
+    <string name="vault_signatures_imported">Firmas de %1$d dirección(es) entregadas a Mail.</string>
+    <string name="vault_signatures_none">Mail no tiene firmas que exportar, o Mail no está accesible.</string>
+    <string name="vault_signatures_unreadable">Ese archivo no es una exportación de firmas ni un archivo HTML.</string>
+    <string name="vault_signatures_refused">Mail no las aceptó: %1$s</string>
     <string name="vault_imported">Paquete importado: %1$s</string>
     <string name="vault_migrate">Recoger lo que guardó SuperApp</string>
     <string name="vault_migrated">%1$d rellenados: %2$s</string>
