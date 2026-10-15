@@ -53,6 +53,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/ops/**"
+      #   input: "ab_cloud-libs-shared/libs/ui-kit/**"
       #   input: "ab_cloud-libs-shared/libs/updater/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "ac_cloud-c3/**"
