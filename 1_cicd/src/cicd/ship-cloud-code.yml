@@ -44,6 +44,7 @@ on:
       # only) ships the app for a moved static lib or cross-app dir.
       #   input: "0_apps/src/root/mcp.json"
       #   input: "1_cicd/src/cicd/ship-cloud-code.yml"
+      #   input: "ab_cloud-libs-shared/libs/ai/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"

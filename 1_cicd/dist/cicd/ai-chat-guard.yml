@@ -1,0 +1,40 @@
+name: "ai chat guard — the fleet draws its AI chat once, in libs:ai"
+
+# The AI chat used to be drawn in four dialects (Cloud Search's page, the browser's assistant
+# panel, Cloud Tools Small LLMs' ChatPage, and one per app that wanted a tab). libs:ai
+# (ab_cloud-libs-shared/libs/ai) is the one chat now: the page, the streaming, the Agent and Model
+# pickers, Sessions, the consent card, the assistant panel, the gateway and OpenRouter backends,
+# and the shared contract assets/ai/ai.json. cloud-android-ai-chat-guard.py fails whenever Kotlin
+# outside it draws a chat of its own (bubbles that branch on the OpenAI roles, a chat page / screen
+# / panel composable, a composable that names the model endpoint or the gateway's mode header), and
+# whenever libs:ai stops holding the chat. Everything it knows is in
+# 1_cicd/src/data/ai-chat-guard.json; a different kind of chat (a messenger) is exempted THERE,
+# with its reason, never skipped silently.
+#
+# EVERY PUSH, NO PATH FILTER: the commit that copies a chat page into an app can be any source file
+# in any app or lib tree; see 1_cicd/src/data/guard-triggers.json.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ai-chat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tester runs FIRST: it draws a second chat in an app six ways, empties the owner two ways and
+      # removes every app, requires the guard to fail (or refuse) each time, then requires a pass on the
+      # clean fleet and on the real tree. A gate whose red path is unproven reads as enforcement and
+      # enforces nothing.
+      - name: The guard still fails when a second AI chat appears
+        run: bash 1_cicd/src/scripts/test/ai-chat-guard.test.sh
+
+      - name: The fleet draws its AI chat once, in libs:ai
+        run: python3 1_cicd/src/scripts/cloud-android-ai-chat-guard.py .

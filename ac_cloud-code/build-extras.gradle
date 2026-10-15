@@ -95,6 +95,20 @@ android {
     }
 }
 
+// ── cloud-code Chat: the shared AI contract (libs:ai assets/ai/ai.json + protocol-cases.json), BY REFERENCE ──
+// The page reads the gateway and OpenRouter from it (tools/resolve-targets.py copies them into
+// targets.gen.json at build time; nav.json restates neither). The assets dir is compiled in by reference
+// so the contract also ships in the APK and a change to it is a source input of this app's build.
+// libs:ai itself is a Compose lib and is not included as a project (as with libs:model-catalogue above).
+def cloudAiLib = new File(rootProject.projectDir, '../../../ab_cloud-libs-shared/libs/ai')
+android {
+    sourceSets {
+        main {
+            assets.srcDirs += new File(cloudAiLib, 'src/main/assets')
+        }
+    }
+}
+
 // ── cloud-code Chat: the fleet Account (Cloud Account / keyboard) over the ITextTools binder (a contract
 // lib): Profile & Config asks it, key-free, whether it holds an OpenRouter key. The key itself is never
 // read here. settings-extras.gradle includes it from build.json::modules.

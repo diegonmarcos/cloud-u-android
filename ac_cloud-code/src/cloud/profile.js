@@ -10,7 +10,7 @@ import { page, sheet, option, toggleRow } from "./chrome";
 import * as M from "./chat/model";
 import { modelPage, chatSettingsChanged } from "./chat/view";
 
-const chat = nav.chat;
+const chat = { ...nav.chat, ...targets.chat.ai };
 const plugin = () => window.CloudChat;
 
 function section(title, ...rows) {

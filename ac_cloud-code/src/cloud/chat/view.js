@@ -12,8 +12,10 @@ import { el, icon } from "../dom";
 import { option, sheet, toggleRow, page, closeOverlay } from "../chrome";
 import * as M from "./model";
 
-const chat = nav.chat;
+// nav.json is the tab's own declaration; the gateway and OpenRouter come from the shared AI contract (libs:ai ai.json),
+// copied into targets.gen.json by tools/resolve-targets.py (chat.ai): nothing here restates an endpoint or a path.
 const fleet = targets.chat;
+const chat = { ...nav.chat, ...fleet.ai };
 const md = markdownIt({ html: false, linkify: true, breaks: true });
 const REASONING_TTL = 24 * 3600 * 1000;
 

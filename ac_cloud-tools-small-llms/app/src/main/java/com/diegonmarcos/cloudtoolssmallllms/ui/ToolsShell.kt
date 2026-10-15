@@ -29,7 +29,7 @@ import androidx.compose.foundation.layout.width
 
 /**
  * The shell (#868): the fleet's bottom island carries the four sections build.json::ui.bottom_nav
- * declares - Chat, Tasks, Costs, Settings - and each draws one page above it.
+ * declares - AI, Tasks, Costs, Settings - and each draws one page above it.
  */
 @Composable
 fun ToolsShell(model: ToolsModel) {
@@ -45,7 +45,7 @@ fun ToolsShell(model: ToolsModel) {
                 "tasks" -> TasksPage(model)
                 "costs" -> CostsPage(model)
                 "settings" -> SettingsPage(model)
-                else -> ChatPage(model)
+                else -> AiTab(model)
             }
         }
     }

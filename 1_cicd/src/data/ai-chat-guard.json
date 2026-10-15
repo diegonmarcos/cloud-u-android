@@ -1,0 +1,40 @@
+{
+  "_doc": "AI-CHAT-UI policy. The fleet draws its AI chat ONCE: libs:ai (ab_cloud-libs-shared/libs/ai, package com.diegonmarcos.superapp.ai): the page (conversation, streaming answer, Agent and Model pickers, Sessions, input), the consent card a mutating tool waits on, the assistant panel, the backends (the fleet gateway, OpenRouter) and the shared contract assets/ai/ai.json. Cloud Search, Cloud Browser, Cloud Drive and Cloud Tools Small LLMs host it with their own theme, store and token; Cloud Code (JS) reads the same ai.json. Consumed by 1_cicd/src/scripts/cloud-android-ai-chat-guard.py, which fails when Kotlin outside the owner draws an AI chat of its own. Nothing in the script names an app, a path or a marker: adding a rule, an exemption or a root is a DATA edit here.",
+  "_rule": "one AI chat UI in the fleet's Kotlin apps, libs:ai's; an app hosts it, it does not draw its own.",
+  "owner": "ab_cloud-libs-shared/libs/ai",
+  "_doc_owner": "The one tree allowed to draw the chat. It must also still HOLD the chat (owner_must_hold): a guard whose owner was emptied would stay green for every app that copied the page back out.",
+  "owner_must_hold": [
+    {"file": "src/main/kotlin/com/diegonmarcos/superapp/ai/AiPage.kt", "needles": ["fun AiChatPage(", "fun AiConsentCard("]},
+    {"file": "src/main/kotlin/com/diegonmarcos/superapp/ai/AiPanel.kt", "needles": ["fun AiAssistantPanel("]},
+    {"file": "src/main/kotlin/com/diegonmarcos/superapp/ai/AiHost.kt", "needles": ["class AiStandardHost("]},
+    {"file": "src/main/assets/ai/ai.json", "needles": ["\"gateway\"", "\"openrouter\""]}
+  ],
+  "scan_prefixes": ["aa_", "ab_", "ac_"],
+  "_doc_scan_prefixes": "A top-level directory starting with any of these is an app, solution or shared-lib tree and is scanned (Kotlin only). Cloud Code's JS chat is not Kotlin: its contract is held by ac_cloud-code/test/test-chat.sh.",
+  "skip_dirs": [".git", "node_modules", "build", "dist", "target", "z_archive", ".gradle"],
+  "skip_path_parts": ["/src/test/", "/src/androidTest/", "/src/testDebug/", "/test/"],
+  "_doc_skip_path_parts": "Test sources may name the roles and the endpoint to prove a host's behaviour (Cloud Search's SearchShellTest posts to the gateway through a fake). They draw nothing in the app.",
+  "exempt": [
+    {"path": "ac_cloud-matrix/", "why": "Element X, a vendored Matrix messenger: its chat is people talking to people, not an AI chat."},
+    {"path": "ac_cloud-chat/", "why": "Mattermost, a vendored team messenger: people talking to people, not an AI chat."}
+  ],
+  "rules": {
+    "role-bubble": {
+      "composable_only": true,
+      "pattern": "\\brole\\s*==\\s*\"(?:user|assistant)\"|\"user\"\\s*->[^}]{0,400}?\"assistant\"\\s*->|\"assistant\"\\s*->[^}]{0,400}?\"user\"\\s*->",
+      "why": "a composable that branches on the OpenAI message roles is drawing the chat's bubbles"
+    },
+    "chat-composable": {
+      "composable_only": false,
+      "unless_file_contains": ["AiChatPage(", "AiAssistantPanel("],
+      "_doc_unless_file_contains": "A file that CALLS libs:ai's page or panel is the host's wrapper around it (Cloud Search's AssistantPage hands the lib its theme and engines): a name is fine there. The role-bubble rule still applies to it, so a host that also draws bubbles is caught.",
+      "pattern": "@Composable\\s+(?:(?:private|internal)\\s+)?fun\\s+(?:Ai|AI)?(?:Chat|Conversation|Assistant)(?:Page|Screen|Panel|Thread|Window|Sheet|Bubble)\\b",
+      "why": "a composable named as a chat page, screen or panel is a second chat UI"
+    },
+    "ui-calls-model": {
+      "composable_only": true,
+      "pattern": "chat/completions|X-Agent-Mode|openrouter\\.ai",
+      "why": "a composable file that names the model endpoint or the gateway's mode header talks to the model itself, instead of through libs:ai's host"
+    }
+  }
+}

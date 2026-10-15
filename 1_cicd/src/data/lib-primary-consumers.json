@@ -6,6 +6,7 @@
   },
   "primary": {
     "account": "ac_cloud-account",
+    "ai": "ac_cloud-search",
     "analytics": "aa_cloud-superapp",
     "appstore": "ac_cloud-store",
     "auth": "aa_cloud-superapp",
@@ -26,7 +27,6 @@
     "model-catalogue": "ac_cloud-search",
     "net": "aa_cloud-superapp",
     "ops": "aa_cloud-superapp",
-    "search-page": "ac_cloud-search",
     "shizuku-adb-debug-tools": "aa_cloud-superapp",
     "sysdns": "ac_cloud-termux",
     "text-tools": "aa_cloud-superapp",

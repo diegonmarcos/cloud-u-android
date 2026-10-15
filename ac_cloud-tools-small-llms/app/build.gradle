@@ -132,6 +132,8 @@ dependencies {
     implementation project(':tools-core')
     // The Decisions API client and its Http door (UrlHttp over Android's resolver, so the fleet DNS menu applies).
     implementation project(':libs:decisions')
+    // The AI tab's chat: libs:ai's page, sessions and contract over this app's own router backend (ToolsModel).
+    implementation project(':libs:ai')
     // The shared model catalogue: the workers' and routers' prices (live, cached, the snapshot offline).
     implementation project(':libs:model-catalogue')
     // The fleet Account over the ITextTools binder: only WHETHER it holds an OpenRouter key, never the key.

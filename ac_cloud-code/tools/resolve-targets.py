@@ -16,9 +16,10 @@ from the store app (nav.json::shared_store.app, cloud-drive) build.json's
 storage.shared_root — so the Backlog and Repos tabs never restate a path.
 
 Chat (replaced Home): `chat` carries what nav.json::chat cannot say by itself, read from the
-fleet's own data in this repository: every agent (nav.json's declared order first, then every
+fleet's own data in this repository: `ai` (the shared AI contract libs:ai assets/ai/ai.json: the gateway's
+service and routes, OpenRouter's endpoints; nav.json no longer restates them) and every agent (nav.json's declared order first, then every
 other fleet service named chat.agent_prefix*), each with `deployed` (the fleet declares it) and
-the mesh address it is reached at; the gateway's base URL (chat.gateway.service's private_dns);
+the mesh address it is reached at; the gateway's base URL (the AI contract's gateway.service private_dns);
 the claude backend's base URL (for its OAuth login); the fleet MCP server NAMES (chat.fleet_mcp,
 never a url or header); and the Account app, resolved like MyTerminal.
 
@@ -164,14 +165,40 @@ def merged_agents(app_root, c):
     return out
 
 
+def shared_ai(app_root, c):
+    """The ONE AI contract (libs:ai assets/ai/ai.json): the gateway's service and routes, OpenRouter's endpoints.
+
+    nav.json::chat no longer restates any of it. Returned shaped as the page reads it: `gateway` (service +
+    every route) and `direct` (the OpenRouter backend: id, label, url, models_url), to be merged over nav.json::chat.
+    The shared agents.json is held to the same chat path and mode header, so the two files cannot drift."""
+    repo = os.path.dirname(os.path.abspath(app_root))
+    try:
+        ai = json.load(open(os.path.join(repo, c["ai"])))
+        agents = json.load(open(os.path.join(repo, c["shared_agents"])))
+    except (OSError, ValueError, KeyError) as e:
+        raise SystemExit("resolve-targets: cannot read the shared AI contract or agent descriptors (%s)" % e)
+    g, o = ai["gateway"], ai["openrouter"]
+    for k in ("service", "chat_path", "health_path", "mcp_path", "tools_path", "sessions_path", "models_path", "mode_header"):
+        if not g.get(k):
+            raise SystemExit("resolve-targets: the AI contract's gateway has no %s" % k)
+    ag = agents["gateway"]
+    if (ag.get("service"), ag.get("chat_path"), ag.get("mode_header")) != (g["service"], g["chat_path"], g["mode_header"]):
+        raise SystemExit("resolve-targets: agents.json's gateway (%s %s %s) disagrees with the AI contract (%s %s %s)" % (
+            ag.get("service"), ag.get("chat_path"), ag.get("mode_header"), g["service"], g["chat_path"], g["mode_header"]))
+    gateway = {k: v for k, v in g.items() if not k.startswith("_")}
+    direct = {"id": o["id"], "label": o["label"], "url": o["chat_url"], "models_url": o["models_url"]}
+    return {"gateway": gateway, "direct": direct}
+
+
 def chat(app_root, nav):
     c = dict(nav["chat"])
     c["agents"] = merged_agents(app_root, c)
+    ai = shared_ai(app_root, c)
     services = fleet_services(app_root, c["fleet_services"])
     prefix = c["agent_prefix"]
-    gateway = services.get(c["gateway"]["service"])
+    gateway = services.get(ai["gateway"]["service"])
     if not gateway or not base_url(gateway):
-        raise SystemExit("resolve-targets: the gateway %r is not a fleet service with an address" % c["gateway"]["service"])
+        raise SystemExit("resolve-targets: the gateway %r is not a fleet service with an address" % ai["gateway"]["service"])
     agents, seen = [], set()
     for a in c["agents"]:
         if not a.get("fleet"):
@@ -193,6 +220,7 @@ def chat(app_root, nav):
         raise SystemExit("resolve-targets: cannot read the fleet MCP list %s (%s)" % (c["fleet_mcp"], e))
     claude = next((a for a in c["agents"] if a["mode"] == "claude-cli"), None)
     return {"agents": agents,
+            "ai": ai,
             "gateway": base_url(gateway),
             "claude_api": base_url(services.get(claude["fleet"])) if claude else None,
             "agent_decls": c["agents"],

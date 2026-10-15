@@ -2,7 +2,6 @@ package com.diegonmarcos.cloudtoolssmallllms.ui
 
 import android.content.Context
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.diegonmarcos.cloudtoolssmallllms.Decl
@@ -14,10 +13,21 @@ import com.diegonmarcos.cloudtoolssmallllms.core.ToolsConfig
 import com.diegonmarcos.cloudtoolssmallllms.core.ToolsFlow
 import com.diegonmarcos.cloudtoolssmallllms.data.AccountStatus
 import com.diegonmarcos.cloudtoolssmallllms.data.Catalogue
-import com.diegonmarcos.cloudtoolssmallllms.data.Msg
 import com.diegonmarcos.cloudtoolssmallllms.data.SecretPrefs
 import com.diegonmarcos.cloudtoolssmallllms.data.Stores
+import com.diegonmarcos.cloudtoolssmallllms.R
+import com.diegonmarcos.cloudtoolssmallllms.core.Costs
+import com.diegonmarcos.superapp.ai.AiBackend
+import com.diegonmarcos.superapp.ai.AiChatState
+import com.diegonmarcos.superapp.ai.AiConfig
+import com.diegonmarcos.superapp.ai.AiFileSessions
+import com.diegonmarcos.superapp.ai.AiMemoryPrefs
+import com.diegonmarcos.superapp.ai.AiModel
+import com.diegonmarcos.superapp.ai.AiReply
+import com.diegonmarcos.superapp.ai.AiRequest
+import com.diegonmarcos.superapp.ai.AiStandardHost
 import com.diegonmarcos.superapp.decisions.UrlHttp
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,6 +40,7 @@ import kotlinx.coroutines.withContext
  * their results into Compose state and the stores.
  */
 class ToolsModel(context: Context, private val scope: CoroutineScope) {
+    private val app = context.applicationContext
     val cfg: ToolsConfig = Decl.tools
     private val stores = Stores(context)
     private val vault = TokenVault(SecretPrefs(context))
@@ -37,12 +48,8 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
     val catalogue = Catalogue(context, UrlHttp, cfg.openRouter.timeoutMs)
 
     var section by mutableStateOf(Decl.nav.default()?.id ?: Decl.nav.bottomNav.firstOrNull().orEmpty())
-    val messages = mutableStateListOf<Msg>().apply { addAll(stores.messages()) }
     var ledger by mutableStateOf(stores.ledger())
         private set
-    var busy by mutableStateOf(false)
-        private set
-    var draft by mutableStateOf("")
     /** The task the next send is pinned to; null = the router decides. */
     var pinned by mutableStateOf<String?>(null)
     var router by mutableStateOf(stores.router.takeIf { it in cfg.router.choices } ?: cfg.router.default)
@@ -83,45 +90,49 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
         refreshAccount()
     }
 
-    // ── chat ─────────────────────────────────────────────────────────────────────────────────
+    // ── AI (libs:ai's page over this app's router backend) ───────────────────────────────────
 
-    /** Send [text]; [echo] false = a re-run of a request already on screen (a clarify chip). */
-    fun send(text: String = draft, forcedTask: String? = pinned, echo: Boolean = true) {
-        val req = text.trim()
-        if (req.isEmpty() || busy) return
-        if (echo) {
-            add(Msg(nextId(), Msg.USER, req, now(), task = forcedTask.orEmpty()))
-            draft = ""
-        }
-        busy = true
-        scope.launch {
-            val turn = withContext(Dispatchers.IO) { flow.send(req, forcedTask) }
-            busy = false
-            when (turn) {
-                is ToolsFlow.Turn.Answered -> {
-                    val a = turn.answer
-                    add(Msg(nextId(), Msg.ANSWER, a.text, now(), a.task, a.worker, a.total, a.routerModel, a.routerCost, a.confidence, request = req))
-                    charge(a.task, a.worker, a.total)
-                }
-                is ToolsFlow.Turn.Clarify -> {
-                    add(Msg(nextId(), Msg.CLARIFY, turn.decision.question, now(), routerModel = turn.decision.routerModel,
-                        routerCost = turn.decision.routerCost, candidates = turn.decision.candidates.map { it.first }, request = req))
-                    charge(ROUTER_TASK, turn.decision.routerModel, turn.decision.routerCost)
-                }
-                is ToolsFlow.Turn.Failed -> {
-                    add(Msg(nextId(), Msg.ERROR, turn.reason, now(), routerModel = turn.routerModel, routerCost = turn.routerCost, request = req))
-                    charge(ROUTER_TASK, turn.routerModel, turn.routerCost)
-                }
-            }
-        }
+    /**
+     * The AI tab's backend: one turn of the router → worker flow as an AiReply. The request is the user's last
+     * message (the router sees one request at a time); the answer carries its task, model and cost, and the cost
+     * lands in the ledger. A question back (the router is unsure) names the candidate tasks; pinning one in the
+     * task row sends the next message straight to it. Blocking: libs:ai calls it off the main thread.
+     */
+    private val routerBackend = object : AiBackend {
+        override val id: String get() = "router"
+        override fun models(): List<AiModel> = emptyList()
+        override fun chat(req: AiRequest, onDelta: (String) -> Unit): AiReply =
+            turn(req.messages.lastOrNull { it.role == "user" }?.content.orEmpty())
     }
 
-    /** A clarify chip: run [request] as [task]. */
-    fun pick(request: String, task: String) = send(request, task, echo = false)
+    /** The AI page's state: the open conversation, kept in a file (class content, never the token). */
+    val chat = AiChatState(AiStandardHost(
+        AiConfig.load(app), AiFileSessions(File(app.filesDir, "ai-sessions.json")), AiMemoryPrefs(""),
+        direct = routerBackend, modelSource = { emptyList() },
+    ))
 
-    fun clearChat() {
-        messages.clear()
-        stores.saveMessages(emptyList())
+    private fun turn(request: String): AiReply {
+        val forced = pinned
+        return when (val t = flow.send(request, forced)) {
+            is ToolsFlow.Turn.Answered -> {
+                val a = t.answer
+                charge(a.task, a.worker, a.total)
+                val label = cfg.task(a.task)?.label ?: a.task
+                val chip = app.getString(R.string.chip_cost, label, short(a.worker), Costs.usd(a.total)) +
+                    (if (a.routerModel.isNotEmpty()) " · " + app.getString(R.string.chip_router, short(a.routerModel), Costs.usd(a.routerCost)) +
+                        " · " + app.getString(R.string.chip_confidence, Math.round(a.confidence * 100).toInt()) else "")
+                AiReply(a.text + "\n\n— " + chip)
+            }
+            is ToolsFlow.Turn.Clarify -> {
+                charge(ROUTER_TASK, t.decision.routerModel, t.decision.routerCost)
+                val names = t.decision.candidates.mapNotNull { cfg.task(it.first)?.label }
+                AiReply(t.decision.question + (if (names.isEmpty()) "" else "\n" + app.getString(R.string.chat_router_unsure) + " " + names.joinToString(" · ")))
+            }
+            is ToolsFlow.Turn.Failed -> {
+                charge(ROUTER_TASK, t.routerModel, t.routerCost)
+                AiReply(null, error = t.reason)
+            }
+        }
     }
 
     private fun charge(task: String, model: String, usd: Double?) {
@@ -135,11 +146,6 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
     fun clearLedger() {
         ledger = Ledger()
         stores.saveLedger(ledger)
-    }
-
-    private fun add(m: Msg) {
-        messages += m
-        stores.saveMessages(messages.toList())
     }
 
     // ── settings ─────────────────────────────────────────────────────────────────────────────
@@ -196,8 +202,6 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
         scope.launch { accountState = withContext(Dispatchers.IO) { account.read() } }
     }
 
-    private var seq = (messages.maxOfOrNull { it.id } ?: 0L)
-    private fun nextId(): Long = ++seq
     private fun now(): Long = System.currentTimeMillis()
 
     companion object {

@@ -13,8 +13,9 @@ const load = async (p) => import(`data:text/javascript,${encodeURIComponent(read
 const M = await load("src/cloud/chat/model.js");
 const T = await load("src/cloud/tabs.js");
 const nav = JSON.parse(read("src/cloud/nav.json"));
-const chat = nav.chat;
 const fleet = JSON.parse(execFileSync("python3", [join(root, "tools/resolve-targets.py"), root, "--print"], { encoding: "utf8" })).chat;
+// What the page sees (src/cloud/chat/view.js): nav.json's own declaration with the shared AI contract merged over it.
+const chat = { ...nav.chat, ...fleet.ai };
 
 class Store {
 	constructor() { this.m = new Map(); }
@@ -33,6 +34,13 @@ out(fleetHasClaw ? claw.available : !claw.available && claw.reason === "not depl
 for (const a of agents.filter((x) => x.via === "gateway" && x.id !== "openclaw" && x.decl.fleet)) {
 	out(fleet.agents.find((f) => f.id === a.id)?.deployed === a.deployed, `${a.label} is deployed exactly when the fleet declares ${a.decl.fleet}`);
 }
+out(!("gateway" in nav.chat) && !("direct" in nav.chat), "nav.json does not restate the gateway or OpenRouter: they come from the shared AI contract (libs:ai ai.json)");
+const aiContract = JSON.parse(read(`../${nav.chat.ai}`));
+out(chat.gateway.chat_path === aiContract.gateway.chat_path && chat.gateway.service === aiContract.gateway.service && chat.direct.url === aiContract.openrouter.chat_url && chat.direct.models_url === aiContract.openrouter.models_url,
+	"the page's gateway and OpenRouter are libs:ai's ai.json, copied by the resolver");
+const sharedGateway = JSON.parse(read(`../${nav.chat.shared_agents}`)).gateway;
+out(sharedGateway.chat_path === aiContract.gateway.chat_path && sharedGateway.mode_header === aiContract.gateway.mode_header && sharedGateway.service === aiContract.gateway.service,
+	"agents.json and ai.json agree on the gateway's service, chat path and mode header");
 const services = JSON.parse(read(`../${chat.fleet_services}`));
 const fleetAgents = services.filter((s) => s.name.startsWith(chat.agent_prefix)).map((s) => s.name).sort();
 const shownFleet = agents.filter((a) => a.deployed && a.via !== "direct").map((a) => (a.decl ? a.decl.fleet : `${chat.agent_prefix}${a.id}`)).filter(Boolean).sort();
@@ -183,6 +191,7 @@ out(a0.rows.some((r) => r.id === chat.default_model), `the default model ${chat.
 const bridge = read("src/plugins/cloudchat/src/CatalogueBridge.java");
 out(/all\.only\(ids\)/.test(bridge) && /CatalogueJson\.INSTANCE\.shown\(cat,/.test(bridge) && /ModelCatalogue\.ASSET/.test(bridge), "the plugin narrows with the lib's own filter and hands over the lib's CatalogueJson (no copy)");
 const extras = read("build-extras.gradle");
+out(/ab_cloud-libs-shared\/libs\/ai'\)/.test(extras) && /new File\(cloudAiLib, 'src\/main\/assets'\)/.test(extras), "build-extras compiles libs:ai's contract assets by reference (the shared AI contract ships in the APK and is a source input)");
 out(/ab_cloud-libs-shared\/libs\/model-catalogue/.test(extras) && /src\/main\/kotlin\/com\/diegonmarcos\/superapp\/modelcatalogue'/.test(extras) && /src\/main\/assets'/.test(extras), "build-extras compiles the lib's logic package and assets by reference");
 
 // ── every agent the fleet can run: catalogue + live /health.modes ───────────
@@ -295,3 +304,28 @@ for (const s of sharedFile.agents) {
 }
 out(sharedFile.agents.some((a) => a.id === "openclaw") && sharedFile.agents.some((a) => a.id === "deepseek"), "the shared file lists OpenClaw and the DeepSeek Harness, so Cloud Search sees them too");
 out(M.resolveAgents(chat, fleet, undefined).find((a) => a.id === "deepseek").label === sharedFile.agents.find((a) => a.id === "deepseek").label, "the picker shows the shared label");
+
+// ── the shared protocol cases (libs:ai assets/ai/protocol-cases.json): the same file libs:ai's AiProtocolTest runs ──
+const proto = JSON.parse(read(`../${nav.chat.ai.replace(/ai\.json$/, "protocol-cases.json")}`));
+out(aiContract.protocol.cases === "protocol-cases.json", "ai.json names the shared protocol cases file");
+for (const c of proto.sse) {
+	const sp = M.sseParser();
+	const text = c.chunks.flatMap((ch) => sp.push(ch)).join("");
+	out(text === c.text && sp.done === c.done && (sp.error ?? null) === c.error, `shared SSE case: ${c.name}`);
+}
+for (const c of proto.whole) {
+	const r = M.parseWhole(c.status, c.body);
+	out((r.text ?? null) === c.text && (r.error ?? null) === c.error && (!c.citations || JSON.stringify(r.citations) === JSON.stringify(c.citations)), `shared whole-answer case: ${c.name}`);
+}
+for (const c of proto.request) {
+	const agent = c.backend === "openrouter" ? U.find((a) => a.via === "direct") : U.find((a) => a.via === "gateway" && a.mode === c.mode);
+	const sess = M.newSession(Date.now(), agent.id);
+	sess.messages.push(...c.messages.map((m) => ({ ...m })));
+	const rqc = M.buildRequest({ chat, fleet, storage: new Store(), agent, model: c.model ?? "x/y", effort: "low", mode: "auto", session: sess, reasoning: new Set(), health: modesUp });
+	const bc = JSON.parse(rqc.body);
+	const headersOk = Object.entries(c.headers).every(([k, v]) => rqc.headers[k.toLowerCase()] === v);
+	const bodyOk = Object.entries(c.body).every(([k, v]) => JSON.stringify(bc[k]) === JSON.stringify(v));
+	const absentOk = c.absent.every((k) => !(k in bc));
+	const urlOk = c.backend === "gateway" ? rqc.url === fleet.gateway + chat.gateway.chat_path : rqc.url === chat.direct.url;
+	out(headersOk && bodyOk && absentOk && urlOk, `shared request case: ${c.name}`);
+}

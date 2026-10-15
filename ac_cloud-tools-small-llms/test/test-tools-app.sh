@@ -140,7 +140,7 @@ mutate "Account key read" 'sub(K + "/data/AccountStatus.kt", "client.aiRoutingSn
 mutate "vault prints the token" 'D = chr(36); sub(M + "/core/src/main/kotlin/com/diegonmarcos/cloudtoolssmallllms/core/TokenVault.kt", "TokenVault(" + D + "{masked()})", "TokenVault(" + D + "{token()})")'
 mutate "test goes online" 'sub(M + "/core/src/test/kotlin/com/diegonmarcos/cloudtoolssmallllms/core/ToolsCoreTest.kt", "import java.io.IOException", "import java.io.IOException\nimport com.diegonmarcos.superapp.decisions.UrlHttp")'
 mutate "missing fixture" 'sub(M + "/core/src/test/kotlin/com/diegonmarcos/cloudtoolssmallllms/core/ToolsCoreTest.kt", "fixture(\"jev-route.json\")", "fixture(\"jev-gone.json\")")'
-mutate "undeclared section" 'sub(K + "/ui/TasksPage.kt", "model.section = \"chat\"", "model.section = \"chatz\"")'
+mutate "undeclared section" 'sub(K + "/ui/TasksPage.kt", "model.section = \"ai\"", "model.section = \"aiz\"")'
 
 echo "-- test-tools-app: $PASS passed, $FAILS failed"
 [ "$FAILS" -eq 0 ]

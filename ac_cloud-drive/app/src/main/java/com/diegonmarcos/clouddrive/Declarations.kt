@@ -344,6 +344,7 @@ object Declarations {
     const val PAGE_APPS = "apps"
     const val PAGE_DATA = "data"
     const val SECTION_AGENTS = "agents"
+    const val SECTION_AI = "ai"
 
     /** #609 the Sync strip: Git/Rclone/Mounts ([pages], ui.sections[sync].pages). #608 carries the Git page too. */
     fun parseSync(text: String, pages: List<PageDecl> = emptyList()): SyncDecl {

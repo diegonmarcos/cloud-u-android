@@ -179,12 +179,12 @@
       }
     },
     {
-      "id": "libs:search-page",
+      "id": "libs:ai",
       "scope": "in",
       "wave": 0,
       "ui": "compose",
       "size": "-",
-      "notes": "NEW in #823: Cloud Search's Search page (SearchChatPage: greeting, a box per declared engine, the conversation, model + Web switch, the input) moved out of ac_cloud-search/ui/AssistantPages.kt so Cloud Browser draws the same page. Themed by the consumer (SearchPageTheme), hosted by it (SearchPageHost). Proven through ac_cloud-search/app/src/test SearchShellTest.",
+      "notes": "NEW in #823 as libs:search-page, renamed libs:ai: the fleet's one AI chat. Cloud Search's page (AiChatPage: greeting, a box per declared engine, the conversation with the answer streaming in, Agent and Model pickers, Sessions, the input), the consent card, the assistant panel (AiAssistantPanel), the gateway and OpenRouter backends and the shared ai.json contract. Themed by the consumer (AiTheme), hosted by it (AiHost / AiStandardHost). Proven through ac_cloud-search/app/src/test SearchShellTest and the lib's AiProtocolTest.",
       "baseline": {
         "view_screens": 0,
         "layout_xml": 0,

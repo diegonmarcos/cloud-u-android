@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -209,11 +210,14 @@ fun AiChatPage(
     query: (AiEngine, String) -> String? = { _, _ -> null },
     onModel: (() -> Unit)? = null,
     sessionsList: Boolean = false,
+    /** False hides the Model chip (an app whose backend picks the model itself: Cloud Tools Small LLMs' router). */
+    showModel: Boolean = true,
+    /** The app's own controls just above the input (Cloud Tools Small LLMs' task row). */
+    aboveInput: @Composable ColumnScope.() -> Unit = {},
     header: @Composable RowScope.() -> Unit = {},
 ) {
     val m = theme.metrics
     val scope = rememberCoroutineScope()
-    var text by remember { mutableStateOf("") }
     LaunchedEffect(Unit) { if (chat.models.isEmpty()) chat.models = withContext(Dispatchers.IO) { runCatching { chat.host().models() }.getOrDefault(emptyList()) } }
     Column(modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = m.gutter, vertical = m.small), verticalAlignment = Alignment.CenterVertically) {
@@ -221,7 +225,7 @@ fun AiChatPage(
             if (sessionsList) SessionsSelect(chat, theme)
             Spacer(Modifier.weight(1f))
             AgentSelect(chat, theme)
-            ModelSelect(chat, theme, onModel)
+            if (showModel) ModelSelect(chat, theme, onModel)
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (chat.session.messages.isEmpty() && !chat.sending) Welcome(engines, query, chat.host(), theme)
@@ -230,13 +234,14 @@ fun AiChatPage(
         chat.consent?.let { req ->
             AiConsentCard(req, onAllow = { chat.decide(true) }, onDeny = { chat.decide(false) }, theme = theme, modifier = Modifier.padding(horizontal = m.small))
         }
+        aboveInput()
         ChatBar(
-            text, { text = it }, sending = chat.sending, theme = theme,
+            chat.draft, { chat.draft = it }, sending = chat.sending, theme = theme,
             onNew = { chat.fresh() },
             onSend = {
-                val ask = text.trim()
+                val ask = chat.draft.trim()
                 if (ask.isNotEmpty() && !chat.sending) {
-                    text = ""
+                    chat.draft = ""
                     scope.launch { chat.send(ask) }
                 }
             },

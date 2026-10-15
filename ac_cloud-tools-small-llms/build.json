@@ -107,6 +107,7 @@
         "libs:core",
         "libs:bottomnav",
         "libs:model-catalogue",
+        "libs:ai",
         "libs:decisions",
         "libs:text-tools",
         "tools-core"
@@ -135,6 +136,11 @@
     "libs:bottomnav": {
       "_doc": "#868 the fleet's bottom island and NavDecl, which reads ui.bottom_nav/ui.sections as baked into BuildConfig.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
+    },
+    "libs:ai": {
+      "_doc": "The fleet's AI chat (libs:ai): the AI tab's page, the session store and the shared contract. This app brings its OWN backend (the router -> worker flow of :tools-core, wrapped by ToolsModel as an AiBackend), so the gateway and OpenRouter backends of the lib are not used here; the token stays the user's own, pasted in Settings.",
+      "dir": "../ab_cloud-libs-shared/libs/ai",
       "type": "library"
     },
     "libs:model-catalogue": {
@@ -467,15 +473,15 @@
   "ui": {
     "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): four sections on the island, each one page.",
     "bottom_nav": [
-      "chat",
+      "ai",
       "tasks",
       "costs",
       "settings"
     ],
-    "default_section": "chat",
+    "default_section": "ai",
     "sections": [
       {
-        "id": "chat",
+        "id": "ai",
         "label": "AI",
         "icon": "chat",
         "pages": []
