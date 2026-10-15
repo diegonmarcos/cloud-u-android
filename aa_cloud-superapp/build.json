@@ -2984,16 +2984,29 @@
                 "target": "app://com.diegonmarcos.superapp"
               },
               {
+                "_doc": "Configs ▸ Setup ▸ Apps ▸ Account, as a tile in row 1 of the Cloud ▸ Apps ▸ Configs group (owner order 2026-10: SuperApp, Account, Configs | Store, Presets, Firewall | C3). Opens the same page the Configs grid tile does.",
+                "id": "configs-account",
+                "label": "Account",
+                "icon": "ic_settings",
+                "target": "page:config/profile"
+              },
+              {
                 "_doc": "The Configs section itself. section: and action:section: resolve identically (see test-onehand-sector-resolution.sh), so the shorter spelling is used here for the same reason the floating nav uses it.",
                 "label": "Configs",
                 "icon": "ic_settings",
                 "target": "section:config"
               },
               {
-                "_doc": "The same separator element as Data Apps (`separator: true`, label \"|\"): the group label tile Configs, then the rule, then the pages it leads to.",
+                "_doc": "The same separator element as Data Apps (`separator: true`, label \"|\"): the rule between row 1 (SuperApp, Account, Configs) and row 2 (Store, Presets, Firewall).",
                 "id": "configs-sep-1",
                 "label": "|",
                 "separator": true
+              },
+              {
+                "_doc": "The Configs row's way into Configs ▸ Store (#563). Its label must equal the store page's label — test-store-identity.sh derives both and fails if they drift.",
+                "label": "Store",
+                "icon": "ic_refresh",
+                "target": "extapp:cloud-store"
               },
               {
                 "_doc": "Configs ▸ Launcher ▸ Presets, first page after the group label and its separator (owner order: Configs | Presets, Store, C3, About).",
@@ -3003,10 +3016,17 @@
                 "target": "page:config/presets"
               },
               {
-                "_doc": "The Configs row's way into Configs ▸ Store (#563). Its label must equal the store page's label — test-store-identity.sh derives both and fails if they drift.",
-                "label": "Store",
-                "icon": "ic_refresh",
-                "target": "extapp:cloud-store"
+                "_doc": "Configs ▸ Setup ▸ Network ▸ Firewall, as a tile in row 2 of the Cloud ▸ Apps ▸ Configs group. Opens the same page the Configs grid tile does.",
+                "id": "configs-firewall",
+                "label": "Firewall",
+                "icon": "ic_lock",
+                "target": "page:config/firewall"
+              },
+              {
+                "_doc": "Second rule: row 2 (Store, Presets, Firewall) | row 3 (C3, About).",
+                "id": "configs-sep-2",
+                "label": "|",
+                "separator": true
               },
               {
                 "_doc": "C3 (#663) — cloud-c3 is a published APK, so this tile is extapp:, NOT page: — it opens the app, or offers the install when it is absent. It resolves through the ui.external_apps entry 'cloud-c3', which carries no label: the caption derives from the id. test-c3-is-an-app.sh fails if this goes back to a page: route. The in-app C3 section is still reachable from the one-hand circular menu and the Labs index, and its Watchdog tab launches com.diegonmarcos.watchdog via extapp:c3-watchdog.",
