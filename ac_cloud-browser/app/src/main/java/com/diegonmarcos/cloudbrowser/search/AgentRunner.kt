@@ -1,7 +1,8 @@
 package com.diegonmarcos.cloudbrowser.search
 
 import android.content.Context
-import com.diegonmarcos.cloudsearch.core.Chat
+import com.diegonmarcos.superapp.ai.AiRequest
+import com.diegonmarcos.superapp.ai.AiTool
 import com.diegonmarcos.superapp.browser.AgentLoop
 import com.diegonmarcos.superapp.browser.BrowserAddon
 import com.diegonmarcos.superapp.browser.BrowserAgentHost
@@ -12,8 +13,8 @@ import org.json.JSONObject
 
 /**
  * #802 I9 the AI Chat add-on's runner: one [AgentLoop] per session, the model reached with
- * cloud-search's protocol ([Chat.toolsBody]/[Chat.reply]) and the fleet Account's token (read
- * per model call, never kept), every tool executed on the live page through [BrowserBus]. A
+ * libs:ai's OpenRouter backend (the tools as its AiTool specs, the wire messages the loop keeps) and the fleet
+ * Account's token (read per model call, never kept), every tool executed on the live page through [BrowserBus]. A
  * mutating tool stops the turn: the consent sheet is put on screen and the turn resumes only
  * from his Allow/Deny ([BrowserAgentHost.decide]). The debug route can ask, never allow.
  */
@@ -22,8 +23,17 @@ class AgentRunner(private val app: Context, private val search: SearchAddon, add
     private val cfg = addon.config
     private val tools = AgentLoop.parseTools(cfg.optJSONArray("tools"))
     private val cap = cfg.optInt("max_tool_calls_per_turn", 6)
-    private val model = cfg.optString("model").ifBlank { search.cfg.ai.defaultModel }
-    private val specs = tools.map { Chat.ToolSpec(it.id, it.description, it.schema()) }
+    private val model = cfg.optString("model").ifBlank { search.ai.defaultModel }
+    /** The tools as the model sees them. The loop executes them (on the live page, behind the consent card), never the backend. */
+    private val specs: List<AiTool> = tools.map { t ->
+        object : AiTool {
+            override val name = t.id
+            override val description = t.description
+            override val schema = t.schema().toString()
+            override fun run(args: JSONObject): String = "executed by the agent loop"
+        }
+    }
+    private val backend = search.backend { SearchAddon.accountToken(app, search.ai.accountProvider) }
     private val sessions = LinkedHashMap<String, AgentLoop>()
     /** #823 summarize_page on the user's route: `model` hands the page text to the model, `on_device` summarizes here. */
     private val summarizer = PageSummarizer.get(app, search, addon)
@@ -83,12 +93,7 @@ class AgentRunner(private val app: Context, private val search: SearchAddon, add
     }
 
     private fun callModel(messages: JSONArray): AgentLoop.ModelTurn {
-        val ai = search.cfg.ai
-        val (token, why) = SearchAddon.accountToken(app, ai.accountProvider)
-        if (token == null) return AgentLoop.ModelTurn(null, emptyList(), why)
-        val res = runCatching { search.post(ai.chatUrl, Chat.headers(ai, token), Chat.toolsBody(model, messages, specs), ai.timeoutMs) }
-        val body = res.getOrNull() ?: return AgentLoop.ModelTurn(null, emptyList(), res.exceptionOrNull()?.javaClass?.simpleName ?: "no answer")
-        val r = Chat.reply(body.second)
+        val r = backend.chat(AiRequest(model, emptyList(), tools = specs, wire = messages, stream = false)) {}
         if (r.error != null) return AgentLoop.ModelTurn(null, emptyList(), r.error)
         return AgentLoop.ModelTurn(r.text, r.toolCalls.map { AgentLoop.Call(it.id, it.name, AgentLoop.args(it.arguments)) })
     }

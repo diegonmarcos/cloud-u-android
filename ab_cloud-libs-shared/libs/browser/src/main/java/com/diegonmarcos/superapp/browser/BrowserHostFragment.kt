@@ -1357,13 +1357,14 @@ class BrowserHostFragment : Fragment() {
 
     /**
      * #823 the assistant as a Compose side panel over the page (the page stays visible and usable
-     * beside it). Its consent card is the ONLY place a waiting action can be allowed.
+     * beside it), drawn by libs:ai through [BrowserAgentPanelHost]. Its consent card is the ONLY place a waiting action can be allowed.
      */
     private fun showAgentChat() {
         if (BrowserAgentHost.ask == null) return toast("The assistant is not available in this app")
+        val panel = BrowserAgentPanelHost.panel ?: return toast("The assistant is not available in this app")
         if (agentPanel?.parent != null) return
         agentPanel = overlay(side = true) { close ->
-            AgentChatPanel(agentState,
+            panel(agentState, AgentPanelActions(
                 onSend = { text ->
                     agentState.lines.add(AgentLine(AgentLine.USER, text))
                     agentRun { listOfNotNull(BrowserAgentHost.ask?.invoke(text)?.let(AgentPanelText::lineFor)) }
@@ -1376,7 +1377,7 @@ class BrowserHostFragment : Fragment() {
                 },
                 onSummarize = { summarizeIntoPanel() },
                 onNewChat = { BrowserAgentHost.reset?.invoke(); agentState.lines.clear(); agentState.pending = null },
-                onClose = close)
+                onClose = close))
         }
     }
 

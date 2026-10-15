@@ -108,7 +108,7 @@
         "libs:core",
         "libs:text-tools",
         "libs:bottomnav",
-        "libs:search-page",
+        "libs:ai",
         "search-core",
         "libs:model-catalogue"
       ]
@@ -138,9 +138,9 @@
       "dir": "../ab_cloud-libs-shared/libs/text-tools",
       "type": "library"
     },
-    "libs:search-page": {
-      "_doc": "#823 the Search page (the engine boxes and the AI chat) as a shared Compose lib, so Cloud Browser draws the same page. This app hosts it (data/SearchHost.kt: ChatFlow, the stores, Browser) and hands it its own glass theme and words (ui/AssistantPages.kt); the lib holds no colour, store, token or network of its own.",
-      "dir": "../ab_cloud-libs-shared/libs/search-page",
+    "libs:ai": {
+      "_doc": "#823 the AI chat as a shared Compose lib (renamed from libs:search-page): the page (greeting, engine boxes, conversation, streaming, Agent and Model pickers, Sessions, the consent card), the backends (the fleet gateway with X-Agent-Mode, OpenRouter) and the shared contract assets/ai/ai.json, so Cloud Browser, Cloud Drive and Cloud Tools Small LLMs draw the same chat. This app hosts it (data/SearchAi.kt: its Http, the Account token, the stores, Browser) and hands it its own glass theme and words (ui/AssistantPages.kt); the lib holds no colour, store, token or network of its own.",
+      "dir": "../ab_cloud-libs-shared/libs/ai",
       "type": "library"
     },
     "libs:bottomnav": {

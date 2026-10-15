@@ -52,7 +52,7 @@ class BrowserSearchAddonTest {
         assertEquals(1, asked)
         assertEquals("no openrouter token in the fleet Account", o.error)
         assertEquals(listOf("user"), o.session.messages.map { it.role })
-        assertEquals(addon.cfg.ai.defaultModel, o.session.model)
+        assertEquals(addon.ai.defaultModel, o.session.model)
         val j = addon.outcomeJson(o)
         assertFalse(j.getBoolean("ok"))
         assertTrue(j.isNull("message"))

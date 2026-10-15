@@ -3,7 +3,8 @@ package com.diegonmarcos.cloudbrowser.search
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import com.diegonmarcos.cloudsearch.core.Chat
+import com.diegonmarcos.superapp.ai.AiMsg
+import com.diegonmarcos.superapp.ai.AiRequest
 import com.diegonmarcos.superapp.browser.BrowserAddon
 import com.diegonmarcos.superapp.browser.BrowserBus
 import com.diegonmarcos.superapp.browser.PageSummary
@@ -11,13 +12,12 @@ import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.summarization.Summarization
 import com.google.mlkit.genai.summarization.SummarizationRequest
 import com.google.mlkit.genai.summarization.SummarizerOptions
-import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 /**
  * #823 "Summarize the page" on the user's route (setting `summarize_route`, declared in
- * build.json::ui.browser.addons[ai].summarize): the fleet model over cloud-search's protocol
+ * build.json::ui.browser.addons[ai].summarize): the fleet model through libs:ai's OpenRouter backend
  * with the fleet Account token read per call, or on the phone — ML Kit's on-device summarizer
  * (Gemini Nano, only on phones that ship AICore) and, where that is not available, the
  * extractive summary [PageSummary.extractive]. [PageSummary.routed] is the one fallback rule;
@@ -32,7 +32,7 @@ class PageSummarizer(private val app: Context, private val search: SearchAddon, 
     private val sentences = cfg.optInt("extractive_sentences", 4)
     private val bullets = cfg.optInt("bullets", 3).coerceIn(1, 3)
     private val prompt = cfg.optString("prompt").ifBlank { "Summarize this web page in %d short bullet points. Answer in the page's language." }
-    private val model = addon.config.optString("model").ifBlank { search.cfg.ai.defaultModel }
+    private val model = addon.config.optString("model").ifBlank { search.ai.defaultModel }
 
     /** The live page's summary on [chosen] (null = the setting's / declared default). Blocking. */
     fun summarizePage(chosen: String?): JSONObject {
@@ -57,17 +57,12 @@ class PageSummarizer(private val app: Context, private val search: SearchAddon, 
     }.getOrNull()
 
     private fun viaModel(title: String, text: String): PageSummary.Result {
-        val ai = search.cfg.ai
-        val (token, why) = SearchAddon.accountToken(app, ai.accountProvider)
-        if (token == null) return PageSummary.Result.failed(PageSummary.MODEL, PageSummary.ENGINE_MODEL, why)
-        val messages = JSONArray().put(JSONObject().put("role", "user")
-            .put("content", prompt.format(bullets) + "\n\n" + title + "\n\n" + text.take(inputCap)))
-        val res = runCatching { search.post(ai.chatUrl, Chat.headers(ai, token), Chat.toolsBody(model, messages, emptyList()), ai.timeoutMs) }
-        val body = res.getOrNull() ?: return PageSummary.Result.failed(PageSummary.MODEL, PageSummary.ENGINE_MODEL,
-            res.exceptionOrNull()?.javaClass?.simpleName ?: "no answer")
-        val r = Chat.reply(body.second)
+        val ai = search.ai
+        val backend = search.backend { SearchAddon.accountToken(app, ai.accountProvider) }
+        val ask = prompt.format(bullets) + "\n\n" + title + "\n\n" + text.take(inputCap)
+        val r = backend.chat(AiRequest(model, listOf(AiMsg("user", ask)), stream = false)) {}
         val out = r.text?.takeIf { it.isNotBlank() } ?: return PageSummary.Result.failed(PageSummary.MODEL, PageSummary.ENGINE_MODEL,
-            r.error ?: "HTTP ${body.first}")
+            r.error ?: "no answer")
         return PageSummary.Result(true, out, PageSummary.MODEL, "${PageSummary.ENGINE_MODEL}:$model", PageSummary.MODEL)
     }
 

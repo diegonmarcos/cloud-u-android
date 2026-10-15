@@ -68,24 +68,6 @@ class Prefs(private val prefs: SharedPreferences, private val cfg: SearchConfig)
     fun setLastQuery(vertical: String, q: String) = prefs.edit().putString("q:$vertical", q).apply()
 }
 
-/** Chat sessions in one JSON file under filesDir. The token is never part of a session. */
-class SessionStore(private val file: File) {
-    @Synchronized fun all(): List<Chat.Session> = runCatching {
-        val a = JSONArray(file.readText())
-        (0 until a.length()).map { Chat.sessionFromJson(a.getJSONObject(it)) }
-    }.getOrDefault(emptyList())
-
-    @Synchronized fun put(s: Chat.Session) {
-        val next = listOf(s) + all().filterNot { it.id == s.id }
-        file.parentFile?.mkdirs()
-        file.writeText(JSONArray(next.map { it.toJson() }).toString())
-    }
-
-    @Synchronized fun delete(id: String) {
-        file.writeText(JSONArray(all().filterNot { it.id == id }.map { it.toJson() }).toString())
-    }
-}
-
 /** OpenRouter's live model catalogue, cached for search.ai.catalog_ttl_hours. */
 class ModelCatalog(private val cfg: SearchConfig, private val http: Http, private val cache: Cache, private val clock: () -> Long) {
     /** The catalogue as OpenRouter sent it (cached), or null when it was never fetched. #913 prices read it too. */

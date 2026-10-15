@@ -207,12 +207,12 @@ class SearchShellTest {
         launch()
         openVertical("search")
         waitFor(Tags.CHAT_INPUT)
-        compose.onNodeWithTag(com.diegonmarcos.superapp.searchpage.SearchPageTags.AGENT).performClick()
+        compose.onNodeWithTag(com.diegonmarcos.superapp.ai.AiTags.AGENT).performClick()
         compose.waitForIdle()
-        val tag = com.diegonmarcos.superapp.searchpage.SearchPageTags.agent("deepseek")
+        val tag = com.diegonmarcos.superapp.ai.AiTags.agent("deepseek")
         compose.onNodeWithTag(tag).assertTextContains("DeepSeek Harness", substring = true)
         compose.onNodeWithTag(tag).assertTextContains("tools (MCP) · reasoning · text only", substring = true)
-        listOf("claude", "hermes", "goose").forEach { compose.onNodeWithTag(com.diegonmarcos.superapp.searchpage.SearchPageTags.agent(it)).assertExists() }
+        listOf("claude", "hermes", "goose").forEach { compose.onNodeWithTag(com.diegonmarcos.superapp.ai.AiTags.agent(it)).assertExists() }
         compose.onNodeWithTag(tag).performClick()
         compose.waitForIdle()
         assertEquals("deepseek", services.prefs.agent)
