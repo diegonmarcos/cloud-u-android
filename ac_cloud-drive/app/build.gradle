@@ -66,6 +66,8 @@ def logSinkStream = (buildJson.diagnostics?.log_sink_stream ?: 'cloud-drive')
 def debugLogDir   = (buildJson.diagnostics?.debug_log_dir   ?: 'drive-debug')
 
 def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toString() }
+// The AI tab's gateway: libs:ai's contract names the service, the fleet catalogue its mesh address (sets aiGatewayUrl).
+apply from: "$rootDir/../ab_cloud-libs-shared/libs/ai/ai-gateway.gradle"
 // The storage back ends the Apps tab lists. They used to live in the SuperApp's
 // build.json as ui.drive_connections and were read there through
 // BuildConfig.DRIVE_CONNECTIONS_B64; task 302 moved the Drive surface out into
@@ -475,6 +477,7 @@ android {
                 : (buildJson.android.abi_filters ?: ['arm64-v8a'])
             abiFilters.addAll(abis as List)
         }
+        buildConfigField "String", "AI_GATEWAY_URL",  "\"${aiGatewayUrl}\""
         buildConfigField "String", "GIT_SHORT_SHA",   "\"${shortSha}\""
         buildConfigField "String", "GIT_SHA",         "\"${fullSha}\""
         buildConfigField "String", "BUILD_TIMESTAMP", "\"${buildTimestamp}\""
@@ -633,6 +636,8 @@ dependencies {
     implementation project(':libs:disk')
     // Manage ▸ Apps: running state + PSS of other apps through the fleet's privileged shell channel.
     implementation project(':libs:shizuku-adb-debug-tools')
+    // The AI tab: the fleet's AI chat over the fleet agent gateway (no token on the phone). It brings libs:model-catalogue along.
+    implementation project(':libs:ai')
     // #646 THE DECLARED GIT AUTH+OPS CHAIN, one ordered declaration (libs-shared
     // build.json::auth.git_chain: fleet, then github) walked by libs:git-sync's
     // GitAuthChain. #705 neither of its binaries is linked here: gh runs in

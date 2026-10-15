@@ -20,6 +20,8 @@ class AiChatState(private val host: AiHost) {
     var model by mutableStateOf(host.model)
     var web by mutableStateOf(host.web)
     var agent by mutableStateOf(host.agent())
+    /** The input's text: hoisted so an app can prefill it (a shared text, a task's example) and nothing is sent until the user does. */
+    var draft by mutableStateOf("")
     /** A mutating tool waiting for Allow / Deny; the page draws the consent card for it. */
     var consent by mutableStateOf<AiConsentRequest?>(null)
         private set

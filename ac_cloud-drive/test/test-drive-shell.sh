@@ -255,8 +255,8 @@ import json, sys
 ui = json.load(open(sys.argv[1]))["ui"]
 bad = 0
 tabs = ui["bottom_nav"]
-if tabs != ["explorer", "manage", "sync", "home", "agents", "configs"]:
-    print("    ui.bottom_nav is %s, not the owner's order explorer/manage/sync/home/agents/configs" % tabs); bad = 1
+if tabs != ["explorer", "manage", "sync", "home", "agents", "ai", "configs"]:
+    print("    ui.bottom_nav is %s, not the owner's order explorer/manage/sync/home/agents/ai/configs" % tabs); bad = 1
 if "backups" in ui:
     print("    ui still carries a top-level backups block: it moved into ui.configs at #603"); bad = 1
 cfg_pages = next(s for s in ui["sections"] if s["id"] == "configs")["pages"]

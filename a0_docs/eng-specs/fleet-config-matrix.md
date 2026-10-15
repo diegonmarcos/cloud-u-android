@@ -251,7 +251,7 @@ Coverage: 4 covered, 0 gaps.
 
 ## cloud-browser — `com.diegonmarcos.cloudbrowser`
 
-Module `ac_cloud-browser`; libs: lib-analytics, lib-autofill, lib-bottomnav, lib-browser, lib-core, lib-devtools, lib-fleetconfig-model, lib-search-page, lib-text-tools, lib-ui-kit, lib-updater.
+Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottomnav, lib-browser, lib-core, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-text-tools, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -407,7 +407,7 @@ Coverage: 5 covered, 0 gaps.
 
 ## cloud-code — `com.diegonmarcos.code`
 
-Module `ac_cloud-code`; libs: lib-core, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-sysdns, lib-text-tools.
+Module `ac_cloud-code`; libs: lib-ai, lib-core, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-sysdns, lib-text-tools.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -476,7 +476,7 @@ Coverage: 3 covered, 0 gaps.
 
 ## cloud-drive — `com.diegonmarcos.clouddrive`
 
-Module `ac_cloud-drive`; libs: lib-analytics, lib-auth, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-disk, lib-disk-scan, lib-file-editor, lib-fleetconfig-model, lib-git-sync, lib-ml-l-image, lib-mounts, lib-rclone, lib-shizuku-adb-debug-tools, lib-sysdns, lib-updater.
+Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-disk, lib-disk-scan, lib-file-editor, lib-fleetconfig-model, lib-git-sync, lib-ml-l-image, lib-model-catalogue, lib-mounts, lib-rclone, lib-shizuku-adb-debug-tools, lib-sysdns, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -501,6 +501,7 @@ Module `ac_cloud-drive`; libs: lib-analytics, lib-auth, lib-bottomnav, lib-core,
 |---|---|---|
 | `filesDir/git-sync/history.json` | device | Sync history log. |
 | `filesDir/<REPORT_FILE>` | device | Store seeding report text. |
+| `filesDir/ai-sessions.json` | content | AI tab chat history (libs:ai's file session store; never carries a token); stays on the phone that held the conversation |
 | `filesDir/git-sync/repos.json` | config | Registered repos to sync |
 | `filesDir/git-sync/known_hosts` | device | Pinned git SSH host keys |
 | `filesDir/mounts/mounts.json` | config | Mount specs (host, path, keyPath, protocol); passwords live in mounts-credentials |
@@ -798,7 +799,7 @@ Coverage: 2 covered, 0 gaps.
 
 ## cloud-search — `com.diegonmarcos.cloudsearch`
 
-Module `ac_cloud-search`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-search-page, lib-text-tools.
+Module `ac_cloud-search`; libs: lib-ai, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-text-tools.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -936,11 +937,11 @@ Coverage: 2 covered, 0 gaps.
 
 ## cloud-tools-small-llms — `com.diegonmarcos.cloudtoolssmallllms`
 
-Module `ac_cloud-tools-small-llms`; libs: lib-bottomnav, lib-core, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-text-tools.
+Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-text-tools.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
-| `cloud_tools_small_llms` | prefs | content (keys: jev_checked_at→device, jev_listed→device, jev_price_in→device, router→config, workers→config) | no | Cloud Tools Small LLMs: the chat (messages, small JSON list), the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The chat and ledger are the user's content; router and workers are configuration; the Jev read is a cache of this phone's last network check. |
+| `cloud_tools_small_llms` | prefs | content (keys: jev_checked_at→device, jev_listed→device, jev_price_in→device, router→config, workers→config) | no | Cloud Tools Small LLMs: the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The ledger is the user's content (the AI tab's chat lives in filesDir/ai-sessions.json, an item of this app); router and workers are configuration; the Jev read is a cache of this phone's last network check. |
 | `cloud_tools_small_llms_secrets` | encrypted | secret | yes | Cloud Tools Small LLMs' OpenRouter token (openrouter_token), pasted in Settings: EncryptedSharedPreferences under a Keystore AES-256-GCM master key, shown masked, never logged. The fleet Account's key is never read (decisions-use guard D5). A credential: migrates through the vault. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
@@ -951,8 +952,8 @@ Module `ac_cloud-tools-small-llms`; libs: lib-bottomnav, lib-core, lib-decisions
 | `EncryptedSharedPreferences cloud_tools_small_llms_secrets:openrouter_token` | secret | The user's own OpenRouter token, pasted in Settings; pays for the router and every worker call. |
 | `SharedPreferences cloud_tools_small_llms:router (default build.json::tools.router.default)` | config | The router: auto (Jev while OpenRouter lists it, else the default chat router), jev, or one chat router. |
 | `SharedPreferences cloud_tools_small_llms:workers` | config | Per-task worker overrides (task id -> catalogue model id); absent = the task's declared worker. |
-| `SharedPreferences cloud_tools_small_llms:messages` | content | The chat: requests, answers with task, model and cost, questions back. |
 | `SharedPreferences cloud_tools_small_llms:ledger` | content | Every priced call (time, dollars, task, model): the day and month totals on Costs. |
+| `filesDir/ai-sessions.json` | content | AI tab chat history (libs:ai's file session store; never carries a token); stays on the phone that held the conversation |
 
 Coverage: 5 covered, 0 gaps.
 

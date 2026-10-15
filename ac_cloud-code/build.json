@@ -97,7 +97,8 @@
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/text-tools"
     },
-    "_doc_model_catalogue": "libs:model-catalogue is NOT a module here: it is a Compose lib and this Cordova app has no Compose, so build-extras.gradle compiles its logic package dir and its assets dir by reference (the libs/sysdns precedent); the lib closure counts it as a source input from that literal path."
+    "_doc_ai": "libs:ai is NOT a module here either (a Compose lib): its assets dir (assets/ai/ai.json, the shared AI contract nav.json::chat.ai points at, and protocol-cases.json) is compiled in by reference from build-extras.gradle, and tools/resolve-targets.py reads the same file at build time. nav.json restates no gateway and no OpenRouter endpoint.",
+ "_doc_model_catalogue": "libs:model-catalogue is NOT a module here: it is a Compose lib and this Cordova app has no Compose, so build-extras.gradle compiles its logic package dir and its assets dir by reference (the libs/sysdns precedent); the lib closure counts it as a source input from that literal path."
   },
   "tests": {
     "_doc": "Shell testers under ac_cloud-code/test/, run by cloud-android-test-engine.sh shell in the ship workflow's FIRST step, before any toolchain. None needs a build.",

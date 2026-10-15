@@ -1750,7 +1750,7 @@
     "cloud_tools_small_llms": {
       "kind": "prefs",
       "class": "content",
-      "doc": "Cloud Tools Small LLMs: the chat (messages, small JSON list), the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The chat and ledger are the user's content; router and workers are configuration; the Jev read is a cache of this phone's last network check.",
+      "doc": "Cloud Tools Small LLMs: the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The ledger is the user's content (the AI tab's chat lives in filesDir/ai-sessions.json, an item of this app); router and workers are configuration; the Jev read is a cache of this phone's last network check.",
       "used_by": [
         "ac_cloud-tools-small-llms"
       ],
@@ -2223,6 +2223,7 @@
       "module": "ac_cloud-browser",
       "schema_version": 1,
       "libs": [
+        "lib-ai",
         "lib-analytics",
         "lib-autofill",
         "lib-bottomnav",
@@ -2230,7 +2231,7 @@
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-search-page",
+        "lib-model-catalogue",
         "lib-text-tools",
         "lib-ui-kit",
         "lib-updater"
@@ -2427,6 +2428,7 @@
       "module": "ac_cloud-code",
       "schema_version": 1,
       "libs": [
+        "lib-ai",
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
@@ -2553,6 +2555,7 @@
       "module": "ac_cloud-drive",
       "schema_version": 1,
       "libs": [
+        "lib-ai",
         "lib-analytics",
         "lib-auth",
         "lib-bottomnav",
@@ -2565,6 +2568,7 @@
         "lib-fleetconfig-model",
         "lib-git-sync",
         "lib-ml-l-image",
+        "lib-model-catalogue",
         "lib-mounts",
         "lib-rclone",
         "lib-shizuku-adb-debug-tools",
@@ -2583,6 +2587,12 @@
           "path": "filesDir/<REPORT_FILE>",
           "class": "device",
           "doc": "Store seeding report text."
+        },
+        {
+          "id": "ai-sessions",
+          "path": "filesDir/ai-sessions.json",
+          "class": "content",
+          "doc": "AI tab chat history (libs:ai's file session store; never carries a token); stays on the phone that held the conversation"
         }
       ]
     },
@@ -2966,12 +2976,12 @@
       "module": "ac_cloud-search",
       "schema_version": 1,
       "libs": [
+        "lib-ai",
         "lib-bottomnav",
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-model-catalogue",
-        "lib-search-page",
         "lib-text-tools"
       ],
       "items": [
@@ -3169,6 +3179,7 @@
       "module": "ac_cloud-tools-small-llms",
       "schema_version": 1,
       "libs": [
+        "lib-ai",
         "lib-bottomnav",
         "lib-core",
         "lib-decisions",
@@ -3200,18 +3211,17 @@
           "store": "cloud_tools_small_llms"
         },
         {
-          "id": "chat",
-          "path": "SharedPreferences cloud_tools_small_llms:messages",
-          "class": "content",
-          "doc": "The chat: requests, answers with task, model and cost, questions back.",
-          "store": "cloud_tools_small_llms"
-        },
-        {
           "id": "ledger",
           "path": "SharedPreferences cloud_tools_small_llms:ledger",
           "class": "content",
           "doc": "Every priced call (time, dollars, task, model): the day and month totals on Costs.",
           "store": "cloud_tools_small_llms"
+        },
+        {
+          "id": "ai-sessions",
+          "path": "filesDir/ai-sessions.json",
+          "class": "content",
+          "doc": "AI tab chat history (libs:ai's file session store; never carries a token); stays on the phone that held the conversation"
         }
       ]
     }

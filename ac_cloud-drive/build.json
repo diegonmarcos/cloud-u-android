@@ -55,7 +55,7 @@
   },
   "ui": {
     "_doc": "#868 THE NAVIGATION IS ONE DECLARATION (libs:bottomnav's NavDecl): ui.bottom_nav = the island's ids, ui.sections[] = each one's label/icon and its `pages` (the strip PageTabs draws), ui.default_section = where the app opens. Volumes' four classes, Sync's three pages and Configs' three pages are those `pages` now (they were the keys ui.volumes.classes, ui.sync.pages and ui.configs.pages; ui.tabs and ui.default_tab are gone). #603/#609 THE STRUCTURE OF THE CHROME, declared. Kotlin holds no tab list, no caption, no page list, no section list, no place list and no icon name: DriveShell renders ui.bottom_nav, SyncScreen renders ui.sections[sync].pages, ConfigsScreen renders ui.sections[configs].pages, the Files Places sheet renders ui.files.sections and ui.files.places, the Files filter pills render ui.files.filters. Every `icon` here is a name IconCatalog.kt resolves to a Material glyph; a name it does not know renders ui.icons._default and test/test-drive-shell.sh fails the build. Baked by app/build.gradle as UI_SECTIONS_B64 / UI_BOTTOM_NAV / UI_DEFAULT_SECTION / UI_SYNC_B64 / UI_FILES_B64 / UI_ICON_DEFAULT and decoded ONCE by Declarations.kt. #603 replaced #579's five tabs (files/apps/sync/backups/configs) with files/volumes/home/apps/configs, moving Sync's three pages and Backups into Configs. #609 REVERSED HALF OF THAT: Apps stopped being a tab (its grid moved into Home, ui.home below) and the freed slot is now Sync, carrying Git/Rclone/Mounts back out of Configs into their own tab — the five tabs are now files/volumes/home/sync/configs. #608 REDESIGNED THE SYNC ▸ GIT SUB-PAGE and declared it whole in ui.sync.git below: two sections (the owner's PUBLIC cloud*/front* set, which needs no login, and Personal, which signs in through libs:auth for the `repo` scope and splits the account's own listing into Public and Private), one DENSE row per repository, and fourteen per-repository operations collapsed behind each row's disclosure — every one of them a verb of libs:git-sync, force push and force pull included.",
-    "bottom_nav": ["explorer", "manage", "sync", "home", "agents", "configs"],
+    "bottom_nav": ["explorer", "manage", "sync", "home", "agents", "ai", "configs"],
     "default_section": "explorer",
     "sections": [
       {
@@ -121,6 +121,12 @@
         "label": "Agents",
         "icon": "smart_toy",
         "_doc": "Owner addition: on-device agents. The first, Screenshots, OCRs every screenshot and labels it with on-device ML (libs:ml-l-image's engine, detect modes text/labels/objects), incrementally, and writes the contract in data/agent-screenshots-contract.json (docs/screenshot-agent-contract.md) for other fleet apps (Cloud Tasks first)."
+      },
+      {
+        "id": "ai",
+        "label": "AI",
+        "icon": "auto_awesome",
+        "_doc": "Owner addition: the fleet's AI chat (libs:ai) as a tab. It talks to the fleet agent gateway (my-ai-api, mesh only) with the agent picked in the page; no token is held or read by this app (decisions-use guard D5). Declared once in libs:ai's assets/ai/ai.json; the gateway's mesh address is baked from the fleet catalogue by libs/ai/ai-gateway.gradle."
       },
       {
         "id": "home",
@@ -737,7 +743,9 @@
         "libs:bottomnav",
         "libs:auth",
         "libs:disk",
-        "libs:shizuku-adb-debug-tools"
+        "libs:shizuku-adb-debug-tools",
+        "libs:ai",
+        "libs:model-catalogue"
       ]
     },
     "libs:shizuku-adb-debug-tools": {
@@ -824,6 +832,16 @@
     "libs:disk": {
       "_doc_dir": "#813 THE Disk Management engine: volumes, storage map, huge files, duplicates, per-app sizes, cache/temp clean and memory behind DiskEngine (contract DiskContract.VERSION), rendered by home/DiskScreen.kt and answered on /api/disk/*. #763 class pinned (1_cicd/src/data/lib-classes.json): it reads and deletes under THIS app's grants (usage access, all-files access), so it is compiled in here and ships no APK of its own.",
       "dir": "../ab_cloud-libs-shared/libs/disk",
+      "type": "library"
+    },
+    "libs:ai": {
+      "_doc_dir": "The AI tab: the fleet's AI chat (libs:ai) over the fleet agent gateway (my-ai-api, mesh only). Shared BY REFERENCE. This app holds no OpenRouter token and reads none (decisions-use guard D5): the gateway holds the fleet key. Its mesh address is baked as BuildConfig.AI_GATEWAY_URL by libs/ai/ai-gateway.gradle.",
+      "dir": "../ab_cloud-libs-shared/libs/ai",
+      "type": "library"
+    },
+    "libs:model-catalogue": {
+      "_doc_dir": "libs:ai's `api` dependency: the shared agent descriptor (assets/agents/agents.json) its Agent picker lists. Listed so settings.gradle resolves the path.",
+      "dir": "../ab_cloud-libs-shared/libs/model-catalogue",
       "type": "library"
     },
     "libs:disk-scan": {

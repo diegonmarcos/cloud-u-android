@@ -55,7 +55,7 @@ fun TasksPage(model: ToolsModel) {
         items(reg.entries, key = { it.task.id }) { e ->
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(ToolsMetrics.corner)).background(MaterialTheme.colorScheme.surface)
-                    .clickable { model.draft = e.task.example; model.pinned = e.task.id; model.section = "chat" }
+                    .clickable { model.chat.draft = e.task.example; model.pinned = e.task.id; model.section = "ai" }
                     .padding(ToolsMetrics.gutter).testTag(Tags.task(e.task.id)),
                 verticalArrangement = Arrangement.spacedBy(ToolsMetrics.tiny),
             ) {

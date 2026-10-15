@@ -92,23 +92,8 @@
     "_doc_shared_agents": "THE ONE agent descriptor list (libs:model-catalogue assets/agents/agents.json), read by Cloud Search's Agent field too. An agent's identity — label, X-Agent-Mode, health_key, fleet service, model kind/providers/default — comes from there (tools/resolve-targets.py merges it at build time into targets.gen.json chat.agent_decls); the entries below keep only the picker order and what is Cloud Code's own (effort, permission mode, MCP source, the claude CLI id map). An agent only in this file (OpenRouter · fleet) is Cloud Code's alone. The live gateway (/health.modes) stays the runtime check.",
     "fleet_mcp": "0_apps/src/root/mcp.json",
     "_doc_fleet_mcp": "The derived .mcp.json (cloud-infra 1_cloud-configs/dist/mcp.json via 0_apps): the fallback MCP list for an agent whose backend publishes none. Only the server NAMES are copied; urls and headers stay out of the APK.",
-    "gateway": {
-      "_doc": "my-ai-api (cloud-agi-goose, WireGuard-only) is the fleet's agent gateway: one OpenAI-compatible /v1/chat/completions that picks the agent with the X-Agent-Mode header (hermes | openclaw | deepseek | goose | claude-cli | openrouter). GET /health lists them under `modes` ([{id, label, fleet, backend, native, model, available, reason, functions}]) — the live half of the agent picker, so an agent the gateway starts serving appears without an app change — plus its plugins; GET /agents/<agent>/<fn> serves each native agent's read-only functions (Hermes skills/toolsets/sessions/jobs, OpenClaw agent targets); GET /v1/mcp/status its MCP servers, GET /v1/mcp/search?q= its tools, GET /sessions the cross-device sessions. Verified against cloud-u-containers user-ai_my-ai-api/src/code/server.mjs on 2026-10-10.",
-      "service": "cloud-agi-goose",
-      "chat_path": "/v1/chat/completions",
-      "health_path": "/health",
-      "mcp_path": "/v1/mcp/status",
-      "tools_path": "/v1/mcp/search?q=",
-      "sessions_path": "/sessions",
-      "models_path": "/v1/models"
-    },
-    "direct": {
-      "_doc": "OpenRouter itself, with the token from Profile & Config (or the fleet Account's). Not an agent: a plain streamed chat with the model picked in the catalogue.",
-      "id": "openrouter",
-      "label": "OpenRouter",
-      "url": "https://openrouter.ai/api/v1/chat/completions",
-      "models_url": "https://openrouter.ai/api/v1/models"
-    },
+    "ai": "ab_cloud-libs-shared/libs/ai/src/main/assets/ai/ai.json",
+    "_doc_ai": "THE SHARED AI CONTRACT (libs:ai assets/ai/ai.json), the file Cloud Search, Cloud Browser, Cloud Drive and Cloud Tools Small LLMs read through libs:ai. The gateway (my-ai-api on cloud-agi-goose, WireGuard-only: the OpenAI-style /v1/chat/completions that picks the agent with the X-Agent-Mode header, its /health, MCP, tools, sessions and models routes) and OpenRouter itself (the direct backend: url, models_url) are declared THERE and nowhere else: tools/resolve-targets.py copies them into targets.gen.json chat.ai, which the page merges over this block (chat.gateway, chat.direct). Cloud Code's `OpenRouter` backend takes the token from Profile & Config (or the fleet Account's); it is not an agent, just a plain streamed chat with the model picked in the catalogue.",
     "agents": [
       {
         "id": "hermes",

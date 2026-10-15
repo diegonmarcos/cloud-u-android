@@ -96,7 +96,8 @@ class AiStandardHost(
             model = model, updated = now, messages = session.messages + AiMsg("user", text),
         )
         store.put(asked)
-        val agent = if (gateway != null) agents.firstOrNull { it.id == prefs.agent } else null
+        // With no direct backend the gateway is the only road: an app that picked no agent gets the first one.
+        val agent = if (gateway != null) agents.firstOrNull { it.id == prefs.agent } ?: (if (direct == null) agents.firstOrNull() else null) else null
         val backend = if (agent != null) gateway else direct
         if (backend == null) return AiOutcome(asked, "no AI backend is configured", emptyList())
         val via = agent?.let { "${it.label} ($gatewayNote)" }

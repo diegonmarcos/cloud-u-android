@@ -214,6 +214,7 @@ object DriveTags {
     const val DATA_ROW = "manage_data_row"
     const val DATA_PROGRESS = "manage_data_progress"
     const val AGENTS = "agents"
+    const val AI = "ai"
     const val AGENT_CARD = "agents_card"
     const val VIEWER_TEXT_LAYER = "viewer_text_layer"
     const val DISK_SCREEN = "disk_screen"

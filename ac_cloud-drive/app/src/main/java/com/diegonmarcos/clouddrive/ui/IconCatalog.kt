@@ -2,6 +2,7 @@ package com.diegonmarcos.clouddrive.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Screenshot
@@ -120,6 +121,7 @@ object IconCatalog {
         "extension" -> Icons.Filled.Extension
         "play_arrow" -> Icons.Filled.PlayArrow
         "smart_toy" -> Icons.Filled.SmartToy
+        "auto_awesome" -> Icons.Filled.AutoAwesome
         "screenshot" -> Icons.Filled.Screenshot
         else -> null
     }

@@ -420,7 +420,10 @@ export function parseWhole(status, body) {
 		return status >= 400 ? { error: `HTTP ${status}: ${String(body).slice(0, 300)}` } : { text: String(body) };
 	}
 	if (status >= 400 || j.error) return { error: j.error?.message || `HTTP ${status}` };
-	return { text: j.choices?.[0]?.message?.content ?? j.message?.content ?? "" };
+	const notes = j.choices?.[0]?.message?.annotations;
+	const out = { text: j.choices?.[0]?.message?.content ?? j.message?.content ?? "" };
+	if (Array.isArray(notes)) out.citations = [...new Set(notes.map((n) => n?.url_citation?.url).filter(Boolean))];
+	return out;
 }
 
 // ── sessions (on the phone) ─────────────────────────────────────────────────

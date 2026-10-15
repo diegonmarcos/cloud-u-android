@@ -47,6 +47,7 @@ on:
       # data manifests and this workflow file. fleet-refresh.yml (schedule
       # only) ships the app for a moved static lib or cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-drive.yml"
+      #   input: "ab_cloud-libs-shared/libs/ai/**"
       #   input: "ab_cloud-libs-shared/libs/analytics/**"
       #   input: "ab_cloud-libs-shared/libs/auth/**"
       #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
@@ -55,6 +56,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/ml-l-image/**"
+      #   input: "ab_cloud-libs-shared/libs/model-catalogue/**"
       #   input: "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       #   input: "ab_cloud-libs-shared/libs/sysdns/**"
       #   input: "ab_cloud-libs-shared/libs/updater/**"
