@@ -113,11 +113,14 @@ pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
 by_id = {p['id']: p for p in pages}
 problems = []
-for pid in ('presets', 'controls', 'onehand', 'notify'):
+for pid in ('presets', 'controls', 'panels', 'panels-ui', 'panels-tools', 'onehand', 'notify'):
     p = by_id.get(pid)
+    tab = pid in ('presets', 'panels', 'panels-ui', 'panels-tools')  # tabs of Controls: declared, hidden, reached through the strip
     if p is None:                       problems.append('page %r is GONE — its target dead-ends' % pid)
+    elif tab:
+        if not p.get('hidden'):         problems.append('tab %r draws a tile of its own' % pid)
     elif p.get('hidden'):               problems.append('page %r is hidden — #649 gave it its own tile' % pid)
-    elif p.get('subgroup') != 'Launcher':  problems.append('page %r left the Launcher group: %r' % (pid, p.get('subgroup')))
+    elif not tab and p.get('subgroup') != 'Launcher':  problems.append('page %r left the Launcher group: %r' % (pid, p.get('subgroup')))
 if by_id.get('notify', {}).get('mirror_page') != 'communication/my-rss':
     problems.append('notify stopped mirroring communication/my-rss — a second '
                     'notification centre is exactly what #497/#515 deleted')
@@ -349,8 +352,10 @@ r_fail=""
 # same class, asserted by every test below).
 grep -q 'pageId == "control" ' "$PAGES"          && r_fail="$r_fail control:old-route-still-there"
 grep -q 'configs.ControlFragment' "$PAGES"     && r_fail="$r_fail control:second-producer-in-SectionPages"
-grep -q 'pageId == "controls" -> LauncherConfigFragment.newInstance()' "$PAGES" \
-                                                 || r_fail="$r_fail controls:not-routed"
+grep -q 'pageId == "panels-ui" -> LauncherConfigFragment.newInstance(LauncherConfigFragment.SCOPE_UI)' "$PAGES" \
+                                                 || r_fail="$r_fail panels-ui:not-routed"
+grep -q 'pageId == "panels-tools" -> LauncherConfigFragment.newInstance(LauncherConfigFragment.SCOPE_TOOLS)' "$PAGES" \
+                                                 || r_fail="$r_fail panels-tools:not-routed"
 grep -q 'ControlFragment.newInstance(embedded = true)' "$KT_LCF" \
                                                  || r_fail="$r_fail controls:does-not-host-the-grid"
 # #580: Push stopped being a page. A route or a fragment class for it is a

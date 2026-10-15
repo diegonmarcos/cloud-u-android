@@ -51,18 +51,24 @@ if any(p['id'] == 'launcher' for p in pages):
           'and a page of that name would tile beside its own four members')
     sys.exit()
 run = [p['id'] for p in pages if p.get('group') == 'Setup' and p.get('subgroup') == 'Launcher']
-if run != ['presets', 'controls', 'onehand', 'notify']:
+if run != ['controls', 'onehand', 'notify']:
     print('Setup ▸ Launcher = %r' % (run,)); sys.exit()
 ids   = [p['id'] for p in pages]
-first = ids.index('presets')
-if ids[first:first + 4] != run:
-    print('the four are not CONSECUTIVE: %r' % (ids[first:first + 6],)); sys.exit()
+first = ids.index('controls')
+if ids[first:first + 3] != run:
+    print('the three are not CONSECUTIVE: %r' % (ids[first:first + 6],)); sys.exit()
+by = {p['id']: p for p in pages}
+if by['controls'].get('tabs') != ['presets', 'panels'] or by['panels'].get('tabs') != ['panels-ui', 'panels-tools']:
+    print('Controls is not Presets | Panels(UI | Tools): %r / %r' % (by['controls'].get('tabs'), by['panels'].get('tabs'))); sys.exit()
+loose = [i for i in ('presets', 'panels', 'panels-ui', 'panels-tools') if i not in by or not by[i].get('hidden')]
+if loose:
+    print('tab page(s) missing or drawing a tile of their own: %r' % (loose,)); sys.exit()
 hidden = [p['id'] for p in pages if p.get('subgroup') == 'Launcher' and p.get('hidden')]
 if hidden:
     print('still hidden, so it draws no tile of its own: %r' % (hidden,)); sys.exit()
 print('OK')
 PY
-)" "Launcher groups presets, controls, onehand, notify as four consecutive visible pages"
+)" "Setup ▸ Launcher = Controls (tabs Presets | Panels ▸ UI | Tools), One-Hand, Notify as three consecutive visible pages"
 
 echo "== T2: no Configs page is a tab strip any more =="
 # #865 deleted the generic tab-owner rule: its last subject, Store, became a
@@ -78,9 +84,9 @@ print(','.join(p['id'] for p in pages if p.get('tabs')))
 ")
 # Agents (Configs ▸ Fleet ▸ Agents: SuperApp agents | Fleet agents) is the one strip
 # with a check of its own: test-configs-agents-page.sh A2.
-[ "$OWNERS" = "agents" ] \
-  && ok "the only Configs tab strip is Agents, checked by test-configs-agents-page.sh (Store opens Cloud Store since #865)" \
-  || bad "Configs tab strips are [$OWNERS], expected only [agents] - a new one must bring a check of its own"
+[ "$OWNERS" = "controls,agents,panels" ] \
+  && ok "the Configs tab strips are Controls (Presets | Panels), Panels (UI | Tools) and Agents, checked by this tester and test-configs-agents-page.sh (Store opens Cloud Store since #865)" \
+  || bad "Configs tab strips are [$OWNERS], expected controls,agents,panels - a new one must bring a check of its own"
 
 echo "== T3: the One-Hand id SURVIVES (page:config/onehand must still resolve) =="
 check "$(python3 - "$BJ" <<'PY'
@@ -151,8 +157,9 @@ grep -qF 'forPage(sectionId: String, pageId: String): SectionTabsFragment' "$STR
   || bad "SectionTabsFragment.forPage missing"
 
 echo "== T6: every tab routes to its fragment =="
-grep -qF 'pageId == "controls" -> LauncherConfigFragment.newInstance()' "$PAGES" \
-  && ok "Controls tab → LauncherConfigFragment (the ONE producer)" || bad "Controls tab lost its fragment"
+grep -qF 'pageId == "panels-ui" -> LauncherConfigFragment.newInstance(LauncherConfigFragment.SCOPE_UI)' "$PAGES" \
+  && grep -qF 'pageId == "panels-tools" -> LauncherConfigFragment.newInstance(LauncherConfigFragment.SCOPE_TOOLS)' "$PAGES" \
+  && ok "Panels ▸ UI and Tools → LauncherConfigFragment (the ONE producer, two scopes)" || bad "Panels UI/Tools lost their fragment"
 grep -qF 'pageId == "onehand" ->' "$PAGES" \
   && ok "One-Hand tab → OneHandFragment" || bad "One-Hand tab lost its fragment"
 
@@ -209,20 +216,20 @@ section = next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['i
 pages   = {p['id']: p for p in section['pages']}
 if 'profile' not in pages:
     print("the owner's identity page 'profile' is GONE — Configs lost its own tile")
-elif 'presets' not in pages:
-    print("no 'presets' page — the Launcher group has nothing to render")
+elif 'controls' not in pages:
+    print("no 'controls' page — the Launcher group has nothing to render")
 elif pages['profile'].get('hidden'):
     print("'profile' went hidden — the owner's identity tile vanished from Configs")
-elif pages['presets'].get('hidden'):
-    print("'presets' went hidden — #649 promoted it to a direct Launcher tile")
-elif (pages['profile'].get('group'), pages['profile'].get('subgroup')) == (pages['presets'].get('group'), pages['presets'].get('subgroup')):
+elif pages['controls'].get('hidden'):
+    print("'controls' went hidden — it is the Launcher group's direct tile")
+elif (pages['profile'].get('group'), pages['profile'].get('subgroup')) == (pages['controls'].get('group'), pages['controls'].get('subgroup')):
     print("'profile' and 'presets' landed under one heading (%r) — the owner's "
           "identity is Watchdog setup, the launcher preset is not"
           % (pages['profile'].get('group'),))
 else:
     print('OK')
 PY
-)" "profile (Setup ▸ Apps) and presets (Setup ▸ Launcher) are two visible pages under two headings"
+)" "profile (Setup ▸ Apps) and controls (Setup ▸ Launcher) are two visible pages under two headings"
 
 grep -qF 'pageId == "presets" -> LauncherPresetsFragment.newInstance()' "$PAGES" \
   && ok "the presets tab routes to its own fragment" \

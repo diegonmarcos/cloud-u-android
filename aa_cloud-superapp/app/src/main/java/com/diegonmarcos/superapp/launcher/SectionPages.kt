@@ -85,7 +85,11 @@ object SectionPages {
         // Panel ▸ Control grid is hosted inside it as a child fragment, so there
         // is no `control` branch below any more.
         sectionId == "config" && pageId == "presets" -> LauncherPresetsFragment.newInstance()
-        sectionId == "config" && pageId == "controls" -> LauncherConfigFragment.newInstance()
+        // Configs ▸ Setup ▸ Launcher ▸ Controls is a strip over Presets | Panels (`controls` declares
+        // `tabs`, so the strip branch at the top answered it); Panels is a strip over UI | Tools,
+        // two scopes of the ONE switch-board producer.
+        sectionId == "config" && pageId == "panels-ui" -> LauncherConfigFragment.newInstance(LauncherConfigFragment.SCOPE_UI)
+        sectionId == "config" && pageId == "panels-tools" -> LauncherConfigFragment.newInstance(LauncherConfigFragment.SCOPE_TOOLS)
         sectionId == "config" && pageId == "kde"            -> com.diegonmarcos.superapp.kdeconnect.KdeConnectFragment.newInstance()
         // Configs ▸ Fleet ▸ Agents: the `agents` page declares `tabs`, so the strip branch at the top
         // answered it; these are its two tabs, one fragment over the consolidated agent registry.

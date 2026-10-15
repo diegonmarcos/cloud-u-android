@@ -36,7 +36,7 @@ for f in "$BJ" "$KT/settings/LauncherPresetsFragment.kt" "$KT/settings/LauncherM
   [ -f "$f" ] || { echo "  ABORT: no such file: $f"; exit 2; }
 done
 
-echo "== T1: the Launcher group is Presets | Controls | One-Hand | Notify (#580, #649) =="
+echo "== T1: the Launcher group is Controls (Presets | Panels ▸ UI | Tools) | One-Hand | Notify (#580, #649) =="
 # Asserted by LABEL, which is what the owner reads on the screen, and the four
 # labels are unchanged across #649 — it moved them from a tab strip to four
 # direct tiles under a `Launcher` heading, which is the same four words in the
@@ -47,12 +47,14 @@ check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages  = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
               if s['id'] == 'config')['pages']
-group  = [p for p in pages if p.get('subgroup') == 'Launcher']
-labels = [p['label'] for p in group]
-print('OK' if labels == ['Presets', 'Controls', 'One-Hand', 'Notify']
-      else 'Launcher group labels = %r' % (labels,))
+by     = {p['id']: p for p in pages}
+labels = [p['label'] for p in pages if p.get('subgroup') == 'Launcher']
+tabs   = [by[i]['label'] for i in by['controls'].get('tabs', [])]
+sub    = [by[i]['label'] for i in by['panels'].get('tabs', [])]
+print('OK' if (labels, tabs, sub) == (['Controls', 'One-Hand', 'Notify'], ['Presets', 'Panels'], ['UI', 'Tools'])
+      else 'Launcher labels = %r, Controls tabs = %r, Panels tabs = %r' % (labels, tabs, sub))
 PY
-)" "the Launcher group, by label, is Presets · Controls · One-Hand · Notify"
+)" "the Launcher group, by label, is Controls (Presets | Panels ▸ UI | Tools) · One-Hand · Notify"
 
 echo "== T2: Presets declares Sandboxes · Themes · Modes, in order =="
 check "$(python3 - "$BJ" <<'PY'
@@ -150,8 +152,9 @@ done
   || bad "declaration does not reach the app:$miss"
 
 echo "== T8: Controls has ONE producer =="
-grep -q 'sectionId == "config" && pageId == "controls" -> LauncherConfigFragment.newInstance()' "$KT/launcher/SectionPages.kt" \
-  && ok "controls → LauncherConfigFragment" || bad "controls is not routed to LauncherConfigFragment"
+grep -q 'pageId == "panels-ui" -> LauncherConfigFragment.newInstance(LauncherConfigFragment.SCOPE_UI)' "$KT/launcher/SectionPages.kt" \
+  && grep -q 'pageId == "panels-tools" -> LauncherConfigFragment.newInstance(LauncherConfigFragment.SCOPE_TOOLS)' "$KT/launcher/SectionPages.kt" \
+  && ok "Panels ▸ UI and Tools → LauncherConfigFragment (two scopes, one producer)" || bad "Panels UI/Tools are not routed to LauncherConfigFragment"
 grep -q 'ControlFragment.newInstance(embedded = true)' "$KT/settings/LauncherConfigFragment.kt" \
   && ok "…which hosts the Samsung-style grid (ControlFragment) as a child" \
   || bad "the switch board is not hosted by the Controls tab"

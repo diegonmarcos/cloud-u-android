@@ -88,11 +88,19 @@ class LauncherConfigFragment : Fragment() {
         }
         scroll.addView(root)
 
+        // Configs ▸ Launcher ▸ Controls ▸ Panels is two tabs over this ONE producer:
+        // UI (look, layout, animation, screensaver, brightness) and Tools (the device
+        // switch board + default-launcher action). No scope draws both, as before.
+        val scope = arguments?.getString(ARG_SCOPE).orEmpty()
+        val showUi = scope != SCOPE_TOOLS
+        val showTools = scope != SCOPE_UI
+
         // The device switch board leads. ControlFragment is embedded, not
         // re-implemented: one implementation of every tile, one place its
         // behaviour is asserted. It is committed only when nothing is already
         // attached at the host — on a restore the FragmentManager re-binds the
         // existing child to the same stable id and must not be overwritten.
+        if (showTools) {
         val gridHost = FrameLayout(ctx).apply {
             id = R.id.controls_grid_host
             layoutParams = LinearLayout.LayoutParams(
@@ -107,7 +115,9 @@ class LauncherConfigFragment : Fragment() {
                     com.diegonmarcos.superapp.configs.ControlFragment.newInstance(embedded = true))
                 .commit()
         }
+        }
 
+        if (showUi) {
         // ── Screensaver section ────────────────────────────────────
         val settingsPrefs = LauncherSettingsPrefs(ctx)
         root.addView(spacer(ctx, dp(ctx, 24)))
@@ -247,8 +257,10 @@ class LauncherConfigFragment : Fragment() {
             settingsPrefs.brightness = v
             applySystemBrightness(ctx, v)
         })
+        }
 
         // "Set as default launcher" CTA
+        if (showTools) {
         root.addView(spacer(ctx, dp(ctx, 16)))
         root.addView(TextView(ctx).apply {
             text = if (isDefaultLauncher(ctx))
@@ -277,6 +289,7 @@ class LauncherConfigFragment : Fragment() {
                 }
             }
         })
+        }
 
         return scroll
     }
@@ -722,7 +735,14 @@ class LauncherConfigFragment : Fragment() {
     }
 
     companion object {
-        fun newInstance() = LauncherConfigFragment()
+        /** [scope] "ui" / "tools" draws one Panels tab; "" draws the whole page. */
+        fun newInstance(scope: String = "") = LauncherConfigFragment().apply {
+            arguments = android.os.Bundle().apply { putString(ARG_SCOPE, scope) }
+        }
+
+        private const val ARG_SCOPE = "scope"
+        const val SCOPE_UI = "ui"
+        const val SCOPE_TOOLS = "tools"
 
         // The same two numbers Configs ▸ Panel ▸ Control uses for its badges, so
         // the two grids read as one screen. #338 is why they are stated once:

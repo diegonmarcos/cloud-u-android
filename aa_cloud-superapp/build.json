@@ -2984,6 +2984,12 @@
                 "target": "app://com.diegonmarcos.superapp"
               },
               {
+                "_doc": "Rule between tile groups (owner order: SuperApp | Account | Store, Controls, Firewall | C3 | About).",
+                "id": "configs-sep-1",
+                "label": "|",
+                "separator": true
+              },
+              {
                 "_doc": "Configs ▸ Setup ▸ Apps ▸ Account, as a tile in row 1 of the Cloud ▸ Apps ▸ Configs group (owner order 2026-10: SuperApp, Account, Configs | Store, Presets, Firewall | C3). Opens the same page the Configs grid tile does.",
                 "id": "configs-account",
                 "label": "Account",
@@ -2997,8 +3003,8 @@
                 "target": "section:config"
               },
               {
-                "_doc": "The same separator element as Data Apps (`separator: true`, label \"|\"): the rule between row 1 (SuperApp, Account, Configs) and row 2 (Store, Presets, Firewall).",
-                "id": "configs-sep-1",
+                "_doc": "Rule between tile groups (owner order: SuperApp | Account | Store, Controls, Firewall | C3 | About).",
+                "id": "configs-sep-2",
                 "label": "|",
                 "separator": true
               },
@@ -3009,11 +3015,11 @@
                 "target": "extapp:cloud-store"
               },
               {
-                "_doc": "Configs ▸ Launcher ▸ Presets, first page after the group label and its separator (owner order: Configs | Presets, Store, C3, About).",
-                "id": "configs-presets",
-                "label": "Presets",
-                "icon": "ic_p_sol_personal",
-                "target": "page:config/presets"
+                "_doc": "Configs ▸ Setup ▸ Launcher ▸ Controls — the merged Controls entry (tabs Presets | Panels ▸ UI | Tools); replaces the old Presets tile in this row.",
+                "id": "configs-controls",
+                "label": "Controls",
+                "icon": "ic_home",
+                "target": "page:config/controls"
               },
               {
                 "_doc": "Configs ▸ Setup ▸ Network ▸ Firewall, as a tile in row 2 of the Cloud ▸ Apps ▸ Configs group. Opens the same page the Configs grid tile does.",
@@ -3023,8 +3029,8 @@
                 "target": "page:config/firewall"
               },
               {
-                "_doc": "Second rule: row 2 (Store, Presets, Firewall) | row 3 (C3, About).",
-                "id": "configs-sep-2",
+                "_doc": "Rule between tile groups (owner order: SuperApp | Account | Store, Controls, Firewall | C3 | About).",
+                "id": "configs-sep-3",
                 "label": "|",
                 "separator": true
               },
@@ -3034,6 +3040,12 @@
                 "label": "C3",
                 "icon": "ic_p_watchdog",
                 "target": "extapp:cloud-c3"
+              },
+              {
+                "_doc": "Rule between tile groups (owner order: SuperApp | Account | Store, Controls, Firewall | C3 | About).",
+                "id": "configs-sep-4",
+                "label": "|",
+                "separator": true
               },
               {
                 "_doc": "Configs ▸ Observability ▸ About, last of the owner-ordered tiles (Configs | Presets, Store, C3, About).",
@@ -4701,7 +4713,7 @@
         "grid_columns": 8,
         "_doc_pages_order": "Order here is the single source of truth \u2014 it drives the Configs page-grid, its SECTION and SUBSECTION headings, and (via home_groups tiles_from_section: 'config') the Home Apps Configs row. TWO LEVELS, DECLARED PER PAGE (#649): `group` is the section heading a tile sits under and `subgroup` is the heading below it, both rendered verbatim by TileGridFragment \u2014 the words \"Launcher\", \"Setup\", \"Apps\", \"Network\" and \"Observability\" appear in no Kotlin file, which is the same contract `label` already keeps for a page name. There is deliberately no parallel group map: a run of consecutive pages carrying the same group/subgroup IS the group, so moving an entry in this array moves it on the screen and a group with no pages left simply stops being drawn. A page that declares no group falls under the default Pages heading, which is every other section in this file. #649 replaced the old flat shape (Account/WireGuard/KDE/AI/Permissions \u2014 Launcher \u2014 Store/About, held together by `row_break`): Launcher stopped being a page wearing four tabs and became the TITLE over its four subpages as direct tiles, and the rest became Setup \u25b8 Apps + Setup \u25b8 Observability. `row_break: true` still starts a fresh grid row at a tile without printing a heading; no page in this section needs it any more, because every row break here is now a group boundary. ACTIONS ARE UNCHANGED: the trailing `is_action` entries are the same three, rendered under the same Actions heading from the same flag, and they carry no group \u2014 the grid appends them last whatever their position in this array. #723 (#878 relabelled: group Watchdog is now Setup, subgroups Setup/Mesh are Apps/Network): OWNER REGROUP (Agents): the order is Launcher, Apps, Setup. Apps is a group with no subgroup and holds C3 · Peer Control · Agents (C3 and Peer Control moved out of Setup ▸ Network with their ids unchanged, so page:config/c3 and page:config/kde are the same links; the Network separator went with them, see removed_pages). Before that regroup, the Setup group had THREE sub-sections in this order — Apps (Account · Permissions · Store), Network (WireGuard · Peer Control) and Observability (About) — and the AI page is gone (see removed_pages). #REORG 2026-10: Configs is exactly THREE sections, in this order: Setup (subgroups Apps = Account/Permissions/Store, Launcher = Presets/Controls/One-Hand/Notify, Network), Fleet (the former Apps group: C3 · Peer Control · Agents) and Observability (About). No ids changed, so every page:config/<id> link is intact. #733: Network is Cloud Mesh (the wg page, relabelled) · Peer Control · Apps Mesh (the Store's mesh page, reached from here too).",
         "_doc_retired_pages": "#697. A config page id that no longer exists, mapped to the pages its content lives on now. The page set is guarded: test-configs-two-sections.sh T9 holds the ids as they stood before #649 regrouped this section and fails if any of them is missing from `pages` without being named here, or if a page named here is still declared, or if one of its successors is not. So a page cannot be dropped by a regroup — removing one is a declared act with a declared destination. `launcher` is the only entry: #649 dissolved the page that wore four tabs and made those four tabs direct pages under the Launcher heading. Read by the tester only; the app routes by `pages` and never needs to know what was retired.",
-        "retired_pages": { "launcher": ["presets", "controls", "onehand", "notify"] },
+        "retired_pages": { "launcher": ["controls", "onehand", "notify"] },
         "_doc_removed_pages": "#723. A config page id that was DELETED rather than moved, with the reason. Distinct from retired_pages on purpose: a retired page names the visible pages its content lives on now, and these have none in Configs — the owner removed the AI page outright because AI tokens are managed in Account (the vault cockpit AI card applies them), so the five-tab AI strip and every tab under it went with it, and the Account card's link to the page was removed rather than left pointing at nothing. Guarded by test-configs-two-sections.sh T9 (the id may not be declared, must have existed, must carry a reason) and T12 (no route, page: target or Kotlin branch may still name it). Read by the tester only.",
         "removed_pages": { "ai": "AI page deleted; AI tokens are managed in Account", "websearch": "tab of the deleted AI page (an unbuilt agent placeholder)", "localsearch": "tab of the deleted AI page (an unbuilt agent placeholder)", "textenhance": "tab of the deleted AI page; each app keeps its own Text Enhance editor", "library": "tab of the deleted AI page (an unbuilt agent placeholder)", "tokens": "tab of the deleted AI page; AI tokens are managed in Account", "network-sep-1": "the Setup ▸ Network separator divided C3 and Peer Control from the network engines; both moved to the Configs ▸ Fleet group (then named Apps), so it had nothing left to divide" },
         "pages": [
@@ -4714,14 +4726,7 @@
             "action": "extapp:cloud-account",
             "_doc_867": "#867 Account is its own app (ac_cloud-account, com.diegonmarcos.cloudaccount). This entry opens it: its action extapp:cloud-account is the tile's target. Not is_action, so the tile keeps its place under Setup > Apps instead of moving to the Actions row, and when it is not installed ui.external_apps[id=cloud-account].install_apk_url is offered. The page itself stays, hidden, for page: routes; AccountHandoff shows Open Cloud Account on it once the app is installed and the page itself (libs:account) until then.",
             "group": "Setup",
-            "subgroup": "Apps"
-          },
-          {
-            "id": "perms",
-            "label": "Permissions",
-            "icon": "ic_settings",
-            "group": "Setup",
-            "subgroup": "Apps"
+            "subgroup": "Connect"
           },
           {
             "_doc": "#563 THE STORE — the one declaration of its identity (id `store`) and its display title (label). It was 'Constellation', an action page (action:constellation) with its own branch in ShellActivity; it is now an ordinary tabbed page, so every way in is a page: target resolved by the same strip Home/Launcher/AI use. Tab 1 is the fleet (every constellation APK: install/update/uninstall/open, per-app versions and digests); tab 2 is every launchable APK on the phone, each row with Update (fleet apps only, through the fleet's own install path) / Open / Stop / Remove / App info / its origin store read from the real installer (#564; map in libs/appstore assets/appstore-install-sources.json). Both tabs group by the central classification (ui.phone_folders + ui.phone_sections, through PhoneTaxonomy) — the store holds no taxonomy of its own. test-store-identity.sh guards that nothing routes here by the old name and that every tile pointing here carries this label.",
@@ -4735,18 +4740,18 @@
             "subgroup": "Apps"
           },
           {
-            "_doc": "Tab 1 of Launcher — the PRESETS: things you pick in one tap. Three groups, declared in ui.launcher_presets (order, names and which declaration feeds each group): Sandboxes (ui.launcher_profiles — Work · Personal · Guest), Themes (ui.launcher_themes — Cloud Purple · Cloud Minimalistic) and Modes (ui.launcher_modes — Power · Focus · Saving Energy). LauncherPresetsFragment draws them and owns no name of its own. Its id is `presets`, not `profile`, because `profile` is already this section's own top-level page (the owner's identity) and a section cannot hold two pages under one id. Nothing persisted moves with the rename: LauncherProfilePrefs/LauncherThemePrefs/LauncherModePrefs key off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
-            "id": "presets",
-            "label": "Presets",
-            "icon": "ic_p_sol_personal",
+            "id": "perms",
+            "label": "Permissions",
+            "icon": "ic_settings",
             "group": "Setup",
-            "subgroup": "Launcher"
+            "subgroup": "Apps"
           },
           {
             "_doc": "Tab 2 of Launcher — the CONTROLS (#574): ONE producer, LauncherConfigFragment, drawing the device/fleet switchboard (the Samsung-style icon grid declared in ui.control_panel and implemented in configs/DeviceControls.kt, formerly Configs ▸ Panel ▸ Control) followed by the launcher's own screensaver, switches, sliders and set-as-default-launcher. The theme picker that used to open this tab moved to Presets ▸ Themes — the SAME LauncherThemes.apply, not a copy. Nothing persisted moves with it: LauncherSettingsPrefs keys off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
             "id": "controls",
             "label": "Controls",
             "icon": "ic_home",
+            "tabs": ["presets", "panels"],
             "group": "Setup",
             "subgroup": "Launcher"
           },
@@ -4846,6 +4851,35 @@
             "label": "About",
             "icon": "ic_settings",
             "group": "Observability"
+          },
+          {
+            "_doc": "Tab 1 of Launcher — the PRESETS: things you pick in one tap. Three groups, declared in ui.launcher_presets (order, names and which declaration feeds each group): Sandboxes (ui.launcher_profiles — Work · Personal · Guest), Themes (ui.launcher_themes — Cloud Purple · Cloud Minimalistic) and Modes (ui.launcher_modes — Power · Focus · Saving Energy). LauncherPresetsFragment draws them and owns no name of its own. Its id is `presets`, not `profile`, because `profile` is already this section's own top-level page (the owner's identity) and a section cannot hold two pages under one id. Nothing persisted moves with the rename: LauncherProfilePrefs/LauncherThemePrefs/LauncherModePrefs key off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
+            "id": "presets",
+            "label": "Presets",
+            "icon": "ic_p_sol_personal",
+            "hidden": true
+          },
+          {
+            "_doc": "Configs ▸ Setup ▸ Launcher ▸ Controls ▸ Panels — today's Controls content (device switch board, screensaver, toggles, icons per row, brightness) as a strip over its two halves, UI and Tools. A hidden tab of `controls`; the id `controls` now names the strip itself, so page:config/controls and page:config/presets both land on the Controls entry.",
+            "id": "panels",
+            "label": "Panels",
+            "icon": "ic_home",
+            "tabs": ["panels-ui", "panels-tools"],
+            "hidden": true
+          },
+          {
+            "_doc": "Panels ▸ UI — the look, layout and behaviour panels: Screensaver (+ idle timer), every ui.launcher_settings toggle group (Battery Hungers, Connectivity, Notifications, Others incl. Screen scale), Icons per row, Screen brightness. LauncherConfigFragment scope ui.",
+            "id": "panels-ui",
+            "label": "UI",
+            "icon": "ic_home",
+            "hidden": true
+          },
+          {
+            "_doc": "Panels ▸ Tools — the action/utility panels: the device switch board (ui.control_panel: Device, Network and Tools groups — Torch, DND, Wi-Fi, Firewall, Wireless debugging …) and the Set-as-default-launcher action. LauncherConfigFragment scope tools.",
+            "id": "panels-tools",
+            "label": "Tools",
+            "icon": "ic_settings",
+            "hidden": true
           },
           {
             "_doc": "Configs ▸ About ▸ Battery — the battery Source of Truth's full stats page (aa_cloud-superapp batterystats/BatteryStatsFragment over libs:battery BatteryRepository/BatteryTruth): Now + Since last charge (the home-screen popup's sections, the same rows), the level graph over 24 h / 7 d, estimated vs design capacity, cycles, temperature/voltage spreads, the discharge-cycle and charge-session tables, and the privileged extras (gauge sysfs, per-app power) through the shell channel. hidden = no tile of its own: About's Battery section, the battery popup's 'Battery stats ›' and the Battery badge open it as page:config/battery.",

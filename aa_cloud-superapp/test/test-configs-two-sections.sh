@@ -58,11 +58,11 @@ for p in pages:
     if p.get('hidden') or p.get('is_action'): continue
     key = (p.get('group', ''), p.get('subgroup', ''))
     if key != last: shape.append(key); last = key
-want = [('Setup', 'Apps'), ('Setup', 'Launcher'), ('Setup', 'Network'),
+want = [('Setup', 'Connect'), ('Setup', 'Apps'), ('Setup', 'Launcher'), ('Setup', 'Network'),
         ('Fleet', ''), ('Observability', '')]
 print('OK' if shape == want else 'heading runs = %r' % (shape,))
 PY
-)" "Setup ▸ Apps, ▸ Launcher, ▸ Network, then Fleet, then Observability — three sections, each appearing ONCE"
+)" "Setup ▸ Connect, ▸ Apps, ▸ Launcher, ▸ Network, then Fleet, then Observability — three sections, each appearing ONCE"
 
 echo "== T2: each heading holds exactly the pages the owner named =="
 check "$(python3 - "$BJ" <<'PY'
@@ -74,9 +74,10 @@ def members(g, s=''):
             if not p.get('hidden') and not p.get('is_action')
             and p.get('group', '') == g and p.get('subgroup', '') == s]
 want = {
-    ('Setup', 'Launcher'):             ['Presets', 'Controls', 'One-Hand', 'Notify'],
+    ('Setup', 'Launcher'):             ['Controls', 'One-Hand', 'Notify'],  # Controls = tabs Presets | Panels (UI | Tools)
     ('Fleet', ''):                     ['C3', 'Peer Control', 'Agents'],
-    ('Setup', 'Apps'):             ['Account', 'Permissions', 'Store'],
+    ('Setup', 'Connect'):          ['Account'],
+    ('Setup', 'Apps'):             ['Store', 'Permissions'],
     ('Setup', 'Network'):              ['Firewall', 'DNS', 'Cloud Mesh', 'Apps Mesh', 'IPC', 'ADB Shell'],
     ('Observability', ''):          ['About'],
 }
@@ -84,7 +85,7 @@ problems = ['%s%s = %r' % (g, ' ▸ ' + s if s else '', members(g, s))
             for (g, s), exp in want.items() if members(g, s) != exp]
 print('; '.join(problems) or 'OK')
 PY
-)" "Setup ▸ Launcher = Presets/Controls/One-Hand/Notify; Fleet = C3/Peer Control/Agents; Setup ▸ Apps = Account/Permissions/Store; Network = Firewall/DNS/Cloud Mesh/Apps Mesh/IPC/ADB Shell (#733, #740, #ipc); Observability = About"
+)" "Setup ▸ Connect = Account; Setup ▸ Launcher = Controls/One-Hand/Notify; Fleet = C3/Peer Control/Agents; Setup ▸ Apps = Store/Permissions; Network = Firewall/DNS/Cloud Mesh/Apps Mesh/IPC/ADB Shell (#733, #740, #ipc); Observability = About"
 
 echo "== T3: Store is the former Constellation, and Cloud Constellation is INSIDE it =="
 # #563 renamed the Constellation page Store; the word survives as the label of
@@ -200,7 +201,9 @@ pages = next(s for s in json.load(raw)['ui']['sections']
              if s['id'] == 'config')['pages']
 by_id   = {p['id']: p for p in pages}
 tiled   = {p['id'] for p in pages if not p.get('hidden')}
-as_tab  = {t: p['id'] for p in pages if p['id'] in tiled for t in p.get('tabs', [])}
+as_tab  = {}
+for _ in range(4):  # tabs of tabs (Controls > Panels > UI | Tools): walk until nothing new is reachable
+    as_tab.update({t: p['id'] for p in pages if p['id'] in tiled or p['id'] in as_tab for t in p.get('tabs', [])})
 # A `page:config/<id>` anywhere in this file is a live door of its own.
 targeted = set(re.findall(r'page:config/([A-Za-z0-9_-]+)', raw))
 orphans = []
@@ -224,9 +227,9 @@ import json
 print(len(next(s for s in json.load(open('$BJ'))['ui']['sections']
                if s['id'] == 'config')['pages']))
 ")
-[ "$COUNT" = 25 ] \
-  && ok "25 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs; #ipc: plus ipc)" \
-  || bad "$COUNT config pages, expected 25 — a page was added or DELETED, and T5 cannot report a page that is gone"
+[ "$COUNT" = 28 ] \
+  && ok "28 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs; #ipc: plus ipc; Controls merge: plus panels, panels-ui and panels-tools)" \
+  || bad "$COUNT config pages, expected 28 — a page was added or DELETED, and T5 cannot report a page that is gone"
 
 echo "== T6: ACTIONS IS UNTOUCHED =="
 # The owner said to keep it as it is. Three things make that true: the same three
@@ -278,7 +281,7 @@ grep -qF 'shownSub = null' "$GRID" \
 echo "== T8: each of Launcher's four pages opens on its OWN, not via a tab owner =="
 # They were tabs until #649. A tile that still resolves to an owner page would
 # land the owner on a tab strip that no longer exists.
-for pid in presets controls onehand notify; do
+for pid in presets panels-ui panels-tools onehand notify; do
   case "$pid" in
     notify) grep -qF '"mirror_page": "communication/my-rss"' "$BJ" \
               && ok "notify renders through its declared mirror_page, no factory branch needed" \
@@ -304,6 +307,7 @@ BEFORE = {'presets', 'controls', 'onehand', 'notify', 'launcher',
           'profile', 'wg', 'kde', 'ai', 'perms', 'store', 'about',
           'websearch', 'localsearch', 'textenhance', 'library', 'tokens',
           'store-cloud', 'store-phone',
+          'panels', 'panels-ui', 'panels-tools',  # added on purpose: Configs ▸ Setup ▸ Launcher ▸ Controls ▸ Panels (UI | Tools), hidden tabs of the merged Controls
           'update', 'kde_connect', 'animations',
           'apps-mesh',  # #733 added on purpose: Configs ▸ Mesh ▸ Apps Mesh (the Store's mesh page)
           'ipc',        # #ipc added on purpose: Configs ▸ Network ▸ IPC (the fleet's IPC Mesh, libs:appstore IpcMeshPage)
@@ -339,7 +343,7 @@ for rid, into in sorted(retired.items()):
         if s not in tiled: problems.append('retired %r -> %r, which is not a visible page' % (rid, s))
 print('; '.join(problems) or 'OK')
 PY
-)" "every pre-regroup config page id is still declared, retired into visible successors (launcher → its four tabs), or removed with a reason (ai + its five tabs)"
+)" "every pre-regroup config page id is still declared, retired into visible successors (launcher → Controls, One-Hand, Notify; Presets is a tab of Controls), or removed with a reason (ai + its five tabs)"
 
 REMOVED=$(python3 -c "
 import json
@@ -403,8 +407,9 @@ for g, s, label, icon in tiles:
     if s and s != s0: out.append('S:' + s.upper()); s0 = s
     out.append('%s[%s]' % (label, icon))
 want = ['H:SETUP',
-        'S:APPS',         'Account[ic_settings]', 'Permissions[ic_settings]', 'Store[ic_refresh]',
-        'S:LAUNCHER',     'Presets[ic_p_sol_personal]', 'Controls[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
+        'S:CONNECT',      'Account[ic_settings]',
+        'S:APPS',         'Store[ic_refresh]', 'Permissions[ic_settings]',
+        'S:LAUNCHER',     'Controls[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
         'S:NETWORK',          'Firewall[ic_lock]', 'DNS[ic_world]', 'Cloud Mesh[ic_wg]', 'Apps Mesh[ic_mode_apps]', 'IPC[ic_mode_apps]', 'ADB Shell[ic_settings]',
         'H:FLEET',        'C3[ic_p_watchdog]', 'Peer Control[ic_kde]', 'Agents[ic_robot]',
         'H:OBSERVABILITY', 'About[ic_settings]',
@@ -416,7 +421,7 @@ else:
     print('rendered != spec: ' + ' | '.join(l for l in difflib.unified_diff(want, out, lineterm='', n=0)
                                            if l[:1] in '+-' and l[:3] not in ('+++', '---')))
 PY
-)" "grid = SETUP ▸ APPS[Account,Permissions,Store] ▸ LAUNCHER[Presets,Controls,One-Hand,Notify] ▸ NETWORK[Firewall,DNS,Cloud Mesh,Apps Mesh,IPC,ADB Shell] FLEET[C3,Peer Control,Agents] OBSERVABILITY[About] ACTIONS[Update All,KDE Connect,Animations]"
+)" "grid = SETUP ▸ CONNECT[Account] ▸ APPS[Store,Permissions] ▸ LAUNCHER[Controls,One-Hand,Notify] ▸ NETWORK[Firewall,DNS,Cloud Mesh,Apps Mesh,IPC,ADB Shell] FLEET[C3,Peer Control,Agents] OBSERVABILITY[About] ACTIONS[Update All,KDE Connect,Animations]"
 
 echo "== T12: THE AI PAGE IS GONE, not hidden — no route, target or tile names it (#723) =="
 # Deleting a declaration and leaving its door behind is the dead-tile failure:
