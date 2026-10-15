@@ -1,12 +1,8 @@
 package com.diegonmarcos.superapp.onehand
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.provider.Settings
 import android.graphics.Color
@@ -54,7 +50,9 @@ class OneHandOverlayService : Service() {
         super.onCreate()
         instance = this
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        startForegroundCompat()
+        // NO foreground service, NO notification: overlay windows need only
+        // "Display over other apps". Wipe what pre-fix builds left behind.
+        OneHandController.retireLegacyNotification(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -76,32 +74,6 @@ class OneHandOverlayService : Service() {
         }
         showHandles()
         return START_STICKY
-    }
-
-    private fun startForegroundCompat() {
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        if (android.os.Build.VERSION.SDK_INT >= 26) {
-            nm.deleteNotificationChannel(OLD_CHANNEL)
-            nm.createNotificationChannel(
-                NotificationChannel(CHANNEL, "Edge menus", NotificationManager.IMPORTANCE_MIN).apply {
-                    setShowBadge(false)
-                    lockscreenVisibility = Notification.VISIBILITY_SECRET
-                    setSound(null, null)
-                    enableVibration(false)
-                    enableLights(false)
-                })
-        }
-        val n = (if (android.os.Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL)
-                 else @Suppress("DEPRECATION") Notification.Builder(this))
-            .setSmallIcon(applicationInfo.icon)
-            .setContentTitle("Edge menus on")
-            .setOngoing(false)
-            .setCategory(Notification.CATEGORY_SERVICE)
-            .setVisibility(Notification.VISIBILITY_SECRET)
-            .build()
-        if (android.os.Build.VERSION.SDK_INT >= 34) {
-            startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-        } else startForeground(NOTIF_ID, n)
     }
 
     override fun onDestroy() {
@@ -383,9 +355,6 @@ class OneHandOverlayService : Service() {
         private const val OVERLAY_ALPHA = 0.6f
         const val ACTION_TEST = "com.diegonmarcos.superapp.onehand.TEST"
         const val EXTRA_MS = "ms"
-        private const val OLD_CHANNEL = "onehand_overlay"
-        private const val CHANNEL = "onehand_overlay_min"
-        private const val NOTIF_ID = 7750
         @Volatile var instance: OneHandOverlayService? = null
             private set
         val isRunning: Boolean get() = instance != null

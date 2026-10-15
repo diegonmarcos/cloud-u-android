@@ -3,8 +3,6 @@
 
     <!-- Draw the edge handles over other apps. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Centauri star inner ring: kill background processes of non-foreground
          apps (CentaurusStar.recentsAction "close_all" / "kill_bg"). Normal-level
@@ -13,18 +11,13 @@
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
 
     <application>
-        <!-- Hosts the edge handles, gesture preview and menus. A plain foreground
-             service: needs ONLY "Display over other apps", no Accessibility.
+        <!-- Hosts the edge handles, gesture preview and menus. A plain started
+             service (NOT foreground: no notification): needs ONLY "Display over other apps", no Accessibility.
              Started by OneHandController (toggle / app start) and the boot
              receiver below, and only while OneHandPrefs says ON (#775). -->
         <service
             android:name=".OneHandOverlayService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Edge-handle gesture overlay that launches apps from the screen edges" />
-        </service>
+            android:exported="false" />
 
         <receiver
             android:name=".OneHandBootReceiver"

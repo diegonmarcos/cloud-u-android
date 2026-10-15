@@ -6,7 +6,7 @@ import android.provider.Settings
 
 /**
  * Entry point app/ (the Configs/Onehand toggle) calls. The overlay is hosted by
- * [OneHandOverlayService], a plain foreground service that needs ONLY "Display
+ * [OneHandOverlayService], a plain started service (no notification, ever) that needs ONLY "Display
  * over other apps" — no Accessibility. Enabling persists the flag and starts it;
  * disabling persists the flag and stops it. GRANTING the permission is the
  * centralized Configs > Permissions page's job — this controller never
@@ -39,6 +39,7 @@ object OneHandController {
     /** App / boot start: host the handles iff the switch is ON (#775: OFF stays
      *  off) and the overlay permission is held. A no-op otherwise. */
     fun startIfEnabled(ctx: Context) {
+        retireLegacyNotification(ctx)
         if (isOn(ctx) && ready(ctx)) start(ctx)
     }
 
@@ -53,5 +54,21 @@ object OneHandController {
     private fun start(
         ctx: Context,
         i: Intent = Intent(ctx, OneHandOverlayService::class.java),
-    ): Boolean = runCatching { ctx.startForegroundService(i) }.isSuccess
+    ): Boolean = runCatching { ctx.startService(i) }.isSuccess
+
+    /** Pre-fix builds ran the overlay as a foreground service with an "Edge
+     *  menus on" notification on two channels. Remove all trace on upgrade:
+     *  the posted notification and both channels. Idempotent, never throws. */
+    fun retireLegacyNotification(ctx: Context) {
+        runCatching {
+            val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            nm.cancel(LEGACY_NOTIF_ID)
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                LEGACY_CHANNELS.forEach { nm.deleteNotificationChannel(it) }
+            }
+        }
+    }
+
+    private const val LEGACY_NOTIF_ID = 7750
+    private val LEGACY_CHANNELS = listOf("onehand_overlay", "onehand_overlay_min")
 }
