@@ -97,7 +97,6 @@ internal object SignatureHtmlTools {
      */
     fun previewDocument(source: String, textColour: String = "#000000", background: String = "#ffffff"): String =
         "<!doctype html><html><head><meta charset=\"utf-8\">" +
-            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
             "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src https: http: data:; style-src 'unsafe-inline'\">" +
             "<style>body{margin:8px;font:14px sans-serif;color:$textColour;background:$background;word-wrap:break-word}" +
             "img{max-width:100%;height:auto}</style></head><body>" +
