@@ -4,4 +4,7 @@ plugins {
     id 'com.android.library'     version '8.7.3' apply false
     id 'org.jetbrains.kotlin.android'            version '2.3.20' apply false
     id 'org.jetbrains.kotlin.plugin.serialization' version '2.3.20' apply false
+    // 2026-10-15 owner decision: all apps must be Compose. libs:updater's overlay is a ComposeView, so the
+    // compose compiler must be resolvable from this root (it ships at Kotlin's version).
+    id 'org.jetbrains.kotlin.plugin.compose'       version '2.3.20' apply false
 }

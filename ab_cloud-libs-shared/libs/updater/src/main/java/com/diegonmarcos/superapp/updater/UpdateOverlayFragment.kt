@@ -1,15 +1,38 @@
 package com.diegonmarcos.superapp.updater
 
-import android.graphics.Typeface
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.core.NotificationStore
 import com.diegonmarcos.superapp.core.StoreNotifyGate
@@ -23,257 +46,74 @@ import com.diegonmarcos.superapp.core.StoreNotifyGate
  *   Downloading      → percent bar + "Downloading 42%" + bytes/total
  *   Installing       → indeterminate spinner + "Installing…"
  *   Failed           → message + Dismiss
+ *
+ * 2026-10-15 owner decision: all apps must be Compose. The view is a ComposeView over [state]; the
+ * hosts' contract is unchanged (add the fragment, call [applyState] on every progress tick), and the
+ * overlay is shown over both View and Compose hosts.
  */
 class UpdateOverlayFragment : Fragment() {
 
-    private lateinit var titleView: TextView
-    private lateinit var detailView: TextView
-    private lateinit var progressBar: ProgressBar
-    private lateinit var dismissButton: TextView
-    private lateinit var cancelButton: TextView
-    private lateinit var minimizeButton: TextView
-    private lateinit var updateNowButton: TextView
-    private lateinit var diagnoseButton: TextView
-    private lateinit var actionRow: LinearLayout
+    /** What the host last told us; every part of the screen is derived from it. */
+    private var state by mutableStateOf<UpdateProgress.State>(UpdateProgress.state)
+
     /** Report text once collected, so Copy/Save/Send all send the SAME bytes
      *  the user just read rather than re-collecting a slightly different one. */
     private var report: String? = null
     private var failed: UpdateProgress.State.Failed? = null
+    private var showingReport by mutableStateOf(false)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
-        val root = FrameLayout(ctx).apply {
-            // Solid dark scrim so the overlay is unambiguously the focus.
-            setBackgroundColor(0xE6000000.toInt())
-            isClickable = true; isFocusable = true
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
-        }
-        val column = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            val pad = dp(24); setPadding(pad, pad, pad, pad)
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-            )
-        }
-        titleView = TextView(ctx).apply {
-            setTextColor(0xFFE9D8FD.toInt())
-            typeface = Typeface.DEFAULT_BOLD
-            setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-            text = ""
-        }
-        progressBar = ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal).apply {
-            isIndeterminate = true
-            max = 100
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(8),
-            ).apply { topMargin = dp(20); bottomMargin = dp(8) }
-        }
-        detailView = TextView(ctx).apply {
-            setTextColor(0xCCFFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Body1)
-            text = ""
-        }
-        // Dismiss control — shown ONLY on terminal states (Failed / Done) so
-        // the user can read the error and hand controls back. During an active
-        // check/download/install it stays hidden (the scrim blocks input on
-        // purpose). Tapping it drives UpdateProgress → Idle, which makes
-        // the host activity remove this overlay.
-        dismissButton = TextView(ctx).apply {
-            text = "OK"
-            gravity = Gravity.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(0xFFFFFFFF.toInt())
-            setBackgroundColor(0xFF7C3AED.toInt())
-            setPadding(dp(28), dp(12), dp(28), dp(12))
-            isClickable = true; isFocusable = true
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(28) }
-            setOnClickListener { UpdateProgress.reset() }
-        }
-        // Cancel control — shown DURING an active check/download/install so a
-        // stuck update can always be aborted (the reported "can't cancel when it
-        // gets stuck" bug). Aborts the worker + flips state to Cancelled.
-        cancelButton = TextView(ctx).apply {
-            text = "Cancel"
-            gravity = Gravity.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(0xFFFFFFFF.toInt())
-            setBackgroundColor(0xFF4A4A55.toInt())
-            setPadding(dp(28), dp(12), dp(28), dp(12))
-            isClickable = true; isFocusable = true
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(20) }
-            setOnClickListener { runCatching { Updater.cancelNow(requireContext()) } }
-        }
-        // Minimize — "give me my screen back", NOT "stop". Shown beside Cancel
-        // during any active state, because a manual update the user chose to
-        // start is still not a reason to hold the whole screen hostage until it
-        // finishes. It is deliberately a peer of Cancel and not a corner "x":
-        // the two outcomes are different enough that the safe one has to be as
-        // easy to hit as the destructive one.
-        //
-        // This touches UpdateProgress' VISIBILITY latch only. No cancelNow, no
-        // reset, no state write — the download and install carry on untouched
-        // and never learn this happened. The scrim goes with the fragment, so
-        // input returns to the app underneath.
-        minimizeButton = TextView(ctx).apply {
-            text = "Minimize"
-            gravity = Gravity.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(0xFFFFFFFF.toInt())
-            setBackgroundColor(0xFF4A4A55.toInt())
-            setPadding(dp(28), dp(12), dp(28), dp(12))
-            isClickable = true; isFocusable = true
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(12) }
-            setOnClickListener {
-                runCatching {
-                    val c = requireContext()
-                    // Tell the user where the work went and how to get it back,
-                    // on the feed they already have. Reusing NotificationStore
-                    // rather than adding a status surface is the whole point —
-                    // this complaint has produced four of those already.
-                    if (StoreNotifyGate.mayPost(c)) NotificationStore.push(
-                        ctx      = c,
-                        source   = "Updater",
-                        title    = "Update continues in the background",
-                        body     = (UpdateProgress.batchLabel ?: "Update") +
-                            " is still running. Tap Check for updates to bring the progress view back.",
-                        severity = NotificationStore.Sev.INFO,
-                    )
-                    // Latch first, then drop the view: the host re-attaches on
-                    // the next progress tick, so removing the fragment without
-                    // setting the latch would simply bounce it back on screen.
-                    UpdateProgress.minimize()
-                    parentFragmentManager.beginTransaction()
-                        .remove(this@UpdateOverlayFragment)
-                        .commitAllowingStateLoss()
-                }
-            }
-        }
-        // "Update now" — shown ONLY on the metered UpdateAvailable prompt. Grants
-        // consent to download over mobile data; kicks a forced one-shot check.
-        updateNowButton = TextView(ctx).apply {
-            text = "Update now"
-            gravity = Gravity.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(0xFFFFFFFF.toInt())
-            setBackgroundColor(0xFF7C3AED.toInt())
-            setPadding(dp(28), dp(12), dp(28), dp(12))
-            isClickable = true; isFocusable = true
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(20) }
-            setOnClickListener { runCatching { Updater.downloadNow(requireContext()) } }
-        }
-        column.addView(titleView)
-        column.addView(progressBar)
-        column.addView(detailView)
-        // Diagnose — offered only on Failed. "Update failed: <platform string>"
-        // is where every one of these ends, and the platform string names a
-        // symptom, not a cause. This turns the dead end into the local state
-        // that explains it.
-        diagnoseButton = TextView(ctx).apply {
-            text = "Diagnose"
-            gravity = Gravity.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(0xFFFFFFFF.toInt())
-            setBackgroundColor(0xFF2A2A33.toInt())
-            setPadding(dp(24), dp(12), dp(24), dp(12))
-            isClickable = true; isFocusable = true
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(12) }
-            setOnClickListener { showReport(ctx) }
-        }
-        // Copy / Save / Send, revealed with the report. Three because the phone
-        // that cannot reach the network is exactly the phone you most need the
-        // report off, so Send must never be the only way out.
-        actionRow = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(12) }
-        }
-        fun action(label: String, onTap: () -> Unit) = TextView(ctx).apply {
-            text = label
-            gravity = Gravity.CENTER
-            setTextColor(0xFFFFFFFF.toInt())
-            setBackgroundColor(0xFF3A3A45.toInt())
-            setPadding(dp(16), dp(10), dp(16), dp(10))
-            isClickable = true; isFocusable = true
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { rightMargin = dp(8) }
-            setOnClickListener { onTap() }
-        }
-        actionRow.addView(action("Copy") { copyReport(ctx) })
-        actionRow.addView(action("Save") { saveReport(ctx) })
-        if (com.diegonmarcos.superapp.devtools.DiagnosticsPush.canReport()) {
-            actionRow.addView(action("Send") { sendReport(ctx) })
-        }
-        column.addView(diagnoseButton)
-        column.addView(actionRow)
-        column.addView(cancelButton)
-        column.addView(minimizeButton)
-        column.addView(updateNowButton)
-        column.addView(dismissButton)
-        root.addView(column)
-
         applyState(UpdateProgress.state)
-        return root
+        return ComposeView(ctx).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent { OverlayTheme { Overlay() } }
+        }
     }
 
-    fun applyState(state: UpdateProgress.State) {
+    @Composable
+    private fun OverlayTheme(content: @Composable () -> Unit) {
+        val scheme = darkColorScheme(
+            primary = colorResource(R.color.updater_primary),
+            onPrimary = colorResource(R.color.updater_on_primary),
+            surface = colorResource(R.color.updater_scrim),
+            onSurface = colorResource(R.color.updater_title),
+            onSurfaceVariant = colorResource(R.color.updater_detail),
+            secondaryContainer = colorResource(R.color.updater_neutral),
+            surfaceVariant = colorResource(R.color.updater_chip),
+        )
+        MaterialTheme(colorScheme = scheme, content = content)
+    }
+
+    @Composable
+    private fun Overlay() {
+        val st = state
+        val ctx = androidx.compose.ui.platform.LocalContext.current
         // Terminal states (Failed / Done) get the OK button + hidden bar;
         // in-progress states show the bar and hide the button.
-        val terminal = state is UpdateProgress.State.Failed || state is UpdateProgress.State.Done
-        val active = state is UpdateProgress.State.CheckingManifest ||
-            state is UpdateProgress.State.Downloading || state is UpdateProgress.State.Installing
+        val terminal = st is UpdateProgress.State.Failed || st is UpdateProgress.State.Done
+        val active = st is UpdateProgress.State.CheckingManifest ||
+            st is UpdateProgress.State.Downloading || st is UpdateProgress.State.Installing
         // Metered "ask before download" prompt: Update now (primary) + Later
         // (the reused dismiss button, which resets → dismisses the overlay).
-        val prompt = state is UpdateProgress.State.UpdateAvailable
-        dismissButton.visibility = if (terminal || prompt) View.VISIBLE else View.GONE
-        cancelButton.visibility = if (active) View.VISIBLE else View.GONE
-        // Exactly when Cancel shows: while there is something running to walk
-        // away from. On a terminal state there is nothing to minimize — OK
-        // already dismisses.
-        minimizeButton.visibility = if (active) View.VISIBLE else View.GONE
-        updateNowButton.visibility = if (prompt) View.VISIBLE else View.GONE
-        progressBar.visibility = if (terminal || prompt) View.GONE else View.VISIBLE
-        when (state) {
+        val prompt = st is UpdateProgress.State.UpdateAvailable
+        val reportShown = showingReport && st is UpdateProgress.State.Failed
+
+        var title = ""
+        var detail = ""
+        var determinate: Int? = null
+        var dismissLabel = "OK"
+        when (st) {
             is UpdateProgress.State.Idle -> { /* about to dismiss */ }
-            is UpdateProgress.State.Cancelled -> { UpdateProgress.reset() /* dismiss */ }
+            is UpdateProgress.State.Cancelled -> { /* applyState resets it, which dismisses */ }
             is UpdateProgress.State.UpdateAvailable -> {
-                titleView.text = "Update available"
-                detailView.text = "${state.totalBytes.toMib()} MiB · you're on mobile data. Download now?"
-                dismissButton.text = "Later"
+                title = "Update available"
+                detail = "${st.totalBytes.toMib()} MiB · you're on mobile data. Download now?"
+                dismissLabel = "Later"
             }
             is UpdateProgress.State.CheckingManifest -> {
-                titleView.text = batch("Checking for updates…")
-                detailView.text = "Reading GHCR manifest"
-                progressBar.isIndeterminate = true
+                title = batch("Checking for updates…")
+                detail = "Reading GHCR manifest"
             }
             is UpdateProgress.State.Downloading -> {
                 // An unknown total must READ as unknown. Showing "0%" and
@@ -281,39 +121,180 @@ class UpdateOverlayFragment : Fragment() {
                 // moving is the single hardest state to tell apart from a stuck
                 // one, and a determinate bar pinned at zero says "stuck" as
                 // loudly as a bar can.
-                if (state.total > 0) {
-                    titleView.text = batch("Downloading ${state.percent}%")
-                    detailView.text = "${state.bytes.toMib()} / ${state.total.toMib()} MiB"
-                    progressBar.isIndeterminate = false
-                    progressBar.progress = state.percent
+                if (st.total > 0) {
+                    title = batch("Downloading ${st.percent}%")
+                    detail = "${st.bytes.toMib()} / ${st.total.toMib()} MiB"
+                    determinate = st.percent
                 } else {
-                    titleView.text = batch("Downloading…")
-                    detailView.text = "${state.bytes.toMib()} MiB so far · total size unknown"
-                    progressBar.isIndeterminate = true
+                    title = batch("Downloading…")
+                    detail = "${st.bytes.toMib()} MiB so far · total size unknown"
                 }
             }
             is UpdateProgress.State.Waiting -> {
-                titleView.text = batch("Waiting")
-                detailView.text = state.reason
-                progressBar.isIndeterminate = true
+                title = batch("Waiting")
+                detail = st.reason
             }
             is UpdateProgress.State.Installing -> {
-                titleView.text = batch("Installing…")
-                detailView.text = "Handing the APK to the system installer"
-                progressBar.isIndeterminate = true
+                title = batch("Installing…")
+                detail = "Handing the APK to the system installer"
             }
             is UpdateProgress.State.Done -> {
-                titleView.text = "Done"
-                detailView.text = "Update complete"
-                dismissButton.text = "OK"
+                title = "Done"
+                detail = "Update complete"
             }
             is UpdateProgress.State.Failed -> {
-                titleView.text = "Update failed"
-                detailView.text = state.message
-                failed = state
-                diagnoseButton.visibility = View.VISIBLE
-                dismissButton.text = "OK"
+                title = "Update failed"
+                detail = st.message
             }
+        }
+        if (reportShown) {
+            title = "Diagnosis"
+            detail = report.orEmpty()
+        }
+
+        // Solid dark scrim so the overlay is unambiguously the focus. The click sink blocks input to
+        // the app underneath on purpose.
+        Box(
+            Modifier.fillMaxSize().background(colorResource(R.color.updater_scrim)).clickable(enabled = true, onClick = {}),
+        ) {
+            Column(
+                Modifier.fillMaxSize().padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    title,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+                if (!terminal && !prompt) {
+                    val bar = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 8.dp).height(8.dp)
+                    val pct = determinate
+                    if (pct != null) {
+                        LinearProgressIndicator(progress = { pct / 100f }, modifier = bar)
+                    } else {
+                        LinearProgressIndicator(modifier = bar)
+                    }
+                }
+                if (reportShown) {
+                    // The report is long; let it scroll in place rather than opening a
+                    // second screen the user has to find their way back from.
+                    Column(Modifier.fillMaxWidth().height(320.dp).verticalScroll(rememberScrollState())) {
+                        androidx.compose.foundation.text.selection.SelectionContainer {
+                            Text(
+                                detail,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = FontFamily.Monospace,
+                            )
+                        }
+                    }
+                } else {
+                    Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                }
+                // Diagnose — offered only on Failed. "Update failed: <platform string>"
+                // is where every one of these ends, and the platform string names a
+                // symptom, not a cause. This turns the dead end into the local state
+                // that explains it.
+                if (st is UpdateProgress.State.Failed && !reportShown) {
+                    OverlayButton("Diagnose", MaterialTheme.colorScheme.surfaceVariant, 12.dp) { showReport(ctx) }
+                }
+                // Copy / Save / Send, revealed with the report. Three because the phone
+                // that cannot reach the network is exactly the phone you most need the
+                // report off, so Send must never be the only way out.
+                if (reportShown) {
+                    Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OverlayButton("Copy", MaterialTheme.colorScheme.surfaceVariant, 0.dp) { copyReport(ctx) }
+                        OverlayButton("Save", MaterialTheme.colorScheme.surfaceVariant, 0.dp) { saveReport(ctx) }
+                        if (com.diegonmarcos.superapp.devtools.DiagnosticsPush.canReport()) {
+                            OverlayButton("Send", MaterialTheme.colorScheme.surfaceVariant, 0.dp) { sendReport(ctx) }
+                        }
+                    }
+                }
+                // Cancel control — shown DURING an active check/download/install so a
+                // stuck update can always be aborted (the reported "can't cancel when it
+                // gets stuck" bug). Aborts the worker + flips state to Cancelled.
+                if (active) {
+                    OverlayButton("Cancel", MaterialTheme.colorScheme.secondaryContainer, 20.dp) {
+                        runCatching { Updater.cancelNow(requireContext()) }
+                    }
+                    // Minimize — "give me my screen back", NOT "stop". Shown beside Cancel
+                    // during any active state, because a manual update the user chose to
+                    // start is still not a reason to hold the whole screen hostage until it
+                    // finishes. It is deliberately a peer of Cancel and not a corner "x":
+                    // the two outcomes are different enough that the safe one has to be as
+                    // easy to hit as the destructive one.
+                    //
+                    // This touches UpdateProgress' VISIBILITY latch only. No cancelNow, no
+                    // reset, no state write — the download and install carry on untouched
+                    // and never learn this happened. The scrim goes with the fragment, so
+                    // input returns to the app underneath.
+                    OverlayButton("Minimize", MaterialTheme.colorScheme.secondaryContainer, 12.dp) { minimize() }
+                }
+                // "Update now" — shown ONLY on the metered UpdateAvailable prompt. Grants
+                // consent to download over mobile data; kicks a forced one-shot check.
+                if (prompt) {
+                    OverlayButton("Update now", MaterialTheme.colorScheme.primary, 20.dp) {
+                        runCatching { Updater.downloadNow(requireContext()) }
+                    }
+                }
+                // Dismiss control — shown ONLY on terminal states (Failed / Done) so
+                // the user can read the error and hand controls back. During an active
+                // check/download/install it stays hidden (the scrim blocks input on
+                // purpose). Tapping it drives UpdateProgress → Idle, which makes
+                // the host activity remove this overlay.
+                if (terminal || prompt) {
+                    OverlayButton(dismissLabel, MaterialTheme.colorScheme.primary, 28.dp) { UpdateProgress.reset() }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun OverlayButton(label: String, fill: androidx.compose.ui.graphics.Color, top: androidx.compose.ui.unit.Dp, onTap: () -> Unit) {
+        Text(
+            label,
+            color = MaterialTheme.colorScheme.onPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = top)
+                .background(fill)
+                .clickable(onClick = onTap)
+                .padding(horizontal = 28.dp, vertical = 12.dp),
+        )
+    }
+
+    /** Called by the host on every [UpdateProgress] tick (and once when the view is created). */
+    fun applyState(state: UpdateProgress.State) {
+        if (state is UpdateProgress.State.Failed) failed = state else showingReport = false
+        this.state = state
+        if (state is UpdateProgress.State.Cancelled) UpdateProgress.reset() // dismiss
+    }
+
+    private fun minimize() {
+        runCatching {
+            val c = requireContext()
+            // Tell the user where the work went and how to get it back,
+            // on the feed they already have. Reusing NotificationStore
+            // rather than adding a status surface is the whole point —
+            // this complaint has produced four of those already.
+            if (StoreNotifyGate.mayPost(c)) NotificationStore.push(
+                ctx      = c,
+                source   = "Updater",
+                title    = "Update continues in the background",
+                body     = (UpdateProgress.batchLabel ?: "Update") +
+                    " is still running. Tap Check for updates to bring the progress view back.",
+                severity = NotificationStore.Sev.INFO,
+            )
+            // Latch first, then drop the view: the host re-attaches on
+            // the next progress tick, so removing the fragment without
+            // setting the latch would simply bounce it back on screen.
+            UpdateProgress.minimize()
+            parentFragmentManager.beginTransaction()
+                .remove(this@UpdateOverlayFragment)
+                .commitAllowingStateLoss()
         }
     }
 
@@ -326,24 +307,14 @@ class UpdateOverlayFragment : Fragment() {
     /** Collect once, show it, and swap the buttons for the export row. */
     private fun showReport(ctx: android.content.Context) {
         val f = failed
-        val text = report ?: InstallDiagnostics.collect(
+        report = report ?: InstallDiagnostics.collect(
             ctx,
             appId = f?.appId?.ifBlank { ctx.packageName } ?: ctx.packageName,
             pkg = f?.pkg?.ifBlank { ctx.packageName } ?: ctx.packageName,
             error = f?.message ?: "unknown",
             apk = f?.apkPath?.takeIf { it.isNotBlank() }?.let { java.io.File(it) },
-        ).also { report = it }
-        titleView.text = "Diagnosis"
-        detailView.text = text
-        // The report is long; let it scroll in place rather than opening a
-        // second screen the user has to find their way back from.
-        detailView.maxLines = 18
-        detailView.movementMethod = android.text.method.ScrollingMovementMethod()
-        detailView.setTextIsSelectable(true)
-        detailView.setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-        detailView.typeface = Typeface.MONOSPACE
-        diagnoseButton.visibility = View.GONE
-        actionRow.visibility = View.VISIBLE
+        )
+        showingReport = true
     }
 
     private fun copyReport(ctx: android.content.Context) {
@@ -376,8 +347,6 @@ class UpdateOverlayFragment : Fragment() {
 
     private fun toast(ctx: android.content.Context, m: String) =
         android.widget.Toast.makeText(ctx, m, android.widget.Toast.LENGTH_SHORT).show()
-
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     companion object {
         const val TAG = "update_overlay"

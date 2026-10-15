@@ -2,6 +2,9 @@ plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.serialization'
+    // 2026-10-15 owner decision: all apps must be Compose. The overlay is a ComposeView; the compiler is
+    // resolved from the consuming app's root build (declared `apply false` there), like libs:bottomnav's.
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 // Inject build.json::release into BuildConfig — runtime code uses the same
@@ -175,7 +178,10 @@ android {
         buildConfigField "String",  "CONSTELLATION_FLEET_B64",     bakeB64(fleetB64)
     }
 
-    buildFeatures { buildConfig = true }
+    buildFeatures {
+        buildConfig = true
+        compose = true
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -201,6 +207,12 @@ dependencies {
         implementation project(':libs:shizuku-adb-debug-tools')
     }
     implementation 'androidx.core:core-ktx:1.13.1'
+    // 2026-10-15 owner decision: all apps must be Compose. UpdateOverlayFragment is a ComposeView; the
+    // BOM is the one every Compose module in the fleet resolves, so app and library compose together.
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
     // UpdateOverlayFragment lives here now (it was four vendored copies in the
     // app modules and browser/vault/wallet were stale); the module owns the UI
     // for its own progress states, so it owns the fragment dependency too.

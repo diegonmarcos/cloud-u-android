@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The update overlay's palette as Material roles (UpdateOverlayFragment builds its colour scheme from
+     these), so no colour is spelled in Kotlin. Prefixed updater_: this library is merged into every
+     app's resources and must not collide with an app's own names. -->
+<resources>
+    <color name="updater_scrim">#E6000000</color>
+    <color name="updater_title">#FFE9D8FD</color>
+    <color name="updater_detail">#CCFFFFFF</color>
+    <color name="updater_primary">#FF7C3AED</color>
+    <color name="updater_on_primary">#FFFFFFFF</color>
+    <color name="updater_neutral">#FF4A4A55</color>
+    <color name="updater_neutral_dim">#FF2A2A33</color>
+    <color name="updater_chip">#FF3A3A45</color>
+</resources>
