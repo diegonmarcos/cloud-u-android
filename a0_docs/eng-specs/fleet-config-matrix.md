@@ -146,7 +146,7 @@ Coverage: 43 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 
-Module `ac_c3-morpheus`; libs: lib-core, lib-devtools, lib-fleetconfig-model.
+Module `ac_c3-morpheus`; libs: lib-core, lib-devtools, lib-fleetconfig-model, lib-ui-kit.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

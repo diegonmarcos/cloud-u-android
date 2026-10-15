@@ -2,22 +2,41 @@ package com.diegonmarcos.morpheus
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
-import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Button
-import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import org.json.JSONObject
 
 /**
@@ -46,87 +65,86 @@ import org.json.JSONObject
  */
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var web: WebView
-    private lateinit var notice: TextView
-    private lateinit var noticeScroll: ScrollView
-    private var current: Tab = Tab.WORKFLOWS
+    private var web: WebView? = null
+    /** Non-null while a notice replaces the page; the WebView is then GONE, as before. */
+    private var notice by mutableStateOf<String?>(null)
+    private var current by mutableStateOf(Tab.WORKFLOWS)
 
-    private enum class Tab { WORKFLOWS, HEALTH, FLEET, BOARDS }
+    private enum class Tab(val label: String) {
+        WORKFLOWS("Workflows"), HEALTH("Health"), FLEET("Fleet"), BOARDS("Boards")
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(BG)
-        }
-
-        val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        root.addView(
-            HorizontalScrollView(this).apply {
-                isHorizontalScrollBarEnabled = false
-                addView(tabs)
-            },
-            LinearLayout.LayoutParams(MATCH, WRAP)
+        fun c(id: Int) = ContextCompat.getColor(this, id)
+        val palette = KitPalette.fromArgb(
+            surface = c(R.color.kit_surface),
+            surfaceSelected = c(R.color.kit_surface_selected),
+            textPrimary = c(R.color.kit_text_primary),
+            textSecondary = c(R.color.kit_text_secondary),
+            accent = c(R.color.kit_accent),
+            hairline = c(R.color.kit_hairline),
+            tileInk = c(R.color.kit_tile_ink),
         )
 
-        val stack = FrameLayout(this)
-        root.addView(stack, LinearLayout.LayoutParams(MATCH, 0, 1f))
-
-        web = WebView(this).apply {
-            settings.javaScriptEnabled = true   // Dagu and Paca are both SPAs
-            settings.domStorageEnabled = true
-            settings.allowFileAccess = false
-            settings.allowContentAccess = false
-            setBackgroundColor(BG)
-            webViewClient = object : WebViewClient() {
-                override fun onReceivedError(
-                    view: WebView?, req: WebResourceRequest?, err: WebResourceError?
-                ) {
-                    // Main-frame failures only: a sub-resource that 404s is not
-                    // the page being unreachable, and treating it as one would
-                    // put a false outage over a page that rendered fine.
-                    if (req?.isForMainFrame != true) return
-                    showUnreachable(err?.description?.toString() ?: "no answer")
+        setContent {
+            CloudKitTheme(palette) {
+                val p = LocalKitPalette.current
+                LaunchedEffect(Unit) { select(Tab.WORKFLOWS) }
+                Column(Modifier.fillMaxSize().background(p.surface)) {
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        Tab.values().forEach { t ->
+                            Button(
+                                onClick = { select(t) },
+                                shape = RectangleShape,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = p.surfaceSelected, contentColor = p.accent,
+                                ),
+                            ) { Text(t.label) }
+                        }
+                    }
+                    Box(Modifier.fillMaxWidth().weight(1f)) {
+                        AndroidView(
+                            modifier = Modifier.fillMaxSize(),
+                            factory = { ctx ->
+                                WebView(ctx).apply {
+                                    settings.javaScriptEnabled = true   // Dagu and Paca are both SPAs
+                                    settings.domStorageEnabled = true
+                                    settings.allowFileAccess = false
+                                    settings.allowContentAccess = false
+                                    setBackgroundColor(p.surface.toArgb())
+                                    webViewClient = object : WebViewClient() {
+                                        override fun onReceivedError(
+                                            view: WebView?, req: WebResourceRequest?, err: WebResourceError?
+                                        ) {
+                                            // Main-frame failures only: a sub-resource that 404s is not
+                                            // the page being unreachable, and treating it as one would
+                                            // put a false outage over a page that rendered fine.
+                                            if (req?.isForMainFrame != true) return
+                                            showUnreachable(err?.description?.toString() ?: "no answer")
+                                        }
+                                    }
+                                    web = this
+                                }
+                            },
+                        )
+                        // Scrollable, because these notices are long on purpose: an
+                        // explanation that is cut off at the fold explains nothing.
+                        notice?.let { text ->
+                            Column(Modifier.fillMaxSize().background(p.surface).verticalScroll(rememberScrollState())) {
+                                Text(
+                                    text,
+                                    color = p.textPrimary,
+                                    fontSize = 15.sp,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp),
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
-        stack.addView(web, FrameLayout.LayoutParams(MATCH, MATCH))
-
-        notice = TextView(this).apply {
-            setBackgroundColor(BG)
-            setTextColor(Color.parseColor("#c8d4e0"))
-            textSize = 15f
-            setPadding(48, 64, 48, 64)
-            gravity = Gravity.TOP
-        }
-        // Scrollable, because these notices are long on purpose: an
-        // explanation that is cut off at the fold explains nothing.
-        noticeScroll = ScrollView(this).apply {
-            setBackgroundColor(BG)
-            visibility = View.GONE
-            addView(notice)
-        }
-        stack.addView(noticeScroll, FrameLayout.LayoutParams(MATCH, MATCH))
-
-        setContentView(root)
-
-        Tab.values().forEach { t -> tabs.addView(tabButton(t)) }
-        select(Tab.WORKFLOWS)
-    }
-
-    private fun tabButton(t: Tab): Button = Button(this).apply {
-        text = when (t) {
-            Tab.WORKFLOWS -> "Workflows"
-            Tab.HEALTH -> "Health"
-            Tab.FLEET -> "Fleet"
-            Tab.BOARDS -> "Boards"
-        }
-        isAllCaps = false
-        setTextColor(Color.parseColor("#78c8ff"))
-        setBackgroundColor(Color.parseColor("#101520"))
-        setOnClickListener { select(t) }
     }
 
     private fun select(t: Tab) {
@@ -144,21 +162,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadUrl(url: String) {
-        noticeScroll.visibility = View.GONE
-        web.visibility = View.VISIBLE
-        web.loadUrl(url)
+        notice = null
+        web?.visibility = View.VISIBLE
+        web?.loadUrl(url)
     }
 
     private fun showHtml(html: String) {
-        noticeScroll.visibility = View.GONE
-        web.visibility = View.VISIBLE
-        web.loadDataWithBaseURL(null, html, "text/html", "utf-8", null)
+        notice = null
+        web?.visibility = View.VISIBLE
+        web?.loadDataWithBaseURL(null, html, "text/html", "utf-8", null)
     }
 
     private fun showNotice(text: String) {
-        web.visibility = View.GONE
-        notice.text = text
-        noticeScroll.visibility = View.VISIBLE
+        web?.visibility = View.GONE
+        notice = text
     }
 
     /**
@@ -306,15 +323,12 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        if (web.visibility == View.VISIBLE && web.canGoBack()) web.goBack()
+        val w = web
+        if (w != null && w.visibility == View.VISIBLE && w.canGoBack()) w.goBack()
         else super.onBackPressed()
     }
 
     private companion object {
-        const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
-        const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
-        val BG = Color.parseColor("#0b0e14")
-
         const val HEAD = """<!doctype html><html><head><meta name=viewport
 content="width=device-width,initial-scale=1"><style>
 body{background:#0b0e14;color:#c8d4e0;font:15px/1.5 -apple-system,sans-serif;padding:16px;margin:0}

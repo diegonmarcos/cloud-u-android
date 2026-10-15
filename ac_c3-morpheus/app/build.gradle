@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 def buildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
 def a = buildJson.android
@@ -62,7 +63,10 @@ android {
         buildConfigField "String", "SUPERAPP_PACKAGE", "\"${s.superapp_package}\""
     }
 
-    buildFeatures { buildConfig = true }
+    buildFeatures {
+        buildConfig = true
+        compose = true
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -83,6 +87,10 @@ dependencies {
     // #743 fleet mesh membership: core defines + requests CONSTELLATION_DATA and
     // carries libs:devtools (fleet provider, MESH_MEMBER receiver and query).
     implementation project(':libs:core')
+    // 2026-10-15 owner decision: all apps must be Compose. The screen is a Compose host under
+    // the fleet's CloudKitTheme, shared BY REFERENCE like the modules above.
+    implementation project(':libs:ui-kit')
+    implementation 'androidx.activity:activity-compose:1.9.3'
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
 }
