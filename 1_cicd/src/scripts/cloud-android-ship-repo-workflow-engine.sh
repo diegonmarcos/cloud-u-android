@@ -204,6 +204,10 @@ for build_json in sorted(glob.glob(os.path.join(root, "*", "build.json"))):
     web = config.get("web")
     if not isinstance(web, dict):
         continue
+    # web.kind "container"/"webapp" is the apk-manifest's public-host declaration
+    # (cloud-android-apk-manifest.sh), not a Kotlin/Wasm page: nothing to ship here.
+    if web.get("kind", "wasm") != "wasm":
+        continue
     app = os.path.basename(os.path.dirname(build_json))
     if not os.path.isfile(template):
         bad.append("%s/build.json declares web but 1_cicd/src/templates/ship-wasm.yml.in is missing" % app)

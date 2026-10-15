@@ -74,7 +74,7 @@ class CatalogFragment : Fragment() {
                 list.addView(row("< Back", "") { open(null, null) })
                 if (s != null) {
                     list.addView(title(s.label))
-                    list.addView(section("Tools it uses"))
+                    list.addView(subheading("Tools it uses"))
                     s.tools.mapNotNull { decl.tool(it) }.forEach { t ->
                         list.addView(row(t.display, "tap to view this tool") { open(KIND_TOOLS, t.id) })
                     }
@@ -87,7 +87,7 @@ class CatalogFragment : Fragment() {
                 if (t != null) {
                     list.addView(title(t.display))
                     AppsCatalog.toolBlocks(slice, t.id).forEach { list.addView(block(it)) }
-                    list.addView(section("Used by services"))
+                    list.addView(subheading("Used by services"))
                     decl.usedBy(t.id).forEach { s -> list.addView(row(s.label, "tap to view this service") { open(KIND_SERVICES, s.id) }) }
                 }
             }
@@ -103,7 +103,7 @@ class CatalogFragment : Fragment() {
         setPadding(dp(4), dp(8), dp(4), dp(8))
     }
 
-    private fun section(t: String) = TextView(requireContext()).apply {
+    private fun subheading(t: String) = TextView(requireContext()).apply {
         text = t
         setTextAppearance(android.R.style.TextAppearance_Material_Small)
         setTextColor(ContextCompat.getColor(context, R.color.c3_accent_on_card))
