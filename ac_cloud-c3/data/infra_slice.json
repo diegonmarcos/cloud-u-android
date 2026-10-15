@@ -575,7 +575,6 @@
  ],
  "dns": {
   "primary": "10.0.0.1",
-  "fallback": "1.1.1.1",
   "description": "Hickory DNS on gcp-proxy (WG IP) + Cloudflare fallback",
   "entries": [
    {

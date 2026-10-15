@@ -113,7 +113,7 @@ object AppsCatalog {
             val d = slice.obj("dns")
             val ents = d.arr("entries").objs()
             listOfNotNull(
-                d?.let { Block("Resolvers", listOf("primary" to d.str("primary").orEmpty(), "fallback" to d.str("fallback").orEmpty(), "note" to d.str("description").orEmpty())) },
+                d?.let { Block("Resolvers", listOf("primary" to d.str("primary").orEmpty(), "note" to d.str("description").orEmpty())) },
                 Block("Records (${ents.size})", ents.map { (it.str("name") ?: "?") to "${it.str("type")} ${it.str("value")}" }))
         }
         "cloudflare_dns" -> listOf(Block("Cloudflare DNS",

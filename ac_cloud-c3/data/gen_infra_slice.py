@@ -77,7 +77,7 @@ out = {
               "note": "peer/secret NAMES only - no key or password value is ever carried"},
     "tools": {t["id"]: tool(t["source"]) for t in decl["tools"]},
     "hosts": hosts,
-    "dns": {"primary": d["native"]["dns"].get("primary"), "fallback": d["native"]["dns"].get("fallback"),
+    "dns": {"primary": d["native"]["dns"].get("primary"),  # no fallback IP: a public resolver literal is a DNS-guard bypass (#741); the description names it
             "description": d["native"]["dns"].get("description"),
             "entries": [{k: e.get(k) for k in ("name", "type", "value", "service")} for e in d["dns"]["derived_entries"]],
             "cloudflare_records": len(d["dns"].get("cloudflare") or [])},
