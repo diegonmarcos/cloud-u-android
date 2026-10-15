@@ -158,7 +158,7 @@ def walk(x):
         for v in x.values(): walk(v)
     elif isinstance(x,list):
         for v in x: walk(v)
-walk(d["ui"]); assert n>=1, n  # the Cloud Apps C3 tab was removed: its two former page:cloud/c3 tiles now also target extapp:cloud-c3; json.dump(d,open(p,"w"))
+walk(d["ui"]); assert n>=1, n; json.dump(d,open(p,"w"))  # n>=1: the removed Cloud C3 tab left two more extapp:cloud-c3 tiles
 PY
 }
 m_drop_tile()    { python3 - "$1" <<'PY'
