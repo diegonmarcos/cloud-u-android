@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    // #823 the Search add-on's page (libs:search-page) is themed and hosted here, in Compose.
+    // #823 the Search add-on's page (libs:ai) is themed and hosted here, in Compose.
     id 'org.jetbrains.kotlin.plugin.compose'
 }
 
@@ -62,6 +62,8 @@ def uiPermissionsRolesB64   = b64(buildJson.ui.permissions?.roles   ?: [])
 def searchDecl = new groovy.json.JsonSlurper().parse(file('../../ac_cloud-search/build.json')).search
 (buildJson.ui.browser?.addons ?: []).findAll { it.id == 'search' }.each { it.engines = searchDecl.engines }
 def searchConfigB64 = b64(searchDecl)
+// libs:ai's shared contract (endpoints, paths, header names, knobs), baked like the search block: the browser spells none of them.
+def aiContractB64 = b64(new groovy.json.JsonSlurper().parse(file('../../ab_cloud-libs-shared/libs/ai/src/main/assets/ai/ai.json')))
 // #802 I10 an add-on's requires_fleet → its package, from the fleet manifest (and into <queries>,
 // without which an installed app reads as "not installed" on API 30+).
 def fleetApps = new groovy.json.JsonSlurper().parse(new File(rootDir, '../aa_cloud-superapp/data/constellation-fleet.json')).apps
@@ -234,6 +236,7 @@ android {
         buildConfigField "String", "UI_SECTIONS_B64",            "\"${uiSectionsB64}\""
         buildConfigField "String", "UI_DEFAULT_SECTION",         "\"${uiDefaultSection}\""
         buildConfigField "String", "SEARCH_CONFIG_B64",          "\"${searchConfigB64}\""
+        buildConfigField "String", "AI_CONFIG_B64",              "\"${aiContractB64}\""
         buildConfigField "String", "DEBUG_API_GROUP",           "\"${debugGroup}\""
         buildConfigField "String", "AUTH_MISSION_B64",          "\"${authMissionB64}\""
         // #684 the manifest cannot read JSON; the declared action and signature permission are
@@ -297,8 +300,9 @@ dependencies {
     implementation project(':libs:updater')
     implementation project(':libs:text-tools')
     implementation project(':search-core')
-    // #823 Cloud Search's Search page, drawn over the browser in the kit palette (libs:ui-kit).
-    implementation project(':libs:search-page')
+    // #823 the AI chat (libs:ai: the page, the backends, the assistant panel and its consent card), drawn over the
+    // browser in the kit palette (libs:ui-kit). It brings libs:model-catalogue along as an `api`.
+    implementation project(':libs:ai')
     implementation project(':libs:ui-kit')
     // #868 the fleet's bottom island + NavDecl: MainActivity's Browser | Search | Configs bar.
     implementation project(':libs:bottomnav')

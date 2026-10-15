@@ -49,16 +49,14 @@ import com.diegonmarcos.cloudsearch.R
 import com.diegonmarcos.cloudsearch.core.Filters
 import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.data.Account
-import com.diegonmarcos.cloudsearch.data.SearchHost
 import com.diegonmarcos.cloudsearch.data.Services
 import com.diegonmarcos.superapp.bottomnav.SearchHtmlIsland
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.bottomnav.islandEntries
-import com.diegonmarcos.superapp.searchpage.SearchChatState
-import com.diegonmarcos.superapp.searchpage.SearchPageTags
-import com.diegonmarcos.superapp.searchpage.SpOutcome
+import com.diegonmarcos.superapp.ai.AiChatState
+import com.diegonmarcos.superapp.ai.AiTags
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -104,7 +102,7 @@ class SearchState(val services: Services) {
     private val thingsModels = mutableMapOf<String, ThingsModel>()
     /** Bumped when the Things area (location use, typed city, radius) changes: the page asks again. */
     var areaRev by mutableStateOf(0)
-    val chat = SearchChatState(SearchHost(services))
+    val chat = AiChatState(services.ai)
 
     fun v(): SearchConfig.Vertical = cfg.vertical(vertical) ?: cfg.verticals.first()
     fun subpageOf(v: SearchConfig.Vertical): String = subpages[v.id]?.takeIf { it in v.subpages } ?: v.subpages.first()
@@ -164,15 +162,7 @@ class SearchState(val services: Services) {
             return
         }
         chat.fresh()
-        val before = chat.begin(q) ?: return
-        scope.launch {
-            val out = try {
-                withContext(Dispatchers.IO) { chat.host().send(before, q, chat.model, chat.web, System.currentTimeMillis()) }
-            } catch (e: Exception) {
-                SpOutcome(chat.session, e.message ?: e.javaClass.simpleName, emptyList())
-            }
-            chat.finish(out)
-        }
+        scope.launch { chat.send(q) }
     }
     fun toggle(m: Menu) { menu = if (menu == m) null else m }
     fun toggleDark() { dark = !dark; services.prefs.dark = dark }
@@ -202,12 +192,12 @@ object Tags {
     const val MORE_FILTERS = "search_more_filters"
     const val APPLY_FILTERS = "search_apply_filters"
     const val SORT = "search_sort"
-    const val CHAT_INPUT = SearchPageTags.CHAT_INPUT
-    const val CHAT_SEND = SearchPageTags.CHAT_SEND
-    const val NEW_CHAT = SearchPageTags.NEW_CHAT
+    const val CHAT_INPUT = AiTags.CHAT_INPUT
+    const val CHAT_SEND = AiTags.CHAT_SEND
+    const val NEW_CHAT = AiTags.NEW_CHAT
     const val SESSIONS = "search_sessions"
-    const val MODEL = SearchPageTags.MODEL
-    const val WEB = SearchPageTags.WEB
+    const val MODEL = AiTags.MODEL
+    const val WEB = AiTags.WEB
     const val SAVED = "search_saved"
     const val THINGS_AREA = "search_things_area"
     const val THINGS_SETTINGS = "search_things_settings"
@@ -226,7 +216,7 @@ object Tags {
     fun card(key: String) = "search_card_$key"
     fun output(calc: String, id: String) = "search_out_${calc}_$id"
     fun field(calc: String, id: String) = "search_field_${calc}_$id"
-    fun engine(id: String) = SearchPageTags.engine(id)
+    fun engine(id: String) = AiTags.engine(id)
     fun source(id: String) = "search_source_$id"
     fun drawer(id: String) = "search_drawer_$id"
     fun chip(id: String) = "search_chip_$id"

@@ -2,6 +2,7 @@ package com.diegonmarcos.cloudbrowser.debugapi
 
 import android.content.Context
 import com.diegonmarcos.cloudbrowser.BuildConfig
+import com.diegonmarcos.cloudbrowser.search.AgentPanelScreen
 import com.diegonmarcos.cloudbrowser.search.AgentRunner
 import com.diegonmarcos.cloudbrowser.search.PageSummarizer
 import com.diegonmarcos.superapp.browser.PageSummary
@@ -96,7 +97,8 @@ object BrowserDebugApi {
             AgentRunner.get(app, SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64), it).summarizeRoute =
                 { BrowserSettings(app, config.settings).string("summarize_route") }
         } }
-        // #823 the Search add-on's on-screen page (Cloud Search's Search page, libs:search-page).
+        // #823 the assistant's side panel (libs:ai's AiAssistantPanel) and the Search add-on's on-screen page (libs:ai's AI page).
+        config.addons["ai"]?.let { runCatching { AgentPanelScreen.install() } }
         config.addons["search"]?.let { runCatching { SearchPageScreen.install(app, SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64)) } }
         AppDebugServer.route(BuildConfig.DEBUG_API_GROUP, OPS) { op, q ->
             handle(app, config, op, q)?.toString()
@@ -251,7 +253,7 @@ object BrowserDebugApi {
                 JSONObject().put("ok", false).put("error", "the search add-on is off (addons/set?id=search&on=true)")
                 else need(q["text"].orEmpty(), "text") ?: SearchAddon.get(BuildConfig.SEARCH_CONFIG_B64).let { s ->
                     s.outcomeJson(s.send(q["session"], q["text"].orEmpty(), q["model"], q["web"]?.lowercase() == "true") {
-                        SearchAddon.accountToken(app, s.cfg.ai.accountProvider)
+                        SearchAddon.accountToken(app, s.ai.accountProvider)
                     })
                 }
             "ai/tools", "ai/ask", "ai/sessions", "ai/summarize" -> {

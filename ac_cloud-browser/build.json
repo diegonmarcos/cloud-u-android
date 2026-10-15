@@ -46,7 +46,8 @@
         "libs:updater",
         "libs:text-tools",
         "libs:ui-kit",
-        "libs:search-page",
+        "libs:ai",
+        "libs:model-catalogue",
         "search-core",
         "libs:bottomnav"
       ]
@@ -92,9 +93,13 @@
       "_doc_dir": "#802 shared BY REFERENCE: the text-tools contract client (thin binder). libs:browser's Translate page row calls it; disabled with its reason when no app serves it.",
       "dir": "../ab_cloud-libs-shared/libs/text-tools"
     },
-    "libs:search-page": {
-      "_doc_dir": "#823 shared BY REFERENCE: Cloud Search's Search page (engine boxes + AI chat). The Search add-on's Search & AI chat row draws it over the page, hosted by search/SearchPageScreen.kt (cloud-search's engines and chat protocol through SearchAddon, results opening as tabs) in the browser's kit palette.",
-      "dir": "../ab_cloud-libs-shared/libs/search-page"
+    "libs:ai": {
+      "_doc_dir": "#823 shared BY REFERENCE: the fleet's AI chat (renamed from libs:search-page). The Search add-on's Search & AI row draws its page over the browser, hosted by search/SearchPageScreen.kt (cloud-search's engines, the OpenRouter backend with the fleet Account's token, results opening as tabs) in the browser's kit palette; the assistant side panel and its consent card are its AiAssistantPanel, installed by search/AgentPanelScreen.kt.",
+      "dir": "../ab_cloud-libs-shared/libs/ai"
+    },
+    "libs:model-catalogue": {
+      "_doc_dir": "libs:ai's `api` dependency (the shared agent descriptor its Agent picker lists). Listed so settings.gradle resolves the path; the browser declares no gateway agent and links nothing of it itself.",
+      "dir": "../ab_cloud-libs-shared/libs/model-catalogue"
     },
     "search-core": {
       "_doc_dir": "#802 I8 shared BY REFERENCE: cloud-search's plain-JVM core (its build.json::search reader and the OpenRouter chat protocol). The browser's search/chat routes use it; nothing is copied. Its own suite and PIT run in cloud-search's CI (this app's unit task is scoped to :app).",
@@ -1105,7 +1110,7 @@
           "menu": [
             {
               "id": "ai_chat",
-              "label": "Ask the assistant…"
+              "label": "AI assistant…"
             },
             {
               "id": "ai_summarize",

@@ -186,8 +186,9 @@ dependencies {
     implementation project(':libs:text-tools')
     // Everything computed or parsed: plain JVM, mutation-tested on its own (core/build.gradle).
     implementation project(':search-core')
-    // #823 the Search page (engine boxes + AI chat), shared with Cloud Browser; this app hosts and themes it.
-    implementation project(':libs:search-page')
+    // #823 the AI chat (the page, the backends, streaming, sessions, the consent card), shared with Cloud Browser,
+    // Cloud Drive and Cloud Tools Small LLMs; this app hosts and themes it (data/SearchAi.kt, ui/AssistantPages.kt).
+    implementation project(':libs:ai')
     // The model catalogue (selection, OpenRouter pricing, the page), shared with Cloud Code's Chat,
     // which shows only its A0 Code section; this app shows every section and hosts the page.
     implementation project(':libs:model-catalogue')

@@ -2,7 +2,7 @@ package com.diegonmarcos.superapp.browser
 
 import org.json.JSONObject
 
-/** #823 the assistant side panel's transcript model ([AgentChatPanel]); pure, JVM-tested. */
+/** #823 the assistant side panel's transcript model (drawn by libs:ai's AiAssistantPanel through [BrowserAgentPanelHost]); pure, JVM-tested. */
 
 /** One line of the panel's transcript. */
 data class AgentLine(val role: String, val text: String) {

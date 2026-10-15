@@ -20,23 +20,23 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.diegonmarcos.cloudsearch.R
-import com.diegonmarcos.cloudsearch.core.Chat
 import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.core.Templates
-import com.diegonmarcos.cloudsearch.data.sp
 import com.diegonmarcos.cloudsearch.models.ModelCataloguePage
-import com.diegonmarcos.superapp.searchpage.SearchChatPage
-import com.diegonmarcos.superapp.searchpage.SearchPageColors
-import com.diegonmarcos.superapp.searchpage.SearchPageIcons
-import com.diegonmarcos.superapp.searchpage.SearchPageMetrics
-import com.diegonmarcos.superapp.searchpage.SearchPageStrings
-import com.diegonmarcos.superapp.searchpage.SearchPageTheme
-import com.diegonmarcos.superapp.searchpage.SearchPageType
-import com.diegonmarcos.superapp.searchpage.SpEngine
+import com.diegonmarcos.superapp.ai.AiBucket
+import com.diegonmarcos.superapp.ai.AiChatPage
+import com.diegonmarcos.superapp.ai.AiColors
+import com.diegonmarcos.superapp.ai.AiEngine
+import com.diegonmarcos.superapp.ai.AiIcons
+import com.diegonmarcos.superapp.ai.AiMetrics
+import com.diegonmarcos.superapp.ai.AiSessions
+import com.diegonmarcos.superapp.ai.AiStrings
+import com.diegonmarcos.superapp.ai.AiTheme
+import com.diegonmarcos.superapp.ai.AiType
 import java.time.ZoneId
 
 /**
- * The mockup's one Search page (renderUnifiedSearchChat), drawn by libs:search-page (#823, shared
+ * The mockup's one Search page (renderUnifiedSearchChat), drawn by libs:ai (#823, shared
  * with Cloud Browser): Sessions and the model on top; until the chat has a message, its
  * #initial-search-view - the greeting and one box per declared engine (each opens that engine's
  * own results in cloud-browser) - then the conversation in the same place. The Gemini-style input
@@ -54,11 +54,11 @@ fun AssistantPage(v: SearchConfig.Vertical) {
         ModelCataloguePage(state, onClose = { catalogue = false }, modifier = Modifier.padding(top = Metrics.contentTop, bottom = bottom))
         return
     }
-    SearchChatPage(
+    AiChatPage(
         state.chat,
-        engines = state.cfg.engines.map { SpEngine(it.id, it.label, it.icon, it.accent) },
+        engines = state.cfg.engines.map { AiEngine(it.id, it.label, it.icon, it.accent) },
         query = { e, q -> state.cfg.engines.firstOrNull { it.id == e.id }?.let { Templates.fill(it.url, q, state.cfg.city(state.city)) } },
-        theme = searchPageTheme(),
+        theme = aiTheme(),
         modifier = Modifier.padding(top = Metrics.contentTop, bottom = bottom),
         onModel = { catalogue = true },
     ) {
@@ -66,17 +66,17 @@ fun AssistantPage(v: SearchConfig.Vertical) {
     }
 }
 
-/** The glass theme, Metrics, Type, Phosphor icons and this app's strings, as libs:search-page takes them. */
+/** The glass theme, Metrics, Type, Phosphor icons and this app's strings, as libs:ai takes them. */
 @Composable
-fun searchPageTheme(): SearchPageTheme {
+fun aiTheme(): AiTheme {
     val g = LocalGlass.current
-    return SearchPageTheme(
-        colors = SearchPageColors(
+    return AiTheme(
+        colors = AiColors(
             text = g.text, text2 = g.text2, accent = g.accent, negative = g.negative,
             field = g.field, tile = g.tile, tileBorder = g.tileBorder, chatBar = g.chatBar, glassBorder = g.glassBorder,
             userBubble = g.userBubble, onUserBubble = g.onUserBubble, onAi = g.onIsland, ai = g.ai,
         ),
-        metrics = SearchPageMetrics(
+        metrics = AiMetrics(
             hairline = Metrics.hairline, tiny = Metrics.tiny, small = Metrics.small, gap = Metrics.gap, gutter = Metrics.gutter,
             cardRadius = Metrics.cardRadius, cardPad = Metrics.cardPad, chipGap = Metrics.chipGap,
             aiAvatar = Metrics.aiAvatar, robot = Metrics.robot, engineGap = Metrics.engineGap,
@@ -85,9 +85,9 @@ fun searchPageTheme(): SearchPageTheme {
             bubbleMaxFraction = Metrics.BUBBLE_MAX_FRACTION, modelMaxWidth = Metrics.modelMaxWidth,
             iconXs = Metrics.iconXs, iconSm = Metrics.iconSm, icon = Metrics.icon, iconLg = Metrics.iconLg,
         ),
-        type = SearchPageType(label = Type.label, small = Type.small, chat = Type.chat, greeting = Type.greeting,
+        type = AiType(label = Type.label, small = Type.small, chat = Type.chat, greeting = Type.greeting,
             greetingSub = Type.greetingSub, chatInput = Type.chatInput),
-        strings = SearchPageStrings(
+        strings = AiStrings(
             hello = stringResource(R.string.assistant_hello), helloSub = stringResource(R.string.assistant_hello_sub),
             searchTheWeb = stringResource(R.string.search_the_web), searchWith = stringResource(R.string.search_with),
             webSearch = stringResource(R.string.web_search), webNative = stringResource(R.string.web_native),
@@ -111,10 +111,10 @@ fun searchPageTheme(): SearchPageTheme {
 
 /** The page's icon names, drawn from this app's Phosphor set. */
 private fun phosphor(name: String): Int = when (name) {
-    SearchPageIcons.ROBOT -> R.drawable.ph_robot
-    SearchPageIcons.GLOBE -> R.drawable.ph_globe
-    SearchPageIcons.CARET_DOWN -> R.drawable.ph_caret_down
-    SearchPageIcons.PLUS_CIRCLE -> R.drawable.ph_plus_circle
+    AiIcons.ROBOT -> R.drawable.ph_robot
+    AiIcons.GLOBE -> R.drawable.ph_globe
+    AiIcons.CARET_DOWN -> R.drawable.ph_caret_down
+    AiIcons.PLUS_CIRCLE -> R.drawable.ph_plus_circle
     else -> R.drawable.ph_arrow_up
 }
 
@@ -123,7 +123,7 @@ private fun phosphor(name: String): Int = when (name) {
 fun SessionsMenu(state: SearchState) {
     val g = LocalGlass.current
     val sessions = remember(state.menu) { state.services.sessions.all() }
-    val groups = remember(sessions) { Chat.group(sessions, System.currentTimeMillis(), ZoneId.systemDefault()) }
+    val groups = remember(sessions) { AiSessions.group(sessions, System.currentTimeMillis(), ZoneId.systemDefault()) }
     MenuTitle(stringResource(R.string.chat_sessions), { state.menu = null }, stringResource(R.string.close))
     if (groups.isEmpty()) Text(stringResource(R.string.no_sessions), color = g.text2, style = Type.style(Type.small))
     groups.forEach { (bucket, list) ->
@@ -131,7 +131,7 @@ fun SessionsMenu(state: SearchState) {
         list.forEach { s ->
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(Metrics.cardRadius)).background(g.field)
-                    .clickable { state.chat.open(s.sp()); state.menu = null }.padding(Metrics.cardPad + Metrics.tiny),
+                    .clickable { state.chat.open(s); state.menu = null }.padding(Metrics.cardPad + Metrics.tiny),
             ) {
                 Text(s.title.ifBlank { stringResource(R.string.untitled) }, color = g.text, style = Type.style(Type.menuItem, FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(stringResource(R.string.n_messages, s.messages.size), color = g.text2, style = Type.style(Type.label), modifier = Modifier.padding(top = Metrics.small))
@@ -140,8 +140,8 @@ fun SessionsMenu(state: SearchState) {
     }
 }
 
-fun bucketLabel(b: Chat.Bucket): Int = when (b) {
-    Chat.Bucket.TODAY -> R.string.today
-    Chat.Bucket.PREVIOUS_7_DAYS -> R.string.previous_7_days
-    Chat.Bucket.OLDER -> R.string.older
+fun bucketLabel(b: AiBucket): Int = when (b) {
+    AiBucket.TODAY -> R.string.today
+    AiBucket.PREVIOUS_7_DAYS -> R.string.previous_7_days
+    AiBucket.OLDER -> R.string.older
 }

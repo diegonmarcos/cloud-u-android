@@ -8,6 +8,8 @@ import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.core.SearchEngine
 import com.diegonmarcos.cloudsearch.core.ThingsEngine
 import com.diegonmarcos.cloudsearch.core.UrlHttp
+import com.diegonmarcos.superapp.ai.AiFileSessions
+import com.diegonmarcos.superapp.ai.AiHost
 import java.io.File
 
 /**
@@ -16,7 +18,7 @@ import java.io.File
  * (not cacheDir, which the system may empty) so the last answers stay readable offline.
  */
 class Services(ctx: Context, val http: Http) {
-    /** The application context: the chat's token read and opening a result need one (#823 SearchHost). */
+    /** The application context: the chat's token read and opening a result need one (#823 SearchAi). */
     val app: Context = ctx.applicationContext
     val cfg: SearchConfig = Decl.config
     val engine = SearchEngine(cfg, http, Cache(File(ctx.filesDir, "results")), System::currentTimeMillis)
@@ -24,7 +26,10 @@ class Services(ctx: Context, val http: Http) {
     val things = ThingsEngine(cfg, http, Cache(File(ctx.filesDir, "things")), System::currentTimeMillis) { FleetBearer.token(app) }
     val saved = SavedStore(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE))
     val prefs = Prefs(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE), cfg)
-    val sessions = SessionStore(File(ctx.filesDir, "chat-sessions.json"))
+    /** libs:ai's file store: the same chat-sessions.json and JSON shape the app always wrote. */
+    val sessions = AiFileSessions(File(ctx.filesDir, "chat-sessions.json"))
+    /** #823 the chat, hosted on libs:ai (SearchAi). */
+    val ai: AiHost by lazy { SearchAi.host(this) }
     val models = ModelCatalog(cfg, http, Cache(File(ctx.filesDir, "catalog")), System::currentTimeMillis)
     /** #913 the Agents tab (draft-only agents, runs, reports); null when the app declares no agents. */
     private var agentService: AgentService? = null
