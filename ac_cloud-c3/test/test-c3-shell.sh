@@ -303,7 +303,8 @@ sys.exit(1 if bad else 0)
 PYTHON
 }
 
-# t7 <MainActivity.kt> <C3BottomNav.kt> <src dir> : fragment host, shared island reused
+# t7 <MainActivity.kt> <C3BottomNav.kt> <src dir> : fragment host, shared island reused,
+#    and a file that hosts Compose builds no Views
 t7() {
     python3 - "$1" "$2" "$3" <<'PYTHON'
 import os, re, sys
@@ -326,16 +327,23 @@ for sym in ("BottomNavIslandView", "BottomNavViewItem"):
 if re.search(r"\bbottomNavItems\b", nc) or re.search(r"\bbottomNavItems\b", mc):
     bad.append("the shell references bottomNavItems, which is cloud-MAIL's item table: this "
                "app's nav would be coupled to another shipping app's tabs")
-# No @Composable anywhere: the shell is Views, and a Compose screen here would be the
-# architecture choice that turned a spin-off into a rewrite.
+# 2026-10-15 owner decision: all apps must be Compose; replaces the no-@Composable check.
+# A file that hosts Compose must not also inflate/build Views: a page is one or the other,
+# so a half-migrated screen cannot hide behind a ComposeView.
+HOST = re.compile(r"@Composable\b|\bComposeView\b|\bAbstractComposeView\b|\bsetContent\s*[({]")
+VIEWS = re.compile(r"\binflate\([^)]*\bR\.layout\.|Binding\.inflate\(|\bfindViewById\b|\bR\.layout\."
+                   r"|\b(?:TextView|LinearLayout|FrameLayout|RelativeLayout|ConstraintLayout|ImageView|"
+                   r"ImageButton|ScrollView|HorizontalScrollView|NestedScrollView|RecyclerView|EditText|"
+                   r"SwitchCompat|CheckBox|GridLayout|ProgressBar|SeekBar|CardView|MaterialCardView|"
+                   r"ListView|PopupWindow)\s*\(")
 for dirpath, _d, files in os.walk(sys.argv[3]):
     for f in files:
         if not f.endswith(".kt"): continue
         p = os.path.join(dirpath, f)
-        if "@Composable" in code(open(p, encoding="utf-8").read()):
-            bad.append("%s declares a @Composable — the pages are the SuperApp's Fragments and "
-                       "the shell hosts them; a Compose screen means a page got reauthored"
-                       % os.path.relpath(p, sys.argv[3]))
+        c = re.sub(r'"(?:\\.|[^"\\\n])*"', '""', code(open(p, encoding="utf-8").read()))
+        if HOST.search(c) and VIEWS.search(c):
+            bad.append("%s hosts Compose AND inflates/builds Views (%s) — a Compose page is "
+                       "Compose all the way down" % (os.path.relpath(p, sys.argv[3]), VIEWS.search(c).group(0)))
 for b in bad: print("    " + b)
 sys.exit(1 if bad else 0)
 PYTHON
@@ -533,7 +541,7 @@ PY
 m_escape_flag() { jqset "$1$A/build.json" 'sec("observ")["pages"][0]["implemented"]=False'; }
 m_empty_tab()   { jqset "$1$A/build.json" 'sec("observ")["pages"]=[]'; }
 # T7 / T8
-m_compose_screen() { printf 'package com.diegonmarcos.cloudc3.pages\nimport androidx.compose.runtime.Composable\n@Composable\nfun Reauthored() {}\n' > "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/pages/Reauthored.kt"; }
+m_compose_screen() { printf 'package com.diegonmarcos.cloudc3.pages\nimport androidx.compose.runtime.Composable\n@Composable\nfun Reauthored(c: android.content.Context) { android.widget.TextView(c) }\n' > "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/pages/Reauthored.kt"; }
 m_consume_insets() { python3 - "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt" <<'PY'
 import sys
 p=sys.argv[1]; s=open(p).read(); b=s
@@ -577,7 +585,7 @@ mutate "an UNBUILT page is declared (the empty tab)"      c_t6 m_declare_unbuilt
 mutate "a declared page resolves to a not-built body"     c_t6 m_placeholder_body
 mutate "an 'implemented:false' escape hatch is added"     c_t6 m_escape_flag
 mutate "a content tab is declared with zero pages"        c_t6 m_empty_tab
-mutate "a page is reauthored as a Composable"             c_t7 m_compose_screen
+mutate "a Compose file also builds a View (2026-10-15)"   c_t7 m_compose_screen
 mutate "the inset listener CONSUMES the insets (#477)"    c_t8 m_consume_insets
 mutate "the cutout is dropped from the inset read (#407)" c_t8 m_drop_cutout
 mutate "a tuned top padding is hardcoded in the shell"    c_t8 m_hardcode_top

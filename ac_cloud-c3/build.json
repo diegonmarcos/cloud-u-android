@@ -92,7 +92,8 @@
         "libs:core",
         "libs:updater",
         "libs:bottomnav",
-        "libs:ops"
+        "libs:ops",
+        "libs:ui-kit"
       ]
     },
     "libs:core": {
@@ -126,6 +127,11 @@
     "libs:ops": {
       "_doc_dir": "Shared BY REFERENCE like every other module here. Carries DaguFragment (the native Dagu DAG list page:c3/dagu opens in the SuperApp) and DaguPrefs, the ONE store of the Authelia bearer the ops routes need. Its build.gradle reads THIS repository's build.json first (consumer-wins) for ui.sections[c3].pages[dagu].dagu_default_server, which is why the verbatim c3 section below is also the lib's config.",
       "dir": "../ab_cloud-libs-shared/libs/ops",
+      "type": "library"
+    },
+    "libs:ui-kit": {
+      "_doc_dir": "2026-10-15 owner decision: all apps must be Compose. Shared BY REFERENCE: the fleet's Compose kit (CloudKitTheme + KitPalette) that AgentsFragment and CatalogFragment paint with.",
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit",
       "type": "library"
     }
   },

@@ -261,10 +261,13 @@ dependencies {
     // store of the Authelia bearer the feed cards' Re-run buttons and the container sheet's
     // actions send — shared BY REFERENCE, same as every module above.
     implementation project(':libs:ops')
+    // 2026-10-15 owner decision: all apps must be Compose. The Agents and Catalog pages are
+    // ComposeViews under the fleet's CloudKitTheme, shared BY REFERENCE like the modules above.
+    implementation project(':libs:ui-kit')
 
-    // #648 Compose survives for ONE reason: libs:bottomnav's island is an
-    // AbstractComposeView, so the app needs the compiler and runtime even though its own
-    // shell is Views — the same trade ac_cloud-me makes, and its build.gradle says so too.
+    // 2026-10-15 owner decision: all apps must be Compose. The bottom island is an
+    // AbstractComposeView and the Agents/Catalog pages are ComposeViews; the remaining
+    // View pages migrate the same way.
     implementation platform('androidx.compose:compose-bom:2025.11.01')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.foundation:foundation'
