@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The panel's palette as the fleet kit's ROLES (KitPalette). The window theme and the
+         Compose host both read these, so no colour is spelled in Kotlin. -->
+    <color name="kit_surface">#0b0e14</color>
+    <color name="kit_surface_selected">#101520</color>
+    <color name="kit_text_primary">#c8d4e0</color>
+    <color name="kit_text_secondary">#7f8c9a</color>
+    <color name="kit_accent">#78c8ff</color>
+    <color name="kit_hairline">#2a3a4a</color>
+    <color name="kit_tile_ink">#0b0e14</color>
+</resources>

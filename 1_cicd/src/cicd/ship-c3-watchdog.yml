@@ -76,6 +76,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      #   input: "ab_cloud-libs-shared/libs/ui-kit/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/watchdog/**"
       - "ac_c3-watchdog/**"

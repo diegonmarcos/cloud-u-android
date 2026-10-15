@@ -700,14 +700,12 @@
       "id": "ac_c3-watchdog",
       "scope": "in",
       "wave": 3,
-      "ui": "views",
+      "ui": "compose",
       "size": "S",
-      "screens_left": [
-        "MainActivity (46 lines)"
-      ],
+      "screens_left": [],
       "notes": "Smallest app in the fleet — the template migration for the per-app agents.",
       "baseline": {
-        "view_screens": 1,
+        "view_screens": 0,
         "layout_xml": 0,
         "view_ui_files": 0,
         "custom_views": 0

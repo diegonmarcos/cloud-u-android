@@ -69,7 +69,8 @@
       "type": "application",
       "depends_on": [
         "libs:watchdog",
-        "libs:core"
+        "libs:core",
+        "libs:ui-kit"
       ]
     },
     "libs:watchdog": {
@@ -80,6 +81,11 @@
       "type": "library",
       "_doc": "#743 fleet mesh membership. core DEFINES and REQUESTS CONSTELLATION_DATA and carries libs:devtools by `api` (FleetTokenProvider, FleetMemberReceiver, the MESH_MEMBER package query), so linking it is what makes this app a mesh member every other app can see and reach. Shared BY REFERENCE, like every app's core.",
       "dir": "../ab_cloud-libs-shared/libs/core"
+    },
+    "libs:ui-kit": {
+      "type": "library",
+      "_doc": "2026-10-15 owner decision: all apps must be Compose. Shared BY REFERENCE: the fleet's Compose kit (CloudKitTheme + KitPalette) MainActivity paints with.",
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit"
     },
     "libs:devtools": {
       "type": "library",
@@ -96,7 +102,7 @@
     "_doc": "Pinned for reproducibility \u2014 all derived in flake.nix. Mirrors aa_cloud-superapp / ea_cloud-comms pins so all the Android projects share one toolchain story. Node is added for the Acode (Cordova) fork's JS/plugin build.",
     "agp": "8.7.3",
     "gradle": "8.10.2",
-    "kotlin": "1.9.24",
+    "kotlin": "2.3.20",
     "jdk": "17",
     "node": "20"
   },
