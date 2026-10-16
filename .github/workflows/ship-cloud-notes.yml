@@ -138,6 +138,7 @@ jobs:
 
       - name: Smoke test (health, app shell, deep-link fallback)
         run: |
+          set -o pipefail
           docker run -d --name cn-web -p 18080:80 cloud-notes-web:ci
           for i in $(seq 1 20); do curl -fsS http://127.0.0.1:18080/healthz >/dev/null 2>&1 && break; sleep 1; done
           curl -fsS http://127.0.0.1:18080/healthz | grep -q '^ok'
@@ -192,6 +193,7 @@ jobs:
 
       - name: Smoke test (healthz, 401 on a bare upgrade, refusal to start unconfigured)
         run: |
+          set -o pipefail
           # fail closed: no verifier configured -> the container must exit non-zero and say why
           if docker run --rm cloud-notes-sync:ci > /tmp/unconfigured.log 2>&1; then echo "::error::the server started without a verifier"; exit 1; fi
           grep -q "refusing to start" /tmp/unconfigured.log
