@@ -1,14 +1,32 @@
 package com.diegonmarcos.superapp.cloud
 import com.diegonmarcos.superapp.launcher.AggregatorStackFragment
 
-import android.graphics.Typeface
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -20,168 +38,104 @@ import java.util.Locale
  * Infos · Apps surface gets the three views the user wants from one
  * card.
  *
- * Embedded inside [AggregatorStackFragment] (kind = "tasks").
+ * Embedded inside [AggregatorStackFragment] (kind = "tasks"), so it has no scroll of
+ * its own. Compose since #773: the chips and rows were hand-picked purple/white literals
+ * no launcher theme could recolour; they are the palette's surface roles now.
  */
-class TasksFragment : Fragment() {
+class TasksFragment : KitComposeFragment() {
 
-    private enum class Tab { AGENDA, DAY, TODO }
-    private var active: Tab = Tab.AGENDA
+    internal enum class Tab(val label: String) { AGENDA("Agenda"), DAY("Day"), TODO("ToDo") }
 
-    private lateinit var chipAgenda: TextView
-    private lateinit var chipDay:    TextView
-    private lateinit var chipToDo:   TextView
-    private lateinit var body:       LinearLayout
+    override fun palette() = LauncherPalette.kit(requireContext())
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(8); setPadding(pad, pad, pad, pad)
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            )
-        }
-
-        // ── Chip strip ──
-        val chips = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            val pad = dp(2); setPadding(pad, pad, pad, dp(6))
-        }
-        chipAgenda = chip(ctx, "Agenda") { setActive(Tab.AGENDA) }
-        chipDay    = chip(ctx, "Day")    { setActive(Tab.DAY) }
-        chipToDo   = chip(ctx, "ToDo")   { setActive(Tab.TODO) }
-        chips.addView(chipAgenda)
-        chips.addView(chipDay)
-        chips.addView(chipToDo)
-        root.addView(chips)
-
-        // ── Body ──
-        body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        root.addView(body)
-
-        setActive(active)
-        return root
-    }
-
-    private fun setActive(t: Tab) {
-        active = t
-        // Update chip styling.
-        for ((chip, target) in listOf(chipAgenda to Tab.AGENDA, chipDay to Tab.DAY, chipToDo to Tab.TODO)) {
-            val sel = (target == t)
-            chip.setTextColor(if (sel) 0xFFE9D8FD.toInt() else 0x88FFFFFF.toInt())
-            chip.setBackgroundColor(if (sel) 0x55B794F4.toInt() else 0x22FFFFFF)
-            chip.typeface = if (sel) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        }
-        // Re-render body.
-        body.removeAllViews()
-        val ctx = requireContext()
-        when (t) {
-            Tab.AGENDA -> renderAgenda(ctx, body)
-            Tab.DAY    -> renderDay(ctx, body)
-            Tab.TODO   -> renderToDo(ctx, body)
+    @Composable
+    override fun Content() {
+        var active by rememberSaveable { mutableStateOf(Tab.AGENDA) }
+        val p = LocalKitPalette.current
+        Column(Modifier.fillMaxWidth().padding(8.dp)) {
+            // ── Chip strip ──
+            Row(Modifier.fillMaxWidth().padding(start = 2.dp, top = 2.dp, end = 2.dp, bottom = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (t in Tab.values()) {
+                    val sel = t == active
+                    Text(t.label, color = if (sel) p.textPrimary else p.textSecondary,
+                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                        textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                            .background(if (sel) p.surfaceSelected else p.surface)
+                            .clickable(role = Role.Tab) { active = t }
+                            .semantics { selected = sel }
+                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                            .testTag(chipTag(t)))
+                }
+            }
+            // ── Body ──
+            Column(Modifier.testTag(TAG_BODY)) {
+                when (active) {
+                    Tab.AGENDA -> Agenda()
+                    Tab.DAY    -> Day()
+                    Tab.TODO   -> ToDo()
+                }
+            }
         }
     }
 
-    // ── Renderers ────────────────────────────────────────────────────────
-
-    private fun renderAgenda(ctx: android.content.Context, host: LinearLayout) {
-        val fmt = SimpleDateFormat("EEE  d MMM", Locale.getDefault())
-        val cal = Calendar.getInstance()
-        for (i in 0 until 7) {
-            val row = simpleRow(ctx,
-                title = if (i == 0) "Today · ${fmt.format(cal.time)}" else fmt.format(cal.time),
-                body  = "no events",
-                highlight = i == 0,
-            )
-            host.addView(row)
-            cal.add(Calendar.DAY_OF_YEAR, 1)
+    @Composable
+    private fun Agenda() {
+        val days = agendaDays()
+        for ((i, d) in days.withIndex()) {
+            SimpleRow(if (i == 0) "Today · $d" else d, "no events", i == 0)
         }
-        host.addView(caption(ctx,
-            "CalDAV integration lands with libs:cal — declared calendars populate events here."))
+        Caption("CalDAV integration lands with libs:cal — declared calendars populate events here.")
     }
 
-    private fun renderDay(ctx: android.content.Context, host: LinearLayout) {
-        val cal = Calendar.getInstance()
-        val now = cal.get(Calendar.HOUR_OF_DAY)
+    @Composable
+    private fun Day() {
+        val now = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         // 8am → 10pm hourly grid.
         for (h in 8..22) {
-            val label = "%02d:00".format(h)
-            host.addView(simpleRow(ctx,
-                title = label + (if (h == now) "  · now" else ""),
-                body  = if (h == now) "no events right now" else "·",
-                highlight = h == now,
-            ))
+            SimpleRow("%02d:00".format(h) + (if (h == now) "  · now" else ""),
+                if (h == now) "no events right now" else "·", h == now)
         }
-        host.addView(caption(ctx,
-            "Hour-by-hour for today. Once CalDAV is wired each row shows events that overlap that slot."))
+        Caption("Hour-by-hour for today. Once CalDAV is wired each row shows events that overlap that slot.")
     }
 
-    private fun renderToDo(ctx: android.content.Context, host: LinearLayout) {
+    @Composable
+    private fun ToDo() {
         // Placeholder ToDo list. Real ToDo backend (CalDAV VTODO or
         // Tasks API) lands later; for now show a single illustrative row.
-        host.addView(simpleRow(ctx,
-            title     = "(no tasks yet)",
-            body      = "Sample row — long-press for actions when the ToDo store wires in.",
-            highlight = false,
-        ))
-        host.addView(caption(ctx,
-            "ToDo persistence pending — will surface VTODO items from your CalDAV server + a local quick-task store."))
+        SimpleRow("(no tasks yet)", "Sample row — long-press for actions when the ToDo store wires in.", false)
+        Caption("ToDo persistence pending — will surface VTODO items from your CalDAV server + a local quick-task store.")
     }
 
-    // ── Widget helpers ───────────────────────────────────────────────────
-
-    private fun chip(ctx: android.content.Context, label: String, onClick: () -> Unit): TextView {
-        return TextView(ctx).apply {
-            text = label
-            setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-            gravity = android.view.Gravity.CENTER
-            setPadding(dp(8), dp(6), dp(8), dp(6))
-            val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                .apply { marginEnd = dp(4) }
-            layoutParams = lp
-            isClickable = true; isFocusable = true
-            setOnClickListener { onClick() }
+    @Composable
+    private fun SimpleRow(title: String, body: String, highlight: Boolean) {
+        val p = LocalKitPalette.current
+        Column(Modifier.fillMaxWidth().padding(top = 4.dp)
+            .background(if (highlight) p.surfaceSelected else p.surface).padding(6.dp)) {
+            Text(title, color = if (highlight) p.textPrimary else p.textSecondary,
+                fontWeight = if (highlight) FontWeight.Bold else FontWeight.Normal,
+                style = MaterialTheme.typography.bodyLarge)
+            Text(body, color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 2.dp))
         }
     }
 
-    private fun simpleRow(ctx: android.content.Context, title: String, body: String, highlight: Boolean): View {
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(6); setPadding(pad, pad, pad, pad)
-            val lp = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(4) }
-            layoutParams = lp
-            setBackgroundColor(if (highlight) 0x331A0033 else 0x221A0033)
-        }
-        row.addView(TextView(ctx).apply {
-            text = title
-            setTextColor(if (highlight) 0xFFE9D8FD.toInt() else 0xCCFFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Body1)
-            typeface = if (highlight) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        })
-        row.addView(TextView(ctx).apply {
-            text = body
-            setTextColor(0x77FFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setPadding(0, dp(2), 0, 0)
-        })
-        return row
+    @Composable
+    private fun Caption(text: String) {
+        Text(text, color = LocalKitPalette.current.textSecondary, style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(start = 2.dp, top = 10.dp, end = 2.dp, bottom = 2.dp))
     }
-
-    private fun caption(ctx: android.content.Context, text: String): TextView =
-        TextView(ctx).apply {
-            this.text = text
-            setTextColor(0x55FFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setPadding(dp(2), dp(10), dp(2), dp(2))
-        }
-
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     companion object {
+        const val TAG_BODY = "tasks:body"
+        internal fun chipTag(t: Tab) = "tasks:chip:${t.name.lowercase()}"
+        /** The seven agenda headings, today first, in the device's locale. */
+        internal fun agendaDays(): List<String> {
+            val fmt = SimpleDateFormat("EEE  d MMM", Locale.getDefault())
+            val cal = Calendar.getInstance()
+            return List(7) { fmt.format(cal.time).also { cal.add(Calendar.DAY_OF_YEAR, 1) } }
+        }
         fun newInstance(): TasksFragment = TasksFragment()
     }
 }

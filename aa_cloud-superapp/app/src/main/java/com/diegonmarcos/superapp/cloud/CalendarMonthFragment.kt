@@ -2,176 +2,144 @@ package com.diegonmarcos.superapp.cloud
 import com.diegonmarcos.superapp.launcher.AggregatorStackFragment
 import com.diegonmarcos.superapp.R
 
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
-import android.os.Bundle
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageButton
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import java.util.Calendar
 import java.util.Locale
 
 /**
- * Self-contained month grid (Sun-first, 6 rows × 7 columns). No CalDAV
+ * Self-contained month grid (Sun-first, up to 6 rows × 7 columns). No CalDAV
  * integration yet — that lands with libs:cal slice D. Today is highlighted
- * with a circular badge tinted with the brand colour.
+ * with a circular badge in the palette's accent.
  *
  * Used standalone (page:cal/month) and embedded inside [AggregatorStackFragment]
- * (Infos · Apps stack_apps[0] = kind "calendar_month").
+ * (Infos · Apps stack_apps[0] = kind "calendar_month"). Compose since #773; the month
+ * arithmetic is [monthGrid], pure, so a test pins it without a UI.
  */
-class CalendarMonthFragment : Fragment() {
+class CalendarMonthFragment : KitComposeFragment() {
 
-    /** Year, month (0-based — Calendar.MONTH convention). */
-    private var displayYear:  Int = 0
-    private var displayMonth: Int = 0
+    override fun palette() = LauncherPalette.kit(requireContext())
 
-    private lateinit var titleView: TextView
-    private lateinit var gridContainer: LinearLayout
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        val today = Calendar.getInstance()
-        displayYear  = today.get(Calendar.YEAR)
-        displayMonth = today.get(Calendar.MONTH)
-
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(8); setPadding(pad, pad, pad, pad)
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            )
-        }
-
-        // Header: ◀  Month YYYY  ▶
-        val header = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            val pad = dp(4); setPadding(pad, pad, pad, pad)
-        }
-        val prev = ImageButton(ctx).apply {
-            setImageResource(R.drawable.ic_chevron_right)
-            rotation = 180f
-            background = null
-            val sz = dp(36); layoutParams = LinearLayout.LayoutParams(sz, sz)
-            setOnClickListener { shiftMonth(-1) }
-        }
-        titleView = TextView(ctx).apply {
-            setTextAppearance(android.R.style.TextAppearance_Material_Title)
-            setTextColor(resources.getColor(R.color.cloud_primary, ctx.theme))
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        val next = ImageButton(ctx).apply {
-            setImageResource(R.drawable.ic_chevron_right)
-            background = null
-            val sz = dp(36); layoutParams = LinearLayout.LayoutParams(sz, sz)
-            setOnClickListener { shiftMonth(+1) }
-        }
-        header.addView(prev); header.addView(titleView); header.addView(next)
-        root.addView(header)
-
-        // Day-of-week strip (S M T W T F S — locale-aware short names).
-        val dowStrip = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            val pad = dp(2); setPadding(pad, pad, pad, pad)
-        }
-        val short = java.text.DateFormatSymbols(Locale.getDefault()).shortWeekdays
-        // Calendar.SUNDAY = 1 ... SATURDAY = 7
-        for (dow in Calendar.SUNDAY..Calendar.SATURDAY) {
-            val cell = TextView(ctx).apply {
-                text = short[dow].take(1)
-                gravity = Gravity.CENTER
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                alpha = 0.65f
-                typeface = Typeface.DEFAULT_BOLD
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+    @Composable
+    override fun Content() {
+        val p = LocalKitPalette.current
+        val now = Calendar.getInstance()
+        // Year * 12 + month (0-based — Calendar.MONTH convention): one saveable number the arrows step.
+        var shown by rememberSaveable { mutableIntStateOf(now.get(Calendar.YEAR) * 12 + now.get(Calendar.MONTH)) }
+        val year = shown / 12
+        val month = shown % 12
+        Column(Modifier.fillMaxWidth().padding(8.dp)) {
+            // Header: ◀  Month YYYY  ▶
+            Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Arrow(false) { shown-- }
+                Text(monthTitle(year, month), color = p.accent, fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center, style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f).testTag(TAG_TITLE))
+                Arrow(true) { shown++ }
             }
-            dowStrip.addView(cell)
-        }
-        root.addView(dowStrip)
-
-        // Grid container — populated by drawMonth().
-        gridContainer = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        root.addView(gridContainer)
-
-        drawMonth()
-        return root
-    }
-
-    private fun shiftMonth(delta: Int) {
-        displayMonth += delta
-        if (displayMonth < 0)  { displayMonth = 11; displayYear-- }
-        if (displayMonth > 11) { displayMonth = 0;  displayYear++ }
-        drawMonth()
-    }
-
-    private fun drawMonth() {
-        val ctx = requireContext()
-        gridContainer.removeAllViews()
-
-        val cal = Calendar.getInstance().apply {
-            clear(); set(Calendar.YEAR, displayYear); set(Calendar.MONTH, displayMonth)
-        }
-        titleView.text = java.text.SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(cal.time)
-
-        // Offset of the 1st (Calendar.SUNDAY=1 → col 0, MONDAY=2 → col 1, …).
-        val firstDow      = cal.get(Calendar.DAY_OF_WEEK)         // 1..7
-        val daysInMonth   = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
-        val leadingBlanks = firstDow - Calendar.SUNDAY            // 0..6
-
-        val today    = Calendar.getInstance()
-        val isCurMo  = today.get(Calendar.YEAR) == displayYear &&
-                       today.get(Calendar.MONTH) == displayMonth
-        val todayDom = if (isCurMo) today.get(Calendar.DAY_OF_MONTH) else -1
-
-        var day = 1
-        for (row in 0 until 6) {
-            val rowLay = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            for (col in 0 until 7) {
-                val flat = row * 7 + col
-                val cell = TextView(ctx).apply {
-                    gravity = Gravity.CENTER
-                    setTextAppearance(android.R.style.TextAppearance_Material_Body1)
-                    layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f)
-                    val m = dp(2); setPadding(m, m, m, m)
+            // Day-of-week strip (S M T W T F S — locale-aware short names).
+            Row(Modifier.fillMaxWidth().padding(2.dp)) {
+                val short = java.text.DateFormatSymbols(Locale.getDefault()).shortWeekdays
+                for (dow in Calendar.SUNDAY..Calendar.SATURDAY) {
+                    Text(short[dow].take(1), color = p.textPrimary, fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f).alpha(0.65f))
                 }
-                if (flat < leadingBlanks || day > daysInMonth) {
-                    cell.text = ""
-                } else {
-                    cell.text = day.toString()
-                    if (day == todayDom) {
-                        cell.background = GradientDrawable().apply {
-                            shape = GradientDrawable.OVAL
-                            setColor(resources.getColor(R.color.cloud_primary, ctx.theme))
+            }
+            val todayDom = if (now.get(Calendar.YEAR) == year && now.get(Calendar.MONTH) == month)
+                now.get(Calendar.DAY_OF_MONTH) else -1
+            for (week in monthGrid(year, month)) {
+                Row(Modifier.fillMaxWidth()) {
+                    for (day in week) {
+                        Box(Modifier.weight(1f).height(40.dp).padding(2.dp), contentAlignment = Alignment.Center) {
+                            if (day != 0) {
+                                val isToday = day == todayDom
+                                Box(Modifier.fillMaxWidth().height(36.dp)
+                                    .clip(CircleShape)
+                                    .then(if (isToday) Modifier.background(p.accent) else Modifier)
+                                    // Placeholder for day-tap; the CalDAV slice surfaces the day agenda here.
+                                    .clickable { },
+                                    contentAlignment = Alignment.Center) {
+                                    Text(day.toString(), color = if (isToday) p.tileInk else p.textPrimary,
+                                        fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.testTag(dayTag(day)))
+                                }
+                            }
                         }
-                        cell.setTextColor(0xFFFFFFFF.toInt())
-                        cell.typeface = Typeface.DEFAULT_BOLD
                     }
-                    val capturedDay = day
-                    cell.setOnClickListener { onDayTapped(capturedDay) }
-                    day++
                 }
-                rowLay.addView(cell)
             }
-            gridContainer.addView(rowLay)
-            if (day > daysInMonth) break  // Trim trailing empty rows
         }
     }
 
-    /** Placeholder for day-tap; future CalDAV slice surfaces the day agenda. */
-    private fun onDayTapped(dom: Int) {
-        // No-op for now. When libs:cal lands an agenda fragment, this will
-        // push it on top with the (year, month, dom) selection.
+    @Composable
+    private fun Arrow(next: Boolean, onClick: () -> Unit) {
+        Icon(painterResource(R.drawable.ic_chevron_right),
+            contentDescription = null,
+            tint = LocalKitPalette.current.accent,
+            modifier = Modifier.size(36.dp)
+                .semantics { contentDescription = if (next) "Next month" else "Previous month" }
+                .testTag(if (next) TAG_NEXT else TAG_PREV)
+                .clickable(onClick = onClick)
+                .padding(6.dp)
+                .then(if (next) Modifier else Modifier.rotate(180f)))
     }
 
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+    companion object {
+        const val TAG_TITLE = "calmonth:title"
+        const val TAG_PREV = "calmonth:prev"
+        const val TAG_NEXT = "calmonth:next"
+        fun dayTag(day: Int) = "calmonth:day:$day"
 
-    companion object { fun newInstance() = CalendarMonthFragment() }
+        internal fun monthTitle(year: Int, month: Int): String {
+            val cal = Calendar.getInstance().apply { clear(); set(Calendar.YEAR, year); set(Calendar.MONTH, month) }
+            return java.text.SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(cal.time)
+        }
+
+        /**
+         * The month as rows of seven day numbers, Sunday first, 0 = blank. The 1st sits in the column
+         * of its weekday; trailing all-blank rows are trimmed.
+         */
+        internal fun monthGrid(year: Int, month: Int): List<List<Int>> {
+            val cal = Calendar.getInstance().apply { clear(); set(Calendar.YEAR, year); set(Calendar.MONTH, month) }
+            val leading = cal.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY       // 0..6
+            val days = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+            val cells = List(leading) { 0 } + (1..days).toList()
+            return cells.chunked(7).map { it + List(7 - it.size) { 0 } }
+        }
+
+        fun newInstance() = CalendarMonthFragment()
+    }
 }

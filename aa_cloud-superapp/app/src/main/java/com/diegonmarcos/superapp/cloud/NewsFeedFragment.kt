@@ -1,25 +1,51 @@
 package com.diegonmarcos.superapp.cloud
 import com.diegonmarcos.superapp.launcher.TileGridFragment
 import com.diegonmarcos.superapp.launcher.Sections
-import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.R
 
-import android.graphics.Typeface
-import android.os.Bundle
-import android.util.TypedValue
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
-import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import com.diegonmarcos.superapp.rss.FeedItem
 import com.diegonmarcos.superapp.rss.RemoteFeed
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * News & RSS — each channel is a collapsable card. Header tap toggles
@@ -31,189 +57,119 @@ import java.util.concurrent.Executors
  * http(s) URLs automatically route through ShellActivity.launchUri, which
  * renders them in the app's embedded browser ([WebPageFragment], pushed onto
  * the content back stack). Nothing here reaches an external browser.
+ *
+ * Compose since #773: the fetch is a coroutine tied to the card's composition (it is cancelled
+ * when the page goes), and the colours are palette roles, not purple/white literals.
  */
-class NewsFeedFragment : Fragment() {
+class NewsFeedFragment : KitComposeFragment() {
 
-    private val executor = Executors.newFixedThreadPool(3)
     /** url → cached items so re-expand doesn't re-fetch. */
     private val cache = ConcurrentHashMap<String, List<FeedItem>>()
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(4); setPadding(pad, pad, pad, pad)
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            )
-        }
+    /** What a card's body shows: nothing yet, the spinner, the items, or the failure. */
+    private sealed interface Load {
+        object Busy : Load
+        class Done(val items: List<FeedItem>) : Load
+        class Failed(val why: String) : Load
+    }
 
+    override fun palette() = LauncherPalette.kit(requireContext())
+
+    @Composable
+    override fun Content() {
         val feeds = Sections.newsFeeds()
-        if (feeds.isEmpty()) {
-            root.addView(emptyText(ctx, getString(R.string.news_feeds_empty)))
-            return root
-        }
-
-        val byCat = feeds.groupBy { it.category.ifBlank { "Other" } }
-        for ((cat, list) in byCat) {
-            root.addView(catHeader(ctx, cat))
-            for (feed in list) root.addView(channelCard(ctx, feed))
-        }
-        return root
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        executor.shutdownNow()
-    }
-
-    private fun catHeader(ctx: android.content.Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-        setTextColor(resources.getColor(R.color.cloud_primary, ctx.theme))
-        typeface = Typeface.DEFAULT_BOLD
-        val pad = dp(10); setPadding(pad, pad, pad, pad / 2)
-    }
-
-    private fun channelCard(ctx: android.content.Context, feed: Sections.NewsFeed): View {
-        val outer = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            background = androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.bg_tile_glass)
-            val m = dp(4)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { setMargins(m, m, m, m) }
-        }
-        // Header row — channel name + host + chevron.
-        val header = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            val pad = dp(12); setPadding(pad, dp(10), pad, dp(10))
-            isClickable = true; isFocusable = true
-        }
-        val nameView = TextView(ctx).apply {
-            text = feed.name
-            setTextAppearance(android.R.style.TextAppearance_Material_Body1)
-            setTextColor(0xFFE9D8FD.toInt())
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        val hostView = TextView(ctx).apply {
-            text = hostOf(feed.url)
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setTextColor(0xCCFFFFFF.toInt())
-            alpha = 0.65f
-            typeface = Typeface.MONOSPACE
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-        }
-        val chevron = ImageView(ctx).apply {
-            setImageResource(R.drawable.ic_chevron_right)
-            val sz = dp(20); layoutParams = LinearLayout.LayoutParams(sz, sz)
-        }
-        header.addView(nameView); header.addView(hostView); header.addView(chevron)
-        outer.addView(header)
-
-        // Body — initially gone; populated on first expand.
-        val body = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(8); setPadding(pad * 2, 0, pad * 2, pad * 2)
-            isVisible = false
-        }
-        outer.addView(body)
-
-        var loaded = false
-        header.setOnClickListener {
-            body.isVisible = !body.isVisible
-            chevron.animate().rotation(if (body.isVisible) 90f else 0f).setDuration(180).start()
-            if (body.isVisible && !loaded) {
-                loaded = true
-                renderItems(ctx, body, feed)
+        Column(Modifier.fillMaxWidth().padding(4.dp)) {
+            if (feeds.isEmpty()) {
+                Hint(stringResource(R.string.news_feeds_empty), Modifier.testTag(TAG_EMPTY))
+                return@Column
+            }
+            for ((cat, list) in feeds.groupBy { it.category.ifBlank { "Other" } }) {
+                Text(cat, color = LocalKitPalette.current.accent, fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 5.dp)
+                        .testTag(catTag(cat)))
+                for (feed in list) ChannelCard(feed)
             }
         }
-        return outer
     }
 
-    private fun renderItems(ctx: android.content.Context, body: LinearLayout, feed: Sections.NewsFeed) {
-        body.removeAllViews()
-        cache[feed.url]?.let {
-            for (item in it) body.addView(itemRow(ctx, item))
-            if (it.isEmpty()) body.addView(emptyText(ctx, "No items"))
-            return
+    @Composable
+    private fun ChannelCard(feed: Sections.NewsFeed) {
+        val p = LocalKitPalette.current
+        val appCtx = LocalContext.current.applicationContext
+        val act = LocalContext.current as? FragmentActivity
+        var open by rememberSaveable(feed.url) { mutableStateOf(false) }
+        var load by remember(feed.url) { mutableStateOf<Load?>(null) }
+        // First expand fetches (once); a re-expand shows what is there.
+        LaunchedEffect(open) {
+            if (!open || load != null) return@LaunchedEffect
+            cache[feed.url]?.let { load = Load.Done(it); return@LaunchedEffect }
+            load = Load.Busy
+            load = withContext(Dispatchers.IO) { runCatching { RemoteFeed.fetch(appCtx, feed.url) } }
+                .fold({ items -> cache[feed.url] = items; Load.Done(items) },
+                      { t -> Load.Failed(t.message ?: t.toString()) })
         }
-        // Loading spinner + status text while we fetch.
-        val spinner = ProgressBar(ctx).apply {
-            isIndeterminate = true
-            val sz = dp(24)
-            layoutParams = LinearLayout.LayoutParams(sz, sz).apply { gravity = android.view.Gravity.CENTER }
-        }
-        val statusView = TextView(ctx).apply {
-            text = "Fetching ${hostOf(feed.url)}…"
-            setTextColor(0xCCFFFFFF.toInt())
-            alpha = 0.7f
-            val pad = dp(12); setPadding(pad, dp(8), pad, dp(8))
-        }
-        body.addView(spinner); body.addView(statusView)
+        val turn by animateFloatAsState(if (open) 90f else 0f, label = "chevron")
 
-        // `ctx` is captured on the main thread; requireContext() from the
-        // executor would throw if the fragment detached mid-fetch - which the
-        // isAdded check below already anticipates.
-        val appCtx = ctx.applicationContext
-        executor.execute {
-            val result = runCatching { RemoteFeed.fetch(appCtx, feed.url) }
-            requireActivity().runOnUiThread {
-                if (!isAdded) return@runOnUiThread
-                body.removeAllViews()
-                result.onSuccess { items ->
-                    cache[feed.url] = items
-                    if (items.isEmpty()) {
-                        body.addView(emptyText(ctx, "No items"))
-                    } else {
-                        for (item in items) body.addView(itemRow(ctx, item))
+        Column(Modifier.fillMaxWidth().padding(4.dp).clip(RoundedCornerShape(12.dp)).background(p.surface)) {
+            // Header row — channel name + host + chevron.
+            Row(Modifier.fillMaxWidth().clickable { open = !open }
+                .padding(horizontal = 12.dp, vertical = 10.dp).testTag(headerTag(feed.id)),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(feed.name, color = p.textPrimary, style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f))
+                Text(hostOf(feed.url), color = p.textSecondary, fontFamily = FontFamily.Monospace,
+                    style = MaterialTheme.typography.labelSmall, modifier = Modifier.alpha(0.8f))
+                Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null,
+                    tint = p.textSecondary, modifier = Modifier.size(20.dp).rotate(turn))
+            }
+            if (open) {
+                Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                    .testTag(bodyTag(feed.id))) {
+                    when (val l = load) {
+                        null, Load.Busy -> {
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(Modifier.size(24.dp), color = p.accent)
+                            }
+                            Hint("Fetching ${hostOf(feed.url)}…")
+                        }
+                        is Load.Failed -> Hint("Fetch failed: ${l.why}", Modifier.testTag(failTag(feed.id)))
+                        is Load.Done -> if (l.items.isEmpty()) Hint("No items") else
+                            for (item in l.items) {
+                                Column(Modifier.fillMaxWidth()
+                                    .clickable {
+                                        // http(s) routes through ShellActivity.launchUri →
+                                        // openEmbeddedBrowser → WebPageFragment (the app's own browser).
+                                        (act as? TileGridFragment.TileClickListener)?.onTileClicked(item.link)
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 8.dp)) {
+                                    Text(item.title, color = p.textPrimary, style = MaterialTheme.typography.bodyMedium)
+                                    if (item.date.isNotBlank()) {
+                                        Text(item.date, color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            }
                     }
-                }.onFailure { t ->
-                    body.addView(emptyText(ctx, "Fetch failed: ${t.message ?: t.toString()}"))
                 }
             }
         }
     }
 
-    private fun itemRow(ctx: android.content.Context, item: FeedItem): View {
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(8); setPadding(pad, dp(8), pad, dp(8))
-            isClickable = true; isFocusable = true
-        }
-        row.addView(TextView(ctx).apply {
-            text = item.title
-            setTextColor(0xFFE9D8FD.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-        })
-        if (item.date.isNotBlank()) {
-            row.addView(TextView(ctx).apply {
-                text = item.date
-                setTextColor(0x99FFFFFF.toInt())
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            })
-        }
-        row.setOnClickListener {
-            // http(s) routes through ShellActivity.launchUri →
-            // openEmbeddedBrowser → WebPageFragment (the app's own browser).
-            (activity as? TileGridFragment.TileClickListener)?.onTileClicked(item.link)
-        }
-        return row
-    }
-
-    private fun emptyText(ctx: android.content.Context, msg: String) = TextView(ctx).apply {
-        text = msg
-        setTextColor(0xCCFFFFFF.toInt())
-        alpha = 0.6f
-        val pad = dp(12); setPadding(pad, pad, pad, pad)
+    @Composable
+    private fun Hint(text: String, modifier: Modifier = Modifier) {
+        Text(text, color = LocalKitPalette.current.textSecondary, style = MaterialTheme.typography.bodyMedium,
+            modifier = modifier.padding(12.dp).alpha(0.8f))
     }
 
     private fun hostOf(url: String): String =
         runCatching { android.net.Uri.parse(url).host ?: url }.getOrDefault(url)
 
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
-    companion object { fun newInstance() = NewsFeedFragment() }
+    companion object {
+        const val TAG_EMPTY = "news:empty"
+        fun catTag(cat: String) = "news:cat:$cat"
+        fun headerTag(id: String) = "news:header:$id"
+        fun bodyTag(id: String) = "news:body:$id"
+        fun failTag(id: String) = "news:failed:$id"
+        fun newInstance() = NewsFeedFragment()
+    }
 }

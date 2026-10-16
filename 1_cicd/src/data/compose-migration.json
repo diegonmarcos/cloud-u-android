@@ -623,12 +623,14 @@
         "Robolectric tests BottomNavSelectedPillTest / ShellBottomNavCollapseTest inflate activity_main"
       ],
       "baseline": {
-        "view_screens": 26,
-        "layout_xml": 17,
-        "view_ui_files": 46,
+        "view_screens": 22,
+        "layout_xml": 15,
+        "view_ui_files": 42,
         "custom_views": 9
       },
       "done": [
+        "rss/RssFeedFragment (page:feed/all, the Infos-stack rss card) — KitComposeFragment; fragment_rss_feed.xml and item_rss_topic.xml deleted; the USER-above-INFRA grouping is the pure RssFeedFragment.plan, pinned by RssFeedPlanTest, #773",
+        "cloud/TasksFragment, cloud/CalendarMonthFragment, cloud/NewsFeedFragment (the Infos stack's tasks / calendar_month / news cards, page:cal/month) — KitComposeFragments under CloudKitTheme; palette surface roles replace the purple/white literals; the news fetch is a coroutine tied to the card; CloudInfosPagesComposeTest, #773",
         "cloud/C3HealthFragment, cloud/C3MeshFragment, cloud/MeshView (page:c3/health, the Infos-stack c3_public/c3_private/wg_mesh cards) — KitComposeFragment under CloudKitTheme, dots are palette ok/warn/accent roles; the five fragment_c3_* / item_c3_* layouts deleted; C3PagesComposeTest, #773",
         "network/WireGuardFragment (Configs ▸ Cloud Mesh: page:config/wg, page:wg/config, the hidden wg/status) — KitComposeFragment hosting network/mesh/MeshScreen: libs:bottomnav PageTabs over the six pages ui.mesh_page declares, every size from MeshDensity, #877; DnsFragment stays Views",
         "settings/LauncherPresetsFragment (Configs ▸ Launcher ▸ Presets) — KitComposeFragment, #773",
