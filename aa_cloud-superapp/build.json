@@ -9360,7 +9360,8 @@
         {
           "id": "health_activity",
           "label": "Health",
-          "subtitle": "Active kcal burned today and km walked today, read from Health Connect on this device. Never estimated — a half with no grant reads 'not available'.",
+          "subtitle": "Steps, active kcal and km walked today, read from Health Connect on this device. Never estimated — a half with no grant reads 'not available'. Tap opens Cloud Navigation > Timeline > Steps.",
+          "click_target": "extapp:cloud-nav#page:timeline/steps",
           "icon": "ic_p_health_activity",
           "surface": "system_notification",
           "channel": "health_activity",
@@ -9405,6 +9406,12 @@
               "default": true
             },
             {
+              "key": "show_steps",
+              "type": "toggle",
+              "label": "Show steps",
+              "default": true
+            },
+            {
               "key": "show_kcal",
               "type": "toggle",
               "label": "Show active kcal",
@@ -9432,6 +9439,7 @@
         {
          "id": "weather_today",
          "label": "Weather",
+         "click_target": "https://open-meteo.com/en/docs#latitude={lat}&longitude={lon}",
          "subtitle": "Today where the device is: current temperature, the day's max/min and the hour-by-hour forecast, from Open-Meteo (no key, no account) for the last known position. The place name comes from Android's own geocoder. Location is never actively requested — the badge reads the position someone else already paid for.",
          "icon": "ic_p_weather_today",
          "surface": "system_notification",

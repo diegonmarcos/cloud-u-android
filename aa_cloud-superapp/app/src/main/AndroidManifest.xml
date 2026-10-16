@@ -15,6 +15,11 @@
          runCatching, so the "Vibration on tap" toggle silently no-ops.
          performHapticFeedback alone is unreliable (OEMs ship it OFF). -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Health badge + Health Connect grants. Declared here as well as in libs:health so THIS manifest is
+         self-describing: Health Connect only lists an app that declares the permission it is asked for. -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
     <!-- Read-only Wi-Fi state for the About page: SSID/BSSID need both
          this AND ACCESS_FINE_LOCATION (Android 10+ scoped Wi-Fi info);
          link speed / frequency / RSSI come from the same surface. -->
@@ -324,11 +329,28 @@
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
+        </activity>
+
+        <!-- Android 14+: Health Connect's "app privacy" entry point. It MUST be an activity-alias guarded by
+             START_VIEW_PERMISSION_USAGE (only the system may start it); the same filter on the activity itself
+             is not recognised, and without it Health Connect will not list or grant this app's permissions. -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE"
+            android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+
+        <!-- Transparent trampoline that runs PermissionController's request contract (Health badge "Grant access"). -->
+        <activity
+            android:name=".notificationcenter.HealthGrantActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <!-- RECOVERY — the direct-install screen, and the tap target for both
              the home banner and the advisory notification.

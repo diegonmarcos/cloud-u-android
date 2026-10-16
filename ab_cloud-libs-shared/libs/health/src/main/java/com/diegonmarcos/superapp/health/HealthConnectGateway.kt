@@ -31,6 +31,7 @@ import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.diegonmarcos.superapp.core.HealthStore
 import kotlinx.coroutines.Dispatchers
@@ -114,6 +115,14 @@ object HealthConnectGateway {
     private fun permsFor(vararg types: KClass<out Record>): Set<String> =
         types.map { HealthPermission.getReadPermission(it) }.toSet()
 
+    /** What the Health badge reads: steps (the number), active kcal and distance. */
+    val BADGE_PERMISSIONS: Set<String> by lazy {
+        setOf(StepsToday.READ_STEPS) + permsFor(ActiveCaloriesBurnedRecord::class, DistanceRecord::class)
+    }
+
+    /** The system permission dialog; launch it from an Activity (see the SuperApp's HealthGrantActivity). */
+    fun requestPermissionsContract() = androidx.health.connect.client.PermissionController.createRequestPermissionResultContract()
+
     /** Availability — split into three states so the UI can give the
      *  user a precise next-step button (install / update / open). */
     enum class Availability { Installed, NotInstalled, UpdateRequired, Unsupported }
@@ -126,9 +135,13 @@ object HealthConnectGateway {
             else                                                 -> Availability.Unsupported
         }
 
-    fun isProviderInstalled(context: Context): Boolean = try {
-        context.packageManager.getPackageInfo(PROVIDER_PACKAGE, 0); true
-    } catch (_: PackageManager.NameNotFoundException) { false }
+    /** True when Health Connect can be used: the SDK says AVAILABLE (on Android 14+ it is a built-in module and the
+     *  com.google.android.apps.healthdata package is NOT installed, so a package lookup alone says "missing"),
+     *  or the provider app is present. */
+    fun isProviderInstalled(context: Context): Boolean =
+        runCatching { availability(context) == Availability.Installed }.getOrDefault(false) || try {
+            context.packageManager.getPackageInfo(PROVIDER_PACKAGE, 0); true
+        } catch (_: PackageManager.NameNotFoundException) { false }
 
     fun client(context: Context): HealthConnectClient? =
         runCatching { HealthConnectClient.getOrCreate(context) }.getOrNull()
@@ -275,6 +288,29 @@ object HealthConnectGateway {
         }
         ActivityToday(kcal, km, reason)
     }
+
+    /**
+     * Today's steps: Health Connect's de-duplicating COUNT_TOTAL aggregate over the LOCAL day, plus who wrote
+     * them and when the latest record ended. Never throws; a failure is carried in [StepsToday.Result.error].
+     */
+    suspend fun readStepsToday(context: Context, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): StepsToday.Result =
+        withContext(Dispatchers.IO) {
+            val sdk = runCatching { HealthConnectClient.getSdkStatus(context, PROVIDER_PACKAGE) }.getOrDefault(HealthConnectClient.SDK_UNAVAILABLE)
+            val c = if (sdk == HealthConnectClient.SDK_AVAILABLE) client(context) else null
+            val granted = if (c != null) runCatching { c.permissionController.getGrantedPermissions() }.getOrDefault(emptySet()) else emptySet()
+            val perm = StepsToday.permState(if (sdk == HealthConnectClient.SDK_AVAILABLE && c == null) HealthConnectClient.SDK_UNAVAILABLE else sdk, granted)
+            if (perm != StepsToday.Perm.GRANTED || c == null) return@withContext StepsToday.Result(null, perm, emptySet(), null)
+            try {
+                val (from, to) = StepsToday.todayRange(now, zone)
+                val range = TimeRangeFilter.between(from, to)
+                val agg = c.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), range))
+                val last = c.readRecords(ReadRecordsRequest(StepsRecord::class, range, ascendingOrder = false, pageSize = 1))
+                    .records.firstOrNull()?.endTime?.toEpochMilli()
+                StepsToday.Result(agg[StepsRecord.COUNT_TOTAL] ?: 0L, perm, agg.dataOrigins.map { it.packageName }.toSet(), last)
+            } catch (t: Throwable) {
+                StepsToday.Result(null, perm, emptySet(), null, t.javaClass.simpleName)
+            }
+        }
 
     private fun emptySnapshot(day: LocalDate) = DailySnapshot(
         day, 0L, 0.0, 0.0, 0.0, 0.0, 0.0, 0L, 0L, 0.0, 0L, 0, emptySet(),

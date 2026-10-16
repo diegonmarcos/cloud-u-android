@@ -204,13 +204,7 @@ class MarketsBadgeService : Service() {
      * (onCreate) and a warm one (onNewIntent); an http(s) target reaches
      * `launchUri`, which renders it in the embedded browser.
      */
-    private fun tickerPi(url: String): PendingIntent = PendingIntent.getActivity(
-        this, url.hashCode(),
-        Intent(this, MainActivity::class.java)
-            .putExtra("shortcut_action", url)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-    )
+    private fun tickerPi(url: String): PendingIntent = BadgeClick.pi(this, url)
 
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return

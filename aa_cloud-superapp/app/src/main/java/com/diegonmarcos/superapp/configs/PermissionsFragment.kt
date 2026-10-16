@@ -783,6 +783,9 @@ class PermissionsFragment : KitComposeFragment() {
     }
 
     private fun openHealthConnectPerms() {
+        // Health Connect's own request dialog first (steps / distance / calories); it falls back to HC settings itself.
+        if (runCatching { startActivity(android.content.Intent(ctxAny(),
+                com.diegonmarcos.superapp.notificationcenter.HealthGrantActivity::class.java)) }.isSuccess) return
         val tried = sequenceOf(
             android.content.Intent("androidx.health.ACTION_HEALTH_CONNECT_SETTINGS"),
             android.content.Intent("android.health.connect.action.HEALTH_HOME_SETTINGS"),

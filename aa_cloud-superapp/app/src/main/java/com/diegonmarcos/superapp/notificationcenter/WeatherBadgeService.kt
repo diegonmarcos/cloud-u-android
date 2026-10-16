@@ -112,6 +112,8 @@ class WeatherBadgeService : Service() {
 
     data class WeatherToday(
         val place: String,
+        val lat: Double,
+        val lon: Double,
         val currentC: Double,
         val maxC: Double,
         val minC: Double,
@@ -163,6 +165,8 @@ class WeatherBadgeService : Service() {
         val daily = j.getJSONObject("daily")
         return WeatherToday(
             place = placeName(loc),
+            lat = loc.latitude,
+            lon = loc.longitude,
             currentC = j.getJSONObject("current").getDouble("temperature_2m"),
             maxC = daily.getJSONArray("temperature_2m_max").getDouble(0),
             minC = daily.getJSONArray("temperature_2m_min").getDouble(0),
@@ -214,6 +218,8 @@ class WeatherBadgeService : Service() {
                     setStyle(NotificationCompat.BigTextStyle().bigText("$text\n\n$rows"))
                 }
             }
+            // Tap = the SOURCE's page for this position, the way Markets opens its ticker page.
+            .setContentIntent(BadgeClick.pi(this, BadgeClick.weatherUrl(today?.lat, today?.lon)))
             .let { NotifyGroups.attach(this, it, BADGE_ID) } // #777 group G1
             .build()
     }

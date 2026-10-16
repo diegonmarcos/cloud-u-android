@@ -99,6 +99,15 @@
   },
   "ui": {
     "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. A section's `pages` are its tab strip (PageTabsView): Timeline = Explored/Daily/Stops/Steps, Configs = Tracker/APIs/Update/Cache/Layers/About. A section id maps to a Fragment in MainActivity.fragmentForSection(); a section icon maps to R.drawable.ic_nav_<icon>; a page id maps to the child fragment its host fragment shows.",
+    "deep_links": [
+      {
+        "id": "timeline-steps",
+        "target": "page:timeline/steps",
+        "intent_extra": "shortcut_action",
+        "from_superapp": "extapp:cloud-nav#page:timeline/steps",
+        "_doc": "Timeline > Steps. Handled by MainActivity.deepLinkOf (NavDeepLink.parse) cold and warm; the SuperApp Health notify badge sends it through launchExternalApp, which carries the part after # as the shortcut_action extra."
+      }
+    ],
     "bottom_nav": [
       "routes",
       "navigation",

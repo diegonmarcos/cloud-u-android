@@ -12,6 +12,8 @@ import android.os.Looper
 import androidx.core.app.NotificationCompat
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.health.HealthConnectGateway
+import com.diegonmarcos.superapp.health.StepsToday
+import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -101,10 +103,11 @@ class HealthBadgeService : Service() {
         scope.launch {
             val today = runCatching { HealthConnectGateway.readActivityToday(applicationContext) }
                 .getOrNull()
+            val steps = runCatching { HealthConnectGateway.readStepsToday(applicationContext) }.getOrNull()
             main.post {
                 runCatching {
                     (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
-                        .notify(NOTIF_ID, build(today))
+                        .notify(NOTIF_ID, build(today, steps))
                 }
             }
         }
@@ -115,12 +118,15 @@ class HealthBadgeService : Service() {
      * says so; a half that read 0 says 0, because 0 km walked is a true fact
      * about today and "not available" is not.
      */
-    private fun build(today: HealthConnectGateway.ActivityToday?): android.app.Notification {
+    private fun build(today: HealthConnectGateway.ActivityToday?, steps: StepsToday.Result? = null): android.app.Notification {
         val b = badge()
         val showKcal = b?.let { BadgeCustomization.bool(this, it, "show_kcal") } ?: true
         val showKm = b?.let { BadgeCustomization.bool(this, it, "show_km") } ?: true
 
+        val showSteps = b?.let { BadgeCustomization.bool(this, it, "show_steps") } ?: true
+
         val parts = mutableListOf<String>()
+        if (showSteps) parts += HealthBadgeModel.stepsText(steps)
         if (showKcal) parts += today?.activeKcal
             ?.let { getString(R.string.badge_health_kcal, it.toInt()) }
             ?: getString(R.string.badge_health_kcal_unavailable)
@@ -128,7 +134,7 @@ class HealthBadgeService : Service() {
             ?.let { getString(R.string.badge_health_km, String.format(Locale.US, "%.2f", it)) }
             ?: getString(R.string.badge_health_km_unavailable)
 
-        val text = if (today == null) getString(R.string.badge_health_reading)
+        val text = if (today == null && steps == null) getString(R.string.badge_health_reading)
         else parts.joinToString("  ·  ")
 
         val pinned = BadgeServices.pinned(this, BADGE_ID)
@@ -145,9 +151,19 @@ class HealthBadgeService : Service() {
             .apply {
                 // The WHY, where the owner can actually read it, instead of a
                 // badge that silently shows one half.
-                today?.reason?.takeIf { it.isNotBlank() }?.let {
-                    setStyle(NotificationCompat.BigTextStyle().bigText("$text\n\n$it"))
-                }
+                // Status line (source, permission, last data time) and the why-it-is-zero hint: the long-press / expanded face.
+                val status = steps?.let { StepsToday.statusLine(it, ZoneId.systemDefault()) }
+                val why = listOfNotNull(steps?.let { StepsToday.hint(it) }, today?.reason?.takeIf { it.isNotBlank() })
+                if (status != null || why.isNotEmpty())
+                    setStyle(NotificationCompat.BigTextStyle().bigText((listOf(text) + listOfNotNull(status) + why).joinToString("\n")))
+            }
+            // Tap = Cloud Navigation > Timeline > Steps; with no grant, the button runs the Health Connect dialog.
+            .setContentIntent(BadgeClick.pi(this, BadgeClick.HEALTH_STEPS))
+            .apply {
+                if (steps != null && steps.perm == StepsToday.Perm.DENIED) addAction(0, "Grant access",
+                    android.app.PendingIntent.getActivity(this@HealthBadgeService, 7716,
+                        Intent(this@HealthBadgeService, HealthGrantActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
             }
             .let { NotifyGroups.attach(this, it, BADGE_ID) } // #777 group G1
             .build()
