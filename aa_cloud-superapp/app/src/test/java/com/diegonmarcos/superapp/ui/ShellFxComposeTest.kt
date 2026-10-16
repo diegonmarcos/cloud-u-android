@@ -39,7 +39,7 @@ class ShellFxComposeTest : KitPageHarness() {
         compose.waitForIdle()
         for (tag in listOf("galaxy", "island", "line")) compose.onNodeWithTag(tag).assertExists()
         val n = compose.onNodeWithTag("island").fetchSemanticsNode()
-        assertTrue(n.size.width > n.size.height)
+        assertTrue("island is ${n.size}, galaxy ${compose.onNodeWithTag("galaxy").fetchSemanticsNode().size}", n.size.width > n.size.height)
         ShellFxState.frozen = false
     }
 
