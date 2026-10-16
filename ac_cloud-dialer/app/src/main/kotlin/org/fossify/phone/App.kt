@@ -21,6 +21,8 @@ class App : FossifyApp() {
     override fun onCreate() {
         super.onCreate()
         baseConfig.appSideloadingStatus = SIDELOADING_FALSE
+        // The fleet setup contract carries the call log and blocked numbers (store call_history).
+        com.diegonmarcos.superapp.fleetconfig.SetupStores.register("call_history", org.fossify.phone.fleet.CallHistoryBackup)
 
         // First-run screening default = contacts_only, per the owner contract in
         // build.json::forks.dialer.call_screening.default_mode: unknown numbers

@@ -30,7 +30,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-chat | `com.diegonmarcos.comms.chat` | 5 | 0 | 100% |
 | cloud-code | `com.diegonmarcos.code` | 7 | 3 | 70% |
 | cloud-contacts | `com.diegonmarcos.cloudcontacts` | 4 | 2 | 66% |
-| cloud-dialer | `com.diegonmarcos.comms.dialer` | 3 | 0 | 100% |
+| cloud-dialer | `com.diegonmarcos.comms.dialer` | 3 | 2 | 60% |
 | cloud-drive | `com.diegonmarcos.clouddrive` | 9 | 4 | 69% |
 | cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 4 | 0 | 100% |
 | cloud-mail | `com.diegonmarcos.comms.mail` | 9 | 2 | 81% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 0 | 100% |
-| **fleet** | | **212** | **38** | **84%** |
+| **fleet** | | **212** | **40** | **84%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -464,6 +464,7 @@ Module `ac_cloud-dialer`; libs: lib-analytics, lib-core, lib-devtools, lib-fleet
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `call_history` | provider | config | GAP | Cloud Dialer: the system call log and blocked numbers, served by the handler the app registers. Carried in the device file so a new phone keeps its call history; restore adds the missing calls and blocked numbers (needs the default phone app role) and never deletes. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
@@ -472,11 +473,12 @@ Module `ac_cloud-dialer`; libs: lib-analytics, lib-core, lib-devtools, lib-fleet
 | file | class | doc |
 |---|---|---|
 | `shared_prefs/<package>_preferences.xml (Fossify Config) ` | config | Fossify Phone settings (theme, sorting, dialpad, quick dials, preferred call provider, blocked-number flags). Not in the scanner list under that name; listed for completeness. |
+| `system CallLog and BlockedNumberContract providers` | config | Call log and blocked numbers, through CallHistoryBackup. |
 | `filesDir/screening_log.json` | device | Log of screened/blocked calls. |
-| `system BlockedNumberContract provider and default-dialer role / call-screening role` | content | Blocked numbers and default phone app role live in the system, not the app. |
+| `system BlockedNumberContract provider and default-dialer role / call-screening role` | content | Blocked numbers and the default phone app role live in the system; the blocked numbers migrate through the call_history store. |
 | `assets/call_providers.json, assets/spam_patterns.json` | device | Read-only bundled assets. |
 
-Coverage: 3 covered, 0 gaps.
+Coverage: 3 covered, 2 gaps — call_history, file:system CallLog and BlockedNumberContract providers.
 
 ## cloud-drive — `com.diegonmarcos.clouddrive`
 

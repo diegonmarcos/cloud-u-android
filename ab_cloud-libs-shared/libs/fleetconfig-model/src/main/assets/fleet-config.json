@@ -568,6 +568,14 @@
         "lib-appstore"
       ]
     },
+    "call_history": {
+      "kind": "provider",
+      "class": "config",
+      "doc": "Cloud Dialer: the system call log and blocked numbers, served by the handler the app registers. Carried in the device file so a new phone keeps its call history; restore adds the missing calls and blocked numbers (needs the default phone app role) and never deletes.",
+      "used_by": [
+        "ac_cloud-dialer"
+      ]
+    },
     "contacts_vcards": {
       "kind": "provider",
       "class": "config",
@@ -2570,6 +2578,13 @@
           "store": "<default>"
         },
         {
+          "id": "dialer-call-history",
+          "path": "system CallLog and BlockedNumberContract providers",
+          "class": "config",
+          "doc": "Call log and blocked numbers, through CallHistoryBackup.",
+          "store": "call_history"
+        },
+        {
           "id": "dialer-screening-log",
           "path": "filesDir/screening_log.json",
           "class": "device",
@@ -2579,7 +2594,7 @@
           "id": "dialer-system-blocked",
           "path": "system BlockedNumberContract provider and default-dialer role / call-screening role",
           "class": "content",
-          "doc": "Blocked numbers and default phone app role live in the system, not the app."
+          "doc": "Blocked numbers and the default phone app role live in the system; the blocked numbers migrate through the call_history store."
         },
         {
           "id": "dialer-call-providers-asset",
