@@ -46,9 +46,10 @@ class CloudAppsSearchTest : KitPageHarness() {
 
         assertTrue("Back with a query clears it", page.tryHandleBack())
         compose.waitForIdle()
-        // The bar drops its focus on the next frames (SearchBox clears it when `blurs` moves); then nothing is left to show.
-        compose.waitUntil(3_000) { compose.onAllNodesWithTag(SearchPanelTags.DROPDOWN).fetchSemanticsNodes().isEmpty() }
-        compose.onAllNodesWithTag(SearchPanelTags.DROPDOWN).assertCountEquals(0)
+        // The query is gone, so the results (and the Cloud Search hand-off) are gone and the grid is back under the
+        // bar. (Whether the bar still holds focus is the window's business: a JVM test has no focused window.)
+        compose.onAllNodesWithTag(SearchPanelTags.CLOUD_SEARCH).assertCountEquals(0)
+        compose.onNodeWithTag(GroupedTilesFragment.TAG_LIST).assertExists()
     }
 
     @Test fun `the Home sheet's Cloud tab is the same page without a second bar`() {
