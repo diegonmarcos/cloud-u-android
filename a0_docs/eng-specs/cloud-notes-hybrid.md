@@ -1,6 +1,6 @@
 # Cloud Notes hybrid — Miro + Notion + Obsidian in one app
 
-Status: **Phase 0 done, Phases 1–8 planned.** Owner vision (2026-10): one app that
+Status: **Phase 0 done (storage tests run in CI), top bar done, Phase 4 (graph) done, Phase 1 folder import started, Phases 2–3 and 5–8 planned.** Owner vision (2026-10): one app that
 is a Notion-style page workspace, a Miro-style infinite canvas and an
 Obsidian-style linked vault. Decisions already taken by the owner:
 
@@ -63,20 +63,31 @@ held by the nav-shape guard (N1–N9; `ac_cloud-notes` left the exemption ledger
 | **Home** | Recent · Daily | all | `/home` · `/journals` |
 | **Pages** | All · Tags · Collections · **+ New page** | Notion | `/all` · `/tag` · `/collection` · create doc |
 | **Canvas** | Boards · **+ New board** | Miro | `/all` (until a boards filter exists, Phase 3) · create edgeless doc |
-| **Graph** | Global · Local · Tags | Obsidian | toast "planned, phase 4" · toast · `/tag` |
-| **Search** | Search · Ask | all | `/search` · toast "planned, phase 7" (libs:ai) |
+| **Graph** | Global · Local · Tags | Obsidian | `/graph` · `/graph/local` · `/tag` (Phase 4, below) |
+| **Search** | Search · Ask | all | `/search` · libs:ai chat drawn by the shell (`native` row) |
 
 Mechanics: the shell knows only ids. It dispatches `cloud-notes:nav {section, page}` to the WebView; the web half
 (`core/src/mobile/components/native-nav-routes.ts`) maps `<section>/<page>` to a workbench route, an action, or a
 "planned" toast. The editor's own bottom tabs hide (`window.cloudNotesNativeNav`). `test/test-nav-routes.sh` fails if
 `build.json::ui`, the web table, the workbench routes and the Kotlin event name drift apart.
 
-Open points, deliberately not papered over: (1) Settings/Profile are **not** a nav item. The fleet "top-row Profile
-button" is not a `libs:bottomnav` view in this tree, so Settings stays AFFiNE's own workspace menu until that
-component exists; hand-rolling one would break guard N3/N7. (2) Not yet verified on a device: the page strip's
-height is pushed into the WebView's top margin, and the web page header also pads for the status bar, so a double
-top gap is possible; fix on first device run by zeroing the web safe-area-top when `cloudNotesNativeNav` is set.
-(3) The Pages "doc tree" (Notion sidebar) is Phase 5; today `All` is the flat list.
+Open point: the Pages "doc tree" (Notion sidebar) is Phase 5; today `All` is the flat list, and the top bar's
+drawer (0c) lists the newest pages.
+
+### 0c. Top bar (DONE)
+
+`build.json::ui.top_bar {"drawer":true,"ai":true,"settings":["account","configs"]}` is drawn by `libs:bottomnav`'s
+`AppTopBarScaffold` in a ComposeView over the editor (`NativeTopBar.kt`): hamburger drawer (the five sections and
+the editor's pages, pushed by the web half through `window.CloudNotesHost.setDocs`), title, AI (libs:ai's shared chat
+via `AiFleetChatPanel`) and Settings (Account launches Cloud Account; Configs fires `cloud-notes:open-settings`, which
+opens AFFiNE's own settings dialog). Search › Ask is the same chat as a full page between strip and island
+(`NativeNav.NATIVE_PAGES`; the web table row is `kind: 'native'`).
+
+**One source of the top inset.** The bar owns the status bar and reports its height; `NativeNav.applyWebMargin` puts the
+page strip and the WebView (and the Ask page) below `statusBar + bar + strip`; the web half zeroes
+`--safe-area-inset-top` once `cloudNotesNativeNav` is set (`setup.ts`), so nothing pads for the status bar twice.
+`test/test-notes-topbar.sh` pins the wiring, the Kotlin/TypeScript event and host names, the native-page set, and
+that only `NativeNav` writes a top margin. Not yet verified on a device: the exact pixel gap (needs the phone).
 
 ---
 
@@ -91,7 +102,7 @@ Goal: the existing vault `/home/user/cloud-notes` (and Markor files) round-trips
 | Folders ↔ doc tree | PARTIAL | importer returns `ImportFolder`; our workspace has collections/organize folders, no persistent tree mirror |
 | Attachments (images, pdf) | EXISTS (import) | `stageImportedAsset`, `blobsFromAssets` |
 | Callouts (`> [!note]`) | EXISTS | `CALLOUT_TYPE_MAP` |
-| Whole-vault import UI on Android | PARTIAL | file picker imports single files (ExternalFilePlugin, #547); folder import = BUILD |
+| Whole-vault import UI on Android | PARTIAL (text) | explorer › "Import as vault" walks the folder (`apps/android/src/vault-import.ts`, spec-tested) and hands all notes to the Obsidian importer in one call so wikilinks resolve; attachments need a binary-capable plugin method (BUILD) |
 | Export doc/workspace → vault folder (`.md` + `attachments/` + frontmatter) | BUILD | reverse of the importer; keep unknown frontmatter keys in a doc property |
 | Frontmatter ↔ doc properties (tags, aliases, created) | BUILD | |
 | Markor data | BUILD | Markor stored plain `.md` in a folder: same path as vault import; one migration button |
@@ -140,7 +151,9 @@ Acceptance tests:
 - **A3.5** Portal: typing in the portal changes the source doc's text and vice versa (Yjs state equal after both edits).
 - **A3.6** `.canvas` fixture (12 nodes, 9 edges, 2 groups) imports with the same counts and re-exports valid JSON Canvas (schema check).
 
-## Phase 4 — Graph (OBSIDIAN pillar, part 3)
+## Phase 4 — Graph (OBSIDIAN pillar, part 3) — DONE except the device run
+
+Shipped: `blocksuite/affine/graph` (`@blocksuite/affine-graph`: builder, local BFS, backlinks, orphans, seeded grid force layout; golden/BFS/determinism tests run in the `storage_tests` CI job) and the mobile views `/graph` and `/graph/local` (`core/src/mobile/views/graph`: canvas renderer with pan/pinch/tap, tag + orphan filters, hops 1–3, highlight search, Linked from / Links to lists). A4.1, A4.3, A4.4 are automated; A4.2 is asserted only as a 3 s CI smoke on 2,000 nodes / 6,000 edges (the 1.5 s / 30 fps phone budget needs the device).
 
 | Feature | State | Notes |
 |---|---|---|
