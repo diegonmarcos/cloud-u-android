@@ -5,6 +5,7 @@ import {
 import { ParagraphBlockSchemaExtension } from '@blocksuite/affine-model';
 
 import { ParagraphBlockAdapterExtensions } from './adapters/extension';
+import { SyncedBlocksExtension } from './synced/synced-blocks';
 
 export class ParagraphStoreExtension extends StoreExtensionProvider {
   override name = 'affine-paragraph-block';
@@ -13,5 +14,6 @@ export class ParagraphStoreExtension extends StoreExtensionProvider {
     super.setup(context);
     context.register(ParagraphBlockSchemaExtension);
     context.register(ParagraphBlockAdapterExtensions);
+    context.register(SyncedBlocksExtension);
   }
 }

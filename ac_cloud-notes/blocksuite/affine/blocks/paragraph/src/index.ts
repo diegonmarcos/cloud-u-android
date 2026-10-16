@@ -4,3 +4,5 @@ export * from './paragraph-block.js';
 export * from './paragraph-block-config.js';
 export * from './turbo/paragraph-layout-handler';
 export * from './turbo/paragraph-painter.worker';
+export * from './synced/bind-ytexts';
+export * from './synced/synced-blocks';
