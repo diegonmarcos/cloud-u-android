@@ -1559,6 +1559,22 @@
         "lib-appstore"
       ]
     },
+    "store_notify": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone.",
+      "used_by": [
+        "lib-core"
+      ]
+    },
+    "store_sources": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Store > Configs > Sources: the ids of the declared feeds the owner switched off (never urls; the declaration stays the only list of feeds); the owner's choice, so it moves with the phone.",
+      "used_by": [
+        "lib-appstore"
+      ]
+    },
     "sterna_account": {
       "kind": "prefs",
       "class": "config",

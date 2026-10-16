@@ -15,42 +15,42 @@ DataStore / Room stores and declared files it cannot move yet.
 
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
-| cloud-superapp | `com.diegonmarcos.superapp` | 44 | 0 | 100% |
-| c3-morpheus | `com.diegonmarcos.morpheus` | 1 | 0 | 100% |
-| c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
-| c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
-| cloud-account | `com.diegonmarcos.cloudaccount` | 13 | 0 | 100% |
-| cloud-tasks | `com.diegonmarcos.cloudagenda` | 5 | 0 | 100% |
-| cloud-browser | `com.diegonmarcos.cloudbrowser` | 9 | 0 | 100% |
-| cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
-| cloud-media-center | `com.diegonmarcos.cloudmediacenter` | 1 | 0 | 100% |
-| cloud-c3 | `com.diegonmarcos.cloudc3` | 7 | 0 | 100% |
-| cloud-calc | `com.diegonmarcos.cloudcalc` | 11 | 0 | 100% |
-| cloud-camera | `cld.camera` | 8 | 0 | 100% |
-| cloud-chat | `com.diegonmarcos.comms.chat` | 5 | 0 | 100% |
-| cloud-code | `com.diegonmarcos.code` | 7 | 5 | 58% |
-| cloud-contacts | `com.diegonmarcos.cloudcontacts` | 4 | 2 | 66% |
-| cloud-dialer | `com.diegonmarcos.comms.dialer` | 5 | 2 | 71% |
-| cloud-drive | `com.diegonmarcos.clouddrive` | 9 | 6 | 60% |
-| cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 4 | 0 | 100% |
-| cloud-mail | `com.diegonmarcos.comms.mail` | 9 | 2 | 81% |
-| cloud-matrix | `com.diegonmarcos.comms.matrix` | 1 | 9 | 10% |
-| cloud-me | `com.diegonmarcos.cloudme` | 3 | 0 | 100% |
-| cloud-gallery | `com.diegonmarcos.mediacenter` | 4 | 1 | 80% |
-| cloud-myterminal | `com.diegonmarcos.ide` | 6 | 0 | 100% |
-| cloud-nav | `com.diegonmarcos.cloudnav` | 11 | 0 | 100% |
-| cloud-news | `com.diegonmarcos.cloudnews` | 3 | 1 | 75% |
-| cloud-terminal-nix | `cld.termux.nix` | 9 | 7 | 56% |
-| cloud-notes | `com.diegonmarcos.cloudnotes` | 1 | 1 | 50% |
-| cloud-office | `com.diegonmarcos.cloudoffice` | 2 | 0 | 100% |
-| cloud-search | `com.diegonmarcos.cloudsearch` | 2 | 2 | 50% |
-| cloud-store | `com.diegonmarcos.cloudstore` | 7 | 0 | 100% |
-| cloud-terminal-termux | `cld.termux` | 9 | 7 | 56% |
-| cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
-| cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
-| cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 2 | 71% |
-| **fleet** | | **217** | **48** | **81%** |
+| cloud-superapp | `com.diegonmarcos.superapp` | 46 | 0 | 100% |
+| c3-morpheus | `com.diegonmarcos.morpheus` | 2 | 0 | 100% |
+| c3-watchdog | `com.diegonmarcos.watchdog` | 2 | 0 | 100% |
+| c3-watchtower | `com.diegonmarcos.watchtower` | 2 | 0 | 100% |
+| cloud-account | `com.diegonmarcos.cloudaccount` | 15 | 0 | 100% |
+| cloud-tasks | `com.diegonmarcos.cloudagenda` | 6 | 0 | 100% |
+| cloud-browser | `com.diegonmarcos.cloudbrowser` | 10 | 0 | 100% |
+| cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 2 | 0 | 100% |
+| cloud-media-center | `com.diegonmarcos.cloudmediacenter` | 2 | 0 | 100% |
+| cloud-c3 | `com.diegonmarcos.cloudc3` | 8 | 0 | 100% |
+| cloud-calc | `com.diegonmarcos.cloudcalc` | 12 | 0 | 100% |
+| cloud-camera | `cld.camera` | 9 | 0 | 100% |
+| cloud-chat | `com.diegonmarcos.comms.chat` | 6 | 0 | 100% |
+| cloud-code | `com.diegonmarcos.code` | 8 | 5 | 61% |
+| cloud-contacts | `com.diegonmarcos.cloudcontacts` | 5 | 2 | 71% |
+| cloud-dialer | `com.diegonmarcos.comms.dialer` | 6 | 2 | 75% |
+| cloud-drive | `com.diegonmarcos.clouddrive` | 10 | 6 | 62% |
+| cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 5 | 0 | 100% |
+| cloud-mail | `com.diegonmarcos.comms.mail` | 10 | 2 | 83% |
+| cloud-matrix | `com.diegonmarcos.comms.matrix` | 2 | 9 | 18% |
+| cloud-me | `com.diegonmarcos.cloudme` | 4 | 0 | 100% |
+| cloud-gallery | `com.diegonmarcos.mediacenter` | 5 | 1 | 83% |
+| cloud-myterminal | `com.diegonmarcos.ide` | 7 | 0 | 100% |
+| cloud-nav | `com.diegonmarcos.cloudnav` | 12 | 0 | 100% |
+| cloud-news | `com.diegonmarcos.cloudnews` | 4 | 1 | 80% |
+| cloud-terminal-nix | `cld.termux.nix` | 10 | 7 | 58% |
+| cloud-notes | `com.diegonmarcos.cloudnotes` | 2 | 1 | 66% |
+| cloud-office | `com.diegonmarcos.cloudoffice` | 3 | 0 | 100% |
+| cloud-search | `com.diegonmarcos.cloudsearch` | 3 | 2 | 60% |
+| cloud-store | `com.diegonmarcos.cloudstore` | 9 | 0 | 100% |
+| cloud-terminal-termux | `cld.termux` | 10 | 7 | 58% |
+| cloud-vault | `com.diegonmarcos.cloudvault` | 3 | 1 | 75% |
+| cloud-wallet | `com.diegonmarcos.cloudwallet` | 6 | 0 | 100% |
+| cloud-writer | `com.diegonmarcos.cloudwriter` | 3 | 0 | 100% |
+| cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 6 | 2 | 75% |
+| **fleet** | | **255** | **48** | **84%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -120,8 +120,10 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
 | `store_integrity_marks` | prefs | config | yes | Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory). |
 | `store_lib_groups` | prefs | device | no | #895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `store_phone_view` | prefs | device | no | Store > Phone: how the app list is sorted (shelf, or size largest / smallest first); a view preference of this phone, not state a new phone needs. |
 | `store_play_anon` | prefs | device | no | Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again. |
+| `store_sources` | prefs | config | yes | Cloud Store > Configs > Sources: the ids of the declared feeds the owner switched off (never urls; the declaration stays the only list of feeds); the owner's choice, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
@@ -143,7 +145,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)` | config | Defaults baked into the APK from build.json; not device state but the fallback for unset prefs. |
 | `filesDir/<KEYSTORE_FILE>` | device | This device's KDE Connect TLS identity keystore; never migrate, re-pair |
 
-Coverage: 44 covered, 0 gaps.
+Coverage: 46 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 
@@ -154,12 +156,13 @@ Module `ac_c3-morpheus`; libs: lib-core, lib-devtools, lib-fleetconfig-model, li
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
 | `-` | device | keeps no configuration of its own; uses libs:core (fleet devtools provider). |
 
-Coverage: 1 covered, 0 gaps.
+Coverage: 2 covered, 0 gaps.
 
 ## c3-watchdog — `com.diegonmarcos.watchdog`
 
@@ -170,12 +173,13 @@ Module `ac_c3-watchdog`; libs: lib-core, lib-devtools, lib-fleetconfig-model, li
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
 | `-` | device | keeps no configuration of its own; uses libs:watchdog and libs:core (fleet devtools provider). |
 
-Coverage: 1 covered, 0 gaps.
+Coverage: 2 covered, 0 gaps.
 
 ## c3-watchtower — `com.diegonmarcos.watchtower`
 
@@ -186,9 +190,10 @@ Module `ac_c3-watchtower`; libs: lib-core, lib-devtools, lib-fleetconfig-model, 
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `watchtower_cache` | prefs | device | no | TTL cache of GitHub workflow-runs responses per repo (<owner>/<repo>/runs.ts/.body). |
 
-Coverage: 1 covered, 0 gaps.
+Coverage: 2 covered, 0 gaps.
 
 ## cloud-account — `com.diegonmarcos.cloudaccount`
 
@@ -217,14 +222,16 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofi
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
 | `store_integrity_marks` | prefs | config | yes | Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory). |
 | `store_lib_groups` | prefs | device | no | #895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `store_phone_view` | prefs | device | no | Store > Phone: how the app list is sorted (shelf, or size largest / smallest first); a view preference of this phone, not state a new phone needs. |
 | `store_play_anon` | prefs | device | no | Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again. |
+| `store_sources` | prefs | config | yes | Cloud Store > Configs > Sources: the ids of the declared feeds the owner switched off (never urls; the declaration stays the only list of feeds); the owner's choice, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
 | `vault_cockpit` | prefs | device | no | Only holds this phone's device_id used in the vault cockpit. |
 
-Coverage: 13 covered, 0 gaps.
+Coverage: 15 covered, 0 gaps.
 
 ## cloud-tasks — `com.diegonmarcos.cloudagenda`
 
@@ -242,6 +249,7 @@ Module `ac_cloud-tasks`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, l
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `tasks_ai` | prefs | device | no | Cloud Tasks AI panel (libs:ai): the model, Web switch and gateway agent last picked. The chat history itself is the sessions file ai-sessions.json under the app's files dir. |
 | `tasks_prefs` | prefs | config (keys: filter→device, selected_list→device) | yes | Cloud Tasks Settings > Appearance (light / dark / system) and where the user was: the top filter bar's status and tag selection and the list the Tasks page shows. The theme is the setting that moves to a new phone; the filter and the list id name rows of this phone's tasks database and mean nothing elsewhere. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
@@ -252,7 +260,7 @@ Module `ac_cloud-tasks`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, l
 | `app assets data/calendars.json (bundled) and engine state in app storage` | content | Calendar and todo data synced from CalDAV; the CalDAV url/username/password is in caldav_secure_prefs. |
 | `databases/tasks.db` | content | The Tasks page's own data: projects, lists, tasks and subtasks, tags, attachment links, and the mail agent's declaration and proposals. SQLite with ordered, additive migrations; nothing ever wipes it. The JMAP / Authelia secret of the agent is in the Keystore-encrypted tasks_agent_secrets file, not here. |
 
-Coverage: 5 covered, 0 gaps.
+Coverage: 6 covered, 0 gaps.
 
 ## cloud-browser — `com.diegonmarcos.cloudbrowser`
 
@@ -272,6 +280,7 @@ Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottom
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `tabs` | prefs | config (keys: active_url→device, defaults_seeded_v1→device) | yes | Browser tab groups/active URL are user state; defaults_seeded_v1 is a migration marker. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
@@ -280,7 +289,7 @@ Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottom
 |---|---|---|
 | `browser_settings` | config | #802 every user setting is a key of the declared browser_settings store (libs:browser BrowserSettings over build.json::ui.browser.settings); tabs and history are the lib's own declared stores. Nothing is kept outside them. |
 
-Coverage: 9 covered, 0 gaps.
+Coverage: 10 covered, 0 gaps.
 
 ## cloud-c3-webserver — `com.diegonmarcos.cloudwebserver`
 
@@ -291,12 +300,13 @@ Module `ac_cloud-c3-webserver`; libs: lib-core, lib-devtools, lib-fleetconfig-mo
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
 | `-` | device | keeps no configuration of its own on device; Tauri/server tree configured by build.json. |
 
-Coverage: 1 covered, 0 gaps.
+Coverage: 2 covered, 0 gaps.
 
 ## cloud-media-center — `com.diegonmarcos.cloudmediacenter`
 
@@ -307,12 +317,13 @@ Module `ac_cloud-media-center`; libs: lib-core, lib-devtools, lib-fleetconfig-mo
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
 | `-` | device | keeps no configuration of its own on device; its pages and their data are bundled in the APK from build.json and web/. |
 
-Coverage: 1 covered, 0 gaps.
+Coverage: 2 covered, 0 gaps.
 
 ## cloud-c3 — `com.diegonmarcos.cloudc3`
 
@@ -331,10 +342,11 @@ Module `ac_cloud-c3`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `stack_filters` | prefs | config (keys: */read_keys→device, */seen_at→device) | yes | Chosen filter option per stack page ('<page>/<filterId>'); dynamic keys '<page>/seen_at' and the reads string-set are device state (cannot be keyed statically). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
-Coverage: 7 covered, 0 gaps.
+Coverage: 8 covered, 0 gaps.
 
 ## cloud-calc — `com.diegonmarcos.cloudcalc`
 
@@ -353,6 +365,7 @@ Module `ac_cloud-calc`; libs: lib-ai, lib-bottomnav, lib-core, lib-databackend, 
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
@@ -363,7 +376,7 @@ Module `ac_cloud-calc`; libs: lib-ai, lib-bottomnav, lib-core, lib-databackend, 
 | `filesDir/sound/*.csv|*.wav` | content | Saved sound-measure sessions. |
 | `filesDir/camera/last.jpg` | device | Last captured measure photo. |
 
-Coverage: 11 covered, 0 gaps.
+Coverage: 12 covered, 0 gaps.
 
 ## cloud-camera — `cld.camera`
 
@@ -378,6 +391,7 @@ Module `ac_cloud-camera`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleet
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `voice_shutter` | prefs | config | yes | cloud-camera voice shutter on/off toggle ('enabled'). |
 
 | file | class | doc |
@@ -386,7 +400,7 @@ Module `ac_cloud-camera`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleet
 | `shared_prefs/{QR_SCAN,AUTO,FACE_RETOUCH,PORTRAIT,NIGHT,HDR,CAMERA,VIDEO}.xml` | config | Per-mode camera settings. |
 | `filesDir vosk-model-small-en-us-0.15 (not bundled)` | device | Optional offline voice model dir; engine not present, so nothing to move. |
 
-Coverage: 8 covered, 0 gaps.
+Coverage: 9 covered, 0 gaps.
 
 ## cloud-chat — `com.diegonmarcos.comms.chat`
 
@@ -402,6 +416,7 @@ Module `ac_cloud-chat`; libs: lib-analytics, lib-core, lib-devtools, lib-fleetco
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `secure_pdf_attempts` | encrypted | device | no | Mattermost secure PDF viewer wrong-password attempt counters (encrypted prefs); lockout state. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
@@ -409,7 +424,7 @@ Module `ac_cloud-chat`; libs: lib-analytics, lib-core, lib-devtools, lib-fleetco
 | `databases/ (WatermelonDB SQLite per server) and files/` | content | Mattermost local cache of teams/channels/posts; server holds the data. |
 | `app-managed server list in the app database (server URL, display name) and Keychain/Keystore tokens` | secret | Server URLs are the account link (config: pushed as chat_setup by Fleet Setup, see server-link); session tokens are secrets in the secure keystore, obtained by signing in and never pushed. Lives in the RN layer. |
 
-Coverage: 5 covered, 0 gaps.
+Coverage: 6 covered, 0 gaps.
 
 ## cloud-code — `com.diegonmarcos.code`
 
@@ -426,6 +441,7 @@ Module `ac_cloud-code`; libs: lib-ai, lib-core, lib-devtools, lib-fleetconfig-mo
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
@@ -436,7 +452,7 @@ Module `ac_cloud-code`; libs: lib-ai, lib-core, lib-devtools, lib-fleetconfig-mo
 | `ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.sessions` | config | The chats kept on this phone (text and attachment names, never attachment bytes); mirrored to files/chat-sessions.json and carried through the code_chat_sessions store. |
 | `encrypted prefs cloud_code_chat_secrets` | secret | The OpenRouter token pasted in Profile & Config; vault. |
 
-Coverage: 7 covered, 5 gaps — code_chat_sessions, file:filesDir or app storage: Acode settings (www/ settings, keybindings, installed plugins, themes, fonts), file:ac_cloud-code/src/lib/projects.js saved folders list (localStorage), file:ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.settings, .mcp.<agent>, .toggles.<agent>, file:ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.sessions.
+Coverage: 8 covered, 5 gaps — code_chat_sessions, file:filesDir or app storage: Acode settings (www/ settings, keybindings, installed plugins, themes, fonts), file:ac_cloud-code/src/lib/projects.js saved folders list (localStorage), file:ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.settings, .mcp.<agent>, .toggles.<agent>, file:ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.sessions.
 
 ## cloud-contacts — `com.diegonmarcos.cloudcontacts`
 
@@ -451,6 +467,7 @@ Module `ac_cloud-contacts`; libs: lib-analytics, lib-contacts, lib-core, lib-dat
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
@@ -461,7 +478,7 @@ Module `ac_cloud-contacts`; libs: lib-analytics, lib-contacts, lib-core, lib-dat
 | `shared_prefs/<package>_preferences.xml (Fossify Config)` | config | Contacts display/sort/visible-sources settings; scanner found no named store. |
 | `-` | device | keeps no configuration of its own; uses libs:contacts, libs:core, libs:updater, libs:analytics (contacts are system data). |
 
-Coverage: 4 covered, 2 gaps — contacts_vcards, file:system ContactsContract provider, exported as vCard.
+Coverage: 5 covered, 2 gaps — contacts_vcards, file:system ContactsContract provider, exported as vCard.
 
 ## cloud-dialer — `com.diegonmarcos.comms.dialer`
 
@@ -475,6 +492,7 @@ Module `ac_cloud-dialer`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devt
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
@@ -485,7 +503,7 @@ Module `ac_cloud-dialer`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devt
 | `system BlockedNumberContract provider and default-dialer role / call-screening role` | content | Blocked numbers and the default phone app role live in the system; the blocked numbers migrate through the call_history store. |
 | `assets/call_providers.json, assets/spam_patterns.json` | device | Read-only bundled assets. |
 
-Coverage: 5 covered, 2 gaps — call_history, file:system CallLog and BlockedNumberContract providers.
+Coverage: 6 covered, 2 gaps — call_history, file:system CallLog and BlockedNumberContract providers.
 
 ## cloud-drive — `com.diegonmarcos.clouddrive`
 
@@ -507,6 +525,7 @@ Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, l
 | `mounts-credentials` | encrypted | secret | yes | Encrypted mount passwords and key passphrases keyed by mount id. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
@@ -523,7 +542,7 @@ Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, l
 | `filesDir/rclone/rclone.conf` | secret | rclone remotes (with embedded tokens/passwords); remote definitions are the config, credentials inside are secret |
 | `filesDir/rclone/jobs.json` | config | Saved rclone sync/copy jobs |
 
-Coverage: 9 covered, 6 gaps — ai_sessions, file:filesDir/ai-sessions.json, file:filesDir/git-sync/repos.json, file:filesDir/mounts/mounts.json, file:filesDir/rclone/rclone.conf, file:filesDir/rclone/jobs.json.
+Coverage: 10 covered, 6 gaps — ai_sessions, file:filesDir/ai-sessions.json, file:filesDir/git-sync/repos.json, file:filesDir/mounts/mounts.json, file:filesDir/rclone/rclone.conf, file:filesDir/rclone/jobs.json.
 
 ## cloud-keyboard — `com.diegonmarcos.cloudkeyboard`
 
@@ -536,6 +555,7 @@ Module `ac_cloud-keyboard`; libs: lib-analytics, lib-autofill, lib-core, lib-dev
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
@@ -544,7 +564,7 @@ Module `ac_cloud-keyboard`; libs: lib-analytics, lib-autofill, lib-core, lib-dev
 | `libs:keyboard (HeliBoard) default shared prefs <pkg>_preferences` | config | Keyboard layouts, languages, theme, key behaviour; kept in the library's default prefs, not in this module's scanned list. |
 | `filesDir/vosk/<model-dir>` | device | Downloaded Vosk model files (re-downloadable); the selected model name is declared/held in the host app prefs, not in this lib |
 
-Coverage: 4 covered, 0 gaps.
+Coverage: 5 covered, 0 gaps.
 
 ## cloud-mail — `com.diegonmarcos.comms.mail`
 
@@ -568,6 +588,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-databackend, lib-devt
 | `push_baselines` | prefs | device | no | Sterna new-mail notification baselines (seen ids, last pass timestamp). |
 | `room:SternaDatabase` | room | content | no | Sterna Room mail cache (emails, mailboxes, bodies, FTS, local drafts, snooze); mirror of the server; migrate only the account. |
 | `sterna_account` | prefs | config (keys: accounts→device, current→device, pw_*→device, vault_mail→secret, vault_owner→secret) | yes | Mail accounts as a JSON blob (server, username, protocol, IMAP/SMTP endpoints — the account LINKS) and the current account; each pw_<id> slot is a password or refresh token encrypted with this phone's Keystore, so it never moves — the new phone signs in once per account. vault_mail / vault_owner are the vault bundle's mail section and owner address IN TRANSIT (cockpit derived_settings, applied by server → runtime and the migration): the app consumes them on start (VaultMailImport adds the accounts through AccountStore.add, encrypting each password) and removes them. The accounts JSON and the current id are THIS phone's state: ids key the pw_<id> slots, so a copy from another capture that lands over them leaves every account without a credential (the owner's me@ lost its login that way on 2026-10-08). They stay home; vault_mail is what travels. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `sync_states` | prefs | device | no | JMAP sync cursors (query/email state). |
 | `text_tools` | prefs | config (keys: seeded_from_keyboard→device, seeded_from_serving_app→device) | yes | Mail AI text-tools choices: provider, per-provider model, enhance/summary style, translate target language (a language picker, default en), auto_translate_incoming and auto_summary_incoming switches (off by default), summary_language (default en), answer_prompt (the Answer Prediction prompt shared by the composer and the summary box suggested reply; empty means the built-in default). |
 | `unifiedpush_state` | prefs | device | no | UnifiedPush subscription state per account (endpoint, device id, status, timestamps); re-registered on new phone. |
@@ -581,7 +602,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-databackend, lib-devt
 | `shared_prefs/sterna_account.xml accounts JSON` | secret | Mail account server/IMAP/SMTP/JMAP settings and credentials; account link is config but travels with the secret through the vault; passwords encrypted with a device Keystore key and cannot be copied raw. |
 | `Room SternaDatabase tables (mailboxes watched/muted/collapsed in account JSON)` | device | No settings tables in Room; per-account watched, muted (the Inbox's Notify about new mail, default on) and collapsed folders live in the account JSON. |
 
-Coverage: 9 covered, 2 gaps — datastore:settings, mail_signatures.
+Coverage: 10 covered, 2 gaps — datastore:settings, mail_signatures.
 
 ## cloud-matrix — `com.diegonmarcos.comms.matrix`
 
@@ -610,6 +631,7 @@ Module `ac_cloud-matrix`; libs: lib-core, lib-devtools, lib-fleetconfig-model.
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
@@ -617,7 +639,7 @@ Module `ac_cloud-matrix`; libs: lib-core, lib-devtools, lib-fleetconfig-model.
 | `databases/ SessionDatabase (SQLDelight) sessions table` | secret | Access/refresh tokens, homeserver URL, user id; homeserver+user id are the account link, tokens go via vault or re-login. |
 | `cacheDir/ (media, logs)` | device | Caches. |
 
-Coverage: 1 covered, 9 gaps — datastore:elementx_featureflag, datastore:elementx_preferences, datastore:elementx_rageshake, datastore:elementx_voice_player, datastore:pin_code_store, datastore:push_store_<userId>, datastore:session_<hash>_preferences, datastore:vector_analytics, file:databases/ SessionDatabase (SQLDelight) sessions table.
+Coverage: 2 covered, 9 gaps — datastore:elementx_featureflag, datastore:elementx_preferences, datastore:elementx_rageshake, datastore:elementx_voice_player, datastore:pin_code_store, datastore:push_store_<userId>, datastore:session_<hash>_preferences, datastore:vector_analytics, file:databases/ SessionDatabase (SQLDelight) sessions table.
 
 ## cloud-me — `com.diegonmarcos.cloudme`
 
@@ -632,6 +654,7 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-databack
 | `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
@@ -639,7 +662,7 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-databack
 |---|---|---|
 | `-` | device | keeps no configuration of its own; uses libs:core, libs:updater, libs:analytics, libs:health (Health Connect) and binds the cal engine. |
 
-Coverage: 3 covered, 0 gaps.
+Coverage: 4 covered, 0 gaps.
 
 ## cloud-gallery — `com.diegonmarcos.mediacenter`
 
@@ -658,6 +681,7 @@ Module `ac_cloud-gallery`; libs: lib-analytics, lib-core, lib-cropper, lib-devto
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `room:InternalDatabase` | room | content | no | Gallery encrypted gallery database: media metadata, albums, favorites, vault index; user data and keyed to this device's Keystore. |
 | `security_flags` | prefs | device | no | gallery flag whether DB is currently encrypted; install state. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `ui_settings` | prefs | config | yes | gallery UI cell/grid size choices for albums and timeline. |
 | `vault_cleanup_prefs` | prefs | device | no | One-shot legacy_filesdir_cleanup_done migration marker. |
 
@@ -666,7 +690,7 @@ Module `ac_cloud-gallery`; libs: lib-analytics, lib-core, lib-cropper, lib-devto
 | `filesDir/<vault uuid>/{info file,<mediaId>.enc}` | content | Encrypted media vaults, Keystore-bound. They migrate through Cloud Drive: Backup & restore ▸ Sync to Cloud Drive writes them password-encrypted to <Cloud Drive shared store>/gallery/vaults.rfbk, Cloud Drive's Sync carries it, and Restore vaults from Cloud Drive re-encrypts them under the new phone's keystore. |
 | `filesDir/<modelsDir>/<group>/ {visual_quant,textual_quant,mobile_sam,version-RFB-320,arcface}.onnx, vocab.json, merges.txt` | device | Downloaded on-device ML models; re-downloadable, selection is implicit by feature. |
 
-Coverage: 4 covered, 1 gaps — datastore:settings.
+Coverage: 5 covered, 1 gaps — datastore:settings.
 
 ## cloud-myterminal — `com.diegonmarcos.ide`
 
@@ -680,6 +704,7 @@ Module `ac_cloud-myterminal`; libs: lib-analytics, lib-core, lib-devtools, lib-f
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `ide_prefs` | prefs | config (keys: battery_exemption_asked→device) | yes | cloud-myterminal IdePrefs: terminal_backend choice, per-backend ssh host/user (terminal_<backend>_host/_user), dev_api_enabled, the #787 wake_lock_wanted toggle and the pinch-zoom terminal_font_size (px, 6..32; the frontend reads it through the AndroidTerm bridge and migrates its old localStorage myk-term-font-size into it, so "apply all" carries the size to a new phone); all user choices, except battery_exemption_asked, which records that the one-time battery-optimization prompt was shown. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
@@ -688,7 +713,7 @@ Module `ac_cloud-myterminal`; libs: lib-analytics, lib-core, lib-devtools, lib-f
 | `filesDir/terminal_id_ecdsa and terminal_id_ecdsa.pub` | device | Hub's own generated ssh keypair (SshBackend.ensureKeyPair); device identity, never migrate; the new phone generates its own and its pubkey must be added to each env's authorized_keys. |
 | `externalFilesDir/crashes/` | device | Crash report dumps queued for DiagnosticsPush. |
 
-Coverage: 6 covered, 0 gaps.
+Coverage: 7 covered, 0 gaps.
 
 ## cloud-nav — `com.diegonmarcos.cloudnav`
 
@@ -713,6 +738,7 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtool
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. |
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `tracker_engine` | prefs | config | yes | Tracking engine settings (sources, accurate-fix / cell / motion triggers), its progress counters and the learned step length. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
@@ -721,7 +747,7 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtool
 |---|---|---|
 | `externalFilesDir/trace/trace.log, crashes/` | device | Debug trace and crash dumps. |
 
-Coverage: 11 covered, 0 gaps.
+Coverage: 12 covered, 0 gaps.
 
 ## cloud-news — `com.diegonmarcos.cloudnews`
 
@@ -737,6 +763,7 @@ Module `ac_cloud-news`; libs: lib-analytics, lib-core, lib-databackend, lib-devt
 | `news_legacy_saved` | prefs | content | no | News legacy saved-articles JSON read once and seeded into the engine; saved items are user data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
@@ -744,7 +771,7 @@ Module `ac_cloud-news`; libs: lib-analytics, lib-core, lib-databackend, lib-devt
 |---|---|---|
 | `data/sources.json, topics.json (bundled) and engine-held user source/topic choices and saved articles` | config | Selected sources/topics are config, saved articles are content; the engine keeps them in its own storage which the scanner did not see. |
 
-Coverage: 3 covered, 1 gaps — file:data/sources.json, topics.json (bundled) and engine-held user source/topic choices and saved articles.
+Coverage: 4 covered, 1 gaps — file:data/sources.json, topics.json (bundled) and engine-held user source/topic choices and saved articles.
 
 ## cloud-terminal-nix — `cld.termux.nix`
 
@@ -759,6 +786,7 @@ Module `ac_cloud-nix-on-droid`; libs: lib-core, lib-devtools, lib-fleetconfig-mo
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
@@ -775,7 +803,7 @@ Module `ac_cloud-nix-on-droid`; libs: lib-core, lib-devtools, lib-fleetconfig-mo
 | `$HOME/.hermes/.env, exported keys in rc` | secret | Provider keys for goose and hermes. #790: Account imports OPENROUTER_API_KEY into the agent-auth store and every login exports it; keys typed into the tools' own files stay the phone's own. |
 | `$HOME/.ssh/ (authorized_keys; sshd on port 8024)` | config | authorized_keys with the cloud-myterminal hub key; private keys secret. |
 
-Coverage: 9 covered, 7 gaps — file:$HOME/.config/nix-on-droid/nix-on-droid.nix (+flake.nix), file:$HOME/.termux/termux.properties, file:$HOME/.config/fish/, .bashrc, .zshrc, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/config.yaml, file:$HOME/.ssh/ (authorized_keys; sshd on port 8024).
+Coverage: 10 covered, 7 gaps — file:$HOME/.config/nix-on-droid/nix-on-droid.nix (+flake.nix), file:$HOME/.termux/termux.properties, file:$HOME/.config/fish/, .bashrc, .zshrc, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/config.yaml, file:$HOME/.ssh/ (authorized_keys; sshd on port 8024).
 
 ## cloud-notes — `com.diegonmarcos.cloudnotes`
 
@@ -788,13 +816,14 @@ Module `ac_cloud-notes`; libs: lib-ai, lib-bottomnav, lib-core, lib-devtools, li
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
 | `filesDir/ (NbStorePlugin appStoragePath, per-workspace sqlite)` | content | AFFiNE local workspace docs; server is source of truth. |
 | `filesDir/logs/<date>.log` | device | Rotating logs. |
 
-Coverage: 1 covered, 1 gaps — datastore:auth-sessions.
+Coverage: 2 covered, 1 gaps — datastore:auth-sessions.
 
 ## cloud-office — `com.diegonmarcos.cloudoffice`
 
@@ -806,12 +835,13 @@ Module `ac_cloud-office`; libs: lib-core, lib-devtools, lib-fleetconfig-model, l
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
 | `-` | device | keeps no configuration of its own; patches/tests only, no Android source tree (document-suite wrapper). |
 
-Coverage: 2 covered, 0 gaps.
+Coverage: 3 covered, 0 gaps.
 
 ## cloud-search — `com.diegonmarcos.cloudsearch`
 
@@ -824,6 +854,7 @@ Module `ac_cloud-search`; libs: lib-ai, lib-bottomnav, lib-core, lib-devtools, l
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `search_chat_sessions` | file | config | GAP | Cloud Search's AI chat history file (never a token), carried whole so a new phone keeps the conversations. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
@@ -832,7 +863,7 @@ Module `ac_cloud-search`; libs: lib-ai, lib-bottomnav, lib-core, lib-devtools, l
 | `filesDir/chat-sessions.json` | config | AI chat history (never carries the token); carried to a new phone through the search_chat_sessions store |
 | `filesDir/things` | device | cached Things answers (OpenStreetMap stores per area, Open Prices, the store-site price service, geocoded cities), refetched from the sources |
 
-Coverage: 2 covered, 2 gaps — search_chat_sessions, file:filesDir/chat-sessions.json.
+Coverage: 3 covered, 2 gaps — search_chat_sessions, file:filesDir/chat-sessions.json.
 
 ## cloud-store — `com.diegonmarcos.cloudstore`
 
@@ -854,12 +885,14 @@ Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, li
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
 | `store_integrity_marks` | prefs | config | yes | Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory). |
 | `store_lib_groups` | prefs | device | no | #895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `store_phone_view` | prefs | device | no | Store > Phone: how the app list is sorted (shelf, or size largest / smallest first); a view preference of this phone, not state a new phone needs. |
 | `store_play_anon` | prefs | device | no | Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again. |
+| `store_sources` | prefs | config | yes | Cloud Store > Configs > Sources: the ids of the declared feeds the owner switched off (never urls; the declaration stays the only list of feeds); the owner's choice, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
-Coverage: 7 covered, 0 gaps.
+Coverage: 9 covered, 0 gaps.
 
 ## cloud-terminal-termux — `cld.termux`
 
@@ -874,6 +907,7 @@ Module `ac_cloud-termux`; libs: lib-core, lib-devtools, lib-fleetconfig-model, l
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
@@ -891,7 +925,7 @@ Module `ac_cloud-termux`; libs: lib-core, lib-devtools, lib-fleetconfig-model, l
 | `$HOME/.ssh/ (authorized_keys, config; id_* private keys)` | config | authorized_keys must contain the cloud-myterminal hub public key; private keys id_* are secret, known_hosts is device. |
 | `$HOME/cloud-drive-shared-store` | device | Link to shared storage CloudDrive; recreated by the app. |
 
-Coverage: 9 covered, 7 gaps — file:$HOME/.termux/termux.properties, file:$HOME/.termux/ (colors.properties, font.ttf, style), file:$HOME/.config/fish/, .bashrc, .zshrc, .profile, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config, agents), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/ (config.yaml, skills, memory), file:$HOME/.ssh/ (authorized_keys, config; id_* private keys).
+Coverage: 10 covered, 7 gaps — file:$HOME/.termux/termux.properties, file:$HOME/.termux/ (colors.properties, font.ttf, style), file:$HOME/.config/fish/, .bashrc, .zshrc, .profile, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config, agents), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/ (config.yaml, skills, memory), file:$HOME/.ssh/ (authorized_keys, config; id_* private keys).
 
 ## cloud-vault — `com.diegonmarcos.cloudvault`
 
@@ -909,6 +943,7 @@ Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetc
 | `room:PlatformDatabase` | room | device | no | Bitwarden org-event queue (OrganizationEventDao); pending telemetry/sync state. |
 | `room:PrivilegedAppDatabase` | room | config | GAP | Bitwarden user-trusted privileged apps list for passkey/credential provider: a user-made trust choice. |
 | `room:VaultDatabase` | room | content | no | Bitwarden synced vault cache (ciphers, folders, collections); the vault lives on the server, re-synced after login. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `{pkg}.xamarinessentials` | prefs | device | no | Legacy Xamarin SecureStorage values (Keystore-alias wrapped), read once by the legacy migrator; bound to this device. |
 | `{pkg}_encrypted_preferences` | encrypted | device | no | Bitwarden session tokens and user key material (EncryptedSharedPreferences): re-established by signing in on the new phone, never copied — the vault account is the link. |
 | `{pkg}_keystore_encrypted_preferences` | prefs | device | no | Bitwarden values wrapped by its own Keystore EncryptionManager: bound to this device's Keystore, unreadable anywhere else. A new phone gets its own by signing in to the vault. |
@@ -917,7 +952,7 @@ Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetc
 |---|---|---|
 | `encrypted prefs: bwCookieConfig:<hostname>` | device | Per-host cookie config inside Bitwarden's encrypted prefs (a device store): sessions are re-established by signing in. |
 
-Coverage: 2 covered, 1 gaps — room:PrivilegedAppDatabase.
+Coverage: 3 covered, 1 gaps — room:PrivilegedAppDatabase.
 
 ## cloud-wallet — `com.diegonmarcos.cloudwallet`
 
@@ -932,12 +967,13 @@ Module `ac_cloud-wallet`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devt
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `wallet_mail_connector` | prefs | config (keys: password→secret) | yes | Mail connector host/email are account links; password is a credential. |
 | `wallet_store` | prefs | content (keys: seed_version→device) | no | Wallet items (cards/passes) the user stored; seed_version is a marker. |
 
-Coverage: 5 covered, 0 gaps.
+Coverage: 6 covered, 0 gaps.
 
 ## cloud-writer — `com.diegonmarcos.cloudwriter`
 
@@ -948,9 +984,10 @@ Module `ac_cloud-writer`; libs: lib-bottomnav, lib-core, lib-decisions, lib-devt
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `text_tools` | prefs | config (keys: seeded_from_keyboard→device, seeded_from_serving_app→device) | yes | Mail AI text-tools choices: provider, per-provider model, enhance/summary style, translate target language (a language picker, default en), auto_translate_incoming and auto_summary_incoming switches (off by default), summary_language (default en), answer_prompt (the Answer Prediction prompt shared by the composer and the summary box suggested reply; empty means the built-in default). |
 
-Coverage: 2 covered, 0 gaps.
+Coverage: 3 covered, 0 gaps.
 
 ## cloud-tools-small-llms — `com.diegonmarcos.cloudtoolssmallllms`
 
@@ -964,6 +1001,7 @@ Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-d
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
 |---|---|---|
@@ -973,5 +1011,5 @@ Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-d
 | `SharedPreferences cloud_tools_small_llms:ledger` | content | Every priced call (time, dollars, task, model): the day and month totals on Costs. |
 | `filesDir/ai-sessions.json` | config | AI tab chat history (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store |
 
-Coverage: 5 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
+Coverage: 6 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
 
