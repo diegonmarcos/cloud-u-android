@@ -1551,7 +1551,7 @@ open class ShellActivity : AppCompatActivity(),
      *   4. If still nothing fires, surface the failure as a snack so
      *      taps don't fail silently.
      */
-    private fun launchUri(uri: String) {
+    internal fun launchUri(uri: String) {
         if (uri.isBlank()) return
 
         // http(s):// → the app's OWN embedded browser, the same

@@ -11,7 +11,7 @@
 #
 # Four ways that regresses, none of which a compiler sees:
 #
-#   1. SOMEONE UN-DEFERS section(). The helper is the whole mechanism: it
+#   1. SOMEONE UN-DEFERS infoSection(). The helper is the whole mechanism: it
 #      registers the body instead of calling it. One edit calling body(grp)
 #      directly restores the original bug for all 30 blocks at once, silently.
 #   2. A NEW BLOCKING CALL LANDS IN A BODY. A section body still looks like
@@ -126,7 +126,7 @@ def fn_body(code, sig):
     return body_of(code, j) if j >= 0 else ''
 
 # ── T1: a section DEFERS its body instead of invoking it ──────────────
-reg = fn_body(model, 'fun section(head: String')          # AboutPage.section: only registers
+reg = fn_body(model, 'fun infoSection(head: String')          # AboutPage.infoSection: only registers
 print("SECTION_FOUND=%d" % (1 if reg else 0))
 print("SECTION_REGISTERS=%d" % (1 if 'blocks +=' in reg and 'AboutSection(' in reg else 0))
 print("SECTION_DEFERS_BODY=%d" % (1 if reg and 'body(' not in reg and 'body.invoke' not in reg else 0))
@@ -208,8 +208,8 @@ print("HEAVY_ON_MAIN_COUNT=%d" % len(leaks))
 print("HEAVY_ON_MAIN_LIST=%s" % ("; ".join(leaks) if leaks else "-"))
 print("IO_REGIONS=%d" % len(regions))
 
-# ── T6: nothing bypasses section() ───────────────────────────────────
-print("SECTION_CALLS=%d" % len(re.findall(r'(?<![A-Za-z])section\("', raw_frag)))
+# ── T6: nothing bypasses infoSection() ───────────────────────────────────
+print("SECTION_CALLS=%d" % len(re.findall(r'(?<![A-Za-z])infoSection\("', raw_frag)))
 print("ASYNC_CALLS=%d" % len(re.findall(r'asyncSection\("', raw_frag)))
 rq = [m.start() for m in re.finditer(r'requireContext\(\)', frag) if off_main(m.start())]
 print("REQUIRECONTEXT_OFF_MAIN=%d" % len(rq))
@@ -233,12 +233,12 @@ else
 fi
 
 echo "== T1: a section DEFERS its body instead of running it (#286, the whole mechanism) =="
-[ "${SECTION_FOUND:-0}" = "1" ]        && ok "AboutPage.section() found" \
-                                       || bad "AboutPage.section() not found — this tester is aimed at nothing"
-[ "${SECTION_REGISTERS:-0}" = "1" ]    && ok "section() registers an AboutSection into the page" \
-                                       || bad "section() no longer registers a lazy unit — every block is eager again"
-[ "${SECTION_DEFERS_BODY:-0}" = "1" ]  && ok "section() never invokes the caller's body" \
-                                       || bad "section() invokes body() itself — all 30 services are eager again"
+[ "${SECTION_FOUND:-0}" = "1" ]        && ok "AboutPage.infoSection() found" \
+                                       || bad "AboutPage.infoSection() not found — this tester is aimed at nothing"
+[ "${SECTION_REGISTERS:-0}" = "1" ]    && ok "infoSection() registers an AboutSection into the page" \
+                                       || bad "infoSection() no longer registers a lazy unit — every block is eager again"
+[ "${SECTION_DEFERS_BODY:-0}" = "1" ]  && ok "infoSection() never invokes the caller's body" \
+                                       || bad "infoSection() invokes body() itself — all 30 services are eager again"
 [ "${LOAD_FOUND:-0}" = "1" ]           && ok "AboutSection.load() found" \
                                        || bad "AboutSection.load() not found — nothing runs a deferred body"
 [ "${SECTION_HAS_PLACEHOLDER:-0}" = "1" ] && ok "an unloaded block shows a placeholder, not nothing" \

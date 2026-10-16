@@ -6,6 +6,8 @@ import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.launcher.WebPageFragment
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
+import androidx.compose.ui.test.assertDoesNotExist
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -43,5 +45,47 @@ class WebAndTabsComposeTest : KitPageHarness() {
         val section = Sections.all().first { s -> s.pages.count { it.action.isBlank() } >= 2 && s.pages.size <= SectionTabsFragment.MAX_PANES }
         show(SectionTabsFragment.newInstance(section.id))
         for (p in section.pages) compose.onNodeWithTag(PageTabsTags.tab(p.id)).assertExists()
+    }
+
+    private fun webViewIn(v: android.view.View): android.webkit.WebView? =
+        if (v is android.webkit.WebView) v
+        else (v as? android.view.ViewGroup)?.let { g -> (0 until g.childCount).firstNotNullOfOrNull { webViewIn(g.getChildAt(it)) } }
+
+    @Test
+    fun `C1 Cloud tabs are App, WebApps, Linktree, Configs in that order`() {
+        show(SectionTabsFragment.newInstance("cloud"))
+        val ids = Sections.byId("cloud")!!.pages.map { it.id }
+        assertEquals(listOf("apps", "webapps", "lnktree", "configs"), ids)
+        for (id in ids) compose.onNodeWithTag(PageTabsTags.tab(id)).assertExists()
+        val xs = ids.map { compose.onNodeWithTag(PageTabsTags.tab(it)).fetchSemanticsNode().positionInRoot.x }
+        assertEquals("the tabs are laid out in declared order", xs.sorted(), xs)
+    }
+
+    @Test
+    fun `C2 WebApps hosts a web view on the embed URL with the embed user agent`() {
+        val url = Sections.byId("cloud")!!.pages.first { it.id == "webapps" }.url
+        assertTrue("the declared URL asks for the embed layout: $url", WebPageFragment.isEmbed(url))
+        show(WebPageFragment.newInstance(url))
+        compose.onNodeWithTag(WebPageFragment.TAG_WEB).assertExists()
+        // The embedded page is a pane: no floating Back over the site.
+        compose.onNodeWithTag(WebPageFragment.TAG_BACK).assertDoesNotExist()
+        val web = webViewIn(compose.activity.window.decorView)!!
+        assertTrue("loaded ${web.url}", web.url == url)
+        assertTrue("UA marker on: ${web.settings.userAgentString}", web.settings.userAgentString.endsWith(WebPageFragment.UA_MARKER))
+    }
+
+    @Test
+    fun `C3 a plain page carries no embed marker`() {
+        show(WebPageFragment.newInstance("https://linktree.diegonmarcos.com"))
+        val web = webViewIn(compose.activity.window.decorView)!!
+        assertTrue(!web.settings.userAgentString.contains("CloudSuperApp-Embed"))
+        compose.onNodeWithTag(WebPageFragment.TAG_BACK).assertExists()
+    }
+
+    @Test
+    fun `C4 links stay in the page for the same site only`() {
+        val u = "https://diegonmarcos.github.io/cloud-mobile/?embed=1"
+        assertTrue(WebPageFragment.sameSite(u, "https://diegonmarcos.github.io/cloud-mobile/x/"))
+        assertTrue(!WebPageFragment.sameSite(u, "https://example.com/"))
     }
 }

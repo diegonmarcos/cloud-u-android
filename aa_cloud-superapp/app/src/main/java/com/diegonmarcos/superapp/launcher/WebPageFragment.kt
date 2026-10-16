@@ -12,8 +12,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,15 +78,32 @@ class WebPageFragment : KitComposeFragment() {
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backToPreviousPage)
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val url = arguments?.getString(ARG_URL).orEmpty()
         val p = LocalKitPalette.current
+        // A page declared with `embed=1` is a site that knows it is drawn INSIDE the SuperApp (the cloud-mobile replica): it
+        // is told so by the query AND by a user-agent marker, and it is a tab pane, so it carries no floating Back control
+        // (the system Back steps through its history) and fills exactly the pane it is given.
+        val embed = isEmbed(url)
+        var refreshing by remember { mutableStateOf(false) }
+        // The page that failed, so a pull reloads IT and not the error page that replaced it.
+        var failedUrl by remember { mutableStateOf<String?>(null) }
         Box(Modifier.fillMaxSize()) {
+            PullToRefreshBox(isRefreshing = refreshing, modifier = Modifier.fillMaxSize(), onRefresh = {
+                refreshing = true
+                val w = web
+                val retry = failedUrl
+                failedUrl = null
+                if (w == null) refreshing = false
+                else if (retry != null) w.loadUrl(retry) else w.reload()
+            }) {
             AndroidView(
                 modifier = Modifier.fillMaxSize().testTag(TAG_WEB),
                 factory = { ctx ->
                     WebView(ctx).apply {
+                        if (embed) settings.userAgentString = settings.userAgentString + UA_MARKER
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         settings.useWideViewPort = true
@@ -90,6 +113,24 @@ class WebPageFragment : KitComposeFragment() {
                         webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 backToPreviousPage.isEnabled = view?.canGoBack() == true
+                                refreshing = false
+                            }
+
+                            /** Same site stays in the page; any other http(s) link goes through the app's link rules
+                             *  (fleet hosts open in the embedded browser, the rest in the system's), never inside this
+                             *  pane where the user could not tell they had left the site. */
+                            override fun shouldOverrideUrlLoading(view: WebView, request: android.webkit.WebResourceRequest): Boolean {
+                                val target = request.url
+                                if (!embed || !request.isForMainFrame) return false
+                                val scheme = target.scheme.orEmpty()
+                                if (scheme != "http" && scheme != "https") return true
+                                if (sameSite(url, target.toString())) return false
+                                (activity as? com.diegonmarcos.superapp.ShellActivity)?.launchUri(target.toString())
+                                    ?: runCatching {
+                                        startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, target)
+                                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                                    }
+                                return true
                             }
 
                             /**
@@ -110,6 +151,8 @@ class WebPageFragment : KitComposeFragment() {
                                 error: android.webkit.WebResourceError,
                             ) {
                                 if (!request.isForMainFrame) return
+                                refreshing = false
+                                failedUrl = request.url.toString()
                                 val host = runCatching { java.net.URI(url).host }.getOrNull() ?: url
                                 view.loadDataWithBaseURL(null, errorHtml(host, error.description?.toString()),
                                     "text/html", "utf-8", null)
@@ -121,11 +164,12 @@ class WebPageFragment : KitComposeFragment() {
                 },
                 onRelease = { it.stopLoading(); it.destroy(); if (web === it) web = null },
             )
+            }
             // The on-screen Back control. An embedded page reached from a tile has no toolbar affordance of its own
             // and the system gesture is a swipe most phones also give to the site itself, so without a visible
             // control a user who follows a link two pages deep has no way out that does not gamble on the gesture.
             // It floats over the content rather than taking a bar of its own: the embedded page IS the screen.
-            Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.action_back),
+            if (!embed) Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.action_back),
                 tint = p.textPrimary,
                 modifier = Modifier.align(Alignment.BottomStart).padding(16.dp).size(44.dp)
                     .clip(CircleShape).background(p.surface.copy(alpha = 0.8f))
@@ -155,9 +199,12 @@ class WebPageFragment : KitComposeFragment() {
                      font-family:monospace;line-height:1.6">
           <h3 style="margin:0 0 12px">Could not load $host</h3>
           <p style="color:#b9a8d0;margin:0 0 12px">${detail.orEmpty()}</p>
-          <p style="color:#b9a8d0;margin:0">This page is served on the WireGuard
+          <p style="color:#b9a8d0;margin:0">${if (isPublicHost(host))
+              "You look to be offline, or the site did not answer. Pull down to try again."
+          else
+              """This page is served on the WireGuard
           mesh only — it answers nothing at the public edge. Check the tunnel is
-          up (Configs &rarr; WireGuard) and reopen.</p>
+          up (Configs &rarr; WireGuard) and reopen."""}</p>
         </body></html>
     """.trimIndent()
 
@@ -165,6 +212,20 @@ class WebPageFragment : KitComposeFragment() {
         private const val ARG_URL = "url"
         const val TAG_WEB = "webpage:web"
         const val TAG_BACK = "webpage:back"
+
+        /** Appended to the WebView's user agent on an `embed=1` page, so the site can tell the SuperApp is hosting it. */
+        const val UA_MARKER = " CloudSuperApp-Embed/1"
+
+        fun isEmbed(url: String): Boolean = Regex("[?&]embed=1(&|#|$)").containsMatchIn(url)
+
+        /** Public hosts answer off the mesh; the rest of the fleet's sites do not. */
+        internal fun isPublicHost(host: String): Boolean = host.endsWith("github.io")
+
+        /** Same origin as the page that was declared (scheme + host + port). */
+        internal fun sameSite(declared: String, target: String): Boolean = runCatching {
+            val a = java.net.URI(declared); val b = java.net.URI(target)
+            a.scheme == b.scheme && a.host == b.host && a.port == b.port
+        }.getOrDefault(false)
 
         fun newInstance(url: String) = WebPageFragment().apply {
             arguments = Bundle().apply { putString(ARG_URL, url) }

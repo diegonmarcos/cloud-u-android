@@ -2526,14 +2526,21 @@
         "pages": [
           {
             "id": "apps",
-            "label": "Apps",
+            "label": "App",
             "icon": "ic_suite",
             "facet": true,
             "_doc": "The cloud apps page — Quickmarks (tile_groups), the star's Actions ring, then Smart Folders. GroupedTilesFragment keys its extras off sectionId=='cloud', not this page id."
           },
           {
+            "id": "webapps",
+            "label": "WebApps",
+            "icon": "ic_world",
+            "_doc": "The cloud-mobile site — the HTML replica of this SuperApp's UI, published from the diegonmarcos front repo (a_Portals/cloud-mobile) on GitHub Pages (public) — in the app's embedded browser (WebPageFragment). `?embed=1` tells the site it is drawn inside the SuperApp, and WebPageFragment appends the user-agent marker ' CloudSuperApp-Embed/1' for the same reason; both are keyed off that query, so a second embedded replica is one more entry like this one. It fills its pane exactly (no floating Back, the system Back walks the page history), pulls to refresh, and says so when it is offline.",
+            "url": "https://diegonmarcos.github.io/cloud-mobile/?embed=1"
+          },
+          {
             "id": "lnktree",
-            "label": "Lnktree",
+            "label": "Linktree",
             "icon": "ic_p_sol_tools",
             "mode": "apps",
             "_doc": "Renders the live site in a WebView (WebPageFragment) instead of a Kotlin port of it — one maintained list, not two copies to keep in step. The PAGE is Lnktree; the `url` host keeps its i because linktree.diegonmarcos.com is what actually serves the site (lnktree.diegonmarcos.com answers 404). `mode` still selects Apps mode on open — declared, not inferred from the id.",
@@ -3049,7 +3056,7 @@
           }
         ],
         "_doc_tiles_labs": "Master Lab index — 6 icon tiles, one per subject Lab. Read by home_groups[title=Labs] via tiles_from_section='cloud/labs'. The key keeps the name `labs` on purpose: it is the SUBJECT labs, which is not what the Linktree tab became. No page `labs` exists, so this list is the Home face only — each icon opens page:cloud/<lab-id>.",
-        "_doc_pages": "Cloud: Apps (the cloud apps) | Linktree (the site, embedded) | Configs. The C3 subpage tab was removed (owner, 2026-10): C3 is the extapp:cloud-c3 tile in the Configs group, and every former page:cloud/c3 link now targets it.",
+        "_doc_pages": "Cloud: App (the cloud apps) | WebApps (the cloud-mobile replica, embedded) | Linktree (the site, embedded) | Configs. The C3 subpage tab was removed (owner, 2026-10): C3 is the extapp:cloud-c3 tile in the Configs group, and every former page:cloud/c3 link now targets it.",
         "stack_lnktree": [
           {
             "kind": "link_grid",

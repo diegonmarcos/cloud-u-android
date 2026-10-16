@@ -48,7 +48,7 @@ internal object AboutTags {
     const val BACK = "about:back"
     const val LIST = "about:list"
     fun macro(label: String) = "about:macro:$label"
-    fun section(head: String) = "about:section:$head"
+    fun infoSection(head: String) = "about:section:$head"
     fun placeholder(head: String) = "about:placeholder:$head"
     fun row(key: String) = "about:row:$key"
     fun button(label: String) = "about:button:$label"

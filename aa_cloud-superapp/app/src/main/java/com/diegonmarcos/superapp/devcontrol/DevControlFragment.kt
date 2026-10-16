@@ -227,7 +227,7 @@ class DevControlFragment : KitComposeFragment() {
         //    release channel, signing, provenance, declared sections, and the full stack scan.
         macro("📱  APP & BUILD")
 
-        section("App") {
+        infoSection("App") {
             row("Name",         BuildConfig.APPLICATION_ID)
             row("Version",      BuildConfig.VERSION_NAME)
             row("Version code", BuildConfig.VERSION_CODE.toString())
@@ -242,7 +242,7 @@ class DevControlFragment : KitComposeFragment() {
             row("Debuggable",   BuildConfig.DEBUG.toString())
         }
 
-        section("Sections (from build.json)") {
+        infoSection("Sections (from build.json)") {
             val all = Sections.all()
             row("Total",       all.size.toString())
             row("Bottom-nav",  all.count { s -> s.bottomNav }.toString())
@@ -251,7 +251,7 @@ class DevControlFragment : KitComposeFragment() {
             row("Default section", Sections.defaultSectionId())
         }
 
-        section("Stack") {
+        infoSection("Stack") {
             // Languages — decode the base64 JSON blob the build emitted.
             // Format: {"Kotlin":{"files":N,"loc":M}, …}
             small("What's actually inside this APK — scanned by the build, never a hardcoded list.")
@@ -353,7 +353,7 @@ class DevControlFragment : KitComposeFragment() {
         //    the heading is not a lie: identity alone never explained a build.
         macro("☁  REPO & RELEASES")
 
-        section("Profile") {
+        infoSection("Profile") {
             val prof = ProfilePrefs(ctxAny())
             row("Name",     prof.name.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_NAME })
             row("Email",    prof.email.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_EMAIL })
@@ -385,7 +385,7 @@ class DevControlFragment : KitComposeFragment() {
             row("Consolidated", BuildConfig.UI_CONSOLIDATED_CONFIG.ifBlank { "—" })
         }
 
-        section("Release / GHCR") {
+        infoSection("Release / GHCR") {
             row("Registry",  UpdBuildConfig.GHCR_REGISTRY)
             row("Namespace", UpdBuildConfig.GHCR_NAMESPACE)
             row("Image",     UpdBuildConfig.GHCR_IMAGE)
@@ -395,7 +395,7 @@ class DevControlFragment : KitComposeFragment() {
             row("Check interval", "${UpdBuildConfig.AUTO_UPDATE_INTERVAL_HOURS}h")
         }
 
-        section("APK") {
+        infoSection("APK") {
             val pm = requireContext().packageManager
             @Suppress("DEPRECATION")
             val info = pm.getPackageInfo(requireContext().packageName, 0)
@@ -409,7 +409,7 @@ class DevControlFragment : KitComposeFragment() {
             row("Updated",    fmtMillis(info.lastUpdateTime))
         }
 
-        section("Signing") {
+        infoSection("Signing") {
             val pm = requireContext().packageManager
             val sigFlags = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P)
                 PackageManager.GET_SIGNING_CERTIFICATES
@@ -433,7 +433,7 @@ class DevControlFragment : KitComposeFragment() {
             }
         }
 
-        section("APK provenance") {
+        infoSection("APK provenance") {
             val pm = ctxAny().packageManager
             val pkg = ctxAny().packageName
             if (android.os.Build.VERSION.SDK_INT >= 30) {
@@ -477,7 +477,7 @@ class DevControlFragment : KitComposeFragment() {
         // ══ DEVICE macro section — the physical/OS device this build is running on.
         macro("🖥️  DEVICE")
 
-        section("Device / stack") {
+        infoSection("Device / stack") {
             row("Manufacturer", android.os.Build.MANUFACTURER)
             row("Model",        android.os.Build.MODEL)
             row("Brand",        android.os.Build.BRAND)
@@ -488,7 +488,7 @@ class DevControlFragment : KitComposeFragment() {
             row("Locale",       java.util.Locale.getDefault().toLanguageTag())
         }
 
-        section("Kernel / OS") {
+        infoSection("Kernel / OS") {
             row("Kernel",   System.getProperty("os.version") ?: "—")
             row("Security patch", android.os.Build.VERSION.SECURITY_PATCH)
             row("Codename", android.os.Build.VERSION.CODENAME)
@@ -500,7 +500,7 @@ class DevControlFragment : KitComposeFragment() {
             row("Native heap", sizeStr(nativeHeap))
         }
 
-        section("SoC / CPU") {
+        infoSection("SoC / CPU") {
             if (android.os.Build.VERSION.SDK_INT >= 31) {
                 row("SoC mfr",   android.os.Build.SOC_MANUFACTURER)
                 row("SoC model", android.os.Build.SOC_MODEL)
@@ -570,7 +570,7 @@ class DevControlFragment : KitComposeFragment() {
         // so the section is one big scrollable table the user can
         // long-press individual rows to copy.
 
-        section("Display") {
+        infoSection("Display") {
             val wm = ctxAny().getSystemService(Context.WINDOW_SERVICE) as? android.view.WindowManager
             val dm = resources.displayMetrics
             row("Resolution", "${dm.widthPixels} × ${dm.heightPixels}")
@@ -595,7 +595,7 @@ class DevControlFragment : KitComposeFragment() {
             row("Font scale", "${cfg.fontScale}x")
         }
 
-        section("Sensors") {
+        infoSection("Sensors") {
             val sm = ctxAny().getSystemService(Context.SENSOR_SERVICE) as? android.hardware.SensorManager
             val all = sm?.getSensorList(android.hardware.Sensor.TYPE_ALL) ?: emptyList()
             row("Count", all.size.toString())
@@ -604,7 +604,7 @@ class DevControlFragment : KitComposeFragment() {
             }
         }
 
-        section("Locale & time") {
+        infoSection("Locale & time") {
             val locales = if (android.os.Build.VERSION.SDK_INT >= 24)
                 (0 until resources.configuration.locales.size()).joinToString(", ") {
                     resources.configuration.locales[it].toLanguageTag()
@@ -631,7 +631,7 @@ class DevControlFragment : KitComposeFragment() {
         // ══ SECURITY macro section — device lock state, ADB/dev-options exposure, biometrics.
         macro("🔐  SECURITY")
 
-        section("Security posture") {
+        infoSection("Security posture") {
             val cr = ctxAny().contentResolver
             val devMode = runCatching {
                 android.provider.Settings.Global.getInt(cr,
@@ -728,7 +728,7 @@ class DevControlFragment : KitComposeFragment() {
 
         // Permissions section moved to PermissionsFragment (config/perms tab).
 
-        section("Battery & Usage") {
+        infoSection("Battery & Usage") {
             // Everything in this block is what the app CAN read about
             // itself without privileged permissions. Per-app battery mAh
             // + screen-on / background time split / wakelocks count etc.
@@ -834,7 +834,7 @@ class DevControlFragment : KitComposeFragment() {
             }
         }
 
-        section("Memory") {
+        infoSection("Memory") {
             val am = ctxAny().getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
             val mi = android.app.ActivityManager.MemoryInfo()
             am?.getMemoryInfo(mi)
@@ -856,7 +856,7 @@ class DevControlFragment : KitComposeFragment() {
             row("Threads",  Thread.activeCount().toString())
         }
 
-        section("Memory & CPU Usage") {
+        infoSection("Memory & CPU Usage") {
             // All metrics are process-attributable + readable WITHOUT any
             // privileged permission. JVM heap from Runtime; PSS from
             // Debug.MemoryInfo (Android's accounting for shared-page
@@ -996,7 +996,7 @@ class DevControlFragment : KitComposeFragment() {
         // ac_cloud-myterminal contract). Always rendered, even when nothing is
         // declared yet, so the surface is discoverable.
 
-        section("SYSFS-PROC") {
+        infoSection("SYSFS-PROC") {
             small("Raw kernel-side telemetry — no runtime permission needed. World-readable /sys/class/* and /proc/* paths. Use this as the audit surface; promote interesting rows to dedicated UI elsewhere.")
 
             small("── /sys/class/power_supply/battery/")
@@ -1040,7 +1040,7 @@ class DevControlFragment : KitComposeFragment() {
         //    no-root per-app firewall.
         macro("🌐  NETWORK")
 
-        section("Network") {
+        infoSection("Network") {
             val cm = ctxAny().getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
             val active = cm?.activeNetwork
             val caps = active?.let { runCatching { cm.getNetworkCapabilities(it) }.getOrNull() }
@@ -1089,7 +1089,7 @@ class DevControlFragment : KitComposeFragment() {
             }
         }
 
-        section("Wi-Fi") {
+        infoSection("Wi-Fi") {
             // SSID/BSSID require ACCESS_FINE_LOCATION on Android 10+
             // AND a connected Wi-Fi network; we already declare both.
             // If location isn't granted yet, SSID comes back as
@@ -1144,7 +1144,7 @@ class DevControlFragment : KitComposeFragment() {
                 }
             })
 
-        section("Firewall") {
+        infoSection("Firewall") {
             // No-root per-app firewall (local VpnService, :libs:firewall).
             // Info rows read WITHOUT any privileged permission via
             // ConnectivityManager / Settings. The gray button opens Network ▸ Firewall, where the control
@@ -1171,7 +1171,7 @@ class DevControlFragment : KitComposeFragment() {
         //    up and what is its bearer".
         macro("🔌  API")
 
-        section("Dev Control HTTP API") {
+        infoSection("Dev Control HTTP API") {
             val prefs = DevControlPrefs(requireContext())
             val running = DevControlServer.isRunning()
             val bound   = DevControlServer.boundHost()
@@ -1205,7 +1205,7 @@ class DevControlFragment : KitComposeFragment() {
             // member hold; rotation, if ever needed, is a vault secret change + rebuild.
         }
 
-        section("Curl shortcuts") {
+        infoSection("Curl shortcuts") {
             val port = DevControlPrefs(requireContext()).port
             val tok  = DevControlPrefs(requireContext()).token
             // Endpoint catalog moved to /api/{group}/{op} layout in
@@ -1236,7 +1236,7 @@ class DevControlFragment : KitComposeFragment() {
         //    only the second one is ever asked.
         macro("🕸️  MESH")
 
-        section("VPN / WireGuard / Mesh") { renderVpnMesh() }
+        infoSection("VPN / WireGuard / Mesh") { renderVpnMesh() }
 
         // ══ DEV TOOLS macro section — the debugging channels that are NOT
         //    the HTTP API: the terminal apps' sshd, Wireless Debugging, the
@@ -1245,7 +1245,7 @@ class DevControlFragment : KitComposeFragment() {
         //    and this one answers "how do I get a shell on this phone".
         macro("🛠️  DEV TOOLS")
 
-        section("SSH servers (Termux & co.)") {
+        infoSection("SSH servers (Termux & co.)") {
             // ── SSH (Termux & co.) — detect installed terminal emulators and
             //    whether each is running an sshd we can reach on localhost.
             //    Installed-check is synchronous (PackageManager); the port
@@ -1269,7 +1269,7 @@ class DevControlFragment : KitComposeFragment() {
             }
         }
 
-        section("Self-contained ADB, W-less Debuging & Shizuku") {
+        infoSection("Self-contained ADB, W-less Debuging & Shizuku") {
             // The token is read here too: the pairing walkthrough below prints
             // the exact curl the user has to run, and a walkthrough with the
             // bearer left as a placeholder is a walkthrough nobody can follow.
@@ -1296,7 +1296,7 @@ class DevControlFragment : KitComposeFragment() {
 
         // 🔍 LOGCAT — the live viewer; the reader and the grant live in AboutLogcat.
         macro("🔍  LOGCAT")
-        section("App logs (this process)") {
+        infoSection("App logs (this process)") {
             custom { AboutLogcatViewer(onExport = ::exportLogFile) }
         }
 
@@ -1308,7 +1308,7 @@ class DevControlFragment : KitComposeFragment() {
         //    and it is why nothing in this file parses HTTP itself.
         macro("🌐  WEBSERVER")
 
-        section("Web server") {
+        infoSection("Web server") {
             val webPrefs = WebServerPrefs(appCtx)
             val web = CloudWebServer.stats(appCtx)
             row("Status",        if (web.running) "Running" else "Stopped")
@@ -1568,7 +1568,7 @@ class DevControlFragment : KitComposeFragment() {
      *  nodes, baked from the consolidated cloud-data config), not just
      *  the configured WG peers. Live rx/tx + handshake attach to a node
      *  when its wg-IP matches a configured peer's tunnel and the tunnel
-     *  is UP. Rendered inside a section() under the Cloud macro header. */
+     *  is UP. Rendered inside a infoSection() under the Cloud macro header. */
     private fun AboutItems.renderVpnMesh() {
         val ctx = ctxAny()
         val wgPrefs = WgState.prefs(ctx)

@@ -132,7 +132,7 @@ internal class AboutPage(private val attached: () -> Boolean) {
         blocks += AboutBlock.Macro(label, glyph)
     }
 
-    fun section(head: String, body: AboutItems.() -> Unit) {
+    fun infoSection(head: String, body: AboutItems.() -> Unit) {
         blocks += AboutBlock.Section(AboutSection(currentMacro, head, body))
     }
 
@@ -151,7 +151,7 @@ internal class AboutPage(private val attached: () -> Boolean) {
         timeoutMs: Long = 4_000,
         probe: suspend () -> T,
         render: AboutItems.(T) -> Unit,
-    ) = section(head) {
+    ) = infoSection(head) {
         val loading = small("reading…")
         launch {
             val outcome = runCatching {

@@ -104,16 +104,16 @@ class OneHandFragment : KitComposeFragment() {
                 "overrides kept in the onehand_prefs store, and each one says which " +
                 "it is.")
 
-            section("Home-Screen Stars")
+            infoSection("Home-Screen Stars")
             addStars(ctx)
 
-            section("Edge Menu")
+            infoSection("Edge Menu")
             addEdgeMenu(ctx)
 
-            section("Floating menu")
+            infoSection("Floating menu")
             addFloatingMenu(ctx)
 
-            section("Home-Screen Gestures")
+            infoSection("Home-Screen Gestures")
             addHomeGestures(ctx)
         }
         if (showResetConfirm) ResetConfirm(ctx)
@@ -474,7 +474,7 @@ class OneHandFragment : KitComposeFragment() {
 
     /** Section rule + heading — the top-level parts of this page. */
     @Composable
-    private fun section(t: String) {
+    private fun infoSection(t: String) {
         Column(Modifier.fillMaxWidth().padding(top = 20.dp)) {
             Column(Modifier.fillMaxWidth().height(1.dp).background(Color(0x33FFFFFF))) {}
             Text(t, color = LocalKitPalette.current.textPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold,
