@@ -32,7 +32,7 @@
              live. On non-home pages most fragments overlay opaque
              content so the galaxy only peeks through transparent zones
              (the system bars, fragment-transition fade, etc.). -->
-        <com.diegonmarcos.superapp.ui.GalaxyBackdropView
+        <androidx.compose.ui.platform.ComposeView
             android:id="@+id/galaxy_backdrop"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -310,7 +310,7 @@
                      carrier, producing a subtle beating effect that
                      doesn't compete with the marquee text. Self-managing
                      animator (onAttachedToWindow / onDetachedFromWindow). -->
-                <com.diegonmarcos.superapp.ui.WaveLineView
+                <androidx.compose.ui.platform.ComposeView
                     android:id="@+id/music_playing_wave"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
@@ -382,7 +382,7 @@
                      refreshDynamicIsland's findViewById<TextView>
                      short-circuits gracefully (returns null → early
                      return) without any code change. -->
-                <com.diegonmarcos.superapp.ui.IslandWaveView
+                <androidx.compose.ui.platform.ComposeView
                     android:id="@+id/dynamic_island_wave"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
@@ -395,7 +395,8 @@
                      match_parent so it covers the island exactly.
                      clickable=false so taps pass through to the parent
                      island FrameLayout's notification-center handler. -->
-                <com.diegonmarcos.superapp.ui.PrismaticShimmerView
+                <androidx.compose.ui.platform.ComposeView
+                    android:id="@+id/dynamic_island_prism"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:clickable="false"

@@ -77,10 +77,8 @@ internal fun Fragment.rerenderPage() {
  * island waves — at those views, so a switch flipped on this page takes
  * effect now.
  *
- * Those three are NOT recreated when a page re-renders, so their
- * `onAttachedToWindow` cannot re-fire for them; each exposes a public
- * `applyXPref()` for exactly this reason and re-reads the store itself, so
- * there is no value to pass and nothing here to keep in step with the store.
+ * Those three are NOT recreated when a page re-renders. The galaxy and the island wave are Compose layers reading
+ * [com.diegonmarcos.superapp.ui.ShellFxState], so a refresh is all they need; the status strip still re-reads the store itself.
  *
  * It exists because [Fragment.rerenderPage] was never what applied these. The
  * Modes page asked the shell for a MODE change on every toggle, that ends in
@@ -94,17 +92,11 @@ internal fun Fragment.rerenderPage() {
  */
 internal fun applyShellLiveToggles(activity: android.app.Activity?) {
     if (activity == null) return
-    runCatching {
-        (activity.findViewById<View>(R.id.galaxy_backdrop)
-            as? com.diegonmarcos.superapp.ui.GalaxyBackdropView)?.applyStarsPref()
-    }
+    // Stars, island and pets are state the Compose layers read: one refresh reaches them all.
+    com.diegonmarcos.superapp.ui.ShellFxState.refresh(activity)
     runCatching {
         (activity.findViewById<View>(R.id.launcher_status_strip)
             as? com.diegonmarcos.superapp.launcher.LauncherStatusStripView)?.applyPetsPref()
-    }
-    runCatching {
-        (activity.findViewById<View>(R.id.dynamic_island_wave)
-            as? com.diegonmarcos.superapp.ui.IslandWaveView)?.applyIslandPref()
     }
 }
 

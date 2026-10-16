@@ -7,7 +7,7 @@ import com.diegonmarcos.superapp.system.ShellOverride
 import com.diegonmarcos.superapp.system.ModePrefs
 import com.diegonmarcos.superapp.system.BackgroundOrchestrator
 import com.diegonmarcos.superapp.ui.Haptics
-import com.diegonmarcos.superapp.ui.IslandWaveView
+import com.diegonmarcos.superapp.ui.ShellFxState
 import com.diegonmarcos.superapp.launcher.Pages
 import com.diegonmarcos.superapp.launcher.TileGridFragment
 import com.diegonmarcos.superapp.launcher.WebPageFragment
@@ -493,6 +493,8 @@ open class ShellActivity : AppCompatActivity(),
             FleetChrome.apply(this)
 
             setContentView(R.layout.activity_main)
+            // The galaxy, the island's wave and neon frame and the music line are Compose layers now.
+            ShellFxState.install(this)
             // App Tabs LRU window size — data-driven from build.json::ui.app_tabs.cap.
             com.diegonmarcos.superapp.apptabs.AppTabPrefs.cap = BuildConfig.UI_APP_TABS_CAP
             modePrefs = ModePrefs(this)
@@ -1225,17 +1227,10 @@ open class ShellActivity : AppCompatActivity(),
      *  from the picker), not a custom overlay. Cube/haptics re-read themselves. */
     private fun applyLauncherSettings() {
         val prefs = com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(this)
-        runCatching {
-            (findViewById<View>(R.id.galaxy_backdrop)
-                as? com.diegonmarcos.superapp.ui.GalaxyBackdropView)?.applyStarsPref()
-        }
+        ShellFxState.refresh(this)
         runCatching {
             (findViewById<View>(R.id.launcher_status_strip)
                 as? LauncherStatusStripView)?.applyPetsPref()
-        }
-        runCatching {
-            (findViewById<View>(R.id.dynamic_island_wave)
-                as? com.diegonmarcos.superapp.ui.IslandWaveView)?.applyIslandPref()
         }
         runCatching {
             val b = prefs.brightness
@@ -2057,12 +2052,12 @@ open class ShellActivity : AppCompatActivity(),
         }
     }
 
-    /** Dynamic Island is now an [IslandWaveView] (purely decorative
+    /** Dynamic Island is now an [com.diegonmarcos.superapp.ui.IslandWave] (purely decorative
      *  animated triple-sine waveform — Samsung-music-island vibe).
      *  The old "{INITIALS} · {Mode}" text label is gone, so this is
      *  intentionally a no-op kept on the existing call sites for any
      *  future re-introduction of text overlay. */
-    private fun refreshDynamicIsland() { /* no-op — see IslandWaveView */ }
+    private fun refreshDynamicIsland() { /* no-op — see IslandWave */ }
 
     override fun onDrawerModeToggle() {
         // Flip global Apps↔Admin. Don't close the drawer — the user just
