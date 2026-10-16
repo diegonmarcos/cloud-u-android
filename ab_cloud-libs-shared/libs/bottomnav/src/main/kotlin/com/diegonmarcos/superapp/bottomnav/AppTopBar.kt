@@ -194,7 +194,7 @@ public class AppTopBarController {
     public var settingsOpen: Boolean by mutableStateOf(false)
         private set
 
-    internal var drawerContent: TopBarDrawerContent? by mutableStateOf(null)
+    internal var drawerContent: TopBarDrawerContent? by mutableStateOf<TopBarDrawerContent?>(null)
 
     public fun openDrawer() { drawerOpen = true; aiOpen = false; settingsOpen = false }
     public fun closeDrawer() { drawerOpen = false }
