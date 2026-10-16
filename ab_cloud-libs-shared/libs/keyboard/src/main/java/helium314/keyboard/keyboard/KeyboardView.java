@@ -27,7 +27,6 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import helium314.keyboard.keyboard.emoji.EmojiPageKeyboardView;
 import helium314.keyboard.keyboard.internal.KeyDrawParams;
 import helium314.keyboard.keyboard.internal.KeyVisualAttributes;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
@@ -38,7 +37,6 @@ import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.common.StringUtilsKt;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.suggestions.MoreSuggestions;
-import helium314.keyboard.latin.suggestions.MoreSuggestionsView;
 import helium314.keyboard.latin.utils.TypefaceUtils;
 
 import java.util.HashSet;
@@ -67,6 +65,7 @@ public class KeyboardView extends View {
     private final Colors mColors;
     private float mKeyScaleForText;
     protected float mFontSizeMultiplier;
+    private boolean mDrawsEmojiPage;
 
     // The maximum key label width in the proportion to the key width.
     private static final float MAX_LABEL_RATIO = 0.90f;
@@ -108,9 +107,7 @@ public class KeyboardView extends View {
 
         final TypedArray keyboardViewAttr = context.obtainStyledAttributes(attrs,
                 R.styleable.KeyboardView, defStyle, R.style.KeyboardView);
-        if (this instanceof MoreSuggestionsView)
-            mKeyBackground = mColors.selectAndColorDrawable(keyboardViewAttr, ColorType.MORE_SUGGESTIONS_WORD_BACKGROUND);
-        else if (this instanceof PopupKeysKeyboardView)
+        if (this instanceof PopupKeysKeyboardView)
             mKeyBackground = mColors.selectAndColorDrawable(keyboardViewAttr, ColorType.POPUP_KEYS_BACKGROUND);
         else
             mKeyBackground = mColors.selectAndColorDrawable(keyboardViewAttr, ColorType.KEY_BACKGROUND);
@@ -211,8 +208,16 @@ public class KeyboardView extends View {
         return mVerticalCorrection;
     }
 
+    /**
+     * Makes this view draw its keys the way the emoji pages do (emoji key text colour). Used by the
+     * Compose emoji palette, which draws each page through a plain KeyboardView.
+     */
+    public void setDrawsEmojiPage(final boolean drawsEmojiPage) {
+        mDrawsEmojiPage = drawsEmojiPage;
+    }
+
     @NonNull
-    protected KeyDrawParams getKeyDrawParams() {
+    public KeyDrawParams getKeyDrawParams() {
         return mKeyDrawParams;
     }
 
@@ -429,7 +434,7 @@ public class KeyboardView extends View {
                     paint.setColor(key.selectTextColor(params) | 0xFF000000); // ignore alpha for emojis (though actually color isn't applied anyway and we could just set white)
                 else if (key.hasActionKeyBackground())
                     paint.setColor(mColors.get(ColorType.ACTION_KEY_ICON));
-                else if (this instanceof EmojiPageKeyboardView)
+                else if (mDrawsEmojiPage)
                     paint.setColor(mColors.get(ColorType.EMOJI_KEY_TEXT));
                 else if (this instanceof PopupKeysKeyboardView)
                     paint.setColor(mColors.get(ColorType.POPUP_KEY_TEXT));

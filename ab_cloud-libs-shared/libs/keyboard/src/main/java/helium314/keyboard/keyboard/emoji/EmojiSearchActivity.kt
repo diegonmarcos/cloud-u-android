@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Handler
-import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -73,7 +74,6 @@ import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import helium314.keyboard.keyboard.Key
 import helium314.keyboard.keyboard.KeyboardId
 import helium314.keyboard.keyboard.KeyboardLayoutSet
@@ -119,7 +119,11 @@ class EmojiSearchActivity : ComponentActivity() {
     private var firstSearchDone = false
     private var screenHeight by Delegates.notNull<Int>()
     private lateinit var hintLocales: LocaleList
-    private lateinit var emojiPageKeyboardView: EmojiPageKeyboardView
+    private var emojiKeyboard by mutableStateOf<DynamicGridKeyboard?>(null)
+    /** Bumped when the keys of [emojiKeyboard] changed in place, so the grid draws them again. */
+    private var gridVersion by mutableIntStateOf(0)
+    private lateinit var emojiCallback: EmojiViewCallback
+    private val popups by lazy { EmojiKeyPopups(this) }
     private lateinit var keyboardParams: KeyboardParams
     private var keyWidth by Delegates.notNull<Float>()
     private var keyHeight by Delegates.notNull<Float>()
@@ -184,8 +188,15 @@ class EmojiSearchActivity : ComponentActivity() {
                                 color = Color(colors.get(ColorType.EMOJI_KEY_TEXT)),
                                 modifier = Modifier.fillMaxWidth().align(Alignment.CenterVertically))
                         }
-                        key(emojiPageKeyboardView) {
-                            AndroidView({ emojiPageKeyboardView }, modifier = Modifier.wrapContentHeight().fillMaxWidth())
+                        emojiKeyboard?.let { keyboard ->
+                            key(keyboard) {
+                                // the page had 10px of padding above and below
+                                val pagePadding = with(localDensity) { 10.toDp() }
+                                Box(Modifier.fillMaxWidth().background(Color(colors.get(ColorType.MAIN_BACKGROUND)))
+                                    .padding(vertical = pagePadding)) {
+                                    EmojiKeyGrid(keyboard, emojiCallback, popups, gridVersion)
+                                }
+                            }
                         }
                         val focusRequester = remember { FocusRequester() }
                         var text by remember { mutableStateOf(TextFieldValue(searchText, selection = TextRange(searchText.length))) }
@@ -300,16 +311,10 @@ class EmojiSearchActivity : ComponentActivity() {
         val (width, height) = getEmojiKeyDimensions(keyboardParams, this)
         keyWidth = width
         keyHeight = height
-        emojiPageKeyboardView = EmojiPageKeyboardView(this, null)
-        emojiPageKeyboardView.setKeyboard(keyboard)
-        emojiPageKeyboardView.layoutParams =
-            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        emojiPageKeyboardView.background = null
-        colors.setBackground(emojiPageKeyboardView, ColorType.MAIN_BACKGROUND)
-        emojiPageKeyboardView.setPadding(0, 10, 0, 10)
+        emojiKeyboard = keyboard
         loadEmojiDefaultVersionsAndPopupSpecs(this)
 
-        emojiPageKeyboardView.setEmojiViewCallback(object : EmojiViewCallback {
+        emojiCallback = object : EmojiViewCallback {
             override fun onPressKey(key: Key) {
             }
 
@@ -327,7 +332,7 @@ class EmojiSearchActivity : ComponentActivity() {
             // emoji-search activity has no pinned grid, so this is a no-op.
             override fun onPinEmoji(key: Key) {
             }
-        })
+        }
         KeyboardSwitcher.getInstance().setAlphabetKeyboard()
         Log.d(TAG, "init end")
     }
@@ -351,7 +356,7 @@ class EmojiSearchActivity : ComponentActivity() {
             return
         }
 
-        val keyboard = emojiPageKeyboardView.keyboard as DynamicGridKeyboard
+        val keyboard = emojiKeyboard ?: return
         keyboard.removeAllKeys()
         firstKey = null
         pressedKey = null
@@ -366,7 +371,7 @@ class EmojiSearchActivity : ComponentActivity() {
             keyboard.addKeyLast(key)
             if (firstKey == null) firstKey = key
         }
-        emojiPageKeyboardView.invalidate()
+        gridVersion++
 
         searchText = text
         firstSearchDone = true

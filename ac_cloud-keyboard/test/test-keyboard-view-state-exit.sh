@@ -42,7 +42,7 @@ FILES=(
     "$J/keyboard/KeyboardSwitcher.java"
     "$J/keyboard/KeyboardViewState.kt"
     "$J/keyboard/clipboard/ClipboardHistoryView.kt"
-    "$J/keyboard/emoji/EmojiPalettesView.java"
+    "$J/keyboard/emoji/EmojiPalettesView.kt"
     "$J/latin/LatinIME.java"
     "$J/latin/suggestions/SuggestionStripView.kt"
     "$K/src/main/assets/layouts/clipboard_bottom/clip_bottom_row.json"
@@ -99,7 +99,7 @@ for p in glob.glob(os.path.join(R, J, "**", "*.*"), recursive=True):
     if not p.endswith((".kt", ".java")) or p.endswith("KeyboardSwitcher.java"): continue
     s = code(open(p, encoding="utf-8").read())
     if pat.search(s): hits.append(os.path.relpath(p, R))
-    if os.path.basename(p) in ("SuggestionStripView.kt", "ClipboardHistoryView.kt", "EmojiPalettesView.java") and selfvis.search(s):
+    if os.path.basename(p) in ("SuggestionStripView.kt", "ClipboardHistoryView.kt", "EmojiPalettesView.kt") and selfvis.search(s):
         hits.append(os.path.relpath(p, R) + " (own visibility)")
 check(not hits, f"G2 no view outside KeyboardSwitcher toggles a strip/panel piece {hits or ''}")
 
@@ -183,9 +183,9 @@ echo "== mutations =="
 mutate "setClipboardKeyboard hides the strip itself (the old style)" "$J/keyboard/KeyboardSwitcher.java" \
     "s=s.replace('        applyViewState();\n        mClipboardStripScrollView.post','        applyViewState();\n        mStripContainer.setVisibility(View.GONE);\n        mClipboardStripScrollView.post',1)" "G1 no owned view"
 mutate "a panel view toggles its own visibility" "$J/keyboard/clipboard/ClipboardHistoryView.kt" \
-    "s=s.replace('        initialize()\n','        initialize()\n        visibility = VISIBLE\n',1)" "G2 no view outside"
-mutate "the emoji panel hides the category strip itself" "$J/keyboard/emoji/EmojiPalettesView.java" \
-    "s=s.replace('KeyboardSwitcher.getInstance().setEmojiCategoryStripShown(emoji);','if (mTabStrip != null) mTabStrip.setVisibility(emoji ? VISIBLE : GONE);')" "G2 no view outside"
+    "s=s.replace('        fitsSystemWindows = true','        visibility = VISIBLE\n        fitsSystemWindows = true',1)" "G2 no view outside"
+mutate "the emoji panel hides the category strip itself" "$J/keyboard/emoji/EmojiPalettesView.kt" \
+    "s=s.replace('KeyboardSwitcher.getInstance().setEmojiCategoryStripShown(emoji)','mTabStrip.setVisibility(if (emoji) VISIBLE else GONE)')" "G2 no view outside"
 mutate "LatinIME calls the strip's self-heal directly (the #776 wiring)" "$J/latin/LatinIME.java" \
     "s=s.replace('mKeyboardSwitcher.requestToolbarCheck(\"strip attached\")','mSuggestionStripView.ensureToolbar(\"strip attached\")')" "G3 ensureToolbar has no caller"
 mutate "the self-heal ignores an open panel" "$J/keyboard/KeyboardSwitcher.java" \

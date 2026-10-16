@@ -7,8 +7,8 @@
 # candidates) are JVM-tested in libs:keyboard ImeAutofillTest (./build.sh unit). This holds the
 # WIRING those rules need, which no JVM test can see:
 #
-#   K1  row 1 exists in the strip layout, ABOVE the keyboard's own rows, starts with a key glyph,
-#       and is GONE by default (zero height when there is nothing from Vault);
+#   K1  row 1 exists in the strip, ABOVE the keyboard's own rows, starts with a key glyph,
+#       and is absent by default (zero height when there is nothing from Vault);
 #   K2  onInlineSuggestionsResponse puts Vault's chips on row 1 through the controller and NEVER
 #       through setExternalSuggestionView (that is row 2: the old path mixed them); an empty
 #       response clears row 1;
@@ -29,7 +29,6 @@ import os, re, sys
 ROOT = os.environ["ROOT"]
 KB = "ab_cloud-libs-shared/libs/keyboard/src/main"
 F = {
-    "layout": KB + "/res/layout/suggestions_strip.xml",
     "ime": KB + "/java/helium314/keyboard/latin/LatinIME.java",
     "ctl": KB + "/java/helium314/keyboard/latin/ImeAutofillController.kt",
     "strip": KB + "/java/helium314/keyboard/latin/suggestions/SuggestionStripView.kt",
@@ -53,22 +52,23 @@ def body(src, sig):
     return src[i:]
 
 def check(files, ok):
-    lay, ime, ctl, strip, attrs, st, man = (strip_comments(files[k]) for k in ("layout", "ime", "ctl", "strip", "attrs", "settings", "manifest"))
-    # K1
-    i_row, i_tool, i_sugg = lay.find('@+id/inline_autofill_row'), lay.find('@+id/toolbar_row'), lay.find('@+id/suggestions_row')
-    ok(0 <= i_row < i_tool < i_sugg, "K1 row 1 (inline_autofill_row) sits above the keyboard's own rows")
-    row = lay[i_row:i_tool]
-    ok('android:visibility="gone"' in row, "K1 row 1 is GONE by default (zero height with nothing from Vault)")
-    ok("@drawable/ic_autofill_key" in row and "inline_autofill_container" in row, "K1 row 1 starts with the key glyph and has its own container")
-    ok("@dimen/config_suggestions_strip_height" in row, "K1 row 1 keeps the strip's chip height")
+    ime, ctl, strip, attrs, st, man = (strip_comments(files[k]) for k in ("ime", "ctl", "strip", "attrs", "settings", "manifest"))
+    # K1: the strip's content, top to bottom
+    content = body(strip, "override fun Body()")
+    i_row, i_tool, i_sugg = content.find("inlineView?.let { InlineRow("), content.find("if (toolbarRowVisible)"), content.find("if (!ownRowSuppressed)")
+    ok(0 <= i_row < i_tool < i_sugg, "K1 row 1 (InlineRow) sits above the keyboard's own rows")
+    ok("inlineView?.let { InlineRow(" in content, "K1 row 1 is absent by default (zero height with nothing from Vault)")
+    row = body(strip, "private fun InlineRow(")
+    ok("R.drawable.ic_autofill_key" in row and "HostedView(view" in row, "K1 row 1 starts with the key glyph and has its own container")
+    ok("dimensionResource(R.dimen.config_suggestions_strip_height)" in content and ".height(height)" in row, "K1 row 1 keeps the strip's chip height")
     # K2
     resp = body(ime, "public boolean onInlineSuggestionsResponse(")
     ok("mImeAutofill.onInline(inlineSuggestionView" in resp, "K2 Vault's chips go to row 1 through the controller")
     ok("setExternalSuggestionView" not in resp, "K2 inline suggestions never take row 2 (no setExternalSuggestionView)")
     ok("mImeAutofill.onInline(null, 0" in resp, "K2 an empty response clears row 1")
-    ok("inlineContainer.addView(view" in strip and "inlineRow.isVisible = view != null" in strip, "K2 row 1 collapses when it holds nothing")
+    ok("inlineView = view" in body(strip, "fun setInlineSuggestions(") and "inlineView?.let { InlineRow(" in strip, "K2 row 1 collapses when it holds nothing")
     # K3
-    ok("suggestionsRow.isVisible = !suppressed" in strip, "K3 Suppression Mode hides row 2")
+    ok("ownRowSuppressed = suppressed" in strip and "if (!ownRowSuppressed) {" in strip, "K3 Suppression Mode hides row 2")
     ok("strip?.setOwnCandidatesSuppressed(!rows.row2)" in ctl and "SuggestionRows.decide(" in ctl, "K3 the rows follow SuggestionRows")
     ok("if (mImeAutofill.isSuppressed()) return false;" in body(ime, "public boolean tryShowClipboardSuggestion("), "K3 no clipboard chip in Suppression Mode")
     ok("mImeAutofill.onStartInputView(editorInfo" in body(ime, "void onStartInputViewInternal("), "K3 every field start is classified")
@@ -110,11 +110,8 @@ print("ok     keyboard autofill rows: every assertion holds on the real tree")
 MUT = [
     ("inline back on row 2", "ime", "mImeAutofill.onInline(inlineSuggestionView, inlineSuggestions.size(), mSuggestionStripView);",
      "mSuggestionStripView.setExternalSuggestionView(inlineSuggestionView, true); mImeAutofill.onInline(inlineSuggestionView, inlineSuggestions.size(), mSuggestionStripView);"),
-    ("row 1 always visible", "layout", '''            android:id="@+id/inline_autofill_row"
-            android:orientation="horizontal"
-            android:visibility="gone"''', '''            android:id="@+id/inline_autofill_row"
-            android:orientation="horizontal"'''),
-    ("suppression keeps row 2", "strip", "suggestionsRow.isVisible = !suppressed", "suggestionsRow.isVisible = true"),
+    ("row 1 always visible", "strip", "inlineView?.let { InlineRow(it, stripHeight) }", "InlineRow(inlineView ?: View(context), stripHeight)"),
+    ("suppression keeps row 2", "strip", "if (!ownRowSuppressed) {", "if (true) {"),
     ("suppressed field learns", "settings", "|| mInputAttributes.mAutofillSuppressed", ""),
     ("clipboard chip on a password field", "ime", "if (mImeAutofill.isSuppressed()) return false;", ""),
     ("candidate taught to the dictionary", "ctl", "c.commitText(text, 1)", "ime.pickSuggestionManually(null)"),

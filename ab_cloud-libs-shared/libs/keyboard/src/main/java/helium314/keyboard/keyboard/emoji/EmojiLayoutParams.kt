@@ -6,9 +6,6 @@
 package helium314.keyboard.keyboard.emoji
 
 import android.content.res.Resources
-import android.view.View
-import android.widget.LinearLayout
-import androidx.viewpager2.widget.ViewPager2
 import helium314.keyboard.keyboard.internal.KeyboardParams
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Settings
@@ -42,16 +39,6 @@ internal class EmojiLayoutParams(res: Resources) {
         emojiKeyboardHeight = emojiListHeight - emojiCategoryPageIdViewHeight - emojiListBottomMargin
     }
 
-    fun setEmojiListProperties(vp: ViewPager2) {
-        val lp = vp.layoutParams as LinearLayout.LayoutParams
-        lp.height = emojiKeyboardHeight
-        lp.bottomMargin = emojiListBottomMargin
-        vp.layoutParams = lp
-    }
-
-    fun setCategoryPageIdViewProperties(v: View) {
-        val lp = v.layoutParams as LinearLayout.LayoutParams
-        lp.height = emojiCategoryPageIdViewHeight
-        v.layoutParams = lp
-    }
+    /** The category page indicator's height (px). */
+    val categoryPageIdViewHeight get() = emojiCategoryPageIdViewHeight
 }

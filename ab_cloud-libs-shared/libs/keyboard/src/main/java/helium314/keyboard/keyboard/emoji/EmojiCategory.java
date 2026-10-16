@@ -34,7 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-final class EmojiCategory {
+public final class EmojiCategory {
     private final String TAG = EmojiCategory.class.getSimpleName();
 
     private static final int ID_UNSPECIFIED = -1;

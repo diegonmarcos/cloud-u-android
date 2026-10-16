@@ -33,7 +33,7 @@ import java.util.List;
 /**
  * This is a Keyboard class where you can add keys dynamically shown in a grid layout
  */
-final class DynamicGridKeyboard extends Keyboard {
+public final class DynamicGridKeyboard extends Keyboard {
     private static final String TAG = DynamicGridKeyboard.class.getSimpleName();
     private final Object mLock = new Object();
 
@@ -127,7 +127,7 @@ final class DynamicGridKeyboard extends Keyboard {
     }
 
     // height is dynamic if we don't have a fixed row count
-    int getOccupiedHeight() {
+    public int getOccupiedHeight() {
         final int count = mFixedRowCount ? mMaxKeyCount : mGridKeys.size();
         final int row = (count - 1) / getOccupiedColumnCount() + 1;
         return row * mVerticalStep;

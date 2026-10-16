@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # The toolbar row pages by a whole screen of icons: eleven on page one, ten on page two,
 # Cloud Vault alone on page three. It has now shown four instead of eleven twice, both
-# times because something OUTSIDE PagedToolbarScrollView's arithmetic changed the width a
+# times because something OUTSIDE the paging arithmetic (ToolbarPaging) changed the width a
 # key occupies. This runner cannot lay out a view, so the proof is the arithmetic plus the
 # two things that feed it:
 #
-#   T1  every toolbar key gets its OWN layout params. One shared LinearLayout.LayoutParams
-#       object was the four-icon bug: PagedToolbarScrollView writes a left margin into the
-#       params of the one key that starts its own page, and while all 22 keys held the same
-#       object each of them got that margin, so a page sized for eleven icons fit four.
-#   T2  exactly one place writes leftMargin on a toolbar key, and it is that alignment.
+#   T1  every toolbar key gets its OWN page gap. One shared LinearLayout.LayoutParams
+#       object was the four-icon bug (the View strip): the margin written for the one key that
+#       starts its own page landed on all 22 keys, so a page sized for eleven icons fit four.
+#       The Compose strip takes one gap PER KEY from ToolbarPaging.gaps and nothing shared.
+#   T2  exactly one place computes the page-start gap of a toolbar key, and it is that alignment.
 #   T3  the geometry: page = as many whole keys as the viewport shows, and with the shipped
 #       key width on a 411dp portrait screen that is eleven, splitting the 22 default keys
 #       11 / 10 / Vault. Fails if the key width or the default row grows past the design.
@@ -19,7 +19,7 @@ APP="$(cd "$(dirname "$0")/.." && pwd)"
 K="$APP/../ab_cloud-libs-shared/libs/keyboard/src/main"
 J="$K/java/helium314/keyboard"
 SV="$J/latin/suggestions/SuggestionStripView.kt"
-PV="$J/latin/suggestions/PagedToolbarScrollView.kt"
+PV="$J/latin/suggestions/ToolbarPaging.kt"
 TU="$J/latin/utils/ToolbarUtils.kt"
 DIM="$K/res/values/config.xml"
 PASS=0; FAIL=0
@@ -30,23 +30,19 @@ absent() { grep -q -- "$2" "$1" && bad "$3 ($1)" || ok "$3"; }
 
 echo "== keyboard toolbar paging: eleven icons on a page, Vault on its own =="
 
-# ── T1 one layout-params object per key ──────────────────────────────────────
-# The getter is what makes each `= toolbarKeyLayoutParams` a fresh instance. A plain
-# initialiser builds it once and hands the same object to all 22 keys, which is the bug.
-has "$SV" 'private val toolbarKeyLayoutParams$' "T1 toolbarKeyLayoutParams is a per-use getter"
-absent "$SV" 'private val toolbarKeyLayoutParams = LinearLayout.LayoutParams' \
-  "T1 no single shared LayoutParams instance for the whole row"
-absent "$SV" 'layoutParams = original.layoutParams' \
-  "T1 the second-row copy does not share the original key's params object"
-n=$(grep -c 'layoutParams = toolbarKeyLayoutParams' "$SV" || true)
-[ "$n" -ge 3 ] && ok "T1 $n keys take their params from the getter" \
-                || bad "T1 only $n key sites use the getter, expected the 3 that build keys"
+# ── T1 one gap per key ───────────────────────────────────────────────────────
+# The row indexes ToolbarPaging.gaps by key; a single gap value applied to every key would be
+# the shared-params bug again.
+has "$SV" 'ToolbarPaging.gaps(keys, toolbarKeysOnOwnPage, iconPx, page)' "T1 the gaps come from ToolbarPaging.gaps"
+has "$SV" 'gaps\[i\].toDp()' "T1 each key is given ITS OWN gap"
+absent "$SV" 'gaps.max()' "T1 no single shared gap for the whole row"
+absent "$SV" 'secondRowKeys.add(original)' "T1 the second-row copy does not share the original key's icon"
 
-# ── T2 one writer of the page-start margin ───────────────────────────────────
-n=$(grep -c 'leftMargin = ' "$PV" "$SV" | awk -F: '{s+=$2} END {print s+0}')
-[ "$n" = 1 ] && ok "T2 exactly one leftMargin writer" \
-             || bad "T2 $n leftMargin writers on toolbar keys — margins from two places cannot converge"
-has "$PV" 'params.leftMargin = gap' "T2 and it is the own-page alignment"
+# ── T2 one writer of the page-start gap ──────────────────────────────────────
+n=$(grep -c '\] = gapForOwnPage(' "$PV" "$SV" | awk -F: '{s+=$2} END {print s+0}')
+[ "$n" = 1 ] && ok "T2 exactly one page-start gap writer" \
+             || bad "T2 $n page-start gap writers on toolbar keys — gaps from two places cannot converge"
+has "$PV" 'gaps\[i\] = gapForOwnPage(x, page)' "T2 and it is the own-page alignment"
 
 # ── T3 the arithmetic, against the shipped key width and default row ─────────
 if python3 - "$DIM" "$TU" <<'EOF'
@@ -59,13 +55,13 @@ keys = [k for k in re.findall(r'\b([A-Z][A-Z_]+)\b', re.sub(r'//[^\n]*', '', row
 own_page = set(re.findall(r'ToolbarKey\.([A-Z_]+)', re.search(r'toolbarKeysOnOwnPage = setOf\(([^)]*)\)', tu).group(1)))
 
 # A 411dp portrait viewport: 1080px at the phone's 2.625 density, and the whole width,
-# because the expand key is hidden in the two-row strip (SuggestionStripView.init).
+# because the two-row strip has no expand key.
 VIEWPORT = 411
-per_page = VIEWPORT // key_dp                      # PagedToolbarScrollView.pageWidth
+per_page = VIEWPORT // key_dp                      # ToolbarPaging.pageWidth
 page = per_page * key_dp
 assert per_page == 11, f'{key_dp}dp keys give {per_page} per page, the design is 11'
 
-# Lay the row out the way onLayout does, with each key holding its own margin.
+# Lay the row out the way the strip does, with each key holding its own gap.
 def layout(margins):
     left, lefts = 0, []
     for k in keys:

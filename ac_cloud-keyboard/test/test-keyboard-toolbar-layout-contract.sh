@@ -16,17 +16,17 @@
 #   A1  the page size is DERIVED from live measurements — the viewport divided by
 #       a real key's width. A literal "11 per page" would be right on exactly one
 #       screen and silently wrong on every other width, rotation and icon size.
-#   A2  every toolbar key carries its OWN layout params. ONE SHARED
-#       LinearLayout.LayoutParams object is the four-icons-instead-of-eleven bug
-#       (#319, fixed in 59527a722): PagedToolbarScrollView writes a left margin
-#       into the params of the one key that starts its own page, and while all 22
-#       keys held the same object every key got that margin.
+#   A2  every toolbar key carries its OWN page gap. ONE SHARED gap (once, one
+#       LinearLayout.LayoutParams object) is the four-icons-instead-of-eleven bug
+#       (#319, fixed in 59527a722): the margin written for the one key that
+#       starts its own page landed on every key. The strip takes one gap PER KEY
+#       from ToolbarPaging.gaps.
 #   A3  the geometry, computed from the SHIPPED key width and the REAL default
-#       row, laid out the way onLayout does — and laid out through whichever
-#       params model A2 found in the source, so the pre-fix state produces the
+#       row, laid out the way the strip does — and laid out through whichever
+#       gap model A2 found in the source, so the pre-fix state produces the
 #       decaying row it really produced instead of the design's split.
-#   A4  exactly one place writes leftMargin on a toolbar key. Two writers cannot
-#       converge on a page boundary.
+#   A4  exactly one place computes the page-start gap of a toolbar key. Two
+#       writers cannot converge on a page boundary.
 #
 # NO RIPGREP, DELIBERATELY: testers in this repository have passed on its absence
 # rather than on their assertions. grep, awk and python3 only — all three are
@@ -43,7 +43,7 @@ set -uo pipefail
 ROOT="${CLOUD_ANDROID_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && while [ "$PWD" != "/" ] && [ ! -e "$PWD/.git" ]; do cd ..; done; printf '%s' "$PWD")}"
 K="$ROOT/ab_cloud-libs-shared/libs/keyboard/src/main"
 SV="$K/java/helium314/keyboard/latin/suggestions/SuggestionStripView.kt"
-PV="$K/java/helium314/keyboard/latin/suggestions/PagedToolbarScrollView.kt"
+PV="$K/java/helium314/keyboard/latin/suggestions/ToolbarPaging.kt"
 TU="$K/java/helium314/keyboard/latin/utils/ToolbarUtils.kt"
 CFG="$K/res/values/config.xml"
 
@@ -59,10 +59,10 @@ echo "== cloud-keyboard toolbar: a full page of icons, measured not declared =="
 
 # ── A1 the page size is measured ────────────────────────────────────────────
 # The division IS the derivation: as many whole icons as the viewport can show.
-if grep -q 'viewportWidth / icon' "$PV"; then
+if grep -q 'viewport / icon' "$PV"; then
     pass "A1 page size divides the measured viewport by a measured key width"
 else
-    fail "A1 PagedToolbarScrollView no longer derives its page from measurements ($PV)"
+    fail "A1 the toolbar paging no longer derives its page from measurements ($PV)"
 fi
 # A page size sitting in the paging code as a number is the failure A1 exists to
 # catch: it cannot be right on two screen widths at once.
@@ -72,31 +72,30 @@ else
     pass "A1 no hardcoded keys-per-page constant in the paging view"
 fi
 
-# ── A2 one layout-params object per key ─────────────────────────────────────
-# The getter is what makes each `= toolbarKeyLayoutParams` a FRESH instance; a
-# plain initialiser builds one object and hands it to all 22 keys.
-if grep -qE '^[[:space:]]*private val toolbarKeyLayoutParams$' "$SV"; then
-    pass "A2 toolbarKeyLayoutParams is a per-use getter"
+# ── A2 one gap per key ──────────────────────────────────────────────────────
+# The row indexes the gaps by key; a single gap applied to all 22 keys is the bug.
+if grep -q 'ToolbarPaging.gaps(keys, toolbarKeysOnOwnPage, iconPx, page)' "$SV"; then
+    pass "A2 the row takes its page gaps from ToolbarPaging.gaps"
 else
-    fail "A2 toolbarKeyLayoutParams is not a getter — the row shares one params object ($SV)"
+    fail "A2 the row no longer takes its page gaps from ToolbarPaging.gaps ($SV)"
 fi
-if grep -q 'private val toolbarKeyLayoutParams = LinearLayout.LayoutParams' "$SV"; then
-    fail "A2 a single shared LayoutParams instance for the whole row ($SV)"
+if grep -q 'gaps\[i\].toDp()' "$SV"; then
+    pass "A2 each key is given its own gap"
 else
-    pass "A2 no single shared LayoutParams instance for the whole row"
+    fail "A2 the keys do not each take their own gap ($SV)"
 fi
-if grep -q 'layoutParams = original.layoutParams' "$SV"; then
-    fail "A2 the second-row copy shares the original key's params object ($SV)"
+if grep -q 'gaps.max()' "$SV"; then
+    fail "A2 a single shared gap for the whole row ($SV)"
 else
-    pass "A2 the second-row copy takes its own params"
+    pass "A2 no single shared gap for the whole row"
 fi
 
-# ── A4 one writer of the page-start margin ──────────────────────────────────
-writers=$(grep -c 'leftMargin = ' "$SV" "$PV" | awk -F: '{ sum += $2 } END { print sum + 0 }')
+# ── A4 one writer of the page-start gap ─────────────────────────────────────
+writers=$(grep -c '\] = gapForOwnPage(' "$SV" "$PV" | awk -F: '{ sum += $2 } END { print sum + 0 }')
 if [ "$writers" = 1 ]; then
-    pass "A4 exactly one leftMargin writer"
+    pass "A4 exactly one page-start gap writer"
 else
-    fail "A4 $writers leftMargin writers on toolbar keys — margins from two places cannot converge"
+    fail "A4 $writers page-start gap writers on toolbar keys — gaps from two places cannot converge"
 fi
 
 # ── A3 the arithmetic, from the shipped width and the real default row ──────
@@ -131,18 +130,18 @@ assert own_page, 'no key asks for its own page — Cloud Vault shared a page aga
 # below fail on the pre-fix state instead of quietly assuming the fix: a shared
 # object spreads the own-page margin to every key, so the row is laid out with
 # that margin on all of them.
-shared_params = re.search(r'private val toolbarKeyLayoutParams = LinearLayout\.LayoutParams', sv) is not None
+shared_params = 'gaps[i].toDp()' not in sv
 
 # A 411dp-class portrait viewport — the whole width, because the expand key is
 # hidden in the two-row strip. 411/36 = 11.4, so eleven whole keys fit and
 # eleven is what #301 asks for; the spec and the hardware agree here.
 VIEWPORT = 411
-per_page = VIEWPORT // key_dp                    # PagedToolbarScrollView.pageWidth
+per_page = VIEWPORT // key_dp                    # ToolbarPaging.pageWidth
 page = per_page * key_dp
 assert per_page == 11, f'{key_dp}dp keys give {per_page} per page on {VIEWPORT}dp, the design is 11'
 
 def layout(margins):
-    """Key lefts, the way onLayout lays the row out: each key's own margin then its width."""
+    """Key lefts, the way the strip lays the row out: each key's own gap then its width."""
     left, lefts = 0, []
     for k in keys:
         left += margins.get(k, 0)
@@ -150,7 +149,7 @@ def layout(margins):
         left += key_dp
     return lefts
 
-# alignKeysThatWantTheirOwnPage(), iterated the way onLayout re-runs it.
+# ToolbarPaging.gaps(), iterated the way a re-layout re-runs it.
 margins, changed, lefts = {}, False, []
 for _ in range(4):
     lefts = layout(margins)

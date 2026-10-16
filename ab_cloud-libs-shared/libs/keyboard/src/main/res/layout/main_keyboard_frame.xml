@@ -12,9 +12,51 @@
     android:layout_gravity="bottom"
     android:orientation="vertical" >
 
-    <include
+    <!--
+        SuperApp two-row redesign: height is wrap_content so the container adopts the height of
+        whichever strip is currently VISIBLE (the others are set GONE by KeyboardSwitcher, so they
+        drop out of measurement). In typing mode the SuggestionStripView is two rows tall (toolbar +
+        suggestions); in emoji / clipboard mode the single-row strips keep the original
+        @dimen/config_suggestions_strip_height. This makes the keyboard grow by one row only while
+        typing, and keeps emoji/clipboard strips single-height.
+        The strip and the emoji category tabs are Compose; the clipboard strip is filled by KeyboardSwitcher.
+    -->
+    <FrameLayout
         android:id="@+id/strip_container"
-        layout="@layout/strip_container" />
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <!-- To ensure that key preview popup is correctly placed when the current system locale is
+             one of RTL locales, layoutDirection="ltr" is needed in the SDK version 17+. -->
+        <helium314.keyboard.latin.suggestions.SuggestionStripView
+            android:id="@+id/suggestion_strip_view"
+            android:layoutDirection="ltr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="?attr/suggestionStripViewStyle" />
+        <helium314.keyboard.keyboard.emoji.EmojiCategoryTabs
+            android:id="@+id/emoji_tab_strip"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/config_suggestions_strip_height"
+            style="?attr/suggestionStripViewStyle" />
+        <HorizontalScrollView
+            android:id="@+id/clipboard_strip_scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/config_suggestions_strip_height"
+            style="?attr/suggestionStripViewStyle"
+            android:scrollbarThumbHorizontal="@color/toolbar_scrollbar" >
+            <LinearLayout
+                android:id="@+id/clipboard_strip"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="end" >
+                <!-- empty view to move buttons to the right -->
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+            </LinearLayout>
+        </HorizontalScrollView>
+    </FrameLayout>
 
     <!-- To ensure that key preview popup is correctly placed when the current system locale is
          one of RTL locales, layoutDirection="ltr" is needed in the SDK version 17+. -->
@@ -29,9 +71,14 @@
             android:layoutDirection="ltr"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
-        <include
+        <helium314.keyboard.keyboard.emoji.EmojiPalettesView
             android:id="@+id/emoji_palettes_view"
-            layout="@layout/emoji_palettes_view" />
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:visibility="gone"
+            android:background="@android:color/transparent"
+            style="?attr/emojiPalettesViewStyle" />
         <helium314.keyboard.keyboard.clipboard.ClipboardHistoryView
             android:id="@+id/clipboard_history_view"
             android:layout_width="match_parent"

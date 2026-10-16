@@ -265,7 +265,7 @@ else bad "T9 bullet normalisation"; fi
 base=$(git -C "$ROOT" rev-parse --verify origin/main 2>/dev/null)
 if [ -n "$base" ]; then
   for f in libs/keyboard/src/main/java/helium314/keyboard/latin/utils/ToolbarUtils.kt \
-           libs/keyboard/src/main/java/helium314/keyboard/latin/suggestions/PagedToolbarScrollView.kt \
+           libs/keyboard/src/main/java/helium314/keyboard/latin/suggestions/ToolbarPaging.kt \
            libs/keyboard/src/main/java/helium314/keyboard/keyboard/internal/keyboard_parser/floris/KeyCode.kt; do
     if git -C "$ROOT" diff --quiet "$base" -- "ab_cloud-libs-shared/$f"; then ok "T7 unchanged: $(basename "$f")"
     else bad "T7 CHANGED: $(basename "$f") — the toolbar row is not this feature's to touch"; fi

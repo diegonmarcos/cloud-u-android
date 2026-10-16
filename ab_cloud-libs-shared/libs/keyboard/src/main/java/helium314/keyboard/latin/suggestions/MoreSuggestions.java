@@ -168,14 +168,15 @@ public final class MoreSuggestions extends Keyboard {
     }
 
     public static final class Builder extends KeyboardBuilder<MoreSuggestionsParam> {
-        private final MoreSuggestionsView mPaneView;
+        private final Paint mLabelPaint;
         private SuggestedWords mSuggestedWords;
         private int mFromIndex;
         private int mToIndex;
 
-        public Builder(final Context context, final MoreSuggestionsView paneView) {
+        /** @param labelPaint measures the suggestion labels, so it must carry the panel's text size and typeface */
+        public Builder(final Context context, final Paint labelPaint) {
             super(context, new MoreSuggestionsParam());
-            mPaneView = paneView;
+            mLabelPaint = labelPaint;
         }
 
         public Builder layout(final SuggestedWords suggestedWords, final int fromIndex,
@@ -185,9 +186,8 @@ public final class MoreSuggestions extends Keyboard {
             mParams.mId = parentKeyboard.mId;
             readAttributes(xmlId);
             mParams.mVerticalGap = mParams.mTopPadding = parentKeyboard.mVerticalGap / 2;
-            mPaneView.updateKeyboardGeometry(mParams.mDefaultAbsoluteRowHeight);
             final int count = mParams.layout(suggestedWords, fromIndex, maxWidth, minWidth, maxRow,
-                    mPaneView.newLabelPaint(null /* key */), getMContext());
+                    mLabelPaint, getMContext());
             mFromIndex = fromIndex;
             mToIndex = fromIndex + count;
             mSuggestedWords = suggestedWords;

@@ -828,7 +828,7 @@
       "wave": 5,
       "ui": "mixed",
       "size": "XL",
-      "notes": "HeliBoard heritage, owned (no upstream sync). Settings are already Compose (68 files). The IME surface (input_view.xml, suggestion strip, KeyboardView, emoji palettes, and our EnhanceBarView / EmojiSearchBarView / PagedToolbarScrollView) is Views and is the hardest surface in the fleet.",
+      "notes": "HeliBoard heritage, owned (no upstream sync). Settings are already Compose (68 files). The candidate strip + toolbar (SuggestionStripView, the paged toolbar, the more-suggestions panel) and the emoji pages (EmojiPalettesView, the category tabs and indicator, the key grids) are Compose (2026-10-16, step 3); what stays Views is the KEY SURFACE: KeyboardView / MainKeyboardView, the popup keys panels, key previews, the swipe trail and the InputView shell, which the Compose surfaces host or sit beside through AndroidView.",
       "risks": [
         "IME constraint: InputMethodService's window has no ViewTreeLifecycleOwner/SavedStateRegistryOwner — a ComposeView in onCreateInputView needs both set on window.decorView first, or it crashes on attach",
         "KeyboardView key rendering + touch dispatch is latency-critical; rewriting it in Compose is not justified — migrate the bars (Enhance/EmojiSearch/Translate/Voice/Media) and leave KeyboardView as AndroidView",
@@ -836,9 +836,9 @@
       ],
       "baseline": {
         "view_screens": 0,
-        "layout_xml": 11,
-        "view_ui_files": 14,
-        "custom_views": 15
+        "layout_xml": 4,
+        "view_ui_files": 9,
+        "custom_views": 8
       }
     },
     {

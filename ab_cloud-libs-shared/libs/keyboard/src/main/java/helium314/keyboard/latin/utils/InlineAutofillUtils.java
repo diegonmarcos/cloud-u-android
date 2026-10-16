@@ -13,11 +13,12 @@ import android.graphics.Rect;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.AttributeSet;
 import android.util.Size;
+import android.view.Gravity;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.ViewTreeObserver;
 import android.view.inputmethod.InlineSuggestion;
 import android.view.inputmethod.InlineSuggestionsRequest;
@@ -27,7 +28,6 @@ import android.widget.LinearLayout;
 import android.widget.inline.InlineContentView;
 import android.widget.inline.InlinePresentationSpec;
 
-import androidx.annotation.AttrRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -100,8 +100,8 @@ public class InlineAutofillUtils {
                 .build();
     }
 
-    public static InlineContentClipView createView(final List<InlineSuggestion> inlineSuggestions,
-                                                   final Context context) {
+    public static View createView(final List<InlineSuggestion> inlineSuggestions,
+                                  final Context context) {
         LinearLayout container = new LinearLayout(context);
         for (InlineSuggestion inlineSuggestion : inlineSuggestions) {
             inlineSuggestion.inflate(context, new Size(ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -116,66 +116,86 @@ public class InlineAutofillUtils {
         inlineSuggestionView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         inlineSuggestionView.addView(container);
 
-        InlineContentClipView scrollableSuggestionsClip = new InlineContentClipView(context);
+        FrameLayout scrollableSuggestionsClip = new FrameLayout(context);
+        final SurfaceView backgroundView = new SurfaceView(context);
+        backgroundView.setZOrderOnTop(true);
+        backgroundView.getHolder().setFormat(PixelFormat.TRANSPARENT);
+        scrollableSuggestionsClip.addView(backgroundView);
         scrollableSuggestionsClip.addView(inlineSuggestionView);
+        clipInlineContentTo(scrollableSuggestionsClip);
         return scrollableSuggestionsClip;
     }
 
     /**
-     * This class is a container for showing {@link InlineContentView}s for cases
-     * where you want to ensure they appear only in a given area in your app. An
-     * example is having a scrollable list of items. Note that without this container
-     * the InlineContentViews' surfaces would cover parts of your app as these surfaces
-     * are owned by another process and always appearing on top of your app.
+     * A bare container the strip hosts a view of someone else's in (the clipboard chip, the inline
+     * autofill row): the strip is Compose, these are not, and this is the one place that builds
+     * the Android container for them.
      */
-    public static class InlineContentClipView extends FrameLayout {
-        @NonNull
-        private final ViewTreeObserver.OnDrawListener mOnDrawListener =
-                this::clipDescendantInlineContentViews;
-        @NonNull
-        private final Rect mParentBounds = new Rect();
-        @NonNull
-        private final Rect mContentBounds = new Rect();
-        public InlineContentClipView(@NonNull Context context) {
-            this(context, /*attrs*/ null, /*defStyleAttr*/ 0);
+    public static ViewGroup newHost(final Context context) {
+        return new FrameLayout(context);
+    }
+
+    /**
+     * Puts {@code view} (or nothing, when null) in {@code host}, taking it out of whatever held it
+     * before. With {@code fill} it takes the whole host; without, it keeps the size it asks for and
+     * sits centred in it, as a suggestion view did in the strip.
+     */
+    public static void setHostedView(final ViewGroup host, @Nullable final View view, final boolean fill) {
+        if (view != null && host.getChildCount() == 1 && host.getChildAt(0) == view) return;
+        host.removeAllViews();
+        if (view == null) return;
+        final ViewParent previous = view.getParent();
+        if (previous instanceof ViewGroup) ((ViewGroup) previous).removeView(view);
+        final FrameLayout.LayoutParams params;
+        if (fill || view.getLayoutParams() == null) {
+            params = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        } else {
+            params = new FrameLayout.LayoutParams(view.getLayoutParams().width, view.getLayoutParams().height);
+            params.gravity = Gravity.CENTER_HORIZONTAL;
         }
-        public InlineContentClipView(@NonNull Context context, @Nullable AttributeSet attrs,
-                                     @AttrRes int defStyleAttr) {
-            super(context, attrs, defStyleAttr);
-            SurfaceView mBackgroundView = new SurfaceView(context);
-            mBackgroundView.setZOrderOnTop(true);
-            mBackgroundView.getHolder().setFormat(PixelFormat.TRANSPARENT);
-            addView(mBackgroundView);
-        }
-        @Override
-        protected void onAttachedToWindow() {
-            super.onAttachedToWindow();
-            getViewTreeObserver().addOnDrawListener(mOnDrawListener);
-        }
-        @Override
-        protected void onDetachedFromWindow() {
-            super.onDetachedFromWindow();
-            getViewTreeObserver().removeOnDrawListener(mOnDrawListener);
-        }
-        private void clipDescendantInlineContentViews() {
-            mParentBounds.right = getWidth();
-            mParentBounds.bottom = getHeight();
-            clipDescendantInlineContentViews(this);
-        }
-        private void clipDescendantInlineContentViews(@Nullable View root) {
-            if (root == null) return;
-            if (root instanceof InlineContentView inlineContentView) {
-                mContentBounds.set(mParentBounds);
-                offsetRectIntoDescendantCoords(inlineContentView, mContentBounds);
-                inlineContentView.setClipBounds(mContentBounds);
-                return;
+        host.addView(view, params);
+    }
+
+    /**
+     * Keeps the {@link InlineContentView}s inside {@code clip} to where {@code clip} is drawn. Without
+     * it the InlineContentViews' surfaces would cover parts of the app, as these surfaces are owned
+     * by another process and always appear on top. An example is a scrollable list of items.
+     */
+    private static void clipInlineContentTo(@NonNull final FrameLayout clip) {
+        final Rect parentBounds = new Rect();
+        final Rect contentBounds = new Rect();
+        final ViewTreeObserver.OnDrawListener onDraw = () -> {
+            parentBounds.right = clip.getWidth();
+            parentBounds.bottom = clip.getHeight();
+            clipDescendantInlineContentViews(clip, clip, parentBounds, contentBounds);
+        };
+        clip.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+            @Override
+            public void onViewAttachedToWindow(@NonNull View v) {
+                v.getViewTreeObserver().addOnDrawListener(onDraw);
             }
-            if (root instanceof ViewGroup rootGroup) {
-                final int childCount = rootGroup.getChildCount();
-                for (int i = 0; i < childCount; i++) {
-                    final View child = rootGroup.getChildAt(i);
-                    clipDescendantInlineContentViews(child);
-                }
+
+            @Override
+            public void onViewDetachedFromWindow(@NonNull View v) {
+                v.getViewTreeObserver().removeOnDrawListener(onDraw);
+            }
+        });
+    }
+
+    private static void clipDescendantInlineContentViews(
+            @NonNull final FrameLayout clip, @Nullable final View root,
+            @NonNull final Rect parentBounds, @NonNull final Rect contentBounds) {
+        if (root == null) return;
+        if (root instanceof InlineContentView inlineContentView) {
+            contentBounds.set(parentBounds);
+            clip.offsetRectIntoDescendantCoords(inlineContentView, contentBounds);
+            inlineContentView.setClipBounds(contentBounds);
+            return;
+        }
+        if (root instanceof ViewGroup rootGroup) {
+            final int childCount = rootGroup.getChildCount();
+            for (int i = 0; i < childCount; i++) {
+                clipDescendantInlineContentViews(clip, rootGroup.getChildAt(i), parentBounds, contentBounds);
             }
         }
     }

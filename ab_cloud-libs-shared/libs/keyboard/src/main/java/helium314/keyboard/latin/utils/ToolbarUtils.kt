@@ -3,6 +3,7 @@ package helium314.keyboard.latin.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.drawable.Drawable
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -22,17 +23,32 @@ import kotlinx.coroutines.launch
 import java.util.EnumMap
 import java.util.Locale
 
+/** The icon the toolbar draws for [key]; null when the icon set has none, which makes the key unbuildable. */
+fun toolbarKeyIcon(context: Context, key: ToolbarKey): Drawable? =
+    KeyboardIconsSet.instance.getNewDrawable(key.name, context)
+
+fun toolbarKeyDescription(context: Context, key: ToolbarKey): String =
+    key.name.lowercase().getStringResourceOrName("", context)
+
+/**
+ * A toolbar key as a View: what the clipboard panel's strip (a row of Views in the strip container)
+ * is built from. The suggestion strip draws its keys itself, from [toolbarKeyIcon].
+ */
 fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
     val button = ImageButton(context, null, R.attr.suggestionWordStyle)
     button.scaleType = ImageView.ScaleType.CENTER
     button.tag = key
-    button.contentDescription = key.name.lowercase().getStringResourceOrName("", context)
-    setToolbarButtonActivatedState(button)
-    button.setImageDrawable(KeyboardIconsSet.instance.getNewDrawable(key.name, context))
+    button.contentDescription = toolbarKeyDescription(context, key)
+    button.isActivated = isToolbarKeyActivated(context, key)
+    button.setImageDrawable(toolbarKeyIcon(context, key))
     return button
 }
 
-fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: String?) {
+/**
+ * Settings need to be re-read when these keys change; [refresh] then redraws the toolbar's
+ * activated states (a toggle that is on is drawn in the full key colour, one that is off dimmed).
+ */
+fun setToolbarButtonsActivatedStateOnPrefChange(key: String?, refresh: () -> Unit) {
     // settings need to be updated when buttons change
     if (key != Settings.PREF_AUTO_CORRECTION
         && key != Settings.PREF_ALWAYS_INCOGNITO_MODE
@@ -41,23 +57,31 @@ fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: St
         && key?.startsWith(Settings.PREF_ONE_HANDED_MODE_PREFIX) == false)
         return
 
-    // On Main: these are Views. GlobalScope's default dispatcher ran this on a worker
-    // thread, touching drawable state the UI thread was drawing at the same time (#776).
+    // On Main: the toolbar reads this state while it draws. GlobalScope's default dispatcher ran
+    // this on a worker thread, touching state the UI thread was drawing at the same time (#776).
     GlobalScope.launch(Dispatchers.Main) {
         delay(10) // need to wait until SettingsValues are reloaded
-        buttonsGroup.forEach { if (it is ImageButton) setToolbarButtonActivatedState(it) }
+        refresh()
     }
 }
 
-private fun setToolbarButtonActivatedState(button: ImageButton) {
-    button.isActivated = when (button.tag) {
-        INCOGNITO -> button.context.prefs().getBoolean(Settings.PREF_ALWAYS_INCOGNITO_MODE, Defaults.PREF_ALWAYS_INCOGNITO_MODE)
-        ONE_HANDED -> Settings.getValues().mOneHandedModeEnabled
-        SPLIT -> Settings.getValues().mIsSplitKeyboardEnabled
-        AUTOCORRECT -> Settings.getValues().mAutoCorrectionEnabledPerUserSettings
-        BACKGROUND_GATHERING -> useBackgroundGathering
-        else -> true
+/** The clipboard strip's View keys follow the same preferences. */
+fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: String?) {
+    setToolbarButtonsActivatedStateOnPrefChange(key) {
+        buttonsGroup.forEach { button ->
+            if (button is ImageButton) (button.tag as? ToolbarKey)?.let { button.isActivated = isToolbarKeyActivated(button.context, it) }
+        }
     }
+}
+
+/** Whether [key] is a toggle that is currently on (drawn in the full key colour). */
+fun isToolbarKeyActivated(context: Context, key: ToolbarKey): Boolean = when (key) {
+    INCOGNITO -> context.prefs().getBoolean(Settings.PREF_ALWAYS_INCOGNITO_MODE, Defaults.PREF_ALWAYS_INCOGNITO_MODE)
+    ONE_HANDED -> Settings.getValues().mOneHandedModeEnabled
+    SPLIT -> Settings.getValues().mIsSplitKeyboardEnabled
+    AUTOCORRECT -> Settings.getValues().mAutoCorrectionEnabledPerUserSettings
+    BACKGROUND_GATHERING -> useBackgroundGathering
+    else -> true
 }
 
 fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomToolbarKeyCode(key) ?: when (key) {
@@ -138,7 +162,7 @@ enum class ToolbarKey {
 
 /**
  * Keys that are a destination rather than an editing tool, and read as one only when nothing else
- * shares their page. [PagedToolbarScrollView] gives such a key a left margin sized from the page
+ * shares their page. [ToolbarPaging.gaps] gives such a key a left gap sized from the page
  * width it measured, so it always starts a page of its own at any screen width, icon size or
  * rotation — the page count is measured, never a constant, so filler keys could not do this.
  */
