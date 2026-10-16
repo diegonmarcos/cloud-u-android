@@ -51,6 +51,7 @@ import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Everything the shell needs from the app around it. MainActivity supplies the real one; the layout-tree tests a fake. */
@@ -106,7 +107,7 @@ fun TasksApp(env: TasksEnv, nav: NavDecl = Declarations.nav) {
                 isAppearanceLightNavigationBars = !dark
             } }
         }
-        TasksShell(env, nav, mode) { mode = it; env.saveThemeMode(it) }
+        TasksShell(env, nav, mode, onThemeMode = { mode = it; env.saveThemeMode(it) })
     }
 }
 
