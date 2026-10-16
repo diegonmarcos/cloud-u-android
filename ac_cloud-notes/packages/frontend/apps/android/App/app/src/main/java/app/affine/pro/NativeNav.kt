@@ -3,17 +3,11 @@ package app.affine.pro
 import android.view.Gravity
 import android.view.View
 import android.webkit.WebView
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import com.diegonmarcos.superapp.ai.AiFleetChatPanel
 import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavPage
@@ -103,16 +97,7 @@ internal class NativeNav(
             },
         )
         // Search > Ask: the fleet's shared AI chat (libs:ai) between the strip and the island.
-        ask = ComposeView(ctx).apply {
-            visibility = View.GONE
-            setContent {
-                MaterialTheme(colorScheme = darkColorScheme()) {
-                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-                        AiFleetChatPanel(gatewayUrl)
-                    }
-                }
-            }
-        }
+        ask = askPage(ctx, gatewayUrl).apply { visibility = View.GONE }
         parent.addView(
             ask,
             CoordinatorLayout.LayoutParams(

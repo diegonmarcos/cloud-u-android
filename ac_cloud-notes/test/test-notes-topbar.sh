@@ -89,7 +89,7 @@ web_native = {k for k, v in rows.items() if "kind: 'native'" in v}
 kt_native = set(re.findall(r'"([\w-]+/[\w-]+)"', re.search(r'NATIVE_PAGES[^=]*=\s*setOf\(([^)]*)\)', nav).group(1)))
 check(web_native == kt_native and bool(kt_native), 'native pages: web rows %s == Kotlin NATIVE_PAGES %s' % (sorted(web_native), sorted(kt_native)))
 check(not re.search(r"kind: 'planned'|notify\.", bridge + routes), 'the web nav bridge has no planned-toast path left')
-check('AiFleetChatPanel(gatewayUrl)' in nav and 'ask.visibility' in nav, 'NativeNav shows libs:ai\'s chat for the native Ask page')
+check('AiFleetChatPanel(gatewayUrl)' in rd(KT, 'AskPage.kt') and 'ask.visibility' in nav, 'NativeNav shows libs:ai\'s chat for the native Ask page')
 check("'graph/global': { kind: 'route'" in routes and "'graph/local': { kind: 'route'" in routes, 'Graph global and local are routes')
 
 print('RESULT: %s' % ('RED' if fails else 'GREEN'))
