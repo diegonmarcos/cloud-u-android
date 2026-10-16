@@ -782,6 +782,18 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private val exporter = MessageExporter(application, repo)
+    /** The running "Export..." job (progress), or null. */
+    val exportState = exporter.state
+
+    fun cancelExport() = exporter.cancel()
+
+    /** "Export...": see [MessageExporter]. [uri] null = hand the file to the share sheet. */
+    fun exportMessage(format: app.sterna.export.ExportFormat, uri: Uri?, ownerId: String) =
+        exporter.start(
+            viewModelScope, format, uri, _messages.value.firstOrNull { it.id == ownerId }, credentials(),
+        ) { _actionStatus.value = it }
+
     /**
      * "Save" on an attachment row: the part's bytes, straight from the server into the document she
      */

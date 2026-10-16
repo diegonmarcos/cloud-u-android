@@ -368,6 +368,24 @@
     <!-- Reader overflow: save the message as it sits on the server (.eml) -->
     <string name="message_export_eml">Save as .eml</string>
     <string name="message_export_saved">Saved as %1$s</string>
+    <string name="message_export">Export…</string>
+    <string name="message_export_share">Share export</string>
+    <string name="message_export_cancelled">Export cancelled</string>
+    <string name="message_export_failed">Export failed: %1$s</string>
+    <string name="export_fmt_mhtml">Web archive (.mhtml)</string>
+    <string name="export_hint_mhtml">The whole message: headers, body, inline images and all attachments in one file.</string>
+    <string name="export_fmt_zip">Attachments only (.zip)</string>
+    <string name="export_hint_zip">Every attachment under its original name.</string>
+    <string name="export_fmt_html">Page as HTML (.html)</string>
+    <string name="export_hint_html">One self-contained page: headers and body, styles and inline images embedded.</string>
+    <string name="export_fmt_eml">Email message (.eml)</string>
+    <string name="export_hint_eml">The original source exactly as received.</string>
+    <string name="export_fmt_mbox">Mailbox (.mbox)</string>
+    <string name="export_hint_mbox">This message in the mbox format.</string>
+    <string name="export_remote_images_note">Remote images are not included.</string>
+    <string name="export_save">Save…</string>
+    <string name="export_share">Share…</string>
+    <string name="export_cancel">Cancel export</string>
     <string name="message_save_attachment">Save attachment</string>
     <!-- #461 — scan the CONTENT of an image attachment through the ONE shared
          ImageScanEngine (ZXing barcode decode + ML Kit OCR) — the same engine

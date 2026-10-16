@@ -1011,6 +1011,10 @@ private fun MessageActions(
         // A cancelled picker (null) does nothing — no toast.
         if (uri != null) viewModel.exportSource(uri, exportName, exportFor)
     }
+    // "Export...": the sheet (format, then the system document picker or the share sheet) is its own
+    // composable; `exportFor` remembers WHICH message the menu entry was tapped for.
+    var exportSheet by rememberSaveable { mutableStateOf(false) }
+    if (exportSheet) ExportSheetHost(viewModel, exportFor, loaded.email) { exportSheet = false }
     IconButton(onClick = { menuOpen = true }) {
         Icon(
             Icons.Filled.MoreVert,
@@ -1300,6 +1304,7 @@ private fun MessageActions(
                 leadingIcon = { Icon(Icons.Filled.Code, contentDescription = null) },
                 onClick = { menuOpen = false; viewModel.viewHeaders() },
             )
+            ExportMenuItem { menuOpen = false; exportFor = active.emailId; exportSheet = true }
             // Save the message as the server holds it (.eml); an encrypted message stays encrypted.
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.message_export_eml)) },
