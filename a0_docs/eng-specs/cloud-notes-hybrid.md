@@ -1,6 +1,6 @@
 # Cloud Notes hybrid — Miro + Notion + Obsidian in one app
 
-Status: **Phase 0 done (storage tests run in CI), top bar done, Phase 4 (graph) done, Phase 1 folder import started, Phases 2–3 and 5–8 planned.** Owner vision (2026-10): one app that
+Status: **Phase 0 done (storage tests run in CI), top bar done, Phase 4 (graph) done, Phase 1 folder import started, gated web image and the sync server (server half) built in CI but not yet registered on the fleet, Canvas Boards list done; the rest of Phases 2, 3, 5, 7, 8 and the sync client planned.** Owner vision (2026-10): one app that
 is a Notion-style page workspace, a Miro-style infinite canvas and an
 Obsidian-style linked vault. Decisions already taken by the owner:
 
@@ -190,6 +190,21 @@ Acceptance tests:
 - **A5.6** Synced block edited in page X appears edited in page Y, and survives an app restart (Phase 0 storage).
 
 ## Phase 6 — Sync (own Yjs server)
+
+### Built so far (all in `ship-cloud-notes.yml`, none deployed yet)
+
+| Piece | Where | Proven by |
+|---|---|---|
+| Server: Hocuspocus 4.7 (MIT) + SQLite, `createSyncServer` | `ac_cloud-notes/sync-server/` | `sync_server` job: A6.1 (two clients' offline edits converge byte-identically), A6.2 (upgrade without a valid Bearer answers 401; header or `?access_token=`), A6.3 (documents survive a graceful server restart; a hard kill mid-write is not exercised yet), auth unit tests; mutation-checked |
+| Fail-closed auth: RFC 7662 introspection (the fleet's introspect-proxy) or a static set for development; no verifier configured = the process refuses to start | `src/auth.mjs`, `main.mjs` | suite + image smoke (`refusing to start`) |
+| Document clock list `GET /v1/docs?after=ms` (Bearer) | `src/server.mjs` | suite |
+| Image `ghcr.io/<owner>/cloud-notes-sync-binaries` (node 22, non-root, `/data` volume, healthcheck) | `sync-server/Dockerfile` | image smoke: healthz, 401 on a bare upgrade, unconfigured start refused; pushed from main only |
+| Gated web image `ghcr.io/<owner>/cloud-notes-web-binaries` (nginx, SPA fallback, `/healthz`) | `deploy/web/`, job `web_image` | smoke: health, shell, deep link, no-store shell; pushed from main only |
+
+### Not built: the client half and the fleet registration
+
+1. **Client peer.** A `DocStorageBase` implementation over `@hocuspocus/provider` (one provider per `<workspaceId>/<docId>` room): `getDocSnapshot` = state of the synced Y.Doc, `pushDocUpdate` = apply to the room's Y.Doc, `getDocTimestamps` = `GET /v1/docs`, `subscribeDocUpdate` = the room's update event; plus a workspace flavour `cloud-notes-sync` that pairs it with the local SQLite storage as the sync peer (nbstore `doc_sync`). The token comes from `libs:auth`'s fleet token provider through the existing `auth-access-token-channel` to the worker. Acceptance A6.4 and A6.5 need the app running; A6.1 to A6.3 are already automated on the server.
+2. **Registration on the fleet** (two repos, generator-driven, so not done blind): `cloud-u-containers/<service>/` for the web image (like `user-comm_matrix-element`: `build.json` with `proxy.primary.auth: two_factor`, image `cloud-notes-web-binaries`) and for the sync image (proxy tier public-protected: Authelia for the web, Bearer through the introspect-proxy for `/` websocket and `/v1/docs`; volume for `/data`; env `SYNC_INTROSPECT_URL`), then the cloud-infra `1_cloud-configs` derive (`link-builds`, `consolidate`, `derive`) and `ship.yml` for the two services, only when no other Ship run is active. Open decision for the edge: a browser/WebView `WebSocket` cannot send an `Authorization` header, so the socket authenticates with `?access_token=` (the server accepts both); the edge rule must read the same token and must not log the query string.
 
 Design: a `cloud-notes-sync` container (Hocuspocus, MIT) on the fleet, reached only through the edge gate.
 Workspace flavour `local` stays the default; a new flavour `cloud-notes-sync` replaces the removed AFFiNE-cloud flavour.
