@@ -291,6 +291,8 @@ fun AccountRow(
     onClick: () -> Unit,
     color: Color? = null,
     indented: Boolean = false,
+    /** The auth chip (Connected / Token / Signed in / Needs sign-in / Error); null draws none. */
+    gateway: app.sterna.core.data.account.GatewayStatus? = null,
 ) {
     Row(
         modifier = Modifier
@@ -314,6 +316,10 @@ fun AccountRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        if (gateway != null) {
+            Spacer(Modifier.width(MailMetrics.s8))
+            GatewayChip(gateway)
         }
         if (isCurrent) {
             Spacer(Modifier.width(MailMetrics.s16))

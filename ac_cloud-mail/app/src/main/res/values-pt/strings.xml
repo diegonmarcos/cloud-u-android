@@ -1345,4 +1345,24 @@
     <string name="sigedit_unsaved_body">Esta assinatura tem alterações por guardar.</string>
     <string name="sigedit_discard">Descartar</string>
     <string name="sigedit_keep_editing">Continuar a editar</string>
+
+    <!-- Account authentication through the edge gate (Authelia) -->
+    <string name="gw_title">Autenticação</string>
+    <string name="gw_none">Nenhuma</string>
+    <string name="gw_bearer">Token Bearer</string>
+    <string name="gw_authelia">Authelia</string>
+    <string name="gw_none_hint">Sem credencial de gateway: apenas o login da conta é enviado.</string>
+    <string name="gw_bearer_hint">Cole o token no campo de token de API acima. Ele é enviado como Authorization: Bearer em cada pedido. Guarde e teste a ligação.</string>
+    <string name="gw_sign_in">Entrar com Authelia</string>
+    <string name="gw_sign_in_again">Entrar novamente</string>
+    <string name="gw_sign_out">Sair</string>
+    <string name="gw_done">Concluído, já entrei</string>
+    <string name="gw_no_cookie">Ainda sem sessão Authelia. Termine a entrada e toque em Concluído.</string>
+    <string name="gw_not_signed_in">Sem sessão. Entre para alcançar este servidor através do Authelia.</string>
+    <string name="gw_signed_in_since">Sessão iniciada %1$s · renovada com o uso</string>
+    <string name="gw_chip_connected">Ligado</string>
+    <string name="gw_chip_token">Token</string>
+    <string name="gw_chip_signed_in">Sessão iniciada</string>
+    <string name="gw_chip_needs_sign_in">Requer início de sessão</string>
+    <string name="gw_chip_error">Erro</string>
 </resources>

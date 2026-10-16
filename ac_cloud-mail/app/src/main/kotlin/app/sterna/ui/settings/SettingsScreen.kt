@@ -93,6 +93,7 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -1353,6 +1354,7 @@ private fun AccountsScreen(
                     isCurrent = account.id == currentId,
                     color = accountColorOf(account.color),
                     indented = row.underLogin,
+                    gateway = if (account.isShared || account.authType == AuthType.OAUTH) null else viewModel.gatewayStatus(account.id),
                     onClick = {
                         // Never switch to an inert (not-yet-signed-in) account: no credentials,
                         // and it would break the current-account inbox. Still opened, so it can be
@@ -1774,6 +1776,29 @@ private fun AccountDetailScreen(
                         onValueChange = { password = it; markEdited(); viewModel.clearConnTest() },
                         keyboardType = KeyboardType.Password,
                         isPassword = true,
+                    )
+                }
+            }
+            if (!isImap && account.authType != AuthType.OAUTH) {
+                val gatewayVersion by viewModel.gatewayVersion.collectAsStateWithLifecycle()
+                var signInOpen by remember(accountId) { mutableStateOf(false) }
+                SettingsSection(stringResource(R.string.gw_title)) {
+                    // gatewayVersion is read so the section follows sign-in, sign-out and a test result.
+                    key(gatewayVersion) {
+                        AccountAuthSection(
+                            mode = viewModel.gatewayMode(accountId),
+                            status = viewModel.gatewayStatus(accountId),
+                            signedInAt = viewModel.gatewayAuth(accountId).signedInAt,
+                            onMode = { viewModel.setGatewayMode(accountId, it) },
+                            onSignIn = { signInOpen = true },
+                            onSignOut = { clearAutheliaWebSession(); viewModel.autheliaSignOut(accountId) },
+                        )
+                    }
+                }
+                if (signInOpen) {
+                    AutheliaSignInDialog(
+                        onDismiss = { signInOpen = false },
+                        onCaptured = { cookie -> signInOpen = false; viewModel.autheliaSignedIn(accountId, cookie) },
                     )
                 }
             }

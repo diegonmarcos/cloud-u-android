@@ -1358,4 +1358,24 @@
     <string name="sigedit_unsaved_body">В этой подписи есть несохранённые изменения.</string>
     <string name="sigedit_discard">Отменить</string>
     <string name="sigedit_keep_editing">Продолжить редактирование</string>
+
+    <!-- Account authentication through the edge gate (Authelia) -->
+    <string name="gw_title">Аутентификация</string>
+    <string name="gw_none">Нет</string>
+    <string name="gw_bearer">Bearer-токен</string>
+    <string name="gw_authelia">Authelia</string>
+    <string name="gw_none_hint">Нет учётных данных шлюза: отправляется только вход в аккаунт.</string>
+    <string name="gw_bearer_hint">Вставьте токен в поле API-токена выше. Он отправляется как Authorization: Bearer с каждым запросом. Сохраните и проверьте соединение.</string>
+    <string name="gw_sign_in">Войти через Authelia</string>
+    <string name="gw_sign_in_again">Войти снова</string>
+    <string name="gw_sign_out">Выйти</string>
+    <string name="gw_done">Готово, я вошёл</string>
+    <string name="gw_no_cookie">Сессии Authelia пока нет. Завершите вход и нажмите «Готово».</string>
+    <string name="gw_not_signed_in">Вход не выполнен. Войдите, чтобы попасть на этот сервер через Authelia.</string>
+    <string name="gw_signed_in_since">Вход выполнен %1$s · сессия обновляется при использовании</string>
+    <string name="gw_chip_connected">Подключено</string>
+    <string name="gw_chip_token">Токен</string>
+    <string name="gw_chip_signed_in">Вход выполнен</string>
+    <string name="gw_chip_needs_sign_in">Нужен вход</string>
+    <string name="gw_chip_error">Ошибка</string>
 </resources>

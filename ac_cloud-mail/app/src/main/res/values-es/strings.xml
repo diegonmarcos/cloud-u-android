@@ -1391,4 +1391,24 @@
     <string name="sigedit_unsaved_body">Esta firma tiene cambios sin guardar.</string>
     <string name="sigedit_discard">Descartar</string>
     <string name="sigedit_keep_editing">Seguir editando</string>
+
+    <!-- Account authentication through the edge gate (Authelia) -->
+    <string name="gw_title">Autenticación</string>
+    <string name="gw_none">Ninguna</string>
+    <string name="gw_bearer">Token Bearer</string>
+    <string name="gw_authelia">Authelia</string>
+    <string name="gw_none_hint">Sin credencial de pasarela: solo se envía el acceso de la cuenta.</string>
+    <string name="gw_bearer_hint">Pega el token en el campo de token de API de arriba. Se envía como Authorization: Bearer en cada petición. Guarda y prueba la conexión.</string>
+    <string name="gw_sign_in">Iniciar sesión con Authelia</string>
+    <string name="gw_sign_in_again">Iniciar sesión de nuevo</string>
+    <string name="gw_sign_out">Cerrar sesión</string>
+    <string name="gw_done">Listo, ya inicié sesión</string>
+    <string name="gw_no_cookie">Aún no hay sesión de Authelia. Termina de iniciar sesión y toca Listo.</string>
+    <string name="gw_not_signed_in">Sin sesión. Inicia sesión para llegar a este servidor a través de Authelia.</string>
+    <string name="gw_signed_in_since">Sesión iniciada %1$s · se renueva con el uso</string>
+    <string name="gw_chip_connected">Conectado</string>
+    <string name="gw_chip_token">Token</string>
+    <string name="gw_chip_signed_in">Sesión iniciada</string>
+    <string name="gw_chip_needs_sign_in">Requiere iniciar sesión</string>
+    <string name="gw_chip_error">Error</string>
 </resources>

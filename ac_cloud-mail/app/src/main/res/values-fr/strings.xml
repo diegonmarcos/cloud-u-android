@@ -1347,4 +1347,24 @@
     <string name="sigedit_unsaved_body">Cette signature a des modifications non enregistrées.</string>
     <string name="sigedit_discard">Abandonner</string>
     <string name="sigedit_keep_editing">Continuer à modifier</string>
+
+    <!-- Account authentication through the edge gate (Authelia) -->
+    <string name="gw_title">Authentification</string>
+    <string name="gw_none">Aucune</string>
+    <string name="gw_bearer">Jeton Bearer</string>
+    <string name="gw_authelia">Authelia</string>
+    <string name="gw_none_hint">Aucun identifiant de passerelle : seul l\'accès au compte est envoyé.</string>
+    <string name="gw_bearer_hint">Collez le jeton dans le champ jeton d\'API ci-dessus. Il est envoyé en Authorization: Bearer à chaque requête. Enregistrez, puis testez la connexion.</string>
+    <string name="gw_sign_in">Se connecter avec Authelia</string>
+    <string name="gw_sign_in_again">Se reconnecter</string>
+    <string name="gw_sign_out">Se déconnecter</string>
+    <string name="gw_done">Terminé, je suis connecté</string>
+    <string name="gw_no_cookie">Pas encore de session Authelia. Terminez la connexion, puis touchez Terminé.</string>
+    <string name="gw_not_signed_in">Non connecté. Connectez-vous pour joindre ce serveur via Authelia.</string>
+    <string name="gw_signed_in_since">Connecté %1$s · session renouvelée à l\'usage</string>
+    <string name="gw_chip_connected">Connecté</string>
+    <string name="gw_chip_token">Jeton</string>
+    <string name="gw_chip_signed_in">Connecté</string>
+    <string name="gw_chip_needs_sign_in">Connexion requise</string>
+    <string name="gw_chip_error">Erreur</string>
 </resources>

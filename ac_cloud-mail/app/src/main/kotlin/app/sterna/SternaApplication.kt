@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import app.sterna.core.data.DataFactory
 import app.sterna.core.data.account.AccountStore
+import app.sterna.core.data.account.GatewayAuthStore
 import app.sterna.core.data.account.VaultMailImport
 import app.sterna.core.data.mail.BodyCachePurge
 import app.sterna.core.data.mail.LocalDraftScheduler
@@ -53,6 +54,10 @@ class AppContainer(context: Context) {
 
     val accountStore: AccountStore = AccountStore(context.applicationContext)
     val settingsRepository: SettingsRepository = SettingsRepository(context.applicationContext)
+    /** Per-account Authelia sign-in (the edge gate in front of the public JMAP URLs); its cookies go
+     *  back on the wire here, before any sync can run. */
+    val gatewayAuth: GatewayAuthStore = GatewayAuthStore.of(context.applicationContext)
+        .also { g -> runCatching { g.restore(accountStore.accounts()) } }
     /** `core/jmap` is plain Kotlin/JVM and cannot see `android.util.Log`, so the app hands it the
      *  sink. The tag is half of the `adb logcat` filter given to reporters and is pinned by a test;
      *  info/warn only, release stripping debug and verbose. */

@@ -1338,4 +1338,24 @@
     <string name="sigedit_unsaved_body">Deze handtekening heeft niet-opgeslagen wijzigingen.</string>
     <string name="sigedit_discard">Negeren</string>
     <string name="sigedit_keep_editing">Verder bewerken</string>
+
+    <!-- Account authentication through the edge gate (Authelia) -->
+    <string name="gw_title">Authenticatie</string>
+    <string name="gw_none">Geen</string>
+    <string name="gw_bearer">Bearer-token</string>
+    <string name="gw_authelia">Authelia</string>
+    <string name="gw_none_hint">Geen gateway-inloggegevens: alleen de accountlogin wordt verstuurd.</string>
+    <string name="gw_bearer_hint">Plak het token in het API-tokenveld hierboven. Het wordt bij elk verzoek als Authorization: Bearer verstuurd. Sla op en test de verbinding.</string>
+    <string name="gw_sign_in">Inloggen met Authelia</string>
+    <string name="gw_sign_in_again">Opnieuw inloggen</string>
+    <string name="gw_sign_out">Uitloggen</string>
+    <string name="gw_done">Klaar, ik ben ingelogd</string>
+    <string name="gw_no_cookie">Nog geen Authelia-sessie. Rond het inloggen af en tik op Klaar.</string>
+    <string name="gw_not_signed_in">Niet ingelogd. Log in om deze server via Authelia te bereiken.</string>
+    <string name="gw_signed_in_since">Ingelogd %1$s · sessie wordt bij gebruik vernieuwd</string>
+    <string name="gw_chip_connected">Verbonden</string>
+    <string name="gw_chip_token">Token</string>
+    <string name="gw_chip_signed_in">Ingelogd</string>
+    <string name="gw_chip_needs_sign_in">Inloggen nodig</string>
+    <string name="gw_chip_error">Fout</string>
 </resources>

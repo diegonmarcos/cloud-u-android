@@ -382,6 +382,13 @@ class AccountStore(context: Context) {
         )
     }
 
+    /** Switch how the account authenticates (None = BASIC, Bearer = API_TOKEN); the secret slot is rewritten by the next password / token save. */
+    @Synchronized
+    fun setAuthType(id: String, authType: AuthType) {
+        if (authType == AuthType.OAUTH) return
+        saveAccounts(accounts().map { if (it.id == id && it.authType != AuthType.OAUTH) it.copy(authType = authType) else it })
+    }
+
     /** Re-encrypt and store a new password for the account (written under its login slot). */
     @Synchronized
     fun updatePassword(id: String, password: String) {

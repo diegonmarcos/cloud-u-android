@@ -1335,4 +1335,24 @@
     <string name="sigedit_unsaved_body">Diese Signatur hat nicht gespeicherte Änderungen.</string>
     <string name="sigedit_discard">Verwerfen</string>
     <string name="sigedit_keep_editing">Weiter bearbeiten</string>
+
+    <!-- Account authentication through the edge gate (Authelia) -->
+    <string name="gw_title">Authentifizierung</string>
+    <string name="gw_none">Keine</string>
+    <string name="gw_bearer">Bearer-Token</string>
+    <string name="gw_authelia">Authelia</string>
+    <string name="gw_none_hint">Keine Gateway-Anmeldung: nur das Kontopasswort wird gesendet.</string>
+    <string name="gw_bearer_hint">Füge den Token oben in das API-Token-Feld ein. Er wird bei jeder Anfrage als Authorization: Bearer gesendet. Speichern, dann die Verbindung testen.</string>
+    <string name="gw_sign_in">Mit Authelia anmelden</string>
+    <string name="gw_sign_in_again">Erneut anmelden</string>
+    <string name="gw_sign_out">Abmelden</string>
+    <string name="gw_done">Fertig, ich bin angemeldet</string>
+    <string name="gw_no_cookie">Noch keine Authelia-Sitzung. Melde dich fertig an und tippe auf Fertig.</string>
+    <string name="gw_not_signed_in">Nicht angemeldet. Melde dich an, um diesen Server über Authelia zu erreichen.</string>
+    <string name="gw_signed_in_since">Angemeldet %1$s · Sitzung wird bei Nutzung erneuert</string>
+    <string name="gw_chip_connected">Verbunden</string>
+    <string name="gw_chip_token">Token</string>
+    <string name="gw_chip_signed_in">Angemeldet</string>
+    <string name="gw_chip_needs_sign_in">Anmeldung nötig</string>
+    <string name="gw_chip_error">Fehler</string>
 </resources>

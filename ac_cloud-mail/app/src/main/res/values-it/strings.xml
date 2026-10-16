@@ -1341,4 +1341,24 @@
     <string name="sigedit_unsaved_body">Questa firma ha modifiche non salvate.</string>
     <string name="sigedit_discard">Annulla modifiche</string>
     <string name="sigedit_keep_editing">Continua a modificare</string>
+
+    <!-- Account authentication through the edge gate (Authelia) -->
+    <string name="gw_title">Autenticazione</string>
+    <string name="gw_none">Nessuna</string>
+    <string name="gw_bearer">Token Bearer</string>
+    <string name="gw_authelia">Authelia</string>
+    <string name="gw_none_hint">Nessuna credenziale del gateway: viene inviato solo l\'accesso dell\'account.</string>
+    <string name="gw_bearer_hint">Incolla il token nel campo token API qui sopra. Viene inviato come Authorization: Bearer a ogni richiesta. Salva, poi prova la connessione.</string>
+    <string name="gw_sign_in">Accedi con Authelia</string>
+    <string name="gw_sign_in_again">Accedi di nuovo</string>
+    <string name="gw_sign_out">Esci</string>
+    <string name="gw_done">Fatto, ho effettuato l\'accesso</string>
+    <string name="gw_no_cookie">Nessuna sessione Authelia. Completa l\'accesso, poi tocca Fatto.</string>
+    <string name="gw_not_signed_in">Non connesso. Accedi per raggiungere questo server tramite Authelia.</string>
+    <string name="gw_signed_in_since">Accesso effettuato %1$s · sessione rinnovata con l\'uso</string>
+    <string name="gw_chip_connected">Connesso</string>
+    <string name="gw_chip_token">Token</string>
+    <string name="gw_chip_signed_in">Accesso effettuato</string>
+    <string name="gw_chip_needs_sign_in">Accesso richiesto</string>
+    <string name="gw_chip_error">Errore</string>
 </resources>

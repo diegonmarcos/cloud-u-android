@@ -2699,6 +2699,10 @@ class JmapClient internal constructor(
                 // Discovery relies on following 3xx redirects, but never across a scheme change, in
                 // either direction. What this refuses is the REQUEST, not a header leak: OkHttp
             .followSslRedirects(false)
+                // The auth gateway (Authelia) in front of a public endpoint: its session cookie per hop,
+                // and a redirect to its login page surfaced as a 401. Inert when no cookie is set.
+            .addInterceptor(GatewayRedirectGuard())
+            .addNetworkInterceptor(GatewayCookieInterceptor())
             .build()
     }
 }

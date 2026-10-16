@@ -1355,4 +1355,24 @@
     <string name="sigedit_unsaved_body">Ten podpis ma niezapisane zmiany.</string>
     <string name="sigedit_discard">Odrzuć</string>
     <string name="sigedit_keep_editing">Edytuj dalej</string>
+
+    <!-- Account authentication through the edge gate (Authelia) -->
+    <string name="gw_title">Uwierzytelnianie</string>
+    <string name="gw_none">Brak</string>
+    <string name="gw_bearer">Token Bearer</string>
+    <string name="gw_authelia">Authelia</string>
+    <string name="gw_none_hint">Brak danych bramki: wysyłane jest tylko logowanie do konta.</string>
+    <string name="gw_bearer_hint">Wklej token w polu tokenu API powyżej. Jest wysyłany jako Authorization: Bearer w każdym żądaniu. Zapisz, a potem przetestuj połączenie.</string>
+    <string name="gw_sign_in">Zaloguj przez Authelię</string>
+    <string name="gw_sign_in_again">Zaloguj ponownie</string>
+    <string name="gw_sign_out">Wyloguj</string>
+    <string name="gw_done">Gotowe, jestem zalogowany</string>
+    <string name="gw_no_cookie">Brak jeszcze sesji Authelia. Dokończ logowanie i dotknij Gotowe.</string>
+    <string name="gw_not_signed_in">Niezalogowano. Zaloguj się, aby połączyć się z tym serwerem przez Authelię.</string>
+    <string name="gw_signed_in_since">Zalogowano %1$s · sesja odnawiana podczas użycia</string>
+    <string name="gw_chip_connected">Połączono</string>
+    <string name="gw_chip_token">Token</string>
+    <string name="gw_chip_signed_in">Zalogowano</string>
+    <string name="gw_chip_needs_sign_in">Wymaga logowania</string>
+    <string name="gw_chip_error">Błąd</string>
 </resources>

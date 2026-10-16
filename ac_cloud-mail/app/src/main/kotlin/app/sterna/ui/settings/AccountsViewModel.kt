@@ -9,6 +9,13 @@ import app.sterna.container
 import app.sterna.core.data.account.AccountCredentials
 import app.sterna.core.data.account.AuthType
 import app.sterna.core.data.account.ConnectionSecurity
+import app.sterna.core.data.account.GatewayAuth
+import app.sterna.core.data.account.GatewayAuthStore
+import app.sterna.core.data.account.GatewayMode
+import app.sterna.core.data.account.GatewayStatus
+import app.sterna.core.data.account.GatewayStatuses
+import app.sterna.core.jmap.GatewayCookies
+import app.sterna.core.jmap.GatewayErrors
 import app.sterna.core.data.account.MailEndpoint
 import app.sterna.core.data.account.MailProtocol
 import app.sterna.core.data.account.StoredAccount
@@ -48,6 +55,53 @@ class AccountsViewModel(application: Application) : AndroidViewModel(application
     private val store = application.container.accountStore
     private val storage = application.container.storageRepository
     private val mail = application.container.mailRepository
+    private val gateway = application.container.gatewayAuth
+
+    /** Bumped on every gateway change so the screens re-read [gatewayAuth] / [gatewayStatus]. */
+    private val _gatewayVersion = MutableStateFlow(0)
+    val gatewayVersion = _gatewayVersion.asStateFlow()
+    private var lastTestFailed = false
+
+    fun gatewayAuth(id: String): GatewayAuth = gateway.get(id)
+    fun gatewayMode(id: String): GatewayMode =
+        store.account(id)?.let { GatewayAuthStore.modeOf(it, gateway.get(id)) } ?: GatewayMode.NONE
+
+    /** The chip for [id]: Connected / Token / Signed in / Needs sign-in / Error. */
+    fun gatewayStatus(id: String): GatewayStatus {
+        val acc = store.account(id) ?: return GatewayStatus.CONNECTED
+        val auth = gateway.get(id)
+        return GatewayStatuses.resolve(
+            GatewayAuthStore.modeOf(acc, auth), auth,
+            rejected = GatewayCookies.isRejected(GatewayAuthStore.hostOf(acc.server)), failed = lastTestFailed,
+        )
+    }
+
+    /** None / Bearer token / Authelia. Bearer is the API-token auth type (the token goes in the secret field). */
+    fun setGatewayMode(id: String, mode: GatewayMode) {
+        val acc = store.account(id) ?: return
+        if (acc.authType == AuthType.OAUTH) return
+        when (mode) {
+            GatewayMode.NONE -> { store.setAuthType(id, AuthType.BASIC); gateway.setAuthelia(id, acc.server, false) }
+            GatewayMode.BEARER -> { store.setAuthType(id, AuthType.API_TOKEN); gateway.setAuthelia(id, acc.server, false) }
+            GatewayMode.AUTHELIA -> { store.setAuthType(id, AuthType.BASIC); gateway.setAuthelia(id, acc.server, true) }
+        }
+        lastTestFailed = false
+        _connTest.value = ConnTest.Idle
+        _gatewayVersion.update { it + 1 }
+    }
+
+    fun autheliaSignedIn(id: String, cookie: String) {
+        val acc = store.account(id) ?: return
+        gateway.signIn(id, acc.server, cookie, System.currentTimeMillis())
+        lastTestFailed = false
+        _gatewayVersion.update { it + 1 }
+    }
+
+    fun autheliaSignOut(id: String) {
+        val acc = store.account(id) ?: return
+        gateway.signOut(id, acc.server)
+        _gatewayVersion.update { it + 1 }
+    }
 
     /** Outlives this screen: `viewModelScope` belongs to the `NavBackStackEntry` and dies with the
      *  back gesture, so work that must survive it runs here (#174). */
@@ -136,9 +190,9 @@ class AccountsViewModel(application: Application) : AndroidViewModel(application
                 oauth = stored?.oauth,
             )
             _connTest.value = mail.testConnection(credentials).fold(
-                onSuccess = { ConnTest.Ok },
-                onFailure = { ConnTest.Failed(it.message ?: it.javaClass.simpleName) },
-            )
+                onSuccess = { lastTestFailed = false; ConnTest.Ok },
+                onFailure = { lastTestFailed = true; ConnTest.Failed(GatewayErrors.describe(it)) },
+            ).also { _gatewayVersion.update { v -> v + 1 } }
         }
     }
 
