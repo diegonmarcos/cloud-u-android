@@ -23,6 +23,7 @@ import com.diegonmarcos.superapp.updater.Updater
 import com.diegonmarcos.cloudnav.places.PlacesFragment
 import com.diegonmarcos.cloudnav.routes.NavigationFragment
 import com.diegonmarcos.cloudnav.routes.RoutesFragment
+import com.diegonmarcos.cloudnav.tracker.NavDeepLink
 import com.diegonmarcos.cloudnav.tracker.TrackerInk
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
