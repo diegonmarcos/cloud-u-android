@@ -61,9 +61,9 @@ for name, src in (("AppLongPressMenu.kt", menu), ("AppUrls.kt", urls)):
 print("== T2: the menu has the three sections and gets its URLs from the one derivation ==")
 mc = code(menu)
 for title in ("Actions", "Configs", "URLs"):
-    ok('section "%s" is drawn' % title) if 'sectionHeader(ctx, "%s"' % title in mc else bad('no "%s" section' % title)
+    ok('section "%s" is drawn' % title) if 'Section("%s"' % title in mc else bad('no "%s" section' % title)
 ok("URL rows come from AppUrls.of") if "AppUrls.of(" in mc else bad("the menu does not call AppUrls.of")
-ok('an "Update" row exists') if 'makeMenuRow(ctx, "Update"' in mc else bad('no "Update" row')
+ok('an "Update" row exists') if 'Row("Update"' in mc else bad('no "Update" row')
 
 print("== T3: Update is the ONE path per kind (fleet -> FleetInstall, else the #571 ladder) - no second updater ==")
 ok("Update runs FleetInstall.run for a fleet app") if "FleetInstall.run(" in mc else bad("Update does not go through FleetInstall")
@@ -125,7 +125,7 @@ ok("unsupported kind -> %r" % m2.group(1)) if m2 else bad("no 'No URL kind for t
 if m1 and m2 and m1.group(1) != m2.group(1)[:len(m1.group(1))]: ok("the two messages differ")
 elif m1 and m2: bad("missing and unsupported produce the same message")
 ok("explain checks a declared site against linktree") if "siteUrl(it, linktree) == null" in ex else bad("explain does not detect a missing site")
-ok("the menu draws AppUrls.absence when no link resolved") if re.search(r"\} else AppUrls\.absence\(ctx, pkg\)", mc) else bad("an empty URLs section is still silent")
+ok("the menu draws AppUrls.absence when no link resolved") if re.search(r"AppUrls\.absence\(ctx, pkg\)", mc) and 'Section("URLs", listOf(Row(AppUrls.absence' in mc else bad("an empty URLs section is still silent")
 
 print("RESULT: %d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)

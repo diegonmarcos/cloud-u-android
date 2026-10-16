@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
@@ -118,4 +119,44 @@ object KitSheet {
         }
         return runCatching { act.addContentView(host, ViewGroup.LayoutParams(0, 0)); true }.getOrElse { false }
     }
+}
+
+/**
+ * A full-window Compose dialog on the activity - a dimmed backdrop with the content centred, tap outside to dismiss. What the
+ * hand-built `Dialog(Theme_Translucent_NoTitleBar_Fullscreen)` menus were. Hosted like [KitPopup].
+ */
+object KitDialog {
+    fun show(act: android.app.Activity, content: @Composable (close: () -> Unit) -> Unit): Boolean {
+        if (act.isFinishing) return false
+        val host = ComposeView(act)
+        var closed = false
+        fun close() {
+            if (closed) return
+            closed = true
+            (host.parent as? ViewGroup)?.removeView(host)
+        }
+        host.setContent {
+            CloudKitTheme(LauncherPalette.kit(act)) {
+                androidx.compose.ui.window.Dialog(
+                    onDismissRequest = ::close,
+                    properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+                ) {
+                    androidx.compose.foundation.layout.Box(
+                        Modifier.androidx_fillMax().background(Color(0xCC000000)).clickable(
+                            interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null, onClick = ::close),
+                        contentAlignment = androidx.compose.ui.Alignment.Center,
+                    ) {
+                        // Taps INSIDE the content must not reach the backdrop.
+                        androidx.compose.foundation.layout.Box(Modifier.clickable(
+                            interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null, onClick = {})) { content(::close) }
+                    }
+                }
+            }
+        }
+        return runCatching { act.addContentView(host, ViewGroup.LayoutParams(0, 0)); true }.getOrElse { false }
+    }
+
+    private fun Modifier.androidx_fillMax(): Modifier = this.then(androidx.compose.foundation.layout.fillMaxSize())
 }

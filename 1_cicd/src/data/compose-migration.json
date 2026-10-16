@@ -625,10 +625,11 @@
       "baseline": {
         "view_screens": 1,
         "layout_xml": 5,
-        "view_ui_files": 12,
+        "view_ui_files": 11,
         "custom_views": 8
       },
       "done": [
+        "App long-press menu in Compose (AppLongPressMenu over the new KitDialog host: Actions/Configs/URLs sections as data, composed; AppLongPressMenuComposeTest)",
         "Container sheet in Compose (ContainerSheet over the new KitSheet ModalBottomSheet host; Infos/Actions with the shared PageTabs; status colour still resolved through StatusLight; ContainerSheetComposeTest)",
         "Calendar bubble in Compose (CalendarAgendaPopup: agenda, month grid, stopwatch over KitPopup Align.CENTER; CalendarAgendaPopupComposeTest)",
         "Network bubble in Compose (NetworkInfoPopup + its Cellular/ADB/Hotspot/GPS sections as composables over KitPopup; async facts via produceState, live GNSS bound to the section being on screen; NetworkInfoPopupComposeTest)",

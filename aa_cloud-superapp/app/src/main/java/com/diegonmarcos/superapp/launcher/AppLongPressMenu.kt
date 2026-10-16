@@ -6,19 +6,13 @@ import com.diegonmarcos.superapp.appstore.FleetInstall
 import com.diegonmarcos.superapp.appstore.PhoneAppActions
 import com.diegonmarcos.superapp.appstore.SourceResolver
 import com.diegonmarcos.superapp.updater.Fleet
-import com.diegonmarcos.superapp.ui.SystemInfoPopup
-import com.diegonmarcos.superapp.apps.SuitePhoneAppsFragment
-import com.diegonmarcos.superapp.apps.PhoneAppsFragment
-import com.diegonmarcos.superapp.battery.BatteryEstimatePopup
+import com.diegonmarcos.superapp.extinstall.ComposeAsk
+import com.diegonmarcos.superapp.ui.KitDialog
 
-import android.app.Dialog
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
 import android.content.pm.ShortcutInfo
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -26,14 +20,25 @@ import android.os.Looper
 import android.os.Process
 import android.os.UserHandle
 import android.provider.Settings
-import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
-import android.view.Window
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlin.concurrent.thread
 
 /**
@@ -57,7 +62,7 @@ import kotlin.concurrent.thread
  * Sections: Actions (the app's shortcuts) · Configs · URLs. A section with no
  * rows is not drawn.
  *
- * The menu is a vertically-stacked Dialog (Theme_Translucent_NoTitleBar)
+ * The menu is a Compose dialog (KitDialog: a dimmed full-window backdrop)
  * with a dark-glass rounded container, mirroring the visual language
  * of BatteryEstimatePopup / SystemInfoPopup so the launcher feels
  * consistent across long-press surfaces. Tap outside → dismiss.
@@ -78,101 +83,86 @@ import kotlin.concurrent.thread
  */
 object AppLongPressMenu {
 
+    /** One row of the menu: its label, whether it is a shortcut (lavender, indented), whether it is dimmed, what it does. */
+    internal class Row(val label: String, val shortcut: Boolean = false, val dim: Float = 1f, val onClick: () -> Unit)
+
+    /** One section of the menu; a section with no rows is not drawn. */
+    internal class Section(val title: String, val rows: List<Row>)
+
     /** Build + show the long-press menu for the given package. The
      *  caller is typically the long-press handler on a tile; we
      *  resolve user + componentName ourselves so the call site stays
      *  one-liner. */
     fun show(ctx: Context, pkg: String) {
+        val act = ComposeAsk.activityOf(ctx) ?: return
+        KitDialog.show(act) { close -> Menu(ctx, pkg, close) }
+    }
+
+    /** The menu itself, split from [show] so it can be drawn without a window. */
+    @Composable
+    internal fun Menu(ctx: Context, pkg: String, close: () -> Unit) {
+        val appLabel = androidx.compose.runtime.remember(pkg) {
+            runCatching {
+                val pm = ctx.packageManager
+                pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+            }.getOrDefault(pkg)
+        }
+        val sections = androidx.compose.runtime.remember(pkg) { sectionsFor(ctx, pkg, appLabel, close) }
+        Column(
+            Modifier.width(280.dp).background(Color(0xEE111111), RoundedCornerShape(16.dp))
+                .border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(16.dp)).padding(16.dp).testTag("longpress:menu"),
+        ) {
+            // Header — app label.
+            Text(appLabel, color = Color(0xFFE9D8FD), fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 10.dp))
+            sections.forEachIndexed { i, sec ->
+                if (i > 0) Column(Modifier.fillMaxWidth().padding(vertical = 6.dp).height(1.dp).background(Color(0x22FFFFFF))) {}
+                Text(sec.title.uppercase(), color = Color(0x99E9D8FD), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 12.dp, top = 6.dp, bottom = 2.dp))
+                for (r in sec.rows) Text(r.label, fontSize = 14.sp, color = if (r.shortcut) Color(0xFFB794F4) else Color.White,
+                    modifier = Modifier.fillMaxWidth().alpha(r.dim).clickable(onClick = r.onClick)
+                        .padding(start = if (r.shortcut) 20.dp else 12.dp, top = if (r.shortcut) 10.dp else 12.dp,
+                            end = 12.dp, bottom = if (r.shortcut) 10.dp else 12.dp).testTag("longpress:row:${r.label}"))
+            }
+        }
+    }
+
+    internal fun sectionsFor(ctx: Context, pkg: String, appLabel: String, close: () -> Unit): List<Section> {
         val launcher = ctx.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
         val me = Process.myUserHandle()
-        val activityComponent = launcher?.getActivityList(pkg, me)?.firstOrNull()?.componentName
-        val appLabel = runCatching {
-            val pm = ctx.packageManager
-            pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-        }.getOrDefault(pkg)
-
-        val dialog = Dialog(ctx, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen)
-        dialog.window?.requestFeature(Window.FEATURE_NO_TITLE)
-
-        // Full-screen dim-tap-to-dismiss backdrop, with the menu
-        // container centered. FrameLayout-like layering achieved
-        // via LinearLayout(VERTICAL) + a centered child — keeps
-        // touch dispatch simple (taps outside the container hit
-        // the parent's click listener and dismiss).
-        val backdrop = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(0xCC000000.toInt())
-            isClickable = true
-            setOnClickListener { dialog.dismiss() }
-        }
-
-        val d = ctx.resources.displayMetrics.density
-        val pad = (16 * d).toInt()
-        val menu = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(pad, pad, pad, pad)
-            background = GradientDrawable().apply {
-                cornerRadius = 16f * d
-                setColor(0xEE111111.toInt())
-                setStroke(maxOf(1, (1 * d).toInt()), 0x44FFFFFF.toInt())
-            }
-            // Stop click propagation — taps INSIDE the menu must NOT
-            // dismiss the dialog (backdrop's onClick would otherwise
-            // fire whenever a non-clickable child got tapped).
-            isClickable = true
-            setOnClickListener { /* swallow */ }
-            layoutParams = LinearLayout.LayoutParams(
-                (280 * d).toInt(),
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-        }
-
-        // Header — app label.
-        menu.addView(TextView(ctx).apply {
-            text = appLabel
-            setTextColor(0xFFE9D8FD.toInt())
-            textSize = 16f
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, 0, 0, (10 * d).toInt())
-        })
+        val out = mutableListOf<Section>()
 
         // App shortcuts (dynamic + manifest). API 25+. Fails silently
         // when not the default launcher — see KDoc above.
         val shortcuts = queryShortcuts(launcher, pkg, me)
-        if (shortcuts.isNotEmpty()) menu.addView(sectionHeader(ctx, "Actions", d))
-        for (s in shortcuts) {
-            menu.addView(makeMenuRow(ctx, s.shortLabel?.toString() ?: s.id, "shortcut") {
-                dialog.dismiss()
-                runCatching {
-                    launcher?.startShortcut(s, null, null)
-                }
-            })
-        }
-        if (shortcuts.isNotEmpty()) menu.addView(divider(ctx, d))
+        if (shortcuts.isNotEmpty()) out += Section("Actions", shortcuts.map { s ->
+            Row(s.shortLabel?.toString() ?: s.id, shortcut = true) {
+                close()
+                runCatching { launcher?.startShortcut(s, null, null) }
+            }
+        })
 
-        menu.addView(sectionHeader(ctx, "Configs", d))
-
+        val configs = mutableListOf<Row>()
         // App info — Settings → Apps → ThisApp.
-        menu.addView(makeMenuRow(ctx, "App info", "system") {
-            dialog.dismiss()
+        configs += Row("App info") {
+            close()
             runCatching {
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                     .setData(Uri.fromParts("package", pkg, null))
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 ctx.startActivity(intent)
             }
-        })
+        }
 
         // Uninstall — modern PackageInstaller.uninstall(): reliably raises the
         // system "Uninstall this app?" dialog across OEMs (ACTION_DELETE was
         // silently no-op on some devices). The shared PackageInstallerReceiver
         // forwards STATUS_PENDING_USER_ACTION → the confirm dialog and reports
         // the result. Needs REQUEST_DELETE_PACKAGES (declared in the manifest).
-        menu.addView(makeMenuRow(ctx, "Uninstall", "system") {
-            dialog.dismiss()
+        configs += Row("Uninstall") {
+            close()
             requestUninstall(ctx, pkg)
-        })
+        }
 
         // Update — the ONE path per kind, the same one Store ▸ Phone Apps runs:
         // a fleet app through FleetInstall, any other app down the ladder its
@@ -182,44 +172,31 @@ object AppLongPressMenu {
         val resolver = runCatching { PhoneAppActions.resolver(PhoneAppActions.sources(ctx)) }.getOrNull()
         val fleetApp = PhoneAppActions.fleetByPackage(Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64))[pkg]
         val external = if (fleetApp == null && resolver != null) SourceResolver.resolve(resolver, pkg) else null
-        menu.addView(makeMenuRow(ctx, "Update", "system") {
+        configs += Row("Update", dim = if (fleetApp == null && (external == null || external.needsPlay)) 0.4f else 1f) {
             if (fleetApp == null && resolver == null) {
                 Toast.makeText(ctx, "No update source for this app", Toast.LENGTH_LONG).show()
             } else {
-                dialog.dismiss()
+                close()
                 requestUpdate(ctx, fleetApp, resolver, pkg, appLabel)
             }
-        }.also { if (fleetApp == null && (external == null || external.needsPlay)) it.alpha = 0.4f })
+        }
+        out += Section("Configs", configs)
 
         // URLs — every row derived by AppUrls from build.json declarations.
         val links = AppUrls.of(ctx, pkg)
-        if (links.isNotEmpty()) {
-            menu.addView(divider(ctx, d))
-            menu.addView(sectionHeader(ctx, "URLs", d))
-            for (l in links) menu.addView(makeMenuRow(ctx, "${l.label} · ${l.url.substringAfter("//")}", "system") {
-                dialog.dismiss()
+        out += if (links.isNotEmpty()) Section("URLs", links.map { l ->
+            Row("${l.label} · ${l.url.substringAfter("//")}") {
+                close()
                 runCatching {
                     ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(l.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }
-            })
-        } else AppUrls.absence(ctx, pkg).let { why ->
+            }
+        }) else {
             // #677 not silent: say whether a declared URL is missing or the app
             // has no URL kind at all — two different messages.
-            menu.addView(divider(ctx, d))
-            menu.addView(sectionHeader(ctx, "URLs", d))
-            menu.addView(makeMenuRow(ctx, why, "system") {}.also { it.alpha = 0.5f })
+            Section("URLs", listOf(Row(AppUrls.absence(ctx, pkg), dim = 0.5f) {}))
         }
-
-        backdrop.addView(menu)
-        dialog.setContentView(backdrop)
-        // Make the dialog fill the screen so the backdrop covers
-        // everything including the status / nav bars (matching what
-        // Pixel Launcher does — long-press menus dim the wallpaper).
-        dialog.window?.setLayout(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-        )
-        dialog.show()
+        return out
     }
 
     /** Fire the system uninstall flow for [pkg] via PackageInstaller.uninstall.
@@ -275,45 +252,5 @@ object AppLongPressMenu {
                 )
             launcher.getShortcuts(q, me) ?: emptyList()
         }.getOrDefault(emptyList())
-    }
-
-    private fun makeMenuRow(ctx: Context, label: String, kind: String, onClick: () -> Unit): View {
-        val d = ctx.resources.displayMetrics.density
-        val row = TextView(ctx).apply {
-            text = label
-            setTextColor(0xFFFFFFFF.toInt())
-            textSize = 14f
-            setPadding((12 * d).toInt(), (12 * d).toInt(), (12 * d).toInt(), (12 * d).toInt())
-            isClickable = true; isFocusable = true
-            val outVal = android.util.TypedValue()
-            ctx.theme.resolveAttribute(
-                android.R.attr.selectableItemBackground, outVal, true)
-            if (outVal.resourceId != 0) setBackgroundResource(outVal.resourceId)
-            setOnClickListener { onClick() }
-        }
-        // Shortcut rows render slightly indented in lavender to
-        // visually distinguish them from system actions.
-        if (kind == "shortcut") {
-            row.setTextColor(0xFFB794F4.toInt())
-            row.setPadding((20 * d).toInt(), (10 * d).toInt(), (12 * d).toInt(), (10 * d).toInt())
-        }
-        return row
-    }
-
-    private fun sectionHeader(ctx: Context, title: String, d: Float) = TextView(ctx).apply {
-        text = title.uppercase()
-        setTextColor(0x99E9D8FD.toInt())
-        textSize = 11f
-        typeface = Typeface.DEFAULT_BOLD
-        setPadding((12 * d).toInt(), (6 * d).toInt(), 0, (2 * d).toInt())
-    }
-
-    private fun divider(ctx: Context, d: Float) = View(ctx).apply {
-        setBackgroundColor(0x22FFFFFF.toInt())
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, maxOf(1, (1 * d).toInt())
-        ).apply {
-            topMargin = (6 * d).toInt(); bottomMargin = (6 * d).toInt()
-        }
     }
 }
