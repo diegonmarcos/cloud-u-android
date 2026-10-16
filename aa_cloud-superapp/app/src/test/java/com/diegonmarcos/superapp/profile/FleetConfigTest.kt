@@ -176,7 +176,19 @@ class FleetConfigTest {
 
     @Test fun `coverage names every non-portable migrating store as a gap, per app`() {
         val mail = m.coverage(m.apps.getValue("mail"))
-        assertTrue("mail's DataStore settings are a named gap", "datastore:settings" in mail.gaps)
+        // A DataStore became portable (SetupStores.register hands the contract the app's own instance),
+        // so mail's settings are covered now; what stays a NAMED gap is a kind the contract cannot write.
+        assertTrue("mail's DataStore settings are moved", "datastore:settings" in mail.covered)
+        assertFalse("mail's DataStore settings are no longer a gap", "datastore:settings" in mail.gaps)
+        val room = FleetPolicy.Manifest(JSONObject()
+            .put("migrate", JSONArray(listOf("config", "secret")))
+            .put("stores", JSONObject()
+                .put("room:notes", JSONObject().put("kind", "room").put("class", "config").put("used_by", JSONArray(listOf("ac_x"))))
+                .put("x_prefs", JSONObject().put("kind", "prefs").put("class", "config").put("used_by", JSONArray(listOf("ac_x")))))
+            .put("apps", JSONObject().put("x", JSONObject().put("package", "p.x").put("module", "ac_x"))))
+        val gap = room.coverage(room.apps.getValue("x"))
+        assertEquals("a Room store is a named gap", listOf("room:notes"), gap.gaps)
+        assertEquals("a prefs store is covered", listOf("x_prefs"), gap.covered)
         assertTrue("mail's account links move", "sterna_account" in mail.covered)
         assertTrue(mail.percent in 1..99)
         for (app in m.apps.values) m.coverage(app).let { c -> assertEquals(c.total, c.covered.size + c.gaps.size) }
