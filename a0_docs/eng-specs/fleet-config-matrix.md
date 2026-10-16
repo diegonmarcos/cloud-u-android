@@ -29,7 +29,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-camera | `cld.camera` | 8 | 0 | 100% |
 | cloud-chat | `com.diegonmarcos.comms.chat` | 5 | 0 | 100% |
 | cloud-code | `com.diegonmarcos.code` | 7 | 3 | 70% |
-| cloud-contacts | `com.diegonmarcos.cloudcontacts` | 4 | 0 | 100% |
+| cloud-contacts | `com.diegonmarcos.cloudcontacts` | 4 | 2 | 66% |
 | cloud-dialer | `com.diegonmarcos.comms.dialer` | 3 | 0 | 100% |
 | cloud-drive | `com.diegonmarcos.clouddrive` | 9 | 4 | 69% |
 | cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 4 | 0 | 100% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 0 | 100% |
-| **fleet** | | **212** | **36** | **85%** |
+| **fleet** | | **212** | **38** | **84%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -441,6 +441,7 @@ Module `ac_cloud-contacts`; libs: lib-analytics, lib-contacts, lib-core, lib-dat
 |---|---|---|---|---|
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
+| `contacts_vcards` | provider | config | GAP | Cloud Contacts: every contact in the phone's system contacts (names, phones, emails, addresses, organisation, birthday, note; no photos) as vCard text, served by the handler the app registers. Carried in the device file so a new phone gets its contacts; restore adds the missing ones to a phone-local account and never deletes. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
@@ -450,11 +451,12 @@ Module `ac_cloud-contacts`; libs: lib-analytics, lib-contacts, lib-core, lib-dat
 
 | file | class | doc |
 |---|---|---|
-| `system ContactsContract provider (accounts and contacts)` | content | Contacts live in the system provider and synced accounts; only the account link migrates. |
+| `system ContactsContract provider (accounts and contacts)` | content | Contacts live in the system provider; they migrate as vCard text through the contacts_vcards store below. |
+| `system ContactsContract provider, exported as vCard` | config | The contacts themselves, through ContactsBackup. |
 | `shared_prefs/<package>_preferences.xml (Fossify Config)` | config | Contacts display/sort/visible-sources settings; scanner found no named store. |
 | `-` | device | keeps no configuration of its own; uses libs:contacts, libs:core, libs:updater, libs:analytics (contacts are system data). |
 
-Coverage: 4 covered, 0 gaps.
+Coverage: 4 covered, 2 gaps — contacts_vcards, file:system ContactsContract provider, exported as vCard.
 
 ## cloud-dialer — `com.diegonmarcos.comms.dialer`
 

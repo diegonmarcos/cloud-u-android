@@ -568,6 +568,14 @@
         "lib-appstore"
       ]
     },
+    "contacts_vcards": {
+      "kind": "provider",
+      "class": "config",
+      "doc": "Cloud Contacts: every contact in the phone's system contacts (names, phones, emails, addresses, organisation, birthday, note; no photos) as vCard text, served by the handler the app registers. Carried in the device file so a new phone gets its contacts; restore adds the missing ones to a phone-local account and never deletes.",
+      "used_by": [
+        "ac_cloud-contacts"
+      ]
+    },
     "store_integrity_marks": {
       "kind": "prefs",
       "class": "config",
@@ -2516,7 +2524,14 @@
           "id": "contacts-system-provider",
           "path": "system ContactsContract provider (accounts and contacts)",
           "class": "content",
-          "doc": "Contacts live in the system provider and synced accounts; only the account link migrates."
+          "doc": "Contacts live in the system provider; they migrate as vCard text through the contacts_vcards store below."
+        },
+        {
+          "id": "contacts-vcards",
+          "path": "system ContactsContract provider, exported as vCard",
+          "class": "config",
+          "doc": "The contacts themselves, through ContactsBackup.",
+          "store": "contacts_vcards"
         },
         {
           "id": "contacts-fossify-prefs",
