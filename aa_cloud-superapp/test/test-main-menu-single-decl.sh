@@ -103,7 +103,7 @@ for dirpath, _, files in os.walk(root):
         path = os.path.join(dirpath, f)
         if path.endswith("HomeDrawerFragment.kt"): continue
         t = open(path).read()
-        if 'Sections.homeGroups()' in t and 'menu.addSubMenu' in t:
+        if 'Sections.homeGroups()' in t and ('menu.addSubMenu' in t or 'DrawerRow.Kind.TITLE' in t):
             p.append("%s builds a menu from homeGroups — the drawer is not the only site map" % os.path.relpath(path, root))
 print("; ".join(p) or "OK")
 PY

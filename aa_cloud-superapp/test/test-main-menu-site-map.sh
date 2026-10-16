@@ -77,9 +77,12 @@ read -r I_ML I_CGC <<<"$ORDER"
 # little Profile avatar badge lives in) is the NavigationView's header and the
 # menu below it is exactly what this code renders. So the profile-above-search
 # ordering is structural: header first, then the main-menu entries.
-grep -q 'app:headerLayout' "$APP/app/src/main/res/layout/fragment_home_drawer.xml" \
-  && ok "the drawer declares its header (Profile badge) above the menu" \
-  || bad "fragment_home_drawer.xml lost its headerLayout — the Profile badge no longer sits above the menu"
+code "$SRC/HomeDrawerFragment.kt" | grep -q 'DrawerList(rows, ::onItemPicked, Modifier.fillMaxSize()) { Header() }' \
+  && ok "the drawer draws its header (Profile badge) above the menu rows" \
+  || bad "HomeDrawerFragment no longer passes Header() as the DrawerList header — the Profile badge no longer sits above the menu"
+code "$SRC/DrawerList.kt" | grep -q 'if (header != null) item { header() }' \
+  && ok "DrawerList puts the header item before the first row" \
+  || bad "DrawerList no longer draws the header before the rows"
 code "$SRC/HomeDrawerFragment.kt" | grep -q 'Sections.mainMenu()' \
   && ok "HomeDrawerFragment renders main-menu after the header via Sections.mainMenu()" \
   || bad "HomeDrawerFragment no longer renders Sections.mainMenu()"

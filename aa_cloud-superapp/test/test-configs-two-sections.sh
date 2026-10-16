@@ -366,11 +366,11 @@ for f in "$MENU" "$DRAWER"; do
   grep -qF 'val (g, s) = Sections.headingOf(section, page)' "$f" \
     && ok "$n asks Sections.headingOf for each page's heading" \
     || bad "$n does not read the declared heading — it lists Configs flat"
-  grep -qE 'g\.uppercase\(\)\)\.setEnabled\(false\)' "$f" \
-    && ok "$n prints the group heading as a disabled row" \
+  grep -qE 'DrawerRow\(([a-z]+ \+ )?g\.uppercase\(\), DrawerRow\.Kind\.HEADING\)' "$f" \
+    && ok "$n prints the group heading as a disabled (HEADING) row" \
     || bad "$n never prints the group heading (Launcher / Setup)"
-  grep -qE '\$s"\)\.setEnabled\(false\)' "$f" \
-    && ok "$n prints the subgroup heading as a disabled row" \
+  grep -qE 'DrawerRow\("[^"]*\$s", DrawerRow\.Kind\.HEADING\)' "$f" \
+    && ok "$n prints the subgroup heading as a disabled (HEADING) row" \
     || bad "$n never prints the subgroup heading (Apps / Observability)"
 done
 grep -qF 'section.pages.none { it.group.isNotBlank() || it.subgroup.isNotBlank() } -> "" to ""' "$SECTIONS" \
