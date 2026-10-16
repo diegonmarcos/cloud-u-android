@@ -180,7 +180,7 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           NO_COLOR=1 npx vitest run 2>&1 | tee /tmp/sync-suite.log
-          sed 's/\x1b\[[0-9;]*m//g' /tmp/sync-suite.log | grep -Eq "Test Files +2 passed \(2\)" || { echo "::error::the sync suite did not run both files green"; exit 1; }
+          sed 's/\x1b\[[0-9;]*m//g' /tmp/sync-suite.log | grep -Eq "Test Files +3 passed \(3\)" || { echo "::error::the sync suite did not run all three files green"; exit 1; }
 
       - name: Build the image
         run: docker build -t cloud-notes-sync:ci ac_cloud-notes/sync-server

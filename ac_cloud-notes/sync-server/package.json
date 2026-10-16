@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@hocuspocus/provider": "4.7.1",
+    "eventemitter2": "6.4.9",
     "vitest": "4.1.10"
   }
 }

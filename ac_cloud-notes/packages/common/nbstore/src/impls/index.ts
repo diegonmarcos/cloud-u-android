@@ -3,6 +3,7 @@ import type { broadcastChannelStorages } from './broadcast-channel';
 import type { cloudStorages } from './cloud';
 import type { idbStorages } from './idb';
 import type { idbV1Storages } from './idb/v1';
+import type { notesSyncStorages } from './notes-sync';
 import type { sqliteStorages } from './sqlite';
 import type { sqliteV1Storages } from './sqlite/v1';
 
@@ -13,6 +14,7 @@ export type StorageConstructor = {
 
 type Storages =
   | typeof cloudStorages
+  | typeof notesSyncStorages
   | typeof idbV1Storages
   | typeof idbStorages
   | typeof sqliteStorages

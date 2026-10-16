@@ -11842,7 +11842,8 @@
    "declared_in": [
     "ac_cloud-notes/packages/common/infra/package.json",
     "ac_cloud-notes/packages/common/nbstore/package.json",
-    "ac_cloud-notes/packages/frontend/core/package.json"
+    "ac_cloud-notes/packages/frontend/core/package.json",
+    "ac_cloud-notes/sync-server/package.json"
    ],
    "version": "^6.4.9",
    "scope": "shipped",

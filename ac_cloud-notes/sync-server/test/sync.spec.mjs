@@ -185,3 +185,103 @@ describe('document clock list (GET /v1/docs)', () => {
     expect(later.map(d => d.name)).toEqual(['ws/doc-b']);
   });
 });
+
+describe('HTTP delta API (what the app\'s sync peer uses)', () => {
+  const auth = { authorization: `Bearer ${TOKEN}` };
+  const post = (s, name, update, headers = auth) =>
+    fetch(`${s.httpURL}/v1/docs/${encodeURIComponent(name)}/updates`, { method: 'POST', headers, body: update });
+  const diff = (s, name, sv, headers = auth) =>
+    fetch(`${s.httpURL}/v1/docs/${encodeURIComponent(name)}/diff${sv ? `?sv=${Buffer.from(sv).toString('base64url')}` : ''}`, { headers });
+  const docWith = text => {
+    const d = new Y.Doc();
+    d.getText('t').insert(0, text);
+    return d;
+  };
+
+  it('refuses without a Bearer, answers 404 for an unknown document', async () => {
+    const s = await start();
+    const u = Y.encodeStateAsUpdate(docWith('x'));
+    expect((await post(s, 'ws/a', u, {})).status).toBe(401);
+    expect((await diff(s, 'ws/a', undefined, {})).status).toBe(401);
+    expect((await diff(s, 'ws/never')).status).toBe(404);
+    expect((await fetch(`${s.httpURL}/v1/docs/${encodeURIComponent('ws/a')}/nope`, { headers: auth })).status).toBe(404);
+  });
+
+  it('a posted update is acknowledged after it is stored, and read back byte-identical', async () => {
+    const s = await start();
+    const a = docWith('hello');
+    const res = await post(s, 'ws/a', Y.encodeStateAsUpdate(a));
+    expect(res.status).toBe(204);
+    expect(Number(res.headers.get('x-doc-clock'))).toBeGreaterThan(0);
+
+    const got = await diff(s, 'ws/a');
+    expect(got.status).toBe(200);
+    const b = new Y.Doc();
+    Y.applyUpdate(b, new Uint8Array(await got.arrayBuffer()));
+    sameState(a, b);
+    expect(Number(got.headers.get('x-doc-clock'))).toBe(Number(res.headers.get('x-doc-clock')));
+  });
+
+  it('diff with a state vector returns only what the client misses', async () => {
+    const s = await start();
+    const a = docWith('x'.repeat(300));
+    await post(s, 'ws/a', Y.encodeStateAsUpdate(a));
+    const clientSv = Y.encodeStateVector(a); // a client that already has the first 300 characters
+    const before = Y.encodeStateAsUpdate(a);
+    a.getText('t').insert(300, ' and more');
+    await post(s, 'ws/a', Y.encodeStateAsUpdate(a, clientSv));
+
+    const full = new Uint8Array(await (await diff(s, 'ws/a')).arrayBuffer());
+    const partial = new Uint8Array(await (await diff(s, 'ws/a', clientSv)).arrayBuffer());
+    expect(partial.length).toBeLessThan(full.length / 2);
+
+    // the client catches up from the partial diff alone
+    const client = new Y.Doc();
+    Y.applyUpdate(client, before);
+    Y.applyUpdate(client, partial);
+    expect(client.getText('t').toString()).toBe('x'.repeat(300) + ' and more');
+  });
+
+  it('a read does not move the clock; a write does', async () => {
+    const s = await start();
+    await post(s, 'ws/a', Y.encodeStateAsUpdate(docWith('x')));
+    const list = async () => (await (await fetch(`${s.httpURL}/v1/docs`, { headers: auth })).json())[0].updatedAt;
+    const t0 = await list();
+    await diff(s, 'ws/a');
+    await diff(s, 'ws/a');
+    expect(await list()).toBe(t0);
+    const a = docWith('x');
+    a.getText('t').insert(1, 'y');
+    await post(s, 'ws/a', Y.encodeStateAsUpdate(a));
+    expect(await list()).toBeGreaterThan(t0);
+  });
+
+  it('a websocket client sees an HTTP-posted update live', async () => {
+    const s = await start();
+    const b = new Y.Doc();
+    const pb = client(s, 'ws/live', b, TOKEN, { url: `${s.webSocketURL}/?access_token=${TOKEN}` });
+    await synced(pb);
+    await post(s, 'ws/live', Y.encodeStateAsUpdate(docWith('from http')));
+    await new Promise(r => setTimeout(r, 300));
+    expect(b.getText('t').toString()).toBe('from http');
+  });
+
+  it('rejects garbage as 400 and survives a restart', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'cn-sync-'));
+    cleanups.push(async () => rmSync(dir, { recursive: true, force: true }));
+    const db = join(dir, 'sync.sqlite');
+    const s1 = createSyncServer({ port: 0, database: db, verify, debounce: 50 });
+    await s1.listen();
+    expect((await post(s1, 'ws/a', new Uint8Array([1, 2, 3, 4, 5]))).status).toBe(400);
+    const a = docWith('durable');
+    expect((await post(s1, 'ws/a', Y.encodeStateAsUpdate(a))).status).toBe(204);
+    await s1.destroy();
+
+    const s2 = await start(db);
+    const got = await diff(s2, 'ws/a');
+    expect(got.status).toBe(200);
+    const b = new Y.Doc();
+    Y.applyUpdate(b, new Uint8Array(await got.arrayBuffer()));
+    expect(b.getText('t').toString()).toBe('durable');
+  });
+});
