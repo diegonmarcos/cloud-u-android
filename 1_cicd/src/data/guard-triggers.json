@@ -96,6 +96,7 @@
         "*/app/build.gradle.kts",
         "*/app/src/main/**",
         "*/src/main/**",
+        "ac_cloud-notes/packages/frontend/apps/android/App/**",
         "ab_cloud-libs-shared/libs/bottomnav/**"
       ]
     },

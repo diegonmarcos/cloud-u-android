@@ -42,6 +42,7 @@ on:
       - "1_cicd/src/scripts/cloud-android-nav-shape-guard.py"
       - "1_cicd/src/scripts/test/nav-shape-guard.test.sh"
       - "ab_cloud-libs-shared/libs/bottomnav/**"
+      - "ac_cloud-notes/packages/frontend/apps/android/App/**"
     # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
