@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.ui.graphics.vector.ImageVector
 import app.sterna.R
 import app.sterna.core.data.account.StoredSignature
+import app.sterna.core.data.account.signatureWireHtml
 import app.sterna.core.data.pgp.PgpMode
 import app.sterna.core.data.pgp.encrypts
 import app.sterna.core.data.text.RichBody
@@ -1057,7 +1058,6 @@ internal fun htmlBodyWithSignature(
         if (found != null && signatureBlockIsIntact(body, found.start, found.end) &&
             verbatims.none { it.first.start < found.end && it.first.end > found.start }
         ) {
-            val head = if (found.withDelimiter) "<br><br>$SIGNATURE_DELIMITER<br>" else "<br><br>"
             // SANITISED here, at the one point a stored signature becomes markup on the wire, for the
             // reason [readerBody] sanitises at its own single point: a policy applied at the assembly
             // cannot be forgotten by a later caller. A signature is stored content that gets RENDERED -
@@ -1066,13 +1066,23 @@ internal fun htmlBodyWithSignature(
             // HTML reads a file off the device, and backup/restore and K-9 import both write this field
             // without anyone typing it. The delimiter line is emitted only when the block found in the
             // BODY carries one (#90).
-            verbatims += Span(found.start, found.end) to head + sanitiseReceivedHtml(signatureHtml.trim())
+            verbatims += Span(found.start, found.end) to signatureBlockHtml(signatureHtml, found.withDelimiter)
         }
     }
     for (v in inlineImageVerbatims(body.text, inlineImages)) {
         if (verbatims.none { it.first.start < v.first.end && it.first.end > v.first.start }) verbatims += v
     }
     return if (verbatims.isEmpty()) toHtml(body) else toHtml(body, verbatims)
+}
+
+/**
+ * The signature as it goes on the wire: the lead-in, then [signatureWireHtml]. THE ONE definition - the
+ * send path above and the signature editor's live preview both call it, so what the owner sees is what
+ * a recipient receives.
+ */
+internal fun signatureBlockHtml(signatureHtml: String, withDelimiter: Boolean): String {
+    val head = if (withDelimiter) "<br><br>$SIGNATURE_DELIMITER<br>" else "<br><br>"
+    return head + signatureWireHtml(signatureHtml)
 }
 
 /** The marker an inline picture stands as in the editor: `[image: name]`, unique per picture. */

@@ -1,7 +1,7 @@
 package app.sterna.ui.settings
 
 import app.sterna.core.data.text.htmlToText
-import app.sterna.core.data.text.sanitiseReceivedHtml
+import app.sterna.core.data.account.signatureWireHtml
 
 /**
  * The pure half of the signature HTML editor: what the toolbar does to the SOURCE, what the source
@@ -100,7 +100,7 @@ internal object SignatureHtmlTools {
             "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src https: http: data:; style-src 'unsafe-inline'\">" +
             "<style>body{margin:8px;font:14px sans-serif;color:$textColour;background:$background;word-wrap:break-word}" +
             "img{max-width:100%;height:auto}</style></head><body>" +
-            sanitiseReceivedHtml(source) +
+            signatureWireHtml(source) +
             "</body></html>"
 
     // ── highlighting ──────────────────────────────────────────────────────

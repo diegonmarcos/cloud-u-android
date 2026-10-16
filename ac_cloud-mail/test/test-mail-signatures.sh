@@ -28,6 +28,11 @@ TEXT="$UI/compose/ComposeText.kt"
 VM="$UI/compose/ComposeViewModel.kt"
 SCREEN="$UI/compose/ComposeScreen.kt"
 TOOLS="$UI/settings/SignatureHtmlTools.kt"
+# The full-screen editor (replaced the inline field): list, dialog + screen, source pane, preview pane, shared document.
+EDSCREEN="$UI/settings/SignatureEditorScreen.kt"
+EDCODE="$UI/settings/SignatureCodeEditor.kt"
+EDWEB="$UI/settings/SignatureWebPreview.kt"
+EDPREVIEW="$UI/settings/SignaturePreview.kt"
 SETTINGS="$UI/settings/SettingsScreen.kt"
 TRANSFER="$DATA/account/SignatureTransfer.kt"
 HANDLER="$APP/app/src/main/kotlin/app/sterna/fleet/SignaturesSetupHandler.kt"
@@ -47,9 +52,9 @@ echo "== cloud-mail: named signatures, HTML for real, and the migration of the e
 # text, so markup the owner typed was redrawn as plain words and lost on the next keystroke.
 has "$SIGNATURE" 'fun source(): String = html.ifBlank { text }' \
   "N1 a signature's editable source is its HTML when it has one"
-has "$EDITOR" 'val initial = remember(signature.id) { signature.source() }' \
+has "$EDSCREEN" 'SignatureEditorState(signature.source(), signature.name, isDefault)' \
   "N1 the signature field starts from the SOURCE, not from the flattened text"
-has "$EDITOR" 'onSource(v.text)' \
+has "$EDITOR" 'StoredSignature.of(id, name, source)' \
   "N1 every keystroke is handed up as the new SOURCE (re-classified by StoredSignature.of)"
 absent "$EDITOR" 'value = signature.text' \
   "N1 nothing binds the field to the flattened text"
@@ -204,30 +209,32 @@ has "$VM" 'available.firstOrNull { it.id == chosen } ?: identity?.defaultSignatu
 # The gap #206 had to close: the send path substituted the stored signature HTML VERBATIM. The
 # reader's sanitiser covered received markup only, so the one kind of HTML the app generated itself
 # was the one kind nothing reduced.
-has "$TEXT" 'to head + sanitiseReceivedHtml(signatureHtml.trim())' \
+has "$TEXT" 'to signatureBlockHtml(signatureHtml, found.withDelimiter)' \
   "N5 the outgoing html alternative sanitises the signature"
+has "$TEXT" 'return head + signatureWireHtml(signatureHtml)' \
+  "N5 the wire block is built in ONE function, shared with the editor's preview"
 absent "$TEXT" 'head + signatureHtml.trim())' \
   "N5 nothing substitutes the raw signature HTML any more"
-has "$SIGNATURE" 'fun renderableHtml(): String = if (isHtml) sanitiseReceivedHtml(html) else ""' \
+has "$SIGNATURE" 'fun renderableHtml(): String = if (isHtml) signatureWireHtml(html) else ""' \
   "N5 a signature's renderable markup is sanitised at the accessor"
-has "$EDITOR" 'signature.renderableHtml()' \
+has "$EDPREVIEW" 'signatureBlockHtml(source, delimiter)' \
   "N5 the editor's preview shows the SANITISED markup, so a drop is visible to the owner"
 # #193: an HTML signature must RENDER as HTML. The preview is a WebView with JavaScript OFF that is
 # given the sanitised string, never the typed one.
-has "$EDITOR" 'SignatureHtmlPreview(html, Modifier' \
+has "$EDWEB" 'fun SignatureWebPreview(' \
   "N5 the editor's preview RENDERS the sanitised HTML signature (#193)"
-has "$EDITOR" 'settings.javaScriptEnabled = false' \
-  "N5 the preview WebView runs no JavaScript"
+has "$EDWEB" 'settings.javaScriptEnabled = visual' \
+  "N5 the preview WebView runs JavaScript only in visual mode, and then only its own nonce'd script"
 absent "$EDITOR" 'javaScriptEnabled = true' \
   "N5 nothing turns JavaScript on in the editor"
-has "$EDITOR" 'settings.allowFileAccess = false' \
+has "$EDWEB" 'settings.allowFileAccess = false' \
   "N5 the preview WebView reads no files"
 has "$TOOLS" "default-src 'none'" \
   "N5 the preview document forbids everything but pictures"
 absent "$EDITOR" 'previewDocument(signature.source' \
   "N5 the preview is never fed the raw source"
 # A plain-text signature must not be put through any of it.
-has "$SIGNATURE" 'if (isHtml) sanitiseReceivedHtml(html) else ""' \
+has "$SIGNATURE" 'if (isHtml) signatureWireHtml(html) else ""' \
   "N5 a plain-text signature is never handed to the HTML pass"
 
 # The quoted original's own coverage, restated here because THIS is the change that could have
@@ -265,19 +272,19 @@ STRINGS
 # ── N7 the HTML source editor ──
 # The toolbar edits the SOURCE the field holds, so the stored value is exactly the text in the field.
 for t in bold italic underline; do
-  has "$EDITOR" "SignatureHtmlTools.$t(field.text" "N7 the $t button edits the source"
+  has "$EDSCREEN" "SignatureHtmlTools::$t" "N7 the $t button edits the source"
 done
-has "$EDITOR" 'SignatureHtmlTools.link(field.text' "N7 the link button edits the source"
-has "$EDITOR" 'SignatureHtmlTools.image(field.text' "N7 the image-by-URL button edits the source"
-has "$EDITOR" 'SignatureHtmlTools.colour(field.text' "N7 the colour button edits the source"
-has "$EDITOR" 'visualTransformation = transformation' "N7 the source is highlighted"
-has "$EDITOR" 'fontFamily = FontFamily.Monospace' "N7 the source is monospace"
-has "$EDITOR" 'history.undo()' "N7 undo"
-has "$EDITOR" 'history.redo()' "N7 redo"
-has "$EDITOR" 'SignatureHtmlTools.plainText(signature.source())' \
+has "$EDSCREEN" 'SignatureHtmlTools.link(state.source' "N7 the link button edits the source"
+has "$EDSCREEN" 'SignatureHtmlTools.image(state.source' "N7 the image-by-URL button edits the source"
+has "$EDSCREEN" 'SignatureHtmlTools.colour(state.source' "N7 the colour button edits the source"
+has "$EDCODE" 'visualTransformation = transformation' "N7 the source is highlighted"
+has "$EDCODE" 'FontFamily.Monospace' "N7 the source is monospace"
+has "$EDSCREEN" 'state.undo()' "N7 undo"
+has "$EDSCREEN" 'state.redo()' "N7 redo"
+has "$EDSCREEN" 'SignatureHtmlTools.plainText(state.source)' \
   "N7 the derived plain text is shown under the preview"
 # Saving goes through the SAME constructor as before, so the (text, html) pair sending reads is unchanged.
-has "$EDITOR" 'StoredSignature.of(it.id, it.name, v)' "N7 saving still goes through StoredSignature.of"
+has "$EDITOR" 'StoredSignature.of(id, name, source)' "N7 saving still goes through StoredSignature.of"
 # The import button is gone, and nothing is left wired to it.
 absent "$EDITOR" 'onImportHtml' "N7 the editor has no import callback"
 absent "$SETTINGS" 'onImportHtml' "N7 Settings passes no import callback"
