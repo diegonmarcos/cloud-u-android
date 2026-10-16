@@ -362,7 +362,7 @@ if not re.search(r"val displayMinHeight: Dp = [1-9]\d*\.dp", theme):
     bad.append("C14 CalcMetrics.displayMinHeight is not a positive dp")
 
 # C15 the declared nav: the island is Calc | Sheet | AI | Measure | JEV in that order; Configs is NOT on it - it is the
-# only section off the bar, opened by the round top-right button (ui/CalcShell.kt ConfigsButton); the Sheet and AI
+# only section off the bar, opened by the fleet top bar's Settings > Configs (libs:bottomnav AppTopBar, ui.top_bar); the Sheet and AI
 # pages each have their renderer; Jev's attachments take the camera and the microphone through the two gates.
 want_bar = ["calculator", "sheet", "ai", "measure", "jev"]
 want_label = ["Calc", "Sheet", "AI", "Measure", "JEV"]
@@ -381,8 +381,20 @@ for mid, kind in (("sheet", "sheet"), ("ai", "ai")):
     if (modes_by_id.get(mid) or {}).get("kind") != kind:
         bad.append("C15 mode %s of kind %s is not declared" % (mid, kind))
 shell = code(os.path.join(src, "ui", "CalcShell.kt"))
-if "fun ConfigsButton(" not in shell or "CircleShape" not in shell:
-    bad.append("C15 ui/CalcShell.kt draws no round ConfigsButton")
+drawer = code(os.path.join(src, "ui", "CalcDrawer.kt"))
+tb = (bj["ui"].get("top_bar") or {})
+if "title" in tb or tb.get("drawer") is not True or tb.get("ai") is not True or tb.get("settings") != ["account", "configs"]:
+    bad.append("C15 build.json::ui.top_bar must be {drawer:true, ai:true, settings:[account, configs]} and restate no title")
+for need in ("AppTopBarScaffold(", "onAccount = rememberAccountLauncher()", "onConfigs = { state.openConfigs() }",
+             "aiPanel = { AiFleetChatPanel(BuildConfig.AI_GATEWAY_URL) }", "TopBarDrawer { close -> CalcDrawer(state, close) }"):
+    if need not in shell:
+        bad.append("C15 ui/CalcShell.kt must draw the fleet top bar: missing %s" % need)
+if "ConfigsButton" in shell or "CircleShape" in shell:
+    bad.append("C15 ui/CalcShell.kt still draws its own round Configs button")
+if "SheetHub" not in drawer or "sheetNames()" not in drawer or "Declarations.sections" not in drawer:
+    bad.append("C15 ui/CalcDrawer.kt must list the Sheet page's sheets and the declared sections")
+if "UI_TOP_BAR_B64" not in open(os.path.join(app, "app", "build.gradle"), encoding="utf-8").read():
+    bad.append("C15 app/build.gradle must bake UI_TOP_BAR_B64")
 att = code(os.path.join(src, "ui", "JevAttach.kt"))
 if "MicGate" not in att or "CameraGate" not in att:
     bad.append("C15 ui/JevAttach.kt must reach the microphone and the camera through MicGate and CameraGate")
@@ -490,7 +502,13 @@ mutate display-unfixed "$J/ui/ModeScreens.kt" 's.replace(".weight(1f).heightIn(m
 mutate display-zero "$J/ui/CalcTheme.kt" 's.replace("val displayMinHeight: Dp = 96.dp", "val displayMinHeight: Dp = 0.dp")' "C14 CalcMetrics.displayMinHeight is not a positive dp"
 mutate nav-order-swapped build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\"", "\"bottom_nav\": [\"calculator\", \"ai\", \"sheet\"")' "C15 ui.bottom_nav must be exactly"
 mutate configs-on-bar build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"jev\"]", "\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"settings\"]")' "C15 ui.bottom_nav must be exactly"
-mutate configs-button-gone "$J/ui/CalcShell.kt" 's.replace("private fun ConfigsButton(", "private fun ConfigsBtn(")' "C15 ui/CalcShell.kt draws no round ConfigsButton"
+mutate topbar-scaffold-gone "$J/ui/CalcShell.kt" 's.replace("AppTopBarScaffold(", "AppTopBarScaffoldx(")' "C15 ui/CalcShell.kt must draw the fleet top bar"
+mutate topbar-own-configs-button "$J/ui/CalcShell.kt" 's + "\nprivate fun ConfigsButton() { CircleShape }\n"' "C15 ui/CalcShell.kt still draws its own round Configs button"
+mutate topbar-configs-unwired "$J/ui/CalcShell.kt" 's.replace("onConfigs = { state.openConfigs() }", "onConfigs = { }")' "C15 ui/CalcShell.kt must draw the fleet top bar"
+mutate topbar-no-drawer build.json 's.replace("\"drawer\": true,", "\"drawer\": false,", 1)' "C15 build.json::ui.top_bar must be"
+mutate topbar-titled build.json 's.replace("\"drawer\": true,", "\"title\": \"Cloud Calc\", \"drawer\": true,", 1)' "C15 build.json::ui.top_bar must be"
+mutate topbar-unbaked app/build.gradle 's.replace("UI_TOP_BAR_B64", "UI_TOP_BAR")' "C15 app/build.gradle must bake UI_TOP_BAR_B64"
+mutate drawer-not-sheets "$J/ui/CalcDrawer.kt" 's.replace("sheetNames()", "sheets()")' "C15 ui/CalcDrawer.kt must list"
 mutate attach-own-mic "$J/ui/JevAttach.kt" 's.replace("MicGate {", "run {")' "C15 ui/JevAttach.kt must reach the microphone"
 
 echo "── C1-C15 + mutations: $FAILURES failure(s) ──"

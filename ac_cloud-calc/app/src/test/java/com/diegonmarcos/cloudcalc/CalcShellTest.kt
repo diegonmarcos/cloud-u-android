@@ -117,7 +117,7 @@ class CalcShellTest {
         launch()
         Declarations.tabs.forEach { tab ->
             // #868 a page is in the top strip only while its section (a bottom-nav item) is selected;
-            // the Configs page has no bar item: the round top-right button opens it.
+            // the Configs page has no bar item: the top bar's Settings > Configs opens it.
             if (Declarations.sections.any { it.id == tab.section }) compose.onNodeWithTag(BottomNavTags.item(tab.section)).performClick()
             else compose.runOnIdle { state.tab = tab.id }
             compose.waitForIdle()

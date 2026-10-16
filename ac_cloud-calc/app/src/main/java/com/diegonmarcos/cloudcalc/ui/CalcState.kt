@@ -32,7 +32,13 @@ class CalcState(private val prefs: SharedPreferences?, private val now: () -> Lo
     private var configsFrom: String? = null
     val onConfigs: Boolean get() = Declarations.configsTab?.id == tab
 
-    /** The round top-right button: open Configs, or from Configs go back to the page it was opened from. */
+    /** The top bar's Settings > Configs: open Configs, remembering the page to go back to; already there changes nothing. */
+    fun openConfigs() {
+        val c = Declarations.configsTab ?: return
+        if (tab != c.id) toggleConfigs()
+    }
+
+    /** Open Configs, or from Configs go back to the page it was opened from (Back does the latter). */
     fun toggleConfigs() {
         val c = Declarations.configsTab ?: return
         if (tab == c.id) {

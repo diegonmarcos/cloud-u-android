@@ -591,6 +591,12 @@
     "_doc_sections": "#868 THE ONE navigation declaration (libs:bottomnav's NavDecl), INVERTED from #770: ui.bottom_nav is the island's section ids in display order, ui.sections[] are Calculator, Measure and Jev, each with `pages` - the ten tabs (what #770 called ui.tabs), drawn as the section's top PageTabs strip - and ui.default_section is where the app opens (its first page). Calculator = the traditional calculators (#767), Measure = sensors and the clock & timers (#768), Jev = natural-language requests routed by a decision model, and its Configs. A page shows the modes whose `tab` is its id, in ui.modes order, as the sub-strip under the page strip. test/test-calc-shell.sh fails on a section with no page, a page with no mode and a mode naming no page.",
     "bottom_nav": ["calculator", "sheet", "ai", "measure", "jev"],
     "default_section": "calculator",
+    "top_bar": {
+      "_doc": "THE first row of the app (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger that opens a side drawer the CURRENT page fills (ui/CalcDrawer.kt: the Sheet page lists its sheets and workbooks, every other page the sections and the open section's pages), the app's name as the title, and two circular buttons: AI (libs:ai's chat in an anchored panel over the fleet gateway) and Settings (Account launches Cloud Account, Configs opens the settings section below, the page that replaced the round top-right Configs button). No app draws its own copy of this row (cloud-android-top-bar-guard).",
+      "drawer": true,
+      "ai": true,
+      "settings": ["account", "configs"]
+    },
     "sections": [
       {
         "id": "calculator",
@@ -686,7 +692,7 @@
         "id": "settings",
         "label": "Configs",
         "icon": "settings",
-        "_doc": "NOT in ui.bottom_nav: the Configs page is opened by the round button at the top-right of the top row (the fleet's Profile/Configs circle), and that button is the first section that is not on the bar.",
+        "_doc": "NOT in ui.bottom_nav: the Configs page is opened by the top bar's Settings > Configs (libs:bottomnav AppTopBar, ui.top_bar), and that page is the first section that is not on the bar.",
         "pages": [
           {
             "id": "configs",

@@ -6,10 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
@@ -36,79 +33,76 @@ import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.cloudcalc.Declarations
 import com.diegonmarcos.cloudcalc.R
 import com.diegonmarcos.cloudcalc.engine.CalcApi
+import com.diegonmarcos.cloudcalc.BuildConfig
+import com.diegonmarcos.superapp.ai.AiFleetChatPanel
+import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.islandEntries
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import androidx.activity.compose.BackHandler
 
 /**
- * The shell (#868, INVERTED from #770): the fleet's bottom-nav island carries the three sections
- * (Calculator, Measure, Jev - build.json::ui.bottom_nav), the section's PAGES (what #770 called
+ * The shell (#868, INVERTED from #770): the fleet's bottom-nav island carries the sections
+ * (Calc, Sheet, AI, Measure, Jev - build.json::ui.bottom_nav), the section's PAGES (what #770 called
  * tabs, ui.sections[].pages) are the top PageTabs strip, and a page shows its modes (ui.modes
- * whose `tab` is its id) as the sub-strip under it when it has more than one.
+ * whose `tab` is its id) as the sub-strip under it when it has more than one. Above all of it is the
+ * fleet's AppTopBar (libs:bottomnav, declared in build.json::ui.top_bar): hamburger + the page's drawer
+ * ([CalcDrawer]), the app's name, AI, and Settings (Account, Configs).
  */
 @Composable
 fun CalcShell(api: CalcApi, state: CalcState) {
     CompositionLocalProvider(LocalCalcApi provides api, LocalCalcState provides state) {
         val entries = Declarations.nav.islandEntries { rememberVectorPainter(IconCatalog.vector(it)) }
         // The fleet's own host: the page above the island, the scroll collapse, the inset handling.
-        BottomNavHost(
-            entries = entries,
-            selectedId = state.section,
-            onSelect = { state.showSection(it.id) },
-            modifier = Modifier.testTag(CalcTags.SHELL),
-        ) {
-            Column(Modifier.fillMaxSize()) {
-                TopRow(state)
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    key(state.tab) { TabContent(state.tab) }
+        val host: @Composable () -> Unit = {
+            BottomNavHost(
+                entries = entries,
+                selectedId = state.section,
+                onSelect = { state.showSection(it.id) },
+                modifier = Modifier.testTag(CalcTags.SHELL),
+            ) {
+                // The drawer is the page's: the Sheet page's sheets and workbooks, else the sections and pages.
+                TopBarDrawer { close -> CalcDrawer(state, close) }
+                // Configs is off the island (the top bar's Settings > Configs opens it), so Back leaves it.
+                BackHandler(enabled = state.onConfigs) { state.toggleConfigs() }
+                Column(Modifier.fillMaxSize()) {
+                    TopRow(state)
+                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                        key(state.tab) { TabContent(state.tab) }
+                    }
                 }
             }
+        }
+        Box(Modifier.fillMaxSize().statusBarsPadding()) {
+            val topBar = Declarations.topBar
+            if (topBar == null) host() else AppTopBarScaffold(
+                decl = topBar,
+                title = stringResource(R.string.app_name),
+                onAccount = rememberAccountLauncher(),
+                onConfigs = { state.openConfigs() },
+                aiPanel = { AiFleetChatPanel(BuildConfig.AI_GATEWAY_URL) },
+                content = host,
+            )
         }
     }
 }
 
 /**
- * The top row: the selected section's pages as the pill strip (a section with ONE page draws none)
- * and, at its right end, the round Configs button (the fleet's Profile/Configs circle).
+ * The top row: the selected section's pages as the pill strip (a section with ONE page draws none). The first
+ * row above it, with Configs behind its Settings button, is the fleet's AppTopBar (see [CalcShell]).
  */
 @Composable
 private fun TopRow(state: CalcState) {
     val pages = Declarations.nav.section(state.section)?.pages.orEmpty()
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        Box(Modifier.weight(1f)) {
-            if (pages.size > 1) {
-                PageTabs(
-                    pages = pages,
-                    selectedId = state.tab,
-                    onSelect = { state.tab = it.id },
-                    modifier = Modifier.testTag(CalcTags.PAGES),
-                )
-            }
-        }
-        if (Declarations.configsTab != null) ConfigsButton(state)
-    }
-}
-
-/** The round Configs button: top-right of the top row, below the status bar; pressed again it goes back. */
-@Composable
-private fun ConfigsButton(state: CalcState) {
-    val on = state.onConfigs
-    val label = Declarations.configsTab?.label.orEmpty()
-    Box(
-        Modifier
-            .statusBarsPadding()
-            .padding(top = CalcMetrics.gap, end = CalcMetrics.gap, bottom = CalcMetrics.gap)
-            .size(CalcMetrics.roundButton)
-            .clip(CircleShape)
-            .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(role = Role.Button, onClickLabel = label) { state.toggleConfigs() }
-            .testTag(CalcTags.CONFIGS_BUTTON),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            IconCatalog.vector(Declarations.configsTab?.icon.orEmpty()),
-            contentDescription = label,
-            tint = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+    if (pages.size > 1) {
+        PageTabs(
+            pages = pages,
+            selectedId = state.tab,
+            onSelect = { state.tab = it.id },
+            modifier = Modifier.testTag(CalcTags.PAGES),
+            underTopChrome = false,
         )
     }
 }
@@ -163,7 +157,6 @@ object CalcTags {
     const val SHELL = "calc_shell"
     const val STRIP = "calc_mode_strip"
     const val PAGES = "calc_page_strip"
-    const val CONFIGS_BUTTON = "calc_configs_button"
     const val AI_PAGE = "calc_ai_page"
     const val INPUT = "calc_input"
     const val RESULT = "calc_result"

@@ -242,6 +242,10 @@
     </plurals>
     <string name="sound_answered_by">Answered by: %1$s</string>
     <string name="sheet_file">File</string>
+    <string name="drawer_sections">Sections</string>
+    <string name="drawer_sheets">Sheets</string>
+    <string name="drawer_new_sheet">New sheet</string>
+    <string name="drawer_workbooks">Workbooks</string>
     <string name="sheet_new">New workbook</string>
     <string name="sheet_open">Open…</string>
     <string name="sheet_save_as">Save as…</string>
