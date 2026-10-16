@@ -17,7 +17,7 @@ afterEach(async () => {
 });
 
 async function start(database = ':memory:') {
-  const server = createSyncServer({ port: 0, database, verify });
+  const server = createSyncServer({ port: 0, database, verify, debounce: 50 });
   await server.listen();
   cleanups.push(() => server.destroy());
   return server;
@@ -136,7 +136,7 @@ describe('A6.3 acknowledged updates survive a server restart', () => {
     cleanups.push(async () => rmSync(dir, { recursive: true, force: true }));
     const db = join(dir, 'sync.sqlite');
 
-    const s1 = createSyncServer({ port: 0, database: db, verify });
+    const s1 = createSyncServer({ port: 0, database: db, verify, debounce: 50 });
     await s1.listen();
     const a = new Y.Doc();
     const pa = new HocuspocusProvider({ url: `${s1.webSocketURL}/?access_token=${TOKEN}`, name: 'doc-persist', document: a, token: TOKEN });
@@ -152,5 +152,36 @@ describe('A6.3 acknowledged updates survive a server restart', () => {
     await synced(pb);
     expect(b.getArray('n').toArray()).toEqual(Array.from({ length: 25 }, (_, i) => i));
     sameState(a, b);
+  });
+});
+
+describe('document clock list (GET /v1/docs)', () => {
+  it('needs a Bearer, lists stored documents oldest first, honours ?after=', async () => {
+    const s = await start();
+    expect((await fetch(`${s.httpURL}/v1/docs`)).status).toBe(401);
+    expect((await fetch(`${s.httpURL}/v1/docs`, { headers: { authorization: 'Bearer wrong' } })).status).toBe(401);
+
+    const auth = { headers: { authorization: `Bearer ${TOKEN}` } };
+    expect(await (await fetch(`${s.httpURL}/v1/docs`, auth)).json()).toEqual([]);
+
+    const url = `${s.webSocketURL}/?access_token=${TOKEN}`;
+    const a = new Y.Doc();
+    a.getText('t').insert(0, 'one');
+    const pa = client(s, 'ws/doc-a', a, TOKEN, { url });
+    await synced(pa);
+    await new Promise(r => setTimeout(r, 400)); // the (shortened) store debounce
+    const mid = Date.now();
+    await new Promise(r => setTimeout(r, 50));
+    const b = new Y.Doc();
+    b.getText('t').insert(0, 'two');
+    const pb = client(s, 'ws/doc-b', b, TOKEN, { url });
+    await synced(pb);
+    await new Promise(r => setTimeout(r, 400));
+
+    const all = await (await fetch(`${s.httpURL}/v1/docs`, auth)).json();
+    expect(all.map(d => d.name)).toEqual(['ws/doc-a', 'ws/doc-b']);
+    expect(all[0].updatedAt).toBeLessThanOrEqual(all[1].updatedAt);
+    const later = await (await fetch(`${s.httpURL}/v1/docs?after=${mid}`, auth)).json();
+    expect(later.map(d => d.name)).toEqual(['ws/doc-b']);
   });
 });

@@ -47,7 +47,7 @@
    "LicenseRef-PublicDomain": 1
   },
   "npm": {
-   "MIT": 524,
+   "MIT": 525,
    "Apache-2.0": 31,
    "ISC": 10,
    "NOASSERTION": 8,
@@ -11102,6 +11102,18 @@
    "licence_source": "registry.npmjs.org latest (1.0.0)",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
    "within_upstream_module": "chat"
+  },
+  "npm:better-sqlite3": {
+   "kind": "npm",
+   "declared_in": [
+    "ac_cloud-notes/sync-server/package.json"
+   ],
+   "version": "12.11.1",
+   "scope": "shipped",
+   "licence": "MIT",
+   "licence_source": "package.json \"license\" of better-sqlite3 12.11.1 (WiseLibs/better-sqlite3)",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
+   "within_upstream_module": "notes"
   },
   "npm:builder-util-runtime": {
    "kind": "npm",
