@@ -1,0 +1,295 @@
+package com.diegonmarcos.cloudagenda
+
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodes
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
+import org.robolectric.RuntimeEnvironment
+import com.diegonmarcos.cloudagenda.data.AttachmentKind
+import com.diegonmarcos.cloudagenda.data.TaskFilter
+import com.diegonmarcos.cloudagenda.data.TaskStatus
+import com.diegonmarcos.cloudagenda.data.ThemeMode
+import com.diegonmarcos.cloudagenda.ui.ChromeTags
+import com.diegonmarcos.cloudagenda.ui.DrawerTags
+import com.diegonmarcos.cloudagenda.ui.EditorTags
+import com.diegonmarcos.cloudagenda.ui.FilterTags
+import com.diegonmarcos.cloudagenda.ui.Declarations
+import com.diegonmarcos.cloudagenda.ui.SettingsTags
+import com.diegonmarcos.cloudagenda.ui.TagTags
+import com.diegonmarcos.cloudagenda.ui.TasksApp
+import com.diegonmarcos.cloudagenda.ui.TasksTags
+import com.diegonmarcos.superapp.bottomnav.BottomNavTags
+import com.diegonmarcos.superapp.bottomnav.PageTabsTags
+import com.diegonmarcos.superapp.uikit.KitPartTags
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+/**
+ * The whole shell, rendered under Robolectric over an in-memory database: the island, the hamburger drawer (projects
+ * collapsed by default, expanding to lists), the filter bar, the editor's fields, Settings (Appearance, Agent), and
+ * the AI panel. Every id is a tag the code declares.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], qualifiers = "w360dp-h640dp-mdpi")
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class TasksPageTest {
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @get:Rule
+    val rules = composeChain(compose)
+
+    private fun launch(seed: Boolean = true): FakeEnv {
+        val env = FakeEnv(RuntimeEnvironment.getApplication(), seed)
+        compose.setContent { TasksApp(env, Declarations.nav) }
+        return env
+    }
+
+    private fun rows() = compose.onAllNodes(tagStartsWith("task_row_"))
+    private fun subRows() = compose.onAllNodes(tagStartsWith("subtask_row_"))
+
+    // ── chrome and island ───────────────────────────────────────────────────────────────────────────────
+
+    @Test fun `the shell draws the top row and the declared island, and opens on Tasks`() {
+        launch()
+        compose.onNodeWithTag(ChromeTags.HAMBURGER).assertIsDisplayed()
+        compose.onNodeWithTag(ChromeTags.AI).assertIsDisplayed()
+        compose.onNodeWithTag(ChromeTags.PROFILE).assertIsDisplayed()
+        compose.onNodeWithTag(BottomNavTags.item("tasks")).assertIsDisplayed()
+        compose.onNodeWithTag(BottomNavTags.item("calendar")).assertIsDisplayed()
+        compose.onNodeWithTag(BottomNavTags.item("settings")).assertDoesNotExist()
+        compose.onNodeWithTag(TasksTags.PAGE).assertIsDisplayed()
+    }
+
+    @Test fun `the first run shows Project Zero's first list with three tasks and their subtasks`() {
+        val env = launch()
+        compose.onNodeWithTag(TasksTags.HEADER).assertIsDisplayed()
+        assertEquals("Project Zero", env.controller.snapshot.projects.first().name)
+        rows().assertCountEquals(3)
+        subRows().assertCountEquals(6)
+    }
+
+    // ── the hamburger drawer ────────────────────────────────────────────────────────────────────────────
+
+    @Test fun `the drawer lists projects collapsed, expands to lists, and a list tap switches the page`() {
+        val env = launch()
+        val project = env.controller.snapshot.projects.first()
+        val lists = env.controller.snapshot.listsOf(project.id)
+        compose.onNodeWithTag(ChromeTags.HAMBURGER).performClick()
+        compose.onNodeWithTag(DrawerTags.project(project.id)).assertIsDisplayed()
+        compose.onNodeWithTag(DrawerTags.list(lists[0].id)).assertDoesNotExist()
+        compose.onNodeWithTag(DrawerTags.list(lists[1].id)).assertDoesNotExist()
+        compose.onNodeWithTag(DrawerTags.project(project.id)).performClick()
+        compose.onNodeWithTag(DrawerTags.list(lists[0].id)).assertIsDisplayed()
+        compose.onNodeWithTag(DrawerTags.list(lists[1].id)).assertIsDisplayed()
+        compose.onNodeWithTag(DrawerTags.list(lists[1].id)).performClick()
+        compose.waitForIdle()
+        assertEquals(lists[1].id, env.controller.selectedListId)
+        compose.onNodeWithTag(TasksTags.HEADER).assertIsDisplayed()
+        rows().assertCountEquals(3)
+        compose.onNodeWithText("Project Zero  ›  Step 1").assertIsDisplayed()
+    }
+
+    @Test fun `a project and a list can be added from the drawer`() {
+        val env = launch()
+        compose.onNodeWithTag(ChromeTags.HAMBURGER).performClick()
+        compose.onNodeWithTag(DrawerTags.ADD_PROJECT).performClick()
+        compose.onNodeWithTag(DrawerTags.NAME_INPUT).performTextInput("Home")
+        compose.onNodeWithTag(DrawerTags.NAME_OK).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("Project Zero", "Home"), env.controller.snapshot.projects.map { it.name })
+    }
+
+    // ── the top filter bar ──────────────────────────────────────────────────────────────────────────────
+
+    @Test fun `filtering by status hides non-matching tasks, persists, and Clear all brings them back`() {
+        val env = launch()
+        compose.onNodeWithTag(FilterTags.CLEAR).assertDoesNotExist()
+        compose.onNodeWithTag(FilterTags.status(TaskStatus.WAITING)).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(TasksTags.NO_MATCH).assertIsDisplayed()
+        rows().assertCountEquals(0)
+        assertEquals(TaskFilter(statuses = setOf(TaskStatus.WAITING)), env.prefs.filter)
+        compose.onNodeWithTag(FilterTags.status(TaskStatus.ACTION)).performClick()
+        compose.waitForIdle()
+        rows().assertCountEquals(3)
+        compose.onNodeWithTag(FilterTags.CLEAR).performClick()
+        compose.waitForIdle()
+        assertEquals(TaskFilter(), env.prefs.filter)
+        compose.onNodeWithTag(FilterTags.CLEAR).assertDoesNotExist()
+    }
+
+    @Test fun `filtering by tag shows only the tagged task`() {
+        val env = launch()
+        val snap = env.controller.snapshot
+        val tag = env.repo.addTag("urgent", 0xFFE53935)
+        val target = snap.topLevel(env.controller.selectedListId).first()
+        env.repo.saveTask(target.copy(tagIds = setOf(tag.id)))
+        env.controller.refreshAgent()
+        compose.waitForIdle()
+        compose.onNodeWithTag(FilterTags.TAGS_BUTTON).performClick()
+        compose.onNodeWithTag(FilterTags.tag(tag.id)).performClick()
+        compose.waitForIdle()
+        rows().assertCountEquals(1)
+        compose.onNodeWithTag("task_row_" + target.id).assertIsDisplayed()
+        assertEquals(setOf(tag.id), env.prefs.filter.tagIds)
+    }
+
+    @Test fun `a restored filter is applied from the first frame`() {
+        val env = FakeEnv(RuntimeEnvironment.getApplication())
+        env.controller.updateFilter(TaskFilter(statuses = setOf(TaskStatus.HOLD)))
+        compose.setContent { TasksApp(env, Declarations.nav) }
+        compose.onNodeWithTag(TasksTags.NO_MATCH).assertIsDisplayed()
+    }
+
+    // ── the task editor ─────────────────────────────────────────────────────────────────────────────────
+
+    @Test fun `the editor has every field and saves an edit`() {
+        val env = launch()
+        val target = env.controller.snapshot.topLevel(env.controller.selectedListId).first()
+        compose.onNodeWithTag("task_row_" + target.id).performClick()
+        for (tag in listOf(EditorTags.NAME, EditorTags.DETAILS, EditorTags.DATE_TARGET, EditorTags.DATE_DEADLINE, EditorTags.LOCATION,
+            EditorTags.add(AttachmentKind.MAIL), EditorTags.add(AttachmentKind.IMAGE), EditorTags.add(AttachmentKind.FILE), EditorTags.MANAGE_TAGS)) {
+            compose.onNodeWithTag(tag).assertExists()
+        }
+        for (s in TaskStatus.entries) compose.onNodeWithTag(EditorTags.status(s)).assertExists()
+        for (sub in env.controller.snapshot.subtasksOf(target.id)) compose.onNodeWithTag(EditorTags.subtask(sub.id)).assertExists()
+        compose.onNodeWithTag(EditorTags.NAME).performTextClearance()
+        compose.onNodeWithTag(EditorTags.NAME).performTextInput("Renamed task")
+        compose.onNodeWithTag(EditorTags.DETAILS).performTextInput("Some details")
+        compose.onNodeWithTag(EditorTags.LOCATION).performTextInput("Berlin")
+        compose.onNodeWithTag(EditorTags.status(TaskStatus.HOLD)).performScrollTo().performClick()
+        compose.onNodeWithTag(EditorTags.SAVE).performClick()
+        compose.waitForIdle()
+        val saved = env.controller.snapshot.task(target.id)!!
+        assertEquals("Renamed task", saved.name)
+        assertEquals("Some details", saved.details)
+        assertEquals("Berlin", saved.location)
+        assertEquals(TaskStatus.HOLD, saved.status)
+    }
+
+    @Test fun `the picker buttons call the host and a returned link joins the draft`() {
+        val env = launch()
+        val target = env.controller.snapshot.topLevel(env.controller.selectedListId).first()
+        compose.onNodeWithTag("task_row_" + target.id).performClick()
+        compose.onNodeWithTag(EditorTags.add(AttachmentKind.IMAGE)).performScrollTo().performClick()
+        compose.onNodeWithTag(EditorTags.add(AttachmentKind.FILE)).performScrollTo().performClick()
+        assertEquals(listOf(AttachmentKind.IMAGE, AttachmentKind.FILE), env.pickedKinds)
+        env.pickedLink = com.diegonmarcos.cloudagenda.links.newAttachment(AttachmentKind.IMAGE, "content://drive/1", "scan.jpg")
+        compose.waitForIdle()
+        compose.onNodeWithText("scan.jpg").performScrollTo().assertIsDisplayed()
+        assertEquals(null, env.pickedLink)
+        compose.onNodeWithTag(EditorTags.SAVE).performClick()
+        compose.waitForIdle()
+        assertEquals("content://drive/1", env.controller.snapshot.task(target.id)!!.attachments.single().uri)
+    }
+
+    @Test fun `a subtask opens in the same editor`() {
+        val env = launch()
+        val target = env.controller.snapshot.topLevel(env.controller.selectedListId).first()
+        val sub = env.controller.snapshot.subtasksOf(target.id).first()
+        compose.onNodeWithTag("subtask_row_" + sub.id).performClick()
+        compose.onNodeWithTag(EditorTags.NAME).assertExists()
+        compose.onNodeWithTag(EditorTags.DATE_DEADLINE).assertExists()
+        compose.onNodeWithTag(EditorTags.status(TaskStatus.WAITING)).assertExists()
+        compose.onNodeWithTag(EditorTags.SUBTASK_INPUT).assertDoesNotExist()
+    }
+
+    // ── tags ────────────────────────────────────────────────────────────────────────────────────────────
+
+    @Test fun `tags can be created from the filter bar's manager`() {
+        val env = launch()
+        compose.onNodeWithTag(FilterTags.TAGS_BUTTON).performClick()
+        compose.onNodeWithTag(FilterTags.MANAGE).performClick()
+        compose.onNodeWithTag(TagTags.NEW_NAME).performTextInput("travel")
+        compose.onNodeWithTag(TagTags.NEW_ADD).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("travel"), env.controller.snapshot.tags.map { it.name })
+    }
+
+    // ── Profile, Settings, theme, agent ─────────────────────────────────────────────────────────────────
+
+    @Test fun `Profile then Account hands off to Cloud Account`() {
+        val env = launch()
+        compose.onNodeWithTag(ChromeTags.PROFILE).performClick()
+        compose.onNodeWithTag(ChromeTags.PROFILE_ACCOUNT).performClick()
+        assertEquals(1, env.accountOpened)
+    }
+
+    @Test fun `Profile then Settings opens the declared strip, and Back returns to Tasks`() {
+        launch()
+        compose.onNodeWithTag(ChromeTags.PROFILE).performClick()
+        compose.onNodeWithTag(ChromeTags.PROFILE_SETTINGS).performClick()
+        compose.waitForIdle()
+        for (id in listOf("appearance", "agent", "inbox", "feeds")) compose.onNodeWithTag(PageTabsTags.tab(id)).assertExists()
+        compose.onNodeWithTag(SettingsTags.APPEARANCE).assertIsDisplayed()
+        compose.onNodeWithTag(ChromeTags.BACK).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(TasksTags.PAGE).assertIsDisplayed()
+    }
+
+    @Test fun `choosing Dark in Appearance is saved`() {
+        val env = launch()
+        compose.onNodeWithTag(ChromeTags.PROFILE).performClick()
+        compose.onNodeWithTag(ChromeTags.PROFILE_SETTINGS).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(KitPartTags.segment(SettingsTags.THEME, "dark")).performClick()
+        compose.waitForIdle()
+        assertEquals(ThemeMode.DARK, env.savedMode)
+        compose.onNodeWithTag(KitPartTags.segment(SettingsTags.THEME, "system")).performClick()
+        compose.waitForIdle()
+        assertEquals(ThemeMode.SYSTEM, env.savedMode)
+    }
+
+    @Test fun `the Agent page saves its declaration and says no backend is deployed after a run that found none`() {
+        val env = launch()
+        compose.onNodeWithTag(ChromeTags.PROFILE).performClick()
+        compose.onNodeWithTag(ChromeTags.PROFILE_SETTINGS).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(PageTabsTags.tab("agent")).performClick()
+        compose.waitForIdle()
+        for (tag in listOf(SettingsTags.AGENT_ENABLED, SettingsTags.SOURCE, SettingsTags.ACCOUNT, SettingsTags.MAILBOXES, SettingsTags.FREQUENCY,
+            SettingsTags.MODEL, SettingsTags.TARGET, SettingsTags.extract("events"), SettingsTags.extract("bookings"),
+            SettingsTags.extract("invoices"), SettingsTags.extract("deadlines"), SettingsTags.SAVE)) {
+            compose.onNodeWithTag(tag).assertExists()
+        }
+        compose.onNodeWithTag(SettingsTags.AGENT_ENABLED).performClick()
+        compose.onNodeWithTag(SettingsTags.MAILBOXES).performScrollTo().performTextInput("inbox")
+        compose.onNodeWithTag(SettingsTags.SAVE).performScrollTo().performClick()
+        compose.waitForIdle()
+        val saved = env.savedAgent
+        assertNotNull(saved)
+        assertTrue(saved!!.enabled)
+        assertEquals("inbox", saved.mailboxes)
+        env.repo.recordAgentRun(1, "backend_not_deployed", "the fleet AI gateway is not reachable")
+        env.controller.refreshAgent()
+        compose.waitForIdle()
+        compose.onNodeWithText("Agent backend not deployed: the fleet AI gateway is not reachable").assertIsDisplayed()
+    }
+
+    // ── the AI panel ────────────────────────────────────────────────────────────────────────────────────
+
+    @Test fun `the AI button drops a panel down and a second tap closes it`() {
+        launch()
+        compose.onNodeWithTag(ChromeTags.AI_PANEL).assertDoesNotExist()
+        compose.onNodeWithTag(ChromeTags.AI).performClick()
+        compose.onNodeWithTag(ChromeTags.AI_PANEL).assertIsDisplayed()
+        compose.onNodeWithTag(com.diegonmarcos.superapp.ai.AiTags.CHAT_INPUT).assertExists()
+        compose.onNodeWithTag(ChromeTags.AI).performClick()
+        compose.onNodeWithTag(ChromeTags.AI_PANEL).assertDoesNotExist()
+    }
+}

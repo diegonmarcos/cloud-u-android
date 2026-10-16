@@ -42,14 +42,14 @@ object ExtractionProtocol {
         val out = ArrayList<ProposalDraft>()
         for (i in 0 until array.length()) {
             val o = array.optJSONObject(i) ?: continue
-            val kind = ProposalKind.of(o.optString("kind").trim().lowercase()) ?: continue
+            val kind = ProposalKind.of(str(o, "kind").trim().lowercase()) ?: continue
             if (kind !in wanted) continue
-            val title = o.optString("title").trim().take(MAX_TITLE)
+            val title = str(o, "title").trim().take(MAX_TITLE)
             if (title.isEmpty()) continue
             out.add(ProposalDraft(
-                kind = kind, title = title, details = o.optString("details").trim().take(MAX_DETAILS),
+                kind = kind, title = title, details = str(o, "details").trim().take(MAX_DETAILS),
                 dateTarget = date(o, "date_target"), dateDeadline = date(o, "date_deadline"),
-                location = o.optString("location").trim().takeUnless { it.equals("null", true) } ?: "",
+                location = str(o, "location").trim(),
                 sourceRef = sourceRef, sourceSubject = subject,
                 confidence = o.optDouble("confidence", 0.0).let { if (it.isNaN()) 0.0 else it.coerceIn(0.0, 1.0) },
             ))
@@ -58,10 +58,10 @@ object ExtractionProtocol {
         return out
     }
 
-    private fun date(o: JSONObject, key: String): String? {
-        if (o.isNull(key)) return null
-        return validDate(o.optString(key))
-    }
+    /** A string field; JSON null (or absent) is "" on every org.json, where optString alone says "null" on some. */
+    private fun str(o: JSONObject, key: String): String = if (o.isNull(key)) "" else o.optString(key)
+
+    private fun date(o: JSONObject, key: String): String? = if (o.isNull(key)) null else validDate(o.optString(key))
 
     /** [s] as yyyy-MM-dd when it is a real date, else null. */
     fun validDate(s: String?): String? {

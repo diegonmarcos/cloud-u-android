@@ -78,6 +78,15 @@ private val PageMapSaver = listSaver<androidx.compose.runtime.snapshots.Snapshot
     restore = { l -> mutableStateMapOf<String, String>().also { m -> l.chunked(2).forEach { m[it[0]] = it[1] } } },
 )
 
+/** The tab of the legacy tasks.html shell each declared page shows (its own tab ids: todo, events, calendar, invites, configs). */
+internal fun webTabFor(page: String): String = when (page) {
+    Ids.PAGE_EVENTS -> "events"
+    Ids.PAGE_CALENDAR -> "calendar"
+    Ids.PAGE_INVITES -> "invites"
+    Ids.PAGE_FEEDS -> "configs"
+    else -> "events"
+}
+
 private tailrec fun Context.activity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.activity()
@@ -124,7 +133,7 @@ fun TasksShell(env: TasksEnv, nav: NavDecl, themeMode: ThemeMode, onThemeMode: (
     val onIsland = section in nav.bottomNav
     val title = when (section) {
         Ids.SETTINGS -> "Settings"
-        Ids.TASKS -> "Tasks"
+        Ids.TASKS -> current?.page(Ids.PAGE_TASKS)?.label ?: "Tasks"
         else -> current?.page(page)?.label ?: current?.label.orEmpty()
     }
 
@@ -163,7 +172,7 @@ fun TasksShell(env: TasksEnv, nav: NavDecl, themeMode: ThemeMode, onThemeMode: (
                                     Ids.TASKS -> TasksScreen(env.controller, env.host, env.pickedLink, onPickedConsumed = env::consumePicked)
                                     Ids.CALENDAR -> {
                                         SectionPagesDrawer(pages, page) { pageOf[section] = it.id }
-                                        LegacyWeb(tab = page, Modifier.fillMaxSize())
+                                        LegacyWeb(tab = webTabFor(page), Modifier.fillMaxSize())
                                     }
                                     Ids.SETTINGS -> {
                                         SectionPagesDrawer(pages, page) { pageOf[section] = it.id }
@@ -211,7 +220,7 @@ private fun SettingsContent(env: TasksEnv, page: String, themeMode: ThemeMode, o
                 onReject = { controller.decide(it.id, false, null) },
             )
         }
-        Ids.PAGE_FEEDS -> LegacyWeb(tab = "configs", Modifier.fillMaxSize())
+        Ids.PAGE_FEEDS -> LegacyWeb(tab = webTabFor(Ids.PAGE_FEEDS), Modifier.fillMaxSize())
     }
 }
 
