@@ -30,99 +30,141 @@
 # What is asserted is that deferred work which repaints is owned by the view's
 # lifecycle, and that work which is NOT so owned cannot reach a Context.
 #
+# SHAPE (#773): the page is Compose. The structural cure the Views needed a rule
+# for is now the framework's: a coroutine launched from a LaunchedEffect /
+# produceState / rememberCoroutineScope() is cancelled when its composition is
+# disposed, and the composition is disposed with the fragment's VIEW lifecycle
+# (KitComposeFragment). So the rule becomes: every coroutine the page owns comes
+# from one of those three, and NOTHING outside them (a Handler, a lifecycleScope
+# - the FRAGMENT's, which outlives the view - GlobalScope, an executor) exists.
+#
 # Invariants:
-#   T1  no bare Handler and no postDelayed in the fragment — both outlive it
-#   T2  every coroutine is on viewLifecycleOwner's scope, never the FRAGMENT's
-#       (the fragment's own scope survives onDestroyView, so it would crash
-#       identically) and never an unscoped one
+#   T1  no bare Handler and no postDelayed in the aggregator files - both outlive them
+#   T2  every coroutine is owned by the composition (LaunchedEffect / produceState /
+#       rememberCoroutineScope), never by the FRAGMENT's lifecycleScope (it survives
+#       onDestroyView, so it would crash identically) and never an unscoped one
 #   T3  no ad-hoc executor in the notification render path
-#   T4  THE GENERAL RULE: no `.post`/animation callback anywhere in the file
-#       reaches a Context, computed as the transitive closure of this
-#       fragment's own functions over `resources` / requireContext /
-#       requireActivity — this is the assertion that would have caught the
-#       crash before it shipped, and it is checked against the CODE, not
-#       against the list of paths that happen to exist today
-#   T5  the ntfy poll and the refresh watchdog — the two paths that did outlive
-#       the view — are on the view scope by name
+#   T4  THE GENERAL RULE: no deferred callback reaches a Context after the view is
+#       gone - a fragment Context getter (requireContext / requireActivity /
+#       resources) is read only while composing, and the one `.post` left is
+#       guarded by isAdded and touches no Context
+#   T5  the ntfy poll and the refresh watchdog - the two paths that did outlive
+#       the view - are on the composition scope by name, and the poll is off-main
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  ok: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
-AGG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
-[ -f "$AGG" ] || { echo "  FAIL: $AGG not found"; exit 1; }
+DIR="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher"
+FRAG="$DIR/AggregatorStackFragment.kt"
+[ -f "$FRAG" ] || { echo "  FAIL: $FRAG not found"; exit 1; }
 
-# CODE-ONLY view. The KDoc above the fixed sites quotes the bug verbatim —
-# `body.post`, `host.postDelayed`, `View.post` — so every assertion below must
-# read the Kotlin and never the prose explaining it.
-CODE="$(mktemp)"; trap 'rm -f "$CODE"' EXIT
-python3 - "$AGG" "$CODE" <<'STRIP'
-import io, re, sys
-s = io.open(sys.argv[1], encoding="utf-8").read()
-s = re.sub(r"/\*.*?\*/", "", s, flags=re.S)
-s = re.sub(r"^[ \t]*//.*$", "", s, flags=re.M)
-s = re.sub(r"[ \t]//.*$", "", s, flags=re.M)
-io.open(sys.argv[2], "w", encoding="utf-8").write(s)
+# CODE-ONLY view. The KDoc above the fixed sites quotes the bug verbatim -
+# `body.post`, `host.postDelayed`, `View.post` - so every assertion below must
+# read the Kotlin and never the prose explaining it. One stripped copy per file,
+# plus ALL.kt holding the page's whole code.
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+python3 - "$DIR" "$TMP" <<'STRIP'
+import glob, io, os, re, sys
+d, out = sys.argv[1], sys.argv[2]
+allc = []
+for f in sorted(glob.glob(os.path.join(d, "Aggregator*.kt"))):
+    s = io.open(f, encoding="utf-8").read()
+    s = re.sub(r"/\*.*?\*/", "", s, flags=re.S)
+    s = re.sub(r"^[ \t]*//.*$", "", s, flags=re.M)
+    s = re.sub(r"[ \t]//.*$", "", s, flags=re.M)
+    io.open(os.path.join(out, os.path.basename(f)), "w", encoding="utf-8").write(s)
+    allc.append(s)
+io.open(os.path.join(out, "ALL.kt"), "w", encoding="utf-8").write("\n".join(allc))
 STRIP
+ALL="$TMP/ALL.kt"
+CODE="$TMP/AggregatorStackFragment.kt"
+STATE="$TMP/AggregatorState.kt"
+PANELS="$TMP/AggregatorPanels.kt"
+NOTIFY="$TMP/AggregatorNotify.kt"
 
 echo "== nothing schedules work the view cannot cancel =="
 # A bare Handler and postDelayed are both owned by the Looper, not by the view,
 # so neither is cancelled by onDestroyView. The watchdog was the second armed
 # copy of this crash: it fired finishRefresh, which builds its outcome line
-# with stateLine, which calls dp().
-if grep -qE '(android\.os\.)?Handler\(' "$CODE"; then
-  bad "T1: a bare Handler is back — the Looper owns it, the view cannot cancel it"
+# and so reached a Context.
+if grep -qE '(android\.os\.)?Handler\(' "$ALL"; then
+  bad "T1: a bare Handler is back - the Looper owns it, the view cannot cancel it"
 else
-  ok "T1: no bare Handler in the fragment"
+  ok "T1: no bare Handler in the aggregator page"
 fi
-if grep -q 'postDelayed' "$CODE"; then
-  bad "T1: postDelayed is back — it fires after onDestroyView with no way to stop it"
+if grep -q 'postDelayed' "$ALL"; then
+  bad "T1: postDelayed is back - it fires after onDestroyView with no way to stop it"
 else
-  ok "T1: no postDelayed in the fragment"
+  ok "T1: no postDelayed in the aggregator page"
 fi
 
-echo "== every coroutine belongs to the VIEW, not to the fragment =="
-# The distinction is the whole point and it is one identifier wide:
-# `lifecycleScope` on a Fragment lives until onDestroy, so it OUTLIVES the
-# views it paints; `viewLifecycleOwner.lifecycleScope` is cancelled in
-# onDestroyView. Getting this wrong reproduces the crash exactly.
-total_launch=$(grep -c '\.launch {' "$CODE")
-view_launch=$(grep -c 'viewLifecycleOwner\.lifecycleScope\.launch {' "$CODE")
-# Counted, not thresholded: a fixed minimum would make this fail whenever a
-# coroutine is legitimately removed, which is a failure for the wrong reason.
-# The invariant is the RATIO — every launch site, whatever the number.
-if [ "$total_launch" -eq "$view_launch" ] && [ "$view_launch" -gt 0 ]; then
-  ok "T2: all $view_launch coroutines are on viewLifecycleOwner's scope"
+echo "== every coroutine belongs to the composition, not to the fragment =="
+# `lifecycleScope` on a Fragment lives until onDestroy, so it OUTLIVES the views it
+# paints. A composition-owned scope is cancelled when the view's composition is
+# disposed. Getting this wrong reproduces the crash exactly.
+if grep -qE 'lifecycleScope' "$ALL"; then
+  bad "T2: a lifecycleScope is back - the fragment's outlives its views (and viewLifecycleOwner's no longer is the owner here)"
 else
-  bad "T2: $total_launch launch sites but only $view_launch on viewLifecycleOwner — the rest outlive the views they paint"
+  ok "T2: no lifecycleScope anywhere in the aggregator page"
 fi
-if grep -qE 'GlobalScope|CoroutineScope\(' "$CODE"; then
-  bad "T2: an unscoped CoroutineScope is back — nothing cancels it"
+if grep -qP 'GlobalScope|(?<![A-Za-z])CoroutineScope\(|MainScope\(' "$ALL"; then
+  bad "T2: an unscoped CoroutineScope is back - nothing cancels it"
 else
   ok "T2: no unscoped CoroutineScope"
 fi
-
-echo "== the notification render path owns no threads of its own =="
-# The cloud dashboard's status-light pool is a different case and stays (T4
-# proves its callback touches no Context). What must not come back is an
-# executor in the path that paints notification ROWS, because that path calls
-# dp() on every row it draws.
-if grep -q 'Executors\.' \
-     <<<"$(awk '/private fun renderNtfyGroups/,/^    private fun paintNtfyGroup/' "$CODE")"; then
-  bad "T3: renderNtfyGroups owns an executor again — nothing cancels it on teardown"
+# Counted, not thresholded: every launch site must be reachable only from a
+# composition-owned scope. Each `.launch {` receiver is a name that is, in the
+# same file, either a rememberCoroutineScope() or a CoroutineScope PARAMETER
+# handed in by a composable (the state never creates one).
+python3 - "$TMP" <<'OWN' && ok "T2: every .launch is on a composition-owned scope" || bad "T2: see above"
+import glob, os, re, sys
+bad = []
+n = 0
+for f in sorted(glob.glob(os.path.join(sys.argv[1], "Aggregator*.kt"))):
+    if f.endswith("ALL.kt"): continue
+    t = open(f).read()
+    for m in re.finditer(r'(\w+)\.launch\s*\{', t):
+        n += 1
+        recv = m.group(1)
+        owned = re.search(r'val\s+%s\s*=\s*rememberCoroutineScope\(\)' % recv, t) or \
+                re.search(r'\b%s\s*:\s*CoroutineScope\b' % recv, t)
+        if not owned:
+            bad.append("%s: %s.launch has no rememberCoroutineScope()/CoroutineScope parameter behind it" % (os.path.basename(f), recv))
+    # bare `launch {` (inside a LaunchedEffect / produceState / coroutineScope) is owned by that block.
+for b in bad: print("    " + b)
+if n == 0:
+    print("    no launch sites found - either they are gone or this parser stopped matching them")
+    sys.exit(1)
+sys.exit(1 if bad else 0)
+OWN
+if grep -q 'LaunchedEffect' "$NOTIFY" && grep -q 'produceState' "$TMP/AggregatorFeeds.kt" && grep -q 'rememberCoroutineScope' "$CODE"; then
+  ok "T2: the page's work hangs off LaunchedEffect / produceState / rememberCoroutineScope"
 else
-  ok "T3: renderNtfyGroups schedules nothing the view does not own"
+  bad "T2: the page lost one of LaunchedEffect / produceState / rememberCoroutineScope - something else owns its work"
 fi
 
-echo "== THE GENERAL RULE: no unscoped callback can reach a Context =="
-python3 - "$CODE" <<'CLOSURE' && ok "T4: no .post/animation callback reaches a Context" || bad "T4: see above"
-import io, re, sys
+echo "== the notification render path owns no threads of its own =="
+# The cloud dashboard's status-light pings used to run on an 8-thread executor;
+# they are a Semaphore-gated LaunchedEffect now. What must not come back is an
+# executor anywhere on the page: it would outlive the composition.
+if grep -q 'Executors\.' "$ALL"; then
+  bad "T3: an executor is back on the aggregator page - nothing cancels it on teardown"
+else
+  ok "T3: the aggregator page schedules nothing the view does not own"
+fi
+if grep -q 'Semaphore(8)' "$PANELS" && grep -q 'LaunchedEffect(host, port)' "$PANELS"; then
+  ok "T3: the status-light pings are bounded (8) and composition-scoped"
+else
+  bad "T3: the status-light pings lost their bound or their scope"
+fi
 
-src = io.open(sys.argv[1], encoding="utf-8").read()
+echo "== THE GENERAL RULE: no deferred callback can reach a Context =="
+python3 - "$TMP" <<'CLOSURE' && ok "T4: no deferred callback reaches a Context" || bad "T4: see above"
+import glob, io, os, re, sys
 
 def block_end(s, open_idx):
-    """Index just past the {...} block whose opening brace is at open_idx."""
     depth = 0
     for i in range(open_idx, len(s)):
         if s[i] == '{': depth += 1
@@ -131,133 +173,77 @@ def block_end(s, open_idx):
             if depth == 0: return i + 1
     return len(s)
 
-def paren_close(s, open_idx):
-    depth = 0
-    for i in range(open_idx, len(s)):
-        if s[i] == '(': depth += 1
-        elif s[i] == ')':
-            depth -= 1
-            if depth == 0: return i
-    return len(s)
+problems = []
 
-# ── every function this fragment declares: body, span and parameter names ──
-# The parameters matter. `flipRead(v, r, paint: (Boolean) -> Unit, toRight)`
-# takes a repaint LAMBDA called `paint`, and this file separately declares a
-# local `fun paint()` inside filterRow that does reach a Context. Treating the
-# two as one name is how a text-level closure invents a path that is not there.
-funcs, spans = {}, []
-for m in re.finditer(r'\bfun\s+(\w+)\s*\(', src):
-    name = m.group(1)
-    pclose = paren_close(src, m.end() - 1)
-    params = set(re.findall(r'(\w+)\s*:', src[m.end():pclose]))
-    brace = src.find('{', pclose)
-    eq = src.find('=', pclose)
-    stop = src.find('\n\n', pclose)
-    if eq != -1 and (brace == -1 or eq < brace) and (stop == -1 or eq < stop):
-        end = stop if stop != -1 else len(src)          # expression body
-    elif brace != -1:
-        end = block_end(src, brace)
-    else:
-        continue
-    funcs[name] = funcs.get(name, "") + src[pclose:end]
-    spans.append((m.start(), end, name, params))
-
-# ── seed: functions that reach a Context DIRECTLY ────────────────────────
-# `resources` with no receiver is Fragment.getResources() → requireContext().
+# (a) the FRAGMENT's own Context getters are read only while COMPOSING: inside
+# Content()/palette()/onCreate - never in a lambda a Handler/animator/coroutine
+# runs later. `resources` with no receiver is Fragment.getResources().
+frag = io.open(os.path.join(sys.argv[1], "AggregatorStackFragment.kt"), encoding="utf-8").read()
+spans = []
+for m in re.finditer(r'\bfun\s+(\w+)\s*\(', frag):
+    brace = frag.find('{', m.end())
+    spans.append((m.start(), block_end(frag, brace), m.group(1)))
 CTX = re.compile(r'(?<![\w.])resources\b|requireContext\(|requireActivity\(')
-reaching = {n for n, b in funcs.items() if CTX.search(b)}
+for m in CTX.finditer(frag):
+    host = [sp for sp in spans if sp[0] <= m.start() < sp[1]]
+    name = host[-1][2] if host else "<class body>"
+    if name not in ("Content", "palette"):
+        problems.append("AggregatorStackFragment.kt: a fragment Context getter (%s) in %s() - it can run after onDestroyView" % (m.group(0), name))
 
-# ── close over calls until nothing new reaches a Context ─────────────────
-changed = True
-while changed:
-    changed = False
-    for n, b in funcs.items():
-        if n in reaching: continue
-        for callee in set(re.findall(r'\b(\w+)\s*\(', b)):
-            if callee in reaching and callee != n:
-                reaching.add(n); changed = True; break
+# (b) nothing but the fragment may reach the FRAGMENT's context at all: the state,
+# the model and the bodies hold the Context they were handed, which a destroyed
+# fragment cannot invalidate.
+for f in sorted(glob.glob(os.path.join(sys.argv[1], "Aggregator*.kt"))):
+    b = os.path.basename(f)
+    if b in ("AggregatorStackFragment.kt", "ALL.kt"): continue
+    t = io.open(f, encoding="utf-8").read()
+    if re.search(r'requireContext\(|requireActivity\(', t):
+        problems.append("%s reaches a fragment Context getter" % b)
 
-if not reaching:
-    print("    read no Context-reaching functions out of the fragment — the")
-    print("    parser is asserting against nothing")
-    sys.exit(1)
-
-def enclosing(off):
-    """Innermost declared function containing `off`, for parameter shadowing."""
-    best = None
-    for start, end, name, params in spans:
-        if start <= off < end and (best is None or start > best[0]):
-            best = (start, end, name, params)
-    return best
-
-# ── every deferred callback that is NOT lifecycle-scoped ─────────────────
-# `.post {`, `.postDelayed {`, `.withEndAction {` — a Handler or an animator
-# owns these, so onDestroyView cannot stop them.
-bad_paths, found = [], 0
-for m in re.finditer(r'\.(post|postDelayed|withEndAction)\s*\{', src):
-    found += 1
-    bopen = src.index('{', m.end() - 1)
-    body = src[bopen:block_end(src, bopen)]
-    host = enclosing(m.start())
-    shadowed = host[3] if host else set()
-    hit = sorted({c for c in re.findall(r'\b(\w+)\s*\(', body)
-                  if c in reaching and c not in shadowed})
-    if hit:
-        line = src[:m.start()].count('\n') + 1
-        recv = src[max(0, m.start() - 40):m.start()].split('\n')[-1].strip()
-        bad_paths.append((line, recv + m.group(0), hit))
-
+# (c) every `.post {` / `.postDelayed {` / `.withEndAction {` left on the page is
+# guarded by the fragment's isAdded and calls nothing that touches a Context.
+found = 0
+for f in sorted(glob.glob(os.path.join(sys.argv[1], "Aggregator*.kt"))):
+    b = os.path.basename(f)
+    if b == "ALL.kt": continue
+    t = io.open(f, encoding="utf-8").read()
+    for m in re.finditer(r'\.(post|postDelayed|withEndAction)\s*\{', t):
+        found += 1
+        bopen = t.index('{', m.end() - 1)
+        body = t[bopen:block_end(t, bopen)]
+        if 'isAdded' not in body:
+            problems.append("%s: a .%s callback with no isAdded guard" % (b, m.group(1)))
+        if re.search(r'\bdp\(|\bresources\b|requireContext\(|LocalContext', body):
+            problems.append("%s: a .%s callback reaches a Context" % (b, m.group(1)))
 if found == 0:
-    print("    found no .post/.withEndAction callbacks at all — either they are")
-    print("    gone (fine) or this parser stopped matching them (not fine)")
-    sys.exit(1)
+    problems.append("found no .post callback at all - the embedded-fragment commit moved or this parser stopped matching it")
 
-for line, site, hit in bad_paths:
-    print("    AggregatorStackFragment.kt:%d  %s" % (line, site))
-    print("      reaches a Context via: %s" % ", ".join(hit))
-    print("      — a Handler owns this callback, so it runs after onDestroyView")
-
-if bad_paths:
-    sys.exit(1)
-print("    checked %d unscoped callbacks against %d Context-reaching functions"
-      % (found, len(reaching)))
+for p in problems: print("    " + p)
+sys.exit(1 if problems else 0)
 CLOSURE
-
-# THE BLIND SPOT T4 HAS TO SKIP, PINNED BY HAND. Shadowing a parameter means
-# the closure above stops at `paint(...)` inside the swipe animation's end
-# action without following it. The lambda it actually receives is built in
-# notifRowView; it sets colours and a typeface on views it already holds, and
-# that is what makes the skip safe. If it ever starts measuring, T4 would go
-# blind rather than loud — so the claim is made here instead.
-if grep -qE '(^|[^.[:alnum:]_])(dp\(|resources)' \
-     <<<"$(awk '/val paint: \(Boolean\) -> Unit = \{/,/^        \}$/' "$CODE")"; then
-  bad "T4: the swipe repaint closure now measures — it runs from an animator callback the view lifecycle does not cancel, and T4 cannot see inside it"
-else
-  ok "T4: the swipe repaint closure touches views only, never a Context"
-fi
 
 echo "== the two paths that actually crashed are scoped, by name =="
 # T4 is the rule; these two are the evidence. Both were the same defect: work
 # posted to a Handler that survived the fragment.
-if grep -q 'viewLifecycleOwner\.lifecycleScope\.launch {' \
-     <<<"$(awk '/private fun renderNtfyGroups/,/^    private fun paintNtfyGroup/' "$CODE")"; then
-  ok "T5: the ntfy poll's repaint is cancelled with the view"
+if grep -q 'LaunchedEffect(i, state.pollEpoch' "$NOTIFY" && grep -q 'state.pollPanel(i, panel)' "$NOTIFY"; then
+  ok "T5: the ntfy poll is driven by a LaunchedEffect - cancelled with the composition"
 else
-  bad "T5: the ntfy poll no longer paints from the view's scope — the crash is back"
+  bad "T5: the ntfy poll no longer runs from a LaunchedEffect - the crash is back"
 fi
-if grep -q 'viewLifecycleOwner\.lifecycleScope\.launch {' \
-     <<<"$(awk '/private fun startRefresh/,/^    }$/' "$CODE")"; then
-  ok "T5: the refresh watchdog is cancelled with the view"
+if grep -q 'fun startRefresh(scope: CoroutineScope)' "$STATE" && grep -q 'scope.launch' \
+     <<<"$(awk '/fun startRefresh/,/^    }$/' "$STATE")" \
+   && grep -q 'st.startRefresh(scope)' "$CODE" && grep -q 'val scope = rememberCoroutineScope()' "$CODE"; then
+  ok "T5: the refresh watchdog is launched on the composition's scope"
 else
-  bad "T5: the watchdog is no longer view-scoped — it fires finishRefresh into a dead Context"
+  bad "T5: the watchdog is no longer composition-scoped - it fires finishRefresh into a dead Context"
 fi
-# The poll must still run OFF the main thread — a lifecycle fix that moved a
+# The poll must still run OFF the main thread - a lifecycle fix that moved a
 # blocking socket read onto the UI thread would trade a crash for an ANR.
-if grep -q 'withContext(kotlinx.coroutines.Dispatchers.IO)' \
-     <<<"$(awk '/private fun renderNtfyGroups/,/^    private fun paintNtfyGroup/' "$CODE")"; then
+if grep -q 'withContext(Dispatchers.IO) { AggregatorModel.ntfyPoller(slots) }' \
+     <<<"$(awk '/suspend fun pollPanel/,/^    }$/' "$STATE")"; then
   ok "T5: the poll itself still runs off the main thread"
 else
-  bad "T5: the network poll is on the main thread now — an ANR instead of a crash"
+  bad "T5: the network poll is on the main thread now - an ANR instead of a crash"
 fi
 
 echo

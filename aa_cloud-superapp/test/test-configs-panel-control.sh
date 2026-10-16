@@ -47,6 +47,7 @@ CONTROLS="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/DeviceControl
 FRAGMENT="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/ControlFragment.kt"
 PUSH="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/BadgePanes.kt"   # #580: was PushFragment.kt
 AGG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
+AGGPANELS="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorPanels.kt"   # the card bodies (#773)
 KT_LCF="$APP/app/src/main/java/com/diegonmarcos/superapp/settings/LauncherConfigFragment.kt"
 # #515 moved the READING of the declaration out of the pane and into one
 # resolver both the pane and the restart receiver share, so T28/T29 follow
@@ -1316,19 +1317,22 @@ for msg in bad: print('  ' + msg)
 sys.exit(1 if bad else 0)
 PY
 grep -q 'aboveFilters *= p.optBoolean("above_filters"' "$SECTIONS" || nb_fail="$nb_fail Sections:above_filters-not-parsed"
-python3 - "$AGG" <<'PY' || nb_fail="$nb_fail AggregatorStackFragment:order"
+python3 - "$AGG" "$AGGPANELS" <<'PY' || nb_fail="$nb_fail AggregatorStackFragment:order"
 import re, sys
 s = open(sys.argv[1], encoding='utf-8').read()
+panels = open(sys.argv[2], encoding='utf-8').read()
 try:
-    a = s.index('for (panel in abovePanels) addPanel(panel)')
-    f = s.index('column.addView(filterRow(ctx, filters))')
-    b = s.index('for (panel in belowPanels) addPanel(panel)')
+    a = s.index('for ((i, panel) in above)')
+    f = s.index('FilterRow(st)')
+    b = s.index('for ((i, panel) in below)')
 except ValueError as e:
     print('  missing marker: %s' % e); sys.exit(1)
 if not (a < f < b):
     print('  render order is not above-panels, Filters, other panels'); sys.exit(1)
+if 'it.value.aboveFilters' not in s:
+    print('  the page no longer partitions on aboveFilters'); sys.exit(1)
 for kind in ('notification_badges', 'notification_badge_configs'):
-    if not re.search(r'"%s"\s*->\s*badgePane' % kind, s):
+    if not re.search(r'"%s"\s*->\s*BadgePane' % kind, panels):
         print('  panel kind %s has no renderer' % kind); sys.exit(1)
 PY
 [ -z "$nb_fail" ] \

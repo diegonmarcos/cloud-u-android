@@ -35,97 +35,117 @@ ok()  { PASS=$((PASS+1)); echo "  ok: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 has() { grep -qF "$2" "$1" 2>/dev/null; }
 
-AGG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
+DIR="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher"
 
 # CODE-ONLY view. The counting assertions must not see the KDoc, which
-# necessarily NAMES the things it explains this file does not do.
-CODE="$(mktemp)"; trap 'rm -f "$CODE"' EXIT
-python3 - "$AGG" "$CODE" <<'PY'
-import io, re, sys
-s = io.open(sys.argv[1], encoding="utf-8").read()
-s = re.sub(r"/\*.*?\*/", "", s, flags=re.S)
-s = re.sub(r"^[ \t]*//.*$", "", s, flags=re.M)
-s = re.sub(r"[ \t]//.*$", "", s, flags=re.M)
-io.open(sys.argv[2], "w", encoding="utf-8").write(s)
+# necessarily NAMES the things it explains this file does not do. (#773: the
+# page is split - rules in AggregatorModel, memory in AggregatorState, the boxes
+# and the Archive in AggregatorNotify, the cards in AggregatorPanels.)
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+python3 - "$DIR" "$TMP" <<'PY'
+import glob, io, os, re, sys
+for f in glob.glob(os.path.join(sys.argv[1], "Aggregator*.kt")):
+    s = io.open(f, encoding="utf-8").read()
+    s = re.sub(r"/\*.*?\*/", "", s, flags=re.S)
+    s = re.sub(r"^[ \t]*//.*$", "", s, flags=re.M)
+    s = re.sub(r"[ \t]//.*$", "", s, flags=re.M)
+    io.open(os.path.join(sys.argv[2], os.path.basename(f)), "w", encoding="utf-8").write(s)
 PY
+MODEL="$TMP/AggregatorModel.kt"; STATE="$TMP/AggregatorState.kt"; NOTIFY="$TMP/AggregatorNotify.kt"
+PANELS="$TMP/AggregatorPanels.kt"; FRAG="$TMP/AggregatorStackFragment.kt"
+cat "$TMP"/Aggregator*.kt > "$TMP/ALL.kt"; CODE="$TMP/ALL.kt"
+for f in "$MODEL" "$STATE" "$NOTIFY" "$PANELS" "$FRAG"; do
+  [ -f "$f" ] || { echo "  FAIL: $(basename "$f") not found"; exit 1; }
+done
 
 echo "== archived state rides the existing mechanism =="
-has "$AGG" 'StackFilters.select(ctx, filterPage, ARCHIVED_PREFIX + key' \
+has "$STATE" 'StackFilters.select(ctx, page, AggregatorModel.ARCHIVED_PREFIX + key' \
   && ok "T1: archiving writes a StackFilters selection" \
   || bad "T1: archiving no longer goes through StackFilters"
-has "$AGG" 'StackFilters.selected(ctx, filterPage, yesNo(ARCHIVED_PREFIX + key))' \
+has "$STATE" 'StackFilters.selected(ctx, page, yesNo(AggregatorModel.ARCHIVED_PREFIX + key))' \
   && ok "T1: archived state is read back through StackFilters" \
   || bad "T1: archived state is read from somewhere else now"
 if grep -q 'getSharedPreferences' "$CODE"; then
-  bad "T1: the fragment opens its own SharedPreferences — that is a second store"
+  bad "T1: the page opens its own SharedPreferences — that is a second store"
 else
   ok "T1: no second store — prefs stay behind StackFilters"
 fi
 
 echo "== the key shape is the page-setting one =="
-has "$AGG" 'private const val ARCHIVED_PREFIX     = "__archived/"' \
+has "$MODEL" 'const val ARCHIVED_PREFIX = "__archived/"' \
   && ok "T2: archived keys carry the __ page-setting prefix" \
-  || bad "T2: the __archived/ prefix is gone — filterRow would try to draw it"
-has "$AGG" 'private const val FILTER_ARCHIVE_OPEN = "__archive_open"' \
+  || bad "T2: the __archived/ prefix is gone — FilterRow would try to draw it"
+has "$MODEL" 'const val FILTER_ARCHIVE_OPEN = "__archive_open"' \
   && ok "T2: the Archive's own open/closed flag is a page setting too" \
   || bad "T2: the archive-open flag is no longer a __ page setting"
-# filterPage is the page id, so one page's archive cannot hide another's boxes.
-n=$(grep -c 'ARCHIVED_PREFIX' "$CODE")
+# `page` is the page id, so one page's archive cannot hide another's boxes.
+n=$(grep -c 'ARCHIVED_PREFIX' "$STATE")
 [ "$n" -ge 2 ] && ok "T2: the prefix is used for both read and write ($n sites)" \
   || bad "T2: only $n use of ARCHIVED_PREFIX — one side reads a different key"
+has "$PANELS" 'filterNot { it.id.startsWith(AggregatorModel.SETTING_PREFIX) }' \
+  && ok "T2: the Filters row skips drawing a control for any __ setting" \
+  || bad "T2: the Filters row would draw the __ settings as toggles"
 
 echo "== every app box gets the control, and it moves the box =="
-has "$AGG" 'header.addView(archivePill(ctx, g.key, block, homeBody))' \
+has "$NOTIFY" 'ArchivePill(state, g.key, archived)' \
   && ok "T3: the control sits on the group header, beside the clear-all tick" \
   || bad "T3: app boxes no longer get an Archive control"
-# groupBlock is the ONE place an app box is built (phone, cloud, in-app, ntfy),
+# GroupBlock is the ONE place an app box is built (phone, cloud, in-app, ntfy),
 # so one call site here is every box on every page.
-b=$(grep -c 'private fun groupBlock' "$CODE")
-[ "$b" -eq 1 ] && ok "T3: one groupBlock builder, so one Archive control for every stream" \
-  || bad "T3: $b groupBlock builders — a stream could get a box with no control"
-has "$AGG" 'target.addView(block)' && has "$AGG" '(block.parent as? ViewGroup)?.removeView(block)' \
-  && ok "T3: the click moves the box, it does not only write a preference" \
+b=$(grep -c 'internal fun GroupBlock' "$CODE")
+[ "$b" -eq 1 ] && ok "T3: one GroupBlock builder, so one Archive control for every stream" \
+  || bad "T3: $b GroupBlock builders — a stream could get a box with no control"
+# The click MOVES the box: it flips the stored state, the card's list skips an
+# archived box, and the Archive section draws exactly the archived ones. A
+# preference written with nothing re-drawn would read as a dead button.
+has "$NOTIFY" 'state.setArchived(key, !state.isArchived(key))' \
+  && has "$NOTIFY" 'if (state.isArchived(v.group.key)) continue' \
+  && has "$NOTIFY" 'filter { state.isArchived(it.group.key) }' \
+  && ok "T3: the click moves the box (stored, skipped in its card, drawn in the Archive)" \
   || bad "T3: the Archive click no longer relocates the box — it would look dead"
 
 echo "== the Archive section =="
-# Built before the cards (so a card can file into it) but added AFTER them, so
-# it is the last thing on the page.
-bld=$(grep -n 'val archive = buildArchiveSection(ctx)' "$CODE" | head -1 | cut -d: -f1)
-# #580: the card loop is the one BELOW the filter row (above_filters panels lead the page).
-loop=$(grep -n 'for (panel in belowPanels) addPanel(panel)' "$CODE" | head -1 | cut -d: -f1)
-add=$(grep -n 'column.addView(archive)' "$CODE" | head -1 | cut -d: -f1)
-if [ -n "$bld" ] && [ -n "$loop" ] && [ -n "$add" ] && [ "$bld" -lt "$loop" ] && [ "$loop" -lt "$add" ]; then
-  ok "T4: built before the cards (line $bld), attached after them (line $add)"
+# Drawn AFTER the cards, so it is the last thing on the page.
+loop=$(grep -n 'for ((i, panel) in below)' "$FRAG" | head -1 | cut -d: -f1)
+add=$(grep -n 'ArchiveSection(st, actions.open)' "$FRAG" | head -1 | cut -d: -f1)
+if [ -n "$loop" ] && [ -n "$add" ] && [ "$loop" -lt "$add" ]; then
+  ok "T4: drawn after the cards (cards line $loop, Archive line $add)"
 else
-  bad "T4: the Archive is no longer built-before / attached-after the card loop"
+  bad "T4: the Archive is no longer drawn after the card loop"
 fi
-has "$AGG" 'archiveWrap?.isVisible = box.childCount > 0' \
+has "$NOTIFY" 'if (archived.isEmpty()) return' \
   && ok "T4: an empty Archive is not drawn at all" \
   || bad "T4: the Archive renders even when it holds nothing"
 
 echo "== the count stays honest =="
-s=$(grep -c 'syncArchiveHeader()' "$CODE")
-[ "$s" -ge 5 ] \
-  && ok "T5: the Archive line is resynced from $s sites (build, place, click, rebuild)" \
-  || bad "T5: only $s syncArchiveHeader() calls — some path changes the count silently"
-has "$AGG" 'archiveBox?.removeAllViews()' \
-  && ok "T6: the Archive is emptied before the bodies that re-file into it rebuild" \
-  || bad "T6: a toggle tap would add a second copy of every archived box"
+# The Archive line is DERIVED from the same groups the cards skip (a
+# derivedStateOf over allViews), so every path that changes the count - a click,
+# a late ntfy poll, a toggle, a pull - changes the line with it; there is no
+# separate sync to forget.
+if has "$NOTIFY" '${archived.size}' && grep -q 'derivedStateOf' <<<"$(awk '/internal fun ArchiveSection/,/^}$/' "$NOTIFY")"; then
+  ok "T5: the Archive line is derived from the archived groups (no separate count to drift)"
+else
+  bad "T5: the Archive line is no longer derived from the archived groups — some path changes the count silently"
+fi
+if grep -qE 'addView|removeAllViews' "$NOTIFY"; then
+  bad "T6: a View-style append is back - a toggle tap would add a second copy of every archived box"
+else
+  ok "T6: nothing is appended to the Archive, so a re-render cannot leave two copies of one box"
+fi
 
 echo "== an inbox card keeps its summary =="
-has "$AGG" 'renderStats(ctx, body, panel); renderInboxNotifications(ctx, body, panel) }' \
+has "$PANELS" '"stats" -> { StatsBody(panel); InboxNotifications(state, panel, onOpen) }' \
   && ok "T7: stats first, notifications after — the counts were kept, not replaced" \
   || bad "T7: the stats card no longer renders its summary rows"
-# Each inbox branch is two lines: the kind, then its renderers. -A2 covers the
-# branch without reaching the next one.
+# Each inbox branch is ONE line: the kind, then its renderers.
 for k in mail_accounts chat_matrix chat_mattermost; do
-  grep -q 'renderInboxNotifications' <<<"$(grep -A2 -F "\"$k\"" "$CODE")" \
+  grep -q 'InboxNotifications' <<<"$(grep -F "\"$k\" ->" "$PANELS")" \
     && ok "T7: $k draws its inbox notifications" \
     || bad "T7: $k lost its inbox notifications"
 done
 
 echo "== the inbox→app binding is data =="
-has "$AGG" '?.let { Sections.externalApp(it) }' \
+has "$MODEL" '?.let { Sections.externalApp(it) }' \
   && ok "T8: an extapp:<id> target resolves through ui.external_apps" \
   || bad "T8: the extapp route is gone"
 # The label route is GONE and must stay gone: it bound a card's notifications
@@ -145,7 +165,7 @@ code = io.open(sys.argv[1], encoding="utf-8").read()
 lits = re.findall(r'"((?:\\.|[^"\\\n])*)"', code)
 pkg  = re.compile(r'^(com|io|org|net|me)\.[A-Za-z0-9_]+\.[A-Za-z0-9_.]+$')
 bad  = [l for l in lits if pkg.match(l)]
-print("  ok: T8: no package literal in the fragment" if not bad
+print("  ok: T8: no package literal in the page" if not bad
       else "  FAIL: T8: package literal(s) hardcoded: " + ", ".join(bad))
 sys.exit(1 if bad else 0)
 PY
@@ -195,12 +215,13 @@ PY2
 echo "== the unresolved case is quiet for the user =="
 # T12: an undeclared inbox is a gap only whoever edits build.json can close, so
 # it must not be spelled out on the phone. The branch renders nothing and logs.
-if grep -q 'body.addView' <<<"$(awk '/val app = inboxApp\(panel\)/,/^        }$/' "$CODE")"; then
+if grep -qE 'Agg(Caption|StateLine|EmptyHint)\(' <<<"$(awk '/if \(app == null\) \{/,/^    }$/' "$NOTIFY")"; then
   bad "T12: the unresolved branch draws into the card again — build.json prose on the phone"
 else
   ok "T12: the unresolved branch draws nothing"
 fi
-has "$AGG" 'if (panel.kind in INBOX_KINDS) android.util.Log.w(TAG,' \
+has "$NOTIFY" 'if (panel.kind in AggregatorModel.INBOX_KINDS) LaunchedEffect(panel) {' \
+  && has "$NOTIFY" 'android.util.Log.w(TAG, "inbox panel' \
   && ok "T12: the gap is reported to logcat, where whoever can fix it looks" \
   || bad "T12: nothing reports the gap at all — it would be invisible to everyone"
 
@@ -209,14 +230,15 @@ p=$(grep -cF 'StackFilters.pruneRead(' "$CODE")
 [ "$p" -eq 3 ] \
   && ok "T9: still three prunes — the per-app inbox view added none" \
   || bad "T9: $p pruneRead calls — a partial view prunes, and read rows will reappear"
-# The watermark must be read+advanced OUTSIDE the `filters.isNotEmpty()` branch,
-# or a page with no toggle row reports its whole history as "N new" forever.
-if grep -q 'StackFilters.markSeen' <<<"$(awk '/val filters = Sections.stackFiltersFor/,0' "$CODE")"; then
-  bad "T10: markSeen sits after/inside the filters branch again"
+# The watermark must be read+advanced by the STATE every visit, outside any
+# `filters.isNotEmpty()` branch, or a page with no toggle row reports its whole
+# history as "N new" forever.
+if grep -q 'StackFilters.markSeen' "$PANELS" "$NOTIFY"; then
+  bad "T10: markSeen sits in a body again — the state is the one place that advances it"
+elif grep -q 'StackFilters.markSeen(ctx, page, System.currentTimeMillis())' <<<"$(awk '/^    init \{/,/^    }$/' "$STATE")"; then
+  ok "T10: the watermark advances on every visit (state init), filter row or not"
 else
-  has "$AGG" 'StackFilters.markSeen(ctx, filterPage, System.currentTimeMillis())' \
-    && ok "T10: the watermark advances on every visit, filter row or not" \
-    || bad "T10: the watermark is never advanced"
+  bad "T10: the watermark is never advanced"
 fi
 
 echo

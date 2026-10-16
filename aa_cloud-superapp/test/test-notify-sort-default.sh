@@ -30,19 +30,24 @@ ok()  { PASS=$((PASS+1)); echo "  ok: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 has() { grep -qF "$2" "$1" 2>/dev/null; }
 
-AGG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
+DIR="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher"
 
 # CODE-ONLY view. The KDoc necessarily NAMES the alphabetical ordering it
 # explains this file no longer does, so the prose must not be searchable here.
-CODE="$(mktemp)"; trap 'rm -f "$CODE"' EXIT
-python3 - "$AGG" "$CODE" <<'PY'
-import io, re, sys
-s = io.open(sys.argv[1], encoding="utf-8").read()
-s = re.sub(r"/\*.*?\*/", "", s, flags=re.S)
-s = re.sub(r"^[ \t]*//.*$", "", s, flags=re.M)
-s = re.sub(r"[ \t]//.*$", "", s, flags=re.M)
-io.open(sys.argv[2], "w", encoding="utf-8").write(s)
+# (#773: the ordering rules are AggregatorModel's, the page's Sort memory is
+# AggregatorState's, the box builder is AggregatorNotify's.)
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+python3 - "$DIR" "$TMP" <<'PY'
+import glob, io, os, re, sys
+for f in glob.glob(os.path.join(sys.argv[1], "Aggregator*.kt")):
+    s = io.open(f, encoding="utf-8").read()
+    s = re.sub(r"/\*.*?\*/", "", s, flags=re.S)
+    s = re.sub(r"^[ \t]*//.*$", "", s, flags=re.M)
+    s = re.sub(r"[ \t]//.*$", "", s, flags=re.M)
+    io.open(os.path.join(sys.argv[2], os.path.basename(f)), "w", encoding="utf-8").write(s)
 PY
+MODEL="$TMP/AggregatorModel.kt"; STATE="$TMP/AggregatorState.kt"; NOTIFY="$TMP/AggregatorNotify.kt"
+cat "$TMP"/Aggregator*.kt > "$TMP/ALL.kt"; CODE="$TMP/ALL.kt"
 
 echo "== every generated Notify tab carries the same default =="
 # THE assertion the "fixed on one tab only" failure walks straight through.
@@ -102,18 +107,18 @@ PY2
 echo "== the Kotlin fallback agrees with the data =="
 # A page carrying notification boxes without a toggle row (C3 Obsv) never
 # assigns sortMode, so this literal IS its ordering.
-has "$AGG" 'private var sortMode   = "time"' \
+has "$STATE" 'var sortMode by mutableStateOf(selection("sort", "time"))' \
   && ok "T4: the no-filter-row fallback is time too" \
   || bad "T4: the Kotlin sortMode fallback is no longer 'time'"
 
 echo "== both box builders read the toggle =="
-has "$AGG" 'else visible.sortedByDescending { it.newest }' \
+has "$MODEL" 'else visible.sortedByDescending { it.newest }' \
   && ok "T5: per-app boxes are ordered by their newest notification under Time" \
   || bad "T5: renderGroups no longer orders boxes by recency"
-# The regression this test exists for: renderNtfyGroups ordered its boxes with
+# The regression this test exists for: the channel builder ordered its boxes with
 # a bare topics.sorted(), alphabetically, whatever the toggle said.
 if grep -q 'topics.sorted()' "$CODE"; then
-  bad "T6: renderNtfyGroups sorts unconditionally again — Sort=Time is dead on every tab"
+  bad "T6: the channel builder sorts unconditionally again — Sort=Time is dead on every tab"
 else
   ok "T6: no unconditional sort left in the channel builder"
 fi
@@ -123,17 +128,17 @@ n=$(grep -c 'sortMode == "app"' "$CODE")
 [ "$n" -eq 2 ] \
   && ok "T6: both builders branch on sortMode ($n sites)" \
   || bad "T6: $n builder(s) read sortMode — expected 2 (per-app boxes + channels)"
-has "$AGG" 'compareByDescending<String> { newestMeasured(it) }.then(byLabel))' \
+has "$MODEL" 'compareByDescending<String> { newestMeasured(cache, it) }.then(byLabel))' \
   && ok "T6: channels under Time are ordered by their last measurement" \
   || bad "T6: the channel Time ordering is gone"
 
 echo "== an unpolled channel makes no claim =="
-has "$AGG" '?.takeIf { it.ok }?.rows?.maxOfOrNull { it.ts } ?: Long.MIN_VALUE' \
+has "$MODEL" '?.takeIf { it.ok }?.rows?.maxOfOrNull { it.ts } ?: Long.MIN_VALUE' \
   && ok "T7: unmeasured and unreachable both sort last, not as fresh" \
   || bad "T7: a channel we never read can now be ranked as though we had"
 
 echo "== sorting can never bury something fresh =="
-has "$AGG" 'return shown.sortedByDescending { it.ts }' \
+has "$MODEL" 'return shown.sortedByDescending { it.ts }' \
   && ok "T8: inside a box the order is newest-first under both modes" \
   || bad "T8: within-group ordering now depends on the Sort toggle"
 
@@ -141,10 +146,10 @@ echo "== the layout is still per-app boxes, so the box controls survive =="
 # "Sort by time" was read as: the BOXES are ordered by their most recent
 # notification. The flat-list reading would delete the box, and with it the
 # per-app clear-all and Archive controls that were built on purpose.
-b=$(grep -c 'private fun groupBlock' "$CODE")
+b=$(grep -c 'internal fun GroupBlock' "$CODE")
 [ "$b" -eq 1 ] && ok "T9: one box builder, so every stream's boxes are the same boxes" \
-  || bad "T9: $b groupBlock builders"
-has "$AGG" 'header.addView(archivePill(ctx, g.key, block, homeBody))' \
+  || bad "T9: $b GroupBlock builders"
+has "$NOTIFY" 'ArchivePill(state, g.key, archived)' \
   && ok "T9: the per-app Archive control still rides on the box header" \
   || bad "T9: the Archive control is gone — the boxes were flattened away"
 

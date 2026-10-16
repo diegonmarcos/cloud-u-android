@@ -7,7 +7,32 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.settings.GridColumns
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import com.google.android.material.card.MaterialCardView
 
 /** The card grid an INDEX row is drawn with.
@@ -27,7 +52,7 @@ object IndexTiles {
 
     /** Standard index-tile height, also the height of the padding cells that
      *  keep a short last row tile-sized instead of stretched. */
-    private const val TILE_HEIGHT_DP = 96
+    internal const val TILE_HEIGHT_DP = 96
 
     data class Cell(
         val label: String,
@@ -114,4 +139,42 @@ object IndexTiles {
 
     private fun dp(ctx: Context, v: Int): Int =
         (v * ctx.resources.displayMetrics.density).toInt()
+}
+
+/** The same card grid in Compose: [cells] laid out `cols` per row, wrapping, the last row padded so a short row stays
+ *  tile-sized instead of stretching. Configs ▸ About and C3 ▸ Topology draw their index with the one object. */
+@Composable
+fun IndexTileGrid(cols: Int, cells: List<IndexTiles.Cell>, modifier: Modifier = Modifier) {
+    val columns = cols.coerceAtLeast(1)
+    Column(modifier) {
+        for ((r, row) in cells.chunked(columns).withIndex()) {
+            Row(Modifier.fillMaxWidth()) {
+                for (cell in row) IndexTileCard(cell, columns, Modifier.weight(1f))
+                repeat(columns - row.size) { Spacer(Modifier.weight(1f).height(IndexTiles.TILE_HEIGHT_DP.dp)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun IndexTileCard(cell: IndexTiles.Cell, cols: Int, modifier: Modifier) {
+    val p = LocalKitPalette.current
+    val ctx = LocalContext.current
+    val density = ctx.resources.displayMetrics.density
+    val padDp = GridColumns.cellPadDp(cols)
+    // Page padding 16 dp a side, card margin 4 dp a side, then the inner pad.
+    val cellPx = GridColumns.cellPx(ctx.resources.displayMetrics.widthPixels - (32 * density).toInt(), cols)
+    val iconDp = GridColumns.iconPx((28 * density).toInt(), cellPx, ((8 + 2 * padDp) * density).toInt(), (16 * density).toInt()) / density
+    Column(
+        modifier.padding(4.dp).height(IndexTiles.TILE_HEIGHT_DP.dp).clip(RoundedCornerShape(12.dp))
+            .background(p.surface).clickable { cell.onClick() }.padding(padDp.dp).testTag("index:" + cell.label),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+    ) {
+        when {
+            cell.iconRes != 0 -> Icon(painterResource(cell.iconRes), null, tint = p.textPrimary, modifier = Modifier.size(iconDp.dp))
+            cell.glyph.isNotBlank() -> Text(cell.glyph, fontSize = 20.sp, textAlign = TextAlign.Center)
+        }
+        Text(cell.label, color = p.textPrimary, fontSize = (GridColumns.labelSp(cols) + 1f).sp, maxLines = 2,
+            overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+    }
 }
