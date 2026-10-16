@@ -43,10 +43,10 @@ job = wf[wf.index('  sync_server:'):] if '  sync_server:' in wf else ''
 job = job.split('\n  build_and_publish:')[0] if '\n  build_and_publish:' in job else job
 check(bool(job), 'ship-cloud-notes.yml declares the sync_server job')
 check('npm ci' in job and 'vitest run' in job, 'the job installs from the lockfile and runs the suite')
-i_smoke = job.find('Smoke test'); i_push = job.find('buildx build --platform linux/amd64,linux/arm64')
+i_smoke = job.find('Smoke test'); i_push = job.find('uses: ./.github/actions/publish-ghcr')
 check(i_smoke != -1 and i_push != -1 and i_smoke < i_push, 'the image smoke test runs BEFORE the push')
 check('401' in job[i_smoke:i_push] and 'refusing to start' in job[i_smoke:i_push], 'the smoke test covers the 401 and the fail-closed start')
-check("github.ref == 'refs/heads/main'" in job, 'the image is pushed from main only')
+check("github.ref == 'refs/heads/main'" in job, 'the image is pushed from main only, through the publish-ghcr module')
 check('cloud-notes-sync' in job, 'the image is named like the fleet\'s other images (<name>-binaries)')
 
 print('RESULT: %s' % ('RED' if fails else 'GREEN'))
