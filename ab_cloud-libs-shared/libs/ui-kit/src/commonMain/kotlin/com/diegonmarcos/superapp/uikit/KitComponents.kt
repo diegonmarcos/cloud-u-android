@@ -65,6 +65,11 @@ object KitDensity {
     val glyph: Dp = 28.dp
     /** The hero avatar. */
     val avatar: Dp = 56.dp
+    /**
+     * The touch floor for Material's own clickable parts (StoreDensity.TAP): the old View screens were 36dp-dense,
+     * Material3 defaults to 48dp. The fleet's own controls (island, top bar) keep their 48dp targets.
+     */
+    val touch: Dp = 36.dp
     /** Corner radius of a card, a tile and a chip. */
     val corner: Dp = 12.dp
 

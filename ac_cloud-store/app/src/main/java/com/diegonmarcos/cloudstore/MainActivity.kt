@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -43,6 +42,7 @@ import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 import com.diegonmarcos.superapp.appstore.StoreDensity
+import com.diegonmarcos.superapp.uikit.KitDenseMaterial
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.compose.AndroidFragment
 import com.diegonmarcos.superapp.appstore.FleetBearer
@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
         StorePages.hostDrawsStrip = true
         requested = tabFrom(intent)
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
+            KitDenseMaterial(darkColorScheme()) {
                 Surface(Modifier.fillMaxSize()) { StoreShell() }
             }
         }

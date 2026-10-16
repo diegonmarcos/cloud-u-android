@@ -143,7 +143,7 @@ object CloudStoreHandoff {
             val installed = installed(requireContext())
             return androidx.compose.ui.platform.ComposeView(requireContext()).apply {
                 setContent {
-                    androidx.compose.material3.MaterialTheme(androidx.compose.material3.darkColorScheme()) {
+                    com.diegonmarcos.superapp.uikit.KitDenseMaterial(androidx.compose.material3.darkColorScheme()) {
                         androidx.compose.material3.Surface {
                             // #894 The Store is Cloud Store's alone: installed -> a button that opens it;
                             // absent -> the one entry point SuperApp keeps, Install Cloud Store. The Store

@@ -14,10 +14,12 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -29,8 +31,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 
 /**
@@ -92,12 +96,47 @@ fun CloudKitTheme(palette: KitPalette, content: @Composable () -> Unit) {
         background = Color.Transparent,
         onBackground = palette.textPrimary,
     )
-    MaterialTheme(colorScheme = scheme) {
+    KitDenseMaterial(scheme) {
         CompositionLocalProvider(
             LocalKitPalette provides palette,
             LocalContentColor provides palette.textPrimary,
             content = content,
         )
+    }
+}
+
+/**
+ * Material3's typography with the two things that made every converted screen swell removed.
+ *
+ * MaterialTheme wraps its content in ProvideTextStyle(typography.bodyLarge), whose lineHeight is a FIXED 24.sp
+ * and letterSpacing 0.5.sp. A fleet screen sets only `fontSize = 9.sp` (the dense ramp: KitDensity, StoreDensity)
+ * and the Text still inherits the 24.sp line, so every line of 9sp text is 24sp tall and every row, tab and
+ * button label grows ~2.5x (the owner's "huge padding" after the Compose conversions). A View TextView takes
+ * the font's own line height and no tracking; so does this: lineHeight, letterSpacing and lineHeightStyle are
+ * UNSPECIFIED on every role, and only the sizes and weights stay Material's. A screen that wants a taller line
+ * says so on its Text.
+ */
+fun kitTypography(base: Typography = Typography()): Typography = base.copy(
+    displayLarge = base.displayLarge.dense(), displayMedium = base.displayMedium.dense(), displaySmall = base.displaySmall.dense(),
+    headlineLarge = base.headlineLarge.dense(), headlineMedium = base.headlineMedium.dense(), headlineSmall = base.headlineSmall.dense(),
+    titleLarge = base.titleLarge.dense(), titleMedium = base.titleMedium.dense(), titleSmall = base.titleSmall.dense(),
+    bodyLarge = base.bodyLarge.dense(), bodyMedium = base.bodyMedium.dense(), bodySmall = base.bodySmall.dense(),
+    labelLarge = base.labelLarge.dense(), labelMedium = base.labelMedium.dense(), labelSmall = base.labelSmall.dense(),
+)
+
+private fun TextStyle.dense(): TextStyle =
+    copy(lineHeight = TextUnit.Unspecified, letterSpacing = TextUnit.Unspecified, lineHeightStyle = null)
+
+/**
+ * THE fleet's Material wrapper: [kitTypography] (no fixed 24.sp line) and a [KitDensity.touch] floor for
+ * Material's own clickable parts (Button, IconButton, Switch, Checkbox, Chip: 48.dp by default, which is what
+ * padded every dense row after the conversion). [CloudKitTheme] uses it; a host that builds its own
+ * MaterialTheme (a Compose activity shell) wraps in this instead, never in a bare MaterialTheme(colorScheme).
+ */
+@Composable
+fun KitDenseMaterial(colorScheme: androidx.compose.material3.ColorScheme, content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = colorScheme, typography = kitTypography()) {
+        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides KitDensity.touch, content = content)
     }
 }
 

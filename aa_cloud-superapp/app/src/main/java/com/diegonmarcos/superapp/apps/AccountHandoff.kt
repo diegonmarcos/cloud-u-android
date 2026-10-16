@@ -79,7 +79,7 @@ object AccountHandoff {
             val installed = installed(requireContext())
             return androidx.compose.ui.platform.ComposeView(requireContext()).apply {
                 setContent {
-                    androidx.compose.material3.MaterialTheme(androidx.compose.material3.darkColorScheme()) {
+                    com.diegonmarcos.superapp.uikit.KitDenseMaterial(androidx.compose.material3.darkColorScheme()) {
                         androidx.compose.material3.Surface { if (installed) OpenCloudAccount() else InstallCloudAccount() }
                     }
                 }

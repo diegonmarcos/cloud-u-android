@@ -1,0 +1,59 @@
+{
+  "_doc": "cloud-android-density-guard policy: the fleet's Compose hosts are dense and own window insets ONCE. Everything the guard knows is here. scan_roots: the apps and libs the Compose conversion reached; a legacy Compose app with its own Typography (Writer, Gallery, Drive, Search) is outside.",
+  "owner": "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt",
+  "owner_needles": [
+    "fun kitTypography",
+    "fun KitDenseMaterial",
+    "LocalMinimumInteractiveComponentSize",
+    "lineHeight = TextUnit.Unspecified"
+  ],
+  "scan_glob_ext": ".kt",
+  "skip_dirs": [
+    "/test/",
+    "/androidTest/",
+    "/build/",
+    "/.git/",
+    "/node_modules/",
+    "/ac_cloud-matrix/",
+    "/ac_cloud-vault/",
+    "/ac_cloud-notes/"
+  ],
+  "theme_exempt": [
+    "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt"
+  ],
+  "rules": {
+    "bare_material_theme": {
+      "why": "MaterialTheme(colorScheme = ...) without typography = kitTypography() hands every Text a fixed 24.sp bodyLarge line and every Material control a 48dp floor: the 'huge padding' after the Compose conversions. Use CloudKitTheme or KitDenseMaterial; an app with its own Typography names `typography =`.",
+      "pattern": "MaterialTheme\\((?![^{]*typography\\s*=)"
+    },
+    "scaffold_without_insets": {
+      "why": "Scaffold applies WindowInsets.systemBars to its content by default; inside a host that already clears the bars (FleetChrome + AppTopBarScaffold / BottomNavHost) that is a second copy of the same padding. Pass contentWindowInsets = WindowInsets(0) or the one slice you own.",
+      "pattern": "\\bScaffold\\((?![^{]*contentWindowInsets)"
+    },
+    "nested_safe_drawing": {
+      "why": "safeDrawing / systemBars padding is the window host's job exactly once (AppTopBarScaffold's host takes statusBarsPadding; BottomNavHost clears the bottom). A page that takes it again stacks both.",
+      "pattern": "\\.(safeDrawingPadding|systemBarsPadding|safeContentPadding)\\(\\)|windowInsetsPadding\\(\\s*WindowInsets\\.(safeDrawing|systemBars|safeContent)\\b"
+    }
+  },
+  "rule_allow": {
+    "nested_safe_drawing": [
+      "ab_cloud-libs-shared/libs/bottomnav/",
+      "ab_cloud-libs-shared/libs/keyboard/"
+    ],
+    "scaffold_without_insets": [
+      "ab_cloud-libs-shared/libs/keyboard/"
+    ],
+    "bare_material_theme": [
+      "ab_cloud-libs-shared/libs/keyboard/"
+    ]
+  },
+  "scan_roots": [
+    "ab_cloud-libs-shared/libs/ui-kit",
+    "ab_cloud-libs-shared/libs/appstore",
+    "ab_cloud-libs-shared/libs/bottomnav",
+    "ab_cloud-libs-shared/libs/ai",
+    "ab_cloud-libs-shared/libs/keyboard",
+    "ac_cloud-store",
+    "aa_cloud-superapp"
+  ]
+}
