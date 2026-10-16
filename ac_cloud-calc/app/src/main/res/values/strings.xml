@@ -242,6 +242,19 @@
     </plurals>
     <string name="sound_answered_by">Answered by: %1$s</string>
     <string name="sheet_file">File</string>
+    <string name="sheet_stat_sum">Sum</string>
+    <string name="sheet_stat_avg">Avg</string>
+    <string name="sheet_stat_median">Median</string>
+    <string name="sheet_stat_stdev">StDev</string>
+    <string name="sheet_stat_min">Min</string>
+    <string name="sheet_stat_max">Max</string>
+    <string name="sheet_stat_ci">CI %1$s%%</string>
+    <string name="sheet_stat_dist">CI of the mean by</string>
+    <string name="sheet_stat_dist_t">Student t, %1$d values</string>
+    <string name="sheet_stat_dist_z">normal z, %1$d values</string>
+    <string name="sheet_stat_count">Count</string>
+    <string name="sheet_stat_errors">Errors</string>
+    <string name="sheet_stat_copied">Copied %1$s</string>
     <string name="drawer_sections">Sections</string>
     <string name="drawer_sheets">Sheets</string>
     <string name="drawer_new_sheet">New sheet</string>

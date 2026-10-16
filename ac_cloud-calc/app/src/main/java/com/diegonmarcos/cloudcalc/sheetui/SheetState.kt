@@ -9,10 +9,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import com.diegonmarcos.cloudcalc.sheet.A1
 import com.diegonmarcos.cloudcalc.sheet.Area
 import com.diegonmarcos.cloudcalc.sheet.Clip
 import com.diegonmarcos.cloudcalc.sheet.Format
+import com.diegonmarcos.cloudcalc.sheet.Refs
+import com.diegonmarcos.cloudcalc.sheet.Stat
+import com.diegonmarcos.cloudcalc.sheet.Stats
 import com.diegonmarcos.cloudcalc.sheet.Workbook
 import java.io.File
 import java.util.concurrent.CountDownLatch
@@ -84,6 +89,122 @@ class SheetState(val files: SheetFiles) {
         bump()
     }
 
+    // ── the edit bar and point-and-click references ──────────────────────────────────────────
+
+    /** The edit bar's text and caret. Outside an edit it mirrors [editText]; in one it is the user's. */
+    var draft by mutableStateOf(TextFieldValue(""))
+        private set
+    /** True from the first keystroke (or focus) in the edit bar until Enter, the check mark, the cross or a tap that abandons it. */
+    var editing by mutableStateOf(false)
+        private set
+    /** The cell being edited, fixed when the edit began: a tap on another cell or sheet is a reference, not a move. */
+    private var editSheet = ""
+    private var editC = 0
+    private var editR = 0
+    /** The span the last tap or drag step inserted (Refs.Edit.last); a plain field: only the next insertion reads it. */
+    private var lastInsert: IntRange? = null
+    private var pointStart: Pair<Int, Int>? = null
+
+    /** A formula is being edited: taps on the grid point at cells; the status bar steps aside. */
+    val formulaEditing: Boolean get() = editing && Refs.isFormula(draft.text)
+    /** The sheet the formula being edited lives on (a reference to another sheet is written Sheet2!A1). */
+    val editingSheet: String get() = editSheet
+
+    /** Show the active cell's raw text in the edit bar (when not mid-edit). */
+    fun syncDraft() { if (!editing) draft = TextFieldValue(editText()) }
+
+    fun beginEdit() {
+        if (editing) return
+        editing = true; editSheet = sheet; editC = anchorC; editR = anchorR; lastInsert = null
+    }
+
+    /** The user typed or moved the caret in the edit bar. */
+    fun type(v: TextFieldValue) {
+        beginEdit()
+        if (v.text != draft.text) lastInsert = null
+        draft = v
+    }
+
+    private fun draftEdit() = Refs.Edit(draft.text, draft.selection.min, draft.selection.max, lastInsert)
+
+    /** Insert [area]'s address at the caret (or in place of the last inserted one); false when a reference cannot stand there. */
+    fun pointInsert(area: Area): Boolean {
+        val e = draftEdit()
+        if (!formulaEditing || !Refs.canInsert(e)) return false
+        val n = Refs.insert(e, Refs.ref(area, if (sheet != editSheet) sheet else null))
+        draft = TextFieldValue(n.text, TextRange(n.start))
+        lastInsert = n.last
+        return true
+    }
+
+    /**
+     * A tap on cell (c, r). While a formula is edited it inserts the address; when no reference can stand at the
+     * caret the formula is committed first (as Excel does) and the tap selects. Any other edit is abandoned (it is
+     * discarded, as before), and the tap selects.
+     */
+    fun tapCell(c: Int, r: Int) {
+        if (formulaEditing) {
+            if (pointInsert(Area(c, r, c, r))) return
+            commitEdit()
+        } else if (editing) cancelEdit()
+        select(c, r)
+    }
+
+    /** A long press on (c, r) starts a drag: it extends the selection, or while a formula is edited grows a range reference. */
+    fun dragBegin(c: Int, r: Int) {
+        if (formulaEditing) {
+            pointStart = if (pointInsert(Area(c, r, c, r))) c to r else null
+        } else {
+            if (editing) cancelEdit()
+            pointStart = null
+            anchorC = c; anchorR = r; endC = c; endR = r
+        }
+    }
+
+    fun dragTo(c: Int, r: Int) {
+        val p = pointStart
+        if (formulaEditing && p != null) pointInsert(Area(minOf(p.first, c), minOf(p.second, r), maxOf(p.first, c), maxOf(p.second, r)))
+        else if (!formulaEditing) { endC = c; endR = r }
+    }
+
+    fun dragEnd() { pointStart = null; bump() }
+
+    /** A selection handle moved to (c, r): the start handle moves the anchor, the end handle the other corner. */
+    fun handleTo(end: Boolean, c: Int, r: Int) {
+        if (end) { endC = c; endR = r } else { anchorC = c; anchorR = r }
+    }
+
+    private fun backToEditCell() {
+        val i = wb.sheetNames().indexOf(editSheet)
+        if (i >= 0 && wb.active != i) wb.select(i)
+        anchorC = editC; anchorR = editR; endC = editC; endR = editR
+    }
+
+    /** Enter / the check mark: the draft goes to the cell the edit began on, wherever the user looked meanwhile. */
+    fun commitEdit() {
+        val text = draft.text
+        if (editing) backToEditCell()
+        editing = false; lastInsert = null; pointStart = null
+        commit(text)
+        draft = TextFieldValue(editText())
+    }
+
+    /** The cross: forget the draft and show the cell as it is. */
+    fun cancelEdit() {
+        if (editing) backToEditCell()
+        editing = false; lastInsert = null; pointStart = null
+        draft = TextFieldValue(editText())
+        bump()
+    }
+
+    // ── the status bar ───────────────────────────────────────────────────────────────────────
+
+    /** Stats of the selected numbers; null while a formula is edited or when the selection holds none. */
+    fun selectionStats(): Stats? {
+        rev
+        return if (formulaEditing) null else Stat.ofArea(wb, sheet, area)
+    }
+
     fun undo() { if (wb.undo()) bump() }
     fun redo() { if (wb.redo()) bump() }
     fun clearSelection() { wb.clear(sheet, area); bump() }
@@ -98,7 +219,7 @@ class SheetState(val files: SheetFiles) {
     fun resizeRow(r: Int, dp: Int) { wb.setRowHeight(sheet, r, dp); bump() }
 
     // sheets
-    fun switchTo(i: Int) { wb.select(i); anchorC = 0; anchorR = 0; endC = 0; endR = 0; bump() }
+    fun switchTo(i: Int) { if (editing && !formulaEditing) editing = false; wb.select(i); anchorC = 0; anchorR = 0; endC = 0; endR = 0; bump() }
     fun addSheet() { wb.addSheet(); bump() }
     fun rename(old: String, new: String): Boolean = wb.renameSheet(old, new).also { bump() }
     fun duplicate(n: String) { wb.duplicateSheet(n); bump() }
@@ -137,14 +258,14 @@ class SheetState(val files: SheetFiles) {
         val fresh = Workbook()
         if (!fresh.load(json)) return false
         save()
-        wb = fresh; name = n; files.lastName = n
+        wb = fresh; name = n; files.lastName = n; editing = false
         anchorC = 0; anchorR = 0; endC = 0; endR = 0
         bump(); return true
     }
 
     fun newWorkbook(n: String) {
         save()
-        wb = Workbook(); name = SheetFiles.safe(n); files.lastName = name
+        wb = Workbook(); name = SheetFiles.safe(n); files.lastName = name; editing = false
         anchorC = 0; anchorR = 0; endC = 0; endR = 0
         save(); bump()
     }

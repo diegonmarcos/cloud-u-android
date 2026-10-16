@@ -14,6 +14,17 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -66,7 +77,9 @@ import com.diegonmarcos.cloudcalc.Declarations
 import com.diegonmarcos.cloudcalc.R
 import com.diegonmarcos.cloudcalc.sheet.A1
 import com.diegonmarcos.cloudcalc.sheet.Area
+import com.diegonmarcos.cloudcalc.sheet.Fmt
 import com.diegonmarcos.cloudcalc.sheet.Format
+import com.diegonmarcos.cloudcalc.sheet.Refs
 import com.diegonmarcos.cloudcalc.sheet.Value
 import com.diegonmarcos.cloudcalc.sheetui.SheetHub
 import com.diegonmarcos.cloudcalc.sheetui.SheetState
@@ -84,6 +97,9 @@ object SheetTags {
     const val UNDO = "sheet_undo"
     const val REDO = "sheet_redo"
     const val EXTEND = "sheet_extend"
+    const val STATUS_BAR = "sheet_status_bar"
+    fun stat(id: String) = "sheet_stat_$id"
+    fun handle(kind: String) = "sheet_handle_$kind"
     fun tab(name: String) = "sheet_tab_$name"
     fun cell(c: Int, r: Int) = "sheet_cell_${A1.cell(c, r)}"
     fun action(id: String) = "sheet_action_$id"
@@ -106,6 +122,8 @@ fun SheetMode(@Suppress("UNUSED_PARAMETER") mode: Declarations.Mode) {
         SheetEditBar(st)
         Box(Modifier.weight(1f).fillMaxWidth()) { SheetGrid(st) }
         SheetTabs(st)
+        // The status bar: stats of the selected numbers, while no formula is being edited.
+        SheetStatusBar(st)
     }
 }
 
@@ -222,15 +240,31 @@ private fun NameDialog(title: String, initial: String, onDismiss: () -> Unit, on
     )
 }
 
+/** The colours of the references of a formula being edited: the n-th reference gets the n-th colour in the edit bar and in the grid. */
+private val RefColors = listOf(
+    Color(0xFF4285F4), Color(0xFFEA4335), Color(0xFF34A853), Color(0xFFA142F4),
+    Color(0xFFFF6D01), Color(0xFF00ACC1), Color(0xFFE91E63), Color(0xFF8D6E63),
+)
+private fun refColor(i: Int) = RefColors[i % RefColors.size]
+
+/** The edit bar's text with each reference in its colour (the text itself is unchanged, so the caret maps one to one). */
+private fun refTransform(tokens: List<Refs.Token>) = VisualTransformation { text ->
+    val styled: AnnotatedString = buildAnnotatedString {
+        append(text.text)
+        tokens.forEachIndexed { i, t -> if (t.range.last < text.length) addStyle(SpanStyle(color = refColor(i)), t.range.first, t.range.last + 1) }
+    }
+    TransformedText(styled, OffsetMapping.Identity)
+}
+
 /** Name box (the selection; type A1:C5 to select a range) and the edit bar, which shows the RAW text: the formula. */
 @Composable
 private fun SheetEditBar(st: SheetState) {
     var box by remember { mutableStateOf("") }
-    var text by remember { mutableStateOf("") }
-    LaunchedEffect(st.anchorC, st.anchorR, st.endC, st.endR, st.rev, st.wb.active) {
+    LaunchedEffect(st.anchorC, st.anchorR, st.endC, st.endR, st.rev, st.wb.active, st.editing) {
         box = st.area.let { if (it.cols > 1000 || it.rows > 1000) "${it.rows}×${it.cols}" else it.label() }
-        text = st.editText()
+        st.syncDraft()
     }
+    val transform = remember(st.draft.text) { refTransform(Refs.tokens(st.draft.text)) }
     Row(Modifier.fillMaxWidth().padding(horizontal = CalcMetrics.small), verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
             box, { box = it }, Modifier.width(110.dp).testTag(SheetTags.NAME_BOX), singleLine = true,
@@ -238,13 +272,14 @@ private fun SheetEditBar(st: SheetState) {
             keyboardActions = KeyboardActions(onGo = { A1.parseArea(box)?.let { st.selectArea(it) } }),
         )
         OutlinedTextField(
-            text, { text = it }, Modifier.weight(1f).testTag(SheetTags.EDIT_BAR), singleLine = true,
+            st.draft, { st.type(it) }, Modifier.weight(1f).testTag(SheetTags.EDIT_BAR).onFocusChanged { if (it.isFocused) st.beginEdit() }, singleLine = true,
             placeholder = { Text(stringResource(R.string.sheet_edit_hint)) },
+            visualTransformation = transform,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { st.commit(text) }),
+            keyboardActions = KeyboardActions(onDone = { st.commitEdit() }),
         )
-        TextButton(onClick = { st.commit(text) }, modifier = Modifier.testTag(SheetTags.COMMIT)) { Text("✓") }
-        TextButton(onClick = { text = st.editText() }) { Text("✗") }
+        TextButton(onClick = { st.commitEdit() }, modifier = Modifier.testTag(SheetTags.COMMIT)) { Text("✓") }
+        TextButton(onClick = { st.cancelEdit() }) { Text("✗") }
     }
 }
 
@@ -282,6 +317,22 @@ private fun SheetGrid(st: SheetState) {
     }
     val totalDp = with(density) { totalPx.toDp() }
     val sel = st.area
+    // While a formula is edited, each of its references is outlined in its colour (the same as in the edit bar).
+    val refBoxes: List<Pair<Area, Color>> = if (!st.formulaEditing) emptyList() else
+        Refs.tokens(st.draft.text).mapIndexedNotNull { i, t ->
+            if ((t.sheet ?: st.editingSheet).equals(sheetName, ignoreCase = true)) t.area to refColor(i) else null
+        }
+    // A pointer position inside cell (c, r), in px from its top-left, back to the cell it is over (a drag leaves its first cell).
+    val locate: (Int, Int, Float, Float) -> Pair<Int, Int> = remember(xs, rev, sheetName, dp, nCols) {
+        { c, r, dx, dy ->
+            val cc = colAt(xs, (xs[c] + dx).toInt().coerceIn(0, xs[nCols] - 1))
+            fun hpx(i: Int) = ((sheet.rowHeights[i] ?: defH) * dp).roundToInt().coerceAtLeast(1)
+            var rr = r; var y = dy
+            while (y >= hpx(rr) && rr < A1.MAX_ROWS - 1) { y -= hpx(rr); rr++ }
+            while (y < 0 && rr > 0) { rr--; y += hpx(rr) }
+            cc to rr
+        }
+    }
     Box(Modifier.fillMaxSize().onSizeChanged { viewport = it.width }.testTag(SheetTags.GRID)) {
         Box(Modifier.fillMaxSize().horizontalScroll(hScroll)) {
             Column(Modifier.width(totalDp).fillMaxHeight()) {
@@ -302,7 +353,7 @@ private fun SheetGrid(st: SheetState) {
                         Box(Modifier.width(totalDp).height(h)) {
                             for (c in first..last) {
                                 val w = with(density) { (xs[c + 1] - xs[c]).toDp() }
-                                GridCell(st, sheetName, c, r, w, h, sel, Modifier.offset { IntOffset(headerPx + xs[c], 0) })
+                                GridCell(st, sheetName, c, r, w, h, sel, refBoxes.lastOrNull { it.first.contains(c, r) }?.second, locate, Modifier.offset { IntOffset(headerPx + xs[c], 0) })
                             }
                             RowHeader(st, r, h, Modifier.offset { IntOffset(hScroll.value, 0) }.zIndex(1f))
                         }
@@ -331,7 +382,7 @@ private fun ColumnHeader(st: SheetState, c: Int, w: androidx.compose.ui.unit.Dp,
         modifier.width(w).height(CalcMetrics.cellHeight)
             .background(if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
             .border(CalcMetrics.hairline, MaterialTheme.colorScheme.outline)
-            .clickable { st.selectCol(c) },
+            .clickable { if (!st.formulaEditing) st.selectCol(c) },
         contentAlignment = Alignment.Center,
     ) {
         Text(A1.colName(c), fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -356,7 +407,7 @@ private fun RowHeader(st: SheetState, r: Int, h: androidx.compose.ui.unit.Dp, mo
         modifier.width(CalcMetrics.headerWidth).height(h)
             .background(if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
             .border(CalcMetrics.hairline, MaterialTheme.colorScheme.outline)
-            .clickable { st.selectRow(r) },
+            .clickable { if (!st.formulaEditing) st.selectRow(r) },
         contentAlignment = Alignment.Center,
     ) {
         Text((r + 1).toString(), fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -374,17 +425,33 @@ private fun RowHeader(st: SheetState, r: Int, h: androidx.compose.ui.unit.Dp, mo
 }
 
 @Composable
-private fun GridCell(st: SheetState, sheet: String, c: Int, r: Int, w: androidx.compose.ui.unit.Dp, h: androidx.compose.ui.unit.Dp, sel: Area, modifier: Modifier) {
+private fun GridCell(
+    st: SheetState, sheet: String, c: Int, r: Int, w: androidx.compose.ui.unit.Dp, h: androidx.compose.ui.unit.Dp, sel: Area,
+    refColor: Color?, locate: (Int, Int, Float, Float) -> Pair<Int, Int>, modifier: Modifier,
+) {
     val v = st.wb.value(sheet, c, r)
     val text = st.wb.display(sheet, c, r)
     val inSel = sel.contains(c, r)
     val active = c == st.anchorC && r == st.anchorR
     val scheme = MaterialTheme.colorScheme
+    val editingFormula = st.formulaEditing
+    var startDrag by remember { mutableStateOf(false) }
+    var endDrag by remember { mutableStateOf(false) }
     Box(
         modifier.width(w).height(h)
             .background(if (inSel) scheme.primary.copy(alpha = 0.18f) else Color.Transparent)
-            .border(if (active) 2.dp else CalcMetrics.hairline, if (active) scheme.primary else scheme.outline.copy(alpha = 0.5f))
-            .combinedClickable(onClick = { st.select(c, r) }, onLongClick = { st.extend = true; st.select(c, r) })
+            .background(refColor?.copy(alpha = 0.14f) ?: Color.Transparent)
+            .border(if (active || refColor != null) 2.dp else CalcMetrics.hairline, refColor ?: if (active) scheme.primary else scheme.outline.copy(alpha = 0.5f))
+            .clickable { st.tapCell(c, r) }
+            // Tap-and-hold, then drag: a range selection, or while a formula is edited a range reference (A1:B5).
+            .pointerInput(c, r, locate) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { st.dragBegin(c, r) },
+                    onDrag = { change, _ -> change.consume(); locate(c, r, change.position.x, change.position.y).let { (cc, rr) -> st.dragTo(cc, rr) } },
+                    onDragEnd = { st.dragEnd() },
+                    onDragCancel = { st.dragEnd() },
+                )
+            }
             .padding(horizontal = CalcMetrics.small)
             .testTag(SheetTags.cell(c, r)),
         contentAlignment = if (v is Value.Num) Alignment.CenterEnd else Alignment.CenterStart,
@@ -394,6 +461,84 @@ private fun GridCell(st: SheetState, sheet: String, c: Int, r: Int, w: androidx.
             color = if (v is Value.Err) scheme.error else scheme.onSurface,
             textAlign = if (v is Value.Num) TextAlign.End else TextAlign.Start,
         )
+        // Selection handles (not while a formula is edited): drag one to grow or shrink the range. The cell a drag began in keeps its handle until release.
+        if (!editingFormula) {
+            if (active || startDrag) SelectionHandle(st, false, c, r, w, h, locate, Modifier.align(Alignment.TopStart)) { startDrag = it }
+            if ((c == st.endC && r == st.endR) || endDrag) SelectionHandle(st, true, c, r, w, h, locate, Modifier.align(Alignment.BottomEnd)) { endDrag = it }
+        }
+    }
+}
+
+@Composable
+private fun SelectionHandle(
+    st: SheetState, end: Boolean, c: Int, r: Int, w: androidx.compose.ui.unit.Dp, h: androidx.compose.ui.unit.Dp,
+    locate: (Int, Int, Float, Float) -> Pair<Int, Int>, modifier: Modifier, dragging: (Boolean) -> Unit,
+) {
+    val density = LocalDensity.current
+    val size = CalcMetrics.resizeHandle
+    // The handle sits at a corner of its cell: its own (0,0) is that far from the cell's top-left.
+    val ox = if (end) with(density) { (w - size).toPx() } else 0f
+    val oy = if (end) with(density) { (h - size).toPx() } else 0f
+    Box(
+        modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.primary)
+            .testTag(SheetTags.handle(if (end) "end" else "start"))
+            .pointerInput(c, r, end, locate) {
+                detectDragGestures(
+                    onDragStart = { dragging(true) },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        locate(c, r, change.position.x + ox, change.position.y + oy).let { (cc, rr) -> st.handleTo(end, cc, rr) }
+                    },
+                    onDragEnd = { dragging(false); st.dragEnd() },
+                    onDragCancel = { dragging(false); st.dragEnd() },
+                )
+            },
+    )
+}
+
+/**
+ * The status bar: for the selected NUMBERS (text, empty cells and booleans are ignored; errors are counted, not
+ * summed) Sum, Avg, Median, StDev (sample), Min, Max, the confidence intervals of the mean at 67%, 97.5% and 99%
+ * as [low, high] and the count. The intervals use Student's t below 30 values and the normal z from 30 up, and the
+ * bar says which. Numbers are shown in the number format of the first selected number. A tap copies a figure.
+ */
+@Composable
+private fun SheetStatusBar(st: SheetState) {
+    val s = st.selectionStats() ?: return
+    val ctx = LocalContext.current
+    val spread = if (s.format.kind == Format.Kind.DATE) Format.GENERAL else s.format   // a sum or deviation of dates is a count of days
+    fun fmt(x: Double, f: Format = s.format) = Fmt.display(Value.Num(x), f)
+    val pct = { level: Double -> Fmt.general(level * 100) }
+    val items = buildList {
+        add(Triple("sum", ctx.getString(R.string.sheet_stat_sum), fmt(s.sum, spread)))
+        add(Triple("avg", ctx.getString(R.string.sheet_stat_avg), fmt(s.avg)))
+        add(Triple("median", ctx.getString(R.string.sheet_stat_median), fmt(s.median)))
+        s.stdev?.let { add(Triple("stdev", ctx.getString(R.string.sheet_stat_stdev), fmt(it, spread))) }
+        add(Triple("min", ctx.getString(R.string.sheet_stat_min), fmt(s.min)))
+        add(Triple("max", ctx.getString(R.string.sheet_stat_max), fmt(s.max)))
+        s.ci.forEach { add(Triple("ci_${pct(it.level)}", ctx.getString(R.string.sheet_stat_ci, pct(it.level)), "[" + fmt(it.low) + ", " + fmt(it.high) + "]")) }
+        if (s.ci.isNotEmpty()) add(Triple("dist", ctx.getString(R.string.sheet_stat_dist),
+            ctx.getString(if (s.dist == "t") R.string.sheet_stat_dist_t else R.string.sheet_stat_dist_z, s.n)))
+        add(Triple("count", ctx.getString(R.string.sheet_stat_count), s.n.toString()))
+        if (s.errors > 0) add(Triple("errors", ctx.getString(R.string.sheet_stat_errors), s.errors.toString()))
+    }
+    Row(
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).horizontalScroll(rememberScrollState())
+            .padding(horizontal = CalcMetrics.small).testTag(SheetTags.STATUS_BAR),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(CalcMetrics.gap),
+    ) {
+        items.forEach { (id, label, value) ->
+            Column(
+                Modifier.clickable {
+                    val cm = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText(label, value))
+                    st.message = ctx.getString(R.string.sheet_stat_copied, value)
+                }.padding(vertical = CalcMetrics.small).testTag(SheetTags.stat(id)),
+            ) {
+                Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                Text(value, fontSize = 12.sp, maxLines = 1)
+            }
+        }
     }
 }
 

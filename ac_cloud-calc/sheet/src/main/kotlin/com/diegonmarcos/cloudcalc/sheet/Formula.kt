@@ -27,7 +27,7 @@ object Formula {
 
     fun render(n: Node): String = "=" + r(n, 0)
 
-    private fun quoteSheet(s: String) =
+    fun quoteSheet(s: String) =
         if (Regex("^[A-Za-z_][A-Za-z0-9_.]*$").matches(s) && A1.parseCell(s) == null && !s.equals("TRUE", true) && !s.equals("FALSE", true)) s else "'" + s.replace("'", "''") + "'"
 
     private fun refText(x: Node.Ref, withSheet: Boolean): String =
