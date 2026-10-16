@@ -229,20 +229,6 @@
     ]
    }
   ],
-  "contacts": [
-   {
-    "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
-    "level": "signature",
-    "source": "libs:contacts/src/main/AndroidManifest.xml",
-    "component": "com.diegonmarcos.superapp.contacts.ContactsBackendService",
-    "id": "service:com.diegonmarcos.superapp.contacts.ContactsBackendService",
-    "kind": "service",
-    "name": "ContactsBackendService",
-    "actions": [],
-    "aidl": [],
-    "callers": []
-   }
-  ],
   "core": [
    {
     "id": "op:fleetalert/raise",
@@ -265,19 +251,6 @@
     "authority": "<pkg>.fleetconfig",
     "callers": [
      "aa_cloud-superapp",
-     "account",
-     "browser",
-     "c3",
-     "c3-webserver",
-     "calc",
-     "camera",
-     "chat",
-     "code",
-     "contacts",
-     "dialer",
-     "drive",
-     "gallery",
-     "keyboard",
      "keyboard-engines",
      "lib-analytics-sink",
      "lib-cal",
@@ -290,30 +263,7 @@
      "lib-ml-l-sound-yamnet",
      "lib-net-wg",
      "lib-news",
-     "lib-ops-engine",
-     "lib-rootfs-nixdroid",
-     "lib-rootfs-termux",
-     "mail",
-     "matrix",
-     "me",
-     "media-center",
-     "morpheus",
-     "myterminal",
-     "nav",
-     "news",
-     "nix-on-droid",
-     "notes",
-     "office",
-     "search",
-     "store",
-     "tasks",
-     "termux",
-     "tools-small-llms",
-     "vault",
-     "wallet",
-     "watchdog",
-     "watchtower",
-     "writer"
+     "lib-ops-engine"
     ]
    }
   ],
@@ -403,9 +353,7 @@
     "level": "signature",
     "source": "libs:devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt",
     "callers": [
-     "aa_cloud-superapp",
-     "account",
-     "store"
+     "aa_cloud-superapp"
     ]
    },
    {
@@ -417,9 +365,7 @@
     "level": "signature",
     "source": "libs:devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt",
     "callers": [
-     "aa_cloud-superapp",
-     "account",
-     "store"
+     "aa_cloud-superapp"
     ]
    },
    {
@@ -463,9 +409,7 @@
     "level": "signature",
     "source": "libs:devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt",
     "callers": [
-     "aa_cloud-superapp",
-     "account",
-     "store"
+     "aa_cloud-superapp"
     ]
    },
    {
@@ -477,9 +421,7 @@
     "level": "signature",
     "source": "libs:devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt",
     "callers": [
-     "aa_cloud-superapp",
-     "account",
-     "store"
+     "aa_cloud-superapp"
     ]
    },
    {
@@ -493,19 +435,6 @@
     "authority": "<pkg>.fleet",
     "callers": [
      "aa_cloud-superapp",
-     "account",
-     "browser",
-     "c3",
-     "c3-webserver",
-     "calc",
-     "camera",
-     "chat",
-     "code",
-     "contacts",
-     "dialer",
-     "drive",
-     "gallery",
-     "keyboard",
      "keyboard-engines",
      "lib-analytics-sink",
      "lib-cal",
@@ -518,30 +447,7 @@
      "lib-ml-l-sound-yamnet",
      "lib-net-wg",
      "lib-news",
-     "lib-ops-engine",
-     "lib-rootfs-nixdroid",
-     "lib-rootfs-termux",
-     "mail",
-     "matrix",
-     "me",
-     "media-center",
-     "morpheus",
-     "myterminal",
-     "nav",
-     "news",
-     "nix-on-droid",
-     "notes",
-     "office",
-     "search",
-     "store",
-     "tasks",
-     "termux",
-     "tools-small-llms",
-     "vault",
-     "wallet",
-     "watchdog",
-     "watchtower",
-     "writer"
+     "lib-ops-engine"
     ]
    },
    {
@@ -613,19 +519,6 @@
     "authority": "<pkg>.fleetsetup",
     "callers": [
      "aa_cloud-superapp",
-     "account",
-     "browser",
-     "c3",
-     "c3-webserver",
-     "calc",
-     "camera",
-     "chat",
-     "code",
-     "contacts",
-     "dialer",
-     "drive",
-     "gallery",
-     "keyboard",
      "keyboard-engines",
      "lib-analytics-sink",
      "lib-cal",
@@ -638,30 +531,7 @@
      "lib-ml-l-sound-yamnet",
      "lib-net-wg",
      "lib-news",
-     "lib-ops-engine",
-     "lib-rootfs-nixdroid",
-     "lib-rootfs-termux",
-     "mail",
-     "matrix",
-     "me",
-     "media-center",
-     "morpheus",
-     "myterminal",
-     "nav",
-     "news",
-     "nix-on-droid",
-     "notes",
-     "office",
-     "search",
-     "store",
-     "tasks",
-     "termux",
-     "tools-small-llms",
-     "vault",
-     "wallet",
-     "watchdog",
-     "watchtower",
-     "writer"
+     "lib-ops-engine"
     ]
    }
   ],
@@ -681,57 +551,6 @@
     "callers": [
      "aa_cloud-superapp",
      "drive"
-    ]
-   }
-  ],
-  "keyboard": [
-   {
-    "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
-    "level": "signature",
-    "source": "libs:keyboard/src/main/AndroidManifest.xml",
-    "component": "com.diegonmarcos.superapp.texttools.TextToolsService",
-    "id": "service:com.diegonmarcos.superapp.texttools.TextToolsService",
-    "kind": "service",
-    "name": "TextToolsService",
-    "actions": [
-     "com.diegonmarcos.superapp.texttools.ITextTools"
-    ],
-    "aidl": [
-     {
-      "interface": "ITextTools",
-      "methods": [
-       "aiRoutingSnapshot",
-       "appendClipboardLists",
-       "clipboardLists",
-       "clipboardListsSlice",
-       "enhance",
-       "enhanceProviderLabel",
-       "enhanceWith",
-       "importClipboardLists",
-       "providerLabelFor",
-       "revealAiKey",
-       "setAiRouting",
-       "settingsSnapshot",
-       "summarise",
-       "summariseWith",
-       "translate",
-       "translateLanguages"
-      ]
-     }
-    ],
-    "callers": [
-     "aa_cloud-superapp",
-     "account",
-     "browser",
-     "calc",
-     "code",
-     "keyboard",
-     "lib-decisions-engine",
-     "lib-ml-l-image-mlkit",
-     "mail",
-     "search",
-     "tools-small-llms",
-     "writer"
     ]
    }
   ],
@@ -872,25 +691,6 @@
     ],
     "callers": []
    }
-  ],
-  "watchdog": [
-   {
-    "permission": null,
-    "level": "none",
-    "source": "libs:watchdog/src/main/AndroidManifest.xml",
-    "component": "com.diegonmarcos.superapp.watchdog.BridgeReceiver",
-    "id": "receiver:com.diegonmarcos.superapp.watchdog.BridgeReceiver",
-    "kind": "receiver",
-    "name": "BridgeReceiver",
-    "actions": [
-     "com.diegonmarcos.watchdog.LOG",
-     "com.diegonmarcos.watchdog.PUSH",
-     "com.diegonmarcos.watchdog.WANTS"
-    ],
-    "callers": [
-     "watchdog"
-    ]
-   }
   ]
  },
  "members": [
@@ -916,15 +716,47 @@
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
      "level": "signature",
      "source": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/devcontrol/AdbBridgeApi.kt",
-     "callers": [
-      "account",
-      "drive",
-      "lib-rootfs-nixdroid",
-      "lib-rootfs-termux",
-      "nix-on-droid",
-      "store",
-      "termux"
-     ]
+     "callers": []
+    },
+    {
+     "id": "op:diagnostics/get",
+     "kind": "op",
+     "name": "diagnostics/get",
+     "method": "fleet.ipc.v1",
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs/Diagnostics.kt",
+     "callers": []
+    },
+    {
+     "id": "op:diagnostics/inject",
+     "kind": "op",
+     "name": "diagnostics/inject",
+     "method": "fleet.ipc.v1",
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs/Diagnostics.kt",
+     "callers": []
+    },
+    {
+     "id": "op:diagnostics/open",
+     "kind": "op",
+     "name": "diagnostics/open",
+     "method": "fleet.ipc.v1",
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs/Diagnostics.kt",
+     "callers": []
+    },
+    {
+     "id": "op:diagnostics/screenshot",
+     "kind": "op",
+     "name": "diagnostics/screenshot",
+     "method": "fleet.ipc.v1",
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs/Diagnostics.kt",
+     "callers": []
     },
     {
      "id": "op:net/dns/overview",
@@ -986,19 +818,6 @@
      "name": "FleetAlertsProvider",
      "authority": "<pkg>.fleetalerts",
      "callers": [
-      "account",
-      "browser",
-      "c3",
-      "c3-webserver",
-      "calc",
-      "camera",
-      "chat",
-      "code",
-      "contacts",
-      "dialer",
-      "drive",
-      "gallery",
-      "keyboard",
       "keyboard-engines",
       "lib-analytics-sink",
       "lib-cal",
@@ -1011,30 +830,7 @@
       "lib-ml-l-sound-yamnet",
       "lib-net-wg",
       "lib-news",
-      "lib-ops-engine",
-      "lib-rootfs-nixdroid",
-      "lib-rootfs-termux",
-      "mail",
-      "matrix",
-      "me",
-      "media-center",
-      "morpheus",
-      "myterminal",
-      "nav",
-      "news",
-      "nix-on-droid",
-      "notes",
-      "office",
-      "search",
-      "store",
-      "tasks",
-      "termux",
-      "tools-small-llms",
-      "vault",
-      "wallet",
-      "watchdog",
-      "watchtower",
-      "writer"
+      "lib-ops-engine"
      ]
     },
     {
@@ -1047,9 +843,7 @@
      "name": "FleetBearerProvider",
      "authority": "<pkg>.fleetbearer",
      "callers": [
-      "account",
-      "search",
-      "store"
+      "search"
      ]
     }
    ]
@@ -1060,12 +854,8 @@
    "label": "c3-morpheus",
    "kind": "app",
    "dir": "ac_c3-morpheus",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -1074,13 +864,8 @@
    "label": "c3-watchdog",
    "kind": "app",
    "dir": "ac_c3-watchdog",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model",
-    "watchdog"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -1089,12 +874,8 @@
    "label": "c3-watchtower",
    "kind": "app",
    "dir": "ac_c3-watchtower",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -1103,13 +884,8 @@
    "label": "cloud-account",
    "kind": "app",
    "dir": "ac_cloud-account",
-   "door": true,
-   "libs": [
-    "appstore",
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
@@ -1122,8 +898,7 @@
      "authority": "<pkg>.accountdata",
      "callers": [
       "aa_cloud-superapp",
-      "search",
-      "store"
+      "search"
      ]
     },
     {
@@ -1135,10 +910,7 @@
      "kind": "provider",
      "name": "AutofillSotProvider",
      "authority": "<pkg>.autofill",
-     "callers": [
-      "browser",
-      "keyboard"
-     ]
+     "callers": []
     },
     {
      "permission": null,
@@ -1152,9 +924,7 @@
       "<pkg>.OPEN"
      ],
      "uris": [],
-     "callers": [
-      "browser"
-     ]
+     "callers": []
     }
    ]
   },
@@ -1164,12 +934,8 @@
    "label": "cloud-browser",
    "kind": "app",
    "dir": "ac_cloud-browser",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
@@ -1227,12 +993,8 @@
    "label": "cloud-c3-webserver",
    "kind": "app",
    "dir": "ac_cloud-c3-webserver",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -1241,12 +1003,8 @@
    "label": "cloud-c3",
    "kind": "app",
    "dir": "ac_cloud-c3",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -1255,12 +1013,8 @@
    "label": "cloud-calc",
    "kind": "app",
    "dir": "ac_cloud-calc",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "id": "op:calc/eval",
@@ -1470,12 +1224,8 @@
    "label": "cloud-camera",
    "kind": "app",
    "dir": "ac_cloud-camera",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "id": "op:image/detect",
@@ -1535,12 +1285,8 @@
    "label": "cloud-chat",
    "kind": "app",
    "dir": "ac_cloud-chat",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "permission": null,
@@ -1565,12 +1311,8 @@
    "label": "cloud-code",
    "kind": "app",
    "dir": "ac_cloud-code",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -1579,13 +1321,8 @@
    "label": "cloud-contacts",
    "kind": "app",
    "dir": "ac_cloud-contacts",
-   "door": true,
-   "libs": [
-    "contacts",
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -1594,12 +1331,8 @@
    "label": "cloud-dialer",
    "kind": "app",
    "dir": "ac_cloud-dialer",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "permission": null,
@@ -1624,17 +1357,13 @@
    "label": "cloud-drive",
    "kind": "app",
    "dir": "ac_cloud-drive",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
-     "id": "op:disk/apps",
+     "id": "op:<DiskContract.GROUP>/<DiskContract.OP_APPS>",
      "kind": "op",
-     "name": "disk/apps",
+     "name": "<DiskContract.GROUP>/<DiskContract.OP_APPS>",
      "method": "fleet.ipc.v1",
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
      "level": "signature",
@@ -1642,9 +1371,9 @@
      "callers": []
     },
     {
-     "id": "op:disk/clean",
+     "id": "op:<DiskContract.GROUP>/<DiskContract.OP_CLEAN>",
      "kind": "op",
-     "name": "disk/clean",
+     "name": "<DiskContract.GROUP>/<DiskContract.OP_CLEAN>",
      "method": "fleet.ipc.v1",
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
      "level": "signature",
@@ -1652,9 +1381,9 @@
      "callers": []
     },
     {
-     "id": "op:disk/duplicates",
+     "id": "op:<DiskContract.GROUP>/<DiskContract.OP_DUPLICATES>",
      "kind": "op",
-     "name": "disk/duplicates",
+     "name": "<DiskContract.GROUP>/<DiskContract.OP_DUPLICATES>",
      "method": "fleet.ipc.v1",
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
      "level": "signature",
@@ -1662,9 +1391,9 @@
      "callers": []
     },
     {
-     "id": "op:disk/huge",
+     "id": "op:<DiskContract.GROUP>/<DiskContract.OP_HUGE>",
      "kind": "op",
-     "name": "disk/huge",
+     "name": "<DiskContract.GROUP>/<DiskContract.OP_HUGE>",
      "method": "fleet.ipc.v1",
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
      "level": "signature",
@@ -1672,9 +1401,9 @@
      "callers": []
     },
     {
-     "id": "op:disk/map",
+     "id": "op:<DiskContract.GROUP>/<DiskContract.OP_MAP>",
      "kind": "op",
-     "name": "disk/map",
+     "name": "<DiskContract.GROUP>/<DiskContract.OP_MAP>",
      "method": "fleet.ipc.v1",
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
      "level": "signature",
@@ -1682,9 +1411,9 @@
      "callers": []
     },
     {
-     "id": "op:disk/memory",
+     "id": "op:<DiskContract.GROUP>/<DiskContract.OP_MEMORY>",
      "kind": "op",
-     "name": "disk/memory",
+     "name": "<DiskContract.GROUP>/<DiskContract.OP_MEMORY>",
      "method": "fleet.ipc.v1",
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
      "level": "signature",
@@ -1692,9 +1421,9 @@
      "callers": []
     },
     {
-     "id": "op:disk/volumes",
+     "id": "op:<DiskContract.GROUP>/<DiskContract.OP_VOLUMES>",
      "kind": "op",
-     "name": "disk/volumes",
+     "name": "<DiskContract.GROUP>/<DiskContract.OP_VOLUMES>",
      "method": "fleet.ipc.v1",
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
      "level": "signature",
@@ -1799,12 +1528,8 @@
    "label": "cloud-gallery",
    "kind": "app",
    "dir": "ac_cloud-gallery",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "permission": null,
@@ -1830,13 +1555,8 @@
    "label": "cloud-keyboard",
    "kind": "app",
    "dir": "ac_cloud-keyboard",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model",
-    "keyboard"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "id": "op:keyboard/toolbar",
@@ -1856,12 +1576,8 @@
    "label": "cloud-mail",
    "kind": "app",
    "dir": "ac_cloud-mail",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
@@ -1898,12 +1614,8 @@
    "label": "cloud-matrix",
    "kind": "app",
    "dir": "ac_cloud-matrix",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "permission": null,
@@ -1935,12 +1647,8 @@
    "label": "cloud-me",
    "kind": "app",
    "dir": "ac_cloud-me",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -1949,12 +1657,8 @@
    "label": "cloud-media-center",
    "kind": "app",
    "dir": "ac_cloud-media-center",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -1963,12 +1667,8 @@
    "label": "cloud-myterminal",
    "kind": "app",
    "dir": "ac_cloud-myterminal",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "id": "op:terminal/wakelock",
@@ -1988,12 +1688,8 @@
    "label": "cloud-nav",
    "kind": "app",
    "dir": "ac_cloud-nav",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -2002,12 +1698,8 @@
    "label": "cloud-news",
    "kind": "app",
    "dir": "ac_cloud-news",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -2016,12 +1708,8 @@
    "label": "cloud-terminal-nix",
    "kind": "app",
    "dir": "ac_cloud-nix-on-droid",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "id": "op:sysdns/state",
@@ -2104,12 +1792,8 @@
    "label": "cloud-notes",
    "kind": "app",
    "dir": "ac_cloud-notes",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -2118,12 +1802,8 @@
    "label": "cloud-office",
    "kind": "app",
    "dir": "ac_cloud-office",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -2132,12 +1812,8 @@
    "label": "cloud-search",
    "kind": "app",
    "dir": "ac_cloud-search",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "id": "op:search/agents",
@@ -2257,13 +1933,8 @@
    "label": "cloud-store",
    "kind": "app",
    "dir": "ac_cloud-store",
-   "door": true,
-   "libs": [
-    "appstore",
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "permission": null,
@@ -2289,12 +1960,8 @@
    "label": "cloud-tasks",
    "kind": "app",
    "dir": "ac_cloud-tasks",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -2303,12 +1970,8 @@
    "label": "cloud-terminal-termux",
    "kind": "app",
    "dir": "ac_cloud-termux",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "id": "op:sysdns/state",
@@ -2414,12 +2077,8 @@
    "label": "cloud-tools-small-llms",
    "kind": "app",
    "dir": "ac_cloud-tools-small-llms",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -2428,12 +2087,8 @@
    "label": "cloud-vault",
    "kind": "app",
    "dir": "ac_cloud-vault",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "permission": "com.diegonmarcos.cloud.permission.VAULT_ADD_IDENTITY",
@@ -2491,12 +2146,8 @@
    "label": "cloud-wallet",
    "kind": "app",
    "dir": "ac_cloud-wallet",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": []
   },
   {
@@ -2505,12 +2156,8 @@
    "label": "cloud-writer",
    "kind": "app",
    "dir": "ac_cloud-writer",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "id": "op:writer/listen/status",
@@ -2543,16 +2190,6 @@
      "callers": []
     }
    ]
-  },
-  {
-   "id": "ae-tool_termux-boot",
-   "pkg": "cld.termux.nix.boot",
-   "label": "termux-boot",
-   "kind": "lib",
-   "dir": "a_solutions/ae-tool_termux-boot",
-   "door": false,
-   "libs": [],
-   "endpoints": []
   },
   {
    "id": "keyboard-engines",
@@ -2807,12 +2444,8 @@
    "label": "cloud-lib-rootfs-nixdroid",
    "kind": "lib",
    "dir": "ac_cloud-nix-on-droid",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "id": "op:sysdns/state",
@@ -2895,12 +2528,8 @@
    "label": "cloud-lib-rootfs-termux",
    "kind": "lib",
    "dir": "ac_cloud-termux",
-   "door": true,
-   "libs": [
-    "core",
-    "devtools",
-    "fleetconfig-model"
-   ],
+   "door": false,
+   "libs": [],
    "endpoints": [
     {
      "id": "op:sysdns/state",

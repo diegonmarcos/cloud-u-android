@@ -38,7 +38,7 @@ class ConfigsIconSizeTest : KitPageHarness() {
     )
 
     private fun iconDp(id: String): Pair<Float, Float> {
-        val b = compose.onNodeWithTag(tileIconTag(id)).getBoundsInRoot()
+        val b = compose.onNodeWithTag(tileIconTag(id), useUnmergedTree = true).getBoundsInRoot()
         return b.width.value to b.height.value
     }
 
