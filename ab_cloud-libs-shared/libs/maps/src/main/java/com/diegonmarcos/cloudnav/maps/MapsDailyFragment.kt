@@ -152,7 +152,7 @@ class MapsDailyFragment : KitComposeFragment() {
                 modifier = Modifier.fillMaxSize().testTag("maps:daily:list"),
             ) {
                 items(daily, key = { it.dayMs }) { entry ->
-                    DailyRow(entry) { dayMs -> (parentFragment as? MapsTimelineTabsFragment)?.openStopsForDay(dayMs) }
+                    DailyRow(entry) { dayMs -> TimelineHost.openStops(parentFragment, dayMs) }
                 }
             }
             // Calendar jump — pick a date, scroll to the nearest day in the list

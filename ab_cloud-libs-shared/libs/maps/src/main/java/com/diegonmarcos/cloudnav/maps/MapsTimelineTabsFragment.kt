@@ -40,7 +40,7 @@ import com.diegonmarcos.superapp.uikit.KitPalette
  * the host app's declared `ui.sections[timeline].pages` (ids explored | daily | stops), handed in
  * through [newInstance]; a host that passes none gets [DEFAULT_PAGES].
  */
-class MapsTimelineTabsFragment : KitComposeFragment() {
+class MapsTimelineTabsFragment : KitComposeFragment(), TimelineHost {
 
     /** Which page is up; [nonce] changes on every pick so a re-tap of the same tab rebuilds it. */
     private var current by mutableStateOf(PAGE_EXPLORED)
@@ -83,7 +83,7 @@ class MapsTimelineTabsFragment : KitComposeFragment() {
     }
 
     /** Called by a Daily row's tap — switches to Stops, scoped to [dayMs]. */
-    fun openStopsForDay(dayMs: Long) {
+    override fun openStopsForDay(dayMs: Long) {
         pendingStopsDayMs = dayMs
         current = PAGE_STOPS
         nonce++

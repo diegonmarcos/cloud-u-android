@@ -239,7 +239,14 @@ step_dev() {
   in_nix adb shell am start -n "$(_release_var '.android.application_id')/$APP_MAIN"
 }
 
-step_test()       { log "Test: JVM unit tests"; in_nix gradle test; }
+step_test() {
+  # The signingConfig throws during configuration without ANDROID_KEYSTORE_*, for every task (CI's unit
+  # step runs this entry), so resolve it first. The app's tracker/timeline rules + libs:maps' host test.
+  log "Test: JVM unit tests"
+  _resolve_signing
+  _export_variant_abis
+  in_nix gradle :app:testDebugUnitTest :libs:maps:testDebugUnitTest
+}
 step_instrument() {
   # connectedAndroidTest builds the debug + androidTest APKs, so it needs the
   # same signing + ABI resolution as step_build (engine bug, fixed 2026-07-10:
