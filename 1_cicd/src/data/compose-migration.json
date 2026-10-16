@@ -626,9 +626,10 @@
         "view_screens": 1,
         "layout_xml": 4,
         "view_ui_files": 9,
-        "custom_views": 8
+        "custom_views": 6
       },
       "done": [
+        "Dead custom views deleted: ShaderBackgroundView and ShimmerBorderView had no caller (not in any layout, no Kotlin reference)",
         "Now-playing card in Compose (MusicControlsPopup over KitPopup Align.CENTER; popup_music_controls.xml deleted; session callbacks via DisposableEffect, 500 ms tick via LaunchedEffect; MusicControlsPopupComposeTest)",
         "Home fan menu in Compose (HomeFanMenu: non-touchable Compose Popup driven by the host's pointer stream; HomeFanMenuComposeTest)",
         "App long-press menu in Compose (AppLongPressMenu over the new KitDialog host: Actions/Configs/URLs sections as data, composed; AppLongPressMenuComposeTest)",
