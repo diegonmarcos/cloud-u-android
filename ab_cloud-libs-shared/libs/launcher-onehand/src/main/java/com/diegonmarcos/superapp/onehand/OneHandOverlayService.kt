@@ -14,6 +14,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.view.HapticFeedbackConstants
 import kotlin.math.hypot
@@ -43,6 +44,8 @@ class OneHandOverlayService : Service() {
     private var downX = 0f
     private var downY = 0f
     private var activated = false
+    private var machine: EdgeGestureMachine? = null
+    private var holdCue: Runnable? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -78,7 +81,7 @@ class OneHandOverlayService : Service() {
 
     override fun onDestroy() {
         testOff?.let { handler.removeCallbacks(it) }
-        hideHandles(); if (instance === this) instance = null; super.onDestroy()
+        endGesture(); hideHandles(); if (instance === this) instance = null; super.onDestroy()
     }
 
     /** Edge-handle windows currently added (read by the app's /api/overlays). */
@@ -115,10 +118,7 @@ class OneHandOverlayService : Service() {
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            EdgeHandleWindow.PREVIEW_FLAGS,
             PixelFormat.TRANSLUCENT,
         )
         if (android.os.Build.VERSION.SDK_INT >= 30) {
@@ -139,14 +139,15 @@ class OneHandOverlayService : Service() {
             background = handleBackground(h.transparency)
             setOnTouchListener { v, e -> onHandleTouch(h, v, e) }
         }
-        var flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS // reach the physical edge, not the safe area
+        // Idle window = thin bounded strip, NOT_TOUCH_MODAL (outside it, touches reach the app below).
+        val len = if (h.lengthDp > 0) dp(h.lengthDp)
+            else (if (h.edge == OneHandConfig.Edge.BOTTOM) dm.widthPixels else dm.heightPixels) * h.lengthPct / 100
+        val size = EdgeHandleWindow.size(h.edge, len, dp(h.thicknessDp), dm.density)
         val lp = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            size.widthPx,
+            size.heightPx,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            flags,
+            EdgeHandleWindow.FLAGS,
             PixelFormat.TRANSLUCENT,
         )
         if (android.os.Build.VERSION.SDK_INT >= 30) {
@@ -161,15 +162,11 @@ class OneHandOverlayService : Service() {
         Log.i(TAG, "addHandle ${h.id} gestureNav=$gestureNav inset=$inset")
         when (h.edge) {
             OneHandConfig.Edge.BOTTOM -> {
-                lp.width = if (h.lengthDp > 0) dp(h.lengthDp) else dm.widthPixels * h.lengthPct / 100
-                lp.height = dp(h.thicknessDp)
                 lp.gravity = Gravity.BOTTOM or Gravity.START
                 lp.x = dm.widthPixels * h.positionPct / 100 - lp.width / 2
                 lp.y = inset
             }
             else -> {
-                lp.width = dp(h.thicknessDp)
-                lp.height = if (h.lengthDp > 0) dp(h.lengthDp) else dm.heightPixels * h.lengthPct / 100
                 lp.gravity = (if (h.edge == OneHandConfig.Edge.LEFT) Gravity.START else Gravity.END) or
                     Gravity.TOP
                 lp.x = inset
@@ -197,34 +194,52 @@ class OneHandOverlayService : Service() {
 
     private fun onHandleTouch(h: OneHandConfig.Handle, view: View, e: MotionEvent): Boolean {
         val c = cfg ?: return true
+        // Tap-hold-and-push only: nothing is drawn or fired until the finger has been HELD for the
+        // system long-press time; then an inward push opens the menu. A tap or an early sweep stays
+        // in PENDING/PASS and does nothing. (We must still return true on DOWN to keep receiving
+        // the stream; the OS cannot hand a window's stream back to the app below.)
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 downX = e.rawX; downY = e.rawY; activated = false
+                val m = EdgeGestureMachine(h.edge, ViewConfiguration.getLongPressTimeout().toLong(),
+                    ViewConfiguration.get(this).scaledTouchSlop.toFloat(), dp(c.swipeThresholdDp).toFloat())
+                    .also { it.down(e.rawX, e.rawY, e.eventTime); machine = it }
+                holdCue?.let { handler.removeCallbacks(it) }
+                holdCue = Runnable {
+                    if (m.tick(android.os.SystemClock.uptimeMillis()))
+                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS) // "armed": now push
+                }.also { handler.postDelayed(it, ViewConfiguration.getLongPressTimeout().toLong()) }
             }
             MotionEvent.ACTION_MOVE -> {
-                val dx = e.rawX - downX; val dy = e.rawY - downY
-                if (activated) {
-                    updatePreview(h, e.rawX, e.rawY)
-                } else if (SwipeClassifier.sector(h.edge, dx, dy) != null &&
-                           hypot(dx, dy) > dp(c.swipeThresholdDp)) {
-                    // Samsung edge-panel style: inward drag past threshold → open menu.
-                    // Taps (no inward drag) are naturally not consumed and pass through.
-                    activate(h)
-                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                val m = machine ?: return true
+                m.move(e.rawX, e.rawY, e.eventTime)
+                if (m.state == EdgeGestureMachine.State.MENU) {
+                    if (!activated) {
+                        activate(h)
+                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    }
                     updatePreview(h, e.rawX, e.rawY)
                 }
             }
             MotionEvent.ACTION_UP -> {
-                if (activated) {
+                val outcome = machine?.up(e.eventTime)
+                if (outcome == EdgeGestureMachine.Outcome.FIRE) {
                     val key = SwipeClassifier.classify(h.edge, e.rawX - downX, e.rawY - downY, dp(c.swipeThresholdDp))
                     key?.let { slot -> h.gestures[slot]?.let { it.perform(this, labelForAction(it)) } }
-                    endPreview()
                 }
-                activated = false
+                endGesture()
             }
-            MotionEvent.ACTION_CANCEL -> { endPreview(); activated = false }
+            MotionEvent.ACTION_CANCEL -> { machine?.cancel(); endGesture() }
         }
         return true
+    }
+
+    /** End of every stream: drop the hold timer and REMOVE (not hide) the preview window. */
+    private fun endGesture() {
+        holdCue?.let { handler.removeCallbacks(it) }; holdCue = null
+        machine = null
+        endPreview()
+        activated = false
     }
 
     private fun activate(h: OneHandConfig.Handle) {
