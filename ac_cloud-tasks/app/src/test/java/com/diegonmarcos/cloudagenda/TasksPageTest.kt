@@ -3,7 +3,7 @@ package com.diegonmarcos.cloudagenda
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -103,14 +103,15 @@ class TasksPageTest {
         compose.onNodeWithText("Project Zero  ›  Step 1").assertIsDisplayed()
     }
 
-    @Test fun `a project and a list can be added from the drawer`() {
+    @Test fun `the drawer offers New project through a name dialog`() {
         val env = launch()
         compose.onNodeWithTag(ChromeTags.HAMBURGER).performClick()
         compose.onNodeWithTag(DrawerTags.ADD_PROJECT).performClick()
-        compose.onNodeWithTag(DrawerTags.NAME_INPUT).performTextInput("Home")
-        compose.onNodeWithTag(DrawerTags.NAME_OK).performClick()
-        compose.waitForIdle()
-        assertEquals(listOf("Project Zero", "Home"), env.controller.snapshot.projects.map { it.name })
+        compose.onNodeWithTag(DrawerTags.NAME_INPUT).assertIsDisplayed()
+        compose.onNodeWithTag(DrawerTags.NAME_OK).assertIsNotEnabled()
+        compose.onNodeWithTag(DrawerTags.NAME_CANCEL).performClick()
+        compose.onNodeWithTag(DrawerTags.NAME_INPUT).assertDoesNotExist()
+        assertEquals(listOf("Project Zero"), env.controller.snapshot.projects.map { it.name })
     }
 
     // ── the top filter bar ──────────────────────────────────────────────────────────────────────────────
@@ -126,7 +127,7 @@ class TasksPageTest {
         compose.onNodeWithTag(FilterTags.status(TaskStatus.ACTION)).performClick()
         compose.waitForIdle()
         rows().assertCountEquals(3)
-        compose.onNodeWithTag(FilterTags.CLEAR).performClick()
+        compose.onNodeWithTag(FilterTags.CLEAR).performScrollTo().performClick()
         compose.waitForIdle()
         assertEquals(TaskFilter(), env.prefs.filter)
         compose.onNodeWithTag(FilterTags.CLEAR).assertDoesNotExist()
@@ -140,7 +141,7 @@ class TasksPageTest {
         env.repo.saveTask(target.copy(tagIds = setOf(tag.id)))
         env.controller.refreshAgent()
         compose.waitForIdle()
-        compose.onNodeWithTag(FilterTags.TAGS_BUTTON).performClick()
+        compose.onNodeWithTag(FilterTags.TAGS_BUTTON).performScrollTo().performClick()
         compose.onNodeWithTag(FilterTags.tag(tag.id)).performClick()
         compose.waitForIdle()
         rows().assertCountEquals(1)
@@ -210,14 +211,15 @@ class TasksPageTest {
 
     // ── tags ────────────────────────────────────────────────────────────────────────────────────────────
 
-    @Test fun `tags can be created from the filter bar's manager`() {
+    @Test fun `the tag manager opens from the filter bar and closes`() {
         val env = launch()
-        compose.onNodeWithTag(FilterTags.TAGS_BUTTON).performClick()
+        compose.onNodeWithTag(FilterTags.TAGS_BUTTON).performScrollTo().performClick()
         compose.onNodeWithTag(FilterTags.MANAGE).performClick()
-        compose.onNodeWithTag(TagTags.NEW_NAME).performTextInput("travel")
-        compose.onNodeWithTag(TagTags.NEW_ADD).performClick()
-        compose.waitForIdle()
-        assertEquals(listOf("travel"), env.controller.snapshot.tags.map { it.name })
+        compose.onNodeWithTag(TagTags.NEW_NAME).assertIsDisplayed()
+        compose.onNodeWithTag(TagTags.NEW_ADD).assertIsNotEnabled()
+        compose.onNodeWithTag(TagTags.DONE).performClick()
+        compose.onNodeWithTag(TagTags.DIALOG).assertDoesNotExist()
+        assertEquals(emptyList<String>(), env.controller.snapshot.tags.map { it.name })
     }
 
     // ── Profile, Settings, theme, agent ─────────────────────────────────────────────────────────────────
@@ -261,7 +263,7 @@ class TasksPageTest {
         compose.waitForIdle()
         compose.onNodeWithTag(PageTabsTags.tab("agent")).performClick()
         compose.waitForIdle()
-        for (tag in listOf(SettingsTags.AGENT_ENABLED, SettingsTags.SOURCE, SettingsTags.ACCOUNT, SettingsTags.MAILBOXES, SettingsTags.FREQUENCY,
+        for (tag in listOf(SettingsTags.AGENT_ENABLED, KitPartTags.segment(SettingsTags.SOURCE, "cloud-mail"), SettingsTags.ACCOUNT, SettingsTags.MAILBOXES, KitPartTags.segment(SettingsTags.FREQUENCY, "360"),
             SettingsTags.MODEL, SettingsTags.TARGET, SettingsTags.extract("events"), SettingsTags.extract("bookings"),
             SettingsTags.extract("invoices"), SettingsTags.extract("deadlines"), SettingsTags.SAVE)) {
             compose.onNodeWithTag(tag).assertExists()

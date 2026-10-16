@@ -37,7 +37,8 @@ class FiltersTest {
     }
 
     @Test fun `status is multi-select and ORed`() {
-        assertEquals(listOf("b", "c"), ids(TaskFilter(statuses = setOf(TaskStatus.HOLD, TaskStatus.COMPLETED))))
+        // a is shown too: its subtask a2 is Completed, so the parent stays visible above it
+        assertEquals(listOf("a", "b", "c"), ids(TaskFilter(statuses = setOf(TaskStatus.HOLD, TaskStatus.COMPLETED))))
     }
 
     @Test fun `tags are multi-select and a task needs any of them`() {

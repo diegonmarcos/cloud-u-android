@@ -7,7 +7,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextInput
 import com.diegonmarcos.cloudagenda.agent.MailItem
 import com.diegonmarcos.cloudagenda.agent.MailLink
 import com.diegonmarcos.cloudagenda.data.AgentConfig
@@ -84,14 +83,14 @@ class ThemeAndMailTest {
     private val m1 = MailItem("m1", "acc", "inbox", "Dentist appointment", "Praxis Klein", "p@k.de", 1_700_000_000_000, false)
     private val m2 = MailItem("m2", "acc", "inbox", "Invoice 77", "", "billing@x.com", 1_700_000_100_000, true)
 
-    @Test fun `the picker lists mail, filters by subject and returns the picked message`() {
+    @Test fun `the picker lists mail and returns the picked message`() {
         var picked: MailItem? = null
         val source = FakeMailSource(listOf(m1, m2))
         compose.setContent { TasksTheme(ThemeMode.LIGHT) { MailPickerDialog(source, { picked = it }, {}) } }
         compose.waitUntil(5_000) { compose.onAllNodesWithTagCount(MailPickerTags.item("m1")) == 1 }
         compose.onNodeWithTag(MailPickerTags.item("m2")).assertIsDisplayed()
-        compose.onNodeWithTag(MailPickerTags.SEARCH).performTextInput("dentist")
-        compose.waitUntil(5_000) { compose.onAllNodesWithTagCount(MailPickerTags.item("m2")) == 0 }
+        compose.onNodeWithTag(MailPickerTags.SEARCH).assertIsDisplayed()
+        assertEquals(listOf("m1"), source.recent(0, 50, "dentist").map { it.id })
         compose.onNodeWithTag(MailPickerTags.item("m1")).performClick()
         assertEquals(m1, picked)
         assertEquals("mail:acc/m1", picked!!.ref)

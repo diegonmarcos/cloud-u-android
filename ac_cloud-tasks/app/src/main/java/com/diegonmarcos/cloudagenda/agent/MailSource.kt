@@ -22,7 +22,10 @@ data class MailItem(
 object MailLink {
     private const val PREFIX = "mail:"
 
-    fun build(account: String, id: String): String = PREFIX + Uri.encode(account) + "/" + Uri.encode(id)
+    private fun enc(s: String) = java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20")
+    private fun dec(s: String) = java.net.URLDecoder.decode(s, "UTF-8")
+
+    fun build(account: String, id: String): String = PREFIX + enc(account) + "/" + enc(id)
 
     /** (account, id), or null when [ref] is not a mail link. */
     fun parse(ref: String): Pair<String, String>? {
@@ -30,7 +33,7 @@ object MailLink {
         val rest = ref.removePrefix(PREFIX)
         val slash = rest.indexOf('/')
         if (slash <= 0 || slash == rest.length - 1) return null
-        return Uri.decode(rest.substring(0, slash)) to Uri.decode(rest.substring(slash + 1))
+        return dec(rest.substring(0, slash)) to dec(rest.substring(slash + 1))
     }
 }
 
