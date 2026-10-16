@@ -2,11 +2,19 @@ package com.diegonmarcos.superapp.network
 
 import android.content.Context
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
-import android.widget.LinearLayout
-import android.widget.TextView
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import com.diegonmarcos.superapp.adbdebug.AdbMdns
 import com.diegonmarcos.superapp.adbdebug.ChannelReader
 import com.diegonmarcos.superapp.adbdebug.ChannelState
@@ -46,40 +54,43 @@ internal object AdbSection {
         )
     }
 
-    fun render(ctx: Context, s: Snap, into: LinearLayout, row: (Context, String) -> TextView) {
+    @Composable
+    fun Render(ctx: Context, s: Snap) {
         val app = ctx.applicationContext
-        into.addView(row(ctx, "USB debugging: ${onOff(s.usb)}"))
-        into.addView(row(ctx, "Wireless debugging: " + if (s.wirelessSupported) onOff(s.wireless) else "— (Android 11+)"))
+        PopValue("USB debugging: ${onOff(s.usb)}")
+        PopValue("Wireless debugging: " + if (s.wirelessSupported) onOff(s.wireless) else "— (Android 11+)")
         if (s.wireless) {
             val known = s.sessionEndpoint?.takeIf { it.contains(':') && !it.startsWith("127.") }
-            val line = row(ctx, "Wireless: " + (known ?: "${s.wifiIp ?: "—"}:… (looking up the port)"))
-            into.addView(line)
             // The connect port rotates on every toggle and is only advertised over mDNS, which is how
             // the lib's own connect finds it: same lookup, our own address only, given up after 4 s.
-            if (known == null) {
-                val main = Handler(Looper.getMainLooper())
+            var line by remember { mutableStateOf("Wireless: " + (known ?: "${s.wifiIp ?: "—"}:… (looking up the port)")) }
+            if (known == null) DisposableEffect(Unit) {
                 var found = false
                 val mdns = runCatching {
                     AdbMdns(app, AdbMdns.TLS_CONNECT) { host, port ->
-                        main.post { found = true; line.text = "Wireless: ${host.hostAddress}:$port" }
+                        found = true; line = "Wireless: ${host.hostAddress}:$port"
                     }
                 }.getOrNull()
                 mdns?.start()
-                main.postDelayed({
+                val main = android.os.Handler(android.os.Looper.getMainLooper())
+                val giveUp = Runnable {
                     mdns?.stop()
-                    if (!found) line.text = "Wireless: ${s.wifiIp ?: "—"}:— (port not advertised)"
-                }, 4_000)
+                    if (!found) line = "Wireless: ${s.wifiIp ?: "—"}:— (port not advertised)"
+                }
+                main.postDelayed(giveUp, 4_000)
+                onDispose { main.removeCallbacks(giveUp); mdns?.stop() }
+            }
+            PopValue(line)
+        }
+        val chan by produceState("Shell channel: checking…") {
+            value = withContext(Dispatchers.IO) {
+                runCatching {
+                    val f = ChannelReader.read(app)
+                    ChannelState.chip(f).removePrefix("ADB Shell: ").let { "Shell channel: $it · ${f.mode.title()} mode" }
+                }.getOrElse { "Shell channel: — (could not read)" }
             }
         }
-        val chan = row(ctx, "Shell channel: checking…")
-        into.addView(chan)
-        Thread {
-            val text = runCatching {
-                val f = ChannelReader.read(app)
-                ChannelState.chip(f).removePrefix("ADB Shell: ").let { "Shell channel: $it · ${f.mode.title()} mode" }
-            }.getOrElse { "Shell channel: — (could not read)" }
-            chan.post { chan.text = text }
-        }.start()
+        PopValue(chan)
     }
 
     private fun onOff(b: Boolean) = if (b) "on" else "off"
@@ -100,34 +111,35 @@ internal object AdbSection {
  */
 internal object HotspotSection {
 
-    fun render(ctx: Context, st: TetherModel.State, into: LinearLayout, row: (Context, String) -> TextView) {
-        into.addView(row(ctx, "On: ${st.summary()}"))
-        into.addView(row(ctx, "Wi-Fi hotspot ${dot(st.wifi)} · USB ${dot(st.usb)} · BT ${dot(st.bluetooth)}"))
-        if (st.tethered.isNotEmpty()) into.addView(row(ctx, "Ifaces: ${st.tethered.joinToString(", ")}"))
+    @Composable
+    fun Render(ctx: Context, st: TetherModel.State) {
+        PopValue("On: ${st.summary()}")
+        PopValue("Wi-Fi hotspot ${dot(st.wifi)} · USB ${dot(st.usb)} · BT ${dot(st.bluetooth)}")
+        if (st.tethered.isNotEmpty()) PopValue("Ifaces: ${st.tethered.joinToString(", ")}")
         if (!st.active) return
-        val ssid = if (st.wifi) row(ctx, "SSID: checking…").also { into.addView(it) } else null
-        val clients = row(ctx, "Clients: checking…")
-        into.addView(clients)
         val app = ctx.applicationContext
-        Thread {
-            val ch = runCatching { ShellChannels.active(app) }.getOrNull()
-            if (ch == null) {
-                val need = "— needs the ADB Shell channel"
-                ssid?.post { ssid.text = "SSID: $need" }
-                clients.post { clients.text = "Clients: $need" }
-                return@Thread
+        // (ssid line, clients line), both "checking…" until the shell answers.
+        val lines by produceState("SSID: checking…" to "Clients: checking…") {
+            value = withContext(Dispatchers.IO) {
+                val ch = runCatching { ShellChannels.active(app) }.getOrNull()
+                if (ch == null) {
+                    val need = "— needs the ADB Shell channel"
+                    return@withContext "SSID: $need" to "Clients: $need"
+                }
+                val out = runCatching {
+                    ch.exec(app, "dumpsys wifi 2>/dev/null | grep -E 'mApConfig|mConnectedClient|SoftApInfo|mNumAssociatedStations' | head -40; echo $SPLIT; ip neigh show 2>/dev/null")
+                }.getOrNull().orEmpty()
+                val dump = out.substringBefore(SPLIT)
+                val neigh = out.substringAfter(SPLIT, "")
+                val ap = TetherModel.parseSoftAp(dump, Build.VERSION.SDK_INT)
+                val n = TetherModel.countClients(neigh, st.tethered)
+                val count = maxOf(n, ap.clients ?: 0)
+                ("SSID: ${ap.ssid ?: "—"}" + (ap.band?.let { " · $it" } ?: "")) to
+                    ("Clients: " + if (out.isBlank()) "— (no answer from ${ch.name()})" else "$count")
             }
-            val out = runCatching {
-                ch.exec(app, "dumpsys wifi 2>/dev/null | grep -E 'mApConfig|mConnectedClient|SoftApInfo|mNumAssociatedStations' | head -40; echo $SPLIT; ip neigh show 2>/dev/null")
-            }.getOrNull().orEmpty()
-            val dump = out.substringBefore(SPLIT)
-            val neigh = out.substringAfter(SPLIT, "")
-            val ap = TetherModel.parseSoftAp(dump, Build.VERSION.SDK_INT)
-            val n = TetherModel.countClients(neigh, st.tethered)
-            val count = maxOf(n, ap.clients ?: 0)
-            ssid?.post { ssid.text = "SSID: ${ap.ssid ?: "—"}" + (ap.band?.let { " · $it" } ?: "") }
-            clients.post { clients.text = "Clients: " + if (out.isBlank()) "— (no answer from ${ch.name()})" else "$count" }
-        }.start()
+        }
+        if (st.wifi) PopValue(lines.first)
+        PopValue(lines.second)
     }
 
     private const val SPLIT = "--neigh--"
@@ -143,48 +155,46 @@ internal object HotspotSection {
  */
 internal object CellularSection {
 
-    fun render(
-        ctx: Context, into: LinearLayout, cellularTransport: Boolean, extra: List<String>,
-        row: (Context, String) -> TextView, link: (Context, String, () -> Unit) -> TextView,
-        group: (Context) -> LinearLayout, onGrant: () -> Unit,
-    ) {
+    @Composable
+    fun Render(ctx: Context, cellularTransport: Boolean, extra: List<String>, onGrant: () -> Unit) {
         val app = ctx.applicationContext
-        val inputs = runCatching { MobileProbe.read(app, cellularTransport) }
-            .getOrElse { MobileLink.Inputs(false, emptyList(), MobileLink.NO_SUB, cellularTransport) }
-        into.addView(row(ctx, MobileLink.stateLine(MobileLink.derive(inputs))))
-        val phone = MobileProbe.phoneGranted(app)
-        val blocks = inputs.sims.map { s ->
-            val isData = s.subId == inputs.defaultDataSubId && s.subId >= 0
-            val d = runCatching { MobileProbe.detail(app, s) }.getOrDefault(MobileLink.Detail())
-            val box = group(ctx)
-            fill(ctx, box, MobileLink.simLines(s, isData, phone, d), row)
-            into.addView(box)
-            Block(s, isData, d, box)
+        val inputs = remember {
+            runCatching { MobileProbe.read(app, cellularTransport) }
+                .getOrElse { MobileLink.Inputs(false, emptyList(), MobileLink.NO_SUB, cellularTransport) }
         }
-        if (!phone) {
-            into.addView(row(ctx, "Phone permission not granted: other SIMs, network types and carrier settings read —"))
-            into.addView(link(ctx, "Grant ›", onGrant))
-        }
-        for (e in extra) into.addView(row(ctx, e))
-        val todo = blocks.filter { b -> b.sim.subId >= 0 && (b.d.volte == null || b.d.wfc == null || b.d.vonr == null || b.d.preferredMode == null) }
-        if (todo.isEmpty()) return
-        Thread {
-            val ch = runCatching { ShellChannels.active(app) }.getOrNull()
-            val out = ch?.let { c -> runCatching { c.exec(app, MobileProbe.shellCommand(todo.map { it.sim.subId })) }.getOrNull() }
-            for (b in todo) {
-                val d2 = if (out.isNullOrBlank()) b.d.copy(needsShell = ch == null) else MobileProbe.withShell(b.d, out, b.sim.subId)
-                val lines = MobileLink.simLines(b.sim, b.isData, phone, d2)
-                b.box.post { fill(ctx, b.box, lines, row) }
+        val phone = remember { MobileProbe.phoneGranted(app) }
+        PopValue(MobileLink.stateLine(MobileLink.derive(inputs)))
+        val blocks = remember {
+            inputs.sims.map { s ->
+                val isData = s.subId == inputs.defaultDataSubId && s.subId >= 0
+                Block(s, isData, runCatching { MobileProbe.detail(app, s) }.getOrDefault(MobileLink.Detail()))
             }
-        }.start()
+        }
+        val todo = remember { blocks.filter { b -> b.sim.subId >= 0 && (b.d.volte == null || b.d.wfc == null || b.d.vonr == null || b.d.preferredMode == null) } }
+        // Each SIM's lines: the public API answers first; the privileged switches fill in after the shell answers.
+        val lines by produceState(blocks.map { MobileLink.simLines(it.sim, it.isData, phone, it.d) }) {
+            if (todo.isEmpty()) return@produceState
+            val fresh = withContext(Dispatchers.IO) {
+                val ch = runCatching { ShellChannels.active(app) }.getOrNull()
+                val out = ch?.let { c -> runCatching { c.exec(app, MobileProbe.shellCommand(todo.map { it.sim.subId })) }.getOrNull() }
+                blocks.map { b ->
+                    if (b !in todo) null else {
+                        val d2 = if (out.isNullOrBlank()) b.d.copy(needsShell = ch == null) else MobileProbe.withShell(b.d, out, b.sim.subId)
+                        MobileLink.simLines(b.sim, b.isData, phone, d2)
+                    }
+                }
+            }
+            value = blocks.mapIndexed { i, b -> fresh[i] ?: MobileLink.simLines(b.sim, b.isData, phone, b.d) }
+        }
+        for (sim in lines) PopGroup { for (l in sim) PopValue(l) }
+        if (!phone) {
+            PopValue("Phone permission not granted: other SIMs, network types and carrier settings read —")
+            PopLink("Grant ›", onGrant)
+        }
+        for (e in extra) PopValue(e)
     }
 
-    private class Block(val sim: MobileLink.Sim, val isData: Boolean, val d: MobileLink.Detail, val box: LinearLayout)
-
-    private fun fill(ctx: Context, box: LinearLayout, lines: List<String>, row: (Context, String) -> TextView) {
-        box.removeAllViews()
-        for (l in lines) box.addView(row(ctx, l))
-    }
+    private class Block(val sim: MobileLink.Sim, val isData: Boolean, val d: MobileLink.Detail)
 }
 
 /**
@@ -195,40 +205,39 @@ internal object CellularSection {
  */
 internal object GpsSection {
 
-    /** Renders into [into]; returns the live session for the popup to start / stop, or null when none can run. */
-    fun render(
-        ctx: Context, into: LinearLayout,
-        row: (Context, String) -> TextView, link: (Context, String, () -> Unit) -> TextView,
-        group: (Context) -> LinearLayout, onGrant: () -> Unit, onSettings: () -> Unit,
-    ): GpsProbe.LiveSession? {
+    /** Draws the section. [visible] is whether it is on screen: the live session runs only then, and stops when it leaves. */
+    @Composable
+    fun Render(ctx: Context, visible: Boolean, onGrant: () -> Unit, onSettings: () -> Unit) {
         val app = ctx.applicationContext
-        val on = GpsProbe.locationOn(app)
-        into.addView(row(ctx, "Location: " + if (on) "ON · mode ${GpsFix.modeName(GpsProbe.mode(app))}" else "OFF"))
-        into.addView(row(ctx, GpsProbe.providersLine(app)))
-        GpsProbe.scanningLine(app)?.let { into.addView(row(ctx, it)) }
-        val fine = GpsProbe.fineGranted(app)
+        val on = remember { GpsProbe.locationOn(app) }
+        val fine = remember { GpsProbe.fineGranted(app) }
+        PopValue("Location: " + if (on) "ON · mode ${GpsFix.modeName(GpsProbe.mode(app))}" else "OFF")
+        PopValue(GpsProbe.providersLine(app))
+        GpsProbe.scanningLine(app)?.let { PopValue(it) }
         if (!fine) {
-            into.addView(row(ctx, if (GpsProbe.coarseGranted(app)) "Permission: approximate only — satellites and GNSS fixes need precise location"
-                else "Permission: location not granted — fix and satellites read —"))
-            into.addView(link(ctx, "Grant ›", onGrant))
+            PopValue(if (GpsProbe.coarseGranted(app)) "Permission: approximate only — satellites and GNSS fixes need precise location"
+                else "Permission: location not granted — fix and satellites read —")
+            PopLink("Grant ›", onGrant)
         }
-        val live = group(ctx)
-        into.addView(live)
-        var session: GpsProbe.LiveSession? = null
-        fun paint() {
-            live.removeAllViews()
+        // Every update of the session bumps the tick, which redraws the live block from the session's own fields.
+        var tick by remember { mutableIntStateOf(0) }
+        val session = remember { if (fine && on) GpsProbe.LiveSession(app) { tick++ } else null }
+        DisposableEffect(session, visible) {
+            if (visible) session?.start() else session?.stop()
+            onDispose { session?.stop() }
+        }
+        tick.let {
             val s = session
             val loc = s?.fix ?: GpsProbe.lastKnown(app)
             val f = loc?.let { GpsProbe.fixOf(it, usedSats = if (it.provider == "gps") s?.usedSats() else null) }
             val sats = s?.sats.orEmpty()
-            live.addView(row(ctx, "Fix quality ${SignalLevels.label(GpsFix.dots(on, f))}"))
-            live.addView(row(ctx, GpsFix.fixLine(f)))
-            for (l in GpsFix.satelliteLines(sats, f, s?.running == true)) live.addView(row(ctx, l))
-            for (l in GpsProbe.capabilityLines(app, GpsFix.dualFrequencySeen(sats))) live.addView(row(ctx, l))
+            PopGroup {
+                PopValue("Fix quality ${SignalLevels.label(GpsFix.dots(on, f))}")
+                PopValue(GpsFix.fixLine(f))
+                for (l in GpsFix.satelliteLines(sats, f, s?.running == true)) PopValue(l)
+                for (l in GpsProbe.capabilityLines(app, GpsFix.dualFrequencySeen(sats))) PopValue(l)
+            }
         }
-        session = if (fine && on) GpsProbe.LiveSession(app) { paint() } else null
-        paint()
-        into.addView(link(ctx, "Location settings ›", onSettings))
-        return session
+        PopLink("Location settings ›", onSettings)
     }
 }

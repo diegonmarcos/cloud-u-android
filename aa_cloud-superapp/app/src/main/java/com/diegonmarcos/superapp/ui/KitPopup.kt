@@ -2,12 +2,14 @@ package com.diegonmarcos.superapp.ui
 
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -32,7 +34,8 @@ import com.diegonmarcos.superapp.uikit.CloudKitTheme
  */
 object KitPopup {
 
-    enum class Align { START, END }
+    /** START/END: the bubble's left/right edge on the anchor's; EDGE: its left edge on the window's (x = 0). */
+    enum class Align { START, END, EDGE }
 
     /** Show [content] under [anchor]. [close] dismisses it. False when no activity can host it. */
     fun show(anchor: View, align: Align = Align.END, content: @Composable (close: () -> Unit) -> Unit): Boolean {
@@ -65,7 +68,7 @@ object KitPopup {
         override fun calculatePosition(
             anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize,
         ): IntOffset {
-            val x = (if (align == Align.END) anchor.right - popupContentSize.width else anchor.left)
+            val x = (when (align) { Align.END -> anchor.right - popupContentSize.width; Align.START -> anchor.left; Align.EDGE -> 0 })
                 .coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0))
             val below = anchor.bottom + gap
             val y = if (below + popupContentSize.height <= windowSize.height) below
@@ -77,10 +80,10 @@ object KitPopup {
 
 /** The dark-glass bubble every strip popup wears: 0xEE111111, a 1 dp hairline, 12 dp corners, 12 dp padding. */
 @Composable
-fun KitBubble(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+fun KitBubble(modifier: Modifier = Modifier, scroll: ScrollState? = null, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Surface(shape = shape, color = Color(0xEE111111), shadowElevation = 8.dp,
         modifier = modifier.border(1.dp, Color(0x44FFFFFF), shape).background(Color.Transparent, shape)) {
-        Column(Modifier.padding(12.dp), content = content)
+        Column(Modifier.let { if (scroll != null) it.verticalScroll(scroll) else it }.padding(12.dp), content = content)
     }
 }

@@ -625,10 +625,11 @@
       "baseline": {
         "view_screens": 1,
         "layout_xml": 5,
-        "view_ui_files": 15,
+        "view_ui_files": 14,
         "custom_views": 8
       },
       "done": [
+        "Network bubble in Compose (NetworkInfoPopup + its Cellular/ADB/Hotspot/GPS sections as composables over KitPopup; async facts via produceState, live GNSS bound to the section being on screen; NetworkInfoPopupComposeTest)",
         "System info bubble in Compose (SystemInfoPopup over the new KitPopup/KitBubble host: Compose Popup anchored under the tapped icon; SystemInfoPopupComposeTest)",
         "Notify badge panes in Compose (BadgePanes: group boxes, alert filters, per-badge customization; the posted notification's own RemoteViews stay a View inside AndroidView; BadgePanesLiveBadgeTest ported to the Compose harness)",
         "Configs ▸ Launcher ▸ Controls page in Compose (LauncherConfigFragment: switch grid, sliders with discrete steps, steppers, screensaver picker; the repaint registry became one epoch state; ControlFragment hosted via AndroidView; LauncherControlsComposeTest; testers remapped)",

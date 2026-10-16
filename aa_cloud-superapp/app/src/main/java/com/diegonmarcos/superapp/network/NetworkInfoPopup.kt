@@ -8,10 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.GradientDrawable
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.TrafficStats
@@ -19,11 +15,35 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.SystemClock
 import android.telephony.TelephonyManager
-import android.view.Gravity
 import android.view.View
-import android.widget.LinearLayout
-import android.widget.PopupWindow
-import android.widget.TextView
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.superapp.ui.KitBubble
+import com.diegonmarcos.superapp.ui.KitPopup
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.wireguard.android.backend.Tunnel
 import java.net.NetworkInterface
 
@@ -98,252 +118,225 @@ object NetworkInfoPopup {
     }
 
     fun show(ctx: Context, anchor: View, focus: String? = null) {
-        val d = ctx.resources.displayMetrics.density
-        val pad = (12 * d).toInt()
-        val container = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(pad, pad, pad, pad)
-            // At least half the screen wide so the (wider) mesh rows + data read
-            // comfortably; still WRAP_CONTENT beyond that.
-            minimumWidth = (ctx.resources.displayMetrics.widthPixels * 0.5f).toInt()
-            background = GradientDrawable().apply {
-                cornerRadius = 12f * d
-                setColor(0xEE111111.toInt())
-                setStroke(maxOf(1, (1 * d).toInt()), 0x44FFFFFF.toInt())
-            }
-        }
+        // Pin the BOX's LEFT EDGE to the screen's left edge (matching Battery/SysInfo's right-edge alignment on the other
+        // side), whichever strip icon was tapped; it sits flush under the strip.
+        KitPopup.show(anchor, KitPopup.Align.EDGE) { close -> NetworkBubble(ctx, focus, close) }
+    }
+
+    /** The bubble itself, split from [show] so it can be drawn without a window. */
+    @Composable
+    internal fun NetworkBubble(ctx: Context, focus: String?, dismiss: () -> Unit) {
+        val dm = ctx.resources.displayMetrics
+        val d = dm.density
+        val scroll = rememberScrollState()
+        val tops = remember { HashMap<String, Int>() }
+        val bottoms = remember { HashMap<String, Int>() }
+        var viewportPx by remember { mutableIntStateOf(0) }
+        // Bumped when a section's position changes, so the visibility below is re-asked (the maps are not state).
+        var layoutTick by remember { mutableIntStateOf(0) }
 
         // Sample now so every rate row reads from the same snapshot.
-        val sample = sampleTraffic()
-        val prev = lastSample
-        lastSample = sample
-
-        // Per-radio on/off state for the light indicators. Tapping a light
-        // toggles the WG mesh in-app (the app owns that tunnel); for Wi-Fi /
-        // cellular / Bluetooth the platform forbids a 3rd-party app flipping
-        // the radio, so the tap deep-links to the system toggle instead.
-        var popup: PopupWindow? = null
-        val dismiss = { popup?.dismiss() }
-        val sections = HashMap<String, View>()
-        fun mark(key: String, v: View): View { sections[key] = v; return v }
-
-        // The sections, keyed; laid out below by NetworkSections.layout — the strip's icon order,
-        // a divider between each two. Each header carries its "Settings ›" link (NetworkSections.SETTINGS).
-        fun header(key: String, row: View): View {
-            val t = NetworkSections.SETTINGS.getValue(key)
-            (row as? LinearLayout)?.addView(linkRow(ctx, t.label) { dismiss(); openTarget(ctx, t, MobileProbe.defaultDataSubId()) }
-                .apply { setPadding((10 * d).toInt(), paddingTop, 0, paddingBottom) })
-            return mark(key, row)
+        val (sample, prev) = remember {
+            val s = sampleTraffic()
+            val p = lastSample
+            lastSample = s
+            s to p
         }
-        val grant: () -> Unit = { dismiss(); openTarget(ctx, NetworkSections.PERMISSIONS) }
-        var gpsSession: GpsProbe.LiveSession? = null
-        val openAdbShell: () -> Unit = {
-            dismiss()
-            // Configs › Network › ADB Shell inside the shell; the lib's own activity anywhere else.
-            val shell = ctx as? com.diegonmarcos.superapp.ShellActivity
-            if (shell != null) shell.openSectionPage("config", "adb-shell")
-            else com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctx)
-        }
-        val usb = readUsbState(ctx)
-        val section = mapOf<String, () -> Unit>(
-        // ── Cellular
-        CELLULAR to {
-        val cellular = hasTransport(ctx, NetworkCapabilities.TRANSPORT_CELLULAR)
-        container.addView(header(CELLULAR, lightRow(ctx, "Cellular", cellular) {
-            dismiss(); openSettings(ctx,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Settings.Panel.ACTION_INTERNET_CONNECTIVITY
-                else Settings.ACTION_WIRELESS_SETTINGS)
-        }))
-        CellularSection.render(ctx, container, cellular,
-            listOf("Rate: " + fmtRate(sample.mobileRx, sample.mobileTx, prev?.mobileRx, prev?.mobileTx, sample.tsMs, prev?.tsMs)),
-            ::valueSmall, ::linkRow, ::group, grant)
-        },
+        val usb = remember { readUsbState(ctx) }
 
-        // ── WiFi
-        WIFI to {
-        container.addView(header(WIFI, lightRow(ctx, "WiFi", wifiEnabled(ctx)) {
-            dismiss(); openSettings(ctx,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Settings.Panel.ACTION_WIFI
-                else Settings.ACTION_WIFI_SETTINGS)
-        }))
-        for (row in readWifi(ctx, sample, prev)) container.addView(valueSmall(ctx, row))
-        },
-
-        // ── Bluetooth — adapter light, then the connected devices (name, profiles, battery) and their
-        //    count: the same BtLinks reading the strip's BT icon + dots are drawn from.
-        BLUETOOTH to {
-        val bt = BtLinks.read(ctx)
-        container.addView(header(BLUETOOTH, lightRow(ctx, "Bluetooth", bt.adapterOn) {
-            dismiss(); openSettings(ctx, Settings.ACTION_BLUETOOTH_SETTINGS)
-        }))
-        for (row in BtLinks.lines(bt)) container.addView(valueSmall(ctx, row))
-        },
-
-        // ── Mesh — header carries one status light PER mesh (wg0 + wg-public
-        //    ride the single Android tunnel). Each light pings that mesh's hub
-        //    (.1 of its allowed-IP range); tap toggles the shared tunnel. Below,
-        //    a labelled block per mesh: endpoint, last talk, key, IP range.
-        MESH to {
-        val meshes = meshList(ctx)
-        container.addView(header(MESH, meshHeaderRow(ctx, meshes) { dismiss(); toggleMesh(ctx) }))
-        val meshUp = meshUp(ctx)
-        val stats = if (meshUp) runCatching { WgState.backend(ctx).getStatistics(WgState.tunnel) }.getOrNull() else null
-        // The same reading the strip's WG icon + dots are drawn from, with its reason spelled out.
-        val link = wgLinkOf(ctx, meshUp, stats, hasTransport(ctx, NetworkCapabilities.TRANSPORT_VPN))
-        container.addView(valueSmall(ctx, "State: " + when (link.state) {
-            WgLink.State.ON -> "ON"; WgLink.State.NO_MESH -> "NO MESH"; WgLink.State.OFF -> "OFF" } + " — " + link.reason))
-        container.addView(valueSmall(ctx, "Signal ${SignalLevels.label(link.level)}"))
-        if (meshes.isEmpty()) {
-            for (row in readMesh(ctx)) container.addView(valueSmall(ctx, row))
-        } else {
-            for (m in meshes) {
-                container.addView(label(ctx, m.tag))
-                for (row in meshDetail(m, stats)) container.addView(valueSmall(ctx, row))
+        // The live GNSS (the only location request the popup makes) runs while the GPS section is on screen.
+        val gpsVisible by remember {
+            derivedStateOf {
+                layoutTick
+                val top = tops[GPS]; val bottom = bottoms[GPS]
+                top != null && bottom != null && viewportPx > 0 && top < scroll.value + viewportPx && bottom > scroll.value
             }
         }
-        },
-
-        // ── KDE Connect — status + connected device count; tap → KDE configs.
-        KDE to {
-        val kdeConn = runCatching {
-            com.diegonmarcos.superapp.kdeconnect.KdeConnectManager.connectedIds().size
-        }.getOrDefault(0)
-        val kdeTotal = runCatching {
-            com.diegonmarcos.superapp.kdeconnect.KdeConnectConfig.get().devices.size
-        }.getOrDefault(0)
-        container.addView(header(KDE, lightRow(ctx, "KDE Connect", kdeConn > 0) {
-            dismiss(); (ctx as? com.diegonmarcos.superapp.ShellActivity)?.openSectionPage("config", "kde")
-        }))
-        container.addView(valueSmall(ctx, "$kdeConn / $kdeTotal device(s) connected"))
-        },
-
-        // ── ADB — USB / Wireless debugging + the privileged shell channel.
-        ADB to {
-        val adb = AdbSection.read(ctx)
-        // The light opens the ADB Shell page too: every place that would switch debugging or the
-        // channel hands off to that one page (test-adb-shell-one-place.sh), never to Developer options.
-        container.addView(header(ADB, lightRow(ctx, "ADB", adb.usb || adb.wireless, openAdbShell)))
-        AdbSection.render(ctx, adb, container, ::valueSmall)
-        container.addView(linkRow(ctx, "ADB Shell ›", openAdbShell))
-        },
-
-        // ── Data (USB-C cable in a data mode, or OTG host)
-        DATA to {
-        container.addView(header(DATA, lightRow(ctx, "Data", usb.data) {
-            dismiss(); openTarget(ctx, NetworkSections.SETTINGS.getValue(DATA))
-        }))
-        for (row in readUsb(ctx, usb)) container.addView(valueSmall(ctx, row))
-        },
-
-        // ── Hotspot / tethering
-        HOTSPOT to {
-        val tether = readTether(ctx, usb)
-        val tetherSettings = { dismiss(); openTarget(ctx, NetworkSections.SETTINGS.getValue(HOTSPOT)) }
-        container.addView(header(HOTSPOT, lightRow(ctx, "Hotspot", tether.active, tetherSettings)))
-        HotspotSection.render(ctx, tether, container, ::valueSmall)
-        container.addView(buttonRow(ctx,
-            "Tethering settings ›" to tetherSettings,
-            "ADB Shell ›" to openAdbShell))
-        },
-
-        // ── GPS — location switch, providers, fix and satellites; live GNSS only while on screen.
-        GPS to {
-        val locationSettings = { dismiss(); openTarget(ctx, NetworkSections.SETTINGS.getValue(GPS)) }
-        container.addView(header(GPS, lightRow(ctx, "GPS", GpsProbe.locationOn(ctx), locationSettings)))
-        gpsSession = GpsSection.render(ctx, container, ::valueSmall, ::linkRow, ::group, grant, locationSettings)
-        },
-        )
-        for (item in NetworkSections.layout()) when (item) {
-            is NetworkSections.Item.Divider -> container.addView(divider(ctx))
-            is NetworkSections.Item.Section -> section.getValue(item.key)()
+        // Open on the tapped icon's own section, once the sections have been laid out.
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            focus?.let { tops[it] }?.let { scroll.scrollTo((it - (12 * d).toInt()).coerceAtLeast(0)) }
         }
 
-        // ── 8. Network (DNS + private IPs)
-        container.addView(sectionTitle(ctx, "Network"))
-        for (row in readNetwork(ctx)) container.addView(valueSmall(ctx, row))
-
-        // Nine sections outgrow a phone screen: the bubble scrolls, capped at
-        // ~85% of the screen height, and opens on the tapped icon's section.
-        val dm = ctx.resources.displayMetrics
-        val scroll = android.widget.ScrollView(ctx).apply {
-            isVerticalScrollBarEnabled = false
-            addView(container)
-        }
-        container.measure(
-            View.MeasureSpec.makeMeasureSpec(dm.widthPixels, View.MeasureSpec.AT_MOST),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
-        val maxH = (dm.heightPixels * 0.85f).toInt()
-        val pw = PopupWindow(
-            scroll,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            if (container.measuredHeight > maxH) maxH else LinearLayout.LayoutParams.WRAP_CONTENT,
-            true,
-        ).apply {
-            isOutsideTouchable = true
-            isFocusable = true
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            elevation = 8 * d
-        }
-        popup = pw  // so a light-indicator tap can dismiss before deep-linking
-        // Live GNSS (the only location request the popup makes) runs while the GPS section is on
-        // screen: started when it scrolls into view, stopped when it leaves or the bubble closes.
-        gpsSession?.let { gs ->
-            val target = sections[GPS]
-            val check = {
-                val r = android.graphics.Rect()
-                if (pw.isShowing && target != null && target.getLocalVisibleRect(r)) gs.start() else gs.stop()
+        // Nine sections outgrow a phone screen: the bubble scrolls, capped at ~85% of the screen height. At least half the
+        // screen wide so the (wider) mesh rows + data read comfortably.
+        KitBubble(
+            Modifier.widthIn(min = (dm.widthPixels * 0.5f / d).dp).heightIn(max = (dm.heightPixels * 0.85f / d).dp)
+                .onSizeChanged { viewportPx = it.height }.testTag("netpop:bubble"),
+            scroll = scroll,
+        ) {
+            val grant: () -> Unit = { dismiss(); openTarget(ctx, NetworkSections.PERMISSIONS) }
+            val openAdbShell: () -> Unit = {
+                dismiss()
+                // Configs › Network › ADB Shell inside the shell; the lib's own activity anywhere else.
+                val shell = ctx as? com.diegonmarcos.superapp.ShellActivity
+                if (shell != null) shell.openSectionPage("config", "adb-shell")
+                else com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctx)
             }
-            scroll.viewTreeObserver.addOnScrollChangedListener { check() }
-            scroll.post { check() }
-            pw.setOnDismissListener { gs.stop() }
+
+            // A section wrapper that reports where it sits, and a header with its "Settings ›" link
+            // (NetworkSections.SETTINGS).
+            @Composable
+            fun Section(key: String, content: @Composable () -> Unit) {
+                Column(Modifier.onGloballyPositioned {
+                    val top = it.positionInParent().y.toInt()
+                    val bottom = top + it.size.height
+                    if (tops[key] != top || bottoms[key] != bottom) { tops[key] = top; bottoms[key] = bottom; layoutTick++ }
+                }.testTag("netpop:section:$key")) { content() }
+            }
+            @Composable
+            fun Header(key: String, row: @Composable () -> Unit) {
+                val t = NetworkSections.SETTINGS.getValue(key)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    row()
+                    Box(Modifier.padding(start = 10.dp)) {
+                        PopLink(t.label) { dismiss(); openTarget(ctx, t, MobileProbe.defaultDataSubId()) }
+                    }
+                }
+            }
+
+            for (item in NetworkSections.layout()) when (item) {
+                is NetworkSections.Item.Divider -> PopDivider()
+                is NetworkSections.Item.Section -> when (item.key) {
+                    // ── Cellular
+                    CELLULAR -> Section(CELLULAR) {
+                        val cellular = remember { hasTransport(ctx, NetworkCapabilities.TRANSPORT_CELLULAR) }
+                        Header(CELLULAR) {
+                            PopLightRow("Cellular", cellular) {
+                                dismiss(); openSettings(ctx,
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Settings.Panel.ACTION_INTERNET_CONNECTIVITY
+                                    else Settings.ACTION_WIRELESS_SETTINGS)
+                            }
+                        }
+                        CellularSection.Render(ctx, cellular,
+                            listOf("Rate: " + fmtRate(sample.mobileRx, sample.mobileTx, prev?.mobileRx, prev?.mobileTx, sample.tsMs, prev?.tsMs)),
+                            grant)
+                    }
+
+                    // ── WiFi
+                    WIFI -> Section(WIFI) {
+                        Header(WIFI) {
+                            PopLightRow("WiFi", remember { wifiEnabled(ctx) }) {
+                                dismiss(); openSettings(ctx,
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Settings.Panel.ACTION_WIFI
+                                    else Settings.ACTION_WIFI_SETTINGS)
+                            }
+                        }
+                        for (row in remember { readWifi(ctx, sample, prev) }) PopValue(row)
+                    }
+
+                    // ── Bluetooth — adapter light, then the connected devices (name, profiles, battery) and their
+                    //    count: the same BtLinks reading the strip's BT icon + dots are drawn from.
+                    BLUETOOTH -> Section(BLUETOOTH) {
+                        val bt = remember { BtLinks.read(ctx) }
+                        Header(BLUETOOTH) {
+                            PopLightRow("Bluetooth", bt.adapterOn) { dismiss(); openSettings(ctx, Settings.ACTION_BLUETOOTH_SETTINGS) }
+                        }
+                        for (row in BtLinks.lines(bt)) PopValue(row)
+                    }
+
+                    // ── Mesh — header carries one status light PER mesh (wg0 + wg-public ride the single Android
+                    //    tunnel). Each light pings that mesh's hub (.1 of its allowed-IP range); tap toggles the shared
+                    //    tunnel. Below, a labelled block per mesh: endpoint, last talk, key, IP range.
+                    MESH -> Section(MESH) {
+                        val meshes = remember { meshList(ctx) }
+                        Header(MESH) { MeshHeaderRow(ctx, meshes) { dismiss(); toggleMesh(ctx) } }
+                        val meshUp = remember { meshUp(ctx) }
+                        val stats = remember { if (meshUp) runCatching { WgState.backend(ctx).getStatistics(WgState.tunnel) }.getOrNull() else null }
+                        // The same reading the strip's WG icon + dots are drawn from, with its reason spelled out.
+                        val link = remember { wgLinkOf(ctx, meshUp, stats, hasTransport(ctx, NetworkCapabilities.TRANSPORT_VPN)) }
+                        PopValue("State: " + when (link.state) {
+                            WgLink.State.ON -> "ON"; WgLink.State.NO_MESH -> "NO MESH"; WgLink.State.OFF -> "OFF" } + " — " + link.reason)
+                        PopValue("Signal ${SignalLevels.label(link.level)}")
+                        if (meshes.isEmpty()) {
+                            for (row in remember { readMesh(ctx) }) PopValue(row)
+                        } else {
+                            for (m in meshes) {
+                                PopLabel(m.tag)
+                                for (row in meshDetail(m, stats)) PopValue(row)
+                            }
+                        }
+                    }
+
+                    // ── KDE Connect — status + connected device count; tap → KDE configs.
+                    KDE -> Section(KDE) {
+                        val kdeConn = remember { runCatching {
+                            com.diegonmarcos.superapp.kdeconnect.KdeConnectManager.connectedIds().size
+                        }.getOrDefault(0) }
+                        val kdeTotal = remember { runCatching {
+                            com.diegonmarcos.superapp.kdeconnect.KdeConnectConfig.get().devices.size
+                        }.getOrDefault(0) }
+                        Header(KDE) {
+                            PopLightRow("KDE Connect", kdeConn > 0) {
+                                dismiss(); (ctx as? com.diegonmarcos.superapp.ShellActivity)?.openSectionPage("config", "kde")
+                            }
+                        }
+                        PopValue("$kdeConn / $kdeTotal device(s) connected")
+                    }
+
+                    // ── ADB — USB / Wireless debugging + the privileged shell channel.
+                    ADB -> Section(ADB) {
+                        val adb = remember { AdbSection.read(ctx) }
+                        // The light opens the ADB Shell page too: every place that would switch debugging or the
+                        // channel hands off to that one page (test-adb-shell-one-place.sh), never to Developer options.
+                        Header(ADB) { PopLightRow("ADB", adb.usb || adb.wireless, openAdbShell) }
+                        AdbSection.Render(ctx, adb)
+                        PopLink("ADB Shell ›", openAdbShell)
+                    }
+
+                    // ── Data (USB-C cable in a data mode, or OTG host)
+                    DATA -> Section(DATA) {
+                        Header(DATA) {
+                            PopLightRow("Data", usb.data) { dismiss(); openTarget(ctx, NetworkSections.SETTINGS.getValue(DATA)) }
+                        }
+                        for (row in remember { readUsb(ctx, usb) }) PopValue(row)
+                    }
+
+                    // ── Hotspot / tethering
+                    HOTSPOT -> Section(HOTSPOT) {
+                        val tether = remember { readTether(ctx, usb) }
+                        val tetherSettings = { dismiss(); openTarget(ctx, NetworkSections.SETTINGS.getValue(HOTSPOT)) }
+                        Header(HOTSPOT) { PopLightRow("Hotspot", tether.active, tetherSettings) }
+                        HotspotSection.Render(ctx, tether)
+                        PopButtons("Tethering settings ›" to tetherSettings, "ADB Shell ›" to openAdbShell)
+                    }
+
+                    // ── GPS — location switch, providers, fix and satellites; live GNSS only while on screen.
+                    GPS -> Section(GPS) {
+                        val locationSettings = { dismiss(); openTarget(ctx, NetworkSections.SETTINGS.getValue(GPS)) }
+                        Header(GPS) { PopLightRow("GPS", remember { GpsProbe.locationOn(ctx) }, locationSettings) }
+                        GpsSection.Render(ctx, gpsVisible, grant, locationSettings)
+                    }
+                    else -> {}
+                }
+            }
+
+            // ── 8. Network (DNS + private IPs)
+            PopTitle("Network")
+            for (row in remember { readNetwork(ctx) }) PopValue(row)
         }
-        // Pin the BOX's LEFT EDGE to the screen's left edge,
-        // matching Battery/SysInfo's right-edge alignment on the
-        // other side. We stay on showAsDropDown (the same vertical
-        // primitive Battery uses) so the popup sits FLUSH with the
-        // status strip — showAtLocation introduced a 1-2 dp
-        // vertical drift the user noticed. Horizontal pinning is
-        // done by computing xOffset = -anchorScreenX so the popup's
-        // left edge lands at screen x=0 regardless of which strip
-        // icon was tapped.
-        val anchorLoc = IntArray(2); anchor.getLocationOnScreen(anchorLoc)
-        pw.showAsDropDown(anchor, -anchorLoc[0], (6 * d).toInt(), Gravity.START)
-        focus?.let { sections[it] }?.let { target -> scroll.post { scroll.scrollTo(0, (target.top - pad).coerceAtLeast(0)) } }
     }
 
     // ──────────────── Light indicators + radio toggles ────────────────
 
-    /** Section header with a trailing on/off light. The light's hit area is
-     *  tappable → [onTap]. Green = on, dim = off. */
-    private fun lightRow(ctx: Context, title: String, on: Boolean, onTap: () -> Unit): View {
-        val d = ctx.resources.displayMetrics.density
-        // WRAP_CONTENT (no weight spacer) so the row sizes to title + light and
-        // never widens the popup — the light sits one space after the title.
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-        }
-        row.addView(sectionTitle(ctx, title))
-        val dot = View(ctx).apply {
-            val sz = (10 * d).toInt()
-            layoutParams = LinearLayout.LayoutParams(sz, sz)
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(if (on) 0xFF35E07F.toInt() else 0x55FFFFFF)
+    /** "Mesh" header carrying one ping dot PER mesh. Each dot starts amber (probing) / green (fresh handshake), then
+     *  resolves to green (hub reachable OR fresh handshake) or dim. Whole row taps → [onTap] (toggle tunnel). */
+    @Composable
+    private fun MeshHeaderRow(ctx: Context, meshes: List<Mesh>, onTap: () -> Unit) {
+        Row(Modifier.clickable(onClick = onTap).testTag("netpop:mesh-header"), verticalAlignment = Alignment.CenterVertically) {
+            PopTitle("Mesh")
+            for (m in meshes) {
+                val fresh = remember(m) { peerHandshakeFresh(ctx, m.pubkey) }
+                val hub = hubIp(m.allowedIps)
+                val colour by produceState(if (fresh) POP_GREEN else if (hub != null) POP_AMBER else POP_DIM, m) {
+                    if (hub != null) {
+                        val ok = withContext(Dispatchers.IO) { pingHub(hub) }
+                        value = if (ok || fresh) POP_GREEN else POP_DIM
+                    }
+                }
+                PopDot(colour, Modifier.padding(start = 8.dp))
             }
         }
-        val hit = LinearLayout(ctx).apply {
-            gravity = Gravity.CENTER
-            // left padding = the "one space" gap after the title; small touch pad.
-            val p = (5 * d).toInt(); setPadding((8 * d).toInt(), p, p, p)
-            isClickable = true
-            setOnClickListener { onTap() }
-            addView(dot)
-        }
-        row.addView(hit)
-        return row
     }
 
     private fun hasTransport(ctx: Context, t: Int): Boolean = runCatching {
@@ -371,35 +364,6 @@ object NetworkInfoPopup {
     private data class Mesh(
         val tag: String, val name: String, val endpoint: String,
         val allowedIps: String, val pubkey: String)
-
-    /** "Mesh" header carrying one ping dot PER mesh. Each dot starts amber
-     *  (probing) / green (fresh handshake), then resolves to green (hub reachable
-     *  OR fresh handshake) or dim. Whole row taps → [onTap] (toggle tunnel). */
-    private fun meshHeaderRow(ctx: Context, meshes: List<Mesh>, onTap: () -> Unit): View {
-        val d = ctx.resources.displayMetrics.density
-        val green = 0xFF35E07F.toInt(); val amber = 0xFFE0A235.toInt(); val dim = 0x55FFFFFF
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            isClickable = true; setOnClickListener { onTap() }
-        }
-        row.addView(sectionTitle(ctx, "Mesh"))
-        for (m in meshes) {
-            val fresh = peerHandshakeFresh(ctx, m.pubkey)
-            val dotBg = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(if (fresh) green else amber) }
-            val sz = (10 * d).toInt()
-            val dot = View(ctx).apply {
-                layoutParams = LinearLayout.LayoutParams(sz, sz).apply { marginStart = (8 * d).toInt() }
-                background = dotBg
-            }
-            row.addView(dot)
-            val hub = hubIp(m.allowedIps)
-            if (hub != null) Thread {
-                val ok = pingHub(hub)
-                dot.post { dotBg.setColor(if (ok || fresh) green else dim) }
-            }.start() else if (!fresh) dotBg.setColor(dim)
-        }
-        return row
-    }
 
     /** Per-mesh detail: endpoint, last talk (handshake age), traffic, key, range. */
     private fun meshDetail(m: Mesh, stats: com.wireguard.android.backend.Statistics?): List<String> {
@@ -924,54 +888,4 @@ object NetworkInfoPopup {
         b > 1_000         -> "%.1f kB".format(b / 1e3)
         else              -> "$b B"
     }
-
-    private fun label(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t
-        setTextColor(0xAAFFFFFFL.toInt())
-        textSize = 11f
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-    }
-    private fun valueSmall(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t
-        setTextColor(0xFFFFFFFFL.toInt())
-        textSize = 12f
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-    }
-    /** A compact tappable action line ("ADB Shell ›"), accent-tinted, same text size as the values. */
-    private fun linkRow(ctx: Context, t: String, onTap: () -> Unit) = TextView(ctx).apply {
-        text = t
-        setTextColor(0xFF7FB8FF.toInt())
-        textSize = 12f
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-        val p = (2 * ctx.resources.displayMetrics.density).toInt()
-        setPadding(0, p, (10 * ctx.resources.displayMetrics.density).toInt(), p)
-        isClickable = true
-        setOnClickListener { onTap() }
-    }
-
-    /** Several [linkRow]s on one line. */
-    private fun buttonRow(ctx: Context, vararg actions: Pair<String, () -> Unit>) = LinearLayout(ctx).apply {
-        orientation = LinearLayout.HORIZONTAL
-        for ((t, a) in actions) addView(linkRow(ctx, t, a))
-    }
-
-    /** A vertical block of rows a section refills in place (a SIM's lines, the live GPS fix). */
-    private fun group(ctx: Context) = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-
-    /** A section header: the label's look, bold. */
-    private fun sectionTitle(ctx: Context, t: String) = label(ctx, t).apply {
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-    }
-
-    /** The full-width 1 dp line between two sections, with 8 dp above the next header. */
-    private fun divider(ctx: Context) = View(ctx).apply {
-        val d = ctx.resources.displayMetrics.density
-        setBackgroundColor(DIVIDER)
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, maxOf(1, (1 * d).toInt())).apply {
-            topMargin = (6 * d).toInt(); bottomMargin = (8 * d).toInt()
-        }
-    }
-
-    /** The divider's colour: the on-surface white at ~25 %. */
-    private const val DIVIDER = 0x40FFFFFF
 }
