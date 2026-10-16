@@ -131,100 +131,73 @@ import sys
 path, kind = sys.argv[1], sys.argv[2]
 text = open(path, encoding="utf-8").read()
 
-CURATED = "            root.addView(tileStrip(ctx, tiles))"
-USAGE   = "        root.addView(tileStrip(ctx, apps.map { makeAppTile(ctx, it, root) }))"
+CURATED = "TileStrip(SuitePhoneAppsFragment.strip(group.title)) {"
+USAGE   = "TileStrip(SuitePhoneAppsFragment.strip(title)) { for (a in apps) item(key = \"t:${a.pkg}\") { AppTile(a) } }"
+SMART   = "PhoneAppsFragment.loadSmartFolders(ctx, ourApps)"
 
 if kind == "wrap_curated_rows":
-    # THE #260 DEFECT, PUT BACK IN THE SHAPE IT ACTUALLY SHIPPED IN: one
-    # horizontal LinearLayout per chunk, added to a vertical parent, so a group
-    # of thirteen apps draws three stacked rows by construction.
+    # THE #260 DEFECT, PUT BACK: the strip replaced by tiles chunked into rows, so a group of thirteen apps draws
+    # three stacked rows by construction.
     assert CURATED in text, "test bug: cannot find the curated strip"
-    text = text.replace(CURATED,
-        "            for (rowChunk in tiles.chunked(BuildConfig.UI_PHONE_GRID_COLUMNS)) {\n"
-        "                val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }\n"
-        "                for (t in rowChunk) row.addView(t)\n"
-        "                root.addView(row)\n"
-        "            }", 1)
+    text = text.replace(CURATED, "packageTiles.chunked(BuildConfig.UI_PHONE_GRID_COLUMNS).forEach { rowChunk ->", 1)
 
 elif kind == "wrap_usage_rows":
-    # The same defect in the OTHER Quickmarks lines. The owner's "all apps line
-    # here" is plural; fixing only the curated groups would leave these two
-    # wrapping on the same surface, which reads as not having fixed it.
+    # The same defect in the OTHER Quickmarks lines. The owner's "all apps line here" is plural; fixing only the
+    # curated groups would leave these two wrapping on the same surface, which reads as not having fixed it.
     assert USAGE in text, "test bug: cannot find the usage strip"
-    text = text.replace(USAGE,
-        "        for (rowChunk in apps.chunked(BuildConfig.UI_PHONE_GRID_COLUMNS)) {\n"
-        "            val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }\n"
-        "            for (a in rowChunk) row.addView(makeAppTile(ctx, a, root))\n"
-        "            root.addView(row)\n"
-        "        }", 1)
+    text = text.replace(USAGE, "apps.chunked(BuildConfig.UI_PHONE_GRID_COLUMNS).forEach { rowChunk -> Row { for (a in rowChunk) AppTile(a) } }", 1)
 
 elif kind == "smart_folders_sync":
-    # #261 undone: the synchronous call back on the main thread. Also the case
-    # that proves the manifest's `renderSmartFolders(` rule can tell the two
-    # names apart — the clean tree calls ...Async and passes.
-    old = "PhoneAppsFragment.renderSmartFoldersAsync(viewLifecycleOwner, ctx, body, exclude) { outcome ->"
-    assert old in text, "test bug: cannot find the async smart-folders call"
-    text = text.replace(old, "PhoneAppsFragment.renderSmartFolders(ctx, body, exclude) { outcome ->", 1)
+    # #261 undone: the page blocks on the fetch (runBlocking on the composition thread).
+    assert SMART in text, "test bug: cannot find the smart-folders call"
+    text = text.replace(SMART, "kotlinx.coroutines.runBlocking { " + SMART + " }", 1)
 
 elif kind == "probe_outlives_the_view":
-    # The scope handed to the probe stops being the VIEW's. `this` is a
-    # perfectly ordinary thing to pass and it compiles, but a Fragment's own
-    # lifecycle outlives its view — so the probe would no longer be cancelled
-    # at onDestroyView and the cancellation half of #194 would be gone while
-    # every other rule stayed green.
-    old = "renderSmartFoldersAsync(viewLifecycleOwner, ctx, body, exclude)"
-    assert old in text, "test bug: cannot find the view-lifecycle argument"
-    text = text.replace(old, "renderSmartFoldersAsync(this, ctx, body, exclude)", 1)
+    # The coroutine stops being the composition's: produceState replaced by something the page does not cancel.
+    old = "produceState<SmartState>(SmartState.Loading"
+    assert old in text, "test bug: cannot find the produceState"
+    text = text.replace(old, "produceStateOutsideTheComposition<SmartState>(SmartState.Loading", 1)
 
 elif kind == "section_starts_expanded":
-    # Collapsed-at-birth removed. This is the edit somebody makes while asking
-    # "why is this section hidden?", and it puts the page back to waiting.
-    #
-    # ANCHORED ON THE FULL STATEMENT, `section.` included. A bare
-    # `visibility = View.GONE` matches the prose above the statement and
-    # `status.visibility = View.GONE` below it before it ever reaches the line
-    # that matters — the mutation then lands somewhere harmless, the guard
-    # rightly stays green, and the case reports the guard as broken when it is
-    # the test that missed. That happened while this suite was being written.
-    old = "        section.visibility = View.GONE\n"
-    assert old in text, "test bug: cannot find the collapsed-at-birth statement"
-    text = text.replace(old, "        section.visibility = View.VISIBLE\n", 1)
+    # Collapsed-at-birth removed. This is the edit somebody makes while asking "why is this section hidden?", and it
+    # puts the page back to waiting.
+    old = "var expanded by remember { mutableStateOf(false) }"
+    assert old in text, "test bug: cannot find the collapsed-at-birth state"
+    text = text.replace(old, "var expanded by remember { mutableStateOf(true) }", 1)
 
 elif kind == "strip_stops_scrolling":
-    # tileStrip itself stops scrolling. Every caller still calls tileStrip, so
-    # every other rule in the manifest is still satisfied and the page is still
-    # wrong — which is exactly why the strip is checked separately.
-    old = "val strip = HorizontalScrollView(ctx).apply {"
+    # TileStrip itself stops scrolling. Every caller still calls TileStrip, so every other rule in the manifest is
+    # still satisfied and the page is still wrong - which is exactly why the strip is checked separately.
+    old = "LazyRow(Modifier.fillMaxWidth().testTag(tag), content = content)"
     assert old in text, "test bug: cannot find the strip"
-    text = text.replace(old, "val strip = LinearLayout(ctx).apply {", 1)
+    text = text.replace(old, "LazyColumn(Modifier.fillMaxWidth().testTag(tag), content = content)", 1)
 
 elif kind == "label_unbounded":
-    # A long application name allowed to dictate the cell — the single most
-    # common cause of a tile spilling onto a second line.
+    # A long application name allowed to dictate the cell - the single most common cause of a tile spilling onto a
+    # second line.
     assert "maxLines = 1" in text
     text = text.replace("maxLines = 1", "maxLines = 2")
 
 elif kind == "rename_entry":
-    # The guard's window run past the code it means to check. It must SAY it has
-    # lost the region rather than report a clean sweep of nothing.
-    text = text.replace("private fun buildPage(ctx: Context, root: LinearLayout)",
-                        "private fun buildPageForSuite(ctx: Context, root: LinearLayout)", 1)
+    # The guard's window run past the code it means to check. It must SAY it has lost the region rather than report
+    # a clean sweep of nothing.
+    text = text.replace("private fun SuitePhonePage(epoch: Int, refresh: () -> Unit)",
+                        "private fun SuitePhonePageForSuite(epoch: Int, refresh: () -> Unit)", 1)
 
 elif kind == "prose_mentions_chunked":
-    # NOT A DEFECT. A comment that names the forbidden construct while
-    # explaining it. A grep goes red here; the guard must not.
+    # NOT A DEFECT. A comment that names the forbidden construct while explaining it. A grep goes red here; the
+    # guard must not.
     assert CURATED in text
     text = text.replace(CURATED,
-        "            // Historical note: this used to be tiles.chunked(columns) with one\n"
-        "            // horizontal LinearLayout per chunk. It is a single strip now.\n"
-        + CURATED, 1)
+        "// Historical note: this used to be tiles.chunked(columns) with one row PER CHUNK.\n"
+        "                    // It is a single sideways strip now.\n"
+        "                    " + CURATED, 1)
 
 elif kind == "commented_out_strip":
-    # The mirror of the case above, and the one a grep gets wrong in the
-    # dangerous direction: the call is still in the file, as text, but nothing
-    # runs it. The guard must treat it as absent.
+    # The mirror of the case above, and the one a grep gets wrong in the dangerous direction: the call is still in
+    # the file, as text, but nothing runs it. The guard must treat it as absent.
     assert CURATED in text
-    text = text.replace(CURATED, "            // " + CURATED.strip(), 1)
+    text = text.replace(CURATED, "// " + CURATED, 1)
 
 else:
     raise SystemExit("test bug: unknown suite mutation %s" % kind)
@@ -239,27 +212,24 @@ path, kind = sys.argv[1], sys.argv[2]
 text = open(path, encoding="utf-8").read()
 
 if kind == "fetch_on_main_thread":
-    # The thousand package-manager binder round trips moved back onto the main
-    # thread: the coroutine still launches, but on the launcher's own
-    # Dispatchers.Main.immediate, which is the UI thread.
+    # The thousand package-manager binder round trips moved back onto the caller's thread: the suspend function
+    # still suspends, but the work runs on whatever dispatcher called it - the UI thread.
     old = "withContext(Dispatchers.IO) {"
     assert old in text, "test bug: cannot find the IO hop"
     text = text.replace(old, "run {", 1)
 
 elif kind == "fetch_back_on_a_raw_thread":
-    # The #228 regression, not a slowness one: a second hand-rolled lazy-load
-    # engine beside the #286/#333 one, which also silently drops cancellation
-    # because a raw Thread has none. Reads as an ordinary refactor in a diff.
-    old = "            owner.lifecycleScope.launch {"
-    assert old in text, "test bug: cannot find the lifecycle-scoped probe"
-    text = text.replace(old, "            Thread {", 1)
+    # The #228 regression, not a slowness one: a second hand-rolled lazy-load engine beside the #286/#333 one, which
+    # also silently drops cancellation because a raw Thread has none. Reads as an ordinary refactor in a diff.
+    old = "            val generation = sCacheGeneration\n"
+    assert old in text, "test bug: cannot find the generation capture"
+    text = text.replace(old, old + "            Thread { }.start()\n", 1)
 
-elif kind == "drop_detached_check":
-    # The standard crash for this pattern: a background answer written into a
-    # view hierarchy the user already navigated away from.
-    old = "if (!body.isAttachedToWindow) return@launch"
-    assert old in text, "test bug: cannot find the attachment check"
-    text = text.replace(old, "if (false) return@launch", 1)
+elif kind == "drop_stale_generation_check":
+    # The cache poisoned by a fetch that began before Refresh: its result published after the invalidation.
+    old = "generation == sCacheGeneration"
+    assert old in text, "test bug: cannot find the generation check"
+    text = text.replace(old, "true", 1)
 
 else:
     raise SystemExit("test bug: unknown phone mutation %s" % kind)
@@ -306,7 +276,7 @@ expect_caught "the Active Apps / Last Apps rows wrapping again is caught" \
     edit_suite wrap_usage_rows
 
 expect_caught "the strip itself losing its sideways scroll is caught" \
-    "sideways-scrolling strip .*no longer contains 'HorizontalScrollView\('" \
+    "sideways-scrolling strip .*no longer contains 'LazyRow\('" \
     edit_suite strip_stops_scrolling
 
 expect_caught "an unbounded tile label is caught" \
@@ -314,12 +284,12 @@ expect_caught "an unbounded tile label is caught" \
     edit_suite label_unbounded
 
 # ── #261 — the page must not wait on Smart Folders ─────────────────
-expect_caught "Smart Folders going back to the synchronous call is caught" \
-    "starts collapsed .*calls 'renderSmartFolders\('" \
+expect_caught "the page blocking on the Smart Folders fetch is caught" \
+    "curated groups .*calls 'runBlocking'" \
     edit_suite smart_folders_sync
 
 expect_caught "the Smart Folders section starting expanded is caught" \
-    "starts collapsed .*no longer contains 'section.visibility = View.GONE'" \
+    "starts collapsed .*no longer contains 'var expanded by remember \{ mutableStateOf\(false\) \}'" \
     edit_suite section_starts_expanded
 
 expect_caught "the Smart Folders fetch returning to the main thread is caught" \
@@ -331,19 +301,19 @@ expect_caught "a second hand-rolled Thread engine coming back is caught" \
     edit_phone fetch_back_on_a_raw_thread
 
 expect_caught "the probe outliving the view it paints into is caught" \
-    "starts collapsed .*no longer contains 'viewLifecycleOwner'" \
+    "starts collapsed .*no longer contains 'produceState<SmartState>\(SmartState.Loading'" \
     edit_suite probe_outlives_the_view
 
-expect_caught "dropping the detached-view check is caught" \
-    "off the main thread .*no longer contains 'isAttachedToWindow'" \
-    edit_phone drop_detached_check
+expect_caught "dropping the stale-generation check is caught" \
+    "off the main thread .*no longer contains 'generation == sCacheGeneration'" \
+    edit_phone drop_stale_generation_check
 
 # ── the guard must not be fooled by prose, in either direction ─────
 expect_clean "a comment mentioning chunked is not a call" \
     edit_suite prose_mentions_chunked
 
 expect_caught "a commented-out tileStrip is not a call" \
-    "curated groups .#260.\]: .*no longer contains 'tileStrip\('" \
+    "curated groups .#260.\]: .*no longer contains 'TileStrip\('" \
     edit_suite commented_out_strip
 
 # ── the guard must not go quiet ────────────────────────────────────
