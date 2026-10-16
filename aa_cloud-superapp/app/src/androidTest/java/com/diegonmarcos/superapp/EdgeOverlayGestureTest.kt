@@ -60,6 +60,14 @@ class EdgeOverlayGestureTest {
     @Before fun setUp() {
         sh("appops set ${ctx.packageName} SYSTEM_ALERT_WINDOW allow")
         sh("input keyevent KEYCODE_WAKEUP"); sh("wm dismiss-keyguard")
+        // The app's own wireless-debugging bootstrap raises SystemUI's "Allow wireless debugging?" dialog on a fresh
+        // emulator: it sits above everything, hides non-system overlays (HIDE_NON_SYSTEM_OVERLAY_WINDOWS) and eats
+        // touches - the CI run that showed it had every edge gesture fail behind it. Switch it off and dismiss it.
+        sh("settings put global adb_wifi_enabled 0")
+        repeat(6) {
+            if (!sh("dumpsys window windows").contains("WifiDebuggingActivity")) return@repeat
+            sh("input keyevent KEYCODE_BACK"); SystemClock.sleep(600)
+        }
         // The owner's setup: gesture navigation (back swipe from the screen edge).
         sh("cmd overlay enable com.android.internal.systemui.navbar.gestural")
         SystemClock.sleep(2500)
