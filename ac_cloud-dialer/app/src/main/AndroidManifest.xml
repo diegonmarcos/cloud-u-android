@@ -84,11 +84,19 @@
         </activity>
 
         <activity
-            android:name="org.fossify.commons.activities.AboutActivity"
+            android:name=".activities.AboutActivity"
             android:configChanges="orientation"
             android:exported="false"
             android:label="@string/about"
             android:parentActivityName=".activities.MainActivity" />
+
+        <!-- Cloud Dialer: commons' screens that carry donate / upgrade / "get the original app" links
+             are not part of this app. Removed from the merged manifest so nothing can start them. -->
+        <activity android:name="org.fossify.commons.activities.AboutActivity" tools:node="remove" />
+        <activity android:name="org.fossify.commons.activities.ContributorsActivity" tools:node="remove" />
+        <activity android:name="org.fossify.commons.activities.FAQActivity" tools:node="remove" />
+        <activity android:name="org.fossify.commons.activities.LicenseActivity" tools:node="remove" />
+        <activity android:name="org.fossify.commons.activities.DonationActivity" tools:node="remove" />
 
         <activity
             android:name="org.fossify.commons.activities.CustomizationActivity"

@@ -66,6 +66,20 @@
       "type": "library"
     }
   },
+  "tests": {
+    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds. shell = test/test-*.sh (static assertions incl. test-no-fake-app-check.sh and the SMS role/nav testers); unit = the JVM suites in app/src/test (foss flavor, the only one we ship).",
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3",
+        "grep"
+      ]
+    },
+    "unit": {
+      "task": "testFossDebugUnitTest",
+      "enabled": true
+    }
+  },
   "signing": {
     "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
     "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"

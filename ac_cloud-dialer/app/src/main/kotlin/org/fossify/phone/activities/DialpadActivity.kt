@@ -102,10 +102,6 @@ class DialpadActivity : SimpleActivity() {
             setupMaterialScrollListener(binding.dialpadList, binding.dialpadAppbar)
         }
 
-        // Cloud Dialer: upstream's checkAppSideloading() anti-repackage tripwire is
-        // removed — this IS an intentional fork (applicationId com.diegonmarcos.comms.dialer),
-        // so the "fake version of the app" dialog is a false positive by construction.
-
         binding.dialpadWrapper.apply {
             if (config.hideDialpadNumbers) {
                 dialpad1Holder.isVisible = false

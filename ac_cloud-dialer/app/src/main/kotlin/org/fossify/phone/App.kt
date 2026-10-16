@@ -4,23 +4,11 @@ import org.fossify.commons.FossifyApp
 import org.fossify.commons.extensions.baseConfig
 import org.fossify.commons.extensions.getSharedPrefs
 import org.fossify.commons.helpers.BLOCK_UNKNOWN_NUMBERS
-import org.fossify.commons.helpers.SIDELOADING_FALSE
 
-/**
- * Cloud Dialer application class (extends commons' FossifyApp).
- *
- * Commons caches its anti-repackage verdict forever in
- * [org.fossify.commons.helpers.BaseConfig.appSideloadingStatus]; devices that ran
- * an earlier build may still hold SIDELOADING_TRUE and would keep showing the
- * "fake version of the app" dialog even after the check's call site is removed.
- * Pin the flag to FALSE on every start — this fork is intentionally repackaged
- * (applicationId com.diegonmarcos.comms.dialer), so the verdict is a false
- * positive by construction.
- */
+/** Cloud Dialer application class (extends commons' FossifyApp). */
 class App : FossifyApp() {
     override fun onCreate() {
         super.onCreate()
-        baseConfig.appSideloadingStatus = SIDELOADING_FALSE
         // The fleet setup contract carries the call log and blocked numbers (store call_history).
         com.diegonmarcos.superapp.fleetconfig.SetupStores.register("call_history", org.fossify.phone.fleet.CallHistoryBackup)
 

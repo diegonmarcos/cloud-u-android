@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cloud Dialer: no donate / upgrade / rate-us / "get the original" prompts, in any flavor.
+         commons' appLaunched() reads these three before it nags; they stay pinned here so no
+         flavor can bring the prompts back. test/test-no-fake-app-check.sh asserts them. -->
+    <bool name="show_donate_in_about">false</bool>
+    <bool name="hide_google_relations">true</bool>
+    <bool name="pretend_thank_you_installed">true</bool>
+</resources>

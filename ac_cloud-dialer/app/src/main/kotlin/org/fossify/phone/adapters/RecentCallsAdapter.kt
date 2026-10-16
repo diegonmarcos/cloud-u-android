@@ -21,9 +21,7 @@ import com.google.i18n.phonenumbers.Phonenumber
 import com.google.i18n.phonenumbers.geocoding.PhoneNumberOfflineGeocoder
 import org.fossify.commons.adapters.MyRecyclerViewListAdapter
 import org.fossify.commons.dialogs.ConfirmationDialog
-import org.fossify.commons.dialogs.FeatureLockedDialog
 import org.fossify.commons.extensions.addBlockedNumber
-import org.fossify.commons.extensions.addLockedLabelIfNeeded
 import org.fossify.commons.extensions.adjustAlpha
 import org.fossify.commons.extensions.adjustForContrast
 import org.fossify.commons.extensions.applyColorFilter
@@ -40,7 +38,6 @@ import org.fossify.commons.extensions.getPopupMenuTheme
 import org.fossify.commons.extensions.getProperTextColor
 import org.fossify.commons.extensions.getTextSize
 import org.fossify.commons.extensions.highlightTextPart
-import org.fossify.commons.extensions.isOrWasThankYouInstalled
 import org.fossify.commons.extensions.launchSendSMSIntent
 import org.fossify.commons.extensions.setupViewBackground
 import org.fossify.commons.helpers.PERMISSION_WRITE_CALL_LOG
@@ -122,7 +119,7 @@ class RecentCallsAdapter(
             findItem(R.id.cab_call_sim_2).isVisible = hasMultipleSIMs && isOneItemSelected
             findItem(R.id.cab_remove_default_sim).isVisible = isOneItemSelected && (activity.config.getCustomSIM(selectedNumber) ?: "") != ""
 
-            findItem(R.id.cab_block_number).title = activity.addLockedLabelIfNeeded(R.string.block_number)
+            findItem(R.id.cab_block_number).title = activity.getString(R.string.block_number)
             findItem(R.id.cab_block_number).isVisible = isNougatPlus()
             findItem(R.id.cab_add_number).isVisible = isOneItemSelected
             findItem(R.id.cab_copy_number).isVisible = isOneItemSelected
@@ -248,11 +245,7 @@ class RecentCallsAdapter(
     }
 
     private fun tryBlocking() {
-        if (activity.isOrWasThankYouInstalled()) {
-            askConfirmBlock()
-        } else {
-            FeatureLockedDialog(activity) { }
-        }
+        askConfirmBlock()
     }
 
     private fun askConfirmBlock() {
@@ -389,7 +382,7 @@ class RecentCallsAdapter(
                 findItem(R.id.cab_add_number).isVisible = !call.isUnknownNumber
                 findItem(R.id.cab_copy_number).isVisible = !call.isUnknownNumber
                 findItem(R.id.cab_show_call_details).isVisible = !call.isUnknownNumber
-                findItem(R.id.cab_block_number).title = activity.addLockedLabelIfNeeded(R.string.block_number)
+                findItem(R.id.cab_block_number).title = activity.getString(R.string.block_number)
                 findItem(R.id.cab_block_number).isVisible = isNougatPlus() && !call.isUnknownNumber
                 findItem(R.id.cab_remove_default_sim).isVisible = (activity.config.getCustomSIM(selectedNumber) ?: "") != "" && !call.isUnknownNumber
             }

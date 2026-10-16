@@ -21,3 +21,19 @@
     public static <1> INSTANCE;
     kotlinx.serialization.KSerializer serializer(...);
 }
+
+# Cloud Dialer: commons' repackaging check ("you are using a fake version of the app ... get the
+# original") is compiled into commons' Compose theme (AppTheme -> FakeVersionCheck -> fakeVersionCheck)
+# and into the sideloading helpers, so every commons dialog could raise it on a fork under its own
+# package name. This app is an intentional fork: the checks are cut out of the release build.
+# test/test-no-fake-app-check.sh fails if these rules, or any call into the check, go missing.
+-assumenosideeffects class org.fossify.commons.compose.extensions.ActivityExtensionsKt {
+    void fakeVersionCheck(android.content.Context, kotlin.jvm.functions.Function0);
+}
+-assumenosideeffects class org.fossify.commons.extensions.ActivityKt {
+    void showSideloadingDialog(android.app.Activity);
+}
+-assumevalues class org.fossify.commons.extensions.ActivityKt {
+    boolean checkAppSideloading(android.app.Activity) return false;
+    boolean isAppSideloaded(android.app.Activity) return false;
+}

@@ -123,7 +123,7 @@
     <string name="faq_2_title">Why emergency calls don\'t work properly?</string>
     <string name="faq_2_text">Due to system restrictions, emergency calls can only be made through your system\'s default dialer or phone app. To ensure emergency calls work properly, you need to keep the system app installed and enabled.</string>
     <string name="faq_3_title">Why are some of my contacts missing from the app?</string>
-    <string name="faq_3_text">Fossify Phone only displays contacts that have a phone number associated with them. Contacts without a phone number are not shown in the app.</string>
+    <string name="faq_3_text">Cloud Dialer only displays contacts that have a phone number associated with them. Contacts without a phone number are not shown in the app.</string>
     <!--
         Haven't found some strings? There's more at
         https://github.com/FossifyOrg/Commons/tree/master/commons/src/main/res
@@ -167,4 +167,15 @@
         <item quantity="other">%1$d calls</item>
     </plurals>
 
+    <string name="about_upstream_title">Based on Fossify Phone</string>
+    <string name="about_upstream_body">Cloud Dialer is a modified version of Fossify Phone, Copyright (C) Fossify and Simple Mobile Tools contributors. Fossify Phone is the upstream project; this app is its own build under its own package name.</string>
+    <string name="about_upstream_link">Fossify Phone on GitHub</string>
+    <string name="about_license_title">Licence</string>
+    <string name="about_license_body">This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License, version 3. It is distributed in the hope that it will be useful, but without any warranty.</string>
+    <string name="about_license_link">GNU GPL version 3</string>
+    <string name="about_source_title">Source code</string>
+    <string name="about_source_body">The complete corresponding source of this build, including every change made to the upstream, is published in the repository below.</string>
+    <string name="about_source_link">Cloud Dialer source</string>
+    <string name="about_third_party_title">Third-party components</string>
+    <string name="about_third_party_body">Glide (BSD, MIT and Apache 2.0), IndicatorFastScroll (Apache 2.0), AutofitTextView (Apache 2.0), AndroidX and Material Components (Apache 2.0).</string>
 </resources>
