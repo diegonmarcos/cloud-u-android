@@ -763,19 +763,17 @@
       "id": "ac_cloud-nav",
       "scope": "in",
       "wave": 4,
-      "ui": "views",
+      "ui": "compose",
       "size": "L",
-      "screens_left": [
-        "MainActivity"
-      ],
-      "notes": "2026-10-16: ConfigsFragment is Compose (KitComposeFragment: PageTabsView strip via AndroidView + child-fragment host); the new Timeline host, Tracker engine settings and Steps pages are Compose from the start. Map-centric: MapView stays AndroidView. Eight canvas gauges port to Canvas composables.",
+      "screens_left": [],
+      "notes": "All Compose (2026-10-16): MainActivity is a Compose shell (BottomNavHost over a FragmentHost page); Routes, Navigation, Places (PlaceDetailSheet as a ModalBottomSheet), the Cache / Layers / Update / About config pages, the Battery Usage dialog and the Constellations screen are composables or KitComposeFragments; the eight cockpit gauges and the sky view are Canvas composables over CockpitFeed / SkyState. The map stays libs:maps' MapsMapFragment in a FragmentHost, and Terrain, Space View stay WebViews hosted through AndroidView. The ConstellationsRenderTest androidTest drives the Compose canvas; test-nav-shape checks BottomNavHost in place of the inflated activity_main.",
       "risks": [
         "test-cloud-nav.yml runs this app's own suite"
       ],
       "baseline": {
-        "view_screens": 1,
-        "layout_xml": 1,
-        "view_ui_files": 1,
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
         "custom_views": 0
       }
     },

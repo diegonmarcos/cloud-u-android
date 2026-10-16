@@ -92,7 +92,7 @@
       "dir": "../ab_cloud-libs-shared/libs/ui-kit"
     },
     "libs:bottomnav": {
-      "_doc_dir": "#868 the fleet's bottom island + page-tab strips + NavDecl, shared BY REFERENCE. MainActivity draws the bar with BottomNavIslandView; the app's TimelineFragment (Explored/Daily/Stops from libs:maps, Steps from the app) and Configs draw their strips with PageTabsView.",
+      "_doc_dir": "#868 the fleet's bottom island + page-tab strips + NavDecl, shared BY REFERENCE. MainActivity draws the bar with BottomNavHost (Compose); the app's TimelineFragment (Explored/Daily/Stops from libs:maps, Steps from the app) and Configs draw their strips with PageTabsView.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
     }

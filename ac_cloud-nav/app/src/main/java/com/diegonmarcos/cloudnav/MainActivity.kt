@@ -2,25 +2,38 @@ package com.diegonmarcos.cloudnav
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
-import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.painterResource
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.cloudnav.configs.ConfigsFragment
 import com.diegonmarcos.superapp.updater.Updater
 import com.diegonmarcos.cloudnav.places.PlacesFragment
 import com.diegonmarcos.cloudnav.routes.NavigationFragment
 import com.diegonmarcos.cloudnav.routes.RoutesFragment
-import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+import com.diegonmarcos.cloudnav.tracker.TrackerInk
+import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitFragmentHostState
 
 /**
- * Cloud Nav shell — minimal Google-Maps-style chrome:
- *   • a content fragment container (each page draws its own search UI)
- *   • bottom nav island (libs:bottomnav): Routes · Navigation · Places · Timeline · Configs
+ * Cloud Nav shell — minimal Google-Maps-style chrome, in Compose:
+ *   • a content area that hosts one page fragment (each page draws its own search UI)
+ *   • bottom nav island (libs:bottomnav's BottomNavHost): Routes · Navigation · Places · Timeline · Configs
  *
  * Sections + default section are data-driven from build.json::ui.* (decoded
  * by [NavConfig.decl], libs:bottomnav's NavDecl). The shell deliberately owns NO search bar — Routes does
@@ -29,23 +42,18 @@ import com.diegonmarcos.superapp.bottomnav.FleetChrome
  */
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var content: View
-    private lateinit var bottomNav: BottomNavIslandView
-    private var currentTab: String = ""
+    private var currentTab by mutableStateOf("")
+    /** Bumped on every switch, so re-selecting the Places tab for a new geo: hand-off still builds a fresh page. */
+    private var tabNonce by mutableIntStateOf(0)
     /** A geo: location handed in by another app, consumed by the Places tab on
      *  its next creation (see [fragmentForSection]). */
     private var pendingGeo: GeoTarget? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        // The page fragment is added by the Compose host once it is on screen, so a restored one would have nowhere to attach.
+        val savedTab = savedInstanceState?.getString(KEY_TAB)
+        super.onCreate(KitFragmentHostState.withoutFragments(savedInstanceState))
         FleetChrome.apply(this)
-        setContentView(R.layout.activity_main)
-
-        content = findViewById(R.id.content)
-        bottomNav = findViewById(R.id.bottom_nav)
-
-        applyInsets()
-        buildBottomNav()
 
         // Schedule the periodic GHCR self-update check (data-driven cadence).
         // The Update tab in Configs offers a manual check-now button.
@@ -60,9 +68,13 @@ class MainActivity : AppCompatActivity() {
             if (geo != null) { pendingGeo = geo; switchTo(TAB_PLACES) }
             else switchTo(defaultSection())
         } else {
-            currentTab = savedInstanceState.getString(KEY_TAB, defaultSection())
-            syncBottomNav(currentTab)
+            currentTab = savedTab ?: defaultSection()
         }
+
+        setContentView(ComposeView(this).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent { CloudKitTheme(TrackerInk.palette()) { NavShell() } }
+        })
     }
 
     /** A geo: intent arriving while the app is already running (singleTop) —
@@ -85,31 +97,24 @@ class MainActivity : AppCompatActivity() {
         outState.putString(KEY_TAB, currentTab)
     }
 
-    private fun applyInsets() {
-        val root = findViewById<View>(R.id.root)
-        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            content.updatePadding(top = bars.top)
-            insets
-        }
-    }
-
     /** The island is libs:bottomnav's, fed by NavDecl (#868). The app only says which fragment a
-     *  section opens; the island's look is the lib's, the same in every app. */
-    private fun buildBottomNav() {
-        bottomNav.items = NavConfig.decl.viewItems { Icons.nav(this, it) }
-        bottomNav.collapseOnScrollIn(content as ViewGroup)
-        bottomNav.onSelect = { id -> if (id != currentTab) switchTo(id) }
+     *  section opens; the island's look is the lib's, the same in every app. The page sits above it. */
+    @Composable
+    private fun NavShell() {
+        val ctx = LocalContext.current
+        val entries = NavConfig.decl.viewItems { Icons.nav(ctx, it) }.map { BottomNavEntry(it.id, it.label, painterResource(it.icon)) }
+        BottomNavHost(entries, currentTab, { e -> if (e.id != currentTab) switchTo(e.id) }) {
+            FragmentHost(supportFragmentManager, R.id.nav_host_main, currentTab to tabNonce, Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
+                fragmentForSection(currentTab)
+            }
+        }
     }
 
     private fun defaultSection(): String = NavConfig.decl.default()?.id ?: "routes"
 
     private fun switchTo(tabId: String) {
         currentTab = tabId
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.content, fragmentForSection(tabId))
-            .commit()
-        syncBottomNav(tabId)
+        tabNonce++
     }
 
     private fun fragmentForSection(id: String): Fragment = when (id) {
@@ -121,10 +126,6 @@ class MainActivity : AppCompatActivity() {
         "timeline"   -> TimelineFragment()
         "configs"    -> ConfigsFragment()
         else         -> RoutesFragment()
-    }
-
-    private fun syncBottomNav(sectionId: String) {
-        bottomNav.selectedId = sectionId
     }
 
     private companion object {

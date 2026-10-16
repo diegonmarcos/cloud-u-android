@@ -8,8 +8,8 @@
 #      Timeline carries Explored|Daily|Stops|Steps and Configs Tracker|APIs|Update|Cache|Layers|About as
 #      its pages; the old nav_tabs / default_tab keys are gone.
 #   S2 the app compiles libs:bottomnav and bakes UI_BOTTOM_NAV + UI_SECTIONS_B64 + UI_DEFAULT_SECTION.
-#   S3 MainActivity draws the bar with BottomNavIslandView fed by NavConfig.decl (NavDecl) and
-#      activity_main.xml hosts that view, not a BottomNavigationView.
+#   S3 MainActivity (Compose) draws the bar with libs:bottomnav's BottomNavHost fed by NavConfig.decl (NavDecl),
+#      not a BottomNavigationView, and no layout XML shell remains.
 #   S4 the Timeline host (the app's TimelineFragment, which hosts the Steps page) and Configs draw their strips with PageTabsView, not a TabLayout.
 #   S5 no hand-rolled nav widget anywhere in the app or libs:maps (nav-shape-guard N3).
 # Each check is then run against planted mutations of the real sources; a mutation that leaves
@@ -61,13 +61,10 @@ CFG = json.loads(r'''{
  ],
  "must": {
   "app/src/main/java/com/diegonmarcos/cloudnav/MainActivity.kt": [
-   "BottomNavIslandView",
+   "BottomNavHost",
    "NavConfig.decl",
    "viewItems",
    "TimelineFragment()"
-  ],
-  "app/src/main/res/layout/activity_main.xml": [
-   "com.diegonmarcos.superapp.bottomnav.BottomNavIslandView"
   ],
   "app/src/main/java/com/diegonmarcos/cloudnav/NavConfig.kt": [
    "NavDecl.fromBuildConfig"
@@ -94,15 +91,14 @@ CFG = json.loads(r'''{
    "UI_DEFAULT_TAB"
   ]
  },
+ "deleted": [
+  "app/src/main/res/layout/activity_main.xml"
+ ],
  "mutate_host": "app/src/main/java/com/diegonmarcos/cloudnav/MainActivity.kt",
  "must_token_mutations": [
   [
    "app/src/main/java/com/diegonmarcos/cloudnav/MainActivity.kt",
-   "BottomNavIslandView"
-  ],
-  [
-   "app/src/main/res/layout/activity_main.xml",
-   "com.diegonmarcos.superapp.bottomnav.BottomNavIslandView"
+   "BottomNavHost"
   ],
   [
    "app/src/main/java/com/diegonmarcos/cloudnav/configs/ConfigsFragment.kt",
