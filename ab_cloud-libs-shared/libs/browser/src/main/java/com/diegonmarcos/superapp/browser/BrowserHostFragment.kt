@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -583,8 +584,16 @@ class BrowserHostFragment : Fragment() {
      * through the Android Autofill framework, which this WebView keeps feeding (importantForAutofill).
      */
     private val domAutofill by lazy {
-        DomAutofill(requireContext(), { browserSettings.bool("profile_fill") != false }, { browserSettings.bool("offer_save_address") != false })
+        // #900 once the user keeps profiles of their own (Configs > Autocomplete), those fill and this Cloud Account chip steps aside.
+        DomAutofill(requireContext(), { browserSettings.bool("profile_fill") != false && !ac.hasLocalProfiles() }, { browserSettings.bool("offer_save_address") != false })
     }
+
+    /** #900 Autocomplete: profiles, per-site memory, saved passwords and cards, Cloud Vault; the fill bar, chooser and save prompt. */
+    private val ac by lazy {
+        AcAutocomplete(requireContext(), { browserSettings.bool(it) }, { activity as? androidx.fragment.app.FragmentActivity }, { config.addons["vault"]?.requiresPackage })
+    }
+    /** Bumped when a Configs > Autocomplete screen changed a store, so it re-reads. */
+    private val acTick = mutableIntStateOf(0)
 
     private val translateMore = Runnable { translator.more() }
 
@@ -836,6 +845,7 @@ class BrowserHostFragment : Fragment() {
             }, PasskeySupport.JS_BRIDGE)
             // Tier 2 DOM autofill: the page engine reports focus / submit (keys and ids, never values) over this bridge.
             domAutofill.attach(this)
+            ac.attach(this)
             // #802 the Android Autofill Framework (Cloud Vault's service) sees the page's fields.
             importantForAutofill = if (browserSettings.bool("autofill_enabled") == false) View.IMPORTANT_FOR_AUTOFILL_NO
                 else View.IMPORTANT_FOR_AUTOFILL_YES
@@ -848,6 +858,7 @@ class BrowserHostFragment : Fragment() {
                     // A real navigation leaves reader view; the reader's own render does not.
                     if (readerPending) readerPending = false else { readerOn = false; translator.abandon() }
                     domAutofill.dismiss()
+                    ac.dismiss()
                     pageHostNow = BrowserSitePolicy.hostOf(startedUrl)
                     // Settings, then this host's shields: a host that was shielded must not leave JS off for the next.
                     view?.let { applySettings(it, startedUrl) }
@@ -891,7 +902,7 @@ class BrowserHostFragment : Fragment() {
                     if (readerOn) return
                     probePasskey(view, u)
                     // Tier 2: (re)install the DOM autofill engine; a private tab gets no prompts and never offers to save.
-                    view?.let { domAutofill.inject(it, u, tab.isPrivate) }
+                    view?.let { domAutofill.inject(it, u, tab.isPrivate); ac.inject(it, u, tab.isPrivate) }
                     onCommitted(tabKey, view, u)
                     postDelayed({ if (webView === this@apply) saveTabState() }, 400)
                     // #887 an offline copy is not a visit.
@@ -1726,7 +1737,10 @@ class BrowserHostFragment : Fragment() {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 AndroidView(factory = { sc.webView }, modifier = Modifier.fillMaxSize())
                 BrowserSuggestOverlay(suggestState, onPick = { s -> pickSuggestion(s) }, onDismiss = { dismissSuggestions() })
-                Box(Modifier.align(Alignment.BottomStart)) {
+                Column(Modifier.align(Alignment.BottomStart)) {
+                    ac.chooser.value?.let { AcChooserSheet(it, onFill = { c -> ac.chooserFill(c) }, onDismiss = { ac.chooserDismiss() }) }
+                    ac.save.value?.let { AcSaveSheet(it, onSave = { picked, pid, never -> ac.confirmSave(picked, pid, never) }, onDismiss = { ac.dismissSave() }) }
+                    AcFillBar(ac.bar.value, onPick = { ac.pick(it) }, onDismiss = { ac.dismiss() })
                     BrowserAutofillChip(domAutofill.chip.value, domAutofill.save.value,
                         onFill = { t -> domAutofill.fill(t) }, onSnippet = { sn -> domAutofill.insert(sn) }, onDismiss = { domAutofill.dismiss() }, onSave = { yes -> domAutofill.confirmSave(yes) })
                 }
@@ -1760,7 +1774,7 @@ class BrowserHostFragment : Fragment() {
             "pinned" to (currentTab()?.pinned == true),
             "bookmarked" to (page && bookmarks.has(wv!!.url ?: "")),
             "private_tab" to (currentTab()?.isPrivate == true),
-            "profile_present" to (runCatching { !BrowserProfileStore(requireContext()).load().isEmpty }.getOrDefault(false)),
+            "profile_present" to (ac.hasLocalProfiles() || runCatching { !BrowserProfileStore(requireContext()).load().isEmpty }.getOrDefault(false)),
             "shield_js" to (page && shieldDenied(BrowserSitePolicy.hostOf(wv!!.url), "javascript")),
             "shield_images" to (page && shieldDenied(BrowserSitePolicy.hostOf(wv!!.url), "images")),
             "shield_trackers" to (page && trackersBlocked(BrowserSitePolicy.hostOf(wv!!.url))),
@@ -1838,11 +1852,80 @@ class BrowserHostFragment : Fragment() {
     }
 
     /** The native blocks of a Configs page, by the ids build.json::ui.browser.configs.native names. */
+    @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
     @Composable
     private fun ColumnScope.ConfigsNative(ids: List<String>) {
-        ids.forEach { id ->
+        // Autocomplete holds several sub-sections: one at a time, picked by chips. A page with one block draws it.
+        var sub by remember(ids) { mutableStateOf(ids.firstOrNull()) }
+        if (ids.size > 1) androidx.compose.foundation.layout.FlowRow(Modifier.padding(vertical = 6.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
+            ids.forEach { id ->
+                androidx.compose.material3.FilterChip(selected = sub == id, onClick = { sub = id }, label = { Text(acSubTitle(id)) },
+                    modifier = Modifier.testTag("browser:ac:sub:$id"))
+            }
+        }
+        (if (ids.size > 1) listOfNotNull(sub) else ids).forEach { id ->
             when (id) {
                 "about" -> BrowserAboutBlock(aboutLines())
+                else -> AcBlock(id)
+            }
+        }
+    }
+
+    private fun acSubTitle(id: String) = when (id) {
+        "profiles" -> "Profiles"; "sites" -> "Sites"; "passwords" -> "Passwords"; "cards" -> "Cards"; "vault" -> "Cloud Vault"; else -> id
+    }
+
+    /** One native Autocomplete block of a Configs page, over the encrypted store. */
+    @Composable
+    private fun AcBlock(id: String) {
+        val store = ac.store
+        if (store == null) {
+            ac.warm()
+            Text("Opening the encrypted store...", color = LocalKitPalette.current.textSecondary, modifier = Modifier.padding(8.dp))
+            return
+        }
+        val tick = acTick.intValue
+        fun changed() { ac.refresh(); acTick.intValue += 1 }
+        fun unlock(title: String, ok: () -> Unit) {
+            AcUnlock.require(requireActivity(), browserSettings.bool("secrets_require_unlock") != false, title, onOk = ok, onDenied = { toast(it) })
+        }
+        when (id) {
+            "profiles" -> {
+                val list = remember(tick) { store.profiles() }
+                val accountHere = remember { runCatching { com.diegonmarcos.superapp.autofill.AutofillSotClient.installed(requireContext()) }.getOrDefault(false) }
+                AcProfilesSection(list,
+                    onSave = { store.upsertProfile(it); changed() },
+                    onDelete = { store.deleteProfile(it); changed() },
+                    onDefault = { store.setDefaultProfile(it); changed() },
+                    onImportAccount = if (!accountHere) null else ({
+                        Thread {
+                            val l = runCatching { com.diegonmarcos.superapp.autofill.AutofillSotClient.profiles(requireContext()) }.getOrDefault(emptyList())
+                            ui.post { if (isAdded) { val n = store.importAccount(l); toast(if (n == 0) "Nothing new in Cloud Account" else "Imported $n profile(s)"); changed() } }
+                        }.start()
+                    }),
+                    note = if (ac.persistent) null else "The encrypted store could not be opened: changes last until the app closes.")
+            }
+            "sites" -> AcSitesSection(remember(tick) { store.memory() }, null,
+                onForget = { store.forgetMemory(it); changed() }, onForgetSite = { store.forgetSite(it); changed() }, onForgetAll = { store.clearMemory(); changed() })
+            "passwords" -> {
+                val (list, bad) = remember(tick) { store.logins() }
+                AcPasswordsSection(list, bad, store.secretsAvailable,
+                    onSave = { store.saveLogin(it); changed() }, onDelete = { store.deleteLogin(it); changed() },
+                    reveal = { l, show -> unlock("Show saved password") { show(l.password) } })
+            }
+            "cards" -> {
+                val (list, bad) = remember(tick) { store.cards() }
+                AcCardsSection(list, bad, store.secretsAvailable,
+                    onSave = { store.saveCard(it); changed() }, onDelete = { store.deleteCard(it); changed() },
+                    reveal = { c, show -> unlock("Show saved card") { show(c.number) } })
+            }
+            "vault" -> {
+                val pkg = config.addons["vault"]?.requiresPackage
+                val st = remember(tick) { runCatching { VaultAutofill.status(requireContext(), pkg) }.getOrNull() ?: JSONObject() }
+                val isService = !pkg.isNullOrBlank() && VaultAutofill.isVault(st.optString("autofill_service"), pkg)
+                val state = AcVaultState.of(browserSettings.bool("autofill_use_vault") == true, st.optBoolean("installed"), st.optBoolean("framework_enabled"), isService)
+                val all = remember(tick) { store.logins().first.map { it.source } + store.cards().first.map { it.source } }
+                AcVaultSection(state, all.count { it == AcSource.LOCAL }, all.count { it == AcSource.VAULT })
             }
         }
     }
@@ -1892,8 +1975,17 @@ class BrowserHostFragment : Fragment() {
         }
     }
 
+    /** #900 page dropdown > This site > Autocomplete for this site: what is remembered for this site only. */
     private fun showSiteAutocomplete(host: String) {
-        toast("Autocomplete for $host")
+        val origin = AcSiteMemory.originKey(host)
+        ac.warm()
+        overlay { close ->
+            val tick = remember { mutableIntStateOf(0) }
+            val store = ac.store
+            val entries = tick.intValue.let { store?.memory().orEmpty() }
+            AcSitePage(entries, origin, onForget = { store?.forgetMemory(it); tick.intValue += 1 },
+                onForgetSite = { store?.forgetSite(it); tick.intValue += 1 }, onClose = close)
+        }
     }
 
     /** #900 Configs > Site settings: every host that has a rule of its own; tap one to change its permissions. */
@@ -1957,6 +2049,8 @@ class BrowserHostFragment : Fragment() {
             "fill_profile", "fill_dry" -> {
                 wv ?: return needPage()
                 val dry = id == "fill_dry"
+                // #900 the user's own profiles: the chooser asks which profile and which value per kind.
+                if (!dry && ac.hasLocalProfiles()) return ac.fillPage { err -> done(if (err == null) ok().put("chooser", true) else ok().put("ok", false).put("error", err)) }
                 BrowserPageActions.run(wv, BrowserPageActions.script(requireContext(), "autofill_scan")) { r ->
                     val plan = BrowserAutofillMatch.plan(r?.optJSONArray("fields") ?: org.json.JSONArray())
                     val fields = org.json.JSONArray(plan.map { (i, k) -> JSONObject().put("i", i).put("fills", k) })

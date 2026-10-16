@@ -55,6 +55,9 @@ dependencies {
     // only compileOnly-s the cipher, so the app that keeps the store ships it.
     implementation 'androidx.security:security-crypto:1.1.0'
 
+    // #900 fingerprint / face / screen lock before a saved password or card is revealed or filled (AcUnlock).
+    implementation 'androidx.biometric:biometric:1.1.0'
+
     // WebAuthn in WebView (WebSettingsCompat.setWebAuthenticationSupport; feature WEB_AUTHENTICATION needs
     // androidx.webkit 1.12+ and a WebView that implements it). 1.14.0 = the fleet's pin.
     implementation 'androidx.webkit:webkit:1.14.0'
