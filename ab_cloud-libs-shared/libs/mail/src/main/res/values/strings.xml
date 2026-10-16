@@ -43,4 +43,40 @@
     <string name="mail_message_login_first">Sign in via Mail → Accounts first.</string>
     <string name="mail_message_error">Failed: %1$s</string>
     <string name="mail_message_has_html">HTML body available — text shown</string>
+
+    <!-- Account authentication (gateway in front of the JMAP server: Authelia) -->
+    <string name="mail_auth_title">Authentication</string>
+    <string name="mail_auth_mode_none">None</string>
+    <string name="mail_auth_mode_bearer">Bearer token</string>
+    <string name="mail_auth_mode_authelia">Authelia</string>
+    <string name="mail_auth_none_hint">No gateway credential: only the JMAP login above is sent.</string>
+    <string name="mail_auth_token_hint">Bearer token</string>
+    <string name="mail_auth_show">Show</string>
+    <string name="mail_auth_hide">Hide</string>
+    <string name="mail_auth_paste">Paste</string>
+    <string name="mail_auth_test">Test connection</string>
+    <string name="mail_auth_testing">Testing…</string>
+    <string name="mail_auth_sign_in">Sign in with Authelia</string>
+    <string name="mail_auth_sign_in_again">Sign in again</string>
+    <string name="mail_auth_sign_out">Sign out</string>
+    <string name="mail_auth_done">Done — I am signed in</string>
+    <string name="mail_auth_no_cookie">No Authelia session yet. Finish signing in, then tap Done.</string>
+    <string name="mail_auth_not_signed_in">Not signed in. Sign in to reach this server through Authelia.</string>
+    <string name="mail_auth_signed_in_since">Signed in %1$s</string>
+    <string name="mail_auth_expires">expires %1$s</string>
+    <string name="mail_auth_expires_session">session cookie, renewed while in use</string>
+    <string name="mail_auth_status_connected">Connected</string>
+    <string name="mail_auth_status_token">Token</string>
+    <string name="mail_auth_status_signed_in">Signed in</string>
+    <string name="mail_auth_status_needs_sign_in">Needs sign-in</string>
+    <string name="mail_auth_status_error">Error</string>
+    <string name="mail_auth_ok">Connected — account %1$s</string>
+    <string name="mail_auth_err_401">401 Unauthorized — the server rejected the credential. Check the token, or sign in again.</string>
+    <string name="mail_auth_err_403">403 Forbidden — you are signed in but not allowed to use this server.</string>
+    <string name="mail_auth_err_tls">TLS error — the certificate could not be verified for this host.</string>
+    <string name="mail_auth_err_dns">DNS error — the server name could not be resolved. Check the address and your network.</string>
+    <string name="mail_auth_err_timeout">Timed out — the server did not answer.</string>
+    <string name="mail_auth_err_refused">Connection refused — nothing is listening at that address.</string>
+    <string name="mail_auth_err_http">The server answered HTTP %1$d.</string>
+    <string name="mail_auth_err_other">Could not connect: %1$s</string>
 </resources>

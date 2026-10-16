@@ -55,4 +55,40 @@
     <string name="mail_message_login_first">Inicia sesión primero en Correo → Cuentas.</string>
     <string name="mail_message_error">Error: %1$s</string>
     <string name="mail_message_has_html">Hay cuerpo HTML — se muestra el texto</string>
+
+    <!-- Autenticación de la cuenta (pasarela Authelia delante del servidor JMAP) -->
+    <string name="mail_auth_title">Autenticación</string>
+    <string name="mail_auth_mode_none">Ninguna</string>
+    <string name="mail_auth_mode_bearer">Token Bearer</string>
+    <string name="mail_auth_mode_authelia">Authelia</string>
+    <string name="mail_auth_none_hint">Sin credencial de pasarela: solo se envía el acceso JMAP de arriba.</string>
+    <string name="mail_auth_token_hint">Token Bearer</string>
+    <string name="mail_auth_show">Mostrar</string>
+    <string name="mail_auth_hide">Ocultar</string>
+    <string name="mail_auth_paste">Pegar</string>
+    <string name="mail_auth_test">Probar conexión</string>
+    <string name="mail_auth_testing">Probando…</string>
+    <string name="mail_auth_sign_in">Iniciar sesión con Authelia</string>
+    <string name="mail_auth_sign_in_again">Iniciar sesión de nuevo</string>
+    <string name="mail_auth_sign_out">Cerrar sesión</string>
+    <string name="mail_auth_done">Listo — ya inicié sesión</string>
+    <string name="mail_auth_no_cookie">Aún no hay sesión de Authelia. Termina de iniciar sesión y toca Listo.</string>
+    <string name="mail_auth_not_signed_in">Sin sesión. Inicia sesión para llegar a este servidor a través de Authelia.</string>
+    <string name="mail_auth_signed_in_since">Sesión iniciada %1$s</string>
+    <string name="mail_auth_expires">caduca %1$s</string>
+    <string name="mail_auth_expires_session">cookie de sesión, se renueva con el uso</string>
+    <string name="mail_auth_status_connected">Conectado</string>
+    <string name="mail_auth_status_token">Token</string>
+    <string name="mail_auth_status_signed_in">Sesión iniciada</string>
+    <string name="mail_auth_status_needs_sign_in">Requiere iniciar sesión</string>
+    <string name="mail_auth_status_error">Error</string>
+    <string name="mail_auth_ok">Conectado — cuenta %1$s</string>
+    <string name="mail_auth_err_401">401 No autorizado — el servidor rechazó la credencial. Revisa el token o inicia sesión de nuevo.</string>
+    <string name="mail_auth_err_403">403 Prohibido — la sesión es válida pero no tienes permiso en este servidor.</string>
+    <string name="mail_auth_err_tls">Error TLS — no se pudo verificar el certificado de este host.</string>
+    <string name="mail_auth_err_dns">Error DNS — no se pudo resolver el nombre del servidor. Revisa la dirección y la red.</string>
+    <string name="mail_auth_err_timeout">Tiempo agotado — el servidor no respondió.</string>
+    <string name="mail_auth_err_refused">Conexión rechazada — nada escucha en esa dirección.</string>
+    <string name="mail_auth_err_http">El servidor respondió HTTP %1$d.</string>
+    <string name="mail_auth_err_other">No se pudo conectar: %1$s</string>
 </resources>

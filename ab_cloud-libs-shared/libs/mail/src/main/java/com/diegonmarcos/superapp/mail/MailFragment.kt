@@ -16,6 +16,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,10 +38,13 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 /**
- * Slice A — minimal JMAP login + session display. Server / email / password
- * persisted via EncryptedSharedPreferences (JmapPrefs). On Connect: hits
- * `<server>/.well-known/jmap` with Basic auth, parses the session JSON, shows
- * the api / download / upload / event-source URLs and the primary account.
+ * Slice A — JMAP login + session display. Server / email / password persisted via
+ * EncryptedSharedPreferences (JmapPrefs). On Connect: hits `<server>/.well-known/jmap`, parses the
+ * session JSON, shows the api / download / upload / event-source URLs and the primary account.
+ *
+ * AUTHENTICATION (the gateway in front of the public endpoints, Authelia): None / Bearer token /
+ * Authelia sign-in, per account, stored encrypted (MailAuthStore) and applied to EVERY request of the
+ * account by its OkHttp interceptor + cookie jar (MailHttp). See MailAuthUi.
  *
  * Default server pulled from BuildConfig.JMAP_DEFAULT_SERVER which the gradle
  * eval injects from build.json::ui.sections[mail].jmap_default_server.
@@ -58,6 +62,7 @@ class MailFragment : KitComposeFragment() {
         val ctx = requireContext()
         val p = LocalKitPalette.current
         val prefs = remember { JmapPrefs(ctx) }
+        val authStore = remember { MailAuthStore.of(ctx) }
         val scope = rememberCoroutineScope()
 
         var server by remember { mutableStateOf(prefs.server.ifEmpty { BuildConfig.JMAP_DEFAULT_SERVER }) }
@@ -66,6 +71,37 @@ class MailFragment : KitComposeFragment() {
         var showPassword by remember { mutableStateOf(false) }
         var status by remember { mutableStateOf("") }
         var session by remember { mutableStateOf("") }
+        var creds by remember { mutableStateOf(authStore.load(MailAuthStore.accountKey(server, email))) }
+        var testing by remember { mutableStateOf(false) }
+        var testMessage by remember { mutableStateOf("") }
+        var testFailed by remember { mutableStateOf(false) }
+        var signInOpen by remember { mutableStateOf(false) }
+
+        fun key() = MailAuthStore.accountKey(server, email)
+        fun keep(c: MailAuthCreds) { creds = c; authStore.save(key(), c) }
+
+        /** Fold a failure into the stored credentials: a refusal under a gateway mode means sign in again. */
+        fun failed(problem: ConnProblem, words: String) {
+            val gated = creds.mode != MailAuthMode.NONE
+            keep(creds.copy(lastOk = false, needsSignIn = gated && problem == ConnProblem.UNAUTHORIZED,
+                lastError = if (gated && problem == ConnProblem.UNAUTHORIZED) "" else words))
+            if (creds.mode == MailAuthMode.AUTHELIA && problem == ConnProblem.UNAUTHORIZED) signInOpen = true
+        }
+
+        // A stored Authelia session that the server stopped honouring: ask for the sign-in straight away.
+        LaunchedEffect(Unit) { if (creds.mode == MailAuthMode.AUTHELIA && creds.needsSignIn) signInOpen = true }
+
+        fun test() {
+            testing = true; testMessage = ""
+            val snapshot = creds
+            scope.launch {
+                val out = withContext(Dispatchers.IO) { MailConnTest.run(ctx, server, email, password, snapshot) }
+                testing = false
+                testMessage = out.message; testFailed = !out.ok
+                if (out.ok) keep(creds.copy(lastOk = true, needsSignIn = false, lastError = ""))
+                else failed(out.problem ?: ConnProblem.OTHER, out.message)
+            }
+        }
 
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
             OutlinedTextField(
@@ -80,7 +116,7 @@ class MailFragment : KitComposeFragment() {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            OutlinedTextField(
+            if (creds.mode != MailAuthMode.BEARER) OutlinedTextField(
                 value = password, onValueChange = { password = it }, singleLine = true,
                 label = { Text(stringResource(R.string.mail_password_hint)) },
                 visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
@@ -90,6 +126,23 @@ class MailFragment : KitComposeFragment() {
                 },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
+            MailDivider(vertical = 12.dp)
+            MailAuthSection(
+                state = MailAuthSectionState(
+                    mode = creds.mode, bearer = creds.bearer,
+                    status = MailAuthStatuses.resolve(creds, System.currentTimeMillis()),
+                    signedInAt = creds.signedInAt, cookieExpiresAt = creds.cookieExpiresAt,
+                    testing = testing, testMessage = testMessage, testFailed = testFailed,
+                ),
+                onMode = { m -> keep(creds.copy(mode = m, needsSignIn = false, lastError = "")); testMessage = "" },
+                onBearer = { t -> keep(creds.copy(bearer = t.trim(), needsSignIn = false, lastError = "")) },
+                onTest = ::test,
+                onSignIn = { signInOpen = true },
+                onSignOut = {
+                    clearAutheliaWebSession()
+                    keep(creds.copy(sessionCookie = "", cookieExpiresAt = 0L, signedInAt = 0L, needsSignIn = false, lastOk = false))
+                },
+            )
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = {
@@ -98,13 +151,15 @@ class MailFragment : KitComposeFragment() {
                         prefs.server = srv
                         prefs.email = mail
                         prefs.password = password
+                        authStore.save(MailAuthStore.accountKey(srv, mail), creds)
                         status = ctx.getString(R.string.mail_status_connecting)
                         session = ""
                         scope.launch {
-                            val result = withContext(Dispatchers.IO) { JmapClient(srv, mail, password).discover() }
+                            val result = withContext(Dispatchers.IO) { prefs.jmapClient(ctx).discover() }
                             when (result) {
                                 is JmapClient.Result.Success -> {
                                     val s = result.value
+                                    keep(creds.copy(lastOk = true, needsSignIn = false, lastError = ""))
                                     status = ctx.getString(R.string.mail_status_ok, s.primaryAccountId)
                                     session = buildString {
                                         appendLine("${ctx.getString(R.string.mail_session_apiurl)}: ${s.apiUrl}")
@@ -119,22 +174,33 @@ class MailFragment : KitComposeFragment() {
                                         appendLine(prettyJson.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), s.raw))
                                     }
                                 }
-                                is JmapClient.Result.HttpError ->
-                                    status = ctx.getString(R.string.mail_status_http, result.code, result.body.take(200))
-                                is JmapClient.Result.NetworkError ->
-                                    status = ctx.getString(R.string.mail_status_net, result.message)
+                                is JmapClient.Result.HttpError -> {
+                                    val prob = ConnErrors.classify(result.code, null)
+                                    status = if (prob == ConnProblem.HTTP) ctx.getString(R.string.mail_status_http, result.code, result.body.take(200))
+                                    else MailConnTest.describe(ctx, prob, result.code, "")
+                                    failed(prob, status)
+                                }
+                                is JmapClient.Result.NetworkError -> {
+                                    val prob = ConnErrors.classify(null, result.cause)
+                                    status = MailConnTest.describe(ctx, prob, null, result.message)
+                                    failed(prob, status)
+                                }
                             }
                         }
                     },
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(R.string.mail_connect)) }
                 TextButton(onClick = {
+                    authStore.forget(key())
+                    clearAutheliaWebSession()
                     prefs.clear()
                     server = BuildConfig.JMAP_DEFAULT_SERVER
                     email = ""
                     password = ""
                     status = ""
                     session = ""
+                    creds = MailAuthCreds()
+                    testMessage = ""
                 }) { Text(stringResource(R.string.mail_logout)) }
             }
             Text(status, color = p.textPrimary, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
@@ -143,6 +209,15 @@ class MailFragment : KitComposeFragment() {
                     fontFamily = FontFamily.Monospace, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             }
         }
+        if (signInOpen) AutheliaSignInDialog(
+            onDismiss = { signInOpen = false },
+            onCaptured = { v ->
+                signInOpen = false
+                keep(creds.copy(mode = MailAuthMode.AUTHELIA, sessionCookie = v, signedInAt = System.currentTimeMillis(),
+                    cookieExpiresAt = 0L, needsSignIn = false, lastError = ""))
+                test()
+            },
+        )
     }
 
     companion object { fun newInstance() = MailFragment() }

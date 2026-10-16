@@ -49,7 +49,7 @@ class MailFoldersFragment : KitComposeFragment() {
         val ctx = requireContext()
         val p = LocalKitPalette.current
         val prefs = remember { JmapPrefs(ctx) }
-        val signedIn = prefs.email.isNotEmpty() && prefs.password.isNotEmpty()
+        val signedIn = prefs.signedIn(ctx)
 
         var status by remember { mutableStateOf(if (signedIn) ctx.getString(R.string.mail_folders_loading) else ctx.getString(R.string.mail_folders_login_first)) }
         var loading by remember { mutableStateOf(signedIn) }
@@ -58,7 +58,7 @@ class MailFoldersFragment : KitComposeFragment() {
         LaunchedEffect(Unit) {
             if (!signedIn) return@LaunchedEffect
             val outcome = withContext(Dispatchers.IO) {
-                val client = JmapClient(prefs.server, prefs.email, prefs.password)
+                val client = prefs.jmapClient(ctx)
                 when (val s = client.discover()) {
                     is JmapClient.Result.Success     -> client.mailboxes(s.value) to null
                     is JmapClient.Result.HttpError   -> null to "HTTP ${s.code}: ${s.body.take(200)}"

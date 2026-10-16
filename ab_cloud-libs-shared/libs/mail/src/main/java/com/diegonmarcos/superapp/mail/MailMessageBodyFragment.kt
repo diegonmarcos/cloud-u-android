@@ -47,7 +47,7 @@ class MailMessageBodyFragment : KitComposeFragment() {
         val args = arguments ?: Bundle.EMPTY
         val emailId = args.getString(ARG_EMAIL_ID, "")
         val prefs = remember { JmapPrefs(ctx) }
-        val ready = !(prefs.email.isEmpty() || prefs.password.isEmpty() || emailId.isEmpty())
+        val ready = prefs.signedIn(ctx) && emailId.isNotEmpty()
 
         // Use args as fast initial render so the user sees headers immediately
         // while we fetch the body.
@@ -64,7 +64,7 @@ class MailMessageBodyFragment : KitComposeFragment() {
         LaunchedEffect(emailId) {
             if (!ready) return@LaunchedEffect
             val outcome = withContext(Dispatchers.IO) {
-                val client = JmapClient(prefs.server, prefs.email, prefs.password)
+                val client = prefs.jmapClient(ctx)
                 when (val s = client.discover()) {
                     is JmapClient.Result.Success     -> client.emailBody(s.value, emailId) to null
                     is JmapClient.Result.HttpError   -> null to "HTTP ${s.code}: ${s.body.take(200)}"
