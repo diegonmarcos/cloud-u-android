@@ -22,7 +22,7 @@ import java.io.File
  * chip says where the account stands, and Authelia exposes sign-in / sign-out. Compose, no Views.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], application = android.app.Application::class)
 class AccountAuthSectionTest {
     @get:Rule val compose = createComposeRule()
 
