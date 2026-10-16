@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
@@ -61,8 +62,16 @@ class SignatureEditorScreenTest {
 
     /** The debounce is a real-time delay on the main looper, which Robolectric only moves when told to. */
     private fun settle() {
+        compose.mainClock.advanceTimeBy(PREVIEW_DEBOUNCE_MS + 100)
         ShadowLooper.idleMainLooper(PREVIEW_DEBOUNCE_MS + 100, TimeUnit.MILLISECONDS)
         compose.waitForIdle()
+    }
+
+    /** The document the preview was last handed, so a failure prints it. */
+    private fun assertPreviewHas(expected: String) {
+        val node = compose.onNodeWithTag("preview-doc").fetchSemanticsNode()
+        val text = node.config[SemanticsProperties.Text].joinToString("") { it.text }
+        assertTrue("preview lacks [$expected] in [$text]", text.contains(expected))
     }
 
     private val saved = mutableListOf<Triple<String, String, Boolean>>()
@@ -85,16 +94,15 @@ class SignatureEditorScreenTest {
         show(SignatureEditorState("", "Work", false))
         compose.onNodeWithTag("sig-source").performTextInput("<b>Alex</b>")
         settle()
-        compose.onNodeWithTag("preview-doc").assertTextContains(signatureBlockHtml("<b>Alex</b>", true), substring = true)
-        compose.onNodeWithTag("preview-doc").assertTextContains("<b>Alex</b>", substring = true)
+        assertPreviewHas(signatureBlockHtml("<b>Alex</b>", true))
+        assertPreviewHas("<b>Alex</b>")
     }
 
     @Test fun theSanitisedMarkupIsWhatThePreviewShows() {
         show(SignatureEditorState("", "Work", false))
         compose.onNodeWithTag("sig-source").performTextInput("<i>hi</i><script>alert(1)</script>")
         settle()
-        val doc = compose.onNodeWithTag("preview-doc")
-        doc.assertTextContains("<i>hi</i>", substring = true)
+        assertPreviewHas("<i>hi</i>")
         // not asserting absence on the node (it has no negative matcher): the same string is pinned in SignaturePreviewTest
         assertTrue(!SignaturePreview.document("<i>hi</i><script>alert(1)</script>").contains("alert"))
     }
@@ -123,7 +131,7 @@ class SignatureEditorScreenTest {
         show(SignatureEditorState("<b>Alex</b>", "Work", false))
         compose.onNodeWithTag("sig-opt-dark").performClick()
         settle()
-        compose.onNodeWithTag("preview-doc").assertTextContains("#1f1f1f", substring = true)
-        compose.onNodeWithTag("preview-doc").assertTextContains(signatureBlockHtml("<b>Alex</b>", true), substring = true)
+        assertPreviewHas("#1f1f1f")
+        assertPreviewHas(signatureBlockHtml("<b>Alex</b>", true))
     }
 }
