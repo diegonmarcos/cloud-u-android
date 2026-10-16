@@ -1,189 +1,173 @@
 package com.diegonmarcos.cloudnav.places
 
 import android.os.Bundle
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
-import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.cloudnav.FragmentHost
+import com.diegonmarcos.cloudnav.NavChip
 import com.diegonmarcos.cloudnav.NavConfig
 import com.diegonmarcos.cloudnav.PlaceCategory
-import com.diegonmarcos.cloudnav.SearchUi
+import com.diegonmarcos.cloudnav.R
 import com.diegonmarcos.cloudnav.maps.MapsMapFragment
 import com.diegonmarcos.cloudnav.maps.MapsProviderClient
-import com.diegonmarcos.cloudnav.maps.MapsStopsFragment
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
+import com.diegonmarcos.cloudnav.tracker.TrackerInk
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitSearchBar
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * Places tab — the universal "find anything" surface. A live map with the
  * simplest search bar (free text → countries, cities, restaurants, anything)
  * + a row of category "islands" beneath it (Bars, Beaches, Gyms, …) like
  * Google Maps. After a search/category lookup the pins drop on the map AND a
- * swipe-up bottom sheet (peeking just above the bottom nav) lists the results;
- * tapping a row recenters the map on that place.
+ * results sheet (peeking just above the bottom nav) lists the results;
+ * tapping a row recenters the map on that place and opens its detail card.
+ *
+ * Compose (KitComposeFragment): the map is libs:maps' fragment inside a [FragmentHost].
  */
-class PlacesFragment : Fragment() {
+class PlacesFragment : KitComposeFragment() {
 
-    private val mapFragment = MapsMapFragment.newInstance(fab = true, style = "satellite")
-    private lateinit var sheetBehavior: BottomSheetBehavior<View>
-    private lateinit var sheetTitle: TextView
-    private lateinit var resultsContainer: LinearLayout
-    private var activeRadiusKm: Double = 0.0   // search scope: City/Country/World
-    private var currentHits: List<MapsProviderClient.SearchHit> = emptyList()
+    private var mapFragment: MapsMapFragment? = null
+    private var activeRadiusKm by mutableDoubleStateOf(0.0)   // search scope: City/Country/World
+    private var query by mutableStateOf("")
+    private var currentHits by mutableStateOf<List<MapsProviderClient.SearchHit>>(emptyList())
+    private var resultsLabel by mutableStateOf("")
+    private var sheet by mutableIntStateOf(SHEET_HIDDEN)
+    private var detail by mutableStateOf<MapsProviderClient.SearchHit?>(null)
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?,
-    ): View {
-        val ctx = requireContext()
-        val root = CoordinatorLayout(ctx)
+    override fun palette(): KitPalette = TrackerInk.palette()
 
-        // Map (fills).
-        val mapHost = FrameLayout(ctx).apply { id = View.generateViewId() }
-        root.addView(mapHost, CoordinatorLayout.LayoutParams(MATCH, MATCH))
-        if (childFragmentManager.findFragmentById(mapHost.id) == null) {
-            childFragmentManager.beginTransaction().replace(mapHost.id, mapFragment).commit()
-        }
-        // Tap a pin → open its rich detail card.
-        mapFragment.onPinClick = { id -> currentHits.getOrNull(id.toIntOrNull() ?: -1)?.let { openDetail(it) } }
-
-        // Handed a geo: location by another app (Cloud Nav as a maps app): once
-        // the map is ready, drop+centre on the point, or run the address search.
-        applyGeoArgs()
-
-        // Top overlay: simple search + radius-scope islands + category islands.
-        val top = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val searchCard = SearchUi.searchCard(ctx, "Search places, addresses, cities…") { q -> search(q) }
-        top.addView(searchCard, LinearLayout.LayoutParams(MATCH, WRAP))
-
-        // Radius scope (City / Country / World) — shown when the search bar is
-        // focused; default = build.json default_search_scope (City).
-        val scopes = NavConfig.searchScopes
-        activeRadiusKm = scopes.firstOrNull { it.id == NavConfig.defaultScope }?.radiusKm ?: 0.0
-        val scopeChips = ChipGroup(ctx).apply { isSingleLine = true; isSingleSelection = true; chipSpacingHorizontal = dp(6); setPadding(dp(4), 0, dp(4), 0) }
-        scopes.forEach { sc ->
-            scopeChips.addView(Chip(ctx).apply {
-                id = View.generateViewId()
-                text = if (sc.emoji.isBlank()) sc.label else "${sc.emoji} ${sc.label}"
-                isCheckable = true
-                isChecked = sc.id == NavConfig.defaultScope
-                setOnClickListener { activeRadiusKm = sc.radiusKm }
-            })
-        }
-        val scopeScroll = HorizontalScrollView(ctx).apply {
-            isHorizontalScrollBarEnabled = false; addView(scopeChips); visibility = View.GONE
-        }
-        top.addView(scopeScroll, LinearLayout.LayoutParams(MATCH, WRAP))
-        SearchUi.field(searchCard).setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) scopeScroll.visibility = View.VISIBLE
-        }
-
-        val islands = ChipGroup(ctx).apply {
-            isSingleLine = true
-            chipSpacingHorizontal = dp(6)
-            setPadding(dp(4), 0, dp(4), 0)
-        }
-        NavConfig.placeCategories.forEach { cat ->
-            islands.addView(Chip(ctx).apply {
-                text = if (cat.emoji.isBlank()) cat.label else "${cat.emoji} ${cat.label}"
-                isClickable = true; isCheckable = false
-                setOnClickListener { searchCategory(cat) }
-            })
-        }
-        top.addView(
-            HorizontalScrollView(ctx).apply { isHorizontalScrollBarEnabled = false; addView(islands) },
-            LinearLayout.LayoutParams(MATCH, WRAP),
-        )
-        root.addView(top, CoordinatorLayout.LayoutParams(MATCH, WRAP).apply {
-            gravity = Gravity.TOP
-            setMargins(dp(8), dp(8), dp(8), 0)
-        })
-
-        // Bottom sheet: results list (hidden until a search returns). The
-        // sheet view already carries its CoordinatorLayout.LayoutParams (with
-        // sheetBehavior) from buildSheet — add it WITHOUT params so that
-        // behavior instance stays the attached one.
-        root.addView(buildSheet(ctx))
-        return root
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        activeRadiusKm = NavConfig.searchScopes.firstOrNull { it.id == NavConfig.defaultScope }?.radiusKm ?: 0.0
     }
 
-    private fun buildSheet(ctx: android.content.Context): View {
-        val sheet = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(MapsStopsFragment.COL_SURFACE)
-            setPadding(dp(16), dp(8), dp(16), dp(8))
-        }
-        // Drag handle.
-        sheet.addView(View(ctx).apply {
-            setBackgroundColor(0xFFCCCCCC.toInt())
-            layoutParams = LinearLayout.LayoutParams(dp(40), dp(4)).apply {
-                gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(8)
+    /** A fresh map page, wired to this tab. Called by the host each time its container is new. */
+    private fun newMap(): MapsMapFragment = MapsMapFragment.newInstance(fab = true, style = "satellite").also { map ->
+        mapFragment = map
+        // Tap a pin → open its rich detail card.
+        map.onPinClick = { id -> currentHits.getOrNull(id.toIntOrNull() ?: -1)?.let { detail = it } }
+        // Handed a geo: location by another app (Cloud Nav as a maps app): once
+        // the map is ready, drop+centre on the point, or run the address search.
+        applyGeoArgs(map)
+    }
+
+    @Composable
+    override fun Content() {
+        val scopes = remember { NavConfig.searchScopes }
+        val categories = remember { NavConfig.placeCategories }
+        var scopesShown by remember { mutableStateOf(false) }
+        var scopeId by remember { mutableStateOf(NavConfig.defaultScope) }
+        val keyboard = LocalSoftwareKeyboardController.current
+
+        Box(Modifier.fillMaxSize()) {
+            FragmentHost(childFragmentManager, R.id.nav_host_places, 0, Modifier.fillMaxSize()) { newMap() }
+
+            // Top overlay: simple search + radius-scope islands + category islands.
+            Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // The radius scope (City / Country / World) shows once the search bar is focused.
+                Box(Modifier.onFocusChanged { if (it.hasFocus) scopesShown = true }) {
+                    KitSearchBar(query, { query = it }, { search(query); keyboard?.hide() }, placeholder = "Search places, addresses, cities…")
+                }
+                if (scopesShown) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    scopes.forEach { sc ->
+                        NavChip(if (sc.emoji.isBlank()) sc.label else "${sc.emoji} ${sc.label}", sc.id == scopeId,
+                            { scopeId = sc.id; activeRadiusKm = sc.radiusKm }, tag = "scope:${sc.id}")
+                    }
+                }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    categories.forEach { cat ->
+                        NavChip(if (cat.emoji.isBlank()) cat.label else "${cat.emoji} ${cat.label}", false,
+                            { searchCategory(cat) }, tag = "cat:${cat.id}")
+                    }
+                }
             }
-        })
-        sheetTitle = TextView(ctx).apply {
-            text = "Results"
-            setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-            setTextColor(MapsStopsFragment.COL_PRIMARY)
-            setPadding(0, 0, 0, dp(8))
+
+            if (sheet != SHEET_HIDDEN) ResultsSheet(
+                Modifier.align(Alignment.BottomCenter), "${currentHits.size} · $resultsLabel", currentHits, sheet == SHEET_EXPANDED,
+                onToggle = { sheet = if (sheet == SHEET_EXPANDED) SHEET_COLLAPSED else SHEET_EXPANDED },
+                onClose = { sheet = SHEET_HIDDEN },
+                onPick = { hit -> mapFragment?.recenter(hit.lat, hit.lon, 16.0); detail = hit },
+            )
         }
-        sheet.addView(sheetTitle)
-        resultsContainer = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        sheet.addView(ScrollView(ctx).apply { addView(resultsContainer) },
-            LinearLayout.LayoutParams(MATCH, 0, 1f))
-        sheetBehavior = BottomSheetBehavior<View>().apply {
-            isHideable = true
-            peekHeight = dp(72)
-            state = BottomSheetBehavior.STATE_HIDDEN
+
+        detail?.let { hit ->
+            val here = mapFragment?.myLatLon()
+            PlaceDetailSheet(hit, here?.first ?: Double.NaN, here?.second ?: Double.NaN) { detail = null }
         }
-        sheet.layoutParams = CoordinatorLayout.LayoutParams(MATCH, MATCH).apply { behavior = sheetBehavior }
-        return sheet
     }
 
     /** Act on a geo: hand-off carried in [getArguments]. A point drops a pin
      *  and centres on it; a query runs the forward search. Deferred to
      *  onMapReady so the camera/pin plumbing exists. */
-    private fun applyGeoArgs() {
+    private fun applyGeoArgs(map: MapsMapFragment) {
         val args = arguments ?: return
         if (args.getBoolean(ARG_HAS_POINT, false)) {
             val lat = args.getDouble(ARG_LAT)
             val lon = args.getDouble(ARG_LON)
             val label = args.getString(ARG_LABEL) ?: "Dropped pin"
             val zoom = if (args.containsKey(ARG_ZOOM)) args.getDouble(ARG_ZOOM) else 16.0
-            mapFragment.onMapReady = {
-                mapFragment.setPins(listOf(MapsMapFragment.Pin(lat, lon, MapsMapFragment.COLOR_RESULT, title = label, id = "0")))
-                mapFragment.recenter(lat, lon, zoom)
+            map.onMapReady = {
+                map.setPins(listOf(MapsMapFragment.Pin(lat, lon, MapsMapFragment.COLOR_RESULT, title = label, id = "0")))
+                map.recenter(lat, lon, zoom)
             }
         } else {
             val q = args.getString(ARG_QUERY)
-            if (!q.isNullOrBlank()) mapFragment.onMapReady = { search(q) }
+            if (!q.isNullOrBlank()) map.onMapReady = { search(q) }
         }
     }
 
     /** Free-text universal search → red pins + results list. Bounded by the
      *  active radius scope (City/Country/World) around the user (or map). */
-    private fun search(query: String) {
-        if (query.isBlank()) return
+    private fun search(q: String) {
+        if (q.isBlank()) return
         val ctx = context ?: return
-        val focus = mapFragment.myLatLon() ?: mapFragment.centerTarget()
+        val map = mapFragment
+        val focus = map?.myLatLon() ?: map?.centerTarget()
         val radius = activeRadiusKm
         Thread {
             val hits = MapsProviderClient.forwardSearch(
-                ctx, query,
+                ctx, q,
                 focusLat = focus?.first ?: 0.0,
                 focusLon = focus?.second ?: 0.0,
                 radiusKm = radius,
             )
             ui {
-                if (hits.isEmpty()) { Toast.makeText(ctx, "No match for \"$query\"", Toast.LENGTH_SHORT).show(); return@ui }
-                showResults(hits, "\"$query\"", MapsMapFragment.COLOR_RESULT)
+                if (hits.isEmpty()) { Toast.makeText(ctx, "No match for \"$q\"", Toast.LENGTH_SHORT).show(); return@ui }
+                showResults(hits, "\"$q\"", MapsMapFragment.COLOR_RESULT)
             }
         }.start()
     }
@@ -191,7 +175,7 @@ class PlacesFragment : Fragment() {
     /** Category island → Overpass POI in the viewport → blue pins + list. */
     private fun searchCategory(cat: PlaceCategory) {
         val ctx = context ?: return
-        val bounds = mapFragment.visibleBounds()
+        val bounds = mapFragment?.visibleBounds()
         if (bounds == null) { Toast.makeText(ctx, "Map still loading…", Toast.LENGTH_SHORT).show(); return }
         Toast.makeText(ctx, "Searching ${cat.label}…", Toast.LENGTH_SHORT).show()
         Thread {
@@ -205,49 +189,12 @@ class PlacesFragment : Fragment() {
 
     /** Drop pins, frame them, and populate + peek the results sheet. */
     private fun showResults(hits: List<MapsProviderClient.SearchHit>, label: String, color: String) {
-        val ctx = context ?: return
         currentHits = hits
+        resultsLabel = label
         val pins = hits.mapIndexed { i, h -> MapsMapFragment.Pin(h.lat, h.lon, color, title = h.title, id = i.toString()) }
-        mapFragment.setPins(pins)
-        mapFragment.fitTo(pins)
-
-        sheetTitle.text = "${hits.size} · $label"
-        resultsContainer.removeAllViews()
-        hits.forEach { hit ->
-            resultsContainer.addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                isClickable = true
-                setPadding(0, dp(10), 0, dp(10))
-                addView(TextView(ctx).apply {
-                    text = hit.title
-                    setTextAppearance(android.R.style.TextAppearance_Material_Body1)
-                    setTextColor(MapsStopsFragment.COL_PRIMARY)
-                })
-                hit.subtitle?.let { sub ->
-                    addView(TextView(ctx).apply {
-                        text = sub
-                        setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                        setTextColor(MapsStopsFragment.COL_SECONDARY)
-                    })
-                }
-                setOnClickListener {
-                    mapFragment.recenter(hit.lat, hit.lon, 16.0)
-                    openDetail(hit)
-                }
-            })
-            resultsContainer.addView(View(ctx).apply {
-                setBackgroundColor(0x14000000)
-                layoutParams = LinearLayout.LayoutParams(MATCH, 1)
-            })
-        }
-        sheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
-    }
-
-    /** Open the rich POI detail sheet, with distance measured from the user. */
-    private fun openDetail(hit: MapsProviderClient.SearchHit) {
-        val ctx = context ?: return
-        val here = mapFragment.myLatLon()
-        PlaceDetailSheet.show(ctx, hit, here?.first ?: Double.NaN, here?.second ?: Double.NaN)
+        mapFragment?.setPins(pins)
+        mapFragment?.fitTo(pins)
+        sheet = SHEET_COLLAPSED
     }
 
     private fun ui(block: () -> Unit) {
@@ -255,11 +202,10 @@ class PlacesFragment : Fragment() {
         requireActivity().runOnUiThread { if (isAdded) block() }
     }
 
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
     companion object {
-        private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
-        private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
+        private const val SHEET_HIDDEN = 0
+        private const val SHEET_COLLAPSED = 1
+        private const val SHEET_EXPANDED = 2
 
         private const val ARG_HAS_POINT = "geo_has_point"
         private const val ARG_LAT = "geo_lat"
@@ -282,6 +228,40 @@ class PlacesFragment : Fragment() {
             }
             is com.diegonmarcos.cloudnav.GeoTarget.Query -> PlacesFragment().apply {
                 arguments = Bundle().apply { putString(ARG_QUERY, t.text) }
+            }
+        }
+    }
+}
+
+object PlacesTags {
+    const val SHEET = "places:results"
+    const val SHEET_TOGGLE = "places:results:toggle"
+    const val SHEET_CLOSE = "places:results:close"
+    fun row(i: Int) = "places:results:row:$i"
+}
+
+/** The results list over the map: a handle and title that fold the list open, and one row per hit. */
+@Composable
+private fun ResultsSheet(
+    modifier: Modifier, title: String, hits: List<MapsProviderClient.SearchHit>, expanded: Boolean,
+    onToggle: () -> Unit, onClose: () -> Unit, onPick: (MapsProviderClient.SearchHit) -> Unit,
+) {
+    val p = LocalKitPalette.current
+    Column(modifier.fillMaxWidth().testTag(PlacesTags.SHEET).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+        .background(p.surface).padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Box(Modifier.align(Alignment.CenterHorizontally).width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(p.hairline))
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, Modifier.weight(1f).testTag(PlacesTags.SHEET_TOGGLE).clickable(onClick = onToggle).padding(vertical = 8.dp),
+                color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+            Text("✕", Modifier.testTag(PlacesTags.SHEET_CLOSE).clickable(onClick = onClose).padding(8.dp), color = p.textSecondary,
+                style = MaterialTheme.typography.titleMedium)
+        }
+        if (expanded) LazyColumn(Modifier.heightIn(max = 320.dp)) {
+            itemsIndexed(hits) { i, hit ->
+                Column(Modifier.fillMaxWidth().testTag(PlacesTags.row(i)).clickable { onPick(hit) }.padding(vertical = 10.dp)) {
+                    Text(hit.title, color = p.textPrimary, style = MaterialTheme.typography.bodyLarge)
+                    hit.subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, color = p.textSecondary, style = MaterialTheme.typography.bodySmall) }
+                }
             }
         }
     }

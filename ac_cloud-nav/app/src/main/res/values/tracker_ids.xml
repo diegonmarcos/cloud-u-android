@@ -3,4 +3,8 @@
     <!-- Containers of the child pages inside the Compose Timeline and Configs hosts. -->
     <item name="nav_host_timeline" type="id"/>
     <item name="nav_host_configs" type="id"/>
+    <!-- The map page inside the Compose Places, Routes and Navigation tabs. -->
+    <item name="nav_host_places" type="id"/>
+    <item name="nav_host_routes" type="id"/>
+    <item name="nav_host_navigation" type="id"/>
 </resources>
