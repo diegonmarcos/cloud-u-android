@@ -26,9 +26,20 @@ export interface ExternalDirListing {
   entries: ExternalDirEntry[];
 }
 
+export interface ExternalBinaryReadResult {
+  /** base64, no line breaks */
+  data: string;
+  name: string;
+  size: number;
+  path: string;
+}
+
 export type ExternalFilePluginType = {
   readFile(options: { path: string }): Promise<ExternalFileReadResult>;
   listDir(options: { path: string }): Promise<ExternalDirListing>;
+  /** every non-hidden entry of one folder level, any file type (vault attachments) */
+  listFiles(options: { path: string }): Promise<ExternalDirListing>;
+  readBinary(options: { path: string }): Promise<ExternalBinaryReadResult>;
   openSettings(): Promise<void>;
 };
 

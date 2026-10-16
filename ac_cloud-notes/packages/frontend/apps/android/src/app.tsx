@@ -598,7 +598,7 @@ const openExternalFile = async (path: string) => {
 // Phase 1 (cloud-notes-hybrid): "Import this folder as a vault". The folder is
 // walked through the same plugin (vault-import.ts) and every note goes to the
 // Obsidian importer in ONE call, so [[wikilinks]] between the notes resolve.
-// Text only: images and other attachments are reported as skipped, never
+// Attachments come along as bytes; whatever is skipped is counted, never
 // dropped silently. Resolved at event time, like openExternalFile (#513).
 const importVaultFolder = async (root: string) => {
   let collected: Awaited<ReturnType<typeof collectVault>>;
@@ -634,13 +634,13 @@ const importVaultFolder = async (root: string) => {
   try {
     await workspace.scope
       .get(ImportService)
-      .importObsidianVault(toVaultFiles(collected.notes, vaultNameOf(root)));
+      .importObsidianVault(toVaultFiles(collected.notes, vaultNameOf(root), collected.attachments));
     const skipped = collected.skipped.length;
     notify.success({
       title: 'Vault imported',
       message:
-        `${collected.notes.length} notes imported` +
-        (skipped ? `, ${skipped} entries skipped (attachments and non-notes)` : '') +
+        `${collected.notes.length} notes and ${collected.attachments.length} attachments imported` +
+        (skipped ? `, ${skipped} entries skipped` : '') +
         (collected.truncated ? '. A size limit stopped the walk early.' : '.'),
     });
   } catch (err: unknown) {

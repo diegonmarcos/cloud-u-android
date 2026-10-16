@@ -15,6 +15,7 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
+import android.util.Base64
 import java.io.File
 import java.io.FileInputStream
 
@@ -195,6 +196,74 @@ class ExternalFilePlugin : Plugin() {
                 .put("parent", if (atRoot) null else File(shown).parentFile?.path?.plus("/"))
                 .put("entries", entries)
         )
+    }
+
+    /**
+     * Vault import (Phase 1): every non-hidden FILE of one folder level, whatever its type, so
+     * attachments (images, pdf) can be found. Deliberately separate from [listDir]: the explorer
+     * keeps offering only what [readFile] accepts.
+     */
+    @PluginMethod
+    fun listFiles(call: PluginCall) {
+        val path = call.getString("path")?.trim().orEmpty()
+        val dir = guardedFile(call, path) ?: return
+        if (!dir.exists()) {
+            call.reject("Folder not found at $path", "NOT_FOUND")
+            return
+        }
+        if (!dir.isDirectory) {
+            call.reject("This is a file, not a folder: $path", "NOT_A_DIRECTORY")
+            return
+        }
+        val children = dir.listFiles()
+        if (children == null) {
+            call.reject("Cannot read the folder $path", "READ_ERROR")
+            return
+        }
+        val entries = JSArray()
+        children
+            .filter { !it.name.startsWith(".") }
+            .sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
+            .forEach {
+                entries.put(
+                    JSObject()
+                        .put("name", it.name)
+                        .put("isDir", it.isDirectory)
+                        .put("size", if (it.isDirectory) 0L else it.length())
+                )
+            }
+        call.resolve(JSObject().put("path", path.trimEnd('/') + "/").put("entries", entries))
+    }
+
+    /** Vault import: one file's bytes as base64, any type, same guard and size cap as [readFile]. */
+    @PluginMethod
+    fun readBinary(call: PluginCall) {
+        val path = call.getString("path")?.trim().orEmpty()
+        val file = guardedFile(call, path) ?: return
+        if (!file.exists()) {
+            call.reject("File not found at $path", "NOT_FOUND")
+            return
+        }
+        if (file.isDirectory) {
+            call.reject("This is a folder, not a file: $path", "IS_DIRECTORY")
+            return
+        }
+        if (file.length() > MAX_BYTES) {
+            call.reject("File is larger than the 10 MiB import limit.", "TOO_LARGE")
+            return
+        }
+        try {
+            val bytes = FileInputStream(file).use { it.readBytes() }
+            call.resolve(
+                JSObject()
+                    .put("data", Base64.encodeToString(bytes, Base64.NO_WRAP))
+                    .put("name", file.name)
+                    .put("size", bytes.size)
+                    .put("path", path)
+            )
+        } catch (e: Exception) {
+            call.reject("Cannot read $path (${e.message ?: "unknown error"})", "READ_ERROR")
+        }
     }
 
     @PluginMethod
