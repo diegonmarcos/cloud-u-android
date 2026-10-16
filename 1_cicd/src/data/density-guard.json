@@ -1,5 +1,5 @@
 {
-  "_doc": "cloud-android-density-guard policy: the fleet's Compose hosts are dense and own window insets ONCE. Everything the guard knows is here. scan_roots: the apps and libs the Compose conversion reached; a legacy Compose app with its own Typography (Writer, Gallery, Drive, Search) is outside.",
+  "_doc": "cloud-android-density-guard policy: the fleet's Compose hosts are dense and own window insets ONCE. Everything the guard knows is here. scan_roots: the apps and libs the Compose conversion reached; a legacy Compose app with its own Typography (Writer, Gallery, Drive, Search) is outside. ac_cloud-store/web is the Kotlin/Wasm page (own theme). MinimalistBlackFragment is the launcher home: no host above it, so it is the one owner of its insets.",
   "owner": "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt",
   "owner_needles": [
     "fun kitTypography",
@@ -16,7 +16,8 @@
     "/node_modules/",
     "/ac_cloud-matrix/",
     "/ac_cloud-vault/",
-    "/ac_cloud-notes/"
+    "/ac_cloud-notes/",
+    "/ac_cloud-store/web/"
   ],
   "theme_exempt": [
     "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt"
@@ -38,7 +39,8 @@
   "rule_allow": {
     "nested_safe_drawing": [
       "ab_cloud-libs-shared/libs/bottomnav/",
-      "ab_cloud-libs-shared/libs/keyboard/"
+      "ab_cloud-libs-shared/libs/keyboard/",
+      "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/themes/minimalist/MinimalistBlackFragment.kt"
     ],
     "scaffold_without_insets": [
       "ab_cloud-libs-shared/libs/keyboard/"

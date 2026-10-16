@@ -2,11 +2,9 @@ package com.diegonmarcos.superapp.ui
 
 import android.app.Application
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -45,7 +43,7 @@ class KitDensityTest : KitPageHarness() {
 
     @Test fun `Material touch targets honour the kit floor, not 48dp`() {
         showKit {
-            IconButton(onClick = {}, modifier = Modifier.testTag("ib")) { Icon(Icons.Filled.Settings, null) }
+            IconButton(onClick = {}, modifier = Modifier.testTag("ib")) { Box(Modifier) }
         }
         val b = compose.onNodeWithTag("ib").getUnclippedBoundsInRoot()
         assertTrue("IconButton is ${b.height.value}dp tall", b.height.value <= 40f)
