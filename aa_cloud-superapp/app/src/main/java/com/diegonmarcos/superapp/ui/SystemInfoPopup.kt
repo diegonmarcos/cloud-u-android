@@ -46,6 +46,11 @@ object SystemInfoPopup {
         KitPopup.show(anchor, KitPopup.Align.END) { SystemInfoBubble(ctx) }
     }
 
+    /** Under a Compose anchor whose window bounds are [rect]. */
+    fun show(ctx: Context, host: View, rect: androidx.compose.ui.unit.IntRect) {
+        KitPopup.show(host, rect, KitPopup.Align.END) { SystemInfoBubble(ctx) }
+    }
+
     /** The bubble itself, split from [show] so it can be drawn without a window. */
     @Composable
     internal fun SystemInfoBubble(ctx: Context) {

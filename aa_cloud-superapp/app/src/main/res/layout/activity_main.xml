@@ -196,7 +196,7 @@
              status bar used to live before MainActivity hid it).
              Default visibility is gone; MainActivity.applyLauncherChrome
              flips it on per the (isLauncher, theme) state. -->
-        <com.diegonmarcos.superapp.launcher.LauncherStatusStripView
+        <androidx.compose.ui.platform.ComposeView
             android:id="@+id/launcher_status_strip"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

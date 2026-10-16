@@ -63,13 +63,13 @@ object ShellFxState {
         pets = runCatching { p?.anim("pets_anim") }.getOrNull() ?: true
     }
 
-    /** Hook the decorative ComposeViews declared in activity_main.xml up to their composables. */
-    fun install(activity: Activity) {
-        refresh(activity)
-        activity.findViewById<ComposeView>(R.id.galaxy_backdrop)?.setContent { GalaxyBackdrop() }
-        activity.findViewById<ComposeView>(R.id.dynamic_island_wave)?.setContent { IslandWave() }
-        activity.findViewById<ComposeView>(R.id.dynamic_island_prism)?.setContent { PrismaticShimmer() }
-        activity.findViewById<ComposeView>(R.id.music_playing_wave)?.setContent { WaveLine() }
+    /** Hook the decorative ComposeViews declared in activity_main.xml (found by ShellActivity) up to their composables. */
+    fun install(ctx: Context, galaxy: ComposeView?, wave: ComposeView?, prism: ComposeView?, line: ComposeView?) {
+        refresh(ctx)
+        galaxy?.setContent { GalaxyBackdrop() }
+        wave?.setContent { IslandWave() }
+        prism?.setContent { PrismaticShimmer() }
+        line?.setContent { WaveLine() }
     }
 }
 

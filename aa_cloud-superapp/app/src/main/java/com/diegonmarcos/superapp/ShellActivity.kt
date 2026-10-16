@@ -18,7 +18,7 @@ import com.diegonmarcos.superapp.launcher.SectionPages
 import com.diegonmarcos.superapp.launcher.SectionMenuFragment
 import com.diegonmarcos.superapp.launcher.SectionTabsFragment
 import com.diegonmarcos.superapp.launcher.PlaceholderDrawerFragment
-import com.diegonmarcos.superapp.launcher.LauncherStatusStripView
+import com.diegonmarcos.superapp.launcher.LauncherStatusStrip
 import com.diegonmarcos.superapp.launcher.HomeDrawerFragment
 import com.diegonmarcos.superapp.launcher.themes.cloud.Home3DFragment
 import com.diegonmarcos.superapp.launcher.DetailPlaceholderFragment
@@ -494,7 +494,11 @@ open class ShellActivity : AppCompatActivity(),
 
             setContentView(R.layout.activity_main)
             // The galaxy, the island's wave and neon frame and the music line are Compose layers now.
-            ShellFxState.install(this)
+            ShellFxState.install(
+                this, findViewById(R.id.galaxy_backdrop), findViewById(R.id.dynamic_island_wave),
+                findViewById(R.id.dynamic_island_prism), findViewById(R.id.music_playing_wave),
+            )
+            findViewById<androidx.compose.ui.platform.ComposeView>(R.id.launcher_status_strip)?.let { LauncherStatusStrip.install(this, it) }
             // App Tabs LRU window size — data-driven from build.json::ui.app_tabs.cap.
             com.diegonmarcos.superapp.apptabs.AppTabPrefs.cap = BuildConfig.UI_APP_TABS_CAP
             modePrefs = ModePrefs(this)
@@ -979,7 +983,7 @@ open class ShellActivity : AppCompatActivity(),
     /** Apply launcher-mode chrome based on (isDefaultLauncher, theme):
      *
      *   Cloud Theme + launcher    → hide system status bar, show our
-     *                               LauncherStatusStripView (Time +
+     *                               the status strip (Time +
      *                               Battery), hide nothing else.
      *   Minimalist Black + launcher → hide system status bar AND hide
      *                               toolbar island + bottom nav (pure
@@ -1229,10 +1233,6 @@ open class ShellActivity : AppCompatActivity(),
         val prefs = com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(this)
         ShellFxState.refresh(this)
         runCatching {
-            (findViewById<View>(R.id.launcher_status_strip)
-                as? LauncherStatusStripView)?.applyPetsPref()
-        }
-        runCatching {
             val b = prefs.brightness
             if (b >= 0 && android.provider.Settings.System.canWrite(this)) {
                 android.provider.Settings.System.putInt(contentResolver,
@@ -1257,7 +1257,7 @@ open class ShellActivity : AppCompatActivity(),
     /** True when THIS instance is the home screen — i.e. it is the
      *  [HomeActivity] door AND our package is the resolved default Home
      *  handler. Drives launcher chrome (hidden system status bar, the
-     *  [LauncherStatusStripView], edge-to-edge window).
+     *  the status strip, edge-to-edge window).
      *
      *  The `is HomeActivity` half is not redundant. Resolving CATEGORY_HOME
      *  answers a question about the PACKAGE, and since the split into two

@@ -2,7 +2,9 @@ package com.diegonmarcos.superapp.ui
 
 import android.app.Application
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -29,13 +31,13 @@ class ShellFxComposeTest : KitPageHarness() {
     @Test
     fun `X1 every layer composes at its size`() {
         ShellFxState.frozen = true
-        showKit {
+        showKit { Column(Modifier.wrapContentSize()) {
             Box(Modifier.size(300.dp, 200.dp).testTag("galaxy")) { GalaxyBackdrop(Modifier.size(300.dp, 200.dp)) }
             Box(Modifier.size(120.dp, 22.dp).testTag("island")) {
                 IslandWave(Modifier.size(120.dp, 22.dp)); PrismaticShimmer(Modifier.size(120.dp, 22.dp))
             }
             Box(Modifier.size(90.dp, 16.dp).testTag("line")) { WaveLine(Modifier.size(90.dp, 16.dp)) }
-        }
+        } }
         compose.waitForIdle()
         for (tag in listOf("galaxy", "island", "line")) compose.onNodeWithTag(tag).assertExists()
         val n = compose.onNodeWithTag("island").fetchSemanticsNode()

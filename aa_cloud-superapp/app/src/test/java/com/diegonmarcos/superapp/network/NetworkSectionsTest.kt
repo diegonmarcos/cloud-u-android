@@ -67,7 +67,7 @@ class NetworkSectionsTest {
         assertTrue("the popup must lay out via NetworkSections.layout", popup.contains("NetworkSections.layout()"))
         assertTrue("the popup draws the divider item", popup.contains("is NetworkSections.Item.Divider -> PopDivider()"))
         assertTrue("every header carries its settings link", popup.contains("NetworkSections.SETTINGS.getValue(key)"))
-        val strip = File(src, "launcher/LauncherStatusStripView.kt").readText()
+        val strip = File(src, "launcher/LauncherStatusStrip.kt").readText()
         assertTrue("the strip must lay out via NetworkSections.inOrder", strip.contains("NetworkSections.inOrder("))
     }
 }

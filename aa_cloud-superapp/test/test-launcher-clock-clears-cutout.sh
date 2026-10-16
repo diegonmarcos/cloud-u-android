@@ -32,7 +32,7 @@ set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 KT="$APP/app/src/main/java/com/diegonmarcos/superapp"
 BUILD="$APP/build.json"
-STRIP="$KT/launcher/LauncherStatusStripView.kt"
+STRIP="$KT/launcher/LauncherStatusStrip.kt"
 SHELL_ACT="$KT/ShellActivity.kt"
 # The window (SHORT_EDGES included) is libs:bottomnav's FleetChrome since the fleet shares SuperApp's chrome.
 FLEET_CHROME="$APP/../ab_cloud-libs-shared/libs/bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/FleetChrome.kt"
@@ -81,6 +81,12 @@ if has "$STRIP" 'setOnApplyWindowInsetsListener'; then
 else
   bad "T2: no insets listener — a one-shot read at construction is stale the moment the cutout is re-dispatched"
 fi
+# The Compose host must not swallow them before the listener hands them on.
+if has "$STRIP" 'consumeWindowInsets = false'; then
+  ok "T2: the strip's ComposeView is told not to consume window insets"
+else
+  bad "T2: the strip's ComposeView may consume window insets - the island below it would lose them"
+fi
 # The listener must hand the insets on. Consuming them here would starve the
 # toolbar island dispatched after it and ShellActivity's own shell listener.
 if has "$STRIP" 'consumeSystemWindowInsets|WindowInsetsCompat\.CONSUMED'; then
@@ -92,7 +98,7 @@ fi
 echo "== T3: the clearance is unconditional =="
 # The pet spacer was `if (petsEnabled)`. It was never clearance — it was 22dp of
 # luck that a phone with Animal animations off did not have at all.
-if has "$STRIP" 'if \(petsEnabled\) *cent(er|re)Col\.addView'; then
+if has "$STRIP" 'if \(petsEnabled\) *(cent(er|re)Col\.addView|Spacer\()'; then
   bad "T3: the centre column's reserve is behind the pets flag again — turn Animal animations off and the clock has no clearance at all"
 else
   ok "T3: the centre column's reserve is not gated on the pets flag"

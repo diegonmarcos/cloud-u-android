@@ -153,7 +153,7 @@ def uiSamplesB64     = uiSamplesJson.bytes.encodeBase64().toString()
 def uiGroupsJson     = groovy.json.JsonOutput.toJson(buildJson.ui.home_groups ?: [])
 def uiGroupsB64      = uiGroupsJson.bytes.encodeBase64().toString()
 // Status-bar Line 0 animated pets — single source of truth in
-// build.json::status_pets. LauncherStatusStripView decodes this at runtime
+// build.json::status_pets. LauncherStatusStrip decodes this at runtime
 // to pick each tool's animal + map its strength to a gait. Empty-safe.
 def statusPetsJson   = groovy.json.JsonOutput.toJson(buildJson.status_pets ?: [:])
 def statusPetsB64    = statusPetsJson.bytes.encodeBase64().toString()
@@ -1055,7 +1055,7 @@ dependencies {
     // libs:launcher-onehand — One-Hand edge-gesture overlay engine (Configs/Onehand toggle).
     implementation project(':libs:launcher-onehand')
     // libs:launcher-zoomies — animated status-bar pet (PetStrengthView + zoomies GIF assets),
-    // extracted from app/launcher. Consumed by LauncherStatusStripView.
+    // extracted from app/launcher. Consumed by LauncherStatusStrip.
     implementation project(':libs:launcher-zoomies')
 
     implementation 'androidx.core:core-ktx:1.13.1'

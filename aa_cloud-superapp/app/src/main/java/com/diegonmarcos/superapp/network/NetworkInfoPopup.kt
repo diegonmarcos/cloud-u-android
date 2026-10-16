@@ -123,6 +123,11 @@ object NetworkInfoPopup {
         KitPopup.show(anchor, KitPopup.Align.EDGE) { close -> NetworkBubble(ctx, focus, close) }
     }
 
+    /** Under a Compose anchor whose window bounds are [rect]. */
+    fun show(ctx: Context, host: View, rect: androidx.compose.ui.unit.IntRect, focus: String? = null) {
+        KitPopup.show(host, rect, KitPopup.Align.EDGE) { close -> NetworkBubble(ctx, focus, close) }
+    }
+
     /** The bubble itself, split from [show] so it can be drawn without a window. */
     @Composable
     internal fun NetworkBubble(ctx: Context, focus: String?, dismiss: () -> Unit) {

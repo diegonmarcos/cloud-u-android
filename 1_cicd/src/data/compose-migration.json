@@ -625,10 +625,11 @@
       "baseline": {
         "view_screens": 1,
         "layout_xml": 4,
-        "view_ui_files": 9,
-        "custom_views": 2
+        "view_ui_files": 7,
+        "custom_views": 1
       },
       "done": [
+        "Launcher status strip in Compose (launcher/LauncherStatusStrip.kt: StatusStripModel owns the receivers and readings as state, the composable draws the three clusters; rect-anchored popups; LauncherStatusStripView and its SignalDots View helper deleted; StatusStripComposeTest)",
         "Shell decorative layers in Compose (ui/ShellFx.kt: GalaxyBackdrop, IslandWave, PrismaticShimmer, WaveLine on a frame clock; the Configs stars/island/pets switches are ShellFxState; the four custom Views deleted; ShellFxComposeTest)",
         "Dead custom views deleted: ShaderBackgroundView and ShimmerBorderView had no caller (not in any layout, no Kotlin reference)",
         "Now-playing card in Compose (MusicControlsPopup over KitPopup Align.CENTER; popup_music_controls.xml deleted; session callbacks via DisposableEffect, 500 ms tick via LaunchedEffect; MusicControlsPopupComposeTest)",

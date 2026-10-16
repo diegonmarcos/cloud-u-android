@@ -94,10 +94,6 @@ internal fun applyShellLiveToggles(activity: android.app.Activity?) {
     if (activity == null) return
     // Stars, island and pets are state the Compose layers read: one refresh reaches them all.
     com.diegonmarcos.superapp.ui.ShellFxState.refresh(activity)
-    runCatching {
-        (activity.findViewById<View>(R.id.launcher_status_strip)
-            as? com.diegonmarcos.superapp.launcher.LauncherStatusStripView)?.applyPetsPref()
-    }
 }
 
 // ── Icons per row: the View-side half of [GridColumns] ──────────────────────

@@ -81,6 +81,11 @@ object CalendarAgendaPopup {
         KitPopup.show(anchor, KitPopup.Align.CENTER) { CalendarBubble() }
     }
 
+    /** Under a Compose anchor whose window bounds are [rect]. */
+    fun show(host: View, rect: androidx.compose.ui.unit.IntRect) {
+        KitPopup.show(host, rect, KitPopup.Align.CENTER) { CalendarBubble() }
+    }
+
     private val MONO = FontFamily.Monospace
     private val LILAC = Color(0xFFE9D8FD)
 

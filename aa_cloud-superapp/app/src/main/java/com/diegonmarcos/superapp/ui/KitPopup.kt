@@ -42,12 +42,16 @@ object KitPopup {
 
     /** Show [content] under [anchor]. [close] dismisses it. Returns the closer for the caller to dismiss from outside, or null when no activity can host it. */
     fun show(anchor: View, align: Align = Align.END, content: @Composable (close: () -> Unit) -> Unit): (() -> Unit)? {
-        val act = ComposeAsk.activityOf(anchor.context) ?: return null
-        if (act.isFinishing) return null
         val loc = IntArray(2)
         anchor.getLocationInWindow(loc)
-        val rect = IntRect(loc[0], loc[1], loc[0] + anchor.width, loc[1] + anchor.height)
-        val gap = (6 * anchor.resources.displayMetrics.density).toInt()
+        return show(anchor, IntRect(loc[0], loc[1], loc[0] + anchor.width, loc[1] + anchor.height), align, content)
+    }
+
+    /** As above for a Compose anchor: [rect] is its bounds in the window, [from] any View of that window. */
+    fun show(from: View, rect: IntRect, align: Align = Align.END, content: @Composable (close: () -> Unit) -> Unit): (() -> Unit)? {
+        val act = ComposeAsk.activityOf(from.context) ?: return null
+        if (act.isFinishing) return null
+        val gap = (6 * from.resources.displayMetrics.density).toInt()
         val host = ComposeView(act)
         var closed = false
         fun close() {

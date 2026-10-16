@@ -19,7 +19,7 @@ import com.diegonmarcos.superapp.launcher.themes.cloud.Home3DFragment
  * Defaults come from build.json (baked into BuildConfig.UI_LAUNCHER_SETTINGS_B64
  * + UI_SCREENSAVERS_B64) so nothing is hardcoded here. Every subsystem reads its
  * own key — Haptics gates on "haptics", GalaxyBackdropView on "stars_anim",
- * Home3DFragment on "cube_anim", LauncherStatusStripView on "pets_anim".
+ * Home3DFragment on "cube_anim", the status strip on "pets_anim".
  */
 class LauncherSettingsPrefs(context: Context) {
 

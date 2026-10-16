@@ -3,7 +3,7 @@ package com.diegonmarcos.superapp.network
 /**
  * The status strip's 4-step signal levels (0..4, -1 = no level to show), as pure rules so the
  * mapping is tested without a radio. The strip draws them as the dots under an icon
- * (ui/SignalDotsView) and the network popup prints the same number ("Signal 3/4 (-67 dBm)").
+ * (launcher/LauncherStatusStrip SignalDots) and the network popup prints the same number ("Signal 3/4 (-67 dBm)").
  */
 object SignalLevels {
     const val NONE = -1

@@ -433,7 +433,7 @@
       "dir": "../ab_cloud-libs-shared/libs/launcher-zoomies",
       "type": "library",
       "depends_on": [],
-      "comment": "Zoomies pets — the animated status-bar companion. PetStrengthView (an AppCompatImageView) plays a per-tool animal whose gait (idle→walk→walk_fast→run) tracks the tool's strength, decoded from the vendored zoomies GIFs at assets/zoomies/<animal>/<variant>_<gait>.gif (CC BY-ND, used unmodified). Pure view module: no build.json config, no inter-lib deps — only androidx.appcompat. Consumed by app/launcher (LauncherStatusStripView instantiates one PetStrengthView per tool)."
+      "comment": "Zoomies pets — the animated status-bar companion. PetStrengthView (an AppCompatImageView) plays a per-tool animal whose gait (idle→walk→walk_fast→run) tracks the tool's strength, decoded from the vendored zoomies GIFs at assets/zoomies/<animal>/<variant>_<gait>.gif (CC BY-ND, used unmodified). Pure view module: no build.json config, no inter-lib deps — only androidx.appcompat. Consumed by app/launcher (LauncherStatusStrip instantiates one PetStrengthView per tool)."
     },
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
@@ -920,7 +920,7 @@
     }
   },
   "status_pets": {
-    "_doc": "Status-bar Line 0 animated pets (vendored from github.com/KartikLabhshetwar/zoomies, sprites CC BY-ND 4.0 — used UNMODIFIED + credited). Each Line-1 tool gets a FIXED animal above it; the tool's strength maps to a gait level 0..3 = idle/walk/walk_fast/run (the animal stays, the gait speeds up). Fully data-driven: sync-zoomies vendors exactly the animal/variant GIFs referenced here; app/build.gradle bakes this block to BuildConfig.STATUS_PETS_B64; LauncherStatusStripView renders + drives it.",
+    "_doc": "Status-bar Line 0 animated pets (vendored from github.com/KartikLabhshetwar/zoomies, sprites CC BY-ND 4.0 — used UNMODIFIED + credited). Each Line-1 tool gets a FIXED animal above it; the tool's strength maps to a gait level 0..3 = idle/walk/walk_fast/run (the animal stays, the gait speeds up). Fully data-driven: sync-zoomies vendors exactly the animal/variant GIFs referenced here; app/build.gradle bakes this block to BuildConfig.STATUS_PETS_B64; LauncherStatusStrip renders + drives it.",
     "enabled": true,
     "px": 22,
     "gaits": [

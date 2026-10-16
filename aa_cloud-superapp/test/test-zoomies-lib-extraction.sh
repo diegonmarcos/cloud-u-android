@@ -72,8 +72,8 @@ PY
 has "app/build.gradle" "project(':libs:launcher-zoomies')" "app/build.gradle implements :libs:launcher-zoomies"
 
 echo "== T6: consumer imports the new package =="
-STRIP="app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherStatusStripView.kt"
-has "$STRIP" "import com.diegonmarcos.superapp.zoomies.PetStrengthView" "LauncherStatusStripView imports moved class"
+STRIP="app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherStatusStrip.kt"
+has "$STRIP" "import com.diegonmarcos.superapp.zoomies.PetStrengthView" "LauncherStatusStrip imports moved class"
 
 echo "== T7: stray ac_zoomies-pets app folder removed =="
 absent "$UNIX/ac_zoomies-pets" "ac_zoomies-pets/ root app folder is gone"
