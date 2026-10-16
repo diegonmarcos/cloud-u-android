@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The dictation bar's palette as KitPalette roles plus its danger button and oscilloscope gradient
+     (VoiceBarView builds its CloudKitTheme from these), so no colour is spelled in Kotlin. Prefixed voice_:
+     this library is merged into the keyboard's resources and must not collide with its names. -->
+<resources>
+    <color name="voice_panel">#FF1B1922</color>
+    <color name="voice_field">#FF2C2842</color>
+    <color name="voice_neutral">#FF3A3552</color>
+    <color name="voice_accent">#FF8A6CFF</color>
+    <color name="voice_danger">#FF5A2E45</color>
+    <color name="voice_text">#FFF2EEFF</color>
+    <color name="voice_muted">#FFB9A7FF</color>
+    <color name="voice_on_accent">#FFFFFFFF</color>
+    <color name="voice_hint">#80FFFFFF</color>
+    <color name="voice_wave_baseline">#22FFFFFF</color>
+    <color name="voice_wave_start">#FF5CC8FF</color>
+    <color name="voice_wave_mid">#FF8A6CFF</color>
+    <color name="voice_wave_end">#FFB66CFF</color>
+</resources>

@@ -552,12 +552,9 @@
       "id": "libs:voice",
       "scope": "in",
       "wave": 5,
-      "ui": "views",
+      "ui": "compose",
       "size": "S",
-      "screens_left": [
-        "VoiceBarView",
-        "WaveformView (custom)"
-      ],
+      "screens_left": [],
       "consumers": [
         "keyboard"
       ],
@@ -567,8 +564,8 @@
       "baseline": {
         "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 1,
-        "custom_views": 2
+        "view_ui_files": 0,
+        "custom_views": 0
       }
     },
     {
