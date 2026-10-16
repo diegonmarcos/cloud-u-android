@@ -38,7 +38,7 @@
       "why": "upstream Acode: its own terminal process server inside Cloud Code; no fleet app"
     },
     "ac_cloud-myterminal/hub/src/main/java/com/diegonmarcos/ide/DevControlActivity.kt": {
-      "max": 2,
+      "max": 1,
       "why": "the address of MyTerminal's own opt-in dev API, shown in its own UI; a label"
     },
     "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/configs/DevControlServer.kt": {

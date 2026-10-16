@@ -237,6 +237,14 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = '17' }
+
+    // The Kotlin 2 / Compose dependency graph carries two multi-release OSGi manifests (jsch and
+    // jspecify), which the resource merger refuses as a duplicate; neither is read at runtime.
+    packaging {
+        resources {
+            excludes += ['META-INF/versions/9/OSGI-INF/MANIFEST.MF', 'META-INF/NOTICE.md', 'META-INF/LICENSE.md', 'META-INF/NOTICE', 'META-INF/LICENSE']
+        }
+    }
 }
 
 dependencies {
