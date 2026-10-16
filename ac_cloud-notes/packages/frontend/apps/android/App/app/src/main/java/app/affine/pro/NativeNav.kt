@@ -3,10 +3,17 @@ package app.affine.pro
 import android.view.Gravity
 import android.view.View
 import android.webkit.WebView
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import com.diegonmarcos.superapp.ai.AiFleetChatPanel
 import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavPage
@@ -47,11 +54,22 @@ internal object NativeNavScript {
 internal class NativeNav(
     private val decl: NavDecl,
     private val webView: WebView,
+    private val gatewayUrl: String,
     private val icon: (String) -> Int,
     private val run: (String) -> Unit,
 ) {
+    companion object {
+        /**
+         * `<section>/<page>` ids the shell draws itself instead of sending them to the web half:
+         * Search > Ask is libs:ai's chat. Mirrors the `native` rows of native-nav-routes.ts
+         * (test-notes-topbar.sh fails when the two sets differ).
+         */
+        val NATIVE_PAGES: Set<String> = setOf("search/ask")
+    }
+
     private lateinit var island: BottomNavIslandView
     private lateinit var strip: PageTabsView
+    private lateinit var ask: ComposeView
 
     /** The open section; the top bar's drawer reads it to mark the current one. */
     var sectionId: String by mutableStateOf("")
@@ -84,6 +102,24 @@ internal class NativeNav(
                 topMargin = topInset
             },
         )
+        // Search > Ask: the fleet's shared AI chat (libs:ai) between the strip and the island.
+        ask = ComposeView(ctx).apply {
+            visibility = View.GONE
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+                        AiFleetChatPanel(gatewayUrl)
+                    }
+                }
+            }
+        }
+        parent.addView(
+            ask,
+            CoordinatorLayout.LayoutParams(
+                CoordinatorLayout.LayoutParams.MATCH_PARENT,
+                CoordinatorLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
         parent.addView(
             island,
             CoordinatorLayout.LayoutParams(
@@ -91,6 +127,15 @@ internal class NativeNav(
                 CoordinatorLayout.LayoutParams.WRAP_CONTENT,
             ).apply { gravity = Gravity.BOTTOM },
         )
+        // The Ask page ends where the island starts.
+        island.addOnLayoutChangeListener { v, _, top, _, bottom, _, _, _, _ ->
+            (ask.layoutParams as? CoordinatorLayout.LayoutParams)?.let {
+                if (it.bottomMargin != bottom - top) {
+                    it.bottomMargin = bottom - top
+                    ask.layoutParams = it
+                }
+            }
+        }
         // The strip sits above the editor, not over its page header.
         strip.addOnLayoutChangeListener { v, _, top, _, bottom, _, _, _, _ ->
             stripHeight = if (v.visibility == View.VISIBLE) bottom - top else 0
@@ -112,10 +157,13 @@ internal class NativeNav(
 
     private fun applyWebMargin() {
         val h = topInset + stripHeight
-        (webView.layoutParams as? CoordinatorLayout.LayoutParams)?.let {
-            if (it.topMargin != h) {
-                it.topMargin = h
-                webView.layoutParams = it
+        // The editor and the Ask page start at the same line: the one margin both get.
+        for (v in listOf<View>(webView, ask)) {
+            (v.layoutParams as? CoordinatorLayout.LayoutParams)?.let {
+                if (it.topMargin != h) {
+                    it.topMargin = h
+                    v.layoutParams = it
+                }
             }
         }
     }
@@ -125,7 +173,15 @@ internal class NativeNav(
 
     private fun openSection(id: String) {
         showSection(id)
-        run(NativeNavScript.dispatch(id, null))
+        route(id, null)
+    }
+
+    /** Native pages are drawn here; every other target goes to the web half. */
+    private fun route(section: String, page: String?) {
+        val target = page ?: decl.section(section)?.pages?.firstOrNull()?.id
+        val native = target != null && "$section/$target" in NATIVE_PAGES
+        ask.visibility = if (native) View.VISIBLE else View.GONE
+        if (!native) run(NativeNavScript.dispatch(section, page))
     }
 
     private fun showSection(id: String) {
@@ -146,6 +202,6 @@ internal class NativeNav(
     private fun openPage(page: NavPage) {
         // A LAUNCH page (non-blank action) creates something and leaves the strip where it was.
         if (page.action.isBlank()) strip.selectedId = page.id
-        run(NativeNavScript.dispatch(sectionId, page.id))
+        route(sectionId, page.id)
     }
 }

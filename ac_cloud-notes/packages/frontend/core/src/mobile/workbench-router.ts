@@ -3,6 +3,7 @@ import type { RouteObject } from 'react-router-dom';
 import { Component as All } from './pages/workspace/all';
 import { Component as Collection } from './pages/workspace/collection';
 import { Component as CollectionDetail } from './pages/workspace/collection/detail';
+import { GlobalGraph, LocalGraph } from './pages/workspace/graph';
 import { Component as Home } from './pages/workspace/home';
 import { Component as Journals } from './pages/workspace/journals';
 import { Component as Search } from './pages/workspace/search';
@@ -41,6 +42,14 @@ export const workbenchRoutes = [
     path: '/tag/:tagId',
     // lazy: () => import('./pages/workspace/tag/detail'),
     Component: TagDetail,
+  },
+  {
+    path: '/graph',
+    Component: GlobalGraph,
+  },
+  {
+    path: '/graph/local',
+    Component: LocalGraph,
   },
   {
     path: '/journals',

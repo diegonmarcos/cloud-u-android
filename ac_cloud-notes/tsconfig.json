@@ -89,6 +89,7 @@
     { "path": "./blocksuite/affine/gfx/template" },
     { "path": "./blocksuite/affine/gfx/text" },
     { "path": "./blocksuite/affine/gfx/turbo-renderer" },
+    { "path": "./blocksuite/affine/graph" },
     { "path": "./blocksuite/affine/inlines/comment" },
     { "path": "./blocksuite/affine/inlines/footnote" },
     { "path": "./blocksuite/affine/inlines/latex" },

@@ -2,9 +2,10 @@
 // nav. libs:bottomnav's island + page strips live in the Compose shell and are
 // declared in build.json::ui; they know only section/page IDS. This table is
 // the one place those ids become AFFiNE workbench routes or actions, so the
-// native shell never learns a URL. `planned` targets have no screen in our
-// AFFiNE copy yet (see a0_docs/eng-specs/cloud-notes-hybrid.md): they toast
-// instead of navigating, so a tap is never silent and never lands on a 404.
+// native shell never learns a URL. A `native` target is a page the Compose
+// shell draws itself (Search > Ask is libs:ai's chat): the shell handles the
+// tap and this half does nothing. There is no toast left: every row is a route,
+// an action or a native page (a0_docs/eng-specs/cloud-notes-hybrid.md, A4.4).
 
 export const NATIVE_NAV_EVENT = 'cloud-notes:nav';
 
@@ -49,7 +50,7 @@ export interface NativeNavDetail {
 export type NativeNavTarget =
   | { kind: 'route'; to: string }
   | { kind: 'action'; action: 'new-page' | 'new-board' }
-  | { kind: 'planned'; phase: number; what: string };
+  | { kind: 'native'; what: string };
 
 /** key = `<section>/<page>`; every build.json::ui page id has exactly one row. */
 export const NATIVE_NAV_TARGETS: Record<string, NativeNavTarget> = {
@@ -61,11 +62,11 @@ export const NATIVE_NAV_TARGETS: Record<string, NativeNavTarget> = {
   'pages/new': { kind: 'action', action: 'new-page' },
   'canvas/boards': { kind: 'route', to: '/all' },
   'canvas/new': { kind: 'action', action: 'new-board' },
-  'graph/global': { kind: 'planned', phase: 4, what: 'Global graph' },
-  'graph/local': { kind: 'planned', phase: 4, what: 'Local graph' },
+  'graph/global': { kind: 'route', to: '/graph' },
+  'graph/local': { kind: 'route', to: '/graph/local' },
   'graph/tags': { kind: 'route', to: '/tag' },
   'search/search': { kind: 'route', to: '/search' },
-  'search/ask': { kind: 'planned', phase: 7, what: 'Ask (AI)' },
+  'search/ask': { kind: 'native', what: 'AI chat (libs:ai)' },
 };
 
 /** First page of each section: what tapping the island item opens. */
@@ -92,4 +93,34 @@ export function hasNativeNav(): boolean {
     (window as unknown as { cloudNotesNativeNav?: boolean })
       .cloudNotesNativeNav === true
   );
+}
+
+/** First path segments that are routes, not a doc id (mobile workbench-router.ts). */
+const RESERVED_ROOTS = new Set([
+  'home',
+  'search',
+  'all',
+  'collection',
+  'tag',
+  'journals',
+  'trash',
+  'graph',
+]);
+
+/** `/<docId>` -> docId; any other location -> null. */
+export function docIdFromPath(pathname: string): string | null {
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts.length !== 1 || RESERVED_ROOTS.has(parts[0])) return null;
+  return parts[0];
+}
+
+let lastDocId: string | null = null;
+
+/** The note that was open last: the local graph follows it. */
+export function setLastDocId(id: string | null) {
+  if (id) lastDocId = id;
+}
+
+export function getLastDocId(): string | null {
+  return lastDocId;
 }

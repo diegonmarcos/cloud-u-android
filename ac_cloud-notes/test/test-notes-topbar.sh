@@ -77,11 +77,20 @@ for dp, _, fs in os.walk(os.path.join(root, KT)):
         if f.endswith('.kt') and re.search(r'\.topMargin\s*=', open(os.path.join(dp, f), encoding='utf-8').read()):
             margin_writers.append(f)
 check(margin_writers == ['NativeNav.kt'], 'only NativeNav writes a top margin (found: %s)' % margin_writers)
-check(len(re.findall(r'\.topMargin\s*=', nav)) == 2, 'NativeNav writes exactly two margins: the strip below the bar, the WebView below the strip')
+check(len(re.findall(r'\.topMargin\s*=', nav)) == 2, 'NativeNav writes exactly two top margins: the strip below the bar, the editor and the Ask page below the strip')
 check('topInset + stripHeight' in nav, 'the WebView starts at bar height + strip height, nothing else')
 check('statusBarsPadding()' in top, 'the bar owns the status bar inset')
 check('--safe-area-inset-top:0px !important' in setup, 'the web half zeroes the status-bar safe area once native owns it')
 check(re.search(r'cloudNotesNativeNav\s*=\s*\n?\s*true', setup) is not None, 'the zeroing sits with the native-nav flag')
+
+# Search > Ask is a page the shell draws itself (libs:ai), never a toast
+rows = dict(re.findall(r"'([\w-]+/[\w-]+)':\s*(\{[^}]*\})", routes))
+web_native = {k for k, v in rows.items() if "kind: 'native'" in v}
+kt_native = set(re.findall(r'"([\w-]+/[\w-]+)"', re.search(r'NATIVE_PAGES[^=]*=\s*setOf\(([^)]*)\)', nav).group(1)))
+check(web_native == kt_native and bool(kt_native), 'native pages: web rows %s == Kotlin NATIVE_PAGES %s' % (sorted(web_native), sorted(kt_native)))
+check(not re.search(r"kind: 'planned'|notify\.", bridge + routes), 'the web nav bridge has no planned-toast path left')
+check('AiFleetChatPanel(gatewayUrl)' in nav and 'ask.visibility' in nav, 'NativeNav shows libs:ai\'s chat for the native Ask page')
+check("'graph/global': { kind: 'route'" in routes and "'graph/local': { kind: 'route'" in routes, 'Graph global and local are routes')
 
 print('RESULT: %s' % ('RED' if fails else 'GREEN'))
 raise SystemExit(1 if fails else 0)

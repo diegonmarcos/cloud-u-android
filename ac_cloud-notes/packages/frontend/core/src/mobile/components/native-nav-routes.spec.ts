@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import {
+  docIdFromPath,
   drawerDocs,
   NATIVE_NAV_FIRST_PAGE,
   NATIVE_NAV_TARGETS,
@@ -25,12 +26,30 @@ describe('native nav routes', () => {
     }
   });
 
-  test('planned targets never carry a route', () => {
-    const planned = Object.values(NATIVE_NAV_TARGETS).filter(
-      t => t.kind === 'planned'
-    );
-    expect(planned.length).toBeGreaterThan(0);
-    for (const t of planned) expect(t).not.toHaveProperty('to');
+  test('A4.4: Graph global/local are routes, Ask is a native page, nothing toasts', () => {
+    expect(NATIVE_NAV_TARGETS['graph/global']).toEqual({
+      kind: 'route',
+      to: '/graph',
+    });
+    expect(NATIVE_NAV_TARGETS['graph/local']).toEqual({
+      kind: 'route',
+      to: '/graph/local',
+    });
+    expect(NATIVE_NAV_TARGETS['search/ask'].kind).toBe('native');
+    const kinds = new Set(Object.values(NATIVE_NAV_TARGETS).map(t => t.kind));
+    expect(Array.from(kinds).sort()).toEqual(['action', 'native', 'route']);
+    for (const t of Object.values(NATIVE_NAV_TARGETS))
+      if (t.kind === 'native') expect(t).not.toHaveProperty('to');
+  });
+
+  test('a doc id is read from /<id> only', () => {
+    expect(docIdFromPath('/abc123')).toBe('abc123');
+    expect(docIdFromPath('/abc123/')).toBe('abc123');
+    expect(docIdFromPath('/graph')).toBeNull();
+    expect(docIdFromPath('/graph/local')).toBeNull();
+    expect(docIdFromPath('/tag/xyz')).toBeNull();
+    expect(docIdFromPath('/all')).toBeNull();
+    expect(docIdFromPath('/')).toBeNull();
   });
 
   test('unknown ids resolve to null', () => {

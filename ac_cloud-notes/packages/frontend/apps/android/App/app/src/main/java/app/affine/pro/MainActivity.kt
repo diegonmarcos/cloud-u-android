@@ -92,6 +92,7 @@ class MainActivity : BridgeActivity(), AFFiNEThemePlugin.Callback {
         val nav = NativeNav(
             decl = decl,
             webView = bridge.webView,
+            gatewayUrl = BuildConfig.AI_GATEWAY_URL,
             icon = { name ->
                 @Suppress("DiscouragedApi")
                 resources.getIdentifier("ic_nav_$name", "drawable", packageName)

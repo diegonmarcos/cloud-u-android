@@ -1,0 +1,22 @@
+{
+  "name": "@blocksuite/affine-graph",
+  "description": "Obsidian-style note graph for Cloud Notes: a pure builder (docs, links, tags), the local BFS subgraph and a deterministic force layout. No DOM, no dependencies.",
+  "type": "module",
+  "scripts": {
+    "build": "yarn run -T tsc"
+  },
+  "sideEffects": false,
+  "keywords": [],
+  "author": "diegonmarcos",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "dist",
+    "!src/__tests__",
+    "!dist/__tests__"
+  ],
+  "version": "0.27.5"
+}

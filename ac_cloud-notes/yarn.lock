@@ -388,6 +388,7 @@ __metadata:
     "@blocksuite/affine": "workspace:*"
     "@blocksuite/affine-block-root": "workspace:*"
     "@blocksuite/affine-components": "workspace:*"
+    "@blocksuite/affine-graph": "workspace:*"
     "@blocksuite/affine-ext-loader": "workspace:*"
     "@blocksuite/affine-shared": "workspace:*"
     "@blocksuite/data-view": "workspace:*"
@@ -2299,6 +2300,12 @@ __metadata:
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
     rxjs: "npm:^7.8.2"
+  languageName: unknown
+  linkType: soft
+
+"@blocksuite/affine-graph@workspace:*, @blocksuite/affine-graph@workspace:blocksuite/affine/graph":
+  version: 0.0.0-use.local
+  resolution: "@blocksuite/affine-graph@workspace:blocksuite/affine/graph"
   languageName: unknown
   linkType: soft
 

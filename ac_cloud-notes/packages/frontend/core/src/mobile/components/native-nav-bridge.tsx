@@ -1,4 +1,3 @@
-import { notify } from '@affine/component';
 import { usePageHelper } from '@affine/core/blocksuite/block-suite-page-list/utils';
 import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
 import { DocsService } from '@affine/core/modules/doc';
@@ -9,12 +8,14 @@ import { useEffect, useMemo } from 'react';
 
 import {
   type CloudNotesHost,
+  docIdFromPath,
   drawerDocs,
   NATIVE_NAV_EVENT,
   NATIVE_OPEN_DOC_EVENT,
   NATIVE_OPEN_SETTINGS_EVENT,
   type NativeNavDetail,
   resolveNativeNav,
+  setLastDocId,
 } from './native-nav-routes';
 
 /**
@@ -29,6 +30,12 @@ export const NativeNavBridge = () => {
   const pageHelper = usePageHelper(workspace.docCollection);
   const dialogs = useService(WorkspaceDialogService);
   const docList = useService(DocsService).list;
+
+  // The local graph follows the note that was open last.
+  const location = useLiveData(workbench.location$);
+  useEffect(() => {
+    setLastDocId(docIdFromPath(location.pathname));
+  }, [location.pathname]);
 
   // The top bar's Settings > Configs and a page picked in its drawer.
   useEffect(() => {
@@ -80,11 +87,8 @@ export const NativeNavBridge = () => {
           workbench.openDoc(doc.id);
           break;
         }
-        case 'planned':
-          notify.warning({
-            title: `${target.what} is coming`,
-            message: `Planned for roadmap phase ${target.phase}.`,
-          });
+        case 'native':
+          // drawn by the Compose shell (Search > Ask); nothing for the web half to do
           break;
       }
     };
