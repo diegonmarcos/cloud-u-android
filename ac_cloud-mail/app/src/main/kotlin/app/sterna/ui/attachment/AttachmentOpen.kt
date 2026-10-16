@@ -79,6 +79,10 @@ object AttachmentOpen {
             .putExtra(Intent.EXTRA_STREAM, uri)
             .putExtra(Intent.EXTRA_SUBJECT, subject)
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        // unguarded: this hand-off is held back by the caller, not by leaveOnce. The only caller is
+        // MessageExporter.start, which refuses a second export while one is in flight
+        // (`if (job?.isActive == true) return`), and that latch has to sit THERE: it also covers the
+        // file being built, which runs long before there is a share sheet to leave for.
         app.startActivity(Intent.createChooser(send, chooserTitle).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
