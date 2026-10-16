@@ -97,6 +97,65 @@ jobs:
       - name: Phase 0 storage tests
         run: sh ac_cloud-notes/test/run-phase0-storage.sh
 
+  # Phase 1 (cloud-notes-hybrid): the SAME web app, built a second time for the
+  # browser and served as a static container behind the edge gate (Authelia 2FA;
+  # the container holds no account and no secret). Smoke-tested before it is
+  # pushed, and pushed from main only, so a broken bundle never becomes :latest.
+  # Registering the service on the fleet is the deploy step (cloud-u-containers).
+  web_image:
+    name: "Web build -> gated container image (nginx, GHCR)"
+    needs: storage_tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22.23.2 (AFFiNE engines >=22.12.0 <23.0.0)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+
+      - name: yarn install (immutable)
+        working-directory: ac_cloud-notes
+        run: yarn install --immutable
+
+      - name: Web bundle (rspack)
+        working-directory: ac_cloud-notes
+        run: |
+          yarn affine @affine/web build
+          test -s packages/frontend/apps/web/dist/index.html || { echo "::error::the web build produced no index.html"; exit 1; }
+          du -sh packages/frontend/apps/web/dist
+
+      - name: Build the image
+        run: |
+          STAGE="$(mktemp -d)"
+          mkdir -p "$STAGE/deploy/web" "$STAGE/packages/frontend/apps/web"
+          cp ac_cloud-notes/deploy/web/Dockerfile ac_cloud-notes/deploy/web/nginx.conf "$STAGE/deploy/web/"
+          cp -r ac_cloud-notes/packages/frontend/apps/web/dist "$STAGE/packages/frontend/apps/web/dist"
+          docker build -f "$STAGE/deploy/web/Dockerfile" -t cloud-notes-web:ci "$STAGE"
+
+      - name: Smoke test (health, app shell, deep-link fallback)
+        run: |
+          docker run -d --name cn-web -p 18080:80 cloud-notes-web:ci
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:18080/healthz >/dev/null 2>&1 && break; sleep 1; done
+          curl -fsS http://127.0.0.1:18080/healthz | grep -q '^ok'
+          curl -fsS http://127.0.0.1:18080/ | grep -qi '<html'
+          # a router path must come back as the app shell, not a 404
+          curl -fsS http://127.0.0.1:18080/some/deep/link | grep -qi '<html'
+          curl -fsSI http://127.0.0.1:18080/index.html | grep -qi 'cache-control: no-store'
+          docker rm -f cn-web
+
+      - name: Push to GHCR (main only)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          IMG="ghcr.io/${{ github.repository_owner }}/cloud-notes-web-binaries"
+          docker tag cloud-notes-web:ci "$IMG:latest"
+          docker tag cloud-notes-web:ci "$IMG:${{ github.sha }}"
+          docker push "$IMG:latest"
+          docker push "$IMG:${{ github.sha }}"
+
   build_and_publish:
     needs: storage_tests
     name: "Build + publish (notes · arm64-v8a)"
