@@ -15,11 +15,11 @@ DataStore / Room stores and declared files it cannot move yet.
 
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
-| cloud-superapp | `com.diegonmarcos.superapp` | 43 | 0 | 100% |
+| cloud-superapp | `com.diegonmarcos.superapp` | 44 | 0 | 100% |
 | c3-morpheus | `com.diegonmarcos.morpheus` | 1 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
-| cloud-account | `com.diegonmarcos.cloudaccount` | 12 | 0 | 100% |
+| cloud-account | `com.diegonmarcos.cloudaccount` | 13 | 0 | 100% |
 | cloud-tasks | `com.diegonmarcos.cloudagenda` | 4 | 0 | 100% |
 | cloud-browser | `com.diegonmarcos.cloudbrowser` | 9 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 0 | 100% |
-| **fleet** | | **209** | **36** | **85%** |
+| **fleet** | | **211** | **36** | **85%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -98,6 +98,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `launcher_profile_prefs` | prefs | config | yes | Selected launcher profile preset (personal/work/guest). |
 | `launcher_settings` | prefs | config | yes | Launcher settings: screensaver, scale, brightness, eye intensity, screensaver timeout, animation/one-hand/control toggles, and the icons-per-row steppers grid_cols_cloud and grid_cols_phone (4..8; absent until the owner moves a stepper, so a phone that never chose follows the shipped default and a chosen value migrates with the phone). |
 | `launcher_theme_prefs` | prefs | config | yes | Selected launcher theme (cloud / cloud_minimalist_black). |
+| `mail_auth_prefs` | encrypted | secret | yes | Cloud Mail's per-account gateway credentials (Authelia in front of the JMAP server): one encrypted JSON blob per account, key auth:<email>, holding the auth mode (none / bearer / authelia), the pasted bearer token and the captured authelia_session cookie. Credentials: shown masked, never logged, replayed only to the account's own domain. |
 | `mail_jmap_prefs` | encrypted | config (keys: password→secret) | yes | JMAP server and email are account links; password is a credential. |
 | `mattermost_prefs` | encrypted | config (keys: token→secret) | yes | Mattermost server_url/user_id are account links; token is a credential. |
 | `mattermost_prefs_fallback` | prefs | config (keys: token→secret) | yes | Plain-prefs fallback of mattermost_prefs. |
@@ -142,7 +143,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)` | config | Defaults baked into the APK from build.json; not device state but the fallback for unset prefs. |
 | `filesDir/<KEYSTORE_FILE>` | device | This device's KDE Connect TLS identity keystore; never migrate, re-pair |
 
-Coverage: 43 covered, 0 gaps.
+Coverage: 44 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 
@@ -204,6 +205,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofi
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `import_configs` | encrypted | secret (keys: app_configs_json→secret, configs_json→secret, data_json→secret, grants_json→device, grants_seeded→device, mail_signatures→device) | yes | EncryptedSharedPreferences, THE Account vault's one keystore-backed file (#874): `configs_json` the Connections (the imported blob incl. auth.authelia_token and email, fleet bearer, mesh, DNS, Dagu, mail), `data_json` the identities, `app_configs_json` the Configs captured from every app; `grants_json` the per-app Secret grants (never migrates: a grant is the owner's decision on THIS phone) and `grants_seeded` its marker. Mostly credentials. `mail_signatures` is the copy of Mail's signatures the vault last held for the bundle (Mail's own store is the source of truth and travels through mail_signatures). |
+| `mail_auth_prefs` | encrypted | secret | yes | Cloud Mail's per-account gateway credentials (Authelia in front of the JMAP server): one encrypted JSON blob per account, key auth:<email>, holding the auth mode (none / bearer / authelia), the pasted bearer token and the captured authelia_session cookie. Credentials: shown masked, never logged, replayed only to the account's own domain. |
 | `mail_jmap_prefs` | encrypted | config (keys: password→secret) | yes | JMAP server and email are account links; password is a credential. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
@@ -222,7 +224,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofi
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
 | `vault_cockpit` | prefs | device | no | Only holds this phone's device_id used in the vault cockpit. |
 
-Coverage: 12 covered, 0 gaps.
+Coverage: 13 covered, 0 gaps.
 
 ## cloud-tasks — `com.diegonmarcos.cloudagenda`
 

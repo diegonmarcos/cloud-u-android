@@ -1078,6 +1078,14 @@
         "aa_cloud-superapp"
       ]
     },
+    "mail_auth_prefs": {
+      "kind": "encrypted",
+      "class": "secret",
+      "doc": "Cloud Mail's per-account gateway credentials (Authelia in front of the JMAP server): one encrypted JSON blob per account, key auth:<email>, holding the auth mode (none / bearer / authelia), the pasted bearer token and the captured authelia_session cookie. Credentials: shown masked, never logged, replayed only to the account's own domain.",
+      "used_by": [
+        "lib-mail"
+      ]
+    },
     "mail_jmap_prefs": {
       "kind": "encrypted",
       "class": "config",
