@@ -145,7 +145,7 @@ class TranslateBarView @JvmOverloads constructor(
     // No colour of its own: the host hands in the KEYBOARD's palette ([setPalette]).
     // The fixed near-black slab that used to sit here is what made the bar a black box
     // on a light keyboard — see [TranslatePalette].
-    private var palette by mutableStateOf(TranslatePalette.DARK)
+    private var colours by mutableStateOf(TranslatePalette.DARK)
     /** Ceiling the host sets so the bar never outgrows the keys under it; 0 = none yet. */
     private var maxBarHeight by mutableIntStateOf(0)
 
@@ -239,7 +239,7 @@ class TranslateBarView @JvmOverloads constructor(
     init {
         // Opaque from the first frame, even before the host's palette arrives: a bar that
         // draws nothing is the IME window showing through, which is black.
-        setBackgroundColor(palette.background)
+        setBackgroundColor(colours.background)
         attachInputTouch()
     }
 
@@ -248,8 +248,8 @@ class TranslateBarView @JvmOverloads constructor(
      * input view is rebuilt (a day/night switch rebuilds it), so the bar follows the keys.
      */
     fun setPalette(p: TranslatePalette) {
-        if (p == palette) return
-        palette = p
+        if (p == colours) return
+        colours = p
         setBackgroundColor(p.background)
     }
 
@@ -264,13 +264,13 @@ class TranslateBarView @JvmOverloads constructor(
     }
 
     override fun palette(): KitPalette = KitPalette.fromArgb(
-        surface = palette.surface,
-        surfaceSelected = palette.chip,
-        textPrimary = palette.text,
-        textSecondary = palette.muted,
-        accent = palette.accent,
-        hairline = palette.outline,
-        tileInk = palette.onAccent,
+        surface = colours.surface,
+        surfaceSelected = colours.chip,
+        textPrimary = colours.text,
+        textSecondary = colours.muted,
+        accent = colours.accent,
+        hairline = colours.outline,
+        tileInk = colours.onAccent,
     )
 
     /** Wire the bar to the IME. [keyboardLang] = active subtype language (detection fallback + default target). */
@@ -603,7 +603,7 @@ class TranslateBarView @JvmOverloads constructor(
 
     private fun applyInput() {
         inputTick // read: a bump re-runs the AndroidView update that calls this
-        val p = palette
+        val p = colours
         inputView.caretColor = p.caret
         if (editor.isEmpty) {
             inputView.text = context.getString(R.string.translate_bar_hint)
@@ -696,7 +696,7 @@ class TranslateBarView @JvmOverloads constructor(
     // ── the bar ──────────────────────────────────────────────────────────────
     @Composable
     override fun Body() {
-        val p = palette
+        val p = colours
         val cap: Dp = with(LocalDensity.current) { if (maxBarHeight > 0) maxBarHeight.toDp() else Dp.Unspecified }
         Box(Modifier.fillMaxWidth().then(if (cap != Dp.Unspecified) Modifier.heightIn(max = cap) else Modifier)
             .background(Color(p.background))) {
