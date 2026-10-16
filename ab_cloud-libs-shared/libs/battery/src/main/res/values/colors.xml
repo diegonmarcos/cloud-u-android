@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The battery energy page's and bubble's palette as KitPalette roles (EnergyUsageDialog and
+     BatteryEstimatePopup build their CloudKitTheme from these), so no colour is spelled in Kotlin. Prefixed
+     battery_: this library is merged into the app's resources and must not collide with its names. -->
+<resources>
+    <color name="battery_bg">#FF0A0A0F</color>
+    <color name="battery_card">#FF15151E</color>
+    <color name="battery_pill">#FF3B2A63</color>
+    <color name="battery_text">#FFFFFFFF</color>
+    <color name="battery_text_dim">#CCFFFFFF</color>
+    <color name="battery_accent">#FFB794F4</color>
+    <color name="battery_value">#FFE9D8FD</color>
+    <color name="battery_link">#FF7FB8FF</color>
+    <color name="battery_popup_bg">#EE111111</color>
+    <color name="battery_popup_stroke">#44FFFFFF</color>
+    <color name="battery_popup_divider">#40FFFFFF</color>
+</resources>
