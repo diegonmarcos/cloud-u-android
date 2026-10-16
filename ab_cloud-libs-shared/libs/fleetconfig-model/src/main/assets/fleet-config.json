@@ -1810,6 +1810,29 @@
       "used_by": [
         "ac_cloud-chat"
       ]
+    },
+    "ai_sessions": {
+      "kind": "file",
+      "class": "config",
+      "files": [
+        "ai-sessions.json"
+      ],
+      "doc": "libs:ai's chat history file (text and attachment names, never a token), carried whole so a new phone keeps the conversations.",
+      "used_by": [
+        "ac_cloud-drive",
+        "ac_cloud-tools-small-llms"
+      ]
+    },
+    "search_chat_sessions": {
+      "kind": "file",
+      "class": "config",
+      "files": [
+        "chat-sessions.json"
+      ],
+      "doc": "Cloud Search's AI chat history file (never a token), carried whole so a new phone keeps the conversations.",
+      "used_by": [
+        "ac_cloud-search"
+      ]
     }
   },
   "bundle": {
@@ -2645,8 +2668,9 @@
         {
           "id": "ai-sessions",
           "path": "filesDir/ai-sessions.json",
-          "class": "content",
-          "doc": "AI tab chat history (libs:ai's file session store; never carries a token); stays on the phone that held the conversation"
+          "class": "config",
+          "doc": "AI tab chat history (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store",
+          "store": "ai_sessions"
         }
       ]
     },
@@ -3059,8 +3083,9 @@
         {
           "id": "chat-sessions",
           "path": "filesDir/chat-sessions.json",
-          "class": "content",
-          "doc": "AI chat history (never carries the token); stays on the phone that held the conversation"
+          "class": "config",
+          "doc": "AI chat history (never carries the token); carried to a new phone through the search_chat_sessions store",
+          "store": "search_chat_sessions"
         },
         {
           "id": "things-cache",
@@ -3282,8 +3307,9 @@
         {
           "id": "ai-sessions",
           "path": "filesDir/ai-sessions.json",
-          "class": "content",
-          "doc": "AI tab chat history (libs:ai's file session store; never carries a token); stays on the phone that held the conversation"
+          "class": "config",
+          "doc": "AI tab chat history (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store",
+          "store": "ai_sessions"
         }
       ]
     }

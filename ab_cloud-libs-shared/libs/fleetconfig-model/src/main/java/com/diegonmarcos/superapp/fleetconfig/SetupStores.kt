@@ -47,7 +47,34 @@ object SetupStores {
 
     /** The handler for [store] (declared [kind]): the registered one, else the default for a portable kind, else null. */
     fun handlerFor(store: String, kind: String): SetupHandler? =
-        handlers[store] ?: if (kind == "prefs" || kind == "encrypted") PrefsHandler(kind) else null
+        handlers[store] ?: when (kind) {
+            "prefs", "encrypted" -> PrefsHandler(kind)
+            "file" -> FileHandler
+            else -> null
+        }
+
+    /**
+     * A `file` store: each declared file (a path under the app's files dir) is one whole file whose content
+     * is the key `text`. For data an app keeps as a single JSON file (the AI chat histories). Served by
+     * default, from the declaration alone; the write is atomic
+     * (temp file, then rename) and the app restarts after an apply, so nothing in memory outlives it.
+     */
+    object FileHandler : SetupHandler {
+        override fun read(ctx: Context, file: String): Map<String, Any?>? {
+            val f = File(ctx.applicationContext.filesDir, file)
+            return if (f.isFile) mapOf("text" to f.readText()) else null
+        }
+
+        override fun write(ctx: Context, file: String, set: Map<String, Any?>, remove: Set<String>): Boolean = runCatching {
+            val f = File(ctx.applicationContext.filesDir, file)
+            if ("text" in remove) { f.delete(); return true }
+            val text = set["text"]?.toString() ?: return true
+            f.parentFile?.mkdirs()
+            val tmp = File(f.parentFile, f.name + ".incoming")
+            tmp.writeText(text)
+            tmp.renameTo(f) || run { f.writeText(text); tmp.delete(); true }
+        }.getOrDefault(false)
+    }
 
     /** The default: SharedPreferences, or EncryptedSharedPreferences through the app's own default MasterKey. */
     class PrefsHandler(private val kind: String) : SetupHandler {

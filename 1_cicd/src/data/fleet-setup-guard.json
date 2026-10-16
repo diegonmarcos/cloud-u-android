@@ -9,7 +9,8 @@
   "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
   "default_kinds": [
     "prefs",
-    "encrypted"
+    "encrypted",
+    "file"
   ],
   "register_pattern": "SetupStores\\.register\\(\\s*\"([^\"]+)\"",
   "lib_root": "ab_cloud-libs-shared/libs",

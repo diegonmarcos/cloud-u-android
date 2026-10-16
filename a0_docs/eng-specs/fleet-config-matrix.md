@@ -31,7 +31,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-code | `com.diegonmarcos.code` | 7 | 3 | 70% |
 | cloud-contacts | `com.diegonmarcos.cloudcontacts` | 4 | 2 | 66% |
 | cloud-dialer | `com.diegonmarcos.comms.dialer` | 3 | 2 | 60% |
-| cloud-drive | `com.diegonmarcos.clouddrive` | 9 | 4 | 69% |
+| cloud-drive | `com.diegonmarcos.clouddrive` | 9 | 6 | 60% |
 | cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 4 | 0 | 100% |
 | cloud-mail | `com.diegonmarcos.comms.mail` | 9 | 2 | 81% |
 | cloud-matrix | `com.diegonmarcos.comms.matrix` | 1 | 9 | 10% |
@@ -43,14 +43,14 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-terminal-nix | `cld.termux.nix` | 9 | 7 | 56% |
 | cloud-notes | `com.diegonmarcos.cloudnotes` | 1 | 1 | 50% |
 | cloud-office | `com.diegonmarcos.cloudoffice` | 2 | 0 | 100% |
-| cloud-search | `com.diegonmarcos.cloudsearch` | 2 | 0 | 100% |
+| cloud-search | `com.diegonmarcos.cloudsearch` | 2 | 2 | 50% |
 | cloud-store | `com.diegonmarcos.cloudstore` | 7 | 0 | 100% |
 | cloud-terminal-termux | `cld.termux` | 9 | 7 | 56% |
 | cloud-vault | `com.diegonmarcos.cloudvault` | 2 | 1 | 66% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
-| cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 0 | 100% |
-| **fleet** | | **212** | **40** | **84%** |
+| cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 2 | 71% |
+| **fleet** | | **212** | **46** | **82%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -487,6 +487,7 @@ Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, l
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `adb_shell` | prefs | device | no | Per-install random token shared with the local adb shell server (install identity), the flag that this install was ever paired with Wireless Debugging (drives the Cloud Store channel control: not paired vs down), and channel_mode, the owner's Privileged channel choice (local \| embedded \| shizuku \| auto; default local where the app owns a local server). |
+| `ai_sessions` | file | config | GAP | libs:ai's chat history file (text and attachment names, never a token), carried whole so a new phone keeps the conversations. |
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
 | `cloud-drive-pdf-reader` | prefs | config (keys: last:*→device) | yes | PDF reader night-mode and paged-mode toggles are viewing preferences; per-document last page ('last:<source>') is device. |
 | `cloud-drive-prefs` | prefs | config (keys: mirror.result.*→device, sync.test.*→device) | yes | cloud-drive file sort, hidden, dual-pane, thumbnails, bookmarks and sync rule enables are settings; mirror.result.* and sync.test.* are last-run results. |
@@ -507,7 +508,7 @@ Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, l
 |---|---|---|
 | `filesDir/git-sync/history.json` | device | Sync history log. |
 | `filesDir/<REPORT_FILE>` | device | Store seeding report text. |
-| `filesDir/ai-sessions.json` | content | AI tab chat history (libs:ai's file session store; never carries a token); stays on the phone that held the conversation |
+| `filesDir/ai-sessions.json` | config | AI tab chat history (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store |
 | `filesDir/git-sync/repos.json` | config | Registered repos to sync |
 | `filesDir/git-sync/known_hosts` | device | Pinned git SSH host keys |
 | `filesDir/mounts/mounts.json` | config | Mount specs (host, path, keyPath, protocol); passwords live in mounts-credentials |
@@ -515,7 +516,7 @@ Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, l
 | `filesDir/rclone/rclone.conf` | secret | rclone remotes (with embedded tokens/passwords); remote definitions are the config, credentials inside are secret |
 | `filesDir/rclone/jobs.json` | config | Saved rclone sync/copy jobs |
 
-Coverage: 9 covered, 4 gaps — file:filesDir/git-sync/repos.json, file:filesDir/mounts/mounts.json, file:filesDir/rclone/rclone.conf, file:filesDir/rclone/jobs.json.
+Coverage: 9 covered, 6 gaps — ai_sessions, file:filesDir/ai-sessions.json, file:filesDir/git-sync/repos.json, file:filesDir/mounts/mounts.json, file:filesDir/rclone/rclone.conf, file:filesDir/rclone/jobs.json.
 
 ## cloud-keyboard — `com.diegonmarcos.cloudkeyboard`
 
@@ -814,19 +815,20 @@ Module `ac_cloud-search`; libs: lib-ai, lib-bottomnav, lib-core, lib-devtools, l
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `search_chat_sessions` | file | config | GAP | Cloud Search's AI chat history file (never a token), carried whole so a new phone keeps the conversations. |
 
 | file | class | doc |
 |---|---|---|
 | `filesDir/results` | device | cached search results, refetched from the sources |
 | `filesDir/catalog` | device | cached OpenRouter model catalog |
-| `filesDir/chat-sessions.json` | content | AI chat history (never carries the token); stays on the phone that held the conversation |
+| `filesDir/chat-sessions.json` | config | AI chat history (never carries the token); carried to a new phone through the search_chat_sessions store |
 | `filesDir/things` | device | cached Things answers (OpenStreetMap stores per area, Open Prices, the store-site price service, geocoded cities), refetched from the sources |
 
-Coverage: 2 covered, 0 gaps.
+Coverage: 2 covered, 2 gaps — search_chat_sessions, file:filesDir/chat-sessions.json.
 
 ## cloud-store — `com.diegonmarcos.cloudstore`
 
-Module `ac_cloud-store`; libs: lib-appstore, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-shizuku-adb-debug-tools, lib-sysdns, lib-ui-kit, lib-updater.
+Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-shizuku-adb-debug-tools, lib-sysdns, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -948,6 +950,7 @@ Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-d
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `ai_sessions` | file | config | GAP | libs:ai's chat history file (text and attachment names, never a token), carried whole so a new phone keeps the conversations. |
 | `cloud_tools_small_llms` | prefs | content (keys: jev_checked_at→device, jev_listed→device, jev_price_in→device, router→config, workers→config) | no | Cloud Tools Small LLMs: the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The ledger is the user's content (the AI tab's chat lives in filesDir/ai-sessions.json, an item of this app); router and workers are configuration; the Jev read is a cache of this phone's last network check. |
 | `cloud_tools_small_llms_secrets` | encrypted | secret | yes | Cloud Tools Small LLMs' OpenRouter token (openrouter_token), pasted in Settings: EncryptedSharedPreferences under a Keystore AES-256-GCM master key, shown masked, never logged. The fleet Account's key is never read (decisions-use guard D5). A credential: migrates through the vault. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
@@ -960,7 +963,7 @@ Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-d
 | `SharedPreferences cloud_tools_small_llms:router (default build.json::tools.router.default)` | config | The router: auto (Jev while OpenRouter lists it, else the default chat router), jev, or one chat router. |
 | `SharedPreferences cloud_tools_small_llms:workers` | config | Per-task worker overrides (task id -> catalogue model id); absent = the task's declared worker. |
 | `SharedPreferences cloud_tools_small_llms:ledger` | content | Every priced call (time, dollars, task, model): the day and month totals on Costs. |
-| `filesDir/ai-sessions.json` | content | AI tab chat history (libs:ai's file session store; never carries a token); stays on the phone that held the conversation |
+| `filesDir/ai-sessions.json` | config | AI tab chat history (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store |
 
-Coverage: 5 covered, 0 gaps.
+Coverage: 5 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
 

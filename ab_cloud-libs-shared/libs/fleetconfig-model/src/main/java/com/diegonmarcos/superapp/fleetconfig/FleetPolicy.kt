@@ -60,7 +60,7 @@ object FleetPolicy {
         /** Kinds this contract carries: prefs and encrypted by default; `provider` and `datastore` through the
          *  handler the app registers ([SetupStores.register]) — a DataStore must be read through the app's own
          *  instance, and provider data (the contacts) lives outside the app. */
-        val portable = setOf("prefs", "encrypted", "provider", "datastore")
+        val portable = setOf("prefs", "encrypted", "file", "provider", "datastore")
 
         val stores: Map<String, Store> = json.optJSONObject("stores").let { o ->
             o?.keys()?.asSequence()?.associateWith { n ->
