@@ -1,15 +1,14 @@
 package com.diegonmarcos.superapp.launcher
 
 import android.app.Application
-import android.view.View
-import android.view.ViewGroup
-import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTextInput
 import com.diegonmarcos.superapp.search.SearchPanelTags
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import com.diegonmarcos.superapp.uikit.KitSearchTags
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -34,9 +33,10 @@ class CloudAppsSearchTest : KitPageHarness() {
 
     @Test fun `Cloud Apps puts the shared bar first, above the grid, and searches with the shared panel`() {
         val page = show(GroupedTilesFragment.newInstance("cloud", search = true))
-        val root = page.requireView() as ViewGroup
-        assertTrue("the first child of the page is the bar", root.getChildAt(0) is ComposeView)
         compose.onNodeWithTag(KitSearchTags.BAR).assertExists()
+        val bar = compose.onNodeWithTag(KitSearchTags.BAR).getUnclippedBoundsInRoot()
+        val list = compose.onNodeWithTag(GroupedTilesFragment.TAG_LIST).getUnclippedBoundsInRoot()
+        assertTrue("the bar sits above the grid (bar bottom ${bar.bottom} <= grid top ${list.top})", bar.bottom <= list.top)
         assertFalse("Back with no query leaves the page", page.tryHandleBack())
 
         compose.onNodeWithTag(KitSearchTags.FIELD).performTextInput("zzzz-no-such-app")
@@ -46,13 +46,13 @@ class CloudAppsSearchTest : KitPageHarness() {
 
         assertTrue("Back with a query clears it", page.tryHandleBack())
         compose.waitForIdle()
-        val drop = (root.getChildAt(1) as ViewGroup).getChildAt(1)
-        assertEquals(View.GONE, drop.visibility)
+        compose.onAllNodesWithTag(SearchPanelTags.DROPDOWN).assertCountEquals(0)
     }
 
     @Test fun `the Home sheet's Cloud tab is the same page without a second bar`() {
         val page = show(GroupedTilesFragment.newInstance("cloud"))
-        assertTrue("the plain page is its scroller alone", page.requireView() is android.widget.ScrollView)
+        compose.onAllNodesWithTag(KitSearchTags.BAR).assertCountEquals(0)
+        compose.onNodeWithTag(GroupedTilesFragment.TAG_LIST).assertExists()
         assertFalse(page.tryHandleBack())
     }
 }

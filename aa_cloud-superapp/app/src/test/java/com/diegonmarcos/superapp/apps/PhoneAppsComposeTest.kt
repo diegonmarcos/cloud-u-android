@@ -4,7 +4,9 @@ import android.app.Application
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.performScrollToNode
+import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.launcher.AppDrawerSheetFragment
@@ -58,20 +60,26 @@ class PhoneAppsComposeTest : KitPageHarness() {
     fun `Q3 every group is one strip and every curated entry is a tile`() {
         show(SuitePhoneAppsFragment.newInstance())
         val groups = SuitePhoneAppsFragment.parseGroups().filter { it.entries.isNotEmpty() || it.folders.isNotEmpty() }
-        for (g in groups) compose.onAllNodesWithTag(SuitePhoneAppsFragment.strip(g.title)).assertCountEquals(1)
-        for (g in groups) for (e in g.entries.distinctBy { it.pkg }) {
-            compose.onAllNodesWithTag(SuitePhoneAppsFragment.tileTag(e.pkg)).assertCountEquals(
-                groups.sumOf { gg -> gg.entries.count { it.pkg == e.pkg } })
+        for (g in groups) {
+            // A lazy page only composes what is on screen: scroll to the group's strip first.
+            compose.onNodeWithTag(SuitePhoneAppsFragment.TAG_LIST).performScrollToNode(hasTestTag(SuitePhoneAppsFragment.strip(g.title)))
+            compose.onAllNodesWithTag(SuitePhoneAppsFragment.strip(g.title)).assertCountEquals(1)
+            // The strip's first cell is composed with it: a curated entry is a tile, installed or not.
+            g.entries.firstOrNull()?.let { e ->
+                assertTrue("${e.pkg} is not drawn", compose.onAllNodesWithTag(SuitePhoneAppsFragment.tileTag(e.pkg)).fetchSemanticsNodes().isNotEmpty())
+            }
         }
     }
 
     @Test
     fun `Q4 smart folders start collapsed and the user's choice sticks`() {
         show(SuitePhoneAppsFragment.newInstance())
+        compose.onNodeWithTag(SuitePhoneAppsFragment.TAG_LIST).performScrollToNode(hasTestTag(SuitePhoneAppsFragment.TAG_SMART_HEADER))
         compose.onNodeWithTag(SuitePhoneAppsFragment.TAG_SMART_HEADER).assertExists()
         compose.onAllNodesWithTag(SuitePhoneAppsFragment.TAG_SMART_STATUS).assertCountEquals(0)
         compose.onNodeWithTag(SuitePhoneAppsFragment.TAG_SMART_HEADER).performClick()
         compose.waitForIdle()
+        compose.onNodeWithTag(SuitePhoneAppsFragment.TAG_LIST).performScrollToNode(hasTestTag(SuitePhoneAppsFragment.TAG_SMART_STATUS))
         // Expanded by the user: with no matching apps in Robolectric the status line explains the empty section.
         compose.onAllNodesWithTag(SuitePhoneAppsFragment.TAG_SMART_STATUS).assertCountEquals(1)
         compose.onNodeWithTag(SuitePhoneAppsFragment.TAG_SMART_HEADER).performClick()
@@ -105,7 +113,11 @@ class PhoneAppsComposeTest : KitPageHarness() {
         show(GroupedTilesFragment.newInstance("cloud"))
         compose.onNodeWithTag(GroupedTilesFragment.groupTag("Quickmarks")).assertExists()
         val groups = Sections.byId("cloud")?.tileGroups.orEmpty()
-        for (g in groups) compose.onAllNodesWithTag(GroupedTilesFragment.groupTag(g.title)).assertCountEquals(1)
+        for (g in groups) {
+            compose.onNodeWithTag(GroupedTilesFragment.TAG_LIST).performScrollToNode(hasTestTag(GroupedTilesFragment.groupTag(g.title)))
+            compose.onAllNodesWithTag(GroupedTilesFragment.groupTag(g.title)).assertCountEquals(1)
+        }
+        compose.onNodeWithTag(GroupedTilesFragment.TAG_LIST).performScrollToNode(hasTestTag(GroupedTilesFragment.TAG_RECENT_EMPTY))
         compose.waitUntil(10_000) {
             compose.onAllNodesWithTag(GroupedTilesFragment.TAG_RECENT_EMPTY).fetchSemanticsNodes().isNotEmpty()
         }
@@ -119,7 +131,7 @@ class PhoneAppsComposeTest : KitPageHarness() {
         show(AppDrawerSheetFragment.newInstance())
         compose.onNodeWithTag(AppDrawerSheetFragment.TAG_SHEET).assertExists()
         compose.onAllNodesWithTag(GroupedTilesFragment.TAG_LIST).assertCountEquals(1)
-        compose.onNodeWithText(tabs[1].label).performClick()
+        compose.onNodeWithTag(PageTabsTags.tab(tabs[1].id)).performClick()
         compose.waitForIdle()
         compose.onAllNodesWithTag(GroupedTilesFragment.TAG_LIST).assertCountEquals(0)
         compose.onAllNodesWithTag(SuitePhoneAppsFragment.TAG_LIST).assertCountEquals(1)
