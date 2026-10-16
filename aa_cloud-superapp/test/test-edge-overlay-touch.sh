@@ -10,7 +10,7 @@
 # menu opens ONLY after a hold then an inward push (EdgeGestureMachine); the veil is removed at the end.
 #
 # Static tester (no device, no build), comments stripped.
-#   T1  idle strip: FLAGS has NOT_TOUCH_MODAL + NOT_FOCUSABLE and NOT NOT_TOUCHABLE; caps <=16dp thick, <=200dp long
+#   T1  idle strip: FLAGS has NOT_TOUCH_MODAL + NOT_FOCUSABLE and NOT NOT_TOUCHABLE; caps <=24dp thick, <=200dp long
 #   T2  preview veil (the only MATCH_PARENT window): PREVIEW_FLAGS has NOT_TOUCHABLE; service uses it
 #   T3  service: handle LayoutParams use EdgeHandleWindow (size + FLAGS); no MATCH_PARENT/WRAP_CONTENT in addHandle
 #   T4  service: touch handler goes through EdgeGestureMachine with the system long-press time; no bare-swipe activation
@@ -44,7 +44,8 @@ if "FLAG_NOT_TOUCH_MODAL" not in flags: v.append("T1 idle FLAGS lacks FLAG_NOT_T
 if "FLAG_NOT_FOCUSABLE" not in flags: v.append("T1 idle FLAGS lacks FLAG_NOT_FOCUSABLE")
 if "FLAG_NOT_TOUCHABLE" in flags: v.append("T1 idle FLAGS contains FLAG_NOT_TOUCHABLE (strip could never detect a hold)")
 m = re.search(r'MAX_THICKNESS_DP\s*=\s*(\d+)', w)
-if not m or int(m.group(1)) > 16: v.append("T1 MAX_THICKNESS_DP missing or > 16")
+if not m or int(m.group(1)) > 24: v.append("T1 MAX_THICKNESS_DP missing or > 24")
+if m and int(m.group(1)) < 24: v.append("T1 MAX_THICKNESS_DP < 24 (strip fits wholly inside the system back-gesture band: unreachable)")
 m = re.search(r'MAX_LENGTH_DP\s*=\s*(\d+)', w)
 if not m or int(m.group(1)) > 200: v.append("T1 MAX_LENGTH_DP missing or > 200")
 if "FLAG_NOT_TOUCHABLE" not in pflags: v.append("T2 PREVIEW_FLAGS lacks FLAG_NOT_TOUCHABLE")
@@ -57,7 +58,7 @@ if "EdgeHandleWindow.FLAGS" not in a or "EdgeHandleWindow.size(" not in a: v.app
 if "MATCH_PARENT" in a or "WRAP_CONTENT" in a: v.append("T3 addHandle uses MATCH_PARENT/WRAP_CONTENT")
 th = re.search(r'private fun onHandleTouch.*?\n    }\n', s, flags=re.S)
 t = th.group(0) if th else ""
-if not re.search(r'EdgeGestureMachine\(h\.edge,\s*ViewConfiguration\.getLongPressTimeout\(\)', t): v.append("T4 touch handler lacks EdgeGestureMachine + long-press timeout")
+if not re.search(r'holdMs\s*=\s*EdgeGestureMachine\.holdMs\(\s*ViewConfiguration\.getLongPressTimeout\(\)', t) or not re.search(r'EdgeGestureMachine\(h\.edge,\s*holdMs', t): v.append("T4 touch handler lacks EdgeGestureMachine + long-press timeout")
 if re.search(r'SwipeClassifier\.sector\([^)]*\)\s*!=\s*null', t): v.append("T4 menu activates on a bare swipe (no hold)")
 if "activate(h)" in t and "State.MENU" not in t: v.append("T4 activate() not gated on State.MENU")
 eg = re.search(r'private fun endGesture.*?\n    }\n', s, flags=re.S)
@@ -85,14 +86,15 @@ if [ -n "$WORK" ]; then
   W=EdgeHandleWindow.kt; S=OneHandOverlayService.kt
   mutate "drop FLAG_NOT_TOUCH_MODAL" $W '0,/LP.FLAG_NOT_TOUCH_MODAL or/s//0 or/'
   mutate "idle strip made NOT_TOUCHABLE" $W 's/const val FLAGS = LP.FLAG_NOT_FOCUSABLE/const val FLAGS = LP.FLAG_NOT_TOUCHABLE or LP.FLAG_NOT_FOCUSABLE/'
-  mutate "strip 32dp thick" $W 's/MAX_THICKNESS_DP = 12/MAX_THICKNESS_DP = 32/'
+  mutate "strip 32dp thick" $W 's/MAX_THICKNESS_DP = 24/MAX_THICKNESS_DP = 32/'
+  mutate "strip 12dp thin (inside back-gesture band)" $W 's/MAX_THICKNESS_DP = 24/MAX_THICKNESS_DP = 12/'
   mutate "strip full height" $W 's/MAX_LENGTH_DP = 160/MAX_LENGTH_DP = 2400/'
   mutate "veil touchable" $W 's/PREVIEW_FLAGS = LP.FLAG_NOT_FOCUSABLE or LP.FLAG_NOT_TOUCHABLE or/PREVIEW_FLAGS = LP.FLAG_NOT_FOCUSABLE or/'
   mutate "veil flags unused" $S 's/EdgeHandleWindow.PREVIEW_FLAGS/WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE/'
   mutate "handle window MATCH_PARENT" $S 's/            size.widthPx,/            WindowManager.LayoutParams.MATCH_PARENT,/'
   mutate "handle ignores EdgeHandleWindow.FLAGS" $S 's/            EdgeHandleWindow.FLAGS,/            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,/'
   mutate "menu on bare swipe (no hold)" $S 's/if (m.state == EdgeGestureMachine.State.MENU) {/if (SwipeClassifier.sector(h.edge, 1f, 0f) != null) {/'
-  mutate "no long-press timeout" $S 's/ViewConfiguration.getLongPressTimeout().toLong(),$/0L,/'
+  mutate "no long-press timeout" $S 's/EdgeGestureMachine.holdMs(ViewConfiguration.getLongPressTimeout().toLong(), c.longPressMs)/0L/'
   mutate "veil never removed" $S '/private fun endPreview/,/^    }/s/; runCatching { windowManager?.removeView(it) }//'
   rm -rf "$WORK/lib"; rmdir "$WORK"
 fi
