@@ -6,7 +6,14 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.viewinterop.AndroidView
 import com.diegonmarcos.cloudnav.maps.MapsLayerPrefs
+import com.diegonmarcos.cloudnav.tracker.TrackerInk
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
 
 /**
  * Real 3D terrain (tilt-rise mountains) via MapLibre GL JS in a WebView.
@@ -21,7 +28,7 @@ import com.diegonmarcos.cloudnav.maps.MapsLayerPrefs
  */
 class TerrainActivity : AppCompatActivity() {
 
-    private lateinit var webView: WebView
+    private var webView: WebView? = null
     private lateinit var layerPrefs: MapsLayerPrefs
 
     /** Exposed to terrain_map.html as `window.AndroidBridge`. Not private --
@@ -35,23 +42,30 @@ class TerrainActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         layerPrefs = MapsLayerPrefs(this)
-        webView = WebView(this)
-        setContentView(webView)
-        webView.settings.apply {
+        setContentView(ComposeView(this).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent { CloudKitTheme(TrackerInk.palette()) { AndroidView(factory = { ctx -> createWebView(ctx) }, modifier = Modifier.fillMaxSize()) } }
+        })
+    }
+
+    /** The page itself stays a WebView (MapLibre GL JS); Compose only hosts it. */
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun createWebView(ctx: android.content.Context): WebView = WebView(ctx).also { wv ->
+        webView = wv
+        wv.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
             cacheMode = WebSettings.LOAD_DEFAULT
         }
-        webView.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
+        wv.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
 
         val lat = intent.getDoubleExtra(EXTRA_LAT, Double.NaN)
         val lon = intent.getDoubleExtra(EXTRA_LON, Double.NaN)
         val zoom = intent.getDoubleExtra(EXTRA_ZOOM, 13.0)
-        webView.webViewClient = object : android.webkit.WebViewClient() {
+        wv.webViewClient = object : android.webkit.WebViewClient() {
             override fun onPageFinished(view: WebView, url: String) {
                 if (!lat.isNaN() && !lon.isNaN()) {
                     view.evaluateJavascript("cloudNavRecenter($lat,$lon,$zoom)", null)
@@ -59,11 +73,12 @@ class TerrainActivity : AppCompatActivity() {
                 view.evaluateJavascript("cloudNavSetExaggeration(${layerPrefs.terrainExaggeration})", null)
             }
         }
-        webView.loadUrl("file:///android_asset/terrain_map.html")
+        wv.loadUrl("file:///android_asset/terrain_map.html")
     }
 
     override fun onDestroy() {
-        webView.destroy()
+        webView?.destroy()
+        webView = null
         super.onDestroy()
     }
 

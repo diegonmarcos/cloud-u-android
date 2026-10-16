@@ -2,7 +2,6 @@ package com.diegonmarcos.cloudnav.sky
 
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -11,9 +10,13 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.Gravity
-import android.widget.FrameLayout
-import android.widget.TextView
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import com.diegonmarcos.cloudnav.tracker.TrackerInk
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import kotlin.concurrent.thread
@@ -22,7 +25,7 @@ import kotlin.concurrent.thread
  * Point-the-phone-at-the-sky view: real stars, full IAU constellation lines, Milky Way,
  * Sun + planets (see CelestialData.kt / PlanetEphemeris.kt / CREDITS.md) -- not a
  * Stardroid port (GPLv3, license-incompatible with reuse here). Uses TYPE_ROTATION_VECTOR
- * for device pointing direction (when present — drag/pinch on [SkyView] works regardless)
+ * for device pointing direction (when present — drag/pinch on [SkyScreen] works regardless)
  * and the last-known/fresh location for the alt/az conversion. If location is truly
  * unavailable, it says so on-screen rather than silently rendering the wrong sky for (0,0).
  */
@@ -30,27 +33,18 @@ class ConstellationsActivity : AppCompatActivity(), SensorEventListener {
 
     private lateinit var sensorManager: SensorManager
     private var rotationSensor: Sensor? = null
-    private lateinit var skyView: SkyView
-    private lateinit var statusText: TextView
+    private val sky = SkyState()
+    private var status by mutableStateOf("")
     private var dataLoaded = false
     private var loadError: String? = null
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        skyView = SkyView(this)
-        statusText = TextView(this).apply {
-            setTextColor(Color.parseColor("#CCFFFFFF"))
-            textSize = 13f
-            setPadding(24, 24, 24, 24)
-        }
-        val root = FrameLayout(this).apply {
-            addView(skyView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-            addView(statusText, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
-                gravity = Gravity.TOP or Gravity.START
-            })
-        }
-        setContentView(root)
+        setContentView(ComposeView(this).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent { CloudKitTheme(TrackerInk.palette()) { SkyScreen(sky, status) } }
+        })
 
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
@@ -61,7 +55,7 @@ class ConstellationsActivity : AppCompatActivity(), SensorEventListener {
     }
 
     /** Parses ~1.2MB of bundled JSON (stars/lines/Milky Way/planet elements) off the main
-     *  thread, then hands the results to [skyView]. Planet/Sun positions barely move over
+     *  thread, then hands the results to [sky]. Planet/Sun positions barely move over
      *  a single viewing session, so they're computed once here rather than every frame. */
     private fun loadCelestialDataAsync() {
         val appCtx = applicationContext
@@ -76,12 +70,11 @@ class ConstellationsActivity : AppCompatActivity(), SensorEventListener {
                 val elements = PlanetEphemeris.loadElements(appCtx)
                 val bodies = PlanetEphemeris.positions(elements, System.currentTimeMillis())
                 Handler(Looper.getMainLooper()).post {
-                    skyView.stars = stars
-                    skyView.constellationLines = lines
-                    skyView.milkyWay = mw
-                    skyView.bodies = bodies
+                    sky.stars = stars
+                    sky.constellationLines = lines
+                    sky.milkyWay = mw
+                    sky.bodies = bodies
                     dataLoaded = true
-                    skyView.invalidate()
                     updateStatus()
                 }
             } catch (t: Throwable) {
@@ -105,16 +98,16 @@ class ConstellationsActivity : AppCompatActivity(), SensorEventListener {
         val providers = try { lm.getProviders(true) } catch (e: SecurityException) { emptyList() }
         val last = providers.firstNotNullOfOrNull { lm.getLastKnownLocation(it) }
         if (last != null) {
-            skyView.observerLatDeg = last.latitude
-            skyView.observerLonDeg = last.longitude
+            sky.observerLatDeg = last.latitude
+            sky.observerLonDeg = last.longitude
             updateStatus()
             return
         }
         val provider = providers.firstOrNull() ?: return
         try {
             lm.requestSingleUpdate(provider, { loc ->
-                skyView.observerLatDeg = loc.latitude
-                skyView.observerLonDeg = loc.longitude
+                sky.observerLatDeg = loc.latitude
+                sky.observerLonDeg = loc.longitude
                 updateStatus()
             }, mainLooper)
         } catch (e: SecurityException) { /* permission revoked mid-flight — status text covers it */ }
@@ -122,8 +115,8 @@ class ConstellationsActivity : AppCompatActivity(), SensorEventListener {
 
     @SuppressLint("SetTextI18n")
     private fun updateStatus() {
-        val hasFix = skyView.observerLatDeg != 0.0 || skyView.observerLonDeg != 0.0
-        val locLine = if (hasFix) "%.2f, %.2f".format(skyView.observerLatDeg, skyView.observerLonDeg)
+        val hasFix = sky.observerLatDeg != 0.0 || sky.observerLonDeg != 0.0
+        val locLine = if (hasFix) "%.2f, %.2f".format(sky.observerLatDeg, sky.observerLonDeg)
             else if (!hasLocationPermission()) "No location permission — using 0,0 (wrong sky)"
             else "Locating…"
         val sensorLine = if (rotationSensor == null) " · no orientation sensor, drag to look around" else ""
@@ -132,7 +125,7 @@ class ConstellationsActivity : AppCompatActivity(), SensorEventListener {
             !dataLoaded -> "\nLoading stars/constellations/planets…"
             else -> ""
         }
-        statusText.text = "Constellations · Sun/planets · Milky Way (no moons)\n$locLine$sensorLine$loadLine"
+        status = "Constellations · Sun/planets · Milky Way (no moons)\n$locLine$sensorLine$loadLine"
     }
 
     override fun onResume() {
@@ -163,14 +156,13 @@ class ConstellationsActivity : AppCompatActivity(), SensorEventListener {
         val orientation = FloatArray(3)
         SensorManager.getOrientation(remapped, orientation)
 
-        skyView.sensorAzimuthDeg = Math.toDegrees(orientation[0].toDouble()).let { if (it < 0) it + 360 else it }
+        sky.sensorAzimuthDeg = Math.toDegrees(orientation[0].toDouble()).let { if (it < 0) it + 360 else it }
         // UNVERIFIED sign: AOSP's pitch javadoc ("angle between a plane parallel to the
         // screen and a plane parallel to the ground") is written for the natural axes and
         // is ambiguous once remapped like this -- no physical device was available to
         // confirm which way pitch should go after the remap above. If tilting the phone
         // up at the sky moves stars the wrong way on a real device, flip this sign.
-        skyView.sensorPitchDeg = PITCH_SIGN * Math.toDegrees(orientation[1].toDouble())
-        skyView.invalidate()
+        sky.sensorPitchDeg = PITCH_SIGN * Math.toDegrees(orientation[1].toDouble())
         } catch (t: Throwable) {
             android.util.Log.e("Constellations", "onSensorChanged failed", t)
         }
@@ -180,7 +172,7 @@ class ConstellationsActivity : AppCompatActivity(), SensorEventListener {
 
     /** Test-only accessor (ConstellationsRenderTest) -- mirrors the debugXxx() pattern
      *  MapsExploredFragment uses for ExploredRenderTest. */
-    fun findSkyViewForTest(): SkyView? = if (::skyView.isInitialized) skyView else null
+    fun findSkyStateForTest(): SkyState = sky
 
     companion object {
         private const val PITCH_SIGN = 1.0

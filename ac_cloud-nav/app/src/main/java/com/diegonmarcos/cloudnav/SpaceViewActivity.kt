@@ -8,7 +8,14 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
+import com.diegonmarcos.cloudnav.tracker.TrackerInk
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
 
 /**
  * "Space View" -- renamed from the earlier "Constellations"/MilkyWayActivity
@@ -27,14 +34,21 @@ import androidx.webkit.WebViewAssetLoader
  */
 class SpaceViewActivity : AppCompatActivity() {
 
-    private lateinit var webView: WebView
+    private var webView: WebView? = null
 
-    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        webView = WebView(this)
-        setContentView(webView)
-        webView.settings.apply {
+        setContentView(ComposeView(this).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent { CloudKitTheme(TrackerInk.palette()) { AndroidView(factory = { ctx -> createWebView(ctx) }, modifier = Modifier.fillMaxSize()) } }
+        })
+    }
+
+    /** The scene itself stays a WebView (three.js); Compose only hosts it. */
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun createWebView(ctx: android.content.Context): WebView = WebView(ctx).also { wv ->
+        webView = wv
+        wv.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
             cacheMode = WebSettings.LOAD_DEFAULT
@@ -43,15 +57,16 @@ class SpaceViewActivity : AppCompatActivity() {
         val assetLoader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
             .build()
-        webView.webViewClient = object : WebViewClient() {
+        wv.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
                 assetLoader.shouldInterceptRequest(request.url)
         }
-        webView.loadUrl("https://appassets.androidplatform.net/assets/space/space_view.html")
+        wv.loadUrl("https://appassets.androidplatform.net/assets/space/space_view.html")
     }
 
     override fun onDestroy() {
-        webView.destroy()
+        webView?.destroy()
+        webView = null
         super.onDestroy()
     }
 }
