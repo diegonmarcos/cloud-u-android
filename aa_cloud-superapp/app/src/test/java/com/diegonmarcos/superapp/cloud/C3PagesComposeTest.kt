@@ -2,8 +2,6 @@ package com.diegonmarcos.superapp.cloud
 
 import android.app.Application
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertDoesNotExist
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import com.diegonmarcos.superapp.launcher.Sections
