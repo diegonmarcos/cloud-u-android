@@ -1257,6 +1257,12 @@
     <string name="compose_format_color_blue">Niebieski</string>
     <string name="compose_format_color_green">Zielony</string>
     <string name="compose_format_inline_image">Wstaw obraz</string>
+    <string name="compose_format_paragraph">Akapit</string>
+    <string name="compose_format_align">Wyrównanie</string>
+    <string name="compose_format_align_left">Wyrównaj do lewej</string>
+    <string name="compose_format_align_center">Wyśrodkuj</string>
+    <string name="compose_format_align_right">Wyrównaj do prawej</string>
+    <string name="compose_format_source">Źródło HTML</string>
     <string name="nav_bar_tasks">Zadania</string>
     <string name="nav_bar_contacts">Kontakty</string>
     <string name="nav_tasks_not_installed">Cloud Tasks is not installed</string>

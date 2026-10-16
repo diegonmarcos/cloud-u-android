@@ -8,7 +8,8 @@ package app.sterna.core.data.text
 /**
  * The HTML part a draft save must store for [body], or null when there is nothing to store.
  */
-fun draftHtmlToSave(body: RichBody): String? = if (body.isPlain) null else toHtml(body)
+fun draftHtmlToSave(body: RichBody): String? =
+    body.html?.let { htmlForWire(it) } ?: if (body.isPlain) null else toHtml(body)
 
 /**
  * The HTML this editor can use, or null — the single decision behind [richBodyFrom] and

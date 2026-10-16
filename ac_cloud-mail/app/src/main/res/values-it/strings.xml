@@ -1243,6 +1243,12 @@
     <string name="compose_format_color_blue">Blu</string>
     <string name="compose_format_color_green">Verde</string>
     <string name="compose_format_inline_image">Inserisci immagine</string>
+    <string name="compose_format_paragraph">Paragrafo</string>
+    <string name="compose_format_align">Allineamento</string>
+    <string name="compose_format_align_left">Allinea a sinistra</string>
+    <string name="compose_format_align_center">Centra</string>
+    <string name="compose_format_align_right">Allinea a destra</string>
+    <string name="compose_format_source">Sorgente HTML</string>
     <string name="nav_bar_tasks">Attività</string>
     <string name="nav_bar_contacts">Contatti</string>
     <string name="nav_tasks_not_installed">Cloud Tasks is not installed</string>

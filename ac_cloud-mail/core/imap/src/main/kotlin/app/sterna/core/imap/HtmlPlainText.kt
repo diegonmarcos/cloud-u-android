@@ -3,11 +3,25 @@ package app.sterna.core.imap
 /**
  * A readable text/plain rendering of [html], for the plain half of a multipart/alternative when the
  * caller supplied none: block ends become line breaks, a blockquote's lines get "> ", list items get
- * "- ", tags (and script/style content) are dropped and the common entities decoded.
+ * "- ", a link whose label is not its address keeps the address ("label <https://…>"), tags (and
+ * script/style content) are dropped and the common entities decoded.
  */
 fun htmlToPlainText(html: String): String {
     var s = html.replace(Regex("(?is)<(script|style|head)\\b.*?</\\1\\s*>"), "")
         .replace(Regex("[\\r\\n\\t ]+"), " ")
+    s = ANCHOR.replace(s) { m ->
+        val href = (m.groups[2]?.value ?: m.groups[3]?.value).orEmpty().trim()
+        val label = m.groupValues[4]
+        val shown = decodeBasicEntities(label.replace(Regex("<[^>]*>"), "")).trim()
+        val target = decodeBasicEntities(href)
+        if (href.isEmpty() || !LINK_SCHEME.containsMatchIn(href) || shown == target ||
+            shown == target.removePrefix("mailto:") || shown.isEmpty()
+        ) {
+            label
+        } else {
+            "$label &lt;$href&gt;"
+        }
+    }
     s = s.replace(Regex("(?i)<br\\s*/?>"), "\n")
     s = s.replace(Regex("(?i)<li\\b[^>]*>"), "\n- ")
     s = s.replace(Regex("(?i)</(p|div|h[1-6]|li|tr|ul|ol|table)\\s*>"), "\n")
@@ -45,3 +59,6 @@ private fun decodeBasicEntities(s: String): String =
             }
         }
     }
+
+private val ANCHOR = Regex("(?is)<a\\b[^>]*?\\bhref\\s*=\\s*(\"([^\"]*)\"|'([^']*)')[^>]*>(.*?)</a\\s*>")
+private val LINK_SCHEME = Regex("(?i)^(https?:|mailto:|tel:)")

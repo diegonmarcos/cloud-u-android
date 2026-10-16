@@ -1,5 +1,7 @@
 package app.sterna.core.data.text
 
+import app.sterna.core.imap.htmlToPlainText
+
 /**
  * The model of a rich body (#131): plain text plus four inline style families, each a set of
  */
@@ -53,6 +55,12 @@ class RichBody(
     ranges: Map<Inline, List<Span>>,
     blocks: List<Block> = emptyList(),
     links: List<Link> = emptyList(),
+    /**
+     * The body AS HTML, when HTML is the model (the composer's editor): [text] is then only its plain
+     * projection and [ranges], [blocks] and [links] are empty - the markup is not described twice.
+     * Null for the older span model, which only the reader-side helpers still build.
+     */
+    val html: String? = null,
 ) {
     /** Lines are separated by `\n`; an empty text still has one line. */
     val lineCount: Int = text.count { it == '\n' } + 1
@@ -66,18 +74,22 @@ class RichBody(
     /**
      * Neither a span, nor a block, nor a link: what `draftHtmlToSave` may store as text only.
      */
-    val isPlain: Boolean get() = ranges.isEmpty() && blocks.isEmpty() && links.isEmpty()
+    val isPlain: Boolean get() = html == null && ranges.isEmpty() && blocks.isEmpty() && links.isEmpty()
 
     override fun equals(other: Any?): Boolean =
         other is RichBody && other.text == text && other.ranges == ranges &&
-            other.blocks == blocks && other.links == links
+            other.blocks == blocks && other.links == links && other.html == html
     override fun hashCode(): Int =
-        31 * (31 * (31 * text.hashCode() + ranges.hashCode()) + blocks.hashCode()) + links.hashCode()
+        31 * (31 * (31 * (31 * text.hashCode() + ranges.hashCode()) + blocks.hashCode()) + links.hashCode()) +
+            (html?.hashCode() ?: 0)
     override fun toString(): String =
-        "RichBody(text=$text, ranges=$ranges, blocks=$blocks, links=$links)"
+        "RichBody(text=$text, ranges=$ranges, blocks=$blocks, links=$links, html=$html)"
 
     companion object {
         fun plain(text: String): RichBody = RichBody(text, emptyMap())
+
+        /** An HTML body: [html] is the model, its plain projection ([htmlToPlainText]) the [text]. */
+        fun ofHtml(html: String): RichBody = RichBody(htmlToPlainText(html), emptyMap(), html = html)
         fun of(
             text: String,
             ranges: Map<Inline, List<Span>>,
@@ -817,6 +829,7 @@ private fun overlaps(a: Span, b: Span): Boolean = a.start < b.end && b.start < a
  * The body's plain-text alternative: styling stripped, list markers spelled out, and every link
  */
 fun toPlainText(body: RichBody): String {
+    if (body.html != null) return body.text
     if (body.blocks.isEmpty() && body.links.isEmpty()) return body.text
     val text = body.text
     val marker = arrayOfNulls<String>(body.lineCount)

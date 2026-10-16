@@ -1260,6 +1260,12 @@
     <string name="compose_format_color_blue">Синий</string>
     <string name="compose_format_color_green">Зелёный</string>
     <string name="compose_format_inline_image">Вставить изображение</string>
+    <string name="compose_format_paragraph">Абзац</string>
+    <string name="compose_format_align">Выравнивание</string>
+    <string name="compose_format_align_left">По левому краю</string>
+    <string name="compose_format_align_center">По центру</string>
+    <string name="compose_format_align_right">По правому краю</string>
+    <string name="compose_format_source">HTML-код</string>
     <string name="nav_bar_tasks">Задачи</string>
     <string name="nav_bar_contacts">Контакты</string>
     <string name="nav_tasks_not_installed">Cloud Tasks is not installed</string>

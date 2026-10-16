@@ -1,0 +1,334 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  #ed {
+    min-height: 100vh; box-sizing: border-box; padding: 12px 16px 28px 16px; outline: none;
+    color: %%FG%%; font: %%FONT_PX%%px/1.45 Roboto, "Segoe UI", sans-serif;
+    overflow-wrap: anywhere; caret-color: %%ACCENT%%; -webkit-user-select: text; user-select: text;
+  }
+  #ed.empty::before { content: attr(data-placeholder); color: %%HINT%%; pointer-events: none; position: absolute; }
+  #ed a { color: %%ACCENT%%; }
+  #ed blockquote { margin: 0 0 0 .8ex; padding-left: 1ex; border-left: 2px solid %%HINT%%; }
+  #ed img { max-width: 100%; height: auto; }
+  #ed table { border-collapse: collapse; max-width: 100%; }
+  #ed td, #ed th { border: 1px solid %%HINT%%; padding: 2px 6px; }
+  #ed pre { white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="ed" contenteditable="true" spellcheck="true" autocapitalize="sentences" role="textbox" aria-multiline="true" data-placeholder="%%PLACEHOLDER%%"></div>
+<script>
+(function () {
+  'use strict';
+  var ed = document.getElementById('ed');
+  var bridge = window.SternaBridge;
+  var timer = null;
+  var lastSent = null;
+  var lastState = null;
+  var loading = false;
+  var managed = {};
+
+  // ---- sanitiser for anything that enters the editor from outside (paste, programmatic) ----
+  var DROP = { SCRIPT: 1, STYLE: 1, HEAD: 1, TITLE: 1, IFRAME: 1, FRAME: 1, FRAMESET: 1, OBJECT: 1, EMBED: 1,
+    APPLET: 1, FORM: 1, INPUT: 1, BUTTON: 1, SELECT: 1, TEXTAREA: 1, SVG: 1, MATH: 1, NOSCRIPT: 1, TEMPLATE: 1,
+    LINK: 1, META: 1, BASE: 1, AUDIO: 1, VIDEO: 1, CANVAS: 1, SOURCE: 1, TRACK: 1 };
+  var KEEP = { A: 1, ABBR: 1, B: 1, BLOCKQUOTE: 1, BR: 1, CAPTION: 1, CENTER: 1, CITE: 1, CODE: 1, COL: 1,
+    COLGROUP: 1, DEL: 1, DIV: 1, EM: 1, FONT: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, HR: 1, I: 1, IMG: 1,
+    INS: 1, LI: 1, OL: 1, P: 1, PRE: 1, S: 1, SMALL: 1, SPAN: 1, STRIKE: 1, STRONG: 1, SUB: 1, SUP: 1,
+    TABLE: 1, TBODY: 1, TD: 1, TFOOT: 1, TH: 1, THEAD: 1, TR: 1, U: 1, UL: 1 };
+  var ATTR_ALL = { style: 1, dir: 1, title: 1, align: 1, 'data-sterna': 1, 'data-cid': 1 };
+  var ATTR_EL = {
+    A: { href: 1, name: 1 }, IMG: { src: 1, alt: 1, width: 1, height: 1 }, FONT: { color: 1, face: 1, size: 1 },
+    OL: { start: 1, type: 1 }, TD: { colspan: 1, rowspan: 1, width: 1 }, TH: { colspan: 1, rowspan: 1, width: 1 },
+    TABLE: { width: 1, border: 1, cellpadding: 1, cellspacing: 1 }, BLOCKQUOTE: { type: 1, cite: 1 }
+  };
+
+  function safeUrl(value, isImage) {
+    var s = String(value || '').replace(/[\u0000- ]+/g, '').toLowerCase();
+    if (isImage) return /^(data:image\/(png|jpe?g|gif|webp);|cid:)/.test(s);
+    return /^(https?:|mailto:|tel:)/.test(s);
+  }
+
+  function cleanNode(node) {
+    Array.prototype.slice.call(node.childNodes).forEach(function (c) {
+      if (c.nodeType === 3) return;
+      if (c.nodeType !== 1) { node.removeChild(c); return; }
+      var tag = c.tagName;
+      if (DROP[tag]) { node.removeChild(c); return; }
+      if (!KEEP[tag]) {
+        cleanNode(c);
+        while (c.firstChild) node.insertBefore(c.firstChild, c);
+        node.removeChild(c);
+        return;
+      }
+      Array.prototype.slice.call(c.attributes).forEach(function (a) {
+        var n = a.name.toLowerCase();
+        var allowed = ATTR_ALL[n] || (ATTR_EL[tag] && ATTR_EL[tag][n]);
+        if (!allowed) { c.removeAttribute(a.name); return; }
+        if (n === 'href' && !safeUrl(a.value, false)) c.removeAttribute(a.name);
+        else if (n === 'src' && !safeUrl(a.value, true)) c.removeAttribute(a.name);
+        else if (n === 'style' && /expression|javascript:|url\s*\(|@import|behavior|-moz-binding/i.test(a.value)) {
+          c.removeAttribute('style');
+        }
+      });
+      cleanNode(c);
+    });
+  }
+
+  function clean(html) {
+    var doc = new DOMParser().parseFromString('<!doctype html><html><body>' + String(html || ''), 'text/html');
+    cleanNode(doc.body);
+    return doc.body.innerHTML;
+  }
+
+  // ---- helpers ----
+  function isEmpty() {
+    return ed.textContent.replace(/[​\s]/g, '') === '' && !ed.querySelector('img,table,hr,li,blockquote');
+  }
+  function updateEmpty() { ed.classList.toggle('empty', isEmpty()); }
+  function html() { return ed.innerHTML; }
+  function selection() {
+    var s = window.getSelection();
+    return (s && s.rangeCount && ed.contains(s.anchorNode)) ? s : null;
+  }
+  function closest(tag) {
+    var s = selection();
+    if (!s) return null;
+    var n = s.anchorNode;
+    while (n && n !== ed) {
+      if (n.nodeType === 1 && n.tagName === tag) return n;
+      n = n.parentNode;
+    }
+    return null;
+  }
+  function escText(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function escAttr(t) { return escText(t).replace(/"/g, '&quot;'); }
+  function blockEl(kind) { return ed.querySelector('[data-sterna="' + kind + '"]'); }
+  function collectManaged() {
+    managed = {};
+    Array.prototype.forEach.call(ed.querySelectorAll('[data-sterna]'), function (el) {
+      managed[el.getAttribute('data-sterna')] = el.innerHTML;
+    });
+  }
+  function ensureLine() {
+    if (!ed.firstChild) { ed.innerHTML = '<div><br></div>'; return; }
+    // Something must be typeable BEFORE a managed block: a body that starts with the signature or the
+    // quote has no line for the owner's own words.
+    var first = ed.firstElementChild;
+    if (first && first.hasAttribute('data-sterna') && ed.firstChild === first) {
+      ed.insertBefore(document.createElement('div'), first).innerHTML = '<br>';
+    }
+  }
+  function caretToStart() {
+    var s = window.getSelection();
+    if (!s) return;
+    var r = document.createRange();
+    r.setStart(ed, 0);
+    r.collapse(true);
+    s.removeAllRanges();
+    s.addRange(r);
+  }
+
+  // ---- change reporting ----
+  function flush() {
+    timer = null;
+    updateEmpty();
+    var h = html();
+    if (h === lastSent) return;
+    lastSent = h;
+    bridge.change(h);
+  }
+  function schedule() {
+    if (loading) return;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(flush, 120);
+  }
+  function q(cmd) { try { return document.queryCommandState(cmd); } catch (e) { return false; } }
+  function report() {
+    if (!selection()) return;
+    var a = closest('A');
+    var blk = '';
+    try { blk = String(document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, ''); } catch (e) { }
+    var color = '';
+    try { color = String(document.queryCommandValue('foreColor') || ''); } catch (e) { }
+    var s = window.getSelection();
+    var st = [
+      'b=' + (q('bold') ? 1 : 0), 'i=' + (q('italic') ? 1 : 0), 'u=' + (q('underline') ? 1 : 0),
+      's=' + (q('strikeThrough') ? 1 : 0), 'ul=' + (q('insertUnorderedList') ? 1 : 0),
+      'ol=' + (q('insertOrderedList') ? 1 : 0), 'al=' + (q('justifyCenter') ? 'c' : (q('justifyRight') ? 'r' : 'l')),
+      'blk=' + encodeURIComponent(blk), 'color=' + encodeURIComponent(color),
+      'link=' + (a ? encodeURIComponent(a.getAttribute('href') || '') : '-'),
+      'range=' + (s && !s.isCollapsed ? 1 : 0), 'quote=' + (closest('BLOCKQUOTE') ? 1 : 0)
+    ].join('&');
+    if (st === lastState) return;
+    lastState = st;
+    bridge.state(st);
+  }
+
+  function cmd(name, arg) {
+    ed.focus();
+    try { document.execCommand('styleWithCSS', false, true); } catch (e) { }
+    var ok = false;
+    try { ok = document.execCommand(name, false, arg === undefined ? null : arg); } catch (e) { }
+    schedule();
+    lastState = null;
+    report();
+    return ok;
+  }
+
+  // ---- the API the app calls ----
+  window.Sterna = {
+    setHtml: function (h) {
+      loading = true;
+      if (timer) { clearTimeout(timer); timer = null; }
+      ed.innerHTML = clean(h);
+      ensureLine();
+      collectManaged();
+      loading = false;
+      lastSent = html();
+      lastState = null;
+      updateEmpty();
+      caretToStart();
+      bridge.loaded(lastSent);
+    },
+    html: function () { flush(); return html(); },
+    focus: function () { ed.focus(); },
+    exec: function (name, arg) { return cmd(name, arg); },
+    block: function (tag) {
+      ed.focus();
+      var cur = '';
+      try { cur = String(document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, ''); } catch (e) { }
+      cmd('formatBlock', cur === tag ? 'div' : tag);
+    },
+    quote: function () {
+      ed.focus();
+      if (closest('BLOCKQUOTE')) cmd('outdent'); else cmd('formatBlock', 'blockquote');
+    },
+    link: function (url, label) {
+      ed.focus();
+      var u = String(url || '').trim();
+      if (!u) { cmd('unlink'); return; }
+      if (!safeUrl(u, false)) return;
+      var s = window.getSelection();
+      var a = closest('A');
+      if (a) { a.setAttribute('href', u); schedule(); return; }
+      if (s && !s.isCollapsed) { cmd('createLink', u); return; }
+      cmd('insertHTML', '<a href="' + escAttr(u) + '">' + escText(label || u) + '</a>');
+    },
+    image: function (dataUri, cid, alt) {
+      if (!safeUrl(dataUri, true)) return;
+      ed.focus();
+      cmd('insertHTML', '<img src="' + escAttr(dataUri) + '" data-cid="' + escAttr(cid) + '" alt="' + escAttr(alt || '') + '" style="max-width:100%">');
+    },
+    clearColor: function () {
+      cmd('foreColor', '#010203');
+      Array.prototype.forEach.call(ed.querySelectorAll('[style]'), function (el) {
+        if (/rgb\(1,\s*2,\s*3\)|#010203/i.test(el.style.color || '')) {
+          el.style.removeProperty('color');
+          if (!el.getAttribute('style')) {
+            el.removeAttribute('style');
+            if (el.tagName === 'SPAN' && !el.attributes.length) {
+              while (el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
+              el.parentNode.removeChild(el);
+            }
+          }
+        }
+      });
+      Array.prototype.forEach.call(ed.querySelectorAll('font[color]'), function (el) {
+        if (/^#?010203$/i.test(el.getAttribute('color'))) el.removeAttribute('color');
+      });
+      schedule();
+    },
+    insertText: function (t) { cmd('insertText', String(t)); },
+    selectedText: function () {
+      var s = selection();
+      return s && !s.isCollapsed ? String(s) : '';
+    },
+    // A block the app manages (the signature, the quote): swap it for [h], unless the owner edited it.
+    // Returns 'ok', 'edited' (left alone) or 'none'.
+    replaceBlock: function (kind, h, belowQuote) {
+      var el = blockEl(kind);
+      var fresh = null;
+      if (h) {
+        var holder = document.createElement('div');
+        holder.innerHTML = clean(h);
+        fresh = holder.firstElementChild;
+      }
+      if (el) {
+        if (managed[kind] !== el.innerHTML) return 'edited';
+        if (fresh) el.parentNode.replaceChild(fresh, el); else el.parentNode.removeChild(el);
+      } else if (fresh) {
+        var quote = blockEl('quote') || blockEl('forward');
+        if (quote && !belowQuote) quote.parentNode.insertBefore(fresh, quote); else ed.appendChild(fresh);
+      } else {
+        return 'none';
+      }
+      collectManaged();
+      schedule();
+      return 'ok';
+    },
+    appendHtml: function (h) {
+      ed.insertAdjacentHTML('beforeend', clean(h));
+      collectManaged();
+      schedule();
+    },
+    // What the text tools may rewrite: the selection, else the owner's own lines above the first managed block.
+    scopeText: function () {
+      var s = selection();
+      if (s && !s.isCollapsed) return 'sel:' + String(s);
+      var out = [];
+      for (var n = ed.firstChild; n; n = n.nextSibling) {
+        if (n.nodeType === 1 && n.hasAttribute('data-sterna')) break;
+        out.push(n.nodeType === 1 && n.innerText != null ? n.innerText : n.textContent);
+      }
+      return 'all:' + out.join('\n').replace(/\s+$/, '');
+    },
+    applyScope: function (mode, text) {
+      ed.focus();
+      if (mode === 'sel' || mode === 'caret') { cmd('insertText', String(text)); return; }
+      var first = ed.firstChild;
+      while (first && !(first.nodeType === 1 && first.hasAttribute('data-sterna'))) {
+        var next = first.nextSibling;
+        ed.removeChild(first);
+        first = next;
+      }
+      var holder = document.createElement('div');
+      holder.innerHTML = '<div>' + escText(text).replace(/\n/g, '<br>') + '</div>';
+      ed.insertBefore(holder.firstChild, first);
+      ensureLine();
+      schedule();
+    }
+  };
+
+  // ---- events ----
+  ed.addEventListener('input', function () { updateEmpty(); schedule(); });
+  ed.addEventListener('focus', function () { bridge.focus('1'); report(); });
+  ed.addEventListener('blur', function () { flush(); bridge.focus('0'); });
+  document.addEventListener('selectionchange', report);
+  ed.addEventListener('paste', function (e) {
+    var cd = e.clipboardData;
+    if (!cd) return;
+    e.preventDefault();
+    var h = cd.getData('text/html');
+    if (h) { cmd('insertHTML', clean(h)); return; }
+    var t = cd.getData('text/plain');
+    if (t) cmd('insertText', t);
+  });
+  ed.addEventListener('drop', function (e) { e.preventDefault(); });
+  ed.addEventListener('click', function (e) {
+    // A link in the editor edits, it does not navigate.
+    var n = e.target;
+    while (n && n !== ed) { if (n.tagName === 'A') { e.preventDefault(); return; } n = n.parentNode; }
+  });
+
+  updateEmpty();
+  bridge.ready();
+})();
+</script>
+</body>
+</html>

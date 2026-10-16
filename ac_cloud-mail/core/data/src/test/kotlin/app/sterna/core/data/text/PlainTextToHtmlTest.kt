@@ -30,8 +30,8 @@ class PlainTextToHtmlTest {
     }
 
     @Test fun `the html reads back as the same text`() {
-        val text = "Hi Ana,\n\nsee you at 6 <ok> & bring snacks\n-- \nAlex"
-        assertEquals(text, htmlToText(plainTextToHtml(text)).replace("\n\n\n", "\n\n"))
+        val text = "Hi Ana,\n\nsee you at 6 <ok> & bring snacks\nAlex"
+        assertEquals(text, htmlToText(plainTextToHtml(text)))
     }
 
     @Test fun `result is always html`() {
