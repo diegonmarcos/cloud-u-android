@@ -52,8 +52,10 @@ object OneHandController {
         if (!isOn(ctx)) return
         if (!ready(ctx)) { EdgeEventLog.recordIfChanged("service", "not started: overlay permission missing"); return }
         val svc = OneHandOverlayService.instance
-        if (svc != null && svc.handleCount > 0 && svc.handleViews.all { it.isAttachedToWindow }) return
-        EdgeEventLog.recordIfChanged("service", "restart: strips not on screen (service ${if (svc == null) "dead" else "up"})")
+        // Alive with strips added = leave it alone: a window is "attached" only after its first traversal, so judging by
+        // that would rebuild the strips under a finger. (Whether they really attached is Diagnostics' business.)
+        if (svc != null && svc.handleCount > 0) return
+        EdgeEventLog.recordIfChanged("service", "restart: no strips (service ${if (svc == null) "dead" else "up"})")
         start(ctx)
     }
 
