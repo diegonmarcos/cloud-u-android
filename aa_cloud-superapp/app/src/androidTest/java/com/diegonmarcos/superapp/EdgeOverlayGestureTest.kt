@@ -198,6 +198,8 @@ class EdgeOverlayGestureTest {
         val s = if (edgeLeft) leftStrip() else rightStrip()
         val dir = if (edgeLeft) 1f else -1f
         val x = s.exactCenterX(); val y = s.exactCenterY()
+        clearPrompt(); SystemClock.sleep(800)
+        val stopsBefore = victimCount("stop")   // the prompt activity, if it came and went, stops the victim too: baseline it
         val hold = ViewConfiguration.getLongPressTimeout() + 500L   // above any of: system, build.json hold time
         down(x, y)
         SystemClock.sleep(hold)
@@ -209,7 +211,7 @@ class EdgeOverlayGestureTest {
         up(x + dir * dp(96), y)
         waitFor("menu window removed after release", 3_000) { !svc().menuShown }
         assertEquals("hold+push must not click the app below", 0, victimCount("click"))
-        assertFalse("system back gesture stole the touch (app below was backgrounded)", (victimCount("stop") > 0))
+        assertEquals("system back gesture stole the touch (app below was backgrounded)" + diag(), stopsBefore, victimCount("stop"))
     }
 
     @Test fun holdThenPushInwardOpensTheMenuFromTheLeftEdge() = holdThenPush(true)
