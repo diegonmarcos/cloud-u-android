@@ -49,6 +49,7 @@ describe('native nav routes', () => {
     expect(docIdFromPath('/graph/local')).toBeNull();
     expect(docIdFromPath('/tag/xyz')).toBeNull();
     expect(docIdFromPath('/all')).toBeNull();
+    expect(docIdFromPath('/boards')).toBeNull();
     expect(docIdFromPath('/')).toBeNull();
   });
 

@@ -60,7 +60,7 @@ export const NATIVE_NAV_TARGETS: Record<string, NativeNavTarget> = {
   'pages/tags': { kind: 'route', to: '/tag' },
   'pages/collections': { kind: 'route', to: '/collection' },
   'pages/new': { kind: 'action', action: 'new-page' },
-  'canvas/boards': { kind: 'route', to: '/all' },
+  'canvas/boards': { kind: 'route', to: '/boards' },
   'canvas/new': { kind: 'action', action: 'new-board' },
   'graph/global': { kind: 'route', to: '/graph' },
   'graph/local': { kind: 'route', to: '/graph/local' },
@@ -105,6 +105,7 @@ const RESERVED_ROOTS = new Set([
   'journals',
   'trash',
   'graph',
+  'boards',
 ]);
 
 /** `/<docId>` -> docId; any other location -> null. */
