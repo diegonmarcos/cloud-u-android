@@ -66,7 +66,7 @@ class C3HealthFragment : KitComposeFragment() {
         val priv = if (showPriv) Sections.privateServices() else emptyList()
         val p = LocalKitPalette.current
 
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
+        Column(pageModifier().padding(12.dp)) {
             Text(stringResource(R.string.c3_health_title), color = p.textPrimary,
                 style = MaterialTheme.typography.headlineSmall)
             // When embedded as a single-scope card the bare status line above
@@ -140,6 +140,15 @@ class C3HealthFragment : KitComposeFragment() {
                 modifier = Modifier.weight(2f))
         }
     }
+
+    /**
+     * Standalone the page scrolls itself; embedded in the Infos stack (a child fragment) it sits inside the
+     * stack's scrolling body, and a Compose scroll under an unbounded height throws at measure time.
+     */
+    @Composable
+    private fun pageModifier(): Modifier =
+        if (parentFragment != null) Modifier.fillMaxWidth()
+        else Modifier.fillMaxSize().verticalScroll(rememberScrollState())
 
     companion object {
         const val SCOPE_ALL     = "all"

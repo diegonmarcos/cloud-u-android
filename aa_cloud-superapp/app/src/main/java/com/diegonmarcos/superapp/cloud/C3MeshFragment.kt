@@ -3,6 +3,7 @@ import com.diegonmarcos.superapp.R
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -47,7 +48,7 @@ class C3MeshFragment : KitComposeFragment() {
     @Composable
     override fun Content() {
         val p = LocalKitPalette.current
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
+        Column(pageModifier().padding(12.dp)) {
             Text(stringResource(R.string.mesh_title), color = p.textPrimary,
                 style = MaterialTheme.typography.headlineSmall)
             Text(MeshView.statusText(LocalContext.current), color = p.textSecondary,
@@ -56,6 +57,15 @@ class C3MeshFragment : KitComposeFragment() {
             MeshView.Content()
         }
     }
+
+    /**
+     * Standalone the page scrolls itself; embedded in the Infos stack (a child fragment) it sits inside the
+     * stack's scrolling body, and a Compose scroll under an unbounded height throws at measure time.
+     */
+    @Composable
+    private fun pageModifier(): Modifier =
+        if (parentFragment != null) Modifier.fillMaxWidth()
+        else Modifier.fillMaxSize().verticalScroll(rememberScrollState())
 
     companion object { fun newInstance() = C3MeshFragment() }
 }

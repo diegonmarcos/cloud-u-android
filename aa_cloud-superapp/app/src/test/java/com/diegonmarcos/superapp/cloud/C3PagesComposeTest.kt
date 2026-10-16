@@ -6,6 +6,13 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.ui.KitPageHarness
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ScrollView
+import androidx.fragment.app.Fragment
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,6 +28,8 @@ import org.robolectric.annotation.Config
  *   H3 every declared service is drawn, once per declaration, in the scope that owns it
  *   M1 one block per declared transport, and the status line counts nodes/peerings/transports
  *   M2 every declared node of the mesh is drawn at least once (a node may sit in two transports)
+ *   E1 embedded as a child fragment inside a View ScrollView (the Infos stack), both pages measure and draw -
+ *      a Compose scroll under that unbounded height would throw, so the embedded page must not scroll itself
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -73,5 +82,35 @@ class C3PagesComposeTest : KitPageHarness() {
             assertTrue("node $n is not drawn in any transport",
                 compose.onAllNodesWithTag(MeshView.nodeTag(n)).fetchSemanticsNodes().isNotEmpty())
         }
+    }
+
+    /** The Infos stack's shape: a View ScrollView holding a wrap-content FrameLayout the child fragment fills. */
+    class StackHost : Fragment() {
+        override fun onCreateView(i: LayoutInflater, c: ViewGroup?, s: Bundle?): View =
+            ScrollView(i.context).apply {
+                addView(FrameLayout(i.context).apply { id = HOST_ID })
+            }
+        companion object { const val HOST_ID = 0x7f0f0f01 }
+    }
+
+    @Test
+    fun `E1 embedded in a View scroll both pages draw without a scroll of their own`() {
+        val host = show(StackHost())
+        compose.runOnUiThread {
+            host.childFragmentManager.beginTransaction()
+                .replace(StackHost.HOST_ID, C3HealthFragment.newInstance(C3HealthFragment.SCOPE_PRIVATE)).commitNow()
+        }
+        compose.waitForIdle()
+        compose.onNodeWithTag(C3HealthFragment.TAG_PUBLIC).assertDoesNotExist()
+        for (n in Sections.privateServices().map { it.name }.toSet()) {
+            assertTrue("private service $n is not drawn in the embedded card",
+                compose.onAllNodesWithTag(C3HealthFragment.rowTag(n)).fetchSemanticsNodes().isNotEmpty())
+        }
+        compose.runOnUiThread {
+            host.childFragmentManager.beginTransaction()
+                .replace(StackHost.HOST_ID, C3MeshFragment.newInstance()).commitNow()
+        }
+        compose.waitForIdle()
+        for (t in Sections.mesh().transports) compose.onNodeWithTag(MeshView.blockTag(t.name)).assertExists()
     }
 }
