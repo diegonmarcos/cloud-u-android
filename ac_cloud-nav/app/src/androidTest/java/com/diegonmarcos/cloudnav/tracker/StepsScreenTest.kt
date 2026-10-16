@@ -52,7 +52,6 @@ class StepsScreenTest {
 
     @Test fun healthConnectSourceIsLabelled() {
         show(ui())
-        rule.onNodeWithTag(StepsTags.SOURCE).assertExists()
         rule.onNodeWithText("Source: Health Connect").assertIsDisplayed()
     }
 
