@@ -3156,6 +3156,17 @@
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
    "within_upstream_module": "gallery"
   },
+  "maven:androidx.compose.material:material-icons-core": {
+   "kind": "maven",
+   "declared_in": [
+    "ac_cloud-tasks/app/build.gradle"
+   ],
+   "scope": "shipped",
+   "version": "1.7.8",
+   "licence": "Apache-2.0",
+   "licence_source": "curated.maven_group_licences[androidx]",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)"
+  },
   "maven:androidx.compose.material:material-icons-extended": {
    "kind": "maven",
    "declared_in": [
