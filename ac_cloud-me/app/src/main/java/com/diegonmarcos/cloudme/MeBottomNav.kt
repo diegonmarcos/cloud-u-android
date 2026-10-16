@@ -1,9 +1,17 @@
 package com.diegonmarcos.cloudme
 
-import android.content.Context
-import android.view.ViewGroup
-import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
-import com.diegonmarcos.superapp.bottomnav.BottomNavViewItem
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
+import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
 
 /**
  * Cloud Me's bottom nav: libs:bottomnav's island fed from [Sections.bottom] (#531).
@@ -11,52 +19,76 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavViewItem
  * The stock Material BottomNavigationView is gone; the bar is the fleet's one Compose island.
  * What stays Cloud Me's own is small: WHICH sections (the bar sections of build.json, in
  * `order`) and what a tap on a launch section does (it leaves the app and the pill stays on the
- * page you are still on). The island's look and its system-bar clearance are the lib's. MainActivity and MeBottomNavTest both call [configure],
- * so the test measures the bar the app shows.
+ * page you are still on). The island's look and its system-bar clearance are the lib's.
  *
- * [configure] takes the content host because the bar's scroll-collapse is driven from it (#673).
+ * 2026-10-16 owner decision: all apps must be Compose. [MeBody] is the shell's content-above-island
+ * column, shared by MainActivity and MeBottomNavTest so the test measures the bar the app shows.
  */
 object MeBottomNav {
 
-    fun items(ctx: Context): List<BottomNavViewItem> = Sections.bottom().map {
+    /** Test tag of the content slot [MeBody] lays out ABOVE the island. */
+    const val CONTENT_TAG = "me:content"
+
+    /** The section whose item the pill sits on: a bar section lights its item, an off-bar section
+     *  (reached from the drawer, a tile or restored state) leaves none lit. */
+    fun pillFor(sectionId: String?): String? =
+        sectionId?.takeIf { id -> Sections.bottom().any { it.id == id } }
+}
+
+/**
+ * The island over build.json's bar sections. [onOpen] shows a section inside the app, [onTarget]
+ * launches a section's `target`. Opening moves the pill; launching does not, so the bar keeps
+ * pointing at the page the user comes back to.
+ */
+@Composable
+fun MeBottomBar(
+    selectedSectionId: String?,
+    onOpen: (String) -> Unit,
+    onTarget: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    collapsed: Boolean = false,
+) {
+    val ctx = LocalContext.current
+    val entries = Sections.bottom().map {
         @Suppress("DiscouragedApi")
         val icon = ctx.resources.getIdentifier(it.icon, "drawable", ctx.packageName)
-        BottomNavViewItem(it.id, it.label, icon)
+        BottomNavEntry(it.id, it.label, painterResource(icon))
     }
-
-    /**
-     * [onOpen] shows a section inside the app, [onTarget] launches a section's `target`.
-     * Opening moves the pill; launching does not, so the bar keeps pointing at the page the
-     * user comes back to.
-     */
-    fun configure(
-        nav: BottomNavIslandView,
-        content: ViewGroup,
-        onOpen: (String) -> Unit,
-        onTarget: (String) -> Unit,
-    ) {
-        val ctx = nav.context
-        nav.items = items(ctx)
-        // #673 scroll-collapse, from the content host: scrolling a page collapses the bar to
-        // icons. #532 shipped this as an island parameter and nothing in a View shell ever set
-        // it, so the behaviour never reached Cloud Me at all. Required, not optional, so it
-        // cannot quietly go unset again.
-        nav.collapseOnScrollIn(content)
-        nav.onSelect = { id ->
-            val section = Sections.byId(id)
+    BottomNavIsland(
+        entries = entries,
+        selectedId = MeBottomNav.pillFor(selectedSectionId),
+        onSelect = { e ->
+            val section = Sections.byId(e.id)
             when {
                 section == null -> Unit
                 section.target.isNotBlank() -> onTarget(section.target)
-                else -> { nav.selectedId = id; onOpen(id) }
+                else -> onOpen(e.id)
             }
-        }
-        // A re-tap on the page already shown reloads nothing; the pill is already there.
-        nav.onReselect = {}
-    }
+        },
+        modifier = modifier,
+        collapsed = collapsed,
+    )
+}
 
-    /** Keep the pill honest when a section was reached from the drawer, a tile or restored
-     *  state: a bar section lights its item, an off-bar section leaves none lit. */
-    fun sync(nav: BottomNavIslandView, sectionId: String?) {
-        nav.selectedId = sectionId?.takeIf { id -> Sections.bottom().any { it.id == id } }
+/**
+ * The shell's body: [content] above the island, ending where the island's clearance begins so
+ * nothing the page draws can hide under the bar. Scrolling the content collapses the island to
+ * icons (#673) and scrolling back up restores the labels: the content slot carries the nested-scroll
+ * connection, so any scrolling page inside it drives the bar.
+ */
+@Composable
+fun MeBody(
+    selectedSectionId: String?,
+    onOpen: (String) -> Unit,
+    onTarget: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val collapse = rememberBottomNavCollapse()
+    Column(modifier) {
+        Box(Modifier.weight(1f).fillMaxWidth().nestedScroll(collapse).testTag(MeBottomNav.CONTENT_TAG)) {
+            content()
+        }
+        MeBottomBar(selectedSectionId, onOpen, onTarget, collapsed = collapse.collapsed)
     }
 }

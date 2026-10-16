@@ -36,7 +36,7 @@ GRADLE="$APP/app/build.gradle"
 MANIFEST="$APP/app/src/main/AndroidManifest.xml"
 MAIN="$APP/app/src/main/java"
 CLIENT="$MAIN/com/diegonmarcos/cloudme/CalEngineClient.kt"
-PAGE="$MAIN/com/diegonmarcos/cloudme/AgendaFragment.kt"
+PAGE="$MAIN/com/diegonmarcos/cloudme/AgendaScreen.kt"
 STR="$APP/app/src/main/res/values/strings.xml"
 WF="$ROOT/1_cicd/src/cicd/ship-cloud-me.yml"
 for required in "$BJ" "$GRADLE" "$MANIFEST" "$CLIENT" "$PAGE" "$STR" "$WF"; do
@@ -160,16 +160,16 @@ sys.exit(bad)
 PYTHON
 }
 
-# m5 <AgendaFragment.kt> <strings.xml> <CalEngineClient.kt>
+# m5 <AgendaScreen.kt> <strings.xml> <CalEngineClient.kt>
 m5() {
     local page="$1" str="$2" client="$3" bad=0 sid want
-    grep -qF 'why is CalEngineClient.Check.NotInstalled -> col.addView(emptyState(ctx,' "$page" \
-        && grep -qF 'getString(R.string.cal_engine_missing_title), getString(R.string.cal_engine_missing, why.pkg)))' "$page" \
+    grep -qF 'why is CalEngineClient.Check.NotInstalled -> AgendaState.Notice(' "$page" \
+        && grep -qF 'ctx.getString(R.string.cal_engine_missing_title), ctx.getString(R.string.cal_engine_missing, why.pkg))' "$page" \
         || { echo "    a missing engine is not the cal_engine_missing line"; bad=1; }
-    grep -qF 'why is CalEngineClient.Check.TooOld -> col.addView(emptyState(ctx,' "$page" \
-        && grep -qF 'getString(R.string.cal_engine_old_title), getString(R.string.cal_engine_old, why.pkg, why.found, why.needed)))' "$page" \
+    grep -qF 'why is CalEngineClient.Check.TooOld -> AgendaState.Notice(' "$page" \
+        && grep -qF 'ctx.getString(R.string.cal_engine_old_title), ctx.getString(R.string.cal_engine_old, why.pkg, why.found, why.needed))' "$page" \
         || { echo "    an engine too old for this build is not the cal_engine_old line"; bad=1; }
-    grep -qF 'getString(R.string.cal_engine_failed_title), rows?.exceptionOrNull()?.message.orEmpty()))' "$page" \
+    grep -qF 'ctx.getString(R.string.cal_engine_failed_title), rows?.exceptionOrNull()?.message.orEmpty())' "$page" \
         || { echo "    an engine call that failed is not said on the tab"; bad=1; }
     while IFS='|' read -r sid want; do
         grep -qE "name=\"$sid\">[^<]*$want" "$str" \
@@ -232,11 +232,11 @@ _green m1 m1 "$BJ" "$MUT/app.gradle" "$MAIN" "$WF" && {
     _sub "$MUT/app.gradle" "    implementation project(':libs:fin')" "    implementation project(':libs:fin')
     implementation project(':libs:cal')"
     _applied "$GRADLE" "$MUT/app.gradle" "project(':libs:cal')" && _red "M1 app/build.gradle links :libs:cal again" m1 "$BJ" "$MUT/app.gradle" "$MAIN" "$WF"; }
-mkdir -p "$MUT/java/x"; cp "$PAGE" "$MUT/java/x/AgendaFragment.kt"
+mkdir -p "$MUT/java/x"; cp "$PAGE" "$MUT/java/x/AgendaScreen.kt"
 _green m1 m1 "$BJ" "$GRADLE" "$MUT/java" "$WF" && {
-    _sub "$MUT/java/x/AgendaFragment.kt" 'import org.json.JSONArray' 'import com.diegonmarcos.superapp.cal.TodoStore
+    _sub "$MUT/java/x/AgendaScreen.kt" 'import org.json.JSONArray' 'import com.diegonmarcos.superapp.cal.TodoStore
 import org.json.JSONArray'
-    _applied "$PAGE" "$MUT/java/x/AgendaFragment.kt" 'import com.diegonmarcos.superapp.cal.TodoStore' \
+    _applied "$PAGE" "$MUT/java/x/AgendaScreen.kt" 'import com.diegonmarcos.superapp.cal.TodoStore' \
         && _red "M1 the tab imports the cal library again" m1 "$BJ" "$GRADLE" "$MUT/java" "$WF"; }
 cp "$WF" "$MUT/wf.yml"
 _green m1 m1 "$BJ" "$GRADLE" "$MAIN" "$MUT/wf.yml" && {
@@ -317,9 +317,9 @@ _green m5 m5 "$PAGE" "$MUT/strings.xml" "$CLIENT" && {
     _applied "$STR" "$MUT/strings.xml" 'needs %3$d.<' && _red "M5 the too-old line names no next step" m5 "$PAGE" "$MUT/strings.xml" "$CLIENT"; }
 cp "$PAGE" "$MUT/page.kt"
 _green m5 m5 "$MUT/page.kt" "$STR" "$CLIENT" && {
-    _sub "$MUT/page.kt" 'getString(R.string.cal_engine_old_title), getString(R.string.cal_engine_old, why.pkg, why.found, why.needed)))' 'getString(R.string.cal_engine_missing_title), getString(R.string.cal_engine_missing, why.pkg)))'
-    _applied "$PAGE" "$MUT/page.kt" 'TooOld -> col.addView(emptyState(ctx,
-                        getString(R.string.cal_engine_missing_title)' && _red "M5 too-old is worded as missing" m5 "$MUT/page.kt" "$STR" "$CLIENT"; }
+    _sub "$MUT/page.kt" 'ctx.getString(R.string.cal_engine_old_title), ctx.getString(R.string.cal_engine_old, why.pkg, why.found, why.needed))' 'ctx.getString(R.string.cal_engine_missing_title), ctx.getString(R.string.cal_engine_missing, why.pkg))'
+    _applied "$PAGE" "$MUT/page.kt" 'TooOld -> AgendaState.Notice(
+            ctx.getString(R.string.cal_engine_missing_title)' && _red "M5 too-old is worded as missing" m5 "$MUT/page.kt" "$STR" "$CLIENT"; }
 cp "$CLIENT" "$MUT/c.kt"
 _green m5 m5 "$PAGE" "$STR" "$MUT/c.kt" && {
     _sub "$MUT/c.kt" 'runCatching { JSONArray(text) }.getOrElse {' 'runCatching { JSONArray(text) }.getOrDefault(JSONArray()).let { return it }; run {'

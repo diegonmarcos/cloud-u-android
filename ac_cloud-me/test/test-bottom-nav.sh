@@ -2,8 +2,8 @@
 # Tester (#531): Cloud Me's bottom bar is libs:bottomnav's Compose island, the
 # stock Material BottomNavigationView is gone, and the bar reads
 # Buro | Projects | Profile | Agenda | Wallet (#504). Structure only: the
-# rendered order, pill, tap routing and clearance are MEASURED on the real
-# layout by app/src/test/.../MeBottomNavTest (CI tests.unit).
+# rendered order, pill, tap routing, clearance and scroll-collapse are MEASURED on
+# the real shell body (MeBody) by app/src/test/.../MeBottomNavTest (CI tests.unit).
 set -u
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 MAIN="$APP/app/src/main"
@@ -12,15 +12,25 @@ ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 check() { if [ "$1" = "OK" ]; then ok "$2"; else bad "$2: $1"; fi; }
 
-echo "== T1: activity_main hosts the shared island as bottom_nav =="
-check "$(python3 - "$MAIN/res/layout/activity_main.xml" <<'PY'
-import re, sys
-t = open(sys.argv[1]).read()
-m = re.search(r'<([A-Za-z0-9_.]+)\s+android:id="@\+id/bottom_nav"', t)
-print('OK' if m and m.group(1) == 'com.diegonmarcos.superapp.bottomnav.BottomNavIslandView'
-      else 'bottom_nav is %s, not libs:bottomnav BottomNavIslandView' % (m.group(1) if m else 'missing'))
+echo "== T1: the shell hosts the shared island (BottomNavIsland) in MeBody =="
+check "$(python3 - "$MAIN/java/com/diegonmarcos/cloudme" "$MAIN/res" <<'PY'
+import os, re, sys
+d = sys.argv[1]
+def code(f):
+    t = open(os.path.join(d, f), encoding='utf-8').read()
+    t = re.sub(r'/\*.*?\*/', '', t, flags=re.S)
+    return re.sub(r'(?m)^\s*//.*$', '', t)
+nav, act = code('MeBottomNav.kt'), code('MainActivity.kt')
+p = []
+if not re.search(r'\bBottomNavIsland\s*\(', nav):
+    p.append('MeBottomNav.kt does not draw libs:bottomnav BottomNavIsland')
+if not re.search(r'\bMeBody\s*\(', act):
+    p.append('MainActivity does not lay the section out through MeBody (content above the island)')
+if os.path.exists(os.path.join(sys.argv[2], 'layout', 'activity_main.xml')):
+    p.append('activity_main.xml is back: the shell is Compose')
+print('; '.join(p) or 'OK')
 PY
-)" "bottom_nav is com.diegonmarcos.superapp.bottomnav.BottomNavIslandView"
+)" "the island is libs:bottomnav's BottomNavIsland, drawn by MeBody under MainActivity"
 
 echo "== T2: no Material bottom-navigation class in any source or layout =="
 check "$(python3 - "$MAIN" <<'PY'
@@ -74,11 +84,11 @@ if not unit.get('task') or unit.get('enabled') is False:
     p.append('build.json::tests.unit is off - MeBottomNavTest never runs in CI')
 f = os.path.join(app, 'app/src/test/java/com/diegonmarcos/cloudme/MeBottomNavTest.kt')
 t = open(f).read() if os.path.exists(f) else ''
-if '@Test' not in t or 'MeBottomNav.configure(' not in t or 'R.layout.activity_main' not in t:
-    p.append('MeBottomNavTest is missing or does not measure the real layout configured by MeBottomNav')
+if '@Test' not in t or 'MeBody(' not in t or 'createAndroidComposeRule' not in t:
+    p.append('MeBottomNavTest is missing or does not drive the real shell body (MeBody)')
 print('; '.join(p) or 'OK')
 PY
-)" "MeBottomNavTest measures the real layout and tests.unit runs it"
+)" "MeBottomNavTest drives the real shell body and tests.unit runs it"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

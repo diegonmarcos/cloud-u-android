@@ -741,20 +741,14 @@
       "id": "ac_cloud-me",
       "scope": "in",
       "wave": 3,
-      "ui": "views",
+      "ui": "compose",
       "size": "M",
-      "screens_left": [
-        "MainActivity",
-        "SectionFragment",
-        "StackFragment",
-        "AgendaFragment",
-        "FilesFragment",
-        "WebFragment"
-      ],
+      "screens_left": [],
+      "notes": "All Compose (2026-10-16): MainActivity is a ModalNavigationDrawer shell over MeBody (content above libs:bottomnav's BottomNavIsland, scroll-collapsed by a nested-scroll connection); SectionScreen draws the page-tab strips (PageTabs) and the page; StackScreen, AgendaScreen, FilesScreen and WebPage replace the four fragments; Health and Fin stay library Fragments hosted through KitFragmentHost, the profile pages' WebView through AndroidView. MeBottomNavTest was ported from the inflated activity_main to a Compose test of MeBody.",
       "baseline": {
-        "view_screens": 6,
-        "layout_xml": 2,
-        "view_ui_files": 5,
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
         "custom_views": 0
       }
     },

@@ -1,0 +1,151 @@
+package com.diegonmarcos.cloudme
+
+import android.content.Context
+import android.content.ContextWrapper
+import android.view.View
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.commit
+import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.fin.MyFinDashboardFragment
+import com.diegonmarcos.superapp.health.HealthFragment
+import com.diegonmarcos.superapp.uikit.KitFragmentHost
+import org.json.JSONObject
+
+/**
+ * One section: its tab strip and whichever page is showing.
+ *
+ * A tab that declares `pages` of its own is a container — it draws another,
+ * quieter strip underneath and shows one of its children, and a child may be
+ * a container in turn. Buro > Fin was the first: Acct, Budget and Portfolio
+ * are three views of one question, and three top-level tabs would have said
+ * they were three questions. Projects > Health > Workout > Gym is the deepest,
+ * at three strips. The strips are built from the page chain rather than from
+ * two named fields, so the depth build.json may declare is not capped here.
+ *
+ * A page's content is decided by its `stack_<id>` list. When that list is a
+ * single `fragment` block the library surface is hosted directly — Health,
+ * Accounting, Agenda and the Wallet file browser are whole surfaces owned by
+ * their modules, and wrapping them in a renderer would only add a scroll
+ * container inside a scroll container. Everything else goes to [StackScreen].
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. The strips are libs:bottomnav's PageTabs
+ * composables; Agenda, Files and Web are composables of this app; only Health and Fin, which
+ * are Fragments of their own libraries, are hosted through KitFragmentHost.
+ */
+@Composable
+fun SectionScreen(sectionId: String, requestedPage: String?, modifier: Modifier = Modifier) {
+    val section = Sections.byId(sectionId) ?: return
+    /** The LEAF page on screen — a sub-page id when the tab is a container. */
+    var pageId by rememberSaveable(sectionId, requestedPage) {
+        mutableStateOf(section.page(requestedPage)?.leaf()?.id)
+    }
+    val page = section.page(pageId)?.leaf() ?: return
+    val chain = section.path(page.id)
+
+    Column(modifier.fillMaxSize()) {
+        // Draws the strips [chain] implies: level 0 offers the section's own
+        // tabs, level n the children of the tab chosen at level n-1, and the
+        // chain says which tab is selected at each. Strips past the chain are
+        // dropped, so stepping out of a container takes its strip with it.
+        val levels = listOf(section.pages) + chain.dropLast(1).map { it.pages }
+        levels.forEachIndexed { level, siblings ->
+            // One tab is not a choice — a single-tab strip reads as a broken
+            // control rather than as a navigation aid. Configs is shaped that
+            // way on purpose: a settings screen is a list you scroll.
+            if (siblings.size > 1) {
+                PageTabs(
+                    pages = siblings,
+                    selectedId = chain.getOrNull(level)?.id,
+                    onSelect = { tab ->
+                        // A container tab has no content of its own; tapping one opens the child
+                        // you were last on — which is what staying on the chain means — or its
+                        // first child. Tapping a leaf opens the leaf.
+                        val stillBelow = section.path(pageId).any { it.id == tab.id }
+                        pageId = if (stillBelow) pageId else section.page(tab.id)?.leaf()?.id
+                    },
+                    underTopChrome = false,
+                )
+            }
+        }
+        PageContent(section, page, Modifier.weight(1f).fillMaxWidth())
+    }
+}
+
+@Composable
+private fun PageContent(section: Section, page: Page, modifier: Modifier) {
+    val ctx = LocalContext.current
+    val stack = remember(section.id, page.id) { Sections.stack(ctx, section.id, page.id) }
+    val single = if (stack.length() == 1) stack.optJSONObject(0) else null
+    if (single != null && single.optString("kind") == "fragment") {
+        // `{"kind":"fragment","id":"…"}` → the module that owns that surface.
+        // An unknown id falls through to the stack renderer, which shows the
+        // block's title rather than a blank screen, so a typo in JSON is
+        // visible on the phone instead of silent.
+        when (single.optString("id")) {
+            // `metric` and `records` are only read by the metric page, which is
+            // one metric of the taxonomy on a page of its own — Workout > Steps
+            // is the Activity metric narrowed to steps, distance and calories.
+            // Both are declared here rather than in Kotlin so that narrowing a
+            // page, or adding another one, stays a JSON edit.
+            "health" -> HostedFragment("${section.id}/${page.id}", modifier) { healthFragment(single) }
+            "fin" -> HostedFragment("${section.id}/${page.id}", modifier) { MyFinDashboardFragment() }
+            "agenda" -> AgendaScreen(AgendaMode.EVENTS, modifier)
+            "todo" -> AgendaScreen(AgendaMode.TODOS, modifier)
+            "files" -> FilesScreen(single, modifier)
+            "web" -> WebPage(single, modifier)
+            else -> StackScreen(stack, modifier)
+        }
+    } else {
+        StackScreen(stack, modifier)
+    }
+}
+
+private fun healthFragment(o: JSONObject): Fragment = HealthFragment.newInstance(
+    o.optString("page", HealthFragment.PAGE_SUMMARY),
+    o.optString("metric"),
+    (o.optJSONArray("records") ?: org.json.JSONArray()).let { arr ->
+        (0 until arr.length()).map { arr.optString(it) }
+    },
+)
+
+/**
+ * A library Fragment as a page: one container per shown page, the fragment added into it by
+ * KitFragmentHost and removed again when the page leaves the screen (a Fragment left behind
+ * would keep running with no view to draw on).
+ */
+@Composable
+private fun HostedFragment(key: String, modifier: Modifier, create: () -> Fragment) {
+    val activity = LocalContext.current.findFragmentActivity()
+    val containerId = remember(key) { View.generateViewId() }
+    DisposableEffect(containerId) {
+        onDispose {
+            val fm = activity.supportFragmentManager
+            if (!fm.isDestroyed) {
+                fm.findFragmentById(containerId)?.let { fm.commit(allowStateLoss = true) { remove(it) } }
+            }
+        }
+    }
+    KitFragmentHost(containerId, modifier, tag = key, create = create)
+}
+
+private fun Context.findFragmentActivity(): FragmentActivity {
+    var c: Context = this
+    while (c is ContextWrapper) {
+        if (c is FragmentActivity) return c
+        c = c.baseContext
+    }
+    error("a hosted Fragment needs a FragmentActivity")
+}

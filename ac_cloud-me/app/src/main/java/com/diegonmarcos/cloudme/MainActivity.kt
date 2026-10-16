@@ -3,65 +3,112 @@ package com.diegonmarcos.cloudme
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
-import android.widget.TextView
-import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.GravityCompat
-import androidx.drawerlayout.widget.DrawerLayout
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.commit
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitFragmentHostState
+import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
-import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
-import com.diegonmarcos.superapp.bottomnav.FleetChrome
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.navigation.NavigationView
+import kotlinx.coroutines.launch
+
+/** Resolves a tile/link target the way [MainActivity.onTarget] does; provided by the shell to every page. */
+val LocalMeTarget = staticCompositionLocalOf<(String) -> Unit> { {} }
 
 /**
- * Single-activity shell: hamburger drawer, toolbar with a Configs gear, a
+ * Single-activity shell: hamburger drawer, top bar with a Configs gear, a
  * content host and the fleet's bottom-nav island — the SuperApp's shape, at a fraction of its
  * size, because Cloud Me has no launcher, no home index and no modes.
  *
  * Both menus are built here from [Sections] rather than inflated from
  * res/menu. That is the point of the app: the bar, the drawer and the tab
  * strips are one JSON list rendered three ways, so they cannot disagree.
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. The shell is a Compose screen under
+ * CloudKitTheme (libs:ui-kit): a ModalNavigationDrawer over [MeBody] (content above the island),
+ * and [SectionScreen] draws the section. Only the Health and Fin library pages are still
+ * Fragments, hosted by KitFragmentHost.
  */
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var drawer: DrawerLayout
-    private lateinit var toolbar: MaterialToolbar
-    private lateinit var bottomNav: BottomNavIslandView
-
     /** Section currently on screen — the back handler's only state. */
-    private var currentSection: String? = null
+    private var currentSection by mutableStateOf<String?>(null)
+
+    /** The page a caller asked for inside [currentSection] (null = the section's first). */
+    private var currentPage by mutableStateOf<String?>(null)
+
+    /** Bumped on every open(), so reopening a section starts it afresh, as a new fragment did. */
+    private var openSeq by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        // Health and Fin are re-added by KitFragmentHost once Compose has a container for them.
+        super.onCreate(KitFragmentHostState.withoutFragments(savedInstanceState))
         FleetChrome.apply(this)
-        setContentView(R.layout.activity_main)
-
-        drawer = findViewById(R.id.drawer_layout)
-        toolbar = findViewById(R.id.toolbar)
-        bottomNav = findViewById(R.id.bottom_nav)
-
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayShowTitleEnabled(true)
-        toolbar.setNavigationOnClickListener { drawer.openDrawer(GravityCompat.START) }
-
-        buildBottomNav()
-        buildDrawer()
-        installBackHandler()
 
         if (savedInstanceState == null) {
             Sections.default()?.let { open(it.id) }
             // A caller that knows where it wants to land overrides that. Both
-            // commits land in the same frame, so the default is never drawn.
+            // land in the same frame, so the default is never drawn.
             handleShortcutIntent(intent)
         } else {
             currentSection = savedInstanceState.getString(STATE_SECTION)
-            MeBottomNav.sync(bottomNav, currentSection)
-            supportActionBar?.title = Sections.byId(currentSection)?.label ?: getString(R.string.app_name)
+        }
+
+        setContent {
+            val palette = KitPalette(
+                surface = colorResource(R.color.me_surface),
+                surfaceSelected = colorResource(R.color.me_surface_high),
+                textPrimary = colorResource(R.color.me_text),
+                textSecondary = colorResource(R.color.me_text_dim),
+                accent = colorResource(R.color.me_primary),
+                hairline = colorResource(R.color.me_outline),
+                tileInk = colorResource(R.color.me_on_primary),
+            )
+            CloudKitTheme(palette) {
+                CompositionLocalProvider(LocalMeTarget provides { onTarget(it) }) { Shell() }
+            }
         }
 
         // Self-update from GHCR: the periodic check plus a one-shot shortly
@@ -106,69 +153,108 @@ class MainActivity : AppCompatActivity() {
         UpdateProgress.setListener(null)
     }
 
-    // ── menus, built from build.json ─────────────────────────────────
+    // ── the screen ───────────────────────────────────────────────────
 
-    /** The bar is libs:bottomnav's island (#531); MeBottomNav fills it from [Sections.bottom]
-     *  and routes a tap: a page section opens here, a launch section leaves the app. */
-    private fun buildBottomNav() {
-        MeBottomNav.configure(
-            bottomNav,
-            content = findViewById(R.id.fragment_container),
-            onOpen = { open(it) },
-            onTarget = { onTarget(it) },
-        )
-    }
-
-    private fun buildDrawer() {
-        val nav = findViewById<NavigationView>(R.id.nav_drawer)
-        val menu = nav.menu
-        menu.clear()
-        val drawerSections = Sections.drawer()
-        drawerSections.forEachIndexed { index, s ->
-            menu.add(Menu.NONE, index + 1, index, s.label).apply {
-                iconRes(s.icon)?.let { setIcon(it) }
+    @Composable
+    private fun Shell() {
+        val drawer = rememberDrawerState(DrawerValue.Closed)
+        val scope = rememberCoroutineScope()
+        val home = Sections.default()?.id
+        // Back from anywhere else lands on the first bar section before it leaves the app — the
+        // same one-step-home rule the SuperApp uses, so Back never exits from deep inside.
+        BackHandler(enabled = drawer.isOpen || (currentSection != null && currentSection != home && home != null)) {
+            if (drawer.isOpen) scope.launch { drawer.close() } else home?.let { open(it) }
+        }
+        ModalNavigationDrawer(
+            drawerState = drawer,
+            drawerContent = { DrawerSheet { scope.launch { drawer.close() } } },
+        ) {
+            Column(
+                Modifier.fillMaxSize().background(colorResource(R.color.me_bg))
+                    .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
+            ) {
+                TopBar { scope.launch { drawer.open() } }
+                MeBody(
+                    selectedSectionId = currentSection,
+                    onOpen = { open(it) },
+                    onTarget = { onTarget(it) },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    currentSection?.let { id -> key(id, openSeq) { SectionScreen(id, currentPage) } }
+                }
             }
         }
-        nav.setNavigationItemSelectedListener { item ->
-            drawer.closeDrawer(GravityCompat.START)
-            select(drawerSections.getOrNull(item.itemId - 1))
-        }
-        nav.getHeaderView(0)?.let { header ->
-            header.findViewById<TextView>(R.id.header_name)?.text =
-                BuildConfig.UI_PROFILE_NAME.ifBlank { getString(R.string.app_name) }
-            header.findViewById<TextView>(R.id.header_email)?.text = BuildConfig.UI_PROFILE_EMAIL
+    }
+
+    /** The bar of the screen: the hamburger, the section's title and, when declared, the Configs gear.
+     *  The gear is a section like any other; it is only drawn here instead of in the bar because
+     *  Configs is the one destination you want reachable from wherever you already are. */
+    @Composable
+    private fun TopBar(onMenu: () -> Unit) {
+        val text = colorResource(R.color.me_text)
+        val cfg = Sections.toolbarSection()
+        Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onMenu) {
+                Icon(painterResource(R.drawable.ic_hamburger_asymmetric), stringResource(R.string.drawer_open), tint = text)
+            }
+            Text(
+                Sections.byId(currentSection)?.label ?: stringResource(R.string.app_name),
+                color = text, fontSize = 20.sp, modifier = Modifier.weight(1f),
+            )
+            cfg?.let { c ->
+                iconRes(c.icon)?.let { icon ->
+                    IconButton(onClick = { open(c.id) }) { Icon(painterResource(icon), c.label, tint = text) }
+                }
+            }
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // The gear is a section like any other; it is only drawn in the
-        // toolbar instead of the bar because Configs is the one destination
-        // you want reachable from wherever you already are.
-        val cfg = Sections.toolbarSection() ?: return false
-        menu.add(Menu.NONE, MENU_CONFIGS, 0, cfg.label).apply {
-            iconRes(cfg.icon)?.let { setIcon(it) }
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+    /** The drawer: the profile header, then every section the bar has no room for. */
+    @Composable
+    private fun DrawerSheet(close: () -> Unit) {
+        val dim = colorResource(R.color.me_text_dim)
+        val primary = colorResource(R.color.me_primary)
+        ModalDrawerSheet(drawerContainerColor = colorResource(R.color.me_surface)) {
+            Column(
+                Modifier.fillMaxWidth().background(colorResource(R.color.me_surface_high))
+                    .padding(start = 20.dp, top = 36.dp, end = 20.dp, bottom = 20.dp),
+            ) {
+                Text(
+                    BuildConfig.UI_PROFILE_NAME.ifBlank { stringResource(R.string.app_name) },
+                    color = colorResource(R.color.me_text), fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(BuildConfig.UI_PROFILE_EMAIL, color = dim, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+            }
+            for (s in Sections.drawer()) {
+                val res = iconRes(s.icon)
+                NavigationDrawerItem(
+                    label = { Text(s.label) },
+                    selected = s.id == currentSection,
+                    onClick = { close(); select(s) },
+                    icon = { res?.let { Icon(painterResource(it), null) } },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = Color.Transparent, unselectedContainerColor = Color.Transparent,
+                        selectedIconColor = primary, selectedTextColor = primary,
+                        unselectedIconColor = dim, unselectedTextColor = dim,
+                    ),
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                )
+            }
         }
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == MENU_CONFIGS) {
-            Sections.toolbarSection()?.let { open(it.id) }
-            return true
-        }
-        return super.onOptionsItemSelected(item)
     }
 
     // ── navigation ───────────────────────────────────────────────────
 
-    /** One tap on a bar or drawer item. A section with a `target` launches
+    /** One tap on a drawer item. A section with a `target` launches
      *  something else and reports "not selected", so the bar keeps its
      *  highlight on the page you are still on and will come back to. */
-    private fun select(section: Section?): Boolean = when {
-        section == null -> false
-        section.target.isNotBlank() -> { onTarget(section.target); false }
-        else -> { open(section.id); true }
+    private fun select(section: Section?) {
+        when {
+            section == null -> Unit
+            section.target.isNotBlank() -> onTarget(section.target)
+            else -> open(section.id)
+        }
     }
 
     /** The single entry point for showing a section. Everything — bar, drawer,
@@ -176,13 +262,8 @@ class MainActivity : AppCompatActivity() {
     fun open(sectionId: String, pageId: String? = null) {
         val section = Sections.byId(sectionId) ?: return
         currentSection = section.id
-        supportActionBar?.title = section.label
-        supportFragmentManager.commit {
-            replace(R.id.fragment_container, SectionFragment.newInstance(section.id, pageId))
-        }
-        // Keep the bar's highlight honest when the section was reached from
-        // the drawer or a tile: an off-bar section leaves nothing lit.
-        MeBottomNav.sync(bottomNav, section.id)
+        currentPage = pageId
+        openSeq++
     }
 
     /**
@@ -203,22 +284,6 @@ class MainActivity : AppCompatActivity() {
             }
             else -> Unit
         }
-    }
-
-    private fun installBackHandler() {
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                val home = Sections.default()?.id
-                when {
-                    drawer.isDrawerOpen(GravityCompat.START) -> drawer.closeDrawer(GravityCompat.START)
-                    // Back from anywhere else lands on the first bar section
-                    // before it leaves the app — the same one-step-home rule
-                    // the SuperApp uses, so Back never exits from deep inside.
-                    currentSection != null && currentSection != home && home != null -> open(home)
-                    else -> { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
-                }
-            }
-        })
     }
 
     // ── self-update overlay ──────────────────────────────────────────
@@ -253,7 +318,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private companion object {
-        const val MENU_CONFIGS = 9001
         const val STATE_SECTION = "section"
 
         /** Cross-app "open at this target" extra. The name is the SuperApp's —
