@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Data Usage screen's palette as KitPalette roles plus its bar colours (DataUsageDialog builds its
+     CloudKitTheme from these), so no colour is spelled in Kotlin. Prefixed dm_: this library is merged into
+     the app's resources and must not collide with its names. -->
+<resources>
+    <color name="dm_bg">#FF0A0A0F</color>
+    <color name="dm_card">#FF15151E</color>
+    <color name="dm_active">#FF6B46C1</color>
+    <color name="dm_idle">#FF3B2A63</color>
+    <color name="dm_text">#FFFFFFFF</color>
+    <color name="dm_text_dim">#CCFFFFFF</color>
+    <color name="dm_accent">#FFB794F4</color>
+    <color name="dm_value">#FFE9D8FD</color>
+    <color name="dm_bar_mobile">#FFF6AD55</color>
+    <color name="dm_bar_sim">#FF68D391</color>
+    <color name="dm_bar_app">#FF9F7AEA</color>
+    <color name="dm_bar_day">#FF63B3ED</color>
+</resources>

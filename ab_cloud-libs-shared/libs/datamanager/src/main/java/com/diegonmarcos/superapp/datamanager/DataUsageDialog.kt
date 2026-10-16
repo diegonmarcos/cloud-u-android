@@ -1,20 +1,53 @@
 package com.diegonmarcos.superapp.datamanager
 
 import android.app.Dialog
-import android.content.Context
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.DialogFragment
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,8 +72,9 @@ import java.util.Locale
  * monthly roll-up is stored, because that is precisely what the OS throws
  * away.
  *
- * Programmatic dark views (no resource deps) so it can live lib-side,
- * matching EnergyUsageDialog / FirewallDialog.
+ * 2026-10-16 owner decision: all apps must be Compose. The dialog is a ComposeView under CloudKitTheme
+ * (libs:ui-kit); the palette comes from the dm_* colour resources, and the host contract
+ * (DialogFragment, TAG) is unchanged.
  */
 class DataUsageDialog : DialogFragment() {
 
@@ -56,22 +90,26 @@ class DataUsageDialog : DialogFragment() {
 
     /** Either a live period index, or a stored "yyyy-MM" key. Exactly one
      *  is non-null at any time. */
-    private var selectedPeriod: Int? = 0
-    private var selectedMonth: String? = null
+    private var selectedPeriod by mutableStateOf<Int?>(0)
+    private var selectedMonth by mutableStateOf<String?>(null)
 
     /** uid of the row currently expanded into a daily breakdown, if any. */
-    private var expandedUid: Int? = null
+    private var expandedUid by mutableStateOf<Int?>(null)
+
+    /** Bumped to re-read every provider (a grant, or the Recheck button). */
+    private var revision by mutableIntStateOf(0)
 
     /** Standard runtime-permission contract — the same androidx contract
      *  PermissionsFragment drives its bulk request with. */
     private val phoneStatePermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { rebuild() }
+    ) { revision++ }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
         dialog.window?.setBackgroundDrawable(
-            android.graphics.drawable.ColorDrawable(0xFF0A0A0F.toInt()))
+            android.graphics.drawable.ColorDrawable(
+                androidx.core.content.ContextCompat.getColor(requireContext(), R.color.dm_bg)))
         return dialog
     }
 
@@ -82,31 +120,27 @@ class DataUsageDialog : DialogFragment() {
     }
 
     override fun onCreateView(
-        inflater: android.view.LayoutInflater, c: ViewGroup?, s: Bundle?,
+        inflater: LayoutInflater, c: ViewGroup?, s: Bundle?,
     ): View {
         val ctx = inflater.context
-        val scroll = ScrollView(ctx).apply {
-            setBackgroundColor(0xFF0A0A0F.toInt())
-            isFillViewport = true
-        }
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(ctx, 16); setPadding(p, dp(ctx, 24), p, dp(ctx, 48))
-        }
-        scroll.addView(root)
         // Fold the current month in on open too, so history still accumulates
         // for a user whose device never lets the 15-min worker run.
         runCatching { DataUsageHistoryStore.refresh(ctx) }
-        build(ctx, root)
-        return scroll
-    }
-
-    /** Re-render in place after a selection change or a grant. */
-    private fun rebuild() {
-        val scroll = view as? ScrollView ?: return
-        val root = scroll.getChildAt(0) as? LinearLayout ?: return
-        root.removeAllViews()
-        build(scroll.context, root)
+        return ComposeView(ctx).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                val palette = KitPalette(
+                    surface = colorResource(R.color.dm_card),
+                    surfaceSelected = colorResource(R.color.dm_active),
+                    textPrimary = colorResource(R.color.dm_text),
+                    textSecondary = colorResource(R.color.dm_text_dim),
+                    accent = colorResource(R.color.dm_accent),
+                    hairline = colorResource(R.color.dm_idle),
+                    tileInk = colorResource(R.color.dm_text),
+                )
+                CloudKitTheme(palette) { Screen() }
+            }
+        }
     }
 
     private fun windowStart(now: Long): Long {
@@ -118,210 +152,210 @@ class DataUsageDialog : DialogFragment() {
         }
     }
 
-    private fun build(ctx: Context, root: LinearLayout) {
-        val header = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        header.addView(TextView(ctx).apply {
-            text = "Data Usage"
-            setTextColor(Color.WHITE); textSize = 22f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        header.addView(TextView(ctx).apply {
-            text = "✕"; setTextColor(0xCCFFFFFF.toInt()); textSize = 20f
-            setPadding(dp(ctx, 12), dp(ctx, 4), dp(ctx, 4), dp(ctx, 4))
-            isClickable = true; setOnClickListener { dismiss() }
-        })
-        root.addView(header)
+    @Composable
+    private fun Screen() {
+        val ctx = LocalContext.current
+        val rev = revision
+        Column(
+            Modifier.fillMaxSize().background(colorResource(R.color.dm_bg))
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 48.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Data Usage", color = LocalKitPalette.current.textPrimary, fontSize = 22.sp,
+                    fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                Text("✕", color = LocalKitPalette.current.textSecondary, fontSize = 20.sp,
+                    modifier = Modifier.clickable { dismiss() }
+                        .padding(start = 12.dp, top = 4.dp, end = 4.dp, bottom = 4.dp))
+            }
 
-        // Usage access is the ONE hard gate. Reuse the existing grant flow —
-        // the same settings screen Configs/About → Permissions opens.
-        if (!DataUsageProvider.hasUsageAccess(ctx)) {
-            card(ctx, root, "Usage Access required") { box ->
-                box.addView(small(ctx, "Per-app data usage is read from NetworkStatsManager, which needs the Usage Access special grant. It's the same grant the battery per-app estimate and the Phone smart folders use — granting it once unlocks all of them."))
-                box.addView(pill(ctx, "Open Usage Access settings") {
-                    runCatching {
-                        startActivity(android.content.Intent(DataUsageProvider.USAGE_ACCESS_SETTINGS))
+            // Usage access is the ONE hard gate. Reuse the existing grant flow —
+            // the same settings screen Configs/About → Permissions opens.
+            if (!DataUsageProvider.hasUsageAccess(ctx)) {
+                Card("Usage Access required") {
+                    Small("Per-app data usage is read from NetworkStatsManager, which needs the Usage Access special grant. It's the same grant the battery per-app estimate and the Phone smart folders use — granting it once unlocks all of them.")
+                    Pill("Open Usage Access settings") {
+                        runCatching {
+                            startActivity(android.content.Intent(DataUsageProvider.USAGE_ACCESS_SETTINGS))
+                        }
                     }
-                })
-                box.addView(pill(ctx, "Recheck") { rebuild() })
+                    Pill("Recheck") { revision++ }
+                }
+                return@Column
             }
-            return
-        }
 
-        // Live-window selector.
-        val liveRow = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(ctx, 10), 0, 0)
-        }
-        periods.forEachIndexed { i, p ->
-            liveRow.addView(weighted(ctx, pill(ctx, p.label, active = selectedPeriod == i) {
-                selectedPeriod = i; selectedMonth = null; expandedUid = null; rebuild()
-            }))
-        }
-        root.addView(liveRow)
-
-        // Stored-month picker — the history the OS no longer has.
-        val stored = runCatching { DataUsageHistoryStore.months(ctx) }.getOrDefault(emptyList())
-        if (stored.isNotEmpty()) {
-            root.addView(small(ctx, "Stored months — kept beyond the OS's ~90-day retention"))
-            val monthRow = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            stored.forEach { m ->
-                monthRow.addView(pill(ctx, DataUsageHistoryStore.monthLabel(m.month),
-                    active = selectedMonth == m.month) {
-                    selectedMonth = m.month; selectedPeriod = null; expandedUid = null; rebuild()
-                }.apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ).apply { marginEnd = dp(ctx, 6) }
-                })
+            // Live-window selector.
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                periods.forEachIndexed { i, p ->
+                    Pill(p.label, active = selectedPeriod == i, modifier = Modifier.weight(1f).padding(end = 6.dp)) {
+                        selectedPeriod = i; selectedMonth = null; expandedUid = null
+                    }
+                }
             }
-            root.addView(android.widget.HorizontalScrollView(ctx).apply {
-                isHorizontalScrollBarEnabled = false
-                addView(monthRow)
-            })
-        }
 
-        val month = selectedMonth
-        if (month != null) buildStoredMonth(ctx, root, month) else buildLive(ctx, root)
+            // Stored-month picker — the history the OS no longer has.
+            val stored = remember(rev) { runCatching { DataUsageHistoryStore.months(ctx) }.getOrDefault(emptyList()) }
+            if (stored.isNotEmpty()) {
+                Small("Stored months — kept beyond the OS's ~90-day retention")
+                Row(Modifier.horizontalScroll(rememberScrollState())) {
+                    stored.forEach { m ->
+                        Pill(DataUsageHistoryStore.monthLabel(m.month),
+                            active = selectedMonth == m.month, modifier = Modifier.padding(end = 6.dp)) {
+                            selectedMonth = m.month; selectedPeriod = null; expandedUid = null
+                        }
+                    }
+                }
+            }
+
+            val month = selectedMonth
+            if (month != null) StoredMonth(month, rev) else Live(rev)
+        }
     }
 
     // ── stored month ──────────────────────────────────────────────────
-    private fun buildStoredMonth(ctx: Context, root: LinearLayout, month: String) {
-        val row = runCatching { DataUsageHistoryStore.months(ctx) }.getOrDefault(emptyList())
-            .firstOrNull { it.month == month }
+    @Composable
+    private fun StoredMonth(month: String, rev: Int) {
+        val ctx = LocalContext.current
+        val row = remember(month, rev) {
+            runCatching { DataUsageHistoryStore.months(ctx) }.getOrDefault(emptyList())
+                .firstOrNull { it.month == month }
+        }
         val label = DataUsageHistoryStore.monthLabel(month)
 
-        card(ctx, root, "$label  ·  stored") { box ->
-            if (row == null) { box.addView(small(ctx, "No stored row.")); return@card }
+        Card("$label  ·  stored") {
+            if (row == null) { Small("No stored row."); return@Card }
             val t = row.totals
-            big(ctx, box, DataUsageProvider.fmtBytes(t.total), "whole device, mobile + Wi-Fi")
-            box.addView(line(ctx, "Mobile", DataUsageProvider.fmtBytes(t.mobile)))
-            box.addView(split(ctx, t.mobileRx, t.mobileTx))
-            box.addView(line(ctx, "Wi-Fi", DataUsageProvider.fmtBytes(t.wifi)))
-            box.addView(split(ctx, t.wifiRx, t.wifiTx))
-            if (t.total > 0) box.addView(bar(ctx, t.mobile, t.total, 0xFFF6AD55.toInt()))
-            box.addView(small(ctx, "Month totals are exact and kept permanently — the OS itself may no longer hold this month."))
+            Big(DataUsageProvider.fmtBytes(t.total), "whole device, mobile + Wi-Fi")
+            Line("Mobile", DataUsageProvider.fmtBytes(t.mobile))
+            Split(t.mobileRx, t.mobileTx)
+            Line("Wi-Fi", DataUsageProvider.fmtBytes(t.wifi))
+            Split(t.wifiRx, t.wifiTx)
+            if (t.total > 0) Bar(t.mobile, t.total, colorResource(R.color.dm_bar_mobile))
+            Small("Month totals are exact and kept permanently — the OS itself may no longer hold this month.")
         }
 
-        val subs = runCatching { DataUsageHistoryStore.subsOf(ctx, month) }.getOrDefault(emptyList())
+        val subs = remember(month, rev) {
+            runCatching { DataUsageHistoryStore.subsOf(ctx, month) }.getOrDefault(emptyList())
+        }
         if (subs.isNotEmpty()) {
-            card(ctx, root, "By SIM  ·  $label") { box ->
+            Card("By SIM  ·  $label") {
                 val peak = subs.maxOf { it.total }.coerceAtLeast(1L)
                 subs.forEach { s ->
-                    box.addView(line(ctx, "${s.label}  (slot ${s.slot + 1})",
-                        DataUsageProvider.fmtBytes(s.total)))
-                    box.addView(split(ctx, s.rx, s.tx))
-                    box.addView(bar(ctx, s.total, peak, 0xFF68D391.toInt()))
+                    Line("${s.label}  (slot ${s.slot + 1})", DataUsageProvider.fmtBytes(s.total))
+                    Split(s.rx, s.tx)
+                    Bar(s.total, peak, colorResource(R.color.dm_bar_sim))
                 }
-                box.addView(small(ctx, "Carrier and slot are recorded at the time of the month, so history stays readable across SIM swaps."))
+                Small("Carrier and slot are recorded at the time of the month, so history stays readable across SIM swaps.")
             }
         }
 
-        val apps = runCatching { DataUsageHistoryStore.appsOf(ctx, month) }.getOrDefault(emptyList())
-        card(ctx, root, "By app  ·  top ${DataUsageHistoryStore.TOP_APPS} of $label") { box ->
+        val apps = remember(month, rev) {
+            runCatching { DataUsageHistoryStore.appsOf(ctx, month) }.getOrDefault(emptyList())
+        }
+        Card("By app  ·  top ${DataUsageHistoryStore.TOP_APPS} of $label") {
             if (apps.isEmpty()) {
-                box.addView(small(ctx, "No stored per-app rows for this month — they're kept for the most recent ${DataUsageHistoryStore.MAX_APP_MONTHS} months only."))
-                return@card
+                Small("No stored per-app rows for this month — they're kept for the most recent ${DataUsageHistoryStore.MAX_APP_MONTHS} months only.")
+                return@Card
             }
             val peak = apps.first().bytes.coerceAtLeast(1L)
             apps.forEach { a ->
-                box.addView(storedAppRow(ctx, a.pkg, a.bytes))
-                box.addView(bar(ctx, a.bytes, peak, 0xFF9F7AEA.toInt()))
+                StoredAppRow(a.pkg, a.bytes)
+                Bar(a.bytes, peak, colorResource(R.color.dm_bar_app))
             }
-            box.addView(small(ctx, "Only the top ${DataUsageHistoryStore.TOP_APPS} apps are stored per month; the month total above stays exact regardless."))
+            Small("Only the top ${DataUsageHistoryStore.TOP_APPS} apps are stored per month; the month total above stays exact regardless.")
         }
     }
 
     // ── live window ───────────────────────────────────────────────────
-    private fun buildLive(ctx: Context, root: LinearLayout) {
-        val now = System.currentTimeMillis()
-        val start = windowStart(now)
-        val device = runCatching { DataUsageProvider.deviceTotals(ctx, start, now) }
-            .getOrDefault(DataUsageProvider.Totals())
-        val apps = runCatching { DataUsageProvider.perApp(ctx, start, now) }
-            .getOrDefault(emptyList())
+    @Composable
+    private fun Live(rev: Int) {
+        val ctx = LocalContext.current
+        val period = selectedPeriod
+        val now = remember(period, rev) { System.currentTimeMillis() }
+        val start = remember(period, now) { windowStart(now) }
+        val device = remember(period, rev) {
+            runCatching { DataUsageProvider.deviceTotals(ctx, start, now) }
+                .getOrDefault(DataUsageProvider.Totals())
+        }
+        val apps = remember(period, rev) {
+            runCatching { DataUsageProvider.perApp(ctx, start, now) }.getOrDefault(emptyList())
+        }
 
         // 1) Summary — the per-network-type axis.
-        card(ctx, root, "${periods[selectedPeriod ?: 0].label}  ·  since ${fmtStamp(start)}") { box ->
-            big(ctx, box, DataUsageProvider.fmtBytes(device.total),
-                "whole device, mobile + Wi-Fi")
-            box.addView(line(ctx, "Mobile", DataUsageProvider.fmtBytes(device.mobile)))
-            box.addView(split(ctx, device.mobileRx, device.mobileTx))
-            box.addView(line(ctx, "Wi-Fi", DataUsageProvider.fmtBytes(device.wifi)))
-            box.addView(split(ctx, device.wifiRx, device.wifiTx))
+        Card("${periods[period ?: 0].label}  ·  since ${fmtStamp(start)}") {
+            Big(DataUsageProvider.fmtBytes(device.total), "whole device, mobile + Wi-Fi")
+            Line("Mobile", DataUsageProvider.fmtBytes(device.mobile))
+            Split(device.mobileRx, device.mobileTx)
+            Line("Wi-Fi", DataUsageProvider.fmtBytes(device.wifi))
+            Split(device.wifiRx, device.wifiTx)
             if (device.total > 0) {
-                box.addView(bar(ctx, device.mobile, device.total, 0xFFF6AD55.toInt()))
-                box.addView(small(ctx, "orange bar = mobile share of the period"))
+                Bar(device.mobile, device.total, colorResource(R.color.dm_bar_mobile))
+                Small("orange bar = mobile share of the period")
             }
-            box.addView(small(ctx, "Device totals come from querySummaryForDevice, so they include traffic no app owns (tethering, kernel sockets) and read slightly higher than the per-app sum below."))
+            Small("Device totals come from querySummaryForDevice, so they include traffic no app owns (tethering, kernel sockets) and read slightly higher than the per-app sum below.")
         }
 
         // 2) Per-SIM breakdown.
-        buildSimCard(ctx, root, start, now)
+        SimCard(start, now, rev)
 
         // 3) Per-app ranked list with drill-down.
-        card(ctx, root, "By app  ·  ${apps.size} apps with traffic") { box ->
+        Card("By app  ·  ${apps.size} apps with traffic") {
             if (apps.isEmpty()) {
-                box.addView(small(ctx, "No per-app traffic recorded in this window."))
-                return@card
+                Small("No per-app traffic recorded in this window.")
+                return@Card
             }
             val peak = apps.first().totals.total.coerceAtLeast(1L)
             apps.forEach { a ->
-                box.addView(appRow(ctx, a) {
-                    expandedUid = if (expandedUid == a.uid) null else a.uid
-                    rebuild()
-                })
-                box.addView(bar(ctx, a.totals.total, peak, 0xFF9F7AEA.toInt()))
-                if (expandedUid == a.uid) box.addView(drillDown(ctx, a, start, now))
+                AppRow(a) { expandedUid = if (expandedUid == a.uid) null else a.uid }
+                Bar(a.totals.total, peak, colorResource(R.color.dm_bar_app))
+                if (expandedUid == a.uid) DrillDown(a, start, now)
             }
-            box.addView(small(ctx, "Tap an app for its day-by-day breakdown. Apps sharing a Linux uid are reported by the kernel as one bucket and can't be split apart."))
+            Small("Tap an app for its day-by-day breakdown. Apps sharing a Linux uid are reported by the kernel as one bucket and can't be split apart.")
         }
     }
 
     /** Per-subscription card, with a tap-to-grant row when READ_PHONE_STATE
      *  is missing. Degrades to the aggregate mobile figure, never hides. */
-    private fun buildSimCard(ctx: Context, root: LinearLayout, start: Long, end: Long) {
-        card(ctx, root, "By SIM") { box ->
+    @Composable
+    private fun SimCard(start: Long, end: Long, rev: Int) {
+        val ctx = LocalContext.current
+        Card("By SIM") {
             if (!DataUsageProvider.hasPhoneState(ctx)) {
-                box.addView(small(ctx, "Splitting mobile data per SIM / eSIM needs the Phone permission (READ_PHONE_STATE) to list your active subscriptions. Without it only the aggregate mobile total above is available."))
-                box.addView(pill(ctx, "Grant Phone permission") {
+                Small("Splitting mobile data per SIM / eSIM needs the Phone permission (READ_PHONE_STATE) to list your active subscriptions. Without it only the aggregate mobile total above is available.")
+                Pill("Grant Phone permission") {
                     runCatching {
                         phoneStatePermission.launch(android.Manifest.permission.READ_PHONE_STATE)
                     }
-                })
-                return@card
+                }
+                return@Card
             }
-            val subs = runCatching { DataUsageProvider.mobilePerSubscription(ctx, start, end) }
-                .getOrDefault(emptyList())
+            val subs = remember(start, rev) {
+                runCatching { DataUsageProvider.mobilePerSubscription(ctx, start, end) }
+                    .getOrDefault(emptyList())
+            }
             if (subs.isEmpty()) {
-                box.addView(small(ctx, "No active mobile subscription — Wi-Fi only, or no SIM present."))
-                return@card
+                Small("No active mobile subscription — Wi-Fi only, or no SIM present.")
+                return@Card
             }
             // Chips only earn their space once there's more than one SIM.
             if (subs.size > 1) {
-                val chips = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-                subs.forEach { s ->
-                    chips.addView(weighted(ctx, pill(ctx,
-                        "${simName(s)} · ${DataUsageProvider.fmtBytes(s.totals.mobile)}",
-                        active = true) { }))
+                Row(Modifier.fillMaxWidth()) {
+                    subs.forEach { s ->
+                        Pill("${simName(s)} · ${DataUsageProvider.fmtBytes(s.totals.mobile)}",
+                            active = true, modifier = Modifier.weight(1f).padding(end = 6.dp)) { }
+                    }
                 }
-                box.addView(chips)
             }
             val peak = subs.maxOf { it.totals.mobile }.coerceAtLeast(1L)
             subs.forEach { s ->
-                box.addView(line(ctx, "${simName(s)}  (slot ${s.slot + 1})",
-                    DataUsageProvider.fmtBytes(s.totals.mobile)))
-                box.addView(split(ctx, s.totals.mobileRx, s.totals.mobileTx))
-                box.addView(bar(ctx, s.totals.mobile, peak, 0xFF68D391.toInt()))
+                Line("${simName(s)}  (slot ${s.slot + 1})", DataUsageProvider.fmtBytes(s.totals.mobile))
+                Split(s.totals.mobileRx, s.totals.mobileTx)
+                Bar(s.totals.mobile, peak, colorResource(R.color.dm_bar_sim))
             }
             if (subs.any { !it.exact }) {
-                box.addView(small(ctx, "⚠ Android 10+ restricts the subscriber id (IMSI) to privileged apps, so an exact per-SIM split isn't possible here — each subscription shows the COMBINED mobile total, not its own share. The monthly ledger stores that same honest figure rather than inventing a division."))
+                Small("⚠ Android 10+ restricts the subscriber id (IMSI) to privileged apps, so an exact per-SIM split isn't possible here — each subscription shows the COMBINED mobile total, not its own share. The monthly ledger stores that same honest figure rather than inventing a division.")
             } else {
-                box.addView(small(ctx, "Per-subscription totals, folded into the monthly ledger labelled by carrier + slot so they survive SIM swaps."))
+                Small("Per-subscription totals, folded into the monthly ledger labelled by carrier + slot so they survive SIM swaps.")
             }
         }
     }
@@ -330,172 +364,138 @@ class DataUsageDialog : DialogFragment() {
         s.carrier.ifBlank { "SIM ${s.slot + 1}" }
 
     /** Expanded per-app daily breakdown for the selected live window. */
-    private fun drillDown(
-        ctx: Context, a: DataUsageProvider.AppUsage, start: Long, end: Long,
-    ): View = LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(dp(ctx, 10), dp(ctx, 6), 0, dp(ctx, 10))
-        addView(line(ctx, "Mobile", DataUsageProvider.fmtBytes(a.totals.mobile)))
-        addView(split(ctx, a.totals.mobileRx, a.totals.mobileTx))
-        addView(line(ctx, "Wi-Fi", DataUsageProvider.fmtBytes(a.totals.wifi)))
-        addView(split(ctx, a.totals.wifiRx, a.totals.wifiTx))
-        addView(small(ctx, "Daily —"))
-        val daily = runCatching { DataUsageProvider.dailyForUid(ctx, a.uid, start, end) }
-            .getOrDefault(emptyList())
-        val peak = daily.maxOfOrNull { it.totals.total }?.coerceAtLeast(1L) ?: 1L
-        if (daily.isEmpty()) {
-            addView(small(ctx, "No daily buckets in this window."))
-        } else {
-            daily.forEach { d ->
-                addView(line(ctx, fmtDay(d.startMs), DataUsageProvider.fmtBytes(d.totals.total)))
-                addView(bar(ctx, d.totals.total, peak, 0xFF63B3ED.toInt()))
+    @Composable
+    private fun DrillDown(a: DataUsageProvider.AppUsage, start: Long, end: Long) {
+        val ctx = LocalContext.current
+        Column(Modifier.padding(start = 10.dp, top = 6.dp, bottom = 10.dp)) {
+            Line("Mobile", DataUsageProvider.fmtBytes(a.totals.mobile))
+            Split(a.totals.mobileRx, a.totals.mobileTx)
+            Line("Wi-Fi", DataUsageProvider.fmtBytes(a.totals.wifi))
+            Split(a.totals.wifiRx, a.totals.wifiTx)
+            Small("Daily —")
+            val daily = remember(a.uid, start) {
+                runCatching { DataUsageProvider.dailyForUid(ctx, a.uid, start, end) }
+                    .getOrDefault(emptyList())
             }
-        }
-        addView(small(ctx, a.pkg))
-    }
-
-    // ── tiny view helpers (same idiom as EnergyUsageDialog) ─────────────
-    private fun card(ctx: Context, parent: LinearLayout, title: String, body: (LinearLayout) -> Unit) {
-        parent.addView(TextView(ctx).apply {
-            text = title; setTextColor(0xFFB794F4.toInt()); textSize = 13f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-            setPadding(0, dp(ctx, 18), 0, dp(ctx, 6))
-        })
-        val box = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                cornerRadius = dp(ctx, 14).toFloat(); setColor(0xFF15151E.toInt())
+            val peak = daily.maxOfOrNull { it.totals.total }?.coerceAtLeast(1L) ?: 1L
+            if (daily.isEmpty()) {
+                Small("No daily buckets in this window.")
+            } else {
+                daily.forEach { d ->
+                    Line(fmtDay(d.startMs), DataUsageProvider.fmtBytes(d.totals.total))
+                    Bar(d.totals.total, peak, colorResource(R.color.dm_bar_day))
+                }
             }
-            val p = dp(ctx, 12); setPadding(p, p, p, p)
+            Small(a.pkg)
         }
-        body(box); parent.addView(box)
     }
 
-    private fun big(ctx: Context, box: LinearLayout, value: String, sub: String) {
-        box.addView(TextView(ctx).apply {
-            text = value; setTextColor(Color.WHITE); textSize = 26f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        })
-        box.addView(TextView(ctx).apply {
-            text = sub; setTextColor(0x99FFFFFF.toInt()); textSize = 12f
-            setPadding(0, 0, 0, dp(ctx, 6))
-        })
+    // ── tiny composable helpers (same idiom as EnergyUsageDialog) ───────
+    @Composable
+    private fun Card(title: String, body: @Composable () -> Unit) {
+        val p = LocalKitPalette.current
+        Text(title, color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(top = 18.dp, bottom = 6.dp))
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surface).padding(12.dp)) {
+            body()
+        }
     }
 
-    private fun line(ctx: Context, k: String, v: String) = LinearLayout(ctx).apply {
-        orientation = LinearLayout.HORIZONTAL
-        setPadding(0, dp(ctx, 3), 0, dp(ctx, 3))
-        addView(TextView(ctx).apply {
-            text = k; setTextColor(0xCCFFFFFF.toInt()); textSize = 13f
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        addView(TextView(ctx).apply {
-            text = v; setTextColor(Color.WHITE); textSize = 13f
-            typeface = Typeface.MONOSPACE; gravity = Gravity.END
-        })
+    @Composable
+    private fun Big(value: String, sub: String) {
+        val p = LocalKitPalette.current
+        Text(value, color = p.textPrimary, fontSize = 26.sp, fontWeight = FontWeight.Medium)
+        Text(sub, color = p.textPrimary.copy(alpha = 0.6f), fontSize = 12.sp,
+            modifier = Modifier.padding(bottom = 6.dp))
+    }
+
+    @Composable
+    private fun Line(k: String, v: String) {
+        val p = LocalKitPalette.current
+        Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+            Text(k, color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Text(v, color = p.textPrimary, fontSize = 13.sp, fontFamily = FontFamily.Monospace,
+                textAlign = TextAlign.End)
+        }
     }
 
     /** "↓ 12.4 MB   ↑ 900 KB" sub-line under a transport row. */
-    private fun split(ctx: Context, rx: Long, tx: Long) = TextView(ctx).apply {
-        text = "↓ ${DataUsageProvider.fmtBytes(rx)}    ↑ ${DataUsageProvider.fmtBytes(tx)}"
-        setTextColor(0x88FFFFFF.toInt()); textSize = 11f
-        typeface = Typeface.MONOSPACE; gravity = Gravity.END
-        setPadding(0, 0, 0, dp(ctx, 4))
+    @Composable
+    private fun Split(rx: Long, tx: Long) {
+        Text("↓ ${DataUsageProvider.fmtBytes(rx)}    ↑ ${DataUsageProvider.fmtBytes(tx)}",
+            color = LocalKitPalette.current.textPrimary.copy(alpha = 0.53f), fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace, textAlign = TextAlign.End,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp))
     }
 
-    /** Give a view equal weight in a horizontal row. */
-    private fun weighted(ctx: Context, v: View): View = v.apply {
-        layoutParams = LinearLayout.LayoutParams(
-            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-        ).apply { marginEnd = dp(ctx, 6) }
-    }
-
-    private fun appRow(ctx: Context, a: DataUsageProvider.AppUsage, onClick: () -> Unit) =
-        LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(ctx, 5), 0, dp(ctx, 5))
-            isClickable = true; setOnClickListener { onClick() }
-            addView(icon(ctx, a.pkg))
-            addView(TextView(ctx).apply {
-                text = a.label; setTextColor(Color.WHITE); textSize = 14f
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-            })
-            addView(TextView(ctx).apply {
-                text = DataUsageProvider.fmtBytes(a.totals.total)
-                setTextColor(0xFFE9D8FD.toInt()); textSize = 13f
-                typeface = Typeface.MONOSPACE
-            })
+    @Composable
+    private fun AppRow(a: DataUsageProvider.AppUsage, onClick: () -> Unit) {
+        val p = LocalKitPalette.current
+        Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            AppIcon(a.pkg)
+            Text(a.label, color = p.textPrimary, fontSize = 14.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(DataUsageProvider.fmtBytes(a.totals.total), color = colorResource(R.color.dm_value),
+                fontSize = 13.sp, fontFamily = FontFamily.Monospace)
         }
+    }
 
     /** Row for a stored month — only pkg + bytes were kept, and the app may
      *  since have been uninstalled, so the label falls back to the package. */
-    private fun storedAppRow(ctx: Context, pkg: String, bytes: Long) = LinearLayout(ctx).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(0, dp(ctx, 5), 0, dp(ctx, 5))
-        addView(icon(ctx, pkg))
-        addView(TextView(ctx).apply {
-            text = runCatching {
+    @Composable
+    private fun StoredAppRow(pkg: String, bytes: Long) {
+        val ctx = LocalContext.current
+        val label = remember(pkg) {
+            runCatching {
                 ctx.packageManager.getApplicationLabel(
                     ctx.packageManager.getApplicationInfo(pkg, 0)).toString()
             }.getOrDefault(pkg)
-            setTextColor(Color.WHITE); textSize = 14f
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-        })
-        addView(TextView(ctx).apply {
-            text = DataUsageProvider.fmtBytes(bytes)
-            setTextColor(0xFFE9D8FD.toInt()); textSize = 13f
-            typeface = Typeface.MONOSPACE
-        })
-    }
-
-    private fun icon(ctx: Context, pkg: String) = ImageView(ctx).apply {
-        layoutParams = LinearLayout.LayoutParams(dp(ctx, 28), dp(ctx, 28)).apply {
-            marginEnd = dp(ctx, 10)
         }
-        runCatching { setImageDrawable(ctx.packageManager.getApplicationIcon(pkg)) }
-    }
-
-    /** Proportional horizontal bar built from layout weights — no drawing
-     *  code and no charting dependency. */
-    private fun bar(ctx: Context, value: Long, peak: Long, color: Int) = LinearLayout(ctx).apply {
-        orientation = LinearLayout.HORIZONTAL
-        layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(ctx, 4)
-        ).apply { topMargin = dp(ctx, 2); bottomMargin = dp(ctx, 4) }
-        val filled = value.coerceIn(0L, peak).toFloat()
-        addView(View(ctx).apply {
-            setBackgroundColor(color)
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, filled)
-        })
-        addView(View(ctx).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.MATCH_PARENT,
-                (peak - filled).coerceAtLeast(0.0001f))
-        })
-    }
-
-    private fun pill(
-        ctx: Context, label: String, active: Boolean = false, onClick: () -> Unit,
-    ) = TextView(ctx).apply {
-        text = label; setTextColor(Color.WHITE); textSize = 12f; gravity = Gravity.CENTER
-        setPadding(dp(ctx, 10), dp(ctx, 8), dp(ctx, 10), dp(ctx, 8))
-        background = GradientDrawable().apply {
-            cornerRadius = dp(ctx, 20).toFloat()
-            setColor(if (active) 0xFF6B46C1.toInt() else 0xFF3B2A63.toInt())
+        Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            AppIcon(pkg)
+            Text(label, color = LocalKitPalette.current.textPrimary, fontSize = 14.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(DataUsageProvider.fmtBytes(bytes), color = colorResource(R.color.dm_value),
+                fontSize = 13.sp, fontFamily = FontFamily.Monospace)
         }
-        isClickable = true; setOnClickListener { onClick() }
     }
 
-    private fun small(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; setTextColor(0x77FFFFFF.toInt()); textSize = 11f
-        setPadding(0, dp(ctx, 2), 0, dp(ctx, 4))
+    @Composable
+    private fun AppIcon(pkg: String) {
+        val ctx = LocalContext.current
+        val bmp = remember(pkg) {
+            runCatching { ctx.packageManager.getApplicationIcon(pkg).toBitmap(64, 64).asImageBitmap() }.getOrNull()
+        }
+        Box(Modifier.padding(end = 10.dp).size(28.dp)) {
+            if (bmp != null) Image(bmp, contentDescription = null, modifier = Modifier.size(28.dp))
+        }
     }
 
-    private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
+    /** Proportional horizontal bar — no drawing code and no charting dependency. */
+    @Composable
+    private fun Bar(value: Long, peak: Long, color: Color) {
+        val frac = (value.coerceIn(0L, peak).toFloat() / peak.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
+        Box(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 4.dp).height(4.dp)) {
+            if (frac > 0f) Box(Modifier.fillMaxWidth(frac).height(4.dp).background(color))
+        }
+    }
+
+    @Composable
+    private fun Pill(label: String, active: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
+        val p = LocalKitPalette.current
+        Text(label, color = p.textPrimary, fontSize = 12.sp, textAlign = TextAlign.Center,
+            modifier = modifier.clip(RoundedCornerShape(20.dp))
+                .background(if (active) p.surfaceSelected else p.hairline)
+                .clickable { onClick() }
+                .padding(horizontal = 10.dp, vertical = 8.dp))
+    }
+
+    @Composable
+    private fun Small(t: String) {
+        Text(t, color = LocalKitPalette.current.textPrimary.copy(alpha = 0.47f), fontSize = 11.sp,
+            modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
+    }
 
     private fun fmtStamp(ts: Long): String =
         SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(ts))

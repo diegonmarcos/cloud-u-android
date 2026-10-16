@@ -410,7 +410,8 @@
       "dir": "../ab_cloud-libs-shared/libs/datamanager",
       "type": "library",
       "depends_on": [
-        "libs:core"
+        "libs:core",
+        "libs:ui-kit"
       ],
       "comment": "The 'data-manager' — pure per-app DATA providers, no UI. AppUsageProvider (UsageStatsManager: recency / active-window / launch-count) + AppNetworkProvider (NetworkStatsManager: per-app bytes), both gated on the PACKAGE_USAGE_STATS special-access already granted for the Battery & Usage screen. Sibling to libs:battery (the 'battery-manager', per-app energy). Providers return ranked package-name lists; app/apps maps them onto the launchable-app set for the Phone smart folders (Recent / Active 48h / Most Opened / Most Network) and the Phone 'Active Apps' section. Every query runCatching→empty so a missing grant just hides the folder."
     },
