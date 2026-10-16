@@ -50,7 +50,7 @@ object StepsModel {
      */
     fun build(
         source: StepsSource, status: SourceStatus, daily: Map<LocalDate, Long>, slices: List<StepSlice>,
-        fixes: List<PlaceFix>, zone: ZoneId, nowMs: Long, stepM: Double, label: (PlaceFix) -> String, diag: StepsDiag = StepsDiag(),
+        fixes: List<PlaceFix>, zone: ZoneId, nowMs: Long, stepM: Double, diag: StepsDiag = StepsDiag(), label: (PlaceFix) -> String,
     ): StepsUi {
         val today = Instant.ofEpochMilli(nowMs).atZone(zone).toLocalDate()
         val cards = (0 until CARD_DAYS).map { today.minusDays(it.toLong()) }.map { day ->

@@ -58,7 +58,7 @@ class StepsRepository(private val ctx: Context) {
                     val diag = StepsDiag(
                         StepsDiagnostics.statusLine("Health Connect", perm, today.lastDataMs, today.origins, zone),
                         StepsDiagnostics.hint(perm, today.steps, today.origins))
-                    return@withContext StepsModel.build(StepsSource.HEALTH_CONNECT, SourceStatus.READY, daily, slices, fixes, zone, now, stepM, label, diag)
+                    return@withContext StepsModel.build(StepsSource.HEALTH_CONNECT, SourceStatus.READY, daily, slices, fixes, zone, now, stepM, diag, label)
                 }
                 // Granted but the read threw: say so, never relabel it as "not allowed".
                 return@withContext device(SourceStatus.HEALTH_CONNECT_ERROR, zone, now, dayStart, fixes, stepM, label, perm,
@@ -98,7 +98,7 @@ class StepsRepository(private val ctx: Context) {
         val diag = StepsDiag(
             StepsDiagnostics.statusLine("this phone's step counter", perm, last, emptySet(), zone) + " | " + engine,
             listOfNotNull(StepsDiagnostics.hint(perm, 0, emptySet()), extra).joinToString(" ").ifBlank { null })
-        return StepsModel.build(StepsSource.DEVICE, st, StepStats.perDay(all, zone), all.filter { it.startMs >= dayStart }, fixes, zone, now, stepM, label, diag)
+        return StepsModel.build(StepsSource.DEVICE, st, StepStats.perDay(all, zone), all.filter { it.startMs >= dayStart }, fixes, zone, now, stepM, diag, label)
     }
 
     private suspend fun hcDaily(c: HealthConnectClient, zone: ZoneId): Map<LocalDate, Long> {
