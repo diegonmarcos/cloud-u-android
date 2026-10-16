@@ -44,7 +44,8 @@
         "libs:analytics",
         "libs:health",
         "libs:fin",
-        "libs:bottomnav"
+        "libs:bottomnav",
+        "libs:ui-kit"
       ]
     },
     "libs:core": {
@@ -84,6 +85,11 @@
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library",
       "_doc": "#531 THE bottom nav of the fleet, in Compose, shared BY REFERENCE. MainActivity hosts it through BottomNavIslandView; the stock Material BottomNavigationView is gone."
+    },
+    "libs:ui-kit": {
+      "type": "library",
+      "_doc": "2026-10-16 owner decision: all apps must be Compose. Shared BY REFERENCE: the fleet's Compose kit (CloudKitTheme + KitPalette) libs:fin's dashboard paints with.",
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit"
     }
   },
   "engines": {

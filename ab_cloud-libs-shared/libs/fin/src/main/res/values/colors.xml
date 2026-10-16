@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The MyFin dashboard's palette as KitPalette roles plus its money colours (MyFinDashboardFragment builds
+     its CloudKitTheme from these), so no colour is spelled in Kotlin. Prefixed fin_: this library is merged
+     into the app's resources and must not collide with its names. -->
+<resources>
+    <color name="fin_surface">#18FFFFFF</color>
+    <color name="fin_kpi">#447C3AED</color>
+    <color name="fin_text">#FFFFFFFF</color>
+    <color name="fin_text_dim">#AAFFFFFF</color>
+    <color name="fin_accent">#FFE9D8FD</color>
+    <color name="fin_hairline">#33FFFFFF</color>
+    <color name="fin_negative">#FFEF4444</color>
+    <color name="fin_positive">#FF22C55E</color>
+    <color name="fin_ink">#FF000000</color>
+</resources>

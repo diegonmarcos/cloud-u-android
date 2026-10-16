@@ -232,6 +232,7 @@ dependencies {
     implementation project(':libs:analytics')
     implementation project(':libs:health')   // Health section (Health Connect)
     implementation project(':libs:fin')      // Buro → Accounting
+    implementation project(':libs:ui-kit')   // CloudKitTheme: libs:fin's dashboard is Compose under it
     // libs:cal is NOT linked: Agenda binds Cloud-Lib-Cal.apk (CalEngineClient, build.json::engines.cal).
     implementation project(':libs:bottomnav') // #531 the fleet's one bottom nav (Compose island)
 

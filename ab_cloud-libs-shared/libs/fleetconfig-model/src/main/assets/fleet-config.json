@@ -2717,6 +2717,7 @@
         "lib-fin",
         "lib-fleetconfig-model",
         "lib-health",
+        "lib-ui-kit",
         "lib-updater"
       ],
       "items": [

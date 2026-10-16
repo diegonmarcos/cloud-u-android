@@ -606,7 +606,7 @@ Coverage: 1 covered, 9 gaps — datastore:elementx_featureflag, datastore:elemen
 
 ## cloud-me — `com.diegonmarcos.cloudme`
 
-Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fin, lib-fleetconfig-model, lib-health, lib-updater.
+Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fin, lib-fleetconfig-model, lib-health, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
