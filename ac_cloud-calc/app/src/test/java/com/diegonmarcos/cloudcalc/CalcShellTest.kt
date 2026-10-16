@@ -116,13 +116,15 @@ class CalcShellTest {
     @Test fun `every declared mode is reachable from the nav and composes`() {
         launch()
         Declarations.tabs.forEach { tab ->
-            // #868 a page is in the top strip only while its section (a bottom-nav item) is selected.
-            compose.onNodeWithTag(BottomNavTags.item(tab.section)).performClick()
+            // #868 a page is in the top strip only while its section (a bottom-nav item) is selected;
+            // the Configs page has no bar item: the round top-right button opens it.
+            if (Declarations.sections.any { it.id == tab.section }) compose.onNodeWithTag(BottomNavTags.item(tab.section)).performClick()
+            else compose.runOnIdle { state.tab = tab.id }
             compose.waitForIdle()
-            // The pill is declared and composed; a strip that scrolls (five pages on a narrow
-            // screen) may park it off-screen, where a click has no pixel to land on, so the page
-            // is selected through the state the pills write.
-            compose.onNodeWithTag(PageTabsTags.tab(tab.id)).assertExists()
+            // The pill is declared and composed (a section with one page draws no strip); a strip that scrolls
+            // may park it off-screen, where a click has no pixel to land on, so the page is selected
+            // through the state the pills write.
+            if (Declarations.tabsOf(tab.section).size > 1) compose.onNodeWithTag(PageTabsTags.tab(tab.id)).assertExists()
             compose.runOnIdle { state.tab = tab.id }
             compose.waitForIdle()
             compose.onNodeWithTag(CalcTags.tab(tab.id)).assertExists()
@@ -148,7 +150,7 @@ class CalcShellTest {
             assertEquals(sec.id, state.section)
             Declarations.tabs.forEach { t ->
                 val shown = compose.onAllNodesWithTag(PageTabsTags.tab(t.id)).fetchSemanticsNodes().isNotEmpty()
-                assertEquals("tab ${t.id} in section ${sec.id}", t.section == sec.id, shown)
+                assertEquals("tab ${t.id} in section ${sec.id}", t.section == sec.id && Declarations.tabsOf(sec.id).size > 1, shown)
             }
         }
         val two = Declarations.sections.first { Declarations.tabsOf(it.id).size > 1 }

@@ -34,13 +34,21 @@ class DeclarationsTest {
     @Test fun `sections parse, match what gradle baked, and every page sits in one`() {
         val sections = Declarations.sectionsOf(nav)
         assertEquals(sections, Declarations.sections)
-        assertEquals("the island is the declared bottom_nav, at most five", listOf("calculator", "measure", "jev"), sections.map { it.id })
+        assertEquals("the island is the declared bottom_nav, at most five", listOf("calculator", "sheet", "ai", "measure", "jev"), sections.map { it.id })
         assertTrue(sections.size <= 5)
         assertEquals(sections.size, sections.map { it.id }.toSet().size)
         tabs.forEach { t -> assertTrue("tab ${t.id} names section ${t.section}", sections.any { it.id == t.section }) }
         sections.forEach { s -> assertTrue("section ${s.id} has no tab", tabs.any { it.section == s.id }) }
         assertEquals(sections.first { s -> s.id == Declarations.sectionOf(Declarations.defaultTab) }.id, Declarations.sectionOf(Declarations.defaultTab))
         assertEquals(sections.first().id, Declarations.sectionOf("no-such-tab"))
+    }
+
+    @Test fun `the bar reads Calc, Sheet, AI, Measure, JEV and Configs is the one page off it`() {
+        assertEquals(listOf("Calc", "Sheet", "AI", "Measure", "JEV"), Declarations.sections.map { it.label })
+        val configs = Declarations.configsTab
+        assertEquals("configs", configs?.id)
+        assertTrue("Configs is not on the bar", Declarations.sections.none { it.id == configs?.section })
+        assertEquals(listOf("jev_token", "jev_routing", "jev_models", "jev_test", "image_route"), Declarations.modesOf("configs").map { it.id })
     }
 
     @Test fun `the jev block parses, validates, and is what gradle baked`() {

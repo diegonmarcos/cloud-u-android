@@ -361,14 +361,42 @@ theme = open(os.path.join(src, "ui", "CalcTheme.kt"), encoding="utf-8").read()
 if not re.search(r"val displayMinHeight: Dp = [1-9]\d*\.dp", theme):
     bad.append("C14 CalcMetrics.displayMinHeight is not a positive dp")
 
+# C15 the declared nav: the island is Calc | Sheet | AI | Measure | JEV in that order; Configs is NOT on it - it is the
+# only section off the bar, opened by the round top-right button (ui/CalcShell.kt ConfigsButton); the Sheet and AI
+# pages each have their renderer; Jev's attachments take the camera and the microphone through the two gates.
+want_bar = ["calculator", "sheet", "ai", "measure", "jev"]
+want_label = ["Calc", "Sheet", "AI", "Measure", "JEV"]
+if bar != want_bar:
+    bad.append("C15 ui.bottom_nav must be exactly %s, found %s" % (want_bar, bar))
+labels = [next((x["label"] for x in sections if x["id"] == b), None) for b in bar]
+if labels != want_label:
+    bad.append("C15 the bar's labels must be %s, found %s" % (want_label, labels))
+off = [x for x in sections if x["id"] not in bar]
+if len(off) != 1 or [p["id"] for p in off[0].get("pages", [])] != ["configs"]:
+    bad.append("C15 exactly one section may be off the bar and it must hold the single page `configs`, found %s" % [x["id"] for x in off])
+for x in sections:
+    if x["id"] in bar and any(p["id"] == "configs" for p in x.get("pages", [])):
+        bad.append("C15 section %s still carries the Configs page on the bar" % x["id"])
+for mid, kind in (("sheet", "sheet"), ("ai", "ai")):
+    if (modes_by_id.get(mid) or {}).get("kind") != kind:
+        bad.append("C15 mode %s of kind %s is not declared" % (mid, kind))
+shell = code(os.path.join(src, "ui", "CalcShell.kt"))
+if "fun ConfigsButton(" not in shell or "CircleShape" not in shell:
+    bad.append("C15 ui/CalcShell.kt draws no round ConfigsButton")
+att = code(os.path.join(src, "ui", "JevAttach.kt"))
+if "MicGate" not in att or "CameraGate" not in att:
+    bad.append("C15 ui/JevAttach.kt must reach the microphone and the camera through MicGate and CameraGate")
+if "libs:ai" not in json.dumps(bj["modules"]) or "sheet" not in bj["modules"]:
+    bad.append("C15 build.json::modules must declare sheet and libs:ai")
+
 for b in bad:
     print("  FAIL  " + b)
 sys.exit(1 if bad else 0)
 PY
 
 FAILURES=0
-echo "── C1-C14 against the tree ──"
-if python3 "$CHECK" "$APP"; then echo "  PASS  C1-C14"; else FAILURES=$((FAILURES + 1)); fi
+echo "── C1-C15 against the tree ──"
+if python3 "$CHECK" "$APP"; then echo "  PASS  C1-C15"; else FAILURES=$((FAILURES + 1)); fi
 
 # ── mutations: each must go red, for the right reason ─────────────────────────
 WORK="$(mktemp -d)"
@@ -414,8 +442,8 @@ JV='jev/src/main/kotlin/com/diegonmarcos/cloudcalc/jev'
 mutate router-online "$JV/JevRouter.kt" 's + "\nprivate fun leak() = java.net.Socket(\"x\", 1)\n"' "C6 JevRouter.kt uses the network"
 mutate url-in-decisions "$JV/Decisions.kt" 's.replace("post(cfg.endpoint, cfg.timeoutMs,", "post(\"https://evil.example\", cfg.timeoutMs,")' "C6 jev/Decisions.kt spells a URL"
 mutate decisions-online "$JV/Decisions.kt" 's + "\nprivate fun leak() = java.net.URL(\"x\").openConnection()\n"' "C6 Decisions.kt uses the network"
-mutate bottom-nav-orphan build.json 's.replace("\"bottom_nav\": [\"calculator\", \"measure\", \"jev\"]", "\"bottom_nav\": [\"calculator\", \"measure\", \"nowhere\"]")' "C1 ui.bottom_nav names nowhere"
-mutate bottom-nav-six build.json 's.replace("\"bottom_nav\": [\"calculator\", \"measure\", \"jev\"]", "\"bottom_nav\": [\"calculator\", \"measure\", \"jev\", \"a\", \"b\", \"c\"]")' "C1 ui.bottom_nav must hold one to five"
+mutate bottom-nav-orphan build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"jev\"]", "\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"nowhere\"]")' "C1 ui.bottom_nav names nowhere"
+mutate bottom-nav-six build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"jev\"]", "\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"jev\", \"a\"]")' "C1 ui.bottom_nav must hold one to five"
 mutate default-off-bar build.json 's.replace("\"default_section\": \"calculator\"", "\"default_section\": \"history\"")' "C1 ui.default_section"
 mutate section-icon build.json 's.replace("\"icon\": \"psychology\"", "\"icon\": \"psycho\"")' "C3 tab jev icon"
 mutate jev-tool-no-mode build.json 's.replace("\"mode\": \"units\"", "\"mode\": \"unitz\"")' "C11 jev tool units names mode unitz"
@@ -460,6 +488,10 @@ mutate ask-above-keys "$J/ui/ModeScreens.kt" 's.replace("        // DISPLAY END"
 mutate result-above-keys "$J/ui/ModeScreens.kt" 's.replace("        // DISPLAY END", "        // DISPLAY END\n        ResultBlock(result)")' "C14 ExpressionMode: ResultBlock( sits outside the display"
 mutate display-unfixed "$J/ui/ModeScreens.kt" 's.replace(".weight(1f).heightIn(min = CalcMetrics.displayMinHeight)", ".wrapContentHeight()")' "C14 the display of ExpressionMode must open with weight(1f)"
 mutate display-zero "$J/ui/CalcTheme.kt" 's.replace("val displayMinHeight: Dp = 96.dp", "val displayMinHeight: Dp = 0.dp")' "C14 CalcMetrics.displayMinHeight is not a positive dp"
+mutate nav-order-swapped build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\"", "\"bottom_nav\": [\"calculator\", \"ai\", \"sheet\"")' "C15 ui.bottom_nav must be exactly"
+mutate configs-on-bar build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"jev\"]", "\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"settings\"]")' "C15 ui.bottom_nav must be exactly"
+mutate configs-button-gone "$J/ui/CalcShell.kt" 's.replace("private fun ConfigsButton(", "private fun ConfigsBtn(")' "C15 ui/CalcShell.kt draws no round ConfigsButton"
+mutate attach-own-mic "$J/ui/JevAttach.kt" 's.replace("MicGate {", "run {")' "C15 ui/JevAttach.kt must reach the microphone"
 
-echo "── C1-C14 + mutations: $FAILURES failure(s) ──"
+echo "── C1-C15 + mutations: $FAILURES failure(s) ──"
 [ "$FAILURES" -eq 0 ]
