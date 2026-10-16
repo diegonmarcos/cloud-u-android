@@ -97,6 +97,8 @@
         "*/app/build.gradle.kts",
         "*/app/src/main/**",
         "*/src/main/**",
+        "*/hub/src/main/**",
+        "*/src-tauri/gen/android/app/src/main/**",
         "ac_cloud-notes/packages/frontend/apps/android/App/**",
         "ab_cloud-libs-shared/libs/bottomnav/**"
       ]
