@@ -250,7 +250,7 @@ object BadgePanes {
 
             val tap = live?.contentIntent
             Row {
-                if (tap != null) PaneButton(ctx.getString(R.string.push_open)) { runCatching { tap.send() } }
+                if (tap != null) PaneButton(ctx.getString(R.string.push_open)) { runCatching { tap.send() }.onFailure { android.util.Log.w("BadgePanes", "Open failed", it) } }
                 PaneButton(ctx.getString(R.string.push_launch)) { launched(ctx, view, redraw, mapOf(b to BadgeServices.launch(ctx, b))) }
             }
         }

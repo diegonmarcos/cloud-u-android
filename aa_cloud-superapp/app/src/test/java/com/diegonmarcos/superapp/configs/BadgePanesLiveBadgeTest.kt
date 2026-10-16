@@ -124,10 +124,13 @@ class BadgePanesLiveBadgeTest : KitPageHarness() {
         assertTrue("no Open button for the posted badge",
             compose.onAllNodesWithTag("pane-button:${ctx.getString(R.string.push_open)}").fetchSemanticsNodes().isNotEmpty())
         tapPaneButton(ctx.getString(R.string.push_open))
-        val started = shadowOf(ctx as Application).nextStartedActivity
-        assertEquals(
-            "Open did not fire the notification's own contentIntent",
-            FragmentActivity::class.java.name, started?.component?.className,
+        shadowOf(android.os.Looper.getMainLooper()).idle()
+        val app = shadowOf(ctx as Application)
+        // The harness's own activity launch may sit in the queue ahead of the tap: look at everything started.
+        val started = generateSequence { app.nextStartedActivity }.toList()
+        assertTrue(
+            "Open did not fire the notification's own contentIntent; started $started",
+            started.any { it.component?.className == FragmentActivity::class.java.name },
         )
     }
 
