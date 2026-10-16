@@ -8,7 +8,12 @@ import android.os.Build
 import android.os.Environment
 import android.widget.Toast
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -22,6 +27,9 @@ import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.SettingsWithoutKey
+import helium314.keyboard.settings.dialogs.ConfirmationDialog
+import helium314.keyboard.settings.dialogs.ListPickerDialog
+import helium314.keyboard.settings.dialogs.TextInputDialog
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.SliderPreference
@@ -135,56 +143,60 @@ fun createClipboardSettings(context: Context) = listOf(
     },
     Setting(context, SettingsWithoutKey.CLIPBOARD_IMPORT_JSON, R.string.clipboard_import_json, R.string.clipboard_import_json_summary) {
         val ctx = LocalContext.current
+        var confirm by remember { mutableStateOf(false) }
         Preference(name = stringResource(R.string.clipboard_import_json), onClick = {
             val dao = ClipboardDao.getInstance(ctx)
             if (dao == null || !ensureAllFilesAccess(ctx)) return@Preference
             // import replaces everything, so confirm first
-            android.app.AlertDialog.Builder(ctx)
-                .setTitle(R.string.clipboard_import_json)
-                .setMessage(ctx.getString(R.string.clipboard_import_replace_warning, dao.count()))
-                .setPositiveButton(android.R.string.ok) { _, _ ->
+            confirm = true
+        })
+        if (confirm) {
+            val dao = ClipboardDao.getInstance(ctx)
+            ConfirmationDialog(
+                onDismissRequest = { confirm = false },
+                onConfirmed = {
                     runCatching {
-                        val count = dao.importFromDir(ClipboardDao.exportDir(), ctx)
+                        val count = dao?.importFromDir(ClipboardDao.exportDir(), ctx) ?: 0
                         Toast.makeText(ctx, ctx.getString(R.string.clipboard_import_success, count), Toast.LENGTH_SHORT).show()
                     }.onFailure {
                         Toast.makeText(ctx, R.string.clipboard_import_failed, Toast.LENGTH_SHORT).show()
                     }
-                }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
-        })
+                },
+                title = { Text(stringResource(R.string.clipboard_import_json)) },
+                content = { Text(stringResource(R.string.clipboard_import_replace_warning, dao?.count() ?: 0)) },
+            )
+        }
     },
     // Rename a pin list from Settings (the in-panel version can't work: while the
     // clipboard is open the keyboard shows the clipboard, so there's nothing to type into).
     Setting(context, SettingsWithoutKey.CLIPBOARD_RENAME_LIST, R.string.clipboard_rename_list) {
         val ctx = LocalContext.current
+        var picking by remember { mutableStateOf(false) }
+        var renaming by remember { mutableStateOf<String?>(null) }
         Preference(name = stringResource(R.string.clipboard_rename_list), onClick = {
-            val dao = ClipboardDao.getInstance(ctx)
-            val names = dao?.getListNames().orEmpty()
-            if (dao != null && names.isNotEmpty()) {
-                android.app.AlertDialog.Builder(ctx)
-                    .setTitle(R.string.clipboard_rename_list)
-                    .setItems(names.toTypedArray()) { _, which ->
-                        val old = names[which]
-                        val input = android.widget.EditText(ctx).apply {
-                            setText(old)
-                            hint = ctx.getString(R.string.clipboard_rename_list_hint)
-                            setSingleLine()
-                            selectAll()
-                        }
-                        android.app.AlertDialog.Builder(ctx)
-                            .setTitle(R.string.clipboard_rename_list)
-                            .setView(input)
-                            .setPositiveButton(android.R.string.ok) { _, _ ->
-                                val newName = input.text?.toString()?.trim().orEmpty()
-                                if (newName.isNotEmpty()) dao.renameList(old, newName)
-                            }
-                            .setNegativeButton(android.R.string.cancel, null)
-                            .show()
-                    }
-                    .show()
-            }
+            if (ClipboardDao.getInstance(ctx)?.getListNames().orEmpty().isNotEmpty()) picking = true
         })
+        if (picking) {
+            ListPickerDialog(
+                onDismissRequest = { picking = false },
+                items = ClipboardDao.getInstance(ctx)?.getListNames().orEmpty(),
+                onItemSelected = { renaming = it },
+                title = { Text(stringResource(R.string.clipboard_rename_list)) },
+                showRadioButtons = false,
+            )
+        }
+        renaming?.let { old ->
+            TextInputDialog(
+                onDismissRequest = { renaming = null },
+                onConfirmed = { text ->
+                    val newName = text.trim()
+                    if (newName.isNotEmpty()) ClipboardDao.getInstance(ctx)?.renameList(old, newName)
+                },
+                title = { Text(stringResource(R.string.clipboard_rename_list)) },
+                initialText = old,
+                textInputLabel = { Text(stringResource(R.string.clipboard_rename_list_hint)) },
+            )
+        }
     },
 )
 

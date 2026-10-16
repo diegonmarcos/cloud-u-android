@@ -130,6 +130,11 @@ dependencies {
     // EmojiPalettesView type-tab row shows a MediaPanelView from this module.
     implementation project(':libs:media')
 
+    // #773 libs:ui-kit: CloudKitTheme + KitImeComposeView, the Compose host every IME surface below
+    // (strip, emoji, clipboard, key surface) is built on. Already in every consumer's module graph
+    // (voice/media/translate pull it), so no build.json change.
+    api project(':libs:ui-kit')
+
     // #843: JVM tests of the view-state model (KeyboardViewStateTest). Pure Kotlin, no Robolectric.
     testImplementation 'junit:junit:4.13.2'
 

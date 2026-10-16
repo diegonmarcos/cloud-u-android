@@ -2,25 +2,32 @@
 package helium314.keyboard.settings.screens
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
-import android.text.method.LinkMovementMethod
-import android.view.View
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
@@ -29,7 +36,6 @@ import helium314.keyboard.latin.settings.DebugSettings
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.LogTakeout
-import helium314.keyboard.latin.utils.SpannableStringUtils
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.SettingsContainer
@@ -38,6 +44,7 @@ import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.SettingsActivity
+import helium314.keyboard.settings.dialogs.ThreeButtonAlertDialog
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.previewDark
 import kotlinx.coroutines.Dispatchers
@@ -111,27 +118,32 @@ fun createAboutSettings(context: Context) = listOf(
     },
     Setting(context, SettingsWithoutKey.HIDDEN_FEATURES, R.string.hidden_features_title, R.string.hidden_features_summary) {
         val ctx = LocalContext.current
+        var show by remember { mutableStateOf(false) }
         Preference(
             name = it.title,
             description = it.description,
-            onClick = {
-                // Compose dialogs are in a rather sad state. They don't understand HTML, and don't scroll without customization.
-                // this should be re-done in compose, but... bah
-                val link = ("<a href=\"https://developer.android.com/reference/android/content/Context#createDeviceProtectedStorageContext()\">"
-                        + ctx.getString(R.string.hidden_features_text) + "</a>")
-                val message = ctx.getString(R.string.hidden_features_message, link)
-                val dialogMessage = SpannableStringUtils.fromHtml(message)
-                val builder = AlertDialog.Builder(ctx)
-                    .setIcon(R.drawable.ic_settings_about_hidden_features)
-                    .setTitle(R.string.hidden_features_title)
-                    .setMessage(dialogMessage)
-                    .setPositiveButton(R.string.dialog_close, null)
-                    .create()
-                builder.show()
-                (builder.findViewById<View>(android.R.id.message) as TextView).movementMethod = LinkMovementMethod.getInstance()
-            },
+            onClick = { show = true },
             icon = R.drawable.ic_settings_about_hidden_features
         )
+        if (show) {
+            val link = ("<a href=\"https://developer.android.com/reference/android/content/Context#createDeviceProtectedStorageContext()\">"
+                    + ctx.getString(R.string.hidden_features_text) + "</a>")
+            val message = AnnotatedString.fromHtml(ctx.getString(R.string.hidden_features_message, link))
+            ThreeButtonAlertDialog(
+                onDismissRequest = { show = false },
+                onConfirmed = { },
+                confirmButtonText = null,
+                cancelButtonText = stringResource(R.string.dialog_close),
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(painterResource(R.drawable.ic_settings_about_hidden_features), null)
+                        Text(stringResource(R.string.hidden_features_title))
+                    }
+                },
+                content = { Text(message) },
+                scrollContent = true,
+            )
+        }
     },
     Setting(context, SettingsWithoutKey.GITHUB_WIKI, R.string.about_wiki_link, R.string.about_wiki_link_description) {
         val ctx = LocalContext.current
