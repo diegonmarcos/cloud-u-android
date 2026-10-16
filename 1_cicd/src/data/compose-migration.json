@@ -773,7 +773,6 @@
         "SpaceViewActivity",
         "TerrainActivity",
         "ConstellationsActivity",
-        "EnergyUsageDialog",
         "cockpit gauges + SkyView (8 custom views)"
       ],
       "notes": "2026-10-16: ConfigsFragment is Compose (KitComposeFragment: PageTabsView strip via AndroidView + child-fragment host); the new Timeline host, Tracker engine settings and Steps pages are Compose from the start. Map-centric: MapView stays AndroidView. Eight canvas gauges port to Canvas composables.",
@@ -781,9 +780,9 @@
         "test-cloud-nav.yml runs this app's own suite"
       ],
       "baseline": {
-        "view_screens": 8,
+        "view_screens": 7,
         "layout_xml": 1,
-        "view_ui_files": 8,
+        "view_ui_files": 7,
         "custom_views": 8
       }
     },
