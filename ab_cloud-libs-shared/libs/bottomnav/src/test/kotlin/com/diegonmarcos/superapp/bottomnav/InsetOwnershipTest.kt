@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.bottomnav
 
+import android.content.ComponentName
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
+import org.junit.rules.TestRule
+import org.junit.runners.model.Statement
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -30,8 +36,19 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class InsetOwnershipTest {
 
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
+    // The library manifest declares no bare ComponentActivity: register it the way AppTopBarTest does.
     @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+    val rules: RuleChain = RuleChain.outerRule(TestRule { base, _ ->
+        object : Statement() {
+            override fun evaluate() {
+                val app = RuntimeEnvironment.getApplication()
+                shadowOf(app.packageManager).addActivityIfNotPresent(ComponentName(app, ComponentActivity::class.java))
+                base.evaluate()
+            }
+        }
+    }).around(compose)
 
     @Test fun `the page starts exactly one bar below the top and fills the rest`() {
         compose.setContent {
