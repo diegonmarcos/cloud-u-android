@@ -44,6 +44,7 @@ import app.sterna.core.data.mail.unlessDraftBelongsElsewhere
 import app.sterna.core.data.pgp.PgpMode
 import app.sterna.core.data.pgp.encrypts
 import app.sterna.core.data.pgp.PgpResult
+import app.sterna.core.data.text.BLANK_OPENING_HTML
 import app.sterna.core.data.text.BLOCK_FORWARD
 import app.sterna.core.data.text.BLOCK_QUOTE
 import app.sterna.core.data.text.Block
@@ -1183,7 +1184,7 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
             viewModelScope.launch {
                 val html = openingHtml(false, "", typed = "")
                 // An empty line alone is what the editor starts with anyway: only a signature is news.
-                if (html != composeOpeningHtml("", "", "", false)) {
+                if (html != BLANK_OPENING_HTML) {
                     _prefill.value = DraftFields(to = "", subject = "", body = "").withBodyHtml(html)
                 }
             }

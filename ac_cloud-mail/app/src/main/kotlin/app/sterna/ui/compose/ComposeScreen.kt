@@ -699,6 +699,7 @@ fun ComposeScreen(
         // Drop this `?:` and that second pass carries an empty quote into the branch below — the body
         // and its baseline would both be emptied, the reply losing its quote AND its signature.
         val quote = replyQuote ?: return@LaunchedEffect
+        val forwardOriginal = if (composeOpening(mode).carriesOriginal) extractEditorBlock(quote, BLOCK_FORWARD) else null
         if (canApplyReplyQuote(applied, body.text, initialBody)) {
             // The whole opening - first line, signature, quote - replaces the plain prefill, and is the
             // new baseline: it is not an edit.
@@ -713,17 +714,16 @@ fun ComposeScreen(
             // posted at the top of this effect nor in the toast branch — it would then mean "the
             // effect ran", and a reply that genuinely has no quote would go out without a word.
             quoteLanded = true
-        } else if (applied) {
+        } else if (applied && forwardOriginal != null) {
             // A forward without its original is not a forward: it goes in at the END of what the owner
-            // has begun, as its own block. A reply's quote is not dropped over their text; say so
-            // instead of silently sending a reply with no quote (B6).
-            val original = if (composeOpening(mode).carriesOriginal) extractEditorBlock(quote, BLOCK_FORWARD) else null
-            if (original != null) {
-                editor.appendHtml(original)
-                quoteLanded = true
-            } else {
-                viewModel.noticeQuoteNotAdded()
-            }
+            // has begun, as its own block - nothing is dropped, so nothing is announced.
+            editor.appendHtml(forwardOriginal)
+            quoteLanded = true
+            viewModel.consumeReplyQuote()
+        } else if (applied) {
+            // The user started writing before it arrived, so it is not dropped in over their text. Say
+            // so instead of silently sending a reply with no quote (B6).
+            viewModel.noticeQuoteNotAdded()
             // Said exactly once, AFTER the notice — otherwise each activity recreation posts the toast
             // again, and they stack up in LENGTH_LONG.
             viewModel.consumeReplyQuote()

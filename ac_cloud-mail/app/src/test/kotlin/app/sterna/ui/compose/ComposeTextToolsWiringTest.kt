@@ -42,7 +42,7 @@ class ComposeTextToolsWiringTest {
     }
 
     @Test fun `a result is one undoable edit and the path never sends`() {
-        assertTrue(screen.contains("textToolUndo = TextToolUndo(body, RichBody(body.text, ranges, blocks, links))"))
+        assertTrue(screen.contains("textToolUndo = TextToolUndo(body, RichBody.ofHtml(editor.currentHtml(bodyHtml)))"))
         val start = screen.indexOf("fun applyTextTool(")
         val end = screen.indexOf("// Which compose this is")
         val path = screen.substring(start, end)

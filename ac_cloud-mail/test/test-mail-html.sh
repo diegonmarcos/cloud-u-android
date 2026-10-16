@@ -138,15 +138,15 @@ n=$(grep -c '\.s-deceptive {' "$SCREEN")
 # ── H6 both alternatives leave, and the plain one is not stripped tags ──
 # A real HTML mail is multipart/alternative carrying BOTH parts, because recipients and their
 # filters still expect the plain one. Generating only HTML is a regression dressed as a feature.
-has "$VM" 'private suspend fun bodiesForSend(userBody: RichBody, identity: StoredIdentity?): Pair<String, String?>' \
+has "$VM" 'private fun bodiesForSend(userBody: RichBody): Pair<String, String>' \
   "H6 the send path builds a (text, html) PAIR"
-has "$VM" 'return toPlainText(userBody) to html' \
-  "H6 the plain alternative comes from the BODY MODEL, not from stripping the HTML"
+has "$VM" 'return htmlToPlainText(html) to html' \
+  "H6 the plain alternative is the rendering of the very html that is sent"
 hasnt "$VM" 'htmlToText(html)' "H6 the plain alternative is not tag-stripped HTML"
 # …and both parts reach the wire as two named body values.
 has "$JMAP" 'putJsonArray("textBody")' "H6 a text/plain part is declared on the wire"
 has "$JMAP" 'putJsonArray("htmlBody")' "H6 a text/html part is declared on the wire"
-has "$JMAP" 'if (htmlBody != null) putJsonObject("html") { put("value", htmlBody) }' \
+has "$JMAP" 'putJsonObject("html") { put("value", htmlBody ?: htmlOfPlainText(textBody)) }' \
   "H6 the html part carries a value of its own, beside the text one"
 
 # ── H7 the order, now in both alternatives ──
@@ -165,16 +165,16 @@ has "$TEXT" 'val found = signatureBlockAt(body.text, signature, delimiter)' \
   "H7 the html alternative finds the signature in the SAME body the text one does"
 hasnt "$TEXT" 'signatureBelowQuote.*toHtml' "H7 the html assembly holds no ordering decision of its own"
 # A forward joins its original AFTER the body, in both alternatives, so the signature still precedes it.
-has "$VM" 'return "${toPlainText(userBody)}\\n\\n${fwd.text}" to "$html<br><br>${fwd.html}"' \
-  "H7 a forward's original is appended after the body in BOTH alternatives"
+has "$VM" 'editorBlock(BLOCK_FORWARD, blocks.html)' \
+  "H7 a forward's original is a block of the HTML body, so both alternatives are made from it"
 
 # ── H8 an old draft still opens ──
 # Drafts written before the styling existed have no html part at all. Reopening one must fall back
 # to its plain text rather than opening empty -- the failure that loses a message the user wrote.
 has "$DRAFT" 'usableDraftHtml(html) ?: RichBody.plain(plainText())' \
   "H8 a draft with no usable html reopens on its plain text"
-has "$DRAFT" 'fun draftHtmlToSave(body: RichBody): String? = if (body.isPlain) null else toHtml(body)' \
-  "H8 a plain draft still stores no html part, so nothing about the old shape changed"
+has "$DRAFT" 'body.html?.let { htmlForWire(it) } ?: if (body.isPlain) null else toHtml(body)' \
+  "H8 a draft saved from the editor stores its html, wire-sanitised"
 has "$DRAFT" 'fun draftHtmlIsLossy(' \
   "H8 html this editor cannot give back faithfully is NAMED, not silently flattened"
 

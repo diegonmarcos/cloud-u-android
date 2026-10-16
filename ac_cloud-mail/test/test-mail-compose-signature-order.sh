@@ -36,6 +36,7 @@ DATA="$APP/core/data/src/main/kotlin/app/sterna/core/data"
 TEXT="$UI/compose/ComposeText.kt"
 VM="$UI/compose/ComposeViewModel.kt"
 SCREEN="$UI/compose/ComposeScreen.kt"
+PAGE="$APP/app/src/main/assets/html-editor.html"
 SETTINGS="$DATA/settings/SettingsRepository.kt"
 SIGTEST="$APP/app/src/test/kotlin/app/sterna/ui/compose/ComposeSignatureTest.kt"
 DEPTHTEST="$APP/app/src/test/kotlin/app/sterna/ui/compose/QuoteDepthTest.kt"
@@ -203,8 +204,8 @@ for n, at in enumerate(marks):
     named = {w for w in ('FORWARD_ATTACHMENT', 'FORWARD', 'REPLY_ALL', 'REPLY')
              if f'ComposeOpening.{w}' in labels}
     covered |= named
-    if 'body = replyBody(' not in arm:
-        missing.append(f'the arm for {"/".join(sorted(named)) or "?"} builds its body without replyBody()')
+    if '.withBodyHtml(openingHtml(' not in arm:
+        missing.append(f'the arm for {"/".join(sorted(named)) or "?"} builds its body without openingHtml()')
     prev_end = arm_end
 for want in ('FORWARD', 'FORWARD_ATTACHMENT', 'REPLY_ALL', 'REPLY'):
     if want not in covered:
@@ -213,15 +214,15 @@ if missing:
     for m in missing:
         print(f'  FAIL: S4 {m}')
     sys.exit(1)
-print(f'  ok: S4 all {len(covered)} openings take their body from replyBody() ({len(marks)} arms)')
+print(f'  ok: S4 all {len(covered)} openings take their body from openingHtml() ({len(marks)} arms)')
 PY
 [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
 # …and replyBody is the one thing that calls the assembly, so the three share code rather than
 # merely agreeing today.
-n=$(grep -o 'bodyWithSignature(' "$VM" | wc -l)
-[ "$n" -eq 1 ] && ok "S4 exactly one call site of bodyWithSignature in the ViewModel" \
-  || bad "S4 $n call sites of bodyWithSignature -- the paths no longer share the assembly"
-has "$VM" 'private suspend fun replyBody' "S4 the shared helper exists"
+n=$(grep -o 'composeOpeningHtml(' "$VM" | wc -l)
+[ "$n" -eq 1 ] && ok "S4 exactly one call site of composeOpeningHtml in the ViewModel" \
+  || bad "S4 $n call sites of composeOpeningHtml -- the paths no longer share the assembly"
+has "$VM" 'private suspend fun openingHtml' "S4 the shared helper exists"
 
 # ── S5 no path assembles a body beside the helper ──
 # The blank-new-message prefill is allowed its own signatureBlock (it has no quote to order against);
@@ -246,8 +247,8 @@ PY
 # a body that does not already end in an old one. Without this the count grows by one per round.
 has "$TEXT" 'return cutAtSignatureDelimiter(if (isHtml) htmlToQuotedText(raw) else raw)' \
   "S6 the quote is cut at the sender's signature delimiter before it is quoted"
-has "$VM" 'val quoted = quotedOriginalText(o).lineSequence()' \
-  "S6 the reply quote is built from that cut copy, not the raw body"
+has "$VM" 'return editorBlock(BLOCK_QUOTE, buildQuoteHtml(attribution, raw.takeIf { isHtml }, raw))' \
+  "S6 the reply quote is the original's own sanitised html in one quote block"
 
 # ── S7 the caret opens above the signature ──
 # The order can be right and the experience wrong: a caret below the signature, or below the quote,
@@ -268,15 +269,16 @@ if 'isDraft -> bodyLength' not in body:
 print('  ok: S7 a reply opens with the caret at offset 0, above the signature and the quote')
 PY
 [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
-has "$SCREEN" 'body = TextFieldValue(quote, TextRange(0))' \
-  "S7 the out-of-band quote drop-in also puts the caret at the top"
+has "$SCREEN" 'adoptHtml(quote, asBaseline = true)' \
+  "S7 the out-of-band quote drop-in is adopted whole, as the new baseline"
+has "$PAGE" 'caretToStart();' "S7 the editor page puts the caret on the first line, above signature and quote"
 
 # ── S8 the forward's SECOND assembly keeps the signature ahead of the original ──
 # A forward's editable body holds the signature but no quote: the original is joined at send time,
 # by a different function. That join must APPEND, or the forwarded mail lands above the signature.
-has "$VM" 'return "${toPlainText(userBody)}\\n\\n${fwd.text}" to "$html<br><br>${fwd.html}"' \
-  "S8 the forwarded original is appended AFTER the body in both alternatives"
-has "$VM" 'body = replyBody(""),' "S8 a forward's editable body is the signature alone, no quote"
+has "$VM" 'editorBlock(BLOCK_FORWARD, blocks.html)' \
+  "S8 the forwarded original is a block of the body, after the signature, in both alternatives"
+has "$VM" ').withBodyHtml(openingHtml(true, ""))' "S8 a forward opens on the signature alone, the original lands as its own block"
 
 # ── S9 the assertions that EXECUTE the ordering ──
 # The greps above prove the wiring; these named tests run the functions and compare whole strings.

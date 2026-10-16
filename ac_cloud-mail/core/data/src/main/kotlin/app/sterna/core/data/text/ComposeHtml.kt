@@ -25,6 +25,9 @@ const val BLOCK_FORWARD: String = "forward"
 fun editorBlock(kind: String, inner: String): String =
     if (inner.isBlank()) "" else "<div $STERNA_BLOCK_ATTR=\"$kind\">$inner</div>"
 
+/** The empty line a message with nothing in it opens on. */
+const val BLANK_OPENING_HTML: String = "<div><br></div>"
+
 /**
  * What a message opens with: the typed [typed] text (a mailto: body, a suggested reply) or an empty
  * line to type on, then the [signature] and [quote] blocks - the signature above the quote, or below
@@ -36,7 +39,7 @@ fun composeOpeningHtml(
     quote: String,
     signatureBelowQuote: Boolean,
 ): String {
-    val first = if (typed.isBlank()) "<div><br></div>" else plainTextToHtml(typed.trimEnd('\n'))
+    val first = if (typed.isBlank()) BLANK_OPENING_HTML else plainTextToHtml(typed.trimEnd('\n'))
     return first + if (signatureBelowQuote) quote + signature else signature + quote
 }
 

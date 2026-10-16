@@ -43,7 +43,7 @@ class ReplyQuoteConsumedWiringTest {
                 "private val _replyQuote = MutableStateFlow<String?>(null)",
                 "val replyQuote: StateFlow<String?> = _replyQuote.asStateFlow()",
                 "_replyQuote.value = null",
-                "_replyQuote.value = replyBody(quote(original, resolveOutgoingDateZone(settings.quotedDatesUtc)))",
+                "_replyQuote.value = openingHtml(true, quoteBlock(original, resolveOutgoingDateZone(settings.quotedDatesUtc)))",
             ).sorted(),
             writers.sorted(),
         )
@@ -75,30 +75,30 @@ class ReplyQuoteConsumedWiringTest {
     @Test fun `the screen consumes the quote once per branch that handled it`() {
         val calls = lines(COMPOSE_SCREEN).count { it == "viewModel.consumeReplyQuote()" }
         assertEquals(
-            "expected exactly TWO lines of $COMPOSE_SCREEN_PATH whose trimmed text is " +
+            "expected exactly THREE lines of $COMPOSE_SCREEN_PATH whose trimmed text is " +
                 "'viewModel.consumeReplyQuote()' — one in the branch that drops the quote into " +
-                "the body, one in the branch that says it could not — but found $calls. With " +
+                "the body, one in the forward branch that appends the original, one in the branch that says it could not — but found $calls. With " +
                 "one missing, that branch replays on every rotation: the body branch throws the " +
                 "caret back to the top of the quote over the user's restored selection, the " +
                 "toast branch re-posts 'Message cité non ajouté' once per rotation. With three, " +
                 "one of them sits on the path where the quote arrived BEFORE the prefill landed " +
                 "— consuming there throws the quote away with nothing having posted it and " +
                 "nothing having announced it.",
-            2, calls,
+            3, calls,
         )
     }
 
     @Test fun `the two lines the consumes retire are each unique`() {
         assertPinnedLine(
             COMPOSE_SCREEN,
-            "body = TextFieldValue(quote, TextRange(0))",
+            "adoptHtml(quote, asBaseline = true)",
             "This is the write the first consume retires, and the reason the replay is visible: " +
                 "it re-seats the caret at offset 0. Split or rewritten, the ordering rule below " +
                 "can no longer find it and stops guarding anything.",
         )
         assertPinnedLine(
             COMPOSE_SCREEN,
-            "initialBody = quote",
+            "adoptHtml(quote, asBaseline = true)",
             "The re-baseline that goes with the write, so the dropped quote is not counted as an " +
                 "unsaved edit. Pinned because the consume must sit immediately after it.",
         )
@@ -113,11 +113,11 @@ class ReplyQuoteConsumedWiringTest {
     @Test fun `each consume comes after the work it retires, never before`() {
         val all = lines(COMPOSE_SCREEN)
         val consumes = all.withIndex().filter { it.value == "viewModel.consumeReplyQuote()" }.map { it.index }
-        assertEquals("two consume calls are needed before their order can be judged", 2, consumes.size)
+        assertEquals("three consume calls are needed before their order can be judged", 3, consumes.size)
 
-        val write = all.indexOf("body = TextFieldValue(quote, TextRange(0))")
+        val write = all.indexOf("adoptHtml(quote, asBaseline = true)")
         assertTrue(
-            "in $COMPOSE_SCREEN_PATH the write 'body = TextFieldValue(quote, TextRange(0))' " +
+            "in $COMPOSE_SCREEN_PATH the write 'adoptHtml(quote, asBaseline = true)' " +
                 "(line index $write) must come BEFORE the first 'viewModel.consumeReplyQuote()' " +
                 "(line index ${consumes[0]}). ⚠ Today this order guards nothing on its own: no " +
                 "line between the two suspends, so cancellation cannot land there — do not cite " +
@@ -132,20 +132,20 @@ class ReplyQuoteConsumedWiringTest {
         assertTrue(
             "in $COMPOSE_SCREEN_PATH 'viewModel.noticeQuoteNotAdded()' (line index $notice) must " +
                 "come BEFORE the second 'viewModel.consumeReplyQuote()' (line index " +
-                "${consumes[1]}). Same order, same reason as above: nothing suspends between the " +
+                "${consumes.last()}). Same order, same reason as above: nothing suspends between the " +
                 "two lines today, and the pin is what keeps it that way if one ever does.",
-            notice in 0 until consumes[1],
+            notice in 0 until consumes.last(),
         )
 
         // Adjacency, so a single consume parked at the end of the effect cannot satisfy both
         // "after" rules at once while one branch is left replaying.
         assertEquals(
-            "in $COMPOSE_SCREEN_PATH the line right after 'initialBody = quote' must BE " +
+            "in $COMPOSE_SCREEN_PATH the line right after 'adoptHtml(quote, asBaseline = true)' must BE " +
                 "'viewModel.consumeReplyQuote()'. Anything wedged between them leaves the applying " +
                 "branch able to run without retiring the quote — the caret jumps back to the top " +
                 "on the next rotation.",
             "viewModel.consumeReplyQuote()",
-            all.getOrNull(all.indexOf("initialBody = quote") + 1),
+            all.getOrNull(all.indexOf("adoptHtml(quote, asBaseline = true)") + 1),
         )
         assertEquals(
             "in $COMPOSE_SCREEN_PATH the line right after 'viewModel.noticeQuoteNotAdded()' must " +

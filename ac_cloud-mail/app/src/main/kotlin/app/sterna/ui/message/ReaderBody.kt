@@ -85,6 +85,23 @@ internal fun plainTextForImages(override: Boolean?, setting: Boolean?): Boolean 
 
 /** Text wrapped for the document: line breaks kept, and the "derived text" line above it if any. */
 private fun plainFragment(text: String, notice: String?): String {
-    val body = "<pre class=\"plain\">${htmlEscape(reflowFormatFlowed(text))}</pre>"
+    val body = "<pre class=\"plain\">${linkifyEscaped(htmlEscape(reflowFormatFlowed(text)))}</pre>"
     return if (notice.isNullOrBlank()) body else "<p class=\"s-note\">${htmlEscape(notice)}</p>$body"
+}
+
+private val BARE_URL = Regex("""(?i)\bhttps?://[^\s<>"']+""")
+
+/**
+ * A text-only message is shown as HTML like any other: its (already escaped) text with every bare
+ * web address made a real link, so the page behaves the same as one the sender wrote in HTML. The
+ * trailing sentence punctuation is not part of the address. [escaped] must already be [htmlEscape]d.
+ */
+internal fun linkifyEscaped(escaped: String): String = BARE_URL.replace(escaped) { m ->
+    var url = m.value
+    var tail = ""
+    while (url.isNotEmpty() && url.last() in ".,;:!?)") {
+        tail = url.last() + tail
+        url = url.dropLast(1)
+    }
+    if (url.length <= "https://".length) m.value else "<a href=\"$url\">$url</a>$tail"
 }

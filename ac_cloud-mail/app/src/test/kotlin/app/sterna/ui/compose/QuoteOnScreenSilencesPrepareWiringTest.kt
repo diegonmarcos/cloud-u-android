@@ -10,11 +10,11 @@ import org.junit.Test
  */
 class QuoteOnScreenSilencesPrepareWiringTest {
 
-    @Test fun `the ViewModel names the flag exactly three times - the parameter and both gates`() {
+    @Test fun `the ViewModel names the flag exactly three times - the parameter and its gates`() {
         // Comments are cut by `lines`, so the KDoc that documents the parameter cannot satisfy this.
         val naming = lines(COMPOSE_VIEW_MODEL).filter { "quoteAlreadyOnScreen" in it }
         assertEquals(
-            "⛔ exactly THREE code lines of $COMPOSE_VIEW_MODEL_PATH may name " +
+            "⛔ exactly FOUR code lines of $COMPOSE_VIEW_MODEL_PATH may name " +
                 "`quoteAlreadyOnScreen`, and each one is a lie the screen would otherwise tell " +
                 "after a process death:\n" +
                 "  1. the `prepare()` parameter — without it the screen cannot say the quote is " +
@@ -32,6 +32,8 @@ class QuoteOnScreenSilencesPrepareWiringTest {
                 "quoteAlreadyOnScreen: Boolean = false,",
                 "if (!quoteAlreadyOnScreen) prefillFailed()",
                 "} else if (!quoteAlreadyOnScreen) {",
+                // The forward's original goes into the editor through the same channel as a quote.
+                "if (!quoteAlreadyOnScreen) {",
             ).sorted(),
             naming.sorted(),
         )
@@ -77,7 +79,7 @@ class QuoteOnScreenSilencesPrepareWiringTest {
                 "'_replyQuote.value = replyBody(quote(original, " +
                 "resolveOutgoingDateZone(settings.quotedDatesUtc)))'. Anything else and the gate " +
                 "has been moved onto some other statement while the emission runs on unguarded.",
-            "_replyQuote.value = replyBody(quote(original, resolveOutgoingDateZone(settings.quotedDatesUtc)))",
+            "_replyQuote.value = openingHtml(true, quoteBlock(original, resolveOutgoingDateZone(settings.quotedDatesUtc)))",
             all.getOrNull(gate + 1),
         )
     }
@@ -98,7 +100,7 @@ class QuoteOnScreenSilencesPrepareWiringTest {
         val all = lines(COMPOSE_SCREEN)
         val posts = all.filter { "quoteLanded = true" in it }
         assertEquals(
-            "\u26d4 exactly TWO lines of $COMPOSE_SCREEN_PATH may raise `quoteLanded`, one per way a " +
+            "\u26d4 exactly THREE lines of $COMPOSE_SCREEN_PATH may raise `quoteLanded`, one per way a " +
                 "quote reaches the body on screen:\n" +
                 "  1. `if (it.quoted) quoteLanded = true` \u2014 the prefill was built WITH the quote " +
                 "inside its body, which is what happens when nothing was cached (a reply to a " +
@@ -116,13 +118,15 @@ class QuoteOnScreenSilencesPrepareWiringTest {
             listOf(
                 "if (it.quoted) quoteLanded = true",
                 "quoteLanded = true",
+                // …and the forward branch that appends the original to a body already begun.
+                "quoteLanded = true",
             ).sorted(),
             posts.sorted(),
         )
 
         val naming = all.filter { "quoteLanded" in it }
         assertEquals(
-            "\u26d4 exactly FOUR lines of $COMPOSE_SCREEN_PATH may so much as NAME `quoteLanded` \u2014 " +
+            "\u26d4 exactly FIVE lines of $COMPOSE_SCREEN_PATH may so much as NAME `quoteLanded` \u2014 " +
                 "its saved declaration, the argument handed to `prepare()`, and the two posts. A " +
                 "fifth is a writer this file has never read (a reset to false, a post under some " +
                 "other condition), and it decides what the composer is allowed to say about the " +
@@ -132,6 +136,7 @@ class QuoteOnScreenSilencesPrepareWiringTest {
                 "quoteAlreadyOnScreen = quoteLanded,",
                 "if (it.quoted) quoteLanded = true",
                 "quoteLanded = true",
+                "quoteLanded = true",
             ).sorted(),
             naming.sorted(),
         )
@@ -140,7 +145,7 @@ class QuoteOnScreenSilencesPrepareWiringTest {
     @Test fun `the out-of-band post sits between the re-baseline and the toast branch, never inside it`() {
         val all = lines(COMPOSE_SCREEN)
         val landed = all.indexOf("quoteLanded = true")
-        val baseline = all.indexOf("initialBody = quote")
+        val baseline = all.indexOf("adoptHtml(quote, asBaseline = true)")
         // The BRANCH OPENER, not the toast call inside it. Bounding by
         // `viewModel.noticeQuoteNotAdded()` left a hole a mutation walked straight through on
         // 2026-08-25: posted on the FIRST line of the toast branch, the flag still sat above the
@@ -148,7 +153,7 @@ class QuoteOnScreenSilencesPrepareWiringTest {
         val toastBranch = all.indexOf("} else if (applied) {")
         assertTrue(
             "in $COMPOSE_SCREEN_PATH 'quoteLanded = true' (line index $landed) must sit STRICTLY " +
-                "between 'initialBody = quote' (index $baseline) and the OPENER of the toast " +
+                "between 'adoptHtml(quote, asBaseline = true)' (index $baseline) and the OPENER of the toast " +
                 "branch, '} else if (applied) {' (index $toastBranch) \u2014 i.e. inside the branch that " +
                 "really drops the quote into the body, below the write and its re-baseline, and " +
                 "ABOVE the toast branch. Both bounds are load-bearing:\n" +
@@ -169,11 +174,11 @@ class QuoteOnScreenSilencesPrepareWiringTest {
     @Test fun `the prefill post sits inside the not-applied block, under the baseline it belongs to`() {
         val all = lines(COMPOSE_SCREEN)
         val post = all.indexOf("if (it.quoted) quoteLanded = true")
-        val baseline = all.indexOf("initialBody = it.body")
+        val baseline = all.indexOf("adoptHtml(it.bodyHtml ?: plainTextToHtml(it.body), asBaseline = true)")
         val applied = all.indexOf("applied = true")
         assertTrue(
             "in $COMPOSE_SCREEN_PATH 'if (it.quoted) quoteLanded = true' (line index $post) must " +
-                "sit STRICTLY between 'initialBody = it.body' (index $baseline) and " +
+                "sit STRICTLY between 'adoptHtml(it.bodyHtml ?: plainTextToHtml(it.body), asBaseline = true)' (index $baseline) and " +
                 "'applied = true' (index $applied) \u2014 that is, inside the `if (!applied)` block " +
                 "of the prefill effect, right under the body and baseline it describes. Above " +
                 "the baseline it would announce a body not yet written; below `applied = true`, " +
@@ -216,7 +221,7 @@ class QuoteOnScreenSilencesPrepareWiringTest {
 
         // Each one is welded to the body line it describes, so neither can drift onto another
         // DraftFields call while the count above stays at two.
-        val bodyLine = """body = replyBody(if (quoteBody) quote(original, zone) else ""),"""
+        val bodyLine = """).withBodyHtml(openingHtml(true, if (quoteBody) quoteBlock(original, zone) else ""))"""
         val bodies = all.withIndex().filter { it.value == bodyLine }.map { it.index }
         assertEquals("the two reply bodies of buildPrefill are the anchor of this rule", 2, bodies.size)
         bodies.forEach { at ->

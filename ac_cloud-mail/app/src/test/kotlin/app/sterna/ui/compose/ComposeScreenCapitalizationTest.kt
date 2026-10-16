@@ -21,23 +21,23 @@ class ComposeScreenCapitalizationTest {
         // Not vacuous: three call sites, one per top-level composable. If this moves, the rule has
         // to be re-read rather than believed.
         assertEquals(
-            "ComposeScreen.kt no longer has 3 BasicTextField call sites",
-            3,
+            "ComposeScreen.kt no longer has 2 BasicTextField call sites (the body is the HTML page)",
+            2,
             composeScreen.count { FIELD in it && !it.isComment() },
         )
         assertEquals(
             "the three inputs are no longer one per composable",
-            listOf(BODY, SUBJECT, RECIPIENTS),
+            listOf(SUBJECT, RECIPIENTS),
             fields(composeScreen).map { it.first },
         )
     }
 
-    @Test fun `the body asks for sentence capitalisation and nothing else`() {
-        assertEquals(
-            "the composer's BODY must carry exactly this keyboardOptions (#184)",
-            BODY_OPTIONS,
-            optionsOf(composeScreen, BODY),
-        )
+    @Test fun `the body page asks for sentence capitalisation`() {
+        // The body is a contenteditable page now, not a BasicTextField: its keyboard hint is an attribute.
+        val text = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
+            .map { java.io.File(it, "app/src/main/assets/html-editor.html") }
+            .first { it.isFile }.readText()
+        assertTrue("the editor page must keep autocapitalize=\"sentences\" (#184)", "autocapitalize=\"sentences\"" in text)
     }
 
     @Test fun `the subject asks for sentence capitalisation next to its keyboard type`() {
@@ -59,18 +59,6 @@ class ComposeScreenCapitalizationTest {
         assertFalse(
             "the recipients must NOT ask for capitalisation — they are addresses (#184)",
             CAPITALIZATION in optionsOf(composeScreen, RECIPIENTS),
-        )
-    }
-
-    @Test fun `the body still names no ime action`() {
-        // #26: the body is the only multi-line field of the screen, so an ImeAction there replaces
-        // the line break. Checked over the WHOLE call, not just the keyboardOptions argument.
-        val (_, block) = fields(composeScreen).single { it.first == BODY }
-        val named = block.filter { !composeScreen[it].isComment() && "ImeAction" in composeScreen[it] }
-        assertTrue(
-            "the body names an ImeAction at line(s) ${named.map { it + 1 }} — it would take the " +
-                "place of the newline in the only multi-line field of the composer (#26)",
-            named.isEmpty(),
         )
     }
 

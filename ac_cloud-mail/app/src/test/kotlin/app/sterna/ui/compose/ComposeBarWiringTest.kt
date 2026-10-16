@@ -311,7 +311,7 @@ class ComposeBarWiringTest {
         )
 
         private const val SAVE_TAP =
-            "onClick = { moreMenu = false; viewModel.saveDraft(to, cc, bcc, subject.text, rich, requestReceipt) },"
+            "onClick = { moreMenu = false; scope.launch { viewModel.saveDraft(to, cc, bcc, subject.text, freshRich(), requestReceipt) } },"
         private const val SCHEDULE_TAP =
             "onClick = { moreMenu = false; menuOpenedAt = System.currentTimeMillis(); scheduleMenu = true },"
         private const val DELETE_TAP = "onClick = { moreMenu = false; viewModel.askDraftDelete() },"

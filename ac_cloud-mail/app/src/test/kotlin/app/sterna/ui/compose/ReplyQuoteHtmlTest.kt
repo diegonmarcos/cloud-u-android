@@ -81,7 +81,7 @@ class ReplyQuoteHtmlTest {
         val vm = java.io.File(generateSequence(java.io.File("").absoluteFile) { it.parentFile }
             .first { java.io.File(it, "app/src/main/kotlin/app/sterna/ui/compose/ComposeViewModel.kt").isFile },
             "app/src/main/kotlin/app/sterna/ui/compose/ComposeViewModel.kt").readText()
-        assertTrue(vm.contains("private suspend fun bodiesForSend(userBody: RichBody, identity: StoredIdentity?): Pair<String, String?>"))
-        assertTrue("both alternatives are made from the one body", vm.contains("toPlainText(userBody)") && vm.contains("htmlBodyWithSignature("))
+        assertTrue(vm.contains("private fun bodiesForSend(userBody: RichBody): Pair<String, String>"))
+        assertTrue("both alternatives are made from the one body", vm.contains("htmlToPlainText(html) to html") && vm.contains("htmlForWire("))
     }
 }

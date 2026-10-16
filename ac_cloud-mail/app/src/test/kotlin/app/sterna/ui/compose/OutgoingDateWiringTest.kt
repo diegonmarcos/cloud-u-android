@@ -24,7 +24,7 @@ class OutgoingDateWiringTest {
             "quote()'s zone parameter must have NO default: 'private fun quote(o: Email, zone: " +
                 "ZoneId): String {'. A default resurrects the silent third-caller trap the " +
                 "parameter exists to close.",
-            "private fun quote(o: Email, zone: ZoneId): String {" in lines(COMPOSE_VIEW_MODEL),
+            "private fun quoteBlock(o: Email, zone: ZoneId): String {" in lines(COMPOSE_VIEW_MODEL),
         )
     }
 
@@ -44,7 +44,7 @@ class OutgoingDateWiringTest {
                 "replyBody(quote(original, resolveOutgoingDateZone(settings.quotedDatesUtc)))'. " +
                 "This is the caller far from quote()'s definition — the offline/cached path — and " +
                 "the one a partial fix misses.",
-            "_replyQuote.value = replyBody(quote(original, resolveOutgoingDateZone(settings.quotedDatesUtc)))" in
+            "_replyQuote.value = openingHtml(true, quoteBlock(original, resolveOutgoingDateZone(settings.quotedDatesUtc)))" in
                 lines(COMPOSE_VIEW_MODEL),
         )
     }
@@ -58,9 +58,9 @@ class OutgoingDateWiringTest {
         )
         assertEquals(
             "reply and reply-all must both hand that zone to quote(): two identical lines " +
-                "'body = replyBody(if (quoteBody) quote(original, zone) else \"\"),'",
+                "').withBodyHtml(openingHtml(true, if (quoteBody) quoteBlock(original, zone) else \"\"))'",
             2,
-            all.count { it == """body = replyBody(if (quoteBody) quote(original, zone) else ""),""" },
+            all.count { it == """).withBodyHtml(openingHtml(true, if (quoteBody) quoteBlock(original, zone) else ""))""" },
         )
     }
 

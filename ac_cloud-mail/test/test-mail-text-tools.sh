@@ -177,7 +177,7 @@ ok "B1 the reader's tool path calls no body writer"
 # and the panel only offers Apply when it was given somewhere to apply TO
 has "$PANEL" 'if (onApply != null)' "B1 Apply is offered only when a target exists"
 # the composer, by contrast, MUST apply - and through the splice, not a raw assignment
-has "$UI/compose/ComposeScreen.kt" 'TextToolScope.splice(' "B1 the composer applies through the splice"
+has "$UI/compose/ComposeScreen.kt" 'editor.applyScope(' "B1 the composer applies through the editor page, on the scope it was asked for"
 has "$UI/compose/ComposeScreen.kt" 'text_tool_stale' "B1 the composer refuses a reply whose range moved"
 
 # ── S1 progress and a real error ──

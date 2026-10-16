@@ -62,12 +62,14 @@ class ScheduleMenuWiringTest {
                 "contradicts it one toast later.",
             listOf(
                 "scheduleMenu = false",
-                "if (viewModel.scheduleSend(to, cc, bcc, subject.text, rich, sendAt, requestReceipt)) {",
+                "scope.launch {",
+                "if (viewModel.scheduleSend(to, cc, bcc, subject.text, freshRich(), sendAt, requestReceipt)) {",
                 "Toast.makeText(",
                 "context,",
                 "context.getString(R.string.compose_scheduled_toast, label),",
                 "Toast.LENGTH_SHORT,",
                 ").show()",
+                "}",
                 "}",
             ),
             guardedBlock(),
@@ -184,7 +186,7 @@ class ScheduleMenuWiringTest {
                 "may not have happened. Found: $calls",
             listOf(
                 PICKER_SCHEDULE,
-                "if (viewModel.scheduleSend(to, cc, bcc, subject.text, rich, sendAt, requestReceipt)) {",
+                "if (viewModel.scheduleSend(to, cc, bcc, subject.text, freshRich(), sendAt, requestReceipt)) {",
             ).sorted(),
             calls.sorted(),
         )
@@ -259,7 +261,7 @@ class ScheduleMenuWiringTest {
 
         /** The free picker's own call, WHOLE: the confirmation hangs off the answer, or off nothing. */
         private const val PICKER_SCHEDULE =
-            "if (viewModel.scheduleSend(to, cc, bcc, subject.text, rich, millis, requestReceipt)) {"
+            "if (viewModel.scheduleSend(to, cc, bcc, subject.text, freshRich(), millis, requestReceipt)) {"
         private const val ELSE = "} else {"
         private const val STAMP_STATE = "var menuOpenedAt by remember { mutableLongStateOf(0L) }"
         private const val STAMP_ON_OPEN =

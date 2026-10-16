@@ -1759,6 +1759,12 @@ private fun AttachedMessageSheet(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                        } else if (message.html != null) {
+                            // HTML shown as HTML: the message's own markup, or its text wrapped and linkified.
+                            HtmlFragmentView(
+                                message.html,
+                                Modifier.fillMaxWidth().height(MailMetrics.s256 * 2),
+                            )
                         } else {
                             Text(message.body, style = MaterialTheme.typography.bodyMedium)
                         }

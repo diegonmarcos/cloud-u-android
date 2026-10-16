@@ -1,6 +1,8 @@
 package app.sterna.ui.message
 
+import app.sterna.core.data.text.htmlEscape
 import app.sterna.core.data.text.htmlToText
+import app.sterna.core.data.text.sanitiseReceivedHtml
 import app.sterna.core.imap.MimeAttachment
 import app.sterna.core.imap.MimeParser
 import app.sterna.core.jmap.ContentTooLargeException
@@ -15,6 +17,12 @@ data class AttachedMessage(
     /** "" when the message has no text nor html. */
     val body: String,
     val attachmentNames: List<String>,
+    /**
+     * The body as the sheet RENDERS it: the message's own html, sanitised, else its text as escaped,
+     * linkified html. Null only when there is no body. [body] is the plain reading, kept for what
+     * needs text (copy, tests).
+     */
+    val html: String? = null,
 )
 
 /** Which attachment opens as an attached message rather than being handed to a viewer app. */
@@ -42,6 +50,8 @@ internal fun attachedMessageOf(bytes: ByteArray): AttachedMessage {
         subject = MimeParser.decodedHeaderOf(raw, "Subject"),
         body = parsed.text ?: parsed.html?.let { htmlToText(it) } ?: "",
         attachmentNames = parsed.attachments.filter { it.isFileAttachment() }.map { it.name },
+        html = parsed.html?.takeIf { it.isNotBlank() }?.let { sanitiseReceivedHtml(it) }
+            ?: parsed.text?.takeIf { it.isNotBlank() }?.let { "<pre class=\"plain\">${linkifyEscaped(htmlEscape(it))}</pre>" },
     )
 }
 

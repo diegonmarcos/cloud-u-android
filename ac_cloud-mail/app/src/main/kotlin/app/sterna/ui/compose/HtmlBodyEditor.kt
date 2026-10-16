@@ -218,6 +218,9 @@ internal class HtmlEditorController {
     private var pending: String? = null
     private var wantFocus = false
 
+    /** The last markup the page is known to hold, so a rebuilt page (the view was released) is refilled. */
+    private var known = ""
+
     var format by mutableStateOf(EditorFormat())
         internal set
 
@@ -228,15 +231,29 @@ internal class HtmlEditorController {
     /** Whether the raw-markup view is up. */
     var sourceMode by mutableStateOf(false)
 
-    /** Called with the page's markup after the owner edited it. */
-    internal var onUserChange: (String) -> Unit = {}
+    private var userChange: (String) -> Unit = {}
+    private var loadedChange: (String) -> Unit = {}
 
-    /** Called with the page's normalised markup after a [load]. */
-    internal var onLoaded: (String) -> Unit = {}
+    /** Wire the screen's two listeners: the owner's edits, and the normalised markup after a [load]. */
+    internal fun listen(onUserChange: (String) -> Unit, onLoaded: (String) -> Unit) {
+        userChange = onUserChange
+        loadedChange = onLoaded
+    }
+
+    internal fun userChanged(html: String) {
+        known = html
+        userChange(html)
+    }
+
+    internal fun loaded(html: String) {
+        known = html
+        loadedChange(html)
+    }
 
     internal fun attach(view: WebView) {
         web = view
         ready = false
+        pending = pending ?: known.ifEmpty { null }
     }
 
     internal fun detach(view: WebView) {
@@ -260,6 +277,7 @@ internal class HtmlEditorController {
 
     /** Replace the whole body with [html] (sanitised by the page). */
     fun load(html: String) {
+        known = html
         if (ready) run("Sterna.setHtml(${jsString(html)})") else pending = html
     }
 
@@ -338,10 +356,10 @@ private class EditorBridge(private val controller: HtmlEditorController) {
     fun ready() { main.post { controller.onReady() } }
 
     @JavascriptInterface
-    fun loaded(html: String) { main.post { controller.onLoaded(html) } }
+    fun loaded(html: String) { main.post { controller.loaded(html) } }
 
     @JavascriptInterface
-    fun change(html: String) { main.post { controller.onUserChange(html) } }
+    fun change(html: String) { main.post { controller.userChanged(html) } }
 
     @JavascriptInterface
     fun state(encoded: String) { main.post { controller.format = parseEditorState(encoded) } }
@@ -380,8 +398,7 @@ internal fun HtmlBodyEditor(
             placeholder = placeholder,
         )
     }
-    controller.onUserChange = onChange
-    controller.onLoaded = onLoaded
+    controller.listen(onChange, onLoaded)
     AndroidView(
         modifier = modifier,
         factory = { ctx ->

@@ -9,50 +9,34 @@ import java.io.File
  */
 class SendBodiesWiringTest {
 
-    @Test fun `the send builds its html from the composer's rich body, once`() {
+    @Test fun `the send builds its html from the editor's markup, once`() {
         val code = codeLines(COMPOSE_VIEW_MODEL.readText())
 
         assertEquals(
-            "⛔ `bodiesForSend` must build the outgoing html through `htmlBodyWithSignature(`, in " +
-                "exactly ONE place. A second call is a second answer to what the recipient sees; " +
-                "none at all is an html alternative built somewhere this lint cannot see.",
-            listOf("val html = htmlBodyWithSignature("),
-            code.filter { "htmlBodyWithSignature(" in it },
+            "⛔ `bodiesForSend` must build the outgoing html through `htmlForWire(`, from the " +
+                "markup the editor holds, in exactly ONE place. A second call is a second answer " +
+                "to what the recipient sees; none at all is an html alternative built somewhere " +
+                "this lint cannot see.",
+            listOf("val html = htmlForWire(userBody.html ?: toHtml(userBody))"),
+            code.filter { "htmlForWire(" in it },
         )
         assertEquals(
-            "⛔ and it is handed the RICH body, whole — the `RichBody` the screen holds, spans " +
-                "included. `RichBody.plain(userBody.text)` here, or `userBody.text`, is the whole " +
-                "of #131 undone with the suite green: the styling never reaches the wire, and only " +
-                "the recipient could tell.",
-            listOf("userBody, signatureTextOf(identity), signatureHtmlOf(identity),"),
-            code.filter { it.startsWith("userBody,") },
+            "the legacy span-model assembly must stay out of the send: the signature and the quote " +
+                "are blocks of the HTML body now.",
+            emptyList<String>(),
+            code.filter { "htmlBodyWithSignature(" in it },
         )
     }
 
-    /**
-     * The TEXT alternative, the half no lint watched until the lists arrived (#131).
-     */
-    @Test fun `the text alternative spells the list markers and the addresses out`() {
+    /** The TEXT alternative is derived from the very html that is sent: the halves cannot disagree. */
+    @Test fun `the text alternative is the html's own plain rendering`() {
         val code = codeLines(COMPOSE_VIEW_MODEL.readText())
 
         assertEquals(
-            "the direct return of `bodiesForSend` must hand `toPlainText(userBody)` to the text " +
-                "alternative, whole line, once.",
-            listOf("val fwd = forwarded ?: return toPlainText(userBody) to html"),
-            code.filter { it.startsWith("val fwd = forwarded ?:") },
-        )
-        assertEquals(
-            "…and so must the forward's concatenation, which builds its own text alternative — " +
-                "the WHOLE LINE, tail included. Drop `\\n\\n\${fwd.text}` from it and the text " +
-                "alternative of every forward carries only what was typed: the carried original " +
-                "gone from it, still there in the html beside it, so the sender's own copy looks " +
-                "whole and only a recipient reading the text part gets a forward with nothing " +
-                "forwarded. A prefix (or a `contains`) is blind to exactly that: the mutation " +
-                "touches nothing before the first closing brace.",
-            listOf(
-                "return \"\${toPlainText(userBody)}\\n\\n\${fwd.text}\" to \"\$html<br><br>\${fwd.html}\"",
-            ),
-            code.filter { it.startsWith("return \"\${toPlainText(userBody)}") },
+            "`bodiesForSend` hands back the html's own plain-text rendering, whole line, once - the " +
+                "list markers, the quote's \"> \" and the link addresses come from htmlToPlainText.",
+            listOf("return htmlToPlainText(html) to html"),
+            code.filter { it.startsWith("return htmlToPlainText(html)") },
         )
         assertEquals(
             "⛔ and NOT ONE `userBody.text` may be left in this class: it is the exact mutation " +
@@ -82,10 +66,10 @@ class SendBodiesWiringTest {
             code.filter { it.startsWith("credentials, recipients, subject,") },
         )
         assertEquals(
-            "⛔ …so exactly THREE lines of this class may name `toPlainText(`: the send's two " +
-                "arms and the draft save. Fewer means one of them writes a different message " +
-                "about the same body; more means a fourth answer nothing here decides.",
-            3,
+            "⛔ …so exactly ONE line of this class may name `toPlainText(`: the draft save (the " +
+                "send's text comes from the html itself). More means a second answer nothing " +
+                "here decides.",
+            1,
             code.count { "toPlainText(" in it },
         )
     }
