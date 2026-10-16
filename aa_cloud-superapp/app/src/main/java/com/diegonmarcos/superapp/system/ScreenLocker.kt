@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.system
 
 import android.accessibilityservice.AccessibilityService
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
@@ -9,9 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
-import android.view.GestureDetector
-import android.view.MotionEvent
-import android.view.View
 import android.widget.Toast
 
 /**
@@ -161,45 +157,19 @@ object ScreenLocker {
         if (isActive(ctx)) "✓ Granted — used only as fallback when accessibility is off"
         else               "⚠ Not granted — fallback path; only enable if accessibility refuses"
 
-    /** Attach a double-tap-to-lock gesture detector to any [View]
-     *  (typically the home-screen root). Single-tap events still
-     *  reach children — GestureDetector only fires onDoubleTap when
-     *  TWO down-up cycles happen within the system's double-tap
-     *  timeout (≈300ms) without movement in between. If admin isn't
-     *  granted yet, the double-tap surfaces a Toast pointing the
-     *  user at the right Configs/About row instead of silently
-     *  doing nothing — the feature would otherwise feel broken.
-     *
-     *  Returns Unit (not the GestureDetector instance) — caller
-     *  doesn't need to retain it; the closure capture inside the
-     *  setOnTouchListener keeps it alive for the view's lifetime. */
-    @SuppressLint("ClickableViewAccessibility")
-    fun attachDoubleTapLock(root: View) {
-        val det = GestureDetector(root.context, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onDown(e: MotionEvent): Boolean = true
-            override fun onDoubleTap(e: MotionEvent): Boolean {
-                val ok = lock(root.context)
-                if (!ok) {
-                    Toast.makeText(
-                        root.context,
-                        "Enable Accessibility (preferred) or Device Admin in " +
-                            "Configs → About → Permissions → Special access — " +
-                            "accessibility keeps Smart Lock + watch unlock alive",
-                        Toast.LENGTH_LONG,
-                    ).show()
-                }
-                return true
-            }
-        })
-        root.isClickable = true
-        root.setOnTouchListener { _, e ->
-            // Return true so the gesture stream stays with the
-            // listener even on empty space. Children get FIRST dibs
-            // via ViewGroup.dispatchTouchEvent — so clickable rows /
-            // tiles still receive their taps; the listener only sees
-            // events the children didn't claim.
-            det.onTouchEvent(e)
-            true
+    /** The double-tap-to-lock action for the home screens ([com.diegonmarcos.superapp.ui.lockOnDoubleTap]).
+     *  If neither accessibility nor Device Admin is granted yet, the double-tap surfaces a Toast pointing
+     *  the user at the right Configs/About row instead of silently doing nothing — the feature would
+     *  otherwise feel broken. */
+    fun lockOrExplain(ctx: Context) {
+        if (!lock(ctx)) {
+            Toast.makeText(
+                ctx,
+                "Enable Accessibility (preferred) or Device Admin in " +
+                    "Configs → About → Permissions → Special access — " +
+                    "accessibility keeps Smart Lock + watch unlock alive",
+                Toast.LENGTH_LONG,
+            ).show()
         }
     }
 }

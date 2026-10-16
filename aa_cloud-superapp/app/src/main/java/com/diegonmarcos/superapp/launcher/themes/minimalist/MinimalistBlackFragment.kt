@@ -1,23 +1,39 @@
 package com.diegonmarcos.superapp.launcher.themes.minimalist
 
-import com.diegonmarcos.superapp.system.ScreenLocker
 import com.diegonmarcos.superapp.ui.Haptics
+import com.diegonmarcos.superapp.ui.lockOnDoubleTap
 
 import android.content.Context
 import android.content.pm.LauncherApps
-import android.os.Bundle
 import android.os.Process
-import android.text.Editable
-import android.text.TextWatcher
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
 
 /**
  * The Cloud Minimalist Black mode's home screen: every installed app as one
@@ -35,112 +51,70 @@ import androidx.fragment.app.Fragment
  *
  * Behaviour is deliberately unchanged: same app source, same filter, same
  * double-tap-to-lock. This was a redesign, not a rewrite of what it does.
+ * Compose since #773 (a LazyColumn of lines under the mode's own palette).
  */
-class MinimalistBlackFragment : Fragment() {
+class MinimalistBlackFragment : KitComposeFragment() {
 
-    private lateinit var listContainer: LinearLayout
-    private var allApps: List<AppRow> = emptyList()
+    override fun palette() = MinimalistDesign.kit
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        val root = MinimalistDesign.page(ctx)
-
-        root.addView(MinimalistDesign.head(ctx, "~/apps"))
-        root.addView(MinimalistDesign.space(ctx, MinimalistDesign.GAP))
-
-        // The filter is the only input in this mode, so it is styled as a
-        // continuation of the prompt rather than as a form field: no border,
-        // no container, same face and same colour as everything above it.
-        root.addView(
-            EditText(ctx).apply {
-                hint = "${MinimalistDesign.PROMPT}filter"
-                setHintTextColor(MinimalistDesign.INK_DIM)
-                setTextColor(MinimalistDesign.INK)
-                typeface = MinimalistDesign.FACE
-                textSize = MinimalistDesign.TYPE_BODY
-                background = null
-                setSingleLine(true)
-                setPadding(0, 0, 0, MinimalistDesign.dp(ctx, MinimalistDesign.GAP))
-                addTextChangedListener(object : TextWatcher {
-                    override fun beforeTextChanged(t: CharSequence?, a: Int, b: Int, c: Int) {}
-                    override fun onTextChanged(t: CharSequence?, a: Int, b: Int, c: Int) {}
-                    override fun afterTextChanged(e: Editable?) {
-                        rebuildList(e?.toString().orEmpty())
-                    }
-                })
-            },
-        )
-        root.addView(MinimalistDesign.rule(ctx))
-
-        listContainer = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(MinimalistDesign.GROUND)
-        }
-        root.addView(
-            ScrollView(ctx).apply {
-                setBackgroundColor(MinimalistDesign.GROUND)
-                // No over-scroll glow: the glow is the default theme's accent
-                // and it used to flash at the top of this otherwise-green screen.
-                overScrollMode = View.OVER_SCROLL_NEVER
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f,
-                )
-                addView(listContainer)
-            },
-        )
-
-        root.addView(MinimalistDesign.rule(ctx))
-        root.addView(MinimalistDesign.space(ctx, MinimalistDesign.GAP_TIGHT))
-        root.addView(MinimalistDesign.hint(ctx, "tap to launch  ·  double-tap to lock"))
-
-        // Edge-to-edge: pad the CONTENT so the black still reaches the screen
-        // edges and only the text clears the status and navigation bars.
-        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
-            val bars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
-            )
-            root.setPadding(
-                MinimalistDesign.dp(ctx, MinimalistDesign.GAP_WIDE),
-                bars.top + MinimalistDesign.dp(ctx, MinimalistDesign.GAP),
-                MinimalistDesign.dp(ctx, MinimalistDesign.GAP_WIDE),
-                bars.bottom + MinimalistDesign.dp(ctx, MinimalistDesign.GAP),
-            )
-            insets
-        }
-
+    @Composable
+    override fun Content() {
+        val ctx = LocalContext.current
+        val view = LocalView.current
         // LauncherApps.getActivityList is fast on a populated device but not
         // free — it stays on the UI thread because the system already caches
         // it internally and a background hop would only add a frame of blank.
-        allApps = loadApps(ctx)
-        rebuildList("")
+        val allApps = remember { loadApps(ctx) }
+        var filter by rememberSaveable { mutableStateOf("") }
+        val visible = allApps.filter { matches(it.label, filter) }
 
-        // Double-tap anywhere on the home root → lock the screen. App rows
-        // still receive single taps via their own handlers; the root listener
-        // only sees events the child rows did not claim.
-        ScreenLocker.attachDoubleTapLock(root)
+        // Edge-to-edge: pad the CONTENT so the black still reaches the screen
+        // edges and only the text clears the status and navigation bars.
+        MinimalistDesign.Page(Modifier
+            .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
+            .padding(vertical = MinimalistDesign.GAP.dp)
+            // Double-tap anywhere on the home root → lock the screen. App rows still receive
+            // single taps via their own handlers; the root only sees events the rows did not claim.
+            .lockOnDoubleTap(ctx)) {
+            MinimalistDesign.Head("~/apps")
+            MinimalistDesign.Space(MinimalistDesign.GAP)
 
-        return root
-    }
-
-    private fun rebuildList(filter: String) {
-        listContainer.removeAllViews()
-        val ctx = listContainer.context
-        val needle = filter.trim().lowercase()
-        val visible =
-            if (needle.isBlank()) allApps
-            else allApps.filter { it.label.lowercase().contains(needle) }
-
-        visible.forEach { app ->
-            listContainer.addView(
-                MinimalistDesign.line(ctx, app.label) {
-                    Haptics.tap(listContainer)
-                    runCatching { app.launch() }
+            // The filter is the only input in this mode, so it is styled as a
+            // continuation of the prompt rather than as a form field: no border,
+            // no container, same face and same colour as everything above it.
+            BasicTextField(
+                value = filter, onValueChange = { filter = it }, singleLine = true,
+                textStyle = TextStyle(color = MinimalistDesign.INK, fontFamily = MinimalistDesign.FACE,
+                    fontSize = MinimalistDesign.TYPE_BODY.sp),
+                cursorBrush = SolidColor(MinimalistDesign.GLOW),
+                modifier = Modifier.fillMaxWidth().padding(bottom = MinimalistDesign.GAP.dp).testTag(TAG_FILTER),
+                decorationBox = { inner ->
+                    Box {
+                        if (filter.isEmpty()) MinimalistDesign.Body("${MinimalistDesign.PROMPT}filter", colour = MinimalistDesign.INK_DIM)
+                        inner()
+                    }
                 },
             )
-        }
-        if (visible.isEmpty()) {
-            listContainer.addView(MinimalistDesign.space(ctx, MinimalistDesign.GAP))
-            listContainer.addView(MinimalistDesign.hint(ctx, "— no matches —"))
+            MinimalistDesign.Rule()
+
+            LazyColumn(Modifier.weight(1f).testTag(TAG_LIST)) {
+                items(visible) { app ->
+                    MinimalistDesign.Line(app.label, Modifier.testTag(lineTag(app.label))) {
+                        Haptics.tap(view)
+                        runCatching { app.launch() }
+                    }
+                }
+                if (visible.isEmpty()) item {
+                    Column {
+                        MinimalistDesign.Space(MinimalistDesign.GAP)
+                        MinimalistDesign.Hint("— no matches —", Modifier.testTag(TAG_NONE))
+                    }
+                }
+            }
+
+            MinimalistDesign.Rule()
+            MinimalistDesign.Space(MinimalistDesign.GAP_TIGHT)
+            MinimalistDesign.Hint("tap to launch  ·  double-tap to lock")
         }
     }
 
@@ -170,6 +144,17 @@ class MinimalistBlackFragment : Fragment() {
     }
 
     companion object {
+        const val TAG_FILTER = "minimalist:filter"
+        const val TAG_LIST = "minimalist:list"
+        const val TAG_NONE = "minimalist:none"
+        fun lineTag(label: String) = "minimalist:line:$label"
+
+        /** The filter: case-insensitive substring over the label; blank matches everything. */
+        internal fun matches(label: String, filter: String): Boolean {
+            val needle = filter.trim().lowercase()
+            return needle.isBlank() || label.lowercase().contains(needle)
+        }
+
         fun newInstance() = MinimalistBlackFragment()
     }
 }

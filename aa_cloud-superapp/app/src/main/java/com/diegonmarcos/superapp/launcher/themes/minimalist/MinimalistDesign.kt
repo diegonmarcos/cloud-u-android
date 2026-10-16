@@ -1,14 +1,26 @@
 package com.diegonmarcos.superapp.launcher.themes.minimalist
 
-import android.content.Context
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
-import android.util.TypedValue
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.TextView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * The COMPLETE design vocabulary of the Cloud Minimalist Black mode.
@@ -31,6 +43,10 @@ import android.widget.TextView
  *     dense list of forty apps scannable without any icon at all.
  *   · NO CONTAINERS. Structure comes from prompt characters and indentation,
  *     the way a shell does it. There are no cards and no rounded corners.
+ *
+ * Compose since #773: the vocabulary is the same, expressed as a [KitPalette] ([kit]: GROUND is
+ * the surface, INK/INK_DIM the two text roles, GLOW the accent) plus composables, so the page sits
+ * under CloudKitTheme like every other page while still borrowing nothing from `ui/`.
  */
 internal object MinimalistDesign {
 
@@ -39,19 +55,26 @@ internal object MinimalistDesign {
     // every other mode by definition, and this vocabulary must not be.
 
     /** The ground. Black, because a terminal's ground is black. */
-    const val GROUND = 0xFF000000.toInt()
+    val GROUND = Color(0xFF000000)
 
     /** Body phosphor. 10.9:1 on black — long lists stay readable. */
-    const val INK = 0xFFB8E6B8.toInt()
+    val INK = Color(0xFFB8E6B8)
 
     /** The quieter phosphor: hints, counts, section chrome. */
-    const val INK_DIM = 0xFF7FB77F.toInt()
+    val INK_DIM = Color(0xFF7FB77F)
 
     /** The bright accent. Reserved for what the user acts on. */
-    const val GLOW = 0xFF00FF66.toInt()
+    val GLOW = Color(0xFF00FF66)
 
     /** A rule, at the accent's hue but barely present. */
-    const val HAIRLINE = 0x3300FF66
+    val HAIRLINE = Color(0x3300FF66)
+
+    /** The mode's palette in kit roles. */
+    val kit = KitPalette(
+        surface = GROUND, surfaceSelected = GROUND,
+        textPrimary = INK, textSecondary = INK_DIM,
+        accent = GLOW, hairline = HAIRLINE, tileInk = GROUND,
+    )
 
     // ── Metric ───────────────────────────────────────────────────────────
     // A terminal is a character grid, so the scale is a line-height scale.
@@ -69,97 +92,65 @@ internal object MinimalistDesign {
     const val TYPE_BODY = 13f
     const val TYPE_HINT = 11f
 
-    val FACE: Typeface = Typeface.MONOSPACE
+    val FACE: FontFamily = FontFamily.Monospace
 
     /** The shell prompt. This mode's entire decorative budget. */
     const val PROMPT = "$ "
 
+    fun gap(step: Int): Dp = step.dp
+
     // ── Primitives ───────────────────────────────────────────────────────
 
-    fun dp(ctx: Context, value: Int): Int = TypedValue.applyDimension(
-        TypedValue.COMPLEX_UNIT_DIP, value.toFloat(), ctx.resources.displayMetrics,
-    ).toInt()
-
-    fun rule(ctx: Context): View = View(ctx).apply {
-        layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(ctx, 1),
-        )
-        setBackgroundColor(HAIRLINE)
+    @Composable
+    fun Rule() {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(HAIRLINE))
     }
 
-    fun space(ctx: Context, height: Int): View = View(ctx).apply {
-        layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(ctx, height),
-        )
-    }
-
-    /** Square outline. No radius anywhere in this mode — a terminal has
-     *  corners, not curves. */
-    fun outline(ctx: Context): GradientDrawable = GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        cornerRadius = 0f
-        setColor(Color.TRANSPARENT)
-        setStroke(dp(ctx, 1), HAIRLINE)
+    @Composable
+    fun Space(height: Int) {
+        Box(Modifier.fillMaxWidth().height(height.dp))
     }
 
     // ── Text ─────────────────────────────────────────────────────────────
 
-    private fun text(ctx: Context, value: String, size: Float, colour: Int): TextView =
-        TextView(ctx).apply {
-            text = value
-            setTextColor(colour)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, size)
-            typeface = FACE
-            includeFontPadding = false
-        }
+    private fun style(size: Float) = TextStyle(fontFamily = FACE, fontSize = size.sp)
 
     /** A section heading, written the way a shell writes one. */
-    fun head(ctx: Context, value: String): TextView =
-        text(ctx, "$PROMPT${value.lowercase()}", TYPE_HEAD, GLOW)
+    @Composable
+    fun Head(value: String, modifier: Modifier = Modifier) {
+        Text("$PROMPT${value.lowercase()}", color = GLOW, style = style(TYPE_HEAD), modifier = modifier)
+    }
 
-    fun body(ctx: Context, value: String, colour: Int = INK): TextView =
-        text(ctx, value, TYPE_BODY, colour)
+    @Composable
+    fun Body(value: String, modifier: Modifier = Modifier, colour: Color = INK) {
+        Text(value, color = colour, style = style(TYPE_BODY), modifier = modifier)
+    }
 
-    fun hint(ctx: Context, value: String): TextView =
-        text(ctx, value, TYPE_HINT, INK_DIM)
+    @Composable
+    fun Hint(value: String, modifier: Modifier = Modifier) {
+        Text(value, color = INK_DIM, style = style(TYPE_HINT), modifier = modifier)
+    }
 
     // ── Components ───────────────────────────────────────────────────────
 
-    /** The mode's one list item: a line of output. Tappable lines carry the
-     *  prompt so that "what can I act on" is legible without any colour or
-     *  container to mark it. */
-    fun line(
-        ctx: Context,
-        value: String,
-        trailing: String = "",
-        onTap: (() -> Unit)? = null,
-    ): LinearLayout = LinearLayout(ctx).apply {
-        orientation = LinearLayout.HORIZONTAL
-        layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-        )
-        setPadding(0, dp(ctx, GAP_TIGHT), 0, dp(ctx, GAP_TIGHT))
-        addView(
-            body(ctx, if (onTap != null) "$PROMPT$value" else "  $value").apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f,
-                )
-            },
-        )
-        if (trailing.isNotEmpty()) addView(hint(ctx, trailing))
-        onTap?.let { handler ->
-            isClickable = true
-            setOnClickListener { handler() }
+    /** The line's text: tappable lines carry the prompt so that "what can I act on" is legible
+     *  without any colour or container to mark it. */
+    fun lineText(value: String, tappable: Boolean): String = if (tappable) "$PROMPT$value" else "  $value"
+
+    /** The mode's one list item: a line of output. */
+    @Composable
+    fun Line(value: String, modifier: Modifier = Modifier, trailing: String = "", onTap: (() -> Unit)? = null) {
+        Row(modifier.fillMaxWidth()
+            .then(if (onTap != null) Modifier.clickable { onTap() } else Modifier)
+            .padding(vertical = GAP_TIGHT.dp)) {
+            Body(lineText(value, onTap != null), Modifier.weight(1f))
+            if (trailing.isNotEmpty()) Hint(trailing)
         }
     }
 
     /** The page scaffold: black to the edges, a single gutter, vertical flow. */
-    fun page(ctx: Context): LinearLayout = LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        setBackgroundColor(GROUND)
-        setPadding(dp(ctx, GAP_WIDE), 0, dp(ctx, GAP_WIDE), 0)
-        layoutParams = ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT,
-        )
+    @Composable
+    fun Page(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+        Column(modifier.fillMaxSize().background(GROUND).padding(horizontal = GAP_WIDE.dp), content = content)
     }
 }
