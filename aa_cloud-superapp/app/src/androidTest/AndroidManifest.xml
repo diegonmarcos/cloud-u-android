@@ -6,6 +6,7 @@
         <activity
             android:name="com.diegonmarcos.superapp.edgetest.VictimActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:theme="@android:style/Theme.Material.NoActionBar" />
     </application>
 </manifest>
