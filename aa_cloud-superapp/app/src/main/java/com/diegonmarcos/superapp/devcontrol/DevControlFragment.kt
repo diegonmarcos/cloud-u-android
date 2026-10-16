@@ -126,7 +126,7 @@ class DevControlFragment : KitComposeFragment() {
                             AboutSectionView(block.section)
                         }
                         AboutBlock.BackToIndex -> AboutBackToIndex { scope.launch { list.animateScrollToItem(1) } }
-                        AboutBlock.CopyAll -> AboutButton(AboutItem.Button("Copy All Infos", false) { copyAll(ctx, page) })
+                        AboutBlock.CopyAll -> AboutButton(AboutItem.Button("Copy All Infos", false, onClick = { copyAll(ctx, page) }))
                     }
                 }
             }
