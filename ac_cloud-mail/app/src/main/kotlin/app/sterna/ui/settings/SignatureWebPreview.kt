@@ -70,7 +70,7 @@ internal fun SignatureWebPreview(
                     object {
                         @JavascriptInterface
                         fun onHtml(html: String) {
-                            view.post { report.value(html) }
+                            view.post { report.value.invoke(html) }
                         }
                     },
                     SignaturePreview.BRIDGE,

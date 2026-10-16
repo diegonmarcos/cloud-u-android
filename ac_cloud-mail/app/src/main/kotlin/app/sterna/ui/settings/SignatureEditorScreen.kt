@@ -410,6 +410,24 @@ internal fun SignatureEditorScreen(
                                     Modifier.fillMaxSize(),
                                 )
                             }
+                            if (canVisual && source.isNotBlank()) {
+                                val plain = remember(source) { SignatureHtmlTools.plainText(state.source) }
+                                Text(
+                                    stringResource(R.string.settings_signature_plain_title),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = MailMetrics.s8, vertical = MailMetrics.s2),
+                                )
+                                Text(
+                                    plain,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    color = scheme.onSurfaceVariant,
+                                    maxLines = 4,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = MailMetrics.s8).padding(bottom = MailMetrics.s4),
+                                )
+                            }
                         }
                     }
                     if (wide) {
