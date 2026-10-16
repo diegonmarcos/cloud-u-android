@@ -249,11 +249,12 @@ jobs:
       - name: database relations, rollups and synced blocks over real blocks
         working-directory: ac_cloud-notes/blocksuite/affine/all
         run: |
-          NO_COLOR=1 yarn vitest run src/__tests__/database src/__tests__/synced-block 2>&1 | tee /tmp/rel.log
+          NO_COLOR=1 yarn vitest run src/__tests__/database src/__tests__/synced-block src/__tests__/connector-anchors 2>&1 | tee /tmp/rel.log
           sed 's/\x1b\[[0-9;]*m//g' /tmp/rel.log > /tmp/rel.plain
           grep -Eq "Test Files .* passed" /tmp/rel.plain && ! grep -Eq "failed" /tmp/rel.plain || { echo "::error::database specs did not all pass"; exit 1; }
           grep -q "relation.unit.spec" /tmp/rel.plain || { echo "::error::the relation spec did not run"; exit 1; }
           grep -q "synced-block.unit.spec" /tmp/rel.plain || { echo "::error::the synced-block spec did not run"; exit 1; }
+          grep -q "connector-anchors.unit.spec" /tmp/rel.plain || { echo "::error::the connector-anchors spec did not run"; exit 1; }
 
       - name: surface unit specs (frames to PDF deck)
         working-directory: ac_cloud-notes/blocksuite/affine/blocks/surface

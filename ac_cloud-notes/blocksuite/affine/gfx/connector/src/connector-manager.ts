@@ -130,20 +130,39 @@ export function isConnectorAndBindingsAllSelected(
   return false;
 }
 
+/** How far outside the shape the probe points sit; the anchor is where the probe's line meets the shape. */
+export const ANCHOR_PROBE_OFFSET = 10;
+
+/** Pointer distance (view px) under which a connector end is pulled onto an anchor. */
+export const MAGNETIC_ANCHOR_DISTANCE = 16;
+
+/**
+ * The points the anchors are found from: the middle of each side (the original four) and the four
+ * corners. A line from the centre through each probe hits the shape's outline at the anchor, so
+ * rectangles get corner anchors and ellipses/diamonds/triangles get the matching outline points.
+ */
+export function anchorProbePoints(
+  bound: { x: number; y: number; maxX: number; maxY: number; center: IVec },
+  offset = ANCHOR_PROBE_OFFSET
+): IVec[] {
+  return [
+    [bound.center[0], bound.y - offset],
+    [bound.center[0], bound.maxY + offset],
+    [bound.x - offset, bound.center[1]],
+    [bound.maxX + offset, bound.center[1]],
+    [bound.x - offset, bound.y - offset],
+    [bound.maxX + offset, bound.y - offset],
+    [bound.x - offset, bound.maxY + offset],
+    [bound.maxX + offset, bound.maxY + offset],
+  ];
+}
+
 export function getAnchors(ele: GfxModel) {
   const bound = Bound.deserialize(ele.xywh);
-  const offset = 10;
   const anchors: { point: PointLocation; coord: IVec }[] = [];
   const rotate = ele.rotate;
 
-  (
-    [
-      [bound.center[0], bound.y - offset],
-      [bound.center[0], bound.maxY + offset],
-      [bound.x - offset, bound.center[1]],
-      [bound.maxX + offset, bound.center[1]],
-    ] satisfies IVec[]
-  )
+  anchorProbePoints(bound)
     .map(vec => getPointFromBoundsWithRotation({ ...bound, rotate }, vec))
     .forEach(vec => {
       const rst = ele.getLineIntersections(bound.center, vec);
@@ -1003,7 +1022,7 @@ export class ConnectionOverlay extends Overlay {
         }
       }
 
-      if (shortestDistance < 8 && result) break;
+      if (shortestDistance < MAGNETIC_ANCHOR_DISTANCE && result) break;
 
       // if not, check if closes to bound
       const nearestPoint = connectable.getNearestPoint(point);
