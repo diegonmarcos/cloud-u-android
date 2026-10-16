@@ -1,15 +1,14 @@
 package app.sterna.ui.message
 
 import android.app.Application
-import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
-import androidx.core.content.FileProvider
 import app.sterna.R
 import app.sterna.core.data.account.AccountCredentials
 import app.sterna.core.data.mail.MailRepository
 import app.sterna.core.jmap.ContentTooLargeException
+import app.sterna.ui.attachment.AttachmentOpen
 import app.sterna.export.ExportCancelled
 import app.sterna.export.ExportFormat
 import app.sterna.export.ExportLabels
@@ -114,16 +113,7 @@ internal class MessageExporter(private val app: Application, private val repo: M
                 if (uri != null) {
                     say(app.getString(R.string.message_export_saved, displayNameOf(uri, name)))
                 } else {
-                    val shared = FileProvider.getUriForFile(app, "${app.packageName}.fileprovider", shareFile!!)
-                    val send = Intent(Intent.ACTION_SEND)
-                        .setType(format.mime)
-                        .putExtra(Intent.EXTRA_STREAM, shared)
-                        .putExtra(Intent.EXTRA_SUBJECT, subject)
-                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    app.startActivity(
-                        Intent.createChooser(send, app.getString(R.string.message_export_share))
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                    )
+                    AttachmentOpen.shareFile(app, shareFile!!, format.mime, subject, app.getString(R.string.message_export_share))
                 }
             } catch (c: CancellationException) {
                 cleanUp()

@@ -14,7 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
+import app.sterna.ui.components.Icon
+import app.sterna.ui.theme.MailMetrics
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -34,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
 import app.sterna.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.sterna.core.jmap.model.Email
@@ -89,8 +89,8 @@ internal fun ExportSheetContent(
     onCancel: () -> Unit,
 ) {
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s24).padding(bottom = MailMetrics.s24).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(MailMetrics.s4),
     ) {
         Text(stringResource(R.string.message_export), style = MaterialTheme.typography.titleLarge)
         EXPORT_FORMATS.forEach { f ->
@@ -98,11 +98,11 @@ internal fun ExportSheetContent(
             Row(
                 Modifier.fillMaxWidth().testTag(exportFormatTag(f))
                     .selectable(selected = f == selected, enabled = on, role = Role.RadioButton) { onSelect(f) }
-                    .padding(vertical = 6.dp),
+                    .padding(vertical = MailMetrics.s6),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 RadioButton(selected = f == selected, onClick = null, enabled = on)
-                Column(Modifier.padding(start = 12.dp)) {
+                Column(Modifier.padding(start = MailMetrics.s12)) {
                     Text(formatTitle(f), style = MaterialTheme.typography.bodyLarge)
                     Text(formatHint(f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -112,19 +112,19 @@ internal fun ExportSheetContent(
             stringResource(R.string.export_remote_images_note),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.testTag("export_remote_note").padding(top = 4.dp),
+            modifier = Modifier.testTag("export_remote_note").padding(top = MailMetrics.s4),
         )
         if (running != null) {
             if (running.total > 0) {
-                LinearProgressIndicator(progress = { (running.done.toFloat() / running.total).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                LinearProgressIndicator(progress = { (running.done.toFloat() / running.total).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(top = MailMetrics.s8))
             } else {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = MailMetrics.s8))
             }
             TextButton(onClick = onCancel, modifier = Modifier.testTag("export_cancel")) {
                 Text(stringResource(R.string.export_cancel))
             }
         } else {
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth().padding(top = MailMetrics.s8), horizontalArrangement = Arrangement.spacedBy(MailMetrics.s8)) {
                 Button(onClick = onSave, enabled = enabled(selected), modifier = Modifier.testTag("export_save")) {
                     Text(stringResource(R.string.export_save))
                 }

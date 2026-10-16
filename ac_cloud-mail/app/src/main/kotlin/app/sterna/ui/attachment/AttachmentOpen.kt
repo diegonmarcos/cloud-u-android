@@ -67,6 +67,21 @@ object AttachmentOpen {
         )
     }
 
+        /**
+         * Hand an export [file] (already in the app's cache, under the FileProvider's `exports/`) to the
+         * share sheet. The ONE other way out with a file next to [openExternally]: a content:// URI with
+         * a read grant, through a chooser.
+         */
+    fun shareFile(app: Application, file: java.io.File, mime: String, subject: String, chooserTitle: String) {
+        val uri = FileProvider.getUriForFile(app, "${app.packageName}.fileprovider", file)
+        val send = Intent(Intent.ACTION_SEND)
+            .setType(mime)
+            .putExtra(Intent.EXTRA_STREAM, uri)
+            .putExtra(Intent.EXTRA_SUBJECT, subject)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        app.startActivity(Intent.createChooser(send, chooserTitle).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
         /** The platform's own extension→type map, asked about the name on disk. Lowercased because
          *  the map is case sensitive and `REPORT.PDF` is a pdf. */
     private fun mimeFromName(name: String): String? {
