@@ -1,6 +1,22 @@
 package com.diegonmarcos.cloudc3.pages
 
 import android.content.ClipData
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
@@ -67,6 +83,17 @@ object RoutesTags {
     const val MENU_COPY = "routes_menu_copy"
     const val MENU_OPEN = "routes_menu_open"
     const val MENU_COPY_OPEN = "routes_menu_copy_open"
+    const val SHEET = "routes_sheet"
+    const val RETEST = "routes_retest"
+    const val REFRESH = "routes_refresh"
+    const val DECL_PAGE = "routes_decl_page"
+    const val DECL_RAW = "routes_decl_raw"
+    const val DECL_COPY = "routes_decl_copy"
+    const val DECL_BACK = "routes_decl_back"
+    fun light(i: Int) = "routes_light_$i"
+    fun more(i: Int) = "routes_more_$i"
+    fun lightChip(id: String) = "routes_lightchip_$id"
+    fun leg(id: String) = "routes_leg_$id"
     const val SEARCH = "routes_search"
     const val SEARCH_CLEAR = "routes_search_clear"
     const val LIST = "routes_list"
@@ -93,10 +120,12 @@ class PrefsRoutesStateStore(context: Context) : RoutesStateStore {
 }
 
 private val widths = mapOf(
+    Col.STATUS to 56.dp,
     Col.CATEGORY to 76.dp, Col.CONTAINER to 150.dp, Col.PUBLIC_URL to 250.dp, Col.AUTH_TYPE to 84.dp,
     Col.PRIVATE_URL to 190.dp, Col.VM_NAME to 100.dp, Col.VM_ADDR to 130.dp,
 )
 private val headers = mapOf(
+    Col.STATUS to "Status",
     Col.CATEGORY to "Category", Col.CONTAINER to "Container", Col.PUBLIC_URL to "Public URL", Col.AUTH_TYPE to "Auth Type",
     Col.PRIVATE_URL to "Private URL", Col.VM_NAME to "VM Name", Col.VM_ADDR to "VM IP:PORT",
 )
@@ -115,16 +144,37 @@ fun RoutesTableScreen(
     onState: (RoutesTableModel.State) -> Unit = {},
     onOpenUrl: (String) -> Unit = {},
     onOpen: (RoutesTableModel.OpenTarget) -> Unit = {},
+    /** Null = no probing (the lights stay grey). */
+    prober: Prober? = null,
+    store: RoutesProbeStore = remember { RoutesProbeStore() },
+    /** data/declarations.json: container name -> declaration, for the More page. */
+    declarations: JsonObject = JsonObject(emptyMap()),
 ) {
     var state by remember { mutableStateOf(initial) }
     fun update(s: RoutesTableModel.State) { state = s; onState(s) }
-    val shown = remember(rows, state) { RoutesTableModel.view(rows, state) }
+    val lightOf: (RoutesTableModel.Row) -> ProbeModel.Light = { ProbeModel.light(it, store.results[it.key]) }
+    val shown by remember(rows) { derivedStateOf { RoutesTableModel.view(rows, state, lightOf) } }
     val scroll = rememberScrollState()
     val c = MaterialTheme.colorScheme
     val ctx = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    var sheetRow by remember { mutableStateOf<RoutesTableModel.Row?>(null) }
+    var detailRow by remember { mutableStateOf<RoutesTableModel.Row?>(null) }
+    LaunchedEffect(rows, prober) { if (prober != null) store.run(rows, prober, force = false) }
+
+    detailRow?.let { row ->
+        BackHandler { detailRow = null }
+        DeclarationPage(row, declarations[row.container] as? JsonObject, onBack = { detailRow = null })
+        return
+    }
     Column(Modifier.fillMaxSize().testTag(RoutesTags.SCREEN)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+            ChipRow("Light") {
+                ProbeModel.Light.entries.forEach { l ->
+                    Chip(l.label, l.id in state.lights, RoutesTags.lightChip(l.id)) { update(RoutesTableModel.toggleLight(state, l.id)) }
+                }
+            }
             ChipRow("Auth") {
                 RoutesTableModel.authOptions(rows).forEach { a ->
                     Chip(a.label, a.id in state.auth, RoutesTags.authChip(a.id)) { update(RoutesTableModel.toggleAuth(state, a.id)) }
@@ -139,16 +189,25 @@ fun RoutesTableScreen(
                 Chip("${state.category}  \u00D7", true, RoutesTags.CATEGORY_CHIP) { update(state.copy(category = "")) }
             }
             SearchBox(state.query) { update(state.copy(query = it)) }
-            Text(
-                RoutesTableModel.countLine(shown.size, rows.size),
-                Modifier.padding(top = 2.dp).testTag(RoutesTags.COUNT),
-                color = c.onSurfaceVariant, style = MaterialTheme.typography.labelMedium,
-            )
+            Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    RoutesTableModel.countLine(shown.size, rows.size),
+                    Modifier.weight(1f).testTag(RoutesTags.COUNT),
+                    color = c.onSurfaceVariant, style = MaterialTheme.typography.labelMedium,
+                )
+                if (prober != null) Text(
+                    if (store.running.value) "Checking\u2026" else "\u21BB Refresh",
+                    Modifier.clickable(enabled = !store.running.value, role = Role.Button) {
+                        scope.launch { store.run(rows, prober, force = true) }
+                    }.padding(horizontal = 8.dp, vertical = 2.dp).testTag(RoutesTags.REFRESH),
+                    color = c.primary, style = MaterialTheme.typography.labelLarge,
+                )
+            }
         }
         Row(Modifier.fillMaxWidth().background(c.surfaceVariant).horizontalScroll(scroll)) {
             Col.entries.forEach { col ->
                 val active = state.sort == col
-                val mark = if (!active) "" else if (state.ascending) " ▲" else " ▼"
+                val mark = if (!active) "" else if (state.ascending) " \u25B2" else " \u25BC"
                 Text(
                     headers.getValue(col) + mark,
                     Modifier.width(widths.getValue(col)).height(30.dp)
@@ -161,11 +220,25 @@ fun RoutesTableScreen(
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
+            Text("More", Modifier.width(MORE_WIDTH).height(30.dp).padding(horizontal = 8.dp, vertical = 6.dp),
+                color = c.onSurface, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge, maxLines = 1)
         }
         LazyColumn(Modifier.fillMaxSize().testTag(RoutesTags.LIST)) {
-            itemsIndexed(shown, key = { i, r -> "$i/${r.container}/${r.publicUrl}/${r.privateUrl}" }) { _, r ->
-                Row(Modifier.fillMaxWidth().horizontalScroll(scroll).border(BorderStroke(0.5.dp, c.outline.copy(alpha = 0.25f)))) {
+            itemsIndexed(shown, key = { i, r -> "$i/${r.container}/${r.publicUrl}/${r.privateUrl}" }) { index, r ->
+                Row(Modifier.fillMaxWidth().horizontalScroll(scroll).border(BorderStroke(0.5.dp, c.outline.copy(alpha = 0.25f))),
+                    verticalAlignment = Alignment.CenterVertically) {
                     Col.entries.forEach { col ->
+                        if (col == Col.STATUS) {
+                            val light = lightOf(r)
+                            Box(
+                                Modifier.width(widths.getValue(col)).height(30.dp)
+                                    .clickable(role = Role.Button) { sheetRow = r }
+                                    .testTag(RoutesTags.light(index))
+                                    .semantics { contentDescription = "Status ${light.id}" },
+                                contentAlignment = Alignment.Center,
+                            ) { Box(Modifier.size(14.dp).clip(CircleShape).background(lightColor(light))) }
+                            return@forEach
+                        }
                         val text = r.text(col)
                         val open = col == Col.PUBLIC_URL && text.isNotBlank()
                         var menu by remember { mutableStateOf(false) }
@@ -198,6 +271,102 @@ fun RoutesTableScreen(
                                     modifier = Modifier.testTag(RoutesTags.MENU_COPY_OPEN),
                                     onClick = { menu = false; copyToClipboard(ctx, text); doOpen() })
                             }
+                        }
+                    }
+                    Text("More", Modifier.width(MORE_WIDTH).clickable(role = Role.Button) { detailRow = r }
+                        .padding(horizontal = 8.dp, vertical = 5.dp).testTag(RoutesTags.more(index)),
+                        color = c.primary, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                }
+            }
+        }
+    }
+    sheetRow?.let { r ->
+        LightSheet(r, store.results[r.key], lightOf(r), canRetest = prober != null,
+            onRetest = { if (prober != null) scope.launch { store.retest(r, prober) } },
+            onDismiss = { sheetRow = null })
+    }
+}
+
+private val MORE_WIDTH = 72.dp
+
+@Composable
+private fun lightColor(l: ProbeModel.Light): Color = when (l) {
+    ProbeModel.Light.GREEN -> Color(0xFF2E9E5B)
+    ProbeModel.Light.YELLOW -> Color(0xFFE0A800)
+    ProbeModel.Light.RED -> Color(0xFFD64545)
+    ProbeModel.Light.GREY -> MaterialTheme.colorScheme.outline
+}
+
+private val timeFmt = SimpleDateFormat("HH:mm:ss", Locale.US)
+
+/** The breakdown under a row's light: each leg's DNS result, HTTP status, latency, error and checked-at time. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LightSheet(
+    row: RoutesTableModel.Row, probe: ProbeModel.RowProbe?, light: ProbeModel.Light,
+    canRetest: Boolean, onRetest: () -> Unit, onDismiss: () -> Unit,
+) {
+    val c = MaterialTheme.colorScheme
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag(RoutesTags.SHEET)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(14.dp).clip(CircleShape).background(lightColor(light)))
+                Text("  ${row.container} \u00B7 ${light.label}", style = MaterialTheme.typography.titleMedium, color = c.onSurface)
+            }
+            Text(ProbeModel.summary(light, probe), Modifier.padding(top = 2.dp, bottom = 8.dp), color = c.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall)
+            val legs = ProbeModel.legsOf(row)
+            if (legs.isEmpty()) Text("No endpoint to check.", color = c.onSurface, style = MaterialTheme.typography.bodyMedium)
+            legs.forEach { (leg, target) ->
+                val r = probe?.legs?.get(leg)
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag(RoutesTags.leg(leg.id))) {
+                    Text("${leg.label}: ${r?.status?.name ?: "NOT CHECKED"}", fontWeight = FontWeight.SemiBold,
+                        color = c.onSurface, style = MaterialTheme.typography.bodyMedium)
+                    Text(target, color = c.primary, style = MaterialTheme.typography.bodySmall)
+                    if (r != null) {
+                        Text("DNS: ${r.dns.ifBlank { "n/a (address literal)" }}", color = c.onSurface, style = MaterialTheme.typography.bodySmall)
+                        Text("HTTP: ${r.http?.toString() ?: "no reply"}   Latency: ${r.latencyMs?.let { "$it ms" } ?: "n/a"}",
+                            color = c.onSurface, style = MaterialTheme.typography.bodySmall)
+                        if (r.error.isNotBlank()) Text("Error: ${r.error}", color = c.onSurface, style = MaterialTheme.typography.bodySmall)
+                        Text("Checked: ${timeFmt.format(Date(r.checkedAt))} (${r.source})", color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+            if (probe?.containerDown == true) Text("Fleet API: container not running", color = c.error, style = MaterialTheme.typography.bodySmall)
+            Text("Re-test", Modifier.padding(vertical = 10.dp).clickable(enabled = canRetest, role = Role.Button) { onRetest() }
+                .testTag(RoutesTags.RETEST), color = if (canRetest) c.primary else c.onSurfaceVariant, style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+/** The More page: the container's whole declaration in readable sections, a raw-JSON toggle and copy. */
+@Composable
+fun DeclarationPage(row: RoutesTableModel.Row, decl: JsonObject?, onBack: () -> Unit) {
+    val c = MaterialTheme.colorScheme
+    val ctx = LocalContext.current
+    var raw by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().background(c.surface).testTag(RoutesTags.DECL_PAGE)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("\u2190", Modifier.clickable(role = Role.Button) { onBack() }.padding(horizontal = 10.dp, vertical = 6.dp).testTag(RoutesTags.DECL_BACK),
+                color = c.primary, style = MaterialTheme.typography.titleLarge)
+            Text(row.container, Modifier.weight(1f), color = c.onSurface, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(if (raw) "Readable" else "Raw JSON", Modifier.clickable(role = Role.Button) { raw = !raw }.padding(8.dp).testTag(RoutesTags.DECL_RAW),
+                color = c.primary, style = MaterialTheme.typography.labelLarge)
+            if (decl != null) Text("Copy", Modifier.clickable(role = Role.Button) { copyToClipboard(ctx, DeclarationModel.raw(decl)) }.padding(8.dp)
+                .testTag(RoutesTags.DECL_COPY), color = c.primary, style = MaterialTheme.typography.labelLarge)
+        }
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
+            when {
+                decl == null -> Text("No declaration is carried for ${row.container}.", color = c.onSurface, style = MaterialTheme.typography.bodyMedium)
+                raw -> Text(DeclarationModel.raw(decl), Modifier.testTag("routes_decl_rawtext"), color = c.onSurface,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
+                else -> DeclarationModel.sections(decl).forEach { sec ->
+                    Text(sec.title, Modifier.padding(top = 12.dp, bottom = 4.dp), color = c.primary, style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold)
+                    sec.lines.forEach { (k, v) ->
+                        Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                            Text(k, Modifier.width(120.dp), color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            Text(v, Modifier.weight(1f), color = c.onSurface, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
@@ -288,6 +457,9 @@ class RoutesTableFragment : KitComposeFragment() {
             rows = remember { Declarations.routes },
             initial = initial,
             onState = store::save,
+            prober = remember { NetProber(ctx) },
+            store = RoutesProbeStore.shared,
+            declarations = remember { Declarations.declarations },
             onOpenUrl = { (activity as? C3HealthFragment.UrlClickListener)?.onUrlClicked(it) },
             onOpen = { t ->
                 when (t) {

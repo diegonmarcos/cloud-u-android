@@ -31,7 +31,7 @@ class RoutesTableModelTest {
 
     @Test
     fun `sorting by any column works, both directions`() {
-        for (c in Column.entries) {
+        for (c in Column.DATA) {
             val asc = M.view(rows, M.State(c, true)).map { it.text(c) }.filter { it.isNotBlank() }
             val desc = M.view(rows, M.State(c, false)).map { it.text(c) }.filter { it.isNotBlank() }
             assertEquals("column $c: descending is ascending reversed", asc.sortedWith(M::naturalCompare), asc)

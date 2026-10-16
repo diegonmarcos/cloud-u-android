@@ -535,6 +535,8 @@ _rt = open(sys.argv[3].replace("TabFragments.kt", "RoutesTable.kt"), encoding="u
 _rm = open(sys.argv[3].replace("TabFragments.kt", "RoutesTableModel.kt"), encoding="utf-8").read()
 if "SearchBox(" not in _rt or "fun matches(" not in _rm or "state.query" not in _rm:
     bad.append("the Table page lost its search box / predicate (owner item 11)")
+if "ProbeModel.light(" not in _rt or "LightSheet(" not in _rt or "DeclarationPage(" not in _rt:
+    bad.append("the Table page lost its status light / breakdown sheet / More declaration page (owner item 13)")
 if "onLongClick" not in _rt or "Copy & Open" not in _rt or "fun openTarget(" not in _rm:
     bad.append("the Table page lost its long-press Copy / Open / Copy & Open menu (owner item 12)")
 if '"stack" -> C3StackFragment.newInstance(C3StackFragment.STACK_INFRA)' not in tabs: bad.append("InfraFragment does not render stack_infra")

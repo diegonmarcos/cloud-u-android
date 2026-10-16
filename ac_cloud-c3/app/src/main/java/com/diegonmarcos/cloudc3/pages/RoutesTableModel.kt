@@ -14,13 +14,20 @@ object RoutesTableModel {
 
     /** The seven columns, in the owner's order. [key] is the row field and the column's test tag. */
     enum class Column(val key: String) {
+        /** The status light (first column): sorted by [ProbeModel.rank], never a text cell. */
+        STATUS("status"),
         CATEGORY("category"),
         CONTAINER("container"),
         PUBLIC_URL("public_url"),
         AUTH_TYPE("auth_type"),
         PRIVATE_URL("private_url"),
         VM_NAME("vm_name"),
-        VM_ADDR("vm_addr"),
+        VM_ADDR("vm_addr");
+
+        companion object {
+            /** The seven text columns (everything but the light). */
+            val DATA: List<Column> = entries.filter { it != STATUS }
+        }
     }
 
     /** The auth tiers a row can be in. [id] is what the generator writes; [label] is what the filter prints. */
@@ -40,7 +47,11 @@ object RoutesTableModel {
         val vmName: String,
         val vmAddr: String,
     ) {
+        /** Identity of a row for the probe cache. */
+        val key: String get() = "$container|$publicUrl|$privateUrl"
+
         fun text(c: Column): String = when (c) {
+            Column.STATUS -> ""
             Column.CATEGORY -> category
             Column.CONTAINER -> container
             Column.PUBLIC_URL -> publicUrl
@@ -64,6 +75,8 @@ object RoutesTableModel {
         val query: String = "",
         /** Exactly this category (set by Open on a category cell); blank = all. */
         val category: String = "",
+        /** Light ids (green / yellow / red / grey) to keep; empty = every light. */
+        val lights: Set<String> = emptySet(),
     )
 
     /** Rows from the slice's `routes` array; a missing or malformed array is an empty table, never a crash. */
@@ -75,12 +88,17 @@ object RoutesTableModel {
     }
 
     /** Filter, then sort. Blank cells sort LAST in both directions, so a column's gaps never lead the table. */
-    fun view(rows: List<Row>, state: State): List<Row> {
+    fun view(rows: List<Row>, state: State, light: (Row) -> ProbeModel.Light = { ProbeModel.Light.GREY }): List<Row> {
         val kept = rows.filter { r ->
             (state.auth.isEmpty() || r.authType in state.auth) && (state.vms.isEmpty() || r.vmName in state.vms) &&
-                (state.category.isEmpty() || r.category == state.category) && matches(r, state.query)
+                (state.category.isEmpty() || r.category == state.category) && matches(r, state.query) &&
+                (state.lights.isEmpty() || light(r).id in state.lights)
         }
         val byText = Comparator<Row> { a, b ->
+            if (state.sort == Column.STATUS) {
+                val c = ProbeModel.rank(light(a)).compareTo(ProbeModel.rank(light(b)))
+                return@Comparator if (state.ascending) c else -c
+            }
             val x = a.text(state.sort)
             val y = b.text(state.sort)
             when {
@@ -100,7 +118,7 @@ object RoutesTableModel {
     fun matches(row: Row, query: String): Boolean {
         val words = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
         if (words.isEmpty()) return true
-        val cells = Column.entries.map { row.text(it).lowercase() }
+        val cells = Column.DATA.map { row.text(it).lowercase() }
         return words.all { w -> cells.any { w in it } }
     }
 
@@ -131,7 +149,7 @@ object RoutesTableModel {
             Column.CONTAINER -> OpenTarget.Container(v)
             Column.VM_NAME -> OpenTarget.Vm(v)
             Column.CATEGORY -> OpenTarget.Category(v)
-            Column.AUTH_TYPE -> null
+            Column.AUTH_TYPE, Column.STATUS -> null
         }
     }
 
@@ -140,6 +158,7 @@ object RoutesTableModel {
         if (state.sort == column) state.copy(ascending = !state.ascending) else state.copy(sort = column, ascending = true)
 
     fun toggleAuth(state: State, id: String): State = state.copy(auth = state.auth.toggled(id))
+    fun toggleLight(state: State, id: String): State = state.copy(lights = state.lights.toggled(id))
     fun toggleVm(state: State, vm: String): State = state.copy(vms = state.vms.toggled(vm))
 
     /** Auth types worth a chip: the owner's three always, Open only when a row is in it. In tier order. */
@@ -157,17 +176,18 @@ object RoutesTableModel {
 
     fun encode(s: State): String =
         listOf(s.sort.key, if (s.ascending) "asc" else "desc", s.auth.sorted().joinToString(","), s.vms.sorted().joinToString("|"),
-            java.net.URLEncoder.encode(s.query, "UTF-8"), java.net.URLEncoder.encode(s.category, "UTF-8")).joinToString(";")
+            java.net.URLEncoder.encode(s.query, "UTF-8"), java.net.URLEncoder.encode(s.category, "UTF-8"), s.lights.sorted().joinToString(",")).joinToString(";")
 
     /** Anything unreadable is the default state: stale or hand-edited preferences cannot break the page. */
     fun decode(text: String?): State {
         val p = text?.split(';') ?: return State()
-        if (p.size !in 4..6) return State()
+        if (p.size !in 4..7) return State()
         val col = Column.entries.firstOrNull { it.key == p[0] } ?: return State()
         val asc = when (p[1]) { "asc" -> true; "desc" -> false; else -> return State() }
         return State(col, asc, p[2].split(',').filter { it.isNotBlank() }.toSet(), p[3].split('|').filter { it.isNotBlank() }.toSet(),
             p.getOrNull(4)?.let { runCatching { java.net.URLDecoder.decode(it, "UTF-8") }.getOrNull() }.orEmpty(),
-            p.getOrNull(5)?.let { runCatching { java.net.URLDecoder.decode(it, "UTF-8") }.getOrNull() }.orEmpty())
+            p.getOrNull(5)?.let { runCatching { java.net.URLDecoder.decode(it, "UTF-8") }.getOrNull() }.orEmpty(),
+            p.getOrNull(6)?.split(',')?.filter { it.isNotBlank() }?.toSet().orEmpty())
     }
 
     private fun Set<String>.toggled(x: String): Set<String> = if (x in this) this - x else this + x

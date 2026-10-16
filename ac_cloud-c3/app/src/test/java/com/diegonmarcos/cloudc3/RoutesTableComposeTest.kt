@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -55,7 +56,7 @@ class RoutesTableComposeTest {
     }).around(compose)
 
     private fun r(name: String, auth: String, vm: String, pub: String = "$name.example.com") =
-        RoutesTableModel.Row("app", name, pub, auth, "$name.app:80", vm, "10.0.0.6:80")
+        RoutesTableModel.Row("app", name, pub, auth, "$name.app:80", vm, "$name.vm:80")
 
     private val rows = listOf(
         r("charlie", "bearer", "vm-b"), r("alpha", "woauth", "vm-a"), r("bravo", "mesh", "vm-a", pub = ""), r("delta", "mesh", "vm-c", pub = ""),
@@ -80,7 +81,7 @@ class RoutesTableComposeTest {
     fun `all seven columns are headed in the owner's order`() {
         show()
         val want = listOf("Category", "Container", "Public URL", "Auth Type", "Private URL", "VM Name", "VM IP:PORT")
-        Column.entries.zip(want).forEach { (c, text) -> compose.onNodeWithTag(RoutesTags.header(c)).assertTextContains(text, substring = true) }
+        Column.DATA.zip(want).forEach { (c, text) -> compose.onNodeWithTag(RoutesTags.header(c)).assertTextContains(text, substring = true) }
     }
 
     @Test
@@ -215,7 +216,7 @@ class RoutesTableComposeTest {
     @Test
     fun `long-press on any cell opens Copy, Open and Copy and Open`() {
         showWithOpen()
-        for (col in Column.entries) {
+        for (col in Column.DATA) {
             longPress(col)
             for (tag in listOf(RoutesTags.MENU_COPY, RoutesTags.MENU_OPEN, RoutesTags.MENU_COPY_OPEN)) compose.onNodeWithTag(tag).assertExists()
             compose.onNodeWithTag(RoutesTags.MENU_COPY).performClick()
@@ -279,6 +280,101 @@ class RoutesTableComposeTest {
         longPress(Column.PUBLIC_URL, 1)
         compose.onNodeWithTag(RoutesTags.MENU_COPY).assertIsNotEnabled()
         compose.onNodeWithTag(RoutesTags.MENU_OPEN).assertIsNotEnabled()
+    }
+
+    // ── status light, breakdown sheet, More page ─────────────────────────────────────────
+
+    private class FakeProber(val up: Set<String>, val down: Set<String>? = null) : com.diegonmarcos.cloudc3.pages.Prober {
+        val probed = mutableListOf<String>()
+        override suspend fun probe(leg: com.diegonmarcos.cloudc3.pages.ProbeModel.Leg, target: String): com.diegonmarcos.cloudc3.pages.ProbeModel.LegResult {
+            probed += target
+            val ok = up.any { target.contains(it) }
+            return com.diegonmarcos.cloudc3.pages.ProbeModel.LegResult(
+                leg, if (ok) com.diegonmarcos.cloudc3.pages.ProbeModel.Status.UP else com.diegonmarcos.cloudc3.pages.ProbeModel.Status.DOWN, target,
+                dns = "10.0.0.6", http = if (ok) 401 else null, latencyMs = 12, error = if (ok) "" else "ConnectException: refused", checkedAt = 1000)
+        }
+        override suspend fun containersDown(): Set<String>? = down
+    }
+
+    private val decls = kotlinx.serialization.json.Json.parseToJsonElement(
+        """{"alpha":{"container":"alpha","image":"a/a:1","env":{"names":["A"],"secret_names":["A_PASSWORD"]},"routes":{"auth_tier":"woauth"},"volumes":["d:/data"]}}"""
+    ) as kotlinx.serialization.json.JsonObject
+
+    private fun showProbed(prober: com.diegonmarcos.cloudc3.pages.Prober?) {
+        compose.setContent {
+            MaterialTheme(colorScheme = darkColorScheme()) {
+                RoutesTableScreen(rows, onState = { states += it }, prober = prober, declarations = decls)
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `lights turn from grey to green, yellow and red as the probes land`() {
+        // alpha: public + private + direct all answer; charlie: only the public answers; bravo/delta mesh-only: nothing answers
+        showProbed(FakeProber(up = setOf("alpha", "charlie.example")))
+        compose.waitForIdle()
+        fun desc(i: Int) = compose.onNodeWithTag(RoutesTags.light(i)).fetchSemanticsNode().config
+            .getOrNull(androidx.compose.ui.semantics.SemanticsProperties.ContentDescription)?.joinToString()
+        assertEquals("Status green", desc(0))   // alpha
+        assertEquals("Status red", desc(1))     // bravo (mesh-only, nothing answers)
+        assertEquals("Status yellow", desc(2))  // charlie (public up, private/direct down)
+    }
+
+    @Test
+    fun `the status header sorts worst first and the light chips filter`() {
+        showProbed(FakeProber(up = setOf("alpha", "charlie.example")))
+        tap(RoutesTags.header(Column.STATUS))
+        assertEquals(listOf("bravo", "delta", "charlie", "alpha"), containers())
+        tap(RoutesTags.lightChip("green"))
+        assertEquals(listOf("alpha"), containers())
+        compose.onNodeWithTag(RoutesTags.COUNT).assertTextEquals("1 of 4 rows")
+    }
+
+    @Test
+    fun `tapping a light opens the breakdown with each leg, and re-test probes again`() {
+        val prober = FakeProber(up = setOf("alpha.app", "alpha.example"))
+        showProbed(prober)
+        tap(RoutesTags.light(0))
+        compose.onNodeWithTag(RoutesTags.SHEET).assertExists()
+        for (leg in listOf("public", "private", "direct")) compose.onNodeWithTag(RoutesTags.leg(leg)).assertExists()
+        compose.onNodeWithTag(RoutesTags.leg("public")).assertTextContains("HTTP: 401", substring = true)
+        compose.onNodeWithTag(RoutesTags.leg("direct")).assertTextContains("ConnectException", substring = true)
+        compose.onNodeWithTag(RoutesTags.leg("direct")).assertTextContains("Latency: 12 ms", substring = true)
+        compose.onNodeWithTag(RoutesTags.leg("public")).assertTextContains("DNS: 10.0.0.6", substring = true)
+        val before = prober.probed.size
+        tap(RoutesTags.RETEST)
+        assertTrue("re-test probed the row's legs again", prober.probed.size >= before + 3)
+    }
+
+    @Test
+    fun `without a prober the lights stay grey and there is no refresh`() {
+        showProbed(null)
+        compose.onNodeWithTag(RoutesTags.light(0)).assertExists()
+        assertTrue(compose.onAllNodesWithTag(RoutesTags.REFRESH).fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
+    fun `More opens the declaration page, raw json toggles, copy puts json on the clipboard, back returns`() {
+        showProbed(null)
+        tap(RoutesTags.more(0))
+        compose.onNodeWithTag(RoutesTags.DECL_PAGE).assertExists()
+        compose.onNodeWithText("Image and runtime").assertExists()
+        compose.onNodeWithText("a/a:1").assertExists()
+        compose.onNodeWithText("A_PASSWORD").assertExists()
+        tap(RoutesTags.DECL_RAW)
+        compose.onNodeWithTag("routes_decl_rawtext").assertTextContains("\"image\": \"a/a:1\"", substring = true)
+        tap(RoutesTags.DECL_COPY)
+        assertTrue(clipboard().orEmpty().contains("\"container\": \"alpha\""))
+        tap(RoutesTags.DECL_BACK)
+        compose.onNodeWithTag(RoutesTags.SCREEN).assertExists()
+    }
+
+    @Test
+    fun `More on a row with no declaration says so`() {
+        showProbed(null)
+        tap(RoutesTags.more(1))   // bravo has none in the fixture
+        compose.onNodeWithText("No declaration is carried for bravo.").assertExists()
     }
 
     @Test
