@@ -514,7 +514,8 @@ t12() {
 import json, re, sys
 b = json.load(open(sys.argv[1], encoding="utf-8"))
 ui = b["ui"]
-sl = json.load(open(sys.argv[2], encoding="utf-8"))
+sl = {"routes": json.load(open(sys.argv[2].replace("infra_slice.json", "routes.json"), encoding="utf-8"))}
+_decl = json.load(open(sys.argv[2].replace("infra_slice.json", "declarations.json"), encoding="utf-8"))
 tabs = open(sys.argv[3], encoding="utf-8").read()
 bad = []
 secs = {x["id"]: x for x in ui.get("sections") or []}
@@ -538,7 +539,8 @@ if "onLongClick" not in _rt or "Copy & Open" not in _rt or "fun openTarget(" not
     bad.append("the Table page lost its long-press Copy / Open / Copy & Open menu (owner item 12)")
 if '"stack" -> C3StackFragment.newInstance(C3StackFragment.STACK_INFRA)' not in tabs: bad.append("InfraFragment does not render stack_infra")
 routes = sl.get("routes") or []
-if len(routes) < 50: bad.append("data/infra_slice.json carries %d routes - run data/gen_infra_slice.py" % len(routes))
+if set(_decl) != {r["container"] for r in routes}: bad.append("data/declarations.json does not cover exactly the Table rows - run data/gen_infra_slice.py")
+if len(routes) < 50: bad.append("data/routes.json carries %d routes - run data/gen_infra_slice.py" % len(routes))
 want = {"category", "container", "public_url", "auth_type", "private_url", "vm_name", "vm_addr"}
 for r in routes:
     if set(r) != want: bad.append("route %r has fields %s, not the seven columns" % (r.get("container"), sorted(r))); break
@@ -723,8 +725,9 @@ m_alias_gone()   { jqset "$1$A/build.json" 'del d["ui"]["aliases"]["pages"]["pub
 m_more_back()    { jqset "$1$A/build.json" 'd["ui"]["carried_c3"]["stack_topology"].append(collections.OrderedDict([("kind","tile_row"),("title","More"),("tiles",[])]))'; }
 m_addr_back()    { jqset "$1$A/build.json" 'd["ui"]["carried_c3"]["stack_topology"].append(collections.OrderedDict([("kind","c3_public"),("title","Public")]))'; }
 m_table_dropped() { jqset "$1$A/build.json" 'sec("containers")["pages"]=[p for p in sec("containers")["pages"] if p["id"]!="table"]'; }
-m_route_field()  { jqset "$1$A/data/infra_slice.json" 'del d["routes"][0]["vm_addr"]'; }
-m_route_authless() { jqset "$1$A/data/infra_slice.json" 'd["routes"][0]["auth_type"]="anything"'; }
+m_route_field()  { jqset "$1$A/data/routes.json" 'del d[0]["vm_addr"]'; }
+m_route_authless() { jqset "$1$A/data/routes.json" 'd[0]["auth_type"]="anything"'; }
+m_decl_gone()    { jqset "$1$A/data/declarations.json" 'd.pop(next(iter(d)))'; }
 
 mutate "a SIXTH tab appears in the declaration"           c_t1 m_sixth_tab
 mutate "Home is moved off the centre position"            c_t1 m_home_offset
@@ -759,10 +762,11 @@ mutate "an address table comes back on Topology"          c_t12 m_addr_back
 mutate "the Table page is dropped from Containers"        c_t12 m_table_dropped
 mutate "a route loses a Table column"                     c_t12 m_route_field
 mutate "a route carries an unknown auth type"             c_t12 m_route_authless
+mutate "a row loses its declaration page data"            c_t12 m_decl_gone
 
 echo
 if [ "$FAILURES" -ne 0 ] || [ "$MUT_FAIL" -ne 0 ]; then
     echo "FAIL  $FAILURES assertion(s) red, $MUT_FAIL mutation(s) void or hollow"
     exit 1
 fi
-echo "PASS  12 properties asserted, 33 mutations each proved able to go red"
+echo "PASS  12 properties asserted, 34 mutations each proved able to go red"

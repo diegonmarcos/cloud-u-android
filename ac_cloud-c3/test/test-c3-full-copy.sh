@@ -78,7 +78,7 @@ for k in ("c3_public", "c3_private"):
         bad.append("stack_topology still embeds the %r address card - it moved to the Table page" % k)
 import os
 _here = os.path.abspath(app)
-_slice = json.load(open(os.path.join(_here, "data", "infra_slice.json"), encoding="utf-8"))
+_slice = {"routes": json.load(open(os.path.join(_here, "data", "routes.json"), encoding="utf-8"))}
 _have = {(r.get("container"), bool(r.get("public_url"))) for r in _slice.get("routes") or []}
 for fn, key, has_pub in (("services_public.json", "name", True), ("services_private.json", "name", False)):
     for row in json.load(open(os.path.join(_here, "data", fn), encoding="utf-8")):
@@ -358,7 +358,7 @@ assert s!=b
 open(p,"w").write(s)
 PY
 }
-m_table_row_lost() { pyjson "$1/data/infra_slice.json" 'd["routes"]=d["routes"][1:]'; }
+m_table_row_lost() { pyjson "$1/data/routes.json" 'd[:]=d[1:]'; }
 m_dead_anchor() { pyjson "$1/build.json" 'c3=d["ui"]["carried_c3"]; c3["stack_topology"][0]["tiles"][0]["target"]="anchor:no-such-card"'; }
 m_orphan_page() { pyjson "$1/build.json" 'c3=d["ui"]["carried_c3"]; c3["stack_observability"][-1]["tiles"][0]["target"]="page:c3/nowhere"'; }
 m_drop_module() { pyjson "$1/build.json" 'del d["modules"]["libs:ops"]'; }

@@ -1,0 +1,938 @@
+[
+ {
+  "category": "tools",
+  "container": "languagetool",
+  "public_url": "languagetool.diegonmarcos.com",
+  "auth_type": "mesh",
+  "private_url": "languagetool.app:8010",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8010"
+ },
+ {
+  "category": "sec",
+  "container": "c3-infra-api",
+  "public_url": "api.diegonmarcos.com/c3-infra-api",
+  "auth_type": "bearer",
+  "private_url": "c3-infra-api.app:8081",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8081"
+ },
+ {
+  "category": "obs",
+  "container": "c3-public-api",
+  "public_url": "api.diegonmarcos.com/pub",
+  "auth_type": "bearer",
+  "private_url": "c3-public-api.app:8087",
+  "vm_name": "oci-E2-f_1",
+  "vm_addr": "10.0.0.4:8087"
+ },
+ {
+  "category": "obs",
+  "container": "c3-services-api",
+  "public_url": "api.diegonmarcos.com/c3-services-api",
+  "auth_type": "bearer",
+  "private_url": "c3-services-api.app:8082",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8082"
+ },
+ {
+  "category": "app",
+  "container": "cloud-drive-mcp",
+  "public_url": "mcp.diegonmarcos.com/cloud-drive-mcp",
+  "auth_type": "bearer",
+  "private_url": "drive-mcp.app:3109",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3109"
+ },
+ {
+  "category": "sec",
+  "container": "cloud-infra-mcp",
+  "public_url": "mcp.diegonmarcos.com/c3-infra-mcp",
+  "auth_type": "bearer",
+  "private_url": "c3-infra-mcp.app:3100",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3100"
+ },
+ {
+  "category": "app",
+  "container": "cloud-mail-mcp",
+  "public_url": "mcp.diegonmarcos.com/mail-mcp",
+  "auth_type": "bearer",
+  "private_url": "mail-mcp.app:3103",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3103"
+ },
+ {
+  "category": "app",
+  "container": "cloud-mattermost-mcp",
+  "public_url": "mcp.diegonmarcos.com/mattermost-mcp",
+  "auth_type": "bearer",
+  "private_url": "mattermost-mcp.app:3102",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3102"
+ },
+ {
+  "category": "obs",
+  "container": "cloud-services-mcp",
+  "public_url": "mcp.diegonmarcos.com/c3-services-mcp",
+  "auth_type": "bearer",
+  "private_url": "c3-services-mcp.app:3101",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3101"
+ },
+ {
+  "category": "app",
+  "container": "cloud-superapp-mcp",
+  "public_url": "mcp.diegonmarcos.com/cloud-superapp-mcp",
+  "auth_type": "bearer",
+  "private_url": "superapp-mcp.app:3110",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3110"
+ },
+ {
+  "category": "app",
+  "container": "google-personal-mcp",
+  "public_url": "mcp.diegonmarcos.com/g-personal",
+  "auth_type": "bearer",
+  "private_url": "g-personal-mcp.app:3106",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3106"
+ },
+ {
+  "category": "app",
+  "container": "google-workspace-mcp",
+  "public_url": "mcp.diegonmarcos.com/g-workspace",
+  "auth_type": "bearer",
+  "private_url": "g-workspace-mcp.app:3104",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3104"
+ },
+ {
+  "category": "app",
+  "container": "http-to-smtp-proxy-api",
+  "public_url": "api.diegonmarcos.com/http-to-smtp-proxy-api",
+  "auth_type": "bearer",
+  "private_url": "http-to-smtp-proxy-api.app:8090",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1:8090"
+ },
+ {
+  "category": "data",
+  "container": "gitea",
+  "public_url": "git.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "gitea.app:3002",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3002"
+ },
+ {
+  "category": "tools",
+  "container": "cloud-spec",
+  "public_url": "cloud.diegonmarcos.com/spec",
+  "auth_type": "bearer",
+  "private_url": "c3-spec.app:3080",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3080"
+ },
+ {
+  "category": "tools",
+  "container": "dagu",
+  "public_url": "workflows.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "dagu.app:8070",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8070"
+ },
+ {
+  "category": "tools",
+  "container": "dbgate",
+  "public_url": "db.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "dbgate.app:8086",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8086"
+ },
+ {
+  "category": "tools",
+  "container": "matomo-hybrid",
+  "public_url": "analytics.diegonmarcos.com/matomo",
+  "auth_type": "woauth",
+  "private_url": "matomo.app:8080",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8080"
+ },
+ {
+  "category": "tools",
+  "container": "ntfy",
+  "public_url": "rss.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "ntfy.app:8090",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8090"
+ },
+ {
+  "category": "tools",
+  "container": "openobserve",
+  "public_url": "analytics.diegonmarcos.com/openobserve",
+  "auth_type": "woauth",
+  "private_url": "openobserve.app:5080",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:5080"
+ },
+ {
+  "category": "tools",
+  "container": "umami",
+  "public_url": "analytics.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "umami.app:3006",
+  "vm_name": "oci-E2-f_1",
+  "vm_addr": "10.0.0.4:3006"
+ },
+ {
+  "category": "sec",
+  "container": "authelia",
+  "public_url": "auth.diegonmarcos.com",
+  "auth_type": "open",
+  "private_url": "authelia.app:9091",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1:9091"
+ },
+ {
+  "category": "sec",
+  "container": "crowdsec",
+  "public_url": "crowdsec.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "crowdsec.app:8088",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8088"
+ },
+ {
+  "category": "obs",
+  "container": "cloud-cgc-pub-mcp",
+  "public_url": "mcp.diegonmarcos.com/cloud-cgc-pub-mcp",
+  "auth_type": "bearer",
+  "private_url": "cloud-cgc-pub-mcp.app:3105",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3105"
+ },
+ {
+  "category": "obs",
+  "container": "cloud-cgc-pvt-mcp",
+  "public_url": "mcp.diegonmarcos.com/cloud-cgc-pvt-mcp",
+  "auth_type": "bearer",
+  "private_url": "cloud-cgc-pvt-mcp:3107",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3107"
+ },
+ {
+  "category": "app",
+  "container": "mattermost",
+  "public_url": "chat.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "mattermost.app:8065",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8065"
+ },
+ {
+  "category": "app",
+  "container": "continuwuity",
+  "public_url": "matrix.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "matrix-continuwuity.app:8008",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8008"
+ },
+ {
+  "category": "app",
+  "container": "matrix-element",
+  "public_url": "messenger.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "matrix-element.app:8083",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8083"
+ },
+ {
+  "category": "app",
+  "container": "stalwart",
+  "public_url": "jmap.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "stalwart.app:2443",
+  "vm_name": "oci-E2-f_0",
+  "vm_addr": "10.0.0.3:2443"
+ },
+ {
+  "category": "data",
+  "container": "scrappers-api",
+  "public_url": "api.diegonmarcos.com",
+  "auth_type": "bearer",
+  "private_url": "scrappers-api.app:3020",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3020"
+ },
+ {
+  "category": "fin",
+  "container": "fin-api",
+  "public_url": "api.diegonmarcos.com/fin-api",
+  "auth_type": "bearer",
+  "private_url": "fin-api.app:8340",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8340"
+ },
+ {
+  "category": "app",
+  "container": "photoprism_app",
+  "public_url": "photos.diegonmarcos.com",
+  "auth_type": "mesh",
+  "private_url": "photoprism.app:3013",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3013"
+ },
+ {
+  "category": "app",
+  "container": "playlist-syncer",
+  "public_url": "playlist.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "playlist-syncer.app:8090",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8090"
+ },
+ {
+  "category": "app",
+  "container": "calendar-radicale",
+  "public_url": "cal.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "calendar.app:5232",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:5232"
+ },
+ {
+  "category": "app",
+  "container": "code-server",
+  "public_url": "ide.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "code-server.app:8443",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8443"
+ },
+ {
+  "category": "app",
+  "container": "contacts-radicale",
+  "public_url": "contacts.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "contacts.app:5233",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:5233"
+ },
+ {
+  "category": "app",
+  "container": "etherpad_app",
+  "public_url": "app.diegonmarcos.com/etherpad",
+  "auth_type": "woauth",
+  "private_url": "etherpad.app:3012",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3012"
+ },
+ {
+  "category": "app",
+  "container": "filebrowser_app",
+  "public_url": "app.diegonmarcos.com/filebrowser",
+  "auth_type": "woauth",
+  "private_url": "filebrowser.app:3015",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3015"
+ },
+ {
+  "category": "app",
+  "container": "grist_app",
+  "public_url": "sheets.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "grist.app:3011",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3011"
+ },
+ {
+  "category": "app",
+  "container": "hedgedoc_app",
+  "public_url": "app.diegonmarcos.com/hedgedoc",
+  "auth_type": "woauth",
+  "private_url": "hedgedoc.app:3018",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3018"
+ },
+ {
+  "category": "app",
+  "container": "paca-gateway",
+  "public_url": "paca.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "paca.app:8095",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8095"
+ },
+ {
+  "category": "app",
+  "container": "send_app",
+  "public_url": "send.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "send.app:3016",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3016"
+ },
+ {
+  "category": "mic",
+  "container": "vaultwarden",
+  "public_url": "vault.diegonmarcos.com",
+  "auth_type": "woauth",
+  "private_url": "vaultwarden.app:8880",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8880"
+ },
+ {
+  "category": "tools",
+  "container": "alerts-api",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "alerts-api.app:5050",
+  "vm_name": "oci-E2-f_1",
+  "vm_addr": "10.0.0.4:5050"
+ },
+ {
+  "category": "data",
+  "container": "cloud-vault-mcp",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "vault-mcp.app:3111",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3111"
+ },
+ {
+  "category": "tools",
+  "container": "cloud-builder-x",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "cloud-builder-x",
+  "vm_name": "local",
+  "vm_addr": ""
+ },
+ {
+  "category": "tools",
+  "container": "gha-runner",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "gha-runner",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6"
+ },
+ {
+  "category": "cloud",
+  "container": "cloudflare-worker",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "cloudflare-worker",
+  "vm_name": "local",
+  "vm_addr": ""
+ },
+ {
+  "category": "cloud",
+  "container": "gcloud",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "gcloud",
+  "vm_name": "local",
+  "vm_addr": ""
+ },
+ {
+  "category": "data",
+  "container": "borg-server",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "borg-server:2224",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:2224"
+ },
+ {
+  "category": "data",
+  "container": "bup-server",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "bup-server:2223",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:2223"
+ },
+ {
+  "category": "data",
+  "container": "postlite-npm",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "postlite-npm",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1"
+ },
+ {
+  "category": "data",
+  "container": "postlite-vaultwarden",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "postlite-vaultwarden",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1"
+ },
+ {
+  "category": "data",
+  "container": "postlite-ntfy",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "postlite-ntfy",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1"
+ },
+ {
+  "category": "data",
+  "container": "sqlite-npm",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "sqlite-npm",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1"
+ },
+ {
+  "category": "data",
+  "container": "sqlite-vaultwarden",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "sqlite-vaultwarden",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1"
+ },
+ {
+  "category": "data",
+  "container": "sqlite-ntfy",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "sqlite-ntfy",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1"
+ },
+ {
+  "category": "data",
+  "container": "sqlite-authelia",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "sqlite-authelia",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1"
+ },
+ {
+  "category": "data",
+  "container": "redis",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "redis.app:6379",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1:6379"
+ },
+ {
+  "category": "cloud",
+  "container": "hickory-dns",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "hickory-dns.app:53",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1:53"
+ },
+ {
+  "category": "infra-net",
+  "container": "unbound-dns64",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "unbound-dns64.app:53",
+  "vm_name": "oci-E2-f_1",
+  "vm_addr": "10.0.0.4:53"
+ },
+ {
+  "category": "tools",
+  "container": "wireguard-mesh",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "wireguard-mesh:8080",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8080"
+ },
+ {
+  "category": "tools",
+  "container": "wireguard-mesh-ws-tunnel",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "wireguard-mesh-ws-tunnel:8080",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1:8080"
+ },
+ {
+  "category": "net",
+  "container": "wireguard-public",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "wireguard-public",
+  "vm_name": "local",
+  "vm_addr": ""
+ },
+ {
+  "category": "tools",
+  "container": "syslog-bridge",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "syslog-bridge",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6"
+ },
+ {
+  "category": "tools",
+  "container": "rss-gateway",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "rss-gateway:8091",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8091"
+ },
+ {
+  "category": "tools",
+  "container": "github-rss",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "github-rss",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6"
+ },
+ {
+  "category": "tools",
+  "container": "reports",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "reports",
+  "vm_name": "local",
+  "vm_addr": ""
+ },
+ {
+  "category": "tools",
+  "container": "umami-db",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "umami-db.app:5442",
+  "vm_name": "oci-E2-f_1",
+  "vm_addr": "10.0.0.4:5442"
+ },
+ {
+  "category": "tools",
+  "container": "umami-setup",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "umami-setup.app",
+  "vm_name": "oci-E2-f_1",
+  "vm_addr": "10.0.0.4"
+ },
+ {
+  "category": "tools",
+  "container": "agents-tmp-reaper",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "agents-tmp-reaper",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6"
+ },
+ {
+  "category": "sec",
+  "container": "authelia-redis",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "authelia-redis.app:6380",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1:6380"
+ },
+ {
+  "category": "sec",
+  "container": "postlite-authelia",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "postlite-authelia",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1"
+ },
+ {
+  "category": "sec",
+  "container": "caddy",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "caddy.app:443",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1:443"
+ },
+ {
+  "category": "sec",
+  "container": "caddy-l4-image",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "caddy-l4-image",
+  "vm_name": "local",
+  "vm_addr": ""
+ },
+ {
+  "category": "sec",
+  "container": "caddy-public",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "caddy-public.app:443",
+  "vm_name": "oci-E2-f_1",
+  "vm_addr": "10.0.0.4:443"
+ },
+ {
+  "category": "sec",
+  "container": "introspect-proxy",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "introspect-proxy.app:4182",
+  "vm_name": "gcp-E2-f_0",
+  "vm_addr": "10.0.0.1:4182"
+ },
+ {
+  "category": "data",
+  "container": "db-agent",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "db-agent",
+  "vm_name": "all",
+  "vm_addr": ""
+ },
+ {
+  "category": "agi",
+  "container": "cloud-agi-hermes",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "hermes-agent.app:8642",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8642"
+ },
+ {
+  "category": "data",
+  "container": "kg-store",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "kg-store:8001",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8001"
+ },
+ {
+  "category": "data",
+  "container": "kg-store-pub",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "kg-store-pub:8002",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8002"
+ },
+ {
+  "category": "agi",
+  "container": "cloud-agi-goose",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "my-ai-api.app:3217",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3217"
+ },
+ {
+  "category": "agi",
+  "container": "cloud-agi-claude",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "my-ai-claude-api.app:3117",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3117"
+ },
+ {
+  "category": "agi",
+  "container": "session-memory",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "session-memory.app:3108",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3108"
+ },
+ {
+  "category": "app",
+  "container": "mattermost-postgres",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "mattermost-postgres.app:5435",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:5435"
+ },
+ {
+  "category": "app",
+  "container": "mattermost-bots",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "mattermost-bots.app",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6"
+ },
+ {
+  "category": "app",
+  "container": "cloud-webmail",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "webmail.app:3000",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3000"
+ },
+ {
+  "category": "app",
+  "container": "mail-puller",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "mail-puller",
+  "vm_name": "oci-E2-f_0",
+  "vm_addr": "10.0.0.3"
+ },
+ {
+  "category": "app",
+  "container": "mautrix-whatsapp",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "matrix-mautrix-whatsapp.app:29318",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:29318"
+ },
+ {
+  "category": "app",
+  "container": "maddy",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "maddy.app",
+  "vm_name": "oci-E2-f_0",
+  "vm_addr": "10.0.0.3"
+ },
+ {
+  "category": "app",
+  "container": "stalwart-sorter",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "stalwart-sorter",
+  "vm_name": "oci-E2-f_0",
+  "vm_addr": "10.0.0.3"
+ },
+ {
+  "category": "app",
+  "container": "photoprism_mariadb",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "photoprism_mariadb",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6"
+ },
+ {
+  "category": "app",
+  "container": "photoprism_rclone",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "photoprism_rclone",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6"
+ },
+ {
+  "category": "tools",
+  "container": "news-gdelt",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "news-gdelt:3019",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3019"
+ },
+ {
+  "category": "app",
+  "container": "etherpad_postgres",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "etherpad-db.app:5436",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:5436"
+ },
+ {
+  "category": "app",
+  "container": "hedgedoc_postgres",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "hedgedoc-db.app:5439",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:5439"
+ },
+ {
+  "category": "app",
+  "container": "paca-api",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "paca-api.app:8080",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:8080"
+ },
+ {
+  "category": "app",
+  "container": "paca-web",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "paca-web.app",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6"
+ },
+ {
+  "category": "app",
+  "container": "paca-realtime",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "paca-realtime.app:3001",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3001"
+ },
+ {
+  "category": "app",
+  "container": "paca-valkey",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "paca-valkey.app:6379",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:6379"
+ },
+ {
+  "category": "app",
+  "container": "paca-postgres",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "paca-postgres.app:5432",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:5432"
+ },
+ {
+  "category": "app",
+  "container": "revealmd_app",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "revealmd.app:3014",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6:3014"
+ },
+ {
+  "category": "app",
+  "container": "send_redis",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "send_redis",
+  "vm_name": "oci-A1-f_0",
+  "vm_addr": "10.0.0.6"
+ },
+ {
+  "category": "app",
+  "container": "front-end",
+  "public_url": "",
+  "auth_type": "mesh",
+  "private_url": "front-end",
+  "vm_name": "local",
+  "vm_addr": ""
+ }
+]

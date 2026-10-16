@@ -84,3 +84,69 @@ def build_routes(public, private, services, vms, edge_auth):
             "vm_addr": vm_address(vms, p.get("vm"), p.get("port")),
         })
     return rows
+
+
+# ── per-container declaration (the Table's "More" page) ───────────────────────────────────────────────────────────
+# Read straight from the consolidated export; env NAMES only - a value is never carried (secrets live in the vault and
+# only their names appear in secret_env_vars).
+
+def _strip_digest(image):
+    return (image or "").split("@")[0]
+
+
+def build_declaration(row, services, vms):
+    """The readable declaration of one Table row: image, ports, volumes, env names, resources, health check, route +
+    auth tier, VM, dependencies. `row` is a build_routes() row; `services` the consolidated services dict."""
+    sv = services.get(row.get("container")) or {}
+    # a row is a container: find it by container_name, else its service's primary container
+    c = {}
+    for name, svc in services.items():
+        for ck, cc in (svc.get("containers") or {}).items():
+            if cc.get("container_name") == row.get("container"):
+                sv, c = svc, cc
+                break
+        if c:
+            break
+    if not c:
+        c = next(iter((sv.get("containers") or {}).values()), {})
+    proxy = c.get("proxy") or {}
+    env_names = sorted(set((c.get("environment") or {}).keys() if isinstance(c.get("environment"), dict) else []))
+    secret_names = sorted(sv.get("secret_env_vars") or [])
+    vm = row.get("vm_name") or sv.get("vm") or ""
+    out = {
+        "container": row.get("container"),
+        "service": next((n for n, s2 in services.items() if s2 is sv), ""),
+        "description": sv.get("description") or "",
+        "category": row.get("category") or sv.get("category") or "",
+        "vm": {"name": vm, "addr": row.get("vm_addr") or "", "ip": (vms.get(vm) or {}).get("ip") or "",
+               "wg_ip": (vms.get(vm) or {}).get("wg_ip") or ""},
+        "image": _strip_digest(c.get("image") or sv.get("upstream_image")),
+        "ports": {"container": c.get("port"), "env": c.get("port_env"), "protocol": c.get("protocol"),
+                  "extra": [{"port": e.get("port"), "protocol": e.get("protocol"), "service": e.get("service")}
+                            for e in c.get("extra_ports") or []]},
+        "volumes": list(c.get("volumes") or []),
+        "env": {"env_file": bool(c.get("env_file")), "names": env_names, "secret_names": secret_names},
+        "resources": c.get("resources"),
+        "healthcheck": c.get("healthcheck"),
+        "depends_on": c.get("depends_on") or [],
+        "read_only": c.get("read_only"),
+        "restart_policy": c.get("restart_policy"),
+        "network_mode": c.get("network_mode"),
+        "routes": {
+            "public_url": row.get("public_url") or "",
+            "domain": proxy.get("domain") or "",
+            "base_path": proxy.get("base_path") or "",
+            "auth_tier": row.get("auth_type"),
+            "declared_auth": proxy.get("auth") or "",
+            "wg_only": bool(proxy.get("wg_only")),
+            "private_url": row.get("private_url") or "",
+            "dns": c.get("dns") or sv.get("dns") or "",
+        },
+        "monitoring": c.get("monitoring"),
+        "folder": sv.get("folder") or "",
+    }
+    return out
+
+
+def build_declarations(routes, services, vms):
+    return {r["container"]: build_declaration(r, services, vms) for r in routes if r.get("container")}

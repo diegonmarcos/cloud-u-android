@@ -6,7 +6,7 @@ export. Secrets: only env-var NAMES and peer NAMES are carried - never a key or 
 
   python3 data/gen_infra_slice.py [consolidated.json [caddy-build.json]]   (default: fetch main raw)
 
-`routes` (the Containers > Table rows) is built by data/c3_routes.py from data/services_public.json +
+data/routes.json + data/declarations.json (the Containers > Table rows and their More pages) are built by data/c3_routes.py from data/services_public.json +
 services_private.json, the consolidated export (service facts, VM addresses) and the edge auth tiers of
 cloud-u-containers infra-sec_caddy/build.json caddy_config.edge_auth.
 """
@@ -106,10 +106,15 @@ out = {
              "hosts": [{"service": s, "host": S[s].get("domain"), "vm": S[s].get("vm")}
                        for s in ("maddy", "stalwart", "cloud-webmail", "mail-puller") if s in S]},
     "containers_per_vm": per_vm,
-    "routes": c3_routes.build_routes(
-        json.load(open(os.path.join(HERE, "services_public.json"))),
-        json.load(open(os.path.join(HERE, "services_private.json"))),
-        S, d["vms"], edge_auth),
 }
+# The Table's rows and per-row declarations are SEPARATE files: infra_slice.json is baked into one BuildConfig string
+# (javac caps a constant at 65,535 bytes), and these two are baked as chunk arrays (app/build.gradle).
+routes = c3_routes.build_routes(
+    json.load(open(os.path.join(HERE, "services_public.json"))),
+    json.load(open(os.path.join(HERE, "services_private.json"))),
+    S, d["vms"], edge_auth)
+json.dump(routes, open(os.path.join(HERE, "routes.json"), "w"), indent=1, ensure_ascii=False)
+json.dump(c3_routes.build_declarations(routes, S, d["vms"]), open(os.path.join(HERE, "declarations.json"), "w"),
+          indent=None, separators=(",", ":"), ensure_ascii=False)
 json.dump(out, open(os.path.join(HERE, "infra_slice.json"), "w"), indent=1, ensure_ascii=False)
-print("wrote infra_slice.json:", len(out["tools"]), "tools,", len(hosts), "hosts,", len(out["routes"]), "routes")
+print("wrote infra_slice.json:", len(out["tools"]), "tools,", len(hosts), "hosts,", len(routes), "routes")

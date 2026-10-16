@@ -87,7 +87,13 @@ object Declarations {
     val aliases: Aliases by lazy { parseAliases(decode(BuildConfig.UI_ALIASES_B64)) }
 
     /** The Containers > Table rows: data/infra_slice.json::routes. */
-    val routes: List<RoutesTableModel.Row> by lazy { RoutesTableModel.parse(infraSlice["routes"]) }
+    val routes: List<RoutesTableModel.Row> by lazy { RoutesTableModel.parse(element(decodeChunks(BuildConfig.ROUTES_B64))) }
+
+    /** Per-container declarations for the Table's More page (data/declarations.json), keyed by container name. */
+    val declarations: JsonObject by lazy { element(decodeChunks(BuildConfig.DECLARATIONS_B64)) as? JsonObject ?: JsonObject(emptyMap()) }
+
+    /** A blob baked as base64 chunks (see app/build.gradle chunkedB64): join, then decode. */
+    fun decodeChunks(chunks: Array<String>): String = decode(chunks.joinToString(""))
 
     /** ui.apps_page (the Services/Tools declaration) and the derived data/infra_slice.json. */
     val appsCatalog: AppsCatalog.Decl by lazy { AppsCatalog.parse(decode(BuildConfig.UI_APPS_PAGE_B64)) }

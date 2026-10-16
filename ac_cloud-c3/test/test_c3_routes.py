@@ -87,11 +87,11 @@ class BuildRoutes(unittest.TestCase):
 
 
 class ShippedSlice(unittest.TestCase):
-    """The committed data/infra_slice.json carries routes in the shape the Table page parses."""
+    """The committed data/routes.json carries rows in the shape the Table page parses."""
 
     def test_routes_present_and_well_formed(self):
-        d = json.load(open(os.path.join(HERE, "..", "data", "infra_slice.json")))
-        rows = d["routes"]
+        with open(os.path.join(HERE, "..", "data", "routes.json")) as f:
+            rows = json.load(f)
         self.assertGreater(len(rows), 50)
         keys = {"category", "container", "public_url", "auth_type", "private_url", "vm_name", "vm_addr"}
         for row in rows:
@@ -100,6 +100,41 @@ class ShippedSlice(unittest.TestCase):
             if not row["public_url"]:
                 self.assertEqual(row["auth_type"], "mesh")
         self.assertTrue({"bearer", "woauth", "mesh"} <= {x["auth_type"] for x in rows})
+
+
+class Declaration(unittest.TestCase):
+    SV = {"gitea": {"description": "Git", "vm": "vm-a", "category": "data", "secret_env_vars": ["B_TOKEN", "A_PASSWORD"],
+                    "containers": {"app": {"container_name": "gitea", "image": "g/g:1@sha256:abc", "port": 3002,
+                                           "volumes": ["d:/data"], "healthcheck": "curl x", "depends_on": ["db"],
+                                           "environment": {"Z": "secret-value", "A": "also-secret"},
+                                           "resources": {"mem": "1G"}, "proxy": {"domain": "git.example.com", "auth": "two_factor"}}}}}
+    ROW = {"container": "gitea", "category": "data", "public_url": "git.example.com", "auth_type": "woauth",
+           "private_url": "gitea.app:3002", "vm_name": "vm-a", "vm_addr": "10.0.0.6:3002"}
+
+    def test_fields_and_no_secret_values(self):
+        d = r.build_declaration(self.ROW, self.SV, VMS)
+        self.assertEqual(d["image"], "g/g:1")
+        self.assertEqual(d["env"]["names"], ["A", "Z"])
+        self.assertEqual(d["env"]["secret_names"], ["A_PASSWORD", "B_TOKEN"])
+        self.assertEqual(d["routes"]["auth_tier"], "woauth")
+        self.assertEqual(d["depends_on"], ["db"])
+        self.assertEqual(d["vm"]["wg_ip"], "10.0.0.6")
+        self.assertNotIn("secret-value", json.dumps(d))
+        self.assertNotIn("also-secret", json.dumps(d))
+
+    def test_row_without_a_container_still_has_a_declaration(self):
+        d = r.build_declarations([dict(self.ROW, container="gha-runner")], {}, VMS)["gha-runner"]
+        self.assertEqual(d["container"], "gha-runner")
+        self.assertEqual(d["vm"]["name"], "vm-a")
+
+    def test_shipped_declarations_cover_every_route_and_carry_no_values(self):
+        with open(os.path.join(HERE, "..", "data", "routes.json")) as f:
+            rows = json.load(f)
+        with open(os.path.join(HERE, "..", "data", "declarations.json")) as f:
+            decls = json.load(f)
+        self.assertEqual({x["container"] for x in rows}, set(decls))
+        for d in decls.values():
+            self.assertIsInstance(d["env"]["names"], list)
 
 
 if __name__ == "__main__":

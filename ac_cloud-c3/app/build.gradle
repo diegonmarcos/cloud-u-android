@@ -69,6 +69,17 @@ def uiAppsPageB64      = b64(buildJson.ui.apps_page      ?: [:])
 def infraSliceFile     = file("../data/infra_slice.json")
 if (!infraSliceFile.exists()) throw new GradleException("missing data/infra_slice.json - run data/gen_infra_slice.py; the Services and Tools pages would bake empty and look fine")
 def infraSliceB64      = infraSliceFile.bytes.encodeBase64().toString()
+// The Containers > Table rows and their More-page declarations. Each is baked as an ARRAY of base64 chunks: javac
+// caps one string constant at 65,535 bytes and declarations.json alone is ~140 KB once encoded.
+def chunkedB64 = { File f ->
+    if (!f.exists()) throw new GradleException("missing ${f.name} - run data/gen_infra_slice.py; the Containers Table would bake empty and look fine")
+    def all = f.bytes.encodeBase64().toString()
+    def parts = []
+    for (int i = 0; i < all.length(); i += 30000) parts << all.substring(i, Math.min(all.length(), i + 30000))
+    return "{" + parts.collect { "\"${it}\"" }.join(",") + "}"
+}
+def routesB64Array       = chunkedB64(file("../data/routes.json"))
+def declarationsB64Array = chunkedB64(file("../data/declarations.json"))
 def c3OpsBaseUrl       = (buildJson.ui.c3_ops?.base_url  ?: '').toString()
 
 // #648 THE CARRIED C3 SECTION: ui.carried_c3 (not nav: ui.sections is) is the SuperApp's declaration block,
@@ -194,6 +205,8 @@ android {
         buildConfigField "String", "UI_EXTERNAL_APPS_B64",  "\"${uiExternalAppsB64}\""
         buildConfigField "String", "UI_APPS_PAGE_B64",      "\"${uiAppsPageB64}\""
         buildConfigField "String", "INFRA_SLICE_B64",       "\"${infraSliceB64}\""
+        buildConfigField "String[]", "ROUTES_B64",        routesB64Array
+        buildConfigField "String[]", "DECLARATIONS_B64",  declarationsB64Array
         buildConfigField "String", "C3_OPS_BASE_URL",       "\"${c3OpsBaseUrl}\""
         buildConfigField "String", "SERVICES_PUBLIC_B64",  "\"${servicesPublicB64}\""
         buildConfigField "String", "SERVICES_PRIVATE_B64", "\"${servicesPrivateB64}\""
