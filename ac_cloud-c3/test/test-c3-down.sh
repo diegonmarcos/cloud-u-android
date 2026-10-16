@@ -88,8 +88,8 @@ PY
 mutate "Home drops the Unreachable branch"          d1 pages/SimplePages.kt "is FleetDown.Report.Unreachable ->" "else ->"
 mutate "a new Report variant nothing renders"       d1 cloud/FleetDown.kt   "object NothingDeclared : Report()" "object NothingDeclared : Report()
         object Stale : Report()"
-mutate "a container action calls the API directly"  d2 cloud/ContainerSheet.kt "val r = FleetDown.act(act, { OpsClient.container(vm, name, act, bearer) }," "val r0 = OpsClient.container(vm, name, act, bearer); val r = FleetDown.act(act, { r0 },"
-mutate "the service stop loses its confirmation"    d3 cloud/ContainerSheet.kt "if (act == FleetDown.STOP) confirmStop(ctx, service, go) else go()" "go()"
+mutate "a container action calls the API directly"  d2 cloud/ContainerSheet.kt "FleetDown.act(act, { OpsClient.container(vm, name, act, bearer) }," "OpsClient.container(vm, name, act, bearer); FleetDown.act(act, { 0 },"
+mutate "the service stop loses its confirmation"    d3 cloud/ContainerSheet.kt "if (act == FleetDown.STOP) confirmStop(service, go) else go()" "go()"
 mutate "a stop is spelled around the constant"      d3 cloud/ContainerSheet.kt '"Stop" to FleetDown.STOP' '"Stop" to "stop"'
 
 echo

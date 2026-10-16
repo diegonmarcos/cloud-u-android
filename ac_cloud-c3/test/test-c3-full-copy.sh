@@ -114,8 +114,8 @@ bad = []
 kinds = {p.get("kind") for p in panels if p.get("kind")}
 for k in sorted(kinds):
     if k == "section_title":
-        if "sectionTitleView" not in code:
-            bad.append("kind 'section_title' has no renderer (sectionTitleView gone)")
+        if "SectionTitle(" not in code:
+            bad.append("kind 'section_title' has no renderer (SectionTitle gone)")
         continue
     if not re.search(r'"%s"\s*->' % re.escape(k), code):
         bad.append("declared panel kind %r has NO arm in C3StackFragment — the card would render "
@@ -159,12 +159,6 @@ manifest = [
     ("app/.../rss/NtfyScopes.kt",           K + "/cloud/NtfyScopes.kt",         "object NtfyScopes"),
     ("app/.../ui/StatusLight.kt",           K + "/cloud/StatusLight.kt",        "object StatusLight"),
     ("app/.../ui/Haptics.kt (tap)",         K + "/cloud/Haptics.kt",            "object Haptics"),
-    ("res/layout/fragment_c3_health.xml",   R + "/layout/fragment_c3_health.xml",  "health_root"),
-    ("res/layout/item_c3_health_row.xml",   R + "/layout/item_c3_health_row.xml",  "h_status_dot"),
-    ("res/layout/fragment_c3_mesh.xml",     R + "/layout/fragment_c3_mesh.xml",    "mesh_root"),
-    ("res/layout/item_c3_mesh_block.xml",   R + "/layout/item_c3_mesh_block.xml",  "mb_peers"),
-    ("res/layout/item_c3_mesh_row.xml",     R + "/layout/item_c3_mesh_row.xml",    "m_status_dot"),
-    ("res/values/ids.xml (stack_embed pool)", R + "/values/ids.xml",             "stack_embed_7"),
     ("res/xml/network_security_config.xml", R + "/xml/network_security_config.xml", "10.0.0.6"),
     ("data/services_public.json",           "data/services_public.json",        "public_url"),
     ("data/services_private.json",          "data/services_private.json",       "private_dns"),
@@ -331,7 +325,7 @@ m_drop_feed()   { pyjson "$1/build.json" 'c3=d["ui"]["carried_c3"]; c3["stack_ob
 m_drop_arm()    { python3 - "$1/app/src/main/java/com/diegonmarcos/cloudc3/cloud/C3StackFragment.kt" <<'PY'
 import sys
 p=sys.argv[1]; s=open(p).read(); b=s
-s=s.replace('            "dagu_runs"        -> renderDaguRunsFeed(ctx, body, panel)\n','')
+s=s.replace('        "dagu_runs"        -> daguRunsFeed(ctx, panel)\n','')
 assert s!=b
 open(p,"w").write(s)
 PY

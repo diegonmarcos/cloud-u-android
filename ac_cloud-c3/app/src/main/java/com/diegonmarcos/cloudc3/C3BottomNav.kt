@@ -1,7 +1,12 @@
 package com.diegonmarcos.cloudc3
 
 import android.content.Context
-import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import com.diegonmarcos.superapp.bottomnav.BottomNavViewItem
 
 /**
@@ -16,6 +21,9 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavViewItem
  * Every tap is a DESTINATION here. Unlike cloud-mail's table and cloud-me's sections, no
  * cloud-c3 tab launches another app: the three sibling APKs are rows INSIDE the Apps tab,
  * not tabs of their own, so the pill always moves and never has to stay behind.
+ *
+ * 2026-10-16 owner decision: all apps must be Compose — the shell draws the island as the
+ * [BottomNavIsland] composable, the same one the browser, me and wallet shells use.
  */
 object C3BottomNav {
 
@@ -32,20 +40,22 @@ object C3BottomNav {
     /** True when every declared tab icon resolves to a real drawable in this APK. */
     fun iconsResolve(ctx: Context): Boolean = items(ctx).all { it.icon != 0 }
 
-    /**
-     * [onOpen] shows a tab's page in the shell's one container. The pill always moves,
-     * because every tab is a destination.
-     */
-    fun configure(nav: BottomNavIslandView, onOpen: (String) -> Unit) {
-        val ctx = nav.context
-        nav.items = items(ctx)
-        nav.onSelect = { id -> nav.selectedId = id; onOpen(id) }
-        // Re-tapping the tab already shown rebuilds nothing; the pill is already there.
-        nav.onReselect = {}
-    }
+    /** The tab id the pill sits on: only a declared tab lights an item. */
+    fun pillFor(tabId: String?): String? = tabId?.takeIf { id -> Declarations.tabs.any { it.id == id } }
 
-    /** Keep the pill honest when a tab was reached from restored state rather than a tap. */
-    fun sync(nav: BottomNavIslandView, tabId: String?) {
-        nav.selectedId = tabId?.takeIf { id -> Declarations.tabs.any { it.id == id } }
+    /**
+     * The island. [onOpen] shows a tab's page in the shell's one container. The pill always moves,
+     * because every tab is a destination; re-tapping the tab already shown rebuilds nothing.
+     */
+    @Composable
+    fun Island(selectedId: String?, onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
+        val ctx = LocalContext.current
+        val entries = items(ctx).map { BottomNavEntry(it.id, it.label, painterResource(it.icon)) }
+        BottomNavIsland(
+            entries = entries,
+            selectedId = pillFor(selectedId),
+            onSelect = { e -> if (e.id != selectedId) onOpen(e.id) },
+            modifier = modifier,
+        )
     }
 }

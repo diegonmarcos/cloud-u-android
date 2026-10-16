@@ -1,15 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- #648 the stack pages' embedded-child host ids — MOVED with C3StackFragment. STABLE
-     resource ids on purpose: View.generateViewId() crashes on FragmentManager restore
-     because the regenerated id no longer matches the saved-state host id; a fixed pool
-     survives process death, which a launcher-adjacent app sees many times an hour. -->
+<!-- 2026-10-16 owner decision: all apps must be Compose. The fragment containers the Compose shell and
+     the paged tabs host (C3FragmentHost). STABLE resource ids on purpose: View.generateViewId() crashes on
+     FragmentManager restore because the regenerated id no longer matches the saved-state host id; fixed
+     ids survive process death, which a launcher-adjacent app sees many times an hour. -->
 <resources>
-    <item name="stack_embed_0" type="id" />
-    <item name="stack_embed_1" type="id" />
-    <item name="stack_embed_2" type="id" />
-    <item name="stack_embed_3" type="id" />
-    <item name="stack_embed_4" type="id" />
-    <item name="stack_embed_5" type="id" />
-    <item name="stack_embed_6" type="id" />
-    <item name="stack_embed_7" type="id" />
+    <item name="fragment_container" type="id" />
+    <item name="page_container" type="id" />
+    <item name="c3_host_key" type="id" />
 </resources>

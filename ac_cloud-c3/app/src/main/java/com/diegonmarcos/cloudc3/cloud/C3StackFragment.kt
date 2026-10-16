@@ -1,34 +1,89 @@
 package com.diegonmarcos.cloudc3.cloud
 
-import android.graphics.Typeface
+import android.content.Context
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
 import com.diegonmarcos.cloudc3.R
-import com.google.android.material.card.MaterialCardView
+import com.diegonmarcos.cloudc3.pages.c3KitPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
+import kotlin.math.max
 
 /**
  * #648 the SuperApp's AggregatorStackFragment, MOVED with the c3 surface it renders and
  * trimmed to EXACTLY the panel kinds the carried c3 stacks declare — nothing the two
  * stacks use is missing, and nothing they never used came along:
  *
- *   c3_public / c3_private → embedded [C3HealthFragment] (scope-filtered address cards)
- *   wg_mesh                → embedded [C3MeshFragment]
+ *   c3_public / c3_private → the address cards ([C3HealthFragment.Tables], scope-filtered)
+ *   wg_mesh                → the WG mesh ([MeshView.Render])
  *   section_title          → plain heading between cards (Addresses / Containers / Stack)
  *   tile_row               → the Index and More rows ([IndexTiles], `anchor:`/`page:` targets)
  *   feed                   → the FIVE feed cards; `source` picks the fetcher
@@ -43,16 +98,19 @@ import kotlinx.coroutines.withContext
  * rather than silently dropped — the SuperApp's phone-notification stores belong to the
  * launcher and did not move.
  *
- * All panels default to **expanded**. Tap the header chevron to collapse/expand. Rendering,
- * wording, colours, timeouts, cache rules, the one-request ntfy poll, the lifecycle-scoped
- * paints (the SM-G996B crash note), the pull-down refresh arithmetic and the anchor
- * mechanics are the ones that shipped.
+ * All panels default to **expanded**. Tap the header chevron to collapse/expand. Wording,
+ * colours, timeouts, cache rules, the one-request ntfy poll, the pull-down refresh
+ * arithmetic and the anchor mechanics are the ones that shipped.
  *
  * Navigation leaves through ONE seam: [TargetListener.onTargetClicked], which the host
  * activity implements — the same role MainActivity's tile dispatcher played, sized to an
  * app whose targets are `page:`/`extapp:`/URLs.
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. The page is a [KitComposeFragment]: the
+ * cards are composables, the bodies' loads are LaunchedEffects scoped to the view, and the
+ * embedded health / mesh pages are composables rather than child fragments.
  */
-class C3StackFragment : Fragment() {
+class C3StackFragment : KitComposeFragment() {
 
     /** Where a non-anchor target goes. The host decides; this fragment only reports it. */
     interface TargetListener {
@@ -61,221 +119,187 @@ class C3StackFragment : Fragment() {
 
     private val stackId: String get() = arguments?.getString(ARG_STACK).orEmpty()
 
-    /** Body container + its chevron for every panel we built. */
-    private data class PanelRefs(val body: View, val chevron: View)
-    private val panelRefs = mutableListOf<PanelRefs>()
-
     /** In-page `anchor:` links for this stack. Generic — the registry is fed
      *  from the panels' own declarations. */
     private val anchors = StackAnchors()
 
+    // ── page state ─────────────────────────────────────────────────────
+    private val collapsedPanels: SnapshotStateMap<Int, Boolean> = mutableStateMapOf()
+    private val feedItems: SnapshotStateMap<Int, List<FeedItem>> = mutableStateMapOf()
+    private val lights: SnapshotStateMap<String, Boolean> = mutableStateMapOf()
+    private var sheet by mutableStateOf<ContainerSheet.Target?>(null)
+    private var stackPanels: List<Stacks.StackPanel> = emptyList()
+
     // ── pull-down to refresh ───────────────────────────────────────────
-    private val bodyRefreshers = mutableListOf<() -> Unit>()
-    private var refreshHost: SwipeRefreshLayout? = null
+    private var refreshing by mutableStateOf(false)
+    private var refreshKey by mutableIntStateOf(0)
+    /** The [refreshKey] value a user pull produced: its polls are forced, the first build's are not. */
+    private var forcedKey by mutableIntStateOf(-1)
+    private var refreshNote by mutableStateOf<Pair<String, Color>?>(null)
     private var refreshPending = 0
     private val pageRowIds = LinkedHashSet<String>()
     private var refreshBefore: Set<String> = emptySet()
-    private var ntfyForceRepoll = false
-    private var cardColumn: LinearLayout? = null
+
     /** The page-level Archive: ONE collapsed section at the bottom holding every channel
-     *  box the user archived. Built before the cards so a card can hand its archived boxes
-     *  straight over as it renders, added to the column after them so it still draws last. */
-    private var archiveBox:    LinearLayout? = null
-    private var archiveWrap:   LinearLayout? = null
-    private var archiveHeader: TextView?     = null
-    private var archiveOpen = false
+     *  box the user archived. */
+    private var archived by mutableStateOf<Set<String>>(emptySet())
+    private var archiveOpen by mutableStateOf(false)
     private var filterPage = ""
-    private var sortMode   = "time"
-    private var showMode   = "all"
+    private val sortMode = "time"
+    private val showMode = "all"
     /** Start of this visit's NEW window: the ts of the PREVIOUS visit. This is what a
      *  group's "N new" chip counts — arrival, not attention. */
     private var visitSeenAt = 0L
     /** Ids the user has explicitly swiped read on this page. */
-    private var readIds: MutableSet<String> = HashSet()
+    private var readIds by mutableStateOf<Set<String>>(emptySet())
 
     /** Read is EXPLICIT — the user swiped this row away. A row with no stable identity
      *  has nothing to remember, so it falls back to the arrival watermark. */
     private fun isUnread(r: NotifRow): Boolean =
         if (r.id.isBlank()) r.ts > visitSeenAt else r.id !in readIds
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        val scroll = ScrollView(ctx).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
-            isFillViewport = true
-        }
-        val column = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            )
-            val pad = dp(12)
-            setPadding(pad, pad, pad, pad)
-        }
-        scroll.addView(column)
-        cardColumn = column
-        // The pull-down host, wrapping the ScrollView and nothing else — it must stay a
-        // SINGLE child so SwipeRefreshLayout's canChildScrollUp lookup finds the ScrollView.
-        val host = SwipeRefreshLayout(ctx).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
-            addView(scroll)
-            setColorSchemeColors(SIGNAL_OK)
-            setOnRefreshListener { startRefresh() }
-            // DISARMED until the panels are built and we know this page has something
-            // re-queryable — a spinner over a page with nothing to re-ask is a control
-            // reporting a fetch it never made.
-            isEnabled = false
-        }
-        refreshHost = host
-        pageRowIds.clear()
-        refreshBefore = emptySet()
-        refreshPending = 0
-        archiveBox = null; archiveWrap = null; archiveHeader = null
-        anchors.reset(scroll)
+    override fun palette(): KitPalette = c3KitPalette(requireContext())
 
-        val panels = when (stackId) {
-            STACK_TOPOLOGY -> Stacks.stackTopology()
-            STACK_OBSERVABILITY -> Stacks.stackObservability()
-            else -> emptyList()
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    override fun Content() {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        val scroll = rememberScrollState()
+        val scope = rememberCoroutineScope()
+
+        val panels = remember(stackId) {
+            when (stackId) {
+                STACK_TOPOLOGY -> Stacks.stackTopology()
+                STACK_OBSERVABILITY -> Stacks.stackObservability()
+                else -> emptyList()
+            }
         }
+        stackPanels = panels
         if (panels.isEmpty()) {
-            column.addView(emptyHint(ctx, "No panels declared for stack: $stackId"))
-            return host
+            Text("No panels declared for stack: $stackId", color = p.textSecondary,
+                style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(16.dp))
+            return
         }
-        panelRefs.clear()
-        bodyRefreshers.clear()
-        nextEmbedIdx = 0
-
-        // The page id is the prefs key: swipes, the visit watermark and the Archive all
-        // land under it, never in a blank-keyed bucket shared with the other stack page.
-        filterPage = stackId
-        readIds = StackFilters.readKeys(ctx, filterPage)
-        visitSeenAt = StackFilters.lastSeen(ctx, filterPage)
-        StackFilters.markSeen(ctx, filterPage, System.currentTimeMillis())
-
-        // Before the cards: a card files its archived boxes into this while it builds.
-        // Added to the column after them, so it still renders last.
-        val archive = buildArchiveSection(ctx)
-        for (panel in panels) {
-            val view = if (panel.kind == "section_title") sectionTitleView(ctx, panel.title)
-                       else buildPanel(ctx, inflater, panel)
-            anchors.register(panel.anchor, view)
-            column.addView(view)
+        remember(stackId) {
+            // The page id is the prefs key: swipes, the visit watermark and the Archive all
+            // land under it, never in a blank-keyed bucket shared with the other stack page.
+            filterPage = stackId
+            readIds = StackFilters.readKeys(ctx, filterPage)
+            visitSeenAt = StackFilters.lastSeen(ctx, filterPage)
+            StackFilters.markSeen(ctx, filterPage, System.currentTimeMillis())
+            archiveOpen = StackFilters.selected(ctx, filterPage, yesNo(FILTER_ARCHIVE_OPEN)) == "yes"
+            archived = panels.filter { it.kind == "notification_center" }
+                .flatMap { ntfyTopics(it) }.filterTo(HashSet()) { isArchived(ctx, it) }
+            collapsedPanels.clear()
+            panels.forEachIndexed { i, panel -> collapsedPanels[i] = panel.collapsed }
+            anchors.reset(scroll, scope) { index -> collapsedPanels[index] = false }
+            panels.forEachIndexed { i, panel ->
+                anchors.register(panel.anchor, i)
+                for (a in panel.anchors) anchors.register(a.id, i)
+            }
+            true
         }
-        column.addView(archive)
-        syncArchiveHeader()
-        // ARM THE GESTURE, and only now: [bodyRefreshers] is what a refresh actually
-        // re-runs, so a page that registered none must not offer a gesture that would
-        // report otherwise.
-        host.isEnabled = bodyRefreshers.isNotEmpty()
-        return host
+
+        val refreshable = panels.any { it.kind == "notification_center" }
+        val page: @Composable () -> Unit = {
+            Column(
+                Modifier.fillMaxSize().verticalScroll(scroll).then(anchors.host()).padding(12.dp),
+            ) {
+                refreshNote?.let { (text, colour) ->
+                    Text(text, color = colour, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp).testTag("c3:stack:refresh-note"))
+                }
+                panels.forEachIndexed { i, panel ->
+                    if (panel.kind == "section_title") SectionTitle(panel.title, Modifier.then(anchors.mark(panel.anchor)))
+                    else PanelCard(i, panel)
+                }
+                ArchiveSection(panels)
+            }
+        }
+        if (refreshable) {
+            PullToRefreshBox(isRefreshing = refreshing, onRefresh = { startRefresh(scope) }, modifier = Modifier.fillMaxSize()) {
+                page()
+            }
+        } else page()
+
+        sheet?.let { target ->
+            ContainerSheet.Sheet(target = target, onOpenUrl = { url -> onTargetClicked(url) }, onDismiss = { sheet = null })
+        }
     }
 
     /** kind=section_title — a plain heading between cards (NOT a card). */
-    private fun sectionTitleView(ctx: android.content.Context, text: String): View =
-        TextView(ctx).apply {
-            this.text = text
-            setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-            setTextColor(0xFFE9D8FD.toInt())
-            typeface = Typeface.DEFAULT_BOLD
-            textSize = 20f
-            setPadding(dp(4), dp(12), dp(4), dp(6))
-        }
+    @Composable
+    private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
+        val p = LocalKitPalette.current
+        Text(text, color = p.accent, fontSize = 20.sp, fontWeight = FontWeight.Bold,
+            modifier = modifier.padding(start = 4.dp, top = 12.dp, end = 4.dp, bottom = 6.dp))
+    }
 
     // ── Panel card (header + collapsable body) ─────────────────────────
 
-    private fun buildPanel(
-        ctx: android.content.Context,
-        inflater: LayoutInflater,
-        panel: Stacks.StackPanel,
-    ): View {
-        val card = MaterialCardView(ctx).apply {
-            radius        = dp(14).toFloat()
-            cardElevation = dp(1).toFloat()
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(10) }
-        }
-        val outer = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+    @Composable
+    private fun PanelCard(index: Int, panel: Stacks.StackPanel) {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        val open = collapsedPanels[index] != true
 
-        // Header
-        val header = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            val pad = dp(14)
-            setPadding(pad, pad, pad, pad)
-            isClickable = true; isFocusable = true
-        }
-        val title = TextView(ctx).apply {
-            text = panel.title.ifBlank { panel.kind.replace('_', ' ') }
-            setTextAppearance(android.R.style.TextAppearance_Material_Title)
-            setTextColor(resources.getColor(R.color.cloud_primary, ctx.theme))
-            typeface = Typeface.DEFAULT_BOLD
-            layoutParams = LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f,
-            )
-        }
-        val chevron = ImageView(ctx).apply {
-            setImageResource(R.drawable.ic_chevron_right)
-            rotation = if (panel.collapsed) 0f else 90f
-            val sz = dp(20)
-            layoutParams = LinearLayout.LayoutParams(sz, sz)
-        }
-        header.addView(title); header.addView(chevron)
-
-        // Optional subtitle line
-        val subtitle = if (panel.subtitle.isNotBlank()) TextView(ctx).apply {
-            text = panel.subtitle
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            alpha = 0.65f
-            val pad = dp(14)
-            setPadding(pad, 0, pad, dp(6))
-        } else null
-
-        // Body container
-        val body = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(8)
-            setPadding(pad * 2, pad, pad * 2, pad * 2)
-            isVisible = !panel.collapsed
-        }
-        renderBody(ctx, body, panel)
-
-        header.setOnClickListener {
-            body.isVisible = !body.isVisible
-            chevron.animate().rotation(if (body.isVisible) 90f else 0f).setDuration(180).start()
+        // The loads belong to the CARD, not its body: a collapsed card still loads once, and
+        // opening it again does not refetch.
+        when (panel.kind) {
+            "feed" -> LaunchedEffect(index) { feedItems[index] = loadFeed(ctx, panel) }
+            "cloud_dashboard" -> LaunchedEffect(index) { pingAll(panel) }
+            "notification_center" -> LaunchedEffect(index, refreshKey) { pollPanel(ctx, panel, forced = refreshKey == forcedKey) }
+            else -> Unit
         }
 
-        outer.addView(header)
-        if (subtitle != null) outer.addView(subtitle)
-        outer.addView(body)
-        card.addView(outer)
-        panelRefs.add(PanelRefs(body = body, chevron = chevron))
-        return card
+        val shape = RoundedCornerShape(14.dp)
+        Column(
+            Modifier.fillMaxWidth().padding(bottom = 10.dp).then(anchors.mark(panel.anchor))
+                .background(p.surface, shape).testTag("c3:stack:panel:$index"),
+        ) {
+            // Header
+            Row(
+                Modifier.fillMaxWidth().clickable { collapsedPanels[index] = open }.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(panel.title.ifBlank { panel.kind.replace('_', ' ') }, color = p.accent,
+                    style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f))
+                val turn by animateFloatAsState(if (open) 90f else 0f, label = "c3-chevron")
+                Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null,
+                    modifier = Modifier.size(20.dp).rotate(turn))
+            }
+            // Optional subtitle line
+            if (panel.subtitle.isNotBlank()) {
+                Text(panel.subtitle, color = p.textSecondary, fontSize = 11.sp,
+                    modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 6.dp))
+            }
+            if (open) {
+                // A notification shade is edge-to-edge: the group headers and rows supply their
+                // own structure, so the card's inner gutter is chrome that only steals width.
+                val gutter = if (panel.kind == "notification_center") 6.dp else 16.dp
+                Column(Modifier.fillMaxWidth().padding(start = gutter, top = 8.dp, end = gutter, bottom = 16.dp)) {
+                    PanelBody(index, panel)
+                }
+            }
+        }
     }
 
     // ── Body kind dispatcher ───────────────────────────────────────────
 
-    private fun renderBody(
-        ctx: android.content.Context,
-        body: LinearLayout,
-        panel: Stacks.StackPanel,
-    ) = when (panel.kind) {
-        "c3_public"           -> embedChild(body, C3HealthFragment.newInstance(C3HealthFragment.SCOPE_PUBLIC))
-        "c3_private"          -> embedChild(body, C3HealthFragment.newInstance(C3HealthFragment.SCOPE_PRIVATE))
-        "wg_mesh"             -> embedChild(body, C3MeshFragment.newInstance())
-        "tile_row"            -> renderTileRow(body, panel.tiles)
-        "notification_center" -> refreshable(body) { renderNotificationCenter(ctx, body, panel) }
-        "feed"                -> renderFeed(ctx, body, panel)
-        "cloud_dashboard"     -> renderCloudDashboard(ctx, body, panel)
-        else                  -> renderUnknownKind(ctx, body, panel)
+    @Composable
+    private fun PanelBody(index: Int, panel: Stacks.StackPanel) {
+        when (panel.kind) {
+            "c3_public"           -> C3HealthFragment.Tables(C3HealthFragment.SCOPE_PUBLIC) { onTargetClicked(it) }
+            "c3_private"          -> C3HealthFragment.Tables(C3HealthFragment.SCOPE_PRIVATE) { onTargetClicked(it) }
+            "wg_mesh"             -> MeshView.Render()
+            "tile_row"            -> TileRow(panel.tiles)
+            "notification_center" -> NotificationCenter(panel)
+            "feed"                -> FeedBody(index, panel)
+            "cloud_dashboard"     -> CloudDashboard(index, panel)
+            else                  -> EmptyRow("(unknown panel kind '${panel.kind}' — this app carries no renderer for it)")
+        }
     }
 
     // ── kind=feed ──────────────────────────────────────────────────────
@@ -284,121 +308,131 @@ class C3StackFragment : Fragment() {
     // own instruction: a new integration is a new `when` arm here plus a client, never a
     // new panel `kind`.
 
-    private fun renderFeed(ctx: android.content.Context, body: LinearLayout, panel: Stacks.StackPanel) {
-        when (panel.source) {
-            "github_runs"      -> renderGithubRunsFeed(ctx, body, panel)
-            "github_run_stats" -> renderRunStatsFeed(ctx, body, panel)
-            "github_commits"   -> renderRepoCommitsFeed(ctx, body, panel, gitea = false)
-            "gitea_commits"    -> renderRepoCommitsFeed(ctx, body, panel, gitea = true)
-            "dagu_runs"        -> renderDaguRunsFeed(ctx, body, panel)
-            else -> body.addView(emptyRow(ctx,
-                "(kind=feed needs a \"source\": github_runs | github_run_stats | " +
-                    "github_commits | gitea_commits | dagu_runs — got '${panel.source}')"))
+    /** One line of a feed card. */
+    private sealed class FeedItem {
+        class Loading(val text: String) : FeedItem()
+        class Empty(val text: String) : FeedItem()
+        class Header(val title: String, val sub: String) : FeedItem()
+        class Row(
+            val title: String, val meta: String, val url: String, val severity: String,
+            val rerun: Pair<Stacks.RepoRef, String>? = null,
+        ) : FeedItem()
+    }
+
+    @Composable
+    private fun FeedBody(index: Int, panel: Stacks.StackPanel) {
+        val items = feedItems[index] ?: listOf(FeedItem.Loading(feedLoadingLabel(panel)))
+        for (item in items) {
+            when (item) {
+                is FeedItem.Loading -> Text(item.text, color = Color(0x88FFFFFF), style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(vertical = 8.dp))
+                is FeedItem.Empty -> EmptyRow(item.text)
+                is FeedItem.Header -> RepoHeader(item.title, item.sub)
+                is FeedItem.Row -> GithubRow(item)
+            }
         }
     }
 
-    private fun loadingRow(ctx: android.content.Context, label: String): View =
-        TextView(ctx).apply {
-            text = label
-            setTextColor(0x88FFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setPadding(0, dp(8), 0, dp(8))
-        }
+    private fun feedLoadingLabel(panel: Stacks.StackPanel): String = when {
+        panel.source == "github_runs" -> "Loading workflow runs…"
+        panel.source == "github_run_stats" -> "Counting workflow runs…"
+        panel.source.startsWith("dagu") -> "Loading Dagu runs…"
+        else -> "Loading commits…"
+    }
+
+    private suspend fun loadFeed(ctx: Context, panel: Stacks.StackPanel): List<FeedItem> = when (panel.source) {
+        "github_runs"      -> githubRunsFeed(ctx, panel)
+        "github_run_stats" -> runStatsFeed(ctx, panel)
+        "github_commits"   -> repoCommitsFeed(ctx, panel, gitea = false)
+        "gitea_commits"    -> repoCommitsFeed(ctx, panel, gitea = true)
+        "dagu_runs"        -> daguRunsFeed(ctx, panel)
+        else -> listOf(FeedItem.Empty(
+            "(kind=feed needs a \"source\": github_runs | github_run_stats | " +
+                "github_commits | gitea_commits | dagu_runs — got '${panel.source}')"))
+    }
 
     /** Last commit per repo, one group per repo — "GH Repos" (source=github_commits) and
      *  "Gitea Repos" (source=gitea_commits). The two only differ in which client fetches
      *  the rows. */
-    private fun renderRepoCommitsFeed(
-        ctx: android.content.Context, body: LinearLayout, panel: Stacks.StackPanel, gitea: Boolean,
-    ) {
+    private suspend fun repoCommitsFeed(ctx: Context, panel: Stacks.StackPanel, gitea: Boolean): List<FeedItem> {
         if (panel.repos.isEmpty()) {
-            body.addView(emptyRow(ctx, "No repos declared. Add a `repos: [{owner, repo, label}]` array to the panel."))
-            return
+            return listOf(FeedItem.Empty("No repos declared. Add a `repos: [{owner, repo, label}]` array to the panel."))
         }
         val perRepo = panel.limit.takeIf { it > 0 } ?: 1
-        val loading = loadingRow(ctx, "Loading commits…")
-        body.addView(loading)
-        viewLifecycleOwner.lifecycleScope.launch {
-            val now = System.currentTimeMillis()
-            val results = panel.repos.mapIndexed { i, ref ->
+        val now = System.currentTimeMillis()
+        val results = coroutineScope {
+            panel.repos.mapIndexed { i, ref ->
                 // Stagger the fan-out: a dozen repos hitting either API at once beats up
                 // the anonymous GitHub quota just the same as it would beat up the Gitea
                 // container, so both sources share the same trickle.
                 async {
-                    kotlinx.coroutines.delay(i * GitHubFeed.STAGGER_MS)
+                    delay(i * GitHubFeed.STAGGER_MS)
                     val feed = if (gitea) GiteaFeed.commits(ctx, ref.owner, ref.repo, perRepo)
                                else GitHubFeed.commits(ctx, ref.owner, ref.repo, perRepo)
                     ref to feed
                 }
             }.awaitAll()
-            body.removeView(loading)
-            for ((ref, feed) in results) {
-                body.addView(repoHeader(ctx, ref.label, "${ref.owner}/${ref.repo}"))
-                if (feed.items.isEmpty()) {
-                    body.addView(emptyRow(ctx, feedEmptyLabel(feed.status, "commits")))
-                    continue
-                }
-                if (feed.status != GitHubFeed.Status.OK) {
-                    body.addView(emptyRow(ctx, feedStaleLabel(feed.status)))
-                }
-                for (c in feed.items) {
-                    body.addView(githubRow(
-                        ctx,
-                        title    = c.message,
-                        meta     = "${c.sha} · ${c.author} · ${GitHubFeed.ago(now - c.tsMillis)}",
-                        url      = c.htmlUrl,
-                        severity = "info",
-                    ))
-                }
+        }
+        val out = mutableListOf<FeedItem>()
+        for ((ref, feed) in results) {
+            out += FeedItem.Header(ref.label, "${ref.owner}/${ref.repo}")
+            if (feed.items.isEmpty()) {
+                out += FeedItem.Empty(feedEmptyLabel(feed.status, "commits"))
+                continue
+            }
+            if (feed.status != GitHubFeed.Status.OK) {
+                out += FeedItem.Empty(feedStaleLabel(feed.status))
+            }
+            for (c in feed.items) {
+                out += FeedItem.Row(
+                    title    = c.message,
+                    meta     = "${c.sha} · ${c.author} · ${GitHubFeed.ago(now - c.tsMillis)}",
+                    url      = c.htmlUrl,
+                    severity = "info",
+                )
             }
         }
+        return out
     }
 
     /** "GHA": the last [limit] workflow runs across EVERY declared repo, merged into one
      *  chronological list. Each row is labelled with its repo. */
-    private fun renderGithubRunsFeed(ctx: android.content.Context, body: LinearLayout, panel: Stacks.StackPanel) {
+    private suspend fun githubRunsFeed(ctx: Context, panel: Stacks.StackPanel): List<FeedItem> {
         if (panel.repos.isEmpty()) {
-            body.addView(emptyRow(ctx, "No repos declared. Add a `repos` array to the panel."))
-            return
+            return listOf(FeedItem.Empty("No repos declared. Add a `repos` array to the panel."))
         }
         val limit = panel.limit.takeIf { it > 0 } ?: 5
-        val loading = loadingRow(ctx, "Loading workflow runs…")
-        body.addView(loading)
-        viewLifecycleOwner.lifecycleScope.launch {
-            val now = System.currentTimeMillis()
-            val results = panel.repos.mapIndexed { i, ref ->
-                async { kotlinx.coroutines.delay(i * GitHubFeed.STAGGER_MS)
+        val now = System.currentTimeMillis()
+        val results = coroutineScope {
+            panel.repos.mapIndexed { i, ref ->
+                async { delay(i * GitHubFeed.STAGGER_MS)
                         ref to GitHubFeed.runs(ctx, ref.owner, ref.repo, limit) }
             }.awaitAll()
-            body.removeView(loading)
-            val flat = results
-                .flatMap { (ref, feed) -> feed.items.map { ref to it } }
-                .sortedByDescending { it.second.tsMillis }
-                .take(limit)
-            if (flat.isEmpty()) {
-                val worst = results.map { it.second.status }.firstOrNull { it != GitHubFeed.Status.OK }
-                    ?: GitHubFeed.Status.OK
-                body.addView(emptyRow(ctx, feedEmptyLabel(worst, "workflow runs")))
-                return@launch
+        }
+        val flat = results
+            .flatMap { (ref, feed) -> feed.items.map { ref to it } }
+            .sortedByDescending { it.second.tsMillis }
+            .take(limit)
+        if (flat.isEmpty()) {
+            val worst = results.map { it.second.status }.firstOrNull { it != GitHubFeed.Status.OK }
+                ?: GitHubFeed.Status.OK
+            return listOf(FeedItem.Empty(feedEmptyLabel(worst, "workflow runs")))
+        }
+        return flat.map { (ref, r) ->
+            val sev = when (r.conclusion) {
+                "success" -> "info"
+                "failure", "timed_out", "cancelled" -> "error"
+                else      -> "warn"
             }
-            for ((ref, r) in flat) {
-                val sev = when (r.conclusion) {
-                    "success" -> "info"
-                    "failure", "timed_out", "cancelled" -> "error"
-                    else      -> "warn"
-                }
-                val statusLabel = if (r.conclusion.isNotBlank()) r.conclusion else r.status
-                body.addView(githubRow(
-                    ctx,
-                    title    = r.displayTitle.ifBlank { r.name },
-                    meta     = "${ref.label} · ${r.name} · $statusLabel · ${GitHubFeed.ago(now - r.tsMillis)}",
-                    url      = r.htmlUrl,
-                    severity = sev,
-                    // Only rows whose run identified its workflow file can be re-dispatched.
-                    action   = r.workflowFile.takeIf { it.isNotBlank() }
-                        ?.let { ghaTriggerRow(ctx, ref, it) },
-                ))
-            }
+            val statusLabel = if (r.conclusion.isNotBlank()) r.conclusion else r.status
+            FeedItem.Row(
+                title    = r.displayTitle.ifBlank { r.name },
+                meta     = "${ref.label} · ${r.name} · $statusLabel · ${GitHubFeed.ago(now - r.tsMillis)}",
+                url      = r.htmlUrl,
+                severity = sev,
+                // Only rows whose run identified its workflow file can be re-dispatched.
+                rerun    = r.workflowFile.takeIf { it.isNotBlank() }?.let { ref to it },
+            )
         }
     }
 
@@ -410,56 +444,45 @@ class C3StackFragment : Fragment() {
      *  reads, through the same cache, so the two cards cost ONE request per repo between
      *  them and cannot disagree about a number. Tapping the fleet row hands off to
      *  panel.url (extapp:c3-watchtower) through the ordinary dispatcher. */
-    private fun renderRunStatsFeed(ctx: android.content.Context, body: LinearLayout, panel: Stacks.StackPanel) {
+    private suspend fun runStatsFeed(ctx: Context, panel: Stacks.StackPanel): List<FeedItem> {
         if (panel.repos.isEmpty()) {
-            body.addView(emptyRow(ctx, "No repos declared. Add a `repos` array to the panel."))
-            return
+            return listOf(FeedItem.Empty("No repos declared. Add a `repos` array to the panel."))
         }
         val limit = panel.limit.takeIf { it > 0 } ?: 30
-        val loading = loadingRow(ctx, "Counting workflow runs…")
-        body.addView(loading)
-        viewLifecycleOwner.lifecycleScope.launch {
-            val now = System.currentTimeMillis()
-            val results = panel.repos.mapIndexed { i, ref ->
-                async { kotlinx.coroutines.delay(i * GitHubFeed.STAGGER_MS)
+        val now = System.currentTimeMillis()
+        val results = coroutineScope {
+            panel.repos.mapIndexed { i, ref ->
+                async { delay(i * GitHubFeed.STAGGER_MS)
                         ref to GitHubFeed.runs(ctx, ref.owner, ref.repo, limit) }
             }.awaitAll()
-            body.removeView(loading)
-
-            val all = results.flatMap { it.second.items }
-            if (all.isEmpty()) {
-                // The WORST status, not the first: one reachable repo with an empty window
-                // must not read as a healthy fleet when the rest were rate limited.
-                val worst = results.map { it.second.status }.firstOrNull { it != GitHubFeed.Status.OK }
-                    ?: GitHubFeed.Status.OK
-                body.addView(emptyRow(ctx, feedEmptyLabel(worst, "workflow runs")))
-                return@launch
-            }
-            if (results.any { it.second.status != GitHubFeed.Status.OK }) {
-                body.addView(emptyRow(ctx, feedStaleLabel(
-                    results.map { it.second.status }.first { it != GitHubFeed.Status.OK })))
-            }
-
-            body.addView(runStatsRow(ctx, "Fleet", all, now, panel.url))
-            for ((ref, feed) in results) {
-                if (feed.items.isEmpty()) {
-                    body.addView(emptyRow(ctx, "${ref.label} — ${feedEmptyLabel(feed.status, "workflow runs")}"))
-                    continue
-                }
-                body.addView(runStatsRow(ctx, ref.label, feed.items, now, ""))
-            }
         }
+        val all = results.flatMap { it.second.items }
+        if (all.isEmpty()) {
+            // The WORST status, not the first: one reachable repo with an empty window
+            // must not read as a healthy fleet when the rest were rate limited.
+            val worst = results.map { it.second.status }.firstOrNull { it != GitHubFeed.Status.OK }
+                ?: GitHubFeed.Status.OK
+            return listOf(FeedItem.Empty(feedEmptyLabel(worst, "workflow runs")))
+        }
+        val out = mutableListOf<FeedItem>()
+        if (results.any { it.second.status != GitHubFeed.Status.OK }) {
+            out += FeedItem.Empty(feedStaleLabel(
+                results.map { it.second.status }.first { it != GitHubFeed.Status.OK }))
+        }
+        out += runStatsRow("Fleet", all, now, panel.url)
+        for ((ref, feed) in results) {
+            if (feed.items.isEmpty()) {
+                out += FeedItem.Empty("${ref.label} — ${feedEmptyLabel(feed.status, "workflow runs")}")
+                continue
+            }
+            out += runStatsRow(ref.label, feed.items, now, "")
+        }
+        return out
     }
 
     /** One aggregate line. [url] is blank for the per-repo rows — only the fleet row is a
      *  handoff, so a tap anywhere in the card has exactly one meaning. */
-    private fun runStatsRow(
-        ctx: android.content.Context,
-        label: String,
-        runs: List<GitHubFeed.Run>,
-        now: Long,
-        url: String,
-    ): View {
+    private fun runStatsRow(label: String, runs: List<GitHubFeed.Run>, now: Long, url: String): FeedItem.Row {
         val finished = runs.filter { it.conclusion.isNotBlank() }
         val green    = finished.filter { it.conclusion == "success" }
         val failed   = finished.count { it.conclusion == "failure" || it.conclusion == "timed_out" }
@@ -473,8 +496,7 @@ class C3StackFragment : Fragment() {
                        else "no green run in this window"
             "${runs.size} runs · $pct% green · $failed failed · $last"
         }
-        return githubRow(
-            ctx,
+        return FeedItem.Row(
             title    = label,
             meta     = verdict,
             url      = url,
@@ -489,38 +511,28 @@ class C3StackFragment : Fragment() {
     /** "Dagu": the last [limit] runs across EVERY registered DAG. Server + bearer token
      *  come from libs:ops' DaguPrefs, shared with the native Dagu page, so there is one
      *  Dagu config on the device rather than two that can disagree. */
-    private fun renderDaguRunsFeed(ctx: android.content.Context, body: LinearLayout, panel: Stacks.StackPanel) {
+    private suspend fun daguRunsFeed(ctx: Context, panel: Stacks.StackPanel): List<FeedItem> {
         val limit = panel.limit.takeIf { it > 0 } ?: 5
-        val loading = loadingRow(ctx, "Loading Dagu runs…")
-        body.addView(loading)
-        viewLifecycleOwner.lifecycleScope.launch {
-            val prefs = com.diegonmarcos.superapp.ops.dagu.DaguPrefs(ctx)
-            val now = System.currentTimeMillis()
-            val outcome = withContext(Dispatchers.IO) {
-                runCatching { DaguRunsFeed.recentRuns(prefs.serverUrl, prefs.bearerToken, limit) }
-            }
-            body.removeView(loading)
-            outcome.onFailure { e ->
-                body.addView(emptyRow(ctx,
-                    "(Dagu unreachable — ${e.message ?: "no response"}. " +
-                        "If the token expired, sign in again on the Dagu page.)"))
-            }
-            outcome.onSuccess { runs ->
-                if (runs.isEmpty()) {
-                    body.addView(emptyRow(ctx, "(no runs recorded on ${prefs.serverUrl})"))
-                    return@onSuccess
-                }
-                for (r in runs) {
-                    val ts = if (r.finishedAtMs > 0L) r.finishedAtMs else r.startedAtMs
-                    body.addView(githubRow(
-                        ctx,
-                        title    = r.name,
-                        meta     = "${daguStatusLabel(r.status)} · ${GitHubFeed.ago(now - ts)}",
-                        url      = "page:observ/dagu",
-                        severity = daguSeverity(r.status),
-                    ))
-                }
-            }
+        val prefs = com.diegonmarcos.superapp.ops.dagu.DaguPrefs(ctx)
+        val now = System.currentTimeMillis()
+        val outcome = withContext(Dispatchers.IO) {
+            runCatching { DaguRunsFeed.recentRuns(prefs.serverUrl, prefs.bearerToken, limit) }
+        }
+        outcome.exceptionOrNull()?.let { e ->
+            return listOf(FeedItem.Empty(
+                "(Dagu unreachable — ${e.message ?: "no response"}. " +
+                    "If the token expired, sign in again on the Dagu page.)"))
+        }
+        val runs = outcome.getOrDefault(emptyList())
+        if (runs.isEmpty()) return listOf(FeedItem.Empty("(no runs recorded on ${prefs.serverUrl})"))
+        return runs.map { r ->
+            val ts = if (r.finishedAtMs > 0L) r.finishedAtMs else r.startedAtMs
+            FeedItem.Row(
+                title    = r.name,
+                meta     = "${daguStatusLabel(r.status)} · ${GitHubFeed.ago(now - ts)}",
+                url      = "page:observ/dagu",
+                severity = daguSeverity(r.status),
+            )
         }
     }
 
@@ -560,71 +572,42 @@ class C3StackFragment : Fragment() {
         else       -> "info"
     }
 
-    private fun repoHeader(ctx: android.content.Context, title: String, sub: String): View {
-        val box = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(10), 0, dp(4))
+    @Composable
+    private fun RepoHeader(title: String, sub: String) {
+        val p = LocalKitPalette.current
+        Column(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 4.dp)) {
+            Text(title, color = p.accent, style = MaterialTheme.typography.titleMedium)
+            Text(sub, color = Color(0x77FFFFFF), style = MaterialTheme.typography.bodySmall)
         }
-        box.addView(TextView(ctx).apply {
-            text = title
-            setTextColor(0xFFE9D8FD.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-        })
-        box.addView(TextView(ctx).apply {
-            text = sub
-            setTextColor(0x77FFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-        })
-        return box
     }
 
-    private fun emptyRow(ctx: android.content.Context, label: String): View =
-        TextView(ctx).apply {
-            text = label
-            setTextColor(0x77FFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setPadding(dp(4), dp(2), 0, dp(2))
-        }
+    @Composable
+    private fun EmptyRow(label: String) {
+        Text(label, color = Color(0x77FFFFFF), style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = 2.dp))
+    }
 
-    private fun githubRow(ctx: android.content.Context, title: String, meta: String,
-                          url: String, severity: String, action: View? = null): View {
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(8); setPadding(pad, pad, pad, pad)
-            val lp = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(4) }
-            layoutParams = lp
-            setBackgroundColor(when (severity) {
-                "error" -> 0x55B91C1C.toInt()
-                "warn"  -> 0x55D97706.toInt()
-                // "idle" = declared but never run: a neutral dim wash, legible as its own
-                // state at a glance.
-                "idle"  -> 0x22FFFFFF
-                else    -> 0x331A0033
-            })
-            isClickable = true
-            isFocusable = true
-            setOnClickListener {
-                if (url.isNotBlank()) onTargetClicked(url)
-            }
+    @Composable
+    private fun GithubRow(row: FeedItem.Row) {
+        val p = LocalKitPalette.current
+        val tint = when (row.severity) {
+            "error" -> Color(0x55B91C1C)
+            "warn"  -> Color(0x55D97706)
+            // "idle" = declared but never run: a neutral dim wash, legible as its own
+            // state at a glance.
+            "idle"  -> Color(0x22FFFFFF)
+            else    -> Color(0x331A0033)
         }
-        row.addView(TextView(ctx).apply {
-            text = title
-            setTextColor(0xFFE9D8FD.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Body1)
-            maxLines = 2
-            ellipsize = android.text.TextUtils.TruncateAt.END
-        })
-        row.addView(TextView(ctx).apply {
-            text = meta
-            setTextColor(0x88FFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setPadding(0, dp(2), 0, 0)
-        })
-        if (action != null) row.addView(action)
-        return row
+        Column(
+            Modifier.fillMaxWidth().padding(top = 4.dp).background(tint).testTag("c3:feed:${row.title}")
+                .clickable { if (row.url.isNotBlank()) onTargetClicked(row.url) }.padding(8.dp),
+        ) {
+            Text(row.title, color = p.textPrimary, style = MaterialTheme.typography.bodyLarge, maxLines = 2,
+                overflow = TextOverflow.Ellipsis)
+            Text(row.meta, color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 2.dp))
+            row.rerun?.let { (ref, file) -> GhaTriggerRow(ref, file) }
+        }
     }
 
     /**
@@ -635,64 +618,47 @@ class C3StackFragment : Fragment() {
      * outcome is displayed in place — the control never finishes without saying what
      * happened.
      */
-    private fun ghaTriggerRow(ctx: android.content.Context, ref: Stacks.RepoRef,
-                              workflowFile: String): View {
-        val box = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(6), 0, 0)
-        }
-        val status = TextView(ctx).apply {
-            setTextColor(0x88FFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setPadding(dp(8), 0, 0, 0)
-            layoutParams = LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        val btn = android.widget.Button(ctx).apply {
-            text = "Re-run"
-            isAllCaps = false
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-        }
-        btn.setOnClickListener {
-            btn.isEnabled = false
-            status.text = "Dispatching $workflowFile…"
-            val bearer = runCatching {
-                com.diegonmarcos.superapp.ops.dagu.DaguPrefs(ctx).bearerToken
-            }.getOrDefault("")
-            viewLifecycleOwner.lifecycleScope.launch {
-                val outcome = withContext(Dispatchers.IO) {
-                    OpsClient.dispatchWorkflow(
-                        repo = "${ref.owner}/${ref.repo}",
-                        workflow = workflowFile,
-                        ref = "main",
-                        bearer = bearer,
-                    )
-                }
-                btn.isEnabled = true
-                when (outcome) {
-                    is OpsClient.Outcome.Ok -> {
-                        status.setTextColor(0xFF7BE38B.toInt())
-                        status.text = outcome.message
+    @Composable
+    private fun GhaTriggerRow(ref: Stacks.RepoRef, workflowFile: String) {
+        val ctx = LocalContext.current
+        val scope = rememberCoroutineScope()
+        var busy by remember { mutableStateOf(false) }
+        var status by remember { mutableStateOf<Pair<String, Color>?>(null) }
+        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(
+                onClick = {
+                    busy = true
+                    status = "Dispatching $workflowFile…" to Color(0x88FFFFFF)
+                    val bearer = runCatching {
+                        com.diegonmarcos.superapp.ops.dagu.DaguPrefs(ctx).bearerToken
+                    }.getOrDefault("")
+                    scope.launch {
+                        val outcome = withContext(Dispatchers.IO) {
+                            OpsClient.dispatchWorkflow(
+                                repo = "${ref.owner}/${ref.repo}",
+                                workflow = workflowFile,
+                                ref = "main",
+                                bearer = bearer,
+                            )
+                        }
+                        busy = false
+                        status = when (outcome) {
+                            is OpsClient.Outcome.Ok -> outcome.message to SIGNAL_OK_TEXT
+                            is OpsClient.Outcome.Failed -> "${outcome.kind}: ${outcome.message}" to SIGNAL_BAD_TEXT
+                        }
                     }
-                    is OpsClient.Outcome.Failed -> {
-                        status.setTextColor(0xFFFF8888.toInt())
-                        status.text = "${outcome.kind}: ${outcome.message}"
-                    }
-                }
-            }
+                },
+                enabled = !busy,
+                modifier = Modifier.testTag("c3:feed:rerun:$workflowFile"),
+            ) { Text("Re-run", fontSize = 12.sp) }
+            status?.let { (text, colour) -> Text(text, color = colour, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp)) }
         }
-        box.addView(btn)
-        box.addView(status)
-        return box
     }
 
     // ── kind=notification_center, stream=channels ──────────────────────
     //
-    // Every view built below is a plain inline View. Nothing here goes through
-    // [embedChild], and that is load-bearing: embedChild allocates from a FIXED pool of
-    // host ids and only commits when nothing is already attached, so any body that re-runs
-    // would come back permanently blank. These bodies re-run on every pull-down (they are
-    // registered through [refreshable]).
+    // These bodies re-run on every pull-down: the card's poll effect is keyed by [refreshKey],
+    // and the groups are drawn from [ntfyCache] and the read / archive state alone.
 
     /** One publisher and everything it has posted. [key] is the ntfy topic we grouped on;
      *  [label] is what the user reads. */
@@ -700,7 +666,6 @@ class C3StackFragment : Fragment() {
         val key: String,
         val label: String,
         val sub: String,
-        val rows: List<NotifRow>,
         val url: String = "",
     )
 
@@ -718,12 +683,12 @@ class C3StackFragment : Fragment() {
     /** A group's one-line verdict. Same four-state vocabulary as the C3 health page:
      *  the two things this card must never confuse are a channel that has genuinely
      *  posted nothing, and a stream we could not read. */
-    private data class GroupState(val text: String, val color: Int)
+    private data class GroupState(val text: String, val color: Color)
 
     private data class NtfyResult(val ok: Boolean, val error: String, val rows: List<NotifRow>)
 
     /** Per-topic poll results for this visit — also the ordering key for Sort=Time. */
-    private val ntfyCache = mutableMapOf<String, NtfyResult>()
+    private val ntfyCache: SnapshotStateMap<String, NtfyResult> = mutableStateMapOf()
 
     /** The newest timestamp we have actually MEASURED for [topic], or Long.MIN_VALUE.
      *  Unmeasured and unreachable both sort last — the honest placement. */
@@ -731,17 +696,23 @@ class C3StackFragment : Fragment() {
         ntfyCache[topic]?.takeIf { it.ok }?.rows?.maxOfOrNull { it.ts } ?: Long.MIN_VALUE
 
     /** Which groups the user has folded away. Held on the fragment, not on the view. */
-    private val collapsedGroups = mutableSetOf<String>()
+    private val collapsedGroups: SnapshotStateMap<String, Boolean> = mutableStateMapOf()
 
-    private fun renderNotificationCenter(
-        ctx: android.content.Context, body: LinearLayout, panel: Stacks.StackPanel,
-    ) {
-        // A notification shade is edge-to-edge: the group headers and rows supply their
-        // own structure, so the card's inner gutter is chrome that only steals width.
-        body.setPadding(dp(6), 0, dp(6), dp(6))
+    /** The topics a notification card draws, from the baked ui.ntfy catalog narrowed to the card's scopes. */
+    private fun ntfyTopics(panel: Stacks.StackPanel): List<String> {
+        if (panel.stream != "channels") return emptyList()
+        val scopes = NtfyScopes.load()
+        val catalog = NtfyScopes.fallbackChannels()
+        return if (panel.scopes.isEmpty()) catalog else catalog.filter {
+            NtfyScopes.scopeOf(it, scopes).id in panel.scopes
+        }
+    }
+
+    @Composable
+    private fun NotificationCenter(panel: Stacks.StackPanel) {
         when (panel.stream) {
             // C3 Obsv's stream: the ntfy CHANNELS and nothing else.
-            "channels" -> renderNtfyGroups(ctx, body, panel)
+            "channels" -> NtfyGroups(panel)
             // The launcher's phone/cloud streams did not move with the c3 surface: they
             // read the SuperApp's notification-listener stores, which belong to the
             // launcher. Stated rather than silently dropped.
@@ -749,13 +720,13 @@ class C3StackFragment : Fragment() {
                 android.util.Log.w(TAG, "notification panel '${panel.title}' declares " +
                     "stream=${panel.stream}, which is the SuperApp launcher's store and is " +
                     "not carried in this app")
-                body.addView(stateLine(ctx, "stream '${panel.stream}' is the SuperApp " +
-                    "launcher's and is not carried here", SIGNAL_UNKNOWN))
+                StateLine("stream '${panel.stream}' is the SuperApp " +
+                    "launcher's and is not carried here", SIGNAL_UNKNOWN)
             }
             else -> {
                 android.util.Log.w(TAG, "notification panel '${panel.title}' declares no " +
                     "`stream`: add \"stream\": \"channels\" in build.json")
-                body.addView(stateLine(ctx, "no stream declared", SIGNAL_UNKNOWN))
+                StateLine("no stream declared", SIGNAL_UNKNOWN)
             }
         }
     }
@@ -773,113 +744,56 @@ class C3StackFragment : Fragment() {
      * The topic list comes from the baked ui.ntfy catalog. The order is decided ONCE from
      * the last measurement [ntfyCache] holds, and the poll landing never re-sorts.
      */
-    private fun renderNtfyGroups(
-        ctx: android.content.Context, body: LinearLayout, panel: Stacks.StackPanel,
-    ) {
-        val scopes = NtfyScopes.load()
-        val catalog = NtfyScopes.fallbackChannels()
-        val topics = if (panel.scopes.isEmpty()) catalog else catalog.filter {
-            NtfyScopes.scopeOf(it, scopes).id in panel.scopes
-        }
+    @Composable
+    private fun NtfyGroups(panel: Stacks.StackPanel) {
+        val topics = remember(panel) { ntfyTopics(panel) }
         if (topics.isEmpty()) {
             android.util.Log.w(TAG, "ntfy panel '${panel.title}' matched no channel: no " +
                 "build.json::ui.ntfy topic falls in scopes (" +
                 panel.scopes.joinToString(", ").ifBlank { "all" } + ")")
-            body.addView(stateLine(ctx, "no channels in scope", SIGNAL_UNKNOWN))
+            StateLine("no channels in scope", SIGNAL_UNKNOWN)
             return
         }
-        // Every card is drawn first, then ONE request fills them all in.
-        val slots = LinkedHashMap<String, Pair<TextView, LinearLayout>>()
-        val byLabel = compareBy(String.CASE_INSENSITIVE_ORDER) { t: String ->
-            NtfyCatalog.labelOf(t)
-        }
-        val ordered =
+        val byLabel = compareBy(String.CASE_INSENSITIVE_ORDER) { t: String -> NtfyCatalog.labelOf(t) }
+        val ordered = remember(panel, refreshKey) {
             if (sortMode == "app") topics.sortedWith(byLabel)
-            else topics.sortedWith(
-                compareByDescending<String> { newestMeasured(it) }.then(byLabel))
-        for (topic in ordered) {
-            val group = NotifGroup(
-                key   = topic,
-                label = NtfyCatalog.labelOf(topic),
-                sub   = topic,
-                rows  = emptyList(),
-                // The HUMAN address, deliberately the gated public one: it opens in a
-                // browser that can carry the Authelia session. Only the programmatic poll
-                // needs the open route.
-                url   = "${NtfyCatalog.webBaseUrl()}/$topic",
-            )
-            // "checking…", never OK: an unpolled channel must not spend even its first
-            // frame looking healthy.
-            val block   = groupBlock(ctx, group, GroupState("checking…", SIGNAL_UNKNOWN), body)
-            val state   = block.findViewWithTag<TextView>(GROUP_STATE_TAG) ?: continue
-            val rowsBox = block.findViewWithTag<LinearLayout>(GROUP_ROWS_TAG) ?: continue
-            placeGroup(ctx, block, topic, body)
-
-            val cached = ntfyCache[topic]
-            // Paint the last measurement first so the box does not flash empty while the
-            // poll is out, but still QUEUE the poll when the user asked for fresh data.
-            if (cached != null) paintNtfyGroup(ctx, state, rowsBox, cached, topic, panel.limit)
-            if (cached == null || ntfyForceRepoll) slots[topic] = state to rowsBox
+            else topics.sortedWith(compareByDescending<String> { newestMeasured(it) }.then(byLabel))
         }
-        if (slots.isEmpty()) return
+        for (topic in ordered) {
+            if (topic in archived) continue   // filed under the page's Archive
+            GroupBlock(groupOf(topic), panel.limit)
+        }
+    }
 
+    private fun groupOf(topic: String) = NotifGroup(
+        key   = topic,
+        label = NtfyCatalog.labelOf(topic),
+        sub   = topic,
+        // The HUMAN address, deliberately the gated public one: it opens in a
+        // browser that can carry the Authelia session. Only the programmatic poll
+        // needs the open route.
+        url   = "${NtfyCatalog.webBaseUrl()}/$topic",
+    )
+
+    /** Polls the card's topics: the ones nothing is known about yet, or every one when the user pulled. */
+    private suspend fun pollPanel(ctx: Context, panel: Stacks.StackPanel, forced: Boolean) {
+        val topics = ntfyTopics(panel)
+        val wanted = topics.filter { ntfyCache[it] == null || forced }
+        if (wanted.isEmpty()) return
         // ONE REQUEST FOR ALL OF THEM. ntfy takes a comma-separated topic list and stamps
         // every envelope with its own `topic`. Per-topic requests spend the visitor burst
         // quota (60, one token back per 10s) and hand back scattered 429s — grey cards
         // that move around between visits, the hardest kind of broken to report.
-        val counted = refreshHost?.isRefreshing == true
-        if (counted) refreshPending++
-        // THE PAINT BELONGS TO THIS VIEW, SO IT IS SCOPED TO THIS VIEW: viewLifecycleOwner's
-        // scope is cancelled in onDestroyView, so the continuation cannot run once the
-        // views it paints are gone (the SM-G996B notifRowView crash this replaced).
-        viewLifecycleOwner.lifecycleScope.launch {
-            val byTopic = withContext(Dispatchers.IO) {
-                pollTopics(slots.keys.toList())
-            }
-            for ((topic, slot) in slots) {
-                val result = byTopic.getValue(topic)
-                ntfyCache[topic] = result
-                paintNtfyGroup(ctx, slot.first, slot.second, result, topic, panel.limit)
-            }
-            if (counted) ntfyPollSettled()
+        val byTopic = withContext(Dispatchers.IO) { pollTopics(wanted) }
+        for ((topic, result) in byTopic) {
+            ntfyCache[topic] = result
+            if (!result.ok) continue
+            // A SUCCESSFUL poll is the complete current window for this topic, and only then
+            // may its read keys be retired — a mesh hiccup does not resurrect swiped rows.
+            StackFilters.pruneRead(ctx, filterPage, ntfyNs(topic), result.rows.mapTo(HashSet()) { it.id })
+            for (r in shownRows(result, panel.limit)) if (r.id.isNotBlank()) pageRowIds += r.id
         }
-    }
-
-    private fun paintNtfyGroup(
-        ctx: android.content.Context, state: TextView, rowsBox: LinearLayout, result: NtfyResult,
-        topic: String = "", limit: Int = 0,
-    ) {
-        rowsBox.removeAllViews()
-        if (!result.ok) {
-            // The verdict already says what went wrong and what to do about it.
-            state.text = result.error
-            state.setTextColor(SIGNAL_UNKNOWN)
-            return
-        }
-        // A SUCCESSFUL poll is the complete current window for this topic, and only then
-        // may its read keys be retired — a mesh hiccup does not resurrect swiped rows.
-        if (topic.isNotBlank()) StackFilters.pruneRead(
-            ctx, filterPage, ntfyNs(topic), result.rows.mapTo(HashSet()) { it.id })
-        // `limit` caps how many of this GROUP's rows are shown (the c3 card wants "last 5
-        // per channel"); 0 means every row the poll window returned.
-        val rows = withinGroup(result.rows).let { if (limit > 0) it.take(limit) else it }
-        if (rows.isEmpty()) {
-            // Empty channel and hidden-by-filter are different facts.
-            if (result.rows.isEmpty()) {
-                state.text = "silent ${NtfyCatalog.pollWindow()} · publisher?"
-                state.setTextColor(SIGNAL_WARN)
-            } else {
-                state.text = "nothing new"
-                state.setTextColor(0x88FFFFFF.toInt())
-            }
-            return
-        }
-        state.text = "${rows.size} · ${ago(System.currentTimeMillis() - rows.first().ts)}"
-        state.setTextColor(SIGNAL_OK)
-        for (r in rows) {
-            rowsBox.addView(notifRowView(ctx, r))
-            if (r.id.isNotBlank()) pageRowIds += r.id
-        }
+        if (forced) ntfyPollSettled()
     }
 
     /**
@@ -944,117 +858,78 @@ class C3StackFragment : Fragment() {
         return shown.sortedByDescending { it.ts }
     }
 
+    /** The rows a group draws: `limit` caps how many of this GROUP's rows are shown (the c3
+     *  card wants "last 5 per channel"); 0 means every row the poll window returned. */
+    private fun shownRows(result: NtfyResult, limit: Int): List<NotifRow> =
+        withinGroup(result.rows).let { if (limit > 0) it.take(limit) else it }
+
+    /** The verdict chip of a group, from its poll result alone (null = not polled yet). */
+    private fun verdictOf(result: NtfyResult?, limit: Int): GroupState {
+        // "checking…", never OK: an unpolled channel must not spend even its first
+        // frame looking healthy.
+        if (result == null) return GroupState("checking…", SIGNAL_UNKNOWN)
+        if (!result.ok) {
+            // The verdict already says what went wrong and what to do about it.
+            return GroupState(result.error, SIGNAL_UNKNOWN)
+        }
+        val rows = shownRows(result, limit)
+        if (rows.isEmpty()) {
+            // Empty channel and hidden-by-filter are different facts.
+            return if (result.rows.isEmpty()) GroupState("silent ${NtfyCatalog.pollWindow()} · publisher?", SIGNAL_WARN)
+                   else GroupState("nothing new", Color(0x88FFFFFF))
+        }
+        return GroupState("${rows.size} · ${ago(System.currentTimeMillis() - rows.first().ts)}", SIGNAL_OK)
+    }
+
     /**
      * One publisher drawn as a notification-shade GROUP: a real header bar — monogram,
      * name, count chip — with its notifications folded under it. Tapping the header
-     * COLLAPSES the group; launching lives on the monogram. Everything here is a plain
-     * View; the row container is reached back through [GROUP_ROWS_TAG] so a late ntfy
-     * poll can fill a group in without a field per group.
+     * COLLAPSES the group; launching lives on the monogram.
      */
-    private fun groupBlock(
-        ctx: android.content.Context, g: NotifGroup, state: GroupState,
-        homeBody: LinearLayout,
-    ): LinearLayout {
-        val block = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(8) }
-        }
-        val rows = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            tag = GROUP_ROWS_TAG
-            isVisible = g.key !in collapsedGroups
-        }
-        val header = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            setPadding(dp(10), dp(8), dp(10), dp(8))
-            background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = dp(10).toFloat()
-                setColor(0x1FFFFFFF)
-            }
-            isClickable = true; isFocusable = true
-        }
-        header.addView(groupAvatar(ctx, g))
-        val names = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f,
-            ).apply { leftMargin = dp(10) }
-        }
-        names.addView(TextView(ctx).apply {
-            text = g.label
-            setTextColor(0xFFF2E9FF.toInt())
-            textSize = 15f
-            typeface = Typeface.DEFAULT_BOLD
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
-        })
-        if (g.sub.isNotBlank() && !g.sub.equals(g.label, ignoreCase = true)) {
-            names.addView(TextView(ctx).apply {
-                text = g.sub
-                setTextColor(0x66FFFFFF.toInt())
-                textSize = 10f
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
-            })
-        }
-        header.addView(names)
-        // The count chip. ONE TextView holding the whole verdict, because an async ntfy
-        // group repaints it with a failure sentence that has no count in it at all.
-        header.addView(TextView(ctx).apply {
-            text = state.text
-            setTextColor(state.color)
-            textSize = 11f
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(dp(8), dp(3), dp(8), dp(3))
-            background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = dp(9).toFloat()
-                setColor(0x22FFFFFF)
-            }
-            tag = GROUP_STATE_TAG
-        })
-        // Clear all — the group-level twin of a swipe.
-        header.addView(ImageView(ctx).apply {
-            setImageResource(R.drawable.ic_check_all)
-            alpha = 0.55f
-            contentDescription = ctx.getString(R.string.notif_mark_group_read)
-            val sz = dp(18)
-            layoutParams = LinearLayout.LayoutParams(sz, sz).apply { leftMargin = dp(8) }
-            isClickable = true
-            isFocusable = true
-            setOnClickListener {
-                Haptics.tap(it)
-                for (r in g.rows) readIds = StackFilters.markRead(ctx, filterPage, r.id, true)
-                if (showMode == "unread") {
-                    block.isVisible = false
-                } else {
-                    rows.removeAllViews()
-                    for (r in g.rows) rows.addView(notifRowView(ctx, r))
+    @Composable
+    private fun GroupBlock(g: NotifGroup, limit: Int) {
+        val ctx = LocalContext.current
+        val view = LocalView.current
+        val result = ntfyCache[g.key]
+        val state = verdictOf(result, limit)
+        val open = collapsedGroups[g.key] != true
+        Column(Modifier.fillMaxWidth().padding(top = 8.dp).testTag("c3:ntfy:${g.key}")) {
+            Row(
+                Modifier.fillMaxWidth().background(Color(0x1FFFFFFF), RoundedCornerShape(10.dp))
+                    .clickable { collapsedGroups[g.key] = open }.padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GroupAvatar(g)
+                Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                    Text(g.label, color = Color(0xFFF2E9FF), fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (g.sub.isNotBlank() && !g.sub.equals(g.label, ignoreCase = true)) {
+                        Text(g.sub, color = Color(0x66FFFFFF), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
+                // The count chip. ONE Text holding the whole verdict, because an async ntfy
+                // group repaints it with a failure sentence that has no count in it at all.
+                Text(state.text, color = state.color, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.background(Color(0x22FFFFFF), RoundedCornerShape(9.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp).testTag("c3:ntfy:${g.key}:state"))
+                // Clear all — the group-level twin of a swipe.
+                Icon(painterResource(R.drawable.ic_check_all), contentDescription = stringResource(R.string.notif_mark_group_read),
+                    modifier = Modifier.padding(start = 8.dp).size(18.dp).graphicsLayer { alpha = 0.55f }
+                        .clickable {
+                            Haptics.tap(view)
+                            val shown = result?.takeIf { it.ok }?.let { shownRows(it, limit) }.orEmpty()
+                            for (r in shown) if (r.id.isNotBlank()) readIds = StackFilters.markRead(ctx, filterPage, r.id, true)
+                        })
+                // Archive — the tick's twin, one level up: about the CHANNEL, not the rows.
+                ArchivePill(g.key)
+                val turn by animateFloatAsState(if (open) 90f else 0f, label = "c3-group-chevron")
+                Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null,
+                    modifier = Modifier.padding(start = 6.dp).size(16.dp).graphicsLayer { alpha = 0.5f }.rotate(turn))
             }
-        })
-        // Archive — the tick's twin, one level up: about the CHANNEL, not the rows.
-        header.addView(archivePill(ctx, g.key, block, homeBody))
-        val chevron = ImageView(ctx).apply {
-            setImageResource(R.drawable.ic_chevron_right)
-            alpha = 0.5f
-            rotation = if (rows.isVisible) 90f else 0f
-            val sz = dp(16)
-            layoutParams = LinearLayout.LayoutParams(sz, sz).apply { leftMargin = dp(6) }
+            if (open && result != null && result.ok) {
+                for (r in shownRows(result, limit)) NotifRowView(r)
+            }
         }
-        header.addView(chevron)
-        header.setOnClickListener {
-            val open = !rows.isVisible
-            rows.isVisible = open
-            if (open) collapsedGroups -= g.key else collapsedGroups += g.key
-            chevron.animate().rotation(if (open) 90f else 0f).setDuration(140).start()
-        }
-        block.addView(header)
-        block.addView(rows)
-        return block
     }
 
     // ── archived channel boxes ─────────────────────────────────────────
@@ -1071,316 +946,171 @@ class C3StackFragment : Fragment() {
         options = listOf(Stacks.FilterOption("yes", "yes"), Stacks.FilterOption("no", "no")),
     )
 
-    private fun isArchived(ctx: android.content.Context, key: String): Boolean =
+    private fun isArchived(ctx: Context, key: String): Boolean =
         StackFilters.selected(ctx, filterPage, yesNo(ARCHIVED_PREFIX + key)) == "yes"
 
-    private fun setArchived(ctx: android.content.Context, key: String, archived: Boolean) {
+    private fun setArchived(ctx: Context, key: String, archived: Boolean) {
         StackFilters.select(ctx, filterPage, ARCHIVED_PREFIX + key, if (archived) "yes" else "no")
     }
 
     /** The Archive control on a box's header. A WORD, not a glyph, and it MOVES THE BOX
      *  immediately — writing the preference alone would read as a dead button. */
-    private fun archivePill(
-        ctx: android.content.Context, key: String, block: View, homeBody: LinearLayout,
-    ): View = TextView(ctx).apply {
-        textSize = 10f
-        typeface = Typeface.DEFAULT_BOLD
-        setTextColor(0xCCFFFFFF.toInt())
-        setPadding(dp(7), dp(3), dp(7), dp(3))
-        background = android.graphics.drawable.GradientDrawable().apply {
-            cornerRadius = dp(9).toFloat()
-            setColor(0x22FFFFFF)
-        }
-        layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-        ).apply { leftMargin = dp(8) }
-        isClickable = true
-        isFocusable = true
-        val paint: (Boolean) -> Unit = { archived ->
-            text = if (archived) ARCHIVE_RESTORE_LABEL else ARCHIVE_LABEL
-            contentDescription =
-                if (archived) "Restore this channel out of the Archive"
-                else "Archive this channel"
-        }
-        paint(isArchived(ctx, key))
-        setOnClickListener {
-            Haptics.tap(it)
-            val archived = !isArchived(ctx, key)
-            setArchived(ctx, key, archived)
-            paint(archived)
-            // Falls back to the card it came from rather than to nothing: a box removed
-            // from one parent and added to none is a box the user just deleted by accident.
-            val target = (if (archived) archiveBox else homeBody) ?: homeBody
-            (block.parent as? ViewGroup)?.removeView(block)
-            target.addView(block)
-            syncArchiveHeader()
-        }
-    }
-
-    /** File a freshly built box where the user left it: its card, or the page's Archive. */
-    private fun placeGroup(
-        ctx: android.content.Context, block: View, key: String, homeBody: LinearLayout,
-    ) {
-        val archive = archiveBox
-        if (archive != null && isArchived(ctx, key)) {
-            archive.addView(block)
-            syncArchiveHeader()
-        } else homeBody.addView(block)
+    @Composable
+    private fun ArchivePill(key: String) {
+        val ctx = LocalContext.current
+        val view = LocalView.current
+        val isIn = key in archived
+        Text(
+            if (isIn) ARCHIVE_RESTORE_LABEL else ARCHIVE_LABEL,
+            color = Color(0xCCFFFFFF), fontSize = 10.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 8.dp).background(Color(0x22FFFFFF), RoundedCornerShape(9.dp))
+                .testTag("c3:ntfy:$key:archive")
+                .clickable {
+                    Haptics.tap(view)
+                    val now = key !in archived
+                    setArchived(ctx, key, now)
+                    archived = if (now) archived + key else archived - key
+                }
+                .padding(horizontal = 7.dp, vertical = 3.dp),
+        )
     }
 
     /** The page's Archive section: one collapsed line over the boxes the user filed away.
      *  Hidden entirely while it holds nothing. */
-    private fun buildArchiveSection(ctx: android.content.Context): View {
-        val wrap = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(6), 0, dp(6))
-            isVisible = false
+    @Composable
+    private fun ArchiveSection(panels: List<Stacks.StackPanel>) {
+        val ctx = LocalContext.current
+        val view = LocalView.current
+        val p = LocalKitPalette.current
+        // Every archived box, with the card limit of the panel that draws it.
+        val boxes = panels.filter { it.kind == "notification_center" }
+            .flatMap { panel -> ntfyTopics(panel).filter { it in archived }.map { it to panel.limit } }
+        if (boxes.isEmpty()) return
+        Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            Text("Archive  ${if (archiveOpen) "▾" else "▸"}  ${boxes.size}", color = p.textSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth().testTag("c3:stack:archive")
+                    .clickable {
+                        Haptics.tap(view)
+                        archiveOpen = !archiveOpen
+                        StackFilters.select(ctx, filterPage, FILTER_ARCHIVE_OPEN, if (archiveOpen) "yes" else "no")
+                    }.padding(start = 14.dp, top = 4.dp, end = 14.dp, bottom = 6.dp))
+            if (archiveOpen) for ((topic, limit) in boxes) GroupBlock(groupOf(topic), limit)
         }
-        val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        archiveOpen = StackFilters.selected(ctx, filterPage, yesNo(FILTER_ARCHIVE_OPEN)) == "yes"
-        box.isVisible = archiveOpen
-        val header = caption(ctx, "").apply {
-            setPadding(dp(2), dp(4), dp(2), dp(6))
-            isClickable = true
-            isFocusable = true
-            setOnClickListener {
-                Haptics.tap(it)
-                archiveOpen = !archiveOpen
-                StackFilters.select(
-                    ctx, filterPage, FILTER_ARCHIVE_OPEN, if (archiveOpen) "yes" else "no")
-                box.isVisible = archiveOpen
-                syncArchiveHeader()
-            }
-        }
-        archiveBox    = box
-        archiveWrap   = wrap
-        archiveHeader = header
-        syncArchiveHeader()
-        wrap.addView(header)
-        wrap.addView(box)
-        return wrap
-    }
-
-    /** Keep the Archive line honest about what is behind it. */
-    private fun syncArchiveHeader() {
-        val box = archiveBox ?: return
-        archiveWrap?.isVisible = box.childCount > 0
-        archiveHeader?.text =
-            "Archive  ${if (archiveOpen) "▾" else "▸"}  ${box.childCount}"
     }
 
     /** A coloured monogram per channel — an ntfy topic has no launcher icon, and a shade
      *  with a blank column where every icon should be reads as broken rather than as
      *  cloud. Tapping opens the channel's web page through the dispatcher. */
-    private fun groupAvatar(ctx: android.content.Context, g: NotifGroup): View {
-        val holder = FrameLayout(ctx)
-        holder.addView(TextView(ctx).apply {
-            text = g.label.trim().take(1).uppercase()
-            gravity = android.view.Gravity.CENTER
-            setTextColor(0xFFFFFFFF.toInt())
-            textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
-            background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(monogramColor(g.key))
-            }
-        }, FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        val sz = dp(30)
-        holder.layoutParams = LinearLayout.LayoutParams(sz, sz)
-        if (g.url.isNotBlank()) {
-            holder.isClickable = true
-            holder.setOnClickListener { onTargetClicked(g.url) }
+    @Composable
+    private fun GroupAvatar(g: NotifGroup) {
+        val tap = if (g.url.isBlank()) Modifier else Modifier.clickable { onTargetClicked(g.url) }
+        Box(Modifier.size(30.dp).background(monogramColor(g.key), CircleShape).then(tap), contentAlignment = Alignment.Center) {
+            Text(g.label.trim().take(1).uppercase(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
-        return holder
     }
 
     /** A stable colour per publisher, derived from the grouping key, so the same topic
      *  keeps the same monogram between visits and no colour table has to be maintained
      *  alongside the channel catalog. */
-    private fun monogramColor(key: String): Int {
-        val hues = intArrayOf(
-            0xFF6D5AE6.toInt(), 0xFF1F8A70.toInt(), 0xFFB5556D.toInt(),
-            0xFF2C6FB5.toInt(), 0xFF9A6A2F.toInt(), 0xFF4E7A2A.toInt(),
-        )
-        return hues[((key.hashCode() % hues.size) + hues.size) % hues.size]
+    private fun monogramColor(key: String): Color {
+        val hues = longArrayOf(0xFF6D5AE6, 0xFF1F8A70, 0xFFB5556D, 0xFF2C6FB5, 0xFF9A6A2F, 0xFF4E7A2A)
+        return Color(hues[((key.hashCode() % hues.size) + hues.size) % hues.size])
     }
 
     /**
      * One notification as a shade ROW: a status stripe, then title and relative time on
      * one line with the snippet under it. Dense on purpose. Unread is said three times
      * over: the stripe lights up, the title goes bold, and the row takes a faint tint.
-     * READ IS A SWIPE — see [attachSwipeToRead].
+     * READ IS A SWIPE: sideways, either direction, flips its read state.
      */
-    private fun notifRowView(ctx: android.content.Context, r: NotifRow): View {
-        val holder = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-        }
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(7), dp(10), dp(7))
-        }
-        val stripe = View(ctx).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                dp(3), LinearLayout.LayoutParams.MATCH_PARENT,
-            ).apply { rightMargin = dp(9) }
-        }
-        row.addView(stripe)
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        val line = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-        }
-        val title = TextView(ctx).apply {
-            text = r.title
-            textSize = 13f
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            layoutParams = LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        line.addView(title)
-        line.addView(TextView(ctx).apply {
-            text = ago(System.currentTimeMillis() - r.ts)
-            setTextColor(0x77FFFFFF.toInt())
-            textSize = 10f
-            setPadding(dp(8), 0, 0, 0)
-        })
-        col.addView(line)
-        val snippet = if (r.text.isBlank()) null else TextView(ctx).apply {
-            text = r.text
-            textSize = 12f
-            maxLines = 2
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(0, dp(1), 0, 0)
-        }
-        snippet?.let { col.addView(it) }
-        row.addView(col)
-        holder.addView(row)
-        holder.addView(View(ctx).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 1)
-            setBackgroundColor(0x11FFFFFF)
-        })
+    @Composable
+    private fun NotifRowView(r: NotifRow) {
+        val ctx = LocalContext.current
+        val scope = rememberCoroutineScope()
+        val offset = remember { Animatable(0f) }
+        var width by remember { mutableIntStateOf(1) }
+        val slop = with(LocalDensity.current) { 64.dp.toPx() }
+        val unread = isUnread(r)
 
         // All three unread cues in one place, so a repaint after a swipe cannot set two of
         // them and forget the third.
-        val paint: (Boolean) -> Unit = { unread ->
-            row.setBackgroundColor(when {
-                r.severity == "error" -> 0x33B91C1C
-                r.severity == "warn"  -> 0x33D97706
-                unread                -> 0x14FFFFFF
-                else                  -> 0x00000000
-            })
-            stripe.setBackgroundColor(when {
-                r.severity == "error" -> 0xFFFF6B6B.toInt()
-                r.severity == "warn"  -> 0xFFFFB020.toInt()
-                unread                -> 0xFF7C5CFF.toInt()
-                else                  -> 0x00000000
-            })
-            title.setTextColor(if (unread) 0xFFF2E9FF.toInt() else 0xBBE9D8FD.toInt())
-            title.typeface = if (unread) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-            snippet?.setTextColor(if (unread) 0xAAE9D8FD.toInt() else 0x77E9D8FD.toInt())
+        val rowTint = when {
+            r.severity == "error" -> Color(0x33B91C1C)
+            r.severity == "warn"  -> Color(0x33D97706)
+            unread                -> Color(0x14FFFFFF)
+            else                  -> Color.Transparent
         }
-        paint(isUnread(r))
+        val stripe = when {
+            r.severity == "error" -> Color(0xFFFF6B6B)
+            r.severity == "warn"  -> Color(0xFFFFB020)
+            unread                -> Color(0xFF7C5CFF)
+            else                  -> Color.Transparent
+        }
 
-        if (r.id.isNotBlank()) attachSwipeToRead(holder, r, paint)
-        return holder
-    }
-
-    /**
-     * Swipe a row sideways — either direction — to flip its read state. Hand-rolled on a
-     * touch listener because this list is plain Views in a LinearLayout inside a
-     * ScrollView. VERTICAL SCROLLING IS PRESERVED by claiming the gesture late: only a
-     * clearly sideways drag calls requestDisallowInterceptTouchEvent. The gesture is
-     * always visibly answered.
-     */
-    private fun attachSwipeToRead(holder: View, r: NotifRow, paint: (Boolean) -> Unit) {
-        val ctx = holder.context
-        val slop = android.view.ViewConfiguration.get(ctx).scaledTouchSlop
-        var downX = 0f; var downY = 0f
-        var decided = false; var horizontal = false
-        // rawX/rawY, not x/y: the view is being translated under the finger.
-        holder.setOnTouchListener { v, ev ->
-            when (ev.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    downX = ev.rawX; downY = ev.rawY
-                    decided = false; horizontal = false
-                    true
-                }
-                android.view.MotionEvent.ACTION_MOVE -> {
-                    val dx = ev.rawX - downX
-                    val dy = ev.rawY - downY
-                    if (!decided && (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop)) {
-                        decided = true
-                        horizontal = kotlin.math.abs(dx) > kotlin.math.abs(dy)
-                        if (horizontal) v.parent?.requestDisallowInterceptTouchEvent(true)
-                    }
-                    if (horizontal) {
-                        v.translationX = dx
-                        v.alpha = 1f - (kotlin.math.abs(dx) / (v.width.coerceAtLeast(1) * 2f))
-                            .coerceIn(0f, 0.55f)
-                    }
-                    true
-                }
-                android.view.MotionEvent.ACTION_UP -> {
-                    val dx = ev.rawX - downX
-                    val far = kotlin.math.abs(dx) >
-                        kotlin.math.max(dp(64).toFloat(), v.width * 0.22f)
-                    when {
-                        horizontal && far -> flipRead(v, r, paint, dx > 0)
-                        horizontal        -> settle(v)
-                        else              -> settle(v)
-                    }
-                    true
-                }
-                android.view.MotionEvent.ACTION_CANCEL -> { settle(v); true }
-                else -> false
+        /** Slide out towards [toRight], persist the flipped state, then bring it back from
+         *  the opposite edge already repainted. */
+        fun flip(toRight: Boolean) {
+            scope.launch {
+                val makeRead = isUnread(r)
+                val out = (if (toRight) 1f else -1f) * width
+                offset.animateTo(out, androidx.compose.animation.core.tween(150))
+                readIds = StackFilters.markRead(ctx, filterPage, r.id, makeRead)
+                offset.snapTo(-out)
+                offset.animateTo(0f, androidx.compose.animation.core.tween(170))
             }
         }
-    }
+        fun settle() { scope.launch { offset.animateTo(0f, androidx.compose.animation.core.tween(140)) } }
 
-    /** Slide [v] out towards [toRight], persist the flipped state, then bring it back from
-     *  the opposite edge already repainted. Under Show=Unread a row that just became read
-     *  has nowhere to return TO, so it stays gone. */
-    private fun flipRead(v: View, r: NotifRow, paint: (Boolean) -> Unit, toRight: Boolean) {
-        val makeRead = isUnread(r)
-        val out = (if (toRight) 1f else -1f) * v.width.coerceAtLeast(1)
-        v.animate().translationX(out).alpha(0f).setDuration(150).withEndAction {
-            readIds = StackFilters.markRead(v.context, filterPage, r.id, makeRead)
-            if (showMode == "unread" && makeRead) {
-                v.visibility = View.GONE
-                v.translationX = 0f
-                v.alpha = 1f
-            } else {
-                paint(!makeRead)
-                v.translationX = -out
-                v.animate().translationX(0f).alpha(1f).setDuration(170).start()
+        Column(
+            Modifier.fillMaxWidth().testTag("c3:ntfy:row:${r.id.ifBlank { r.title }}")
+                .onSizeChanged { width = max(1, it.width) }
+                .graphicsLayer {
+                    translationX = offset.value
+                    alpha = 1f - (abs(offset.value) / (width * 2f)).coerceIn(0f, 0.55f)
+                }
+                .then(if (r.id.isBlank()) Modifier else Modifier.pointerInput(r.id) {
+                    // Only a clearly sideways drag is claimed, so vertical scrolling is preserved.
+                    var total = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { total = 0f },
+                        onDragEnd = {
+                            if (abs(total) > max(slop, width * 0.22f)) flip(total > 0) else settle()
+                        },
+                        onDragCancel = { settle() },
+                        onHorizontalDrag = { change, dx ->
+                            change.consume()
+                            total += dx
+                            scope.launch { offset.snapTo(offset.value + dx) }
+                        },
+                    )
+                }),
+        ) {
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(rowTint).padding(top = 7.dp, end = 10.dp, bottom = 7.dp)) {
+                Box(Modifier.width(3.dp).fillMaxHeight().background(stripe))
+                Column(Modifier.weight(1f).padding(start = 9.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(r.title, color = if (unread) Color(0xFFF2E9FF) else Color(0xBBE9D8FD), fontSize = 13.sp,
+                            fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(ago(System.currentTimeMillis() - r.ts), color = Color(0x77FFFFFF), fontSize = 10.sp,
+                            modifier = Modifier.padding(start = 8.dp))
+                    }
+                    if (r.text.isNotBlank()) {
+                        Text(r.text, color = if (unread) Color(0xAAE9D8FD) else Color(0x77E9D8FD), fontSize = 12.sp,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 1.dp))
+                    }
+                }
             }
-        }.start()
-    }
-
-    private fun settle(v: View) {
-        v.animate().translationX(0f).alpha(1f).setDuration(140).start()
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0x11FFFFFF)))
+        }
     }
 
     /** A card-level verdict line, for the states that apply to a whole stream. */
-    private fun stateLine(ctx: android.content.Context, text: String, color: Int): TextView =
-        TextView(ctx).apply {
-            this.text = text
-            setTextColor(color)
-            textSize = 12f
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, dp(8), 0, 0)
-        }
+    @Composable
+    private fun StateLine(text: String, color: Color) {
+        Text(text, color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+    }
 
     private fun ago(ms: Long): String = when {
         ms < 60_000     -> "just now"
@@ -1389,42 +1119,13 @@ class C3StackFragment : Fragment() {
         else            -> "${ms / 86_400_000}d ago"
     }
 
-    /** Round-robin pool of stable host ids. View.generateViewId() crashes on
-     *  FragmentManager restore because the new id won't match the saved-state host id.
-     *  Stable resource ids survive process death. */
-    private val embedHostIds = intArrayOf(
-        R.id.stack_embed_0, R.id.stack_embed_1, R.id.stack_embed_2, R.id.stack_embed_3,
-        R.id.stack_embed_4, R.id.stack_embed_5, R.id.stack_embed_6, R.id.stack_embed_7,
-    )
-    private var nextEmbedIdx = 0
-
-    private fun embedChild(body: LinearLayout, frag: Fragment) {
-        val hostId = embedHostIds[nextEmbedIdx % embedHostIds.size]
-        nextEmbedIdx++
-        val host = FrameLayout(body.context).apply {
-            id = hostId
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-        }
-        body.addView(host)
-        // Only commit when there's nothing already attached at that host — on restore the
-        // FragmentManager re-binds the existing inner fragment to the same id.
-        if (childFragmentManager.findFragmentById(hostId) == null) {
-            childFragmentManager.beginTransaction()
-                .replace(hostId, frag)
-                .commit()
-        }
-    }
-
     /** Mini-tile index row — the card look and the wrap-at-tile_columns layout live in
      *  [IndexTiles]. openUrlOrTarget, not the listener directly, so `anchor:` tiles
      *  scroll this page instead of being handed to the navigating dispatcher. */
-    private fun renderTileRow(body: LinearLayout, tiles: List<Stacks.AggTile>) {
-        val ctx = body.context
-        body.addView(IndexTiles.grid(
-            ctx,
+    @Composable
+    private fun TileRow(tiles: List<Stacks.AggTile>) {
+        val ctx = LocalContext.current
+        IndexTiles.Grid(
             Stacks.tileColumns(),
             tiles.map { tile ->
                 IndexTiles.Cell(
@@ -1433,17 +1134,7 @@ class C3StackFragment : Fragment() {
                     onClick = { openUrlOrTarget(tile.target) },
                 )
             },
-        ))
-    }
-
-    /** A kind the carried stacks never declare. STATED, not drawn blank — the same
-     *  fail-visible rule an unknown feed `source` gets; there is no not-built body for a
-     *  declared card to fall back into (#648). */
-    private fun renderUnknownKind(
-        ctx: android.content.Context, body: LinearLayout, panel: Stacks.StackPanel,
-    ) {
-        body.addView(emptyRow(ctx,
-            "(unknown panel kind '${panel.kind}' — this app carries no renderer for it)"))
+        )
     }
 
     // ── kind=cloud_dashboard ───────────────────────────────────────────
@@ -1457,58 +1148,6 @@ class C3StackFragment : Fragment() {
     ): String? = panel.anchors
         .firstOrNull { it.group == groupId && it.subgroup == subLabel }?.id
 
-    /** kind=cloud_dashboard — live container map. Decodes the baked service inventory
-     *  (data/cloud_services.json → BuildConfig.CLOUD_SERVICES_B64), buckets every
-     *  container by category into the card's dashGroups, draws a TCP-ping status dot per
-     *  container (green up / red down / grey checking, meaningful only over WireGuard) and
-     *  opens [ContainerSheet] on tap. Provider groups render external consoles (no ping). */
-    private fun renderCloudDashboard(
-        ctx: android.content.Context, body: LinearLayout, panel: Stacks.StackPanel,
-    ) {
-        val dash = Stacks.cloudServices()
-        val cols = Stacks.tileColumns()
-        val executor = java.util.concurrent.Executors.newFixedThreadPool(8)
-        val wanted = panel.dashGroupIds.ifEmpty { dash.groups.map { it.id } }
-        val groups = dash.groups.filter { it.id in wanted }
-        // Only label the group inside the card when one card shows >1 group.
-        val showGroupHeader = groups.size > 1
-        for (group in groups) {
-            if (showGroupHeader) {
-                val gh = groupHeader(ctx, group.label)
-                // The card's sub-tables are anchor targets in their own right
-                // (`anchor:stack/providers`). Only ids the panel DECLARED are registered.
-                declaredAnchor(panel, group.id, "")?.let { anchors.register(it, gh) }
-                body.addView(gh)
-            }
-            if (group.providers.isNotEmpty()) {
-                addCloudGrid(ctx, body, cols, executor, group.providers.map {
-                    CloudTile(it.label, group.icon, it.url, showLight = false, ping = null)
-                })
-            }
-            for (sub in group.subgroups) {
-                if (sub.containers.isEmpty()) continue
-                val sh = subHeader(ctx, sub.label)
-                // Subgroups carry no id in cloud_services.json, so the panel's declaration
-                // names the label it binds to.
-                declaredAnchor(panel, group.id, sub.label)?.let { anchors.register(it, sh) }
-                body.addView(sh)
-                addCloudGrid(ctx, body, cols, executor, sub.containers.map {
-                    when {
-                        // Explicit open-URL (e.g. VM dashboard) — open it verbatim but
-                        // still light up from the url:port ping.
-                        it.link.isNotBlank() -> CloudTile(it.label, sub.icon, it.link, showLight = true,
-                            ping = if (it.port in 1..65535) it.url to it.port else null, name = it.name)
-                        it.external -> CloudTile(it.label, sub.icon, it.url, showLight = false, ping = null,
-                            name = it.name)
-                        else -> CloudTile(it.label, sub.icon, "https://${it.url}", showLight = true,
-                            ping = if (it.port in 1..65535) it.url to it.port else null, name = it.name)
-                    }
-                })
-            }
-        }
-        executor.shutdown()
-    }
-
     private data class CloudTile(
         val label: String, val icon: String, val openUrl: String,
         val showLight: Boolean, val ping: Pair<String, Int>?,
@@ -1517,122 +1156,129 @@ class C3StackFragment : Fragment() {
         val name: String = "",
     )
 
+    /** The tiles of one sub-table or provider list, by the rules the dashboard has always had. */
+    private fun containerTiles(sub: Stacks.CloudSub): List<CloudTile> = sub.containers.map {
+        when {
+            // Explicit open-URL (e.g. VM dashboard) — open it verbatim but
+            // still light up from the url:port ping.
+            it.link.isNotBlank() -> CloudTile(it.label, sub.icon, it.link, showLight = true,
+                ping = if (it.port in 1..65535) it.url to it.port else null, name = it.name)
+            it.external -> CloudTile(it.label, sub.icon, it.url, showLight = false, ping = null,
+                name = it.name)
+            else -> CloudTile(it.label, sub.icon, "https://${it.url}", showLight = true,
+                ping = if (it.port in 1..65535) it.url to it.port else null, name = it.name)
+        }
+    }
+
+    /** The TCP-ping lights of a card's tiles, at most eight in flight (green up / red down). */
+    private suspend fun pingAll(panel: Stacks.StackPanel) {
+        val dash = Stacks.cloudServices()
+        val wanted = panel.dashGroupIds.ifEmpty { dash.groups.map { it.id } }
+        val pings = dash.groups.filter { it.id in wanted }
+            .flatMap { g -> g.subgroups.flatMap { containerTiles(it) } }
+            .mapNotNull { it.ping }.distinct()
+        val gate = Semaphore(8)
+        coroutineScope {
+            for ((host, port) in pings) launch {
+                gate.withPermit {
+                    val up = withContext(Dispatchers.IO) {
+                        try {
+                            java.net.Socket().use { it.connect(java.net.InetSocketAddress(host, port), 1200); true }
+                        } catch (_: Throwable) { false }
+                    }
+                    lights["$host:$port"] = up
+                }
+            }
+        }
+    }
+
+    /** kind=cloud_dashboard — live container map. Decodes the baked service inventory
+     *  (data/cloud_services.json → BuildConfig.CLOUD_SERVICES_B64), buckets every
+     *  container by category into the card's dashGroups, draws a TCP-ping status dot per
+     *  container (green up / red down / grey checking, meaningful only over WireGuard) and
+     *  opens [ContainerSheet] on tap. Provider groups render external consoles (no ping). */
+    @Composable
+    private fun CloudDashboard(index: Int, panel: Stacks.StackPanel) {
+        val dash = remember { Stacks.cloudServices() }
+        val cols = Stacks.tileColumns()
+        val wanted = panel.dashGroupIds.ifEmpty { dash.groups.map { it.id } }
+        val groups = dash.groups.filter { it.id in wanted }
+        // Only label the group inside the card when one card shows >1 group.
+        val showGroupHeader = groups.size > 1
+        for (group in groups) {
+            if (showGroupHeader) {
+                // The card's sub-tables are anchor targets in their own right
+                // (`anchor:stack/providers`). Only ids the panel DECLARED are registered.
+                val id = declaredAnchor(panel, group.id, "")
+                GroupHeader(group.label, if (id != null) anchors.mark(id) else Modifier)
+            }
+            if (group.providers.isNotEmpty()) {
+                CloudGrid(cols, group.providers.map {
+                    CloudTile(it.label, group.icon, it.url, showLight = false, ping = null)
+                })
+            }
+            for (sub in group.subgroups) {
+                if (sub.containers.isEmpty()) continue
+                // Subgroups carry no id in cloud_services.json, so the panel's declaration
+                // names the label it binds to.
+                val id = declaredAnchor(panel, group.id, sub.label)
+                SubHeader(sub.label, if (id != null) anchors.mark(id) else Modifier)
+                CloudGrid(cols, containerTiles(sub))
+            }
+        }
+    }
+
     /** Wrap-flowing `cols`-column grid of cloud tiles. */
-    private fun addCloudGrid(
-        ctx: android.content.Context, body: LinearLayout, cols: Int,
-        executor: java.util.concurrent.ExecutorService, tiles: List<CloudTile>,
-    ) {
-        var i = 0
-        while (i < tiles.size) {
-            val row = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+    @Composable
+    private fun CloudGrid(cols: Int, tiles: List<CloudTile>) {
+        for (row in tiles.chunked(cols.coerceAtLeast(1))) {
+            Row(Modifier.fillMaxWidth()) {
+                for (t in row) Box(Modifier.weight(1f)) { CloudTileCell(t) }
+                repeat(cols.coerceAtLeast(1) - row.size) { Box(Modifier.weight(1f)) }
             }
-            for (c in 0 until cols) {
-                if (i < tiles.size) row.addView(cloudTile(ctx, tiles[i++], executor))
-                else                row.addView(spacerTile(ctx))
-            }
-            body.addView(row)
         }
     }
 
     /** Icon + STATUS LIGHT (under the icon) + label tile. Tap opens [ContainerSheet] —
      *  Infos / Actions for the box and the app inside it; a provider console has no
      *  container behind it and still opens its URL. */
-    private fun cloudTile(
-        ctx: android.content.Context, t: CloudTile,
-        executor: java.util.concurrent.ExecutorService,
-    ): View {
-        val cell = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = android.view.Gravity.CENTER
-            val padH = dp(4); val padV = dp(8); setPadding(padH, padV, padH, padV)
-            isClickable = true; isFocusable = true
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            setOnClickListener {
-                val act = activity
-                if (t.name.isNotBlank() && act is androidx.fragment.app.FragmentActivity) {
-                    ContainerSheet.show(act, t.name, t.label, t.openUrl)
-                } else {
-                    openUrlOrTarget(t.openUrl)
-                }
+    @Composable
+    private fun CloudTileCell(t: CloudTile) {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        Column(
+            Modifier.fillMaxWidth().testTag("c3:cloud:${t.label}")
+                .clickable {
+                    if (t.name.isNotBlank()) sheet = ContainerSheet.Target(t.name, t.label, t.openUrl)
+                    else openUrlOrTarget(t.openUrl)
+                }.padding(horizontal = 4.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            val resId = remember(t.icon) { Stacks.iconResFor(ctx, t.icon) }
+            if (resId != 0) Image(painterResource(resId), contentDescription = null, Modifier.size(28.dp),
+                colorFilter = ColorFilter.tint(p.accent))
+            if (t.showLight) {
+                val up = t.ping?.let { (host, port) -> lights["$host:$port"] }
+                Box(Modifier.padding(top = 3.dp).size(8.dp).background(
+                    when (up) { true -> Color(0xFF34C759); false -> Color(0xFFFF3B30); null -> Color(0x66FFFFFF) }, CircleShape))
             }
+            Text(t.label, color = p.textPrimary, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 3.dp))
         }
-        cell.addView(ImageView(ctx).apply {
-            val resId = Stacks.iconResFor(ctx, t.icon)
-            if (resId != 0) setImageResource(resId)
-            imageTintList = android.content.res.ColorStateList.valueOf(0xFFE9D8FD.toInt())
-            val sz = dp(28)
-            layoutParams = LinearLayout.LayoutParams(sz, sz)
-        })
-        if (t.showLight) {
-            val dot = View(ctx).apply {
-                val sz = dp(8)
-                layoutParams = LinearLayout.LayoutParams(sz, sz).apply { topMargin = dp(3) }
-                background = android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.OVAL
-                    setColor(0x66FFFFFF)
-                }
-            }
-            cell.addView(dot)
-            t.ping?.let { (host, port) ->
-                runCatching {
-                    executor.execute {
-                        val up = try {
-                            java.net.Socket().use { it.connect(java.net.InetSocketAddress(host, port), 1200); true }
-                        } catch (_: Throwable) { false }
-                        dot.post {
-                            (dot.background as? android.graphics.drawable.GradientDrawable)
-                                ?.setColor(if (up) 0xFF34C759.toInt() else 0xFFFF3B30.toInt())
-                        }
-                    }
-                }
-            }
-        }
-        cell.addView(TextView(ctx).apply {
-            text = t.label
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            gravity = android.view.Gravity.CENTER
-            maxLines = 2
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(0, dp(3), 0, 0)
-        })
-        return cell
     }
 
-    private fun groupHeader(ctx: android.content.Context, text: String): TextView =
-        TextView(ctx).apply {
-            this.text = text
-            setTextColor(resources.getColor(R.color.cloud_primary, ctx.theme))
-            typeface = Typeface.DEFAULT_BOLD
-            textSize = 16f
-            setPadding(0, dp(14), 0, dp(4))
-        }
+    @Composable
+    private fun GroupHeader(text: String, modifier: Modifier) {
+        val p = LocalKitPalette.current
+        Text(text, color = p.accent, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+            modifier = modifier.padding(top = 14.dp, bottom = 4.dp))
+    }
 
-    private fun subHeader(ctx: android.content.Context, text: String): TextView =
-        TextView(ctx).apply {
-            this.text = text
-            setTextColor(0xCCFFFFFF.toInt())
-            typeface = Typeface.DEFAULT_BOLD
-            textSize = 12f
-            setPadding(dp(4), dp(8), 0, dp(2))
-        }
-
-    private fun spacerTile(ctx: android.content.Context): View =
-        View(ctx).apply {
-            layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
-        }
-
-    /**
-     * Registers [render] so the pull-down can rebuild THIS body in place, and runs it once
-     * now. Only bodies made of plain views may be registered: re-running a body that calls
-     * [embedChild] would allocate the next fixed host id while the previous child fragment
-     * still holds the old one, and the panel would render empty.
-     */
-    private fun refreshable(body: LinearLayout, render: () -> Unit) {
-        bodyRefreshers += { body.removeAllViews(); render() }
-        render()
+    @Composable
+    private fun SubHeader(text: String, modifier: Modifier) {
+        val p = LocalKitPalette.current
+        Text(text, color = p.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+            modifier = modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp))
     }
 
     // ── pull-down to refresh ───────────────────────────────────────────
@@ -1644,46 +1290,35 @@ class C3StackFragment : Fragment() {
      * [ntfyCache] cleared, though every channel IS re-polled: the cache is also the
      * ordering key for Sort=Time.
      */
-    private fun startRefresh() {
-        val host = refreshHost ?: return
-        if (bodyRefreshers.isEmpty()) {
-            host.isRefreshing = false
+    private fun startRefresh(scope: kotlinx.coroutines.CoroutineScope) {
+        val cards = stackPanels.filter { it.kind == "notification_center" && ntfyTopics(it).isNotEmpty() }
+        if (cards.isEmpty()) {
+            refreshing = false
             return
         }
         refreshBefore = HashSet(pageRowIds)
-        refreshPending = 0
-        ntfyForceRepoll = true
-        rebuildBodies()
-        ntfyForceRepoll = false
+        pageRowIds.clear()
+        refreshPending = cards.size
+        refreshing = true
+        // Every card's poll effect is keyed by this: bumping it re-runs them, forced.
+        forcedKey = refreshKey + 1
+        refreshKey += 1
         // WATCHDOG. A poll that never settles is a spinner that never stops. It waits on
         // the SAME scope the polls do — cancelled with the view, it can only fire while
         // there is still a spinner to stop.
-        viewLifecycleOwner.lifecycleScope.launch {
-            kotlinx.coroutines.delay(REFRESH_TIMEOUT_MS)
-            if (host.isRefreshing) {
+        scope.launch {
+            delay(REFRESH_TIMEOUT_MS)
+            if (refreshing) {
                 refreshPending = 0
                 finishRefresh(timedOut = true)
             }
         }
-        if (refreshPending == 0) finishRefresh(timedOut = false)
-    }
-
-    /** Re-render every registered body — emptying the Archive first stops a rebuild
-     *  growing a second copy of every archived box; clearing [pageRowIds] keeps the
-     *  refresh's arithmetic honest. */
-    private fun rebuildBodies() {
-        archiveBox?.removeAllViews()
-        pageRowIds.clear()
-        for (refresh in bodyRefreshers) refresh()
-        syncArchiveHeader()
     }
 
     /** One channel poll landed, or failed to be scheduled. */
     private fun ntfyPollSettled() {
         if (refreshPending > 0) refreshPending--
-        if (refreshPending == 0 && refreshHost?.isRefreshing == true) {
-            finishRefresh(timedOut = false)
-        }
+        if (refreshPending == 0 && refreshing) finishRefresh(timedOut = false)
     }
 
     /**
@@ -1693,10 +1328,8 @@ class C3StackFragment : Fragment() {
      * part of the answer is unknown.
      */
     private fun finishRefresh(timedOut: Boolean) {
-        val host = refreshHost ?: return
-        host.isRefreshing = false
-        val column = cardColumn ?: return
-        val ctx = column.context
+        refreshing = false
+        val ctx = context ?: return
         val fresh = pageRowIds.count { it !in refreshBefore }
         val unreachable = ntfyCache.count { !it.value.ok }
         val at = android.text.format.DateFormat.getTimeFormat(ctx)
@@ -1711,33 +1344,11 @@ class C3StackFragment : Fragment() {
         val color = when {
             timedOut || unreachable > 0 -> SIGNAL_UNKNOWN
             fresh > 0                   -> SIGNAL_OK
-            else                        -> 0x88FFFFFF.toInt()
+            else                        -> Color(0x88FFFFFF)
         }
         // One line, reused rather than appended.
-        val note = column.findViewWithTag<TextView>(REFRESH_NOTE_TAG)
-            ?: stateLine(ctx, "", color).also {
-                it.tag = REFRESH_NOTE_TAG
-                column.addView(it, 0)
-            }
-        note.text = "Refreshed $at · $outcome$notReached"
-        note.setTextColor(color)
+        refreshNote = "Refreshed $at · $outcome$notReached" to color
     }
-
-    private fun caption(ctx: android.content.Context, text: String): TextView =
-        TextView(ctx).apply {
-            this.text = text
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            alpha = 0.55f
-            val pad = dp(12); setPadding(pad, dp(4), pad, dp(4))
-        }
-
-    private fun emptyHint(ctx: android.content.Context, text: String): TextView =
-        TextView(ctx).apply {
-            this.text = text
-            setTextAppearance(android.R.style.TextAppearance_Material_Body1)
-            alpha = 0.6f
-            val pad = dp(16); setPadding(pad, pad, pad, pad)
-        }
 
     // ── Click dispatch ─────────────────────────────────────────────────
 
@@ -1759,19 +1370,15 @@ class C3StackFragment : Fragment() {
         (activity as? TargetListener)?.onTargetClicked(target)
     }
 
-    private fun dp(v: Int): Int =
-        (v * resources.displayMetrics.density).toInt()
+    override fun onDestroyView() {
+        pageRowIds.clear()
+        super.onDestroyView()
+    }
 
     companion object {
         private const val ARG_STACK = "stack"
         const val STACK_TOPOLOGY = "stack_topology"
         const val STACK_OBSERVABILITY = "stack_observability"
-
-        /** Marks a notification group's verdict chip so an async ntfy poll can find it
-         *  again without a field per group. */
-        private const val GROUP_STATE_TAG = "notif_group_state"
-        /** Marks a notification group's row container — same tag-lookup trick. */
-        private const val GROUP_ROWS_TAG = "notif_group_rows"
 
         /** Archived-box keys, and the Archive section's own open/closed flag. Both
          *  `__`-prefixed page settings, stored by [StackFilters] under the page id. */
@@ -1780,8 +1387,6 @@ class C3StackFragment : Fragment() {
         private const val ARCHIVE_LABEL         = "Archive"
         private const val ARCHIVE_RESTORE_LABEL = "Restore"
 
-        /** Marks the pull-down outcome line so each refresh REPLACES it. */
-        private const val REFRESH_NOTE_TAG = "stack_refresh_note"
         /** Comfortably past the poll's own 4s connect timeout, so a slow-but-alive mesh
          *  reports its real answer rather than a timeout. */
         private const val REFRESH_TIMEOUT_MS = 20_000L
@@ -1790,9 +1395,11 @@ class C3StackFragment : Fragment() {
 
         /** Grey = we do not know. Deliberately NOT red: red is a claim about the fleet,
          *  and a failed fetch is a claim about this phone's network. */
-        private val SIGNAL_UNKNOWN = 0xFF9E9E9E.toInt()
-        private val SIGNAL_OK      = 0xFF34C759.toInt()
-        private val SIGNAL_WARN    = 0xFFFFB020.toInt()
+        private val SIGNAL_UNKNOWN = Color(0xFF9E9E9E)
+        private val SIGNAL_OK      = Color(0xFF34C759)
+        private val SIGNAL_WARN    = Color(0xFFFFB020)
+        private val SIGNAL_OK_TEXT  = Color(0xFF7BE38B)
+        private val SIGNAL_BAD_TEXT = Color(0xFFFF8888)
 
         /** One namespace PER TOPIC: an ntfy poll is only ever complete for the topic it
          *  polled, so that is the largest set a successful poll is entitled to prune. */

@@ -1,19 +1,27 @@
 package com.diegonmarcos.cloudc3.pages
 
 import android.os.Bundle
-import android.view.View
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.commit
 import com.diegonmarcos.cloudc3.R
 import com.diegonmarcos.superapp.bottomnav.NavPage
-import com.diegonmarcos.superapp.bottomnav.PageTabsView
+import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
 
 /**
  * #648 a content tab: a strip over that tab's DECLARED pages, and one container the
  * selected page's fragment is swapped into.
  *
  * ONE implementation for every paged tab, so adding a page is a build.json edit. The strip
- * is libs:bottomnav's PageTabsView over the section's declared pages (#868) — the labels are
+ * is libs:bottomnav's PageTabs over the section's declared pages (#868) — the labels are
  * never spelled here.
  *
  * THE RULE THIS CLASS ENFORCES AT RUNTIME, and the tester at build time: a declared page
@@ -22,8 +30,10 @@ import com.diegonmarcos.superapp.bottomnav.PageTabsView
  * like a page with nothing in it. There is deliberately no "not built yet" state to fall
  * back into: a tab the declaration lists is a tab that works, and the only way to keep
  * that true is to declare a page when it is implemented and not before.
+ *
+ * 2026-10-16 owner decision: all apps must be Compose — the tab is a [KitComposeFragment].
  */
-abstract class PagedFragment : Fragment(R.layout.fragment_paged) {
+abstract class PagedFragment : KitComposeFragment() {
 
     /** That tab's declared pages, from build.json::ui.<tab>.pages. */
     abstract fun pages(): List<NavPage>
@@ -31,51 +41,50 @@ abstract class PagedFragment : Fragment(R.layout.fragment_paged) {
     /** The real fragment for a declared page id. Null means the declaration is a lie. */
     abstract fun pageFragment(pageId: String): Fragment?
 
-    private var selected: String? = null
+    private var selected by mutableStateOf<String?>(null)
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        val strip = view.findViewById<PageTabsView>(R.id.page_strip)
+    override fun palette(): KitPalette = c3KitPalette(requireContext())
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
         val declared = pages()
         val restored = savedInstanceState?.getString(STATE_PAGE)
-        val initial = restored?.takeIf { id -> declared.any { it.id == id } }
-            ?: declared.firstOrNull()?.id
+        selected = restored?.takeIf { id -> declared.any { it.id == id } } ?: declared.firstOrNull()?.id
+    }
 
-        // A single declared page needs no strip: the tab IS that page, and a one-item
-        // picker is chrome that cannot be used.
-        strip.visibility = if (declared.size > 1) View.VISIBLE else View.GONE
-        // #868 the strip is libs:bottomnav's PageTabsView; the section sits under the shell's
-        // own inset padding, so the strip adds none.
-        strip.underTopChrome = false
-        strip.pages = declared
-        strip.onSelect = { open(it.id, strip) }
-        initial?.let { open(it, strip) }
+    @Composable
+    override fun Content() {
+        val declared = remember { pages() }
+        Column(Modifier.fillMaxSize()) {
+            // A single declared page needs no strip: the tab IS that page, and a one-item
+            // picker is chrome that cannot be used. #868 the strip is libs:bottomnav's; the
+            // section sits under the shell's own inset padding, so the strip adds none.
+            if (declared.size > 1) {
+                PageTabs(
+                    pages = declared,
+                    selectedId = selected,
+                    onSelect = { selected = it.id },
+                    underTopChrome = false,
+                )
+            }
+            val id = selected
+            if (id != null) {
+                C3FragmentHost(
+                    fm = childFragmentManager,
+                    containerId = R.id.page_container,
+                    key = id,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    // A declared page with no fragment. Stated, not drawn blank.
+                    pageFragment(id) ?: UndeclaredPageFragment.newInstance(id)
+                }
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_PAGE, selected)
-    }
-
-    private fun open(pageId: String, strip: PageTabsView) {
-        if (pageId == selected) return
-        val fragment = pageFragment(pageId)
-        if (fragment == null) {
-            // A declared page with no fragment. Stated, not drawn blank.
-            childFragmentManager.commit {
-                setReorderingAllowed(true)
-                replace(R.id.page_container, UndeclaredPageFragment.newInstance(pageId))
-            }
-            selected = pageId
-            strip.selectedId = pageId
-            return
-        }
-        selected = pageId
-        strip.selectedId = pageId
-        childFragmentManager.commit {
-            setReorderingAllowed(true)
-            replace(R.id.page_container, fragment, pageId)
-        }
     }
 
     private companion object {

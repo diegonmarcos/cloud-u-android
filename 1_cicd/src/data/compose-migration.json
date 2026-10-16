@@ -745,30 +745,17 @@
       "id": "ac_cloud-c3",
       "scope": "in",
       "wave": 4,
-      "ui": "views",
+      "ui": "compose",
       "size": "L",
-      "screens_left": [
-        "MainActivity",
-        "HomeFragment",
-        "AboutFragment",
-        "TopologyFragment",
-        "ObservFragment",
-        "ConfigsFragment",
-        "UndeclaredPageFragment",
-        "AppsFragment",
-        "PagedFragment",
-        "C3HealthFragment",
-        "C3MeshFragment",
-        "C3StackFragment"
-      ],
+      "screens_left": [],
       "notes": "Copies of SuperApp pages (C3Health/C3Mesh/ContainerSheet/IndexTiles). Migrate AFTER the SuperApp's own versions and share the composables instead of porting twice.",
       "risks": [
         "test/test-c3-shell.sh diffs the tab dispatch against build.json — keep the dispatch shape"
       ],
       "baseline": {
-        "view_screens": 12,
-        "layout_xml": 7,
-        "view_ui_files": 10,
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
         "custom_views": 0
       }
     },

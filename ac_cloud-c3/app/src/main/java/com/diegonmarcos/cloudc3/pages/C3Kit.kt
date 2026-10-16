@@ -12,6 +12,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentContainerView
+import androidx.fragment.app.FragmentManager
 import androidx.core.content.ContextCompat
 import com.diegonmarcos.cloudc3.R
 import com.diegonmarcos.superapp.uikit.KitDensity
@@ -47,5 +51,39 @@ internal fun C3Card(onClick: (() -> Unit)? = null, content: @Composable ColumnSc
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(KitDensity.medium),
         content = content,
+    )
+}
+
+/**
+ * A child [Fragment] inside a Compose page: the one place the pages still touch a FragmentManager
+ * (the paged tabs swap their page fragment here, the shell swaps its tab). [key] changes → the
+ * previous child is removed and [create]'s fragment takes the container.
+ *
+ * Added to the container VIEW, not looked up by id: this runs before the container is attached
+ * to the window, so a replace-by-id would find nothing to attach to.
+ */
+@Composable
+internal fun C3FragmentHost(
+    fm: FragmentManager,
+    containerId: Int,
+    key: Any?,
+    modifier: Modifier = Modifier,
+    create: () -> Fragment,
+) {
+    AndroidView(
+        modifier = modifier,
+        factory = { ctx -> FragmentContainerView(ctx).apply { id = containerId } },
+        update = { container ->
+            if (container.getTag(R.id.c3_host_key) != key) {
+                container.setTag(R.id.c3_host_key, key)
+                // Everything in this container goes: a page pushed OVER a tab (add + back stack)
+                // is in it too, and a tab switch must not leave it standing on the new tab.
+                val old = fm.fragments.filter { it.id == containerId }
+                fm.beginTransaction().apply {
+                    old.forEach { remove(it) }
+                    add(container, create(), null)
+                }.commitAllowingStateLoss()
+            }
+        },
     )
 }

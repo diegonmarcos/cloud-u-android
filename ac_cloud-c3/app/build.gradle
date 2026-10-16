@@ -264,6 +264,7 @@ dependencies {
     // 2026-10-15 owner decision: all apps must be Compose. The Agents and Catalog pages are
     // ComposeViews under the fleet's CloudKitTheme, shared BY REFERENCE like the modules above.
     implementation project(':libs:ui-kit')
+    implementation 'androidx.activity:activity-compose:1.9.3'
 
     // 2026-10-15 owner decision: all apps must be Compose. The bottom island is an
     // AbstractComposeView and the Agents/Catalog pages are ComposeViews; the remaining
@@ -287,9 +288,6 @@ dependencies {
     // Kotlin file and every shell tester green. Same coordinate ac_cloud-drive and ac_cloud-wallet
     // link for the same theme parent.
     implementation 'com.google.android.material:material:1.12.0'
-    // #648 the stack pages' pull-down-to-refresh host — the same widget, same version, the
-    // SuperApp's AggregatorStackFragment wraps its ScrollView in.
-    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
 
     // The JVM unit phase (build.json::tests.unit) runs these on every ship.
     testImplementation 'junit:junit:4.13.2'

@@ -1,11 +1,16 @@
 package com.diegonmarcos.cloudc3.cloud
 
-import android.view.View
-import android.widget.ScrollView
-import androidx.core.view.isVisible
+import androidx.compose.foundation.ScrollState
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /** Anchor links WITHIN one aggregator stack — MOVED from the SuperApp's launcher package
- *  with the stack pages (#648), body unchanged.
+ *  with the stack pages (#648).
  *
  *  A tile whose target reads `anchor:<id>` does not navigate anywhere — it
  *  scrolls the page it is already on to the view registered under `<id>`.
@@ -23,22 +28,45 @@ import androidx.core.view.isVisible
  *  not have, and so the full set of anchor targets is readable out of
  *  build.json without running the app. See [Stacks.PanelAnchor].
  *
- *  This registry stays a registry: it is handed ids and views, and has no
+ *  This registry stays a registry: it is handed ids and a place on screen, and has no
  *  opinion about where either came from.
+ *
+ *  2026-10-16 owner decision: all apps must be Compose. A target is the layout position of the
+ *  composable that claimed the id, reached through [mark]; the page scrolls its [ScrollState] there.
  */
 class StackAnchors {
 
-    private val targets = LinkedHashMap<String, View>()
-    private var host: ScrollView? = null
+    private class Target(val panel: Int, var coords: LayoutCoordinates? = null)
 
-    /** Called once per stack build, before any panel is registered. */
-    fun reset(scroll: ScrollView?) {
+    private val targets = LinkedHashMap<String, Target>()
+    private var scroll: ScrollState? = null
+    private var column: LayoutCoordinates? = null
+    private var scope: CoroutineScope? = null
+    private var open: (Int) -> Unit = {}
+
+    /** Called once per stack build, before any panel is registered. [open] expands a collapsed
+     *  panel by index: a collapsed body measures zero high, so its anchors sit at the card's top
+     *  until it is open. */
+    fun reset(scroll: ScrollState?, scope: CoroutineScope?, open: (Int) -> Unit) {
         targets.clear()
-        host = scroll
+        this.scroll = scroll
+        this.scope = scope
+        this.open = open
+        column = null
     }
 
-    fun register(id: String, view: View) {
-        if (id.isNotBlank() && !targets.containsKey(id)) targets[id] = view
+    /** The scrolling content's own layout, the origin every target is measured from. */
+    fun host(): Modifier = Modifier.onGloballyPositioned { column = it }
+
+    /** Claim [id] for the composable [mark] is applied to, inside panel [panel]. */
+    fun register(id: String, panel: Int) {
+        if (id.isNotBlank() && !targets.containsKey(id)) targets[id] = Target(panel)
+    }
+
+    /** The modifier that records where [id] is drawn; a no-op for an id nobody registered. */
+    fun mark(id: String): Modifier {
+        val t = targets[id] ?: return Modifier
+        return Modifier.onGloballyPositioned { t.coords = it }
     }
 
     /** True when [target] was an `anchor:` link and it was handled — the
@@ -49,33 +77,19 @@ class StackAnchors {
         target.startsWith(PREFIX) && scrollTo(target.removePrefix(PREFIX))
 
     private fun scrollTo(id: String): Boolean {
-        val scroll = host ?: return false
-        val view = targets[id] ?: return false
-        // A collapsed panel body measures zero high, so its children all sit
-        // at the same y — open every hidden ancestor before measuring or the
-        // scroll lands on the card above.
-        var p: View? = view
-        while (p != null && p !== scroll) {
-            val cur: View = p
-            cur.isVisible = true
-            p = cur.parent as? View
+        val state = scroll ?: return false
+        val scope = scope ?: return false
+        val t = targets[id] ?: return false
+        open(t.panel)
+        scope.launch {
+            // One frame for the opened panel to lay out, then measure and scroll there.
+            withFrameNanos { }
+            val origin = column ?: return@launch
+            val coords = t.coords ?: return@launch
+            val y = (coords.positionInRoot().y - origin.positionInRoot().y).toInt().coerceAtLeast(0)
+            state.animateScrollTo(y)
         }
-        scroll.post { scroll.smoothScrollTo(0, offsetIn(view, scroll)) }
         return true
-    }
-
-    /** Distance from the top of the scrolling content to [view], summed over
-     *  the parent chain — the view is nested inside a card inside the column,
-     *  so its own `top` alone is meaningless. */
-    private fun offsetIn(view: View, scroll: ScrollView): Int {
-        var y = 0
-        var v: View? = view
-        while (v != null && v !== scroll) {
-            val cur: View = v
-            y += cur.top
-            v = cur.parent as? View
-        }
-        return y.coerceAtLeast(0)
     }
 
     companion object {

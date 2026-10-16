@@ -1,27 +1,42 @@
 package com.diegonmarcos.cloudc3.pages
 
-import android.content.Context
-import android.graphics.drawable.GradientDrawable
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.diegonmarcos.cloudc3.BuildConfig
 import com.diegonmarcos.cloudc3.Declarations
 import com.diegonmarcos.cloudc3.R
+import com.diegonmarcos.cloudc3.cloud.C3HealthFragment
 import com.diegonmarcos.cloudc3.cloud.ContainerSheet
 import com.diegonmarcos.cloudc3.cloud.FleetDown
 import com.diegonmarcos.cloudc3.cloud.Services
 import com.diegonmarcos.cloudc3.cloud.StatusLight
 import com.diegonmarcos.superapp.ops.dagu.DaguPrefs
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
@@ -32,6 +47,8 @@ import java.util.Date
  * Both report only what they can MEASURE. Home counts the declared estate and the declared
  * pages; About reads what gradle baked. Neither claims a status it has not established —
  * on an ops surface a confident number nobody verified is the defect, not the feature.
+ *
+ * 2026-10-16 owner decision: all apps must be Compose — both pages are [KitComposeFragment]s.
  */
 
 /**
@@ -48,137 +65,85 @@ import java.util.Date
  * Below it, a summary of the other tabs' DECLARATIONS plus the real size of the estate, so
  * it cannot drift from what the app offers: declaring a page adds it here with no edit.
  */
-class HomeFragment : Fragment() {
+class HomeFragment : KitComposeFragment() {
 
-    private var downBox: LinearLayout? = null
+    override fun palette(): KitPalette = c3KitPalette(requireContext())
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?,
-    ): View {
-        val ctx = requireContext()
-        val d = ctx.resources.displayMetrics.density
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding((12 * d).toInt(), (12 * d).toInt(), (12 * d).toInt(), (12 * d).toInt())
+    @Composable
+    override fun Content() {
+        val ctx = LocalContext.current
+        // Re-measured on open, on Refresh, and whenever a container sheet closes.
+        var measureKey by remember { mutableIntStateOf(0) }
+        var report by remember { mutableStateOf<FleetDown.Report?>(null) }
+        var sheet by remember { mutableStateOf<ContainerSheet.Target?>(null) }
+        LaunchedEffect(measureKey) {
+            report = null
+            val bearer = runCatching { DaguPrefs(ctx).bearerToken }.getOrDefault("")
+            report = withContext(Dispatchers.IO) { FleetDown.load(bearer) }
         }
-
-        downBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        col.addView(downBox)
 
         val pub = Services.publicServices().size
         val priv = Services.privateServices().size
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
+            DownCard(report, onRefresh = { measureKey++ }) { name -> sheet = ContainerSheet.Target(name, name, "") }
 
-        col.addView(
-            card(
-                ctx,
+            Card(
                 label("topology"),
                 listOf(
-                    getString(R.string.c3_health_section_public, pub),
-                    getString(R.string.c3_health_section_private, priv),
+                    stringResource(R.string.c3_health_section_public, pub),
+                    stringResource(R.string.c3_health_section_private, priv),
                 ),
-            ),
-        )
-        col.addView(
-            card(
-                ctx,
-                label("observ"),
-                Declarations.observPages.map { it.label },
-            ),
-        )
-        col.addView(
-            card(
-                ctx,
-                label("apps"),
-                Declarations.externalApps.map { "${it.display} · ${it.packageName}" },
-            ),
-        )
-
-        return ScrollView(ctx).apply {
-            isFillViewport = true
-            addView(
-                col,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ),
+            )
+            Card(label("observ"), Declarations.observPages.map { it.label })
+            Card(label("apps"), Declarations.externalApps.map { "${it.display} · ${it.packageName}" })
+        }
+        sheet?.let { target ->
+            ContainerSheet.Sheet(
+                target = target,
+                onOpenUrl = { url -> (activity as? C3HealthFragment.UrlClickListener)?.onUrlClicked(url) },
+                onDismiss = { sheet = null; measureKey++ },
             )
         }
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        measure()
-    }
-
-    override fun onDestroyView() {
-        downBox = null
-        super.onDestroyView()
-    }
-
-    /** Re-measured on open, on Refresh, and whenever a container sheet closes. */
-    private fun measure() {
-        val box = downBox ?: return
-        val ctx = box.context
-        val declared = FleetDown.declared()
-        box.removeAllViews()
-        box.addView(card(ctx, getString(R.string.down_title), listOf(
-            getString(R.string.down_measuring, declared.size, declared.map { it.vm }.distinct().size))))
-        val bearer = runCatching { DaguPrefs(ctx).bearerToken }.getOrDefault("")
-        viewLifecycleOwner.lifecycleScope.launch {
-            val report = withContext(Dispatchers.IO) { FleetDown.load(bearer) }
-            render(report)
-        }
-    }
-
-    private fun render(report: FleetDown.Report) {
-        val box = downBox ?: return
-        val ctx = box.context
-        box.removeAllViews()
-        val c = card(ctx, getString(R.string.down_title), emptyList())
-        box.addView(c)
-        fun line(text: String, light: StatusLight.State? = null, onTap: (() -> Unit)? = null) =
-            c.addView(TextView(ctx).apply {
-                this.text = text
-                setTextAppearance(android.R.style.TextAppearance_Material_Small)
-                setTextColor(light?.let { StatusLight.colour(ctx, it) }
-                    ?: ContextCompat.getColor(ctx, R.color.c3_text_secondary))
-                val d = ctx.resources.displayMetrics.density
-                setPadding(0, (6 * d).toInt(), 0, (6 * d).toInt())
-                setTextIsSelectable(onTap == null)
-                onTap?.let { tap -> isClickable = true; setOnClickListener { tap() } }
-            })
-
-        when (report) {
-            is FleetDown.Report.Unreachable -> line(
-                getString(R.string.down_unreachable, report.kind.name, report.detail), StatusLight.State.UNKNOWN)
-            FleetDown.Report.NothingDeclared -> line(getString(R.string.down_nothing_declared), StatusLight.State.UNKNOWN)
-            is FleetDown.Report.Measured -> {
-                val downCount = report.down.values.sumOf { it.size }
-                if (downCount == 0 && report.blind.isEmpty()) {
-                    line(getString(R.string.down_all_up, report.declared, report.declaredPerVm.size), StatusLight.State.ON)
-                } else {
-                    line(getString(R.string.down_summary, downCount, report.declared))
-                }
-                for (vm in (report.down.keys + report.blind.keys).sorted()) {
-                    report.blind[vm]?.let {
-                        line(getString(R.string.down_vm_blind, vm, report.declaredPerVm[vm] ?: 0, it),
-                             StatusLight.State.UNKNOWN)
+    @Composable
+    private fun DownCard(report: FleetDown.Report?, onRefresh: () -> Unit, onOpen: (String) -> Unit) {
+        val ctx = LocalContext.current
+        C3Card {
+            Title(stringResource(R.string.down_title))
+            if (report == null) {
+                val declared = remember { FleetDown.declared() }
+                Line(stringResource(R.string.down_measuring, declared.size, declared.map { it.vm }.distinct().size))
+                return@C3Card
+            }
+            when (report) {
+                is FleetDown.Report.Unreachable -> Line(
+                    stringResource(R.string.down_unreachable, report.kind.name, report.detail), StatusLight.State.UNKNOWN)
+                FleetDown.Report.NothingDeclared -> Line(stringResource(R.string.down_nothing_declared), StatusLight.State.UNKNOWN)
+                is FleetDown.Report.Measured -> {
+                    val downCount = report.down.values.sumOf { it.size }
+                    if (downCount == 0 && report.blind.isEmpty()) {
+                        Line(stringResource(R.string.down_all_up, report.declared, report.declaredPerVm.size), StatusLight.State.ON)
+                    } else {
+                        Line(stringResource(R.string.down_summary, downCount, report.declared))
                     }
-                    val rows = report.down[vm] ?: continue
-                    line(getString(R.string.down_vm_heading, vm, rows.size))
-                    for (r in rows) {
-                        line(getString(R.string.down_row, StatusLight.glyph(StatusLight.State.OFF), r.name,
-                                       ContainerSheet.stateText(ctx, r.state)), StatusLight.State.OFF) {
-                            ContainerSheet.show(requireActivity(), r.name, r.name, "", onDismiss = ::measure)
+                    for (vm in (report.down.keys + report.blind.keys).sorted()) {
+                        report.blind[vm]?.let {
+                            Line(stringResource(R.string.down_vm_blind, vm, report.declaredPerVm[vm] ?: 0, it),
+                                StatusLight.State.UNKNOWN)
+                        }
+                        val rows = report.down[vm] ?: continue
+                        Line(stringResource(R.string.down_vm_heading, vm, rows.size))
+                        for (r in rows) {
+                            Line(stringResource(R.string.down_row, StatusLight.glyph(StatusLight.State.OFF), r.name,
+                                                ContainerSheet.stateText(ctx, r.state)), StatusLight.State.OFF) { onOpen(r.name) }
                         }
                     }
                 }
             }
+            Line(stringResource(R.string.down_refresh, DateFormat.getTimeInstance(DateFormat.SHORT).format(Date())),
+                onTap = onRefresh)
         }
-        line(getString(R.string.down_refresh,
-                       DateFormat.getTimeInstance(DateFormat.SHORT).format(Date())), onTap = ::measure)
     }
 
     /** A card title names a TAB, so it is read from the tab declaration, never spelled. */
@@ -187,40 +152,44 @@ class HomeFragment : Fragment() {
 }
 
 /** CONFIGS ▸ ABOUT — everything here was baked by gradle, so it reports and never guesses. */
-class AboutFragment : Fragment() {
+class AboutFragment : KitComposeFragment() {
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?,
-    ): View {
-        val ctx = requireContext()
-        val d = ctx.resources.displayMetrics.density
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding((12 * d).toInt(), (12 * d).toInt(), (12 * d).toInt(), (12 * d).toInt())
-        }
-        col.addView(
-            card(
-                ctx,
-                getString(R.string.about_title),
+    override fun palette(): KitPalette = c3KitPalette(requireContext())
+
+    @Composable
+    override fun Content() {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
+            Card(
+                stringResource(R.string.about_title),
                 listOf(
-                    "${getString(R.string.about_version)}: ${BuildConfig.VERSION_NAME}",
-                    "${getString(R.string.about_commit)}: ${BuildConfig.GIT_SHORT_SHA}",
-                    "${getString(R.string.about_build)}: ${BuildConfig.BUILD_TIMESTAMP}",
-                ),
-            ),
-        )
-        return ScrollView(ctx).apply {
-            isFillViewport = true
-            addView(
-                col,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    "${stringResource(R.string.about_version)}: ${BuildConfig.VERSION_NAME}",
+                    "${stringResource(R.string.about_commit)}: ${BuildConfig.GIT_SHORT_SHA}",
+                    "${stringResource(R.string.about_build)}: ${BuildConfig.BUILD_TIMESTAMP}",
                 ),
             )
         }
+    }
+}
+
+/** The card title: the accent-on-card subhead both pages use. */
+@Composable
+private fun ColumnScope.Title(text: String) {
+    val p = LocalKitPalette.current
+    Text(text, color = p.accent, style = MaterialTheme.typography.titleMedium)
+}
+
+/** One line of a card; [light] colours it with the StatusLight, [onTap] makes it a button (else it is selectable). */
+@Composable
+private fun ColumnScope.Line(text: String, light: StatusLight.State? = null, onTap: (() -> Unit)? = null) {
+    val ctx = LocalContext.current
+    val p = LocalKitPalette.current
+    val colour = light?.let { Color(StatusLight.colour(ctx, it)) } ?: p.textSecondary
+    val line = Modifier.fillMaxWidth().padding(vertical = 6.dp)
+    if (onTap != null) {
+        Text(text, color = colour, style = MaterialTheme.typography.bodySmall,
+            modifier = line.testTag("c3:line:$text").clickable { onTap() })
+    } else {
+        SelectionContainer { Text(text, color = colour, style = MaterialTheme.typography.bodySmall, modifier = line) }
     }
 }
 
@@ -228,40 +197,14 @@ class AboutFragment : Fragment() {
  * The one card shape both pages use. Declared here once rather than per page, for the same
  * reason the colours live in colors.xml: a second copy is a second thing to keep in step.
  */
-private fun card(ctx: Context, title: String, lines: List<String>): LinearLayout {
-    val d = ctx.resources.displayMetrics.density
-    fun px(v: Int) = (v * d).toInt()
-    return LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(px(12), px(12), px(12), px(12))
-        background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = px(12).toFloat()
-            setColor(ContextCompat.getColor(ctx, R.color.c3_surface))
-            setStroke(px(1), ContextCompat.getColor(ctx, R.color.c3_outline))
-        }
-        addView(
-            TextView(ctx).apply {
-                text = title
-                setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-                setTextColor(ContextCompat.getColor(ctx, R.color.c3_accent_on_card))
-            },
-        )
+@Composable
+private fun Card(title: String, lines: List<String>) {
+    val p = LocalKitPalette.current
+    C3Card {
+        Title(title)
         for (line in lines) {
-            addView(
-                TextView(ctx).apply {
-                    text = line
-                    setTextAppearance(android.R.style.TextAppearance_Material_Small)
-                    setTextColor(ContextCompat.getColor(ctx, R.color.c3_text_secondary))
-                    setPadding(0, px(4), 0, 0)
-                },
-            )
+            Text(line, color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp))
         }
-        val lp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        )
-        lp.bottomMargin = px(8)
-        layoutParams = lp
     }
 }

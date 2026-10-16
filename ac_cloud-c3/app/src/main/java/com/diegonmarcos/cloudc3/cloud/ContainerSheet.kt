@@ -1,22 +1,58 @@
 package com.diegonmarcos.cloudc3.cloud
-/* #648 MOVED from aa_cloud-superapp with the c3 pages, body unchanged; the package,
-   the R/BuildConfig it resolves against, and the collaborators (Sections -> Services; the row tap goes through this app's UrlClickListener, the same swap C3HealthFragment already made) are the only edits. */
+/* #648 MOVED from aa_cloud-superapp with the c3 pages; the package, the R/BuildConfig it resolves against,
+   and the collaborators (Sections -> Services; the row tap goes through the host's onOpenUrl, the same swap C3HealthFragment already made) are the only edits.
+   2026-10-16 owner decision: all apps must be Compose — the sheet is a ModalBottomSheet under the host's CloudKitTheme. */
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
-import android.view.Gravity
-import android.view.View
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.fragment.app.FragmentActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.diegonmarcos.cloudc3.R
 import com.diegonmarcos.superapp.bottomnav.NavPage
-import com.diegonmarcos.superapp.bottomnav.PageTabsView
+import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.ops.dagu.DaguPrefs
-import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * What a container icon opens on the C3 page.
@@ -46,15 +82,22 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
  */
 object ContainerSheet {
 
+    /** The container a sheet is open on. A host keeps one of these in state and clears it on dismiss. */
+    data class Target(val containerName: String, val label: String, val openUrl: String)
+
+    /** The outcome line under the actions: [ok] true = confirmed, false = failed, null = in flight. */
+    private data class Status(val text: String, val ok: Boolean?)
+
     /** [onDismiss] lets the Home down list re-measure once the sheet closes, so a box an
-     *  action brought back leaves the list on the reading that proved it, not on a guess. */
-    fun show(
-        activity: FragmentActivity, containerName: String, label: String, openUrl: String,
-        onDismiss: (() -> Unit)? = null,
-    ) {
-        val ctx = activity
-        val pub = Services.publicServices().firstOrNull { it.name == containerName }
-        val priv = Services.privateServices().firstOrNull { it.name == containerName }
+     *  action brought back leaves the list on the reading that proved it, not on a guess.
+     *  [onOpenUrl] is the host's browser seam, the one every service row uses. */
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun Sheet(target: Target, onOpenUrl: (String) -> Unit, onDismiss: () -> Unit) {
+        val p = LocalKitPalette.current
+        val containerName = target.containerName
+        val pub = remember(containerName) { Services.publicServices().firstOrNull { it.name == containerName } }
+        val priv = remember(containerName) { Services.privateServices().firstOrNull { it.name == containerName } }
 
         // vm and service are what every ops route is keyed by; without a vm
         // there is nothing to POST to and the Actions tab says so rather than
@@ -62,68 +105,51 @@ object ContainerSheet {
         val vm = pub?.vm ?: priv?.vm ?: ""
         val service = pub?.service ?: priv?.service ?: containerName
 
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xFF140E1F.toInt())
+        var tab by remember { mutableStateOf("infos") }
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = p.surface,
+            contentColor = p.textPrimary,
+        ) {
+            Header(target.label, containerName, vm)
+            // #868 the sheet's two tabs are libs:bottomnav's pill strip, not a TabLayout. A sheet has
+            // no toolbar above it, so the strip adds no status-bar inset of its own.
+            PageTabs(
+                pages = listOf(NavPage("infos", "Infos"), NavPage("actions", "Actions")),
+                selectedId = tab,
+                onSelect = { page -> tab = page.id },
+                underTopChrome = false,
+            )
+            Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                if (tab == "infos") Infos(containerName, vm, service, pub, priv)
+                else Actions(containerName, vm, service, pub, priv, target.openUrl, onOpenUrl, onDismiss)
+            }
         }
-        root.addView(header(ctx, label, containerName, vm))
-
-        val pane = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        // #868 the sheet's two tabs are libs:bottomnav's pill strip, not a TabLayout. A sheet has
-        // no toolbar above it, so the strip adds no status-bar inset of its own.
-        val tabs = PageTabsView(ctx).apply {
-            underTopChrome = false
-            pages = listOf(NavPage("infos", "Infos"), NavPage("actions", "Actions"))
-            selectedId = "infos"
-        }
-        root.addView(tabs)
-        root.addView(ScrollView(ctx).apply {
-            isFillViewport = true
-            addView(pane)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 420))
-        })
-
-        val dialog = BottomSheetDialog(ctx).apply {
-            setContentView(root)
-            onDismiss?.let { cb -> setOnDismissListener { cb() } }
-        }
-
-        fun render(index: Int) {
-            pane.removeAllViews()
-            if (index == 0) renderInfos(ctx, pane, containerName, vm, service, pub, priv)
-            else renderActions(ctx, pane, dialog, containerName, vm, service, pub, priv, openUrl)
-        }
-        tabs.onSelect = { page ->
-            tabs.selectedId = page.id
-            render(if (page.id == "actions") 1 else 0)
-        }
-        render(0)
-        dialog.show()
     }
 
     // ── Infos ────────────────────────────────────────────────────────────
 
-    private fun renderInfos(
-        ctx: Context, pane: LinearLayout, name: String, vm: String, service: String,
+    @Composable
+    private fun Infos(
+        name: String, vm: String, service: String,
         pub: Services.PublicService?, priv: Services.PrivateService?,
     ) {
-        val card = card(ctx); pane.addView(card)
-        card.addView(blockTitle(ctx, "Container"))
-        card.addView(kv(ctx, "Name", name))
-        card.addView(kv(ctx, "VM", vm.ifBlank { "—" }))
-        card.addView(kv(ctx, "Private DNS", (pub?.privateDns ?: priv?.privateDns).orEmpty().ifBlank { "—" }))
-        card.addView(kv(ctx, "Protocol", priv?.protocol.orEmpty().ifBlank { "—" }))
-        card.addView(kv(ctx, "Category", (pub?.category ?: priv?.category).orEmpty().ifBlank { "—" }))
-        priv?.dbEngine?.takeIf { it.isNotBlank() && it != "null" }
-            ?.let { card.addView(kv(ctx, "DB engine", it)) }
-
-        val card2 = card(ctx); pane.addView(card2)
-        card2.addView(blockTitle(ctx, "App"))
-        card2.addView(kv(ctx, "Service", service))
-        card2.addView(kv(ctx, "Public URL", pub?.publicUrl.orEmpty().ifBlank { "not published" }))
-        card2.addView(kv(ctx, "Auth", pub?.auth.orEmpty().ifBlank { if (pub == null) "private (mesh only)" else "—" }))
-        card2.addView(kv(ctx, "Exposure", if (pub != null) "public via Caddy" else "private — reachable over WireGuard only"))
+        val p = LocalKitPalette.current
+        Block("Container") {
+            Kv("Name", name)
+            Kv("VM", vm.ifBlank { "—" })
+            Kv("Private DNS", (pub?.privateDns ?: priv?.privateDns).orEmpty().ifBlank { "—" })
+            Kv("Protocol", priv?.protocol.orEmpty().ifBlank { "—" })
+            Kv("Category", (pub?.category ?: priv?.category).orEmpty().ifBlank { "—" })
+            priv?.dbEngine?.takeIf { it.isNotBlank() && it != "null" }?.let { Kv("DB engine", it) }
+        }
+        Block("App") {
+            Kv("Service", service)
+            Kv("Public URL", pub?.publicUrl.orEmpty().ifBlank { "not published" })
+            Kv("Auth", pub?.auth.orEmpty().ifBlank { if (pub == null) "private (mesh only)" else "—" })
+            Kv("Exposure", if (pub != null) "public via Caddy" else "private — reachable over WireGuard only")
+        }
 
         // App-specific configuration. The generic fields above describe the box;
         // these describe the JOB — Caddy's routes, WireGuard's mesh, Authelia's
@@ -131,97 +157,144 @@ object ContainerSheet {
         // block is its own card and the pane scrolls.
         val extras = ContainerConfigs.forContainer(name)
         for (b in extras) {
-            val c = card(ctx); pane.addView(c)
-            c.addView(blockTitle(ctx, b.title))
-            if (b.subtitle.isNotBlank()) c.addView(TextView(ctx).apply {
-                text = b.subtitle
-                setTextColor(0xFF6F6880.toInt()); textSize = 11f
-                setPadding(0, 0, 0, dp(ctx, 2))
-            })
-            for ((k, v) in b.rows) c.addView(kv(ctx, k, v))
+            Block(b.title) {
+                if (b.subtitle.isNotBlank()) Text(b.subtitle, color = p.textSecondary, fontSize = 11.sp,
+                    modifier = Modifier.padding(bottom = 2.dp))
+                for ((k, v) in b.rows) Kv(k, v)
+            }
         }
 
-        pane.addView(note(ctx,
+        Note(
             "Declared, not probed. Every value above comes from data/services_public.json, " +
-            "data/services_private.json and data/mesh.json — the same files the dashboard tile " +
-            "was built from, so this sheet cannot disagree with the icon that opened it, and it " +
-            "still reads correctly with the mesh down." +
-            if (extras.isEmpty()) "\n\nNo app-specific config block is written for this " +
-                "container yet; ContainerConfigs is where one goes." else ""))
+                "data/services_private.json and data/mesh.json — the same files the dashboard tile " +
+                "was built from, so this sheet cannot disagree with the icon that opened it, and it " +
+                "still reads correctly with the mesh down." +
+                if (extras.isEmpty()) "\n\nNo app-specific config block is written for this " +
+                    "container yet; ContainerConfigs is where one goes." else "",
+        )
     }
 
     // ── Actions ──────────────────────────────────────────────────────────
 
-    private fun renderActions(
-        ctx: Context, pane: LinearLayout, dialog: BottomSheetDialog,
+    @Composable
+    private fun Actions(
         name: String, vm: String, service: String,
         pub: Services.PublicService?, priv: Services.PrivateService?, openUrl: String,
+        onOpenUrl: (String) -> Unit, onDismiss: () -> Unit,
     ) {
-        val status = TextView(ctx).apply {
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setTextColor(0xFF9B93AB.toInt())
-            setPadding(dp(ctx, 16), dp(ctx, 10), dp(ctx, 16), dp(ctx, 4))
-            setTextIsSelectable(true)
-            visibility = View.GONE
-        }
-        val bearer = runCatching { DaguPrefs(ctx).bearerToken }.getOrDefault("")
+        val ctx = LocalContext.current
+        val scope = rememberCoroutineScope()
+        var status by remember { mutableStateOf<Status?>(null) }
+        var stopping by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
+        var logs by remember { mutableStateOf<String?>(null) }
+        val bearer = remember { runCatching { DaguPrefs(ctx).bearerToken }.getOrDefault("") }
 
-        val card = card(ctx); pane.addView(card)
-        card.addView(blockTitle(ctx, "Container"))
-        if (vm.isBlank()) {
-            card.addView(note(ctx, "No VM recorded for $name, so there is no /vms/{vm}/containers/ " +
-                "path to call. Add it to data/services_*.json and the buttons appear."))
-        } else {
-            for ((verb, act) in listOf("Start" to "start", "Stop" to FleetDown.STOP,
-                                       "Restart" to "restart", "Update" to "update")) {
-                card.addView(action(ctx, verb, "$act container") {
-                    if (act == FleetDown.STOP) confirmStop(ctx, name) { containerAction(ctx, status, vm, name, act, bearer) }
-                    else containerAction(ctx, status, vm, name, act, bearer)
-                })
-            }
-            card.addView(action(ctx, ctx.getString(R.string.sheet_logs), ctx.getString(R.string.sheet_logs_detail)) {
-                showLogs(ctx, status, vm, name, bearer)
-            })
-        }
+        /** Stop takes a running service away from whoever uses it, so it asks first. */
+        fun confirmStop(what: String, go: () -> Unit) { stopping = what to go }
 
-        val card2 = card(ctx); pane.addView(card2)
-        card2.addView(blockTitle(ctx, "App"))
-        val url = pub?.publicUrl?.takeIf { it.isNotBlank() }?.let {
-            if (it.startsWith("http")) it else "https://$it"
-        } ?: openUrl
-        if (url.isNotBlank()) {
-            card2.addView(action(ctx, "Open", url.removePrefix("https://")) {
-                // Same target the C3 tile itself dispatches when the sheet is
-                // bypassed, so it must open the same way: through the activity,
-                // in the app's browser. Two paths to one service URL that
-                // disagreed about where it opens is the bug this removes.
-                (ctx as? C3HealthFragment.UrlClickListener)?.onUrlClicked(url)
-                dialog.dismiss()
-            })
-        }
-        (pub?.privateDns ?: priv?.privateDns)?.takeIf { it.isNotBlank() }?.let { dns ->
-            card2.addView(action(ctx, "Copy private DNS", dns) {
-                val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                cm.setPrimaryClip(android.content.ClipData.newPlainText(name, dns))
-                show(status, "Copied $dns")
-            })
-        }
-        if (vm.isNotBlank()) {
-            for ((verb, act) in listOf("Start service" to "start", "Stop service" to FleetDown.STOP)) {
-                card2.addView(action(ctx, verb, "$act $service") {
-                    val go = { dispatch(status) { OpsClient.service(vm, service, act, bearer) } }
-                    if (act == FleetDown.STOP) confirmStop(ctx, service, go) else go()
-                })
+        Block("Container") {
+            if (vm.isBlank()) {
+                Note("No VM recorded for $name, so there is no /vms/{vm}/containers/ " +
+                    "path to call. Add it to data/services_*.json and the buttons appear.")
+            } else {
+                for ((verb, act) in listOf("Start" to "start", "Stop" to FleetDown.STOP,
+                                           "Restart" to "restart", "Update" to "update")) {
+                    ActionRow(verb, "$act container") {
+                        if (act == FleetDown.STOP) confirmStop(name) { containerAction(ctx, scope, { status = it }, vm, name, act, bearer) }
+                        else containerAction(ctx, scope, { status = it }, vm, name, act, bearer)
+                    }
+                }
+                ActionRow(stringResource(R.string.sheet_logs), stringResource(R.string.sheet_logs_detail)) {
+                    status = Status(ctx.getString(R.string.sheet_logs_loading, name), null)
+                    scope.launch {
+                        val r = withContext(Dispatchers.IO) { FleetDown.logs(vm, name, bearer) }
+                        when (r) {
+                            is OpsClient.Outcome.Failed -> status = Status("✗ ${r.kind}\n${r.message}", false)
+                            is OpsClient.Outcome.Ok -> {
+                                status = null
+                                logs = r.body.ifBlank { ctx.getString(R.string.sheet_logs_empty) }
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        pane.addView(status)
+        Block("App") {
+            val url = pub?.publicUrl?.takeIf { it.isNotBlank() }?.let {
+                if (it.startsWith("http")) it else "https://$it"
+            } ?: openUrl
+            if (url.isNotBlank()) {
+                ActionRow("Open", url.removePrefix("https://")) {
+                    // Same target the C3 tile itself dispatches when the sheet is
+                    // bypassed, so it must open the same way: through the activity,
+                    // in the app's browser. Two paths to one service URL that
+                    // disagreed about where it opens is the bug this removes.
+                    onOpenUrl(url)
+                    onDismiss()
+                }
+            }
+            (pub?.privateDns ?: priv?.privateDns)?.takeIf { it.isNotBlank() }?.let { dns ->
+                ActionRow("Copy private DNS", dns) {
+                    val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    cm.setPrimaryClip(ClipData.newPlainText(name, dns))
+                    status = Status("Copied $dns", null)
+                }
+            }
+            if (vm.isNotBlank()) {
+                for ((verb, act) in listOf("Start service" to "start", "Stop service" to FleetDown.STOP)) {
+                    ActionRow(verb, "$act $service") {
+                        val go = { dispatch(scope, { status = it }) { OpsClient.service(vm, service, act, bearer) } }
+                        if (act == FleetDown.STOP) confirmStop(service, go) else go()
+                    }
+                }
+            }
+        }
+
+        status?.let { s ->
+            val colour = Color(StatusLight.colour(ctx, StatusLight.of(s.ok)))
+            SelectionContainer {
+                Text(s.text, color = colour, fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
+                        .testTag("c3:sheet:status"))
+            }
+        }
         if (bearer.isBlank() && vm.isNotBlank()) {
-            pane.addView(note(ctx,
+            Note(
                 "The four container actions and the two service actions need an Authelia bearer — " +
-                "they sit behind forward_auth. This device has none stored. Import one via " +
-                "Configs → Profile → Config import, or paste it in the Dagu login; both write the " +
-                "same token. Open and Copy work without it."))
+                    "they sit behind forward_auth. This device has none stored. Import one via " +
+                    "Configs → Profile → Config import, or paste it in the Dagu login; both write the " +
+                    "same token. Open and Copy work without it.",
+            )
+        }
+
+        stopping?.let { (what, go) ->
+            AlertDialog(
+                onDismissRequest = { stopping = null },
+                title = { Text(stringResource(R.string.sheet_stop_confirm_title, what)) },
+                text = { Text(stringResource(R.string.sheet_stop_confirm_body)) },
+                confirmButton = {
+                    TextButton(onClick = { stopping = null; go() }, modifier = Modifier.testTag("c3:sheet:stop-yes")) {
+                        Text(stringResource(R.string.sheet_stop_confirm_yes))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { stopping = null }) { Text(stringResource(android.R.string.cancel)) }
+                },
+            )
+        }
+        logs?.let { body ->
+            AlertDialog(
+                onDismissRequest = { logs = null },
+                title = { Text(stringResource(R.string.sheet_logs_title, name, vm)) },
+                text = {
+                    SelectionContainer {
+                        Text(body, fontFamily = FontFamily.Monospace, fontSize = 11.sp,
+                            modifier = Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()))
+                    }
+                },
+                confirmButton = { TextButton(onClick = { logs = null }) { Text(stringResource(android.R.string.ok)) } },
+            )
         }
     }
 
@@ -232,12 +305,15 @@ object ContainerSheet {
      * action promised.
      */
     private fun containerAction(
-        ctx: Context, status: TextView, vm: String, name: String, act: String, bearer: String,
+        ctx: Context, scope: CoroutineScope, report: (Status) -> Unit,
+        vm: String, name: String, act: String, bearer: String,
     ) {
-        show(status, ctx.getString(R.string.sheet_working, act, name))
-        Thread {
-            val r = FleetDown.act(act, { OpsClient.container(vm, name, act, bearer) },
-                                  { FleetDown.state(vm, name, bearer) })
+        report(Status(ctx.getString(R.string.sheet_working, act, name), null))
+        scope.launch {
+            val r = withContext(Dispatchers.IO) {
+                FleetDown.act(act, { OpsClient.container(vm, name, act, bearer) },
+                              { FleetDown.state(vm, name, bearer) })
+            }
             val call = when (val c = r.call) {
                 is OpsClient.Outcome.Ok -> c.message.lineSequence().first()
                 is OpsClient.Outcome.Failed -> "✗ ${c.kind}\n${c.message}"
@@ -245,45 +321,8 @@ object ContainerSheet {
             val verdict = ctx.getString(
                 if (r.confirmed) R.string.sheet_readback_confirmed else R.string.sheet_readback_unconfirmed,
                 stateText(ctx, r.after))
-            status.post { show(status, "$call\n$verdict", ok = r.confirmed) }
-        }.apply { isDaemon = true }.start()
-    }
-
-    /** Stop takes a running service away from whoever uses it, so it asks first. */
-    private fun confirmStop(ctx: Context, name: String, go: () -> Unit) {
-        MaterialAlertDialogBuilder(ctx)
-            .setTitle(ctx.getString(R.string.sheet_stop_confirm_title, name))
-            .setMessage(R.string.sheet_stop_confirm_body)
-            .setPositiveButton(R.string.sheet_stop_confirm_yes) { _, _ -> go() }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
-
-    private fun showLogs(ctx: Context, status: TextView, vm: String, name: String, bearer: String) {
-        show(status, ctx.getString(R.string.sheet_logs_loading, name))
-        Thread {
-            val r = FleetDown.logs(vm, name, bearer)
-            status.post {
-                when (r) {
-                    is OpsClient.Outcome.Failed -> show(status, "✗ ${r.kind}\n${r.message}", ok = false)
-                    is OpsClient.Outcome.Ok -> {
-                        status.visibility = View.GONE
-                        MaterialAlertDialogBuilder(ctx)
-                            .setTitle(ctx.getString(R.string.sheet_logs_title, name, vm))
-                            .setView(ScrollView(ctx).apply {
-                                addView(TextView(ctx).apply {
-                                    text = r.body.ifBlank { ctx.getString(R.string.sheet_logs_empty) }
-                                    typeface = Typeface.MONOSPACE; textSize = 11f
-                                    setTextIsSelectable(true)
-                                    setPadding(dp(ctx, 18), dp(ctx, 8), dp(ctx, 18), dp(ctx, 8))
-                                })
-                            })
-                            .setPositiveButton(android.R.string.ok, null)
-                            .show()
-                    }
-                }
-            }
-        }.apply { isDaemon = true }.start()
+            report(Status("$call\n$verdict", r.confirmed))
+        }
     }
 
     /** One [FleetDown.State] as a caption — shared by the Home down list and the read-back. */
@@ -293,115 +332,73 @@ object ContainerSheet {
         is FleetDown.State.Unread -> ctx.getString(R.string.down_state_unread, s.why)
     }
 
-    private fun dispatch(status: TextView, call: () -> OpsClient.Outcome) {
-        show(status, "… working")
-        Thread {
-            val r = call()
-            status.post {
-                when (r) {
-                    is OpsClient.Outcome.Ok -> show(status, r.message, ok = true)
-                    is OpsClient.Outcome.Failed -> show(status, "✗ ${r.kind}\n${r.message}", ok = false)
-                }
+    private fun dispatch(scope: CoroutineScope, report: (Status) -> Unit, call: () -> OpsClient.Outcome) {
+        report(Status("… working", null))
+        scope.launch {
+            val r = withContext(Dispatchers.IO) { call() }
+            report(when (r) {
+                is OpsClient.Outcome.Ok -> Status(r.message, true)
+                is OpsClient.Outcome.Failed -> Status("✗ ${r.kind}\n${r.message}", false)
+            })
+        }
+    }
+
+    // ── small composables ────────────────────────────────────────────────
+
+    @Composable
+    private fun Header(label: String, name: String, vm: String) {
+        val p = LocalKitPalette.current
+        Column(Modifier.fillMaxWidth().padding(start = 18.dp, top = 4.dp, end = 18.dp, bottom = 8.dp)) {
+            Text(label, color = p.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(if (vm.isBlank()) name else "$name · $vm", color = p.textSecondary, fontSize = 12.sp)
+        }
+    }
+
+    @Composable
+    private fun Block(title: String, content: @Composable ColumnScope.() -> Unit) {
+        val p = LocalKitPalette.current
+        val shape = RoundedCornerShape(14.dp)
+        Column(
+            Modifier.fillMaxWidth().padding(start = 14.dp, top = 10.dp, end = 14.dp)
+                .background(p.surfaceSelected, shape).border(1.dp, p.hairline, shape)
+                .padding(start = 14.dp, top = 10.dp, end = 14.dp, bottom = 12.dp),
+        ) {
+            Text(title, color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 4.dp))
+            content()
+        }
+    }
+
+    @Composable
+    private fun Kv(k: String, v: String) {
+        val p = LocalKitPalette.current
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+            Text(k, color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            SelectionContainer(Modifier.weight(1.4f)) {
+                Text(v, color = p.textPrimary, fontSize = 13.sp, textAlign = TextAlign.End,
+                    modifier = Modifier.fillMaxWidth())
             }
-        }.apply { isDaemon = true }.start()
-    }
-
-    // ── small view helpers ───────────────────────────────────────────────
-
-    /**
-     * The outcome line under the actions, coloured by whether the action WORKED.
-     *
-     * [ok] is the same three-state reading [StatusLight] was built for -- true is a
-     * confirmed success, false a confirmed failure, and null "the call is still in
-     * flight, nobody can say yet" -- so it resolves through [StatusLight] rather than
-     * through a private palette. This method used to carry three colour literals of its
-     * own, and they had DRIFTED: its green, its red and its grey were each a different
-     * value from the ones every other status in this app uses, so the same fact about
-     * the same fleet was painted one colour on this sheet and another everywhere else.
-     * A status light is a promise the owner learns to trust at a glance, and two greens
-     * mean one of them is lying about which green means healthy.
-     *
-     * Restating the palette here also put it out of reach of the tester that recomputes
-     * the contrast ratios against the themes this app ships, including the pure-black
-     * launcher palette: a colour compiled into Kotlin is one no theme can override and
-     * nothing was checking.
-     */
-    private fun show(t: TextView, text: String, ok: Boolean? = null) {
-        t.visibility = View.VISIBLE
-        t.text = text
-        t.setTextColor(StatusLight.colour(t.context, StatusLight.of(ok)))
-    }
-
-    private fun header(ctx: Context, label: String, name: String, vm: String) =
-        LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(ctx, 18), dp(ctx, 16), dp(ctx, 18), dp(ctx, 8))
-            addView(TextView(ctx).apply {
-                text = label
-                setTextColor(0xFFECE6F5.toInt()); textSize = 18f
-                setTypeface(typeface, Typeface.BOLD)
-            })
-            addView(TextView(ctx).apply {
-                text = if (vm.isBlank()) name else "$name · $vm"
-                setTextColor(0xFF9B93AB.toInt()); textSize = 12f
-            })
         }
+    }
 
-    private fun card(ctx: Context) = LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        background = GradientDrawable().apply {
-            cornerRadius = dp(ctx, 14).toFloat()
-            setColor(0xFF1B1428.toInt())
-            setStroke(dp(ctx, 1), 0xFF322A44.toInt())
+    @Composable
+    private fun ActionRow(label: String, detail: String, onTap: () -> Unit) {
+        val p = LocalKitPalette.current
+        Row(
+            Modifier.fillMaxWidth().testTag("c3:sheet:action:$label").clickable { onTap() }.padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(label, color = p.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Text(detail, color = p.textSecondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.End, modifier = Modifier.weight(1.2f))
         }
-        setPadding(dp(ctx, 14), dp(ctx, 10), dp(ctx, 14), dp(ctx, 12))
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { setMargins(dp(ctx, 14), dp(ctx, 10), dp(ctx, 14), 0) }
     }
 
-    private fun blockTitle(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextColor(0xFFB794F6.toInt()); textSize = 13f
-        setTypeface(typeface, Typeface.BOLD)
-        setPadding(0, 0, 0, dp(ctx, 4))
+    @Composable
+    private fun Note(text: String) {
+        val p = LocalKitPalette.current
+        Text(text, color = p.textSecondary, fontSize = 12.sp, lineHeight = 16.sp,
+            modifier = Modifier.fillMaxWidth().padding(start = 18.dp, top = 12.dp, end = 18.dp, bottom = 16.dp))
     }
-
-    private fun kv(ctx: Context, k: String, v: String) = LinearLayout(ctx).apply {
-        orientation = LinearLayout.HORIZONTAL
-        setPadding(0, dp(ctx, 6), 0, 0)
-        addView(TextView(ctx).apply {
-            text = k; setTextColor(0xFF9B93AB.toInt()); textSize = 13f
-        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        addView(TextView(ctx).apply {
-            text = v; setTextColor(0xFFECE6F5.toInt()); textSize = 13f
-            gravity = Gravity.END; setTextIsSelectable(true)
-        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f))
-    }
-
-    private fun action(ctx: Context, label: String, detail: String, onTap: () -> Unit) =
-        LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            isClickable = true; isFocusable = true
-            setPadding(0, dp(ctx, 10), 0, dp(ctx, 10))
-            setOnClickListener { onTap() }
-            addView(TextView(ctx).apply {
-                text = label; setTextColor(0xFFECE6F5.toInt()); textSize = 14f
-            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            addView(TextView(ctx).apply {
-                text = detail; setTextColor(0xFF6F6880.toInt()); textSize = 11f
-                gravity = Gravity.END; maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
-            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f))
-        }
-
-    private fun note(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextColor(0xFF6F6880.toInt()); textSize = 12f
-        setLineSpacing(dp(ctx, 2).toFloat(), 1f)
-        setPadding(dp(ctx, 18), dp(ctx, 12), dp(ctx, 18), dp(ctx, 16))
-    }
-
-    private fun dp(ctx: Context, v: Int): Int = (v * ctx.resources.displayMetrics.density).toInt()
 }

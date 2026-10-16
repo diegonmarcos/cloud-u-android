@@ -24,7 +24,7 @@
 #   T3  the declaration is the ONLY order: no Kotlin file holds a second list of tab
 #       ids, so reordering build.json reorders the nav and nothing else.
 #   T4  every declared icon is a real DRAWABLE and every drawable is declared. The
-#       shell is Views and resolves icons by name with getIdentifier, so a name with
+#       shell resolves icons by name with getIdentifier, so a name with
 #       no file resolves to 0 and draws a blank square — silently.
 #   T5  the Apps tab LAUNCHES the three real sibling APKs: each package equals that
 #       sibling's own application_id, each id IS its fleet name, no tile carries a
@@ -36,14 +36,14 @@
 #       one stated error fragment is reachable only from an UNDECLARED id, never
 #       from a declared one. There is also no `implemented:` style flag in the
 #       declaration — an escape hatch is how the empty APK shipped.
-#   T7  the shell HOSTS FRAGMENTS and reuses libs:bottomnav's own View contract
-#       (BottomNavIslandView), and does NOT consume cloud-mail's bottomNavItems
+#   T7  the shell HOSTS FRAGMENTS and reuses libs:bottomnav's own island
+#       (the BottomNavIsland composable), and does NOT consume cloud-mail's bottomNavItems
 #       table. The pages are the SuperApp's Fragments, moved, not reauthored.
-#   T8  the TOP-OVERFLOW fix is the declared one (#407/#477): the shell reads
-#       systemBars UNION displayCutout in a NON-consuming listener and pads the
-#       content; it returns the insets untouched, and holds no hardcoded top margin
-#       or padding. Consuming would starve the island below of its own inset, which
-#       is exactly how #477's bug worked.
+#   T8  the TOP-OVERFLOW fix is the declared one (#407/#477): the Compose shell reads
+#       systemBars UNION displayCutout and pads the content's TOP and SIDES only,
+#       leaving the bottom inset to the island; it consumes nothing, and holds no
+#       hardcoded top margin or padding. Consuming the bottom would starve the island
+#       below of its own inset, which is exactly how #477's bug worked.
 #   M   mutation-proof: every check above is shown able to go RED.
 #
 # OWN-SOURCE ONLY. python3, jq and grep.
@@ -58,12 +58,11 @@ NAVKT="$SRC/C3BottomNav.kt"
 TABS="$SRC/pages/TabFragments.kt"
 DRAWABLE="$APP/app/src/main/res/drawable"
 MANIFEST="$APP/app/src/main/AndroidManifest.xml"
-SHELL_XML="$APP/app/src/main/res/layout/activity_main.xml"
 
 FAILURES=0
 pass() { echo "  PASS  $*"; }
 fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
-for required in "$BJ" "$MAIN" "$NAVKT" "$TABS" "$MANIFEST" "$SHELL_XML"; do
+for required in "$BJ" "$MAIN" "$NAVKT" "$TABS" "$MANIFEST"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 [ -d "$DRAWABLE" ] || { echo "ERROR missing $DRAWABLE — unrun, not passing"; exit 1; }
@@ -320,10 +319,10 @@ if "AppCompatActivity" not in mc:
 if "supportFragmentManager" not in mc:
     bad.append("MainActivity never touches supportFragmentManager — it is not a fragment host, "
                "and the pages this app exists to show ARE fragments")
-for sym in ("BottomNavIslandView", "BottomNavViewItem"):
+for sym in ("BottomNavIsland", "BottomNavViewItem"):
     if sym not in nc:
-        bad.append("C3BottomNav does not use the shared %s — libs:bottomnav's own View-side "
-                   "contract is the supported path for an XML shell, not a workaround" % sym)
+        bad.append("C3BottomNav does not use the shared %s — libs:bottomnav's own island "
+                   "is the one every fleet shell draws, not a fork" % sym)
 if re.search(r"\bbottomNavItems\b", nc) or re.search(r"\bbottomNavItems\b", mc):
     bad.append("the shell references bottomNavItems, which is cloud-MAIL's item table: this "
                "app's nav would be coupled to another shipping app's tabs")
@@ -349,41 +348,37 @@ sys.exit(1 if bad else 0)
 PYTHON
 }
 
-# t8 <MainActivity.kt> <activity_main.xml> : read the cutout inset, never consume it
+# t8 <MainActivity.kt> : read the cutout inset, never consume it
 t8() {
-    python3 - "$1" "$2" <<'PYTHON'
+    python3 - "$1" <<'PYTHON'
 import re, sys
 main = open(sys.argv[1], encoding="utf-8").read()
-xml = open(sys.argv[2], encoding="utf-8").read()
 code = re.sub(r"/\*.*?\*/", "", main, flags=re.S)
 code = re.sub(r"//[^\n]*", "", code)
 bad = []
-if "setOnApplyWindowInsetsListener" not in code:
-    bad.append("the shell attaches no window-inset listener, so the top offset cannot be the "
+if "windowInsetsPadding" not in code:
+    bad.append("the shell pads its content with no window-inset read, so the top offset cannot be the "
                "real one (#407 replaced a tuned margin with a measured inset)")
 if "displayCutout" not in code:
-    bad.append("the inset listener never reads displayCutout — on this device the cutout is "
+    bad.append("the inset read never includes displayCutout — on this device the cutout is "
                "taller than the status bar, so systemBars alone leaves content clipped (#407)")
 if "systemBars" not in code:
-    bad.append("the inset listener never reads systemBars")
-# NON-CONSUMING: the listener must hand the insets back. CONSUMED / .consumeSystemWindowInsets()
-# / returning WindowInsetsCompat.CONSUMED starves the island of its own bottom inset (#477).
-m = re.search(r"setOnApplyWindowInsetsListener\s*\([^)]*\)\s*\{(.*?)\n        \}", code, re.S)
+    bad.append("the inset read never includes systemBars")
+# NON-CONSUMING: the shell pads the top and the sides and LEAVES THE BOTTOM, which the island reads
+# for itself. Taking the bottom (Bottom / Vertical / all sides) starves the island of its own inset (#477).
+m = re.search(r"windowInsetsPadding\((.*?)\n\s*\)", code, re.S)
 if m:
     body = m.group(1)
-    if "CONSUMED" in body or "consumeSystemWindowInsets" in body:
-        bad.append("the inset listener CONSUMES the insets — that starves every view below it, "
-                   "which is exactly how #477's bug worked; the island reads its own bottom inset")
-    if not re.search(r"\n\s*insets\s*$", body):
-        bad.append("the inset listener does not return the insets unchanged as its last "
-                   "expression — anything else is a consumed or rebuilt inset")
-# fitsSystemWindows in the shell layout would consume them before the listener ever runs.
-if re.search(r'fitsSystemWindows\s*=\s*"true"', xml):
-    bad.append("activity_main declares fitsSystemWindows=true, which CONSUMES the insets before "
-               "the listener runs — the shell reads them instead")
+    if re.search(r"WindowInsetsSides\.(Bottom|Vertical)\b", body) or ".only(" not in body:
+        bad.append("the shell's inset padding takes the BOTTOM inset — that starves the island below it "
+                   "of its own, which is exactly how #477's bug worked; pad Top + Horizontal only")
+else:
+    bad.append("no windowInsetsPadding(...) on the shell column")
+if re.search(r"\bconsumeWindowInsets\b|\bCONSUMED\b|consumeSystemWindowInsets", code):
+    bad.append("the shell CONSUMES window insets — the island reads its own bottom inset")
 # and no tuned top offset anywhere in the shell
-for m2 in re.finditer(r'android:(?:layout_marginTop|paddingTop)\s*=\s*"(\d+)dp"', xml):
-    bad.append("activity_main hardcodes a top offset of %sdp — the top offset is the measured "
+for m2 in re.finditer(r"\.padding\(\s*top\s*=\s*(\d+)\.dp", code):
+    bad.append("the shell hardcodes a top offset of %sdp — the top offset is the measured "
                "inset, never a tuned number (#407)" % m2.group(1))
 for b in bad: print("    " + b)
 sys.exit(1 if bad else 0)
@@ -427,9 +422,9 @@ t3 "$BJ" "$SRC"                       && pass "T3 no parallel list of tab ids" |
 t4 "$BJ" "$DRAWABLE" "$SRC"           && pass "T4 every declared icon is a real drawable, and every drawable is declared" || fail "T4 an icon would draw blank, or a drawable is dead"
 t5 "$BJ" "$MANIFEST" "$ROOT"          && pass "T5 the Apps tab launches the REAL siblings + cloud-c3-webserver, each queried, none renamed" || fail "T5 an Apps tile cannot open what it names"
 t6 "$BJ" "$TABS" "$SRC"               && pass "T6 NO PLACEHOLDER: every declared page resolves to a real fragment, and no not-built body exists" || fail "T6 a shipped tab can render a placeholder"
-t7 "$MAIN" "$NAVKT" "$SRC"            && pass "T7 the shell HOSTS FRAGMENTS and reuses libs:bottomnav's View contract" || fail "T7 the shell is not a fragment host, or forks the nav"
+t7 "$MAIN" "$NAVKT" "$SRC"            && pass "T7 the shell HOSTS FRAGMENTS and reuses libs:bottomnav's island" || fail "T7 the shell is not a fragment host, or forks the nav"
 t9 "$BJ" "$SRC/AppsCatalog.kt" "$APP/data/infra_slice.json" && pass "T9 Services/Tools declaration is closed: tools, views and the derived slice agree" || fail "T9 apps_page and its renderers or slice disagree"
-t8 "$MAIN" "$SHELL_XML"               && pass "T8 the top inset is READ (systemBars u displayCutout) and never consumed" || fail "T8 the top-overflow fix is not the declared one"
+t8 "$MAIN"                           && pass "T8 the top inset is READ (systemBars u displayCutout) and never consumed" || fail "T8 the top-overflow fix is not the declared one"
 
 # ── MUTATION PROOF ─────────────────────────────────────────────────────────
 echo
@@ -468,7 +463,7 @@ c_t4() { t4 "$1$A/build.json" "$1$A/app/src/main/res/drawable" "$1$A/app/src/mai
 c_t5() { t5 "$1$A/build.json" "$1$A/app/src/main/AndroidManifest.xml" "$1"; }
 c_t6() { t6 "$1$A/build.json" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/pages/TabFragments.kt" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3"; }
 c_t7() { t7 "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/C3BottomNav.kt" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3"; }
-c_t8() { t8 "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt" "$1$A/app/src/main/res/layout/activity_main.xml"; }
+c_t8() { t8 "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt"; }
 
 jqset() { python3 - "$1" "$2" <<'PY'
 import json,sys,collections
@@ -545,7 +540,7 @@ m_compose_screen() { printf 'package com.diegonmarcos.cloudc3.pages\nimport andr
 m_consume_insets() { python3 - "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt" <<'PY'
 import sys
 p=sys.argv[1]; s=open(p).read(); b=s
-s=s.replace("            insets\n        }","            WindowInsetsCompat.CONSUMED\n        }")
+s=s.replace("WindowInsetsSides.Top + WindowInsetsSides.Horizontal","WindowInsetsSides.Vertical + WindowInsetsSides.Horizontal")
 assert s!=b
 open(p,"w").write(s)
 PY
@@ -553,16 +548,17 @@ PY
 m_drop_cutout() { python3 - "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt" <<'PY'
 import re,sys
 p=sys.argv[1]; s=open(p).read(); b=s
-s=s.replace("            val cutout = insets.getInsets(WindowInsetsCompat.Type.displayCutout())\n","")
-s=re.sub(r"maxOf\(bars\.(\w+), cutout\.\w+\)", r"bars.\1", s)
+s=s.replace(".union(WindowInsets.displayCutout)","")
+s=re.sub(r"import [^\n]*displayCutout\n","",s)
+s=re.sub(r"import [^\n]*\.union\n","",s)
 assert s!=b
 open(p,"w").write(s)
 PY
 }
-m_hardcode_top() { python3 - "$1$A/app/src/main/res/layout/activity_main.xml" <<'PY'
+m_hardcode_top() { python3 - "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt" <<'PY'
 import sys
 p=sys.argv[1]; s=open(p).read(); b=s
-s=s.replace('android:orientation="vertical"','android:orientation="vertical"\n    android:paddingTop="36dp"',1)
+s=s.replace("Modifier.fillMaxSize().background(colorResource(R.color.c3_background))","Modifier.fillMaxSize().background(colorResource(R.color.c3_background)).padding(top = 36.dp)")
 assert s!=b
 open(p,"w").write(s)
 PY
@@ -586,7 +582,7 @@ mutate "a declared page resolves to a not-built body"     c_t6 m_placeholder_bod
 mutate "an 'implemented:false' escape hatch is added"     c_t6 m_escape_flag
 mutate "a content tab is declared with zero pages"        c_t6 m_empty_tab
 mutate "a Compose file also builds a View (2026-10-15)"   c_t7 m_compose_screen
-mutate "the inset listener CONSUMES the insets (#477)"    c_t8 m_consume_insets
+mutate "the shell takes the BOTTOM inset (#477)"          c_t8 m_consume_insets
 mutate "the cutout is dropped from the inset read (#407)" c_t8 m_drop_cutout
 mutate "a tuned top padding is hardcoded in the shell"    c_t8 m_hardcode_top
 
@@ -595,4 +591,4 @@ if [ "$FAILURES" -ne 0 ] || [ "$MUT_FAIL" -ne 0 ]; then
     echo "FAIL  $FAILURES assertion(s) red, $MUT_FAIL mutation(s) void or hollow"
     exit 1
 fi
-echo "PASS  9 properties asserted, 18 mutations each proved able to go red"
+echo "PASS  9 properties asserted, 21 mutations each proved able to go red"

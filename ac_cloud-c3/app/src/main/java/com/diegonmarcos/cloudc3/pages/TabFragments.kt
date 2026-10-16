@@ -1,12 +1,14 @@
 package com.diegonmarcos.cloudc3.pages
 
 import android.os.Bundle
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
-import androidx.core.content.ContextCompat
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.cloudc3.Declarations
 import com.diegonmarcos.cloudc3.R
@@ -15,6 +17,9 @@ import com.diegonmarcos.cloudc3.cloud.C3MeshFragment
 import com.diegonmarcos.cloudc3.cloud.C3StackFragment
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.ops.dagu.DaguFragment
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * #648 the three paged content tabs. Each one is only two things: WHICH declaration it
@@ -95,18 +100,19 @@ class ConfigsFragment : PagedFragment() {
  * placeholder to ship behind: test-c3-shell.sh fails the build if any declared page reaches
  * it, so on a shipped APK this class is unreachable by construction.
  */
-class UndeclaredPageFragment : Fragment() {
+class UndeclaredPageFragment : KitComposeFragment() {
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?,
-    ): View = TextView(requireContext()).apply {
-        val d = resources.displayMetrics.density
-        setPadding((16 * d).toInt(), (24 * d).toInt(), (16 * d).toInt(), (16 * d).toInt())
-        gravity = Gravity.CENTER_HORIZONTAL
-        setTextColor(ContextCompat.getColor(requireContext(), R.color.c3_text_secondary))
-        text = getString(R.string.page_has_no_body, arguments?.getString(ARG_PAGE) ?: "")
+    override fun palette(): KitPalette = c3KitPalette(requireContext())
+
+    @Composable
+    override fun Content() {
+        val p = LocalKitPalette.current
+        Text(
+            stringResource(R.string.page_has_no_body, arguments?.getString(ARG_PAGE) ?: ""),
+            color = p.textSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 24.dp, end = 16.dp, bottom = 16.dp),
+        )
     }
 
     companion object {

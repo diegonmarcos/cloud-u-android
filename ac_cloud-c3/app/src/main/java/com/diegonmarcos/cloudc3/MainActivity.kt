@@ -3,23 +3,41 @@ package com.diegonmarcos.cloudc3
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.widget.FrameLayout
-import com.diegonmarcos.superapp.bottomnav.FleetChrome
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import android.widget.Toast
+import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.colorResource
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.diegonmarcos.cloudc3.cloud.C3HealthFragment
 import com.diegonmarcos.cloudc3.cloud.C3MeshFragment
 import com.diegonmarcos.cloudc3.cloud.C3StackFragment
 import com.diegonmarcos.cloudc3.pages.AppsFragment
+import com.diegonmarcos.cloudc3.pages.C3FragmentHost
 import com.diegonmarcos.cloudc3.pages.ConfigsFragment
 import com.diegonmarcos.cloudc3.pages.HomeFragment
 import com.diegonmarcos.cloudc3.pages.ObservFragment
 import com.diegonmarcos.cloudc3.pages.TopologyFragment
-import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+import com.diegonmarcos.cloudc3.pages.c3KitPalette
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitFragmentHostState
 
 /**
  * #648 the app's one Activity: a FRAGMENT HOST above the fleet's bottom-nav island.
@@ -27,57 +45,69 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
  * The pages are the SuperApp's C3 pages and they are Fragments, so the shell hosts
  * fragments rather than asking them to become something else.
  *
+ * 2026-10-16 owner decision: all apps must be Compose. The shell is a Compose screen under
+ * CloudKitTheme: the tab's fragment sits in a [C3FragmentHost] and the island is libs:bottomnav's
+ * BottomNavIsland composable (through [C3BottomNav]).
+ *
  * THE TOP-OVERFLOW FIX (#407/#477). Content was drawing under the status bar and the
  * camera cutout. The fix reads the REAL inset and pads with it:
  *
  *  - [FleetChrome.apply] means this window lays out behind the system bars, which is what
  *    lets the island sit against the bottom edge.
- *  - the listener below takes systemBars UNION displayCutout, because on this device the
+ *  - the content column pads with systemBars UNION displayCutout, because on this device the
  *    cutout is taller than the status bar and either one alone leaves the other clipped
  *    (#407 replaced a tuned margin with exactly this reading).
- *  - it pads the CONTENT container's top, never the root, and **returns the insets
- *    unconsumed**. Consuming them is the #477 bug: a strip that consumed the inset
- *    starved every view below it, and here it would starve the island of the bottom
- *    inset it reads for itself.
+ *  - it pads the top and the sides ONLY, so the bottom inset is left for the island, which
+ *    reads it itself. Consuming it is the #477 bug: a strip that consumed the inset starved
+ *    every view below it.
  *  - there is no hardcoded top margin. Nothing here is tuned to a device.
  */
 class MainActivity : AppCompatActivity(),
     C3HealthFragment.UrlClickListener,
     C3StackFragment.TargetListener {
 
-    private lateinit var nav: BottomNavIslandView
-    private lateinit var content: FrameLayout
-    private var currentTab: String? = null
+    private var currentTab by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        // The tab's fragment is re-added by the Compose host once it has a container for it.
+        super.onCreate(KitFragmentHostState.withoutFragments(savedInstanceState))
         FleetChrome.apply(this)
-        setContentView(R.layout.activity_main)
-
-        content = findViewById(R.id.fragment_container)
-        nav = findViewById(R.id.bottom_nav)
-
-        // READ, never consume (#477).
-        ViewCompat.setOnApplyWindowInsetsListener(content) { view, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val cutout = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
-            view.setPadding(
-                maxOf(bars.left, cutout.left),
-                maxOf(bars.top, cutout.top),
-                maxOf(bars.right, cutout.right),
-                0,
-            )
-            insets
-        }
-
-        C3BottomNav.configure(nav) { tabId -> show(tabId) }
 
         val restored = savedInstanceState?.getString(STATE_TAB)
         val initial = restored?.takeIf { id -> Declarations.tabs.any { it.id == id } }
             ?: Declarations.defaultTab.takeIf { d -> Declarations.tabs.any { it.id == d } }
             ?: Declarations.tabs.firstOrNull()?.id
         initial?.let { show(it) }
+        setContent { CloudKitTheme(c3KitPalette(this)) { Shell() } }
         if (savedInstanceState == null) handleDeepLink(intent)
+    }
+
+    @Composable
+    private fun Shell() {
+        Column(
+            Modifier.fillMaxSize().background(colorResource(R.color.c3_background))
+                // READ, never consume (#477): top and sides only; the island takes the bottom.
+                .windowInsetsPadding(
+                    WindowInsets.systemBars.union(WindowInsets.displayCutout)
+                        .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+                ),
+        ) {
+            // The page. Every tab replaces this one container, the way the SuperApp's shell
+            // does, so a page arrives as the Fragment it already is.
+            val tab = currentTab
+            if (tab != null) {
+                C3FragmentHost(
+                    fm = supportFragmentManager,
+                    containerId = R.id.fragment_container,
+                    key = tab,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) { fragmentFor(tab) ?: Fragment() }
+            }
+            // The fleet's ONE bottom nav (#531/#565): the same Compose island the SuperApp,
+            // mail, wallet, me and drive draw. Below the content so nothing a page draws can
+            // hide under it. C3BottomNav feeds it build.json::ui.bottom_nav.
+            C3BottomNav.Island(selectedId = tab, onOpen = { show(it) })
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -103,28 +133,28 @@ class MainActivity : AppCompatActivity(),
         outState.putString(STATE_TAB, currentTab)
     }
 
+    /** Open a tab: the island's pill moves with [currentTab] and the host swaps the page in. */
+    private fun show(tabId: String) {
+        if (tabId == currentTab) return
+        currentTab = tabId
+    }
+
     /**
-     * Swap the one container to a tab's page. THE ONE PLACE Kotlin names a tab id — the
+     * The tab's page. THE ONE PLACE Kotlin names a tab id — the
      * tester diffs this dispatch against build.json::ui.bottom_nav in BOTH directions, so a
      * declared tab with no page and a page no declaration reaches are each a build
      * failure. There is deliberately no companion list of these ids.
      */
-    private fun show(tabId: String) {
-        if (tabId == currentTab) return
+    private fun fragmentFor(tabId: String): Fragment? {
         val fragment = when (tabId) {
             "topology" -> TopologyFragment()
             "observ" -> ObservFragment()
             "home" -> HomeFragment()
             "apps" -> AppsFragment()
             "configs" -> ConfigsFragment()
-            else -> return
+            else -> return null
         }
-        currentTab = tabId
-        C3BottomNav.sync(nav, tabId)
-        supportFragmentManager.commit {
-            setReorderingAllowed(true)
-            replace(R.id.fragment_container, fragment, tabId)
-        }
+        return fragment
     }
 
     /** A service row's own web UI. The estate tables are the one place this happens. */

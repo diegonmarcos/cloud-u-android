@@ -1,14 +1,24 @@
 package com.diegonmarcos.cloudc3.cloud
-/* #648 MOVED from aa_cloud-superapp with the c3 pages, body unchanged; the package,
+/* #648 MOVED from aa_cloud-superapp with the c3 pages; the package,
    the R/BuildConfig it resolves against are the only edits. */
 import com.diegonmarcos.cloudc3.R
 
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.cloudc3.pages.c3KitPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * C3 · WG Mesh — renders the canonical wg-mesh/v1 snapshot
@@ -28,17 +38,25 @@ import androidx.fragment.app.Fragment
  * it's the wstunnel TCP/443 transport of the same wg0 network. The
  * UI groups by transport so it reads as two networks (which is how
  * the user perceives them).
+ *
+ * 2026-10-16 owner decision: all apps must be Compose.
  */
-class C3MeshFragment : Fragment(R.layout.fragment_c3_mesh) {
+class C3MeshFragment : KitComposeFragment() {
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        val root   = view.findViewById<LinearLayout>(R.id.mesh_root)
-        val status = view.findViewById<TextView>(R.id.mesh_status)
-        // All rendering lives in the shared [MeshView] builder so the same
-        // table can be folded into the single WireGuard page.
-        status.text = MeshView.statusText(requireContext())
-        MeshView.render(requireContext(), LayoutInflater.from(requireContext()), root)
+    override fun palette(): KitPalette = c3KitPalette(requireContext())
+
+    @Composable
+    override fun Content() {
+        val p = LocalKitPalette.current
+        val ctx = LocalContext.current
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
+            Text(stringResource(R.string.mesh_title), color = p.textPrimary, style = MaterialTheme.typography.headlineSmall)
+            // All rendering lives in the shared [MeshView] so the same
+            // table can be folded into the single WireGuard page.
+            Text(MeshView.statusText(ctx), color = p.textSecondary, style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+            MeshView.Render()
+        }
     }
 
     companion object { fun newInstance() = C3MeshFragment() }
