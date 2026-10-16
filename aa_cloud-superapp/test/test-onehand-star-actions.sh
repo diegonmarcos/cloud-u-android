@@ -139,7 +139,7 @@ grep -q 'ic_p_import' "$APP/app/src/main/res/xml/shortcuts.xml" \
 
 # The clipboard snapshot itself was never the star's — the About page has its
 # own button for it. Only the shortcut was removed, not the capability.
-grep -q 'actionButton(ctx, "Copy All Infos")' "$DEVCTL" \
+grep -q 'AboutItem.Button("Copy All Infos"' "$DEVCTL" \
   && check OK "the About page keeps its own 'Copy All Infos' button" \
   || check "the on-page copy button is gone" \
            "the About page keeps its own 'Copy All Infos' button"

@@ -6,34 +6,36 @@ import com.diegonmarcos.superapp.system.ScreenLocker
 import com.diegonmarcos.superapp.system.CrashLogger
 import com.diegonmarcos.superapp.system.AppProcessUptime
 import com.diegonmarcos.superapp.launcher.Sections
-import com.diegonmarcos.superapp.launcher.IndexTiles
 import com.diegonmarcos.superapp.launcher.StackAnchors
-import com.diegonmarcos.superapp.App
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.battery.SysfsProc
-import com.diegonmarcos.superapp.battery.EnergyWatchdog
-import com.diegonmarcos.superapp.battery.EnergyUsageDialog
-import com.diegonmarcos.superapp.battery.EnergyLedger
-import com.diegonmarcos.superapp.battery.BatteryEstimatePopup
-import com.diegonmarcos.superapp.battery.BatteryChargerSpec
 import com.diegonmarcos.superapp.network.WgState
 import com.diegonmarcos.superapp.network.WireGuardPrefs
 import com.diegonmarcos.superapp.profile.ProfilePrefs
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
 
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.graphics.Typeface
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import android.widget.Toast
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.adbdebug.WirelessDebugging
 import com.diegonmarcos.superapp.updater.BuildConfig as UpdBuildConfig
@@ -45,59 +47,144 @@ import com.wireguard.android.backend.Tunnel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.withFrameNanos
 import android.content.pm.PackageManager
 import java.io.File
 import java.security.MessageDigest
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import java.text.DateFormat
 import java.util.Date
 import java.util.TimeZone
 
 /**
- * About page — comprehensive runtime + build metadata for the user
- * to inspect. Long-press any monospace row to copy to clipboard.
+ * About page — comprehensive runtime + build metadata for the user to inspect. Long-press any monospace row to copy to
+ * clipboard.
+ *
+ * Compose since #773 (was a ScrollView of hand-built Views). The page is declared once in [declare] — macro groups and
+ * service blocks, each block's body a function of an [AboutItems] — and drawn from a LazyColumn. A block's body does not run
+ * until it is reached (#286): the viewport triggers it (a finger scroll or an Index card — both reach a block by scrolling
+ * to it), and an idle loop warms the rest one block per frame (#333) so scrolling rarely meets a placeholder.
  */
-class DevControlFragment : Fragment() {
+class DevControlFragment : KitComposeFragment() {
 
-    /** Accumulator that mirrors everything written to the UI by
-     *  [title] / [section] / [row] + the inline folder-tree block, so
-     *  the "Copy All Infos" button at the bottom can dump the whole
-     *  page to the clipboard as plain text. Reset at the start of
-     *  every onCreateView so it stays in sync after a reattach. */
-    private var infoBuf = StringBuilder()
-
-    /** Rebuilds this fragment in place so every Permission row re-reads
-     *  its current grant state. Cheaper than rendering a full diff. */
-    private fun rebuildFragment() {
-        parentFragmentManager.beginTransaction()
-            .detach(this).commitNow()
-        parentFragmentManager.beginTransaction()
-            .attach(this).commitNow()
-    }
+    /** What the page head wrote to the copy buffer (the title); every block owns its own buffer, assembled in DECLARED order
+     *  by [copyAll] because bodies finish in whatever order the user reaches them. */
+    private val infoBuf = StringBuilder("# About Cloud SuperApp\n")
 
     private fun ctxAny(): Context = requireContext()
 
-    /** Deep-link to the OS's per-app settings page — the user can then
-     *  drill down to Battery via the visible row. Android doesn't expose
-     *  a public "open battery details for this app" intent (the
-     *  Settings.ACTION_BATTERY_* surface is for saver / optimisation
-     *  settings only), so the app-details deeplink is the closest public
-     *  affordance across every API level. */
-    private fun openBatteryDetails() {
-        runCatching {
-            startActivity(
-                android.content.Intent(
-                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    android.net.Uri.fromParts("package", requireContext().packageName, null),
-                )
+    override fun palette() = LauncherPalette.kit(requireContext())
+
+    /** The text prompt on screen (web server port / document root), or null. */
+    private var prompt by mutableStateOf<AboutPrompt?>(null)
+
+    @Composable
+    override fun Content() {
+        val ctx = requireContext()
+        val scope = rememberCoroutineScope()
+        val page = remember { AboutPage(attached = { isAdded && view != null }).also { declare(it) } }
+        val blocks = remember(page) { page.withBackLinks() }
+        val list = rememberLazyListState()
+        val actions = remember {
+            AboutActions(
+                copy = { toast, text -> if (text.isNotEmpty()) copy(ctx, text); Toast.makeText(ctx, toast, Toast.LENGTH_SHORT).show() },
+                toast = { Toast.makeText(ctx, it, Toast.LENGTH_SHORT).show() },
             )
+        }
+
+        // Fill a section when it is reached. Detached hosts render nothing: every helper reaches for the context, which
+        // is the #194 throw.
+        fun loadSection(s: AboutSection) { if (isAdded && view != null) s.load(scope) }
+
+        // Render before the jump, not because of it: a section that only starts rendering once the scroll settles would
+        // show a placeholder at the exact moment it was asked for.
+        fun goMacro(label: String) {
+            for (s in page.sections) if (s.macro == label) loadSection(s)
+            val at = blocks.indexOfFirst { it is AboutBlock.Macro && it.label == label }
+            if (at >= 0) scope.launch { list.animateScrollToItem(HEAD_ITEMS + at) }
+        }
+
+        // Fill the rest of the page ONE SECTION PER FRAME once the opening viewport is painted. #286 made the page open
+        // instantly by deferring every body; the cost was that scrolling then met a placeholder. This keeps the fast open
+        // and spends the idle main loop afterwards. One section per frame keeps each unit of work short enough that the
+        // scroll never janks.
+        LaunchedEffect(page) {
+            withFrameNanos { }
+            for (s in page.sections) { loadSection(s); withFrameNanos { } }
+        }
+
+        CompositionLocalProvider(LocalAboutActions provides actions) {
+            LazyColumn(Modifier.fillMaxSize().testTag(AboutTags.LIST), state = list, contentPadding = PaddingValues(16.dp)) {
+                item(key = "title") { AboutTitle("About Cloud SuperApp") }
+                item(key = "index") { AboutIndex(page.macros, ::goMacro) }
+                itemsIndexed(blocks, key = { i, b -> blockKey(i, b) }) { _, block ->
+                    when (block) {
+                        is AboutBlock.Macro -> AboutMacroHeader(block)
+                        is AboutBlock.Section -> {
+                            // The viewport is the trigger: a block composed is a block reached.
+                            LaunchedEffect(block.section) { loadSection(block.section) }
+                            AboutSectionView(block.section)
+                        }
+                        AboutBlock.BackToIndex -> AboutBackToIndex { scope.launch { list.animateScrollToItem(1) } }
+                        AboutBlock.CopyAll -> AboutButton(AboutItem.Button("Copy All Infos", false) { copyAll(ctx, page) })
+                    }
+                }
+            }
+            prompt?.let { AboutPromptDialog(it) { prompt = null } }
         }
     }
 
-    /** Read per-app foreground + background time from UsageStatsManager.
-     *  Returns (foregroundMs, backgroundMs); both -1 if the user hasn't
-     *  granted PACKAGE_USAGE_STATS. Window = last 7 days. */
+    private fun blockKey(i: Int, b: AboutBlock): String = when (b) {
+        is AboutBlock.Macro -> "macro:${b.label}"
+        is AboutBlock.Section -> "section:${b.section.head}"
+        AboutBlock.BackToIndex -> "back:$i"
+        AboutBlock.CopyAll -> "copy-all"
+    }
+
+    // Tail-anchor: snapshot the entire About page to the clipboard. Each section owns its own buffer and fills it only when it
+    // loads, so the dump is assembled in DECLARED order here. A section that has not loaded says so: silently omitting it
+    // would make a partial dump look like a complete one, which is the same lie as an empty section.
+    private fun copyAll(ctx: Context, page: AboutPage) {
+        val sb = StringBuilder(infoBuf)
+        for (s in page.sections) {
+            sb.append(s.buf)
+            if (!s.started) sb.append("  (not loaded — scroll to this section to read it)\n")
+        }
+        val snapshot = sb.toString()
+        copy(ctx, snapshot)
+        Toast.makeText(ctx,
+            "Copied ${snapshot.length} chars (${snapshot.count { it == '\n' }} lines)",
+            Toast.LENGTH_SHORT).show()
+    }
+
+    /** Buffer handed to the SAF writer — the picker is async, so the text has to survive the round trip. */
+    private var pendingExport: String = ""
+
+    /** Save-as through the system picker: no FileProvider to declare and no storage permission to request, and the user
+     *  chooses the destination. */
+    private val exportLog =
+        registerForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain")
+        ) { uri ->
+            if (uri == null) return@registerForActivityResult
+            val ok = runCatching {
+                requireContext().contentResolver.openOutputStream(uri)?.use {
+                    it.write(pendingExport.toByteArray())
+                }
+            }.isSuccess
+            Toast.makeText(requireContext(),
+                if (ok) "Exported ${pendingExport.length} chars" else "Export failed",
+                Toast.LENGTH_SHORT).show()
+        }
+
+    private fun exportLogFile(text: String, fileName: String) {
+        pendingExport = text
+        runCatching { exportLog.launch(fileName) }
+            .onFailure { Toast.makeText(requireContext(), "No file picker available", Toast.LENGTH_SHORT).show() }
+    }
+
+    /** Read per-app foreground + background time from UsageStatsManager. Returns (foregroundMs, backgroundMs); both -1 if the
+     *  user hasn't granted PACKAGE_USAGE_STATS. Window = last 7 days. */
     private fun readUsageStats(ctx: Context): Pair<Long, Long> {
         val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE)
             as? android.app.usage.UsageStatsManager ?: return -1L to -1L
@@ -123,391 +210,51 @@ class DevControlFragment : Fragment() {
         return fg to bg
     }
 
-    private fun fmtDuration(ms: Long): String {
-        if (ms < 0) return "—"
-        val s = ms / 1000
-        val h = s / 3600
-        val m = (s % 3600) / 60
-        val sec = s % 60
-        return when {
-            h > 0 -> "%d h %02d min".format(h, m)
-            m > 0 -> "%d min %02d s".format(m, sec)
-            else  -> "%d s".format(sec)
-        }
-    }
+    private fun fmtDuration(ms: Long): String = AboutFormat.fmtDuration(ms)
+    private fun fmtSecs(s: Long): String = AboutFormat.fmtSecs(s)
+    private fun fmtMillis(ms: Long): String = AboutFormat.fmtMillis(ms)
+    private fun sizeStr(bytes: Long): String = AboutFormat.sizeStr(bytes)
 
-    /** Live logcat viewer (own-process logs) with All | Errors filter + copy-all. */
-    private fun addLogcatSection(ctx: Context, column: LinearLayout) {
-        column.addView(macroHeader(ctx, "🔍  LOGCAT"))
-        section(ctx, column, "App logs (this process)") { box ->
-            val logView = TextView(ctx).apply {
-                typeface = android.graphics.Typeface.MONOSPACE
-                textSize = 10f
-                setTextIsSelectable(true)
-                setHorizontallyScrolling(true) // long lines scroll instead of wrapping
-                setPadding(dp(10), dp(10), dp(10), dp(10))
-            }
-            // Bordered, independently-scrollable frame nested in the page ScrollView.
-            val logScroll = android.widget.ScrollView(ctx).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(340)).apply {
-                    topMargin = dp(8); bottomMargin = dp(8)
-                }
-                isVerticalScrollBarEnabled = true
-                background = android.graphics.drawable.GradientDrawable().apply {
-                    cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), android.graphics.Color.parseColor("#4DA3FF"))
-                    setColor(android.graphics.Color.parseColor("#0D0D12"))
-                }
-                // Keep our own vertical scroll instead of the outer page stealing it.
-                setOnTouchListener { v, _ -> v.parent.requestDisallowInterceptTouchEvent(true); false }
-                // Long lines: let the log pane scroll horizontally too.
-                val h = android.widget.HorizontalScrollView(ctx).apply { addView(logView) }
-                addView(h)
-            }
-            // Scope is a THREE-way choice, not a checkbox, because the three
-            // cases are read three different ways (see readLogcat): own process
-            // in-process, everything through the Shizuku shell, one app by uid.
-            var scopeUid = -1              // -1 = this app, -2 = all apps, else a uid
-            var scopePkg = ""              // label for the picked app
-            var errorsOnly = false
-            fun refresh() {
-                logView.text = "Loading…"
-                val uid = scopeUid; val eo = errorsOnly
-                Thread {
-                    val out = readLogcat(ctx, uid, eo)
-                    logView.post { logView.text = out }
-                }.start()
-            }
-            fun btn(label: String, onTap: () -> Unit) = android.widget.Button(ctx).apply {
-                text = label; setOnClickListener { onTap() }
-                layoutParams = LinearLayout.LayoutParams(0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            }
-            fun row() = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-
-            // row 0 — whose logs
-            val scopeRow = row().apply {
-                addView(btn("This App") { scopeUid = -1; scopePkg = ""; refresh() })
-                addView(btn("All Apps") { scopeUid = -2; scopePkg = ""; refresh() })
-                addView(btn("Select a App") {
-                    pickApp(ctx) { label, uid ->
-                        scopeUid = uid; scopePkg = label; refresh()
-                    }
-                })
-            }
-            // row 1 — which level
-            val filters = row().apply {
-                addView(btn("All Logs") { errorsOnly = false; refresh() })
-                addView(btn("Error Logs") { errorsOnly = true; refresh() })
-            }
-            // row 2 — what to do with the buffer
-            val actions = row().apply {
-                addView(btn("Refresh") { refresh() })
-                addView(btn("Copy All") {
-                    val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE)
-                        as android.content.ClipboardManager
-                    cm.setPrimaryClip(
-                        android.content.ClipData.newPlainText("logcat", logView.text))
-                    android.widget.Toast.makeText(ctx, "Copied", android.widget.Toast.LENGTH_SHORT).show()
-                })
-                // SAF, not a FileProvider: the user picks the destination, so
-                // this needs no provider declaration and no storage permission.
-                addView(btn("Export File") {
-                    pendingExport = logView.text.toString()
-                    val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US)
-                        .format(java.util.Date())
-                    val who = when {
-                        scopeUid == -1 -> "thisapp"
-                        scopeUid == -2 -> "allapps"
-                        else -> scopePkg.ifBlank { "uid$scopeUid" }
-                    }
-                    runCatching { exportLog.launch("logcat-$who-$stamp.log") }
-                        .onFailure {
-                            android.widget.Toast.makeText(ctx,
-                                "No file picker available", android.widget.Toast.LENGTH_SHORT).show()
-                        }
-                })
-                // Same buffer as "Copy All", posted instead of pasted: hands the
-                // dump straight to c3-infra-api so a broken phone reports its own
-                // evidence. Secrets are stripped in LogUpload.redact before it
-                // leaves the device.
-                addView(btn("Post c3-api") {
-                    val text = logView.text.toString()
-                    val endpoint = BuildConfig.LOG_INGEST_URL
-                    android.widget.Toast.makeText(ctx, "Sending…", android.widget.Toast.LENGTH_SHORT).show()
-                    kotlin.concurrent.thread(name = "logcat-upload") {
-                        val r = com.diegonmarcos.superapp.core.LogUpload.post(
-                            endpoint, "cloud-superapp", text)
-                        val msg = when (r) {
-                            is com.diegonmarcos.superapp.core.LogUpload.Result.Ok ->
-                                "Sent → ${r.file}"
-                            is com.diegonmarcos.superapp.core.LogUpload.Result.Failed ->
-                                "Send failed: ${r.reason}"
-                        }
-                        logView.post {
-                            android.widget.Toast.makeText(ctx, msg, android.widget.Toast.LENGTH_LONG).show()
-                        }
-                    }
-                })
-            }
-            box.addView(scopeRow)
-            box.addView(filters)
-            box.addView(actions)
-
-            // One-time capability row. Shown only while the grant is missing —
-            // once READ_LOGS is held it has nothing left to do and disappears,
-            // which is also how you can tell at a glance whether it worked.
-            val grantRow = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-            fun renderGrantRow() {
-                grantRow.removeAllViews()
-                if (holdsReadLogs(ctx)) {
-                    grantRow.addView(TextView(ctx).apply {
-                        text = "✓ READ_LOGS granted — All Apps and Select a App read every app, " +
-                               "in this process, with Shizuku stopped."
-                        setTextColor(0xFF34C759.toInt()); textSize = 11f
-                        setPadding(0, dp(6), 0, 0)
-                    })
-                    return
-                }
-                grantRow.addView(android.widget.Button(ctx).apply {
-                    text = "Enable all-app logs (one-time grant)"
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                    setOnClickListener {
-                        isEnabled = false; text = "Granting…"
-                        // Binds a shell channel — never on the main thread.
-                        kotlin.concurrent.thread(name = "readlogs-grant") {
-                            val r = com.diegonmarcos.superapp.adbdebug.ShizukuAdb
-                                .grant(ctx, "android.permission.READ_LOGS")
-                            grantRow.post {
-                                android.widget.Toast.makeText(
-                                    ctx,
-                                    when {
-                                        r.held -> "READ_LOGS granted"
-                                        !r.ran -> r.output
-                                        else -> "pm grant ran but the permission is still not held: ${r.output}"
-                                    },
-                                    android.widget.Toast.LENGTH_LONG,
-                                ).show()
-                                renderGrantRow()
-                                if (r.held) refresh()
-                            }
-                        }
-                    }
-                })
-                grantRow.addView(TextView(ctx).apply {
-                    text = "Runs `pm grant` once through Shizuku or a paired adb. The grant " +
-                           "persists, so nothing needs to stay running afterwards."
-                    setTextColor(0xFF9B93AB.toInt()); textSize = 11f
-                    setPadding(0, dp(4), 0, 0)
-                })
-            }
-            renderGrantRow()
-            box.addView(grantRow)
-
-            box.addView(logScroll)
-            // DO NOT auto-refresh on open. Any `logcat` exec by a non-shell app on
-            // Android 13+ (Samsung especially, SM-G996B) pops the system
-            // LogAccessDialogActivity, which launched OVER the About page every
-            // time it opened — the screen looked like it "would not open / crashed"
-            // (2026-09-03; no exception, a system consent dialog stealing focus).
-            // Load lazily: the user taps This App / All Apps / Refresh when they
-            // actually want logs, so merely opening About never execs logcat.
-            logView.text = "Tap “This App”, “All Apps”, or “Refresh” to load logs."
-        }
-    }
-
-    /** True once READ_LOGS has been granted; from then on the whole buffer is
-     *  readable IN THIS PROCESS, with no shell channel live. */
-    private fun holdsReadLogs(ctx: Context): Boolean =
-        ctx.checkSelfPermission("android.permission.READ_LOGS") ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-
-    /**
-     * Read the log buffer for one scope.
-     *
-     * Android hands an unprivileged app only its OWN lines, so reading anything
-     * else takes elevation. There are two ways to have it, and they are very
-     * different to live with:
-     *
-     *   READ_LOGS granted  — the good one. `logcat` in our own process returns
-     *                        EVERY app's lines. Nothing needs to be running:
-     *                        Shizuku can be stopped and adb unplugged. This is
-     *                        why the grant is offered as a one-off.
-     *   shell channel      — the fallback until then. Works, but only while
-     *                        Shizuku or a paired adb is actually up.
-     *
-     * A single app is narrowed by UID, not by pid: a pid needs the app to be
-     * RUNNING, while the uid is stable and still works for one that has already
-     * crashed — usually the app whose log you want. Once elevated that
-     * narrowing happens in memory over the LogPipe stream; only the shell-channel
-     * fallback still spends a `--uid` flag on it.
-     */
-    private fun readLogcat(ctx: Context, uid: Int, errorsOnly: Boolean): String {
-        val elevated = holdsReadLogs(ctx)
-
-        // In-process whenever it can answer: own logs always, everything once
-        // READ_LOGS is held. No binder, no bind latency.
-        //
-        // Served from the shared LogPipe stream and filtered in memory rather
-        // than by re-running `logcat --uid=N`. Not a detail: holding READ_LOGS
-        // sends every separate exec to the log-consent dialog, so the old
-        // one-exec-per-refresh viewer re-prompted roughly every minute. One
-        // stream answers all three scopes, and `--uid` is not needed at all —
-        // which also drops the Android 10 floor the flag imposed.
-        if (uid == -1 || elevated) {
-            // -1 "this app" must filter to OUR uid explicitly. It used to be
-            // free — logd narrowed an unprivileged read for us — but once this
-            // app holds READ_LOGS the stream carries the whole device, and
-            // leaving it unfiltered would quietly turn "this app" into "all
-            // apps". -2 "all apps" is the only scope that filters nothing.
-            val scope = when {
-                uid >= 0 -> uid
-                uid == -1 -> android.os.Process.myUid()
-                else -> com.diegonmarcos.superapp.devtools.LogPipe.ANY_UID
-            }
-            return com.diegonmarcos.superapp.devtools.LogPipe.tail(
-                n = 5000, uid = scope, errorsOnly = errorsOnly,
-            )
-        }
-
-        // Not granted yet: borrow a shell channel for this one read.
-        val args = buildList {
-            add("logcat"); add("-d"); add("-v"); add("time")
-            // --uid landed in Android 10; below that logcat rejects it outright.
-            if (uid >= 0 && android.os.Build.VERSION.SDK_INT >= 29) add("--uid=$uid")
-            if (errorsOnly) add("*:E")
-        }
-        if (uid >= 0 && android.os.Build.VERSION.SDK_INT < 29) {
-            return "Per-app filtering needs Android 10+ (logcat --uid). " +
-                "Use All Apps on this device."
-        }
-        val cmd = args.joinToString(" ")
-        val out = com.diegonmarcos.superapp.adbdebug.ShellChannels.active(ctx)?.exec(ctx, cmd)
-            ?: com.diegonmarcos.superapp.adbdebug.ShizukuAdb.exec(ctx, cmd)
-        return out?.ifBlank { "(empty — nothing in the buffer for this scope)" }
-            ?: ("Reading another app's logs needs READ_LOGS, which Android will not give an " +
-                "app at install time.\n\nTap \"Enable all-app logs\" below: it runs " +
-                "`pm grant` through Shizuku or a paired adb ONCE, and the grant sticks — after " +
-                "that this works with Shizuku stopped.\n\nShell channel: " +
-                (com.diegonmarcos.superapp.adbdebug.ShellChannels.active(ctx)?.name()
-                    ?: "none ready") +
-                "\nShizuku: " + com.diegonmarcos.superapp.adbdebug.ShizukuAdb.status())
-    }
-
-    /** Buffer handed to the SAF writer — the picker is async, so the text has to
-     *  survive the round trip. */
-    private var pendingExport: String = ""
-
-    /** Save-as through the system picker: no FileProvider to declare and no
-     *  storage permission to request, and the user chooses the destination. */
-    private val exportLog =
-        registerForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain")
-        ) { uri ->
-            if (uri == null) return@registerForActivityResult
-            val ok = runCatching {
-                requireContext().contentResolver.openOutputStream(uri)?.use {
-                    it.write(pendingExport.toByteArray())
-                }
-            }.isSuccess
-            Toast.makeText(requireContext(),
-                if (ok) "Exported ${pendingExport.length} chars" else "Export failed",
-                Toast.LENGTH_SHORT).show()
-        }
-
-    /** Pick an installed app; hands back its label and UID for `logcat --uid`. */
-    private fun pickApp(ctx: Context, onPicked: (String, Int) -> Unit) {
-        val pm = ctx.packageManager
-        val apps = runCatching {
-            pm.getInstalledApplications(0)
-                .map { (pm.getApplicationLabel(it).toString()) to it.uid }
-                .sortedBy { it.first.lowercase() }
-        }.getOrDefault(emptyList())
-        if (apps.isEmpty()) {
-            Toast.makeText(ctx, "No apps visible", Toast.LENGTH_SHORT).show(); return
-        }
-        val labels = apps.map { it.first }.toTypedArray()
-        androidx.appcompat.app.AlertDialog.Builder(ctx)
-            .setTitle("Logs for which app")
-            .setItems(labels) { _, i -> onPicked(apps[i].first, apps[i].second) }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        infoBuf = StringBuilder()
-        lazySections.clear()
-        currentBuf = null
-        // The context a background probe is allowed to hold. requireContext()
-        // off the main thread is the #194 throw (a fragment reaching for a
-        // host it has already been detached from); the application context
-        // cannot be detached and answers packageManager/packageName the same.
+    /** The page, declared. Nothing in here runs a section body: [AboutPage.section] only registers it. */
+    private fun declare(page: AboutPage) = with(page) {
+        val ctx = requireContext()
+        // The context a background probe is allowed to hold. requireContext() off the main thread is the #194 throw (a
+        // fragment reaching for a host it has already been detached from); the application context cannot be detached and
+        // answers packageManager/packageName the same.
         val appCtx = ctx.applicationContext
-        val scroll = ScrollView(ctx).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
-        }
-        val column = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(16); setPadding(pad, pad, pad, pad)
-        }
-        scroll.addView(column)
-
-        column.addView(title(ctx, "About Cloud SuperApp"))
-
-        // Placeholder for the section index. It is added HERE so it lands at the
-        // top of the page, but populated at the END — the anchors do not exist
-        // until every section has been laid out.
-        val indexBox = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(4) }
-        }
-        macroAnchors.clear()
-        macroGlyphs.clear()
-        currentMacro = ""
-        anchors.reset(scroll)
-        column.addView(indexBox)
 
         // ══ APP & BUILD macro section — this APK's identity: package/version,
         //    release channel, signing, provenance, declared sections, and the full stack scan.
-        column.addView(macroHeader(ctx, "📱  APP & BUILD"))
+        macro("📱  APP & BUILD")
 
-        section(ctx, column, "App") {
-            row(ctx, it, "Name",         BuildConfig.APPLICATION_ID)
-            row(ctx, it, "Version",      BuildConfig.VERSION_NAME)
-            row(ctx, it, "Version code", BuildConfig.VERSION_CODE.toString())
+        section("App") {
+            row("Name",         BuildConfig.APPLICATION_ID)
+            row("Version",      BuildConfig.VERSION_NAME)
+            row("Version code", BuildConfig.VERSION_CODE.toString())
             // The versionCode is wall-clock encoded (3,000,000 + minutes since
             // 2026-01-01 UTC), so "3356276" is a DATE nobody can read. Decoding
             // it is the difference between a number and the answer to the only
             // question anyone asks here: how old is what I am running.
-            row(ctx, it, "Built from code", BuildAge.describe(BuildConfig.VERSION_CODE.toLong()))
-            row(ctx, it, "Git sha",      BuildConfig.GIT_SHORT_SHA)
-            row(ctx, it, "Built (UTC)",  BuildConfig.BUILD_TIMESTAMP)
-            row(ctx, it, "Build type",   BuildConfig.BUILD_TYPE)
-            row(ctx, it, "Debuggable",   BuildConfig.DEBUG.toString())
+            row("Built from code", BuildAge.describe(BuildConfig.VERSION_CODE.toLong()))
+            row("Git sha",      BuildConfig.GIT_SHORT_SHA)
+            row("Built (UTC)",  BuildConfig.BUILD_TIMESTAMP)
+            row("Build type",   BuildConfig.BUILD_TYPE)
+            row("Debuggable",   BuildConfig.DEBUG.toString())
         }
 
-        section(ctx, column, "Sections (from build.json)") {
+        section("Sections (from build.json)") {
             val all = Sections.all()
-            row(ctx, it, "Total",       all.size.toString())
-            row(ctx, it, "Bottom-nav",  all.count { s -> s.bottomNav }.toString())
-            row(ctx, it, "Aggregators", all.count { s -> s.isAggregator }.toString())
-            row(ctx, it, "Default mode", Sections.defaultMode())
-            row(ctx, it, "Default section", Sections.defaultSectionId())
+            row("Total",       all.size.toString())
+            row("Bottom-nav",  all.count { s -> s.bottomNav }.toString())
+            row("Aggregators", all.count { s -> s.isAggregator }.toString())
+            row("Default mode", Sections.defaultMode())
+            row("Default section", Sections.defaultSectionId())
         }
 
-        section(ctx, column, "Stack") {
+        section("Stack") {
             // Languages — decode the base64 JSON blob the build emitted.
             // Format: {"Kotlin":{"files":N,"loc":M}, …}
-            it.addView(small(ctx, "What's actually inside this APK — scanned by the build, never a hardcoded list."))
+            small("What's actually inside this APK — scanned by the build, never a hardcoded list.")
             val langB64 = BuildConfig.UI_STACK_LANGUAGES_JSON_B64
             val langJson = runCatching { String(android.util.Base64.decode(langB64, android.util.Base64.DEFAULT)) }.getOrDefault("{}")
             val langs = runCatching {
@@ -523,34 +270,34 @@ class DevControlFragment : Fragment() {
             }.getOrDefault(emptyList())
             val totalLoc = langs.sumOf { tr -> tr.third }
             val totalFiles = langs.sumOf { tr -> tr.second }
-            row(ctx, it, "Total LOC",   "%,d lines".format(totalLoc))
-            row(ctx, it, "Total files", totalFiles.toString())
+            row("Total LOC",   "%,d lines".format(totalLoc))
+            row("Total files", totalFiles.toString())
             for ((lang, files, loc) in langs) {
                 val pct = if (totalLoc > 0) " (%d%%)".format(loc * 100 / totalLoc) else ""
-                row(ctx, it, lang, "%,d lines · %d file(s)%s".format(loc, files, pct))
+                row(lang, "%,d lines · %d file(s)%s".format(loc, files, pct))
             }
 
             // Frameworks — sorted unique Maven coordinates that the
             // gradle scripts depend on. Internal :libs:* are skipped.
-            it.addView(small(ctx, "Frameworks (Maven coordinates from every *.gradle in the repo):"))
+            small("Frameworks (Maven coordinates from every *.gradle in the repo):")
             val fwB64 = BuildConfig.UI_STACK_FRAMEWORKS_JSON_B64
             val fwJson = runCatching { String(android.util.Base64.decode(fwB64, android.util.Base64.DEFAULT)) }.getOrDefault("[]")
             val frameworks = runCatching {
                 val arr = org.json.JSONArray(fwJson)
                 (0 until arr.length()).map { i -> arr.getString(i) }
             }.getOrDefault(emptyList())
-            row(ctx, it, "Dep count", frameworks.size.toString())
+            row("Dep count", frameworks.size.toString())
             for (dep in frameworks) {
                 // Strip the version off the front for terseness; show
                 // "group:artifact" with version on a second row.
                 val parts = dep.split(":")
                 val head = if (parts.size >= 2) "${parts[0]}:${parts[1]}" else dep
                 val ver  = if (parts.size >= 3) parts[2] else "?"
-                row(ctx, it, head, ver)
+                row(head, ver)
             }
 
             // Local internal modules — derived from build.json::modules.
-            it.addView(small(ctx, "Internal modules (build.json::modules, project(':libs:*')):"))
+            small("Internal modules (build.json::modules, project(':libs:*')):")
             // Modules are part of buildJson::modules but we don't have it
             // here — list nativeLibraryDir contents (per-ABI native libs)
             // instead, which is its own useful "what's in here" line.
@@ -560,141 +307,42 @@ class DevControlFragment : Fragment() {
             val ai = pm2.getPackageInfo(ctxAny().packageName, 0).applicationInfo
             val splits = ai?.splitSourceDirs
             val baseApk = ai?.sourceDir?.let { File(it) }
-            row(ctx, it, "Base APK",
+            row("Base APK",
                 if (baseApk != null) "${baseApk.name} · ${sizeStr(baseApk.length())}" else "—")
             splits?.forEach { s ->
-                row(ctx, it, "Split", File(s).name + " · " + sizeStr(File(s).length()))
+                row("Split", File(s).name + " · " + sizeStr(File(s).length()))
             }
 
             // Build-time metrics. Avg/last numbers come from `gh run
             // list` at gradle config time — full wall-clock from queue
             // to "completed" of the GHA `ship-cloud-superapp.yml`
             // workflow, sampling the most-recent N successful runs.
-            it.addView(small(ctx, "Build metrics (from GitHub Actions history):"))
-            fun fmtSecs(s: Long): String = when {
-                s < 0     -> "—"
-                s < 60    -> "${s}s"
-                s < 3600  -> "%dm %02ds".format(s / 60, s % 60)
-                else      -> "%dh %02dm".format(s / 3600, (s % 3600) / 60)
-            }
-            row(ctx, it, "Build avg time", fmtSecs(BuildConfig.STACK_BUILD_AVG_SECS) +
+            small("Build metrics (from GitHub Actions history):")
+            row("Build avg time", fmtSecs(BuildConfig.STACK_BUILD_AVG_SECS) +
                 if (BuildConfig.STACK_BUILD_SAMPLE > 0) " (n=${BuildConfig.STACK_BUILD_SAMPLE})" else "")
-            row(ctx, it, "Build last",     fmtSecs(BuildConfig.STACK_BUILD_LAST_SECS))
-            row(ctx, it, "Gradle config phase", "%d ms".format(BuildConfig.STACK_GRADLE_CONFIG_MS))
-            row(ctx, it, "Build SHA",      BuildConfig.GIT_SHORT_SHA)
+            row("Build last",     fmtSecs(BuildConfig.STACK_BUILD_LAST_SECS))
+            row("Gradle config phase", "%d ms".format(BuildConfig.STACK_GRADLE_CONFIG_MS))
+            row("Build SHA",      BuildConfig.GIT_SHORT_SHA)
 
-            // Three trees SIDE-BY-SIDE — Sitemap | Folders | AST. Accordion:
-            // tapping one button OPENS its scroller and CLOSES the other two
-            // (only one box visible at a time). LONG-PRESS — on the button OR
-            // anywhere in the open box — copies that tree's full text to the
-            // clipboard. (Folders also feeds the page-copy buffer.)
-            val box = it
-            val btnRow = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(0, dp(10), 0, dp(4))
-            }
+            // Three trees SIDE-BY-SIDE — Sitemap | Folders | AST. Accordion: tapping one button OPENS its box and
+            // CLOSES the other two (only one box visible at a time). LONG-PRESS — on the button OR anywhere in the open
+            // box — copies that tree's full text to the clipboard. (Folders also feeds the page-copy buffer.)
             fun dec(b64: String) = runCatching {
                 String(android.util.Base64.decode(b64, android.util.Base64.DEFAULT))
             }.getOrDefault("—")
-            // Each tree is a list of (column-header, text) columns. Sitemap and
-            // AST are single-column; Folders is three columns — L2 / L3 / L4 —
-            // each a depth-bounded view of the same ea_* scan.
+            // Each tree is a list of (column-header, text) columns. Sitemap and AST are single-column; Folders is three
+            // columns — L3 / L4 / L5 — each a depth-bounded view of the same ea_* scan.
             val trees = listOf(
-                Triple("Sitemap", listOf("" to dec(BuildConfig.UI_ASM_TREE_B64)), false),
-                Triple("Folders", listOf(
+                AboutTree("Sitemap", listOf("" to dec(BuildConfig.UI_ASM_TREE_B64))),
+                AboutTree("Folders", listOf(
                     "L3" to dec(BuildConfig.UI_STACK_FOLDER_TREE_L3_B64),
                     "L4" to dec(BuildConfig.UI_STACK_FOLDER_TREE_L4_B64),
                     "L5" to dec(BuildConfig.UI_STACK_FOLDER_TREE_B64),
-                ), true),
-                Triple("AST", listOf("" to dec(BuildConfig.UI_AST_TREE_B64)), false),
+                )),
+                AboutTree("AST", listOf("" to dec(BuildConfig.UI_AST_TREE_B64))),
             )
-            val buttons = mutableListOf<TextView>()
-            val scrollers = mutableListOf<View>()
-            val labels = mutableListOf<String>()
-            fun copyTree(label: String, str: String) {
-                (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
-                    as? android.content.ClipboardManager)
-                    ?.setPrimaryClip(android.content.ClipData.newPlainText(label, str))
-                android.widget.Toast.makeText(ctx, "$label copied", android.widget.Toast.LENGTH_SHORT).show()
-            }
-            // Collapse every tree, reset every button caret. `openIdx` < 0 = all closed.
-            fun setOpen(openIdx: Int) {
-                for (i in scrollers.indices) {
-                    val show = i == openIdx
-                    scrollers[i].visibility = if (show) android.view.View.VISIBLE else android.view.View.GONE
-                    buttons[i].text = (if (show) "▾ " else "▸ ") + labels[i]
-                }
-            }
-            for ((idx, t) in trees.withIndex()) {
-                val (label, cols, intoBuf) = t
-                if (intoBuf) (currentBuf ?: infoBuf).append("\n```\n").append(cols.last().second).append("\n```\n")
-                labels += label
-                val tsize = if (cols.size > 1) 7f else 9f
-                // One horizontal row of weighted columns. Single-column trees
-                // fill the width; Folders splits into 3 equal columns. Each
-                // column scrolls horizontally on its own and LONG-PRESS-copies.
-                val colRow = LinearLayout(ctx).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    visibility = android.view.View.GONE
-                }
-                for ((sub, txt) in cols) {
-                    val colName = if (sub.isBlank()) label else "$label · $sub"
-                    val cell = LinearLayout(ctx).apply {
-                        orientation = LinearLayout.VERTICAL
-                        layoutParams = LinearLayout.LayoutParams(
-                            0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f,
-                        ).apply { rightMargin = if (cols.size > 1) dp(3) else 0 }
-                    }
-                    if (sub.isNotBlank()) cell.addView(TextView(ctx).apply {
-                        text = sub
-                        setTextColor(resources.getColor(R.color.cloud_primary, ctx.theme))
-                        typeface = Typeface.DEFAULT_BOLD
-                        textSize = 10f
-                        setPadding(dp(4), dp(4), dp(4), dp(2))
-                    })
-                    cell.addView(android.widget.HorizontalScrollView(ctx).apply {
-                        // No setTextIsSelectable — it would hijack the long-press
-                        // into a text-selection gesture. Long-press copies instead.
-                        addView(TextView(ctx).apply {
-                            text = txt
-                            setTextColor(0xFFE9D8FD.toInt())
-                            typeface = Typeface.MONOSPACE
-                            textSize = tsize
-                            setPadding(dp(8), dp(8), dp(8), dp(8))
-                            setBackgroundColor(0x33000000)
-                            isLongClickable = true
-                            setOnLongClickListener { copyTree(colName, txt); true }
-                        })
-                    })
-                    colRow.addView(cell)
-                }
-                scrollers += colRow
-                val btnCopy = if (cols.size == 1) cols[0].second
-                    else cols.joinToString("\n\n") { "## ${it.first}\n${it.second}" }
-                val btn = TextView(ctx).apply {
-                    text = "▸ $label"
-                    gravity = android.view.Gravity.CENTER
-                    setTextColor(resources.getColor(R.color.cloud_primary, ctx.theme))
-                    typeface = Typeface.DEFAULT_BOLD
-                    setPadding(dp(6), dp(8), dp(6), dp(8))
-                    setBackgroundColor(0x22FFFFFF)
-                    isClickable = true; isFocusable = true
-                    layoutParams = LinearLayout.LayoutParams(
-                        0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f,
-                    ).apply { rightMargin = dp(4) }
-                    setOnClickListener {
-                        // Accordion: open this one only if it was closed; tapping
-                        // the open one closes everything.
-                        val wasOpen = scrollers[idx].visibility == android.view.View.VISIBLE
-                        setOpen(if (wasOpen) -1 else idx)
-                    }
-                    setOnLongClickListener { copyTree(label, btnCopy); true }
-                }
-                buttons += btn
-                btnRow.addView(btn)
-            }
-            box.addView(btnRow)
-            scrollers.forEach { box.addView(it) }
+            buf.append("\n```\n").append(trees[1].columns.last().second).append("\n```\n")
+            custom { AboutTreeAccordion(trees) }
         }
 
         // ══ REPO & RELEASES macro section — where this build CAME FROM: the
@@ -703,25 +351,25 @@ class DevControlFragment : Fragment() {
         //    three together. Renamed from "Cloud Identity", and the release,
         //    APK, signing and provenance sections moved in from App & Build so
         //    the heading is not a lie: identity alone never explained a build.
-        column.addView(macroHeader(ctx, "☁  REPO & RELEASES"))
+        macro("☁  REPO & RELEASES")
 
-        section(ctx, column, "Profile") {
+        section("Profile") {
             val prof = ProfilePrefs(ctxAny())
-            row(ctx, it, "Name",     prof.name.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_NAME })
-            row(ctx, it, "Email",    prof.email.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_EMAIL })
-            row(ctx, it, "Company",  prof.company.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_COMPANY })
-            row(ctx, it, "Location", prof.location.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_LOCATION })
+            row("Name",     prof.name.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_NAME })
+            row("Email",    prof.email.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_EMAIL })
+            row("Company",  prof.company.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_COMPANY })
+            row("Location", prof.location.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_LOCATION })
             val site = prof.website.ifBlank { com.diegonmarcos.superapp.account.BuildConfig.UI_PROFILE_WEBSITE }
-            if (site.isNotBlank()) row(ctx, it, "Website", site)
+            if (site.isNotBlank()) row("Website", site)
             // Repos — data-driven from build.json::ui.profile_default.repos.
-            it.addView(small(ctx, "Repos:"))
-            for ((label, url) in parseProfileRepos()) row(ctx, it, label, url)
+            small("Repos:")
+            for ((label, url) in parseProfileRepos()) row(label, url)
             // Install — the repo links above tell you where the SOURCE lives,
             // which is no help to someone holding a broken build: reading the
             // code is not installing it. The artifact those repos produce gets
             // its own address here, next to them, plus the button that uses it.
-            it.addView(small(ctx, getString(R.string.about_install_header)))
-            renderDirectInstall(ctx, it)
+            small(getString(R.string.about_install_header))
+            renderDirectInstall()
             // Wireless Debugging, next to the install button rather than only in
             // "Dev Tools" twenty sections below. Same audience, same
             // moment: the channel that makes an install silent is the switch
@@ -729,25 +377,25 @@ class DevControlFragment : Fragment() {
             // control that far down the page is one the user reports as absent.
             // Status is read here (unprivileged); every control (pair, connect, the server, Shizuku)
             // is on the ADB Shell page, which the button opens.
-            row(ctx, it, "Wireless debugging",
+            row("Wireless debugging",
                 if (WirelessDebugging.isOn(ctxAny())) "ON" else "OFF")
-            it.addView(actionButton(ctx, "ADB Shell ›", GRAY) { com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctxAny()) })
+            button("ADB Shell ›", gray = true) { com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctxAny()) }
             // The consolidated cloud-data config that feeds the mesh.
-            it.addView(small(ctx, "Config source:"))
-            row(ctx, it, "Consolidated", BuildConfig.UI_CONSOLIDATED_CONFIG.ifBlank { "—" })
+            small("Config source:")
+            row("Consolidated", BuildConfig.UI_CONSOLIDATED_CONFIG.ifBlank { "—" })
         }
 
-        section(ctx, column, "Release / GHCR") {
-            row(ctx, it, "Registry",  UpdBuildConfig.GHCR_REGISTRY)
-            row(ctx, it, "Namespace", UpdBuildConfig.GHCR_NAMESPACE)
-            row(ctx, it, "Image",     UpdBuildConfig.GHCR_IMAGE)
-            row(ctx, it, "Tag",       UpdBuildConfig.AUTO_UPDATE_TAG)
-            row(ctx, it, "Full URL",
+        section("Release / GHCR") {
+            row("Registry",  UpdBuildConfig.GHCR_REGISTRY)
+            row("Namespace", UpdBuildConfig.GHCR_NAMESPACE)
+            row("Image",     UpdBuildConfig.GHCR_IMAGE)
+            row("Tag",       UpdBuildConfig.AUTO_UPDATE_TAG)
+            row("Full URL",
                 "${UpdBuildConfig.GHCR_REGISTRY}/${UpdBuildConfig.GHCR_NAMESPACE}/${UpdBuildConfig.GHCR_IMAGE}:${UpdBuildConfig.AUTO_UPDATE_TAG}")
-            row(ctx, it, "Check interval", "${UpdBuildConfig.AUTO_UPDATE_INTERVAL_HOURS}h")
+            row("Check interval", "${UpdBuildConfig.AUTO_UPDATE_INTERVAL_HOURS}h")
         }
 
-        section(ctx, column, "APK") {
+        section("APK") {
             val pm = requireContext().packageManager
             @Suppress("DEPRECATION")
             val info = pm.getPackageInfo(requireContext().packageName, 0)
@@ -755,13 +403,13 @@ class DevControlFragment : Fragment() {
             // Fall back to "—" so the dev-control row still renders.
             val path = info.applicationInfo?.sourceDir ?: "—"
             val size = runCatching { File(path).length() }.getOrDefault(0L)
-            row(ctx, it, "Path",       path)
-            row(ctx, it, "Size",       sizeStr(size))
-            row(ctx, it, "Installed",  fmtMillis(info.firstInstallTime))
-            row(ctx, it, "Updated",    fmtMillis(info.lastUpdateTime))
+            row("Path",       path)
+            row("Size",       sizeStr(size))
+            row("Installed",  fmtMillis(info.firstInstallTime))
+            row("Updated",    fmtMillis(info.lastUpdateTime))
         }
 
-        section(ctx, column, "Signing") {
+        section("Signing") {
             val pm = requireContext().packageManager
             val sigFlags = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P)
                 PackageManager.GET_SIGNING_CERTIFICATES
@@ -777,27 +425,27 @@ class DevControlFragment : Fragment() {
                     .generateCertificate(sigBytes.inputStream()) as X509Certificate
                 val sha256 = MessageDigest.getInstance("SHA-256").digest(cert.encoded)
                     .joinToString(":") { "%02X".format(it) }
-                row(ctx, it, "Subject",     cert.subjectDN.name)
-                row(ctx, it, "SHA-256",     sha256)
-                row(ctx, it, "Valid until", fmtMillis(cert.notAfter.time))
+                row("Subject",     cert.subjectDN.name)
+                row("SHA-256",     sha256)
+                row("Valid until", fmtMillis(cert.notAfter.time))
             } else {
-                row(ctx, it, "Cert", "—")
+                row("Cert", "—")
             }
         }
 
-        section(ctx, column, "APK provenance") {
+        section("APK provenance") {
             val pm = ctxAny().packageManager
             val pkg = ctxAny().packageName
             if (android.os.Build.VERSION.SDK_INT >= 30) {
                 val src = runCatching { pm.getInstallSourceInfo(pkg) }.getOrNull()
-                row(ctx, it, "Installed by", src?.installingPackageName ?: "—")
-                row(ctx, it, "Initiated by", src?.initiatingPackageName ?: "—")
+                row("Installed by", src?.installingPackageName ?: "—")
+                row("Initiated by", src?.initiatingPackageName ?: "—")
                 if (android.os.Build.VERSION.SDK_INT >= 34)
-                    row(ctx, it, "Update owner", src?.updateOwnerPackageName ?: "—")
+                    row("Update owner", src?.updateOwnerPackageName ?: "—")
             } else {
                 @Suppress("DEPRECATION")
                 val installer = runCatching { pm.getInstallerPackageName(pkg) }.getOrNull()
-                row(ctx, it, "Installed by", installer ?: "—")
+                row("Installed by", installer ?: "—")
             }
             // Signing cert SHA-256 — proves "this APK was signed by my keystore"
             val sigInfo = runCatching {
@@ -807,11 +455,11 @@ class DevControlFragment : Fragment() {
             }.getOrNull()
             val sigs = sigInfo?.signingCertificateHistory ?: sigInfo?.apkContentsSigners
             if (sigs.isNullOrEmpty()) {
-                row(ctx, it, "Cert SHA-256", "—")
+                row("Cert SHA-256", "—")
             } else {
                 val md = java.security.MessageDigest.getInstance("SHA-256")
                 val hex = md.digest(sigs[0].toByteArray()).joinToString(":") { "%02X".format(it) }
-                row(ctx, it, "Cert SHA-256", hex)
+                row("Cert SHA-256", hex)
             }
             // Split APKs (base + per-density + per-ABI).
             // PackageInfo.applicationInfo is @Nullable as of API 35;
@@ -820,57 +468,56 @@ class DevControlFragment : Fragment() {
             @Suppress("DEPRECATION")
             val appInfo = pm.getPackageInfo(pkg, 0).applicationInfo
             val splits = appInfo?.splitSourceDirs?.size ?: 0
-            row(ctx, it, "Splits",      "$splits split APK(s)")
-            row(ctx, it, "Native lib dir", appInfo?.nativeLibraryDir ?: "—")
+            row("Splits",      "$splits split APK(s)")
+            row("Native lib dir", appInfo?.nativeLibraryDir ?: "—")
             val nativeLibs = runCatching { File(appInfo?.nativeLibraryDir ?: "").listFiles()?.map { it.name } }.getOrNull()
-            row(ctx, it, "Native libs", nativeLibs?.joinToString(", ") ?: "—")
+            row("Native libs", nativeLibs?.joinToString(", ") ?: "—")
         }
 
         // ══ DEVICE macro section — the physical/OS device this build is running on.
-        column.addView(macroHeader(ctx, "🖥️  DEVICE"))
+        macro("🖥️  DEVICE")
 
-        section(ctx, column, "Device / stack") {
-            row(ctx, it, "Manufacturer", android.os.Build.MANUFACTURER)
-            row(ctx, it, "Model",        android.os.Build.MODEL)
-            row(ctx, it, "Brand",        android.os.Build.BRAND)
-            row(ctx, it, "Device",       android.os.Build.DEVICE)
-            row(ctx, it, "Hardware",     android.os.Build.HARDWARE)
-            row(ctx, it, "Android",      "${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT})")
-            row(ctx, it, "ABIs",         android.os.Build.SUPPORTED_ABIS.joinToString(", "))
-            row(ctx, it, "Locale",       java.util.Locale.getDefault().toLanguageTag())
+        section("Device / stack") {
+            row("Manufacturer", android.os.Build.MANUFACTURER)
+            row("Model",        android.os.Build.MODEL)
+            row("Brand",        android.os.Build.BRAND)
+            row("Device",       android.os.Build.DEVICE)
+            row("Hardware",     android.os.Build.HARDWARE)
+            row("Android",      "${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT})")
+            row("ABIs",         android.os.Build.SUPPORTED_ABIS.joinToString(", "))
+            row("Locale",       java.util.Locale.getDefault().toLanguageTag())
         }
 
-        section(ctx, column, "Kernel / OS") {
-            row(ctx, it, "Kernel",   System.getProperty("os.version") ?: "—")
-            row(ctx, it, "Security patch", android.os.Build.VERSION.SECURITY_PATCH)
-            row(ctx, it, "Codename", android.os.Build.VERSION.CODENAME)
-            row(ctx, it, "Incremental", android.os.Build.VERSION.INCREMENTAL)
-            row(ctx, it, "/proc/version", runCatching { File("/proc/version").readText().trim() }.getOrDefault("—"))
-            row(ctx, it, "VM",       "${System.getProperty("java.vm.name")} ${System.getProperty("java.vm.version")}")
-            row(ctx, it, "VM heap",  "${sizeStr(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())} / ${sizeStr(Runtime.getRuntime().maxMemory())}")
+        section("Kernel / OS") {
+            row("Kernel",   System.getProperty("os.version") ?: "—")
+            row("Security patch", android.os.Build.VERSION.SECURITY_PATCH)
+            row("Codename", android.os.Build.VERSION.CODENAME)
+            row("Incremental", android.os.Build.VERSION.INCREMENTAL)
+            row("/proc/version", runCatching { File("/proc/version").readText().trim() }.getOrDefault("—"))
+            row("VM",       "${System.getProperty("java.vm.name")} ${System.getProperty("java.vm.version")}")
+            row("VM heap",  "${sizeStr(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())} / ${sizeStr(Runtime.getRuntime().maxMemory())}")
             val nativeHeap = android.os.Debug.getNativeHeapAllocatedSize()
-            row(ctx, it, "Native heap", sizeStr(nativeHeap))
+            row("Native heap", sizeStr(nativeHeap))
         }
 
-        section(ctx, column, "SoC / CPU") {
+        section("SoC / CPU") {
             if (android.os.Build.VERSION.SDK_INT >= 31) {
-                row(ctx, it, "SoC mfr",   android.os.Build.SOC_MANUFACTURER)
-                row(ctx, it, "SoC model", android.os.Build.SOC_MODEL)
+                row("SoC mfr",   android.os.Build.SOC_MANUFACTURER)
+                row("SoC model", android.os.Build.SOC_MODEL)
             }
-            row(ctx, it, "Bootloader", android.os.Build.BOOTLOADER)
+            row("Bootloader", android.os.Build.BOOTLOADER)
             @Suppress("DEPRECATION")
-            row(ctx, it, "Radio",      android.os.Build.getRadioVersion() ?: "—")
-            row(ctx, it, "Board",      android.os.Build.BOARD)
-            row(ctx, it, "Fingerprint", android.os.Build.FINGERPRINT)
-            row(ctx, it, "CPU cores",  Runtime.getRuntime().availableProcessors().toString())
+            row("Radio",      android.os.Build.getRadioVersion() ?: "—")
+            row("Board",      android.os.Build.BOARD)
+            row("Fingerprint", android.os.Build.FINGERPRINT)
+            row("CPU cores",  Runtime.getRuntime().availableProcessors().toString())
             // /proc/cpuinfo is scanned line by line and the two cpufreq nodes
             // are sysfs reads — cheap individually, but this is a diagnostics
             // page and none of it needs to happen on the way to a frame.
-            val host = it
-            viewLifecycleOwner.lifecycleScope.launch {
-                val cpuModel = row(ctx, host, "CPU model", "reading…")
-                val curFreqRow = row(ctx, host, "Cur freq", "reading…")
-                val govRow = row(ctx, host, "Governor", "reading…")
+            launch {
+                val cpuModel = row("CPU model", "reading…")
+                val curFreqRow = row("Cur freq", "reading…")
+                val govRow = row("Governor", "reading…")
                 val facts = withContext(Dispatchers.IO) {
                     val m = runCatching {
                         File("/proc/cpuinfo").useLines { lines ->
@@ -894,7 +541,7 @@ class DevControlFragment : Fragment() {
         }
 
         // Two sysfs reads per zone, and a phone can expose dozens. Off-thread.
-        asyncSection(ctx, column, "Thermal zones",
+        asyncSection("Thermal zones",
             probe = {
                 runCatching {
                     File("/sys/class/thermal").listFiles { f -> f.name.startsWith("thermal_zone") }
@@ -906,11 +553,11 @@ class DevControlFragment : Fragment() {
                         }
                 }.getOrNull().orEmpty()
             },
-            render = { g, zones ->
+            render = { zones ->
                 if (zones.isEmpty()) {
-                    g.addView(small(ctx, "No thermal zones readable (kernel restricts /sys/class/thermal on most modern devices)."))
+                    small("No thermal zones readable (kernel restricts /sys/class/thermal on most modern devices).")
                 } else {
-                    for ((k, v) in zones) row(ctx, g, k, v)
+                    for ((k, v) in zones) row(k, v)
                 }
             })
 
@@ -923,68 +570,68 @@ class DevControlFragment : Fragment() {
         // so the section is one big scrollable table the user can
         // long-press individual rows to copy.
 
-        section(ctx, column, "Display") {
+        section("Display") {
             val wm = ctxAny().getSystemService(Context.WINDOW_SERVICE) as? android.view.WindowManager
             val dm = resources.displayMetrics
-            row(ctx, it, "Resolution", "${dm.widthPixels} × ${dm.heightPixels}")
-            row(ctx, it, "Density",    "${dm.density}x · ${dm.densityDpi} dpi")
+            row("Resolution", "${dm.widthPixels} × ${dm.heightPixels}")
+            row("Density",    "${dm.density}x · ${dm.densityDpi} dpi")
             @Suppress("DEPRECATION")
             val display = wm?.defaultDisplay
-            row(ctx, it, "Refresh",    display?.refreshRate?.let { "%.1f Hz".format(it) } ?: "—")
+            row("Refresh",    display?.refreshRate?.let { "%.1f Hz".format(it) } ?: "—")
             if (android.os.Build.VERSION.SDK_INT >= 23) {
                 val modes = display?.supportedModes?.map { "%.0f Hz @ %dx%d".format(it.refreshRate, it.physicalWidth, it.physicalHeight) }
-                row(ctx, it, "Modes", modes?.joinToString(", ") ?: "—")
+                row("Modes", modes?.joinToString(", ") ?: "—")
             }
             if (android.os.Build.VERSION.SDK_INT >= 24) {
-                row(ctx, it, "HDR",       display?.hdrCapabilities?.supportedHdrTypes?.joinToString(",") ?: "—")
+                row("HDR",       display?.hdrCapabilities?.supportedHdrTypes?.joinToString(",") ?: "—")
             }
             if (android.os.Build.VERSION.SDK_INT >= 26) {
-                row(ctx, it, "Wide gamut", display?.isWideColorGamut?.toString() ?: "—")
+                row("Wide gamut", display?.isWideColorGamut?.toString() ?: "—")
             }
             val cfg = resources.configuration
             val dark = (cfg.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
-            row(ctx, it, "Dark mode", dark.toString())
-            row(ctx, it, "Font scale", "${cfg.fontScale}x")
+            row("Dark mode", dark.toString())
+            row("Font scale", "${cfg.fontScale}x")
         }
 
-        section(ctx, column, "Sensors") {
+        section("Sensors") {
             val sm = ctxAny().getSystemService(Context.SENSOR_SERVICE) as? android.hardware.SensorManager
             val all = sm?.getSensorList(android.hardware.Sensor.TYPE_ALL) ?: emptyList()
-            row(ctx, it, "Count", all.size.toString())
+            row("Count", all.size.toString())
             for ((idx, s) in all.withIndex()) {
-                row(ctx, it, "Sensor ${idx + 1}", "${s.name} — ${s.vendor}")
+                row("Sensor ${idx + 1}", "${s.name} — ${s.vendor}")
             }
         }
 
-        section(ctx, column, "Locale & time") {
+        section("Locale & time") {
             val locales = if (android.os.Build.VERSION.SDK_INT >= 24)
                 (0 until resources.configuration.locales.size()).joinToString(", ") {
                     resources.configuration.locales[it].toLanguageTag()
                 }
             else
                 @Suppress("DEPRECATION") resources.configuration.locale.toLanguageTag()
-            row(ctx, it, "Locales",  locales)
+            row("Locales",  locales)
             val tz = TimeZone.getDefault()
-            row(ctx, it, "Timezone", "${tz.id} (${tz.displayName})")
+            row("Timezone", "${tz.id} (${tz.displayName})")
             val offMin = tz.rawOffset / 60000
-            row(ctx, it, "UTC offset", "%+03d:%02d".format(offMin / 60, kotlin.math.abs(offMin) % 60))
-            row(ctx, it, "In DST",   tz.inDaylightTime(Date()).toString())
+            row("UTC offset", "%+03d:%02d".format(offMin / 60, kotlin.math.abs(offMin) % 60))
+            row("In DST",   tz.inDaylightTime(Date()).toString())
             val autoTime = runCatching {
                 android.provider.Settings.Global.getInt(ctxAny().contentResolver,
                     android.provider.Settings.Global.AUTO_TIME) == 1
             }.getOrDefault(false)
-            row(ctx, it, "Auto time", autoTime.toString())
+            row("Auto time", autoTime.toString())
             // System uptime gap = boot wall-clock.
             val bootWall = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime()
-            row(ctx, it, "Booted",   fmtMillis(bootWall))
-            row(ctx, it, "System uptime", fmtDuration(android.os.SystemClock.elapsedRealtime()))
+            row("Booted",   fmtMillis(bootWall))
+            row("System uptime", fmtDuration(android.os.SystemClock.elapsedRealtime()))
         }
 
         // ══ SECURITY macro section — device lock state, ADB/dev-options exposure, biometrics.
-        column.addView(macroHeader(ctx, "🔐  SECURITY"))
+        macro("🔐  SECURITY")
 
-        section(ctx, column, "Security posture") {
+        section("Security posture") {
             val cr = ctxAny().contentResolver
             val devMode = runCatching {
                 android.provider.Settings.Global.getInt(cr,
@@ -994,19 +641,19 @@ class DevControlFragment : Fragment() {
                 android.provider.Settings.Global.getInt(cr,
                     android.provider.Settings.Global.ADB_ENABLED) == 1
             }.getOrDefault(false)
-            row(ctx, it, "Dev options", devMode.toString())
-            row(ctx, it, "USB ADB",     adbEnabled.toString())
+            row("Dev options", devMode.toString())
+            row("USB ADB",     adbEnabled.toString())
             if (android.os.Build.VERSION.SDK_INT >= 30) {
                 val adbWifi = runCatching {
                     android.provider.Settings.Global.getInt(cr, "adb_wifi_enabled") == 1
                 }.getOrDefault(false)
-                row(ctx, it, "Wireless ADB", adbWifi.toString())
+                row("Wireless ADB", adbWifi.toString())
                 for ((k, v) in com.diegonmarcos.superapp.system.WirelessDebugKeeper.Status.rows(ctxAny()))
-                    row(ctx, it, "Keep-alive $k", v)
+                    row("Keep-alive $k", v)
             }
             val km = ctxAny().getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
-            row(ctx, it, "Device secure",  (km?.isDeviceSecure ?: false).toString())
-            row(ctx, it, "Keyguard locked", (km?.isKeyguardLocked ?: false).toString())
+            row("Device secure",  (km?.isDeviceSecure ?: false).toString())
+            row("Keyguard locked", (km?.isKeyguardLocked ?: false).toString())
             if (android.os.Build.VERSION.SDK_INT >= 29) {
                 val bm = ctxAny().getSystemService(Context.BIOMETRIC_SERVICE)
                     as? android.hardware.biometrics.BiometricManager
@@ -1014,7 +661,7 @@ class DevControlFragment : Fragment() {
                     @Suppress("DEPRECATION")
                     bm?.canAuthenticate() ?: -1
                 }.getOrDefault(-1)
-                row(ctx, it, "Biometric ready", when (biometric) {
+                row("Biometric ready", when (biometric) {
                     android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS              -> "Yes"
                     android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED  -> "No (not enrolled)"
                     android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE    -> "No (no hardware)"
@@ -1025,13 +672,13 @@ class DevControlFragment : Fragment() {
         }
 
         // ══ RESOURCES macro section — storage, battery, memory and raw kernel telemetry.
-        column.addView(macroHeader(ctx, "🔋  RESOURCES"))
+        macro("🔋  RESOURCES")
 
         // THE worst offender on this page: dirSize() is a recursive walk of the
         // whole private data tree and it ran TWICE, on the main thread, before
         // the page could draw. On an install with a large cache that is seconds,
         // not milliseconds — an ANR, not a jank.
-        asyncSection(ctx, column, "Storage", timeoutMs = 15_000,
+        asyncSection("Storage", timeoutMs = 15_000,
             probe = {
             val ctxAny = appCtx
             val pm = ctxAny.packageManager
@@ -1065,23 +712,23 @@ class DevControlFragment : Fragment() {
                 total    = sizeStr(totalBytes),
             )
             },
-            render = { g, f ->
+            render = { f ->
                 // Paths first.
-                row(ctx, g, "Files dir",   f.filesDir)
-                row(ctx, g, "Cache dir",   f.cacheDir)
-                row(ctx, g, "Data root",   f.dataRoot)
-                row(ctx, g, "External",    f.external)
-                row(ctx, g, "Trace log",   f.traceLog)
-                g.addView(small(ctx, "Breakdown — same buckets Android system settings shows:"))
-                row(ctx, g, "Aplicación",  f.apk)
-                row(ctx, g, "Datos",       f.data)
-                row(ctx, g, "Caché",       f.cache)
-                row(ctx, g, "Total",       f.total)
+                row("Files dir",   f.filesDir)
+                row("Cache dir",   f.cacheDir)
+                row("Data root",   f.dataRoot)
+                row("External",    f.external)
+                row("Trace log",   f.traceLog)
+                small("Breakdown — same buckets Android system settings shows:")
+                row("Aplicación",  f.apk)
+                row("Datos",       f.data)
+                row("Caché",       f.cache)
+                row("Total",       f.total)
             })
 
         // Permissions section moved to PermissionsFragment (config/perms tab).
 
-        section(ctx, column, "Battery & Usage") {
+        section("Battery & Usage") {
             // Everything in this block is what the app CAN read about
             // itself without privileged permissions. Per-app battery mAh
             // + screen-on / background time split / wakelocks count etc.
@@ -1098,16 +745,16 @@ class DevControlFragment : Fragment() {
             val crashes  = crashDir.listFiles { f -> f.name.startsWith("crash-") }?.size ?: 0
             val mostRecent = crashDir.listFiles { f -> f.name.startsWith("crash-") }
                 ?.maxByOrNull { it.lastModified() }
-            row(ctx, it, "Crash count",  crashes.toString())
-            row(ctx, it, "Last crash",   mostRecent?.let { fmtMillis(it.lastModified()) } ?: "—")
-            row(ctx, it, "Crashes dir",  crashDir.absolutePath)
+            row("Crash count",  crashes.toString())
+            row("Last crash",   mostRecent?.let { fmtMillis(it.lastModified()) } ?: "—")
+            row("Crashes dir",  crashDir.absolutePath)
 
             // Process uptime since this Application's onCreate.
             val uptimeMs = android.os.SystemClock.elapsedRealtime() -
                 AppProcessUptime.startedAtElapsed
-            row(ctx, it, "Process uptime", fmtDuration(uptimeMs))
-            row(ctx, it, "First install",  fmtMillis(pkg.firstInstallTime))
-            row(ctx, it, "Last update",    fmtMillis(pkg.lastUpdateTime))
+            row("Process uptime", fmtDuration(uptimeMs))
+            row("First install",  fmtMillis(pkg.firstInstallTime))
+            row("Last update",    fmtMillis(pkg.lastUpdateTime))
 
             // Network bytes RX/TX since boot (TrafficStats is per-UID;
             // resets on reboot). Captures all sockets this UID has used.
@@ -1115,10 +762,10 @@ class DevControlFragment : Fragment() {
             val tx = android.net.TrafficStats.getUidTxBytes(myUid)
             val rxMobile = android.net.TrafficStats.getMobileRxBytes()
             val txMobile = android.net.TrafficStats.getMobileTxBytes()
-            row(ctx, it, "Net RX (all)",    sizeStr(if (rx < 0) 0L else rx))
-            row(ctx, it, "Net TX (all)",    sizeStr(if (tx < 0) 0L else tx))
-            row(ctx, it, "Mobile RX (UID)", if (rxMobile < 0) "—" else sizeStr(rxMobile))
-            row(ctx, it, "Mobile TX (UID)", if (txMobile < 0) "—" else sizeStr(txMobile))
+            row("Net RX (all)",    sizeStr(if (rx < 0) 0L else rx))
+            row("Net TX (all)",    sizeStr(if (tx < 0) 0L else tx))
+            row("Mobile RX (UID)", if (rxMobile < 0) "—" else sizeStr(rxMobile))
+            row("Mobile TX (UID)", if (txMobile < 0) "—" else sizeStr(txMobile))
 
             // Per-app foreground / background screen time — needs
             // PACKAGE_USAGE_STATS (Settings.ACTION_USAGE_ACCESS_SETTINGS).
@@ -1126,11 +773,10 @@ class DevControlFragment : Fragment() {
             // the whole usage database — the single slowest read left in this
             // section, so it fills its three rows asynchronously instead of
             // holding the block (and, before #286, the entire page) behind it.
-            val usageHost = it
-            val fgRow = row(ctx, usageHost, "Screen-on",  "reading…")
-            val bgRow = row(ctx, usageHost, "Background", "reading…")
-            val totRow = row(ctx, usageHost, "Total used", "reading…")
-            viewLifecycleOwner.lifecycleScope.launch {
+            val fgRow = row("Screen-on",  "reading…")
+            val bgRow = row("Background", "reading…")
+            val totRow = row("Total used", "reading…")
+            launch {
                 val stats = runCatching {
                     withContext(Dispatchers.IO) { readUsageStats(appCtx) }
                 }
@@ -1161,56 +807,56 @@ class DevControlFragment : Fragment() {
             val rep = runCatching { com.diegonmarcos.superapp.battery.BatteryRepository.report(ctxAny) }.getOrNull()
             if (rep != null) {
                 for (sec in com.diegonmarcos.superapp.battery.BatteryRows.popup(rep)) {
-                    it.addView(small(ctx, "— ${sec.title} —"))
-                    for (r in sec.rows) row(ctx, it, r.label, r.value)
+                    small("— ${sec.title} —")
+                    for (r in sec.rows) row(r.label, r.value)
                 }
                 if (rep.reading.onPower)
-                    row(ctx, it, "Charger input", com.diegonmarcos.superapp.battery.BatteryRows.charger(rep))
-            } else row(ctx, it, "Battery", "unavailable")
-            it.addView(actionButton(ctx, "Battery stats ›", GRAY) {
+                    row("Charger input", com.diegonmarcos.superapp.battery.BatteryRows.charger(rep))
+            } else row("Battery", "unavailable")
+            button("Battery stats ›", gray = true) {
                 runCatching { com.diegonmarcos.superapp.batterystats.BatteryStatsPage.open(requireActivity()) }
-            })
-            it.addView(small(ctx, "Battery-stats internals (mAh per-component, wakelocks, wakeups) are system-only. Grant Usage Access + Set Battery No Optimization shortcuts live in the Permissions section above."))
+            }
+            small("Battery-stats internals (mAh per-component, wakelocks, wakeups) are system-only. Grant Usage Access + Set Battery No Optimization shortcuts live in the Permissions section above.")
             // Deep BatteryManager / sticky-intent dump — merged in from
             // the former separate "Battery (deep)" section (one Battery
             // section, not two).
-            it.addView(small(ctx, "— Deep (raw BatteryManager + sticky intent, as reported) —"))
-            renderBatteryDeep(ctx, it)
+            small("— Deep (raw BatteryManager + sticky intent, as reported) —")
+            renderBatteryDeep()
             // AccuBattery-style energy page — device state→draw
             // attribution, per-foreground-app draw, and our own subsystem
             // ledger (what INSIDE the app costs). Backed by the
             // EnergyWatchdog Tier-1 sampler + EnergyLedger.
-            it.addView(actionButton(ctx, "Battery Usage Details", GRAY) {
+            button("Battery Usage Details", gray = true) {
                 runCatching {
                     com.diegonmarcos.superapp.battery.EnergyUsageDialog()
                         .show(parentFragmentManager, com.diegonmarcos.superapp.battery.EnergyUsageDialog.TAG)
                 }
-            })
+            }
         }
 
-        section(ctx, column, "Memory") {
+        section("Memory") {
             val am = ctxAny().getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
             val mi = android.app.ActivityManager.MemoryInfo()
             am?.getMemoryInfo(mi)
-            row(ctx, it, "Total RAM",  sizeStr(mi.totalMem))
-            row(ctx, it, "Available",  sizeStr(mi.availMem))
-            row(ctx, it, "Threshold",  sizeStr(mi.threshold))
-            row(ctx, it, "Low memory", mi.lowMemory.toString())
+            row("Total RAM",  sizeStr(mi.totalMem))
+            row("Available",  sizeStr(mi.availMem))
+            row("Threshold",  sizeStr(mi.threshold))
+            row("Low memory", mi.lowMemory.toString())
             val pids = intArrayOf(android.os.Process.myPid())
             val procInfo = runCatching { am?.getProcessMemoryInfo(pids) }.getOrNull()?.firstOrNull()
             if (procInfo != null) {
-                row(ctx, it, "App PSS",  sizeStr(procInfo.totalPss * 1024L))
-                row(ctx, it, "Java heap", sizeStr(procInfo.getMemoryStat("summary.java-heap")?.toLongOrNull()?.times(1024L) ?: 0L))
-                row(ctx, it, "Native heap (proc)", sizeStr(procInfo.getMemoryStat("summary.native-heap")?.toLongOrNull()?.times(1024L) ?: 0L))
+                row("App PSS",  sizeStr(procInfo.totalPss * 1024L))
+                row("Java heap", sizeStr(procInfo.getMemoryStat("summary.java-heap")?.toLongOrNull()?.times(1024L) ?: 0L))
+                row("Native heap (proc)", sizeStr(procInfo.getMemoryStat("summary.native-heap")?.toLongOrNull()?.times(1024L) ?: 0L))
             }
             val fdCount = runCatching {
                 File("/proc/self/fd").listFiles()?.size ?: 0
             }.getOrDefault(0)
-            row(ctx, it, "Open FDs", fdCount.toString())
-            row(ctx, it, "Threads",  Thread.activeCount().toString())
+            row("Open FDs", fdCount.toString())
+            row("Threads",  Thread.activeCount().toString())
         }
 
-        section(ctx, column, "Memory & CPU Usage") {
+        section("Memory & CPU Usage") {
             // All metrics are process-attributable + readable WITHOUT any
             // privileged permission. JVM heap from Runtime; PSS from
             // Debug.MemoryInfo (Android's accounting for shared-page
@@ -1226,19 +872,19 @@ class DevControlFragment : Fragment() {
             val heapFree  = rt.freeMemory()
             val heapUsed  = heapTotal - heapFree
             val heapPct   = if (heapMax > 0) (heapUsed * 100 / heapMax).toInt() else -1
-            row(ctx, it, "JVM heap used",
+            row("JVM heap used",
                 "${sizeStr(heapUsed)} / ${sizeStr(heapMax)}" +
                     (if (heapPct >= 0) " ($heapPct%)" else ""))
-            row(ctx, it, "JVM heap total", sizeStr(heapTotal))
-            row(ctx, it, "JVM heap free",  sizeStr(heapFree))
+            row("JVM heap total", sizeStr(heapTotal))
+            row("JVM heap free",  sizeStr(heapFree))
 
             val mi = android.os.Debug.MemoryInfo()
             android.os.Debug.getMemoryInfo(mi)
-            row(ctx, it, "PSS total",     sizeStr(mi.totalPss.toLong()        * 1024L))
-            row(ctx, it, "PSS dalvik",    sizeStr(mi.dalvikPss.toLong()       * 1024L))
-            row(ctx, it, "PSS native",    sizeStr(mi.nativePss.toLong()       * 1024L))
-            row(ctx, it, "PSS other",     sizeStr(mi.otherPss.toLong()        * 1024L))
-            row(ctx, it, "Private dirty", sizeStr(mi.totalPrivateDirty.toLong() * 1024L))
+            row("PSS total",     sizeStr(mi.totalPss.toLong()        * 1024L))
+            row("PSS dalvik",    sizeStr(mi.dalvikPss.toLong()       * 1024L))
+            row("PSS native",    sizeStr(mi.nativePss.toLong()       * 1024L))
+            row("PSS other",     sizeStr(mi.otherPss.toLong()        * 1024L))
+            row("Private dirty", sizeStr(mi.totalPrivateDirty.toLong() * 1024L))
 
             // RSS via /proc/self/statm field 2 (resident pages).
             val pageSize = runCatching {
@@ -1248,17 +894,17 @@ class DevControlFragment : Fragment() {
                 val parts = File("/proc/self/statm").readText().trim().split(' ')
                 parts.getOrNull(1)?.toLongOrNull()?.let { it * pageSize } ?: -1L
             }.getOrDefault(-1L)
-            row(ctx, it, "RSS", if (rssBytes < 0) "—" else sizeStr(rssBytes))
+            row("RSS", if (rssBytes < 0) "—" else sizeStr(rssBytes))
 
             val am = ctxAny.getSystemService(Context.ACTIVITY_SERVICE)
                 as? android.app.ActivityManager
             val sysMi = android.app.ActivityManager.MemoryInfo()
             am?.getMemoryInfo(sysMi)
-            row(ctx, it, "System avail",      sizeStr(sysMi.availMem))
-            row(ctx, it, "System total",      sizeStr(sysMi.totalMem))
-            row(ctx, it, "System low-memory", sysMi.lowMemory.toString())
-            row(ctx, it, "Heap class limit",  am?.memoryClass?.let { "$it MB" } ?: "—")
-            row(ctx, it, "Heap class (large)",
+            row("System avail",      sizeStr(sysMi.availMem))
+            row("System total",      sizeStr(sysMi.totalMem))
+            row("System low-memory", sysMi.lowMemory.toString())
+            row("Heap class limit",  am?.memoryClass?.let { "$it MB" } ?: "—")
+            row("Heap class (large)",
                 am?.largeMemoryClass?.let { "$it MB" } ?: "—")
 
             // CPU: utime (field 14) + stime (field 15) in jiffies. The
@@ -1283,13 +929,13 @@ class DevControlFragment : Fragment() {
                 AppProcessUptime.startedAtElapsed
             val uptimeSec = uptimeMs / 1000.0
 
-            row(ctx, it, "CPU user-time",
+            row("CPU user-time",
                 if (utime < 0 || tck <= 0) "—"
                 else "%.2fs".format(utime.toDouble() / tck))
-            row(ctx, it, "CPU sys-time",
+            row("CPU sys-time",
                 if (stime < 0 || tck <= 0) "—"
                 else "%.2fs".format(stime.toDouble() / tck))
-            row(ctx, it, "CPU total",
+            row("CPU total",
                 if (cpuJif < 0 || tck <= 0) "—"
                 else "%.2fs".format(cpuJif.toDouble() / tck))
 
@@ -1298,11 +944,11 @@ class DevControlFragment : Fragment() {
                 else (cpuJif.toDouble() / tck / uptimeSec) * 100.0
             val avgPctPerCore = if (avgPctSingle < 0 || cores <= 0) -1.0
                 else avgPctSingle / cores
-            row(ctx, it, "CPU avg % (1-thread)",
+            row("CPU avg % (1-thread)",
                 if (avgPctSingle < 0) "—" else "%.2f%%".format(avgPctSingle))
-            row(ctx, it, "CPU avg % (per-core)",
+            row("CPU avg % (per-core)",
                 if (avgPctPerCore < 0) "—" else "%.2f%%".format(avgPctPerCore))
-            row(ctx, it, "Cores online", cores.toString())
+            row("Cores online", cores.toString())
 
             // ── Phone storage ─────────────────────────────────────
             // StatFs against the data partition is the right anchor —
@@ -1313,14 +959,14 @@ class DevControlFragment : Fragment() {
             val dataDir = android.os.Environment.getDataDirectory().absolutePath
             val (dataFree, dataTotal) = statFsBytes(dataDir)
             val dataPct = if (dataTotal > 0) ((dataTotal - dataFree) * 100 / dataTotal).toInt() else -1
-            row(ctx, it, "Data free",
+            row("Data free",
                 "${sizeStr(dataFree)} / ${sizeStr(dataTotal)}" +
                     (if (dataPct >= 0) " (${100 - dataPct}% free)" else ""))
 
             val extDir = ctxAny.getExternalFilesDir(null)?.absolutePath
             if (extDir != null) {
                 val (extFree, extTotal) = statFsBytes(extDir)
-                row(ctx, it, "External free",
+                row("External free",
                     "${sizeStr(extFree)} / ${sizeStr(extTotal)}")
             }
 
@@ -1330,16 +976,16 @@ class DevControlFragment : Fragment() {
             // "disabled" so the row isn't misread as "everything's used".
             val (swapTotal, swapFree) = readSwapBytes()
             val swapUsed = if (swapTotal < 0 || swapFree < 0) -1L else swapTotal - swapFree
-            row(ctx, it, "Swap total",
+            row("Swap total",
                 if (swapTotal < 0) "—"
                 else if (swapTotal == 0L) "disabled"
                 else sizeStr(swapTotal))
-            row(ctx, it, "Swap free",
+            row("Swap free",
                 if (swapFree < 0 || swapTotal == 0L) "—" else sizeStr(swapFree))
-            row(ctx, it, "Swap used",
+            row("Swap used",
                 if (swapUsed < 0 || swapTotal == 0L) "—" else sizeStr(swapUsed))
 
-            it.addView(small(ctx, "PSS = process-attributable RSS after sharing. JVM heap is the growable section of the Dalvik PSS bucket. CPU avg % is utime+stime / wall-time × 100 — 1-thread (100% = one core saturated) or per-core (100% = ALL cores saturated). Sustained > 50% with the screen off may indicate a background work leak. Storage = data partition (where the app + caches live). Swap is typically zRAM on Android — counts AGAINST physical RAM but appears as virtual."))
+            small("PSS = process-attributable RSS after sharing. JVM heap is the growable section of the Dalvik PSS bucket. CPU avg % is utime+stime / wall-time × 100 — 1-thread (100% = one core saturated) or per-core (100% = ALL cores saturated). Sustained > 50% with the screen off may indicate a background work leak. Storage = data partition (where the app + caches live). Swap is typically zRAM on Android — counts AGAINST physical RAM but appears as virtual.")
         }
 
         // (VPN / WireGuard / Mesh moved up under the "Cloud" macro header,
@@ -1350,51 +996,51 @@ class DevControlFragment : Fragment() {
         // ac_cloud-myterminal contract). Always rendered, even when nothing is
         // declared yet, so the surface is discoverable.
 
-        section(ctx, column, "SYSFS-PROC") {
-            it.addView(small(ctx, "Raw kernel-side telemetry — no runtime permission needed. World-readable /sys/class/* and /proc/* paths. Use this as the audit surface; promote interesting rows to dedicated UI elsewhere."))
+        section("SYSFS-PROC") {
+            small("Raw kernel-side telemetry — no runtime permission needed. World-readable /sys/class/* and /proc/* paths. Use this as the audit surface; promote interesting rows to dedicated UI elsewhere.")
 
-            it.addView(small(ctx, "── /sys/class/power_supply/battery/"))
-            for ((k, v) in SysfsProc.battery()) row(ctx, it, k, v)
+            small("── /sys/class/power_supply/battery/")
+            for ((k, v) in SysfsProc.battery()) row(k, v)
 
-            it.addView(small(ctx, "── /sys/class/power_supply/{usb,ac,wireless,main}/"))
+            small("── /sys/class/power_supply/{usb,ac,wireless,main}/")
             val chargerRows = SysfsProc.chargers()
-            if (chargerRows.isEmpty()) it.addView(small(ctx, "(no charger nodes readable)"))
-            for ((k, v) in chargerRows) row(ctx, it, k, v)
+            if (chargerRows.isEmpty()) small("(no charger nodes readable)")
+            for ((k, v) in chargerRows) row(k, v)
 
-            it.addView(small(ctx, "── /proc/loadavg + /proc/uptime  (CPU load in seconds)"))
-            for ((k, v) in SysfsProc.cpuLoadRows()) row(ctx, it, k, v)
+            small("── /proc/loadavg + /proc/uptime  (CPU load in seconds)")
+            for ((k, v) in SysfsProc.cpuLoadRows()) row(k, v)
 
-            it.addView(small(ctx, "── /proc/stat  (cumulative jiffies → seconds, ALL cores)"))
-            for ((k, v) in SysfsProc.procStatRows()) row(ctx, it, k, v)
+            small("── /proc/stat  (cumulative jiffies → seconds, ALL cores)")
+            for ((k, v) in SysfsProc.procStatRows()) row(k, v)
 
-            it.addView(small(ctx, "── /sys/devices/system/cpu/cpu*/cpufreq/"))
-            for ((k, v) in SysfsProc.cpuFreqs()) row(ctx, it, k, v)
+            small("── /sys/devices/system/cpu/cpu*/cpufreq/")
+            for ((k, v) in SysfsProc.cpuFreqs()) row(k, v)
 
-            it.addView(small(ctx, "── /sys/class/thermal/thermal_zone*/"))
+            small("── /sys/class/thermal/thermal_zone*/")
             val thermalRows = SysfsProc.thermal()
-            if (thermalRows.isEmpty()) it.addView(small(ctx, "(no zones readable — vendor restriction)"))
-            for ((k, v) in thermalRows) row(ctx, it, k, v)
+            if (thermalRows.isEmpty()) small("(no zones readable — vendor restriction)")
+            for ((k, v) in thermalRows) row(k, v)
 
-            it.addView(small(ctx, "── /proc/meminfo  (selected)"))
-            for ((k, v) in SysfsProc.memInfo()) row(ctx, it, k, v)
+            small("── /proc/meminfo  (selected)")
+            for ((k, v) in SysfsProc.memInfo()) row(k, v)
 
-            it.addView(small(ctx, "── /sys/class/net/*/statistics/"))
-            for ((k, v) in SysfsProc.network()) row(ctx, it, k, v)
+            small("── /sys/class/net/*/statistics/")
+            for ((k, v) in SysfsProc.network()) row(k, v)
 
-            it.addView(small(ctx, "── /proc/diskstats"))
+            small("── /proc/diskstats")
             val diskRows = SysfsProc.diskstats()
-            if (diskRows.isEmpty()) it.addView(small(ctx, "(no diskstats readable)"))
-            for ((k, v) in diskRows) row(ctx, it, k, v)
+            if (diskRows.isEmpty()) small("(no diskstats readable)")
+            for ((k, v) in diskRows) row(k, v)
 
-            it.addView(small(ctx, "── /proc/self/  (this app's own kernel-side stats)"))
-            for ((k, v) in SysfsProc.selfProc()) row(ctx, it, k, v)
+            small("── /proc/self/  (this app's own kernel-side stats)")
+            for ((k, v) in SysfsProc.selfProc()) row(k, v)
         }
 
         // ══ NETWORK macro section — connectivity, Wi-Fi, the IPC contract and the
         //    no-root per-app firewall.
-        column.addView(macroHeader(ctx, "🌐  NETWORK"))
+        macro("🌐  NETWORK")
 
-        section(ctx, column, "Network") {
+        section("Network") {
             val cm = ctxAny().getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
             val active = cm?.activeNetwork
             val caps = active?.let { runCatching { cm.getNetworkCapabilities(it) }.getOrNull() }
@@ -1408,24 +1054,24 @@ class DevControlFragment : Fragment() {
                 if (c.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN))       transports.add("VPN")
                 if (c.hasTransport(android.net.NetworkCapabilities.TRANSPORT_BLUETOOTH)) transports.add("Bluetooth")
             }
-            row(ctx, it, "Transport",     if (transports.isEmpty()) "—" else transports.joinToString(", "))
-            row(ctx, it, "Validated",     caps?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED)?.toString() ?: "—")
-            row(ctx, it, "Captive portal", caps?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL)?.toString() ?: "—")
-            row(ctx, it, "Metered",       cm?.isActiveNetworkMetered?.toString() ?: "—")
+            row("Transport",     if (transports.isEmpty()) "—" else transports.joinToString(", "))
+            row("Validated",     caps?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED)?.toString() ?: "—")
+            row("Captive portal", caps?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL)?.toString() ?: "—")
+            row("Metered",       cm?.isActiveNetworkMetered?.toString() ?: "—")
             caps?.let { c ->
-                row(ctx, it, "Link down",     "${c.linkDownstreamBandwidthKbps} kbps")
-                row(ctx, it, "Link up",       "${c.linkUpstreamBandwidthKbps} kbps")
+                row("Link down",     "${c.linkDownstreamBandwidthKbps} kbps")
+                row("Link up",       "${c.linkUpstreamBandwidthKbps} kbps")
             }
             link?.let { lp ->
-                row(ctx, it, "Iface",  lp.interfaceName ?: "—")
-                row(ctx, it, "MTU",    lp.mtu.toString())
-                row(ctx, it, "DNS",    lp.dnsServers.joinToString(", ") { it.hostAddress ?: "" }.ifBlank { "—" })
+                row("Iface",  lp.interfaceName ?: "—")
+                row("MTU",    lp.mtu.toString())
+                row("DNS",    lp.dnsServers.joinToString(", ") { it.hostAddress ?: "" }.ifBlank { "—" })
                 val v4 = lp.linkAddresses.mapNotNull { la -> la.address.hostAddress }.filter { ":" !in it }
                 val v6 = lp.linkAddresses.mapNotNull { la -> la.address.hostAddress }.filter { ":" in it }
-                row(ctx, it, "IPv4",   v4.joinToString(", ").ifBlank { "—" })
-                row(ctx, it, "IPv6",   v6.joinToString(", ").ifBlank { "—" })
+                row("IPv4",   v4.joinToString(", ").ifBlank { "—" })
+                row("IPv6",   v6.joinToString(", ").ifBlank { "—" })
                 val gw = lp.routes.firstOrNull { r -> r.isDefaultRoute }?.gateway?.hostAddress
-                row(ctx, it, "Default gw", gw ?: "—")
+                row("Default gw", gw ?: "—")
             }
             // Data-usage manager (:libs:datamanager DataUsageProvider over
             // NetworkStatsManager). Same "open the full data screen" button
@@ -1434,40 +1080,40 @@ class DevControlFragment : Fragment() {
             // battery estimate and Phone smart folders already ask for, so
             // no new permission flow — the dialog deep-links to the same
             // settings screen Configs/About → Permissions opens.
-            it.addView(small(ctx, "Per-app, per-network, per-period data usage — read live from NetworkStatsManager (needs Usage Access)."))
-            it.addView(actionButton(ctx, "Data Usage", GRAY) {
+            small("Per-app, per-network, per-period data usage — read live from NetworkStatsManager (needs Usage Access).")
+            button("Data Usage", gray = true) {
                 runCatching {
                     com.diegonmarcos.superapp.datamanager.DataUsageDialog()
                         .show(parentFragmentManager, com.diegonmarcos.superapp.datamanager.DataUsageDialog.TAG)
                 }
-            })
+            }
         }
 
-        section(ctx, column, "Wi-Fi") {
+        section("Wi-Fi") {
             // SSID/BSSID require ACCESS_FINE_LOCATION on Android 10+
             // AND a connected Wi-Fi network; we already declare both.
             // If location isn't granted yet, SSID comes back as
             // "<unknown ssid>" — surface that as the user-facing hint.
             val wm = ctxAny().applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
             if (wm == null || !wm.isWifiEnabled) {
-                it.addView(small(ctx, "Wi-Fi is off."))
+                small("Wi-Fi is off.")
             } else {
                 @Suppress("DEPRECATION")
                 val info = runCatching { wm.connectionInfo }.getOrNull()
                 if (info == null) {
-                    it.addView(small(ctx, "No Wi-Fi connection info."))
+                    small("No Wi-Fi connection info.")
                 } else {
                     val ssid = info.ssid?.trim('"').orEmpty()
-                    row(ctx, it, "SSID",       if (ssid.isBlank() || ssid == "<unknown ssid>") "Needs location permission" else ssid)
-                    row(ctx, it, "BSSID",      info.bssid ?: "—")
-                    row(ctx, it, "RSSI",       "${info.rssi} dBm")
-                    row(ctx, it, "Link speed", "${info.linkSpeed} Mbps")
-                    row(ctx, it, "Tx speed",   "${info.txLinkSpeedMbps} Mbps")
+                    row("SSID",       if (ssid.isBlank() || ssid == "<unknown ssid>") "Needs location permission" else ssid)
+                    row("BSSID",      info.bssid ?: "—")
+                    row("RSSI",       "${info.rssi} dBm")
+                    row("Link speed", "${info.linkSpeed} Mbps")
+                    row("Tx speed",   "${info.txLinkSpeedMbps} Mbps")
                     if (android.os.Build.VERSION.SDK_INT >= 29) {
-                        row(ctx, it, "Rx speed", "${info.rxLinkSpeedMbps} Mbps")
+                        row("Rx speed", "${info.rxLinkSpeedMbps} Mbps")
                     }
-                    row(ctx, it, "Frequency",  "${info.frequency} MHz")
-                    row(ctx, it, "Hidden SSID", info.hiddenSSID.toString())
+                    row("Frequency",  "${info.frequency} MHz")
+                    row("Hidden SSID", info.hiddenSSID.toString())
                 }
             }
         }
@@ -1475,7 +1121,7 @@ class DevControlFragment : Fragment() {
         // getPackageInfo with GET_ACTIVITIES|GET_SERVICES|GET_PROVIDERS|
         // GET_RECEIVERS is a full manifest unmarshal across a binder call —
         // small on a fast phone, not free, and never worth a frame drop.
-        asyncSection(ctx, column, "IPC Contract",
+        asyncSection("IPC Contract",
             // Two halves, and the order matters. First the MESH — the peers this
             // app talks to, from build.json::ui.app_mesh, each resolved live. Then
             // what this app itself exports. Before the roster existed only the
@@ -1483,22 +1129,22 @@ class DevControlFragment : Fragment() {
             // declared" while eight channels were in daily use: a manifest can
             // only ever describe its own side of a binding.
             probe = { collectAppMesh(appCtx) to collectSelfIpcContract(appCtx) },
-            render = { g, (mesh, self) ->
+            render = { (mesh, self) ->
                 if (mesh.isEmpty() && self.isEmpty()) {
-                    g.addView(small(ctx, "No IPC contract declared yet — no exported/consumed cross-app intents, services, or providers beyond the framework defaults."))
+                    small("No IPC contract declared yet — no exported/consumed cross-app intents, services, or providers beyond the framework defaults.")
                 } else {
                     if (mesh.isNotEmpty()) {
-                        g.addView(small(ctx, "Mesh — declared peers (ui.app_mesh), resolved on this device"))
-                        for ((k, v) in mesh) row(ctx, g, k, v)
+                        small("Mesh — declared peers (ui.app_mesh), resolved on this device")
+                        for ((k, v) in mesh) row(k, v)
                     }
                     if (self.isNotEmpty()) {
-                        g.addView(small(ctx, "Exported by this app"))
-                        for ((k, v) in self) row(ctx, g, k, v)
+                        small("Exported by this app")
+                        for ((k, v) in self) row(k, v)
                     }
                 }
             })
 
-        section(ctx, column, "Firewall") {
+        section("Firewall") {
             // No-root per-app firewall (local VpnService, :libs:firewall).
             // Info rows read WITHOUT any privileged permission via
             // ConnectivityManager / Settings. The gray button opens Network ▸ Firewall, where the control
@@ -1507,15 +1153,15 @@ class DevControlFragment : Fragment() {
             // libs/firewall/phase3-firestack/ — staged, compiles only once
             // firestack.aar is built from libs/firewall/firestack/.
             val fw = com.diegonmarcos.superapp.firewall.FirewallInfo.read(ctx)
-            row(ctx, it, "State", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtState(fw))
-            row(ctx, it, "Apps with rules", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtBlocked(fw))
-            row(ctx, it, "Active transport", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtTransport(fw))
-            row(ctx, it, "System VPN", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtVpn(fw))
-            row(ctx, it, "Private DNS", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtPrivateDns(fw))
-            it.addView(small(ctx, "Read-only summary. Switch, VPN consent and per-app rules live in Network ▸ Firewall."))
-            it.addView(actionButton(ctx, "Manage in Network ▸ Firewall", GRAY) {
+            row("State", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtState(fw))
+            row("Apps with rules", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtBlocked(fw))
+            row("Active transport", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtTransport(fw))
+            row("System VPN", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtVpn(fw))
+            row("Private DNS", com.diegonmarcos.superapp.firewall.FirewallInfo.fmtPrivateDns(fw))
+            small("Read-only summary. Switch, VPN consent and per-app rules live in Network ▸ Firewall.")
+            button("Manage in Network ▸ Firewall", gray = true) {
                 (activity as? com.diegonmarcos.superapp.ShellActivity)?.openSectionPage("config", "firewall")
-            })
+            }
         }
 
         // ══ API macro section — the on-device HTTP control surface (Dev
@@ -1523,30 +1169,26 @@ class DevControlFragment : Fragment() {
         //    the adb/Shizuku channels that used to share this section live in
         //    DEV TOOLS now: one heading, one question — "is the control plane
         //    up and what is its bearer".
-        column.addView(macroHeader(ctx, "🔌  API"))
+        macro("🔌  API")
 
-        section(ctx, column, "Dev Control HTTP API") {
+        section("Dev Control HTTP API") {
             val prefs = DevControlPrefs(requireContext())
             val running = DevControlServer.isRunning()
             val bound   = DevControlServer.boundHost()
             val loopback = DevControlServer.isLoopbackOnly()
-            row(ctx, it, "Endpoint", "http://${bound ?: "127.0.0.1"}:${prefs.port}")
-            row(ctx, it, "Status",   if (running) "Running" else "Stopped")
-            row(ctx, it, "Bound to", bound ?: "—")
-            row(ctx, it, "Bind scope", when {
+            row("Endpoint", "http://${bound ?: "127.0.0.1"}:${prefs.port}")
+            row("Status",   if (running) "Running" else "Stopped")
+            row("Bound to", bound ?: "—")
+            row("Bind scope", when {
                 !running       -> "—"
                 loopback       -> "✓ Loopback only (127.0.0.1) — unreachable from LAN"
                 else           -> "✗ Reachable from LAN — bind addr ${bound ?: "?"}"
             })
-            row(ctx, it, "Token",    prefs.token)
-            it.addView(small(ctx, "Bearer token — long-press to copy. DECLARATIVE: baked from the vault sops secret (BuildConfig.FLEET_TOKEN), the same value cloud-superapp-mcp is configured with, so it is stable across installs and there is nothing to regenerate. Endpoints follow /api/{group}/{op}. Full catalog: GET /api/docs."))
+            row("Token",    prefs.token)
+            small("Bearer token — long-press to copy. DECLARATIVE: baked from the vault sops secret (BuildConfig.FLEET_TOKEN), the same value cloud-superapp-mcp is configured with, so it is stable across installs and there is nothing to regenerate. Endpoints follow /api/{group}/{op}. Full catalog: GET /api/docs.")
 
             // Toggle Switch: persists pref + start/stop the server live.
-            it.addView(android.widget.Switch(ctx).apply {
-                text = "API enabled"
-                isChecked = prefs.enabled
-                val pad = dp(6); setPadding(pad, pad, pad, pad)
-                setOnCheckedChangeListener { _, checked ->
+            toggle("API enabled", prefs.enabled) { checked ->
                     prefs.enabled = checked
                     if (checked) {
                         DevControlServer.start(requireContext().applicationContext)
@@ -1554,10 +1196,8 @@ class DevControlFragment : Fragment() {
                         DevControlServer.stop()
                     }
                     // Re-render so Status/Bound/scope reflect the new state.
-                    parentFragmentManager.beginTransaction().detach(this@DevControlFragment).commitNow()
-                    parentFragmentManager.beginTransaction().attach(this@DevControlFragment).commitNow()
-                }
-            })
+                    reload()
+            }
 
             // Regenerate REMOVED: the token is now declarative (BuildConfig.FLEET_TOKEN
             // from the vault sops secret, seeded in App.onCreate). Rotating it on one
@@ -1565,7 +1205,7 @@ class DevControlFragment : Fragment() {
             // member hold; rotation, if ever needed, is a vault secret change + rebuild.
         }
 
-        section(ctx, column, "Curl shortcuts") {
+        section("Curl shortcuts") {
             val port = DevControlPrefs(requireContext()).port
             val tok  = DevControlPrefs(requireContext()).token
             // Endpoint catalog moved to /api/{group}/{op} layout in
@@ -1574,19 +1214,19 @@ class DevControlFragment : Fragment() {
             // the full list is GET /api/docs (machine-readable JSON,
             // generated from the same Spec list the routing uses so it
             // can't drift). These shortcuts cover the most-used probes.
-            row(ctx, it, "Docs",     "curl http://127.0.0.1:$port/api/docs")
-            row(ctx, it, "Logcat",   "curl http://127.0.0.1:$port/api/diagnostics/logcat?n=500")
-            row(ctx, it, "Trace",    "curl http://127.0.0.1:$port/api/diagnostics/trace")
-            row(ctx, it, "Crashes",  "curl http://127.0.0.1:$port/api/diagnostics/crashes")
-            row(ctx, it, "Bundle",   "curl http://127.0.0.1:$port/api/diagnostics/bundle")
-            row(ctx, it, "Download logs", "curl http://127.0.0.1:$port/api/diagnostics/download")
-            row(ctx, it, "Send logs → cloud", "curl http://127.0.0.1:$port/api/diagnostics/push")
-            row(ctx, it, "Info",     "curl http://127.0.0.1:$port/api/system/info")
-            row(ctx, it, "State",    "curl -H 'Authorization: Bearer $tok' http://127.0.0.1:$port/api/state")
-            row(ctx, it, "Haptic",   "curl -XPOST -H 'Authorization: Bearer $tok' 'http://127.0.0.1:$port/api/haptic?preset=gemini_stream'")
-            row(ctx, it, "Update",   "curl -XPOST -H 'Authorization: Bearer $tok' http://127.0.0.1:$port/api/system/update")
-            row(ctx, it, "Restart",  "curl -XPOST -H 'Authorization: Bearer $tok' http://127.0.0.1:$port/api/system/restart")
-            row(ctx, it, "Tracker",  "curl http://127.0.0.1:$port/api/tracker/counts")
+            row("Docs",     "curl http://127.0.0.1:$port/api/docs")
+            row("Logcat",   "curl http://127.0.0.1:$port/api/diagnostics/logcat?n=500")
+            row("Trace",    "curl http://127.0.0.1:$port/api/diagnostics/trace")
+            row("Crashes",  "curl http://127.0.0.1:$port/api/diagnostics/crashes")
+            row("Bundle",   "curl http://127.0.0.1:$port/api/diagnostics/bundle")
+            row("Download logs", "curl http://127.0.0.1:$port/api/diagnostics/download")
+            row("Send logs → cloud", "curl http://127.0.0.1:$port/api/diagnostics/push")
+            row("Info",     "curl http://127.0.0.1:$port/api/system/info")
+            row("State",    "curl -H 'Authorization: Bearer $tok' http://127.0.0.1:$port/api/state")
+            row("Haptic",   "curl -XPOST -H 'Authorization: Bearer $tok' 'http://127.0.0.1:$port/api/haptic?preset=gemini_stream'")
+            row("Update",   "curl -XPOST -H 'Authorization: Bearer $tok' http://127.0.0.1:$port/api/system/update")
+            row("Restart",  "curl -XPOST -H 'Authorization: Bearer $tok' http://127.0.0.1:$port/api/system/restart")
+            row("Tracker",  "curl http://127.0.0.1:$port/api/tracker/counts")
         }
 
         // ══ MESH macro section — this device's place in the WireGuard mesh:
@@ -1594,67 +1234,71 @@ class DevControlFragment : Fragment() {
         //    Split out of the identity block because "who owns this phone" and
         //    "can it reach the fleet" are different questions, and in an outage
         //    only the second one is ever asked.
-        column.addView(macroHeader(ctx, "🕸️  MESH"))
+        macro("🕸️  MESH")
 
-        section(ctx, column, "VPN / WireGuard / Mesh") { renderVpnMesh(ctx, it) }
+        section("VPN / WireGuard / Mesh") { renderVpnMesh() }
 
         // ══ DEV TOOLS macro section — the debugging channels that are NOT
         //    the HTTP API: the terminal apps' sshd, Wireless Debugging, the
         //    embedded adb pairing walkthrough and Shizuku. Split out of the old
         //    combined section so API above answers "is the control plane up"
         //    and this one answers "how do I get a shell on this phone".
-        column.addView(macroHeader(ctx, "🛠️  DEV TOOLS"))
+        macro("🛠️  DEV TOOLS")
 
-        section(ctx, column, "SSH servers (Termux & co.)") {
+        section("SSH servers (Termux & co.)") {
             // ── SSH (Termux & co.) — detect installed terminal emulators and
             //    whether each is running an sshd we can reach on localhost.
             //    Installed-check is synchronous (PackageManager); the port
             //    probe is async (no network on the main thread).
-            it.addView(small(ctx, "SSH servers on this device — terminal apps + whether their sshd is listening on localhost (probes 127.0.0.1 across common ports)."))
+            small("SSH servers on this device — terminal apps + whether their sshd is listening on localhost (probes 127.0.0.1 across common ports).")
             for (term in SSH_TERMINALS) {
                 val installed = isPackageInstalled(ctx, term.pkg)
                 val portList = term.ports.joinToString(",")
-                val valueView = row(ctx, it, term.label,
+                val valueView = row(term.label,
                     if (!installed) "not installed" else "installed · probing :$portList…")
-                if (installed) viewLifecycleOwner.lifecycleScope.launch {
+                if (installed) launch {
                     val open = withContext(Dispatchers.IO) { term.ports.filter { p -> portOpen("127.0.0.1", p) } }
                     if (open.isNotEmpty()) {
                         valueView.text = "installed · sshd ✓ up :${open.joinToString(",")}"
-                        valueView.setTextColor(0xFF8BE9A0.toInt())
+                        valueView.color = Color(0xFF8BE9A0)
                     } else {
                         valueView.text = "installed · sshd ✗ down (tried :$portList)"
-                        valueView.setTextColor(0xFFFFB199.toInt())
+                        valueView.color = Color(0xFFFFB199)
                     }
                 }
             }
         }
 
-        section(ctx, column, "Self-contained ADB, W-less Debuging & Shizuku") {
+        section("Self-contained ADB, W-less Debuging & Shizuku") {
             // The token is read here too: the pairing walkthrough below prints
             // the exact curl the user has to run, and a walkthrough with the
             // bearer left as a placeholder is a walkthrough nobody can follow.
             val prefs = DevControlPrefs(requireContext())
-            it.addView(small(ctx, "Self-contained ADB — enable Wireless Debugging, then pair via /api/adb/pair + /api/adb/connect:"))
-            it.addView(actionButton(ctx, "ADB Shell ›", GRAY) { com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctxAny()) })
+            small("Self-contained ADB — enable Wireless Debugging, then pair via /api/adb/pair + /api/adb/connect:")
+            button("ADB Shell ›", gray = true) { com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctxAny()) }
             // ── Self-contained ADB how-to (embedded adb client, no Shizuku
             //    app, no PC; works with WireGuard ON). Long-press any row to
             //    copy. Documented here next to the button that enables it.
             val adbPort = DevControlPrefs(requireContext()).port
             val adbTok  = prefs.token
-            it.addView(small(ctx, "Self-contained ADB (embedded libadb — no Shizuku app, no PC, works with WireGuard ON). Steps:"))
-            it.addView(small(ctx, "1) Open ADB Shell and press Connect (or turn Wireless Debugging ON by hand). 2) /api/adb/pair posts the pairing notification. 3) 'Pair device with pairing code' → type the 6-digit code into the notification (or pass code=). IP + ports are discovered over mDNS."))
-            it.addView(small(ctx, "⚠ HOST GOTCHA: use your Wi-Fi LAN IP (e.g. 192.168.x.x), NOT the 10.x the dialog shows — that 10.x is the WireGuard tun0 and gets ECONNREFUSED. Find the real wlan0 IP with /api/adb/netinfo."))
-            row(ctx, it, "0 NetInfo",  "curl -H 'Authorization: Bearer $adbTok' http://127.0.0.1:$adbPort/api/adb/netinfo   # find wlan0 IPv4")
-            row(ctx, it, "1 Pair",     "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/pair'   # optional &code=<6digits>; port via mDNS")
-            row(ctx, it, "2 Connect",  "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/connect?host=<wlan-ip>&port=<connectport>'")
-            row(ctx, it, "3 Status",   "curl -H 'Authorization: Bearer $adbTok' http://127.0.0.1:$adbPort/api/adb/status   # embedded-adb ready=true")
-            row(ctx, it, "4 Charger",  "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/diagnostics?bundle=charger'")
-            row(ctx, it, "Bundles",    "charger | battery | usb | thermal | pd   (build.json::shizuku_diagnostics)")
-            row(ctx, it, "Exec",       "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/exec?cmd=dumpsys%20battery'")
-            it.addView(small(ctx, "Pairing/connect bind the socket to the Wi-Fi Network so it bypasses wg0. Pairing is once per boot (Android law; only root removes it). Pair port lives only while the pairing dialog is open — keep it open until step 1 returns ok."))
+            small("Self-contained ADB (embedded libadb — no Shizuku app, no PC, works with WireGuard ON). Steps:")
+            small("1) Open ADB Shell and press Connect (or turn Wireless Debugging ON by hand). 2) /api/adb/pair posts the pairing notification. 3) 'Pair device with pairing code' → type the 6-digit code into the notification (or pass code=). IP + ports are discovered over mDNS.")
+            small("⚠ HOST GOTCHA: use your Wi-Fi LAN IP (e.g. 192.168.x.x), NOT the 10.x the dialog shows — that 10.x is the WireGuard tun0 and gets ECONNREFUSED. Find the real wlan0 IP with /api/adb/netinfo.")
+            row("0 NetInfo",  "curl -H 'Authorization: Bearer $adbTok' http://127.0.0.1:$adbPort/api/adb/netinfo   # find wlan0 IPv4")
+            row("1 Pair",     "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/pair'   # optional &code=<6digits>; port via mDNS")
+            row("2 Connect",  "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/connect?host=<wlan-ip>&port=<connectport>'")
+            row("3 Status",   "curl -H 'Authorization: Bearer $adbTok' http://127.0.0.1:$adbPort/api/adb/status   # embedded-adb ready=true")
+            row("4 Charger",  "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/diagnostics?bundle=charger'")
+            row("Bundles",    "charger | battery | usb | thermal | pd   (build.json::shizuku_diagnostics)")
+            row("Exec",       "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/exec?cmd=dumpsys%20battery'")
+            small("Pairing/connect bind the socket to the Wi-Fi Network so it bypasses wg0. Pairing is once per boot (Android law; only root removes it). Pair port lives only while the pairing dialog is open — keep it open until step 1 returns ok.")
         }
 
-        addLogcatSection(ctx, column)
+        // 🔍 LOGCAT — the live viewer; the reader and the grant live in AboutLogcat.
+        macro("🔍  LOGCAT")
+        section("App logs (this process)") {
+            custom { AboutLogcatViewer(onExport = ::exportLogFile) }
+        }
 
         // ══ WEBSERVER macro section — a full static HTTP server living INSIDE
         //    this app. The ENGINE is libs:webserver (CloudWebServer / WebServer /
@@ -1662,190 +1306,75 @@ class DevControlFragment : Fragment() {
         //    it. That split is what lets a standalone Cloud WebServer APK take
         //    the same socket implementation later without carrying this screen,
         //    and it is why nothing in this file parses HTTP itself.
-        column.addView(macroHeader(ctx, "🌐  WEBSERVER"))
+        macro("🌐  WEBSERVER")
 
-        section(ctx, column, "Web server") {
+        section("Web server") {
             val webPrefs = WebServerPrefs(appCtx)
             val web = CloudWebServer.stats(appCtx)
-            row(ctx, it, "Status",        if (web.running) "Running" else "Stopped")
-            row(ctx, it, "URL",           CloudWebServer.reachableUrl(appCtx))
-            row(ctx, it, "Bound to",      web.boundHost ?: "—")
-            row(ctx, it, "Bind scope", when {
+            row("Status",        if (web.running) "Running" else "Stopped")
+            row("URL",           CloudWebServer.reachableUrl(appCtx))
+            row("Bound to",      web.boundHost ?: "—")
+            row("Bind scope", when {
                 !web.running     -> "—"
                 web.loopbackOnly -> "✓ Loopback only (127.0.0.1) — unreachable from LAN"
                 else             -> "✗ Reachable from the Wi-Fi LAN and the mesh — bound to every interface"
             })
-            row(ctx, it, "Port",          webPrefs.port.toString())
-            row(ctx, it, "Document root", web.docRoot)
-            row(ctx, it, "Files in root", web.filesInRoot.toString())
-            row(ctx, it, "Directory listing", if (webPrefs.directoryListing) "on" else "off")
-            row(ctx, it, "Uptime",        if (web.running) fmtDuration(web.uptimeMillis) else "—")
-            row(ctx, it, "Requests",      web.requests.toString())
-            row(ctx, it, "Bytes served",  sizeStr(web.bytesServed))
+            row("Port",          webPrefs.port.toString())
+            row("Document root", web.docRoot)
+            row("Files in root", web.filesInRoot.toString())
+            row("Directory listing", if (webPrefs.directoryListing) "on" else "off")
+            row("Uptime",        if (web.running) fmtDuration(web.uptimeMillis) else "—")
+            row("Requests",      web.requests.toString())
+            row("Bytes served",  sizeStr(web.bytesServed))
             // #281's rule applied to this surface: a server that FAILED TO BIND
             // must never read the same as one that is merely switched off. The
             // engine records the bind error rather than throwing, and this row
             // is where that error becomes visible.
-            row(ctx, it, "Last error",    web.lastError ?: "none")
-            it.addView(small(ctx, "Self-contained static HTTP server — engine libs:webserver. " +
+            row("Last error",    web.lastError ?: "none")
+            small("Self-contained static HTTP server — engine libs:webserver. " +
                 "Serves the document root above with MIME typing, index.html, optional directory " +
                 "listings and a path-traversal containment check against the canonical root. " +
-                "GET /__status returns these same counters as JSON."))
+                "GET /__status returns these same counters as JSON.")
 
             // Master switch. Default OFF: opening a listening socket is never
             // something the app should decide on the user's behalf.
-            it.addView(android.widget.Switch(ctx).apply {
-                text = "Web server enabled"
-                isChecked = webPrefs.enabled
-                val pad = dp(6); setPadding(pad, pad, pad, pad)
-                setOnCheckedChangeListener { _, checked ->
+            toggle("Web server enabled", webPrefs.enabled) { checked ->
                     webPrefs.enabled = checked
                     if (checked) CloudWebServer.start(appCtx) else CloudWebServer.stop(appCtx)
-                    rebuildFragment()
-                }
-            })
-            it.addView(android.widget.Switch(ctx).apply {
-                text = "Reachable from LAN and mesh (off = loopback only)"
-                isChecked = !webPrefs.loopbackOnly
-                val pad = dp(6); setPadding(pad, pad, pad, pad)
-                setOnCheckedChangeListener { _, checked ->
+                    reload()
+            }
+            toggle("Reachable from LAN and mesh (off = loopback only)", !webPrefs.loopbackOnly) { checked ->
                     webPrefs.loopbackOnly = !checked
                     CloudWebServer.refresh(appCtx)
-                    rebuildFragment()
-                }
-            })
-            it.addView(android.widget.Switch(ctx).apply {
-                text = "Directory listing for folders with no index.html"
-                isChecked = webPrefs.directoryListing
-                val pad = dp(6); setPadding(pad, pad, pad, pad)
-                setOnCheckedChangeListener { _, checked ->
+                    reload()
+            }
+            toggle("Directory listing for folders with no index.html", webPrefs.directoryListing) { checked ->
                     webPrefs.directoryListing = checked
                     CloudWebServer.refresh(appCtx)
-                }
-            })
+            }
 
-            it.addView(actionButton(ctx, "Open in browser") {
+            button("Open in browser") {
                 openInAppUrl(CloudWebServer.reachableUrl(appCtx))
-            })
-            it.addView(actionButton(ctx, "Open /__status", GRAY) {
+            }
+            button("Open /__status", gray = true) {
                 openInAppUrl(CloudWebServer.reachableUrl(appCtx) + "__status")
-            })
-            it.addView(actionButton(ctx, "Copy URL", GRAY) {
+            }
+            button("Copy URL", gray = true) {
                 copy(ctx, CloudWebServer.reachableUrl(appCtx))
-            })
-            it.addView(actionButton(ctx, "Change port", GRAY) { editWebServerPort(ctx) })
-            it.addView(actionButton(ctx, "Change document root", GRAY) { editWebServerDocRoot(ctx) })
-            it.addView(actionButton(ctx, "Refresh", GRAY) { rebuildFragment() })
+            }
+            button("Change port", gray = true) { editWebServerPort(ctx) { reload() } }
+            button("Change document root", gray = true) { editWebServerDocRoot(ctx) { reload() } }
+            button("Refresh", gray = true) { reload() }
 
             // The request log is the difference between "the switch says
             // Running" and "something actually talked to it".
-            it.addView(small(ctx, "Recent requests (newest first):"))
-            if (web.recent.isEmpty()) row(ctx, it, "—", "no requests served yet")
-            else web.recent.forEachIndexed { index, entry -> row(ctx, it, (index + 1).toString(), entry) }
+            small("Recent requests (newest first):")
+            if (web.recent.isEmpty()) row("—", "no requests served yet")
+            else web.recent.forEachIndexed { index, entry -> row((index + 1).toString(), entry) }
         }
 
-        // Tail-anchor: snapshot the entire About page to the clipboard.
-        // The accumulator [infoBuf] is filled during render by every
-        // title / section / row helper + the inline folder-tree block,
-        // so this captures whatever was actually drawn — no parallel
-        // data collection to keep in sync.
-        // Since #286 each section owns its own buffer and fills it only when it
-        // loads, so the dump is assembled in DECLARED order here rather than in
-        // the order the user happened to reach the blocks. A section that has
-        // not loaded says so: silently omitting it would make a partial dump
-        // look like a complete one, which is the same lie as an empty section.
-        fun copyAll() {
-            val sb = StringBuilder(infoBuf)
-            for (s in lazySections) {
-                sb.append(s.buf)
-                if (!s.started) sb.append("  (not loaded — scroll to this section to read it)\n")
-            }
-            val snapshot = sb.toString()
-            copy(ctx, snapshot)
-            Toast.makeText(ctx,
-                "Copied ${snapshot.length} chars (${snapshot.count { it == '\n' }} lines)",
-                Toast.LENGTH_SHORT).show()
-        }
-        column.addView(actionButton(ctx, "Copy All Infos") { copyAll() })
-
-        // ── Section index ────────────────────────────────────────────────
-        // Built last, shown first. The page is ~30 sections in eight macro
-        // groups and was reachable only by scrolling; these jump straight to a
-        // group. Derived from macroAnchors, so a new macroHeader appears here
-        // automatically and a removed one cannot leave a dead link behind.
-        // Heading names the section; the old "Jump to" caption is gone.
-        indexBox.addView(TextView(ctx).apply {
-            text = "Index"
-            setTextColor(0xFFE9D8FD.toInt()); textSize = 17f
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
-            setPadding(0, dp(4), 0, dp(8))
-        })
-        // Same card grid C3 ▸ Topology's Index draws, from the same builder —
-        // three across, because these labels are words rather than the short
-        // nouns a six-wide stack row carries.
-        // The row SHAPE is a layout decision; the CONTENT is still derived
-        // from macroAnchors in page order, so a new macroHeader still appears
-        // here by itself and a removed one still cannot leave a dead link.
-        val indexCells = macroAnchors.map { (label, anchor) ->
-            anchors.register(label, anchor)
-            IndexTiles.Cell(
-                label   = label,
-                glyph   = macroGlyphs[label].orEmpty(),
-                onClick = {
-                    // Render before the jump, not because of it: dispatch()
-                    // lands on the header immediately, and a section that only
-                    // starts rendering once the scroll settles would show a
-                    // placeholder at the exact moment it was asked for.
-                    loadSectionsUnder(label)
-                    anchors.dispatch(StackAnchors.PREFIX + label)
-                },
-            )
-        }
-        var cellAt = 0
-        for (perRow in INDEX_ROW_SHAPE) {
-            if (cellAt >= indexCells.size) break
-            val end = minOf(cellAt + perRow, indexCells.size)
-            indexBox.addView(IndexTiles.grid(ctx, perRow, indexCells.subList(cellAt, end)))
-            cellAt = end
-        }
-        // Whatever the shape does not name still gets a row instead of
-        // vanishing: an index that silently drops a section is worse than an
-        // uneven grid.
-        if (cellAt < indexCells.size) {
-            indexBox.addView(IndexTiles.grid(ctx, 3, indexCells.subList(cellAt, indexCells.size)))
-        }
-
-        // "Go Back Up to Index" closing every macro section. Inserted from the
-        // anchors themselves rather than at eight call sites, so a new
-        // macroHeader gets one for free — and in REVERSE order, because each
-        // insertion shifts the indices of everything after it.
-        anchors.register(INDEX_ANCHOR, indexBox)
-        for (header in macroAnchors.values.toList().drop(1).asReversed()) {
-            val at = column.indexOfChild(header)
-            if (at > 0) column.addView(backToIndexLink(ctx), at)
-        }
-        column.addView(backToIndexLink(ctx))
-
-        // ── Arm the lazy loader (#286) ───────────────────────────────────
-        // Nothing above has run a single section body: all 30 are queued in
-        // [lazySections] with a placeholder showing. The post() fires after
-        // the first layout, when the ScrollView finally has a height to
-        // measure against, and fills only what the opening viewport shows.
-        // From there three things can start a body: a scroll, an Index card
-        // tap, and — since #333 — [warmRemainingSections], which finishes the
-        // page during idle so scrolling rarely meets a placeholder at all.
-        lazyScroll = scroll
-        val onScrolled = android.view.ViewTreeObserver.OnScrollChangedListener { pumpLazySections() }
-        lazyListener = onScrolled
-        scroll.viewTreeObserver.addOnScrollChangedListener(onScrolled)
-        scroll.post {
-            pumpLazySections()
-            // ...and then keep going without waiting for a finger. See
-            // [warmRemainingSections].
-            warmRemainingSections()
-        }
-
-        return scroll
+        // The Copy All button closes the last group; "Go Back Up to Index" links are derived (AboutPage.withBackLinks).
+        copyAllButton()
     }
 
     // ── helpers ──────────────────────────────────────────────────────
@@ -1861,7 +1390,6 @@ class DevControlFragment : Fragment() {
         SshTerminal("UserLAnd", "tech.ula", listOf(2022, 8022, 22)),
     )
 
-    /** Installed? Needs a <queries> entry in the manifest on API 30+ (added). */
     /**
      * Open a URL on the app's OWN browser surface instead of handing it to an
      * external one. #156: an action on an About row must not eject the user
@@ -1885,57 +1413,49 @@ class DevControlFragment : Fragment() {
         }
     }
 
-    /** Port editor for the WEBSERVER section. Rebinds on save — a port row
-     *  that changed without the socket moving would be a lie. */
-    private fun editWebServerPort(ctx: Context) {
+    /** Port editor for the WEBSERVER section. Rebinds on save — a port row that changed without the socket moving would be a
+     *  lie. [reload] re-reads the block so the Port / Bound-to rows say what is true now. */
+    private fun editWebServerPort(ctx: Context, reload: () -> Unit) {
         val prefs = WebServerPrefs(ctx.applicationContext)
-        val field = android.widget.EditText(ctx).apply {
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            setText(prefs.port.toString())
-        }
-        androidx.appcompat.app.AlertDialog.Builder(ctx)
-            .setTitle("Web server port")
-            .setMessage("1024-65535. The server rebinds immediately.")
-            .setView(field)
-            .setPositiveButton("Save") { _, _ ->
-                val value = field.text.toString().trim().toIntOrNull()
+        prompt = AboutPrompt(
+            title = "Web server port", message = "1024-65535. The server rebinds immediately.",
+            initial = prefs.port.toString(), numeric = true,
+            onSave = { text ->
+                val value = text.trim().toIntOrNull()
                 if (value == null || value !in 1024..65535) {
                     Toast.makeText(ctx, "Port must be 1024-65535", Toast.LENGTH_SHORT).show()
                 } else {
                     prefs.port = value
                     CloudWebServer.refresh(ctx.applicationContext)
-                    rebuildFragment()
+                    reload()
                 }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+            },
+        )
     }
 
     /** Document-root editor for the WEBSERVER section. */
-    private fun editWebServerDocRoot(ctx: Context) {
+    private fun editWebServerDocRoot(ctx: Context, reload: () -> Unit) {
         val prefs = WebServerPrefs(ctx.applicationContext)
-        val field = android.widget.EditText(ctx).apply { setText(prefs.docRootPath) }
-        androidx.appcompat.app.AlertDialog.Builder(ctx)
-            .setTitle("Document root")
-            .setMessage("Absolute path of the directory served as /. Created if missing.")
-            .setView(field)
-            .setNeutralButton("Default") { _, _ ->
+        prompt = AboutPrompt(
+            title = "Document root", message = "Absolute path of the directory served as /. Created if missing.",
+            initial = prefs.docRootPath, numeric = false,
+            neutralLabel = "Default",
+            onNeutral = {
                 prefs.docRootPath = prefs.defaultDocRoot().absolutePath
                 CloudWebServer.refresh(ctx.applicationContext)
-                rebuildFragment()
-            }
-            .setPositiveButton("Save") { _, _ ->
-                val value = field.text.toString().trim()
+                reload()
+            },
+            onSave = { text ->
+                val value = text.trim()
                 if (value.isBlank()) {
                     Toast.makeText(ctx, "Path is empty", Toast.LENGTH_SHORT).show()
                 } else {
                     prefs.docRootPath = value
                     CloudWebServer.refresh(ctx.applicationContext)
-                    rebuildFragment()
+                    reload()
                 }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+            },
+        )
     }
 
     private fun isPackageInstalled(ctx: Context, pkg: String): Boolean = runCatching {
@@ -1947,27 +1467,6 @@ class DevControlFragment : Fragment() {
     private fun portOpen(host: String, port: Int): Boolean = runCatching {
         java.net.Socket().use { it.connect(java.net.InetSocketAddress(host, port), 350); true }
     }.getOrDefault(false)
-
-    // ── Lazy sections (#286) ─────────────────────────────────────────
-    //
-    // Every section() on this page used to run its body inline in
-    // onCreateView, so opening Configs ▸ About paid for all 30 service blocks
-    // before the first frame: two recursive directory walks, a 7-day
-    // usage-stats query, sysfs and /proc reads, a logcat exec and socket
-    // connects — on the main thread, in one ~1,235-line stretch. The owner
-    // asked for "a lazy load per service ... each will only run as we go in
-    // that block".
-    //
-    // WHY THE VIEWPORT IS THE TRIGGER. The page's index (the IndexTiles grid
-    // at the top) navigates by SCROLLING to a macro header — anchors.dispatch,
-    // not a tab switch. So "the user opened that block" and "that block came
-    // on screen" are the same event, and one ScrollView listener serves both
-    // the index and a plain finger scroll. There is no second mechanism to
-    // keep in step with the first.
-    //
-    // The signature below is deliberately unchanged: all 30 call sites keep
-    // working untouched, and a section added later is lazy without its author
-    // having to know any of this.
 
     /** Everything the Storage section paints, gathered in one off-thread pass
      *  so the two recursive dirSize() walks never touch the main thread. */
@@ -1983,420 +1482,17 @@ class DevControlFragment : Fragment() {
         val total: String,
     )
 
-    private class LazySection(
-        val macro: String,
-        val head: String,
-        val anchor: View,
-        val group: LinearLayout,
-        val buf: StringBuilder,
-        val run: () -> Unit,
-    ) {
-        var started = false
-    }
-
-    /** Declared (page) order, so "Copy All Infos" can still assemble the page
-     *  top-to-bottom even though bodies finish in whatever order the user
-     *  reaches them. Cleared per view lifecycle — see [onDestroyView]. */
-    private val lazySections = mutableListOf<LazySection>()
-
-    /** The macro section [section] is currently filling, so every lazy body
-     *  knows which index card owns it. Set by [macroHeader]; page-head
-     *  sections declared before any header keep the empty string. */
-    private var currentMacro: String = ""
-
-    /** How many index cards sit on each row, top to bottom. The ORDER comes
-     *  from the page itself — only the shape is decided here. */
-    private val INDEX_ROW_SHAPE = listOf(2, 3, 3, 3)
-    private var lazyScroll: ScrollView? = null
-    private var lazyListener: android.view.ViewTreeObserver.OnScrollChangedListener? = null
-
-    /** The buffer [row] writes into: the section currently rendering, or null
-     *  outside any section (then [infoBuf], the page head, takes it). */
-    private var currentBuf: StringBuilder? = null
-
-    /** Y of [v] in [sv]'s scrolling coordinates. Walks the parent chain rather
-     *  than trusting v.top, so a section nested one level deeper than today's
-     *  flat column still measures correctly. */
-    private fun yInScroll(v: View, sv: ScrollView): Int {
-        var y = 0
-        var cur: View? = v
-        while (cur != null && cur !== sv) {
-            y += cur.top
-            cur = cur.parent as? View
-        }
-        return y
-    }
-
-    /** Render every section under one macro heading now. Called from an index
-     *  card, where the user has just said exactly which part of the page they
-     *  want — waiting for the scroll to settle before starting would show them
-     *  a placeholder as the reward for asking. */
-    private fun loadSectionsUnder(macro: String) {
-        for (s in lazySections.toList()) if (s.macro == macro) runLazySection(s)
-    }
-
-    /**
-     * Fill the rest of the page ONE SECTION PER FRAME once the opening
-     * viewport is painted.
-     *
-     * #286 made the page open instantly by deferring every body to a scroll
-     * event; the cost was that scrolling then met a placeholder and had to
-     * wait for it. This keeps the fast open — nothing below the fold blocks
-     * the first paint — and spends the idle main loop afterwards, so by the
-     * time a thumb arrives the content is already there. One section per post
-     * keeps each unit of work short enough that the scroll never janks.
-     *
-     * When the last one is done the scroll listener has nothing left to decide
-     * and is detached, rather than running a no-op over ~30 sections on every
-     * frame for the rest of the fragment's life.
-     */
-    private fun warmRemainingSections() {
-        if (!isAdded) return
-        val host = view ?: return
-        val next = lazySections.firstOrNull { !it.started }
-        if (next == null) {
-            lazyListener?.let { lazyScroll?.viewTreeObserver?.removeOnScrollChangedListener(it) }
-            lazyListener = null
-            return
-        }
-        runLazySection(next)
-        host.post { warmRemainingSections() }
-    }
-
-    /** Start every declared section whose header has reached the viewport,
-     *  plus one screen of lookahead so a block is usually ready by the time it
-     *  is actually looked at. Cheap and idempotent: [LazySection.started] means
-     *  a body runs exactly once per view lifecycle, so scrolling back and forth
-     *  does not re-probe. */
-    private fun pumpLazySections() {
-        val sv = lazyScroll ?: return
-        if (!isAdded || view == null || sv.height == 0) return
-        val limit = sv.scrollY + sv.height * 2
-        var any = false
-        for (s in lazySections) {
-            if (s.started) continue
-            if (yInScroll(s.anchor, sv) <= limit) {
-                runLazySection(s)
-                any = true
-            }
-        }
-        // A section that just rendered made the page taller, which can bring
-        // the next one inside the window without any further scroll event.
-        // Re-pump once after layout; `any` keeps this from spinning.
-        if (any) sv.post { pumpLazySections() }
-    }
-
-    /** Run one section's body with its own copy buffer bound, and turn a throw
-     *  into a VISIBLE failure inside that block. #281: a status surface that
-     *  reported READY when nothing worked is why this does not swallow. An
-     *  empty section and a working-but-boring section must not look alike. */
-    private fun runLazySection(s: LazySection) {
-        // Detached hosts render nothing: every helper below reaches for
-        // requireContext() through resources/dp(), which is the #194 throw.
-        if (!isAdded || view == null) return
-        if (s.started) return
-        s.started = true
-        val prev = currentBuf
-        currentBuf = s.buf
-        try {
-            s.run()
-        } catch (t: Throwable) {
-            // #331: this runs from a scroll callback on the MAIN THREAD, so
-            // anything that escapes here reaches the framework with no catch
-            // above it and takes the process down. Rendering the failure
-            // touches the view tree and the fragment's resources, both of
-            // which throw once detached — so the report itself is guarded.
-            runCatching {
-                s.group.removeAllViews()
-                context?.let { c ->
-                    s.group.addView(small(c, "⚠ ${s.head} failed to load — " +
-                        "${t.javaClass.simpleName}: ${t.message ?: "no detail"}"))
-                }
-            }
-            s.buf.append("  FAILED: ").append(t.javaClass.simpleName)
-                .append(": ").append(t.message ?: "no detail").append("\n")
-        } finally {
-            currentBuf = prev
-        }
-    }
-
-    private fun section(ctx: Context, host: LinearLayout, head: String, body: (LinearLayout) -> Unit) {
-        val header = sectionHeader(ctx, head)
-        host.addView(header)
-        val grp = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, dp(8))
-        }
-        host.addView(grp)
-        // The heading goes into the copy buffer NOW, so an unopened section
-        // still appears in "Copy All Infos" as a heading marked not-loaded
-        // rather than vanishing from the dump entirely.
-        val buf = StringBuilder("\n## ").append(head).append("\n")
-        val placeholder = small(ctx, "▸ loads when you reach it")
-        grp.addView(placeholder)
-        lazySections += LazySection(currentMacro, head, header, grp, buf) {
-            grp.removeView(placeholder)
-            body(grp)
-        }
-    }
-
-    /**
-     * A section whose data costs real I/O — a socket connect, a recursive
-     * directory walk, an exec, a 7-day usage query. [section] alone only
-     * defers such a body; it would still block the main thread at the moment
-     * the user scrolled to it. This runs [probe] on [Dispatchers.IO] under a
-     * timeout and renders from the result.
-     *
-     * Three properties the brief for #286 asked for, all of them here rather
-     * than at each call site:
-     *  - one slow service cannot stall the other 29, because each probe is its
-     *    own coroutine and none of them is awaited by the page;
-     *  - a failure or a timeout is RENDERED IN THIS BLOCK. No permanent
-     *    spinner, no silently empty section;
-     *  - cancellation is structural: the scope is [viewLifecycleOwner]'s, so
-     *    every in-flight probe dies at onDestroyView. That is the #194 crash
-     *    class (a fragment painting after detach, requireContext() throwing on
-     *    the main thread) and this page would otherwise have had 30 of them.
-     */
-    private fun <T> asyncSection(
-        ctx: Context,
-        host: LinearLayout,
-        head: String,
-        timeoutMs: Long = 4_000,
-        probe: suspend () -> T,
-        render: (LinearLayout, T) -> Unit,
-    ) {
-        section(ctx, host, head) { grp ->
-            val loading = small(ctx, "reading…")
-            grp.addView(loading)
-            val buf = currentBuf
-            viewLifecycleOwner.lifecycleScope.launch {
-                val outcome = runCatching {
-                    kotlinx.coroutines.withTimeout(timeoutMs) {
-                        withContext(Dispatchers.IO) { probe() }
-                    }
-                }
-                // The scope is already cancelled by onDestroyView, so normally
-                // we do not get here after detach — but a fragment can be
-                // detached between the resume and this line, and painting then
-                // is exactly #194.
-                if (!isAdded) return@launch
-                grp.removeView(loading)
-                val prev = currentBuf
-                currentBuf = buf
-                try {
-                    outcome
-                        .onSuccess { render(grp, it) }
-                        .onFailure { e ->
-                            val why =
-                                if (e is kotlinx.coroutines.TimeoutCancellationException)
-                                    "timed out after $timeoutMs ms"
-                                else "${e.javaClass.simpleName}: ${e.message ?: "no detail"}"
-                            grp.addView(small(ctx, "⚠ $head could not be read — $why"))
-                            buf?.append("  UNAVAILABLE: $why\n")
-                        }
-                } finally {
-                    currentBuf = prev
-                }
-            }
-        }
-    }
-
-    override fun onDestroyView() {
-        // viewLifecycleOwner's scope cancels every asyncSection probe for us.
-        // The scroll listener does NOT go with it: left attached it holds a
-        // destroyed ScrollView and keeps pumping bodies into a dead view tree.
-        lazyListener?.let { l ->
-            lazyScroll?.viewTreeObserver?.takeIf { it.isAlive }?.removeOnScrollChangedListener(l)
-        }
-        lazyListener = null
-        lazyScroll = null
-        lazySections.clear()
-        currentBuf = null
-        super.onDestroyView()
-    }
-
-    private fun row(ctx: Context, host: LinearLayout, key: String, value: String): TextView {
-        (currentBuf ?: infoBuf).append("  ").append(key).append(": ").append(value).append("\n")
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(4), 0, dp(4))
-        }
-        row.addView(TextView(ctx).apply {
-            text = key
-            setTextColor(0xCCFFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            layoutParams = LinearLayout.LayoutParams(dp(110), LinearLayout.LayoutParams.WRAP_CONTENT)
-        })
-        // Capture the value TextView so callers that need to update it
-        // later (e.g. async Health Connect lookup) can rebind .text
-        // without rebuilding the row. Plain callers ignore the return.
-        val valueView = TextView(ctx).apply {
-            text = value
-            setTextColor(0xFFB794F4.toInt())
-            typeface = Typeface.MONOSPACE
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setTextIsSelectable(true)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            setOnLongClickListener {
-                copy(ctx, "$key: $value")
-                Toast.makeText(ctx, "Copied $key", Toast.LENGTH_SHORT).show(); true
-            }
-        }
-        row.addView(valueView)
-        host.addView(row)
-        return valueView
-    }
-
-    private fun title(ctx: Context, text: String) = TextView(ctx).apply {
-        infoBuf.append("# ").append(text).append("\n")
-        this.text = text
-        setTextColor(0xFFE9D8FD.toInt())
-        typeface = Typeface.DEFAULT_BOLD
-        setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-        setPadding(0, 0, 0, dp(12))
-    }
-
-    private fun sectionHeader(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextColor(0xFF7C3AED.toInt())
-        typeface = Typeface.DEFAULT_BOLD
-        setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-        setPadding(0, dp(14), 0, dp(4))
-    }
-
-    private fun small(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextColor(0x99FFFFFF.toInt())
-        setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-        setPadding(0, dp(4), 0, dp(4))
-    }
-
-    private fun actionButton(ctx: Context, label: String, bg: Int = 0xFF7C3AED.toInt(), onClick: () -> Unit) = TextView(ctx).apply {
-        text = label
-        setTextColor(0xFFFFFFFF.toInt())
-        setBackgroundColor(bg)
-        gravity = android.view.Gravity.CENTER
-        setPadding(dp(12), dp(10), dp(12), dp(10))
-        val lp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { topMargin = dp(8) }
-        layoutParams = lp
-        isClickable = true; isFocusable = true
-        setOnClickListener { onClick() }
-    }
-
-    /** Horizontal row of equal-width action buttons. Each button gets
-     *  weight=1 so 5 buttons across share the row evenly. Multi-line
-     *  text allowed (maxLines = 3) so the "Set Battery No Optimization"
-     *  label can wrap without overflowing the chip. Padding tightened
-     *  vs the single-button variant so 5 tall labels still fit
-     *  comfortably on narrow screens. */
-    private fun actionButtonRow(ctx: Context, vararg buttons: Pair<String, () -> Unit>): View {
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            val lp = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(8) }
-            layoutParams = lp
-        }
-        val gap = dp(4)
-        for ((idx, pair) in buttons.withIndex()) {
-            val (label, onClick) = pair
-            val btn = TextView(ctx).apply {
-                text = label
-                setTextColor(0xFFFFFFFF.toInt())
-                setBackgroundColor(0xFF7C3AED.toInt())
-                gravity = android.view.Gravity.CENTER
-                textSize = 12f
-                setPadding(dp(8), dp(10), dp(8), dp(10))
-                maxLines = 3
-                minHeight = dp(64)
-                val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                if (idx > 0) lp.leftMargin = gap
-                layoutParams = lp
-                isClickable = true; isFocusable = true
-                setOnClickListener { onClick() }
-            }
-            row.addView(btn)
-        }
-        return row
-    }
-
     private fun copy(ctx: Context, v: String) {
         val clip = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clip?.setPrimaryClip(ClipData.newPlainText("about", v))
     }
 
-    /** Deep dump: every raw BatteryManager property and sticky-intent extra
-     *  exactly as the device reports it (no scaling, no sign, no arithmetic),
-     *  read by the battery SoT itself (BatteryRepository.rawDump) — the
-     *  computed values are the SoT rows above. */
-    private fun renderBatteryDeep(ctx: Context, host: LinearLayout) {
-        val dump = runCatching { com.diegonmarcos.superapp.battery.BatteryRepository.rawDump(ctx) }.getOrDefault(emptyList())
-        for ((k, v) in dump) row(ctx, host, k, v ?: "—")
-    }
-
-    /** Big macro-section divider ("☁ CLOUD", "📱 PHONE") splitting the
-     *  About page into the cloud-identity half and the phone-device half. */
-    /** Every macro group registers itself here as it is built, so the index at
-     *  the top of the page is DERIVED from the page rather than being a second
-     *  list to keep in step. Add a macroHeader and it appears in the index; the
-     *  two cannot disagree. */
-    private val macroAnchors = LinkedHashMap<String, View>()
-
-    /** Anchor id of the index block itself — the target every "Go Back Up to
-     *  Index" link scrolls to. Not a macro label, so it cannot collide with
-     *  one. */
-    private val INDEX_ANCHOR = "__index__"
-
-    /** The upward half of the index: a long page should be navigable both
-     *  ways, so every macro section ends with the way back. */
-    private fun backToIndexLink(ctx: Context): View = TextView(ctx).apply {
-        text = "↑  Go Back Up to Index"
-        setTextColor(0xFF9B93AB.toInt()); textSize = 12f
-        gravity = android.view.Gravity.END
-        isClickable = true; isFocusable = true
-        setPadding(dp(6), dp(10), dp(6), dp(14))
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        )
-        setOnClickListener { anchors.dispatch(StackAnchors.PREFIX + INDEX_ANCHOR) }
-    }
-
-    /** The leading glyph of each macro header, kept beside the label so the
-     *  index cards have an icon without one being invented for them —
-     *  "🔍  LOGCAT" already carries its own. */
-    private val macroGlyphs = LinkedHashMap<String, String>()
-
-    /** Scroll-to-anchor, shared with the aggregator stacks. Configs ▸ About
-     *  is NOT a stack — no build.json panels, no StackPanel — so this reuse
-     *  is the check that [StackAnchors] really is page-agnostic: the registry,
-     *  the parent-chain offset and the collapsed-ancestor handling all come
-     *  from there, and only the ids are local. */
-    private val anchors = StackAnchors()
-
-    private fun macroHeader(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        // Label without the leading emoji + spacing: "🔍  LOGCAT" -> "LOGCAT".
-        val label = text.dropWhile { !it.isLetter() }.trim()
-        macroAnchors[label] = this
-        macroGlyphs[label] = text.takeWhile { !it.isLetter() }.trim()
-        currentMacro = label
-        setTextColor(0xFFE9D8FD.toInt())
-        textSize = 17f
-        setTypeface(typeface, android.graphics.Typeface.BOLD)
-        setBackgroundColor(0x22B794F4.toInt())
-        val p = dp(8)
-        val lp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { topMargin = dp(20) }
-        layoutParams = lp
-        setPadding(p, dp(12), p, dp(10))
+    /** Deep dump: every raw BatteryManager property and sticky-intent extra exactly as the device reports it (no scaling, no
+     *  sign, no arithmetic), read by the battery SoT itself (BatteryRepository.rawDump) — the computed values are the SoT
+     *  rows above. */
+    private fun AboutItems.renderBatteryDeep() {
+        val dump = runCatching { com.diegonmarcos.superapp.battery.BatteryRepository.rawDump(ctxAny()) }.getOrDefault(emptyList())
+        for ((k, v) in dump) row(k, v ?: "—")
     }
 
     /**
@@ -2419,7 +1515,7 @@ class DevControlFragment : Fragment() {
      * and x86 tablet in the fleet — a failure that looks like a corrupt
      * download rather than a wrong URL.
      */
-    private fun renderDirectInstall(ctx: Context, host: LinearLayout) {
+    private fun AboutItems.renderDirectInstall() {
         val me = Fleet.parse(UpdBuildConfig.CONSTELLATION_FLEET_B64)
             .firstOrNull { it.pkg == BuildConfig.APPLICATION_ID }
 
@@ -2437,23 +1533,23 @@ class DevControlFragment : Fragment() {
         val apkUrl = me?.abiReleaseUrl?.takeIf { it.isNotBlank() }
             ?: "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-SuperApp.apk"
 
-        row(ctx, host, "APK", apkUrl)
+        row("APK", apkUrl)
         // The sidecar is what makes the URL trustworthy rather than merely
         // convenient, so it is shown rather than silently used.
-        row(ctx, host, "Checksum", "$apkUrl.sha256")
-        me?.repoUrl?.takeIf { it.isNotBlank() }?.let { row(ctx, host, "Release repo", it) }
+        row("Checksum", "$apkUrl.sha256")
+        me?.repoUrl?.takeIf { it.isNotBlank() }?.let { row("Release repo", it) }
 
-        host.addView(actionButton(ctx, getString(R.string.about_install_action), 0xFF7C3AED.toInt()) {
+        button(getString(R.string.about_install_action)) {
             // Straight into the same recovery flow the advisory feed opens:
             // download → verify sha256 → system installer. Opening the URL in
             // a browser instead would drop the verification step, which is the
             // only reason to prefer this over telling the user to search GitHub.
             runCatching {
                 startActivity(
-                    com.diegonmarcos.superapp.recovery.RecoveryActivity.intent(ctx, me?.id)
+                    com.diegonmarcos.superapp.recovery.RecoveryActivity.intent(ctxAny(), me?.id)
                 )
             }
-        })
+        }
     }
 
     /** Repo {label,url} list for the Profile section — data-driven from
@@ -2473,17 +1569,18 @@ class DevControlFragment : Fragment() {
      *  the configured WG peers. Live rx/tx + handshake attach to a node
      *  when its wg-IP matches a configured peer's tunnel and the tunnel
      *  is UP. Rendered inside a section() under the Cloud macro header. */
-    private fun renderVpnMesh(ctx: Context, host: LinearLayout) {
+    private fun AboutItems.renderVpnMesh() {
+        val ctx = ctxAny()
         val wgPrefs = WgState.prefs(ctx)
         val backend = runCatching { WgState.backend(ctx) }.getOrNull()
         val tunnel  = WgState.tunnel
         val state   = runCatching { backend?.getState(tunnel) }.getOrNull()
-        row(ctx, host, "Tunnel name", wgPrefs.tunnelName.ifBlank { "—" })
-        row(ctx, host, "State",       state?.name ?: "—")
-        row(ctx, host, "Backend",     "libwg-go ${runCatching { backend?.version }.getOrNull() ?: "—"}")
-        row(ctx, host, "Always-on",   runCatching { backend?.isAlwaysOn?.toString() }.getOrNull() ?: "—")
-        row(ctx, host, "Lockdown",    runCatching { backend?.isLockdownEnabled?.toString() }.getOrNull() ?: "—")
-        row(ctx, host, "Configured peers", wgPrefs.peers().size.toString())
+        row("Tunnel name", wgPrefs.tunnelName.ifBlank { "—" })
+        row("State",       state?.name ?: "—")
+        row("Backend",     "libwg-go ${runCatching { backend?.version }.getOrNull() ?: "—"}")
+        row("Always-on",   runCatching { backend?.isAlwaysOn?.toString() }.getOrNull() ?: "—")
+        row("Lockdown",    runCatching { backend?.isLockdownEnabled?.toString() }.getOrNull() ?: "—")
+        row("Configured peers", wgPrefs.peers().size.toString())
 
         // Live per-peer stats keyed by pubkey (only when tunnel UP), then
         // re-keyed by the peer's mesh IP so we can attach to mesh nodes.
@@ -2498,56 +1595,42 @@ class DevControlFragment : Fragment() {
         }
         val statsByMeshIp = HashMap<String, com.wireguard.android.backend.Statistics.PeerStats>()
         for (p in wgPrefs.peers()) {
-            val ip = meshIpOf(p) ?: continue
+            val ip = AboutFormat.meshIpOf(p.allowedIps, p.endpoint) ?: continue
             statsByKey[p.publicKey.trim()]?.let { statsByMeshIp[ip] = it }
         }
 
         // FULL mesh — every declared member from the baked consolidated config.
         val nodes = runCatching { com.diegonmarcos.superapp.launcher.Sections.mesh().nodes }.getOrDefault(emptyList())
-        host.addView(small(ctx, "Full mesh — ${nodes.size} declared members (consolidated config). Live wg0 reachability ping:"))
-        val pingTargets = ArrayList<Pair<String, TextView>>()
+        small("Full mesh — ${nodes.size} declared members (consolidated config). Live wg0 reachability ping:")
+        val pingTargets = ArrayList<Pair<String, AboutItem.Row>>()
         for (n in nodes) {
             val name = "${n.alias.ifBlank { n.name }} · ${n.role}"
-            host.addView(small(ctx, "— $name —"))
-            row(ctx, host, "$name · wg ip", n.wgIp.ifBlank { "—" })
-            if (n.publicIp.isNotBlank()) row(ctx, host, "$name · public ip", n.publicIp)
+            small("— $name —")
+            row("$name · wg ip", n.wgIp.ifBlank { "—" })
+            if (n.publicIp.isNotBlank()) row("$name · public ip", n.publicIp)
             val provReg = listOf(n.provider, n.region).filter { it.isNotBlank() }.joinToString(" · ")
-            if (provReg.isNotBlank()) row(ctx, host, "$name · provider", provReg)
+            if (provReg.isNotBlank()) row("$name · provider", provReg)
             statsByMeshIp[n.wgIp]?.let { ps ->
                 val hsAge = if (ps.latestHandshakeEpochMillis > 0)
                     fmtDuration(System.currentTimeMillis() - ps.latestHandshakeEpochMillis) + " ago" else "never"
-                row(ctx, host, "$name · rx/tx",     "${sizeStr(ps.rxBytes)} / ${sizeStr(ps.txBytes)}")
-                row(ctx, host, "$name · handshake", hsAge)
+                row("$name · rx/tx",     "${sizeStr(ps.rxBytes)} / ${sizeStr(ps.txBytes)}")
+                row("$name · handshake", hsAge)
             }
             if (n.wgIp.isNotBlank()) {
-                val pingRow = row(ctx, host, "$name · ping ${n.wgIp}", "pinging…")
+                val pingRow = row("$name · ping ${n.wgIp}", "pinging…")
                 pingTargets.add(n.wgIp to pingRow)
             }
         }
-        if (nodes.isEmpty()) host.addView(small(ctx, "No mesh members in the baked consolidated config (data/mesh.json)."))
+        if (nodes.isEmpty()) small("No mesh members in the baked consolidated config (data/mesh.json).")
 
         if (pingTargets.isNotEmpty()) {
-            Thread {
+            launch {
                 for ((ip, view) in pingTargets) {
-                    val res = pingHost(ip, 1500)
-                    view.post { view.text = res }
+                    view.text = withContext(Dispatchers.IO) { pingHost(ip, 1500) }
                 }
-            }.start()
+            }
         }
-        host.addView(actionButton(ctx, "Re-ping all mesh members") { rebuildFragment() })
-    }
-
-    /** The mesh IP to ping for a WG peer — prefer a /32 allowed-IP,
-     *  then any non-network IPv4 allowed-IP, finally the endpoint host.
-     *  Null when nothing pingable can be derived. */
-    private fun meshIpOf(p: WireGuardPrefs.PeerData): String? {
-        val cidrs = p.allowedIps.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        val ipv4 = Regex("""^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$""")
-        cidrs.firstOrNull { it.endsWith("/32") }?.substringBefore('/')?.let { return it }
-        cidrs.map { it.substringBefore('/') }
-            .firstOrNull { it.matches(ipv4) && it != "0.0.0.0" && !it.endsWith(".0") }
-            ?.let { return it }
-        return p.endpoint.substringBefore(':').trim().ifBlank { null }
+        button("Re-ping all mesh members") { reload() }
     }
 
     /** Reachability probe for [ip] — ICMP echo where allowed, else a TCP
@@ -2558,7 +1641,7 @@ class DevControlFragment : Fragment() {
         val t0 = android.os.SystemClock.elapsedRealtime()
         val ok = addr.isReachable(timeoutMs)
         val dt = android.os.SystemClock.elapsedRealtime() - t0
-        if (ok) "✓ reachable · ${dt} ms" else "✗ no answer (${timeoutMs} ms)"
+        AboutFormat.pingVerdict(ok, dt, timeoutMs)
     } catch (e: Exception) {
         "✗ ${e.message ?: "unreachable"}"
     }
@@ -2648,12 +1731,6 @@ class DevControlFragment : Fragment() {
         dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
     }.getOrDefault(0L)
 
-    private fun sizeStr(bytes: Long): String = when {
-        bytes >= 1_073_741_824 -> "%.2f GiB".format(bytes / 1_073_741_824.0)
-        bytes >= 1_048_576     -> "%.2f MiB".format(bytes / 1_048_576.0)
-        bytes >= 1024          -> "%.1f KiB".format(bytes / 1024.0)
-        else                   -> "$bytes B"
-    }
 
     /** (free, total) bytes for the filesystem hosting [path]. Returns
      *  (-1, -1) when StatFs throws — happens on early-API or unmounted
@@ -2677,15 +1754,10 @@ class DevControlFragment : Fragment() {
         kb("SwapTotal") to kb("SwapFree")
     }.getOrDefault(-1L to -1L)
 
-    private fun fmtMillis(ms: Long): String =
-        DateFormat.getDateTimeInstance().format(Date(ms))
-
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
     companion object {
         fun newInstance() = DevControlFragment()
 
-        // Neutral gray for utility buttons (Regenerate token, Open Wireless Debugging).
-        private val GRAY = 0xFF4B5563.toInt()
+        /** The page's own two heading rows (title, Index) before the first block. */
+        private const val HEAD_ITEMS = 2
     }
 }

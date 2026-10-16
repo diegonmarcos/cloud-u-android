@@ -1,0 +1,54 @@
+package com.diegonmarcos.superapp.devcontrol
+
+import android.app.Application
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasTestTag
+import com.diegonmarcos.superapp.ui.KitPageHarness
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/**
+ * #773 — Configs ▸ About in Compose (was a ScrollView of Views, every block built before the first frame).
+ *
+ *   D1 the page draws its title and an Index card per macro group
+ *   D2 the block at the top loads without a scroll (the opening viewport is the trigger)
+ *   D3 an Index card jumps to its group and the group's blocks load
+ *   D4 the page ends with the Copy All button
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
+class AboutComposeTest : KitPageHarness() {
+
+    @Test
+    fun `D1 title and an Index card per macro group`() {
+        show(DevControlFragment.newInstance())
+        compose.onNodeWithTag(AboutTags.TITLE).assertExists()
+        compose.onNodeWithTag(AboutTags.INDEX).assertExists()
+        compose.onNodeWithTag("index:APP & BUILD").assertExists()
+    }
+
+    @Test
+    fun `D2 the opening block loads by itself`() {
+        show(DevControlFragment.newInstance())
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag(AboutTags.row("Version")).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    @Test
+    fun `D3 an Index card jumps to its group`() {
+        show(DevControlFragment.newInstance())
+        compose.onNodeWithTag("index:SECURITY").performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag(AboutTags.macro("SECURITY")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag(AboutTags.row("Dev options")).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    @Test
+    fun `D4 the page ends with Copy All and the way back up`() {
+        show(DevControlFragment.newInstance())
+        compose.onNodeWithTag(AboutTags.LIST).performScrollToNode(hasTestTag(AboutTags.button("Copy All Infos")))
+    }
+}

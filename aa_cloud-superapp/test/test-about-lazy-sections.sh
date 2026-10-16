@@ -26,6 +26,11 @@
 #      READY when nothing worked. A diagnostics page that renders an empty
 #      section, or spins forever, is worse than a slow one.
 #
+# SHAPE (#773): the page is Compose. A block is an AboutSection (AboutModel.kt) whose body runs through AboutSection.load();
+# the viewport trigger is the LazyColumn composing the block (a LaunchedEffect per block in DevControlFragment.Content) and
+# an idle loop warms the rest one block per frame; probes live on the page's composition scope instead of the view-lifecycle
+# scope + scroll listener the View page needed. Every check below keeps the intent it had; the mechanisms it names changed.
+#
 # Static tester: no device, no build. The Kotlin is parsed for structure —
 # brace-matched regions, not substring presence, because a comment mentioning
 # Dispatchers.IO must not satisfy an assertion about running on it.
@@ -35,7 +40,10 @@ PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
-FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/devcontrol/DevControlFragment.kt"
+DIR="$APP/app/src/main/java/com/diegonmarcos/superapp/devcontrol"
+FRAG="$DIR/DevControlFragment.kt"
+MODEL="$DIR/AboutModel.kt"
+UI="$DIR/AboutUi.kt"
 
 # FAIL CLOSED — a tester whose tool is missing answers from the tool's absence.
 if ! command -v python3 >/dev/null 2>&1; then
@@ -43,64 +51,65 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo "== RESULT: 0 passed, 1 failed =="
   exit 1
 fi
-if [ ! -f "$FRAG" ]; then
-  echo "  FAIL: missing $FRAG — the tree is not what this tester was written against"
-  echo "== RESULT: 0 passed, 1 failed =="
-  exit 1
-fi
+for f in "$FRAG" "$MODEL" "$UI"; do
+  if [ ! -f "$f" ]; then
+    echo "  FAIL: missing $f — the tree is not what this tester was written against"
+    echo "== RESULT: 0 passed, 1 failed =="
+    exit 1
+  fi
+done
 
-# One python program answers every structural question and prints KEY=VALUE
-# lines. Comments and string literals are stripped FIRST, so prose can never
-# satisfy a check — the mistake that made an earlier guard in this repository
-# match its own explanatory comment.
-EVAL="$(python3 - "$FRAG" <<'PY'
+# One python program answers every structural question and prints KEY=VALUE lines. Comments and string literals are
+# stripped FIRST, so prose can never satisfy a check — the mistake that made an earlier guard in this repository match its
+# own explanatory comment.
+EVAL="$(python3 - "$FRAG" "$MODEL" "$UI" <<'PY'
 import sys, re
 
-raw = open(sys.argv[1], encoding='utf-8').read()
-
-# ── strip comments and string bodies, preserving offsets ──────────────
-# Kotlin block comments NEST, so this counts depth rather than searching
-# for the first */ — a KDoc containing a /* otherwise swallows the file.
-out = list(raw)
-i, n, depth = 0, len(raw), 0
-def blank(a, b):
-    for k in range(a, b):
-        if out[k] != '\n':
-            out[k] = ' '
-while i < n:
-    if depth:
+def strip(raw, keep_strings=False):
+    # Kotlin block comments NEST, so this counts depth rather than searching for the first */ — a KDoc containing a /*
+    # otherwise swallows the file. Offsets are preserved.
+    out = list(raw)
+    i, n, depth = 0, len(raw), 0
+    def blank(a, b):
+        for k in range(a, b):
+            if out[k] != '\n':
+                out[k] = ' '
+    while i < n:
+        if depth:
+            if raw.startswith('/*', i): depth += 1; blank(i, i+2); i += 2; continue
+            if raw.startswith('*/', i): depth -= 1; blank(i, i+2); i += 2; continue
+            blank(i, i+1); i += 1; continue
         if raw.startswith('/*', i): depth += 1; blank(i, i+2); i += 2; continue
-        if raw.startswith('*/', i): depth -= 1; blank(i, i+2); i += 2; continue
-        blank(i, i+1); i += 1; continue
-    if raw.startswith('/*', i): depth += 1; blank(i, i+2); i += 2; continue
-    if raw.startswith('//', i):
-        j = raw.find('\n', i); j = n if j < 0 else j
-        blank(i, j); i = j; continue
-    c = raw[i]
-    if c == '"':
-        if raw.startswith('"""', i):
-            j = raw.find('"""', i+3); j = n if j < 0 else j+3
-            blank(i+3, j-3 if j >= 6 else i+3); i = j; continue
-        j = i+1
-        while j < n and raw[j] != '"':
-            if raw[j] == '\\': j += 1
-            j += 1
-        blank(i+1, min(j, n)); i = min(j+1, n); continue
-    # Char literals MUST be blanked too. '(' and '\n' appear in this file, and
-    # leaving them in place unbalances every brace/paren match downstream —
-    # which silently emptied the onCreateView range and made T6 read 0 sections.
-    if c == "'":
-        j = i+1
-        while j < n and raw[j] != "'":
-            if raw[j] == '\\': j += 1
-            j += 1
-        blank(i+1, min(j, n)); i = min(j+1, n); continue
-    i += 1
-code = ''.join(out)
-print("UNTERMINATED_BLOCK_COMMENT=%d" % (1 if depth else 0))
+        if raw.startswith('//', i):
+            j = raw.find('\n', i); j = n if j < 0 else j
+            blank(i, j); i = j; continue
+        c = raw[i]
+        if c == '"':
+            if raw.startswith('"""', i):
+                j = raw.find('"""', i+3); j = n if j < 0 else j+3
+                blank(i+3, j-3 if j >= 6 else i+3); i = j; continue
+            j = i+1
+            while j < n and raw[j] != '"':
+                if raw[j] == '\\': j += 1
+                j += 1
+            if not keep_strings: blank(i+1, min(j, n))
+            i = min(j+1, n); continue
+        # Char literals MUST be blanked too: '(' and '\n' appear in these files and would unbalance every brace match.
+        if c == "'" and i + 2 < n and (raw[i+2] == "'" or raw[i+1] == '\\'):
+            j = i+1
+            while j < n and raw[j] != "'":
+                if raw[j] == '\\': j += 1
+                j += 1
+            blank(i+1, min(j, n)); i = min(j+1, n); continue
+        i += 1
+    return ''.join(out), depth
 
-def body_of(start_idx):
-    """Text of the brace-delimited block that starts at/after start_idx."""
+frag, d1 = strip(open(sys.argv[1], encoding='utf-8').read())
+model, d2 = strip(open(sys.argv[2], encoding='utf-8').read())
+ui, d3 = strip(open(sys.argv[3], encoding='utf-8').read())
+print("UNTERMINATED_BLOCK_COMMENT=%d" % (1 if (d1 or d2 or d3) else 0))
+
+def body_of(code, start_idx):
     b = code.find('{', start_idx)
     if b < 0: return ''
     d, k = 0, b
@@ -112,86 +121,86 @@ def body_of(start_idx):
         k += 1
     return ''
 
-def fn_body(sig):
+def fn_body(code, sig):
     j = code.find(sig)
-    return body_of(j) if j >= 0 else ''
+    return body_of(code, j) if j >= 0 else ''
 
-# ── T1: section() defers instead of invoking ─────────────────────────
-sec = fn_body('private fun section(ctx: Context, host: LinearLayout')
-print("SECTION_FOUND=%d" % (1 if sec else 0))
-print("SECTION_REGISTERS=%d" % (1 if 'lazySections +=' in sec else 0))
-# The ONLY invocation of the caller's lambda must sit after the registration,
-# i.e. inside the deferred block.
-reg = sec.find('lazySections +=')
-inv = sec.find('body(')
-print("SECTION_DEFERS_BODY=%d" % (1 if (reg >= 0 and inv > reg) else 0))
-print("SECTION_HAS_PLACEHOLDER=%d" % (1 if 'placeholder' in sec else 0))
+# ── T1: a section DEFERS its body instead of invoking it ──────────────
+reg = fn_body(model, 'fun section(head: String')          # AboutPage.section: only registers
+print("SECTION_FOUND=%d" % (1 if reg else 0))
+print("SECTION_REGISTERS=%d" % (1 if 'blocks +=' in reg and 'AboutSection(' in reg else 0))
+print("SECTION_DEFERS_BODY=%d" % (1 if reg and 'body(' not in reg and 'body.invoke' not in reg else 0))
+ld = fn_body(model, 'fun load(scope: CoroutineScope)')
+# The ONLY invocation of the caller's lambda is inside load(), after the once-only guard.
+print("LOAD_FOUND=%d" % (1 if ld else 0))
+print("LOAD_ONCE_ONLY=%d" % (1 if ('if (started) return' in ld and ld.find('if (started) return') < ld.find('body(')) else 0))
+print("LOAD_RENDERS_FAILURE=%d" % (1 if ('catch (t: Throwable)' in ld and 'items +=' in ld and 'FAILED' in open(sys.argv[2], encoding='utf-8').read()) else 0))
+print("SECTION_HAS_PLACEHOLDER=%d" % (1 if ('!section.started' in ui and 'loads when you reach it' in open(sys.argv[3], encoding='utf-8').read()) else 0))
 
-# ── T2: the pump, and its once-only guard ────────────────────────────
-pump = fn_body('private fun pumpLazySections()')
-print("PUMP_FOUND=%d" % (1 if pump else 0))
-print("PUMP_ONCE_ONLY=%d" % (1 if ('started' in pump and 'continue' in pump) else 0))
-print("PUMP_USES_VIEWPORT=%d" % (1 if 'scrollY' in pump else 0))
-print("PUMP_WIRED_TO_SCROLL=%d" % (1 if 'addOnScrollChangedListener' in code else 0))
+# ── T2: the trigger is the viewport (a composed block), plus the idle warm-up ──
+content = fn_body(frag, 'override fun Content()')
+print("CONTENT_FOUND=%d" % (1 if content else 0))
+print("PUMP_USES_VIEWPORT=%d" % (1 if re.search(r'is AboutBlock\.Section\s*->\s*\{[^}]*LaunchedEffect\(block\.section\)\s*\{\s*loadSection\(block\.section\)', content, re.S) else 0))
+print("PUMP_WARMS_REST=%d" % (1 if re.search(r'LaunchedEffect\(page\)\s*\{.*?for \(s in page\.sections\)\s*\{\s*loadSection\(s\);\s*withFrameNanos', content, re.S) else 0))
+print("PUMP_LAZY_LIST=%d" % (1 if 'LazyColumn(' in content else 0))
+print("PUMP_ONCE_ONLY=%d" % (1 if 'if (started) return' in ld else 0))
 
 # ── T3: teardown (the #194 class) ────────────────────────────────────
-odv = fn_body('override fun onDestroyView()')
-print("ONDESTROYVIEW_FOUND=%d" % (1 if odv else 0))
-print("ONDESTROYVIEW_REMOVES_LISTENER=%d" % (1 if 'removeOnScrollChangedListener' in odv else 0))
-print("ONDESTROYVIEW_CLEARS=%d" % (1 if 'lazySections.clear()' in odv else 0))
+ls = fn_body(content, 'fun loadSection(s: AboutSection)') if 'fun loadSection' in content else ''
+print("LOADSECTION_FOUND=%d" % (1 if ls else 0))
+print("LOADSECTION_ATTACHED_GUARD=%d" % (1 if 'isAdded' in ls and 'view != null' in ls else 0))
+print("SCOPE_IS_COMPOSITION=%d" % (1 if 'val scope = rememberCoroutineScope()' in content else 0))
+print("NO_VIEW_LISTENER=%d" % (0 if re.search(r'addOnScrollChangedListener|OnScrollChangedListener|viewLifecycleOwner|lifecycleScope', frag + model + ui) else 1))
 
 # ── T4: asyncSection's contract ──────────────────────────────────────
-asy = fn_body('private fun <T> asyncSection(')
+asy = fn_body(model, 'fun <T> asyncSection(')
 print("ASYNC_FOUND=%d" % (1 if asy else 0))
 print("ASYNC_OFF_MAIN=%d" % (1 if 'Dispatchers.IO' in asy else 0))
 print("ASYNC_TIMEOUT=%d" % (1 if 'withTimeout' in asy else 0))
-print("ASYNC_LIFECYCLE_SCOPE=%d" % (1 if 'viewLifecycleOwner.lifecycleScope' in asy else 0))
-print("ASYNC_ISADDED_GUARD=%d" % (1 if 'isAdded' in asy else 0))
-# A failure must REACH THE SCREEN, not just a log: an addView on the failure
-# path. body_of() indexes into `code`, so the search has to be absolute too —
-# an offset taken inside `asy` would point at an unrelated block.
-asy_at = code.find('private fun <T> asyncSection(')
-onfail_at = code.find('.onFailure', asy_at) if asy_at >= 0 else -1
-onfail = body_of(onfail_at) if 0 <= onfail_at < asy_at + len(asy) else ''
-print("ASYNC_RENDERS_FAILURE=%d" % (1 if ('addView' in onfail) else 0))
-print("ASYNC_REMOVES_SPINNER=%d" % (1 if 'removeView(loading)' in asy else 0))
+print("ASYNC_ISADDED_GUARD=%d" % (1 if 'attached()' in asy else 0))
+asy_at = model.find('fun <T> asyncSection(')
+onfail_at = model.find('.onFailure', asy_at) if asy_at >= 0 else -1
+onfail = body_of(model, onfail_at) if 0 <= onfail_at < asy_at + len(asy) else ''
+print("ASYNC_RENDERS_FAILURE=%d" % (1 if ('small(' in onfail and 'could not be read' in open(sys.argv[2], encoding='utf-8').read()) else 0))
+print("ASYNC_REMOVES_SPINNER=%d" % (1 if 'remove(loading)' in asy else 0))
+print("ASYNC_ON_PAGE_SCOPE=%d" % (1 if re.search(r'(?<![A-Za-z])launch\s*\{', asy) else 0))
 
 # ── T5: every known-heavy call runs off the main thread ──────────────
-# Build the set of off-main regions by brace-matching each withContext(
-# Dispatchers.IO) block, then ask which heavy call sites fall inside one.
 regions = []
 for pat in (r'withContext\(Dispatchers\.IO\)', r'probe = \{'):
-    for m in re.finditer(pat, code):
-        # `probe = { ... }` counts because asyncSection runs it inside
-        # withContext(Dispatchers.IO) — which T4::ASYNC_OFF_MAIN asserts
-        # separately, so this is not circular: if asyncSection ever stops
-        # dispatching to IO, T4 goes red and this region stops being honest.
+    for m in re.finditer(pat, frag):
         start = m.start() if pat.endswith(r'\{') else m.end()
-        blk = body_of(start)
+        blk = body_of(frag, start)
         if blk:
-            s = code.find(blk, start)
+            s = frag.find(blk, start)
             regions.append((s, s + len(blk)))
 def off_main(pos):
     return any(a <= pos < b for a, b in regions)
 
 HEAVY = {
     'dirSize(':              'recursive walk of the private data tree',
-    'collectIpcContract(':   'full manifest unmarshal over binder',
+    'collectAppMesh(':       'package-manager resolves per declared peer',
+    'collectSelfIpcContract(': 'full manifest unmarshal over binder',
     'readUsageStats(':       '7-day usage-stats query',
     '/proc/cpuinfo':         'procfs scan',
     '/sys/class/thermal':    'sysfs enumeration',
     'scaling_cur_freq':      'sysfs read',
+    'portOpen(':             'a TCP connect',
+    'pingHost(':             'an ICMP/TCP probe',
 }
-onc = code.find('override fun onCreateView(')
-onc_end = onc + len(body_of(onc))
+# The raw text still has the string literals the strip blanked; the HEAVY needles that are paths live in them.
+raw_frag, _ = strip(open(sys.argv[1], encoding='utf-8').read(), keep_strings=True)   # comments gone, string bodies kept
+dec = frag.find('private fun declare(')
+dec_end = dec + len(body_of(frag, dec))
 leaks = []
 for needle, why in HEAVY.items():
-    for m in re.finditer(re.escape(needle), code):
+    # A path is a READ only where it is handed to File(...); the same path printed as a row label is not.
+    hay, pat = (raw_frag, r'File\(\s*"' + re.escape(needle)) if needle.startswith('/') else (frag, re.escape(needle))
+    for m in re.finditer(pat, hay):
         p = m.start()
-        # Only care about call sites inside onCreateView's lexical range —
-        # the private helper that DEFINES the call is not itself a main-thread
-        # execution, it is only reached through one of these sites.
-        if not (onc <= p < onc_end):
+        # Only call sites inside the declaration are main-thread candidates — the helper that DEFINES the call is only
+        # reached through one of these sites.
+        if not (dec <= p < dec_end):
             continue
         if not off_main(p):
             leaks.append("%s (%s) at offset %d" % (needle, why, p))
@@ -200,10 +209,9 @@ print("HEAVY_ON_MAIN_LIST=%s" % ("; ".join(leaks) if leaks else "-"))
 print("IO_REGIONS=%d" % len(regions))
 
 # ── T6: nothing bypasses section() ───────────────────────────────────
-print("SECTION_CALLS=%d" % len(re.findall(r'(?<![A-Za-z])section\(ctx, ', code)))
-print("ASYNC_CALLS=%d" % len(re.findall(r'asyncSection\(ctx, ', code)))
-# requireContext() must never be reached from inside an IO region.
-rq = [m.start() for m in re.finditer(r'requireContext\(\)', code) if off_main(m.start())]
+print("SECTION_CALLS=%d" % len(re.findall(r'(?<![A-Za-z])section\("', raw_frag)))
+print("ASYNC_CALLS=%d" % len(re.findall(r'asyncSection\("', raw_frag)))
+rq = [m.start() for m in re.finditer(r'requireContext\(\)', frag) if off_main(m.start())]
 print("REQUIRECONTEXT_OFF_MAIN=%d" % len(rq))
 PY
 )"
@@ -217,40 +225,46 @@ fi
 eval "$(echo "$EVAL" | grep -E '^[A-Z_]+=[0-9]+$')"
 HEAVY_LIST="$(echo "$EVAL" | sed -n 's/^HEAVY_ON_MAIN_LIST=//p')"
 
-echo "== T0: the file parses (Kotlin block comments NEST — one stray /* hides everything) =="
+echo "== T0: the files parse (Kotlin block comments NEST — one stray /* hides everything) =="
 if [ "${UNTERMINATED_BLOCK_COMMENT:-1}" = "0" ]; then
   ok "no unterminated block comment"
 else
-  bad "unterminated block comment — a /* inside a KDoc has swallowed the rest of the file"
+  bad "unterminated block comment — a /* inside a KDoc has swallowed the rest of a file"
 fi
 
-echo "== T1: section() DEFERS its body instead of running it (#286, the whole mechanism) =="
-[ "${SECTION_FOUND:-0}" = "1" ]        && ok "section() helper found" \
-                                       || bad "section() helper not found — this tester is aimed at nothing"
-[ "${SECTION_REGISTERS:-0}" = "1" ]    && ok "section() registers into lazySections" \
+echo "== T1: a section DEFERS its body instead of running it (#286, the whole mechanism) =="
+[ "${SECTION_FOUND:-0}" = "1" ]        && ok "AboutPage.section() found" \
+                                       || bad "AboutPage.section() not found — this tester is aimed at nothing"
+[ "${SECTION_REGISTERS:-0}" = "1" ]    && ok "section() registers an AboutSection into the page" \
                                        || bad "section() no longer registers a lazy unit — every block is eager again"
-[ "${SECTION_DEFERS_BODY:-0}" = "1" ]  && ok "the caller's body is invoked only inside the deferred block" \
-                                       || bad "section() invokes body() BEFORE/OUTSIDE the deferred block — all 30 services are eager again"
+[ "${SECTION_DEFERS_BODY:-0}" = "1" ]  && ok "section() never invokes the caller's body" \
+                                       || bad "section() invokes body() itself — all 30 services are eager again"
+[ "${LOAD_FOUND:-0}" = "1" ]           && ok "AboutSection.load() found" \
+                                       || bad "AboutSection.load() not found — nothing runs a deferred body"
 [ "${SECTION_HAS_PLACEHOLDER:-0}" = "1" ] && ok "an unloaded block shows a placeholder, not nothing" \
                                        || bad "no placeholder — an unloaded section is indistinguishable from an empty one"
 
 echo "== T2: the trigger is the viewport, which is what the Index drives =="
-[ "${PUMP_FOUND:-0}" = "1" ]           && ok "pumpLazySections() exists" \
-                                       || bad "no pump — nothing ever loads a deferred section"
-[ "${PUMP_USES_VIEWPORT:-0}" = "1" ]   && ok "the pump measures against the scroll position" \
-                                       || bad "the pump does not read scrollY — it cannot be viewport-driven"
-[ "${PUMP_WIRED_TO_SCROLL:-0}" = "1" ] && ok "wired to the ScrollView via OnScrollChangedListener" \
-                                       || bad "no scroll listener — sections below the fold would never load"
-[ "${PUMP_ONCE_ONLY:-0}" = "1" ]       && ok "a loaded section is skipped on later pumps (no re-probing on scroll)" \
-                                       || bad "the pump has no once-only guard — probes would re-run on every scroll event"
+[ "${CONTENT_FOUND:-0}" = "1" ]        && ok "the page's Content() exists" \
+                                       || bad "no Content() — nothing ever loads a deferred section"
+[ "${PUMP_LAZY_LIST:-0}" = "1" ]       && ok "the page is a LazyColumn: only blocks near the viewport are composed" \
+                                       || bad "the page is not lazy — every block would be composed (and loaded) at once"
+[ "${PUMP_USES_VIEWPORT:-0}" = "1" ]   && ok "a composed block is a reached block: it loads itself from a LaunchedEffect" \
+                                       || bad "no per-block load trigger — sections below the fold would never load on reaching them"
+[ "${PUMP_WARMS_REST:-0}" = "1" ]      && ok "the rest of the page is warmed one block per frame (#333)" \
+                                       || bad "no idle warm-up — scrolling would meet a placeholder everywhere"
+[ "${PUMP_ONCE_ONLY:-0}" = "1" ] && [ "${LOAD_ONCE_ONLY:-0}" = "1" ] \
+                                       && ok "a loaded section is skipped on later triggers (no re-probing on scroll)" \
+                                       || bad "load() has no once-only guard before the body — probes would re-run on every trigger"
 
 echo "== T3: in-flight work dies with the view (#194 crash class) =="
-[ "${ONDESTROYVIEW_FOUND:-0}" = "1" ]            && ok "onDestroyView() is overridden" \
-                                                 || bad "no onDestroyView — nothing cancels or unregisters on teardown"
-[ "${ONDESTROYVIEW_REMOVES_LISTENER:-0}" = "1" ] && ok "the scroll listener is removed on teardown" \
-                                                 || bad "the scroll listener is never removed — it holds a destroyed ScrollView and keeps pumping into a dead view tree"
-[ "${ONDESTROYVIEW_CLEARS:-0}" = "1" ]           && ok "the lazy registry is cleared per view lifecycle" \
-                                                 || bad "lazySections is never cleared — stale views leak across reattach"
+[ "${SCOPE_IS_COMPOSITION:-0}" = "1" ] && ok "work hangs off rememberCoroutineScope(), cancelled when the view's composition goes" \
+                                       || bad "the page's scope is not the composition's — probes outlive the view (#194)"
+[ "${LOADSECTION_FOUND:-0}" = "1" ] && [ "${LOADSECTION_ATTACHED_GUARD:-0}" = "1" ] \
+                                       && ok "a body only starts while the fragment is attached" \
+                                       || bad "loadSection has no isAdded/view guard — a detached host would render into nothing (#194)"
+[ "${NO_VIEW_LISTENER:-0}" = "1" ]     && ok "no scroll listener or fragment/view lifecycle scope to leak" \
+                                       || bad "a View-era listener or lifecycleScope is back — it holds a dead view tree"
 
 echo "== T4: a slow or failing service reports, and cannot hang the page =="
 [ "${ASYNC_FOUND:-0}" = "1" ]            && ok "asyncSection() exists" \
@@ -259,12 +273,14 @@ echo "== T4: a slow or failing service reports, and cannot hang the page =="
                                          || bad "asyncSection does not dispatch to IO — it is lazy but still blocking"
 [ "${ASYNC_TIMEOUT:-0}" = "1" ]          && ok "the probe is bounded by a timeout" \
                                          || bad "no timeout — one hanging service spins forever"
-[ "${ASYNC_LIFECYCLE_SCOPE:-0}" = "1" ]  && ok "scoped to viewLifecycleOwner, so teardown cancels it" \
-                                         || bad "not scoped to viewLifecycleOwner — probes outlive the view (#194)"
+[ "${ASYNC_ON_PAGE_SCOPE:-0}" = "1" ]    && ok "launched from the block's own scope, so teardown cancels it" \
+                                         || bad "not launched from the block's scope — probes outlive the view (#194)"
 [ "${ASYNC_ISADDED_GUARD:-0}" = "1" ]    && ok "renders only while still attached" \
-                                         || bad "no isAdded guard before painting the result"
+                                         || bad "no attached() guard before painting the result"
 [ "${ASYNC_RENDERS_FAILURE:-0}" = "1" ]  && ok "a failure/timeout is RENDERED in its own block" \
-                                         || bad "a failing probe adds no view — the block would stay blank, which is the #281 lie"
+                                         || bad "a failing probe adds no item — the block would stay blank, which is the #281 lie"
+[ "${LOAD_RENDERS_FAILURE:-0}" = "1" ]   && ok "a throwing body is RENDERED in its own block too (#331)" \
+                                         || bad "a throwing body escapes load() — it would take the process down from a composition effect"
 [ "${ASYNC_REMOVES_SPINNER:-0}" = "1" ]  && ok "the loading placeholder is removed when the probe settles" \
                                          || bad "the spinner is never removed — a settled block still looks like it is loading"
 
@@ -272,7 +288,7 @@ echo "== T5: no known-heavy read happens on the main thread =="
 if [ "${IO_REGIONS:-0}" -lt 1 ]; then
   bad "found zero withContext(Dispatchers.IO) regions — T5 would pass vacuously, so it proves nothing"
 elif [ "${HEAVY_ON_MAIN_COUNT:-1}" = "0" ]; then
-  ok "every heavy read inside onCreateView sits in an off-main block (${IO_REGIONS} IO regions)"
+  ok "every heavy read inside the page declaration sits in an off-main block (${IO_REGIONS} IO regions)"
 else
   bad "heavy reads still on the main thread: $HEAVY_LIST"
 fi
