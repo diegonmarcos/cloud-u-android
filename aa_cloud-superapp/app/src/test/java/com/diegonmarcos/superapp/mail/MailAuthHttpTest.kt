@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.mail
 
+import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
@@ -25,7 +26,9 @@ import javax.net.ssl.SSLHandshakeException
 class MailAuthHttpTest {
 
     private lateinit var server: MockWebServer
-    private val toLocal = OkHttpClient.Builder().dns { listOf(InetAddress.getByName("127.0.0.1")) }.build()
+    private val toLocal = OkHttpClient.Builder().dns(object : Dns {
+        override fun lookup(hostname: String) = listOf(InetAddress.getByName("127.0.0.1"))
+    }).build()
 
     @Before fun up() { server = MockWebServer(); server.start() }
     @After fun down() { server.shutdown() }
