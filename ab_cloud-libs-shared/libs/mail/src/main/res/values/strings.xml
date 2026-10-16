@@ -71,8 +71,9 @@
     <string name="mail_auth_status_needs_sign_in">Needs sign-in</string>
     <string name="mail_auth_status_error">Error</string>
     <string name="mail_auth_ok">Connected — account %1$s</string>
-    <string name="mail_auth_err_401">401 Unauthorized — the server rejected the credential. Check the token, or sign in again.</string>
-    <string name="mail_auth_err_403">403 Forbidden — you are signed in but not allowed to use this server.</string>
+    <string name="mail_auth_err_gate">Gate refused — the edge gate rejected the fleet token or Authelia session (mailbox not reached). Check the token, or sign in again.</string>
+    <string name="mail_auth_err_401">401 Unauthorized — the mailbox rejected the login (email or password). The gate let the request through.</string>
+    <string name="mail_auth_err_403">403 Forbidden — the mailbox login is valid but not allowed to use this server.</string>
     <string name="mail_auth_err_tls">TLS error — the certificate could not be verified for this host.</string>
     <string name="mail_auth_err_dns">DNS error — the server name could not be resolved. Check the address and your network.</string>
     <string name="mail_auth_err_timeout">Timed out — the server did not answer.</string>

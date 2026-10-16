@@ -10,7 +10,10 @@ class GatewayAuthTest {
 
     @Test fun `the mode follows the auth type and the authelia flag`() {
         assertEquals(GatewayMode.NONE, GatewayAuthStore.modeOf(acc(AuthType.BASIC), GatewayAuth()))
-        assertEquals(GatewayMode.BEARER, GatewayAuthStore.modeOf(acc(AuthType.API_TOKEN), GatewayAuth()))
+        // An API-token account is a mailbox credential, not the gate's: Bearer is the explicit fleet-token mode.
+        assertEquals(GatewayMode.NONE, GatewayAuthStore.modeOf(acc(AuthType.API_TOKEN), GatewayAuth()))
+        assertEquals(GatewayMode.BEARER, GatewayAuthStore.modeOf(acc(AuthType.API_TOKEN), GatewayAuth(bearer = true, fleetToken = "t")))
+        assertEquals(GatewayMode.BEARER, GatewayAuthStore.modeOf(acc(AuthType.BASIC), GatewayAuth(bearer = true)))
         assertEquals(GatewayMode.AUTHELIA, GatewayAuthStore.modeOf(acc(AuthType.BASIC), GatewayAuth(authelia = true)))
     }
 
@@ -18,16 +21,18 @@ class GatewayAuthTest {
         fun s(m: GatewayMode, a: GatewayAuth = GatewayAuth(), rejected: Boolean = false, failed: Boolean = false) =
             GatewayStatuses.resolve(m, a, rejected, failed)
         assertEquals(GatewayStatus.CONNECTED, s(GatewayMode.NONE))
-        assertEquals(GatewayStatus.TOKEN, s(GatewayMode.BEARER))
+        assertEquals(GatewayStatus.TOKEN, s(GatewayMode.BEARER, GatewayAuth(bearer = true, fleetToken = "t")))
+        assertEquals(GatewayStatus.NEEDS_SIGN_IN, s(GatewayMode.BEARER, GatewayAuth(bearer = true)))
         assertEquals(GatewayStatus.SIGNED_IN, s(GatewayMode.AUTHELIA, GatewayAuth(true, "c", 1)))
         assertEquals(GatewayStatus.NEEDS_SIGN_IN, s(GatewayMode.AUTHELIA, GatewayAuth(true)))
         assertEquals(GatewayStatus.NEEDS_SIGN_IN, s(GatewayMode.AUTHELIA, GatewayAuth(true, "c", 1), rejected = true))
-        assertEquals(GatewayStatus.NEEDS_SIGN_IN, s(GatewayMode.BEARER, rejected = true))
+        assertEquals(GatewayStatus.NEEDS_SIGN_IN, s(GatewayMode.BEARER, GatewayAuth(bearer = true, fleetToken = "t"), rejected = true))
         assertEquals(GatewayStatus.ERROR, s(GatewayMode.NONE, failed = true))
     }
 
     @Test fun `the cookie prints masked and the store never logs`() {
         assertFalse(GatewayAuth(true, "SECRET", 1).toString().contains("SECRET"))
+        assertFalse(GatewayAuth(bearer = true, fleetToken = "FLEETSECRET").toString().contains("FLEETSECRET"))
         val src = File("src/main/kotlin/app/sterna/core/data/account/GatewayAuthStore.kt").readText()
         assertFalse(Regex("""(Log\.|println\(|Timber|printStackTrace)""").containsMatchIn(src))
     }

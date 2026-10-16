@@ -1360,7 +1360,9 @@
     <string name="gw_bearer">Bearer-токен</string>
     <string name="gw_authelia">Authelia</string>
     <string name="gw_none_hint">Нет учётных данных шлюза: отправляется только вход в аккаунт.</string>
-    <string name="gw_bearer_hint">Вставьте токен в поле API-токена выше. Он отправляется как Authorization: Bearer с каждым запросом. Сохраните и проверьте соединение.</string>
+    <string name="gw_bearer_hint">Токен флота отправляется как X-Fleet-Authorization в каждом запросе; вход в аккаунт (пароль или API-токен выше) остаётся в Authorization для почтового сервера. Сохраните и проверьте соединение.</string>
+    <string name="gw_fleet_token_label">Токен флота</string>
+    <string name="gw_fleet_token_save">Сохранить токен</string>
     <string name="gw_sign_in">Войти через Authelia</string>
     <string name="gw_sign_in_again">Войти снова</string>
     <string name="gw_sign_out">Выйти</string>

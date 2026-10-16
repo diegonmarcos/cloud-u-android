@@ -1349,7 +1349,9 @@
     <string name="gw_bearer">Jeton Bearer</string>
     <string name="gw_authelia">Authelia</string>
     <string name="gw_none_hint">Aucun identifiant de passerelle : seul l\'accès au compte est envoyé.</string>
-    <string name="gw_bearer_hint">Collez le jeton dans le champ jeton d\'API ci-dessus. Il est envoyé en Authorization: Bearer à chaque requête. Enregistrez, puis testez la connexion.</string>
+    <string name="gw_bearer_hint">Le jeton de flotte est envoyé en X-Fleet-Authorization à chaque requête ; l\'accès au compte (mot de passe ou jeton d\'API ci-dessus) reste dans Authorization pour le serveur de messagerie. Enregistrez, puis testez la connexion.</string>
+    <string name="gw_fleet_token_label">Jeton de flotte</string>
+    <string name="gw_fleet_token_save">Enregistrer le jeton</string>
     <string name="gw_sign_in">Se connecter avec Authelia</string>
     <string name="gw_sign_in_again">Se reconnecter</string>
     <string name="gw_sign_out">Se déconnecter</string>

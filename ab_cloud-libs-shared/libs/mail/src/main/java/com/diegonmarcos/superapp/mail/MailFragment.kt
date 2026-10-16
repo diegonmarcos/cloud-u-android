@@ -83,9 +83,9 @@ class MailFragment : KitComposeFragment() {
         /** Fold a failure into the stored credentials: a refusal under a gateway mode means sign in again. */
         fun failed(problem: ConnProblem, words: String) {
             val gated = creds.mode != MailAuthMode.NONE
-            keep(creds.copy(lastOk = false, needsSignIn = gated && problem == ConnProblem.UNAUTHORIZED,
-                lastError = if (gated && problem == ConnProblem.UNAUTHORIZED) "" else words))
-            if (creds.mode == MailAuthMode.AUTHELIA && problem == ConnProblem.UNAUTHORIZED) signInOpen = true
+            keep(creds.copy(lastOk = false, needsSignIn = gated && problem == ConnProblem.GATE_REJECTED,
+                lastError = if (gated && problem == ConnProblem.GATE_REJECTED) "" else words))
+            if (creds.mode == MailAuthMode.AUTHELIA && problem == ConnProblem.GATE_REJECTED) signInOpen = true
         }
 
         // A stored Authelia session that the server stopped honouring: ask for the sign-in straight away.
@@ -116,7 +116,7 @@ class MailFragment : KitComposeFragment() {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            if (creds.mode != MailAuthMode.BEARER) OutlinedTextField(
+            OutlinedTextField(
                 value = password, onValueChange = { password = it }, singleLine = true,
                 label = { Text(stringResource(R.string.mail_password_hint)) },
                 visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),

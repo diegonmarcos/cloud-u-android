@@ -378,7 +378,7 @@ class JmapClient(
         exec(request(url).post(payload.toRequestBody("application/json".toMediaType())).build())
 
     private fun request(url: String) = Request.Builder().url(url)
-        .header("Authorization", authHeader)   // the interceptor swaps this for the Bearer token in BEARER mode
+        .header("Authorization", authHeader)   // the mailbox login; the gate's fleet token rides in X-Fleet-Authorization (GateHeaderInterceptor)
         .header("Accept", "application/json")
 
     private fun exec(req: Request): String = http.newCall(req).execute().use { resp ->

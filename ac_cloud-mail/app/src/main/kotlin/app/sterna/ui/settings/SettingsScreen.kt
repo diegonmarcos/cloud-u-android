@@ -1783,6 +1783,8 @@ private fun AccountDetailScreen(
                             onMode = { viewModel.setGatewayMode(accountId, it) },
                             onSignIn = { signInOpen = true },
                             onSignOut = { clearAutheliaWebSession(); viewModel.autheliaSignOut(accountId) },
+                            fleetToken = viewModel.gatewayAuth(accountId).fleetToken,
+                            onFleetToken = { viewModel.setFleetToken(accountId, it) },
                         )
                     }
                 }

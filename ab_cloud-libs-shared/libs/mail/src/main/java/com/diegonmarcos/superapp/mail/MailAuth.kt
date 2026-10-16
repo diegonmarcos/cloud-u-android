@@ -18,7 +18,8 @@ import kotlinx.serialization.json.put
  * jmap.diegonmarcos.com and the other public mail APIs). This is separate from the JMAP login
  * (email + password, Basic) the server itself checks:
  *  - [NONE]     nothing extra; the JMAP login alone (a LAN / unprotected server).
- *  - [BEARER]   `Authorization: Bearer <token>` on every request to the account's endpoints.
+ *  - [BEARER]   the fleet token as `X-Fleet-Authorization: Bearer <token>` on every request to the account's
+ *               endpoints; `Authorization` stays the mailbox login (the gate strips the fleet header).
  *  - [AUTHELIA] the `authelia_session` cookie the in-app Authelia web sign-in captured, replayed
  *               from the account's cookie jar (the JMAP Basic login rides along).
  */
@@ -32,7 +33,7 @@ enum class MailAuthMode { NONE, BEARER, AUTHELIA;
  */
 data class MailAuthCreds(
     val mode: MailAuthMode = MailAuthMode.NONE,
-    /** The pasted bearer token (mode BEARER). */
+    /** The pasted fleet token (mode BEARER), sent as X-Fleet-Authorization. */
     val bearer: String = "",
     /** The `authelia_session` cookie VALUE (mode AUTHELIA). */
     val sessionCookie: String = "",
@@ -134,6 +135,6 @@ fun JmapPrefs.jmapClient(ctx: Context): JmapClient = JmapClient(server, email, p
 
 /** Whether the active login can talk to its server: a password login, or a gateway credential instead. */
 fun JmapPrefs.signedIn(ctx: Context): Boolean {
-    val mode = MailAuthStore.of(ctx).load(MailAuthStore.accountKey(server, email)).mode
-    return if (mode == MailAuthMode.NONE) email.isNotEmpty() && password.isNotEmpty() else server.isNotBlank()
+    // The mailbox login is needed in every mode: the gate credential (token / cookie) rides next to it.
+    return email.isNotEmpty() && password.isNotEmpty() && server.isNotBlank()
 }

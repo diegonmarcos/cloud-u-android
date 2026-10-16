@@ -23,6 +23,7 @@ object MailConnTest {
     }
 
     fun describe(ctx: Context, p: ConnProblem, code: Int?, detail: String): String = when (p) {
+        ConnProblem.GATE_REJECTED -> ctx.getString(R.string.mail_auth_err_gate)
         ConnProblem.UNAUTHORIZED -> ctx.getString(R.string.mail_auth_err_401)
         ConnProblem.FORBIDDEN -> ctx.getString(R.string.mail_auth_err_403)
         ConnProblem.TLS -> ctx.getString(R.string.mail_auth_err_tls)

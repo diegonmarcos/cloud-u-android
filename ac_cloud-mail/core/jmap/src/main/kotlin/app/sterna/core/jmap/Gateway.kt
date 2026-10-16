@@ -39,17 +39,69 @@ object GatewayCookies {
 }
 
 /**
- * Network interceptor: on every hop (redirects included) sends the gateway cookie to hosts of the
- * domain it belongs to, and to no other. Runs per hop on purpose: an application-level header
- * would ride a redirect to a foreign host.
+ * The fleet token of a Bearer-mode account, per domain, in memory only (restored from the encrypted
+ * store like [GatewayCookies]). The gate reads it from `X-Fleet-Authorization`, never from
+ * `Authorization`, which stays the mailbox login (Stalwart Basic / API token) behind the gate.
+ */
+object GatewayFleetTokens {
+    private val byDomain = ConcurrentHashMap<String, String>()
+
+    fun set(host: String, token: String?) {
+        val d = GatewayCookies.domainOf(host)
+        if (token.isNullOrBlank()) byDomain.remove(d) else byDomain[d] = token.trim()
+    }
+
+    fun tokenFor(host: String): String? = byDomain[GatewayCookies.domainOf(host)]
+}
+
+/** The gate credentials as request headers. Pure, so the composition is unit-tested. */
+object GatewayHeaders {
+    const val FLEET = "X-Fleet-Authorization"
+
+    /**
+     * Headers to add for a request to [host]: the Authelia cookie (cookie mode) and/or the fleet token
+     * header (Bearer mode), each only when the request does not already carry that header. Never
+     * touches `Authorization`.
+     */
+    fun compose(host: String, hasCookie: Boolean, hasFleet: Boolean): Map<String, String> {
+        val out = LinkedHashMap<String, String>()
+        val cookie = GatewayCookies.cookieFor(host)
+        if (cookie != null && !hasCookie) out["Cookie"] = "${GatewayCookies.NAME}=$cookie"
+        val fleet = GatewayFleetTokens.tokenFor(host)
+        if (fleet != null && !hasFleet) out[FLEET] = "Bearer $fleet"
+        return out
+    }
+}
+
+/**
+ * Network interceptor: on every hop (redirects included) sends the gateway credentials (the cookie, or
+ * the fleet token in `X-Fleet-Authorization`) to hosts of the domain they belong to, and to no other.
+ * Runs per hop on purpose: an application-level header would ride a redirect to a foreign host.
  */
 class GatewayCookieInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val req = chain.request()
-        val cookie = GatewayCookies.cookieFor(req.url.host)
-        val signed = if (cookie != null && req.header("Cookie") == null)
-            req.newBuilder().header("Cookie", "${GatewayCookies.NAME}=$cookie").build() else req
-        return chain.proceed(signed)
+        val extra = GatewayHeaders.compose(req.url.host, req.header("Cookie") != null, req.header(GatewayHeaders.FLEET) != null)
+        if (extra.isEmpty()) return chain.proceed(req)
+        val b = req.newBuilder()
+        extra.forEach { (k, v) -> b.header(k, v) }
+        return chain.proceed(b.build())
+    }
+}
+
+/** Which layer refused a request: the edge gate in front, or the mailbox (Stalwart) behind it. */
+enum class RejectionLayer {
+    GATE, MAILBOX;
+
+    companion object {
+        /**
+         * A 401/403 carrying the mail server's own marks (a `WWW-Authenticate` challenge naming Stalwart,
+         * or a JSON problem body) came from the mailbox; the gate answers with a redirect to auth.* or a
+         * bare / HTML 401. Pure, so both answers are pinned by tests.
+         */
+        fun of(wwwAuthenticate: List<String>, contentType: String?): RejectionLayer =
+            if (wwwAuthenticate.any { it.contains("stalwart", ignoreCase = true) } ||
+                contentType?.contains("json", ignoreCase = true) == true) MAILBOX else GATE
     }
 }
 
@@ -66,20 +118,34 @@ class GatewayRedirectGuard : Interceptor {
         if (resp.priorResponse != null && landed.startsWith("auth.") && !req.url.host.startsWith("auth.")) {
             resp.close()
             GatewayCookies.markRejected(req.url.host)
-            throw JmapException("Sign-in required: the server redirected to its login page", httpCode = 401)
+            throw JmapException("Sign-in required: the server redirected to its login page", httpCode = 401, gate = true)
         }
-        if (resp.code == 401) GatewayCookies.markRejected(req.url.host)
+        // A 401/403 from the GATE (no mail-server marks) is the gate refusing the fleet token / session; one
+        // from the mailbox is the account login being wrong and must not flag the gateway credential.
+        if (resp.code == 401 || resp.code == 403) {
+            val host = req.url.host
+            val gated = GatewayCookies.cookieFor(host) != null || GatewayFleetTokens.tokenFor(host) != null
+            val layer = RejectionLayer.of(resp.headers("WWW-Authenticate"), resp.header("Content-Type"))
+            if (gated && layer == RejectionLayer.GATE) {
+                val code = resp.code
+                resp.close()
+                GatewayCookies.markRejected(host)
+                throw JmapException("The edge gate refused the request ($code)", httpCode = code, gate = true)
+            }
+            if (resp.code == 401 && !gated) GatewayCookies.markRejected(host)
+        }
         return resp
     }
 }
 
 /** Test-connection failures told apart in words: 401, 403, TLS, DNS, timeout, refused. */
 object GatewayErrors {
-    enum class Kind { UNAUTHORIZED, FORBIDDEN, TLS, DNS, TIMEOUT, REFUSED, OTHER }
+    enum class Kind { GATE, UNAUTHORIZED, FORBIDDEN, TLS, DNS, TIMEOUT, REFUSED, OTHER }
 
     fun kind(t: Throwable): Kind {
         var c: Throwable? = t
         while (c != null) {
+            if (c is JmapException && c.gate) return Kind.GATE
             if (c is JmapException) when (c.httpCode) { 401 -> return Kind.UNAUTHORIZED; 403 -> return Kind.FORBIDDEN }
             when (c) {
                 is javax.net.ssl.SSLException -> return Kind.TLS
@@ -93,8 +159,9 @@ object GatewayErrors {
     }
 
     fun describe(t: Throwable): String = when (kind(t)) {
-        Kind.UNAUTHORIZED -> "401 Unauthorized: the server rejected the credential. Check the token, or sign in again."
-        Kind.FORBIDDEN -> "403 Forbidden: signed in, but not allowed to use this server."
+        Kind.GATE -> "Gate refused: the edge gate rejected the fleet token or Authelia session (the mailbox was not reached). Check the token, or sign in again."
+        Kind.UNAUTHORIZED -> "401 Unauthorized: the mailbox rejected the account login. The gate let the request through; check the password or API token."
+        Kind.FORBIDDEN -> "403 Forbidden: the account login is valid, but not allowed to use this server."
         Kind.TLS -> "TLS error: the certificate could not be verified for this host."
         Kind.DNS -> "DNS error: the server name could not be resolved. Check the address and the network."
         Kind.TIMEOUT -> "Timed out: the server did not answer."

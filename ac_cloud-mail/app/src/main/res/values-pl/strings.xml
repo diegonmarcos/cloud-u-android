@@ -1357,7 +1357,9 @@
     <string name="gw_bearer">Token Bearer</string>
     <string name="gw_authelia">Authelia</string>
     <string name="gw_none_hint">Brak danych bramki: wysyłane jest tylko logowanie do konta.</string>
-    <string name="gw_bearer_hint">Wklej token w polu tokenu API powyżej. Jest wysyłany jako Authorization: Bearer w każdym żądaniu. Zapisz, a potem przetestuj połączenie.</string>
+    <string name="gw_bearer_hint">Token floty jest wysyłany jako X-Fleet-Authorization w każdym żądaniu; logowanie do konta (hasło lub token API powyżej) pozostaje w Authorization dla serwera poczty. Zapisz, a potem przetestuj połączenie.</string>
+    <string name="gw_fleet_token_label">Token floty</string>
+    <string name="gw_fleet_token_save">Zapisz token</string>
     <string name="gw_sign_in">Zaloguj przez Authelię</string>
     <string name="gw_sign_in_again">Zaloguj ponownie</string>
     <string name="gw_sign_out">Wyloguj</string>

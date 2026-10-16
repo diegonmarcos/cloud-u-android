@@ -83,8 +83,9 @@
     <string name="mail_auth_status_needs_sign_in">Requiere iniciar sesión</string>
     <string name="mail_auth_status_error">Error</string>
     <string name="mail_auth_ok">Conectado — cuenta %1$s</string>
-    <string name="mail_auth_err_401">401 No autorizado — el servidor rechazó la credencial. Revisa el token o inicia sesión de nuevo.</string>
-    <string name="mail_auth_err_403">403 Prohibido — la sesión es válida pero no tienes permiso en este servidor.</string>
+    <string name="mail_auth_err_gate">Puerta rechazada — la puerta de acceso rechazó el token de flota o la sesión de Authelia (el buzón no se alcanzó). Revisa el token o inicia sesión de nuevo.</string>
+    <string name="mail_auth_err_401">401 No autorizado — el buzón rechazó el acceso (correo o contraseña). La puerta dejó pasar la solicitud.</string>
+    <string name="mail_auth_err_403">403 Prohibido — el acceso al buzón es válido pero no tienes permiso en este servidor.</string>
     <string name="mail_auth_err_tls">Error TLS — no se pudo verificar el certificado de este host.</string>
     <string name="mail_auth_err_dns">Error DNS — no se pudo resolver el nombre del servidor. Revisa la dirección y la red.</string>
     <string name="mail_auth_err_timeout">Tiempo agotado — el servidor no respondió.</string>

@@ -1340,7 +1340,9 @@
     <string name="gw_bearer">Bearer-token</string>
     <string name="gw_authelia">Authelia</string>
     <string name="gw_none_hint">Geen gateway-inloggegevens: alleen de accountlogin wordt verstuurd.</string>
-    <string name="gw_bearer_hint">Plak het token in het API-tokenveld hierboven. Het wordt bij elk verzoek als Authorization: Bearer verstuurd. Sla op en test de verbinding.</string>
+    <string name="gw_bearer_hint">Het vlootteken wordt bij elk verzoek als X-Fleet-Authorization verstuurd; de accountlogin (wachtwoord of API-token hierboven) blijft in Authorization voor de mailserver. Opslaan, daarna de verbinding testen.</string>
+    <string name="gw_fleet_token_label">Vlootteken</string>
+    <string name="gw_fleet_token_save">Token opslaan</string>
     <string name="gw_sign_in">Inloggen met Authelia</string>
     <string name="gw_sign_in_again">Opnieuw inloggen</string>
     <string name="gw_sign_out">Uitloggen</string>

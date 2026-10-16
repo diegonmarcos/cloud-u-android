@@ -1393,7 +1393,9 @@
     <string name="gw_bearer">Token Bearer</string>
     <string name="gw_authelia">Authelia</string>
     <string name="gw_none_hint">Sin credencial de pasarela: solo se envía el acceso de la cuenta.</string>
-    <string name="gw_bearer_hint">Pega el token en el campo de token de API de arriba. Se envía como Authorization: Bearer en cada petición. Guarda y prueba la conexión.</string>
+    <string name="gw_bearer_hint">El token de flota se envía como X-Fleet-Authorization en cada solicitud; el acceso de la cuenta (contraseña o token de API arriba) sigue en Authorization para el servidor de correo. Guarda y prueba la conexión.</string>
+    <string name="gw_fleet_token_label">Token de flota</string>
+    <string name="gw_fleet_token_save">Guardar token</string>
     <string name="gw_sign_in">Iniciar sesión con Authelia</string>
     <string name="gw_sign_in_again">Iniciar sesión de nuevo</string>
     <string name="gw_sign_out">Cerrar sesión</string>

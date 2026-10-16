@@ -1337,7 +1337,9 @@
     <string name="gw_bearer">Bearer-Token</string>
     <string name="gw_authelia">Authelia</string>
     <string name="gw_none_hint">Keine Gateway-Anmeldung: nur das Kontopasswort wird gesendet.</string>
-    <string name="gw_bearer_hint">Füge den Token oben in das API-Token-Feld ein. Er wird bei jeder Anfrage als Authorization: Bearer gesendet. Speichern, dann die Verbindung testen.</string>
+    <string name="gw_bearer_hint">Das Flottentoken wird bei jeder Anfrage als X-Fleet-Authorization gesendet; die Kontoanmeldung (Passwort oder API-Token oben) bleibt in Authorization für den Mailserver. Speichern, dann Verbindung testen.</string>
+    <string name="gw_fleet_token_label">Flottentoken</string>
+    <string name="gw_fleet_token_save">Token speichern</string>
     <string name="gw_sign_in">Mit Authelia anmelden</string>
     <string name="gw_sign_in_again">Erneut anmelden</string>
     <string name="gw_sign_out">Abmelden</string>

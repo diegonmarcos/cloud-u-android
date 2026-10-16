@@ -76,15 +76,27 @@ class AccountsViewModel(application: Application) : AndroidViewModel(application
         )
     }
 
-    /** None / Bearer token / Authelia. Bearer is the API-token auth type (the token goes in the secret field). */
+    /**
+     * None / Bearer token / Authelia. Bearer sends the fleet token as X-Fleet-Authorization and keeps the
+     * account's own secret (password or API token) in Authorization; neither mode touches the auth type.
+     */
     fun setGatewayMode(id: String, mode: GatewayMode) {
         val acc = store.account(id) ?: return
         if (acc.authType == AuthType.OAUTH) return
         when (mode) {
-            GatewayMode.NONE -> { store.setAuthType(id, AuthType.BASIC); gateway.setAuthelia(id, acc.server, false) }
-            GatewayMode.BEARER -> { store.setAuthType(id, AuthType.API_TOKEN); gateway.setAuthelia(id, acc.server, false) }
-            GatewayMode.AUTHELIA -> { store.setAuthType(id, AuthType.BASIC); gateway.setAuthelia(id, acc.server, true) }
+            GatewayMode.NONE -> { gateway.setBearer(id, acc.server, false); gateway.setAuthelia(id, acc.server, false) }
+            GatewayMode.BEARER -> gateway.setBearer(id, acc.server, true)
+            GatewayMode.AUTHELIA -> gateway.setAuthelia(id, acc.server, true)
         }
+        lastTestFailed = false
+        _connTest.value = ConnTest.Idle
+        _gatewayVersion.update { it + 1 }
+    }
+
+    /** The fleet token typed in the Bearer section: sealed, and on the wire at once. */
+    fun setFleetToken(id: String, token: String) {
+        val acc = store.account(id) ?: return
+        gateway.setFleetToken(id, acc.server, token)
         lastTestFailed = false
         _connTest.value = ConnTest.Idle
         _gatewayVersion.update { it + 1 }

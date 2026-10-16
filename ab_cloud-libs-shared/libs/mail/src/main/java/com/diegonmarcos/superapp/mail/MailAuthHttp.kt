@@ -46,10 +46,60 @@ object MailAuthScope {
         serverHost.isNotEmpty() && (serverHost.equals(requestHost, true) || registrable(serverHost) == registrable(requestHost))
 }
 
+/** Which layer refused a request: the edge gate in front, or the mailbox (Stalwart) behind it. */
+enum class RejectionLayer {
+    GATE, MAILBOX;
+
+    companion object {
+        /**
+         * A 401/403 that carries the mail server's own marks (a `WWW-Authenticate` challenge naming
+         * Stalwart, or a JSON problem body) came from the mailbox; the gate answers with a redirect to
+         * auth.* or a bare/HTML 401. Pure, so both answers are pinned by tests.
+         */
+        fun of(wwwAuthenticate: List<String>, contentType: String?): RejectionLayer =
+            if (wwwAuthenticate.any { it.contains("stalwart", ignoreCase = true) } ||
+                contentType?.contains("json", ignoreCase = true) == true) MAILBOX else GATE
+    }
+}
+
 /** A gateway answered with its sign-in page instead of the API: the credential is missing or dead. */
 class MailAuthRequiredException(message: String) : IOException(message)
 
-/** Adds `Authorization: Bearer <token>` to every request to the account's endpoints (mode BEARER). */
+/**
+ * The edge gate's credential on the wire. The fleet token travels in its OWN header so the
+ * request's `Authorization` stays the mailbox login (Stalwart Basic) the server behind the gate checks:
+ * the gate validates `X-Fleet-Authorization` and strips it, Stalwart sees `Authorization` untouched.
+ * Pure, so the composition is unit-tested.
+ */
+object GateHeaders {
+    const val FLEET = "X-Fleet-Authorization"
+
+    /** The gate headers for a request to [requestHost]; empty unless the account is in BEARER mode with a token. */
+    fun forRequest(serverHost: String, requestHost: String, c: MailAuthCreds): Map<String, String> =
+        if (c.mode == MailAuthMode.BEARER && c.bearer.isNotBlank() && MailAuthScope.allows(serverHost, requestHost))
+            mapOf(FLEET to "Bearer ${c.bearer.trim()}")
+        else emptyMap()
+}
+
+/**
+ * Network interceptor (per hop, so a redirect to a foreign host never carries the token): adds
+ * [GateHeaders] and leaves `Authorization` alone. The Authelia cookie goes through [AutheliaCookieJar].
+ */
+class GateHeaderInterceptor(
+    private val serverHost: String,
+    private val creds: () -> MailAuthCreds,
+) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val req = chain.request()
+        val extra = GateHeaders.forRequest(serverHost, req.url.host, creds())
+        if (extra.isEmpty()) return chain.proceed(req)
+        val b = req.newBuilder()
+        extra.forEach { (k, v) -> b.header(k, v) }
+        return chain.proceed(b.build())
+    }
+}
+
+/** Detects a gateway refusal (401, or a redirect to its sign-in portal) and reports it; adds no headers. */
 class MailAuthInterceptor(
     private val serverHost: String,
     private val creds: () -> MailAuthCreds,
@@ -59,10 +109,14 @@ class MailAuthInterceptor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val req = chain.request()
         val c = creds()
-        val signed = if (c.mode == MailAuthMode.BEARER && c.bearer.isNotBlank() && MailAuthScope.allows(serverHost, req.url.host))
-            req.newBuilder().header("Authorization", "Bearer ${c.bearer.trim()}").build()
-        else req
-        val resp = chain.proceed(signed)
+        val resp = chain.proceed(req)
+        // The gate itself refused (401/403 from the gate, not from the mailbox behind it).
+        if ((resp.code == 401 || resp.code == 403) && c.mode != MailAuthMode.NONE &&
+            RejectionLayer.of(resp.headers("WWW-Authenticate"), resp.header("Content-Type")) == RejectionLayer.GATE) {
+            resp.close()
+            onRejected()
+            throw MailAuthRequiredException("the gate refused the request (${resp.code})")
+        }
         // A redirect (followed by OkHttp) that ended on the Authelia portal means no usable credential.
         if (resp.priorResponse != null && AutheliaPortal.isPortalHost(resp.request.url.host) &&
             !AutheliaPortal.isPortalHost(req.url.host)) {
@@ -70,7 +124,6 @@ class MailAuthInterceptor(
             if (c.mode != MailAuthMode.NONE) onRejected()
             throw MailAuthRequiredException("redirected to the sign-in portal")
         }
-        if (resp.code == 401 && c.mode != MailAuthMode.NONE) onRejected()
         return resp
     }
 }
@@ -112,6 +165,7 @@ object MailHttp {
             .readTimeout(30, TimeUnit.SECONDS)
             .cookieJar(AutheliaCookieJar(host, creds, onRefresh))
             .addInterceptor(MailAuthInterceptor(host, creds, onRejected))
+            .addNetworkInterceptor(GateHeaderInterceptor(host, creds))
             .build()
     }
 
@@ -125,8 +179,11 @@ object MailHttp {
     }
 }
 
-/** What went wrong reaching an account, as a closed set the UI words (and tests pin). */
-enum class ConnProblem { UNAUTHORIZED, FORBIDDEN, TLS, DNS, TIMEOUT, REFUSED, HTTP, OTHER }
+/**
+ * What went wrong reaching an account, as a closed set the UI words (and tests pin). GATE_REJECTED is the
+ * edge gate (fleet token / Authelia session); UNAUTHORIZED and FORBIDDEN are the mailbox login behind it.
+ */
+enum class ConnProblem { GATE_REJECTED, UNAUTHORIZED, FORBIDDEN, TLS, DNS, TIMEOUT, REFUSED, HTTP, OTHER }
 
 object ConnErrors {
     fun classify(code: Int?, cause: Throwable?): ConnProblem {
@@ -138,7 +195,7 @@ object ConnErrors {
         var t = cause
         while (t != null) {
             when (t) {
-                is MailAuthRequiredException -> return ConnProblem.UNAUTHORIZED
+                is MailAuthRequiredException -> return ConnProblem.GATE_REJECTED
                 is SSLException -> return ConnProblem.TLS
                 is UnknownHostException -> return ConnProblem.DNS
                 is SocketTimeoutException -> return ConnProblem.TIMEOUT

@@ -18,4 +18,6 @@ class JmapException(
          * The server REFUSED this delivery, and replaying it can only duplicate what already went out.
          */
     val permanent: Boolean = false,
+        /** The EDGE GATE refused the request (fleet token / Authelia session), not the mailbox behind it. */
+    val gate: Boolean = false,
 ) : Exception(message, cause)

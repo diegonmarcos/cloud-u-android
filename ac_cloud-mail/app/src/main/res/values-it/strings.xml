@@ -1343,7 +1343,9 @@
     <string name="gw_bearer">Token Bearer</string>
     <string name="gw_authelia">Authelia</string>
     <string name="gw_none_hint">Nessuna credenziale del gateway: viene inviato solo l\'accesso dell\'account.</string>
-    <string name="gw_bearer_hint">Incolla il token nel campo token API qui sopra. Viene inviato come Authorization: Bearer a ogni richiesta. Salva, poi prova la connessione.</string>
+    <string name="gw_bearer_hint">Il token della flotta viene inviato come X-Fleet-Authorization a ogni richiesta; l\'accesso dell\'account (password o token API sopra) resta in Authorization per il server di posta. Salva, poi prova la connessione.</string>
+    <string name="gw_fleet_token_label">Token della flotta</string>
+    <string name="gw_fleet_token_save">Salva token</string>
     <string name="gw_sign_in">Accedi con Authelia</string>
     <string name="gw_sign_in_again">Accedi di nuovo</string>
     <string name="gw_sign_out">Esci</string>

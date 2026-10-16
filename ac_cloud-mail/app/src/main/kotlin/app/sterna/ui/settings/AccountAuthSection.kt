@@ -17,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -50,6 +52,8 @@ object AccountAuthTags {
     const val CHIP = "account_auth_chip"
     const val SIGN_IN = "account_auth_sign_in"
     const val SIGN_OUT = "account_auth_sign_out"
+    const val FLEET_TOKEN = "account_auth_fleet_token"
+    const val FLEET_SAVE = "account_auth_fleet_save"
     fun mode(m: GatewayMode) = "account_auth_mode_${m.name.lowercase()}"
 }
 
@@ -100,6 +104,8 @@ fun AccountAuthSection(
     onMode: (GatewayMode) -> Unit,
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
+    fleetToken: String = "",
+    onFleetToken: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val modes = GatewayMode.entries
@@ -132,7 +138,20 @@ fun AccountAuthSection(
         }
         when (mode) {
             GatewayMode.NONE -> Hint(R.string.gw_none_hint)
-            GatewayMode.BEARER -> Hint(R.string.gw_bearer_hint)
+            GatewayMode.BEARER -> {
+                Hint(R.string.gw_bearer_hint)
+                var draft by remember(fleetToken) { mutableStateOf(fleetToken) }
+                OutlinedTextField(
+                    value = draft, onValueChange = { draft = it }, singleLine = true,
+                    label = { Text(stringResource(R.string.gw_fleet_token_label)) },
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth().testTag(AccountAuthTags.FLEET_TOKEN),
+                )
+                Button(
+                    onClick = { onFleetToken(draft) }, enabled = draft.trim() != fleetToken,
+                    modifier = Modifier.testTag(AccountAuthTags.FLEET_SAVE),
+                ) { Text(stringResource(R.string.gw_fleet_token_save)) }
+            }
             GatewayMode.AUTHELIA -> {
                 val signed = status == GatewayStatus.SIGNED_IN
                 if (signed && signedInAt > 0) {
