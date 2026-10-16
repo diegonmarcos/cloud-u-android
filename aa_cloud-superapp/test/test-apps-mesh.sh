@@ -82,13 +82,13 @@ echo "$out" | grep -qx 'ORDER firewall,dns,wg,apps-mesh,ipc,adb-shell' && ok "Se
   || bad "Setup ▸ Network is not firewall, dns, wg, apps-mesh, ipc, adb-shell in that order"
 
 echo "== C2: one page, two entry points =="
-code "$FRAG" | grep -qF 'AppsMesh.page(this, col)' && ok "AppsMeshFragment hosts AppsMesh.page" \
-  || bad "AppsMeshFragment does not draw AppsMesh.page"
+code "$FRAG" | grep -qF 'AppsMesh.Page(this@AppsMeshFragment)' && ok "AppsMeshFragment hosts AppsMesh.Page" \
+  || bad "AppsMeshFragment does not draw AppsMesh.Page"
 # #896.3 the Store's entry point is Cloud Store's Access page, which hosts the SAME AppsMeshFragment (no copy).
 ACCESS="$ROOT/ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt"
 grep -qF 'AndroidFragment<AppsMeshFragment>' "$ACCESS" && ok "Store's Access page hosts the same AppsMeshFragment (AppsMesh.page)" \
   || bad "Store's Access page does not host AppsMeshFragment — the two entry points show different pages"
-{ grep -qF 'StoreMesh.render' "$PAGE" || grep -qF 'AppsMesh.page(' "$PAGE"; } && bad "the Cloud page still draws its own mesh" \
+{ grep -qF 'StoreMesh.Mesh' "$PAGE" || grep -qF 'AppsMesh.Page(' "$PAGE"; } && bad "the Cloud page still draws its own mesh" \
   || ok "the Cloud page draws no mesh (it moved to Access)"
 # #865 directly, or through the Cloud Store hand-off that embeds it until Cloud Store is installed.
 HANDOFF="$(dirname "$PAGES")/../apps/CloudStoreHandoff.kt"
@@ -96,10 +96,10 @@ HANDOFF="$(dirname "$PAGES")/../apps/CloudStoreHandoff.kt"
   { grep -qE 'sectionId == "config" && pageId == "apps-mesh" +-> .*CloudStoreHandoff\.page\(pageId\)' "$PAGES" &&
     grep -qE '"apps-mesh" +to +[A-Za-z.]*AppsMeshFragment::class\.java' "$HANDOFF"; }; } \
   && ok "config/apps-mesh routes to AppsMeshFragment" || bad "config/apps-mesh does not route to AppsMeshFragment"
-callers="$(grep -rlF 'StoreMesh.render(' "$LIBS" "$APP/app/src/main" --include=*.kt | xargs -r -n1 sh -c 'python3 - "$0" <<EOF
+callers="$(grep -rlF 'StoreMesh.Mesh(' "$LIBS" "$APP/app/src/main" --include=*.kt | xargs -r -n1 sh -c 'python3 - "$0" <<EOF
 import re,sys
 s=open(sys.argv[1]).read(); s=re.sub(r"/\*.*?\*/","",s,flags=re.S); s=re.sub(r"(?m)^\s*//.*$","",s)
-print(sys.argv[1] if "StoreMesh.render(" in s else "")
+print(sys.argv[1] if "StoreMesh.Mesh(" in s else "")
 EOF' | grep -v '^$' | xargs -r -n1 basename | sort -u | tr '\n' ' ')"
 [ "$callers" = "AppsMesh.kt " ] && ok "only AppsMesh draws the mesh (callers: $callers)" \
   || bad "the mesh is drawn outside AppsMesh: $callers"
@@ -122,16 +122,17 @@ branch api     | grep -qF 'row.docs[app.id]?.let { body ->' && branch api | grep
   && ok "Docs unfolds in the card and reuses the fetched copy" || bad "Docs does not unfold in the card from a cached copy"
 branch start   | grep -qF 'FleetPeers.wake('  && branch start | grep -qF 'row.reprobe(app)' \
   && ok "Wake wakes through the fleet provider, then re-probes that member" || bad "Wake does not use FleetPeers.wake and re-probe"
-branch stop    | grep -qF 'PhoneAppActions.forceStop('  && branch stop | grep -qF 'store_fleet_stop_no_channel' \
+branch stop    | grep -qF 'PhoneAppActions.forceStop('  && branch stop | grep -qF 'row.noChannel(app)' \
+  && code "$MESH" | grep -qF 'store_fleet_stop_no_channel' \
   && ok "Stop force-stops via the privileged channel and says so when none is armed" \
   || bad "Stop does not use the shell channel, or is silent when it is not armed"
 branch open    | grep -qF 'getLaunchIntentForPackage'   && ok "Open launches the app" || bad "Open does not launch the app"
-DPAGE="$(code "$MESH" | awk '/fun detailsPage\(/{f=1} f{print} f && /^        }$/{exit}')"
+DPAGE="$(code "$MESH" | awk '/fun DetailsPage\(/{f=1} f{print} f && /^        }$/{exit}')"
 printf '%s' "$DPAGE" | grep -qF 'details(appCtx, app' && ok "Details builds the full detail text (on its sub-page)" || bad "the Details page does not build details()"
 fn "$MESH" details | grep -qF 'installedDetails' && fn "$MESH" details | grep -qF 'permissions(' \
   && ok "details() reads the installed APK identity and its permissions" || bad "details() lacks installed identity or permissions"
 printf '%s' "$DPAGE" | grep -qF '"copy" to { copy(ctx, body) }' && ok "the Details page offers Copy all" || bad "no Copy all on the Details page"
-fn "$MESH" page | grep -qF 'val mine = actionsFor(decl, onStore != null)' && fn "$MESH" page | grep -qF 'for (a in cs)' \
+fn "$MESH" ColumnScope.MemberButtons | grep -qF 'val mine = actionsFor(decl, onStore != null)' && fn "$MESH" ColumnScope.MemberButtons | grep -qF 'for (a in cs)' \
   && ok "each member's card draws the declared actions" || bad "member cards do not draw the declared actions"
 code "$MESH" | grep -qF 'fun showActions(' && bad "a member's actions still hide behind a dialog" || ok "no action dialog: the buttons are on the card"
 
@@ -144,8 +145,8 @@ for k in $kinds; do
     && ok "gap $k has its words and fix declared" || bad "gap $k has no label/fix in apps_mesh.gaps"
   printf '%s' "$gaps_fn" | grep -qF "GapKind.$k" && ok "gaps() can report $k" || bad "gaps() never reports $k"
 done
-fn "$MESH" share | grep -qF 'Intent.ACTION_SEND' && fn "$MESH" page | grep -qF 'report(decl' \
-  && fn "$MESH" page | grep -qF '"export" to { share(host, "Apps Mesh", "text/plain", report()) }' \
+fn "$MESH" share | grep -qF 'Intent.ACTION_SEND' && fn "$MESH" GapsPage | grep -qF 'report(decl' \
+  && fn "$MESH" GapsPage | grep -qF '"export" to { share(host, "Apps Mesh", "text/plain", report()) }' \
   && ok "Export shares the page's report" || bad "Export does not share report()"
 
 echo "== C5: every mesh member can see every other (the manifest-only gap, fixed) =="
@@ -179,20 +180,44 @@ clip="$(printf '%s\n' "$cv" | grep -nF 'ClipboardCard(' | cut -d: -f1)"
   || bad "the peer selector is not drawn above the action cards (selector@$sel clipboard@$clip)"
 
 echo "== C7: the Store's own controls, filters, lazy probe (#793) =="
-MPAGE="$(fn "$MESH" page)"
-[ -n "$MPAGE" ] || bad "could not isolate AppsMesh.page — the checks below would verify nothing"
-fn "$BAR" button | grep -qF 'setTag(R.id.store_control, BUTTON)' && fn "$BAR" chip | grep -qF 'setTag(R.id.store_control, style)' \
+MROOT="$(fn "$MESH" Root)"
+[ -n "$MROOT" ] || bad "could not isolate AppsMesh's Root page — the checks below would verify nothing"
+fn "$BAR" Button | grep -qF 'storeControl = BUTTON' && fn "$BAR" Chip | grep -qF 'storeControl = CHIP' \
   && ok "StoreBar owns the one marked button and the one marked chip" || bad "StoreBar's button/chip carry no mark"
-fn "$BAR" btn | grep -qF 'button(ctx, StoreControls.load(ctx).action' && ok "the Store bar (Check all …) draws StoreBar.button" \
+fn "$BAR" Bar | grep -qF 'Button(ctx.getString(R.string.store_bar_check_all)' && ok "the Store bar (Check all …) draws StoreBar.Button" \
   || bad "the Store bar draws its own buttons"
-fn "$PAGE" btn | grep -qF 'StoreBar.button(' && ok "the Store's app rows draw StoreBar.button" \
+fn "$BAR" Actions | grep -qF 'StoreBar.Button(' && fn "$PAGE" FleetDetail | grep -qF 'StoreRow.Actions(' \
+  && ok "the Store's app rows draw StoreBar.Button (through StoreRow.Actions)" \
   || bad "the Store's app rows draw their own buttons"
-fn "$PAGE" filterBar | grep -qF 'StoreBar.chip(' && ok "the Store's filter draws StoreBar.chip" \
+# The Store's filter is the shared chip: the page asks StoreRow.Filters, which draws every chip with StoreBar.Chip.
+# (c7filter <Cloud page> <StoreBar.kt>: prints one FAIL line per defect, so a mutant can prove it goes red.)
+c7filter() {
+  fn "$1" FleetPage | grep -qF 'StoreRow.Filters(' || echo "FAIL the Store's filter is not StoreRow.Filters"
+  fn "$2" Filters | grep -qF 'StoreBar.Chip(' || echo "FAIL StoreRow.Filters draws its own chips"
+  fn "$1" FleetPage | grep -qE '\bText\(.*(All|Updates|Missing|Installed)' && echo "FAIL the Store's filter labels are drawn as plain text"
+  return 0
+}
+[ -z "$(c7filter "$PAGE" "$BAR")" ] && ok "the Store's filter draws StoreBar.Chip (StoreRow.Filters)" \
   || bad "the Store's filter draws its own chips"
-n="$(code "$MESH" | grep -cF 'StoreBar.button(')"
-[ "$n" -ge 2 ] && ok "Apps Mesh draws its buttons with StoreBar.button ($n call sites: member rows, controls())" \
-  || bad "Apps Mesh has only $n StoreBar.button call sites"
-printf '%s' "$MPAGE" | grep -qF 'StoreBar.chip(' && ok "Apps Mesh filters with StoreBar.chip" \
+C7W="$(mktemp -d)"
+cp "$PAGE" "$C7W/page.kt"; cp "$BAR" "$C7W/bar.kt"
+python3 - "$C7W/page.kt" <<'EOF' || bad "C7 mutation 'the Store filter is plain text' did not apply"
+import sys; p = sys.argv[1]; s = open(p).read()
+old = "StoreRow.Filters(listOf(\"All\""; assert old in s, old
+open(p, "w").write(s.replace(old, "Text(listOf(\"All\"", 1))
+EOF
+[ -n "$(c7filter "$C7W/page.kt" "$BAR")" ] && ok "C7 mutant 'the Store filter is not the shared chip line' goes red" || bad "C7 mutant 'the Store filter is not the shared chip line' stayed GREEN"
+python3 - "$C7W/bar.kt" <<'EOF' || bad "C7 mutation 'Filters draws its own chip' did not apply"
+import sys; p = sys.argv[1]; s = open(p).read()
+i = s.index("fun Filters("); j = s.index("StoreBar.Chip(", i)
+open(p, "w").write(s[:j] + "Text(" + s[j + len("StoreBar.Chip("):])
+EOF
+[ -n "$(c7filter "$PAGE" "$C7W/bar.kt")" ] && ok "C7 mutant 'StoreRow.Filters draws its own chip' goes red" || bad "C7 mutant 'StoreRow.Filters draws its own chip' stayed GREEN"
+rm -rf "$C7W"
+n="$(code "$MESH" | grep -cF 'StoreBar.Button(')"
+[ "$n" -ge 2 ] && ok "Apps Mesh draws its buttons with StoreBar.Button ($n call sites: member rows, Controls())" \
+  || bad "Apps Mesh has only $n StoreBar.Button call sites"
+printf '%s' "$MROOT" | grep -qF 'StoreBar.Chip(' && ok "Apps Mesh filters with StoreBar.Chip" \
   || bad "Apps Mesh draws its own filter chips"
 code "$MESH" | grep -qE 'setBackgroundColor\(|GradientDrawable|private fun tool\(' \
   && bad "Apps Mesh paints a control of its own" || ok "Apps Mesh paints no control of its own"
@@ -209,17 +234,20 @@ for f in $kfilters; do
     && ok "filter '$f' has a declared chip" || bad "filter '$f' has no filter control in apps_mesh.controls"
 done
 for t in $(jq -r '.apps_mesh.controls[] | select(.scope=="root" and .type!="filter") | .id' "$CONTROLS"); do
-  printf '%s' "$MPAGE" | grep -qE "^\s+\"$t\" to " && ok "root control '$t' has a handler" || bad "root control '$t' is declared but has no handler"
+  printf '%s' "$MROOT" | grep -qE "^\s+\"$t\" to " && ok "root control '$t' has a handler" || bad "root control '$t' is declared but has no handler"
 done
 for t in wake endpoints; do
   jq -e --arg t "$t" '[.apps_mesh.controls[] | select(.scope=="root")] | map(.id) | index($t)' "$CONTROLS" >/dev/null \
     && ok "the '$t' control is on the page" || bad "the '$t' control is not declared on root"
 done
-printf '%s' "$MPAGE" | grep -qF 'putString(PREF_FILTER' && ok "the chosen filter is remembered" || bad "the filter is not persisted"
-last2="$(printf '%s\n' "$MPAGE" | grep -nE '^        (refresh\(null\)|probe\(wake = false\))$' | cut -d: -f2 | tr -d ' ' | tr '\n' ' ')"
-[ "$last2" = "refresh(null) probe(wake=false) " ] && ok "the page draws everything static first, then probes" \
-  || bad "the page does not draw before probing (saw: $last2)"
-printf '%s' "$MPAGE" | grep -qF 'readCache(ctx)' && printf '%s' "$MPAGE" | grep -qF 'StoreMesh.probeEach(' \
+printf '%s' "$MROOT" | grep -qF 'putString(PREF_FILTER' && ok "the chosen filter is remembered" || bad "the filter is not persisted"
+# draws everything static first (the model starts from the cached probe, the composition reads it), THEN probes
+# (the effect that starts the probe runs after the first composition has been committed)
+code "$MESH" | grep -qF 'mutableStateOf<StoreMesh.Live?>(cached?.live)' && fn "$MESH" Page | grep -qF 'DisposableEffect(m)' \
+  && fn "$MESH" Page | grep -qF 'm.start()' && fn "$MESH" start | grep -qF 'probe(wake = false)' \
+  && ok "the page draws everything static first, then probes" \
+  || bad "the page does not draw before probing"
+code "$MESH" | grep -qF 'readCache(ctx)' && code "$MESH" | grep -qF 'StoreMesh.probeEach(' \
   && ok "the page opens on the cached probe and fills member by member" || bad "the page does not use the cache or the per-member probe"
 fn "$SMESH" probeEach | grep -qF 'Executors.newFixedThreadPool(POOL)' \
   && fn "$SMESH" probeEach | grep -qF 'if (port != null) { found(id, port); emit(listOf(id)) }' \
@@ -246,13 +274,13 @@ for p in "endpoints json" "endpoints markdown" "endpoints copy" "gaps export" "g
 done
 jq -e '[.apps_mesh.controls[] | select(.scope=="root" and .type=="page") | .id] == ["endpoints","gaps"]' "$CONTROLS" >/dev/null \
   && ok "root's page buttons: App API Endpoints, Missing membership" || bad "root's page buttons are not endpoints + gaps"
-grp="$(fn "$MESH" controls)"
-printf '%s' "$grp" | grep -qF 'StoreBar.page(ctx, looks.page' && printf '%s' "$grp" | grep -qF 'StoreBar.button(ctx, looks.action' \
-  && printf '%s' "$grp" | grep -qF 'group(ctx, decl, into, scope, type)' \
-  && ok "controls() draws each type with its own Store builder, in a group per type" || bad "controls() does not draw a group per type with the Store builders"
-fn "$BAR" page | grep -qF 'setTag(R.id.store_control, PAGE)' && ok "StoreBar owns the one marked page button" || bad "StoreBar.page carries no mark"
+grp="$(fn "$MESH" Controls)"
+printf '%s' "$grp" | grep -qF 'StoreBar.PageButton(' && printf '%s' "$grp" | grep -qF 'StoreBar.Button(' \
+  && printf '%s' "$grp" | grep -qF 'Group(scope, type)' \
+  && ok "Controls() draws each type with its own Store builder, in a group per type" || bad "Controls() does not draw a group per type with the Store builders"
+fn "$BAR" PageButton | grep -qF 'storeControl = PAGE' && ok "StoreBar owns the one marked page button" || bad "StoreBar.PageButton carries no mark"
 [ "$(jq -r '.page_style' "$CONTROLS")" = "page" ] && ok "page buttons wear 'page'" || bad "page_style is not 'page' - a fourth look"
-fn "$MESH" allEndpoints | grep -qF 'AlertDialog' && bad "App API Endpoints is still a dialog, not a page" || ok "App API Endpoints is a page"
+fn "$MESH" EndpointsPage | grep -qF 'AlertDialog' && bad "App API Endpoints is still a dialog, not a page" || ok "App API Endpoints is a page"
 
 echo "== C9: Details is a sub-page, and the typed controls are on the debug API (#809) =="
 # c9 <AppsMesh.kt> <StoreDebugApi.kt> <appstore-controls.json> — prints one FAIL line per defect
@@ -263,9 +291,9 @@ c9() {
     && echo "FAIL the member 'details' action still opens a dialog"
   printf '%s' "$act" | grep -qF '"details" -> row.details(app)' \
     || echo "FAIL the member 'details' action does not hand over to the page's Details sub-page"
-  det="$(code "$1" | awk '/fun detailsPage\(/{f=1} f{print} f && /^        }$/{exit}')"
-  printf '%s' "$det" | grep -qF 'open("details"' || echo "FAIL detailsPage is not opened as the 'details' sub-page"
-  printf '%s' "$det" | grep -qF 'controls(ctx, decl, looks, page, "details"' \
+  det="$(code "$1" | awk '/fun DetailsPage\(/{f=1} f{print} f && /^        }$/{exit}')"
+  code "$1" | grep -qF 'Sub("details"' || echo "FAIL DetailsPage is not opened as the 'details' sub-page"
+  printf '%s' "$det" | grep -qF 'Controls("details"' \
     || echo "FAIL the Details sub-page does not draw its own declared controls"
   printf '%s' "$det" | grep -qF 'AlertDialog' && echo "FAIL the Details sub-page builds a dialog"
   jq -e 'any(.apps_mesh.controls[]; .scope=="member" and .id=="details" and .type=="page")' "$3" >/dev/null \
@@ -293,7 +321,7 @@ EOF
   [ -n "$(c9 "$MW/m.kt" "$MW/a.kt" "$MW/c.json")" ] && ok "C9 mutant '$1' goes red" || bad "C9 mutant '$1' stayed GREEN"
 }
 c9mut "details back to a dialog"         mesh '"details" -> row.details(app)' '"details" -> AlertDialog.Builder(ctx).setTitle(app.label).show()'
-c9mut "Details page drops its Copy"      mesh 'controls(ctx, decl, looks, page, "details"' 'controls(ctx, decl, looks, page, "gaps"'
+c9mut "Details page drops its Copy"      mesh 'Controls("details"' 'Controls("gaps"'
 c9mut "details declared as an action"    json '"id": "details",
         "type": "page"' '"id": "details",
         "type": "action"'

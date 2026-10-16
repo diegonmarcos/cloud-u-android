@@ -46,6 +46,9 @@ object StoreDensity {
     fun dp(ctx: Context, step: Int): Int =
         (step * SCALE * ctx.resources.displayMetrics.density).roundToInt().coerceAtLeast(1)
 
+    /** A control's outline width, in dp (unscaled: a hairline stays a hairline). */
+    const val STROKE = 1f
+
     /** The same, for Compose (dp as a plain number). */
     fun dpValue(step: Int): Float = step * SCALE
 }

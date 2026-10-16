@@ -104,7 +104,7 @@ has "$STAGES" 'total size unknown'                            "Store progress li
 has "$OVL"  'total size unknown'                              "overlay says so when the length is unknown"
 has "$STAGES" 'if (state.total > 0) state.percent else -1'    "Store progress line only carries a percentage it actually has"
 # #894 the rule moved into ProgressBarModel (one state per item): indeterminate until the first byte count.
-has "$PAGE" 'barModel.step(p.appId.ifEmpty { p.pkg }, p.bytes, p.percent, p.failed)' "Store bar draws through the one-state-per-item model"
+has "$(dirname "$PAGE")/StoreProgressPanel.kt" 'model.step(p.appId.ifEmpty { p.pkg }, p.bytes, p.percent, p.failed)' "Store bar draws through the one-state-per-item model"
 has "$(dirname "$PAGE")/ProgressBarModel.kt" 'if (percent > 0 || (bytes > 0 && percent >= 0))' "Store bar draws no percentage before the first byte count"
 
 echo "== T6: only ONE metered policy, not one per worker =="

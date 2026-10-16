@@ -83,12 +83,12 @@ check() {
     && ok "the list sorts by StoreSizes.comparator and persists the choice" || bad "the size sort is not wired or not persisted"
 
   # 4. one row layout
-  for part in 'StoreRow.card(ctx)' 'StoreRow.head(ctx,' 'StoreRow.actions(ctx,' 'StoreRow.filters(ctx,'; do
+  for part in 'StoreRow.Card(' 'StoreRow.Head(' 'StoreRow.Actions(' 'StoreRow.Filters('; do
     printf '%s' "$ph" | has -F "$part" && printf '%s' "$cl" | has -F "$part" && ok "Phone and Cloud both draw $part" || bad "Phone and Cloud do not share $part"
   done
   printf '%s' "$bar" | has '^object StoreRow' && ok "StoreRow is the one shared component" || bad "no shared StoreRow"
-  ! printf '%s' "$ph" | has 'HorizontalScrollView' && ok "Phone's buttons are expanded, no sideways scroller" || bad "Phone hides buttons in a HorizontalScrollView"
-  ! printf '%s' "$ph" | has 'setBackgroundColor(0xFF1C1C24' && ok "Phone has no card of its own" || bad "Phone draws its own card"
+  ! printf '%s' "$ph" | has -E 'HorizontalScrollView|horizontalScroll' && ok "Phone's buttons are expanded, no sideways scroller" || bad "Phone hides buttons in a HorizontalScrollView"
+  ! printf '%s' "$ph" | has 'Ink.CARD' && ok "Phone has no card of its own" || bad "Phone draws its own card"
   ! printf '%s' "$ph$cl$bar" | has -i 'minHeight' && ok "no minHeight in the Store rows" || bad "a minHeight in the Store rows"
   return $fails
 }
@@ -116,10 +116,10 @@ echo "== mutations =="
 P=$LIBREL
 mutate "grant row always hidden" $P/StorePhoneFragment.kt 'if (StoreSizes.needsGrantRow(sizeGranted))' 'if (false)' || M=$((M+1))
 mutate "no APK fallback" $P/StoreSizeProbe.kt 'val s = (ss?.let { full(it, pkg) }) ?: apk(ctx, pkg) ?: continue' 'val s = (ss?.let { full(it, pkg) }) ?: continue' || M=$((M+1))
-mutate "Phone back to a sideways scroller" $P/StorePhoneFragment.kt 'body.addView(StoreRow.actions(ctx, buttons))' 'body.addView(android.widget.HorizontalScrollView(ctx))' || M=$((M+1))
-mutate "Phone draws its own card" $P/StorePhoneFragment.kt 'val card = StoreRow.card(ctx)' 'val card = LinearLayout(ctx).apply { setBackgroundColor(0xFF1C1C24.toInt()) }' || M=$((M+1))
-mutate "Cloud stops using the shared actions" $P/StoreCloudFragment.kt 'val actions = StoreRow.actions(ctx,' 'val actions = myActions(ctx,' || M=$((M+1))
-mutate "sort not persisted" $P/StorePhoneFragment.kt 'StoreSizes.saveSort(sortStore, sort); redraw()' 'redraw()' || M=$((M+1))
+mutate "Phone back to a sideways scroller" $P/StorePhoneFragment.kt 'StoreRow.Actions(verbs)' 'Box(Modifier.horizontalScroll(rememberScrollState()))' || M=$((M+1))
+mutate "Phone draws its own card" $P/StorePhoneFragment.kt 'StoreRow.Card(tag = "store-phone-row:${r.pkg}") {' 'Column(Modifier.background(Ink.CARD.ink())) {' || M=$((M+1))
+mutate "Cloud stops using the shared actions" $P/StoreCloudFragment.kt 'StoreRow.Actions(' 'MyActions(' || M=$((M+1))
+mutate "sort not persisted" $P/StorePhoneFragment.kt 'StoreSizes.saveSort(sortStore, sort)' 'Unit' || M=$((M+1))
 mutate "sizes measured on the main thread" $P/StorePhoneFragment.kt 'thread(name = "store-phone-sizes") {' 'run {' || M=$((M+1))
 mutate "manifest drops usage access" ac_cloud-store/app/src/main/AndroidManifest.xml 'android:name="android.permission.PACKAGE_USAGE_STATS"' 'android:name="android.permission.NOPE"' || M=$((M+1))
 if [ -n "$KC" ]; then

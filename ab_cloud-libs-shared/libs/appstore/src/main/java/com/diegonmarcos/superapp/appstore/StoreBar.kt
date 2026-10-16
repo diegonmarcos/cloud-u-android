@@ -2,22 +2,131 @@ package com.diegonmarcos.superapp.appstore
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Typeface
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
-import android.view.Gravity
-import android.view.View
-import android.widget.HorizontalScrollView
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.adbdebug.AdbShellLink
 import com.diegonmarcos.superapp.adbdebug.ChannelSelector
 import com.diegonmarcos.superapp.adbdebug.ControlStatus
 import com.diegonmarcos.superapp.adbdebug.PackageVerifier
 import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
 import kotlin.concurrent.thread
+
+// ── the Store's ink, as Compose colours ─────────────────────────────────────
+// One place for the literals the View builders used to repeat; the Store is dark by design, so these
+// are not palette roles (the palette the pages sit in is built from the same values).
+
+internal fun Int.ink(): Color = Color(this)
+
+internal object Ink {
+    val DIM = 0x99FFFFFF.toInt()
+    val WHITE = 0xFFFFFFFF.toInt()
+    val CARD = 0xFF1C1C24.toInt()
+    val RULE = 0xFF2A2A33.toInt()
+    val BLUE_FILL = 0xFF2B6CB0.toInt()
+    val GREEN_FILL = 0xFF2F855A.toInt()
+    val GREY_FILL = 0xFF4A4A55.toInt()
+    val AMBER_FILL = 0xFFB7791F.toInt()
+    val DISABLED = 0xFF3A3A44.toInt()
+}
+
+/** A Store spacing step (before SCALE) as Compose dp. */
+internal fun sdp(step: Int): Dp = StoreDensity.dpValue(step).dp
+
+/** Compose test hooks of the shared controls: which kind of Store control a node is, and what it measures. */
+object StoreSemantics {
+    /** [StoreBar.BUTTON] / [StoreBar.CHIP] / [StoreBar.PAGE] — what only the shared builders set. */
+    val Control = SemanticsPropertyKey<String>("StoreControl")
+    /** The control's measures (text size, padding, corner radius): two controls with one look read alike. */
+    val Look = SemanticsPropertyKey<String>("StoreLook")
+    /** The ARGB ink a label is painted in (a failure is red). */
+    val Ink = SemanticsPropertyKey<Int>("StoreInk")
+}
+
+private var SemanticsPropertyReceiver.storeControl by StoreSemantics.Control
+private var SemanticsPropertyReceiver.storeLook by StoreSemantics.Look
+internal var SemanticsPropertyReceiver.storeInk by StoreSemantics.Ink
+
+/** #732 the declared styles, read once per composition host. */
+@Composable
+internal fun rememberStoreControls(): StoreControls.Decl {
+    val ctx = LocalContext.current
+    return remember(ctx) { StoreControls.load(ctx) }
+}
+
+/** A plain tap target, without the ripple the dense store rows never use. */
+internal fun Modifier.tap(onClick: (() -> Unit)?): Modifier =
+    if (onClick == null) this else this.clickable(interactionSource = null, indication = null, onClick = onClick)
+
+internal fun Modifier.tagged(tag: String?): Modifier = if (tag == null) this else this.testTag(tag)
+
+/** The one background builder for all three styles (what StoreControls.background drew as a GradientDrawable). */
+internal fun Modifier.storeSurface(style: StoreControls.Style, active: Boolean, fillOverride: Int? = null): Modifier {
+    val shape = RoundedCornerShape((style.radiusDp * StoreDensity.SCALE).dp)
+    val fill = fillOverride ?: (if (active) style.fillActive else style.fill) ?: 0
+    val stroke = if (active) style.strokeActive ?: style.stroke else style.stroke
+    val clipped = this.clip(shape).background(Color(fill))
+    return if (stroke != null) clipped.border(StoreDensity.STROKE.dp, Color(stroke), shape) else clipped
+}
+
+private fun weightOf(style: StoreControls.Style) = if (style.bold) FontWeight.Bold else FontWeight.Normal
+
+/** A page caption: meta size, dim, with room below. */
+@Composable
+internal fun StoreCaption(text: String, modifier: Modifier = Modifier, color: Int = Ink.DIM, tag: String? = null) {
+    Text(text, color = color.ink(), fontSize = StoreDensity.T_META.sp,
+        modifier = modifier.tagged(tag).padding(bottom = sdp(StoreDensity.S8)))
+}
+
+/** A heading over a run of rows. */
+@Composable
+internal fun StoreHeading(text: String, color: Int, modifier: Modifier = Modifier, tag: String? = null) {
+    Text(text, color = color.ink(), fontSize = StoreDensity.T_META.sp,
+        modifier = modifier.tagged(tag).padding(top = sdp(StoreDensity.S8), bottom = sdp(StoreDensity.S4)))
+}
 
 /**
  * THE Store top bar (#565) — one declaration, drawn by both Store tabs. It was
@@ -31,7 +140,7 @@ import kotlin.concurrent.thread
  * under it. Every other control (auto-update, Wi-Fi-only, Play Protect, Wireless
  * Debugging, Developer options) is device state, identical on both tabs.
  *
- * Each control is tagged with its [Item] id, so a test can read the rendered bar
+ * Each control is tagged with its [Item] ([itemTag]), so a test can read the rendered bar
  * rather than this source.
  */
 object StoreBar {
@@ -41,6 +150,9 @@ object StoreBar {
     const val PROGRESS_TAG = "store-progress"
 
     enum class Item { CHECK, INSTALL, DOWNLOAD, UPDATE, AUTO_UPDATE, WIFI_ONLY, PLAY_PROTECT, WIRELESS_DEBUG }
+
+    /** The test tag of a bar control. */
+    fun itemTag(item: Item) = "$TAG:${item.name}"
 
     class Verbs(
         val checkAll: () -> Unit,
@@ -54,91 +166,108 @@ object StoreBar {
         val downloadAll: (() -> Unit)? = null,
     )
 
-    private val cDim = 0x99FFFFFF.toInt()
+    private val MAIN = Handler(Looper.getMainLooper())
+    private val AMBER = 0xFFB7791F.toInt()
 
-    /** (Re)draws the bar into [into]. A toggle redraws it from the device's new state. */
-    fun render(host: Fragment, into: LinearLayout, verbs: Verbs) {
-        val ctx = host.requireContext()
-        into.removeAllViews(); into.tag = TAG
-        fun redraw() { if (host.isAdded) render(host, into, verbs) }
-        into.setTag(R.id.store_redraw, ::redraw)
-        // Exactly two rows of controls: the batch actions and the auto-update
-        // switch on the first, the configs and the remaining switches on the
-        // second. Check all refreshes what is on offer, changing nothing; Install
-        // all takes only what is not on the device; Update all is every group in
-        // one pass, never tab-scoped.
-        val actionRow = row(ctx); val configRow = row(ctx)
-        into.addView(actionRow); into.addView(configRow)
+    /**
+     * The bar. Exactly two rows of controls: the batch actions and the auto-update switch on the first,
+     * the configs and the remaining switches on the second. Check all refreshes what is on offer,
+     * changing nothing; Install all takes only what is not on the device; Update all is every group in
+     * one pass, never tab-scoped. A toggle redraws it from the device's new state; [resume] (a counter
+     * the host bumps when it comes back to the front) drops the cached readings and re-reads them.
+     */
+    @Composable
+    fun Bar(verbs: Verbs, modifier: Modifier = Modifier, resume: Int = 0) {
+        val ctx = LocalContext.current
+        var tick by remember { mutableIntStateOf(0) }
+        var chan by remember { mutableIntStateOf(0) }
+        LaunchedEffect(resume) { if (resume > 0) { StoreStatus.invalidate(); tick++; chan++ } }
+        val autoOn = remember(tick) { AutoUpdatePrefs.enabled(ctx) }
+        val wifiOnly = remember(tick) { AutoUpdatePrefs.requireUnmetered(ctx) }
+        val silent = remember(tick) { AutoUpdatePrefs.canInstallSilently(ctx) }
+        val pp = remember(tick) { StoreStatus.playProtect(ctx) }
+        val ch = remember(chan, tick) { StoreStatus.channel() }
 
-        actionRow.addView(btn(ctx, Item.CHECK, ctx.getString(R.string.store_bar_check_all), 0xFF2B6CB0.toInt(), verbs.checkAll))
-        actionRow.addView(btn(ctx, Item.INSTALL, ctx.getString(R.string.store_bar_install_all), 0xFF2B6CB0.toInt(), verbs.installAll))
-        verbs.downloadAll?.let {
-            actionRow.addView(btn(ctx, Item.DOWNLOAD, ctx.getString(R.string.store_bar_download_all), 0xFF2B6CB0.toInt(), it))
-        }
-        actionRow.addView(btn(ctx, Item.UPDATE, ctx.getString(R.string.store_bar_update_all), 0xFF2B6CB0.toInt(), verbs.updateAll))
-        val autoOn = AutoUpdatePrefs.enabled(ctx)
-        actionRow.addView(btn(ctx, Item.AUTO_UPDATE, ctx.getString(R.string.store_bar_auto_update, onOff(ctx, autoOn)),
-            if (autoOn) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt()) {
-            AutoUpdatePrefs.setEnabled(ctx, !autoOn)
-            // Reconcile the periodic workers immediately: start() schedules
-            // when enabled, cancels when disabled (both re-check the pref).
-            com.diegonmarcos.superapp.updater.Updater.start(ctx)
-            ConstellationWorker.start(ctx)
-            toast(ctx, ctx.getString(R.string.store_bar_auto_update_toast, onOff(ctx, !autoOn)))
-            redraw()
-        })
-        // Only gates the UNATTENDED passes: the buttons above are the user
-        // asking, so they download on any network regardless of this.
-        val wifiOnly = AutoUpdatePrefs.requireUnmetered(ctx)
-        configRow.addView(btn(ctx, Item.WIFI_ONLY, ctx.getString(R.string.store_bar_wifi_only, onOff(ctx, wifiOnly)),
-            if (wifiOnly) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt()) {
-            AutoUpdatePrefs.setRequireUnmetered(ctx, !wifiOnly)
-            toast(ctx, ctx.getString(R.string.store_bar_wifi_only_toast, onOff(ctx, !wifiOnly)))
-            redraw()
-        })
-        if (verbs.disabledReason != 0 &&
-            (verbs.installAll == null || verbs.updateAll == null)) into.addView(caption(ctx, ctx.getString(verbs.disabledReason)))
-        into.addView(caption(ctx, ctx.getString(
-            if (AutoUpdatePrefs.canInstallSilently(ctx)) R.string.store_bar_silent_on else R.string.store_bar_silent_off)))
-
-        // Play Protect's per-INSTALL scan prompt. The label is what the device STORES
-        // (ON / OFF / unknown when no key can be read), never a default. Tap toggles
-        // through the shell channel (or WRITE_SECURE_SETTINGS); when that is absent or
-        // refused it opens Play Protect's own settings. Re-read on resume.
-        val pp = StoreStatus.playProtect(ctx)
-        val ppLabel = when (pp) {
-            ControlStatus.Tri.ON -> onOff(ctx, true)
-            ControlStatus.Tri.OFF -> onOff(ctx, false)
-            ControlStatus.Tri.UNKNOWN -> ctx.getString(R.string.store_unknown_state)
-        }
-        configRow.addView(btn(ctx, Item.PLAY_PROTECT, ctx.getString(R.string.store_bar_play_protect, ppLabel),
-            when (pp) { ControlStatus.Tri.ON -> 0xFF4A4A55.toInt(); ControlStatus.Tri.OFF -> 0xFF2F855A.toInt(); else -> AMBER }) {
-            if (pp == ControlStatus.Tri.UNKNOWN) { openPlayProtect(host); return@btn }
-            // setScanning binds Shizuku, which blocks - never on the main thread.
-            thread(name = "play-protect-toggle") {
-                val r = PackageVerifier.setScanning(ctx, pp == ControlStatus.Tri.OFF)
-                into.post {
-                    if (r.ok) Toast.makeText(ctx, r.state.describe() + " - via " + r.channel, Toast.LENGTH_LONG).show()
-                    else { Toast.makeText(ctx, ctx.getString(R.string.store_bar_play_protect_settings, r.output.lineSequence().firstOrNull().orEmpty()), Toast.LENGTH_LONG).show(); openPlayProtect(host) }
-                    StoreStatus.invalidate(); redraw()
+        Column(modifier.testTag(TAG)) {
+            Row {
+                Button(ctx.getString(R.string.store_bar_check_all), Ink.BLUE_FILL, verbs.checkAll,
+                    Modifier.weight(1f), itemTag(Item.CHECK))
+                Button(ctx.getString(R.string.store_bar_install_all), Ink.BLUE_FILL, verbs.installAll,
+                    Modifier.weight(1f), itemTag(Item.INSTALL))
+                verbs.downloadAll?.let {
+                    Button(ctx.getString(R.string.store_bar_download_all), Ink.BLUE_FILL, it,
+                        Modifier.weight(1f), itemTag(Item.DOWNLOAD))
                 }
+                Button(ctx.getString(R.string.store_bar_update_all), Ink.BLUE_FILL, verbs.updateAll,
+                    Modifier.weight(1f), itemTag(Item.UPDATE))
+                Button(ctx.getString(R.string.store_bar_auto_update, onOff(ctx, autoOn)),
+                    if (autoOn) Ink.GREEN_FILL else Ink.GREY_FILL,
+                    {
+                        AutoUpdatePrefs.setEnabled(ctx, !autoOn)
+                        // Reconcile the periodic workers immediately: start() schedules
+                        // when enabled, cancels when disabled (both re-check the pref).
+                        com.diegonmarcos.superapp.updater.Updater.start(ctx)
+                        ConstellationWorker.start(ctx)
+                        toast(ctx, ctx.getString(R.string.store_bar_auto_update_toast, onOff(ctx, !autoOn)))
+                        tick++
+                    }, Modifier.weight(1f), itemTag(Item.AUTO_UPDATE))
             }
-        })
-        into.addView(caption(ctx, ctx.getString(when (pp) {
-            ControlStatus.Tri.UNKNOWN -> R.string.store_bar_play_protect_unknown
-            ControlStatus.Tri.OFF -> R.string.store_bar_play_protect_off
-            ControlStatus.Tri.ON -> R.string.store_bar_play_protect_on })))
-
-        // The privileged channel itself: a cached live `id` round trip (uid 2000) over the
-        // embedded adb or Shizuku, probed off the main thread. NOT the system "wireless
-        // debugging" switch - that can be on while the channel is dead.
-        val ch = StoreStatus.channel()
-        configRow.addView(channelButton(ctx, into, ::redraw))
-        into.addView(caption(ctx, ctx.getString(when (ch?.state) {
-            ControlStatus.Channel.UP -> R.string.store_bar_channel_up_caption
-            ControlStatus.Channel.DOWN -> R.string.store_bar_channel_down_caption
-            ControlStatus.Channel.NOT_PAIRED -> R.string.store_bar_channel_unpaired_caption
-            null -> R.string.store_bar_channel_checking })))
+            Row {
+                // Only gates the UNATTENDED passes: the buttons above are the user
+                // asking, so they download on any network regardless of this.
+                Button(ctx.getString(R.string.store_bar_wifi_only, onOff(ctx, wifiOnly)),
+                    if (wifiOnly) Ink.GREEN_FILL else Ink.GREY_FILL,
+                    {
+                        AutoUpdatePrefs.setRequireUnmetered(ctx, !wifiOnly)
+                        toast(ctx, ctx.getString(R.string.store_bar_wifi_only_toast, onOff(ctx, !wifiOnly)))
+                        tick++
+                    }, Modifier.weight(1f), itemTag(Item.WIFI_ONLY))
+                // Play Protect's per-INSTALL scan prompt. The label is what the device STORES
+                // (ON / OFF / unknown when no key can be read), never a default. Tap toggles
+                // through the shell channel (or WRITE_SECURE_SETTINGS); when that is absent or
+                // refused it opens Play Protect's own settings. Re-read on resume.
+                val ppLabel = when (pp) {
+                    ControlStatus.Tri.ON -> onOff(ctx, true)
+                    ControlStatus.Tri.OFF -> onOff(ctx, false)
+                    ControlStatus.Tri.UNKNOWN -> ctx.getString(R.string.store_unknown_state)
+                }
+                Button(ctx.getString(R.string.store_bar_play_protect, ppLabel),
+                    when (pp) { ControlStatus.Tri.ON -> Ink.GREY_FILL; ControlStatus.Tri.OFF -> Ink.GREEN_FILL; else -> AMBER },
+                    {
+                        if (pp == ControlStatus.Tri.UNKNOWN) openPlayProtect(ctx)
+                        else {
+                            // setScanning binds Shizuku, which blocks - never on the main thread.
+                            thread(name = "play-protect-toggle") {
+                                val r = PackageVerifier.setScanning(ctx, pp == ControlStatus.Tri.OFF)
+                                MAIN.post {
+                                    if (r.ok) Toast.makeText(ctx, r.state.describe() + " - via " + r.channel, Toast.LENGTH_LONG).show()
+                                    else {
+                                        Toast.makeText(ctx, ctx.getString(R.string.store_bar_play_protect_settings, r.output.lineSequence().firstOrNull().orEmpty()), Toast.LENGTH_LONG).show()
+                                        openPlayProtect(ctx)
+                                    }
+                                    StoreStatus.invalidate(); tick++; chan++
+                                }
+                            }
+                        }
+                    }, Modifier.weight(1f), itemTag(Item.PLAY_PROTECT))
+                // The privileged channel itself: a cached live `id` round trip (uid 2000) over the
+                // embedded adb or Shizuku, probed off the main thread. NOT the system "wireless
+                // debugging" switch - that can be on while the channel is dead.
+                ChannelButton(Modifier.weight(1f), onChange = { chan++ })
+            }
+            if (verbs.disabledReason != 0 && (verbs.installAll == null || verbs.updateAll == null))
+                StoreCaption(ctx.getString(verbs.disabledReason))
+            StoreCaption(ctx.getString(if (silent) R.string.store_bar_silent_on else R.string.store_bar_silent_off))
+            StoreCaption(ctx.getString(when (pp) {
+                ControlStatus.Tri.UNKNOWN -> R.string.store_bar_play_protect_unknown
+                ControlStatus.Tri.OFF -> R.string.store_bar_play_protect_off
+                ControlStatus.Tri.ON -> R.string.store_bar_play_protect_on }))
+            StoreCaption(ctx.getString(when (ch?.state) {
+                ControlStatus.Channel.UP -> R.string.store_bar_channel_up_caption
+                ControlStatus.Channel.DOWN -> R.string.store_bar_channel_down_caption
+                ControlStatus.Channel.NOT_PAIRED -> R.string.store_bar_channel_unpaired_caption
+                null -> R.string.store_bar_channel_checking }))
+        }
     }
 
     /**
@@ -146,129 +275,149 @@ object StoreBar {
      * target - the ADB Shell page (libs:shizuku-adb-debug-tools AdbShellPage), where pairing, connecting,
      * the local server, the logs and the setup checklist live. It carries no channel control of its own:
      * test-adb-shell-one-place.sh fails if this builder ever starts one again. Drawn by this bar and by
-     * Access > Android Perms. [redraw] repaints whoever hosts it.
+     * Access > Android Perms. [onChange] tells whoever hosts it that the status changed (repaint).
      */
-    fun channelButton(ctx: Context, into: View, redraw: () -> Unit): TextView {
-        val ch = StoreStatus.channel()
-        if (!StoreStatus.fresh()) StoreStatus.refresh(ctx) { into.post { redraw() } }
+    @Composable
+    fun ChannelButton(modifier: Modifier = Modifier, onChange: () -> Unit = {}) {
+        val ctx = LocalContext.current
+        var tick by remember { mutableIntStateOf(0) }
+        val ch = remember(tick) { StoreStatus.channel() }
+        LaunchedEffect(tick) {
+            if (!StoreStatus.fresh()) StoreStatus.refresh(ctx) { MAIN.post { tick++; onChange() } }
+        }
         val chLabel = ch?.shizuku?.let { ChannelSelector.shizukuLabel(it) } ?: when (ch?.state) {
             null -> ctx.getString(R.string.store_bar_channel_checking)
             ControlStatus.Channel.UP -> ChannelSelector.label(ch?.via, down = false)
             ControlStatus.Channel.DOWN -> ChannelSelector.label(null, down = true)
             ControlStatus.Channel.NOT_PAIRED -> ChannelSelector.label(null, down = false)
         }
-        return btn(ctx, Item.WIRELESS_DEBUG, chLabel,
-            when (ch?.state) { ControlStatus.Channel.UP -> 0xFF2F855A.toInt(); ControlStatus.Channel.DOWN -> 0xFFC05621.toInt()
-                else -> 0xFF4A4A55.toInt() }) { AdbShellLink.open(ctx) }
+        Button(chLabel,
+            when (ch?.state) { ControlStatus.Channel.UP -> Ink.GREEN_FILL; ControlStatus.Channel.DOWN -> 0xFFC05621.toInt()
+                else -> Ink.GREY_FILL },
+            { AdbShellLink.open(ctx) }, modifier, itemTag(Item.WIRELESS_DEBUG))
     }
 
-    /** A row holding THE chip for a Compose host; [onChange] fires whenever it redraws (status changed). */
-    fun channelHost(ctx: Context, onChange: () -> Unit): View {
-        val box = row(ctx)
-        fun draw() {
-            box.removeAllViews()
-            box.addView(channelButton(ctx, box) { draw(); onChange() })
-        }
-        draw()
-        return box
-    }
-
-    /** Back in front (e.g. from settings): drop the cached readings and repaint [bar]. */
-    fun onResume(bar: View?) {
-        StoreStatus.invalidate()
-        @Suppress("UNCHECKED_CAST")
-        (bar?.getTag(R.id.store_redraw) as? (() -> Unit))?.invoke()
-    }
-
-    private val AMBER = 0xFFB7791F.toInt()
-
-    private fun openPlayProtect(host: Fragment) {
-        val pm = host.requireContext().packageManager
+    private fun openPlayProtect(ctx: Context) {
+        val pm = ctx.packageManager
         val ladder = listOf(
             Intent().setClassName("com.google.android.gms", "com.google.android.gms.security.settings.VerifyAppsSettingsActivity"),
             Intent(Settings.ACTION_SECURITY_SETTINGS), Intent(Settings.ACTION_SETTINGS))
-        for (i in ladder) if (i.resolveActivity(pm) != null && runCatching { host.startActivity(i) }.isSuccess) return
+        for (i in ladder) if (i.resolveActivity(pm) != null && runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
     }
 
     private fun onOff(ctx: Context, on: Boolean) = ctx.getString(if (on) R.string.store_on else R.string.store_off)
     private fun toast(ctx: Context, t: String) = Toast.makeText(ctx, t, Toast.LENGTH_SHORT).show()
-    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
-    private fun row(ctx: Context) = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-    private fun caption(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; textSize = StoreDensity.T_META; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, StoreDensity.S8))
-    }
-
-    /** A null [onClick] is a verb this page cannot do: drawn, dimmed, not clickable. */
-    private fun btn(ctx: Context, item: Item, label: String, bg: Int, onClick: (() -> Unit)?) =
-        button(ctx, StoreControls.load(ctx).action, label, bg, onClick).apply { tag = item }
 
     // ── #793 THE Store's action button and filter chip ────────────────────────
     // This bar's button is the Store's action button: every Store app row
-    // (StoreCloudFragment.btn), the Store's filter chips, and every Apps Mesh
-    // tool, member row button and filter chip are drawn by these two builders,
+    // (StoreCloudFragment's verbs), the Store's filter chips, and every Apps Mesh
+    // tool, member row button and filter chip are drawn by these builders,
     // in the styles appstore-controls.json declares (`action`, `filter_style`).
-    // Each view they draw is marked under R.id.store_control, so a test can tell
-    // the shared component from a TextView merely painted to look like it.
+    // Each node they draw carries [StoreSemantics.Control], so a test can tell
+    // the shared component from a Text merely painted to look like it.
 
     const val BUTTON = "store-control:button"
-
-    fun isButton(v: View) = v.getTag(R.id.store_control) == BUTTON
-    fun isChip(v: View) = v.getTag(R.id.store_control) is StoreControls.Style
-    fun isPage(v: View) = v.getTag(R.id.store_control) == PAGE
-
+    const val CHIP = "store-control:chip"
     const val PAGE = "store-control:page"
 
-    /** #809 THE page button outside line 2: opens another page, in [style]
-     *  (`page_style`) — icon, label, chevron — wrapping its caption. */
-    fun page(ctx: Context, style: StoreControls.Style, icon: String, label: String, onClick: () -> Unit) = TextView(ctx).apply {
-        setTag(R.id.store_control, PAGE)
-        text = listOf(icon, label, style.chevron).filter { it.isNotEmpty() }.joinToString("  ")
-        maxLines = 1; textSize = StoreDensity.T_META; gravity = Gravity.CENTER_VERTICAL
-        typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
-        setTextColor(style.text)
-        background = StoreControls.background(ctx, style, false)
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2)) }
-        isClickable = true; setOnClickListener { onClick() }
+    /**
+     * The action button: the `action` style in [fill], the verb's own colour. Weighted by whoever lays
+     * it out, so a row of them shares its width. A null [onClick] is a verb this page cannot do: drawn,
+     * dimmed, inert. [alpha] overrides the dimming (a stage that is not live is drawn at .35, still
+     * in its verb's colour); [live] false is inert without losing the colour.
+     */
+    @Composable
+    fun Button(
+        label: String, fill: Int?, onClick: (() -> Unit)?, modifier: Modifier = Modifier, tag: String? = null,
+        style: StoreControls.Style = rememberStoreControls().action, alpha: Float? = null, live: Boolean = true,
+        description: String? = null,
+    ) {
+        val on = onClick != null && live
+        val look = "${StoreDensity.T_META} p${StoreDensity.S8},${StoreDensity.S6} r${style.radiusDp}"
+        Box(
+            modifier
+                .padding(start = sdp(StoreDensity.S2), top = sdp(StoreDensity.S4), end = sdp(StoreDensity.S2), bottom = sdp(StoreDensity.S2))
+                .alpha(alpha ?: if (onClick != null) 1f else 0.45f)
+                .storeSurface(style, false, if (onClick != null) fill else Ink.DISABLED)
+                .tagged(tag)
+                .semantics(mergeDescendants = true) {
+                    storeControl = BUTTON; storeLook = "button $look"
+                    role = Role.Button
+                    if (description != null) contentDescription = description
+                    if (!on) disabled()
+                }
+                .tap(if (on) onClick else null)
+                .padding(horizontal = sdp(StoreDensity.S8), vertical = sdp(StoreDensity.S6)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(label, color = style.text.ink(), fontSize = StoreDensity.T_META.sp, fontWeight = weightOf(style),
+                textAlign = TextAlign.Center)
+        }
     }
 
-    /** The action button: [style] in [fill], the verb's own colour; weight 1, so
-     *  a row of them shares its width. Null [onClick] = drawn, dimmed, inert. */
-    fun button(ctx: Context, style: StoreControls.Style, label: String, fill: Int?, onClick: (() -> Unit)?) = TextView(ctx).apply {
-        setTag(R.id.store_control, BUTTON)
-        text = label; gravity = Gravity.CENTER; textSize = StoreDensity.T_META
-        typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
-        setTextColor(style.text)
-        background = StoreControls.background(ctx, style, false, if (onClick != null) fill else DISABLED)
-        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            .apply { setMargins(dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S4), dp(ctx, StoreDensity.S2), dp(ctx, StoreDensity.S2)) }
-        isEnabled = onClick != null
-        if (onClick != null) { isClickable = true; setOnClickListener { onClick() } } else alpha = 0.45f
+    /**
+     * One filter chip of a row that partitions a list; painted on or off by [selected]. [first] has no
+     * leading gap. Weighted by whoever lays it out.
+     */
+    @Composable
+    fun Chip(
+        label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, first: Boolean = false,
+        tag: String? = null, style: StoreControls.Style = rememberStoreControls().filter,
+    ) {
+        val look = "${StoreDensity.T_CAPTION} p${StoreDensity.S6},${StoreDensity.S6} r${style.radiusDp}"
+        Box(
+            modifier
+                .padding(start = if (first) 0.dp else sdp(StoreDensity.S4))
+                .storeSurface(style, selected)
+                .tagged(tag)
+                .semantics(mergeDescendants = true) {
+                    storeControl = CHIP; storeLook = "chip $look"
+                    role = Role.Button
+                }
+                .tap(onClick)
+                .padding(sdp(StoreDensity.S6)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(label, color = (if (selected) style.textActive else style.text).ink(), fontSize = StoreDensity.T_CAPTION.sp,
+                fontWeight = weightOf(style), textAlign = TextAlign.Center, maxLines = 1)
+        }
     }
 
-    /** One filter chip of a row that partitions a list; [paint] draws it on or
-     *  off. [first] has no leading gap. It carries its style under its mark, so
-     *  its plain tag stays free for the page that draws it. */
-    fun chip(ctx: Context, style: StoreControls.Style, label: String, first: Boolean, onClick: () -> Unit) = TextView(ctx).apply {
-        setTag(R.id.store_control, style)
-        text = label; textSize = StoreDensity.T_CAPTION; gravity = Gravity.CENTER; maxLines = 1
-        typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        setPadding(dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S6))
-        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            .apply { setMargins(if (first) 0 else dp(ctx, StoreDensity.S4), 0, 0, 0) }
-        isClickable = true; setOnClickListener { onClick() }
+    /** #809 THE page button outside line 2: opens another page, in the `page_style` — icon, label,
+     *  chevron — wrapping its caption. */
+    @Composable
+    fun PageButton(
+        icon: String, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, tag: String? = null,
+        style: StoreControls.Style = rememberStoreControls().page,
+    ) {
+        val look = "${StoreDensity.T_META} p${StoreDensity.S8},${StoreDensity.S6} r${style.radiusDp}"
+        Box(
+            modifier
+                .padding(start = sdp(StoreDensity.S2), top = sdp(StoreDensity.S4), end = sdp(StoreDensity.S2), bottom = sdp(StoreDensity.S2))
+                .storeSurface(style, false)
+                .tagged(tag)
+                .semantics(mergeDescendants = true) {
+                    storeControl = PAGE; storeLook = "page $look"
+                    role = Role.Button
+                }
+                .tap(onClick)
+                .padding(horizontal = sdp(StoreDensity.S8), vertical = sdp(StoreDensity.S6)),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Text(listOf(icon, label, style.chevron).filter { it.isNotEmpty() }.joinToString("  "),
+                color = style.text.ink(), fontSize = StoreDensity.T_META.sp, fontWeight = weightOf(style), maxLines = 1)
+        }
     }
-
-    fun paint(chip: TextView, active: Boolean) {
-        val style = chip.getTag(R.id.store_control) as StoreControls.Style
-        chip.background = StoreControls.background(chip.context, style, active)
-        chip.setTextColor(if (active) style.textActive else style.text)
-    }
-
-    private const val DISABLED = 0xFF3A3A44.toInt()
 }
+
+/** The quick verb on a collapsed row (⬆ / ⬇ / Install / Clear): its caption, its colour and its action. */
+class StoreQuick(val label: String, val fill: Int, val onClick: () -> Unit)
+
+/** One button of a row's expanded lines. [live] false is drawn dimmed and inert, in its own colour. */
+class StoreVerb(
+    val label: String, val fill: Int?, val onClick: (() -> Unit)?, val tag: String? = null,
+    val live: Boolean = true, val alpha: Float? = null, val description: String? = null,
+)
 
 /**
  * THE Store row and its page parts - one builder for the Cloud page's fleet rows AND the Phone
@@ -276,95 +425,92 @@ object StoreBar {
  * its own card: Cloud a dense head (state dot, name, meta, quick verb, chevron) with its buttons as
  * full-width shared action buttons, Phone a taller card whose buttons sat in a sideways-scrolling
  * strip, half of them off-screen. Both now ask this object for:
- *  - [card]     the row's background and spacing;
- *  - [head]     dot · name · meta · quick verb · chevron; the chevron opens [detail] (and says so);
- *  - [actions]  the row's buttons, EXPANDED: weight-1 lines of at most [PER_LINE], never a scroller;
- *  - [filters]  a line of the shared filter chips, painted for [selected].
+ *  - [Card]     the row's background and spacing;
+ *  - [Head]     dot · name · meta · quick verb · chevron; the chevron opens the detail (and says so);
+ *  - [Actions]  the row's buttons, EXPANDED: weight-1 lines of at most [PER_LINE], never a scroller;
+ *  - [Filters]  a line of the shared filter chips, painted for the selected one.
  * test-store-phone-sizes.sh holds that both fragments draw rows only through these.
  */
 object StoreRow {
     const val PER_LINE = 4
+    const val ACTIONS = "store-row:actions"
 
-    class Head(val view: LinearLayout, val dot: TextView, val name: TextView, val meta: TextView,
-               val quick: TextView, val chevron: TextView)
-
-    fun card(ctx: Context) = LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        setBackgroundColor(0xFF1C1C24.toInt())
-        val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-        lp.setMargins(0, StoreDensity.dp(ctx, StoreDensity.S2), 0, StoreDensity.dp(ctx, StoreDensity.S2)); layoutParams = lp
+    @Composable
+    fun Card(modifier: Modifier = Modifier, tag: String? = null, content: @Composable ColumnScope.() -> Unit) {
+        Column(modifier.tagged(tag).padding(vertical = sdp(StoreDensity.S2)).background(Ink.CARD.ink()).fillMaxWidth(), content = content)
     }
 
-    /** The row's head. [detail] is shown or hidden by the chevron; [isOpen]/[setOpen] keep the page's memory of it. */
-    fun head(ctx: Context, label: String, detail: View, isOpen: () -> Boolean, setOpen: (Boolean) -> Unit): Head {
-        fun dp(v: Int) = StoreDensity.dp(ctx, v)
-        val dim = 0x99FFFFFF.toInt()
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(StoreDensity.S12), dp(StoreDensity.S8), dp(StoreDensity.S12), dp(StoreDensity.S8))
-            isClickable = true
+    /**
+     * The row's head. [open] / [onToggle] keep the page's memory of the chevron; [meta] is the one-line
+     * status slot (state, or the size on the Phone page) and [quick] the verb beside it, if any.
+     */
+    @Composable
+    fun Head(
+        label: String, open: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier,
+        dot: String = "·", dotColor: Int = Ink.DIM, meta: String = "", metaColor: Int = Ink.DIM,
+        quick: StoreQuick? = null, headTag: String? = null, metaTag: String? = null, dotTag: String? = null,
+        nameTag: String? = null,
+    ) {
+        // The head is ONE tap target (it merges its texts into the node [headTag] names); a test reads the
+        // dot / name / meta by their own tags from the UNMERGED tree.
+        Row(
+            modifier.fillMaxWidth().tagged(headTag).tap(onToggle)
+                .padding(horizontal = sdp(StoreDensity.S12), vertical = sdp(StoreDensity.S8)),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(dot, color = dotColor.ink(), fontSize = StoreDensity.T_BODY.sp,
+                modifier = Modifier.tagged(dotTag).padding(end = sdp(StoreDensity.S8)))
+            Text(label, color = Ink.WHITE.ink(), fontSize = StoreDensity.T_TITLE.sp, fontWeight = FontWeight.Bold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).tagged(nameTag))
+            Text(meta, color = metaColor.ink(), fontSize = StoreDensity.T_CAPTION.sp, maxLines = 1,
+                modifier = Modifier.tagged(metaTag))
+            if (quick != null) Text(quick.label, color = Ink.WHITE.ink(), fontSize = StoreDensity.T_BODY.sp,
+                fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
+                modifier = Modifier.padding(start = sdp(StoreDensity.S8)).background(quick.fill.ink())
+                    .tap(quick.onClick)
+                    .padding(horizontal = sdp(StoreDensity.S12), vertical = sdp(StoreDensity.S4)))
+            Text(if (open) "⌄" else "›", color = Ink.DIM.ink(), fontSize = StoreDensity.T_TITLE.sp,
+                modifier = Modifier.padding(start = sdp(StoreDensity.S8)))
         }
-        val dot = TextView(ctx).apply {
-            text = "·"; textSize = StoreDensity.T_BODY; setTextColor(dim); setPadding(0, 0, dp(StoreDensity.S8), 0)
-        }
-        val name = TextView(ctx).apply {
-            text = label; textSize = StoreDensity.T_TITLE; setTextColor(0xFFFFFFFF.toInt())
-            typeface = Typeface.DEFAULT_BOLD
-            maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        val meta = TextView(ctx).apply { textSize = StoreDensity.T_CAPTION; setTextColor(dim); maxLines = 1 }
-        val quick = TextView(ctx).apply {
-            textSize = StoreDensity.T_BODY; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(0xFFFFFFFF.toInt())
-            setPadding(dp(StoreDensity.S12), dp(StoreDensity.S4), dp(StoreDensity.S12), dp(StoreDensity.S4))
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(StoreDensity.S8), 0, 0, 0) }
-        }
-        val chev = TextView(ctx).apply {
-            textSize = StoreDensity.T_TITLE; setTextColor(dim); setPadding(dp(StoreDensity.S8), 0, 0, 0)
-        }
-        row.addView(dot); row.addView(name); row.addView(meta); row.addView(quick); row.addView(chev)
-        fun show(open: Boolean) { detail.visibility = if (open) View.VISIBLE else View.GONE; chev.text = if (open) "⌄" else "›" }
-        show(isOpen())
-        row.setOnClickListener { val open = !isOpen(); setOpen(open); show(open) }
-        return Head(row, dot, name, meta, quick, chev)
     }
 
     /** The row's buttons, all visible: lines of at most [PER_LINE] buttons sharing the width. */
-    fun actions(ctx: Context, buttons: List<View>): LinearLayout = LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        tag = ACTIONS
-        buttons.chunked(PER_LINE).forEach { line ->
-            addView(LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; line.forEach { addView(it) } })
+    @Composable
+    fun Actions(verbs: List<StoreVerb>, modifier: Modifier = Modifier) {
+        Column(modifier.testTag(ACTIONS)) {
+            verbs.chunked(PER_LINE).forEach { line ->
+                Row {
+                    line.forEach { v ->
+                        StoreBar.Button(v.label, v.fill, v.onClick, Modifier.weight(1f), v.tag,
+                            alpha = v.alpha, live = v.live, description = v.description)
+                    }
+                }
+            }
         }
     }
-
-    const val ACTIONS = "store-row:actions"
-
-    /** The row's detail: the column the head's chevron shows and hides (facts, reasons, [actions]). */
-    fun detail(ctx: Context) = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
 
     /** One line of a row's detail or under its head (facts, a reason, an install's progress), caption scale. */
-    fun line(ctx: Context, text: String, color: Int = 0x99FFFFFF.toInt()) = TextView(ctx).apply {
-        this.text = text; textSize = StoreDensity.T_CAPTION; setTextColor(color)
-        val h = StoreDensity.dp(ctx, StoreDensity.S12); val v = StoreDensity.dp(ctx, StoreDensity.S2)
-        setPadding(h, v, h, v)
+    @Composable
+    fun Line(text: String, modifier: Modifier = Modifier, color: Int = Ink.DIM, tag: String? = null,
+             mono: Boolean = false, maxLines: Int = Int.MAX_VALUE, overflow: TextOverflow = TextOverflow.Clip) {
+        Text(text, color = color.ink(), fontSize = StoreDensity.T_CAPTION.sp, maxLines = maxLines, overflow = overflow,
+            fontFamily = if (mono) FontFamily.Monospace else null,
+            modifier = modifier.tagged(tag).padding(horizontal = sdp(StoreDensity.S12), vertical = sdp(StoreDensity.S2)))
     }
 
-    /** One line of the shared filter chips; [chips] is filled in order and painted for [selected]. */
-    fun filters(ctx: Context, style: StoreControls.Style, labels: List<String>, selected: Int,
-                chips: MutableList<TextView>, onPick: (Int) -> Unit): LinearLayout = LinearLayout(ctx).apply {
-        orientation = LinearLayout.HORIZONTAL
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, StoreDensity.dp(ctx, StoreDensity.S6)) }
-        chips.clear()
-        labels.forEachIndexed { i, label ->
-            val c = StoreBar.chip(ctx, style, label, i == 0) { onPick(i) }
-            chips += c; addView(c)
+    /** One line of the shared filter chips, painted for [selected]; [tags] (optional) tags each chip. */
+    @Composable
+    fun Filters(
+        labels: List<String>, selected: Int, onPick: (Int) -> Unit, modifier: Modifier = Modifier,
+        tags: List<String?> = emptyList(),
+    ) {
+        val style = rememberStoreControls().filter
+        Row(modifier.fillMaxWidth().padding(bottom = sdp(StoreDensity.S6))) {
+            labels.forEachIndexed { i, label ->
+                StoreBar.Chip(label, i == selected, { onPick(i) }, Modifier.weight(1f), first = i == 0,
+                    tag = tags.getOrNull(i), style = style)
+            }
         }
-        chips.forEachIndexed { i, c -> StoreBar.paint(c, i == selected) }
     }
 }
 
@@ -372,13 +518,13 @@ object StoreRow {
  *  content below it; a page's action bar is the first thing IN that content, under the tabs, as the
  *  Cloud page's header is (#896.3). */
 object StorePage {
-    fun frame(ctx: Context, strip: View?, content: View): LinearLayout =
-        LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = StoreDensity.dp(ctx, StoreDensity.S8)
-            if (strip != null) { strip.setPadding(p, p, p, 0); addView(strip) }
-            addView(content, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+    @Composable
+    fun Frame(strip: (@Composable () -> Unit)?, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+        Column(modifier.fillMaxWidth()) {
+            if (strip != null) Box(Modifier.padding(start = sdp(StoreDensity.S8), top = sdp(StoreDensity.S8), end = sdp(StoreDensity.S8))) { strip() }
+            Column(Modifier.weight(1f), content = content)
         }
+    }
 }
 
 /**
@@ -389,82 +535,74 @@ object StorePage {
  * a second copy (#896). A strip is a list of lines, each a list of [StoreControls.Control]s
  * wearing the style their declaration names; a line whose controls all `stretch` fills the
  * width (a segmented control), any other wraps and scrolls (a set of pages). The running
- * index across the lines is the page's one tab ordering, which is what [paint] and the
- * caller's `onSelect` speak.
+ * index across the lines is the page's one tab ordering, which is what `selected`
+ * and the caller's `onSelect` speak.
  *
  * No minimum height: a Store tab is as tall as its text and padding (data-dense; test-store-app.sh holds it).
  */
 object StoreTabs {
 
-    /** The strip: [lines] as one column, each line one row. [buttons] is filled in tab order. */
-    fun bar(ctx: Context, lines: List<List<StoreControls.Control>>,
-            buttons: MutableList<TextView>, onSelect: (Int) -> Unit): View {
-        val column = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            lp.setMargins(0, 0, 0, StoreDensity.dp(ctx, StoreDensity.S8)); layoutParams = lp
-        }
-        buttons.clear()
-        for (line in lines) {
-            if (line.isEmpty()) continue
-            // Only BETWEEN lines, so a page with one line draws no stray rule.
-            if (column.childCount > 0) column.addView(divider(ctx))
-            val strip = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            for (control in line) {
-                val index = buttons.size
-                val t = button(ctx, control) { onSelect(index) }
-                buttons.add(t); strip.addView(t)
+    const val TAG = "store-tabs"
+    fun tabTag(index: Int) = "$TAG:$index"
+
+    /** The strip: [lines] as one column, each line one row. */
+    @Composable
+    fun Bar(lines: List<List<StoreControls.Control>>, selected: Int, modifier: Modifier = Modifier, onSelect: (Int) -> Unit) {
+        Column(modifier.fillMaxWidth().padding(bottom = sdp(StoreDensity.S8)).testTag(TAG)) {
+            var index = 0
+            var drawn = 0
+            for (line in lines) {
+                if (line.isEmpty()) continue
+                // Only BETWEEN lines, so a page with one line draws no stray rule.
+                if (drawn > 0) Divider()
+                drawn++
+                val first = index
+                index += line.size
+                val stretch = line.all { it.style.stretch }
+                val strip: @Composable () -> Unit = {
+                    Row {
+                        line.forEachIndexed { i, control ->
+                            Tab(control, first + i == selected, tabTag(first + i), stretch) { onSelect(first + i) }
+                        }
+                    }
+                }
+                // A wrapping line scrolls rather than clipping its last chip on a
+                // narrow phone; a stretched line fills the width by definition.
+                if (stretch) strip() else Box(Modifier.horizontalScroll(rememberScrollState())) { strip() }
             }
-            // A wrapping line scrolls rather than clipping its last chip on a
-            // narrow phone; a stretched line fills the width by definition.
-            column.addView(if (line.all { it.style.stretch }) strip
-                else HorizontalScrollView(ctx).apply { isHorizontalScrollBarEnabled = false; addView(strip) })
         }
-        paint(buttons, 0)
-        return column
     }
 
     /** The hairline plus the real space that makes a second line a second table. */
-    fun divider(ctx: Context) = View(ctx).apply {
-        setBackgroundColor(0xFF2A2A33.toInt())
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, StoreDensity.dp(ctx, StoreDensity.S1))
-            .apply { setMargins(0, StoreDensity.dp(ctx, StoreDensity.S12), 0, StoreDensity.dp(ctx, StoreDensity.S8)) }
+    @Composable
+    fun Divider() {
+        Box(Modifier.fillMaxWidth().padding(top = sdp(StoreDensity.S12), bottom = sdp(StoreDensity.S8))
+            .height(sdp(StoreDensity.S1)).background(Ink.RULE.ink()))
     }
 
     /**
-     * THE ONE tab-button builder. [control]'s style is carried as the view's tag so [paint]
-     * stays one pass over one list. A stretching style (weight 1f) is a partition filling its
+     * THE ONE tab-button builder. A stretching style (weight 1f) is a partition filling its
      * bar; a wrapping one sits left at its own width, because a set of pages is not a partition.
-     * The icon leads and the chevron trails only when the style declares them.
+     * The icon leads and the chevron trails only when the style declares them. The active look is
+     * whatever that style's `_active` fields say.
      */
-    fun button(ctx: Context, control: StoreControls.Control, onClick: () -> Unit) = TextView(ctx).apply {
+    @Composable
+    private fun RowScope.Tab(
+        control: StoreControls.Control, on: Boolean, tag: String, stretch: Boolean, onClick: () -> Unit,
+    ) {
         val style = control.style
-        text = listOf(control.icon, control.label, style.chevron).filter { it.isNotEmpty() }.joinToString("  ")
-        maxLines = 1
-        tag = style
-        isClickable = true
-        setOnClickListener { onClick() }
-        typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        textSize = StoreDensity.T_BODY
-        if (style.stretch) {
-            gravity = Gravity.CENTER
-            setPadding(StoreDensity.dp(ctx, StoreDensity.S4), StoreDensity.dp(ctx, StoreDensity.S6), StoreDensity.dp(ctx, StoreDensity.S4), StoreDensity.dp(ctx, StoreDensity.S6))
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        } else {
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(StoreDensity.dp(ctx, StoreDensity.S12), StoreDensity.dp(ctx, StoreDensity.S6), StoreDensity.dp(ctx, StoreDensity.S12), StoreDensity.dp(ctx, StoreDensity.S6))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-                .apply { setMargins(0, 0, StoreDensity.dp(ctx, StoreDensity.S8), 0) }
+        val text = listOf(control.icon, control.label, style.chevron).filter { it.isNotEmpty() }.joinToString("  ")
+        val base = if (stretch) Modifier.weight(1f) else Modifier.padding(end = sdp(StoreDensity.S8))
+        Box(
+            base.storeSurface(style, on).testTag(tag).semantics(mergeDescendants = true) { role = Role.Tab }
+                .tap(onClick)
+                .padding(
+                    horizontal = if (stretch) sdp(StoreDensity.S4) else sdp(StoreDensity.S12),
+                    vertical = sdp(StoreDensity.S6)),
+            contentAlignment = if (stretch) Alignment.Center else Alignment.CenterStart,
+        ) {
+            Text(text, color = (if (on) style.textActive else style.text).ink(), fontSize = StoreDensity.T_BODY.sp,
+                fontWeight = weightOf(style), maxLines = 1)
         }
-    }
-
-    /** Selection reads per style: each button carries its declared style as its tag, so this is a
-     *  single pass over one list and the active look is whatever that style's `_active` fields say. */
-    fun paint(buttons: List<TextView>, selected: Int) = buttons.forEachIndexed { i, t ->
-        val on = i == selected
-        val style = t.tag as StoreControls.Style
-        t.background = StoreControls.background(t.context, style, on)
-        t.setTextColor(if (on) style.textActive else style.text)
     }
 }

@@ -117,7 +117,8 @@ dependencies {
     implementation project(':libs:core')
     // The fleet's shared Compose kit: Store ▸ Phone ▸ Search draws its search field, state pills,
     // banners and empty state with it, the same parts every migrated fleet page uses.
-    implementation project(':libs:ui-kit')
+    // api: the Store's fragments are KitComposeFragments, so a host that names one needs the kit's class.
+    api project(':libs:ui-kit')
     // The store drives the updater; that direction is the whole separation.
     api project(':libs:updater')
     // Play Protect toggle + shell channel ladder on the store's header.
@@ -127,7 +128,6 @@ dependencies {
     implementation 'androidx.work:work-runtime-ktx:2.9.1'
     // #866 the Store's own fleet-token entry (FleetBearer.Own), encrypted like libs:ops DaguPrefs.
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
-    // BottomSheetDialog for the APK detail sheet — same pattern and version
-    // aa_cloud-superapp/app already uses for ContainerSheet.
+    // The theme attributes the fleet's View hosts resolve (and the APK detail sheet's ModalBottomSheet window).
     implementation 'com.google.android.material:material:1.12.0'
 }

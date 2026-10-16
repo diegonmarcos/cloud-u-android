@@ -265,7 +265,7 @@ elif re.search(r"listOf\s*\(\s*\"", tabs): bad("StoreSourceTabs builds a literal
 elif "kinds.map { it.label }" in tabs: ok("the strip is one pill per declared kind, labelled from the declaration")
 else: bad("StoreSourceTabs does not derive its pills from the declared kinds")
 page = kt["StorePhoneFragment.kt"]
-if "StoreSourceTabs.render(" in page and "cfg?.kinds" in page:
+if "StoreSourceTabs.Strip(" in page and "cfg?.kinds" in page:
     ok("Store > Phone draws the strip from the resolved kinds")
 else: bad("Store > Phone does not draw the strip from the resolved kinds")
 if "it.external?.inTab(tab)" in page and ".filter { if (installedOnly) it.installed else it.external?.declared == true }" in page:

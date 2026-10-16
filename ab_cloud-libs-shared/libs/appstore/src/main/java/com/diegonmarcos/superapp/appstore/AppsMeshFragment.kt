@@ -1,26 +1,28 @@
 package com.diegonmarcos.superapp.appstore
 
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
 
 /**
  * #733 Configs ▸ Setup ▸ Network ▸ Apps Mesh (page id `apps-mesh`). The SAME
- * page Store ▸ Apps Mesh draws — both call [AppsMesh.page] — hosted on its own.
+ * page Store ▸ Apps Mesh draws — both call [AppsMesh.Page] — hosted on its own.
  * There is no Store row to open from here, so `store` is not offered.
  */
-class AppsMeshFragment : Fragment() {
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = requireContext()
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = StoreDensity.dp(ctx, StoreDensity.S12); setPadding(p, p, p, p)
+class AppsMeshFragment : KitComposeFragment() {
+    override fun palette(): KitPalette = StoreSearchPage.palette(requireContext())
+
+    @Composable
+    override fun Content() {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(sdp(StoreDensity.S12))) {
+            AppsMesh.Page(this@AppsMeshFragment)
         }
-        AppsMesh.page(this, col)
-        return ScrollView(ctx).apply { addView(col) }
     }
 }

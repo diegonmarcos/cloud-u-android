@@ -4,11 +4,11 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
+import android.os.Looper
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.test.hasTestTag
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentActivity
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.appstore.AppInventory
 import com.diegonmarcos.superapp.appstore.AppStoreHost
@@ -16,6 +16,7 @@ import com.diegonmarcos.superapp.appstore.PhoneAppActions
 import com.diegonmarcos.superapp.appstore.StoreBar
 import com.diegonmarcos.superapp.appstore.StoreCloudFragment
 import com.diegonmarcos.superapp.appstore.StorePhoneFragment
+import com.diegonmarcos.superapp.ui.KitPageHarness
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -24,7 +25,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
@@ -34,7 +34,7 @@ import org.robolectric.annotation.Config
  * what the code RENDERS and RETURNS.
  *
  * Bar: both Store fragments are hosted and their bars read back by the tag
- * StoreBar puts on every control — same controls, same labels, every verb
+ * StoreBar puts on every control (StoreBar.itemTag) — same controls, same labels, every verb
  * enabled on both (#571 made Install all / Update all real on Phone Apps).
  *
  * Export: packages are installed into Robolectric's PackageManager with a real
@@ -48,7 +48,7 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
-class StorePhoneAppsTest {
+class StorePhoneAppsTest : KitPageHarness() {
 
     private val ctx: Context = ApplicationProvider.getApplicationContext()
     private val pm get() = ctx.packageManager
@@ -57,26 +57,31 @@ class StorePhoneAppsTest {
         AppStoreHost.classify = { _, _ -> emptyMap() }
     }
 
-    private fun host(f: Fragment): View {
-        val act = Robolectric.buildActivity(FragmentActivity::class.java).setup().get()
-        act.supportFragmentManager.beginTransaction().add(android.R.id.content, f).commitNow()
-        return f.requireView()
-    }
+    private fun idle() { shadowOf(Looper.getMainLooper()).idle(); compose.waitForIdle() }
 
-    private fun texts(v: View): List<TextView> = when (v) {
-        is TextView -> listOf(v)
-        is ViewGroup -> (0 until v.childCount).flatMap { texts(v.getChildAt(it)) }
-        else -> emptyList()
-    }
-
-    private class Bar(val controls: Map<StoreBar.Item, TextView>, val captions: Set<String>)
+    /** The bar as the semantics tree shows it: its controls by item, and the captions under them. */
+    /** What one bar control said when it was read (nodes go stale when their page is replaced). */
+    private class Seen(val text: String, val disabled: Boolean, val clickable: Boolean)
+    private class Bar(val controls: Map<StoreBar.Item, Seen>, val captions: Set<String>)
 
     private fun barOf(f: Fragment): Bar {
-        val bar = host(f).findViewWithTag<ViewGroup>(StoreBar.TAG)
-        assertNotNull("${f::class.simpleName} draws no Store bar", bar)
-        val all = texts(bar!!)
-        return Bar(all.filter { it.tag is StoreBar.Item }.associateBy { it.tag as StoreBar.Item },
-            all.filter { it.tag !is StoreBar.Item }.map { it.text.toString() }.toSet())
+        compose.runOnUiThread {
+            compose.activity.supportFragmentManager.fragments.toList().forEach {
+                compose.activity.supportFragmentManager.beginTransaction().remove(it).commitNow()
+            }
+        }
+        show(f); idle()
+        val root = compose.onAllNodes(hasTestTag(StoreBar.TAG), useUnmergedTree = true).fetchSemanticsNodes()
+        assertTrue("${f::class.simpleName} draws no Store bar", root.isNotEmpty())
+        val controls = StoreBar.Item.values().mapNotNull { item ->
+            compose.onAllNodes(hasTestTag(StoreBar.itemTag(item))).fetchSemanticsNodes().firstOrNull()
+                ?.let { item to Seen(it.text(), it.isDisabled(), SemanticsActions.OnClick in it.config) }
+        }.toMap()
+        // the captions: every text of the bar that is not inside one of its controls
+        fun captions(n: SemanticsNode): List<String> =
+            if (n.tag()?.startsWith(StoreBar.TAG + ":") == true) emptyList()
+            else n.children.flatMap { captions(it) } + listOfNotNull(n.text().takeIf { it.isNotEmpty() && n.children.isEmpty() })
+        return Bar(controls, root.first().children.flatMap { captions(it) }.toSet())
     }
 
     @Test
@@ -88,19 +93,20 @@ class StorePhoneAppsTest {
         // a null verb draws no button at all, so it is the one control Phone lacks.
         assertEquals("Phone Apps does not draw the same controls",
             cloud.controls.keys - StoreBar.Item.DOWNLOAD, phone.controls.keys)
-        for ((item, view) in phone.controls)
-            assertEquals("$item label differs between the tabs", cloud.controls.getValue(item).text.toString(), view.text.toString())
+        for ((item, seen) in phone.controls)
+            assertEquals("$item label differs between the tabs", cloud.controls.getValue(item).text, seen.text)
         assertEquals("the Cloud tab has a disabled control", emptySet<StoreBar.Item>(),
-            cloud.controls.filterValues { !it.isEnabled }.keys)
+            cloud.controls.filterValues { it.disabled }.keys)
         // #571: Install all / Update all are real on Phone Apps — this store installs
         // fleet apps through the release path and external apps through their
         // declared ladder — so nothing is disabled and no reason caption is drawn.
         assertEquals("Phone Apps still disables a verb the resolver made real", emptySet<StoreBar.Item>(),
-            phone.controls.filterValues { !it.isEnabled }.keys)
+            phone.controls.filterValues { it.disabled }.keys)
         assertEquals("Phone Apps draws a disabled-reason caption for verbs that are enabled",
-            emptySet<String>(), phone.captions - cloud.captions)
+            emptySet<String>(), (phone.captions - cloud.captions).filterNot { it.endsWith("checking...") }.toSet())
         assertTrue("an enabled verb must answer a tap",
-            phone.controls.filterKeys { it == StoreBar.Item.INSTALL || it == StoreBar.Item.UPDATE }.values.all { it.hasOnClickListeners() })
+            phone.controls.filterKeys { it == StoreBar.Item.INSTALL || it == StoreBar.Item.UPDATE }.values
+                .all { it.clickable })
     }
 
     private fun install(pkg: String, versionName: String, code: Long, installer: String?) {

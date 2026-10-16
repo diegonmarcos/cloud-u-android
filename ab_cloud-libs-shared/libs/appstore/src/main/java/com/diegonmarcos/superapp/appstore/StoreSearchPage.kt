@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.view.View
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,7 +27,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,15 +37,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.graphics.drawable.toBitmap
 import com.diegonmarcos.superapp.apps.PhoneSections
 import com.diegonmarcos.superapp.apps.PhoneTaxonomy
-import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitAction
 import com.diegonmarcos.superapp.uikit.KitDensity
 import com.diegonmarcos.superapp.uikit.KitEmptyState
@@ -64,9 +60,9 @@ import java.net.URLEncoder
 import kotlin.concurrent.thread
 
 /**
- * Store ▸ Phone ▸ Search. Compose, hosted in the View page by [view], drawn with the fleet's
+ * Store ▸ Phone ▸ Search. Compose ([Content], inside the Phone page), drawn with the fleet's
  * shared parts: libs:ui-kit's search field, state pills, banners and empty state, and the Store's
- * own [StoreRow] for every result row (the SAME row Phone and Cloud draw), embedded as a View.
+ * own [StoreRow] for every result row (the SAME row Phone and Cloud draw).
  *
  * BEFORE A QUERY — the landing. Our list (the constellation fleet's apps and the declared apps of
  * the install-source map, with this phone's DeclaredEdits) filed under SuperApp ▸ Phone's
@@ -269,7 +265,7 @@ object StoreSearchPage {
     // ── the page ───────────────────────────────────────────────────────
 
     /** The Store's look as kit roles: its card, its tab fills and its state colours. */
-    private fun palette(ctx: Context): KitPalette {
+    internal fun palette(ctx: Context): KitPalette {
         val tab = controlsOf(ctx).groupTab
         return KitPalette.fromArgb(
             surface = CARD, surfaceSelected = tab.fill ?: IDLE, textPrimary = tab.textActive, textSecondary = tab.text,
@@ -277,8 +273,10 @@ object StoreSearchPage {
         )
     }
 
-    fun view(ctx: Context, cfg: () -> SourceResolver.Config?): View = ComposeView(ctx).apply {
-        setContent { CloudKitTheme(palette(ctx)) { Page(ctx, cfg) } }
+    /** The page, to be drawn inside the Phone page's CloudKitTheme (palette: [palette]). */
+    @Composable
+    fun Content(cfg: () -> SourceResolver.Config?) {
+        Page(LocalContext.current, cfg)
     }
 
     private enum class Licence(val label: Int) {
@@ -434,9 +432,7 @@ object StoreSearchPage {
                     Text(ctx.getString(R.string.store_search_merged_up, st.hits.size), color = p.textSecondary, fontSize = KitDensity.caption)
                 }
                 group.forEach { r ->
-                    key(r.key, tick, lines[r.pkg]) {
-                        AndroidView(factory = { c -> resultRow(c, cfg, d, r, lines, open, bump) }, modifier = Modifier.fillMaxWidth())
-                    }
+                    ResultRow(ctx, cfg, d, r, lines, open, tick, bump)
                 }
             }
         }
@@ -480,22 +476,17 @@ object StoreSearchPage {
         }
     }
 
-    private fun resultRow(
+    @Composable
+    private fun ResultRow(
         ctx: Context, cfg: () -> SourceResolver.Config?, d: Decl, r: StoreSuggest.Result,
-        lines: MutableMap<String, String>, open: MutableMap<String, Boolean>, bump: () -> Unit,
-    ): View {
-        val c = runCatching { resolveCfg(ctx, cfg) }.getOrNull()
-        val controls = controlsOf(ctx)
-        val card = StoreRow.card(ctx)
-        val detail = StoreRow.detail(ctx)
-        val head = StoreRow.head(ctx, r.title, detail, { open[r.key] == true }, { open[r.key] = it })
-        val installed = isInstalled(ctx, r.pkg)
-        head.dot.text = "●"
-        head.dot.setTextColor(if (installed) OK else if (r.pkg.isEmpty()) DIM else MISSING)
-        head.meta.text = r.sources.joinToString(" · ") { d.label(it) }
+        lines: MutableMap<String, String>, open: MutableMap<String, Boolean>, tick: Int, bump: () -> Unit,
+    ) {
+        val c = remember(r.key) { runCatching { resolveCfg(ctx, cfg) }.getOrNull() }
+        val installed = remember(r.pkg, tick) { isInstalled(ctx, r.pkg) }
         val fleetApp = if (FLEET in r.sources) fleetByPkg[r.pkg] else null
-        val buttons = ArrayList<View>()
-        fun button(label: String, onClick: (() -> Unit)?) = StoreBar.button(ctx, controls.action, label, null, onClick).also { buttons += it }
+        val verbs = ArrayList<StoreVerb>()
+        val reasons = ArrayList<String>()
+        fun button(label: String, onClick: (() -> Unit)?) { verbs += StoreVerb(label, null, onClick, "store-search:verb:${r.key}:${verbs.size}") }
         var quick: Pair<String, () -> Unit>? = null
         when {
             r.pkg.isEmpty() -> {
@@ -521,7 +512,7 @@ object StoreSearchPage {
                             else { { install(ctx, lines, r.pkg) { ExternalInstall.run(ctx.applicationContext, c, ext) } } }
                         if (go != null) quick = a.label to go
                         button(a.label, go)
-                        a.disabledReason?.let { detail.addView(caption(ctx, it)) }
+                        a.disabledReason?.let { reasons += it }
                     } else button(a.label) { start(ctx, a.intent, a.label) }
                 }
                 if (!ext.declared && ext.direct.isNotEmpty()) button(ctx.getString(R.string.store_search_install_declare)) {
@@ -538,22 +529,23 @@ object StoreSearchPage {
                 bump()
             }
         }
-        quick?.let { (label, go) ->
-            head.quick.text = label; head.quick.visibility = View.VISIBLE
-            head.quick.setOnClickListener { go() }
-        }
         val facts = listOf(r.pkg, r.by, ctx.getString(if (r.foss) R.string.store_trait_oss else R.string.store_trait_private))
             .filter { it.isNotBlank() }.joinToString("  ·  ")
-        detail.addView(caption(ctx, facts), 0)
-        if (r.pkg.isEmpty()) detail.addView(caption(ctx, ctx.getString(R.string.store_search_repo_only)))
-        detail.addView(StoreRow.actions(ctx, buttons))
-        card.addView(head.view)
-        lines[r.pkg]?.takeIf { r.pkg.isNotEmpty() }?.let { card.addView(caption(ctx, it, OK)) }
-        card.addView(detail)
-        return card
+        val isOpen = open[r.key] == true
+        StoreRow.Card(Modifier.fillMaxWidth().testTag("store-search:row:${r.key}")) {
+            StoreRow.Head(r.title, isOpen, { open[r.key] = !isOpen },
+                dot = "●", dotColor = if (installed) OK else if (r.pkg.isEmpty()) DIM else MISSING,
+                meta = r.sources.joinToString(" · ") { d.label(it) },
+                quick = quick?.let { (label, go) -> StoreQuick(label, Ink.GREY_FILL, go) })
+            lines[r.pkg]?.takeIf { r.pkg.isNotEmpty() }?.let { StoreRow.Line(it, color = OK) }
+            if (isOpen) {
+                StoreRow.Line(facts)
+                reasons.forEach { StoreRow.Line(it) }
+                if (r.pkg.isEmpty()) StoreRow.Line(ctx.getString(R.string.store_search_repo_only))
+                StoreRow.Actions(verbs)
+            }
+        }
     }
-
-    private fun caption(ctx: Context, text: String, color: Int = DIM) = StoreRow.line(ctx, text, color)
 
     // ── the landing's view ─────────────────────────────────────────────
 

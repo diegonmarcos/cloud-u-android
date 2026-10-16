@@ -23,7 +23,7 @@ import re, sys
 lib = sys.argv[1]
 A = lib + "/appstore/src/main/java/com/diegonmarcos/superapp/appstore/"
 U = lib + "/updater/src/main/java/com/diegonmarcos/superapp/updater/"
-FILES = {"page": A + "StoreCloudFragment.kt", "stages": A + "StoreStages.kt", "api": A + "StoreDebugApi.kt",
+FILES = {"page": A + "StoreCloudFragment.kt", "panel": A + "StoreProgressPanel.kt", "stages": A + "StoreStages.kt", "api": A + "StoreDebugApi.kt",
          "fleet": U + "Fleet.kt", "prog": U + "UpdateProgress.kt"}
 P = F = 0
 def ok(m):
@@ -41,13 +41,14 @@ def fun(t, name):
 
 CHECKS = [
     ("the bar is drawn from StoreStages.progress, described on the publishing thread",
-     lambda s: re.search(r"progressObserver[^\n]*=\s*\{\s*state\s*->\s*\n\s*val p = StoreStages\.progress\(state\)", code(s["page"]))),
+     lambda s: re.search(r"progressObserver[^\n]*=\s*\{\s*state\s*->\s*\n\s*val p = StoreStages\.progress\(state\)", code(s["panel"]))),
     ("the bar's label IS the progress line",
      # A failed job shows the row's error banner instead (StoreRowError); every
      # other state must still draw the progress line itself.
-     lambda s: "label.text = if (p.failed) StoreRowError.banner(p.app) else p.text" in fun(code(s["page"]), "renderProgress")),
+     lambda s: "Ui(if (p.failed) StoreRowError.banner(p.app) else p.text," in fun(code(s["panel"]), "single")),
     ("a tap on the bar opens the named app's row",
-     lambda s: re.search(r"row\.setOnClickListener\s*\{[^}]*openDetail\(", fun(code(s["page"]), "renderProgress"))),
+     lambda s: "onOpen?.invoke(t)" in fun(code(s["panel"]), "Panel") and ".tap(open)" in fun(code(s["panel"]), "Panel")
+               and "StoreProgressPanel(fleet) { openDetail(it) }" in code(s["page"])),
     ("/api/store/progress answers the SAME object",
      lambda s: '"progress" -> progress()' in code(s["api"]) and "StoreStages.progress()" in fun(code(s["api"]), "progress")),
     ("Download all runs each app as its own keyed job (rows run concurrently, none shares a position)",
@@ -80,10 +81,10 @@ for name, _ in CHECKS:
 
 print("== T2: the validator sees each regression (mutation) ==")
 MUTANTS = [
-    ("the page goes back to drawing the raw state", "page",
+    ("the page goes back to drawing the raw state", "panel",
      "val p = StoreStages.progress(state)", "val p = null as StoreStages.Progress?"),
-    ("the label shows the stage only", "page", "else p.text", "else p.stage"),
-    ("the tap does nothing", "page", "target?.let { openDetail(row.context, it) }", "target?.let { }"),
+    ("the label shows the stage only", "panel", "else p.text", "else p.stage"),
+    ("the tap does nothing", "page", "StoreProgressPanel(fleet) { openDetail(it) }", "StoreProgressPanel(fleet) { }"),
     ("the API route is dropped", "api", '"progress" -> progress().toString()', ""),
     ("Download all stops keying its jobs", "stages",
      "StoreJobs.board.begin(app.pkg, app.label)\n            val s = download(ctx, app)",

@@ -393,30 +393,23 @@
       "id": "libs:appstore",
       "scope": "in",
       "wave": 1,
-      "ui": "views",
+      "ui": "compose",
       "size": "L",
-      "screens_left": [
-        "StoreCloudFragment",
-        "StorePhoneFragment",
-        "AppsMeshFragment",
-        "ApkDetailSheet",
-        "FeedViewer",
-        "StoreBar",
-        "StoreSourceTabs"
-      ],
+      "screens_left": [],
       "consumers": [
-        "superapp"
+        "superapp",
+        "store"
       ],
       "risks": [
-        "9 SuperApp Robolectric tests (Store*/AppsMesh*) assert on the built View tree — port to compose-test with the same tags",
         "fleet install/update actions must keep their debug-API tags"
       ],
       "baseline": {
-        "view_screens": 3,
+        "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 10,
+        "view_ui_files": 0,
         "custom_views": 0
-      }
+      },
+      "notes": "All Compose (2026-10-16): the Cloud and Phone pages and the Apps Mesh page are KitComposeFragments under CloudKitTheme (Store palette); StoreBar/StoreRow/StoreTabs are composables (StoreBar.Button, Chip, PageButton carry the StoreSemantics marks); the APK detail sheet is a ModalBottomSheet, the import plan a dialog; the 9 SuperApp Robolectric tests read the semantics tree."
     },
     {
       "id": "libs:mail",

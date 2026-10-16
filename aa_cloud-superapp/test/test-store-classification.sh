@@ -104,14 +104,15 @@ else: bad("renderAllApps ignores `only`, or writes a filtered result into the sh
 
 print("== T5: carry-over survived the move into the Cloud tab ==")
 for needle, what in (
-        ("ApkDetailSheet.show(requireActivity(), app, states[app.id])", "#496 detail sheet"),
+        ("details.add(app to states[app.id])", "#496 detail sheet"),
         ("Fleet.downgradePolicy = Fleet.DowngradePolicy { app, candidateCode, installedCode ->", "#496 downgrade confirm armed while visible"),
         ("Fleet.downgradePolicy = Fleet.DowngradePolicy { _, _, _ -> false }", "#496 refuse-by-default restored on leave"),
         ("{ it.label.lowercase() }", "#334 A-Z within a run"),
-        ("Updater.cancelNow(requireContext())", "#140 Cancel"),
+        ("Updater.cancelNow(ctx.applicationContext)", "#140 Cancel"),
         ("UpdateProgress.addObserver(progressObserver)", "#88 live progress"),
-        ("StoreBar.render(this, headerControls", "#565 the Cloud tab draws the shared Store bar")):
-    if needle in cloud: ok(what)
+        ("StoreBar.Bar(StoreBar.Verbs(", "#565 the Cloud tab draws the shared Store bar")):
+    # the progress row (Cancel, the observer) is the one StoreProgressPanel both Store tabs draw
+    if needle in cloud or needle in store_files.get("StoreProgressPanel.kt", ""): ok(what)
     else: bad(what + " — missing from StoreCloudFragment")
 # #565: the header moved into the ONE bar both Store tabs draw.
 bar = store_files.get("StoreBar.kt", "")
@@ -171,6 +172,9 @@ else:
     decl = json.loads(read(feeds_asset))
     feeds = decl.get("feeds", [])
     viewer = store_files.get("FeedViewer.kt", "")
+    # The feeds are DRAWN by Cloud Store's Feed page (Compose); FeedViewer is the reader (fetch, parse, templates).
+    feedpage = os.path.join(store_dir, "../../../../../../../../../../ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/FeedPage.kt")
+    feedpage = code(feedpage) if os.path.exists(feedpage) else ""
     if not viewer: bad("FeedViewer.kt is missing — nothing renders the declared feeds")
     # (a) The declaration is usable: every feed needs the id/label/url a tab is
     #     built from. A feed short of one draws a nameless tab that cannot fetch.
@@ -238,13 +242,13 @@ else:
     # (e) EMPTY IS NOT FAILED. Both outcomes must be drawn, and drawn
     #     differently: a fetch that threw and rendered as an empty list is the
     #     quiet-green shape that keeps costing this repo days.
-    if "onFailure" in viewer and "isEmpty()" in viewer:
+    if "explain(it)" in feedpage and "l.error != null" in feedpage and "entries.isEmpty()" in feedpage:
         ok("a failed fetch and an empty feed are separate branches")
     else: bad("FeedViewer does not distinguish a failed fetch from an empty feed")
     # (f) IN-FLIGHT IS NEUTRAL. A run that has not finished carries a state in
     #     neither ok nor bad, and must not be coloured as a failure.
-    if re.search(r"in feed\.ok\s*->", viewer) and re.search(r"in feed\.bad\s*->", viewer) \
-       and re.search(r"else\s*->", viewer):
+    if re.search(r"in feed\.ok\s*->", feedpage) and re.search(r"in feed\.bad\s*->", feedpage) \
+       and re.search(r"else\s*->", feedpage):
         ok("a state in neither ok nor bad falls to a neutral else — unfinished is not failed")
     else: bad("FeedViewer has no neutral branch: an in-flight run would be coloured as a verdict")
     # (g) The strip is a RENDERING of the declaration, and parse() is separable
@@ -253,8 +257,6 @@ else:
     #     declaration, so the strip maps the declared feeds, in order.
     #     #896 the feeds are the Feed page's top tabs now: a Compose page in Cloud Store reads the SAME
     #     declaration through FeedViewer.feeds, and the Cloud page draws none.
-    feedpage = os.path.join(store_dir, "../../../../../../../../../../ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/FeedPage.kt")
-    feedpage = open(feedpage).read() if os.path.exists(feedpage) else ""
     if "FeedViewer.feeds(ctx)" in feedpage and "feeds.map" not in cloud and "FeedViewer" not in cloud: ok("the Feed page reads the declared feeds through FeedViewer, and the Cloud page draws none")
     else: bad("the Feed page does not read the declared feeds, or Cloud still draws feeds")
     if re.search(r"fun parse\(decl: JSONObject\)", viewer): ok("parse() takes a declaration, so it can be handed an invented one")
@@ -306,7 +308,7 @@ else:
     # (k) #668 SAY WHICH. The failure branch renders explain(), and explain()
     #     has a distinct sentence for each cause the owner has to act on
     #     differently: quota (wait), unreachable (network), refused (url/auth).
-    if re.search(r"onFailure\s*\{\s*status\.text\s*=\s*explain\(it\)", viewer):
+    if re.search(r"Loaded\(emptyList\(\),\s*FeedViewer\.explain\(it\)\)", feedpage):
         ok("the failure branch draws explain(), not a generic sentence")
     else: bad("the feed's failure branch does not go through explain()")
     ex = viewer[viewer.find("fun explain("):viewer.find("fun fill(")] if "fun explain(" in viewer else ""

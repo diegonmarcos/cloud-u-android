@@ -148,13 +148,14 @@ PY
   [ $lit -eq 0 ] && ok "no dp/sp literal outside the density declaration" || bad "$lit file(s) hold their own dp/sp literals"
   local nodel=0
   for f in "$L"/*.kt; do
-    grep -q 'private fun dp(' "$f" && ! grep -q 'private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)' "$f" && nodel=$((nodel+1))
+    [ "$(basename "$f")" = StoreDensity.kt ] && continue
+    grep -qE 'fun (dp|sdp)\(' "$f" && ! grep -qE 'fun dp\(ctx: Context, v: Int\) = StoreDensity.dp\(ctx, v\)|fun sdp\(step: Int\): Dp = StoreDensity.dpValue\(step\).dp' "$f" && nodel=$((nodel+1))
   done
-  [ $nodel -eq 0 ] && ok "every local dp() helper delegates to StoreDensity" || bad "$nodel dp() helper(s) scale on their own"
+  [ $nodel -eq 0 ] && ok "every local dp helper delegates to StoreDensity" || bad "$nodel dp helper(s) scale on their own"
   grep -q 'StoreDensity\.' "$MA" && ok "Cloud Store's screens read StoreDensity" || bad "Cloud Store's MainActivity does not read StoreDensity"
   grep -q 'StoreDensity\.T_' "$L/StoreCloudFragment.kt" && grep -q 'StoreDensity\.T_' "$L/StorePhoneFragment.kt" && ok "the Cloud and Phone shelves draw their type from the ramp" || bad "a shelf page does not use the StoreDensity type ramp"
   # 7. #868 the fleet nav pattern: the island's five pages (#896) are build.json::ui.sections, the bar is the shared island
-  python3 - "$S/build.json" "$L/../../../../../assets/appstore-feeds.json" <<'PY' && ok "ui.bottom_nav is cloud, phone, feed, access, settings (five, each a ui.sections id), Phone's pages are installed|search|declared, Feed's the declared feeds, Access's mesh|android|cloud, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, feed, perms, settings"
+  python3 - "$S/build.json" "$L/../../../../../assets/appstore-feeds.json" <<'PY' && ok "ui.bottom_nav is cloud, phone, feed, access, settings (five, each a ui.sections id), Phone's pages are installed|search|declared, Feed's the declared feeds, Access's mesh|ipc|android|cloud, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, feed, perms, settings"
 import json, os, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
 secs = {s.get('id'): s for s in ui.get('sections') or []}
@@ -162,7 +163,7 @@ feeds = json.load(open(sys.argv[2]))['feeds'] if os.path.exists(sys.argv[2]) els
 pg = lambda i: [p.get('id') for p in secs.get(i, {}).get('pages') or []]
 ok = (ui.get('bottom_nav') == ['cloud', 'phone', 'feed', 'access', 'settings']
       and set(ui['bottom_nav']) <= set(secs) and 'mesh' not in secs and 'perms' not in secs
-      and pg('access') == ['mesh', 'android', 'cloud']
+      and pg('access') == ['mesh', 'ipc', 'android', 'cloud']
       and pg('phone') == ['installed', 'search', 'declared']
       and (pg('feed') == [f['id'] for f in feeds] if feeds else len(pg('feed')) >= 2)
       and ui.get('default_section') == 'cloud')
@@ -178,9 +179,9 @@ PY
   [ -f "$CS/FeedPage.kt" ] && [ -f "$CS/AccessPage.kt" ] && grep -q '@Composable' "$CS/FeedPage.kt" && grep -q '@Composable' "$CS/AccessPage.kt" && grep -q 'AndroidFragment<AppsMeshFragment>' "$CS/AccessPage.kt" && grep -q 'FeedViewer.load(' "$CS/FeedPage.kt" && ok "the Feed and Access pages are Compose (the ratchet's rule), Access hosts Apps Mesh, and read libs:appstore's FeedViewer declaration" || bad "FeedPage/PermsPage are missing, not Compose, or no longer read FeedViewer"
   grep -q 'object StoreTabs' "$L/StoreBar.kt" && ok "the shared strip builder (StoreTabs) lives once in libs:appstore" || bad "StoreTabs is missing from libs:appstore"
   ! grep -qE 'renderPerms|renderFeed|FeedViewer' "$L/StoreCloudFragment.kt" && ok "the Cloud page draws neither feeds nor Perms" || bad "the Cloud page still carries the moved Feed/Perms parts"
-  grep -q 'StoreTabs.bar(' "$L/StorePhoneFragment.kt" && grep -q 'StoreTabs.bar(' "$L/StoreCloudFragment.kt" && ok "Cloud and Phone draw their top tabs with the one StoreTabs.bar" || bad "a Store page draws its tabs with something other than StoreTabs.bar"
+  grep -q 'StoreTabs.Bar(' "$L/StorePhoneFragment.kt" && grep -q 'StoreTabs.Bar(' "$L/StoreCloudFragment.kt" && ok "Cloud and Phone draw their top tabs with the one StoreTabs.Bar" || bad "a Store page draws its tabs with something other than StoreTabs.Bar"
   # 8b. #896.3 Phone's action bar sits UNDER the top tabs inside the scrolling page, as Cloud's header does (no bottom frame)
-  grep -q 'StorePage.frame(ctx, strip, ScrollView(ctx).apply { addView(col) })' "$L/StorePhoneFragment.kt" && ! grep -qE 'fun frame\(.*actions' "$L/StoreBar.kt" && ok "Phone's action bar is in its page under the tabs, like Cloud's (no bottom bar)" || bad "Phone's action bar left the spot under the tabs"
+  grep -q 'StorePage.Frame(strip) {' "$L/StorePhoneFragment.kt" && ! grep -qE 'fun Frame\(.*actions' "$L/StoreBar.kt" && ok "Phone's action bar is in its page under the tabs, like Cloud's (no bottom bar)" || bad "Phone's action bar left the spot under the tabs"
   # 9. #896 density: the Store is data-dense, so NO Store tab, chip, page or action button may force a
   # minimum height (a 40dp floor made them huge, 2026-10-07). A control is as tall as its text and padding.
   local mh
@@ -190,12 +191,9 @@ PY
   python3 - "$L/StoreBar.kt" <<'PY' && ok "the tab strip's vertical padding is at most the pre-change step (S8)" || bad "the tab strip's vertical padding grew past S8 (or was not found)"
 import re, sys
 s = open(sys.argv[1], encoding='utf-8').read()
-body = s[s.index('fun button(ctx: Context, control'):]
+body = s[s.index('fun RowScope.Tab('):]
 body = body[:body.index('\n    }\n')]
-v = []
-for line in re.findall(r'setPadding\([^\n]*', body):
-    d = [int(x) for x in re.findall(r'StoreDensity\.S(\d+)', line)]
-    v += d[1::2]  # top and bottom of (left, top, right, bottom)
+v = [int(x) for x in re.findall(r'(?:vertical|top|bottom) = sdp\(StoreDensity\.S(\d+)\)', body)]
 sys.exit(0 if v and max(v) <= 8 else 1)
 PY
   printf '%s' "$ma" | grep -Eq '(^|[^A-Za-z])TabRow *\(' && bad "MainActivity still draws its own TabRow" || ok "no hand-rolled tab row"
@@ -249,11 +247,9 @@ mutate "a section leaves the bar" store/build.json '"bottom_nav": [
       "feed",
       "perms"
     ]' || M=$((M+1))
-mutate "Phone's action bar goes to the bottom again" lib/StorePhoneFragment.kt 'StorePage.frame(ctx, strip, ScrollView(ctx).apply { addView(col) })' 'StorePage.frame(ctx, strip, ScrollView(ctx).apply { addView(col) }, col)' || M=$((M+1))
-mutate "a tab gets a minimum height back" lib/StoreBar.kt '        textSize = StoreDensity.T_BODY
-        if (style.stretch) {' '        textSize = StoreDensity.T_BODY; minHeight = 120
-        if (style.stretch) {'
-mutate "a button gets a minimum height back" lib/StoreBar.kt '        isEnabled = onClick != null' '        minHeight = 120; isEnabled = onClick != null' || M=$((M+1))
+mutate "Phone's action bar goes to the bottom again" lib/StorePhoneFragment.kt 'StorePage.Frame(strip) {' 'StorePage.Frame(strip, actions = col) {' || M=$((M+1))
+mutate "a tab gets a minimum height back" lib/StoreBar.kt 'base.storeSurface(style, on).testTag(tag)' 'base.storeSurface(style, on).heightIn(min = 120.dp).testTag(tag)' || M=$((M+1))
+mutate "a button gets a minimum height back" lib/StoreBar.kt '.storeSurface(style, false, if (onClick != null) fill else Ink.DISABLED)' '.heightIn(min = 120.dp).storeSurface(style, false, if (onClick != null) fill else Ink.DISABLED)' || M=$((M+1))
 mutate "Phone loses its Installed tab" store/build.json '"id": "installed",' '"id": "installd",' || M=$((M+1))
 mutate "Feed page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'FeedPage(pageOf(it))' 'Unit' || M=$((M+1))
 mutate "Access page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'AccessPage(pageOf(it))' 'Unit' || M=$((M+1))
@@ -277,13 +273,15 @@ mutate "provider unguarded in the manifest" super.xml 'android:authorities="${ap
             android:exported="true"' || M=$((M+1))
 mutate "provider logs the token" super/cloud/FleetBearerProvider.kt 'return Bundle().apply { putBoolean(FleetBearer.KEY_OK, true)' 'android.util.Log.i("x", token); return Bundle().apply { putBoolean(FleetBearer.KEY_OK, true)' || M=$((M+1))
 mutate "Cloud Store loses the token entry" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'FleetBearer.Own(' 'FleetBearer.Ownx(' || M=$((M+1))
-mutate "a dp literal back in the Cloud shelf" lib/StoreCloudFragment.kt 'val p = dp(ctx, StoreDensity.S12); setPadding' 'val p = dp(ctx, 14); setPadding' || M=$((M+1))
-mutate "a textSize literal back in the Phone shelf" lib/StorePhoneFragment.kt 'textSize = StoreDensity.T_META' 'textSize = 12f' || M=$((M+1))
-mutate "a text() size literal back in the mesh" lib/AppsMesh.kt 'text(ctx, "Missing membership (${gaps.size})", StoreDensity.T_BODY' 'text(ctx, "Missing membership (${gaps.size})", 13f' || M=$((M+1))
+mutate "a dp literal back in the Cloud shelf" lib/StoreCloudFragment.kt 'verticalScroll(scroll).padding(sdp(StoreDensity.S12))' 'verticalScroll(scroll).padding(14.dp)' || M=$((M+1))
+mutate "a font size literal back in the Phone shelf" lib/StorePhoneFragment.kt 'color = Ink.WHITE.ink(), fontSize = StoreDensity.T_TITLE.sp,
+                    fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))' 'color = Ink.WHITE.ink(), fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))' || M=$((M+1))
+mutate "a note size literal back in the mesh" lib/AppsMesh.kt 'size = StoreDensity.T_BODY, color = if (gaps.isEmpty()) GREEN else RED' 'size = 13.sp.value, color = if (gaps.isEmpty()) GREEN else RED' || M=$((M+1))
 mutate "density turned off" lib/StoreDensity.kt 'const val SCALE = 0.7f' 'const val SCALE = 1.0f' || M=$((M+1))
 mutate "declaration deleted" lib/StoreDensity.kt 'object StoreDensity' 'object Other' || M=$((M+1))
 mutate "Cloud Store hardcodes a dp" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'padding(top = StoreDensity.dpValue(StoreDensity.S8).dp)' 'padding(top = 8.dp)' || M=$((M+1))
-mutate "a helper scales on its own" lib/StoreBar.kt 'private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)' 'private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()' || M=$((M+1))
+mutate "a helper scales on its own" lib/StoreBar.kt 'internal fun sdp(step: Int): Dp = StoreDensity.dpValue(step).dp' 'internal fun sdp(step: Int): Dp = step.dp' || M=$((M+1))
 
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="
 [ "$REAL" -eq 0 ] && [ "$M" -eq 0 ]

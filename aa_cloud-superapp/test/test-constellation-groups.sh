@@ -313,8 +313,8 @@ merged="$(command grep -nE '\{ it\.label \}[[:space:]]*\+[[:space:]]*FeedViewer\
 # 1 IS the declared groups and line 2 IS the declared feeds plus Perms.
 # #732 each line's entries are now Controls carrying their declared look, so
 # the line list is two lists of Controls; the membership asserted is the same.
-command grep -qF 'tabs.map { StoreControls.Control(it.label, "", controls.groupTab) }' "$PAGE" \
-  && ! command grep -qF 'controls.page(' "$PAGE" \
+command grep -qF 'tabs.map { StoreControls.Control(it.label, "", groupTab) }' "$PAGE" \
+  && ! command grep -qF 'rememberStoreControls().page' "$PAGE" \
   && ok "the Cloud page is ONE line, the declared groups; Mesh, the feeds and Perms are Access/Feed pages since #896/#896.3" \
   || bad "the tab lines are not built from the two declarations"
 
@@ -329,16 +329,16 @@ command grep -qF 'tabs.map { StoreControls.Control(it.label, "", controls.groupT
 # #896 the strip builder is StoreTabs.bar, shared with Phone; tabBar is its Cloud call.
 TABS="$LIBS/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreBar.kt"  # StoreTabs lives beside the bar
 [ -f "$TABS" ] || { echo "ERROR: missing $TABS" >&2; exit 2; }
-command grep -qF 'StoreTabs.bar(' "$PAGE" && ok "tabBar draws through the shared StoreTabs.bar" || bad "tabBar does not use the shared strip builder"
-tabbar_body="$(awk '/fun bar\(ctx: Context, lines/{f=1} f{print} f && /^    }$/{exit}' "$TABS")"
+command grep -qF 'StoreTabs.Bar(' "$PAGE" && ok "TabBar draws through the shared StoreTabs.Bar" || bad "TabBar does not use the shared strip builder"
+tabbar_body="$(awk '/fun Bar\(lines: List/{f=1} f{print} f && /^    }$/{exit}' "$TABS")"
 [ -n "$tabbar_body" ] || bad "could not isolate tabBar's body - the assertion below would verify nothing"
-printf '%s' "$tabbar_body" | command grep -qF 'orientation = LinearLayout.VERTICAL' \
+printf '%s' "$tabbar_body" | command grep -qF 'Column(modifier' \
   && ok "tabBar itself is a column that can hold more than one strip" \
   || bad "tabBar is still a single horizontal row"
-printf '%s' "$tabbar_body" | command grep -qF 'orientation = LinearLayout.HORIZONTAL' \
+printf '%s' "$tabbar_body" | command grep -qF 'Row {' \
   && ok "and the strips inside it are horizontal" \
   || bad "tabBar builds no horizontal strip - the tabs would stack one per line"
-builders="$(command grep -c 'fun button(ctx: Context, control' "$TABS")"
+builders="$(command grep -c 'fun RowScope.Tab(' "$TABS")"
 [ "$builders" = "1" ] \
   && ok "exactly one tab-button builder feeds both lines" \
   || bad "expected 1 tab-button builder, found $builders - the two lines can drift apart"
@@ -383,11 +383,11 @@ body_of() { # body_of <fun signature fragment>
   awk -v pat="$1" 'index($0, pat){f=1} f{print} f && /^    }$/{exit}' "$PAGE"
 }
 tabs_body_of() { awk -v pat="$1" 'index($0, pat){f=1} f{print} f && /^    }$/{exit}' "$TABS"; }
-TABBAR="$(body_of 'private fun tabBar(')"
-TABBTN="$(tabs_body_of 'fun button(ctx: Context, control')"
-PAINT="$(tabs_body_of 'fun paint(buttons')"
-BARBODY="$(tabs_body_of 'fun bar(')"
-for pair in "tabBar:$TABBAR" "tabButton:$TABBTN" "paintTabs:$PAINT"; do
+TABBAR="$(body_of 'private fun TabBar(')"
+TABBTN="$(tabs_body_of 'fun RowScope.Tab(')"
+PAINT="$TABBTN"   # selection is painted by the same Tab composable now (no separate paint pass)
+BARBODY="$(tabs_body_of 'fun Bar(lines')"
+for pair in "TabBar:$TABBAR" "Tab:$TABBTN"; do
   [ -n "${pair#*:}" ] || bad "could not isolate ${pair%%:*}'s body - every assertion about it would verify nothing"
 done
 
@@ -396,45 +396,45 @@ done
 #     declared style (controls.page). That the declared styles really differ is
 #     test-store-controls.sh's job; here, that tabBar sources the two lines'
 #     looks from those two DIFFERENT declarations rather than one.
-printf '%s' "$TABBAR" | command grep -qF 'controls.groupTab' \
-  && printf '%s' "$TABBAR" | command grep -qF 'controls.groupTab' \
-  && ! printf '%s' "$TABBAR" | command grep -qF 'controls.page(' \
+printf '%s' "$TABBAR" | command grep -qF 'rememberStoreControls().groupTab' \
+  && printf '%s' "$TABBAR" | command grep -qF 'groupTab' \
+  && ! printf '%s' "$TABBAR" | command grep -qF '.page' \
   && ok "tabBar dresses its one line from the group-tab declaration (no page chips left on Cloud)" \
   || bad "tabBar draws page chips again"
 
 # (b) ONE builder still, and it is the thing that VARIES by style. A builder
 #     that ignores its style argument is the same defect wearing a parameter.
-builders="$(command grep -c 'fun button(ctx: Context, control' "$TABS")"
+builders="$(command grep -c 'fun RowScope.Tab(' "$TABS")"
 [ "$builders" = "1" ] \
   && ok "exactly one tab-button builder feeds both lines" \
   || bad "expected 1 tab-button builder, found $builders - the two languages can drift apart"
-printf '%s' "$TABBTN" | command grep -qF 'if (style.stretch)' \
+printf '%s' "$TABBTN" | command grep -qF 'if (stretch)' && printf '%s' "$BARBODY" | command grep -qF 'it.style.stretch' \
   && ok "the builder branches on the style it is handed" \
   || bad "tabButton takes a style and ignores it - both lines would draw the same"
 # The two branches must differ in the thing that makes a segmented control
 # segmented: one stretches (weight 1f), the other wraps.
-printf '%s' "$TABBTN" | command grep -qE 'LayoutParams\(0, LinearLayout\.LayoutParams\.WRAP_CONTENT, 1f\)' \
-  && printf '%s' "$TABBTN" | command grep -qE 'LayoutParams\.WRAP_CONTENT, LinearLayout\.LayoutParams\.WRAP_CONTENT' \
+printf '%s' "$TABBTN" | command grep -qF 'Modifier.weight(1f)' \
+  && printf '%s' "$TABBTN" | command grep -qF 'Modifier.padding(end' \
   && ok "one style stretches to fill the bar and the other wraps its content" \
   || bad "both styles size the same way, so line 2 still reads as a partition"
 
 # (c) SELECTION reads differently too. Filling a destination chip the way a
 #     segmented pill fills puts the two languages back into one.
-printf '%s' "$PAINT" | command grep -qF 't.tag as StoreControls.Style' \
+printf '%s' "$PAINT" | command grep -qF 'storeSurface(style, on)' \
   && printf '%s' "$PAINT" | command grep -qF 'style.textActive' \
   && ok "paintTabs paints a destination differently from a segmented pill" \
   || bad "paintTabs paints every tab alike - the active state re-merges the two languages"
 
 # (d) REAL SEPARATION, and only BETWEEN lines. A page with one line must not
 #     draw a stray rule above it.
-printf '%s' "$BARBODY" | command grep -qF 'divider(ctx)' \
+printf '%s' "$BARBODY" | command grep -qF 'Divider()' \
   && ok "a divider separates the two lines" \
   || bad "nothing separates the two lines - they read as one block"
-printf '%s' "$BARBODY" | command grep -qF 'if (column.childCount > 0)' \
+printf '%s' "$BARBODY" | command grep -qF 'if (drawn > 0)' \
   && ok "the divider is drawn only BETWEEN lines, never above the first" \
   || bad "the divider is not conditional - a single-line bar would draw a stray rule"
-DIV="$(tabs_body_of 'fun divider(')"
-printf '%s' "$DIV" | command grep -qE 'setMargins\(0, StoreDensity\.dp\(ctx, StoreDensity\.S[0-9]+\), 0, StoreDensity\.dp\(ctx, StoreDensity\.S[0-9]+\)\)' \
+DIV="$(tabs_body_of 'fun Divider(')"
+printf '%s' "$DIV" | command grep -qE 'padding\(top = sdp\(StoreDensity\.S[0-9]+\), bottom = sdp\(StoreDensity\.S[0-9]+\)\)' \
   && ok "the divider carries real vertical space, not just a hairline" \
   || bad "the divider has no margins - a 1px rule with no space is still one block"
 

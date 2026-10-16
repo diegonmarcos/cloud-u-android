@@ -23,7 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.viewinterop.AndroidView
 import com.diegonmarcos.superapp.appstore.PermsGrant
 import com.diegonmarcos.superapp.appstore.PermsGrantDevice
 import com.diegonmarcos.superapp.appstore.StoreBar
@@ -147,9 +146,7 @@ private fun AndroidPermsPage() {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(s4), verticalAlignment = Alignment.CenterVertically) {
                 PermFilter(options, selected, { selected = it }, Modifier.weight(1f))
-                AndroidView(modifier = Modifier.weight(1.4f), factory = { c ->
-                    StoreBar.channelHost(c, onChange = { chan++ })
-                })
+                StoreBar.ChannelButton(Modifier.weight(1.4f), onChange = { chan++ })
                 val can = up && !running && plan.steps.isNotEmpty()
                 Text(if (running) "Granting..." else "Grant missing perms (${plan.steps.size})",
                     Modifier.weight(1.2f).background(if (can) UP else IDLE).clickable(enabled = can) { confirm = true }

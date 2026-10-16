@@ -141,7 +141,7 @@ appdir = os.path.join(root, kt1, "com/diegonmarcos/superapp/appstore")
 frag = strip(open(os.path.join(appdir, "StorePhoneFragment.kt"), encoding="utf-8").read())
 imp = strip(open(os.path.join(appdir, "StoreImport.kt"), encoding="utf-8").read())
 strings = open(os.path.join(root, kt1, "../res/values/strings.xml"), encoding="utf-8").read()
-if not re.search(r'if \(integrity\(ctx, r\) == SourceResolver\.Integrity\.PLAY\) addView\(TextView\(ctx\)\.apply \{\s*tag = INTEGRITY_TAG_PREFIX \+ r\.pkg[^}]*store_phone_integrity_badge', frag):
+if not re.search(r'if \(integrity\(ctx, r\) == SourceResolver\.Integrity\.PLAY\)\s*Text\(ctx\.getString\(R\.string\.store_phone_integrity_badge\)[^}]*testTag\(INTEGRITY_TAG_PREFIX \+ r\.pkg\)', frag):
     bad("a play row does not render the Play Integrity badge")
 elif "Play Integrity: may refuse to run" not in strings:
     bad("the badge text is not 'Play Integrity: may refuse to run'")
@@ -191,7 +191,7 @@ mut "ladder out of order" 'd=jload(); a=next(v for v in d["resolver"]["apps"].va
 mut "dispenser literal in Kotlin" 'u=jload()["resolver"]["play_anon"]["dispensers"][0]["url"]; open(os.path.join(root,kt1,"Planted.kt"),"w").write("val x = \"%s\"\n" % u)' || mf=$((mf+1))
 mut "unverified vendor rung" 'd=jload(); s=next(s for v in d["resolver"]["apps"].values() for s in v.get("sources",[]) if s["kind"]=="vendor"); s.pop("verified"); jsave(d)' || mf=$((mf+1))
 mut "a row without integrity" 'd=jload(); a=next(iter(d["resolver"]["apps"].values())); a.pop("integrity"); jsave(d)' || mf=$((mf+1))
-mut "a play row without the badge" 'edit(os.path.join(root,kt1,"com/diegonmarcos/superapp/appstore/StorePhoneFragment.kt"), "tag = INTEGRITY_TAG_PREFIX + r.pkg", "tag = CACHE_TAG_PREFIX + r.pkg")' || mf=$((mf+1))
+mut "a play row without the badge" 'edit(os.path.join(root,kt1,"com/diegonmarcos/superapp/appstore/StorePhoneFragment.kt"), "testTag(INTEGRITY_TAG_PREFIX + r.pkg)", "testTag(CACHE_TAG_PREFIX + r.pkg)")' || mf=$((mf+1))
 
 echo
 if [ "$real" -eq 0 ] && [ "$mf" -eq 0 ]; then echo "ALL GREEN (real tree green, 10 mutations red)"; exit 0; fi

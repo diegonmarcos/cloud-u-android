@@ -2,7 +2,7 @@
 # #857 "Download all" starts at once: no confirmation dialog, visible progress.
 #
 # The Store bar's Download all verb (StoreBar.Verbs.downloadAll) is wired in
-# StoreCloudFragment.renderHeader straight to downloadAll(), which must hand
+# StoreCloudFragment's StoreBar.Bar straight to downloadAll(), which must hand
 # the fleet to StoreStages.downloadAll on a worker thread with no dialog in
 # between. StoreStages.downloadAll drives UpdateProgress (beginBatch), which is
 # the progress row the page draws. Android's own install sheet is untouched:
@@ -59,7 +59,9 @@ else ok "StoreBar's buttons run their verb on tap, no dialog"; fi
 # ── 4. visible progress: the batch publishes into UpdateProgress ───────────
 ST="$(strip "$SRC/StoreStages.kt")"
 SD="$(printf '%s' "$ST" | sed -n '/fun downloadAll(/,/^    }/p')"
-if printf '%s' "$SD" | grep -q 'StoreJobs.board.begin(' && printf '%s' "$FRAG" | grep -q 'UpdateProgress.addObserver\|progressObserver'; then
+PANEL="$(strip "$SRC/StoreProgressPanel.kt")"
+if printf '%s' "$SD" | grep -q 'StoreJobs.board.begin(' && printf '%s' "$PANEL" | grep -q 'UpdateProgress.addObserver' \
+   && printf '%s' "$FRAG" | grep -q 'progress.Panel()'; then
   ok "Download all drives the Store's progress row"
 else bad "Download all publishes no progress"; fi
 

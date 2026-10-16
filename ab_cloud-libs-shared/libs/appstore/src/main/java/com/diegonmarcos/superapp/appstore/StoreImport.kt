@@ -1,16 +1,26 @@
 package com.diegonmarcos.superapp.appstore
 
-import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Context
-import android.graphics.Typeface
-import android.view.Gravity
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
-import androidx.fragment.app.Fragment
-import com.diegonmarcos.superapp.updater.Fleet
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import kotlin.concurrent.thread
 
@@ -47,36 +57,54 @@ object StoreImport {
 
     fun takePending(): String? = pending.also { pending = null }
 
-    fun show(host: Fragment, plan: AppInventory.Plan) {
-        val ctx = host.requireContext()
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(ctx, StoreDensity.S12); setPadding(p, dp(ctx, StoreDensity.S8), p, p)
-        }
-        col.addView(text(ctx, ctx.getString(R.string.store_import_summary,
-            plan.installed.size, plan.store.size, plan.manual.size), StoreDensity.T_BODY, bold = true))
+    /**
+     * The plan as a dialog over the Phone page: [plan] and a Close. [onDismiss] drops it. Each action is
+     * a tap; the dialog itself acts on nothing.
+     */
+    @Composable
+    fun PlanDialog(plan: AppInventory.Plan, onDismiss: () -> Unit) {
+        val ctx = LocalContext.current
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            modifier = Modifier.testTag(TAG),
+            title = { Text(ctx.getString(R.string.store_import_title), color = Ink.WHITE.ink()) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()).padding(top = sdp(StoreDensity.S8))) {
+                    Plan(ctx, plan)
+                }
+            },
+            confirmButton = { TextButton(onClick = onDismiss) { Text(ctx.getString(R.string.store_close)) } },
+        )
+    }
+
+    const val TAG = "store-import-plan"
+
+    @Composable
+    private fun ColumnScope.Plan(ctx: Context, plan: AppInventory.Plan) {
+        Line(ctx.getString(R.string.store_import_summary, plan.installed.size, plan.store.size, plan.manual.size),
+            StoreDensity.T_BODY, bold = true)
         // Fleet members the phone lacks are the Cloud page's (constellation install / update
         // all): this page neither lists them as declared nor installs them. One line says so.
-        if (plan.ours.isNotEmpty()) col.addView(text(ctx, ctx.getString(R.string.store_import_ours_cloud_page, plan.ours.size), StoreDensity.T_CAPTION))
+        if (plan.ours.isNotEmpty()) Line(ctx.getString(R.string.store_import_ours_cloud_page, plan.ours.size), StoreDensity.T_CAPTION)
 
         // Counted SEPARATELY: these install fine from Play's servers, but the
         // app itself may refuse to run without Google Play as its installer.
         if (plan.needIntegrity.isNotEmpty()) {
-            col.addView(text(ctx, ctx.getString(R.string.store_import_need_integrity, plan.needIntegrity.size), StoreDensity.T_CAPTION, bold = true))
-            plan.needIntegrity.forEach { col.addView(text(ctx, it.pkg + "  ·  " + ctx.getString(R.string.store_phone_integrity_badge), StoreDensity.T_CAPTION, mono = true)) }
+            Line(ctx.getString(R.string.store_import_need_integrity, plan.needIntegrity.size), StoreDensity.T_CAPTION, bold = true)
+            plan.needIntegrity.forEach { Line(it.pkg + "  ·  " + ctx.getString(R.string.store_phone_integrity_badge), StoreDensity.T_CAPTION, mono = true) }
         }
         val missing = plan.direct.size
         val play = plan.store.size + plan.manual.size
-        if (missing > 0) col.addView(button(ctx, ctx.getString(R.string.store_import_install_missing, missing, play)) {
+        if (missing > 0) Verb(ctx.getString(R.string.store_import_install_missing, missing, play), "$TAG:install-missing") {
             val app = ctx.applicationContext
             val cfg = PhoneAppActions.resolver(PhoneAppActions.sources(app))
             Toast.makeText(ctx, ctx.getString(R.string.store_phone_install_all_start, missing, play), Toast.LENGTH_LONG).show()
             thread(name = "store-import-missing") { installMissing(app, cfg, plan) }
-        })
+        }
         if (plan.direct.isNotEmpty()) {
-            col.addView(heading(ctx, ctx.getString(R.string.store_import_direct, plan.direct.size)))
-            plan.direct.forEach { col.addView(text(ctx, it.pkg, StoreDensity.T_CAPTION, mono = true)) }
-            col.addView(button(ctx, ctx.getString(R.string.store_import_install_direct, plan.direct.size)) {
+            Heading(ctx.getString(R.string.store_import_direct, plan.direct.size))
+            plan.direct.forEach { Line(it.pkg, StoreDensity.T_CAPTION, mono = true) }
+            Verb(ctx.getString(R.string.store_import_install_direct, plan.direct.size), "$TAG:install-direct") {
                 val app = ctx.applicationContext
                 val cfg = PhoneAppActions.resolver(PhoneAppActions.sources(app))
                 Toast.makeText(ctx, ctx.getString(R.string.store_import_installing, plan.direct.size), Toast.LENGTH_SHORT).show()
@@ -84,40 +112,32 @@ object StoreImport {
                 thread(name = "store-import-direct") {
                     for (e in plan.direct) ExternalInstall.run(app, cfg, SourceResolver.resolve(cfg, e.pkg))
                 }
-            })
+            }
         }
         if (plan.store.isNotEmpty()) {
-            col.addView(heading(ctx, ctx.getString(R.string.store_import_store, plan.store.size)))
-            for (link in plan.store) col.addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-                addView(text(ctx, link.entry.pkg, StoreDensity.T_CAPTION, mono = true).apply {
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                })
-                addView(button(ctx, ctx.getString(R.string.store_import_open_in, link.label)) {
+            Heading(ctx.getString(R.string.store_import_store, plan.store.size))
+            for (link in plan.store) Row(verticalAlignment = Alignment.CenterVertically) {
+                Line(link.entry.pkg, StoreDensity.T_CAPTION, mono = true, modifier = Modifier.weight(1f))
+                Verb(ctx.getString(R.string.store_import_open_in, link.label), "$TAG:open:${link.entry.pkg}", Modifier) {
                     // Aimed at the store that installed it on the old phone; if
                     // that store is not on this one, say so rather than letting
                     // another market handler pick the app up.
-                    try { host.startActivity(link.intent) } catch (e: ActivityNotFoundException) {
+                    try { ctx.startActivity(link.intent) } catch (e: ActivityNotFoundException) {
                         Toast.makeText(ctx, ctx.getString(R.string.store_import_no_store, link.label), Toast.LENGTH_LONG).show()
                     }
-                })
-            })
+                }
+            }
         }
         if (plan.manual.isNotEmpty()) {
-            col.addView(heading(ctx, ctx.getString(R.string.store_import_manual, plan.manual.size)))
+            Heading(ctx.getString(R.string.store_import_manual, plan.manual.size))
             plan.manual.forEach {
-                col.addView(text(ctx, it.pkg + "  ·  " + (it.origin ?: ctx.getString(R.string.store_import_no_origin)), StoreDensity.T_CAPTION, mono = true))
+                Line(it.pkg + "  ·  " + (it.origin ?: ctx.getString(R.string.store_import_no_origin)), StoreDensity.T_CAPTION, mono = true)
             }
         }
         if (plan.installed.isNotEmpty()) {
-            col.addView(heading(ctx, ctx.getString(R.string.store_import_installed, plan.installed.size)))
-            plan.installed.forEach { col.addView(text(ctx, it.pkg, StoreDensity.T_CAPTION, mono = true)) }
+            Heading(ctx.getString(R.string.store_import_installed, plan.installed.size))
+            plan.installed.forEach { Line(it.pkg, StoreDensity.T_CAPTION, mono = true) }
         }
-        AlertDialog.Builder(host.requireActivity())
-            .setTitle(R.string.store_import_title)
-            .setView(ScrollView(ctx).apply { addView(col) })
-            .setPositiveButton(R.string.store_close, null)
-            .show()
     }
 
     /**
@@ -142,18 +162,16 @@ object StoreImport {
         return outcomes
     }
 
-    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
-    private fun heading(ctx: Context, t: String) = text(ctx, t, StoreDensity.T_META, bold = true).apply {
-        setTextColor(0xFFED8936.toInt()); setPadding(0, dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S4))
-    }
-    private fun text(ctx: Context, t: String, size: Float, bold: Boolean = false, mono: Boolean = false) = TextView(ctx).apply {
-        text = t; textSize = size
-        typeface = when { mono -> Typeface.MONOSPACE; bold -> Typeface.DEFAULT_BOLD; else -> Typeface.DEFAULT }
-    }
-    private fun button(ctx: Context, label: String, onClick: () -> Unit) = TextView(ctx).apply {
-        text = label; textSize = StoreDensity.T_META; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
-        setTextColor(0xFFFFFFFF.toInt()); setBackgroundColor(0xFF2B6CB0.toInt())
-        setPadding(dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S6))
-        isClickable = true; setOnClickListener { onClick() }
-    }
+    @Composable
+    private fun Heading(t: String) = Text(t, color = 0xFFED8936.toInt().ink(), fontSize = StoreDensity.T_META.sp,
+        fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = sdp(StoreDensity.S12), bottom = sdp(StoreDensity.S4)))
+
+    @Composable
+    private fun Line(t: String, size: Float, bold: Boolean = false, mono: Boolean = false, modifier: Modifier = Modifier) =
+        Text(t, color = Ink.WHITE.ink(), fontSize = size.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+            fontFamily = if (mono) FontFamily.Monospace else null, modifier = modifier)
+
+    @Composable
+    private fun Verb(label: String, tag: String, modifier: Modifier = Modifier.fillMaxWidth(), onClick: () -> Unit) =
+        StoreBar.Button(label, Ink.BLUE_FILL, onClick, modifier, tag)
 }

@@ -2,14 +2,7 @@ package com.diegonmarcos.superapp.appstore
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Typeface
 import android.net.Uri
-import android.text.TextUtils
-import android.view.Gravity
-import android.view.View
-import android.widget.LinearLayout
-import android.widget.TextView
-import kotlin.concurrent.thread
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -268,92 +261,11 @@ object FeedViewer {
 
     private val TEMPLATE = Regex("\\{([A-Za-z0-9_.]+)\\}")
 
-    // ── the view ─────────────────────────────────────────────────────────────
-
-    /**
-     * Draw [feed] into [into]. Fetches on its own thread and posts back, the
-     * same rule the fleet rows follow: one slow endpoint must never block the
-     * screen that is already drawn.
-     *
-     * An EMPTY result and a FAILED fetch are drawn differently on purpose.
-     * "Nothing to show" and "we could not ask" are different facts, and a
-     * reader that renders a failure as an empty list is the quiet-green shape
-     * this repo keeps finding.
-     */
-    fun render(ctx: Context, into: LinearLayout, feed: Feed, open: (String) -> Unit) {
-        into.removeAllViews()
-        into.addView(caption(ctx, feed.blurb))
-        val status = caption(ctx, "loading…")
-        into.addView(status)
-        val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        into.addView(list)
-        thread(name = "store-feed-${feed.id}") {
-            val result = runCatching { load(feed) }
-            into.post {
-                result.onSuccess { entries ->
-                    if (entries.isEmpty()) status.text = "Nothing in this feed."
-                    else {
-                        status.visibility = View.GONE
-                        for (e in entries) list.addView(row(ctx, feed, e, open))
-                    }
-                }.onFailure { status.text = explain(it) }
-            }
-        }
-    }
-
-    private fun row(ctx: Context, feed: Feed, e: Entry, open: (String) -> Unit): View {
-        val card = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xFF1C1C24.toInt())
-            setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2)) }
-            isClickable = e.link.isNotEmpty()
-            if (e.link.isNotEmpty()) setOnClickListener { open(e.link) }
-        }
-        val head = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-        }
-        // A value in NEITHER list is neutral: an in-flight run is not a failure,
-        // and colouring it red is how a reader invents bad news.
-        val colour = when (e.state) {
-            in feed.ok -> OK
-            in feed.bad -> BAD
-            else -> DIM
-        }
-        head.addView(TextView(ctx).apply {
-            // 7 characters is a readable sha and a short run number alike; the
-            // field itself is declared, so this trims whatever it was handed.
-            text = e.ref.take(7)
-            textSize = StoreDensity.T_CAPTION; typeface = Typeface.MONOSPACE; setTextColor(colour)
-            setPadding(0, 0, dp(ctx, StoreDensity.S8), 0)
-        })
-        head.addView(TextView(ctx).apply {
-            // Only the FIRST line of a commit message: the body belongs on the
-            // page the row opens, not squeezed into a list.
-            text = e.title.lineSequence().firstOrNull().orEmpty()
-            textSize = StoreDensity.T_BODY; setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD
-            maxLines = 1; ellipsize = TextUtils.TruncateAt.END
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        card.addView(head)
-        if (e.subtitle.isNotEmpty()) card.addView(caption(ctx, e.subtitle))
-        return card
-    }
+    // ── the link ─────────────────────────────────────────────────────────────
 
     /** The one place a row's link is opened. Handed in by the host fragment so
      *  this object needs no Activity of its own. */
     fun opener(ctx: Context): (String) -> Unit = { url ->
         runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
     }
-
-    private fun caption(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; textSize = StoreDensity.T_CAPTION; setTextColor(DIM); setPadding(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S4))
-    }
-
-    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
-
-    private const val OK = 0xFF48BB78.toInt()
-    private const val BAD = 0xFFF56565.toInt()
-    private const val DIM = 0x99FFFFFF.toInt()
 }

@@ -1,13 +1,12 @@
 package com.diegonmarcos.superapp.appstore
 
 import android.content.Context
-import android.graphics.drawable.GradientDrawable
 import org.json.JSONObject
 
 /**
  * #732 — how the Store's three kinds of control LOOK, read from
  * assets/appstore-controls.json. `tab` selects a subset, `page` opens a page,
- * `action` acts on one app. This object maps a declared style onto a view; it
+ * `action` acts on one app. This object reads the declared styles; Modifier.storeSurface (StoreBar.kt) maps one onto a control; it
  * names no style token, colour, icon or caption — those are the asset.
  */
 object StoreControls {
@@ -70,14 +69,4 @@ object StoreControls {
 
     private fun argb(o: JSONObject, key: String): Int? =
         o.optString(key).takeIf { it.startsWith("0x") }?.removePrefix("0x")?.toLongOrNull(16)?.toInt()
-
-    /** The one background builder for all three styles. [fillOverride] is an
-     *  action's own verb colour, which replaces the style's fill. */
-    fun background(ctx: Context, style: Style, active: Boolean, fillOverride: Int? = null) = GradientDrawable().apply {
-        val d = ctx.resources.displayMetrics.density
-        cornerRadius = style.radiusDp * d * StoreDensity.SCALE
-        setColor(fillOverride ?: (if (active) style.fillActive else style.fill) ?: 0)
-        val stroke = if (active) style.strokeActive ?: style.stroke else style.stroke
-        if (stroke != null) setStroke(d.toInt().coerceAtLeast(1), stroke)
-    }
 }

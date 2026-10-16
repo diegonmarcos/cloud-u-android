@@ -1,62 +1,88 @@
 package com.diegonmarcos.superapp.appstore
 
-import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.view.View
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
+import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
 
 /**
- * The live progress row under a Store page's buttons: the app, its stage, bytes and %, one overall line
- * while several keyed jobs run, and Cancel while something is cancellable. Same sources and rules as the
- * Cloud page's row ([StoreStages.progress] — the line `/api/store/progress` returns — and the [StoreJobs]
- * board), so every page and the API say the same thing. Compose, hosted in the View page by [view].
- * // ponytail: the Cloud page still draws its own View copy of this row; switch it to this class next.
+ * The live progress row under a Store page's buttons (#785): WHICH app (its launcher icon, when it is
+ * on the device — the PackageManager already has it), its stage, version, bytes and %, one overall line
+ * while several keyed jobs run, Cancel while something is cancellable, and a tap that opens that app's
+ * row ([onOpen], with [fleet] to look the app up in; Phone has neither). Same sources and rules for
+ * every page ([StoreStages.progress] — the line `/api/store/progress` returns — and the [StoreJobs]
+ * board), so every page and the API say the same thing.
+ *
+ * Attached with [UpdateProgress.addObserver], never setListener: that slot is the shell overlay's, and
+ * taking it would turn the overlay off for as long as this page is open. The pipeline posts from its
+ * worker thread, so the state is described HERE, on the thread that published it, so the line pairs
+ * this state with the job that was running when it was published, then handed to the main thread.
+ *
+ * The states keep their old rules: an unknown size is an indeterminate bar and never a hard 0% (identical,
+ * to the person watching, to a stalled transfer); a failure is never hidden (silence about work that did
+ * not happen is hiding, not quietness); a Cancel the user asked for is not a failure to report, so the
+ * row goes; and the Done/Idle dip between two apps of a batch keeps the row up instead of flickering it
+ * out per app. A failure's reason is long and this line is one slot above the list: it names the app and
+ * points at its row, where the reason is whole (#831).
  */
-class StoreProgressPanel {
-    private class Ui(val text: String, val failed: Boolean, val percent: Int, val indeterminate: Boolean, val cancellable: Boolean)
+class StoreProgressPanel(
+    private val fleet: List<Fleet.App> = emptyList(),
+    private val onOpen: ((Fleet.App) -> Unit)? = null,
+) {
+    /** What the row says now; null = nothing running, nothing drawn. */
+    class Ui(
+        val text: String, val failed: Boolean, val percent: Int, val indeterminate: Boolean, val cancellable: Boolean,
+        val pkg: String = "", val target: Fleet.App? = null,
+    )
 
-    private var ui by mutableStateOf<Ui?>(null)
+    var ui by mutableStateOf<Ui?>(null)
+        private set
+
+    /** #894 the one writer of the bar's state: monotonic per item (see [ProgressBarModel]). */
     private val model = ProgressBarModel()
     private val main = Handler(Looper.getMainLooper())
 
     private val progressObserver: (UpdateProgress.State) -> Unit = { state ->
         val p = StoreStages.progress(state)
+        // While keyed jobs run, the bar speaks from THEIR board, not from the one process-wide state
+        // whichever job wrote last.
         main.post { ui = if (StoreJobs.board.overall().active > 0) board() else single(state, p) }
     }
     private val boardObserver: () -> Unit = {
         main.post { ui = if (StoreJobs.board.overall().active > 0) board() else single(UpdateProgress.state, StoreStages.progress()) }
     }
 
-    /** The row (empty until there is work), listening from now on; [detach] stops. */
-    fun view(ctx: Context): View {
+    /** Listen from now on; [detach] stops. Idempotent: re-attaching never stacks observers. */
+    fun attach() {
         detach()
         UpdateProgress.addObserver(progressObserver)
         StoreJobs.install()
         StoreJobs.addObserver(boardObserver)
-        return ComposeView(ctx).apply { setContent { MaterialTheme(colorScheme = darkColorScheme()) { Panel(ctx) } } }
     }
 
     fun detach() {
@@ -64,6 +90,8 @@ class StoreProgressPanel {
         StoreJobs.removeObserver(boardObserver)
     }
 
+    /** Several jobs in flight: ONE overall line ("3 running · 2 queued · 41%"), bytes done over bytes total
+     *  with installs as steps. One job: that job's own words. Never one app's percent for all of them. */
     private fun board(): Ui {
         val o = StoreJobs.board.overall()
         val only = StoreJobs.board.rows().filter { !it.finished }.singleOrNull()
@@ -73,30 +101,66 @@ class StoreProgressPanel {
     }
 
     private fun single(state: UpdateProgress.State, p: StoreStages.Progress?): Ui? {
-        if (state is UpdateProgress.State.Cancelled || p == null) { model.reset(); return null }
+        if (state is UpdateProgress.State.Cancelled) { model.reset(); UpdateProgress.reset(); return null }
+        if (p == null) { model.reset(); return null }
         val d = model.step(p.appId.ifEmpty { p.pkg }, p.bytes, p.percent, p.failed)
+        // Offer Cancel only while something is actually cancellable. Failed has already stopped, and the
+        // batch-gap between apps is not a job of its own.
         val cancellable = state is UpdateProgress.State.Downloading || state is UpdateProgress.State.CheckingManifest ||
             state is UpdateProgress.State.Installing
-        return Ui(if (p.failed) StoreRowError.banner(p.app) else p.text, p.failed, d.percent, d.indeterminate, cancellable)
+        val target = fleet.firstOrNull { it.id == p.appId || (p.pkg.isNotEmpty() && it.pkg == p.pkg) }
+        return Ui(if (p.failed) StoreRowError.banner(p.app) else p.text, p.failed, d.percent, d.indeterminate, cancellable, p.pkg, target)
+    }
+
+    /** #812 A batch's outcome, IN the page's progress bar — never a dialog. A failure already drawn
+     *  there ([StoreStages.progress]) keeps the bar. */
+    fun report(title: String, b: StoreStages.Batch) {
+        if (StoreStages.progress() != null) return
+        val d = model.complete()
+        ui = Ui("$title — ${b.summary.ifEmpty { "nothing to do" }}" + if (b.online) "" else " (offline)",
+            false, d.percent, d.indeterminate, false)
     }
 
     @Composable
-    private fun Panel(ctx: Context) {
+    fun Panel(modifier: Modifier = Modifier) {
         val u = ui ?: return
-        Column(Modifier.fillMaxWidth().padding(top = StoreDensity.dpValue(StoreDensity.S6).dp, bottom = StoreDensity.dpValue(StoreDensity.S4).dp), verticalArrangement = Arrangement.spacedBy(StoreDensity.dpValue(StoreDensity.S4).dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(u.text, color = if (u.failed) Color(0xFFF56565) else Color(0xFFF6AD55), fontSize = StoreDensity.T_META.sp,
-                    modifier = Modifier.weight(1f))
-                if (u.cancellable) Text("Cancel", color = Color.White, fontSize = StoreDensity.T_META.sp,
-                    modifier = Modifier.padding(start = StoreDensity.dpValue(StoreDensity.S8).dp).background(Color(0xFF4A4A55))
-                        .clickableNoRipple { Updater.cancelNow(ctx.applicationContext) }.padding(horizontal = StoreDensity.dpValue(StoreDensity.S12).dp, vertical = StoreDensity.dpValue(StoreDensity.S6).dp))
+        val ctx = LocalContext.current
+        val tint = (if (u.failed) FAILED else RUNNING).ink()
+        val icon = remember(u.pkg) {
+            u.pkg.takeIf { it.isNotEmpty() }?.let { pkg ->
+                runCatching { ctx.packageManager.getApplicationIcon(pkg).toBitmap(ICON_PX, ICON_PX).asImageBitmap() }.getOrNull()
             }
-            if (u.indeterminate) LinearProgressIndicator(Modifier.fillMaxWidth())
-            else LinearProgressIndicator(progress = { u.percent / 100f }, modifier = Modifier.fillMaxWidth())
+        }
+        val open: (() -> Unit)? = u.target?.takeIf { onOpen != null }?.let { t -> { onOpen?.invoke(t); Unit } }
+        Column(
+            modifier.fillMaxWidth().testTag(StoreBar.PROGRESS_TAG).tap(open)
+                .padding(top = sdp(StoreDensity.S6), bottom = sdp(StoreDensity.S4)),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (icon != null) {
+                    Image(icon, null, Modifier.size(sdp(StoreDensity.GLYPH)).testTag("store-progress:icon"))
+                    Spacer(Modifier.width(sdp(StoreDensity.S6)))
+                }
+                Text(u.text, color = tint, fontSize = StoreDensity.T_META.sp,
+                    modifier = Modifier.weight(1f).testTag("store-progress:label")
+                        .semantics { storeInk = if (u.failed) FAILED else RUNNING })
+            }
+            Spacer(Modifier.size(sdp(StoreDensity.S4)))
+            if (u.indeterminate) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("store-progress:bar"))
+            else LinearProgressIndicator(progress = { u.percent / 100f }, modifier = Modifier.fillMaxWidth().testTag("store-progress:bar"))
+            if (u.cancellable) Box(Modifier.fillMaxWidth().padding(top = sdp(StoreDensity.S6)), contentAlignment = Alignment.CenterEnd) {
+                // Cancel. UpdateProgress.cancelRequested is polled by both download loops in ApkSource and by
+                // both phases of Fleet.installAll, and the shell overlay has driven it through Updater.cancelNow
+                // all along: a download started from the table can be stopped from here too.
+                StoreBar.Button(CANCEL, Ink.GREY_FILL, { Updater.cancelNow(ctx.applicationContext) }, tag = "store-progress:cancel")
+            }
         }
     }
-}
 
-/** A plain tap target, without the ripple the dense store rows never use. */
-internal fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier =
-    this.then(Modifier.clickable(interactionSource = null, indication = null, onClick = onClick))
+    private companion object {
+        const val RUNNING = 0xFFED8936.toInt()
+        const val FAILED = 0xFFF56565.toInt()
+        const val CANCEL = "Cancel"
+        const val ICON_PX = 48
+    }
+}

@@ -46,29 +46,27 @@ RE="$(strip "$SRC/StoreRowError.kt")"
 HOST="$(strip "$SRC/AppStoreHost.kt")"
 
 # ── 1. the error area: Retry + APK↗ + DNS ──────────────────────────────────
-AREA="$(printf '%s' "$FR" | sed -n '/private fun errorArea(/,/^    }/p')"
+AREA="$(printf '%s' "$FR" | sed -n '/private fun ErrorArea(/,/^    }/p')"
 if printf '%s' "$RE" | grep -q 'const val RETRY_BUTTON = "↻ Retry"' &&
    printf '%s' "$RE" | grep -q 'const val APK_BUTTON = "APK↗"' &&
    printf '%s' "$RE" | grep -q 'const val DNS_BUTTON = '; then
   ok "StoreRowError names the three ways out of a failed row: Retry, APK↗, DNS"
 else bad "StoreRowError does not declare RETRY_BUTTON / APK_BUTTON / DNS_BUTTON"; fi
-if printf '%s' "$AREA" | grep -q 'btn(ctx, StoreRowError.RETRY_BUTTON, .*) { next(ctx, app) }'; then
+if printf '%s' "$AREA" | grep -q 'StoreBar.Button(StoreRowError.RETRY_BUTTON, .*{ next(ctx, app) }'; then
   ok "Retry runs next(ctx, app): the quick button's own next stage, no second install path"
 else bad "the error area has no Retry button, or it does not go through next()"; fi
-if printf '%s' "$AREA" | grep -q 'btn(ctx, StoreRowError.APK_BUTTON' &&
+if printf '%s' "$AREA" | grep -q 'StoreBar.Button(StoreRowError.APK_BUTTON' &&
    printf '%s' "$AREA" | grep -q 'Intent(Intent.ACTION_VIEW, Uri.parse(app.abiReleaseUrl.ifEmpty { app.releaseUrl }))'; then
   ok "APK↗ opens the per-ABI release URL in the browser (release URL as the fallback)"
 else bad "the error area has no APK↗ button on the direct download"; fi
-if printf '%s' "$AREA" | grep -q 'btn(ctx, StoreRowError.DNS_BUTTON, .*) { openDnsPage(ctx) }' &&
-   printf '%s' "$AREA" | grep -q 'buttonRow(ctx, retry, apk, dns)'; then
+if printf '%s' "$AREA" | grep -q 'StoreBar.Button(StoreRowError.DNS_BUTTON, .*{ openDnsPage(ctx) }' &&
+   printf '%s' "$AREA" | grep -q 'androidx.compose.foundation.layout.Row('; then
   ok "the DNS button sits in the same row as Retry and APK↗"
 else bad "the DNS button is missing from the error area's button row"; fi
-SHOW="$(printf '%s' "$FR" | sed -n '/private fun showError(/,/^    }/p')"
-if printf '%s' "$SHOW" | grep -q 'getChildAt(2).visibility' &&
-   printf '%s' "$SHOW" | grep -q 'look.dnsButton && dnsPageIntent(box.context) != null'; then
+if printf '%s' "$AREA" | grep -q 'look.dnsButton && dnsPageIntent(ctx) != null'; then
   ok "showError shows the DNS button for a DNS failure exactly when a page exists to open"
 else bad "showError does not gate the DNS button on look.dnsButton + a resolvable DNS page"; fi
-if printf '%s' "$FR" | grep -q 'errBoxes\[app.id\] = errorArea(ctx, app)'; then
+if printf '%s' "$FR" | grep -q 'ui.error?.let { ErrorArea(ctx, app, it) }'; then
   ok "every row's error area is built with its app, so Retry and APK↗ know what to run"
 else bad "errorArea is not built with the row's app"; fi
 

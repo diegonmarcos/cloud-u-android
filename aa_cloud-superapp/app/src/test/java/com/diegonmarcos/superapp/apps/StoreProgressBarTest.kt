@@ -7,15 +7,18 @@ import android.content.pm.PackageInfo
 import android.graphics.drawable.ColorDrawable
 import android.os.Looper
 import android.util.Base64
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.ProgressBar
-import android.widget.TextView
-import androidx.fragment.app.FragmentActivity
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.appstore.StoreBar
 import com.diegonmarcos.superapp.appstore.StoreCloudFragment
+import com.diegonmarcos.superapp.appstore.StoreSemantics
+import com.diegonmarcos.superapp.ui.KitPageHarness
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import org.json.JSONObject
@@ -26,7 +29,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
@@ -43,20 +45,14 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
-class StoreProgressBarTest {
+class StoreProgressBarTest : KitPageHarness() {
 
     private val ctx: Context = ApplicationProvider.getApplicationContext()
     private val b64 = com.diegonmarcos.superapp.appstore.BuildConfig.CONSTELLATION_FLEET_B64
 
     @After fun clear() { UpdateProgress.reset() }
 
-    private fun idle() = shadowOf(Looper.getMainLooper()).idle()
-
-    private fun texts(v: View): List<TextView> = when (v) {
-        is TextView -> listOf(v)
-        is ViewGroup -> (0 until v.childCount).flatMap { texts(v.getChildAt(it)) }
-        else -> emptyList()
-    }
+    private fun idle() { shadowOf(Looper.getMainLooper()).idle(); compose.waitForIdle() }
 
     /** A fleet app the page draws a row for — the last group's, so opening it
      *  is a real tab switch whenever there is more than one tab. */
@@ -73,18 +69,24 @@ class StoreProgressBarTest {
         return app!!
     }
 
-    private class Bar(val row: ViewGroup) {
-        val head = row.getChildAt(0) as ViewGroup
-        val icon = head.getChildAt(0) as ImageView
-        val label = head.getChildAt(1) as TextView
-        val bar = row.getChildAt(1) as ProgressBar
+    /** The progress row as the semantics tree shows it; the row itself is absent while nothing runs. */
+    private class ProgressRow(val row: SemanticsNode, val label: SemanticsNode, val bar: SemanticsNode, val icon: SemanticsNode?) {
+        val text get() = label.text()
+        val indeterminate get() = bar.config[SemanticsProperties.ProgressBarRangeInfo] == ProgressBarRangeInfo.Indeterminate
+        val progress get() = (bar.config[SemanticsProperties.ProgressBarRangeInfo].current * 100).toInt()
     }
 
-    private fun bar(root: View): Bar {
-        val row = root.findViewWithTag<ViewGroup>(StoreBar.PROGRESS_TAG)
-        assertNotNull("the Cloud tab draws no progress row under its buttons", row)
-        return Bar(row!!)
+    private fun bar(): ProgressRow {
+        val row = compose.onNodeWithTag(StoreBar.PROGRESS_TAG)
+        row.assertExists("the Cloud tab draws no progress row under its buttons")
+        // the row is one tap target (it merges its parts), so its label, bar and icon are read unmerged
+        return ProgressRow(row.fetchSemanticsNode(),
+            compose.onNodeWithTag("store-progress:label", useUnmergedTree = true).fetchSemanticsNode(),
+            compose.onNodeWithTag("store-progress:bar", useUnmergedTree = true).fetchSemanticsNode(),
+            compose.onAllNodes(hasTestTag("store-progress:icon"), useUnmergedTree = true).fetchSemanticsNodes().firstOrNull())
     }
+
+    private fun noBar() = compose.onNodeWithTag(StoreBar.PROGRESS_TAG).assertDoesNotExist()
 
     @Test
     fun `the bar names the app, stage, version, bytes, position and next, and a failure opens that row`() {
@@ -96,31 +98,27 @@ class StoreProgressBarTest {
             applicationInfo = ApplicationInfo().apply { packageName = app.pkg }
         })
         shadowOf(ctx.packageManager).setApplicationIcon(app.pkg, ColorDrawable(0xFF2B6CB0.toInt()))
-        val act = Robolectric.buildActivity(FragmentActivity::class.java).setup().get()
-        val f = StoreCloudFragment()
-        act.supportFragmentManager.beginTransaction().add(android.R.id.content, f).commitNow()
+        show(StoreCloudFragment())
         idle()
-        val root = f.requireView()
-        assertEquals("nothing running, nothing drawn", View.GONE, bar(root).row.visibility)
+        noBar()   // nothing running, nothing drawn
 
         // ── a download in a batch ──
         UpdateProgress.beginJob(UpdateProgress.Job(app.id, app.pkg, app.label,
             UpdateProgress.STAGE_DOWNLOADING, "1.2.3", 3, 12, "Chat"))
         UpdateProgress.update(UpdateProgress.State.Downloading(42, 4_200_000, 10_000_000))
         idle()
-        var b = bar(root)
-        val t = b.label.text.toString()
-        assertEquals(View.VISIBLE, b.row.visibility)
+        var b = bar()
+        val t = b.text
         assertTrue("no app name: $t", t.startsWith("${app.label} 1.2.3"))
         for (part in listOf("downloading", "42%", " / ", "3 of 12", "next: Chat"))
             assertTrue("'$part' missing from: $t", part in t)
-        assertFalse(b.bar.isIndeterminate); assertEquals(42, b.bar.progress)
-        assertEquals("the app's own icon is beside its name", View.VISIBLE, b.icon.visibility)
+        assertFalse(b.indeterminate); assertEquals(42, b.progress)
+        assertNotNull("the app's own icon is beside its name", b.icon)
 
         // Control: the stage is the job's, not a constant — verifying reads as verifying.
         UpdateProgress.stage(UpdateProgress.STAGE_VERIFYING)
         idle()
-        assertTrue(bar(root).label.text.toString(), "verifying" in bar(root).label.text && "downloading" !in bar(root).label.text)
+        assertTrue(bar().text, "verifying" in bar().text && "downloading" !in bar().text)
 
         // #894 the bar holds one state per item, so a NEW job is what starts it over: a finished job
         // clears the row, and the next one begins indeterminate.
@@ -130,42 +128,41 @@ class StoreProgressBarTest {
         // Control: an unknown size is said, never drawn as a percentage.
         UpdateProgress.update(UpdateProgress.State.Downloading(0, 500_000, -1))
         idle()
-        b = bar(root)
-        assertTrue(b.label.text.toString(), "total size unknown" in b.label.text && "%" !in b.label.text)
-        assertTrue(b.bar.isIndeterminate)
+        b = bar()
+        assertTrue(b.text, "total size unknown" in b.text && "%" !in b.text)
+        assertTrue(b.indeterminate)
 
         // ── the failure: app + stage + reason, after the job has ended ──
         UpdateProgress.update(UpdateProgress.State.Failed("no space left on device", app.id, app.pkg,
             stage = UpdateProgress.STAGE_INSTALLING, app = app.label))
         UpdateProgress.endBatch()
         idle()
-        b = bar(root)
-        val err = b.label.text.toString()
+        b = bar()
+        val err = b.text
         // #831 the bar names the app and points at its row; the reason is drawn whole THERE, never cut here.
         assertTrue(err, err.startsWith("⚠ ") && "failed" in err && "on its row" in err && "no space left" !in err)
-        assertEquals("a failure is drawn red", 0xFFF56565.toInt(), b.label.currentTextColor)
+        assertEquals("a failure is drawn red", 0xFFF56565.toInt(), b.label.config[StoreSemantics.Ink])
 
         // ── tap → that app's row, open ──
         val detail = "${app.pkg}  ·  ${app.image}"
-        fun detailShown() = texts(root).any { it.text.toString() == detail && it.isShown }
+        fun detailShown() = compose.onAllNodesWithText(detail).fetchSemanticsNodes().isNotEmpty()
         assertFalse("control: the row is not open before the tap", detailShown())
-        assertTrue(b.row.isClickable)
-        b.row.performClick()
+        assertTrue(SemanticsActions.OnClick in b.row.config)
+        compose.onNodeWithTag(StoreBar.PROGRESS_TAG).invokeClick()
         idle()
         assertTrue("the tap did not open ${app.id}'s row", detailShown())
 
         // Control: a single finished job leaves nothing on the bar; a cancel hides it.
         UpdateProgress.update(UpdateProgress.State.Done)
         idle()
-        assertEquals(View.GONE, bar(root).row.visibility)
+        noBar()
         UpdateProgress.beginJob(UpdateProgress.Job(app.id, app.pkg, app.label, UpdateProgress.STAGE_DOWNLOADING))
         UpdateProgress.update(UpdateProgress.State.Downloading(5, 5, 100))
         idle()
-        assertEquals(View.VISIBLE, bar(root).row.visibility)
-        assertFalse("a lone app has no batch position: ${bar(root).label.text}",
-            Regex("""\d+ of \d+""").containsMatchIn(bar(root).label.text))
+        assertFalse("a lone app has no batch position: ${bar().text}",
+            Regex("""\d+ of \d+""").containsMatchIn(bar().text))
         UpdateProgress.update(UpdateProgress.State.Cancelled)
         idle()
-        assertEquals(View.GONE, bar(root).row.visibility)
+        noBar()
     }
 }

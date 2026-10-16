@@ -3,10 +3,18 @@ package com.diegonmarcos.superapp.appstore
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Typeface
-import android.view.View
-import android.widget.LinearLayout
-import android.widget.TextView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import com.diegonmarcos.superapp.devtools.FleetIpc
 import com.diegonmarcos.superapp.devtools.FleetIpcWire
@@ -52,7 +60,7 @@ import org.json.JSONObject
  *   - shared data: providers and services a member guards with
  *     CONSTELLATION_DATA, and which members hold that grant
  *
- * [render] takes the probe result as plain data, so a test hands it a phone it
+ * [Mesh] takes the probe result as plain data, so a test hands it a phone it
  * invented and reads back what was drawn (every node and link row is tagged).
  */
 object StoreMesh {
@@ -414,34 +422,32 @@ object StoreMesh {
     private const val DIM = 0x99FFFFFF.toInt()
     private const val WHITE = 0xFFFFFFFF.toInt()
 
-    /** #793 what [render] drew, so a page can refill one member's card as its
-     *  probe lands and hide what a filter excludes, without redrawing the rest. */
-    class Drawn(val summary: TextView, val cards: Map<String, LinearLayout>, val headings: List<Pair<View, List<String>>>)
-
     /**
-     * Draw the mesh into [into]. [live] null = nothing known yet: every node
-     * is drawn, statuses read "probing". [pending] are members whose probe is
-     * still running — drawn from what [live] already says, marked ⟳.
-     * [onOpen] receives a tapped link's engine. [extras] is the host's own
-     * per-member block (Apps Mesh: the row buttons and the endpoints panel),
-     * appended to each card.
+     * Draw the mesh. [live] null = nothing known yet: every node is drawn, statuses read "probing".
+     * [pending] are members whose probe is still running — drawn from what [live] already says, marked
+     * ⟳; each card redraws the moment its member's answer lands (the arguments are state the caller
+     * holds, so a composition reads them and nothing else is redrawn). [show] is the page's filter: a
+     * member it rejects has no card, and a run with no card left has no heading. [onOpen] receives a
+     * tapped link's engine. [extras] is the host's own per-member block (Apps Mesh: the row buttons
+     * and the endpoints panel), appended to each card.
      */
-    fun render(
-        ctx: Context, into: LinearLayout, fleetJson: JSONObject, fleet: List<Fleet.App>,
-        links: List<Link>, live: Live?, pending: Set<String> = emptySet(),
-        extras: ((Fleet.App) -> View?)? = null, onOpen: (Fleet.App) -> Unit,
-    ): Drawn {
+    @Composable
+    fun Mesh(
+        fleetJson: JSONObject, fleet: List<Fleet.App>, links: List<Link>, live: Live?, pending: Set<String> = emptySet(),
+        show: (Fleet.App) -> Boolean = { true },
+        extras: (@Composable ColumnScope.(Fleet.App) -> Unit)? = null, onOpen: (Fleet.App) -> Unit,
+    ) {
         val byId = fleet.associateBy { it.id }
         val label = { id: String -> byId[id]?.label ?: id }
         val broken = if (live == null) emptyList()
             else links.filter { state(it, live) == State.ENGINE_MISSING || state(it, live) == State.ENGINE_OLD }
 
-        val summary = text(ctx, summaryLine(fleet, links, live, pending), StoreDensity.T_META, DIM)
-        into.addView(summary)
+        Text(summaryLine(fleet, links, live, pending), color = DIM.ink(), fontSize = StoreDensity.T_META.sp,
+            modifier = Modifier.padding(vertical = sdp(StoreDensity.S1)))
 
         if (broken.isNotEmpty()) {
-            into.addView(heading(ctx, "Broken links", RED))
-            for (l in broken) into.addView(linkRow(ctx, l, live!!, label, byId, onOpen))
+            StoreHeading("Broken links", RED)
+            for (l in broken) LinkRow(l, live!!, label, byId, onOpen)
         }
 
         // Nodes in the declared group order; a row no group lists still gets
@@ -458,25 +464,12 @@ object StoreMesh {
         }
         fleet.filter { it.id !in placed }.takeIf { it.isNotEmpty() }?.let { runs.add("Other" to it) }
 
-        val cards = LinkedHashMap<String, LinearLayout>()
-        val headings = ArrayList<Pair<View, List<String>>>()
         for ((title, rows) in runs) {
-            val h = heading(ctx, title, AMBER)
-            into.addView(h); headings.add(h to rows.map { it.id })
-            for (app in rows) {
-                val card = LinearLayout(ctx).apply {
-                    orientation = LinearLayout.VERTICAL
-                    tag = TAG_NODE + app.id
-                    setBackgroundColor(0xFF1C1C24.toInt())
-                    setPadding(dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S6), dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S6))
-                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2)) }
-                }
-                fill(ctx, card, app, live, app.id in pending, links, byId, extras, onOpen)
-                into.addView(card); cards[app.id] = card
-            }
+            val shown = rows.filter(show)
+            if (shown.isEmpty()) continue
+            StoreHeading(title, AMBER)
+            for (app in shown) Card(app, live, app.id in pending, links, byId, extras, onOpen)
         }
-        return Drawn(summary, cards, headings)
     }
 
     /** The line over the mesh: counts of what is known, and how many are still probing. */
@@ -489,12 +482,12 @@ object StoreMesh {
 
     const val TAG_STATUS = "store-mesh-status:"
 
-    /** (Re)fill one member's card from [live]; [probing] marks it still loading. */
-    fun fill(
-        ctx: Context, card: LinearLayout, app: Fleet.App, live: Live?, probing: Boolean, links: List<Link>,
-        byId: Map<String, Fleet.App>, extras: ((Fleet.App) -> View?)?, onOpen: (Fleet.App) -> Unit,
+    /** One member's card, from [live]; [probing] marks it still loading. */
+    @Composable
+    fun Card(
+        app: Fleet.App, live: Live?, probing: Boolean, links: List<Link>, byId: Map<String, Fleet.App>,
+        extras: (@Composable ColumnScope.(Fleet.App) -> Unit)?, onOpen: (Fleet.App) -> Unit,
     ) {
-        card.removeAllViews()
         val label = { id: String -> byId[id]?.label ?: id }
         val out = links.filter { it.from == app.id }
         val inn = links.filter { it.engine == app.id }
@@ -509,20 +502,25 @@ object StoreMesh {
             app.id in live.peers -> BLUE to "${version.ifEmpty { "?" }} · mesh member, not running"
             else -> BLUE to "${version.ifEmpty { "?" }} · installed, no debug API answered"
         }
-        card.addView(text(ctx, app.label + (if (app.kind == "lib") "  · lib" else ""), StoreDensity.T_TITLE, WHITE, bold = true))
-        card.addView(text(ctx, (if (probing && live != null) "⟳ " else "● ") + status, StoreDensity.T_CAPTION, dot).apply {
-            tag = TAG_STATUS + app.id + if (probing) ":probing" else ""
-        })
-        if (live != null) for (l in out) card.addView(linkRow(ctx, l, live, label, byId, onOpen))
-        if (inn.isNotEmpty())
-            card.addView(text(ctx, "← bound by " + inn.joinToString(", ") { l ->
-                label(l.from) + (live?.let { " " + state(l, it).name } ?: "") }, StoreDensity.T_CAPTION, DIM))
-        live?.shares?.get(app.id)?.let { card.addView(text(ctx, "⇄ serves " + it.joinToString(" · "), StoreDensity.T_CAPTION, DIM)) }
-        if (live != null && version != null)
-            card.addView(text(ctx, if (app.id in live.granted) "⇄ reads constellation data (CONSTELLATION_DATA granted)"
-                else "✕ CONSTELLATION_DATA not granted — reinstall from our release", StoreDensity.T_CAPTION,
-                if (app.id in live.granted) DIM else RED))
-        extras?.invoke(app)?.let { v -> (v.parent as? android.view.ViewGroup)?.removeView(v); card.addView(v) }
+        Column(
+            Modifier.padding(vertical = sdp(StoreDensity.S2)).fillMaxWidth().background(Ink.CARD.ink())
+                .testTag(TAG_NODE + app.id)
+                .padding(horizontal = sdp(StoreDensity.S12), vertical = sdp(StoreDensity.S6)),
+        ) {
+            Line(app.label + (if (app.kind == "lib") "  · lib" else ""), StoreDensity.T_TITLE, WHITE, bold = true)
+            Line((if (probing && live != null) "⟳ " else "● ") + status, StoreDensity.T_CAPTION, dot,
+                tag = TAG_STATUS + app.id + if (probing) ":probing" else "")
+            if (live != null) for (l in out) LinkRow(l, live, label, byId, onOpen)
+            if (inn.isNotEmpty())
+                Line("← bound by " + inn.joinToString(", ") { l ->
+                    label(l.from) + (live?.let { " " + state(l, it).name } ?: "") }, StoreDensity.T_CAPTION, DIM)
+            live?.shares?.get(app.id)?.let { Line("⇄ serves " + it.joinToString(" · "), StoreDensity.T_CAPTION, DIM) }
+            if (live != null && version != null)
+                Line(if (app.id in live.granted) "⇄ reads constellation data (CONSTELLATION_DATA granted)"
+                    else "✕ CONSTELLATION_DATA not granted — reinstall from our release", StoreDensity.T_CAPTION,
+                    if (app.id in live.granted) DIM else RED)
+            extras?.invoke(this, app)
+        }
     }
 
     /** #792 a member's full loopback address, and — when it is not on the port
@@ -538,10 +536,11 @@ object StoreMesh {
         }
     }
 
-    private fun linkRow(
-        ctx: Context, l: Link, live: Live, label: (String) -> String,
+    @Composable
+    private fun LinkRow(
+        l: Link, live: Live, label: (String) -> String,
         byId: Map<String, Fleet.App>, onOpen: (Fleet.App) -> Unit,
-    ): View {
+    ) {
         val s = state(l, live)
         val engine = label(l.engine)
         val line = when (s) {
@@ -549,21 +548,15 @@ object StoreMesh {
             State.APP_ABSENT -> "→ ${l.name}: $engine (${label(l.from)} not installed)"
             else -> "✕ ${label(l.from)} → ${l.name}: ${fix(l, live, engine)}"
         }
-        return text(ctx, line, StoreDensity.T_META, when (s) { State.OK -> GREEN; State.APP_ABSENT -> DIM; else -> RED }).apply {
-            tag = "$TAG_LINK${l.from}>${l.engine}:${s.name}"
-            // A broken link opens the ENGINE's Store row — that is where the fix is.
-            byId[l.engine]?.let { e -> isClickable = true; setOnClickListener { onOpen(e) } }
-        }
+        // A broken link opens the ENGINE's Store row — that is where the fix is.
+        val open = byId[l.engine]?.let { e -> { onOpen(e) } }
+        Line(line, StoreDensity.T_META, when (s) { State.OK -> GREEN; State.APP_ABSENT -> DIM; else -> RED },
+            tag = "$TAG_LINK${l.from}>${l.engine}:${s.name}", onClick = open)
     }
 
-    private fun heading(ctx: Context, t: String, color: Int) =
-        text(ctx, t, StoreDensity.T_META, color).apply { setPadding(0, dp(ctx, StoreDensity.S8), 0, dp(ctx, StoreDensity.S4)) }
-
-    private fun text(ctx: Context, t: String, size: Float, color: Int, bold: Boolean = false) = TextView(ctx).apply {
-        text = t; textSize = size; setTextColor(color)
-        if (bold) typeface = Typeface.DEFAULT_BOLD
-        setPadding(0, dp(ctx, StoreDensity.S1), 0, dp(ctx, StoreDensity.S1))
+    @Composable
+    private fun Line(t: String, size: Float, color: Int, bold: Boolean = false, tag: String? = null, onClick: (() -> Unit)? = null) {
+        Text(t, color = color.ink(), fontSize = size.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+            modifier = Modifier.tagged(tag).semantics { storeInk = color }.tap(onClick).padding(vertical = sdp(StoreDensity.S1)))
     }
-
-    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
 }

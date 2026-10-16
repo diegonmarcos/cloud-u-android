@@ -3,11 +3,12 @@ package com.diegonmarcos.superapp.apps
 import android.app.Application
 import android.content.Context
 import android.util.Base64
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.TextView
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.getOrNull
 import androidx.test.core.app.ApplicationProvider
+import com.diegonmarcos.superapp.appstore.StoreSemantics
+import com.diegonmarcos.superapp.ui.KitPageHarness
 import com.diegonmarcos.superapp.appstore.StoreMesh
 import com.diegonmarcos.superapp.updater.Fleet
 import org.json.JSONArray
@@ -21,7 +22,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * #728 Store ▸ Mesh, asserted on what [StoreMesh.render] DRAWS for the fleet
+ * #728 Store ▸ Mesh, asserted on what [StoreMesh.Mesh] DRAWS for the fleet
  * manifest this build baked, under a phone state the test invents.
  *
  * Every red assertion has a paired control on the same data: the same link
@@ -33,7 +34,7 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
-class StoreMeshTest {
+class StoreMeshTest : KitPageHarness() {
 
     private val ctx: Context = ApplicationProvider.getApplicationContext()
     private val b64 = com.diegonmarcos.superapp.appstore.BuildConfig.CONSTELLATION_FLEET_B64
@@ -45,20 +46,20 @@ class StoreMeshTest {
         installed: Collection<String>, contracts: Map<String, Int> = emptyMap(),
     ) = StoreMesh.Live(installed.associateWith { "1.0" }, emptyMap(), emptySet(), contracts, emptyMap(), emptySet())
 
-    private fun draw(json: JSONObject, fleet: List<Fleet.App>, live: StoreMesh.Live?): LinearLayout =
-        LinearLayout(ctx).also { StoreMesh.render(ctx, it, json, fleet, StoreMesh.links(json), live) {} }
+    /** Draws the mesh and returns the nodes it composed, by test tag. */
+    private fun draw(json: JSONObject, fleet: List<Fleet.App>, live: StoreMesh.Live?): List<SemanticsNode> {
+        showKit { Column { StoreMesh.Mesh(json, fleet, StoreMesh.links(json), live, onOpen = {}) } }
+        return compose.onAllNodes(tagStartsWith("store-mesh-")).fetchSemanticsNodes()
+    }
 
-    private fun views(v: View): List<View> =
-        listOf(v) + if (v is ViewGroup) (0 until v.childCount).flatMap { views(v.getChildAt(it)) } else emptyList()
+    private fun tags(nodes: List<SemanticsNode>) = nodes.mapNotNull { it.tag() }
 
-    private fun tags(root: View) = views(root).mapNotNull { it.tag as? String }
-
-    private fun nodeIds(root: View) = tags(root).filter { it.startsWith(StoreMesh.TAG_NODE) }
+    private fun nodeIds(nodes: List<SemanticsNode>) = tags(nodes).filter { it.startsWith(StoreMesh.TAG_NODE) }
         .map { it.removePrefix(StoreMesh.TAG_NODE) }
 
-    private fun linkRows(root: View, l: StoreMesh.Link) = views(root).filter {
-        (it.tag as? String)?.startsWith("${StoreMesh.TAG_LINK}${l.from}>${l.engine}:") == true
-    }.map { it as TextView }
+    private fun linkRows(nodes: List<SemanticsNode>, l: StoreMesh.Link) = nodes.filter {
+        it.tag()?.startsWith("${StoreMesh.TAG_LINK}${l.from}>${l.engine}:") == true
+    }
 
     private fun manifestIds(json: JSONObject): List<String> {
         val apps = json.getJSONArray("apps")
@@ -92,18 +93,19 @@ class StoreMeshTest {
             val broken = draw(fleetJson, fleet, live(everyone - l.engine))
             val red = linkRows(broken, l)
             assertTrue("${l.from} -> ${l.engine}: no link row drawn", red.isNotEmpty())
-            assertTrue("${l.from} -> ${l.engine} with the engine missing is not flagged ENGINE_MISSING: ${red.map { it.tag }}",
-                red.all { (it.tag as String).endsWith(":ENGINE_MISSING") })
-            assertTrue("the broken link does not name its fix: ${red.map { it.text }}",
-                red.all { it.text.contains("install $engineLabel from the Store") })
-            assertTrue("the broken link is not drawn red", red.all { it.currentTextColor == 0xFFF56565.toInt() })
+            assertTrue("${l.from} -> ${l.engine} with the engine missing is not flagged ENGINE_MISSING: ${red.map { it.tag() }}",
+                red.all { it.tag()!!.endsWith(":ENGINE_MISSING") })
+            assertTrue("the broken link does not name its fix: ${red.map { it.text() }}",
+                red.all { it.text().contains("install $engineLabel from the Store") })
+            assertTrue("the broken link is not drawn red",
+                red.all { it.config.getOrNull(StoreSemantics.Ink) == 0xFFF56565.toInt() })
 
             // the control: same data, engine installed at the contract the app needs
             val healthy = draw(fleetJson, fleet, live(everyone, mapOf(l.key to l.minContract)))
             val green = linkRows(healthy, l)
-            assertTrue("${l.from} -> ${l.engine} with its engine present is not OK: ${green.map { it.tag }}",
-                green.isNotEmpty() && green.all { (it.tag as String).endsWith(":OK") })
-            assertFalse("a healthy link still names a fix", green.any { it.text.contains("from the Store") })
+            assertTrue("${l.from} -> ${l.engine} with its engine present is not OK: ${green.map { it.tag() }}",
+                green.isNotEmpty() && green.all { it.tag()!!.endsWith(":OK") })
+            assertFalse("a healthy link still names a fix", green.any { it.text().contains("from the Store") })
         }
     }
 
@@ -112,8 +114,8 @@ class StoreMeshTest {
         val everyone = manifestIds(fleetJson)
         for (l in links) {
             val old = linkRows(draw(fleetJson, fleet, live(everyone, mapOf(l.key to l.minContract - 1))), l)
-            assertTrue("${l.from} -> ${l.engine} below min_contract is not ENGINE_OLD: ${old.map { it.tag }}",
-                old.isNotEmpty() && old.all { (it.tag as String).endsWith(":ENGINE_OLD") && it.text.contains("update ") })
+            assertTrue("${l.from} -> ${l.engine} below min_contract is not ENGINE_OLD: ${old.map { it.tag() }}",
+                old.isNotEmpty() && old.all { it.tag()!!.endsWith(":ENGINE_OLD") && it.text().contains("update ") })
             // the app itself is not on the phone: nothing binds, nothing is broken
             val absent = draw(fleetJson, fleet, live(everyone - l.from - l.engine))
             assertFalse("a link from an uninstalled app is flagged broken",

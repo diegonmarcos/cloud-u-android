@@ -2,14 +2,14 @@ package com.diegonmarcos.superapp.apps
 
 import android.app.Application
 import android.content.Context
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.appstore.PhoneAppActions
 import com.diegonmarcos.superapp.appstore.SourceResolver
 import com.diegonmarcos.superapp.appstore.StoreSourceTabs
 import com.diegonmarcos.superapp.appstore.R as StoreR
+import com.diegonmarcos.superapp.ui.KitPageHarness
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -42,21 +42,15 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
-class StoreSourceTabsTest {
+class StoreSourceTabsTest : KitPageHarness() {
 
     private val ctx: Context = ApplicationProvider.getApplicationContext()
     private val sources: JSONObject get() = PhoneAppActions.sources(ctx)
     private val cfg get() = PhoneAppActions.resolver(sources)
 
-    private fun pills(v: View): List<TextView> {
-        val out = ArrayList<TextView>()
-        fun walk(x: View) {
-            if (x is TextView && (x.tag as? String)?.startsWith(StoreSourceTabs.TAG_PREFIX) == true) out += x
-            if (x is ViewGroup) for (i in 0 until x.childCount) walk(x.getChildAt(i))
-        }
-        walk(v)
-        return out
-    }
+    /** The pills the strip drew, left to right, as their labels. */
+    private fun pills(): List<String> =
+        compose.onAllNodes(tagStartsWith(StoreSourceTabs.TAG_PREFIX)).fetchSemanticsNodes().map { it.text() }
 
     @Test
     fun `renders one tab per declared kind, whatever the declaration says`() {
@@ -70,11 +64,11 @@ class StoreSourceTabsTest {
             SourceResolver.Kind("play", "Google Play", "com.android.vending", null, false),
             SourceResolver.Kind("huawei", "AppGallery", "com.huawei.appmarket", null, false),
         )
-        val strip = StoreSourceTabs.render(ctx, invented, null) { }
+        showKit { StoreSourceTabs.Strip(invented, null, { }) }
         assertEquals(
             "one tab per declared kind, in declared order, plus All",
             listOf(ctx.getString(StoreR.string.store_phone_source_all)) + invented.map { it.label },
-            pills(strip).map { it.text.toString() })
+            pills())
     }
 
     @Test
@@ -82,14 +76,14 @@ class StoreSourceTabsTest {
         val kinds = cfg.kinds
         val chosen = kinds.first { it.id == SourceResolver.KIND_FDROID }
         var picked: SourceResolver.Kind? = chosen
-        val strip = StoreSourceTabs.render(ctx, kinds, chosen) { picked = it }
+        showKit { StoreSourceTabs.Strip(kinds, chosen, { picked = it }) }
         val labels = StoreSourceTabs.labels(ctx, kinds)
-        assertEquals("the strip renders every declared label", labels, pills(strip).map { it.text.toString() })
+        assertEquals("the strip renders every declared label", labels, pills())
         // Tapping All must hand back null — the absence of a source filter, not
         // a source called "All".
-        pills(strip).first { it.text.toString() == labels.first() }.performClick()
+        compose.onNodeWithTag(StoreSourceTabs.TAG_PREFIX + labels.first()).performClick()
         assertNull("All is the absence of a filter", picked)
-        pills(strip).first { it.text.toString() == chosen.label }.performClick()
+        compose.onNodeWithTag(StoreSourceTabs.TAG_PREFIX + chosen.label).performClick()
         assertEquals(chosen.id, picked?.id)
     }
 

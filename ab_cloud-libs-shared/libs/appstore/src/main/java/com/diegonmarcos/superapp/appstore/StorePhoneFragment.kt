@@ -1,22 +1,39 @@
 package com.diegonmarcos.superapp.appstore
 
 import android.content.Context
-import android.content.Intent
-import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
-import android.text.TextUtils
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.cache.ApkCache
@@ -44,70 +61,66 @@ import kotlin.concurrent.thread
  * and say how many were skipped because they need Play. Then Export / Import
  * of the app inventory ([AppInventory]); an import shows its plan
  * ([StoreImport]) before anything acts.
+ *
+ * Compose: the rows, the state each shows ([states]), the filters and the sort are state this page
+ * holds, so a check landing or a chip tapped only writes its value and the list redraws itself.
  */
-class StorePhoneFragment : Fragment() {
+class StorePhoneFragment : KitComposeFragment() {
 
-    private class Row(val pkg: String, val label: String, val shelf: AppStoreHost.Shelf?,
-                      val fleetApp: Fleet.App?, val external: SourceResolver.External?,
-                      val installed: Boolean, val actions: List<PhoneAppActions.Action>) {
+    private class AppRow(val pkg: String, val label: String, val shelf: AppStoreHost.Shelf?,
+                         val fleetApp: Fleet.App?, val external: SourceResolver.External?,
+                         val installed: Boolean, val actions: List<PhoneAppActions.Action>) {
         /** This store can put it on the phone by itself. */
         val direct: Boolean get() = (fleetApp != null && !fleetApp.blocked) || (external?.needsPlay == false)
     }
 
-    private val controls by lazy { StoreControls.load(requireContext()) }
-    private val cDim = 0x99FFFFFF.toInt()
+    /** What one enumeration found: the rows, their resolved state and what the APK cache holds. */
+    private class Loaded(val rows: List<AppRow>, val cfg: SourceResolver.Config,
+                         val states: Map<String, SourceResolver.Check>, val cached: Map<String, ApkCache.Entry>)
+
+    private val cDim = Ink.DIM
     private val cHead = 0xFFED8936.toInt()
     private val cUp = 0xFF48BB78.toInt()
     private val cUpd = 0xFFF6AD55.toInt()
     private val cMiss = 0xFF9F7AEA.toInt()
     private val cBadge = 0xFFE53E3E.toInt()
-    private var list: LinearLayout? = null
-    private var bar: LinearLayout? = null
-    private var rows: List<Row> = emptyList()
-    // #619 the row filter. false = Declared (the full set rows() builds:
-    // installed ∪ fleet ∪ external) — the default, and the mode Profile ▸ Store
-    // deep-links into; true = Installed (only rows already on the device). No
-    // second list: it filters Row.installed, the state rows() already resolved
-    // through PackageManager. redraw() re-renders the SAME rows, so flipping the
-    // toggle never re-probes or re-enumerates.
-    private var installedOnly = false
+    private val main = Handler(Looper.getMainLooper())
+
+    private var rows by mutableStateOf<List<AppRow>>(emptyList())
+    /** The first enumeration has not landed yet. */
+    private var loading by mutableStateOf(true)
+    private var loaded by mutableStateOf(false)
+    private var failure by mutableStateOf<String?>(null)
+    // #619 the row filter. Declared (the full set rows() builds: installed ∪ fleet ∪ external) is the
+    // default, and the mode Profile ▸ Store deep-links into; Installed is only rows already on the
+    // device. No second list: it filters AppRow.installed, the state rows() already resolved through
+    // PackageManager. Redrawing re-renders the SAME rows, so flipping the page never re-probes or
+    // re-enumerates. #896 Installed | Search | Declared are the page's top tabs ([StorePages]).
+    private var page by mutableStateOf(PAGE_DECLARED)
     // #627 which declared store source the page is showing, or null for All.
-    // COMPOSES with [installedOnly] rather than replacing it: the tab chooses the
-    // store, the pill chooses declared-vs-installed, and render() applies both to
+    // COMPOSES with the page rather than replacing it: the tab chooses the
+    // store, the page chooses declared-vs-installed, and the render applies both to
     // the SAME rows() output — so every view is a subset of Declared, by
     // construction, exactly as #619 required.
-    private var sourceTab: SourceResolver.Kind? = null
+    private var sourceTab by mutableStateOf<SourceResolver.Kind?>(null)
     /** The trait row's choice (Play Integrity / Private / Open source), or null for All; both pages. */
-    private var trait: StoreSourceTabs.Trait? = null
+    private var trait by mutableStateOf<StoreSourceTabs.Trait?>(null)
     /** The state chips, the Cloud page's: 0 All, 1 Updates, 2 Missing, 3 Installed. */
-    private var stateFilter = 0
+    private var stateFilter by mutableIntStateOf(0)
     /** Installed only: 0 All, 1 Declared, 2 Not declared. */
-    private var declFilter = 0
-    private val stateChips = ArrayList<TextView>()
-    private val progress = StoreProgressPanel()
-    /** The Search page (between Installed and Declared) replaces the list and its controls. */
-    private var searchMode = false
-    private val listViews = ArrayList<View>()
-    private var searchHost: View? = null
-    // Installed owns Export and the APK cache (what is on this phone); Declared owns Import (a list to install).
-    private val installedOnlyViews = ArrayList<View>()
-    private val declaredOnlyViews = ArrayList<View>()
-    // #896 Installed | Declared are the page's top tabs now (the Cloud page's strip, [StoreTabs]); the
-    // bottom bar holds every other control, and the store-source strip is drawn into [sourceHost].
-    private val pageButtons = ArrayList<TextView>()
-    private var sourceHost: LinearLayout? = null
-    private var stopObserving: (() -> Unit)? = null
-    private var cfg: SourceResolver.Config? = null
-    private val states = HashMap<String, SourceResolver.Check>()
-    private val stateViews = HashMap<String, TextView>()
+    private var declFilter by mutableIntStateOf(0)
+    private var cfg by mutableStateOf<SourceResolver.Config?>(null)
+    private val states = mutableStateMapOf<String, SourceResolver.Check>()
+    /** Packages whose probe is in flight (their state line says "checking…"). */
+    private val checking = mutableStateMapOf<String, Boolean>()
     // #625 what the APK cache holds, per package, as of the last reload: the
     // row's own answer to "is the download still here, and is it the thing I
     // have installed?". Read from ApkCache's download records — no second
     // bookkeeping, and no hashing on the UI thread.
-    private val cached = HashMap<String, ApkCache.Entry>()
-    // #666 the clear-cache button, kept so its label can carry the REAL count and
-    // megabytes it would free, recomputed on every reload rather than described.
-    private var cacheBtn: TextView? = null
+    private val cached = mutableStateMapOf<String, ApkCache.Entry>()
+    // #666 the clear-cache label, carrying the REAL count and megabytes it would free, recomputed on
+    // every reload rather than described. Null = not measured yet.
+    private var cacheLabel by mutableStateOf<String?>(null)
     // Set when a tap has already taken the provably-installed bytes and the only
     // thing left is unproven: the next tap discards the only copy, and the toast
     // has already said so in those words. It stays armed across reloads on
@@ -122,11 +135,16 @@ class StorePhoneFragment : Fragment() {
         override fun get(key: String) = runCatching { viewPrefs.getString(key, null) }.getOrNull()
         override fun put(key: String, value: String) { runCatching { viewPrefs.edit().putString(key, value).apply() } }
     }
-    private var sort = StoreSizes.Sort.SHELF
-    private val sortChips = ArrayList<TextView>()
-    private var sizeGranted = true
-    private val openRows = HashSet<String>()
+    private var sort by mutableStateOf(StoreSizes.Sort.SHELF)
+    private var sizeGranted by mutableStateOf(true)
+    /** Bumped when sizes were measured or a mark changed: every row re-reads what is not state. */
+    private var redrawTick by mutableIntStateOf(0)
+    private var resume by mutableIntStateOf(0)
+    private val openRows = mutableStateMapOf<String, Boolean>()
+    private var importPlan by mutableStateOf<AppInventory.Plan?>(null)
+    private var stopObserving: (() -> Unit)? = null
     private var stopSizeWatch: (() -> Unit)? = null
+    private val progress = StoreProgressPanel()
 
     // #565 export / import. Registered at construction, as the Activity Result
     // API requires; the system picker owns where the file lives.
@@ -137,244 +155,153 @@ class StorePhoneFragment : Fragment() {
         if (uri != null) importFrom(uri)
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = requireContext()
-        // The page's TOP TABS: Installed | Declared, in build.json::ui phone.pages order. Drawn here by
-        // the Cloud page's own strip builder unless the host draws them (StorePages.hostDrawsStrip).
-        val strip = if (StorePages.hostDrawsStrip) null else StoreTabs.bar(ctx, listOf(listOf(
-            StoreControls.Control(ctx.getString(R.string.store_phone_filter_installed), "", controls.groupTab),
-            StoreControls.Control(ctx.getString(R.string.store_phone_filter_search), "", controls.groupTab),
-            StoreControls.Control(ctx.getString(R.string.store_phone_filter_declared), "", controls.groupTab))),
-            pageButtons) { StorePages.select(SECTION, PAGES[it]) }
-        syncPage()
-        stopObserving = StorePages.observe(SECTION) { view?.post {
-            // Leaving Search re-reads the rows: a declare made there changes Declared.
-            val was = searchMode; syncPage(); if (was && !searchMode) reload() else redraw()
-        } }
+    override fun palette(): KitPalette = StoreSearchPage.palette(requireContext())
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
         sort = StoreSizes.loadSort(sortStore)
-        stopSizeWatch = StoreSizeProbe.watch(ctx) { view?.post { if (isAdded) measureSizes() } }
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(ctx, StoreDensity.S12); setPadding(p, p, p, p)
-        }
-        // THE ACTION BAR sits right under the top tabs, exactly where the Cloud page's header does (#896.3):
-        // the SAME bar the Cloud tab draws. #571: Install all and Update all are real verbs here now - they
-        // walk every row this store can serve itself (fleet path, vendor APK, F-Droid) and report the rows
-        // that need Play. Then export / import / clear cache, and the store-source strip.
-        col.addView(LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            listViews += this
-            bar = this
-            StoreBar.render(this@StorePhoneFragment, this, StoreBar.Verbs(
-                checkAll = { checkAll() }, installAll = { installAll() }, updateAll = { updateAll() }))
-        })
-        col.addView(progress.view(ctx))
-        // The page's file verbs: the SAME shared action buttons, laid out by StoreRow.actions as every row's are.
-        col.addView(StoreRow.actions(ctx, listOf(
-            fileBtn(ctx, ctx.getString(R.string.store_export)) { exportDoc.launch(EXPORT_NAME) }.also { installedOnlyViews += it },
-            fileBtn(ctx, ctx.getString(R.string.store_import)) { importDoc.launch(IMPORT_TYPES) }.also { declaredOnlyViews += it },
-            // #625 the manual door onto the cache. The app owns eviction now, so
-            // the user needs a way to say "drop it all" that does not mean
-            // Settings > Clear cache - which no longer reaches these bytes, on
-            // purpose, because the OS doing that silently WAS the bug.
-            // #666 the label states the measured count and megabytes; reload()
-            // rewrites it from ApkCache.plan, so it is never an estimate.
-            fileBtn(ctx, ctx.getString(R.string.store_cache_clear)) { clearCache() }
-                .also { cacheBtn = it; installedOnlyViews += it })).also { listViews += it })
-        sourceHost = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        col.addView(sourceHost)
-        val cap = caption(ctx, ctx.getString(R.string.store_phone_caption))
-        col.addView(cap)
-        val rowsView = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        list = rowsView
-        col.addView(rowsView)
-        listViews += listOfNotNull(sourceHost, cap, rowsView)
-        searchHost = StoreSearchPage.view(ctx) { cfg ?: runCatching { PhoneAppActions.resolver(PhoneAppActions.sources(ctx)) }.getOrNull() }
-            .also { col.addView(it) }
-        syncPage()  // again, now that the page-specific buttons exist
-        return StorePage.frame(ctx, strip, ScrollView(ctx).apply { addView(col) })
-    }
-
-    /** [installedOnly] is the selected page, and the strip paints it. */
-    private fun syncPage() {
-        val page = StorePages.page(SECTION, PAGE_DECLARED)
-        installedOnly = page == PAGE_INSTALLED
-        searchMode = page == PAGE_SEARCH
-        StoreTabs.paint(pageButtons, PAGES.indexOf(page).coerceAtLeast(0))
-        listViews.forEach { it.visibility = if (searchMode) View.GONE else View.VISIBLE }
-        searchHost?.visibility = if (searchMode) View.VISIBLE else View.GONE
-        installedOnlyViews.forEach { it.visibility = if (installedOnly) View.VISIBLE else View.GONE }
-        declaredOnlyViews.forEach { it.visibility = if (installedOnly || searchMode) View.GONE else View.VISIBLE }
+        page = StorePages.page(SECTION, PAGE_DECLARED)
     }
 
     // Reloaded on every return: Remove and App info leave for a system
     // screen, and what they changed must not be drawn stale.
     override fun onResume() {
         super.onResume()
-        StoreBar.onResume(bar)
+        resume++
         reload()
         // #570 Account ▸ Fleet ▸ Apps ▸ Apply list to Store: the declared inventory, same path as a picked file.
         StoreImport.takePending()?.let { importText(it) }
     }
 
-    private fun reload(then: (() -> Unit)? = null) {
-        val ctx = requireContext()
-        val into = list ?: return
-        into.removeAllViews()
-        into.addView(caption(ctx, ctx.getString(R.string.store_phone_loading)))
-        // Enumerating, classifying and probing a few hundred packages is
-        // PackageManager IPC — off the main thread, the #261 lesson.
-        val app = ctx.applicationContext
-        thread(name = "store-phone-apps") {
-            val built = runCatching { rows(app) }
-            into.post {
-                if (!isAdded) return@post
-                into.removeAllViews()
-                built.onSuccess { rows = it; render(ctx, into, it); refreshCacheLabel(); measureSizes(); then?.invoke() }
-                    .onFailure { into.addView(caption(ctx, ctx.getString(R.string.store_phone_list_failed, it.message))) }
+    // ── the page ──────────────────────────────────────────────────────────────
+
+    @Composable
+    override fun Content() {
+        val ctx = LocalContext.current
+        val searchMode = page == PAGE_SEARCH
+        val installedOnly = page == PAGE_INSTALLED
+        DisposableEffect(Unit) {
+            page = StorePages.page(SECTION, PAGE_DECLARED)
+            progress.attach()
+            stopObserving = StorePages.observe(SECTION) { main.post {
+                // Leaving Search re-reads the rows: a declare made there changes Declared.
+                val was = page == PAGE_SEARCH
+                page = StorePages.page(SECTION, PAGE_DECLARED)
+                if (was && page != PAGE_SEARCH) reload()
+            } }
+            stopSizeWatch = StoreSizeProbe.watch(ctx) { main.post { if (isAdded) measureSizes() } }
+            onDispose {
+                stopObserving?.invoke(); stopObserving = null; stopSizeWatch?.invoke(); stopSizeWatch = null
+                progress.detach()
             }
+        }
+        // The page's TOP TABS: Installed | Search | Declared, in build.json::ui phone.pages order. Drawn here by
+        // the Cloud page's own strip builder unless the host draws them (StorePages.hostDrawsStrip).
+        val groupTab = rememberStoreControls().groupTab
+        val strip: (@Composable () -> Unit)? = if (StorePages.hostDrawsStrip) null else {
+            {
+                StoreTabs.Bar(listOf(listOf(
+                    StoreControls.Control(ctx.getString(R.string.store_phone_filter_installed), "", groupTab),
+                    StoreControls.Control(ctx.getString(R.string.store_phone_filter_search), "", groupTab),
+                    StoreControls.Control(ctx.getString(R.string.store_phone_filter_declared), "", groupTab))),
+                    PAGES.indexOf(page).coerceAtLeast(0)) { StorePages.select(SECTION, PAGES[it]) }
+            }
+        }
+        StorePage.Frame(strip) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(sdp(StoreDensity.S12))) {
+                if (!searchMode) PageBody(ctx, installedOnly)
+                // The Search page (between Installed and Declared) replaces the list and its controls. It
+                // stays composed (zero size) while the others show, so its query and results survive a switch.
+                Column(if (searchMode) Modifier.fillMaxWidth() else Modifier.size(0.dp)) {
+                    StoreSearchPage.Content { cfg ?: runCatching { PhoneAppActions.resolver(PhoneAppActions.sources(ctx)) }.getOrNull() }
+                }
+            }
+        }
+        importPlan?.let { plan -> StoreImport.PlanDialog(plan) { importPlan = null } }
+    }
+
+    @Composable
+    private fun PageBody(ctx: Context, installedOnly: Boolean) {
+        // THE ACTION BAR sits right under the top tabs, exactly where the Cloud page's header does (#896.3):
+        // the SAME bar the Cloud tab draws. #571: Install all and Update all are real verbs here now - they
+        // walk every row this store can serve itself (fleet path, vendor APK, F-Droid) and report the rows
+        // that need Play. Then export / import / clear cache, and the store-source strip.
+        StoreBar.Bar(StoreBar.Verbs(
+            checkAll = { checkAll() }, installAll = { installAll() }, updateAll = { updateAll() }), resume = resume)
+        progress.Panel()
+        // The page's file verbs: the SAME shared action buttons, laid out by StoreRow.Actions as every row's are.
+        // Installed owns Export and the APK cache (what is on this phone); Declared owns Import (a list to install).
+        StoreRow.Actions(buildList {
+            if (installedOnly) add(StoreVerb(ctx.getString(R.string.store_export), FILE_FILL, { exportDoc.launch(EXPORT_NAME) }, "store-phone:export"))
+            if (!installedOnly) add(StoreVerb(ctx.getString(R.string.store_import), FILE_FILL, { importDoc.launch(IMPORT_TYPES) }, "store-phone:import"))
+            // #625 the manual door onto the cache. The app owns eviction now, so
+            // the user needs a way to say "drop it all" that does not mean
+            // Settings > Clear cache - which no longer reaches these bytes, on
+            // purpose, because the OS doing that silently WAS the bug.
+            // #666 the label states the measured count and megabytes; reload()
+            // rewrites it from ApkCache.plan, so it is never an estimate.
+            if (installedOnly) add(StoreVerb(cacheLabel ?: ctx.getString(R.string.store_cache_clear), FILE_FILL, { clearCache() }, "store-phone:cache"))
+        })
+        if (loaded) Controls(ctx, installedOnly)
+        StoreCaption(ctx.getString(R.string.store_phone_caption))
+        when {
+            loading && !loaded -> StoreCaption(ctx.getString(R.string.store_phone_loading))
+            failure != null -> StoreCaption(ctx.getString(R.string.store_phone_list_failed, failure))
+            else -> RowList(ctx, installedOnly)
         }
     }
 
-    override fun onDestroyView() {
-        stopObserving?.invoke(); stopObserving = null; stopSizeWatch?.invoke(); stopSizeWatch = null; sortChips.clear(); pageButtons.clear(); sourceHost = null
-        list = null; cacheBtn = null; stateViews.clear()
-        installedOnlyViews.clear(); declaredOnlyViews.clear(); listViews.clear(); searchHost = null; stateChips.clear(); progress.detach(); super.onDestroyView()
-    }
-
-    /** Every launchable app, fleet included, as [AppInventory] JSON. */
-    private fun exportTo(uri: Uri) {
-        val app = requireContext().applicationContext
-        thread(name = "store-export") {
-            val result = runCatching {
-                val entries = AppInventory.entriesFor(app, AppInventory.launchable(app))
-                app.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(AppInventory.toJson(entries, IntegrityMarks.marked(app)).toByteArray()) }
-                entries.size
-            }
-            toastLater(app, result.fold({ app.getString(R.string.store_export_done, it) },
-                { app.getString(R.string.store_file_failed, it.message) }))
-        }
-    }
-
-    /** Read a file, diff it against this phone, show the plan. Acts on nothing. */
-    private fun importFrom(uri: Uri) {
-        val app = requireContext().applicationContext
-        thread(name = "store-import") {
-            val text = runCatching { app.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() } }
-            view?.post { if (isAdded) text.onSuccess { importText(it) }
-                .onFailure { Toast.makeText(app, app.getString(R.string.store_file_failed, it.message), Toast.LENGTH_LONG).show() } }
-        }
-    }
-
-    /** Diff an inventory (file or Account hand-off) against this phone, show the plan. Acts on nothing. */
-    private fun importText(text: String) {
-        val app = requireContext().applicationContext
-        thread(name = "store-import") {
-            val result = runCatching {
-                val wanted = AppInventory.parse(text)
-                val pm = app.packageManager
-                val installed = wanted.map { it.pkg }.filter { runCatching { pm.getPackageInfo(it, 0) }.isSuccess }.toSet()
-                AppInventory.plan(wanted, installed, AppInventory.fleetPackages(), PhoneAppActions.sources(app))
-            }
-            view?.post {
-                if (!isAdded) return@post
-                result.onSuccess { StoreImport.show(this, it) }
-                    .onFailure { Toast.makeText(app, app.getString(R.string.store_file_failed, it.message), Toast.LENGTH_LONG).show() }
-            }
-        }
-    }
-
-    /**
-     * The DECLARED list: installed launchable apps ∪ fleet apps (kind app) ∪
-     * the resolver's external apps, each with its actions and its local state.
-     * Sorted: shelf order, then label; unshelved last.
-     */
-    private fun rows(ctx: Context): List<Row> {
-        val pm = ctx.packageManager
-        val fleetList = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
-        val fleet = PhoneAppActions.fleetByPackage(fleetList)
-        val sources = PhoneAppActions.sources(ctx)
-        val resolver = PhoneAppActions.resolver(sources).also { cfg = it }
-        val shellReady = ShellChannels.active(ctx) != null
-        // The Phone page is the FOREIGN apps' page: a fleet app — installed or not — is the Cloud
-        // page's (constellation install / update all), never declared, listed or installed here.
-        val declared = LinkedHashMap<String, String>()
-        declared.putAll(AppInventory.launchable(ctx).filterKeys { it !in fleet })
-        resolver.apps.values.filter { it.pkg !in fleet }.forEach { declared.putIfAbsent(it.pkg, it.label) }
-        DeclaredEdits.addedPackages(ctx).filterKeys { it !in fleet }.forEach { (p, l) -> declared.putIfAbsent(p, l) }
-        val shelves = AppStoreHost.classify(ctx, declared)
-        states.clear()
-        cached.clear()
-        ApkCache.entries(ctx).forEach { e ->
-            val r = e.record ?: return@forEach
-            // Newest cached build per package wins the row's line; the older one
-            // is what eviction takes first.
-            val had = cached[r.pkg]?.record
-            if (had == null || r.versionCode > had.versionCode) cached[r.pkg] = e
-        }
-        return declared.map { (pkg, label) ->
-            val installed = runCatching { pm.getPackageInfo(pkg, 0) }.isSuccess
-            val fa = fleet[pkg]
-            val ext = if (fa == null) DeclaredEdits.apply(ctx, resolver, pkg, SourceResolver.resolve(resolver, pkg)) else null
-            val actions = if (installed) PhoneAppActions.of(ctx, pkg, fa, shellReady, sources)
-                          else PhoneAppActions.forMissing(ctx, ext ?: SourceResolver.resolve(resolver, pkg), fa, sources, resolver)
-            states[pkg] = when {
-                ext != null -> SourceResolver.local(ctx, ext)
-                installed -> SourceResolver.installed(ctx, pkg)?.let { SourceResolver.Check.Installed(it.first, it.second, null, SourceResolver.Note.NONE) }
-                    ?: SourceResolver.Check.Unknown(null, "")
-                else -> SourceResolver.Check.NotInstalled(SourceResolver.VIA_FLEET, needsPlay = false)
-            }
-            Row(pkg, label, shelves[pkg], fa, ext, installed, actions)
-        }.sortedWith(SHELF_ORDER)
-    }
-
-    private fun render(ctx: Context, into: LinearLayout, rows: List<Row>) {
-        stateViews.clear()
-        // #619 Declared shows every row rows() built; Installed keeps only the
-        // ones on the device. The declared set is never rebuilt here — it is
-        // filtered, so Installed is by construction a subset of Declared.
-        // #627 the tab strip is drawn from the DECLARED kinds, rebuilt on every
-        // render so a change in the asset is a change on the screen with nothing
-        // in between. Rows with no external ladder (fleet members) belong to no
+    /** The store strip, the trait row, the state chips and the sort: everything that narrows the list. */
+    @Composable
+    private fun Controls(ctx: Context, installedOnly: Boolean) {
+        // #627 the tab strip is drawn from the DECLARED kinds, so a change in the asset is a change on the
+        // screen with nothing in between. Rows with no external ladder (fleet members) belong to no
         // store tab — they come from the constellation, not from a store, and
         // pretending otherwise would put them under whichever tab was listed
         // first.
         val kinds = cfg?.kinds.orEmpty()
-        sourceHost?.let { host ->
-            host.removeAllViews()
-            // The store strip only on Installed: a declared app's store is not chosen yet (its ladder is).
-            if (installedOnly && kinds.isNotEmpty()) host.addView(
-                StoreSourceTabs.render(ctx, kinds, sourceTab) { k ->
-                    if (sourceTab?.id != k?.id) { sourceTab = k; redraw() }
-                })
-            host.addView(StoreSourceTabs.traits(ctx, trait) { t -> if (trait != t) { trait = t; redraw() } })
-            if (installedOnly) host.addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                listOf(R.string.store_phone_decl_all, R.string.store_phone_decl_yes, R.string.store_phone_decl_no).forEachIndexed { i, id ->
-                    addView(StoreBar.chip(ctx, controls.filter, ctx.getString(id), i == 0) { if (declFilter != i) { declFilter = i; redraw() } }
-                        .also { StoreBar.paint(it, i == declFilter) })
+        // The store strip only on Installed: a declared app's store is not chosen yet (its ladder is).
+        if (installedOnly && kinds.isNotEmpty())
+            StoreSourceTabs.Strip(kinds, sourceTab, { k -> if (sourceTab?.id != k?.id) sourceTab = k })
+        StoreSourceTabs.Traits(trait, { t -> if (trait != t) trait = t })
+        if (installedOnly) {
+            val labels = listOf(R.string.store_phone_decl_all, R.string.store_phone_decl_yes, R.string.store_phone_decl_no).map { ctx.getString(it) }
+            androidx.compose.foundation.layout.Row {
+                val style = rememberStoreControls().filter
+                labels.forEachIndexed { i, label ->
+                    StoreBar.Chip(label, i == declFilter, { if (declFilter != i) declFilter = i }, first = i == 0,
+                        tag = "store-phone:decl:$i", style = style)
                 }
-            })
-            // The state chips: the Cloud page's line, drawn by the same StoreRow.filters.
-            host.addView(StoreRow.filters(ctx, controls.filter, listOf("All", "⬆ Updates", "◯ Missing", "✓ Installed"),
-                stateFilter, stateChips) { i -> if (stateFilter != i) { stateFilter = i; redraw() } })
-            // The sort: the page's shelf order, or size (tap again to flip largest / smallest first). Persisted.
-            val sizeLabel = if (sort == StoreSizes.Sort.SIZE_ASC) ctx.getString(R.string.store_phone_sort_size_asc)
-                            else ctx.getString(R.string.store_phone_sort_size_desc)
-            host.addView(StoreRow.filters(ctx, controls.filter,
-                listOf(ctx.getString(R.string.store_phone_sort_shelf), sizeLabel),
-                if (sort == StoreSizes.Sort.SHELF) 0 else 1, sortChips) { i ->
+            }
+        }
+        // The state chips: the Cloud page's line, drawn by the same StoreRow.Filters.
+        StoreRow.Filters(listOf("All", "⬆ Updates", "◯ Missing", "✓ Installed"), stateFilter,
+            { i -> if (stateFilter != i) stateFilter = i },
+            tags = listOf("store-phone:state:all", "store-phone:state:updates", "store-phone:state:missing", "store-phone:state:installed"))
+        // The sort: the page's shelf order, or size (tap again to flip largest / smallest first). Persisted.
+        val sizeLabel = if (sort == StoreSizes.Sort.SIZE_ASC) ctx.getString(R.string.store_phone_sort_size_asc)
+                        else ctx.getString(R.string.store_phone_sort_size_desc)
+        StoreRow.Filters(listOf(ctx.getString(R.string.store_phone_sort_shelf), sizeLabel),
+            if (sort == StoreSizes.Sort.SHELF) 0 else 1,
+            { i ->
                 sort = if (i == 0) StoreSizes.Sort.SHELF else if (sort == StoreSizes.Sort.SHELF) StoreSizes.Sort.SIZE_DESC
                        else StoreSizes.toggleSize(sort)
-                StoreSizes.saveSort(sortStore, sort); redraw()
-            })
-            // No usage access: sizes are the APK's alone, and ONE tap opens the screen that grants it.
-            if (StoreSizes.needsGrantRow(sizeGranted)) host.addView(StoreRow.actions(ctx, listOf(
-                StoreBar.button(ctx, controls.action, ctx.getString(R.string.store_phone_size_grant), GRANT_FILL) { grantUsageAccess(ctx) }
-                    .also { it.tag = GRANT_TAG }))
-                .also { it.addView(caption(ctx, ctx.getString(R.string.store_phone_size_grant_caption))) })
+                StoreSizes.saveSort(sortStore, sort)
+            },
+            tags = listOf("store-phone:sort:shelf", "store-phone:sort:size"))
+        // No usage access: sizes are the APK's alone, and ONE tap opens the screen that grants it.
+        if (StoreSizes.needsGrantRow(sizeGranted)) {
+            StoreRow.Actions(listOf(StoreVerb(ctx.getString(R.string.store_phone_size_grant), GRANT_FILL, { grantUsageAccess(ctx) }, GRANT_TAG)))
+            StoreCaption(ctx.getString(R.string.store_phone_size_grant_caption))
         }
+    }
+
+    @Composable
+    private fun RowList(ctx: Context, installedOnly: Boolean) {
+        redrawTick
+        // #619 Declared shows every row rows() built; Installed keeps only the
+        // ones on the device. The declared set is never rebuilt here — it is
+        // filtered, so Installed is by construction a subset of Declared.
         val tab = sourceTab.takeIf { installedOnly }
         val shown = rows
             .filter { tab == null || it.external?.inTab(tab) == true }
@@ -382,12 +309,12 @@ class StorePhoneFragment : Fragment() {
             .filter { if (installedOnly) it.installed else it.external?.declared == true }
             .filter { traitOk(ctx, it) }
             .filter { stateOk(it) }
-            .filter { declOk(it) }
-            .sortedWith(StoreSizes.comparator(sort, { r: Row -> StoreSizeProbe.cached(r.pkg)?.totalBytes }, SHELF_ORDER))
+            .filter { declOk(it, installedOnly) }
+            .sortedWith(StoreSizes.comparator(sort, { r: AppRow -> StoreSizeProbe.cached(r.pkg)?.totalBytes }, SHELF_ORDER))
         val missing = shown.count { !it.installed }
         val play = shown.count { !it.installed && !it.direct }
-        into.addView(caption(ctx, ctx.getString(R.string.store_phone_count, shown.size) + "  ·  " +
-            ctx.getString(R.string.store_phone_count_missing, missing, play)))
+        StoreCaption(ctx.getString(R.string.store_phone_count, shown.size) + "  ·  " +
+            ctx.getString(R.string.store_phone_count_missing, missing, play))
         // Two groups, each with its own Install all: what our Store fully
         // manages, and what the VENDOR ties to Google Play (Play Integrity / a
         // Play-installer check). The second still installs from Play's servers;
@@ -395,39 +322,33 @@ class StorePhoneFragment : Fragment() {
         val (needPlay, managed) = shown.partition { integrity(ctx, it) == SourceResolver.Integrity.PLAY }
         for ((title, group) in listOf(R.string.store_phone_group_managed to managed, R.string.store_phone_group_play to needPlay)) {
             if (group.isEmpty()) continue
-            val header = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S4))
+            androidx.compose.foundation.layout.Row(
+                Modifier.padding(top = sdp(StoreDensity.S12), bottom = sdp(StoreDensity.S4)),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(ctx.getString(title, group.size), color = Ink.WHITE.ink(), fontSize = StoreDensity.T_TITLE.sp,
+                    fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                val targets = group.filter { !it.installed && it.direct }
+                if (targets.isNotEmpty()) StoreBar.Button(ctx.getString(R.string.store_phone_group_install_all, targets.size), null, {
+                    Toast.makeText(ctx, ctx.getString(R.string.store_phone_batch_start, targets.size), Toast.LENGTH_SHORT).show()
+                    batch(ctx, targets)
+                }, tag = "store-phone:group-install:$title")
             }
-            header.addView(TextView(ctx).apply {
-                text = ctx.getString(title, group.size); textSize = StoreDensity.T_TITLE
-                typeface = Typeface.DEFAULT_BOLD; setTextColor(0xFFFFFFFF.toInt())
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            })
-            val targets = group.filter { !it.installed && it.direct }
-            if (targets.isNotEmpty()) header.addView(btn(ctx, PhoneAppActions.Action(PhoneAppActions.Kind.INSTALL,
-                ctx.getString(R.string.store_phone_group_install_all, targets.size), null, null)) {
-                Toast.makeText(ctx, ctx.getString(R.string.store_phone_batch_start, targets.size), Toast.LENGTH_SHORT).show()
-                batch(ctx, targets)
-            })
-            into.addView(header)
             var heading: String? = null
             for (r in group) {
                 // Sorted by size, the rows are one ranking: no shelf headings cutting it up.
-                if (sort != StoreSizes.Sort.SHELF) { into.addView(row(ctx, r)); continue }
-                val here = r.shelf?.heading ?: if (heading != null) ctx.getString(R.string.store_phone_other) else null
-                if (here != null && here != heading) into.addView(TextView(ctx).apply {
-                    text = here; textSize = StoreDensity.T_META; setTextColor(cHead)
-                    setPadding(0, dp(ctx, StoreDensity.S8), 0, dp(ctx, StoreDensity.S4))
-                })
-                heading = here
-                into.addView(row(ctx, r))
+                if (sort == StoreSizes.Sort.SHELF) {
+                    val here = r.shelf?.heading ?: if (heading != null) ctx.getString(R.string.store_phone_other) else null
+                    if (here != null && here != heading) StoreHeading(here, cHead)
+                    heading = here
+                }
+                PhoneRow(ctx, r)
             }
         }
     }
 
     /** The trait row: Play Integrity (must come from Play), Open source, Private (declared and not open). */
-    private fun traitOk(ctx: Context, r: Row): Boolean = when (trait) {
+    private fun traitOk(ctx: Context, r: AppRow): Boolean = when (trait) {
         null -> true
         StoreSourceTabs.Trait.PLAY_INTEGRITY -> integrity(ctx, r) == SourceResolver.Integrity.PLAY
         StoreSourceTabs.Trait.OPEN_SOURCE -> r.external?.openSource == true
@@ -436,7 +357,7 @@ class StorePhoneFragment : Fragment() {
     }
 
     /** Installed's declared filter; Declared itself already is the declared rows. */
-    private fun declOk(r: Row): Boolean = when (declFilter.takeIf { installedOnly } ?: 0) {
+    private fun declOk(r: AppRow, installedOnly: Boolean): Boolean = when (declFilter.takeIf { installedOnly } ?: 0) {
         1 -> r.external?.declared == true
         2 -> r.external?.declared != true
         else -> true
@@ -455,7 +376,7 @@ class StorePhoneFragment : Fragment() {
     }
 
     /** The state chips; an update shows once Check all has probed the row. */
-    private fun stateOk(r: Row): Boolean = when (stateFilter) {
+    private fun stateOk(r: AppRow): Boolean = when (stateFilter) {
         1 -> states[r.pkg] is SourceResolver.Check.UpdateAvailable
         2 -> !r.installed
         3 -> r.installed
@@ -463,119 +384,82 @@ class StorePhoneFragment : Fragment() {
     }
 
     /** The row's integrity: declared, raised to PLAY by this phone's own "did not run". */
-    private fun integrity(ctx: Context, r: Row): SourceResolver.Integrity =
+    private fun integrity(ctx: Context, r: AppRow): SourceResolver.Integrity =
         r.external?.let { IntegrityMarks.effective(ctx, it) } ?: SourceResolver.Integrity.NONE
-
-    /** Re-render the current rows under the current filter — no enumerate, no probe. */
-    private fun redraw() {
-        val ctx = context ?: return
-        val into = list ?: return
-        into.removeAllViews()
-        render(ctx, into, rows)
-    }
 
     /** THE Store row ([StoreRow]), as the Cloud page draws it: the head (name, size, chevron), the row's
      *  state lines, its buttons EXPANDED in full-width lines, and behind the chevron the package and
      *  the size breakdown. */
-    private fun row(ctx: Context, r: Row): View {
-        val card = StoreRow.card(ctx)
-        val detail = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S8))
-        }
-        detail.addView(TextView(ctx).apply {
-            text = r.pkg; textSize = StoreDensity.T_CAPTION; typeface = Typeface.MONOSPACE; setTextColor(cDim)
-            maxLines = 1; ellipsize = TextUtils.TruncateAt.MIDDLE
-        })
-        detail.addView(TextView(ctx).apply {
-            tag = SIZE_DETAIL_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION; setTextColor(cDim)
-            text = if (r.installed) StoreSizes.breakdown(StoreSizeProbe.cached(r.pkg)) else StoreSizes.NONE
-        })
-        val h = StoreRow.head(ctx, r.label, detail, { r.pkg in openRows }) { o -> if (o) openRows.add(r.pkg) else openRows.remove(r.pkg) }
-        // The size slot: "48 MB", "48 MB APK" (no usage access), or "—" (not installed / not measured yet).
-        h.meta.tag = SIZE_TAG_PREFIX + r.pkg
-        h.meta.text = if (r.installed) StoreSizes.rowLabel(StoreSizeProbe.cached(r.pkg)) else StoreSizes.NONE
-        card.addView(h.view)
-        val body = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(ctx, StoreDensity.S12), 0, dp(ctx, StoreDensity.S12), dp(ctx, StoreDensity.S6))
-        }
-        card.addView(body)
-        body.apply {
-            // The state line: version / update / not installed / needs Play. Tagged
-            // with the package so a test reads the rendered verdict, not this source.
-            addView(TextView(ctx).apply {
-                tag = STATE_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION
-                stateViews[r.pkg] = this
-                paint(ctx, this, states[r.pkg] ?: SourceResolver.Check.Unknown(null, ""), r)
-            })
-            // The Play Integrity badge: an app the vendor ties to Google Play. We
-            // still install it; the badge says it may refuse to run. Tagged so a
-            // test reads the rendered badge.
-            if (integrity(ctx, r) == SourceResolver.Integrity.PLAY) addView(TextView(ctx).apply {
-                tag = INTEGRITY_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION
-                text = ctx.getString(R.string.store_phone_integrity_badge); setTextColor(cBadge)
-            })
-            // #625 cached-vs-installed, per row. "cached, matches what is
-            // installed" is the state in which the bytes are about to be reaped;
-            // "cached, NOT installed" is a download waiting for its install — the
-            // thing that used to disappear.
-            cached[r.pkg]?.let { e ->
-                val rec = e.record ?: return@let
-                val here = SourceResolver.installed(ctx, r.pkg)?.second
-                addView(TextView(ctx).apply {
-                    tag = CACHE_TAG_PREFIX + r.pkg; textSize = StoreDensity.T_CAPTION
+    @Composable
+    private fun PhoneRow(ctx: Context, r: AppRow) {
+        redrawTick
+        val open = openRows[r.pkg] == true
+        StoreRow.Card(tag = "store-phone-row:${r.pkg}") {
+            // The size slot: "48 MB", "48 MB APK" (no usage access), or "—" (not installed / not measured yet).
+            StoreRow.Head(r.label, open, { openRows[r.pkg] = !open },
+                meta = if (r.installed) StoreSizes.rowLabel(StoreSizeProbe.cached(r.pkg)) else StoreSizes.NONE,
+                headTag = "store-phone-head:${r.pkg}", metaTag = SIZE_TAG_PREFIX + r.pkg)
+            Column(Modifier.padding(start = sdp(StoreDensity.S12), end = sdp(StoreDensity.S12), bottom = sdp(StoreDensity.S6))) {
+                // The state line: version / update / not installed / needs Play. Tagged
+                // with the package so a test reads the rendered verdict, not this source.
+                val (text, colour) = if (checking[r.pkg] == true) ctx.getString(R.string.store_phone_checking) to cDim
+                    else stateLine(ctx, states[r.pkg] ?: SourceResolver.Check.Unknown(null, ""), r)
+                Text(text, color = colour.ink(), fontSize = StoreDensity.T_CAPTION.sp, modifier = Modifier.testTag(STATE_TAG_PREFIX + r.pkg))
+                // The Play Integrity badge: an app the vendor ties to Google Play. We
+                // still install it; the badge says it may refuse to run. Tagged so a
+                // test reads the rendered badge.
+                if (integrity(ctx, r) == SourceResolver.Integrity.PLAY)
+                    Text(ctx.getString(R.string.store_phone_integrity_badge), color = cBadge.ink(), fontSize = StoreDensity.T_CAPTION.sp,
+                        modifier = Modifier.testTag(INTEGRITY_TAG_PREFIX + r.pkg))
+                // #625 cached-vs-installed, per row. "cached, matches what is
+                // installed" is the state in which the bytes are about to be reaped;
+                // "cached, NOT installed" is a download waiting for its install — the
+                // thing that used to disappear.
+                cached[r.pkg]?.let { e ->
+                    val rec = e.record ?: return@let
+                    val here = SourceResolver.installed(ctx, r.pkg)?.second
                     val mb = (e.bytes / 1_000_000).coerceAtLeast(1L)
-                    text = if (here == rec.versionCode)
-                        ctx.getString(R.string.store_cache_matches, rec.versionCode, mb)
-                    else ctx.getString(R.string.store_cache_waiting, rec.versionCode, mb, here?.toString() ?: "—")
-                    setTextColor(if (here == rec.versionCode) cUp else cUpd)
-                })
+                    Text(if (here == rec.versionCode) ctx.getString(R.string.store_cache_matches, rec.versionCode, mb)
+                         else ctx.getString(R.string.store_cache_waiting, rec.versionCode, mb, here?.toString() ?: "—"),
+                        color = (if (here == rec.versionCode) cUp else cUpd).ink(), fontSize = StoreDensity.T_CAPTION.sp,
+                        modifier = Modifier.testTag(CACHE_TAG_PREFIX + r.pkg))
+                }
+                val verbs = ArrayList<StoreVerb>()
+                r.actions.forEach { a ->
+                    verbs += StoreVerb(a.label, null, { act(ctx, r, a) }, "store-phone:verb:${a.kind.name}:${r.pkg}",
+                        alpha = if (a.disabledReason == null) null else 0.4f,
+                        description = a.disabledReason?.let { "${a.label}: $it" } ?: a.label)
+                }
+                // Detected at runtime: an UNKNOWN app this store installed that did not
+                // run is marked PLAY on this phone (persisted, exported with the inventory).
+                val ext = r.external
+                // Declared is the user's list: any foreign row can join or leave it.
+                if (ext != null) verbs += StoreVerb(
+                    ctx.getString(if (ext.declared) R.string.store_phone_undeclare else R.string.store_phone_declare), null, {
+                        if (ext.declared) DeclaredEdits.undeclare(ctx, r.pkg)
+                        else DeclaredEdits.declare(ctx, r.pkg, r.label, originKinds(ctx, r.pkg))
+                        reload()
+                    }, "store-phone:declare:${r.pkg}")
+                if (r.installed && ext != null && IntegrityMarks.canReport(ctx, ext)) verbs += StoreVerb(
+                    ctx.getString(R.string.store_phone_did_not_run), null, {
+                        IntegrityMarks.mark(ctx, r.pkg)
+                        Toast.makeText(ctx, ctx.getString(R.string.store_phone_marked_play, r.label), Toast.LENGTH_LONG).show()
+                        redrawTick++
+                    }, "store-phone:did-not-run:${r.pkg}")
+                // EXPANDED, as the Cloud page lays its buttons out: never a sideways scroller hiding half of them.
+                StoreRow.Actions(verbs)
+            }
+            if (open) Column(Modifier.padding(start = sdp(StoreDensity.S12), end = sdp(StoreDensity.S12), bottom = sdp(StoreDensity.S8))) {
+                Text(r.pkg, color = cDim.ink(), fontSize = StoreDensity.T_CAPTION.sp, fontFamily = FontFamily.Monospace,
+                    maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
+                Text(if (r.installed) StoreSizes.breakdown(StoreSizeProbe.cached(r.pkg)) else StoreSizes.NONE,
+                    color = cDim.ink(), fontSize = StoreDensity.T_CAPTION.sp, modifier = Modifier.testTag(SIZE_DETAIL_TAG_PREFIX + r.pkg))
             }
         }
-        val buttons = ArrayList<View>()
-        r.actions.forEach { a -> buttons += btn(ctx, a) { act(ctx, r, a) } }
-        // Detected at runtime: an UNKNOWN app this store installed that did not
-        // run is marked PLAY on this phone (persisted, exported with the inventory).
-        val ext = r.external
-        // Declared is the user's list: any foreign row can join or leave it.
-        if (ext != null) buttons += btn(ctx, PhoneAppActions.Action(PhoneAppActions.Kind.INSTALL,
-            ctx.getString(if (ext.declared) R.string.store_phone_undeclare else R.string.store_phone_declare), null, null)) {
-            if (ext.declared) DeclaredEdits.undeclare(ctx, r.pkg)
-            else DeclaredEdits.declare(ctx, r.pkg, r.label, originKinds(ctx, r.pkg))
-            reload()
-        }
-        if (r.installed && ext != null && IntegrityMarks.canReport(ctx, ext)) buttons += btn(ctx,
-            PhoneAppActions.Action(PhoneAppActions.Kind.INSTALL, ctx.getString(R.string.store_phone_did_not_run), null, null)) {
-            IntegrityMarks.mark(ctx, r.pkg)
-            Toast.makeText(ctx, ctx.getString(R.string.store_phone_marked_play, r.label), Toast.LENGTH_LONG).show()
-            redraw()
-        }
-        // EXPANDED, as the Cloud page lays its buttons out: never a sideways scroller hiding half of them.
-        body.addView(StoreRow.actions(ctx, buttons))
-        card.addView(detail)
-        return card
-    }
-
-    /** Sizes for every installed row, measured off the main thread (cached; see [StoreSizeProbe]), then repainted. */
-    private fun measureSizes() {
-        val app = context?.applicationContext ?: return
-        val pkgs = rows.filter { it.installed }.map { it.pkg }
-        thread(name = "store-phone-sizes") {
-            val granted = StoreSizeProbe.granted(app)
-            runCatching { StoreSizeProbe.measure(app, pkgs) }
-            view?.post { if (isAdded) { sizeGranted = granted; redraw() } }
-        }
-    }
-
-    /** The one-tap grant: the usage-access screen (this app's own toggle first, the list as fallback). */
-    private fun grantUsageAccess(ctx: Context) {
-        for (i in StoreSizeProbe.grantIntents(ctx)) if (runCatching { startActivity(i) }.isSuccess) return
-        Toast.makeText(ctx, ctx.getString(R.string.store_phone_size_grant_failed), Toast.LENGTH_LONG).show()
     }
 
     /** One [SourceResolver.Check] → the row's state line and colour. */
-    private fun paint(ctx: Context, tv: TextView, s: SourceResolver.Check, r: Row) {
+    private fun stateLine(ctx: Context, s: SourceResolver.Check, r: AppRow): Pair<String, Int> {
         // #627 A KIND'S NAME COMES FROM THE DECLARATION, ONCE. This was a
         // `when` over three KIND_* constants mapping to three string resources —
         // a second list of the stores that exist, three lines long, and adding
@@ -588,7 +472,7 @@ class StorePhoneFragment : Fragment() {
             else -> cfg?.kinds?.firstOrNull { it.id == k }?.label ?: k
         }
         val ladder = r.external?.sources?.joinToString(" → ") { via(it.kind) } ?: via(SourceResolver.VIA_FLEET)
-        val (text, colour) = when (s) {
+        return when (s) {
             is SourceResolver.Check.NotInstalled -> {
                 // #627 NAME THE STORE THAT ACTUALLY HAS IT. "needs Play" is the
                 // right sentence for a Play hand-off and the wrong one for an app
@@ -626,7 +510,139 @@ class StorePhoneFragment : Fragment() {
             is SourceResolver.Check.Unknown ->
                 ctx.getString(R.string.store_phone_state_unknown, s.versionName ?: "—", s.reason) to cDim
         }
-        tv.text = text; tv.setTextColor(colour)
+    }
+
+    // ── loading ───────────────────────────────────────────────────────────────
+
+    private fun reload(then: (() -> Unit)? = null) {
+        val ctx = context ?: return
+        loading = true
+        // Enumerating, classifying and probing a few hundred packages is
+        // PackageManager IPC — off the main thread, the #261 lesson.
+        val app = ctx.applicationContext
+        thread(name = "store-phone-apps") {
+            val built = runCatching { rows(app) }
+            main.post {
+                if (!isAdded) return@post
+                loading = false
+                built.onSuccess { l ->
+                    rows = l.rows; cfg = l.cfg; failure = null; loaded = true
+                    states.clear(); states.putAll(l.states)
+                    cached.clear(); cached.putAll(l.cached)
+                    refreshCacheLabel(); measureSizes(); then?.invoke()
+                }.onFailure { failure = it.message }
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        stopObserving?.invoke(); stopObserving = null; stopSizeWatch?.invoke(); stopSizeWatch = null
+        progress.detach()
+        super.onDestroyView()
+    }
+
+    /** Every launchable app, fleet included, as [AppInventory] JSON. */
+    private fun exportTo(uri: Uri) {
+        val app = requireContext().applicationContext
+        thread(name = "store-export") {
+            val result = runCatching {
+                val entries = AppInventory.entriesFor(app, AppInventory.launchable(app))
+                app.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(AppInventory.toJson(entries, IntegrityMarks.marked(app)).toByteArray()) }
+                entries.size
+            }
+            toastLater(app, result.fold({ app.getString(R.string.store_export_done, it) },
+                { app.getString(R.string.store_file_failed, it.message) }))
+        }
+    }
+
+    /** Read a file, diff it against this phone, show the plan. Acts on nothing. */
+    private fun importFrom(uri: Uri) {
+        val app = requireContext().applicationContext
+        thread(name = "store-import") {
+            val text = runCatching { app.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() } }
+            main.post { if (isAdded) text.onSuccess { importText(it) }
+                .onFailure { Toast.makeText(app, app.getString(R.string.store_file_failed, it.message), Toast.LENGTH_LONG).show() } }
+        }
+    }
+
+    /** Diff an inventory (file or Account hand-off) against this phone, show the plan. Acts on nothing. */
+    private fun importText(text: String) {
+        val app = requireContext().applicationContext
+        thread(name = "store-import") {
+            val result = runCatching {
+                val wanted = AppInventory.parse(text)
+                val pm = app.packageManager
+                val installed = wanted.map { it.pkg }.filter { runCatching { pm.getPackageInfo(it, 0) }.isSuccess }.toSet()
+                AppInventory.plan(wanted, installed, AppInventory.fleetPackages(), PhoneAppActions.sources(app))
+            }
+            main.post {
+                if (!isAdded) return@post
+                result.onSuccess { importPlan = it }
+                    .onFailure { Toast.makeText(app, app.getString(R.string.store_file_failed, it.message), Toast.LENGTH_LONG).show() }
+            }
+        }
+    }
+
+    /**
+     * The DECLARED list: installed launchable apps ∪ fleet apps (kind app) ∪
+     * the resolver's external apps, each with its actions and its local state.
+     * Sorted: shelf order, then label; unshelved last.
+     */
+    private fun rows(ctx: Context): Loaded {
+        val pm = ctx.packageManager
+        val fleetList = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
+        val fleet = PhoneAppActions.fleetByPackage(fleetList)
+        val sources = PhoneAppActions.sources(ctx)
+        val resolver = PhoneAppActions.resolver(sources)
+        val shellReady = ShellChannels.active(ctx) != null
+        // The Phone page is the FOREIGN apps' page: a fleet app — installed or not — is the Cloud
+        // page's (constellation install / update all), never declared, listed or installed here.
+        val declared = LinkedHashMap<String, String>()
+        declared.putAll(AppInventory.launchable(ctx).filterKeys { it !in fleet })
+        resolver.apps.values.filter { it.pkg !in fleet }.forEach { declared.putIfAbsent(it.pkg, it.label) }
+        DeclaredEdits.addedPackages(ctx).filterKeys { it !in fleet }.forEach { (p, l) -> declared.putIfAbsent(p, l) }
+        val shelves = AppStoreHost.classify(ctx, declared)
+        val states = HashMap<String, SourceResolver.Check>()
+        val cached = HashMap<String, ApkCache.Entry>()
+        ApkCache.entries(ctx).forEach { e ->
+            val r = e.record ?: return@forEach
+            // Newest cached build per package wins the row's line; the older one
+            // is what eviction takes first.
+            val had = cached[r.pkg]?.record
+            if (had == null || r.versionCode > had.versionCode) cached[r.pkg] = e
+        }
+        val list = declared.map { (pkg, label) ->
+            val installed = runCatching { pm.getPackageInfo(pkg, 0) }.isSuccess
+            val fa = fleet[pkg]
+            val ext = if (fa == null) DeclaredEdits.apply(ctx, resolver, pkg, SourceResolver.resolve(resolver, pkg)) else null
+            val actions = if (installed) PhoneAppActions.of(ctx, pkg, fa, shellReady, sources)
+                          else PhoneAppActions.forMissing(ctx, ext ?: SourceResolver.resolve(resolver, pkg), fa, sources, resolver)
+            states[pkg] = when {
+                ext != null -> SourceResolver.local(ctx, ext)
+                installed -> SourceResolver.installed(ctx, pkg)?.let { SourceResolver.Check.Installed(it.first, it.second, null, SourceResolver.Note.NONE) }
+                    ?: SourceResolver.Check.Unknown(null, "")
+                else -> SourceResolver.Check.NotInstalled(SourceResolver.VIA_FLEET, needsPlay = false)
+            }
+            AppRow(pkg, label, shelves[pkg], fa, ext, installed, actions)
+        }.sortedWith(SHELF_ORDER)
+        return Loaded(list, resolver, states, cached)
+    }
+
+    /** Sizes for every installed row, measured off the main thread (cached; see [StoreSizeProbe]), then repainted. */
+    private fun measureSizes() {
+        val app = context?.applicationContext ?: return
+        val pkgs = rows.filter { it.installed }.map { it.pkg }
+        thread(name = "store-phone-sizes") {
+            val granted = StoreSizeProbe.granted(app)
+            runCatching { StoreSizeProbe.measure(app, pkgs) }
+            main.post { if (isAdded) { sizeGranted = granted; redrawTick++ } }
+        }
+    }
+
+    /** The one-tap grant: the usage-access screen (this app's own toggle first, the list as fallback). */
+    private fun grantUsageAccess(ctx: Context) {
+        for (i in StoreSizeProbe.grantIntents(ctx)) if (runCatching { startActivity(i) }.isSuccess) return
+        Toast.makeText(ctx, ctx.getString(R.string.store_phone_size_grant_failed), Toast.LENGTH_LONG).show()
     }
 
     /** Check all: rebuild the rows, then probe every one off the main thread. */
@@ -634,13 +650,13 @@ class StorePhoneFragment : Fragment() {
         val ctx = requireContext(); val app = ctx.applicationContext
         val resolver = cfg ?: return@reload
         for (r in rows) {
-            stateViews[r.pkg]?.let { tv -> tv.text = ctx.getString(R.string.store_phone_checking); tv.setTextColor(cDim) }
+            checking[r.pkg] = true
             thread(name = "store-phone-check-${r.pkg}") {
                 val s = runCatching {
                     r.fleetApp?.let { SourceResolver.ofFleet(Fleet.status(app, it)) }
                         ?: SourceResolver.check(app, resolver, r.external ?: SourceResolver.resolve(resolver, r.pkg))
                 }.getOrElse { SourceResolver.Check.Unknown(null, it.message ?: it.javaClass.simpleName) }
-                view?.post { if (isAdded) { states[r.pkg] = s; stateViews[r.pkg]?.let { paint(ctx, it, s, r) } } }
+                main.post { if (isAdded) { states[r.pkg] = s; checking.remove(r.pkg) } }
             }
         }
     }
@@ -678,7 +694,7 @@ class StorePhoneFragment : Fragment() {
      * Installs stay strictly sequential inside phase 2 — each one may raise the
      * system confirm sheet — and a download failure costs only its own app.
      */
-    private fun batch(ctx: Context, targets: List<Row>) {
+    private fun batch(ctx: Context, targets: List<AppRow>) {
         val app = ctx.applicationContext
         val resolver = cfg ?: PhoneAppActions.resolver(PhoneAppActions.sources(app))
         thread(name = "store-phone-batch") {
@@ -688,7 +704,7 @@ class StorePhoneFragment : Fragment() {
                 BatchInstall.engine(resolver)
             ) { phase, t, i, n ->
                 UpdateProgress.beginBatch(
-                    (if (phase == BatchInstall.Phase.DOWNLOAD) "\u2193 " else "") + t.label, i, n)
+                    (if (phase == BatchInstall.Phase.DOWNLOAD) "↓ " else "") + t.label, i, n)
             }
             UpdateProgress.endBatch()
             // Per-app, never a bare count: a failure you cannot name is a
@@ -701,7 +717,7 @@ class StorePhoneFragment : Fragment() {
             }
             toastLater(app, app.getString(R.string.store_phone_batch_done,
                 outcomes.size - failed.size, failed.size))
-            view?.post { if (isAdded) reload() }
+            main.post { if (isAdded) reload() }
         }
     }
 
@@ -734,7 +750,7 @@ class StorePhoneFragment : Fragment() {
                     e.deleted.size, e.freedBytes / 1_000_000,
                     left.kept.size, left.keptBytes / 1_000_000)
             })
-            view?.post {
+            main.post {
                 if (!isAdded) return@post
                 armedToDiscard = left.kept.isNotEmpty()
                 reload()
@@ -746,7 +762,6 @@ class StorePhoneFragment : Fragment() {
      *  redundancy hashes every cached APK and the installed package beside it. */
     private fun refreshCacheLabel() {
         val app = context?.applicationContext ?: return
-        val btn = cacheBtn ?: return
         val armed = armedToDiscard
         thread(name = "store-cache-plan") {
             val p = runCatching { ApkCache.plan(app) }.getOrNull() ?: return@thread
@@ -756,10 +771,10 @@ class StorePhoneFragment : Fragment() {
             val stillArmed = armed && p.kept.isNotEmpty()
             val free = if (stillArmed) p.keptBytes else p.redundantBytes
             val count = if (stillArmed) p.kept.size else p.redundant.size
-            btn.post {
+            main.post {
                 if (!isAdded) return@post
                 armedToDiscard = stillArmed
-                btn.text = when {
+                cacheLabel = when {
                     stillArmed -> app.getString(R.string.store_cache_clear_discard, count, free / 1_000_000)
                     count == 0 -> app.getString(R.string.store_cache_clear_empty)
                     else -> app.getString(R.string.store_cache_clear_n, count, free / 1_000_000)
@@ -769,7 +784,7 @@ class StorePhoneFragment : Fragment() {
     }
 
     /** The ONE path per kind. Blocking. */
-    private fun installOne(app: Context, r: Row): String? {
+    private fun installOne(app: Context, r: AppRow): String? {
         val resolver = cfg ?: PhoneAppActions.resolver(PhoneAppActions.sources(app))
         // Not `fleetApp?.let { } ?: external`: a fleet install that SUCCEEDS
         // returns null, and that elvis would have gone on to run the external path.
@@ -778,7 +793,7 @@ class StorePhoneFragment : Fragment() {
                else ExternalInstall.run(app, resolver, r.external ?: SourceResolver.resolve(resolver, r.pkg))
     }
 
-    private fun act(ctx: Context, r: Row, a: PhoneAppActions.Action) {
+    private fun act(ctx: Context, r: AppRow, a: PhoneAppActions.Action) {
         a.disabledReason?.let { Toast.makeText(ctx, it, Toast.LENGTH_LONG).show(); return }
         when (a.kind) {
             PhoneAppActions.Kind.INSTALL, PhoneAppActions.Kind.UPDATE -> {
@@ -788,7 +803,7 @@ class StorePhoneFragment : Fragment() {
                 val app = ctx.applicationContext
                 thread(name = "store-phone-install-${r.pkg}") {
                     installOne(app, r)?.let { msg -> toastLater(app, app.getString(R.string.store_phone_failed, r.label, msg)) }
-                    view?.post { if (isAdded) reload() }
+                    main.post { if (isAdded) reload() }
                 }
             }
             PhoneAppActions.Kind.STOP -> if (SelfStop.isSelf(ctx, r.pkg)) SelfStop.stop(ctx, activity) else thread(name = "store-phone-stop") {
@@ -804,22 +819,7 @@ class StorePhoneFragment : Fragment() {
     }
 
     private fun toastLater(ctx: Context, msg: String) =
-        view?.post { Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show() }
-
-    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
-    private fun caption(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; textSize = StoreDensity.T_META; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, StoreDensity.S8))
-    }
-    /** THE Store action button ([StoreBar.button], the Cloud rows' own). Dimmed, not hidden, when it
-     *  cannot work here: the reason is one tap away. */
-    private fun btn(ctx: Context, a: PhoneAppActions.Action, onClick: () -> Unit) =
-        StoreBar.button(ctx, controls.action, a.label, null, onClick).apply {
-            alpha = if (a.disabledReason == null) 1f else 0.4f
-            contentDescription = a.disabledReason?.let { "${a.label}: $it" } ?: a.label
-        }
-
-    private fun fileBtn(ctx: Context, label: String, onClick: () -> Unit) =
-        StoreBar.button(ctx, controls.action, label, FILE_FILL, onClick)
+        main.post { Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show() }
 
     companion object {
         /** The Play Integrity badge of a row, tagged [INTEGRITY_TAG_PREFIX] + package. */
@@ -841,7 +841,7 @@ class StorePhoneFragment : Fragment() {
         private const val FILE_FILL = 0xFF2B6CB0.toInt()
         private const val GRANT_FILL = 0xFFB7791F.toInt()
         /** The page's base order: shelf, then label; unshelved last. A size sort breaks ties with it. */
-        private val SHELF_ORDER: Comparator<Row> = compareBy({ it.shelf?.order ?: UNSHELVED }, { it.label.lowercase() })
+        private val SHELF_ORDER: Comparator<AppRow> = compareBy({ it.shelf?.order ?: UNSHELVED }, { it.label.lowercase() })
         /** The build.json::ui section id this page is, and its two child pages (#896). */
         const val SECTION = "phone"
         const val PAGE_INSTALLED = "installed"

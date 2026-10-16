@@ -59,9 +59,9 @@ if not off: ok("captions: %s" % ", ".join("%s=%r" % (k, label[k]) for k in want)
 else: bad("captions differ from the ask: %s" % off)
 
 print("== T2: the code draws the declaration and can act on every id ==")
-body = fn(store, "detailBody")
+body = fn(store, "FleetDetail")
 if "FleetActions.row(ctx)" in body and "rowAction(" in body: ok("the row is built by iterating FleetActions.row")
-else: bad("detailBody does not build its buttons from FleetActions.row")
+else: bad("FleetDetail does not build its buttons from FleetActions.row")
 if "FleetActions.details(ctx)" in sheet and "detailAction(" in sheet: ok("Details is built by iterating FleetActions.details")
 else: bad("ApkDetailSheet does not build its actions from FleetActions.details")
 ra, da = fn(store, "rowAction"), fn(sheet, "detailAction")
@@ -89,8 +89,10 @@ st = fn(store, "stop")
 if '"stop" ->' in ra and "stop(ctx, app)" in ra and "PhoneAppActions.forceStop(" in st: ok("the row's Stop calls forceStop")
 else: bad("the row's Stop does not reach PhoneAppActions.forceStop")
 nul = re.search(r"out == null ->(.*?)(?=\n\s*out\.contains)", st, re.S)
-if nul and "AlertDialog" in nul.group(1) and "PhoneAppActions.appInfo(" in nul.group(1) \
-        and "R.string.store_fleet_stop_no_channel" in nul.group(1):
+# the dialog is state: stop() raises it (stopNoChannel), the page's Content draws it
+cont = store[store.find("override fun Content()"):store.find("// ── tabs:")]
+if nul and "stopNoChannel = app" in nul.group(1) and "AlertDialog" in cont and "PhoneAppActions.appInfo(" in cont \
+        and "R.string.store_fleet_stop_no_channel" in cont:
     ok("no channel -> a dialog that says so and offers App settings")
 else: bad("with no channel armed, Stop does not explain and offer App settings")
 if 'name="store_fleet_stop_no_channel"' in strings: ok("the no-channel message is declared")

@@ -3,10 +3,8 @@ package com.diegonmarcos.superapp.apps
 import android.app.Application
 import android.content.Context
 import android.os.Looper
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
-import androidx.fragment.app.FragmentActivity
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.appstore.AppInventory
 import com.diegonmarcos.superapp.appstore.ExternalInstall
@@ -15,6 +13,7 @@ import com.diegonmarcos.superapp.appstore.PhoneAppActions
 import com.diegonmarcos.superapp.appstore.SourceResolver
 import com.diegonmarcos.superapp.appstore.StoreBar
 import com.diegonmarcos.superapp.appstore.StorePhoneFragment
+import com.diegonmarcos.superapp.ui.KitPageHarness
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.appstore.BuildConfig as StoreBuildConfig
 import com.diegonmarcos.superapp.appstore.R as StoreR
@@ -27,7 +26,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
@@ -48,7 +46,7 @@ import java.util.zip.ZipOutputStream
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
-class StoreResolverTest {
+class StoreResolverTest : KitPageHarness() {
 
     private val ctx: Context = ApplicationProvider.getApplicationContext()
     private val sources get() = PhoneAppActions.sources(ctx)
@@ -210,31 +208,25 @@ class StoreResolverTest {
 
     // ── the rendered page on an empty phone ──────────────────────────────
 
-    private fun texts(v: View): List<TextView> = when (v) {
-        is TextView -> listOf(v)
-        is ViewGroup -> (0 until v.childCount).flatMap { texts(v.getChildAt(it)) }
-        else -> emptyList()
-    }
-
-    private fun rendered(): View {
-        val f = StorePhoneFragment()
-        val act = Robolectric.buildActivity(FragmentActivity::class.java).setup().get()
-        act.supportFragmentManager.beginTransaction().add(android.R.id.content, f).commitNow()
-        val root = f.requireView()
+    /** The rows' state lines, by package, once the page's own enumeration thread has posted back. */
+    private fun rendered(): Map<String, String> {
+        show(StorePhoneFragment())
         // rows() runs on its own thread and posts back: idle the main looper until a state line lands.
         repeat(200) {
-            shadowOf(Looper.getMainLooper()).idle()
-            if (texts(root).any { (it.tag as? String)?.startsWith(StorePhoneFragment.STATE_TAG_PREFIX) == true }) return root
+            shadowOf(Looper.getMainLooper()).idle(); compose.waitForIdle()
+            if (stateLines().isNotEmpty()) return stateLines()
             Thread.sleep(25)
         }
-        return root
+        return stateLines()
     }
+
+    private fun stateLines(): Map<String, String> =
+        compose.onAllNodes(tagStartsWith(StorePhoneFragment.STATE_TAG_PREFIX)).fetchSemanticsNodes()
+            .associate { it.tag()!!.removePrefix(StorePhoneFragment.STATE_TAG_PREFIX) to it.text() }
 
     @Test
     fun `an empty phone renders every fleet app and every declared external app, with honest state lines`() {
-        val root = rendered()
-        val states = texts(root).filter { (it.tag as? String)?.startsWith(StorePhoneFragment.STATE_TAG_PREFIX) == true }
-            .associateBy { (it.tag as String).removePrefix(StorePhoneFragment.STATE_TAG_PREFIX) }
+        val states = rendered()
         assertTrue("no rows rendered", states.isNotEmpty())
         val fleetApps = Fleet.parse(StoreBuildConfig.CONSTELLATION_FLEET_B64).filter { it.kind == "app" }
         // 9bc208ee8: Phone lists foreign apps only; a fleet app is the Cloud page's and has no row here.
@@ -243,18 +235,17 @@ class StoreResolverTest {
 
         val badge = ctx.getString(StoreR.string.store_phone_badge_needs_play)
         for (a in cfg.apps.values) {
-            val line = states.getValue(a.pkg).text.toString()
+            val line = states.getValue(a.pkg)
             if (a.needsPlay && a.handoff is SourceResolver.Source.Play)
                 assertTrue("${a.pkg} is Play-only but shows no badge: $line", line.contains(badge))
             else assertFalse("${a.pkg} has a direct rung but shows the Play badge: $line", line.contains(badge))
         }
 
         // The bar's batch verbs are real on this tab now: enabled, with a click.
-        val bar = root.findViewWithTag<ViewGroup>(StoreBar.TAG)!!
-        val verbs = texts(bar).filter { it.tag is StoreBar.Item }.associateBy { it.tag as StoreBar.Item }
         for (i in listOf(StoreBar.Item.INSTALL, StoreBar.Item.UPDATE)) {
-            assertTrue("$i must be enabled on Phone Apps", verbs.getValue(i).isEnabled)
-            assertTrue("$i must answer a tap", verbs.getValue(i).hasOnClickListeners())
+            val verb = compose.onNodeWithTag(StoreBar.itemTag(i)).fetchSemanticsNode()
+            assertFalse("$i must be enabled on Phone Apps", verb.isDisabled())
+            assertTrue("$i must answer a tap", SemanticsActions.OnClick in verb.config)
         }
     }
 }

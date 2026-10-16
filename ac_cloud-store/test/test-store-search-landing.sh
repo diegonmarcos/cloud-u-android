@@ -144,14 +144,14 @@ PY
   printf '%s' "$lv" | tr -d '\n' | has -E 'testTag\(TAG_SHELF \+ shelf\.folderId\)\).*LazyRow\(Modifier\.fillMaxWidth\(\)\.testTag\(TAG_SHELF_ROW \+ shelf\.folderId\)' \
     && ok "each shelf is a title line, then a LazyRow (scrolls sideways)" || bad "a shelf is not a title line followed by a horizontally scrolling LazyRow"
   printf '%s' "$lv" | has -F 'section.shelves.forEach' && ok "one shelf per sub-category the landing returned (empty ones never reach the view)" || bad "the view does not draw the landing's shelves"
-  for part in 'KitSearchBar(' 'KitStatusBanner(' 'KitEmptyState(' 'KitStatePill(' 'CloudKitTheme(' 'StoreRow.card(ctx)' 'StoreRow.head(ctx,' 'StoreRow.actions(ctx,' 'StoreSuggest.merge(' 'StoreSuggest.groups('; do
+  for part in 'KitSearchBar(' 'KitStatusBanner(' 'KitEmptyState(' 'KitStatePill(' 'KitPalette.fromArgb(' 'StoreRow.Card(' 'StoreRow.Head(' 'StoreRow.Actions(' 'StoreSuggest.merge(' 'StoreSuggest.groups('; do
     printf '%s' "$page" | has -F "$part" && ok "Search uses $part" || bad "Search does not use $part"
   done
   printf '%s' "$page" | has -F 'SrcState.Failed(' && printf '%s' "$page" | has -F 'store_search_retry' && ok "a failing source shows its own error with Retry, the others keep theirs" || bad "no per-source error state"
   printf '%s' "$page" | has -F 'thread(name = "store-search-${s.id}")' && ok "each source searches on its own thread" || bad "sources do not search independently"
   ! printf '%s' "$page" | has -E 'openConnection|HttpURLConnection|URL\(|127\.0\.0\.1|localhost|AppDebugServer' && ok "Search opens no connection of its own and calls no sibling fleet app" || bad "Search opens its own connection or calls a sibling app"
   local bg; bg="$(cat "$R/$LIBREL/../../build.gradle")"
-  printf '%s' "$bg" | has -F "implementation project(':libs:ui-kit')" && ok "libs:appstore links libs:ui-kit" || bad "libs:appstore does not link libs:ui-kit"
+  printf '%s' "$bg" | has -F "api project(':libs:ui-kit')" && ok "libs:appstore links libs:ui-kit" || bad "libs:appstore does not link libs:ui-kit"
 
   # 5. sources and the nav rule
   python3 - "$ASSET" "$R/ac_cloud-store/build.json" "$PAGE" <<'PY' || fails=$((fails+1))
@@ -214,7 +214,7 @@ S=$STOREREL; A=$APPSREL
 mutate "SuperApp goes back to its own bucketing loop" "$SAREL" 'PhoneTaxonomyLayout.bucket(sections, visible) { it.label }' 'myBucket(sections, visible).also { folder.label.startsWith(it.prefix) }' || M=$((M+1))
 mutate "the landing suggests search hits" $S/StoreSearchPage.kt 'for ((pkg, label) in declaredList(ctx, cfg)) {' 'for ((pkg, label) in FDroidIndex.search(ctx, cfg.fdroid, "a").associate { it.pkg to it.name }) {' || M=$((M+1))
 mutate "a shelf's row stops scrolling sideways" $S/StoreSearchPage.kt 'LazyRow(Modifier.fillMaxWidth().testTag(TAG_SHELF_ROW + shelf.folderId),' 'Column(Modifier.fillMaxWidth().testTag(TAG_SHELF_ROW + shelf.folderId),' || M=$((M+1))
-mutate "result rows stop using StoreRow" $S/StoreSearchPage.kt 'val card = StoreRow.card(ctx)' 'val card = LinearLayout(ctx)' || M=$((M+1))
+mutate "result rows stop using StoreRow" $S/StoreSearchPage.kt 'StoreRow.Card(Modifier.fillMaxWidth()' 'Column(Modifier.fillMaxWidth()' || M=$((M+1))
 mutate "Search opens its own connection" $S/StoreSearchPage.kt 'val body = SourceResolver.getBody(url) ?: return emptyList()' 'val body = java.net.URL(url).openConnection().getInputStream().reader().readText()' || M=$((M+1))
 mutate "a search source with no searcher" $LIBREL/assets/appstore-install-sources.json '"id": "github"' '"id": "gitlab"' || M=$((M+1))
 mutate "izzy loses its pin" $LIBREL/assets/appstore-install-sources.json '"cert_sha256": "3bf0d6ab' '"cert_sha256": "3bf0' || M=$((M+1))

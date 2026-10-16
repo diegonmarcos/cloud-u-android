@@ -4,7 +4,7 @@
 # icons or details.
 #
 # The rule is DECLARED in libs:appstore/assets/appstore-priority.json and
-# evaluated by StorePriority; the Store page (StoreCloudFragment.renderFleet)
+# evaluated by StorePriority; the Store page (StoreCloudFragment's per-tab effect)
 # starts the StoreAuto chain through StorePriority.startUpdatesAsync and then
 # runs its catalogue check (checkAll) AT ONCE: #861, the check never awaits,
 # joins or gates on the update chain (it held the Store on "Checking..." forever).
@@ -12,7 +12,7 @@
 # #861 proven red by mutation: the #857 wait loop restored, checkAll moved into a
 # callback of the chain, or a sleep/join/await on the chain in the check path.
 # Proven red by mutation: priority "normal", network "metered", `first` dropped,
-# or a bare checkAll(ctx, list) back in renderFleet each fail a check below.
+# or a bare checkAll(ctx, rows) back in the tab effect each fail a check below.
 #
 # Usage: ./test-store-updates-first.sh   (static, no network)
 set -u
@@ -82,13 +82,13 @@ if ! printf '%s' "$RUN" | grep -Eq "$BLOCK" &&
 else bad "#861 the update chain is waited on / gates work again (Store stuck on Checking)"; fi
 
 FRAG="$(strip "$SRC/StoreCloudFragment.kt")"
-RF="$(printf '%s' "$FRAG" | sed -n '/private fun renderFleet(/,/^    }/p')"
+RF="$(printf '%s' "$FRAG" | sed -n '/LaunchedEffect(tab) {/,/^        }$/p')"
 START_L="$(printf '%s' "$RF" | grep -n 'StorePriority.startUpdatesAsync(ctx, fleet) *$' | head -1 | cut -d: -f1)"
-CHECK_L="$(printf '%s' "$RF" | grep -nE '^ *checkAll\(ctx, list\) *$' | head -1 | cut -d: -f1)"
+CHECK_L="$(printf '%s' "$RF" | grep -nE '^ *checkAll\(ctx, rows\) *$' | head -1 | cut -d: -f1)"
 if [ -n "$START_L" ] && [ -n "$CHECK_L" ] && [ "$START_L" -lt "$CHECK_L" ] &&
    ! printf '%s' "$RF" | grep -Eq "$BLOCK|runUpdatesFirst"; then
-  ok "#861 renderFleet starts the updates async, then runs the catalogue check at once"
-else bad "#861 renderFleet's catalogue check awaits or is gated on the update chain"; fi
+  ok "#861 the tab's effect starts the updates async, then runs the catalogue check at once"
+else bad "#861 the tab's catalogue check awaits or is gated on the update chain"; fi
 
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

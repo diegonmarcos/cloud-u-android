@@ -63,7 +63,7 @@ for id in $ids; do
     [ -n "$lbl" ] && ok "page '$id' declares its caption ($lbl)" || bad "page '$id' declares no caption"
   fi
 done
-! grep -qF 'controls.page(' "$PAGE" && ok "the Cloud page draws no page chips" || bad "the Cloud page draws page chips again"
+! grep -qF 'rememberStoreControls().page' "$PAGE" && ok "the Cloud page draws no page chips" || bad "the Cloud page draws page chips again"
 [ "$count" -ge 1 ] && ok "$count declared page checked (Apps Mesh's caption)" \
   || bad "only $count line-2 entries derived - the checks above verified too little"
 
@@ -78,33 +78,33 @@ echo "== C4: the Kotlin draws what is declared =="
 body_of() { awk -v pat="$1" 'index($0, pat){f=1} f{print} f && /^    }$/{exit}' "$PAGE"; }
 TABS="$STORE/java/com/diegonmarcos/superapp/appstore/StoreBar.kt"  # #896 the strip builder (StoreTabs) Cloud and Phone share
 tabs_body_of() { awk -v pat="$1" 'index($0, pat){f=1} f{print} f && /^    }$/{exit}' "$TABS"; }
-TABBAR="$(body_of 'private fun tabBar(')"; TABBTN="$(tabs_body_of 'fun button(ctx: Context, control')"
-PAINT="$(tabs_body_of 'fun paint(buttons')"; BTN="$(body_of 'private fun btn(')"
-for pair in "tabBar:$TABBAR" "tabButton:$TABBTN" "paintTabs:$PAINT" "btn:$BTN"; do
+TABBAR="$(body_of 'private fun TabBar(')"; TABBTN="$(tabs_body_of 'fun RowScope.Tab(')"
+PAINT="$TABBTN"   # the Tab composable paints its own selection from the style it is handed
+SB="$(awk '/^    fun Button\(/{f=1} f{print} f && /^    }$/{exit}' "$(dirname "$CTRL")/StoreBar.kt")"
+for pair in "TabBar:$TABBAR" "Tab:$TABBTN" "StoreBar.Button:$SB"; do
   [ -n "${pair#*:}" ] || bad "could not isolate ${pair%%:*} - every assertion about it would verify nothing"
 done
-printf '%s' "$TABBAR" | grep -qF 'controls.groupTab' \
+printf '%s' "$TABBAR" | grep -qF 'rememberStoreControls().groupTab' \
   && ok "the one line is dressed by the group-tab declaration" \
   || bad "tabBar does not dress its line from the group-tab declaration"
 printf '%s' "$TABBTN" | grep -qF 'listOf(control.icon, control.label, style.chevron)' \
   && ok "tabButton draws icon, caption and chevron" || bad "tabButton drops the icon or the chevron"
-printf '%s' "$PAINT" | grep -qF 'StoreControls.background(t.context, style, on)' \
-  && ok "paintTabs builds each background from that button's declared style" \
-  || bad "paintTabs paints without the declared style"
-printf '%s' "$BTN" | grep -qF 'val style = controls.action' \
-  && printf '%s' "$BTN" | grep -qF 'StoreBar.button(ctx, style, label, bg, onClick)' \
-  && ok "btn() wears the declared action style in its verb's colour (#793 via the shared StoreBar.button)" \
-  || bad "btn() ignores the action style"
-SB="$(awk '/fun button\(/{f=1} f{print} f && /^    }$/{exit}' "$(dirname "$CTRL")/StoreBar.kt")"
-printf '%s' "$SB" | grep -qF 'background = StoreControls.background(ctx, style, false,' \
-  && ok "StoreBar.button builds its background from the style it is given" \
-  || bad "StoreBar.button ignores the declared style"
+printf '%s' "$PAINT" | grep -qF 'storeSurface(style, on)' \
+  && ok "each Tab builds its background from that button's declared style" \
+  || bad "a Tab paints without the declared style"
+printf '%s' "$SB" | grep -qF 'style: StoreControls.Style = rememberStoreControls().action' \
+  && grep -qF 'StoreVerb(a.label, a.color' "$PAGE" \
+  && ok "a row's verb wears the declared action style in its verb's colour (#793 via the shared StoreBar.Button)" \
+  || bad "a row's verb ignores the action style"
+printf '%s' "$SB" | grep -qF 'storeSurface(style, false,' \
+  && ok "StoreBar.Button builds its background from the style it is given" \
+  || bad "StoreBar.Button ignores the declared style"
 [ "$(jq -r '.filter_style' "$DECL")" = "tab" ] && ok "filter chips wear 'tab' (they select a subset)" \
   || bad "filter_style is not 'tab' - a filter chip would be a fourth look"
-BG="$(awk '/fun background\(/{f=1} f{print} f && /^    }$/{exit}' "$CTRL")"
-printf '%s' "$BG" | grep -qF 'setStroke(' && printf '%s' "$BG" | grep -qF 'cornerRadius' \
+BG="$(awk '/^internal fun Modifier.storeSurface\(/{f=1} f{print} f && /^}$/{exit}' "$(dirname "$CTRL")/StoreBar.kt")"
+printf '%s' "$BG" | grep -qF '.border(' && printf '%s' "$BG" | grep -qF 'RoundedCornerShape' \
   && ok "the background builder draws the outline and the rounding" \
-  || bad "StoreControls.background draws no outline or no rounding - the page chip is flat text again"
+  || bad "Modifier.storeSurface draws no outline or no rounding - the page chip is flat text again"
 for tok in tab page action; do
   hits="$(grep -nF "\"$tok\"" "$PAGE" "$CTRL")"
   [ -z "$hits" ] && ok "style token \"$tok\" is not written in Kotlin" || bad "Kotlin hardcodes style token \"$tok\": $hits"

@@ -44,7 +44,7 @@ if not {"StoreBar.kt", "StoreCloudFragment.kt", "StorePhoneFragment.kt"} <= kt.k
 
 print("== T1: one Store bar, drawn by both tabs ==")
 for frag in ("StoreCloudFragment.kt", "StorePhoneFragment.kt"):
-    if re.search(r"StoreBar\.render\(this\b", kt[frag]): ok(frag + " draws StoreBar")
+    if re.search(r"StoreBar\.Bar\(", kt[frag]): ok(frag + " draws StoreBar")
     else: bad(frag + " does not draw the shared StoreBar")
 for needle in ("AutoUpdatePrefs.setEnabled(", "AutoUpdatePrefs.setRequireUnmetered(",
                "PackageVerifier.setScanning(", "AdbShellLink.open("):
@@ -52,7 +52,7 @@ for needle in ("AutoUpdatePrefs.setEnabled(", "AutoUpdatePrefs.setRequireUnmeter
     if owners == ["StoreBar.kt"]: ok(needle + " lives only in StoreBar")
     else: bad(needle + " is in %s — a second copy of the bar" % owners)
 phone = kt["StorePhoneFragment.kt"]
-m = re.search(r"StoreBar\.Verbs\((.*?)\)\)", phone, re.S)
+m = re.search(r"StoreBar\.Verbs\((.*?)\), resume", phone, re.S)
 # #571: the verbs are REAL on Phone Apps now — this store installs fleet apps
 # through the release path and external apps through their declared ladder —
 # so the bar must receive both lambdas and no disabled reason (test-store-resolver.sh
@@ -117,13 +117,13 @@ print("== T5: the Declared / Installed filter (#619, #896: the page's top tabs) 
 # #896 Installed | Declared are the page's TOP TABS, drawn by the Cloud page's own strip builder
 # (StoreTabs.bar) from the two i18n'd labels; the old pill toggle is gone.
 if 'R.string.store_phone_filter_declared' in phone and 'R.string.store_phone_filter_installed' in phone \
-        and "StoreTabs.bar(" in phone and not re.search(r"private fun filterToggle\(", phone):
-    ok("Phone Apps draws Installed | Declared as its top tabs (StoreTabs.bar) from two string resources")
+        and "StoreTabs.Bar(" in phone and not re.search(r"private fun filterToggle\(", phone):
+    ok("Phone Apps draws Installed | Declared as its top tabs (StoreTabs.Bar) from two string resources")
 else: bad("Phone Apps has no Declared / Installed top tabs")
 # DECLARED is the default — this is the mode Profile ▸ Store deep-links into,
 # and the full set on a fresh phone.
-if re.search(r"private var installedOnly\s*=\s*false", phone):
-    ok("T5-default: the default filter is Declared (installedOnly = false)")
+if re.search(r"private var page by mutableStateOf\(PAGE_DECLARED\)", phone):
+    ok("T5-default: the default filter is Declared (page = PAGE_DECLARED)")
 else: bad("T5-default: the default filter is not Declared")
 
 # THE SUBSET CONTRACT, by construction: Declared renders the whole set rows()
@@ -153,8 +153,8 @@ mut1 = phone.replace(".filter { if (installedOnly) it.installed else it.external
 if filter_ok(mut1): bad("T5-mutation: an unfiltered Installed view was NOT caught")
 else: ok("T5-mutation: an unfiltered Installed view is caught")
 # (2) the default flips to Installed — Profile ▸ Store would no longer land on Declared.
-mut2 = re.sub(r"private var installedOnly\s*=\s*false", "private var installedOnly = true", phone)
-if re.search(r"private var installedOnly\s*=\s*false", mut2): bad("T5-mutation: an Installed default was NOT caught")
+mut2 = re.sub(r"private var page by mutableStateOf\(PAGE_DECLARED\)", "private var page by mutableStateOf(PAGE_INSTALLED)", phone)
+if re.search(r"private var page by mutableStateOf\(PAGE_DECLARED\)", mut2): bad("T5-mutation: an Installed default was NOT caught")
 else: ok("T5-mutation: an Installed default is caught")
 
 print("RESULT: %d passed, %d failed" % (PASS, FAIL))

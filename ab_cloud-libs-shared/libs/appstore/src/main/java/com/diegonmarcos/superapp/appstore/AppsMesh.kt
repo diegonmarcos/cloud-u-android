@@ -1,34 +1,61 @@
 package com.diegonmarcos.superapp.appstore
 
-import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
-import android.graphics.Typeface
+import android.os.Handler
+import android.os.Looper
 import android.util.Base64
-import android.view.View
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.devtools.FleetPeers
 import com.diegonmarcos.superapp.devtools.FleetToken
+import com.diegonmarcos.superapp.uikit.KitSearchBar
 import com.diegonmarcos.superapp.updater.Fleet
 import java.text.DateFormat
 import java.util.Date
 import kotlin.concurrent.thread
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
  * #733 APPS MESH — the ONE page behind two entry points: Store ▸ Apps Mesh
- * (StoreCloudFragment.renderMesh) and Configs ▸ Setup ▸ Network ▸ Apps Mesh
- * ([AppsMeshFragment], page id `apps-mesh`). Both call [page]; neither draws a
+ * (the Cloud Store's Access page) and Configs ▸ Setup ▸ Network ▸ Apps Mesh
+ * ([AppsMeshFragment], page id `apps-mesh`). Both call [Page]; neither draws a
  * copy, so the two cannot drift.
  *
- * What it adds over #728's mesh drawing ([StoreMesh.render], still the node
+ * What it adds over #728's mesh drawing ([StoreMesh.Mesh], still the node
  * and link renderer):
  *   - each member is tappable for its actions (API · Start · Stop · Open ·
  *     Details), declared in assets/appstore-controls.json::apps_mesh.member_actions
@@ -39,17 +66,17 @@ import org.json.JSONObject
  *     member, and Export endpoints: the whole fleet's [catalogue] as JSON —
  *     the same body the SuperApp serves at /api/fleet/endpoints
  *   - #793 the Store's OWN controls: every tool and every member's row of
- *     buttons is [StoreBar.button], the filter chips [StoreBar.chip];
+ *     buttons is [StoreBar.Button], the filter chips [StoreBar.Chip];
  *     filters ([FILTERS]) with counts; drawn at once from the roster and the
  *     last cached probe ([readCache]), then filled member by member as
  *     [StoreMesh.probeEach] returns; endpoints fetched only when a row's Docs
  *     opens; All endpoints, one searchable view of every member's routes
  *   - #809 three kinds of control, declared as data (`apps_mesh.controls`,
  *     each with a `type` and the `scope` page it sits on) and drawn in three
- *     groups: PAGE buttons ([StoreBar.page]: App API Endpoints, Missing
- *     membership, a member's Details), ACTION buttons ([StoreBar.button]:
+ *     groups: PAGE buttons ([StoreBar.PageButton]: App API Endpoints, Missing
+ *     membership, a member's Details), ACTION buttons ([StoreBar.Button]:
  *     Re-probe, Wake all; Export / Copy on the sub-page they act on), FILTER
- *     chips ([StoreBar.chip])
+ *     chips ([StoreBar.Chip])
  *
  * Every word on it is the asset's; this file names no member, package or caption.
  */
@@ -438,9 +465,17 @@ object AppsMesh {
         JSONObject(String(Base64.decode(BuildConfig.CONSTELLATION_FLEET_B64, Base64.DEFAULT)))
     }.getOrElse { JSONObject() }
 
+    /** A member's Docs panel: [text] null = folded away; the text lives in the page's state map. */
+    class Panel(private val texts: MutableMap<String, String>, private val id: String) {
+        val shown: Boolean get() = texts.containsKey(id)
+        var text: String?
+            get() = texts[id]
+            set(v) { if (v == null) texts.remove(id) else texts[id] = v }
+    }
+
     /** #793 what a member's row buttons reach on the page they sit on. */
-    class Row(
-        val panel: TextView,
+    class MemberRow(
+        val panel: Panel,
         /** member id -> its /api/docs body, fetched once and kept (and cached). */
         val docs: MutableMap<String, String>,
         val docsAt: MutableMap<String, Long>,
@@ -449,11 +484,16 @@ object AppsMesh {
         val saved: () -> Unit,
         /** #809 open this member's Details sub-page (a page, not a dialog). */
         val details: (Fleet.App) -> Unit = {},
+        /** Stop found no shell channel: the page says so in a dialog. */
+        val noChannel: (Fleet.App) -> Unit = {},
     )
 
+    /** #809 the sub-page being shown (App API Endpoints, Missing membership, a member's Details). */
+    private class Sub(val id: String, val title: String, val app: Fleet.App? = null)
+
     /**
-     * Draw the page into [into] and start its probe. [onStore] is the host's
-     * way to a member's Store row — null where there is none (Configs).
+     * Draw the page and start its probe. [onStore] is the host's way to a member's Store row — null
+     * where there is none (Configs).
      *
      * #793 LAZY: everything static is drawn before anything is probed — the
      * roster, each member's assigned port, its declared engine links, and the
@@ -462,43 +502,49 @@ object AppsMesh {
      * answers (⟳ until then, showing what the cache said), never waiting on the
      * slowest app. The probe only LOOKS: Wake / Wake all start what is stopped.
      */
-    fun page(host: Fragment, into: LinearLayout, onStore: ((Fleet.App) -> Unit)? = null) {
-        val ctx = host.requireContext()
-        val appCtx = ctx.applicationContext
+    @Composable
+    fun Page(host: Fragment, onStore: ((Fleet.App) -> Unit)? = null) {
+        val ctx = LocalContext.current
+        val m = remember(host) { Model(ctx, host, onStore) }
+        DisposableEffect(m) {
+            m.start()
+            onDispose { m.stop() }
+        }
+        m.Body()
+    }
+
+    private class Model(val ctx: Context, val host: Fragment, val onStore: ((Fleet.App) -> Unit)?) {
+        val appCtx: Context = ctx.applicationContext
         val decl = load(ctx)
-        val looks = StoreControls.load(ctx)
         val fleetJson = fleetJson()
         val fleet = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
-        val byId = fleet.associateBy { it.id }
         val links = StoreMesh.links(fleetJson)
         val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val cached = readCache(ctx)
-        val docs = java.util.concurrent.ConcurrentHashMap(cached?.live?.docs.orEmpty())
-        val docsAt = java.util.concurrent.ConcurrentHashMap(cached?.docsAt.orEmpty())
-        var live: StoreMesh.Live? = cached?.live
-        var at = cached?.at ?: 0L
-        var pending: Set<String> = fleet.map { it.id }.toSet()
-        var probing = false
-        var filter = prefs.getString(PREF_FILTER, null)?.takeIf { f -> decl.filters.any { it.id == f } }
-            ?: decl.filters.firstOrNull()?.id ?: "all"
+        val docs: MutableMap<String, String> = java.util.concurrent.ConcurrentHashMap(cached?.live?.docs.orEmpty())
+        val docsAt: MutableMap<String, Long> = java.util.concurrent.ConcurrentHashMap(cached?.docsAt.orEmpty())
+        /** Bumped whenever [docs] gained a body, so a reader of it recomposes. */
+        var docsTick by mutableIntStateOf(0)
+        var live by mutableStateOf<StoreMesh.Live?>(cached?.live)
+        var at by mutableLongStateOf(cached?.at ?: 0L)
+        var pending by mutableStateOf<Set<String>>(fleet.map { it.id }.toSet())
+        var probing by mutableStateOf(false)
+        var filter by mutableStateOf(prefs.getString(PREF_FILTER, null)?.takeIf { f -> decl.filters.any { it.id == f } }
+            ?: decl.filters.firstOrNull()?.id ?: "all")
+        var sub by mutableStateOf<Sub?>(null)
+        var noChannelApp by mutableStateOf<Fleet.App?>(null)
+        val panels = mutableStateMapOf<String, String>()
         val mesh = meshAddresses()
+        private val rows = HashMap<String, MemberRow>()
+        private val main = Handler(Looper.getMainLooper())
+        @Volatile private var alive = true
+        private val waitWord = "${decl.label("root", "reprobe")}…"
 
-        // #809 the root page and the one sub-page slot; a page button swaps them
-        val root = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val sub = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
-        into.addView(root); into.addView(sub)
-        root.addView(text(ctx, exposure(decl, mesh), StoreDensity.T_CAPTION, DIM))
-        val ageView = text(ctx, "", StoreDensity.T_CAPTION, DIM).apply { tag = TAG_AGE }
-        val meshBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        fun start() { alive = true; probe(wake = false) }
+        fun stop() { alive = false }
 
-        var drawn: StoreMesh.Drawn? = null
-        val rows = HashMap<String, View>()
-        val chipViews = LinkedHashMap<String, TextView>()
-        val pageViews = HashMap<String, TextView>()
-        val onLink = { app: Fleet.App -> onStore?.invoke(app); Unit }
-        fun shown() = live?.let { withDocs(it, docs) }
+        fun shown(): StoreMesh.Live? { docsTick; return live?.let { withDocs(it, docs) } }
         fun saved() { live?.let { writeCache(appCtx, Cached(at, withDocs(it, docs), HashMap(docsAt))) } }
-        val waitWord = "${decl.label("root", "reprobe")}…"
 
         fun ageLine() = when {
             at == 0L && probing -> "⟳ first probe…"
@@ -506,64 +552,11 @@ object AppsMesh {
             probing -> "last probe ${age(at)} · ⟳ refreshing ${pending.size} member(s)"
             else -> "last probe ${age(at)}"
         }
-        fun applyFilter() {
-            val d = drawn ?: return
-            for ((id, card) in d.cards)
-                card.visibility = if (matches(filter, byId.getValue(id), links, live)) View.VISIBLE else View.GONE
-            for ((h, ids) in d.headings)
-                h.visibility = if (ids.any { d.cards[it]?.visibility == View.VISIBLE }) View.VISIBLE else View.GONE
-        }
-        fun paintChips() {
-            val n = counts(fleet, links, live)
-            for (f in decl.filters) chipViews[f.id]?.let { c ->
-                c.text = "${f.label} (${n[f.id] ?: 0})"
-                StoreBar.paint(c, f.id == filter)
-            }
-        }
-        fun paintPages() {
-            val gaps = live?.let { gaps(decl, fleet, links, it).size }
-            pageViews["gaps"]?.let { v ->
-                val c = decl.of("root", "page").first { it.id == "gaps" }
-                v.text = listOf(c.icon, c.label + (gaps?.let { " ($it)" } ?: ""), looks.page.chevron)
-                    .filter { it.isNotEmpty() }.joinToString("  ")
-            }
-        }
-        lateinit var reprobe: (Fleet.App) -> Unit
-        lateinit var detailsOf: (Fleet.App) -> Unit
-        fun rowOf(app: Fleet.App): View = rows.getOrPut(app.id) {
-            val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-            val panel = text(ctx, "", StoreDensity.T_CAPTION, DIM).apply {
-                typeface = Typeface.MONOSPACE; visibility = View.GONE; setTextIsSelectable(true)
-                tag = TAG_DOCS + app.id
-            }
-            val row = Row(panel, docs, docsAt, { reprobe(it) }, { saved() }, { detailsOf(it) })
-            // #809 a member's actions in one row, its pages in another: two kinds, two groups
-            val mine = actionsFor(decl, onStore != null)
-            for (type in listOf("action", "page")) {
-                val cs = mine.filter { it.type == type }
-                if (cs.isEmpty()) continue
-                val line = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; tag = "${TAG_GROUP}member:$type" }
-                for (a in cs) {
-                    val go = { act(host, a.id, app, links, live, onStore, row) }
-                    line.addView((if (type == "page") StoreBar.page(ctx, looks.page, a.icon, a.label, go)
-                        else StoreBar.button(ctx, looks.action, a.label, a.color, go))
-                        .apply { tag = "$TAG_ACTION${a.id}:${app.id}" })
-                }
-                box.addView(line)
-            }
-            box.addView(panel)
-            box
-        }
-        fun refresh(ids: Collection<String>?) {
-            val d = drawn
-            if (d == null || ids == null) {
-                meshBox.removeAllViews()
-                drawn = StoreMesh.render(ctx, meshBox, fleetJson, fleet, links, live, pending, ::rowOf, onLink)
-            } else {
-                for (id in ids) d.cards[id]?.let { StoreMesh.fill(ctx, it, byId.getValue(id), live, id in pending, links, byId, ::rowOf, onLink) }
-                d.summary.text = StoreMesh.summaryLine(fleet, links, live, pending)
-            }
-            paintChips(); paintPages(); applyFilter(); ageView.text = ageLine()
+
+        fun rowOf(app: Fleet.App): MemberRow = rows.getOrPut(app.id) {
+            MemberRow(Panel(panels, app.id), docs, docsAt, { reprobe(it) }, { saved() },
+                { a -> sub = Sub("details", "${a.label} · ${decl.label("member", "details")}", a) },
+                { a -> noChannelApp = a })
         }
 
         /** [only] null = every member; [wake] starts the ones that do not answer. */
@@ -571,120 +564,259 @@ object AppsMesh {
             if (probing) return toast(ctx, "${decl.label("root", "reprobe")}: already probing")
             probing = true
             val base = live
-            var first = only == null
             thread(name = "apps-mesh-probe") {
                 runCatching {
                     StoreMesh.probeEach(appCtx, fleet, links, wake, only, base) { snap, left ->
-                        into.post {
-                            if (!into.isAttachedToWindow) return@post
-                            val landed = pending - left
+                        main.post {
+                            if (!alive) return@post
                             pending = left
                             live = overlay(snap, base, left)
-                            if (first) { first = false; refresh(null) } else refresh(landed + (only ?: emptySet()))
                         }
                     }
                 }
-                into.post {
+                main.post {
                     probing = false; pending = emptySet()
                     if (live != null) { at = System.currentTimeMillis(); saved() }
-                    if (into.isAttachedToWindow) refresh(emptyList())
                 }
             }
-            ageView.text = ageLine()
         }
-        reprobe = { app -> probe(wake = true, only = setOf(app.id)) }
+
+        fun reprobe(app: Fleet.App) = probe(wake = true, only = setOf(app.id))
+
+        // ── the composition ──────────────────────────────────────────────
+
+        @Composable
+        fun Body() {
+            val s = sub
+            Column(Modifier.fillMaxWidth()) {
+                if (s == null) Root() else SubPage(s)
+            }
+            noChannelApp?.let { app ->
+                AlertDialog(
+                    onDismissRequest = { noChannelApp = null },
+                    title = { Text(app.label) },
+                    text = { Text(ctx.getString(R.string.store_fleet_stop_no_channel)) },
+                    confirmButton = { TextButton(onClick = { noChannelApp = null }) { Text(decl.word("close")) } },
+                )
+            }
+        }
+
+        @Composable
+        private fun Root() {
+            Note(exposure(decl, mesh))
+            val gaps = live?.let { gaps(decl, fleet, links, it).size }
+            Controls("root", mapOf(
+                "endpoints" to { sub = Sub("endpoints", decl.label("root", "endpoints")) },
+                "gaps" to { sub = Sub("gaps", decl.label("root", "gaps")) },
+                "reprobe" to { probe(wake = false) },
+                "wake" to { probe(wake = true) },
+            ), gaps)
+            // the filter group: the Store's own chips, with counts, remembered
+            val n = counts(fleet, links, live)
+            Group("root", "filter") {
+                for ((i, f) in decl.filters.withIndex())
+                    StoreBar.Chip("${f.label} (${n[f.id] ?: 0})", f.id == filter, {
+                        if (filter != f.id) { filter = f.id; prefs.edit().putString(PREF_FILTER, f.id).apply() }
+                    }, Modifier.weight(1f), first = i == 0, tag = TAG_FILTER + f.id)
+            }
+            Note(ageLine(), TAG_AGE)
+            StoreMesh.Mesh(fleetJson, fleet, links, live, pending,
+                show = { matches(filter, it, links, live) },
+                extras = { app -> MemberButtons(app) },
+                onOpen = { onStore?.invoke(it) })
+        }
+
+        /** A member's actions in one row, its pages in another: two kinds, two groups; then its Docs panel. */
+        @Composable
+        private fun ColumnScope.MemberButtons(app: Fleet.App) {
+            val row = rowOf(app)
+            val mine = actionsFor(decl, onStore != null)
+            for (type in listOf("action", "page")) {
+                val cs = mine.filter { it.type == type }
+                if (cs.isEmpty()) continue
+                Row(Modifier.fillMaxWidth().testTag("${TAG_GROUP}member:$type")) {
+                    for (a in cs) {
+                        val go = { act(host, a.id, app, links, live, onStore, row) }
+                        val tag = "$TAG_ACTION${a.id}:${app.id}"
+                        if (type == "page") StoreBar.PageButton(a.icon, a.label, go, tag = tag)
+                        else StoreBar.Button(a.label, a.color, go, Modifier.weight(1f), tag)
+                    }
+                }
+            }
+            row.panel.text?.let { t ->
+                SelectionContainer {
+                    Text(t, color = DIM.ink(), fontSize = StoreDensity.T_CAPTION.sp, fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.testTag(TAG_DOCS + app.id).padding(vertical = sdp(StoreDensity.S2)))
+                }
+            }
+        }
 
         // ── #809 sub-pages: each carries its own actions, and a way back ──
-        fun back() { sub.removeAllViews(); sub.visibility = View.GONE; root.visibility = View.VISIBLE; refresh(emptyList()) }
-        fun open(id: String, title: String = decl.label("root", id), build: (LinearLayout) -> Unit) {
-            sub.removeAllViews(); sub.tag = TAG_SUB + id
-            controls(ctx, decl, looks, sub, "sub", mapOf("back" to ::back))
-            sub.addView(text(ctx, title, StoreDensity.T_TITLE, BLUE, bold = true))
-            build(sub)
-            root.visibility = View.GONE; sub.visibility = View.VISIBLE
+
+        @Composable
+        private fun SubPage(s: Sub) {
+            Column(Modifier.fillMaxWidth().testTag(TAG_SUB + s.id)) {
+                Controls("sub", mapOf("back" to { sub = null }))
+                Note(s.title, size = StoreDensity.T_TITLE, color = BLUE, bold = true)
+                when (s.id) {
+                    "gaps" -> GapsPage()
+                    "details" -> s.app?.let { DetailsPage(it) }
+                    "endpoints" -> EndpointsPage()
+                }
+            }
         }
-        fun gapsPage() = open("gaps") { page ->
-            val l = shown() ?: return@open page.addView(text(ctx, waitWord, StoreDensity.T_META, DIM))
+
+        @Composable
+        private fun GapsPage() {
+            val l = shown()
+            if (l == null) { Note(waitWord, size = StoreDensity.T_META); return }
             fun report() = report(decl, fleet, links, l)
-            controls(ctx, decl, looks, page, "gaps", mapOf(
+            Controls("gaps", mapOf(
                 "export" to { share(host, "Apps Mesh", "text/plain", report()) },
                 "copy" to { copy(ctx, report()) }))
-            val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-            renderGaps(ctx, decl, box, gaps(decl, fleet, links, l)); page.addView(box)
+            val gaps = gaps(decl, fleet, links, l)
+            Column {
+                Note("Missing membership (${gaps.size})", size = StoreDensity.T_BODY, color = if (gaps.isEmpty()) GREEN else RED, bold = true)
+                if (gaps.isEmpty()) Note(decl.word("missing_none"), size = StoreDensity.T_META, color = GREEN)
+                for (g in gaps) Note("✕ ${g.app.label} — ${g.label}\n    fix: ${g.fix}", "$TAG_GAP${g.app.id}:${g.kind.name}",
+                    size = StoreDensity.T_META, color = RED)
+            }
         }
+
         // #809 a member's Details: a sub-page like App API Endpoints, carrying
         // its own Copy, filled off the main thread (it may ask the member's
         // /api/system/info), never a dialog over the page.
-        fun detailsPage(app: Fleet.App) = open("details", "${app.label} · ${decl.label("member", "details")}") { page ->
-            var body = ""
-            controls(ctx, decl, looks, page, "details", mapOf("copy" to { copy(ctx, body) }))
-            val out = text(ctx, "⟳", StoreDensity.T_META, DIM).apply {
-                typeface = Typeface.MONOSPACE; setTextIsSelectable(true); tag = TAG_DETAILS + app.id
+        @Composable
+        private fun DetailsPage(app: Fleet.App) {
+            var body by remember(app.id) { mutableStateOf("") }
+            var out by remember(app.id) { mutableStateOf("⟳") }
+            Controls("details", mapOf("copy" to { copy(ctx, body) }))
+            SelectionContainer {
+                Text(out, color = DIM.ink(), fontSize = StoreDensity.T_META.sp, fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.testTag(TAG_DETAILS + app.id).padding(vertical = sdp(StoreDensity.S2)))
             }
-            page.addView(out)
-            val l = live
-            thread(name = "apps-mesh-details") {
-                val port = l?.reachable?.get(app.id)
-                val info = port?.let { p -> Fleet.installedId(appCtx, app)?.let { StoreMesh.ask(appCtx, it, p, "system/info") } }
-                val t = details(appCtx, app, links, l, info)
-                out.post { body = t; out.text = t }
+            LaunchedEffect(app.id) {
+                val l = live
+                val t = withContext(Dispatchers.IO) {
+                    val port = l?.reachable?.get(app.id)
+                    val info = port?.let { p -> Fleet.installedId(appCtx, app)?.let { StoreMesh.ask(appCtx, it, p, "system/info") } }
+                    details(appCtx, app, links, l, info)
+                }
+                body = t; out = t
             }
         }
-        detailsOf = { app -> detailsPage(app) }
-        fun endpointsPage() = open("endpoints") { page ->
-            val l = shown() ?: return@open page.addView(text(ctx, waitWord, StoreDensity.T_META, DIM))
-            allEndpoints(host, page, decl, looks, fleet, links, l, docs, docsAt, mesh) { saved() }
-        }
 
-        controls(ctx, decl, looks, root, "root", mapOf(
-            "endpoints" to ::endpointsPage,
-            "gaps" to ::gapsPage,
-            "reprobe" to { probe(wake = false) },
-            "wake" to { probe(wake = true) },
-        ), pageViews)
-        // the filter group: the Store's own chips, with counts, remembered
-        val chips = group(ctx, decl, root, "root", "filter")
-        for ((i, f) in decl.filters.withIndex())
-            chipViews[f.id] = StoreBar.chip(ctx, looks.filter, f.label, i == 0) {
-                if (filter != f.id) { filter = f.id; prefs.edit().putString(PREF_FILTER, f.id).apply(); paintChips(); applyFilter() }
-            }.apply { tag = TAG_FILTER + f.id }.also { chips.addView(it) }
-        root.addView(ageView); root.addView(meshBox)
-
-        refresh(null)
-        probe(wake = false)
-    }
-
-    /** #809 one captioned group holding one [type] of control of [scope]; returns its row. */
-    private fun group(ctx: Context, decl: Decl, into: LinearLayout, scope: String, type: String): LinearLayout {
-        val g = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL; tag = "$TAG_GROUP$scope:$type"
-            setPadding(0, dp(ctx, StoreDensity.S4), 0, dp(ctx, StoreDensity.S2))
-        }
-        g.addView(text(ctx, decl.group(type), StoreDensity.T_MICRO, DIM, bold = true))
-        val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        g.addView(row); into.addView(g)
-        return row
-    }
-
-    /** #809 draw [scope]'s page and action controls, a group per type (pages
-     *  first), each with its handler; a declared id with no handler here is
-     *  not drawn. Filters are drawn by the page that owns the list. */
-    private fun controls(
-        ctx: Context, decl: Decl, looks: StoreControls.Decl, into: LinearLayout, scope: String,
-        handlers: Map<String, () -> Unit>, pageViews: MutableMap<String, TextView>? = null,
-    ) {
-        for (type in listOf("page", "action")) {
-            val cs = decl.of(scope, type).filter { it.id in handlers }
-            if (cs.isEmpty()) continue
-            val row = group(ctx, decl, into, scope, type)
-            for (c in cs) {
-                val h = handlers.getValue(c.id)
-                val v = if (type == "page") StoreBar.page(ctx, looks.page, c.icon, c.label, h)
-                    else StoreBar.button(ctx, looks.action, c.label, c.color, h)
-                v.tag = "$TAG_TOOL$scope:${c.id}"
-                if (type == "page") pageViews?.put(c.id, v)
-                row.addView(v)
+        /**
+         * #793 ALL ENDPOINTS — one list of every member's API, grouped by app (its
+         * address, then each route: path, params, description), searchable,
+         * collapsible per app, with Copy and Export JSON / Markdown. Drawn at once
+         * from what is known and filled per app as each member's /api/docs lands.
+         */
+        @Composable
+        private fun EndpointsPage() {
+            val l = shown()
+            if (l == null) { Note(waitWord, size = StoreDensity.T_META); return }
+            fun now() = withDocs(l, docs)
+            // #809 this page's actions live on this page, not on the Apps Mesh root
+            Controls("endpoints", mapOf(
+                "json" to { share(host, "Apps Mesh endpoints", "application/json",
+                    catalogue(fleet, now(), exposure(decl, mesh), mesh, links).toString(2)) },
+                "markdown" to { share(host, "Apps Mesh endpoints", "text/markdown", markdown(fleet, now())) },
+                "copy" to { copy(ctx, markdown(fleet, now())) }))
+            var query by remember { mutableStateOf("") }
+            KitSearchBar(query, { query = it }, {}, Modifier.padding(vertical = sdp(StoreDensity.S4)),
+                placeholder = decl.word("search"), clearLabel = decl.word("close"))
+            val members = remember(l.installed) { fleet.filter { it.id in l.installed } }
+            val open = remember { mutableStateListOf<String>().apply { addAll(members.map { it.id }) } }
+            val fetching = remember { mutableStateListOf<String>().apply {
+                addAll(members.filter { it.id in l.reachable && it.id !in docs }.map { it.id }) } }
+            val q = query.trim().lowercase()
+            docsTick
+            for (app in members) {
+                val port = l.reachable[app.id]
+                val eps = docs[app.id]?.let { endpointList(it) }
+                val hit = eps.orEmpty().filter { e ->
+                    q.isEmpty() || app.label.lowercase().contains(q) ||
+                        listOf("path", "params", "description", "group").any { e.optString(it).lowercase().contains(q) }
+                }
+                val sectionVisible = q.isEmpty() || hit.isNotEmpty() || app.label.lowercase().contains(q)
+                if (!sectionVisible) continue
+                val isOpen = app.id in open
+                Column(Modifier.fillMaxWidth().testTag(TAG_DOCS + "all:" + app.id)) {
+                    Text((if (isOpen) "▾ " else "▸ ") + app.label + "  ·  " +
+                        (port?.let { "http://127.0.0.1:$it" } ?: decl.word("not_serving")) +
+                        (eps?.let { "  ·  ${if (q.isEmpty()) it.size else hit.size} endpoints" } ?: ""),
+                        color = BLUE.ink(), fontSize = StoreDensity.T_BODY.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.tap { if (!open.remove(app.id)) open.add(app.id) }
+                            .padding(vertical = sdp(StoreDensity.S2)))
+                    if (isOpen) Column(Modifier.padding(start = sdp(StoreDensity.S8), bottom = sdp(StoreDensity.S6))) {
+                        when {
+                            port == null -> {}
+                            eps == null -> Note(if (app.id in fetching) "⟳ " + decl.word("fetching")
+                                else "127.0.0.1:$port " + decl.word("no_answer"), size = StoreDensity.T_CAPTION)
+                            else -> for (e in hit) SelectionContainer {
+                                Text(buildString {
+                                    e.optString("group").takeIf { it.isNotEmpty() }?.let { append("[$it] ") }
+                                    append(e.optString("path"))
+                                    e.optString("params").takeIf { it.isNotEmpty() }?.let { append("  ($it)") }
+                                    e.optString("description").takeIf { it.isNotEmpty() }?.let { append("\n    $it") }
+                                }, color = 0xFFE2E8F0.toInt().ink(), fontSize = StoreDensity.T_CAPTION.sp, fontFamily = FontFamily.Monospace,
+                                    modifier = Modifier.padding(vertical = sdp(StoreDensity.S2)))
+                            }
+                        }
+                    }
+                }
             }
+            LaunchedEffect(l.installed) {
+                if (fetching.isEmpty()) return@LaunchedEffect
+                withContext(Dispatchers.IO) {
+                    fillDocs(appCtx, fleet, l, docs, docsAt) { id -> main.post { fetching.remove(id); docsTick++ } }
+                }
+                fetching.clear(); docsTick++
+                saved()
+            }
+        }
+
+        // ── controls ─────────────────────────────────────────────────────
+
+        /** #809 one captioned group holding one [type] of control of [scope]. */
+        @Composable
+        private fun Group(scope: String, type: String, content: @Composable RowScope.() -> Unit) {
+            Column(Modifier.fillMaxWidth().testTag("$TAG_GROUP$scope:$type")
+                .padding(top = sdp(StoreDensity.S4), bottom = sdp(StoreDensity.S2))) {
+                Text(decl.group(type), color = DIM.ink(), fontSize = StoreDensity.T_MICRO.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = sdp(StoreDensity.S2)))
+                Row(content = content)
+            }
+        }
+
+        /** #809 draw [scope]'s page and action controls, a group per type (pages
+         *  first), each with its handler; a declared id with no handler here is
+         *  not drawn. Filters are drawn by the page that owns the list. [gaps] is the Missing
+         *  membership count, once there is a probe to count from. */
+        @Composable
+        private fun Controls(scope: String, handlers: Map<String, () -> Unit>, gaps: Int? = null) {
+            for (type in listOf("page", "action")) {
+                val cs = decl.of(scope, type).filter { it.id in handlers }
+                if (cs.isEmpty()) continue
+                Group(scope, type) {
+                    for (c in cs) {
+                        val h = handlers.getValue(c.id)
+                        val tag = "$TAG_TOOL$scope:${c.id}"
+                        if (type == "page") StoreBar.PageButton(c.icon,
+                            c.label + if (scope == "root" && c.id == "gaps") gaps?.let { " ($it)" }.orEmpty() else "", h, tag = tag)
+                        else StoreBar.Button(c.label, c.color, h, Modifier.weight(1f), tag)
+                    }
+                }
+            }
+        }
+
+        @Composable
+        private fun Note(
+            t: String, tag: String? = null, size: Float = StoreDensity.T_CAPTION, color: Int = DIM, bold: Boolean = false,
+        ) {
+            Text(t, color = color.ink(), fontSize = size.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+                modifier = Modifier.tagged(tag).padding(vertical = sdp(StoreDensity.S2)))
         }
     }
 
@@ -706,91 +838,6 @@ object AppsMesh {
         } finally { pool.shutdownNow() }
     }
 
-    /**
-     * #793 ALL ENDPOINTS — one list of every member's API, grouped by app (its
-     * address, then each route: path, params, description), searchable,
-     * collapsible per app, with Copy and Export JSON / Markdown. Drawn at once
-     * from what is known and filled per app as each member's /api/docs lands.
-     */
-    private fun allEndpoints(
-        host: Fragment, col: LinearLayout, decl: Decl, looks: StoreControls.Decl, fleet: List<Fleet.App>,
-        links: List<StoreMesh.Link>, live: StoreMesh.Live, docs: MutableMap<String, String>,
-        docsAt: MutableMap<String, Long>, mesh: List<String>, saved: () -> Unit,
-    ) {
-        val ctx = col.context
-        val search = android.widget.EditText(ctx).apply {
-            hint = decl.word("search"); textSize = StoreDensity.T_BODY; setSingleLine()
-        }
-        val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        fun now() = withDocs(live, docs)
-        // #809 this page's actions live on this page, not on the Apps Mesh root
-        controls(ctx, decl, looks, col, "endpoints", mapOf(
-            "json" to { share(host, "Apps Mesh endpoints", "application/json",
-                catalogue(fleet, now(), exposure(decl, mesh), mesh, links).toString(2)) },
-            "markdown" to { share(host, "Apps Mesh endpoints", "text/markdown", markdown(fleet, now())) },
-            "copy" to { copy(ctx, markdown(fleet, now())) }))
-        col.addView(search); col.addView(list)
-        val members = fleet.filter { it.id in live.installed }
-        val bodies = HashMap<String, LinearLayout>()
-        val heads = HashMap<String, TextView>()
-        val open = HashSet(members.map { it.id })
-        val fetching = HashSet<String>()
-
-        fun fill(app: Fleet.App) {
-            val body = bodies[app.id] ?: return
-            val head = heads.getValue(app.id)
-            val q = search.text.toString().trim().lowercase()
-            val port = live.reachable[app.id]
-            val eps = docs[app.id]?.let { endpointList(it) }
-            val hit = eps.orEmpty().filter { e ->
-                q.isEmpty() || app.label.lowercase().contains(q) ||
-                    listOf("path", "params", "description", "group").any { e.optString(it).lowercase().contains(q) }
-            }
-            head.text = (if (app.id in open) "▾ " else "▸ ") + app.label + "  ·  " +
-                (port?.let { "http://127.0.0.1:$it" } ?: decl.word("not_serving")) +
-                (eps?.let { "  ·  ${if (q.isEmpty()) it.size else hit.size} endpoints" } ?: "")
-            val sectionVisible = q.isEmpty() || hit.isNotEmpty() || app.label.lowercase().contains(q)
-            (head.parent as? View)?.visibility = if (sectionVisible) View.VISIBLE else View.GONE
-            body.removeAllViews()
-            body.visibility = if (app.id in open) View.VISIBLE else View.GONE
-            when {
-                port == null -> {}
-                eps == null -> body.addView(text(ctx, if (app.id in fetching) "⟳ " + decl.word("fetching")
-                    else "127.0.0.1:$port " + decl.word("no_answer"), StoreDensity.T_CAPTION, DIM))
-                else -> for (e in hit) body.addView(text(ctx, buildString {
-                    e.optString("group").takeIf { it.isNotEmpty() }?.let { append("[$it] ") }
-                    append(e.optString("path"))
-                    e.optString("params").takeIf { it.isNotEmpty() }?.let { append("  ($it)") }
-                    e.optString("description").takeIf { it.isNotEmpty() }?.let { append("\n    $it") }
-                }, StoreDensity.T_CAPTION, 0xFFE2E8F0.toInt()).apply { typeface = Typeface.MONOSPACE; setTextIsSelectable(true) })
-            }
-        }
-        for (app in members) {
-            val section = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; tag = TAG_DOCS + "all:" + app.id }
-            val head = text(ctx, app.label, StoreDensity.T_BODY, BLUE, bold = true).apply {
-                isClickable = true
-                setOnClickListener { if (!open.remove(app.id)) open.add(app.id); fill(app) }
-            }
-            val body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(ctx, StoreDensity.S8), 0, 0, dp(ctx, StoreDensity.S6)) }
-            section.addView(head); section.addView(body); list.addView(section)
-            heads[app.id] = head; bodies[app.id] = body
-            if (app.id in live.reachable && app.id !in docs) fetching.add(app.id)
-            fill(app)
-        }
-        search.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) { members.forEach { fill(it) } }
-        })
-        if (fetching.isEmpty()) return
-        thread(name = "apps-mesh-all-endpoints") {
-            fillDocs(ctx.applicationContext, fleet, live, docs, docsAt) { id ->
-                list.post { fetching.remove(id); if (list.isAttachedToWindow) fleet.firstOrNull { it.id == id }?.let { fill(it) } }
-            }
-            list.post { if (list.isAttachedToWindow) { fetching.clear(); members.forEach { fill(it) } }; saved() }
-        }
-    }
-
     private fun share(host: Fragment, subject: String, mime: String, text: String) {
         runCatching {
             host.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType(mime)
@@ -802,7 +849,7 @@ object AppsMesh {
      *  shell channel runs off the main thread and posts its answer back. */
     fun act(
         host: Fragment, id: String, app: Fleet.App, links: List<StoreMesh.Link>,
-        live: StoreMesh.Live?, onStore: ((Fleet.App) -> Unit)?, row: Row,
+        live: StoreMesh.Live?, onStore: ((Fleet.App) -> Unit)?, row: MemberRow,
     ) {
         val ctx = host.requireContext()
         val appCtx = ctx.applicationContext
@@ -833,9 +880,7 @@ object AppsMesh {
                     val out = PhoneAppActions.forceStop(appCtx, pkg)
                     ui {
                         when {
-                            out == null -> AlertDialog.Builder(ctx).setTitle(app.label)
-                                .setMessage(ctx.getString(R.string.store_fleet_stop_no_channel))
-                                .setPositiveButton(load(ctx).word("close"), null).show()
+                            out == null -> row.noChannel(app)
                             out.contains("OK") -> toast(ctx, ctx.getString(R.string.store_phone_stopped, app.label))
                             else -> toast(ctx, ctx.getString(R.string.store_phone_failed, app.label, out.trim()))
                         }
@@ -846,8 +891,7 @@ object AppsMesh {
             // with the fleet bearer the first time, the cached copy after.
             "api" -> {
                 val panel = row.panel
-                if (panel.visibility == View.VISIBLE) { panel.visibility = View.GONE; return }
-                panel.visibility = View.VISIBLE
+                if (panel.shown) { panel.text = null; return }
                 val port = live?.reachable?.get(app.id)
                     ?: return run { panel.text = "${app.label} is not serving a debug API right now. Wake it, then Docs again." }
                 row.docs[app.id]?.let { body ->
@@ -952,27 +996,11 @@ object AppsMesh {
     private const val DIM = 0x99FFFFFF.toInt()
     private const val BLUE = 0xFF63B3ED.toInt()
 
-    private fun renderGaps(ctx: Context, decl: Decl, box: LinearLayout, gaps: List<Gap>) {
-        box.addView(text(ctx, "Missing membership (${gaps.size})", StoreDensity.T_BODY, if (gaps.isEmpty()) GREEN else RED, bold = true))
-        if (gaps.isEmpty()) box.addView(text(ctx, decl.word("missing_none"), StoreDensity.T_META, GREEN))
-        for (g in gaps) box.addView(text(ctx, "✕ ${g.app.label} — ${g.label}\n    fix: ${g.fix}", StoreDensity.T_META, RED).apply {
-            tag = "$TAG_GAP${g.app.id}:${g.kind.name}"
-        })
-    }
-
     private fun copy(ctx: Context, body: String) {
         (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
             ?.setPrimaryClip(ClipData.newPlainText("Apps Mesh", body))
         toast(ctx, "copied ${body.lines().size} lines")
     }
 
-    private fun text(ctx: Context, t: String, size: Float, color: Int, bold: Boolean = false) = TextView(ctx).apply {
-        text = t; textSize = size; setTextColor(color)
-        if (bold) typeface = Typeface.DEFAULT_BOLD
-        setPadding(0, dp(ctx, StoreDensity.S2), 0, dp(ctx, StoreDensity.S2))
-    }
-
     private fun toast(ctx: Context, m: String) = Toast.makeText(ctx, m, Toast.LENGTH_LONG).show()
-
-    private fun dp(ctx: Context, v: Int) = StoreDensity.dp(ctx, v)
 }
