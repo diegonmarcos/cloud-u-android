@@ -38,7 +38,7 @@ job = job.split('\n  build_and_publish:')[0] if '\n  build_and_publish:' in job 
 check(bool(job), 'ship-cloud-notes.yml declares the web_image job')
 check('yarn affine @affine/web build' in job, 'the job builds the web bundle')
 check('docker build' in job and 'deploy/web/Dockerfile' in job, 'the job builds the image from deploy/web/Dockerfile')
-i_smoke = job.find('/healthz'); i_push = job.find('docker push')
+i_smoke = job.find('/healthz'); i_push = job.find('buildx build --platform linux/amd64,linux/arm64')
 check(i_smoke != -1 and i_push != -1 and i_smoke < i_push, 'the smoke test (healthz) runs BEFORE the push')
 check('index.html' in job[i_smoke:i_push] if i_smoke != -1 and i_push != -1 else False, 'the smoke test also fetches the shell and a deep link')
 check("github.ref == 'refs/heads/main'" in job, 'the image is pushed from main only')

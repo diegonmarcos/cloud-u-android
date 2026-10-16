@@ -134,6 +134,7 @@ jobs:
           cp ac_cloud-notes/deploy/web/Dockerfile ac_cloud-notes/deploy/web/nginx.conf "$STAGE/deploy/web/"
           cp -r ac_cloud-notes/packages/frontend/apps/web/dist "$STAGE/packages/frontend/apps/web/dist"
           docker build -f "$STAGE/deploy/web/Dockerfile" -t cloud-notes-web:ci "$STAGE"
+          echo "STAGE=$STAGE" >> "$GITHUB_ENV"
 
       - name: Smoke test (health, app shell, deep-link fallback)
         run: |
@@ -146,15 +147,19 @@ jobs:
           curl -fsSI http://127.0.0.1:18080/index.html | grep -qi 'cache-control: no-store'
           docker rm -f cn-web
 
-      - name: Push to GHCR (main only)
+      - name: Set up QEMU + buildx (the fleet's app VMs are arm64)
+        if: github.ref == 'refs/heads/main'
+        uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+        if: github.ref == 'refs/heads/main'
+
+      - name: Push to GHCR (main only, amd64 + arm64)
         if: github.ref == 'refs/heads/main'
         run: |
           echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           IMG="ghcr.io/${{ github.repository_owner }}/cloud-notes-web-binaries"
-          docker tag cloud-notes-web:ci "$IMG:latest"
-          docker tag cloud-notes-web:ci "$IMG:${{ github.sha }}"
-          docker push "$IMG:latest"
-          docker push "$IMG:${{ github.sha }}"
+          docker buildx build --platform linux/amd64,linux/arm64 -f "$STAGE/deploy/web/Dockerfile" -t "$IMG:latest" -t "$IMG:${{ github.sha }}" --push "$STAGE"
 
   # Phase 2 (cloud-notes-hybrid): our own Yjs sync server (Hocuspocus, MIT). The
   # suite is the acceptance run (A6.1 offline edits converge, A6.2 refused without
@@ -197,15 +202,19 @@ jobs:
           curl -sS -i -m 5 -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" http://127.0.0.1:11234/ | head -1 | grep -q " 401 "
           docker rm -f cn-sync
 
-      - name: Push to GHCR (main only)
+      - name: Set up QEMU + buildx (the fleet's app VMs are arm64)
+        if: github.ref == 'refs/heads/main'
+        uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+        if: github.ref == 'refs/heads/main'
+
+      - name: Push to GHCR (main only, amd64 + arm64)
         if: github.ref == 'refs/heads/main'
         run: |
           echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           IMG="ghcr.io/${{ github.repository_owner }}/cloud-notes-sync-binaries"
-          docker tag cloud-notes-sync:ci "$IMG:latest"
-          docker tag cloud-notes-sync:ci "$IMG:${{ github.sha }}"
-          docker push "$IMG:latest"
-          docker push "$IMG:${{ github.sha }}"
+          docker buildx build --platform linux/amd64,linux/arm64 -t "$IMG:latest" -t "$IMG:${{ github.sha }}" --push ac_cloud-notes/sync-server
 
   build_and_publish:
     needs: storage_tests
