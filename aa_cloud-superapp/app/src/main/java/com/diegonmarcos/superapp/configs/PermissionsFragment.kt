@@ -3,17 +3,41 @@ package com.diegonmarcos.superapp.configs
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.graphics.Typeface
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.appstore.ConstellationWorker
 import com.diegonmarcos.superapp.battery.EnergyWatchdog
@@ -24,7 +48,6 @@ import com.diegonmarcos.superapp.system.PermAskTracker
 import com.diegonmarcos.superapp.system.DeviceTuning
 import com.diegonmarcos.superapp.system.PrivilegedGrants
 import com.diegonmarcos.superapp.system.ScreenLocker
-import kotlinx.coroutines.launch
 import com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel
 import com.diegonmarcos.superapp.adbdebug.ShizukuShellChannel
 import com.diegonmarcos.superapp.adbdebug.ShellChannel
@@ -36,7 +59,7 @@ import android.content.pm.PackageManager
 /** Permissions page — runtime perms, special access, Health Connect,
  *  auto-granted, and all grant/set action buttons. Extracted from
  *  DevControlFragment so it has its own dedicated Configs tab. */
-class PermissionsFragment : Fragment() {
+class PermissionsFragment : KitComposeFragment() {
 
     private val notifPermLauncher =
         registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {
@@ -67,10 +90,10 @@ class PermissionsFragment : Fragment() {
                 "That permission is required by Android to create a WiFi Direct group", Toast.LENGTH_LONG).show()
         }
 
-    private fun rebuildFragment() {
-        parentFragmentManager.beginTransaction().detach(this).commitNow()
-        parentFragmentManager.beginTransaction().attach(this).commitNow()
-    }
+    /** Redraw key: bumping it re-reads every row (the old detach+attach, without tearing the fragment down). */
+    private var epoch by mutableIntStateOf(0)
+
+    private fun rebuildFragment() { epoch++ }
 
     private fun ctxAny(): Context = requireContext()
 
@@ -79,56 +102,55 @@ class PermissionsFragment : Fragment() {
         private val DARK_VIOLET = 0xFF4C1D95.toInt()
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val ctx = requireContext()
-        val scroll = ScrollView(ctx).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        }
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(10), dp(8), dp(10), dp(16))
-        }
-        scroll.addView(col)
+    override fun palette() = LauncherPalette.kit(requireContext())
 
-        var hcGrantBtn: TextView? = null
-        val perms = parseRuntimePermissions()
+    @Composable
+    override fun Content() {
+        // rebuildFragment() bumps the epoch: the whole page is read again, exactly what detach+attach used to do.
+        androidx.compose.runtime.key(epoch) { PermsPage() }
+    }
+
+    @Composable
+    private fun PermsPage() {
+        val ctx = requireContext()
+        val perms = remember { parseRuntimePermissions() }
         // includeGranted=true: this screen must show the REAL state of every
         // fleet package × development permission, granted or not. Showing only
         // the outstanding ones makes a fully-granted plane look like an empty
         // section — indistinguishable from the bug where READ_LOGS silently
         // vanished because its build.json entry had no `apps` array.
-        val priv = PrivilegedGrants.resolve(ctxAny(), includeGranted = true)
-        val plane: ShellChannel? = shellPlane()
+        val priv = remember { PrivilegedGrants.resolve(ctxAny(), includeGranted = true) }
+        val plane: ShellChannel? = remember { shellPlane() }
 
         // ── Tally ─────────────────────────────────────────────────────────
         val runtimeMissing = perms.filter { (_, perm) -> ctxAny().checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED }
         val privMissing = priv.filter { !PrivilegedGrants.isGranted(ctxAny(), it) }
-        val pages = buildPageItems(ctxAny())
+        val pages = remember { buildPageItems(ctxAny()) }
         val pagesMissing = pages.count { it.granted == false }
-        col.addView(small(ctx, "${perms.size - runtimeMissing.size + priv.size - privMissing.size} granted here · " +
-            "${runtimeMissing.size + privMissing.size} missing here · $pagesMissing need a system page"))
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 10.dp, top = 8.dp, end = 10.dp, bottom = 16.dp)) {
+        Small("${perms.size - runtimeMissing.size + priv.size - privMissing.size} granted here · " +
+            "${runtimeMissing.size + privMissing.size} missing here · $pagesMissing need a system page")
 
         // ── A. GRANT HERE ─────────────────────────────────────────────────
-        col.addView(sectionHead(ctx, "GRANT HERE — one tap each, or all at once"))
-        col.addView(permButtonRow(ctx,
-            permButton(ctx, "GRANT ALL reachable (${runtimeMissing.size + (if (plane != null) privMissing.size else 0)})", null) {
+        SectionHead("GRANT HERE — one tap each, or all at once")
+        PermButtonRow {
+            PermButton("GRANT ALL reachable (${runtimeMissing.size + (if (plane != null) privMissing.size else 0)})", null) {
                 if (runtimeMissing.isNotEmpty()) requestAllPermissions(runtimeMissing.map { it.second }.toTypedArray())
                 if (plane != null) for (pp in privMissing) grantPrivileged(plane, pp)
                 if (runtimeMissing.isEmpty()) rebuildFragment()
-            },
-        ))
-        col.addView(small(ctx, "Runtime perms — ✓ Granted · ⏳ Ask each time · ✗ Denied (don't ask) · ◯ Not requested. Policy-restricted ones (SMS/Phone/Call Log) may stay ✗ on non-default handlers."))
+            }
+        }
+        Small("Runtime perms — ✓ Granted · ⏳ Ask each time · ✗ Denied (don't ask) · ◯ Not requested. Policy-restricted ones (SMS/Phone/Call Log) may stay ✗ on non-default handlers.")
         for ((label, perm) in perms) {
             val g = ctxAny().checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED
-            permRow(ctx, col, label, g, permissionState(perm), if (g) "OK" else "Request") { requestAllPermissions(arrayOf(perm)) }
+            PermRow(label, g, permissionState(perm), if (g) "OK" else "Request") { requestAllPermissions(arrayOf(perm)) }
         }
-        permRow(ctx, col, "Notifications (post)", grantedNotifWrite(ctxAny()), "", "Request") { requestNotificationsPermission() }
-        col.addView(small(ctx, "Privileged perms — signature perms Android never asks for. Granted by the privileged plane (embedded adb / Shizuku) via pm grant; persist across reboots + updates." +
-            (if (plane == null) " ⚠ No shell channel ready — open ADB Shell and press Connect to enable these buttons." else " Channel: ${plane.name()}")))
+        PermRow("Notifications (post)", grantedNotifWrite(ctxAny()), "", "Request") { requestNotificationsPermission() }
+        Small("Privileged perms — signature perms Android never asks for. Granted by the privileged plane (embedded adb / Shizuku) via pm grant; persist across reboots + updates." +
+            (if (plane == null) " ⚠ No shell channel ready — open ADB Shell and press Connect to enable these buttons." else " Channel: ${plane.name()}"))
         for (pp in priv) {
             val g = PrivilegedGrants.isGranted(ctxAny(), pp)
-            permRow(ctx, col, "${pp.label} → ${pp.pkg.substringAfterLast('.')}", g, "", if (g) "OK" else if (plane != null) "Grant" else "needs plane") {
+            PermRow("${pp.label} → ${pp.pkg.substringAfterLast('.')}", g, "", if (g) "OK" else if (plane != null) "Grant" else "needs plane") {
                 if (plane != null) grantPrivileged(plane, pp) else Toast.makeText(ctxAny(), "Open ADB Shell and press Connect first", Toast.LENGTH_LONG).show()
             }
         }
@@ -137,10 +159,10 @@ class PermissionsFragment : Fragment() {
         // This screen keeps a status chip only. Every control that used to live here (Wireless debugging
         // toggle, Pair, Connect, the server row) is on the ADB Shell page, which every app that links
         // libs:shizuku-adb-debug-tools has; test-adb-shell-one-place.sh holds it to that.
-        row(ctx, col, "Privileged channel", plane?.let { "✓ ${it.name()}" } ?: "◯ no adb session (server: ${com.diegonmarcos.superapp.adbdebug.AdbShellBootstrap.bootstrapState(ctxAny())})")
-        col.addView(permButtonRow(ctx,
-            permButton(ctx, "ADB Shell ›", null) { com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctxAny()) },
-        ))
+        KvRow("Privileged channel", plane?.let { "✓ ${it.name()}" } ?: "◯ no adb session (server: ${com.diegonmarcos.superapp.adbdebug.AdbShellBootstrap.bootstrapState(ctxAny())})")
+        PermButtonRow {
+            PermButton("ADB Shell ›", null) { com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctxAny()) }
+        }
         // Pairing network helpers: Wireless debugging needs a Wi-Fi network, and these CREATE one (they
         // are not channel controls). The connecting itself is on the ADB Shell page.
         // Step ⓪ (optional): no external WiFi to join? Spin up a device-local
@@ -148,28 +170,28 @@ class PermissionsFragment : Fragment() {
         // Debugging (adb over WiFi, API 30+) needs. Local-only, not internet-
         // routed — any throwaway network works just as well if this fails.
         val hotspotStatus = LocalHotspot.status()
-        col.addView(permButtonRow(ctx,
-            permButton(ctx, "⓪ Create local WiFi (for pairing)", hotspotStatus is LocalHotspot.Status.Active) { requestLocalHotspot() },
-        ))
-        if (hotspotStatus is LocalHotspot.Status.Active) col.addView(small(ctx,
-            "Local WiFi up — SSID: ${hotspotStatus.ssid}  ·  password: ${hotspotStatus.passphrase}"))
+        PermButtonRow {
+            PermButton("⓪ Create local WiFi (for pairing)", hotspotStatus is LocalHotspot.Status.Active) { requestLocalHotspot() }
+        }
+        if (hotspotStatus is LocalHotspot.Status.Active) Small(
+            "Local WiFi up — SSID: ${hotspotStatus.ssid}  ·  password: ${hotspotStatus.passphrase}")
         // Step ⓪b (fallback): some devices (certain Samsung builds) refuse
         // LocalOnlyHotspot while Wireless Debugging is being enabled. WiFi
         // Direct (WifiP2pManager) is a second self-created-WiFi path — this
         // device becomes the P2P group owner, which behaves like a local AP
         // (SSID always starts with "DIRECT-"), still no external network.
         val wifiDirectStatus = WifiDirect.status()
-        col.addView(permButtonRow(ctx,
-            permButton(ctx, "⓪b Create WiFi Direct (for pairing)", wifiDirectStatus is WifiDirect.Status.Active) { requestWifiDirect() },
-        ))
-        if (wifiDirectStatus is WifiDirect.Status.Active) col.addView(small(ctx,
+        PermButtonRow {
+            PermButton("⓪b Create WiFi Direct (for pairing)", wifiDirectStatus is WifiDirect.Status.Active) { requestWifiDirect() }
+        }
+        if (wifiDirectStatus is WifiDirect.Status.Active) Small(
             "WiFi Direct up — SSID: ${wifiDirectStatus.ssid}  ·  password: ${wifiDirectStatus.passphrase}" +
-            (wifiDirectStatus.ownerIp?.let { "  ·  owner IP: $it" } ?: "")))
+            (wifiDirectStatus.ownerIp?.let { "  ·  owner IP: $it" } ?: ""))
         // ── Device tuning ────────────────────────────────────────────────
         // The shell-applied settings declared in data/device-tuning.json
         // (phantom-process killer off, ...) — the rows are the declared entries,
         // the light is the state DeviceTuning remembered from its last pass.
-        col.addView(sectionHead(ctx, "DEVICE TUNING — applied through this app's own shell (data/device-tuning.json)"))
+        SectionHead("DEVICE TUNING — applied through this app's own shell (data/device-tuning.json)")
         val tuning = DeviceTuning.records(ctxAny()).associateBy { it.id }
         for (e in DeviceTuning.entries()) {
             val r = tuning[e.id]
@@ -178,78 +200,81 @@ class PermissionsFragment : Fragment() {
                 DeviceTuning.State.FAILED -> "✗ FAILED"
                 else -> "◯ PENDING"
             }
-            row(ctx, col, e.title, light + (r?.detail?.takeIf { it.isNotBlank() }?.let { " — $it" } ?: ""))
-            col.addView(small(ctx, e.why))
+            KvRow(e.title, light + (r?.detail?.takeIf { it.isNotBlank() }?.let { " — $it" } ?: ""))
+            Small(e.why)
         }
-        col.addView(permButtonRow(ctx,
-            permButton(ctx, "Re-apply device tuning", tuning.values.all { it.state == DeviceTuning.State.APPLIED } && tuning.isNotEmpty()) {
+        PermButtonRow {
+            PermButton("Re-apply device tuning", tuning.values.all { it.state == DeviceTuning.State.APPLIED } && tuning.isNotEmpty()) {
                 armPlane(); Toast.makeText(ctxAny(), "Verifying + applying device tuning in background…", Toast.LENGTH_SHORT).show()
-            },
-        ))
+            }
+        }
 
         // ── B. OPEN A SYSTEM PAGE ─────────────────────────────────────────
-        col.addView(sectionHead(ctx, "OPEN A SYSTEM PAGE — Grant-All can NOT reach these"))
-        col.addView(small(ctx, "Nothing can grant these for you: each button opens the exact system page, you flip it, come back. Missing ones listed first."))
+        SectionHead("OPEN A SYSTEM PAGE — Grant-All can NOT reach these")
+        Small("Nothing can grant these for you: each button opens the exact system page, you flip it, come back. Missing ones listed first.")
         for (it in pages.sortedBy { if (it.granted == false) 0 else if (it.granted == null) 1 else 2 })
-            permRow(ctx, col, it.label, it.granted, it.state, "Open", it.open)
-        if (!ScreenLocker.isAccessibilityEnabled(ctxAny())) col.addView(small(ctx,
-            "Accessibility on Samsung: 'Open App Info' → ⋮ → 'Allow restricted settings', then reopen Accessibility and enable Cloud SuperApp."))
+            PermRow(it.label, it.granted, it.state, "Open", it.open)
+        if (!ScreenLocker.isAccessibilityEnabled(ctxAny())) Small(
+            "Accessibility on Samsung: 'Open App Info' → ⋮ → 'Allow restricted settings', then reopen Accessibility and enable Cloud SuperApp.")
         // Only offer the manual `adb shell pm grant` when there is NO channel.
         // With the plane up the app grants DUMP itself (it is development-
         // protected, so PrivilegedGrants picks it up), and telling the user to
         // go find a PC for something already handled is advice that is simply
         // false — the kind that trains people to ignore the whole screen.
         if (plane == null && !specialAccessDumpGranted(ctxAny())) {
-            col.addView(actionButton(ctx, "Copy DUMP grant command for adb") {
+            ActionButton("Copy DUMP grant command for adb") {
                 copy(ctxAny(), "adb shell pm grant ${ctxAny().packageName} android.permission.DUMP")
                 Toast.makeText(ctxAny(), "Copied — paste into a shell with adb access", Toast.LENGTH_LONG).show()
-            })
+            }
         }
         val hcTotal = HealthMetrics.allPermissions.size
-        val hcRow = row(ctx, col, "HC perms granted", "checking… / $hcTotal")
-        viewLifecycleOwner.lifecycleScope.launch {
-            val n = runCatching { HealthConnectGateway.grantedPermissions(requireContext()).size }.getOrDefault(0)
-            hcRow.text = if (n > 0) "✓ $n / $hcTotal granted" else "◯ 0 / $hcTotal — none granted"
-            hcGrantBtn?.let { b -> stylePermButton(b, "Grant Health Perms", n >= hcTotal && hcTotal > 0) }
+        // null while the Health Connect read is in flight, then the granted count.
+        val hcGranted by androidx.compose.runtime.produceState<Int?>(null) {
+            value = runCatching { HealthConnectGateway.grantedPermissions(requireContext()).size }.getOrDefault(0)
         }
-        col.addView(permButtonRow(ctx, permButton(ctx, "Grant Health Perms", null) { openHealthConnectPerms() }.also { b -> hcGrantBtn = b }))
+        KvRow("HC perms granted", hcGranted?.let { n ->
+            if (n > 0) "✓ $n / $hcTotal granted" else "◯ 0 / $hcTotal — none granted"
+        } ?: "checking… / $hcTotal")
+        PermButtonRow {
+            PermButton("Grant Health Perms", hcGranted?.let { it >= hcTotal && hcTotal > 0 }) { openHealthConnectPerms() }
+        }
 
         // ── C. Already yours ─────────────────────────────────────────────
-        col.addView(sectionHead(ctx, "SYSTEM AUTO-GRANTED — protection-NORMAL, granted at install"))
-        for ((label, status) in collectAutoGrantedPerms(ctxAny())) row(ctx, col, label, status)
+        SectionHead("SYSTEM AUTO-GRANTED — protection-NORMAL, granted at install")
+        for ((label, status) in collectAutoGrantedPerms(ctxAny())) KvRow(label, status)
 
-        col.addView(small(ctx, "Floating nav — grant 'Display over other apps', then toggle the overlay:"))
-        lateinit var navToggle: TextView
-        navToggle = permButton(ctx, "Floating Nav", null) { toggleFloatingNav(navToggle) }
-        styleNavToggle(navToggle, FloatingNavService.isRunning && FloatingNavService.armed)
-        col.addView(permButtonRow(ctx,
-            permButton(ctx, "Set Display-over-apps", android.provider.Settings.canDrawOverlays(ctxAny())) { openOverlaySettings() },
-            permButton(ctx, "Set Modify-system-settings", android.provider.Settings.System.canWrite(ctxAny())) { openWriteSettings() },
-            navToggle,
-        ))
+        Small("Floating nav — grant 'Display over other apps', then toggle the overlay:")
+        var navRunning by remember { mutableStateOf(FloatingNavService.isRunning && FloatingNavService.armed) }
+        PermButtonRow {
+            PermButton("Set Display-over-apps", android.provider.Settings.canDrawOverlays(ctxAny())) { openOverlaySettings() }
+            PermButton("Set Modify-system-settings", android.provider.Settings.System.canWrite(ctxAny())) { openWriteSettings() }
+            PermButton(if (navRunning) "Stop Floating Nav" else "Start Floating Nav", if (navRunning) true else null, plain = true) {
+                toggleFloatingNav { navRunning = it }
+            }
+        }
 
-        col.addView(small(ctx, "Auto-update — automatic app updates (default ON). Grant 'Install unknown apps' below for no-tap installs:"))
-        row(ctx, col, "Auto-update",
+        Small("Auto-update — automatic app updates (default ON). Grant 'Install unknown apps' below for no-tap installs:")
+        KvRow("Auto-update",
             if (com.diegonmarcos.superapp.updater.AutoUpdatePrefs.enabled(ctxAny())) "✓ ON" else "✗ OFF")
-        row(ctx, col, "Install unknown apps",
+        KvRow("Install unknown apps",
             if (com.diegonmarcos.superapp.updater.AutoUpdatePrefs.canInstallSilently(ctxAny())) "✓ Granted" else "◯ Not granted")
         // "Auto-update is ON but nothing installs quietly" has three different
         // causes and they are indistinguishable from the toggle alone, so the
         // effective state is spelled out rather than left to be guessed.
         val silentCh = com.diegonmarcos.superapp.updater.Fleet.silentChannelName(ctxAny())
-        row(ctx, col, "Unattended installs",
+        KvRow("Unattended installs",
             if (silentCh != null) "✓ Silent via $silentCh (whole fleet per pass)"
             else "◯ Prompts — capped at ${com.diegonmarcos.superapp.updater.BuildConfig.AU_MAX_PER_PASS}/pass")
-        if (silentCh == null) col.addView(small(ctx,
+        if (silentCh == null) Small(
             "No shell channel, so each update opens a confirm dialog and holds a " +
             "PackageInstaller session until you answer — which is why the unattended pass " +
             "only takes a few apps at a time. Open ADB Shell and press Connect (embedded adb, local server or Shizuku" +
             ") and the pass installs the whole fleet with nothing shown. " +
             "'Install unknown apps' alone is not enough: USER_ACTION_NOT_REQUIRED is honoured " +
             "only for apps this one already installed, so anything installed by hand prompts " +
-            "once regardless."))
-        col.addView(permButtonRow(ctx,
-            permButton(ctx, "Auto-update: " + (if (com.diegonmarcos.superapp.updater.AutoUpdatePrefs.enabled(ctxAny())) "ON" else "OFF"),
+            "once regardless.")
+        PermButtonRow {
+            PermButton("Auto-update: " + (if (com.diegonmarcos.superapp.updater.AutoUpdatePrefs.enabled(ctxAny())) "ON" else "OFF"),
                        com.diegonmarcos.superapp.updater.AutoUpdatePrefs.enabled(ctxAny())) {
                 val now = !com.diegonmarcos.superapp.updater.AutoUpdatePrefs.enabled(ctxAny())
                 com.diegonmarcos.superapp.updater.AutoUpdatePrefs.setEnabled(ctxAny(), now)
@@ -259,23 +284,23 @@ class PermissionsFragment : Fragment() {
                 ConstellationWorker.start(ctxAny())
                 Toast.makeText(ctxAny(), "Auto-update " + (if (now) "ON" else "OFF"), Toast.LENGTH_SHORT).show()
                 rebuildFragment()
-            },
-            permButton(ctx, "Set Install-unknown-apps",
-                       com.diegonmarcos.superapp.updater.AutoUpdatePrefs.canInstallSilently(ctxAny())) { openUnknownAppSourcesSettings() },
-        ))
+            }
+            PermButton("Set Install-unknown-apps",
+                       com.diegonmarcos.superapp.updater.AutoUpdatePrefs.canInstallSilently(ctxAny())) { openUnknownAppSourcesSettings() }
+        }
         // Gates the UNATTENDED passes only — "Update now" is the user asking,
         // and that still downloads on mobile data.
-        row(ctx, col, "Update over Wi-Fi only",
+        KvRow("Update over Wi-Fi only",
             if (com.diegonmarcos.superapp.updater.AutoUpdatePrefs.requireUnmetered(ctxAny())) "✓ ON" else "✗ OFF")
-        col.addView(permButtonRow(ctx,
-            permButton(ctx, "Update over Wi-Fi only: " + (if (com.diegonmarcos.superapp.updater.AutoUpdatePrefs.requireUnmetered(ctxAny())) "ON" else "OFF"),
+        PermButtonRow {
+            PermButton("Update over Wi-Fi only: " + (if (com.diegonmarcos.superapp.updater.AutoUpdatePrefs.requireUnmetered(ctxAny())) "ON" else "OFF"),
                        com.diegonmarcos.superapp.updater.AutoUpdatePrefs.requireUnmetered(ctxAny())) {
                 val now = !com.diegonmarcos.superapp.updater.AutoUpdatePrefs.requireUnmetered(ctxAny())
                 com.diegonmarcos.superapp.updater.AutoUpdatePrefs.setRequireUnmetered(ctxAny(), now)
                 Toast.makeText(ctxAny(), "Update over Wi-Fi only " + (if (now) "ON" else "OFF"), Toast.LENGTH_SHORT).show()
                 rebuildFragment()
-            },
-        ))
+            }
+        }
         // ── RECOVERY ────────────────────────────────────────────────────────
         // Everything above this line assumes the update chain works. This is
         // what is left when it does not.
@@ -288,31 +313,30 @@ class PermissionsFragment : Fragment() {
         // a human and a USB cable as the only exit. That does not scale to one
         // fleet, let alone thousands of users.
         val playProtect = com.diegonmarcos.superapp.adbdebug.PackageVerifier.state(ctxAny()).on
-        row(ctx, col, "Play Protect scanning", if (playProtect) "✓ ON" else "◯ OFF")
-        col.addView(small(ctx,
+        KvRow("Play Protect scanning", if (playProtect) "✓ ON" else "◯ OFF")
+        Small(
             "Recovery downloads the published build through the ordinary verified " +
             "source and hands it to Android's own installer. It needs NO pairing, " +
             "NO Shizuku and no special access — only the standard install " +
             "confirmation — which is exactly why it still works when nothing else " +
             "does. Play Protect can delay a sideloaded install with a scan; turning " +
             "it off removes Google's malware check on installs, so leave it ON " +
-            "unless a recovery install is being blocked."))
-        col.addView(permButtonRow(ctx,
-            permButton(ctx, "Recovery: install directly", null) {
+            "unless a recovery install is being blocked.")
+        PermButtonRow {
+            PermButton("Recovery: install directly", null) {
                 startActivity(com.diegonmarcos.superapp.recovery.RecoveryActivity
                     .intent(ctxAny(), null))
-            },
-            permButton(ctx, "Play Protect: " + (if (playProtect) "ON" else "OFF"), playProtect) {
+            }
+            PermButton("Play Protect: " + (if (playProtect) "ON" else "OFF"), playProtect) {
                 togglePlayProtect(!playProtect)
-            },
-        ))
+            }
+        }
 
-        col.addView(actionButton(ctx, "Copy All Perms Status", DARK_VIOLET) {
+        ActionButton("Copy All Perms Status", DARK_VIOLET) {
             copy(ctxAny(), buildAllPermsStatus(ctxAny()))
             Toast.makeText(ctxAny(), "Copied full permission status", Toast.LENGTH_SHORT).show()
-        })
-
-        return scroll
+        }
+        }
     }
 
     // ── Reorg helpers (state + button on ONE row; grant-here vs open-a-page) ──
@@ -460,28 +484,26 @@ class PermissionsFragment : Fragment() {
     }
 
     /** One row: "✓/◯ label  state" on the left, its own button on the right. */
-    private fun permRow(ctx: Context, host: LinearLayout, label: String, granted: Boolean?, state: String, btn: String, onClick: () -> Unit) {
-        val r = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL; setPadding(0, dp(1), 0, dp(1)) }
+    @Composable
+    private fun PermRow(label: String, granted: Boolean?, state: String, btn: String, onClick: () -> Unit) {
+        val ctx = LocalContext.current
         val icon = when (granted) { true -> "✓ "; false -> "◯ "; null -> "? " }
-        r.addView(TextView(ctx).apply {
-            text = icon + label + (if (state.isNotBlank()) "  ·  $state" else "")
-            textSize = 11.5f
+        Row(Modifier.fillMaxWidth().padding(vertical = 1.dp), verticalAlignment = Alignment.CenterVertically) {
             // The app's one definition of healthy / failed / cannot-say. These
             // were the literals StatusLight was built from; pointing at it
             // instead is what stops this page and Configs ▸ Panel ▸ Control
             // drifting into two greens that mean the same thing.
-            setTextColor(com.diegonmarcos.superapp.ui.StatusLight.colour(ctx,
-                com.diegonmarcos.superapp.ui.StatusLight.of(granted)))
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        r.addView(permButton(ctx, btn, granted, onClick).apply {
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-        })
-        host.addView(r)
+            Text(icon + label + (if (state.isNotBlank()) "  ·  $state" else ""), fontSize = 11.5.sp,
+                color = Color(com.diegonmarcos.superapp.ui.StatusLight.colour(ctx, com.diegonmarcos.superapp.ui.StatusLight.of(granted))),
+                modifier = Modifier.weight(1f))
+            PermButton(btn, granted, onClick = onClick, fill = false)
+        }
     }
-    private fun sectionHead(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text; textSize = 11f; setTypeface(null, android.graphics.Typeface.BOLD)
-        setTextColor(0xFF7C3AED.toInt()); setPadding(0, dp(8), 0, dp(1))
+
+    @Composable
+    private fun SectionHead(text: String) {
+        Text(text, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = LocalKitPalette.current.accent,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 1.dp))
     }
 
     /**
@@ -582,97 +604,54 @@ class PermissionsFragment : Fragment() {
 
     // ── UI helpers ────────────────────────────────────────────────────
 
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
-    private fun row(ctx: Context, host: LinearLayout, key: String, value: String): TextView {
-        val r = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(1), 0, dp(1))
+    @Composable
+    private fun KvRow(key: String, value: String) {
+        val p = LocalKitPalette.current
+        val ctx = LocalContext.current
+        Row(Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
+            Text(key, fontSize = 11.sp, color = p.textPrimary.copy(alpha = 0.8f), modifier = Modifier.width(100.dp))
+            Text(value, fontSize = 11.sp, color = p.accent, fontFamily = FontFamily.Monospace,
+                modifier = Modifier.weight(1f).combinedClickable(onClick = {}, onLongClick = {
+                    copy(ctx, "$key: $value")
+                    Toast.makeText(ctx, "Copied $key", Toast.LENGTH_SHORT).show()
+                }))
         }
-        r.addView(TextView(ctx).apply {
-            text = key
-            setTextColor(0xCCFFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            textSize = 11f
-            layoutParams = LinearLayout.LayoutParams(dp(100), LinearLayout.LayoutParams.WRAP_CONTENT)
-        })
-        val v = TextView(ctx).apply {
-            text = value
-            setTextColor(0xFFB794F4.toInt())
-            typeface = Typeface.MONOSPACE
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            textSize = 11f
-            setTextIsSelectable(true)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            setOnLongClickListener {
-                copy(ctx, "$key: $value")
-                Toast.makeText(ctx, "Copied $key", Toast.LENGTH_SHORT).show(); true
-            }
-        }
-        r.addView(v)
-        host.addView(r)
-        return v
     }
 
-    private fun small(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextColor(0x99FFFFFF.toInt())
-        setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-        textSize = 10.5f
-        setPadding(0, dp(1), 0, dp(1))
+    @Composable
+    private fun Small(text: String) {
+        Text(text, fontSize = 10.5.sp, color = LocalKitPalette.current.textPrimary.copy(alpha = 0.6f),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp))
     }
 
-    private fun actionButton(ctx: Context, label: String, bg: Int = 0xFF7C3AED.toInt(), onClick: () -> Unit) = TextView(ctx).apply {
-        text = label
-        setTextColor(0xFFFFFFFF.toInt())
-        setBackgroundColor(bg)
-        gravity = android.view.Gravity.CENTER
-        textSize = 11.5f
-        setPadding(dp(8), dp(5), dp(8), dp(5))
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { topMargin = dp(4) }
-        isClickable = true; isFocusable = true
-        setOnClickListener { onClick() }
+    @Composable
+    private fun ActionButton(label: String, bg: Int = 0xFF7C3AED.toInt(), onClick: () -> Unit) {
+        Text(label, fontSize = 11.5.sp, color = Color.White, textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp).background(Color(bg)).clickable(onClick = onClick)
+                .padding(horizontal = 8.dp, vertical = 5.dp).testTag("perm:action:$label"))
     }
 
-    private fun permButton(ctx: Context, label: String, granted: Boolean?, onClick: () -> Unit) =
-        TextView(ctx).apply {
-            gravity = android.view.Gravity.CENTER
-            textSize = 11f
-            setPadding(dp(6), dp(3), dp(6), dp(3))
-            maxLines = 2
-            minHeight = dp(30)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            isClickable = true; isFocusable = true
-            stylePermButton(this, label, granted)
-            setOnClickListener { onClick() }
-        }
-
-    private fun stylePermButton(tv: TextView, label: String, granted: Boolean?) {
-        tv.text = if (granted == true) "✓ $label" else label
-        tv.setTextColor(if (granted == true) 0xFF9CA3AF.toInt() else 0xFFFFFFFF.toInt())
-        tv.setBackgroundColor(if (granted == true) 0xFF2A2A33.toInt() else 0xFF7C3AED.toInt())
+    /**
+     * A permission button: accent-filled while there is something to do, greyed and ticked once [granted]. [plain] keeps the
+     * label as given (the Floating Nav toggle says Start/Stop itself, a tick on it would read as "granted").
+     */
+    @Composable
+    private fun RowScope.PermButton(
+        label: String, granted: Boolean?, plain: Boolean = false, fill: Boolean = true, onClick: () -> Unit,
+    ) {
+        val done = granted == true
+        Text(if (done && !plain) "✓ $label" else label, fontSize = 11.sp, maxLines = 2, textAlign = TextAlign.Center,
+            color = if (done) Color(0xFF9CA3AF) else Color.White,
+            modifier = (if (fill) Modifier.weight(1f) else Modifier)
+                .padding(horizontal = 1.5.dp)
+                .heightIn(min = 30.dp).background(if (done) Color(0xFF2A2A33) else Color(0xFF7C3AED))
+                .clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 3.dp)
+                .wrapContentHeight(Alignment.CenterVertically).testTag("perm:button:$label"))
     }
 
-    private fun styleNavToggle(tv: TextView, running: Boolean) {
-        tv.text = if (running) "Stop Floating Nav" else "Start Floating Nav"
-        tv.setTextColor(if (running) 0xFF9CA3AF.toInt() else 0xFFFFFFFF.toInt())
-        tv.setBackgroundColor(if (running) 0xFF2A2A33.toInt() else 0xFF7C3AED.toInt())
-    }
-
-    private fun permButtonRow(ctx: Context, vararg btns: View): View {
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(3) }
-        }
-        for ((i, b) in btns.withIndex()) {
-            (b.layoutParams as? LinearLayout.LayoutParams)?.leftMargin = if (i > 0) dp(3) else 0
-            row.addView(b)
-        }
-        return row
+    @Composable
+    private fun PermButtonRow(content: @Composable RowScope.() -> Unit) {
+        Row(Modifier.fillMaxWidth().padding(top = 3.dp), content = content)
     }
 
     private fun copy(ctx: Context, v: String) {
@@ -814,19 +793,19 @@ class PermissionsFragment : Fragment() {
         }
     }
 
-    private fun toggleFloatingNav(tv: TextView) {
+    private fun toggleFloatingNav(setRunning: (Boolean) -> Unit) {
         // #775: the button's state is `armed`; a running service may be only
         // the badge host, and stopping it would take the badges with it.
         if (FloatingNavService.isRunning && FloatingNavService.armed) {
             FloatingNavService.setEnabled(ctxAny(), false)
             Toast.makeText(ctxAny(), "Floating nav stopped", Toast.LENGTH_SHORT).show()
-            styleNavToggle(tv, running = false)
+            setRunning(false)
         } else {
             val ok = FloatingNavService.setEnabled(ctxAny(), true)
             Toast.makeText(ctxAny(),
                 if (ok) "Floating nav started" else "Grant 'Display over other apps' first",
                 Toast.LENGTH_SHORT).show()
-            styleNavToggle(tv, running = ok)
+            setRunning(ok)
         }
     }
 

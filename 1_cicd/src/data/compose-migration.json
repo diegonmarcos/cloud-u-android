@@ -623,12 +623,13 @@
         "Robolectric tests BottomNavSelectedPillTest / ShellBottomNavCollapseTest inflate activity_main"
       ],
       "baseline": {
-        "view_screens": 3,
+        "view_screens": 2,
         "layout_xml": 5,
-        "view_ui_files": 19,
+        "view_ui_files": 18,
         "custom_views": 8
       },
       "done": [
+        "Configs ▸ Permissions page in Compose (PermissionsFragment: grant-here, system pages, device tuning, auto-update, recovery; PermissionsComposeTest; testers remapped)",
         "Configs ▸ Launcher-edge/One-hand page in Compose (OneHandFragment: stars, edge menu, floating menu, home gestures; ConfigDropdown/ConfigSwitchRow widgets that write only on a tap; testers remapped, ConfigWidgetsComposeTest)",
         "configs/ControlFragment (Launcher ▸ Controls switchboard: tile = composable, readings are state per control id read by every tile of it, the ticker is a LaunchedEffect under repeatOnLifecycle(RESUMED), tap/hold are one combinedClickable) and network/DnsFragment (DnsModel + a Compose page over the shared settings/ConfigWidgets: heading, caption, read-out, button, radio and check rows); test-configs-panel-control and test-fleet-dns read the new shape; #773",
         "devcontrol/DevControlFragment (Configs ▸ About, ~2700 lines of hand-built Views): KitComposeFragment over a LazyColumn; the page is declared once as AboutPage blocks (AboutModel: AboutSection bodies that run only when reached, asyncSection probes on Dispatchers.IO under a timeout, copy buffers assembled in declared order), drawn by AboutUi (rows with long-press copy, accordions, Index via IndexTileGrid) with the logcat viewer in AboutLogcat and number wording in AboutFormat; the View IndexTiles.grid and StackAnchors use are gone; configs/AdbShellFragment is a KitComposeFragment under the dense theme; test-about-lazy-sections, test-network-firewall-page, test-onehand-star-actions read the new shape; AboutModelTest, AboutComposeTest, IndexTileGridComposeTest, #773",

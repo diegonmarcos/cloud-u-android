@@ -123,7 +123,7 @@ fi
 # T7
 P="$(code "$PAGE")"
 if grep -q 'DeviceTuning.entries()' <<<"$P" && grep -q 'DeviceTuning.records(' <<<"$P" \
-   && grep -qE 'row\(ctx, col, e\.title' <<<"$P" && grep -q 'small(ctx, e.why)' <<<"$P"; then
+   && grep -qE 'KvRow\(e\.title' <<<"$P" && grep -q 'Small(e.why)' <<<"$P"; then
   ok "T7 the Permissions page renders every declared entry: title row, state light, why"
 else
   bad "T7 the Permissions page does not render the declared entries"
