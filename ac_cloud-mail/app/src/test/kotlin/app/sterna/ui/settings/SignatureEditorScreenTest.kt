@@ -93,7 +93,7 @@ class SignatureEditorScreenTest {
 
     @Test fun theValidationPanelFollowsTheSource() {
         show(SignatureEditorState("", "Work", false))
-        compose.onNodeWithTag("sig-validation-summary").assertTextContains("0 errors", substring = true)
+        compose.onNodeWithTag("sig-validation-summary").assertTextContains("No problems found", substring = true)
         compose.onNodeWithTag("sig-source").performTextInput("<div>")
         compose.waitForIdle()
         compose.onNodeWithTag("sig-validation-summary").assertTextContains("1 errors", substring = true)

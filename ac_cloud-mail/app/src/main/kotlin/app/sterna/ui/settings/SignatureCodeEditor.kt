@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -71,8 +72,9 @@ internal fun codeStyle(): TextStyle = MaterialTheme.typography.bodySmall.copy(fo
  * The monospace source pane: line numbers with error / warning markers in the gutter, HTML syntax colours,
  * and the key handling a code editor owes (Tab = two spaces, Shift+Tab, Ctrl+Z / Y / F).
  *
- * No soft wrap: one logical line is one visual line, which is what keeps the gutter's numbers level
- * with the text without measuring the field. The pane scrolls both ways.
+ * No wrapping (the field sits in a horizontal scroll, so its width is unbounded): one logical line is one
+ * visual line, which is what keeps the gutter's numbers level with the text without measuring the field.
+ * The pane scrolls both ways.
  */
 @Composable
 internal fun SignatureCodeEditor(
@@ -135,8 +137,8 @@ internal fun SignatureCodeEditor(
                 textStyle = textStyle,
                 cursorBrush = SolidColor(scheme.primary),
                 visualTransformation = transformation,
-                softWrap = false,
                 modifier = Modifier
+                    .widthIn(min = MailMetrics.s256)
                     .padding(horizontal = MailMetrics.s8, vertical = MailMetrics.s10)
                     .focusRequester(focus)
                     .testTag("sig-source")
