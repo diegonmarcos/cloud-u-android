@@ -1,0 +1,26 @@
+// :sheet — Cloud Calc's Sheet page (a LibreOffice-Calc-style spreadsheet for basic use) as a
+// plain-JVM module: the formula engine (parser, evaluator, functions, errors), the workbook
+// model (sheets, dependency graph + recalculation, insert/delete with reference adjustment,
+// formats, clipboard TSV, undo/redo), CSV and the workbook's JSON file format. No Android here,
+// so its suite runs in milliseconds. The grid, the files and the AI tools are app/…/ui/Sheet*.kt.
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // Android's own org.json at runtime; the real library for the JVM suite.
+    compileOnly 'org.json:json:20240303'
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'junit:junit:4.13.2'
+}
