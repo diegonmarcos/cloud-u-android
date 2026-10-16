@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import com.diegonmarcos.clouddrive.ui.denseTypography
 import com.diegonmarcos.cloudlib.fileeditor.FileEditorScreen
 import com.diegonmarcos.cloudlib.gitsync.GitSyncScreen
 import com.diegonmarcos.cloudlib.mounts.MountSpec
@@ -53,7 +54,7 @@ class EngineActivity : ComponentActivity() {
         }
         val close: () -> Unit = { finish() }
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
+            MaterialTheme(colorScheme = darkColorScheme(), typography = denseTypography()) {
                 EngineRoute(engine, target, cloneUrl, openFile, close)
             }
         }

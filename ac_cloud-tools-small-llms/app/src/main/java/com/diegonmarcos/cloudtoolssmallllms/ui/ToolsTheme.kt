@@ -1,12 +1,16 @@
 package com.diegonmarcos.cloudtoolssmallllms.ui
 
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -31,8 +35,14 @@ fun ToolsTheme(content: @Composable () -> Unit) {
         outline = col(R.color.tools_outline),
         error = col(R.color.tools_error),
     )
-    MaterialTheme(colorScheme = scheme) {
-        CompositionLocalProvider(LocalContentColor provides scheme.onBackground, content = content)
+    // Dense, like the fleet's kit: MaterialTheme's default bodyLarge forces a fixed 24.sp line + 0.5.sp tracking on
+    // every Text and Material controls get a 48dp floor; the stock scale keeps its sizes and weights only.
+    MaterialTheme(colorScheme = scheme, typography = Typography().dense()) {
+        CompositionLocalProvider(
+            LocalContentColor provides scheme.onBackground,
+            LocalMinimumInteractiveComponentSize provides ToolsMetrics.chipHeight,
+            content = content,
+        )
     }
 }
 
@@ -48,3 +58,14 @@ object ToolsMetrics {
     val chipHeight: Dp = 26.dp
     val bubbleMax: Dp = 340.dp
 }
+
+private fun TextStyle.noFixedLine(): TextStyle =
+    copy(lineHeight = TextUnit.Unspecified, letterSpacing = TextUnit.Unspecified, lineHeightStyle = null)
+
+private fun Typography.dense(): Typography = copy(
+    displayLarge = displayLarge.noFixedLine(), displayMedium = displayMedium.noFixedLine(), displaySmall = displaySmall.noFixedLine(),
+    headlineLarge = headlineLarge.noFixedLine(), headlineMedium = headlineMedium.noFixedLine(), headlineSmall = headlineSmall.noFixedLine(),
+    titleLarge = titleLarge.noFixedLine(), titleMedium = titleMedium.noFixedLine(), titleSmall = titleSmall.noFixedLine(),
+    bodyLarge = bodyLarge.noFixedLine(), bodyMedium = bodyMedium.noFixedLine(), bodySmall = bodySmall.noFixedLine(),
+    labelLarge = labelLarge.noFixedLine(), labelMedium = labelMedium.noFixedLine(), labelSmall = labelSmall.noFixedLine(),
+)

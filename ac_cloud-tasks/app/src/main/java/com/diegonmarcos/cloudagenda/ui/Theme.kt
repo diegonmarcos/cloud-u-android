@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.background
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -15,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.diegonmarcos.cloudagenda.data.ThemeMode
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitDenseMaterial
 import com.diegonmarcos.superapp.uikit.KitPalette
 
 /** Whether the app is drawing dark right now (the chrome reads it for the nav strips and the system-bar glyphs). */
@@ -82,7 +82,7 @@ fun TasksTheme(mode: ThemeMode, systemDark: Boolean = isSystemInDarkTheme(), con
     val dark = mode.isDark(systemDark)
     val palette = TasksPalettes.of(dark)
     CloudKitTheme(palette) {
-        MaterialTheme(colorScheme = materialSchemeFor(palette, dark)) {
+        KitDenseMaterial(materialSchemeFor(palette, dark)) {
             CompositionLocalProvider(LocalDarkTheme provides dark) {
                 // The kit leaves the page background transparent; the app paints it so a dark window never shows a light one.
                 Box(Modifier.fillMaxSize().background(palette.surface)) { content() }

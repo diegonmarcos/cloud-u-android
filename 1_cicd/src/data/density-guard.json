@@ -1,5 +1,5 @@
 {
-  "_doc": "cloud-android-density-guard policy: the fleet's Compose hosts are dense and own window insets ONCE. Everything the guard knows is here. scan_roots: the apps and libs the Compose conversion reached; a legacy Compose app with its own Typography (Writer, Gallery, Drive, Search) is outside. ac_cloud-store/web is the Kotlin/Wasm page (own theme). MinimalistBlackFragment is the launcher home: no host above it, so it is the one owner of its insets.",
+  "_doc": "cloud-android-density-guard policy: the fleet's Compose hosts are dense and own window insets ONCE. Everything the guard knows is here. scan_roots: every Compose app and lib of the fleet except the three skip_dirs below (Matrix, Vault, Notes: not on the dense Material theme, see skip_dirs). Apps with their own Typography (Writer, Gallery, Drive, Search, Calc, Tools) are in scope: they keep their own scale but must drop the fixed lineHeight / letterSpacing. ac_cloud-store/web is the Kotlin/Wasm page (CloudKitTheme). rule_allow for scaffold_without_insets / nested_safe_drawing lists the STANDALONE Compose apps (Writer, Gallery, Drive, Search): each owns its Activity window and draws its own Scaffold / system-bar padding with no FleetChrome / BottomNavHost host above it, so those two host-stacking rules do not describe them (the typography and theme rules still do). MinimalistBlackFragment is the launcher home: no host above it, so it is the one owner of its insets.",
   "owner": "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt",
   "owner_needles": [
     "fun kitTypography",
@@ -16,8 +16,7 @@
     "/node_modules/",
     "/ac_cloud-matrix/",
     "/ac_cloud-vault/",
-    "/ac_cloud-notes/",
-    "/ac_cloud-store/web/"
+    "/ac_cloud-notes/"
   ],
   "theme_exempt": [
     "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt"
@@ -31,6 +30,10 @@
       "why": "Scaffold applies WindowInsets.systemBars to its content by default; inside a host that already clears the bars (FleetChrome + AppTopBarScaffold / BottomNavHost) that is a second copy of the same padding. Pass contentWindowInsets = WindowInsets(0) or the one slice you own.",
       "pattern": "\\bScaffold\\((?![^{]*contentWindowInsets)"
     },
+    "stock_typography": {
+      "why": "A bare Typography() keeps Material's fixed lineHeight (bodyLarge 24.sp) and 0.5.sp letterSpacing, which every dense Text inherits: the 'huge padding'. Use kitTypography(), or take Typography() through a .dense*()/copy that sets lineHeight and letterSpacing to TextUnit.Unspecified.",
+      "pattern": "(?<![\\w.])Typography\\(\\)(?!\\s*\\.(dense\\w*|copy)\\b)"
+    },
     "nested_safe_drawing": {
       "why": "safeDrawing / systemBars padding is the window host's job exactly once (AppTopBarScaffold's host takes statusBarsPadding; BottomNavHost clears the bottom). A page that takes it again stacks both.",
       "pattern": "\\.(safeDrawingPadding|systemBarsPadding|safeContentPadding)\\(\\)|windowInsetsPadding\\(\\s*WindowInsets\\.(safeDrawing|systemBars|safeContent)\\b"
@@ -38,15 +41,26 @@
   },
   "rule_allow": {
     "nested_safe_drawing": [
+      "ac_cloud-writer/",
+      "ac_cloud-gallery/",
+      "ac_cloud-drive/",
+      "ac_cloud-search/",
       "ab_cloud-libs-shared/libs/bottomnav/",
       "ab_cloud-libs-shared/libs/keyboard/",
       "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/themes/minimalist/MinimalistBlackFragment.kt"
     ],
     "scaffold_without_insets": [
+      "ac_cloud-writer/",
+      "ac_cloud-gallery/",
+      "ac_cloud-drive/",
+      "ac_cloud-search/",
       "ab_cloud-libs-shared/libs/keyboard/"
     ],
     "bare_material_theme": [
       "ab_cloud-libs-shared/libs/keyboard/"
+    ],
+    "stock_typography": [
+      "ab_cloud-libs-shared/libs/ui-kit/"
     ]
   },
   "scan_roots": [
@@ -56,6 +70,13 @@
     "ab_cloud-libs-shared/libs/ai",
     "ab_cloud-libs-shared/libs/keyboard",
     "ac_cloud-store",
+    "ac_cloud-tasks",
+    "ac_cloud-calc",
+    "ac_cloud-tools-small-llms",
+    "ac_cloud-writer",
+    "ac_cloud-gallery",
+    "ac_cloud-drive",
+    "ac_cloud-search",
     "aa_cloud-superapp"
   ]
 }

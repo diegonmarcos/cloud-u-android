@@ -1,6 +1,7 @@
 package com.diegonmarcos.clouddrive.ui
 
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -8,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.isSpecified
 import com.diegonmarcos.clouddrive.R
 
@@ -38,22 +40,28 @@ import com.diegonmarcos.clouddrive.R
  * multiplied ONCE by DriveMetrics.textScale, so `MaterialTheme.typography.*` is already
  * dense everywhere and re-tuning the app's type is one number in DriveMetrics.
  */
-/** One style, scaled: the size and its line height together, so leading never outgrows the glyph. */
+/**
+ * One style, scaled, with NO fixed line or tracking: Material's roles carry a fixed lineHeight (bodyLarge 24.sp) and
+ * letterSpacing that a dense Text inherits, so a small row grows ~2.5x. The font's own line height leaves leading
+ * proportional to the glyph (what a View TextView did).
+ */
 private fun TextStyle.dense(scale: Float = DriveMetrics.textScale) = copy(
     fontSize = if (fontSize.isSpecified) fontSize * scale else fontSize,
-    lineHeight = if (lineHeight.isSpecified) lineHeight * scale else lineHeight,
+    lineHeight = TextUnit.Unspecified,
+    letterSpacing = TextUnit.Unspecified,
+    lineHeightStyle = null,
 )
 
 /** The whole Material scale at DriveMetrics.textScale — the app's ONE type declaration. */
-private fun denseTypography(): Typography = Typography().let { t ->
-    Typography(
-        displayLarge = t.displayLarge.dense(), displayMedium = t.displayMedium.dense(), displaySmall = t.displaySmall.dense(),
-        headlineLarge = t.headlineLarge.dense(), headlineMedium = t.headlineMedium.dense(), headlineSmall = t.headlineSmall.dense(),
-        titleLarge = t.titleLarge.dense(), titleMedium = t.titleMedium.dense(), titleSmall = t.titleSmall.dense(),
-        bodyLarge = t.bodyLarge.dense(), bodyMedium = t.bodyMedium.dense(), bodySmall = t.bodySmall.dense(),
-        labelLarge = t.labelLarge.dense(), labelMedium = t.labelMedium.dense(), labelSmall = t.labelSmall.dense(),
-    )
-}
+internal fun denseTypography(): Typography = Typography().denseScale()
+
+private fun Typography.denseScale(): Typography = copy(
+    displayLarge = displayLarge.dense(), displayMedium = displayMedium.dense(), displaySmall = displaySmall.dense(),
+    headlineLarge = headlineLarge.dense(), headlineMedium = headlineMedium.dense(), headlineSmall = headlineSmall.dense(),
+    titleLarge = titleLarge.dense(), titleMedium = titleMedium.dense(), titleSmall = titleSmall.dense(),
+    bodyLarge = bodyLarge.dense(), bodyMedium = bodyMedium.dense(), bodySmall = bodySmall.dense(),
+    labelLarge = labelLarge.dense(), labelMedium = labelMedium.dense(), labelSmall = labelSmall.dense(),
+)
 
 @Composable
 fun DriveTheme(content: @Composable () -> Unit) {
@@ -98,6 +106,10 @@ fun DriveTheme(content: @Composable () -> Unit) {
         onErrorContainer = off,
     )
     MaterialTheme(colorScheme = scheme, typography = denseTypography()) {
-        CompositionLocalProvider(LocalContentColor provides text, content = content)
+        CompositionLocalProvider(
+            LocalContentColor provides text,
+            LocalMinimumInteractiveComponentSize provides DriveMetrics.tap,
+            content = content,
+        )
     }
 }

@@ -38,8 +38,15 @@ mutate() {  # name file-to-append text
 fixture "$WORK/clean"; expect "clean fleet passes" 0 "$WORK/clean"
 mutate bare-material-theme "$APP/Main.kt" 'fun X() { MaterialTheme(colorScheme = darkColorScheme()) { } }'
 mutate scaffold-without-insets "$APP/Main.kt" 'fun Y() { Scaffold(topBar = { }) { } }'
+mutate stock-typography "$APP/Main.kt" 'val T = Typography()'
 mutate nested-system-bars "$APP/Main.kt" 'fun Z() { Box(Modifier.systemBarsPadding()) }'
 mutate nested-safe-drawing-insets "$APP/Main.kt" 'fun Z2() { Box(Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) }'
+d="$WORK/dense-typography"; fixture "$d"; echo 'val T = Typography().dense()' >> "$d/$APP/Main.kt"; expect "dense Typography passes" 0 "$d"
+# the apps with their own theme are scanned
+for app in ac_cloud-tasks ac_cloud-calc ac_cloud-tools-small-llms ac_cloud-writer ac_cloud-gallery ac_cloud-drive ac_cloud-search; do
+  d="$WORK/root-$app"; fixture "$d"; mkdir -p "$d/$app/app/src/main/java"
+  echo 'fun X() { MaterialTheme(colorScheme = c) { } }' > "$d/$app/app/src/main/java/T.kt"; expect "$app is scanned" 1 "$d"
+done
 # a comment naming the defect is not a defect
 d="$WORK/comment"; fixture "$d"; echo '// MaterialTheme(colorScheme = x) and Scaffold( are banned' >> "$d/$APP/Main.kt"; expect "comments are ignored" 0 "$d"
 # a test may name them

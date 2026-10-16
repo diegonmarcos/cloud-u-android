@@ -729,7 +729,7 @@ private fun PhonePreview(
     val currentScheme = MaterialTheme.colorScheme
     val scheme = colorScheme ?: currentScheme
 
-    MaterialTheme(colorScheme = scheme) {
+    MaterialTheme(colorScheme = scheme, typography = MaterialTheme.typography) {
         Surface(
             modifier = modifier,
             shape = RoundedCornerShape(28.dp),

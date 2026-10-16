@@ -1,6 +1,7 @@
 package com.diegonmarcos.cloudsearch.ui
 
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -89,7 +90,13 @@ fun SearchTheme(dark: Boolean, content: @Composable () -> Unit) {
         error = g.negative, surfaceContainer = g.menu, surfaceContainerHigh = g.menu, surfaceContainerLow = g.menu,
     )
     MaterialTheme(colorScheme = scheme, typography = Type.material) {
-        CompositionLocalProvider(LocalGlass provides g, LocalContentColor provides g.text, content = content)
+        CompositionLocalProvider(
+            LocalGlass provides g,
+            LocalContentColor provides g.text,
+            // Dense floor for Material's own clickable parts (48.dp by default); the app's chrome sets its own sizes.
+            LocalMinimumInteractiveComponentSize provides Metrics.touchFloor,
+            content = content,
+        )
     }
 }
 
@@ -152,6 +159,8 @@ object Metrics {
     val engineShadow: Dp = 6.dp
     val chatBarRadius: Dp = 28.dp
     val sendButton: Dp = 40.dp
+    /** Floor of Material's own clickable parts (switches, dropdown rows): dense, not the 48.dp default. */
+    val touchFloor: Dp = 36.dp
     val bubbleRadius: Dp = 24.dp
     val bubbleTail: Dp = 4.dp
     val bubblePadH: Dp = 16.dp

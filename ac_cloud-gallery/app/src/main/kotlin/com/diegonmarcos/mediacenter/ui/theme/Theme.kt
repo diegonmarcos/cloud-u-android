@@ -12,6 +12,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.diegonmarcos.mediacenter.core.Settings
 import com.diegonmarcos.mediacenter.core.Settings.Misc.rememberForceTheme
 import com.diegonmarcos.mediacenter.core.Settings.Misc.rememberIsAmoledMode
@@ -152,7 +154,9 @@ fun GalleryTheme(
         typography = if (useSystemFont) SystemTypography else Typography
     ) {
         CompositionLocalProvider(
-            value = LocalOverscrollFactory provides null,
+            LocalOverscrollFactory provides null,
+            // Dense touch floor for Material's own clickable parts (48.dp by default).
+            LocalMinimumInteractiveComponentSize provides 36.dp,
             content = content
         )
     }

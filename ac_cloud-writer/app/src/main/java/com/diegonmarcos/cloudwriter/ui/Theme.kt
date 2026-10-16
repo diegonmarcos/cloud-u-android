@@ -5,8 +5,7 @@ import android.content.Context
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Typography
+import com.diegonmarcos.superapp.uikit.KitDenseMaterial
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -182,12 +181,8 @@ fun CloudWriterTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        // The stock Material 3 type scale, unmodified and on purpose. The screens it replaces set
-        // 20f / 16f / 15f / 14f / 13f / 12f by hand with no relationship between them; the default
-        // scale is a designed set of relationships, and taking it is the enhancement.
-        typography = Typography(),
-        content = content,
-    )
+    // The stock Material 3 sizes and weights (the designed set of relationships), through the kit's dense
+    // wrapper: no fixed 24.sp line / 0.5.sp tracking on every Text and a dense touch floor, so a 12sp row is
+    // not 24sp tall.
+    KitDenseMaterial(colorScheme, content)
 }
