@@ -47,6 +47,7 @@ on:
       # data manifests and this workflow file. fleet-refresh.yml (schedule
       # only) ships the app for a moved static lib or cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-calc.yml"
+      #   input: "ab_cloud-libs-shared/libs/ai/**"
       #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/databackend/**"
@@ -54,6 +55,7 @@ on:
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       #   input: "ab_cloud-libs-shared/libs/ml-l-image/**"
       #   input: "ab_cloud-libs-shared/libs/ml-l-sound/**"
+      #   input: "ab_cloud-libs-shared/libs/model-catalogue/**"
       #   input: "ab_cloud-libs-shared/libs/text-tools/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/decisions/**"
