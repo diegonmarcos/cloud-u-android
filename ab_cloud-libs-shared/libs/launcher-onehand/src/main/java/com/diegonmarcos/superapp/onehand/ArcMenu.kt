@@ -103,7 +103,7 @@ object ArcMenu {
         private val items: List<Item>,
         private val host: Host,
         private val dismiss: (View) -> Unit,
-    ) : View(ctx), Session {
+    ) : OverlayCanvasView(ctx), Session {
 
         private val dm  = resources.displayMetrics
         private fun dp(v: Float) = v * dm.density
@@ -207,7 +207,7 @@ object ArcMenu {
                         slots.indices.minByOrNull { i ->
                             hypot(fx - slots[i].x, fy - slots[i].y)
                         } ?: -1
-                    invalidate()
+                    redraw()
                 }
                 MotionEvent.ACTION_UP -> {
                     val sel = active; dismiss(this)
@@ -221,8 +221,8 @@ object ArcMenu {
             feed(e.x, e.y, e.actionMasked); return true
         }
 
-        override fun onDraw(c: Canvas) {
-            c.drawRect(0f, 0f, width.toFloat(), height.toFloat(), scrim)
+        override fun paint(c: Canvas, w: Float, h: Float) {
+            c.drawRect(0f, 0f, w, h, scrim)
             slots.forEachIndexed { i, s ->
                 // Background disc
                 c.drawCircle(s.x, s.y, s.nr, if (i == active) hot else disc)

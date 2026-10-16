@@ -196,7 +196,7 @@ object CircularMenu {
         val cx: Float,
         val cy: Float,
         val dismiss: (View) -> Unit,
-    ) : View(ctx), Session {
+    ) : OverlayCanvasView(ctx), Session {
 
         companion object {
             private const val TARGET_BACK = "__back__"
@@ -372,7 +372,7 @@ object CircularMenu {
         override fun feed(x: Float, y: Float, action: Int) {
             when (action) {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                    fx = x; fy = y; recompute(); invalidate()
+                    fx = x; fy = y; recompute(); redraw()
                 }
                 MotionEvent.ACTION_UP -> {
                     val lv = stack.last(); val sel = active
@@ -380,7 +380,7 @@ object CircularMenu {
                     if (target == TARGET_BACK) {
                         // pop back to parent level, keep menu open
                         if (stack.size > 1) stack.removeAt(stack.size - 1)
-                        active = -1; invalidate()
+                        active = -1; redraw()
                     } else {
                         dismiss(this)
                         if (target != null) host.navigate(target)
@@ -393,8 +393,8 @@ object CircularMenu {
         // If the finger DOES land on the overlay directly, handle it too.
         override fun onTouchEvent(e: MotionEvent): Boolean { feed(e.x, e.y, e.actionMasked); return true }
 
-        override fun onDraw(c: Canvas) {
-            c.drawRect(0f, 0f, width.toFloat(), height.toFloat(), scrim)
+        override fun paint(c: Canvas, w: Float, h: Float) {
+            c.drawRect(0f, 0f, w, h, scrim)
             val lv = stack.last()
             val slots = layout(lv)
             // arrow from the current center toward the finger (clamped to inner ring)

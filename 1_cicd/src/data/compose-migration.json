@@ -467,19 +467,15 @@
       "id": "libs:launcher-onehand",
       "scope": "in",
       "wave": 1,
-      "ui": "views",
+      "ui": "mixed",
       "size": "M",
       "screens_left": [
-        "ArcView",
-        "MenuView",
-        "GesturePreviewView",
-        "RadialMenuView (custom)",
-        "CanopusStar/CentaurusStar/SiriusStar"
+        "CanopusStar/CentaurusStar/SiriusStar/PolarisStar (touch forwarders bound to ShellActivity's TextView glyphs; they go with the SuperApp shell)"
       ],
       "consumers": [
         "superapp"
       ],
-      "notes": "Gesture canvases: port each onDraw to a Canvas composable + pointerInput. Behaviour first, pixels second.",
+      "notes": "The four gesture canvases (ArcMenu.ArcView, CircularMenu.MenuView, GesturePreviewView, RadialMenuView) are Compose (2026-10-16): each is an OverlayCanvasView (libs:ui-kit KitImeComposeView, which gives WindowManager and decor roots their view-tree owners) painting its old onDraw on a Compose Canvas; same feed/begin/update/open/move/close contracts. The edge handle strips stay plain Views (an invisible touch target with a gesture-exclusion rect). Left: the stars findViewById the shell content frame.",
       "risks": [
         "androidTest SiriusStarTest and test-arc-menu-section-nav.sh (quarantined) pin the star routing"
       ],
@@ -487,7 +483,7 @@
         "view_screens": 0,
         "layout_xml": 0,
         "view_ui_files": 3,
-        "custom_views": 4
+        "custom_views": 0
       }
     },
     {

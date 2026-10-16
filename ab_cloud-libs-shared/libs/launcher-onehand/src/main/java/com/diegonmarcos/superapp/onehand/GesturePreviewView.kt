@@ -24,7 +24,7 @@ import kotlin.math.sin
  * Multi-level / sub-arc behaviour belongs to the Canopus circle (RadialMenuView).
  * This view has no L2 / morphing / transition logic.
  */
-class GesturePreviewView(ctx: Context) : View(ctx) {
+internal class GesturePreviewView(ctx: Context) : OverlayCanvasView(ctx) {
 
     data class Option(val key: String, val label: String, val icon: Bitmap?)
 
@@ -62,31 +62,28 @@ class GesturePreviewView(ctx: Context) : View(ctx) {
         color = Color.argb(220, 100, 160, 255); style = Paint.Style.STROKE; strokeWidth = 2 * dp
     }
 
-    private val frame = object : Runnable {
-        override fun run() { if (active) { invalidate(); postDelayed(this, 16) } }
-    }
-
     // ── public API ─────────────────────────────────────────────────────────────
 
     fun begin(opts: List<Option>, edge: OneHandConfig.Edge) {
         this.opts = opts; this.edge = edge; active = true; selKey = null; swipeDist = 0f
-        postDelayed(frame, 0)
+        redraw()
     }
 
     fun update(startX: Float, startY: Float, curX: Float, curY: Float, key: String?, progress: Float) {
         this.startX = startX; this.startY = startY
         this.curX   = curX;   this.curY   = curY
         this.selKey = key;    this.swipeDist = progress
+        redraw()
     }
 
-    fun end() { active = false; removeCallbacks(frame); invalidate() }
+    fun end() { active = false; redraw() }
 
     // ── drawing ────────────────────────────────────────────────────────────────
 
-    override fun onDraw(canvas: Canvas) {
+    override fun paint(canvas: Canvas, w: Float, h: Float) {
         if (!active || opts.isEmpty()) return
 
-        val sw = width.toFloat(); val sh = height.toFloat()
+        val sw = w; val sh = h
         val n  = opts.size
 
         // ── L1 geometry: tight arc centred at swipe start ──

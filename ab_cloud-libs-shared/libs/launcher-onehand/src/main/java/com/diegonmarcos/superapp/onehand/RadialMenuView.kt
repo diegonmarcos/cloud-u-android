@@ -17,7 +17,7 @@ import kotlin.math.sin
  * never steals input). Icons are laid in a ring around the invocation point; an
  * arrow follows the finger and the nearest item highlights, easing its scale.
  */
-class RadialMenuView(ctx: Context) : View(ctx) {
+internal class RadialMenuView(ctx: Context) : OverlayCanvasView(ctx) {
 
     class Item(val label: String, val icon: android.graphics.Bitmap?) {
         var x = 0f; var y = 0f; var hi = 0f
@@ -43,8 +43,6 @@ class RadialMenuView(ctx: Context) : View(ctx) {
     }
     private val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent }
 
-    init { setLayerType(LAYER_TYPE_SOFTWARE, null) }
-
     private val frame = object : Runnable {
         override fun run() {
             val now = System.nanoTime()
@@ -52,7 +50,7 @@ class RadialMenuView(ctx: Context) : View(ctx) {
             lastFrameNs = now
             val k = (dt * 14f).coerceIn(0f, 1f)
             items.forEachIndexed { i, it -> it.hi += ((if (i == activeIndex) 1f else 0f) - it.hi) * k }
-            invalidate()
+            redraw()
             if (active) postOnAnimation(this)
         }
     }
@@ -81,9 +79,9 @@ class RadialMenuView(ctx: Context) : View(ctx) {
         return activeIndex
     }
 
-    fun close() { active = false; removeCallbacks(frame); invalidate() }
+    fun close() { active = false; removeCallbacks(frame); redraw() }
 
-    override fun onDraw(canvas: Canvas) {
+    override fun paint(canvas: Canvas, w: Float, h: Float) {
         if (!active) return
         if (hypot(fx - cx, fy - cy) > 8f * d) canvas.drawLine(cx, cy, fx, fy, line)
         canvas.drawCircle(cx, cy, 6f * d, dot)

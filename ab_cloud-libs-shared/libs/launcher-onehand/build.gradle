@@ -1,6 +1,9 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
+    // 2026-10-16 owner decision: all apps must be Compose. The gesture overlays are Compose canvases;
+    // the compiler is resolved from the consuming app's root build (declared `apply false` there).
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 // ── One-Hand config ─────────────────────────────────────────────────
@@ -155,6 +158,7 @@ android {
     }
     buildFeatures {
         buildConfig = true
+        compose = true
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -172,6 +176,12 @@ dependencies {
     // module graph (onehand -> datamanager -> core, no cycle).
     implementation project(':libs:datamanager')
     implementation 'androidx.core:core-ktx:1.13.1'
+    api project(':libs:ui-kit')   // KitImeComposeView: the overlays' Compose base (owners for WindowManager roots)
+    // The overlays are Compose canvases; the BOM is the one every Compose module in the fleet resolves.
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
 
     // JVM unit test for the PURE SwipeClassifier (no Android deps).
     testImplementation 'junit:junit:4.13.2'
