@@ -800,10 +800,13 @@
         "app/src/main/kotlin/org/fossify/phone/helpers/CallProviders.kt",
         "app/src/main/kotlin/org/fossify/phone/helpers/ScreeningLogStore.kt",
         "app/src/main/kotlin/org/fossify/phone/extensions/CallProviderExt.kt",
-        "app/src/main/kotlin/org/fossify/phone/extensions/DialerKitPalette.kt"
+        "app/src/main/kotlin/org/fossify/phone/extensions/DialerKitPalette.kt",
+        "app/src/main/kotlin/org/fossify/phone/activities/AboutActivity.kt",
+        "app/src/main/kotlin/org/fossify/phone/nav",
+        "app/src/main/kotlin/org/fossify/phone/sms"
       ],
       "screens_left": [],
-      "notes": "Fossify Phone fork. Only OUR additions are counted (roots), and they are all Compose (2026-10-16): ScreeningLogActivity (SimpleActivity hosting a ComposeView under CloudKitTheme) and CallProviderChooserSheet (BaseBottomSheetDialogFragment hosting composable rows); both take their palette from the Fossify theme through DialerKitPalette. Upstream screens stay Views.",
+      "notes": "Fossify Phone fork. Only OUR additions are counted (roots), and they are all Compose (2026-10-16): AboutActivity (the credit + licence screen that replaced commons' About) and the whole SMS app under sms/ (ConversationActivity, SmsComposeActivity and the list/conversation/new-message composables; the main pager hosts the list through SmsFragment, a ComposeView page), ScreeningLogActivity (SimpleActivity hosting a ComposeView under CloudKitTheme) and CallProviderChooserSheet (BaseBottomSheetDialogFragment hosting composable rows); both take their palette from the Fossify theme through DialerKitPalette. Upstream screens stay Views.",
       "risks": [
         "edits to upstream activity_call/activity_main/item_recent_call are first-party but inseparable from upstream layouts — not counted, not migrated"
       ],

@@ -24,6 +24,13 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_MMS" />
+    <uses-permission android:name="android.permission.RECEIVE_WAP_PUSH" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
 
     <uses-permission
         android:name="android.permission.USE_FINGERPRINT"
@@ -225,6 +232,108 @@
                 <action android:name="android.telecom.CallScreeningService" />
             </intent-filter>
         </service>
+
+        <!-- ===== Default SMS app (ROLE_SMS). Android grants the role only to an app that declares all four
+             of these; test/test-sms-role-manifest.sh fails if any goes missing or loses its permission. ===== -->
+
+        <!-- 1. SMS_DELIVER: a received text, delivered to the default SMS app only. -->
+        <receiver
+            android:name=".sms.SmsDeliverReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_DELIVER" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 2. WAP_PUSH_DELIVER: a received MMS notification. -->
+        <receiver
+            android:name=".sms.mms.MmsWapPushReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_WAP_PUSH">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.WAP_PUSH_DELIVER" />
+
+                <data android:mimeType="application/vnd.wap.mms-message" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 3. RESPOND_VIA_MESSAGE: "reply with a message" from the incoming-call screen. -->
+        <service
+            android:name=".sms.RespondViaMessageService"
+            android:exported="true"
+            android:permission="android.permission.SEND_RESPOND_VIA_MESSAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.RESPOND_VIA_MESSAGE" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
+            </intent-filter>
+        </service>
+
+        <!-- 4. The compose activity: SENDTO / SEND with sms:, smsto:, mms:, mmsto:. -->
+        <activity
+            android:name=".sms.SmsComposeActivity"
+            android:exported="true"
+            android:label="@string/sms_new_message"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SENDTO" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".sms.ConversationActivity"
+            android:exported="false"
+            android:parentActivityName=".activities.MainActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <receiver
+            android:name=".sms.SmsStatusReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".sms.SmsActionReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".sms.mms.MmsDownloadedReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".sms.mms.MmsSentReceiver"
+            android:exported="false" />
+
+        <provider
+            android:name=".sms.mms.MmsFileProvider"
+            android:authorities="${applicationId}.mms"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/mms_paths" />
+        </provider>
 
         <receiver
             android:name=".receivers.CallActionReceiver"

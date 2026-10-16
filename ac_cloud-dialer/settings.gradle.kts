@@ -46,3 +46,5 @@ project(":libs:fleetconfig-model").projectDir = file("../ab_cloud-libs-shared/li
 // ScreeningLogActivity and CallProviderChooserSheet paint with it.
 include(":libs:ui-kit")
 project(":libs:ui-kit").projectDir = file("../ab_cloud-libs-shared/libs/ui-kit")
+include(":libs:bottomnav")
+project(":libs:bottomnav").projectDir = file("../ab_cloud-libs-shared/libs/bottomnav")

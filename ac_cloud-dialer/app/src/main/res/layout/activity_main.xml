@@ -22,7 +22,7 @@
             android:id="@+id/view_pager"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            app:layout_constraintBottom_toTopOf="@+id/main_tabs_holder"
+            app:layout_constraintBottom_toTopOf="@+id/main_nav_island"
             app:layout_constraintTop_toTopOf="parent" />
 
         <org.fossify.commons.views.MyFloatingActionButton
@@ -38,25 +38,19 @@
             android:src="@drawable/ic_dialpad_vector"
             app:backgroundTint="@color/color_primary"
             app:shapeAppearanceOverlay="@style/DialerFabShape"
-            app:layout_constraintBottom_toTopOf="@+id/main_tabs_holder"
+            app:layout_constraintBottom_toTopOf="@+id/main_nav_island"
             app:layout_constraintEnd_toEndOf="parent"
             app:rippleColor="@color/pressed_item_foreground" />
 
         <!--
-            Four tabs share the width evenly. The 150dp minimum this carried
-            before was written for three tabs and, at four, asks for 600dp of
-            strip on a phone that has 400 — which turns the bottom bar into a
-            scrolling strip whose last tab is off screen.
+            #868 the bottom nav: libs:bottomnav's island (build.json::ui declares its items). It floats,
+            so the pager and the dialpad button sit above the room it takes.
         -->
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/main_tabs_holder"
+        <com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+            android:id="@+id/main_nav_island"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:tabGravity="fill"
-            app:tabIndicator="@null"
-            app:tabMode="fixed"
-            app:tabRippleColor="@null" />
+            app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

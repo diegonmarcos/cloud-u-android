@@ -24,6 +24,13 @@ fun hasSigningVars(): Boolean {
             && providers.environmentVariable("SIGNING_STORE_PASSWORD").orNull != null
 }
 
+// #868 build.json::ui is THE navigation declaration (libs:bottomnav's NavDecl). It is baked here as
+// UI_SECTIONS_B64 / UI_BOTTOM_NAV / UI_DEFAULT_SECTION and decoded once by DialerNav; no section id is
+// spelled in Kotlin. nav-shape-guard (N1-N9) holds this app to it.
+val dialerUi = (groovy.json.JsonSlurper().parse(rootProject.file("build.json")) as Map<*, *>)["ui"] as Map<*, *>
+fun base64Json(value: Any?): String =
+    java.util.Base64.getEncoder().encodeToString(groovy.json.JsonOutput.toJson(value).toByteArray())
+
 // #826 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
 // Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
 // derivation as the rest of the fleet: GITHUB_SHA first, `git rev-parse` locally, 8 hex.
@@ -63,6 +70,9 @@ android {
         buildConfigField("String", "AUTO_UPDATE_TAG", "\"${project.findProperty("AUTO_UPDATE_TAG") ?: "latest"}\"")
         buildConfigField("String", "AUTO_UPDATE_TAG_MAP", "\"${project.findProperty("AUTO_UPDATE_TAG_MAP") ?: ""}\"")
         buildConfigField("String", "GIT_SHORT_SHA", "\"$gitShortSha\"")
+        buildConfigField("String", "UI_SECTIONS_B64", "\"${base64Json(dialerUi["sections"])}\"")
+        buildConfigField("String", "UI_BOTTOM_NAV", "\"${(dialerUi["bottom_nav"] as List<*>).joinToString(",")}\"")
+        buildConfigField("String", "UI_DEFAULT_SECTION", "\"${dialerUi["default_section"]}\"")
         buildConfigField("boolean", "AUTO_UPDATE_ENABLED", "${project.findProperty("AUTO_UPDATE_ENABLED") ?: "false"}")
         buildConfigField("boolean", "AU_REQUIRE_UNMETERED", "${project.findProperty("AU_REQUIRE_UNMETERED") ?: "true"}")
         buildConfigField("boolean", "AU_REQUIRE_CHARGING", "${project.findProperty("AU_REQUIRE_CHARGING") ?: "false"}")
@@ -135,6 +145,13 @@ android {
         includeInApk = false
     }
 
+    testOptions {
+        unitTests {
+            // The Compose tests render the real screens, which read this app's string resources.
+            isIncludeAndroidResources = true
+        }
+    }
+
     androidResources {
         // FLEET RULE (#299): English is the fleet's base language.
         localeFilters += listOf("en")
@@ -180,6 +197,8 @@ dependencies {
     // 2026-10-16 owner decision: all apps must be Compose. Our additions (screened-call history, provider
     // chooser sheet) are composables under CloudKitTheme; upstream Fossify screens stay Views.
     implementation(project(":libs:ui-kit"))
+    // #868 the bottom nav: one island for the whole fleet, declared in build.json::ui.
+    implementation(project(":libs:bottomnav"))
     implementation(platform("androidx.compose:compose-bom:2025.11.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
@@ -193,5 +212,9 @@ dependencies {
     implementation(libs.geocoder)
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     testImplementation("junit:junit:4.13.2")
+    // Compose UI tests of the SMS screens run on the JVM under Robolectric (same stack as libs:bottomnav's tests).
+    testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation(platform("androidx.compose:compose-bom:2025.11.01"))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
     detektPlugins(libs.compose.detekt)
 }

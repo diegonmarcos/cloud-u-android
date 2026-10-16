@@ -64,6 +64,8 @@ const val HOME_TAB_INDEX = 0
  * which index means which page.
  */
 data class DialerTab(
+    /** The build.json::ui section this page is: the id the bottom-nav island selects it by. */
+    val sectionId: String,
     val visibilityMask: Int,
     val labelResourceId: Int,
     val layoutResourceId: Int,
@@ -73,6 +75,7 @@ data class DialerTab(
 
 val dialerTabs = listOf(
     DialerTab(
+        sectionId = "home",
         visibilityMask = ALWAYS_VISIBLE_TAB,
         labelResourceId = R.string.home_tab,
         layoutResourceId = R.layout.fragment_home,
@@ -80,6 +83,7 @@ val dialerTabs = listOf(
         deselectedIconResourceId = R.drawable.ic_home_vector,
     ),
     DialerTab(
+        sectionId = "contacts",
         visibilityMask = TAB_CONTACTS,
         labelResourceId = R.string.contacts_tab,
         layoutResourceId = R.layout.fragment_contacts,
@@ -87,6 +91,7 @@ val dialerTabs = listOf(
         deselectedIconResourceId = R.drawable.ic_person_outline_vector,
     ),
     DialerTab(
+        sectionId = "favorites",
         visibilityMask = TAB_FAVORITES,
         labelResourceId = R.string.favorites_tab,
         layoutResourceId = R.layout.fragment_favorites,
@@ -94,11 +99,21 @@ val dialerTabs = listOf(
         deselectedIconResourceId = R.drawable.ic_star_outline_vector,
     ),
     DialerTab(
+        sectionId = "recents",
         visibilityMask = TAB_CALL_HISTORY,
         labelResourceId = R.string.call_history_tab,
         layoutResourceId = R.layout.fragment_recents,
         selectedIconResourceId = R.drawable.ic_clock_filled_vector,
         deselectedIconResourceId = R.drawable.ic_clock_vector,
+    ),
+    // Cloud Dialer: the default-SMS-app screen. Like Home it is always on screen (no maskable TAB_* bit left).
+    DialerTab(
+        sectionId = "sms",
+        visibilityMask = ALWAYS_VISIBLE_TAB,
+        labelResourceId = R.string.sms_tab,
+        layoutResourceId = R.layout.fragment_sms,
+        selectedIconResourceId = R.drawable.ic_sms_vector,
+        deselectedIconResourceId = R.drawable.ic_sms_vector,
     ),
 )
 

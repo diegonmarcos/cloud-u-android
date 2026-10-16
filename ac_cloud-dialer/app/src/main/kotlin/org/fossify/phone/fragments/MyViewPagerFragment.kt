@@ -97,4 +97,10 @@ abstract class MyViewPagerFragment<BINDING : MyViewPagerFragment.InnerBinding>(c
         override val fragmentList = null
         override val recentsList = binding.homeRecentCallsList
     }
+
+    /** Cloud Dialer: the SMS page is Compose; it has no RecyclerView for the shared act-mode and font-size code to reach. */
+    object SmsInnerBinding : InnerBinding {
+        override val fragmentList: MyRecyclerView? = null
+        override val recentsList: MyRecyclerView? = null
+    }
 }

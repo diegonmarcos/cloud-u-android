@@ -88,7 +88,6 @@
     "ac_cloud-chat": "Exempt by class (#868 nav plan): fork of an upstream chat client; navigation is the upstream's.",
     "ac_cloud-code": "Exempt by class (#868 nav plan): fork of an upstream code editor; navigation is the upstream's.",
     "ac_cloud-contacts": "Single WebView page (#868 decided 2026-10-06): the app hosts one web page with no native pages to navigate between; revisit if it gains native screens.",
-    "ac_cloud-dialer": "Exempt by class (#868 nav plan): fork of an upstream dialer; navigation is the upstream's.",
     "ac_cloud-keyboard": "Exempt by class (#868 nav plan): input method; the keyboard is the UI and has no bottom navigation.",
     "ac_cloud-matrix": "Exempt by class (#868 nav plan): fork of an upstream Matrix client; navigation is the upstream's.",
     "ac_cloud-gallery": "Exempt by class (#868 nav plan): fork of an upstream gallery; navigation is the upstream's.",

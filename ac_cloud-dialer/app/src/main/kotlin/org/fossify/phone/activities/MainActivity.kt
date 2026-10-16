@@ -10,12 +10,11 @@ import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.provider.Settings
-import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.viewpager.widget.ViewPager
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.google.android.material.snackbar.Snackbar
-import me.grantland.widget.AutofitHelper
 import org.fossify.commons.dialogs.ChangeViewTypeDialog
 import org.fossify.commons.dialogs.ConfirmationDialog
 import org.fossify.commons.dialogs.PermissionRequiredDialog
@@ -39,6 +38,8 @@ import org.fossify.phone.fragments.HomeFragment
 import org.fossify.phone.fragments.FavoritesFragment
 import org.fossify.phone.fragments.MyViewPagerFragment
 import org.fossify.phone.fragments.RecentsFragment
+import org.fossify.phone.fragments.SmsFragment
+import org.fossify.phone.nav.DialerNav
 import org.fossify.phone.helpers.HOME_TAB_INDEX
 import org.fossify.phone.helpers.OPEN_DIAL_PAD_AT_LAUNCH
 import org.fossify.phone.helpers.RecentsHelper
@@ -61,12 +62,14 @@ class MainActivity : SimpleActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // #868 the window every app of the fleet wears (edge-to-edge, transparent bars), then the layout.
+        FleetChrome.apply(this)
         setContentView(binding.root)
         appLaunched(BuildConfig.APPLICATION_ID)
         org.fossify.phone.updater.Updater.start(this)
         setupOptionsMenu()
         refreshMenuItems()
-        setupEdgeToEdge(padBottomImeAndSystem = listOf(binding.mainTabsHolder))
+        setupEdgeToEdge(padBottomImeAndSystem = emptyList())
 
         EventBus.getDefault().register(this)
         launchedDialer = savedInstanceState?.getBoolean(OPEN_DIAL_PAD_AT_LAUNCH) ?: false
@@ -121,7 +124,6 @@ class MainActivity : SimpleActivity() {
         binding.mainDialpadButton.setImageDrawable(dialpadIcon)
 
         updateTextColors(binding.mainHolder)
-        setupTabColors()
 
         getAllFragments().forEach {
             it?.setupColors(getProperTextColor(), getProperPrimaryColor(), getProperPrimaryColor())
@@ -205,6 +207,8 @@ class MainActivity : SimpleActivity() {
             findItem(R.id.change_view_type).isVisible = currentFragment == getFavoritesFragment()
             findItem(R.id.column_count).isVisible = currentFragment == getFavoritesFragment() && config.viewType == VIEW_TYPE_GRID
         }
+        // The SMS page has its own new-message button; the dialpad button belongs to the call pages.
+        binding.mainDialpadButton.isVisible = currentFragment !is SmsFragment
     }
 
     private fun setupOptionsMenu() {
@@ -317,18 +321,6 @@ class MainActivity : SimpleActivity() {
 
     private fun visibleTabs() = visibleDialerTabs(config.showTabs)
 
-    private fun setupTabColors() {
-        val currentIndex = binding.viewPager.currentItem
-        visibleTabs().forEachIndexed { index, tab ->
-            val isActive = index == currentIndex
-            val iconResourceId = if (isActive) tab.selectedIconResourceId else tab.deselectedIconResourceId
-            val tabView = binding.mainTabsHolder.getTabAt(index)?.customView
-            updateBottomTabItemColors(tabView, isActive, iconResourceId)
-        }
-
-        binding.mainTabsHolder.setBackgroundColor(getBottomNavigationBackgroundColor())
-    }
-
     private fun initFragments() {
         binding.viewPager.offscreenPageLimit = 2
         binding.viewPager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
@@ -337,26 +329,22 @@ class MainActivity : SimpleActivity() {
             override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {}
 
             override fun onPageSelected(position: Int) {
-                binding.mainTabsHolder.getTabAt(position)?.select()
-                getAllFragments().forEach {
-                    it?.finishActMode()
-                }
-                refreshMenuItems()
+                onTabSelected(position)
             }
         })
 
         // selecting the proper tab sometimes glitches, add an extra selector to make sure we have it right
-        binding.mainTabsHolder.onGlobalLayout {
+        binding.mainNavIsland.post {
             Handler().postDelayed({
                 var wantedTab = getDefaultTab()
 
                 // open the Recents tab if we got here by clicking a missed call notification
                 if (intent.action == Intent.ACTION_VIEW && config.showTabs and TAB_CALL_HISTORY > 0) {
-                    wantedTab = binding.mainTabsHolder.tabCount - 1
+                    wantedTab = visibleTabs().indexOfFirst { it.visibilityMask == TAB_CALL_HISTORY }.coerceAtLeast(wantedTab)
                 }
 
-                binding.mainTabsHolder.getTabAt(wantedTab)?.select()
-                refreshMenuItems()
+                binding.viewPager.currentItem = wantedTab
+                onTabSelected(wantedTab)
             }, 100L)
         }
 
@@ -374,35 +362,39 @@ class MainActivity : SimpleActivity() {
         }
     }
 
+    /** The pager landed on [position]: move the island's pill there and do what opening that page means. */
+    private fun onTabSelected(position: Int) {
+        val tab = visibleTabs().getOrNull(position) ?: return
+        binding.mainNavIsland.selectedId = tab.sectionId
+        getAllFragments().forEach {
+            it?.finishActMode()
+        }
+        getCurrentFragment()?.onSearchQueryChanged(binding.mainMenu.getCurrentQuery())
+
+        // Opening the call history is the owner acknowledging the misses
+        // it lists, which is what dismisses the system's notification.
+        if (tab.visibilityMask == TAB_CALL_HISTORY) {
+            clearMissedCalls()
+        }
+        refreshMenuItems()
+    }
+
+    /** A tap on the island: show that section's page. */
+    private fun selectSection(sectionId: String) {
+        val index = visibleTabs().indexOfFirst { it.sectionId == sectionId }
+        if (index >= 0) {
+            binding.viewPager.currentItem = index
+        }
+    }
+
     private fun setupTabs() {
         binding.viewPager.adapter = null
-        binding.mainTabsHolder.removeAllTabs()
-        visibleTabs().forEach { tab ->
-            val icon = resources.getColoredDrawableWithColor(tab.deselectedIconResourceId, getProperTextColor())
-            binding.mainTabsHolder.newTab().setCustomView(R.layout.bottom_tablayout_item).apply {
-                customView?.findViewById<ImageView>(R.id.tab_item_icon)?.setImageDrawable(icon)
-                customView?.findViewById<TextView>(R.id.tab_item_label)?.text = getString(tab.labelResourceId)
-                AutofitHelper.create(customView?.findViewById(R.id.tab_item_label))
-                binding.mainTabsHolder.addTab(this)
-            }
+        val tabs = visibleTabs()
+        binding.mainNavIsland.apply {
+            items = DialerNav.items(tabs.map { it.sectionId })
+            onSelect = { sectionId -> selectSection(sectionId) }
+            selectedId = tabs.getOrNull(binding.viewPager.currentItem)?.sectionId ?: tabs.firstOrNull()?.sectionId
         }
-
-        binding.mainTabsHolder.onTabSelectionChanged(
-            tabUnselectedAction = {
-                updateBottomTabItemColors(it.customView, false, visibleTabs()[it.position].deselectedIconResourceId)
-            },
-            tabSelectedAction = {
-                getCurrentFragment()?.onSearchQueryChanged(binding.mainMenu.getCurrentQuery())
-                binding.viewPager.currentItem = it.position
-                updateBottomTabItemColors(it.customView, true, visibleTabs()[it.position].selectedIconResourceId)
-
-                // Opening the call history is the owner acknowledging the misses
-                // it lists, which is what dismisses the system's notification.
-                if (visibleTabs()[it.position].visibilityMask == TAB_CALL_HISTORY) {
-                    clearMissedCalls()
-                }
-            }
-        )
 
         storedShowTabs = config.showTabs
         storedStartNameWithSurname = config.startNameWithSurname
@@ -433,7 +425,7 @@ class MainActivity : SimpleActivity() {
     fun openCallHistoryTab() {
         val callHistoryIndex = visibleTabs().indexOfFirst { it.visibilityMask == TAB_CALL_HISTORY }
         if (callHistoryIndex >= 0) {
-            binding.mainTabsHolder.getTabAt(callHistoryIndex)?.select()
+            binding.viewPager.currentItem = callHistoryIndex
         }
     }
 
@@ -449,13 +441,15 @@ class MainActivity : SimpleActivity() {
         getContactsFragment()?.refreshItems()
         getFavoritesFragment()?.refreshItems()
         getRecentsFragment()?.refreshItems()
+        getSmsFragment()?.refreshItems()
     }
 
     private fun getAllFragments(): List<MyViewPagerFragment<*>?> = visibleTabs().map { tab ->
-        when (tab.visibilityMask) {
-            TAB_CONTACTS -> getContactsFragment()
-            TAB_FAVORITES -> getFavoritesFragment()
-            TAB_CALL_HISTORY -> getRecentsFragment()
+        when {
+            tab.visibilityMask == TAB_CONTACTS -> getContactsFragment()
+            tab.visibilityMask == TAB_FAVORITES -> getFavoritesFragment()
+            tab.visibilityMask == TAB_CALL_HISTORY -> getRecentsFragment()
+            tab.layoutResourceId == R.layout.fragment_sms -> getSmsFragment()
             else -> getHomeFragment()
         }
     }
@@ -469,6 +463,8 @@ class MainActivity : SimpleActivity() {
     private fun getFavoritesFragment(): FavoritesFragment? = findViewById(R.id.favorites_fragment)
 
     private fun getRecentsFragment(): RecentsFragment? = findViewById(R.id.recents_fragment)
+
+    private fun getSmsFragment(): SmsFragment? = findViewById(R.id.sms_fragment)
 
     /**
      * Which page the app lands on. Home unless the owner explicitly chose one

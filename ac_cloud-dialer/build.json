@@ -64,6 +64,11 @@
       "_doc": "#873 libs:core `api`s this module (the setup provider every app serves, describe / export / apply / status); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
       "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
       "type": "library"
+    },
+    "libs:bottomnav": {
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "_doc": "#868 the bottom nav island (BottomNavIslandView) the main screen draws, with the SMS section. Shared BY REFERENCE; build.json::ui declares what it shows."
     }
   },
   "tests": {
@@ -112,5 +117,78 @@
       "endpoint": "https://analytics.diegonmarcos.com/matomo",
       "site_id": "1"
     }
+  },
+  "ui": {
+    "_doc": "#868 THE navigation declaration (libs:bottomnav's NavDecl): ui.bottom_nav is the island's section ids in display order, ui.sections[] each carry the one page they show. Home, Contacts, Favorites and Calls are the upstream pager pages; Settings > Manage shown tabs still hides the three optional ones. SMS is the default-SMS-app screen. app/build.gradle.kts bakes this as UI_SECTIONS_B64 / UI_BOTTOM_NAV / UI_DEFAULT_SECTION.",
+    "bottom_nav": [
+      "home",
+      "contacts",
+      "favorites",
+      "recents",
+      "sms"
+    ],
+    "default_section": "home",
+    "sections": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "pages": [
+          {
+            "id": "home",
+            "label": "Home",
+            "icon": "home"
+          }
+        ]
+      },
+      {
+        "id": "contacts",
+        "label": "Contacts",
+        "icon": "person",
+        "pages": [
+          {
+            "id": "contacts",
+            "label": "Contacts",
+            "icon": "person"
+          }
+        ]
+      },
+      {
+        "id": "favorites",
+        "label": "Favorites",
+        "icon": "star",
+        "pages": [
+          {
+            "id": "favorites",
+            "label": "Favorites",
+            "icon": "star"
+          }
+        ]
+      },
+      {
+        "id": "recents",
+        "label": "Calls",
+        "icon": "history",
+        "pages": [
+          {
+            "id": "recents",
+            "label": "Calls",
+            "icon": "history"
+          }
+        ]
+      },
+      {
+        "id": "sms",
+        "label": "SMS",
+        "icon": "sms",
+        "pages": [
+          {
+            "id": "sms",
+            "label": "SMS",
+            "icon": "sms"
+          }
+        ]
+      }
+    ]
   }
 }

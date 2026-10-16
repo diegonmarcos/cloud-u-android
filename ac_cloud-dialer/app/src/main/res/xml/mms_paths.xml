@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The MMS spool: PDUs handed to / written by the phone process (SmsManager send / download). -->
+<paths>
+    <cache-path name="mms" path="mms/" />
+</paths>
