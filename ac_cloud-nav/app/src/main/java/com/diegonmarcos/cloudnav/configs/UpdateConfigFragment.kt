@@ -2,21 +2,33 @@ package com.diegonmarcos.cloudnav.configs
 
 import android.content.Intent
 import android.net.Uri
-import android.os.Bundle
 import android.provider.Settings
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.fragment.app.Fragment
-import com.diegonmarcos.cloudnav.maps.MapsStopsFragment
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.cloudnav.tracker.TrackerInk
+import com.diegonmarcos.cloudnav.tracker.TrackerPage
+import com.diegonmarcos.superapp.uikit.KitCard
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.KitSectionHeader
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import com.diegonmarcos.superapp.updater.AbiUpdateTag
 import com.diegonmarcos.superapp.updater.BuildConfig as UpdBuildConfig
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
-import com.google.android.material.button.MaterialButton
 
 /**
  * Configs → Update tab. The in-app self-updater surface:
@@ -29,74 +41,45 @@ import com.google.android.material.button.MaterialButton
  *     (Android requires the user to permit install-from-this-app once).
  *
  * All config is data-driven from build.json::release.{ghcr,auto_update} baked
- * into the updater BuildConfig — nothing hardcoded here.
+ * into the updater BuildConfig — nothing hardcoded here. Compose (KitComposeFragment).
  */
-class UpdateConfigFragment : Fragment() {
+class UpdateConfigFragment : KitComposeFragment() {
 
-    private var statusView: TextView? = null
+    private var status by mutableStateOf("Idle")
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        val scroll = ScrollView(ctx).apply {
-            isFillViewport = true
-            setBackgroundColor(MapsStopsFragment.COL_SURFACE)
-        }
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(16); setPadding(p, p, p, p)
-        }
-        scroll.addView(root)
+    override fun palette(): KitPalette = TrackerInk.palette()
 
-        root.addView(header(ctx, "App update"))
-
-        val version = runCatching {
-            ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName
-        }.getOrNull() ?: "?"
-        root.addView(kv(ctx, "Installed version", version))
-        root.addView(kv(ctx, "Package", ctx.packageName))
-        root.addView(kv(ctx, "Channel", AbiUpdateTag.current()))
-        root.addView(kv(ctx, "Source",
-            "${UpdBuildConfig.GHCR_REGISTRY}/${UpdBuildConfig.GHCR_NAMESPACE}/${UpdBuildConfig.GHCR_IMAGE}"))
-        root.addView(kv(ctx, "Auto-check",
-            if (UpdBuildConfig.AUTO_UPDATE_ENABLED) "every ${UpdBuildConfig.AUTO_UPDATE_INTERVAL_HOURS}h" else "off"))
-
-        root.addView(spacer(ctx, dp(16)))
-        statusView = TextView(ctx).apply {
-            setTextAppearance(android.R.style.TextAppearance_Material_Body1)
-            setTextColor(MapsStopsFragment.COL_PRIMARY)
-            text = "Idle"
-        }
-        root.addView(statusView)
-
-        root.addView(spacer(ctx, dp(16)))
-        root.addView(MaterialButton(ctx).apply {
-            text = "Check for updates now"
-            setOnClickListener {
-                Updater.checkNow(ctx)
-                statusView?.text = "Checking…"
+    @Composable
+    override fun Content() {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        val version = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "?"
+        TrackerPage {
+            KitSectionHeader("App update", "")
+            KitCard {
+                for ((k, v) in listOf(
+                    "Installed version" to version,
+                    "Package" to ctx.packageName,
+                    "Channel" to AbiUpdateTag.current(),
+                    "Source" to "${UpdBuildConfig.GHCR_REGISTRY}/${UpdBuildConfig.GHCR_NAMESPACE}/${UpdBuildConfig.GHCR_IMAGE}",
+                    "Auto-check" to if (UpdBuildConfig.AUTO_UPDATE_ENABLED) "every ${UpdBuildConfig.AUTO_UPDATE_INTERVAL_HOURS}h" else "off",
+                )) Text("$k:  $v", color = p.textSecondary, style = MaterialTheme.typography.bodyMedium)
             }
-            layoutParams = LinearLayout.LayoutParams(MATCH, WRAP)
-        })
-        root.addView(spacer(ctx, dp(8)))
-        root.addView(MaterialButton(ctx).apply {
-            text = "Allow app installs"
-            setOnClickListener { openUnknownSourcesSettings() }
-            layoutParams = LinearLayout.LayoutParams(MATCH, WRAP)
-        })
-
-        root.addView(spacer(ctx, dp(12)))
-        root.addView(TextView(ctx).apply {
-            text = "Updates are signed with the shared Cloud-constellation key, so SuperApp / Nav / Comms / IDE update each other without a signature conflict. The system shows an install prompt — Android can't bypass it without root."
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setTextColor(MapsStopsFragment.COL_SECONDARY)
-        })
-
-        return scroll
+            Text(status, Modifier.testTag(UpdateTags.STATUS), color = p.textPrimary, style = MaterialTheme.typography.bodyLarge)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { Updater.checkNow(ctx); status = "Checking…" },
+                    modifier = Modifier.fillMaxWidth().testTag(UpdateTags.CHECK)) { Text("Check for updates now") }
+                OutlinedButton(onClick = { openUnknownSourcesSettings() },
+                    modifier = Modifier.fillMaxWidth().testTag(UpdateTags.ALLOW)) { Text("Allow app installs") }
+            }
+            Text("Updates are signed with the shared Cloud-constellation key, so SuperApp / Nav / Comms / IDE update each other without a signature conflict. The system shows an install prompt — Android can't bypass it without root.",
+                color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        UpdateProgress.setListener { state -> ui { statusView?.text = render(state) } }
+        UpdateProgress.setListener { state -> status = UpdateStatus.render(state) }
     }
 
     override fun onPause() {
@@ -104,65 +87,34 @@ class UpdateConfigFragment : Fragment() {
         super.onPause()
     }
 
-    private fun render(state: UpdateProgress.State): String = when (state) {
+    private fun openUnknownSourcesSettings() {
+        val ctx = context ?: return
+        runCatching {
+            startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${ctx.packageName}")))
+        }.onFailure {
+            runCatching { startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)) }
+        }
+    }
+}
+
+object UpdateTags {
+    const val STATUS = "update:status"
+    const val CHECK = "update:check"
+    const val ALLOW = "update:allow"
+}
+
+object UpdateStatus {
+    fun render(state: UpdateProgress.State): String = when (state) {
         is UpdateProgress.State.Idle             -> "Idle"
         is UpdateProgress.State.CheckingManifest -> "Checking GHCR for a newer build…"
         is UpdateProgress.State.Downloading      -> "Downloading… ${state.percent}%"
         is UpdateProgress.State.Installing       -> "Installing — confirm the system prompt…"
         is UpdateProgress.State.Done             -> "Up to date / installed ✓"
         is UpdateProgress.State.Failed           -> "Failed: ${state.message}"
-        // Both arrived with the shared libs:updater; nav's vendored copy of the
-        // updater never had them, so this when had no branch for either.
-        is UpdateProgress.State.UpdateAvailable   -> "Update ready — held back on a metered network"
+        is UpdateProgress.State.UpdateAvailable  -> "Update ready — held back on a metered network"
         is UpdateProgress.State.Cancelled        -> "Cancelled"
-        // A pass held by a policy constraint, not by a network that is failing.
-        // The reason is the whole point of the state — collapsing it into a
-        // bare "Waiting" would put this line back where it was before the
-        // state existed, where a deliberate deferral and a dead download read
-        // identically. No `else` here on purpose: this when staying exhaustive
-        // is what turned the next new state into a compile error instead of a
-        // status line that silently says nothing.
+        // A pass held by a policy constraint, not by a failing network: the reason is the point of
+        // the state. No `else` on purpose: a new state must be a compile error, not a blank line.
         is UpdateProgress.State.Waiting          -> "Waiting — ${state.reason}"
-    }
-
-    private fun openUnknownSourcesSettings() {
-        val ctx = context ?: return
-        runCatching {
-            startActivity(
-                Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${ctx.packageName}"))
-            )
-        }.onFailure {
-            runCatching { startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)) }
-        }
-    }
-
-    private fun header(ctx: android.content.Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-        setTextColor(MapsStopsFragment.COL_PRIMARY)
-        setPadding(0, 0, 0, dp(12))
-    }
-
-    private fun kv(ctx: android.content.Context, k: String, v: String) = TextView(ctx).apply {
-        text = "$k:  $v"
-        setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-        setTextColor(MapsStopsFragment.COL_SECONDARY)
-        setPadding(0, dp(2), 0, dp(2))
-    }
-
-    private fun spacer(ctx: android.content.Context, h: Int) = View(ctx).apply {
-        layoutParams = LinearLayout.LayoutParams(MATCH, h)
-    }
-
-    private fun ui(block: () -> Unit) {
-        if (!isAdded) return
-        requireActivity().runOnUiThread { if (isAdded) block() }
-    }
-
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
-    private companion object {
-        const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
-        const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
     }
 }
