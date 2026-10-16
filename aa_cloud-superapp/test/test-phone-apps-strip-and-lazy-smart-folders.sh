@@ -38,6 +38,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"   # -> the repository root
 APP="$ROOT/aa_cloud-superapp"
 SUITE="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/SuitePhoneAppsFragment.kt"
 PHONE="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/PhoneAppsFragment.kt"
+PHONEUI="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/PhoneAppsUi.kt"
 BUILD_JSON="$APP/build.json"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
@@ -50,7 +51,7 @@ for tool in python3 grep jq; do
     command -v "$tool" >/dev/null || {
         echo "FATAL: $tool is not on PATH -- refusing to report a verdict"; exit 2; }
 done
-for f in "$SUITE" "$PHONE" "$BUILD_JSON"; do
+for f in "$SUITE" "$PHONE" "$PHONEUI" "$BUILD_JSON"; do
     [ -f "$f" ] || { echo "FATAL: missing input $f -- refusing to report a verdict"; exit 2; }
 done
 
@@ -68,7 +69,7 @@ path, indent, name = sys.argv[1], int(sys.argv[2]), sys.argv[3]
 source = open(path, encoding="utf-8").read()
 
 pad = " " * indent
-start = re.search(r"\n" + pad + r"(?:private |internal )?fun " + re.escape(name) + r"\b", source)
+start = re.search(r"\n" + pad + r"(?:private |internal )?(?:suspend )?fun (?:[\w.]+\.)?" + re.escape(name) + r"\b", source)
 if not start:
     print("__NOT_FOUND__")
     sys.exit(0)
@@ -137,6 +138,7 @@ MAIN = [
     r"\brunOnUiThread\s*\(?\s*\{",
     r"withContext\s*\(\s*Dispatchers\.Main\b[^)]*\)\s*\{",
     r"\blifecycleScope\s*\.\s*launch\s*\{",
+    r"\bproduceState\s*(?:<[^>]*>)?\s*\([^)]*\)\s*\{",
     r"\blaunch\s*\(\s*Dispatchers\.Main\b[^)]*\)\s*\{",
 ]
 
@@ -232,46 +234,45 @@ load() {  # load <key> <file> <indent> <name>
 
 body() { cat "$BODIES/$1"; }   # already validated by load()
 
-load strip      "$SUITE" 4 tileStrip
-load buildPage  "$SUITE" 4 buildPage
-load usage      "$SUITE" 4 usageSection
-load appTile    "$SUITE" 4 makeAppTile
-load folderTile "$SUITE" 4 makeFolderTile
-load cellWidth  "$SUITE" 4 cellWidth
-load section    "$SUITE" 4 addSmartFoldersSection
-load async      "$PHONE" 8 renderSmartFoldersAsync
+load strip      "$SUITE" 0 TileStrip
+load buildPage  "$SUITE" 0 SuitePhonePage
+load usage      "$SUITE" 0 usageSection
+load appTile    "$SUITE" 0 AppTile
+load folderTile "$SUITE" 0 FolderTile
+load cellWidth  "$SUITE" 0 cellWidth
+load async      "$PHONE" 8 loadSmartFolders
 load compute    "$PHONE" 8 computeSmartFolders
 load invalidate "$PHONE" 8 invalidateCache
 
 # The two thread-placement facts T7 judges, resolved here with the bodies.
 dispatch ipc    async 'computeSmartFolders(appContext'
-dispatch render async 'renderSmartFolderBody(body.context'
+dispatch render buildPage 'PhoneAppsFragment.loadSmartFolders(ctx'
 
-echo "== T1: each Quickmarks line is a HorizontalScrollView strip =="
+echo "== T1: each Quickmarks line is a one-row LazyRow strip =="
 STRIP="$(body strip)"
-if printf '%s\n' "$STRIP" | grep -qF 'HorizontalScrollView(ctx)'; then
-    ok "tileStrip builds a HorizontalScrollView"
+if printf '%s\n' "$STRIP" | grep -qF 'LazyRow('; then
+    ok "TileStrip builds a LazyRow -- ONE row that scrolls sideways"
 else
-    bad "tileStrip does not build a HorizontalScrollView -- a line cannot scroll sideways"
+    bad "TileStrip does not build a LazyRow -- a line cannot scroll sideways"
 fi
-if printf '%s\n' "$STRIP" | grep -qF 'orientation = LinearLayout.HORIZONTAL'; then
-    ok "tileStrip puts every tile in ONE horizontal row"
+if printf '%s\n' "$STRIP" | grep -qE 'LazyColumn|LazyVerticalGrid|FlowRow|Column\('; then
+    bad "TileStrip lays tiles out vertically or wrapped -- the tiles would stack"
 else
-    bad "tileStrip's row is not horizontal -- the tiles would stack vertically"
+    ok "TileStrip puts every tile in ONE horizontal row (no column, grid or flow)"
 fi
-if printf '%s\n' "$STRIP" | grep -qF 'clipToPadding = false'; then
+if printf '%s\n' "$STRIP" | grep -qE '\.padding\(|\.clip\(|contentPadding'; then
+    bad "TileStrip pads or clips itself -- the last app can be unreachable, which is the same bug"
+else
     ok "the strip does not clip its final tile at the page padding"
-else
-    bad "clipToPadding is not disabled -- the last app can be unreachable, which is the same bug"
 fi
 
 echo "== T2: the Quickmarks render path no longer chunks into rows =="
 # THE ASSERTION THAT WOULD HAVE FAILED BEFORE #260. buildPage drew the curated
 # groups and usageSection drew Active/Last Apps; both walked .chunked(columns)
 # and added one row View per chunk. Neither may do so again.
-declare -A KEY=([buildPage]=buildPage [usageSection]=usage \
-                [makeAppTile]=appTile [makeFolderTile]=folderTile)
-for fn in buildPage usageSection; do
+declare -A KEY=([SuitePhonePage]=buildPage [usageSection]=usage \
+                [AppTile]=appTile [FolderTile]=folderTile)
+for fn in SuitePhonePage usageSection; do
     if printf '%s\n' "$(body "${KEY[$fn]}")" | grep -qF '.chunked('; then
         bad "$fn still chunks its tiles into rows -- that IS the second line"
     else
@@ -280,11 +281,11 @@ for fn in buildPage usageSection; do
 done
 # Both must actually go through the strip, or "no chunking" could just mean the
 # section stopped rendering.
-for fn in buildPage usageSection; do
-    if printf '%s\n' "$(body "${KEY[$fn]}")" | grep -qF 'tileStrip(ctx'; then
-        ok "$fn renders its apps through tileStrip"
+for fn in SuitePhonePage usageSection; do
+    if printf '%s\n' "$(body "${KEY[$fn]}")" | grep -qF 'TileStrip('; then
+        ok "$fn renders its apps through TileStrip"
     else
-        bad "$fn does not call tileStrip -- its apps are laid out some other way"
+        bad "$fn does not call TileStrip -- its apps are laid out some other way"
     fi
 done
 
@@ -292,14 +293,14 @@ echo "== T3: strip tiles size themselves in a way that survives a scrolling row 
 # A HorizontalScrollView measures its child with an UNSPECIFIED width spec, so
 # there is no excess width to hand out and a LayoutParams(0, _, weight) child
 # keeps its zero. A weighted tile in a strip is an invisible tile.
-for fn in makeAppTile makeFolderTile; do
+for fn in AppTile FolderTile; do
     TILE="$(body "${KEY[$fn]}")"
-    if printf '%s\n' "$TILE" | grep -qE 'LayoutParams\(0,[^)]*, *1f\)'; then
-        bad "$fn still sizes its cell with a weight -- inside a strip that collapses to zero width"
+    if printf '%s\n' "$TILE" | grep -qE '\.weight\(|fillMaxWidth\(\)\.clickable|fillParentMaxWidth'; then
+        bad "$fn still sizes its cell with a weight or the parent's width -- inside a strip that collapses"
     else
         ok "$fn does not size its cell with a weight"
     fi
-    if printf '%s\n' "$TILE" | grep -qF 'LayoutParams(cellWidth(ctx)'; then
+    if printf '%s\n' "$TILE" | grep -qE 'width\(cell(Width\(ctx\))?\)'; then
         ok "$fn sizes its cell from cellWidth()"
     else
         bad "$fn does not size its cell from cellWidth() -- the strip's cell geometry is undefined"
@@ -310,13 +311,14 @@ echo "== T4: a long app name cannot force a second line =="
 # The label is the classic cause of a row growing. It is constrained rather than
 # allowed to dictate the cell.
 TILE="$(body appTile)"
+TILE="$(body appTile)"
 LABEL_LINES="$(printf '%s\n' "$TILE" | grep -c 'maxLines = 1')"
 if [ "$LABEL_LINES" -ge 2 ]; then
     ok "every text line in an app tile is capped at one line ($LABEL_LINES sites)"
 else
-    bad "only $LABEL_LINES capped text line(s) in makeAppTile -- a long name can grow the row"
+    bad "only $LABEL_LINES capped text line(s) in AppTile -- a long name can grow the row"
 fi
-if printf '%s\n' "$TILE" | grep -qF 'TruncateAt.END'; then
+if printf '%s\n' "$TILE" | grep -qF 'TextOverflow.Ellipsis'; then
     ok "an over-long label is ellipsised rather than wrapped"
 else
     bad "no ellipsize on the tile label -- a long name has nowhere to go but a second line"
@@ -342,15 +344,15 @@ fi
 
 echo "== T6: the merged page loads Smart Folders asynchronously =="
 PAGE="$(body buildPage)"
-if printf '%s\n' "$PAGE" | grep -qE 'PhoneAppsFragment\.renderSmartFolders\('; then
-    bad "buildPage still calls the SYNCHRONOUS renderSmartFolders -- the page waits on it again"
+if printf '%s\n' "$PAGE" | grep -qE 'renderSmartFolders\(|[^a-zA-Z]computeSmartFolders\(|smartFoldersCached\('; then
+    bad "SuitePhonePage still calls the SYNCHRONOUS smart-folder selection -- the page waits on it again"
 else
-    ok "buildPage does not call the synchronous renderSmartFolders"
+    ok "SuitePhonePage does not call the synchronous selection"
 fi
-if printf '%s\n' "$PAGE" | grep -qF 'addSmartFoldersSection(ctx'; then
-    ok "buildPage installs the lazy Smart Folders section"
+if printf '%s\n' "$PAGE" | grep -qF 'PhoneAppsFragment.loadSmartFolders(ctx'; then
+    ok "SuitePhonePage loads Smart Folders through the async loadSmartFolders"
 else
-    bad "buildPage does not install the lazy section -- Smart Folders reach the page some other way"
+    bad "SuitePhonePage does not load Smart Folders through loadSmartFolders -- they reach the page some other way"
 fi
 
 echo "== T7: the expensive selection runs off the main thread, the render back on it =="
@@ -374,23 +376,28 @@ else
     bad "computeSmartFolders runs on the MAIN thread ($(kind ipc): $(where ipc)) -- ~1000 package-manager IPCs before a frame is the ANR this page was fixed for"
 fi
 if printf '%s\n' "$ASYNC" | grep -qF 'computeSmartFolders(appContext'; then
-    ok "the selection runs against the application Context, not the fragment's Activity"
+    ok "the selection runs against the application Context, not the page's Activity"
 else
-    bad "the background work captures the fragment's Context -- that is a leak for the run of the probe"
+    bad "the background work captures the page's Context -- that is a leak for the run of the probe"
 fi
-# PROPERTY 2 -- THE RENDER IS BACK ON THE MAIN THREAD BEFORE IT TOUCHES A VIEW.
-# Off the main thread is only half of it. Views may only be touched from the
-# thread that made them, so a render left on the worker is not a slow page, it
-# is a CalledFromWrongThreadException.
+# PROPERTY 2 -- THE RESULT IS CONSUMED ON THE MAIN THREAD. The page reads loadSmartFolders' answer inside a
+# produceState producer, which the composition runs on its own (main) coroutine context, and draws it in
+# composition. A render left on the worker would be a slow page; here it cannot happen because the worker
+# block returns data and builds nothing.
 if [ "$(kind render)" = "main" ]; then
-    ok "the View render is handed back to the main thread -- innermost dispatch is \`$(where render)\`"
+    ok "the result is consumed on the main thread -- innermost dispatch is \`$(where render)\`"
 else
-    bad "renderSmartFolderBody runs on a non-main thread ($(kind render): $(where render)) -- Views built there crash with CalledFromWrongThreadException"
+    bad "loadSmartFolders is consumed on a non-main thread ($(kind render): $(where render))"
+fi
+if printf '%s\n' "$ASYNC" | grep -qE 'smartFolderItems|folderGridItems|addView|item\('; then
+    bad "loadSmartFolders draws -- the worker block must return data and nothing else"
+else
+    ok "loadSmartFolders only returns data; drawing happens in composition"
 fi
 # And the selection itself must build no Views, or moving it off the main thread
 # would trade a slow page for a crash.
 COMPUTE="$(body compute)"
-VIEWY="$(printf '%s\n' "$COMPUTE" | grep -cE 'addView|LinearLayout\(|TextView\(|ImageView\(')"
+VIEWY="$(printf '%s\n' "$COMPUTE" | grep -cE 'addView|LinearLayout\(|TextView\(|ImageView\(|Text\(|Image\(')"
 if [ "$VIEWY" -eq 0 ]; then
     ok "computeSmartFolders creates no Views -- safe to call off the main thread"
 else
@@ -398,29 +405,24 @@ else
 fi
 
 echo "== T8: the section starts collapsed and expands itself =="
-SECTION="$(body section)"
-# THIS BLOCK WAS VACUOUS ON ITS FIRST DRAFT, and was caught by flipping the
-# section's initial visibility to VISIBLE and watching the tester stay green.
-# It grepped the whole function for `visibility = View.GONE`, which also
-# matches paint()'s ternary and the status line's own hide -- so the one
-# statement it existed to pin was the one statement it could not see. The
-# assertions below name the state instead: the section is collapsed at birth
-# because `expanded` starts false and visibility is a pure function of it, and
-# nothing may set it visible outside that function.
-if printf '%s\n' "$SECTION" | grep -qF 'var expanded = false'; then
+SECTION="$PAGE"
+if printf '%s\n' "$SECTION" | grep -qE 'var expanded by remember \{ mutableStateOf\(false\) \}'; then
     ok "the section's initial state is collapsed"
 else
     bad "the section does not start collapsed -- #261 asks for exactly that"
 fi
-if printf '%s\n' "$SECTION" | grep -qF 'section.visibility = if (expanded) View.VISIBLE else View.GONE'; then
-    ok "the section's visibility is driven solely by that state"
+# The smart-folder items are produced from exactly one place, and it is inside `if (expanded)`.
+N_ITEMS="$(printf '%s\n' "$SECTION" | grep -c 'smartFolderItems(')"
+INSIDE="$(printf '%s\n' "$SECTION" | awk '/if \(expanded\) \{/{f=1} f&&/smartFolderItems\(/{print "y"; exit}')"
+if [ "$N_ITEMS" -eq 1 ] && [ "$INSIDE" = "y" ]; then
+    ok "the section's contents are drawn only while expanded (its visibility is a function of the expanded flag)"
 else
-    bad "the section visibility is not a function of the expanded flag -- it can show while collapsed"
+    bad "smartFolderItems is drawn $N_ITEMS time(s) / outside the expanded branch -- it can show while collapsed"
 fi
-if printf '%s\n' "$SECTION" | grep -qE '^[[:space:]]*visibility = View\.VISIBLE'; then
-    bad "the section view is constructed VISIBLE -- it is on screen before any state says so"
+if printf '%s\n' "$SECTION" | grep -qE 'expanded by remember \{ mutableStateOf\(true\)'; then
+    bad "the section is constructed EXPANDED -- it is on screen before any state says so"
 else
-    ok "no view in the section is constructed already-visible"
+    ok "nothing constructs the section already expanded"
 fi
 if printf '%s\n' "$SECTION" | grep -qF 'expanded = true'; then
     ok "the section expands itself when the result arrives"
@@ -429,15 +431,18 @@ else
 fi
 
 echo "== T9: a result arriving after the user left cannot touch a dead view =="
-if printf '%s\n' "$ASYNC" | grep -qF 'body.isAttachedToWindow'; then
-    ok "renderSmartFoldersAsync checks the target view is still attached"
+# STRUCTURAL: loadSmartFolders is only ever called from a produceState producer, which is cancelled the moment the
+# page leaves composition, so a late result has nowhere to resume and nothing to write into -- the #194 crash class
+# removed rather than caught by an attach check.
+if printf '%s\n' "$PAGE" | grep -qE 'produceState<SmartState>\(SmartState\.Loading, epoch\)'; then
+    ok "the result is delivered through produceState, whose coroutine dies with the composition"
 else
-    bad "no attach check before the background result writes into the view -- this is the standard crash"
+    bad "the smart-folder result is not tied to the composition's lifetime -- it can land after the page is gone"
 fi
-if printf '%s\n' "$SECTION" | grep -qF 'isAdded'; then
-    ok "the callback checks the fragment is still added before touching its state"
+if printf '%s\n' "$SECTION" | grep -qE 'isAdded|viewLifecycleOwner|lifecycleScope|GlobalScope'; then
+    bad "the page reaches for a lifecycle it does not own -- state must live in the composition"
 else
-    bad "the callback does not check isAdded -- it mutates a destroyed fragment's view state"
+    ok "the section's state lives in the composition (remember), not in a fragment that outlives its view"
 fi
 
 echo "== T10: the auto-expand does not override the user =="
@@ -447,7 +452,7 @@ if printf '%s\n' "$SECTION" | grep -qF 'userChose = true'; then
 else
     bad "nothing records a manual collapse -- the background result would fight the user"
 fi
-if printf '%s\n' "$SECTION" | grep -qF 'if (!userChose) expanded = true'; then
+if printf '%s\n' "$SECTION" | grep -qF '!userChose) expanded = true'; then
     ok "the auto-expand is skipped once the user has chosen"
 else
     bad "the auto-expand does not consult the user's choice"
@@ -463,10 +468,10 @@ for token in '"loading…"' '"none"' '"unavailable"'; do
         bad "no $token state -- an empty or failed fetch reads as still loading"
     fi
 done
-if printf '%s\n' "$ASYNC" | grep -qF 'onDone(computed?.isNotEmpty())'; then
-    ok "the async result distinguishes rendered / empty / failed"
+if printf '%s\n' "$ASYNC" | grep -qF '.getOrNull()' && printf '%s\n' "$PAGE" | grep -qF '?: SmartState.Failed' && printf '%s\n' "$PAGE" | grep -qF 'smartDone.isNullOrEmpty() -> "none"'; then
+    ok "the result distinguishes rendered / empty (none) / failed (null → Failed)"
 else
-    bad "the async result collapses its three outcomes -- the caller cannot tell them apart"
+    bad "the result collapses its three outcomes -- the page cannot tell them apart"
 fi
 
 echo "== T12: refreshing drops the smart-folder cache with everything else =="
@@ -483,7 +488,7 @@ echo "== T13: a second visit does not re-run the thousand IPCs =="
 # Rotation and re-entry rebuild the fragment. Without a cache hit that is the
 # whole cost paid again, every time, which is the bug wearing a different hat.
 if printf '%s\n' "$ASYNC" | grep -qF 'sCachedSmart[exclude]'; then
-    ok "renderSmartFoldersAsync serves a repeat visit from the cache"
+    ok "loadSmartFolders serves a repeat visit from the cache"
 else
     bad "no cache lookup -- every rotation re-runs the package-manager scan"
 fi
@@ -645,8 +650,8 @@ echo "== T19: a lib tile taps to the in-app Store ▸ Cloud Constellation -- nev
 # A lib cannot be launched (no component). Its tap must OPEN SOMETHING useful
 # in-app; a silent nil-receiver on startMainActivity or an external ACTION_VIEW
 # would each be the exact regression #156 exists to stop.
-load expTile "$PHONE" 8 makeExpandedAppTile
-load storeHop "$PHONE" 8 openStore
+load expTile "$PHONEUI" 0 PhoneFolderSheet
+load storeHop "$PHONEUI" 0 openStore
 TILE="$(body expTile)"
 if printf '%s\n' "$TILE" | grep -qF 'app.activityComponent'; then
     ok "the expanded tile reads the (now nullable) launch component"

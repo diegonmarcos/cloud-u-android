@@ -623,12 +623,13 @@
         "Robolectric tests BottomNavSelectedPillTest / ShellBottomNavCollapseTest inflate activity_main"
       ],
       "baseline": {
-        "view_screens": 14,
+        "view_screens": 10,
         "layout_xml": 5,
-        "view_ui_files": 33,
+        "view_ui_files": 27,
         "custom_views": 8
       },
       "done": [
+        "apps/PhoneAppsFragment (Phone tab), apps/SuitePhoneAppsFragment (Suite ▸ Phone / Quickmarks), launcher/GroupedTilesFragment (Cloud ▸ Apps), launcher/AppDrawerSheetFragment (Home swipe-up sheet), launcher/TileFolderDialog (folder popup) — KitComposeFragments / Compose Dialogs over the shared apps/PhoneAppsUi (folder card, folder grid, FolderSheetFrame, ExpandedAppTile) and launcher/LauncherTile; every Quickmarks line is one LazyRow (#260); Smart Folders load through PhoneAppsFragment.loadSmartFolders (off-main, cancellable, generation-checked) into a section collapsed at birth (#261); the search is search/SearchSession + SearchFrame; apps/FolderDialog.kt deleted; test-phone-apps-strip-and-lazy-smart-folders, test-phone-quickmark-placeholders, test-configs-grid-eight, test-store-identity and test-tab-strip-spacing read the new shape; PhoneAppsComposeTest, #773",
         "launcher/LauncherTiles (the one Compose tile: glass card, glyph fitted by the GridColumns arithmetic, press scale, haptic, extInstallRing) + TileGridFragment (every section's page grid and Configs) + HomeGroupedFragment (the grouped Home tab) — KitComposeFragments; the grid layout is the pure TileGridFragment.plan and HomeGroupedFragment.buckets; item_tile / fragment_tile_grid / fragment_home_grouped / item_home_group_header layouts deleted; the install ring is the extInstallRing modifier (Compose hosts registered with ExtTileRing.showing); the grid-eight / two-sections / ExtInstallReuse checks read the new shape; TileGridComposeTest, #773",
         "launcher/SectionMenuFragment (the tablet rail and the Config page menu) and launcher/HomeDrawerFragment (the Home drawer with the Profile badge header) — KitComposeFragments over one DrawerList; the menus are data (SectionMenuFragment.rows / HomeDrawerFragment.rows) so a test pins the declared headings; fragment_section_menu, fragment_home_drawer, nav_header and item_section_menu layouts deleted; test-configs-two-sections T10 and the main-menu testers read the new shape; DrawerMenuComposeTest, #773",
         "launcher/themes/cloud/Home3DFragment (the Cloud theme's home: neon wireframe cube; RotatingCubeView custom View gone) and launcher/themes/minimalist/MinimalistBlackFragment + MinimalistDesign (the terminal home; the mode's vocabulary is now a KitPalette ([MinimalistDesign.kit]) plus composables, still importing nothing from ui/) — KitComposeFragments; the cube is a Compose Canvas on withFrameNanos (3-stroke glow replaces BlurMaskFilter), drag-to-spin + momentum kept; the double-tap lock is the lockOnDoubleTap modifier (ScreenLocker.lockOrExplain); HomePanesComposeTest, #773",

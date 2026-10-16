@@ -183,7 +183,7 @@ else
     bad "AppInstall.start has ${RETURNS:-0} Outcome returns and ${BARE:-0} bare returns --"
     bad "a bare exit is a tap that does nothing and says nothing"
 fi
-if grep -qF 'anchor.snack(AppInstall.start(ctx, app.pkg, app.label).message)' "$FRAGMENT"; then
+if grep -qF 'view.snack(AppInstall.start(ctx, app.pkg, app.label).message)' "$FRAGMENT"; then
     ok "the tile tap shows AppInstall's message"
 else
     bad "the tile tap discards AppInstall's message -- the outcome reaches nobody"
@@ -198,26 +198,31 @@ echo "== T6: one tap is one dispatch =="
 # Issue #195 shipped a tile in this launcher firing TWICE per tap (149
 # duplicate deliveries in one trace) because two views in the same cell both
 # dispatched. Each tile builder must register exactly one click listener.
-for fn in makeAppTile makeExpandedAppTile; do
-    BODY="$(python3 - "$FRAGMENT" "$fn" <<'PY'
+PHONEUI="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/PhoneAppsUi.kt"
+[ -r "$PHONEUI" ] || { echo "FATAL: missing $PHONEUI"; exit 2; }
+# The tile builders are composables now: AppTile (this fragment) and ExpandedAppTile (PhoneAppsUi.kt, used by both
+# folder sheets). Each must register exactly ONE click target (combinedClickable/clickable) on its cell.
+for spec in "$FRAGMENT:private fun AppTile" "$PHONEUI:internal fun ExpandedAppTile"; do
+    file="${spec%%:*}"; sig="${spec#*:}"
+    BODY="$(python3 - "$file" "$sig" <<'PY'
 import sys, re
-source, name = open(sys.argv[1], encoding="utf-8").read(), sys.argv[2]
-match = re.search(r"\n    private fun " + re.escape(name) + r"\b", source)
-if not match:
+source, sig = open(sys.argv[1], encoding="utf-8").read(), sys.argv[2]
+i = source.find("\n" + sig + "(")
+if i < 0:
     print("__NOT_FOUND__"); sys.exit(0)
-rest = source[match.start() + 1:]
-nxt = re.search(r"\n    (private |override |fun |companion )", rest[1:])
+rest = source[i + 1:]
+nxt = re.search(r"\n(?:@|private |internal |/\*\*|\})", rest[1:])
 print(rest[: nxt.start() + 1] if nxt else rest)
 PY
 )"
     if [ "$BODY" = "__NOT_FOUND__" ]; then
-        bad "$fn not found -- the single-dispatch guard cannot see it"
+        bad "$sig not found -- the single-dispatch guard cannot see it"
     else
-        N="$(printf '%s\n' "$BODY" | grep -c 'setOnClickListener' || true)"
+        N="$(printf '%s\n' "$BODY" | grep -cE '\.(combinedClickable|clickable)\(' || true)"
         if [ "${N:-0}" -eq 1 ]; then
-            ok "$fn registers exactly one click listener"
+            ok "$sig registers exactly one click target"
         else
-            bad "$fn registers ${N:-0} click listeners, expected 1 (see #195)"
+            bad "$sig registers ${N:-0} click targets, expected 1 (see #195)"
         fi
     fi
 done
@@ -225,14 +230,14 @@ done
 echo "== T7: the not-installed glyph takes no colour of its own =="
 # Both dark themes recolour their surfaces, so a colour chosen against the
 # default gradient is legible on one and invisible on the other. The glyph is
-# tinted by the caller from LauncherPalette.
+# tinted by the caller from the palette's textSecondary role (Compose: `tint = p.textSecondary`).
 if grep -qF 'ic_app_not_installed' "$FRAGMENT"; then
     ok "the fragment draws R.drawable.ic_app_not_installed"
 else
     bad "nothing draws the not-installed glyph"
 fi
-TINTS="$(grep -cF 'ColorStateList.valueOf(LauncherPalette.of(ctx).textSecondary)' "$FRAGMENT" || true)"
-TINTS2="$(grep -cF 'ColorStateList.valueOf(palette.textSecondary)' "$FRAGMENT" || true)"
+TINTS="$(grep -cF 'tint = p.textSecondary' "$FRAGMENT" || true)"
+TINTS2=0
 if [ $(( ${TINTS:-0} + ${TINTS2:-0} )) -ge 2 ]; then
     ok "the glyph is tinted from LauncherPalette at every draw site"
 else

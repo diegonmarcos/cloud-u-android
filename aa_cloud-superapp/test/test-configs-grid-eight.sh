@@ -34,13 +34,15 @@ echo "== G3: the separator is inline =="
 # The separator is the composable TileSeparator (LauncherTiles.kt): text as wide as itself, no weight, no slot.
 sep="$(awk '/^internal fun TileSeparator/{f=1} f{print} f&&/^}$/{exit}' "$KT/LauncherTiles.kt")"
 echo "$sep" | grep -q 'Text(' && ! echo "$sep" | grep -qE 'weight\(|fillMaxWidth|clickable' && ok "separator is as wide as its text (no weight, no fill, no slot, not clickable)" || bad "separator is not wrap_content"
-ref="$(awk '/private fun separatorCell/{f=1} f{print} f&&/^        }$/{exit}' "$KT/GroupedTilesFragment.kt")"
-# Data Apps' separatorCell still draws 0x66FFFFFF (40% ink), the caption, centred, hidden from accessibility;
-# TileSeparator draws the same four things in Compose terms.
-echo "$ref" | grep -q '0x66FFFFFF' && echo "$sep" | grep -q 'alpha = 0.4f' && ok "same as Data Apps: the faint 0x66 ink" || bad "differs from Data Apps' separatorCell: ink"
-echo "$ref" | grep -q 'TextAppearance_Material_Caption' && echo "$sep" | grep -q 'fontSize = 12.sp' && ok "same as Data Apps: caption size" || bad "differs from Data Apps' separatorCell: caption"
-echo "$ref" | grep -q 'Gravity.CENTER' && echo "$sep" | grep -q 'TextAlign.Center' && ok "same as Data Apps: centred" || bad "differs from Data Apps' separatorCell: gravity"
-echo "$ref" | grep -q 'IMPORTANT_FOR_ACCESSIBILITY_NO' && echo "$sep" | grep -q 'clearAndSetSemantics' && ok "same as Data Apps: hidden from accessibility" || bad "differs from Data Apps' separatorCell: accessibility"
+# Data Apps' separators (GroupedTilesFragment) and this grid's are now the ONE TileSeparator composable, so they
+# cannot differ in ink, caption size, centring or accessibility; the faint 0x66 ink, the caption size, the
+# centring and the a11y-hidden semantics are pinned on it above and in the next four checks.
+grep -q 'TileSeparator(' "$KT/GroupedTilesFragment.kt" && grep -q 'TileSeparator(' "$KT/TileGridFragment.kt" \
+  && ok "Data Apps and the section grid draw their separators with the same TileSeparator" || bad "a grid draws its own separator again"
+echo "$sep" | grep -q 'alpha = 0.4f' && ok "the separator ink is the faint 0x66 (40%) ink" || bad "separator ink is not the faint 0x66 ink"
+echo "$sep" | grep -q 'fontSize = 12.sp' && ok "the separator is caption size" || bad "separator is not caption size"
+echo "$sep" | grep -q 'TextAlign.Center' && ok "the separator is centred" || bad "separator is not centred"
+echo "$sep" | grep -q 'clearAndSetSemantics' && ok "the separator is hidden from accessibility" || bad "separator is not hidden from accessibility"
 grep -q 'if (!sep) slots++' "$KT/TileGridFragment.kt" && grep -q 'if (!sep && slots == cols) break' "$KT/TileGridFragment.kt" \
   && ok "separators are not counted against the column slots" || bad "separators count as column slots"
 

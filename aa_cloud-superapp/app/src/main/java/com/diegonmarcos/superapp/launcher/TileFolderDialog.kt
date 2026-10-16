@@ -1,16 +1,35 @@
 package com.diegonmarcos.superapp.launcher
 
-import android.app.Dialog
-import android.content.Context
-import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import com.diegonmarcos.superapp.apps.launcherFolderDialog
-import com.diegonmarcos.superapp.apps.setFolderContent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.diegonmarcos.superapp.ui.Haptics
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * The popup behind a FOLDER tile on an aggregator page (Cloud ▸ Apps today).
@@ -26,202 +45,74 @@ import com.diegonmarcos.superapp.ui.Haptics
  *     Sixteen task models all drawn as the same chat glyph would be sixteen
  *     identical icons, so that folder asks for the table.
  *
- * The dim card, its corner radius and its dismiss-on-scrim behaviour come from
- * [launcherFolderDialog] / [setFolderContent], which the Phone ▸ Apps folders
- * already use: one folder look for the whole launcher, not two that drift.
+ * Compose since #773: one dim rounded card with dismiss-on-scrim (a Compose Dialog) — the same folder
+ * look as the Phone ▸ Apps folders ([com.diegonmarcos.superapp.apps.PhoneFolderSheet]).
  */
 object TileFolderDialog {
-
     /** Icons per row in the grid layout — matches the tile row's ~6 across. */
-    private const val GRID_COLUMNS = 4
+    const val GRID_COLUMNS = 4
+    const val TAG_SHEET = "tilefolder:sheet"
+    fun childTag(id: String) = "tilefolder:child:$id"
+}
 
-    fun open(ctx: Context, folder: Sections.AggTile, onPick: (Sections.AggTile) -> Unit) {
-        val dialog = launcherFolderDialog(ctx)
-        val sheet = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(ctx, 16)
-            setPadding(pad, pad, pad, pad)
-        }
-        sheet.addView(TextView(ctx).apply {
-            text = folder.label
-            setTextColor(0xFFFFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-            setPadding(dp(ctx, 4), 0, 0, dp(ctx, 12))
-        })
-
-        val body = if (folder.childrenUi == "table") {
-            tableBody(ctx, folder, dialog, onPick)
-        } else {
-            gridBody(ctx, folder, dialog, onPick)
-        }
-        // A folder tall enough to overflow must scroll rather than clip its last
-        // entry: the table one holds sixteen rows and would not fit any phone.
-        sheet.addView(
-            ScrollView(ctx).apply {
-                isFillViewport = true
-                addView(body)
-            },
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ),
-        )
-
-        dialog.setFolderContent(ctx, sheet)
-        dialog.show()
-    }
-
-    /** Icon grid: [GRID_COLUMNS] cells per line, wrapping downwards. */
-    private fun gridBody(
-        ctx: Context,
-        folder: Sections.AggTile,
-        dialog: Dialog,
-        onPick: (Sections.AggTile) -> Unit,
-    ): View {
-        val column = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        folder.children.filterNot { it.separator }.chunked(GRID_COLUMNS).forEach { line ->
-            val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            line.forEach { child -> row.addView(gridCell(ctx, child, dialog, onPick)) }
-            column.addView(
-                row,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                ),
-            )
-        }
-        return column
-    }
-
-    private fun gridCell(
-        ctx: Context,
-        child: Sections.AggTile,
-        dialog: Dialog,
-        onPick: (Sections.AggTile) -> Unit,
-    ): View {
-        val cell = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            val pad = dp(ctx, 8)
-            setPadding(pad, pad, pad, pad)
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            isClickable = true
-            isFocusable = true
-            setOnClickListener {
-                Haptics.tap(it)
-                // Close first: the entry may launch another app, and a folder
-                // left open behind it is still there on the way back.
-                dialog.dismiss()
-                onPick(child)
+@Composable
+internal fun TileFolderSheet(folder: Sections.AggTile, onDismiss: () -> Unit, onPick: (Sections.AggTile) -> Unit) {
+    val p = LocalKitPalette.current
+    val view = LocalView.current
+    val ctx = LocalContext.current
+    val children = folder.children.filterNot { it.separator }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(Modifier.padding(20.dp).clip(RoundedCornerShape(28.dp)).background(p.surface).padding(16.dp)
+            .testTag(TileFolderDialog.TAG_SHEET)) {
+            Text(folder.label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = 4.dp, bottom = 12.dp))
+            Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState())) {
+                if (folder.childrenUi == "table") {
+                    // One row per entry, four columns of information in two lines: the category above, then
+                    // the task name with the model right-aligned beside it. Dropping any would leave rows that
+                    // cannot be told apart: two share a model, two share a category.
+                    for (child in children) {
+                        Column(Modifier.fillMaxWidth().clickable { Haptics.tap(view); onDismiss(); onPick(child) }
+                            .padding(horizontal = 6.dp, vertical = 8.dp).testTag(TileFolderDialog.childTag(child.id))) {
+                            if (child.caption.isNotEmpty()) {
+                                Text(child.caption, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            Text(child.label, color = p.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodyMedium)
+                            Row(Modifier.fillMaxWidth()) {
+                                Text(child.id, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                if (child.note.isNotEmpty()) {
+                                    Text(child.note, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                        textAlign = TextAlign.End, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    for (line in children.chunked(TileFolderDialog.GRID_COLUMNS)) {
+                        Row(Modifier.fillMaxWidth()) {
+                            for (child in line) {
+                                Column(Modifier.weight(1f).clickable { Haptics.tap(view); onDismiss(); onPick(child) }
+                                    .padding(8.dp).testTag(TileFolderDialog.childTag(child.id)),
+                                    horizontalAlignment = Alignment.CenterHorizontally) {
+                                    val iconRes = Sections.iconResFor(ctx, child.iconName)
+                                    if (iconRes != 0) {
+                                        Icon(painterResource(iconRes), contentDescription = null, tint = p.textPrimary,
+                                            modifier = Modifier.size(36.dp))
+                                    }
+                                    Text(child.label, color = p.textPrimary.copy(alpha = 0.8f), maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+                                        style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+                                }
+                            }
+                            // The last line keeps its cells the width of the rest.
+                            for (k in line.size until TileFolderDialog.GRID_COLUMNS) Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
             }
         }
-        val iconRes = Sections.iconResFor(ctx, child.iconName)
-        if (iconRes != 0) {
-            cell.addView(android.widget.ImageView(ctx).apply {
-                setImageResource(iconRes)
-                imageTintList = android.content.res.ColorStateList.valueOf(0xFFFFFFFF.toInt())
-                val size = dp(ctx, 36)
-                layoutParams = LinearLayout.LayoutParams(size, size)
-            })
-        }
-        cell.addView(TextView(ctx).apply {
-            text = child.label
-            setTextColor(0xCCFFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            gravity = Gravity.CENTER
-            maxLines = 2
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(0, dp(ctx, 4), 0, 0)
-        })
-        return cell
     }
-
-    /**
-     * Table list: one row per entry, four columns of information in two lines —
-     * the category above, then the task name with the model right-aligned
-     * beside it. All four are what the owner listed, and dropping any of them
-     * would leave rows that cannot be told apart: two rows share a model, two
-     * share a category, and the slug is what the bot actually receives.
-     */
-    private fun tableBody(
-        ctx: Context,
-        folder: Sections.AggTile,
-        dialog: Dialog,
-        onPick: (Sections.AggTile) -> Unit,
-    ): View {
-        val column = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        folder.children.filterNot { it.separator }.forEach { child ->
-            column.addView(tableRow(ctx, child, dialog, onPick))
-        }
-        return column
-    }
-
-    private fun tableRow(
-        ctx: Context,
-        child: Sections.AggTile,
-        dialog: Dialog,
-        onPick: (Sections.AggTile) -> Unit,
-    ): View {
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val padX = dp(ctx, 6)
-            val padY = dp(ctx, 8)
-            setPadding(padX, padY, padX, padY)
-            isClickable = true
-            isFocusable = true
-            setOnClickListener {
-                Haptics.tap(it)
-                dialog.dismiss()
-                onPick(child)
-            }
-        }
-        if (child.caption.isNotEmpty()) {
-            row.addView(TextView(ctx).apply {
-                text = child.caption
-                setTextColor(0x99FFFFFF.toInt())
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-            })
-        }
-        row.addView(TextView(ctx).apply {
-            text = child.label
-            setTextColor(0xFFFFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
-        })
-        val line = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        line.addView(
-            TextView(ctx).apply {
-                text = child.id
-                setTextColor(0xB3FFFFFF.toInt())
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-            },
-            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
-        )
-        if (child.note.isNotEmpty()) {
-            line.addView(TextView(ctx).apply {
-                text = child.note
-                setTextColor(0xB3FFFFFF.toInt())
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                gravity = Gravity.END
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-            })
-        }
-        row.addView(
-            line,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ),
-        )
-        return row
-    }
-
-    private fun dp(ctx: Context, value: Int): Int =
-        (value * ctx.resources.displayMetrics.density).toInt()
 }

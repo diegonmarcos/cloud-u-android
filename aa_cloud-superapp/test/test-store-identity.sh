@@ -158,7 +158,7 @@ fleet_target = "page:%s/%s" % (SEC, CLOUD_TAB)
 for suffix, needle, what in (
         ("/superapp/App.kt", '"shortcut_action" to "%s"' % fleet_target, "the update notification deep-links to the fleet tab"),
         ("/superapp/ShellActivity.kt", 'routeTarget("%s")' % fleet_target, "Update-All opens the fleet tab"),
-        ("/apps/PhoneAppsFragment.kt", 'openSectionPage("%s", "%s"' % (SEC, CLOUD_TAB), "a lib tile opens the fleet tab")):
+        ("/apps/PhoneAppsUi.kt", 'openSectionPage("%s", "%s"' % (SEC, CLOUD_TAB), "a lib tile opens the fleet tab")):
     if needle in "\n".join(code_lines(src(suffix))): ok(what)
     else: bad(what + " — expected %s in %s" % (needle, suffix))
 OLD_CODE = re.compile(r'action:constellation|"constellation"\)|== "constellation"|ConstellationFragment')

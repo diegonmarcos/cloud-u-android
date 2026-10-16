@@ -61,11 +61,11 @@ t2() {   # $1 = PageTabs.kt, $2 = NavPlatformAndroid.kt
 }
 t3() {   # $1 = source root; every strip site is a PageTabsView and owns no geometry of its own
     local root="$1" sites f n=0
-    sites=$(grep -rl 'PageTabsView(' "$root" --include=*.kt)
+    sites=$(grep -rlE '\bPageTabs(View)?\(' "$root" --include=*.kt)
     for f in $sites; do
         grep -qE 'TabLayout|AppTabsStyle|tab_strip_|setOnApplyWindowInsetsListener' <<<"$(codeof "$f")" && return 1
     done
-    n=$(( $(grep -rl 'PageTabsView(' "$root" --include=*.kt | wc -l) + $(grep -rl '<com.diegonmarcos.superapp.bottomnav.PageTabsView' "$RES/layout" 2>/dev/null | wc -l) ))
+    n=$(( $(grep -rlE '\bPageTabs(View)?\(' "$root" --include=*.kt | wc -l) + $(grep -rl '<com.diegonmarcos.superapp.bottomnav.PageTabsView' "$RES/layout" 2>/dev/null | wc -l) ))
     [ "$n" -ge 4 ]
 }
 
@@ -73,7 +73,7 @@ echo "== T2: PageTabs applies both, plus the live inset, without consuming it ==
 t2 "$PT" "$PLAT" && ok "T2: reads both dimens, pads top (base + live inset) and bottom, live inset only under the top chrome" || bad "T2: PageTabs does not own the whole geometry"
 
 echo "== T3: every strip site is a PageTabsView =="
-SITES=$( (grep -rl 'PageTabsView(' "$SRC" --include=*.kt; grep -rl '<com.diegonmarcos.superapp.bottomnav.PageTabsView' "$RES/layout") | sed "s#$APP/##")
+SITES=$( (grep -rlE '\bPageTabs(View)?\(' "$SRC" --include=*.kt; grep -rl '<com.diegonmarcos.superapp.bottomnav.PageTabsView' "$RES/layout") | sed "s#$APP/##")
 echo "$SITES" | sed 's/^/     site: /'
 t3 "$SRC" && ok "T3: $(echo "$SITES" | wc -l) strip sites, none with its own dimen, listener or TabLayout" || bad "T3: a strip site is not a PageTabsView, or declares its own spacing"
 grep -q 'underTopChrome = false' "$SRC/com/diegonmarcos/superapp/launcher/AppDrawerSheetFragment.kt" \
@@ -88,11 +88,11 @@ grep -v 'WindowInsets.statusBars.union(WindowInsets.displayCutout)' "$PT" > "$TM
 t2 "$TMP/no-live.kt" "$PLAT" && bad "T4: T2 passed without the live inset" || ok "T4: no live status/cutout inset → RED"
 sed 's/tabsTopInset = dp(R.dimen.page_tabs_top_inset)/tabsTopInset = 8.dp/' "$PLAT" > "$TMP/literal-top.kt"
 t2 "$PT" "$TMP/literal-top.kt" && bad "T4: T2 passed with the top base as a literal dp" || ok "T4: top base no longer read from the declared dimen → RED"
-mkdir -p "$TMP/src"; for f in $(grep -rl 'PageTabsView(' "$SRC" --include=*.kt); do cp "$f" "$TMP/src/$(basename "$f")"; done
+mkdir -p "$TMP/src"; for f in $(grep -rlE '\bPageTabs(View)?\(' "$SRC" --include=*.kt); do cp "$f" "$TMP/src/$(basename "$f")"; done
 printf '%s\n' 'private fun oldStrip(t: TabLayout) { ViewCompat.setOnApplyWindowInsetsListener(t) { _, i -> i } }' >> "$TMP/src/SectionTabsFragment.kt"
 grep -q 'setOnApplyWindowInsetsListener' "$TMP/src/SectionTabsFragment.kt" || bad "T4: the mutation did not land in the scratch copy"
 t3 "$TMP/src" && bad "T4: T3 passed a section strip with its own TabLayout/listener back" || ok "T4: a per-strip TabLayout/listener back → RED"
-[ "$(( $(grep -rl 'PageTabsView(' "$TMP/src" --include=*.kt | wc -l) + $(grep -rl '<com.diegonmarcos.superapp.bottomnav.PageTabsView' "$RES/layout" | wc -l) ))" -ge 4 ] && ok "T4: the scratch tree still has every strip site" || bad "T4: the scratch tree lost a strip site — the mutation proved nothing"
+[ "$(( $(grep -rlE '\bPageTabs(View)?\(' "$TMP/src" --include=*.kt | wc -l) + $(grep -rl '<com.diegonmarcos.superapp.bottomnav.PageTabsView' "$RES/layout" | wc -l) ))" -ge 4 ] && ok "T4: the scratch tree still has every strip site" || bad "T4: the scratch tree lost a strip site — the mutation proved nothing"
 
 echo
 echo "passed=$PASS failed=$FAIL"

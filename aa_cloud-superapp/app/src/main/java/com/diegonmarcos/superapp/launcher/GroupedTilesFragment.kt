@@ -1,16 +1,59 @@
 package com.diegonmarcos.superapp.launcher
-import com.diegonmarcos.superapp.ui.Haptics
-
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.fragment.app.Fragment
-import com.diegonmarcos.superapp.search.InlineSearch
+import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.apps.AllApps
+import com.diegonmarcos.superapp.apps.OpenFolder
+import com.diegonmarcos.superapp.apps.PhoneFolderSheet
+import com.diegonmarcos.superapp.apps.PhoneRefreshBar
+import com.diegonmarcos.superapp.apps.PhoneSectionDivider
+import com.diegonmarcos.superapp.apps.PhoneSubhead
+import com.diegonmarcos.superapp.apps.allApps
+import com.diegonmarcos.superapp.apps.allAppsItems
+import com.diegonmarcos.superapp.extinstall.extInstallRing
+import com.diegonmarcos.superapp.search.SearchFrame
+import com.diegonmarcos.superapp.search.SearchSession
 import com.diegonmarcos.superapp.search.SearchEntry
+import com.diegonmarcos.superapp.ui.Haptics
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
+
+import android.content.Context
+import android.os.Bundle
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Aggregator section that renders themed sub-groups stacked vertically.
@@ -27,125 +70,26 @@ import com.diegonmarcos.superapp.search.SearchEntry
  * Tile clicks bubble up through the same TileGridFragment.TileClickListener
  * the activity already implements, so deep-link grammar (section: / page: /
  * action: / http(s):) routes identically to the flat aggregator path.
+ *
+ * Compose since #773: one LazyColumn; each group's tiles are ONE sideways-scrolling LazyRow, so a group of
+ * any size stays on a single line. [GroupedTilesPage] is the body, shared with the Home swipe sheet's Cloud tab.
  */
-class GroupedTilesFragment : Fragment(), BackHandler {
+class GroupedTilesFragment : KitComposeFragment(), BackHandler {
 
     /** Cloud ▸ Apps' search: the SuperApp's one search (search/SearchPanel), inline at the top. */
-    private var search: InlineSearch? = null
+    private var search: SearchSession? = null
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
+    override fun palette() = LauncherPalette.kit(requireContext())
+
+    @Composable
+    override fun Content() {
         val sectionId = arguments?.getString(ARG_SECTION_ID).orEmpty()
-        val section = Sections.byId(sectionId)
-        val groups  = section?.tileGroups.orEmpty()
         val withSearch = arguments?.getBoolean(ARG_SEARCH) == true && sectionId == "cloud"
-
-        val scroll = ScrollView(ctx).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
-            isFillViewport = true
-        }
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(12); setPadding(pad, pad, pad, pad)
-        }
-        scroll.addView(col)
-
-        // Suite is the only section merging in the generic Home-tab "All
-        // Apps" grid + a "Recently Used" smart folder below its Quickmarks
-        // — other GroupedTilesFragment users (Home, Labs, Configs, …) keep
-        // their plain grouped-tiles rendering unchanged.
-        if (sectionId == "cloud") col.addView(groupHeader(ctx, "Quickmarks"))
-
-        for (group in groups) {
-            col.addView(groupHeader(ctx, group.title))
-            col.addView(tileRow(ctx, group.tiles))
-        }
-
-        // ── Actions, after the declared groups ────────────────────────────
-        // The SAME list the all-apps star draws on its inner ring
-        // (build.json::onehand.circular_menu.actions), read from that block
-        // rather than copied into tile_groups. Copying is what let the Configs
-        // grid and the Configs star disagree about how many actions exist; one
-        // list cannot disagree with itself, and adding a sixth action means
-        // editing one place and seeing it in both.
-        //
-        // Suite only, like the Quickmarks header above: these are the global
-        // actions, so repeating them in Home, Labs and Configs would be the
-        // same five tiles four times over.
-        if (sectionId == "cloud") {
-            val starActions = com.diegonmarcos.superapp.onehand.CircularMenu.config().actions
-                .map { Sections.AggTile(it.target, it.label, it.iconName, it.target) }
-            if (starActions.isNotEmpty()) {
-                col.addView(groupHeader(ctx, "Actions"))
-                col.addView(tileRow(ctx, starActions))
-            }
-        }
-
-        if (sectionId == "cloud") {
-            // ── Below the fold: built AFTER the first frame ──────────────
-            //
-            // Everything above is the Quickmarks + Actions the user opens this
-            // page for, and it is ~30 tiles. Smart Folders follows, each tile a
-            // separate inflate(R.layout.item_tile) — inline, that work sat
-            // between the tap and the first frame, so the tab stayed on the
-            // previous page until all of it existed.
-            //
-            // Deferring it costs nothing visually: it is appended below the
-            // fold, so it lands off-screen while the user is still reading
-            // Quickmarks.
-            //
-            // The whole-of-Home "All Apps" grid used to sit here too, via
-            // HomeGroupedFragment.buildInto. It was the Home tab rendered a
-            // second time inside a Cloud tab — the same ~30 groups the user
-            // had just navigated away from — so this page is Quickmarks,
-            // Actions and Smart Folders now. Home still renders it; the
-            // buildInto entry point stays for Home's own use.
-            col.post {
-                if (!isAdded) return@post
-                // ── All Apps (#563) — the same section Phone ▸ Apps has (#249),
-                //    mirrored: Phone draws every installed app EXCEPT the
-                //    fleet's, this draws ONLY the fleet's, through the one
-                //    renderer and the one taxonomy. Distinct from the removed
-                //    Home grid below: that was ui.home_groups tiles repeated,
-                //    this is installed apps grouped by purpose.
-                col.addView(sectionDivider(ctx))
-                col.addView(groupHeader(ctx, "All Apps"))
-                com.diegonmarcos.superapp.apps.PhoneAppsFragment.renderAllApps(ctx, col,
-                    only = Sections.constellationPackages(ctx.packageName))
-                // ── Smart Folders → Recently Used. Cloud tiles have no
-                //    existing pin/favorite/most-used signal the way Phone
-                //    apps do — this is the one real per-tile signal
-                //    available (RecentCloudTiles, recorded centrally from
-                //    MainActivity.onTileClicked), so it's the sole Smart
-                //    Folders subsection for now. Always shown (with an
-                //    empty-state line) so the section doesn't disappear
-                //    entirely before the user has opened any Cloud tiles.
-                col.addView(sectionDivider(ctx))
-                val allTiles = Sections.all().flatMap { it.tileGroups }.flatMap { it.destinations }
-                    .associateBy { it.target }
-                val recent = RecentCloudTiles.recent(ctx).mapNotNull { allTiles[it] }
-                col.addView(groupHeader(ctx, "Smart Folders"))
-                col.addView(groupHeader(ctx, "Recently Used"))
-                if (recent.isNotEmpty()) {
-                    col.addView(tileRow(ctx, recent))
-                } else {
-                    col.addView(TextView(ctx).apply {
-                        text = "Open a few Cloud tiles and they'll show up here"
-                        setTextColor(0x99FFFFFF.toInt())
-                        setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                        setPadding(dp(4), 0, dp(4), dp(8))
-                    })
-                }
-            }
-        }
-        if (!withSearch) return scroll
+        val click = { id: String -> (activity as? TileGridFragment.TileClickListener)?.onTileClicked(id); Unit }
+        if (!withSearch) { GroupedTilesPage(sectionId, click); return }
         // The bar sits directly under the page's tab icons, the results drop over the grid.
-        val inline = InlineSearch(this, SearchEntry.CLOUD_APPS_PAGE, "Search")
-        search = inline
-        return mountSearch(inline, scroll)
+        val session = remember { SearchSession(this, SearchEntry.CLOUD_APPS_PAGE).also { search = it } }
+        SearchFrame(session, "Search", Modifier.fillMaxSize()) { GroupedTilesPage(sectionId, click) }
     }
 
     /** Back with a query clears it (the full grid returns) before Back leaves the page. */
@@ -156,200 +100,33 @@ class GroupedTilesFragment : Fragment(), BackHandler {
         search = null
     }
 
-    private fun groupHeader(ctx: android.content.Context, title: String): View =
-        TextView(ctx).apply {
-            text = title
-            setTextColor(0xFFE9D8FD.toInt())
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-            setPadding(dp(4), dp(12), 0, dp(4))
-        }
-
-    /** Thin separator line between the Quickmarks / All Apps / Smart
-     *  Folders sections on the merged page. */
-    private fun sectionDivider(ctx: android.content.Context): View =
-        View(ctx).apply {
-            setBackgroundColor(0x33FFFFFF)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(1),
-            ).apply { topMargin = dp(16); bottomMargin = dp(4) }
-        }
-
-    /** One horizontally-scrollable strip per group — tiles stay on a
-     *  single line regardless of count; the user scrolls right for
-     *  overflow. Replaces the previous 5-column wrap so groups like
-     *  Suite/Data Apps (6 tiles now) don't break onto a second row. */
-    private fun tileRow(ctx: android.content.Context, tiles: List<Sections.AggTile>): View {
-        val scroll = android.widget.HorizontalScrollView(ctx).apply {
-            isHorizontalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            )
-        }
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-        }
-        for (tile in tiles) row.addView(tileCell(ctx, tile))
-        scroll.addView(row)
-        return scroll
-    }
-
-    /**
-     * The "|" between two runs of tiles in one group. A glyph, not a control:
-     * a cell that looks like the tiles around it but does nothing when pressed
-     * is the defect this app already fixed once in the tab strips, so this one
-     * is explicitly not clickable, not focusable, and hidden from
-     * accessibility — TalkBack should walk from the tile before it to the tile
-     * after it and never stop on a vertical bar.
-     *
-     * Set in the tiles' own caption type at the icon's height so it reads as
-     * punctuation between the rows rather than as a piece of chrome sitting on
-     * top of them, and it stays aligned when the labels wrap to two lines.
-     */
-    private fun separatorCell(ctx: android.content.Context, tile: Sections.AggTile): View =
-        TextView(ctx).apply {
-            text = tile.label
-            setTextColor(0x66FFFFFF)
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            gravity = android.view.Gravity.CENTER
-            isClickable = false
-            isFocusable = false
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            val pad = dp(6)
-            setPadding(pad, pad, pad, pad)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.MATCH_PARENT,
-            )
-        }
-
-    private fun tileCell(ctx: android.content.Context, tile: Sections.AggTile): View {
-        if (tile.separator) return separatorCell(ctx, tile)
-        // Fixed-width cells so the horizontal scroll row shows ~6
-        // tiles at a time on a typical phone width (matches Home Apps'
-        // tile_columns = 6) and the rest stay reachable by swiping.
-        val cellWidth = dp(60)
-        val cell = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = android.view.Gravity.CENTER_HORIZONTAL
-            val pad = dp(6); setPadding(pad, pad, pad, pad)
-            layoutParams = LinearLayout.LayoutParams(cellWidth, LinearLayout.LayoutParams.WRAP_CONTENT)
-            isClickable = true; isFocusable = true
-            // No cell background — matches TileGridFragment's bare tile
-            // look. The previous list_selector_background was the default
-            // amber/yellow highlight from the platform list theme, which
-            // showed up only on Suite (the sole GroupedTilesFragment user
-            // today).
-            setOnClickListener {
-                // A folder HOLDS destinations instead of being one, so it opens
-                // the popup and the entries inside dispatch. Falling through to
-                // `target` as well would make the first tap ambiguous, which is
-                // why a folder in build.json carries no target at all.
-                //
-                // A folder opens a POPUP, which is not a tile click and reaches
-                // no dispatcher, so it buzzes for itself. A destination does
-                // not: onTileClicked IS the per-tap bookkeeping — log, haptic,
-                // drawer close, Recently-Used and App-Tabs — and #195 put it
-                // all in one place precisely so one tap could not pay for it
-                // twice. This row was the place that still did. Every Data Apps
-                // tap, Drive's included, fired Haptics.tap here and again at
-                // ShellActivity.onTileClicked: two real Vibrator pulses (they
-                // are direct `fire()` calls, not view feedback that could
-                // coalesce) for one finger. test-tile-click-dispatched-once.sh
-                // read only ShellActivity.kt, so it stayed green over it.
-                if (tile.children.isNotEmpty()) {
-                    Haptics.tap(it)
-                    TileFolderDialog.open(ctx, tile) { child ->
-                        (activity as? TileGridFragment.TileClickListener)
-                            ?.onTileClicked(child.target)
-                    }
-                } else {
-                    (activity as? TileGridFragment.TileClickListener)?.onTileClicked(tile.target)
-                }
-            }
-        }
-        // #571: an extapp tile whose app is not on the phone draws the #249
-        // placeholder Phone ▸ Apps uses — same glyph, same strings — instead
-        // of an icon that promises an app. The tap is unchanged: it still
-        // reaches launchExternalApp, which installs from the Store's asset.
-        val missing = Sections.extappMissing(ctx, tile.target)
-        val palette = com.diegonmarcos.superapp.ui.LauncherPalette.of(ctx)
-        if (missing) {
-            cell.contentDescription = ctx.getString(
-                com.diegonmarcos.superapp.R.string.phone_app_not_installed_tile_hint, tile.label)
-        }
-        val iconRes = if (missing) com.diegonmarcos.superapp.R.drawable.ic_app_not_installed
-                      else Sections.iconResFor(ctx, tile.iconName)
-        if (iconRes != 0) {
-            cell.addView(android.widget.ImageView(ctx).apply {
-                setImageResource(iconRes)
-                // A tile that declares tint:false keeps its glyph's own colours;
-                // the not-installed placeholder is always tinted.
-                if (missing || tile.tint) imageTintList = android.content.res.ColorStateList.valueOf(
-                    if (missing) palette.textSecondary else 0xFFFFFFFF.toInt())
-                val sz = dp(32)
-                layoutParams = LinearLayout.LayoutParams(sz, sz)
-            })
-        }
-        cell.addView(TextView(ctx).apply {
-            text = tile.label
-            setTextColor(if (missing) palette.textSecondary else 0xCCFFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            gravity = android.view.Gravity.CENTER
-            maxLines = 2
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(0, dp(4), 0, 0)
-        })
-        if (missing) {
-            cell.addView(TextView(ctx).apply {
-                setText(com.diegonmarcos.superapp.R.string.phone_app_not_installed)
-                setTextColor(palette.accent)
-                textSize = 9f
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-                gravity = android.view.Gravity.CENTER
-            })
-        }
-        com.diegonmarcos.superapp.extinstall.ExtTileRing.attach(cell, tile.target)
-        return cell
-    }
-
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
     companion object {
         private const val ARG_SECTION_ID = "section_id"
         private const val ARG_SEARCH = "search"
 
-        /**
-         * [search] mounted around [content]: its bar FIRST (so on Cloud ▸ Apps it sits directly
-         * under the page's tab icons), then [content] with the results dropdown layered over it.
-         * The Home swipe sheet mounts the same over its Cloud | Phone body.
-         */
-        fun mountSearch(search: InlineSearch, content: View): View {
-            val ctx = content.context
-            val frame = android.widget.FrameLayout(ctx).apply {
-                addView(content, android.widget.FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-                addView(search.dropdown, android.widget.FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-            }
-            return LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-                // Takes the focus off the bar when the search resets (InlineSearch.reset), so the
-                // keyboard and the chips go; before its children, so opening the page focuses nothing.
-                isFocusable = true
-                isFocusableInTouchMode = true
-                descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
-                addView(search.bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-                addView(frame, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-            }
-        }
+        const val TAG_LIST = "groupedtiles:list"
+        fun groupTag(title: String) = "groupedtiles:group:$title"
+        fun tileTag(target: String) = "groupedtiles:tile:$target"
+        const val TAG_RECENT_EMPTY = "groupedtiles:recent-empty"
 
         /** Where an empty search sends its query: the Cloud Search app (ac_cloud-search). */
         const val CLOUD_SEARCH_TARGET = "extapp:cloud-search"
+
+        /** The Actions group: the SAME list the all-apps star draws on its inner ring
+         *  (build.json::onehand.circular_menu.actions), read from that block rather than copied into
+         *  tile_groups. Copying is what let the Configs grid and the Configs star disagree about how many
+         *  actions exist. Suite/Cloud only: repeating the global actions in Home, Labs and Configs would be
+         *  the same five tiles four times over. */
+        internal fun starActions(): List<Sections.AggTile> =
+            com.diegonmarcos.superapp.onehand.CircularMenu.config().actions
+                .map { Sections.AggTile(it.target, it.label, it.iconName, it.target) }
+
+        /** The Recently Used smart folder's tiles: the one real per-tile signal the Cloud tiles have
+         *  (RecentCloudTiles, recorded centrally from onTileClicked). */
+        internal fun recentTiles(ctx: Context): List<Sections.AggTile> {
+            val allTiles = Sections.all().flatMap { it.tileGroups }.flatMap { it.destinations }.associateBy { it.target }
+            return RecentCloudTiles.recent(ctx).mapNotNull { allTiles[it] }
+        }
 
         /** [search] puts the SuperApp's search at the top of the page — Cloud ▸ Apps asks for
          *  it; the Home sheet's Cloud tab does not (the sheet carries the same search above its
@@ -359,6 +136,130 @@ class GroupedTilesFragment : Fragment(), BackHandler {
                 putString(ARG_SECTION_ID, sectionId)
                 putBoolean(ARG_SEARCH, search)
             }
+        }
+    }
+}
+
+/** What sits below the fold of Cloud ▸ Apps, computed after the first frame. */
+private class BelowFold(val all: AllApps, val recent: List<Sections.AggTile>)
+
+@Composable
+internal fun GroupedTilesPage(sectionId: String, click: (String) -> Unit) {
+    val ctx = LocalContext.current
+    val section = Sections.byId(sectionId)
+    val groups = section?.tileGroups.orEmpty()
+    var folder by remember { mutableStateOf<Sections.AggTile?>(null) }
+    var apps by remember { mutableStateOf<OpenFolder?>(null) }
+    var epoch by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    // ── Below the fold: built AFTER the first frame ──────────────────────────
+    // Quickmarks + Actions are what the user opens this page for and it is ~30 tiles; All Apps and Smart
+    // Folders follow. Computing them off the main thread keeps the tab from freezing on the previous page.
+    val below by produceState<BelowFold?>(null, sectionId, epoch) {
+        value = if (sectionId != "cloud") null else withContext(Dispatchers.Default) {
+            BelowFold(allApps(ctx, only = Sections.constellationPackages(ctx.packageName)), GroupedTilesFragment.recentTiles(ctx))
+        }
+    }
+    LazyColumn(Modifier.fillMaxSize().testTag(GroupedTilesFragment.TAG_LIST), contentPadding = PaddingValues(12.dp)) {
+        // Suite is the only section merging in the generic "All Apps" grid + a "Recently Used" smart folder
+        // below its Quickmarks — other users (Home, Labs, Configs, …) keep their plain grouped tiles.
+        if (sectionId == "cloud") item(key = "h:quick") { GroupTitle("Quickmarks") }
+        groups.forEachIndexed { gi, g ->
+            item(key = "g:$gi") {
+                Column {
+                    GroupTitle(g.title)
+                    TileStrip(g.tiles, click) { folder = it }
+                }
+            }
+        }
+        // ── Actions, after the declared groups ──
+        if (sectionId == "cloud") {
+            val actions = GroupedTilesFragment.starActions()
+            if (actions.isNotEmpty()) item(key = "g:actions") {
+                Column { GroupTitle("Actions"); TileStrip(actions, click) { folder = it } }
+            }
+        }
+        val b = below
+        if (b != null) {
+            // ── All Apps (#563) — the same section Phone ▸ Apps has (#249), mirrored: Phone draws every
+            //    installed app EXCEPT the fleet's, this draws ONLY the fleet's, through the one renderer and
+            //    the one taxonomy.
+            item(key = "div:1") { PhoneSectionDivider() }
+            item(key = "h:allapps") { GroupTitle("All Apps") }
+            allAppsItems(ctx, b.all) { apps = it }
+            // ── Smart Folders → Recently Used: always shown (with an empty-state line) so the section does
+            //    not disappear before the user has opened any Cloud tile.
+            item(key = "div:2") { PhoneSectionDivider() }
+            item(key = "h:smart") { GroupTitle("Smart Folders") }
+            item(key = "h:recent") { GroupTitle("Recently Used") }
+            if (b.recent.isNotEmpty()) item(key = "recent") { TileStrip(b.recent, click) { folder = it } }
+            else item(key = "recent-empty") {
+                Text("Open a few Cloud tiles and they'll show up here", color = LocalKitPalette.current.textSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp).testTag(GroupedTilesFragment.TAG_RECENT_EMPTY))
+            }
+            item(key = "refresh") { PhoneRefreshBar { com.diegonmarcos.superapp.apps.PhoneAppsFragment.invalidateCache(); epoch++ } }
+        }
+    }
+    folder?.let { f -> TileFolderSheet(f, onDismiss = { folder = null }, onPick = { child -> click(child.target) }) }
+    apps?.let { PhoneFolderSheet(it) { apps = null } }
+}
+
+@Composable
+private fun GroupTitle(text: String) {
+    Text(text, color = LocalKitPalette.current.textPrimary, style = MaterialTheme.typography.titleSmall,
+        modifier = Modifier.fillMaxWidth().padding(start = 4.dp, top = 12.dp, bottom = 4.dp).testTag(GroupedTilesFragment.groupTag(text)))
+}
+
+/** One horizontally-scrollable strip per group — tiles stay on a single line regardless of count; the user
+ *  scrolls right for overflow (replaces the previous 5-column wrap so groups like Data Apps don't break). */
+@Composable
+internal fun TileStrip(tiles: List<Sections.AggTile>, click: (String) -> Unit, openFolder: (Sections.AggTile) -> Unit) {
+    LazyRow(Modifier.fillMaxWidth()) {
+        items(tiles) { tile -> TileCell(tile, click, openFolder) }
+    }
+}
+
+/** A tile in a strip. A `separator` is the faint "|" between two runs of tiles: a glyph, not a control. */
+@Composable
+internal fun TileCell(tile: Sections.AggTile, click: (String) -> Unit, openFolder: (Sections.AggTile) -> Unit) {
+    if (tile.separator) { TileSeparator(tile.label); return }
+    val ctx = LocalContext.current
+    val view = LocalView.current
+    val p = LocalKitPalette.current
+    // #571: an extapp tile whose app is not on the phone draws the #249 placeholder Phone ▸ Apps uses — same
+    // glyph, same strings — instead of an icon that promises an app. The tap is unchanged: it still reaches
+    // launchExternalApp, which installs from the Store's asset.
+    val missing = remember(tile.target) { Sections.extappMissing(ctx, tile.target) }
+    val iconRes = if (missing) R.drawable.ic_app_not_installed else Sections.iconResFor(ctx, tile.iconName)
+    val hint = if (missing) stringResource(R.string.phone_app_not_installed_tile_hint, tile.label) else null
+    Column(
+        // Fixed-width cells so the sideways row shows ~6 tiles at a time on a typical phone width.
+        Modifier.width(60.dp)
+            .clickable {
+                // A folder HOLDS destinations instead of being one, so it opens the popup and the entries inside
+                // dispatch. A folder opens a POPUP, which is not a tile click and reaches no dispatcher, so it buzzes
+                // for itself. A destination does not: onTileClicked IS the per-tap bookkeeping (log, haptic, drawer
+                // close, Recently-Used, App-Tabs) and #195 put it in one place so one tap could not pay for it twice.
+                if (tile.children.isNotEmpty()) { Haptics.tap(view); openFolder(tile) } else click(tile.target)
+            }
+            .extInstallRing(tile.target, 32.dp, iconTop = 6.dp)
+            .padding(6.dp)
+            .semantics { if (hint != null) contentDescription = hint }
+            .testTag(GroupedTilesFragment.tileTag(tile.target)),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (iconRes != 0) {
+            // A tile that declares tint:false keeps its glyph's own colours; the placeholder is always tinted.
+            Icon(painterResource(iconRes), contentDescription = null,
+                tint = if (missing) p.textSecondary else if (tile.tint) p.textPrimary else androidx.compose.ui.graphics.Color.Unspecified,
+                modifier = Modifier.size(32.dp))
+        }
+        Text(tile.label, color = if (missing) p.textSecondary else p.textPrimary.copy(alpha = 0.8f), maxLines = 2,
+            overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, fontSize = 12.sp,
+            modifier = Modifier.padding(top = 4.dp))
+        if (missing) {
+            Text(stringResource(R.string.phone_app_not_installed), color = p.accent, fontSize = 9.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
         }
     }
 }
