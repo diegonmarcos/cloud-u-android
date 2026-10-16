@@ -88,7 +88,7 @@ class MainActivity : BridgeActivity(), AFFiNEThemePlugin.Callback {
             BuildConfig.UI_DEFAULT_SECTION,
         )
         val parent = bridge.webView.parent as CoordinatorLayout
-        val run = { js: String -> bridge.webView.post { bridge.webView.evaluateJavascript(js, null) } }
+        val run: (String) -> Unit = { js -> bridge.webView.post { bridge.webView.evaluateJavascript(js, null) } }
         val nav = NativeNav(
             decl = decl,
             webView = bridge.webView,
