@@ -59,10 +59,10 @@
         "ab_cloud-libs-shared/libs/bottomnav/src/main/java/com/diegonmarcos/superapp/bottomnav/BottomNav.kt"
       ],
       "expect": {
-        "apps": 18,
+        "apps": 19,
         "libs": 0,
         "rootfs": 0,
-        "ship": 19,
+        "ship": 20,
         "refresh": 0
       }
     },
