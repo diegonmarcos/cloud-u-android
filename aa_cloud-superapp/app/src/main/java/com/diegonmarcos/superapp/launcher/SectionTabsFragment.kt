@@ -1,17 +1,26 @@
 package com.diegonmarcos.superapp.launcher
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.fragment.app.FragmentContainerView
 import com.diegonmarcos.superapp.ShellActivity
 import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.shell.Collapsible
 import com.diegonmarcos.superapp.system.ModePrefs
-import com.diegonmarcos.superapp.bottomnav.PageTabsView
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
 
 /**
  * A section's pages behind ONE tab strip — the launcher's tabbed sections
@@ -44,8 +53,13 @@ import com.diegonmarcos.superapp.bottomnav.PageTabsView
  * its selection under its own key so it cannot overwrite the section's, and it
  * stays single-pane on a tablet because it is already living inside the
  * activity's 60% detail column rather than splitting the window itself.
+ *
+ * Compose since #773: the strip is libs:bottomnav's composable [PageTabs] (the same geometry [PageTabsView] drew)
+ * and each pane is a FragmentContainerView hosted in an AndroidView, because the pages a section opens are still
+ * Fragments built by [LauncherNavController.pageFragment].
  */
-class SectionTabsFragment : Fragment(), Collapsible {
+
+class SectionTabsFragment : KitComposeFragment(), Collapsible {
 
     private val sectionId: String get() = arguments?.getString(ARG_SECTION_ID).orEmpty()
 
@@ -94,6 +108,9 @@ class SectionTabsFragment : Fragment(), Collapsible {
      */
     private var selectedPageId = ""
 
+    /** The state saved by the last instance, read before the first composition. */
+    private var restoredState: Bundle? = null
+
     /**
      * [Collapsible] — a bottom-nav re-tap lands on this wrapper (it is the
      * visible top fragment), so forward it to the ACTIVE pane's child. Panes
@@ -107,105 +124,71 @@ class SectionTabsFragment : Fragment(), Collapsible {
             ?.toggleAllCollapsed() ?: false
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        // The section's own pages, or — when a PAGE owns this strip — that
-        // page's declared tabs. Both are pages of the same section, so
-        // everything below this line is unaware of the difference.
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        restoredState = savedInstanceState
+    }
+
+    override fun palette() = LauncherPalette.kit(requireContext())
+
+    @Composable
+    override fun Content() {
         val owner = Sections.byId(sectionId)?.allPages?.firstOrNull { it.id == ownerPageId }
         val pages = if (owner != null) Sections.tabPagesOf(sectionId, owner)
                     else Sections.byId(sectionId)?.pages.orEmpty()
-        // A page that declares an `action` is a LAUNCH tab, not a destination:
-        // C3's Watchdog and Morpheus fire `extapp:` and leave the app. It wears
-        // a tab so the strip reads Observability | Topology | Watchdog |
-        // Morpheus, but it has no fragment, so it never claims a pane.
         val panePages = pages.filter { it.action.isBlank() }
         val twoPane = (activity as? ShellActivity)?.isTwoPane() == true && ownerPageId.isBlank()
-        // One pane per content page on a tablet; phones keep the single
-        // swapping pane. A PAGE strip is single-pane on every device: it is
-        // opened INTO the tablet's 60% detail column, so fanning its tabs out
-        // side by side would divide that column, not the window.
         val paneCount = if (twoPane) panePages.size.coerceIn(1, MAX_PANES) else 1
 
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        }
-
-        // #868 the strip is libs:bottomnav's PageTabsView: the SAME pill strip every app draws
-        // (PageTabs is the pixel port of the AppTabsStyle this file used to call). It owns the
-        // top clearance (base + live status/cutout inset), the gap to the pane below, the equal
-        // pill widths and the "|" between the destination tabs and the launch tabs (Observability
-        // · Topology │ Watchdog · Morpheus): the divider is derived from the same blank/non-blank
-        // `action` split this file turns on, and a launch pill is a button wearing a tab, so it
-        // is never the strip's selection.
-        val tabs = PageTabsView(ctx).apply {
-            this.pages = pages.map(Sections::navPage)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        }
-
-        val panes = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            isBaselineAligned = false
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
-        }
-        repeat(paneCount) { i ->
-            panes.addView(FrameLayout(ctx).apply {
-                id = paneIds[i]
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
-            })
-        }
-
-        root.addView(tabs)
-        root.addView(panes)
-
-        val start = startIndex(pages, s)
-        activePane = start
-        lastContentTab = start
-        if (paneCount > 1) {
-            // Every content page is on screen at once — fill each pane from its
-            // own page and leave them alone; the tabs only move [activePane].
-            panePages.take(paneCount).forEachIndexed { i, p -> render(i, p.id) }
-        } else {
-            // Phone: one pane, so the selected tab is also the rendered page.
-            pages.getOrNull(start)?.let { render(0, it.id) }
-        }
-        pages.getOrNull(start)?.let { tabs.selectedId = it.id }
-        // Sync the mode for the landing tab explicitly: setting selectedId only moves the pill
-        // and never calls back, so nothing else would fire it for the page we start on.
-        pages.getOrNull(start)?.let {
-            selectedPageId = it.id
-            (activity as? ShellActivity)?.nav?.syncModeForPage(it.id)
-            (activity as? ShellActivity)?.nav?.recordActiveTab(tabKey, it.id)
-        }
-
-        tabs.onSelect = select@{ tapped ->
-            val position = pages.indexOfFirst { it.id == tapped.id }
-            val page = pages.getOrNull(position) ?: return@select
-            // Launch tab: dispatch its target through the same grammar a tile uses (so `extapp:`
-            // gets the existing installed→open, absent→offer-the-APK behaviour for free) and
-            // leave the strip where the user was reading — the pill never moves, so the strip is
-            // never parked on a tab with no pane behind it.
-            if (page.action.isNotBlank()) {
-                (activity as? ShellActivity)?.dispatchTarget(page.action)
-                return@select
+        val start = remember { startIndex(pages, restoredState) }
+        var selected by remember { mutableStateOf(pages.getOrNull(start)?.id) }
+        // What each pane shows, so a recomposition never re-commits the page that is already there.
+        val shown = remember { arrayOfNulls<String>(paneCount) }
+        remember {
+            activePane = start
+            lastContentTab = start
+            pages.getOrNull(start)?.let {
+                selectedPageId = it.id
+                (activity as? ShellActivity)?.nav?.syncModeForPage(it.id)
+                (activity as? ShellActivity)?.nav?.recordActiveTab(tabKey, it.id)
             }
-            tabs.selectedId = page.id
-            lastContentTab = position
-            selectedPageId = page.id
-            activePane = if (paneCount > 1) position.coerceAtMost(paneCount - 1) else 0
-            // An Apps/Admin tab also SETS the global mode, so the Home grid, drawer and
-            // bottom-nav icon variants follow it. Fired on SELECTION, not at render time: with
-            // every pane on screen rendering both would call it twice and the last would win.
-            (activity as? ShellActivity)?.nav?.syncModeForPage(page.id)
-            (activity as? ShellActivity)?.nav?.recordActiveTab(tabKey, page.id)
-            if (paneCount == 1) render(0, page.id)
+            true
         }
 
-        return root
+        Column(Modifier.fillMaxSize()) {
+            PageTabs(pages.map(Sections::navPage), selected, onSelect = select@{ tapped ->
+                val position = pages.indexOfFirst { it.id == tapped.id }
+                val page = pages.getOrNull(position) ?: return@select
+                if (page.action.isNotBlank()) {
+                    (activity as? ShellActivity)?.dispatchTarget(page.action)
+                    return@select
+                }
+                selected = page.id
+                lastContentTab = position
+                selectedPageId = page.id
+                activePane = if (paneCount > 1) position.coerceAtMost(paneCount - 1) else 0
+                (activity as? ShellActivity)?.nav?.syncModeForPage(page.id)
+                (activity as? ShellActivity)?.nav?.recordActiveTab(tabKey, page.id)
+            })
+            Row(Modifier.fillMaxWidth().weight(1f)) {
+                for (i in 0 until paneCount) {
+                    // One pane per page on a tablet (Suite shows Cloud and Phone side by side); one pane on a phone,
+                    // where the selected tab renders into it.
+                    val pageId = if (paneCount > 1) panePages.getOrNull(i)?.id else selected
+                    AndroidView(
+                        modifier = Modifier.weight(1f).fillMaxSize(),
+                        factory = { ctx -> FragmentContainerView(ctx).apply { id = paneIds[i] } },
+                        update = { host ->
+                            if (pageId != null && shown[i] != pageId) {
+                                shown[i] = pageId
+                                // Committed once the host is in the window, so the FragmentManager can find it.
+                                host.post { if (isAdded) render(i, pageId) }
+                            }
+                        },
+                    )
+                }
+            }
+        }
     }
 
     /** Which tab starts selected: where THIS strip was when the Activity was

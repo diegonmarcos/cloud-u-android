@@ -41,7 +41,7 @@ has 'tileId.startsWith("extapp:")'             "$SHELL_KT" "extapp: still routes
 
 echo "== T3: the embedded browser has a Back affordance on BOTH inputs =="
 has 'OnBackPressedCallback'   "$WEB_KT" "system back gesture is wired (OnBackPressedCallback)"
-has 'setOnClickListener { goBackOrClose() }' "$WEB_KT" "on-screen control is wired to the same action"
+has '.clickable { goBackOrClose() }' "$WEB_KT" "on-screen control is wired to the same action"
 has 'canGoBack'               "$WEB_KT" "Back consults WebView.canGoBack"
 has 'goBack()'                "$WEB_KT" "Back steps through WebView history"
 has 'onBackPressedDispatcher.onBackPressed()' "$WEB_KT" "with no history left, Back closes the browser"
