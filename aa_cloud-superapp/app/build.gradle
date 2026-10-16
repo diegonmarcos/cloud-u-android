@@ -973,7 +973,9 @@ android {
             // line numbers survive and the reason this variant ships (real
             // stacktraces) is preserved; what goes is unreachable library code,
             // which was most of a ~20MB dex.
-            minifyEnabled true
+            // -PnoMinify (build.sh instrument): the instrumentation APK carries no Kotlin stdlib of its own, so a
+            // shrunk app APK crashes the test runner (NoClassDefFoundError kotlin.LazyKt) before a test starts.
+            minifyEnabled !project.hasProperty('noMinify')
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
         }
