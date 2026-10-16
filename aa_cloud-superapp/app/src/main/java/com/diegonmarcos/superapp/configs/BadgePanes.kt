@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.configs
 
 import android.content.Context
-import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -218,14 +217,12 @@ object BadgePanes {
             else it
         }
         Column(Modifier.fillMaxWidth().padding(vertical = 10.dp).testTag("badge:${b.id}")) {
-            // The platform's own template for the posted Notification, inflated into a plain frame: a View, because
-            // RemoteViews can only be applied to one. Inflated once per composition of the pane (the host keys the pane on
-            // the badge epoch, so a redraw builds a fresh one).
-            val frame = remember(live) {
-                live?.let { n -> FrameLayout(ctx).also { f -> BadgeServices.view(ctx, n, f)?.let { f.addView(it) } } }
-            }
-            if (frame != null && frame.childCount > 0) {
-                AndroidView(modifier = Modifier.fillMaxWidth(), factory = { frame })
+            // The platform's own template for the posted Notification: a View, because RemoteViews can only be applied to one.
+            // Inflated once per composition of the pane (the host keys the pane on the badge epoch, so a redraw builds a fresh
+            // one), with no parent: it is handed to AndroidView, which attaches it.
+            val rendered = remember(live) { live?.let { n -> BadgeServices.view(ctx, n, null) } }
+            if (rendered != null) {
+                AndroidView(modifier = Modifier.fillMaxWidth(), factory = { rendered })
             } else {
                 Text(b.label, fontSize = 16.sp, color = p.textPrimary)
             }

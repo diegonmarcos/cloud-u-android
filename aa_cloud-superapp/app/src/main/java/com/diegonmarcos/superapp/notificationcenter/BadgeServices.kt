@@ -203,7 +203,7 @@ object BadgeServices {
      * badge looks like. The expanded layout, as that is what carries the
      * action row. Null if the platform cannot build one.
      */
-    fun view(ctx: Context, n: Notification, parent: ViewGroup): View? = runCatching {
+    fun view(ctx: Context, n: Notification, parent: ViewGroup?): View? = runCatching {
         val b = Notification.Builder.recoverBuilder(ctx, n)
         (b.createBigContentView() ?: b.createContentView()).apply(ctx, parent)
     }.getOrNull()
