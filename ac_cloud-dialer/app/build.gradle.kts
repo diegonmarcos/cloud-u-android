@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.konan.properties.Properties
 import java.io.FileInputStream
+import java.util.Base64
 
 plugins {
     alias(libs.plugins.android)
@@ -29,7 +30,7 @@ fun hasSigningVars(): Boolean {
 // spelled in Kotlin. nav-shape-guard (N1-N9) holds this app to it.
 val dialerUi = (groovy.json.JsonSlurper().parse(rootProject.file("build.json")) as Map<*, *>)["ui"] as Map<*, *>
 fun base64Json(value: Any?): String =
-    java.util.Base64.getEncoder().encodeToString(groovy.json.JsonOutput.toJson(value).toByteArray())
+    Base64.getEncoder().encodeToString(groovy.json.JsonOutput.toJson(value).toByteArray())
 
 // #826 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
 // Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
