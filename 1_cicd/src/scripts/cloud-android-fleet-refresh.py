@@ -3,9 +3,9 @@
 cloud-android-fleet-refresh — #836: ship the apps a shared-lib change did NOT
 ship per push, once, on a schedule.
 
-Since #836 a push to a shared lib starts only the lib's PRIMARY consumer
-(1_cicd/src/data/lib-primary-consumers.json). Every other app that compiles it
-carries the lib as a DEFERRED input of its ship workflow: comment lines
+A push to a STATIC shared lib starts every app that compiles it (its ship workflow
+watches the lib), so this refresh no longer covers libs. What it still ships is an
+app whose DEFERRED cross-app source dirs moved: comment lines
 `#   input: "..."` inside the managed paths fence, which GitHub ignores and
 cloud-android-source-identity.sh hashes. This script answers, per app:
 

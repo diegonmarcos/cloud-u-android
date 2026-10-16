@@ -46,9 +46,6 @@ name: "Ship → Cloud Writer APK (build + push to GHCR via ORAS + attach to GH R
 # a binder client — so the Android SDK setup omits cmake and ndk.
 
 on:
-  # ── MANAGED-REFRESH-TRIGGER (#836): fleet-refresh.yml dispatches this app ──
-  repository_dispatch:
-    types: [fleet-refresh-ac_cloud-writer]
   workflow_dispatch:
     inputs:
       variant:
@@ -88,19 +85,11 @@ on:
       # that tester) and must NOT publish an APK (it changed no bytes).
       # The gate skips it, so the run costs the test step alone.
       # #870 build inputs HASHED but NOT watched per push: every engine lib
-      # (its Cloud-Lib APK ships alone, apps bind it at runtime), each static
-      # lib this app is not the primary consumer of
-      # (1_cicd/src/data/lib-primary-consumers.json), cross-app dirs, shared
-      # data manifests and this workflow file. fleet-refresh.yml (schedule
-      # only) ships the app for a moved static lib or cross-app dir.
+      # (its Cloud-Lib APK ships alone, apps bind it at runtime), cross-app
+      # dirs, shared data manifests and this workflow file. A STATIC lib this
+      # app compiles is watched above: any change in it ships every consumer.
+      # fleet-refresh.yml (schedule only) ships the app for a moved cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-writer.yml"
-      #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
-      #   input: "ab_cloud-libs-shared/libs/core/**"
-      #   input: "ab_cloud-libs-shared/libs/decisions/**"
-      #   input: "ab_cloud-libs-shared/libs/devtools/**"
-      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
-      #   input: "ab_cloud-libs-shared/libs/text-tools/**"
-      #   input: "ab_cloud-libs-shared/libs/ui-kit/**"
       # ── end MANAGED-PATHS-HEADER ──
       # THE SHARED LIB ENTRY IS ab_cloud-libs-shared/libs/text-tools, derived
       # from build.json::modules and not hand-written. It is the ITextTools
@@ -117,6 +106,13 @@ on:
       # unrelated commit that regenerated this file. The real guard is
       # generated-up-to-date.yml, which fails the build when the emitted copy
       # does not match what the source produces.
+      - "ab_cloud-libs-shared/libs/bottomnav/**"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/decisions/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
+      - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      - "ab_cloud-libs-shared/libs/text-tools/**"
+      - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ac_cloud-writer/**"
 permissions:
   contents: write   # for gh release create + tag push reads

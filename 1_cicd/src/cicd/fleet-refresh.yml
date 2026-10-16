@@ -1,8 +1,8 @@
 name: "Ship → fleet refresh (apps whose shared-lib inputs moved since their last publish)"
 
-# #836: a push to a shared lib ships only the lib's PRIMARY consumer
-# (1_cicd/src/data/lib-primary-consumers.json). Every other app that compiles it
-# carries the lib as a deferred input of its ship workflow — hashed by the
+# A push to a static shared lib ships every app that compiles it (its ship workflow watches
+# the lib); this workflow ships an app whose DEFERRED cross-app source dirs moved. Such an
+# input is carried as a deferred input of its ship workflow — hashed by the
 # publish gate, not watched by GitHub — and THIS workflow ships it: every 6 h
 # (and on demand) it diffs each app's deferred shared-lib inputs between the
 # commit its published APK was built from (line 2 of the <asset>.source sidecar)

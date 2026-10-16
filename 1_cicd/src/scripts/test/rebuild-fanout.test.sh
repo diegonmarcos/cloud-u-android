@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════════╗
 # ║ rebuild-fanout.test — #796: what one change REBUILDS cannot widen   ║
-# ║ (#836: and a shared-lib edit ships only its primary consumer)       ║
+# ║ (a static-lib edit ships every app that compiles it, no one else)   ║
 # ╚══════════════════════════════════════════════════════════════════════╝
 #
 # Runs cloud_android_ci_fanout.py --builds over every scenario in
@@ -63,13 +63,14 @@ if compare "[$(printf "$row" 3)]" >/dev/null; then fail "comparator: a scenario 
 if compare "[$(printf "$row" 2)]" >/dev/null; then ok "comparator is green on the expectation"; else fail "comparator is red on an exact match"; fi
 if compare '[{"id":"x","runs":1,"ship":1,"apps":0,"libs":0,"rootfs":0,"built":{"apps":[],"libs":[],"rootfs":[]}}]' >/dev/null; then fail "an undeclared expectation passed"; else ok "a scenario without expect goes red"; fi
 
-# ── #836: the per-push filter is what is held, so a mutant must go red ──
+# ── the per-push filter is what is held, so a mutant must go red ──
 # Two mutants of the REAL source workflows, each run through the same simulator
 # and comparator as the real tree:
-#   M1  every deferred shared-lib input put back into its app's push list —
-#       the pre-#836 fan-out (a lib edit starts every consumer's ship again)
-#   M2  every deferred input deleted — the libs vanish from the identity and
-#       from fleet-refresh.yml's view, so a lib fix would never reach the apps
+#   M1  an ENGINE lib put into every app's push list -- an engine edit (which
+#       ships its own Cloud-Lib APK, apps bind it at runtime) fans out to apps
+#   M2  every STATIC shared-lib path deleted from the push lists -- the defect
+#       a lib edit left a consumer unshipped (libs:bottomnav alone never shipped
+#       Cloud Store until it was dispatched by hand)
 # Both must go red, or the scenarios table is not actually holding the gate.
 mutant() {  # mutant <M1|M2> <dir>
     cp -r "$ROOT/1_cicd/src/cicd/." "$2/"
@@ -77,15 +78,16 @@ mutant() {  # mutant <M1|M2> <dir>
 import glob, re, sys
 mode, d = sys.argv[1], sys.argv[2]
 for wf in glob.glob(d + "/ship-*.yml"):
+    if wf.endswith("/ship-cloud-libs.yml"):
+        continue
     t = open(wf).read()
-    libs = re.findall(r'^      #   input: "(ab_cloud-libs-shared/libs/[^"]+)"\s*$', t, re.M)
-    if not libs:
+    if "ab_cloud-libs-shared/libs/" not in t:
         continue
     if mode == "M1":
         t = t.replace("      # ── end MANAGED-PATHS-HEADER ──\n",
-                      "      # ── end MANAGED-PATHS-HEADER ──\n" + "".join('      - "%s"\n' % l for l in libs), 1)
+                      "      # ── end MANAGED-PATHS-HEADER ──\n      - \"ab_cloud-libs-shared/libs/gh/**\"\n", 1)
     else:
-        t = re.sub(r'^      #   input: "ab_cloud-libs-shared/libs/[^"]+"\s*\n', "", t, flags=re.M)
+        t = re.sub(r'^      - "ab_cloud-libs-shared/libs/[^"]+"\s*\n', "", t, flags=re.M)
     open(wf, "w").write(t)
 PY
 }
@@ -96,9 +98,9 @@ for M in M1 M2; do
     rm -rf "$MD"
     if [ -z "$mrows" ]; then fail "mutant $M: simulator failed"; continue; fi
     if compare "$mrows" >/dev/null; then
-        fail "mutant $M stayed green — the per-push lib filter (#836) is not held by rebuild-scenarios.json"
+        fail "mutant $M stayed green — the per-push lib filter is not held by rebuild-scenarios.json"
     else
-        ok "mutant $M (deferred libs $( [ "$M" = M1 ] && echo 'back in the push lists' || echo 'dropped')) goes red"
+        ok "mutant $M ($( [ "$M" = M1 ] && echo 'an engine lib in every push list' || echo 'static lib paths dropped from the push lists')) goes red"
     fi
 done
 

@@ -1,5 +1,5 @@
 {
-  "_doc": "#796 THE change sets the fleet is measured by: for each, cloud_android_ci_fanout.py --scenarios prints how many workflow runs GitHub starts and -- the number that costs 30 minutes and a phone update each -- how many app APKs, lib APKs and rootfs companions the publish gates would actually rebuild. `expect` is what 1_cicd/src/scripts/test/rebuild-fanout.test.sh (mesh-membership-guard, every push) holds the tree to, both ways: more rebuilt than expected is a fan-out regression (a lib newly compiled into apps, a trigger list widened, a slice that stopped being per-root); fewer is progress that must be locked in by lowering the number in the same commit, so it cannot creep back. `ship` is a ceiling only (a guard added or removed changes `runs`, which is reported, not held). Files are paths as a push would list them; they need not exist (a new file in a watched directory fires the same triggers as an edited one). Every entry names a real cause from the 30 days to 2026-10-03: #783 (core), #792 (devtools, the port table), #791 (sysdns, one engine), #790 (one app), #771 (rootfs declaration), and the 17 verify-rootfs.sh edits that each republished 437 MB. #836: `refresh` is how many apps fleet-refresh.yml ships LATER for the change (their deferred shared-lib inputs moved; they are NOT started per push), held both ways like the rest. A shared lib edit now starts its declared primary consumer only (1_cicd/src/data/lib-primary-consumers.json) plus the one lib-APK builder run. #870 (owner rule, see rebuild-isolation.json): only RUNTIME ENGINES ship a Cloud-Lib APK (discovered by the ENGINE CONTRACT manifest scan, cloud-android-lib-apks-engines.py), so an engine lib change = 1 lib APK, 0 apps; a static lib change = its primary consumer only (the rest are `refresh`, scheduled), 0 libs; a shared manifest change = 0 apps. cloud-android-rebuild-isolation-guard.py asserts this independently of the counts.",
+  "_doc": "#796 THE change sets the fleet is measured by: for each, cloud_android_ci_fanout.py --scenarios prints how many workflow runs GitHub starts and -- the number that costs 30 minutes and a phone update each -- how many app APKs, lib APKs and rootfs companions the publish gates would actually rebuild. `expect` is what 1_cicd/src/scripts/test/rebuild-fanout.test.sh (mesh-membership-guard, every push) holds the tree to, both ways: more rebuilt than expected is a fan-out regression (a lib newly compiled into apps, a trigger list widened, a slice that stopped being per-root); fewer is progress that must be locked in by lowering the number in the same commit, so it cannot creep back. `ship` is a ceiling only (a guard added or removed changes `runs`, which is reported, not held). Files are paths as a push would list them; they need not exist (a new file in a watched directory fires the same triggers as an edited one). Every entry names a real cause from the 30 days to 2026-10-03: #783 (core), #792 (devtools, the port table), #791 (sysdns, one engine), #790 (one app), #771 (rootfs declaration), and the 17 verify-rootfs.sh edits that each republished 437 MB. #836: `refresh` is how many apps fleet-refresh.yml ships LATER for the change (their deferred shared-lib inputs moved; they are NOT started per push), held both ways like the rest. A static shared lib edit starts EVERY app that compiles it (an edit under libs:bottomnav alone once left Cloud Store unshipped) plus the one lib-APK builder run. #870 (owner rule, see rebuild-isolation.json): only RUNTIME ENGINES ship a Cloud-Lib APK (discovered by the ENGINE CONTRACT manifest scan, cloud-android-lib-apks-engines.py), so an engine lib change = 1 lib APK, 0 apps; a static lib change = every app that compiles it, 0 libs (`refresh` is only for deferred cross-app dirs, so it is 0 here); a shared manifest change = 0 apps. cloud-android-rebuild-isolation-guard.py asserts this independently of the counts.",
   "scenarios": [
     {
       "id": "libs/core (one source file)",
@@ -7,11 +7,11 @@
         "ab_cloud-libs-shared/libs/core/src/main/java/com/diegonmarcos/superapp/core/FleetAlerts.kt"
       ],
       "expect": {
-        "apps": 0,
+        "apps": 36,
         "libs": 0,
         "rootfs": 0,
-        "ship": 1,
-        "refresh": 36
+        "ship": 37,
+        "refresh": 0
       }
     },
     {
@@ -20,11 +20,11 @@
         "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
       ],
       "expect": {
-        "apps": 0,
+        "apps": 36,
         "libs": 0,
         "rootfs": 0,
-        "ship": 1,
-        "refresh": 36
+        "ship": 37,
+        "refresh": 0
       }
     },
     {
@@ -33,11 +33,11 @@
         "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/LibDownloader.kt"
       ],
       "expect": {
-        "apps": 1,
+        "apps": 3,
         "libs": 0,
         "rootfs": 0,
-        "ship": 2,
-        "refresh": 2
+        "ship": 4,
+        "refresh": 0
       }
     },
     {
@@ -46,24 +46,24 @@
         "ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/Updater.kt"
       ],
       "expect": {
-        "apps": 1,
+        "apps": 13,
         "libs": 0,
         "rootfs": 0,
-        "ship": 2,
-        "refresh": 12
+        "ship": 14,
+        "refresh": 0
       }
     },
     {
-      "id": "libs/bottomnav (17 consumers)",
+      "id": "libs/bottomnav (16 consumers)",
       "files": [
         "ab_cloud-libs-shared/libs/bottomnav/src/main/java/com/diegonmarcos/superapp/bottomnav/BottomNav.kt"
       ],
       "expect": {
-        "apps": 1,
+        "apps": 18,
         "libs": 0,
         "rootfs": 0,
-        "ship": 2,
-        "refresh": 17
+        "ship": 19,
+        "refresh": 0
       }
     },
     {
@@ -192,11 +192,11 @@
         "ab_cloud-libs-shared/libs/databackend/src/main/java/com/diegonmarcos/superapp/core/DataBackendClient.kt"
       ],
       "expect": {
-        "apps": 1,
+        "apps": 9,
         "libs": 0,
         "rootfs": 0,
-        "ship": 2,
-        "refresh": 8
+        "ship": 10,
+        "refresh": 0
       }
     },
     {
@@ -220,11 +220,11 @@
         "ab_cloud-libs-shared/libs/fleetconfig-model/src/main/java/com/diegonmarcos/superapp/fleetconfig/FleetPolicy.kt"
       ],
       "expect": {
-        "apps": 1,
+        "apps": 36,
         "libs": 0,
         "rootfs": 0,
-        "ship": 2,
-        "refresh": 35
+        "ship": 37,
+        "refresh": 0
       }
     },
     {
@@ -234,11 +234,11 @@
         "ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json"
       ],
       "expect": {
-        "apps": 1,
+        "apps": 36,
         "libs": 0,
         "rootfs": 0,
-        "ship": 2,
-        "refresh": 35
+        "ship": 37,
+        "refresh": 0
       }
     },
     {
@@ -369,7 +369,7 @@
     {
       "id": "#871 contract lib: libs/analytics (the client every app still compiles)",
       "files": ["ab_cloud-libs-shared/libs/analytics/src/main/java/com/diegonmarcos/superapp/analytics/SinkLink.kt"],
-      "expect": { "apps": 1, "libs": 0, "rootfs": 0, "ship": 2, "refresh": 15 }
+      "expect": { "apps": 16, "libs": 0, "rootfs": 0, "ship": 17, "refresh": 0 }
     },
     {
       "id": "#881 engine lib: libs/decisions-engine (the decisions engine, token and budget in its own process)",
@@ -404,11 +404,11 @@
         "ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountData.kt"
       ],
       "expect": {
-        "apps": 1,
+        "apps": 2,
         "libs": 0,
         "rootfs": 0,
-        "ship": 2,
-        "refresh": 1
+        "ship": 3,
+        "refresh": 0
       }
     },
     {
@@ -447,11 +447,11 @@
         "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt"
       ],
       "expect": {
-        "apps": 2,
+        "apps": 18,
         "libs": 0,
         "rootfs": 0,
-        "ship": 3,
-        "refresh": 16
+        "ship": 19,
+        "refresh": 0
       }
     }
   ]

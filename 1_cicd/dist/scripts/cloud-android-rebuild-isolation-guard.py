@@ -4,14 +4,14 @@
 
   * app dir change        -> that app only (+ its explicit non-lib inputs)
   * engine lib change     -> that ONE Cloud-Lib APK, 0 apps (apps bind it at runtime)
-  * static lib change     -> only its declared consumer (lib-primary-consumers.json
-                             or its sole consumer), never unrelated apps; no lib APK
+  * static lib change     -> EVERY app that compiles it (an edit under libs:bottomnav
+                             alone must ship Cloud Store), never an unrelated app; no lib APK
   * a lib change never rebuilds another lib; a shared manifest never starts an app
 
 Two checks, both against the SOURCE workflows (1_cicd/src/cicd):
   STATIC   every path an app ship workflow watches is something that app owns:
            its WORK_DIR, its fork/source engine script, its explicit_inputs, or a
-           static lib it is the primary/sole consumer of. An engine lib, a shared
+           static lib it compiles. An engine lib, a shared
            manifest or another app's dir in a push list is a violation.
   DYNAMIC  for a change set (--commit SHA | --range A..B | --files F... |
            --scenarios FILE), cloud_android_ci_fanout's predicted rebuild set must
@@ -48,8 +48,7 @@ def ship_workflows(wf_dir):
 
 
 def static_owners(root, wf_dir):
-    """{static lib: set(apps allowed to watch it)} -- primary, or sole consumer."""
-    primary = json.load(open(os.path.join(root, "1_cicd/src/data/lib-primary-consumers.json"))).get("primary", {})
+    """{static lib: set(apps allowed to watch it)} -- every app that compiles it."""
     engines = lib_apk_modules(root)
     cons = {}
     for _n, (app, _w) in ship_workflows(wf_dir).items():
@@ -61,7 +60,7 @@ def static_owners(root, wf_dir):
     for lib, who in cons.items():
         if lib in engines:
             continue
-        own[lib] = {primary[lib]} if primary.get(lib) else (set(who) if lib not in primary and len(who) <= 1 else set())
+        own[lib] = set(who)
     return own
 
 
@@ -91,7 +90,7 @@ def static_check(root, wf_dir):
             if p in (f"{app}/**",) or owns(root, iso, owners, app, name, probe + "/x") or owns(root, iso, owners, app, name, probe):
                 continue
             why = ("an ENGINE lib (ships its own Cloud-Lib APK)" if probe.startswith(LIBS + "/") and probe.rsplit("/", 1)[-1] in lib_apk_modules(root)
-                   else "a static lib this app is not the primary consumer of" if probe.startswith(LIBS + "/")
+                   else "a static lib this app does not compile" if probe.startswith(LIBS + "/")
                    else "a shared manifest/data file" if is_manifest(root, p)
                    else "a path another owner holds")
             bad.append(f"{name}: watches {p} -- {why}; an app ships on its own dir only (defer it: hashed, not watched)")

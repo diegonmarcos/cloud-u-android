@@ -190,9 +190,8 @@ _paths() {
 
     # The workflow's `on: push: paths` list, minus the glob tail, PLUS the
     # #836 deferred inputs the generator writes as `#   input: "…"` comment
-    # lines inside the managed fence: shared libs this app compiles but is not
-    # the primary consumer of, and the workflow file itself. GitHub does not
-    # watch them (so a lib edit no longer starts every consumer's ship); this
+    # lines inside the managed fence: cross-app dirs and engine libs (which ship their own APK),
+    # and the workflow file itself. GitHub does not watch them; this
     # identity still hashes them, so a refresh- or dispatch-started run
     # publishes exactly when they moved. Triggers stay a SUBSET of the
     # identity, which is the property the gate's safety rests on. A dir entry

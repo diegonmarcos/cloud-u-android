@@ -24,7 +24,7 @@ BuildConfig.LIB_CONSUMERS_B64), so no list of callers is typed anywhere:
               description (lib_apks.static_libs in lib-apks/build.json), the apps that compile
               it in (the build.json::modules maps plus the gradle closure, the same answer the
               ship workflows watch: cloud_android_lib_closure.inputs), the engine APKs that
-              compile it in, and the primary consumer (1_cicd/src/data/lib-primary-consumers.json).
+              compile it in, and a primary consumer (1_cicd/src/data/lib-primary-consumers.json; informational only, every consumer ships on a lib edit).
 
   gen ROOT      print the JSON (reads the fleet file for the lib rows)
   write ROOT    write aa_cloud-superapp/data/lib-consumers.json, for regen.sh

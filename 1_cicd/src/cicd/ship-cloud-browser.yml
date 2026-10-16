@@ -41,28 +41,27 @@ on:
       # that tester) and must NOT publish an APK (it changed no bytes).
       # The gate skips it, so the run costs the test step alone.
       # #870 build inputs HASHED but NOT watched per push: every engine lib
-      # (its Cloud-Lib APK ships alone, apps bind it at runtime), each static
-      # lib this app is not the primary consumer of
-      # (1_cicd/src/data/lib-primary-consumers.json), cross-app dirs, shared
-      # data manifests and this workflow file. fleet-refresh.yml (schedule
-      # only) ships the app for a moved static lib or cross-app dir.
+      # (its Cloud-Lib APK ships alone, apps bind it at runtime), cross-app
+      # dirs, shared data manifests and this workflow file. A STATIC lib this
+      # app compiles is watched above: any change in it ships every consumer.
+      # fleet-refresh.yml (schedule only) ships the app for a moved cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-browser.yml"
       #   input: "aa_cloud-superapp/data/constellation-fleet.json"
-      #   input: "ab_cloud-libs-shared/libs/ai/**"
-      #   input: "ab_cloud-libs-shared/libs/analytics/**"
-      #   input: "ab_cloud-libs-shared/libs/autofill/**"
-      #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
-      #   input: "ab_cloud-libs-shared/libs/core/**"
-      #   input: "ab_cloud-libs-shared/libs/devtools/**"
-      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
-      #   input: "ab_cloud-libs-shared/libs/model-catalogue/**"
-      #   input: "ab_cloud-libs-shared/libs/text-tools/**"
-      #   input: "ab_cloud-libs-shared/libs/ui-kit/**"
-      #   input: "ab_cloud-libs-shared/libs/updater/**"
       #   input: "ac_cloud-search/build.json"
       #   input: "ac_cloud-search/core/**"
       # ── end MANAGED-PATHS-HEADER ──
+      - "ab_cloud-libs-shared/libs/ai/**"
+      - "ab_cloud-libs-shared/libs/analytics/**"
+      - "ab_cloud-libs-shared/libs/autofill/**"
+      - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/browser/**"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
+      - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      - "ab_cloud-libs-shared/libs/model-catalogue/**"
+      - "ab_cloud-libs-shared/libs/text-tools/**"
+      - "ab_cloud-libs-shared/libs/ui-kit/**"
+      - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-browser/**"
 permissions:
   contents: write

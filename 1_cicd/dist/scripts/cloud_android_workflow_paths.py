@@ -115,20 +115,18 @@ def _split(region_lines):
 
 
 # ── #836: build inputs hashed by the publish gate but NOT watched per push ──
-# A shared lib compiled into many apps used to sit in every one of their push
-# lists, so one lib edit started a ship run per consumer (700ab854: 12). Those
-# inputs now live INSIDE the fence as comment lines: GitHub never sees them, so
+# Engine libs (bound at runtime, shipped as their own APK), other apps' dirs and shared
+# manifests are not an app's own code. Those inputs live INSIDE the fence as comment lines: GitHub never sees them, so
 # a push to the lib does not start this workflow, while
 # cloud-android-source-identity.sh still hashes them (a dispatched run still
 # publishes when they moved) and fleet-refresh.yml reads them to decide which
 # apps it ships on its schedule.
 DEFERRED_INTRO = [
     "      # #870 build inputs HASHED but NOT watched per push: every engine lib",
-    "      # (its Cloud-Lib APK ships alone, apps bind it at runtime), each static",
-    "      # lib this app is not the primary consumer of",
-    "      # (1_cicd/src/data/lib-primary-consumers.json), cross-app dirs, shared",
-    "      # data manifests and this workflow file. fleet-refresh.yml (schedule",
-    "      # only) ships the app for a moved static lib or cross-app dir.",
+    "      # (its Cloud-Lib APK ships alone, apps bind it at runtime), cross-app",
+    "      # dirs, shared data manifests and this workflow file. A STATIC lib this",
+    "      # app compiles is watched above: any change in it ships every consumer.",
+    "      # fleet-refresh.yml (schedule only) ships the app for a moved cross-app dir.",
 ]
 DEFERRED_PREFIX = '      #   input: "'
 DEFERRED_RE = re.compile(r'^      #   input: "([^"]+)"\s*$', re.M)

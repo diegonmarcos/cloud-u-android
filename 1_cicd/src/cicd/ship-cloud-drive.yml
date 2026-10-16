@@ -1,9 +1,6 @@
 name: "Ship → Cloud Drive APK (build + push to GHCR via ORAS + attach to GH Release)"
 
 on:
-  # ── MANAGED-REFRESH-TRIGGER (#836): fleet-refresh.yml dispatches this app ──
-  repository_dispatch:
-    types: [fleet-refresh-ac_cloud-drive]
   workflow_dispatch:
     inputs:
       variant:
@@ -41,32 +38,31 @@ on:
       # that tester) and must NOT publish an APK (it changed no bytes).
       # The gate skips it, so the run costs the test step alone.
       # #870 build inputs HASHED but NOT watched per push: every engine lib
-      # (its Cloud-Lib APK ships alone, apps bind it at runtime), each static
-      # lib this app is not the primary consumer of
-      # (1_cicd/src/data/lib-primary-consumers.json), cross-app dirs, shared
-      # data manifests and this workflow file. fleet-refresh.yml (schedule
-      # only) ships the app for a moved static lib or cross-app dir.
+      # (its Cloud-Lib APK ships alone, apps bind it at runtime), cross-app
+      # dirs, shared data manifests and this workflow file. A STATIC lib this
+      # app compiles is watched above: any change in it ships every consumer.
+      # fleet-refresh.yml (schedule only) ships the app for a moved cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-drive.yml"
-      #   input: "ab_cloud-libs-shared/libs/ai/**"
-      #   input: "ab_cloud-libs-shared/libs/analytics/**"
-      #   input: "ab_cloud-libs-shared/libs/auth/**"
-      #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
-      #   input: "ab_cloud-libs-shared/libs/core/**"
-      #   input: "ab_cloud-libs-shared/libs/databackend/**"
-      #   input: "ab_cloud-libs-shared/libs/devtools/**"
-      #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
-      #   input: "ab_cloud-libs-shared/libs/ml-l-image/**"
-      #   input: "ab_cloud-libs-shared/libs/model-catalogue/**"
-      #   input: "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
-      #   input: "ab_cloud-libs-shared/libs/sysdns/**"
-      #   input: "ab_cloud-libs-shared/libs/updater/**"
       # ── end MANAGED-PATHS-HEADER ──
+      - "ab_cloud-libs-shared/libs/ai/**"
+      - "ab_cloud-libs-shared/libs/analytics/**"
+      - "ab_cloud-libs-shared/libs/auth/**"
+      - "ab_cloud-libs-shared/libs/bottomnav/**"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/databackend/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/disk-scan/**"
       - "ab_cloud-libs-shared/libs/disk/**"
       - "ab_cloud-libs-shared/libs/file-editor/**"
+      - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/git-sync/**"
+      - "ab_cloud-libs-shared/libs/ml-l-image/**"
+      - "ab_cloud-libs-shared/libs/model-catalogue/**"
       - "ab_cloud-libs-shared/libs/mounts/**"
       - "ab_cloud-libs-shared/libs/rclone/**"
+      - "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
+      - "ab_cloud-libs-shared/libs/sysdns/**"
+      - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-drive/**"
 permissions:
   contents: write
