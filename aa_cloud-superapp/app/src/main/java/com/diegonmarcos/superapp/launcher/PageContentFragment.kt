@@ -1,20 +1,41 @@
 package com.diegonmarcos.superapp.launcher
 import com.diegonmarcos.superapp.R
 
-import android.content.res.ColorStateList
-import android.graphics.drawable.GradientDrawable
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.core.content.ContextCompat
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
-import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
-import com.google.android.material.card.MaterialCardView
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlin.math.abs
 
 /**
@@ -25,97 +46,74 @@ import kotlin.math.abs
  *  • Renders a header (title + subtitle) and a vertical list of cards
  *  • Empty state if no samples are declared yet
  *
- * Each row uses an accent stripe tinted from the same palette as the
- * TileGrid — keeps the visual language consistent across the app.
+ * Each row uses an accent stripe, picked per row from the palette's four state/accent roles
+ * ([stripeSlot]) so a theme recolours it — keeps the visual language consistent across the app.
+ * Compose since #773 (was fragment_page_content.xml + item_page_row.xml).
  */
-class PageContentFragment : Fragment(R.layout.fragment_page_content) {
+class PageContentFragment : KitComposeFragment() {
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    override fun palette() = LauncherPalette.kit(requireContext())
+
+    @Composable
+    override fun Content() {
         val args = requireArguments()
         val sectionId = args.getString(ARG_SECTION_ID).orEmpty()
         val pageId    = args.getString(ARG_PAGE_ID).orEmpty()
         val title     = args.getString(ARG_TITLE).orEmpty()
         val subtitle  = args.getString(ARG_SUBTITLE).orEmpty()
-
-        view.findViewById<TextView>(R.id.pc_title).text = title
-        view.findViewById<TextView>(R.id.pc_subtitle).text = subtitle.ifBlank {
-            getString(R.string.page_default_subtitle, sectionId, pageId)
-        }
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
 
         // Header icon: prefer the page's icon, fall back to the section's.
         val section = Sections.byId(sectionId)
         val pageIconName = section?.pages?.firstOrNull { it.id == pageId }?.iconName
         val iconName = pageIconName ?: section?.iconName ?: "ic_settings"
-        val iconRes = Sections.iconResFor(requireContext(), iconName).takeIf { it != 0 }
-            ?: R.drawable.ic_settings
-
-        val pairs = paletteBgFg()
-        val slot = abs("$sectionId/$pageId".hashCode()) % pairs.size
-        val (iconBg, iconFg) = pairs[slot]
-
-        view.findViewById<FrameLayout>(R.id.pc_icon_bg).background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 1000f
-            setColor(iconBg)
-        }
-        val iconView = view.findViewById<ImageView>(R.id.pc_icon)
-        iconView.setImageResource(iconRes)
-        iconView.imageTintList = ColorStateList.valueOf(iconFg)
-
-        val list = view.findViewById<LinearLayout>(R.id.pc_list)
-        val empty = view.findViewById<MaterialCardView>(R.id.pc_empty_card)
-        val emptyHint = view.findViewById<TextView>(R.id.pc_empty_hint)
-
+        val iconRes = Sections.iconResFor(ctx, iconName).takeIf { it != 0 } ?: R.drawable.ic_settings
         val key = "$sectionId/$pageId"
         val samples = Sections.pageSamples(key)
-        if (samples.isEmpty()) {
-            empty.isVisible = true
-            emptyHint.text = getString(R.string.page_empty_hint, key)
-            return
+
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(48.dp).clip(CircleShape).background(p.surfaceSelected).testTag(TAG_ICON),
+                    contentAlignment = Alignment.Center) {
+                    Icon(painterResource(iconRes), contentDescription = null,
+                        tint = stripeColor(p, stripeSlot(key, -1)), modifier = Modifier.size(24.dp))
+                }
+                Column(Modifier.padding(start = 14.dp)) {
+                    Text(title, color = p.textPrimary, style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.testTag(TAG_TITLE))
+                    Text(subtitle.ifBlank { stringResource(R.string.page_default_subtitle, sectionId, pageId) },
+                        color = p.textSecondary, style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 2.dp).testTag(TAG_SUBTITLE))
+                }
+            }
+            if (samples.isEmpty()) {
+                Column(Modifier.fillMaxWidth().padding(top = 24.dp).clip(RoundedCornerShape(20.dp))
+                    .background(p.surface).padding(20.dp).testTag(TAG_EMPTY),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(stringResource(R.string.page_empty_title), color = p.textPrimary,
+                        style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.page_empty_hint, key), color = p.textSecondary,
+                        textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 6.dp).alpha(0.9f))
+                }
+            } else {
+                Column(Modifier.padding(top = 14.dp)) {
+                    samples.forEachIndexed { idx, sample ->
+                        Row(Modifier.fillMaxWidth().padding(bottom = 6.dp).clip(RoundedCornerShape(14.dp))
+                            .background(p.surface).clickable { }
+                            .padding(horizontal = 14.dp, vertical = 12.dp).testTag(rowTag(idx)),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.width(4.dp).height(36.dp).background(stripeColor(p, stripeSlot(key, idx))))
+                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                Text(sample.title, color = p.textPrimary, style = MaterialTheme.typography.titleSmall)
+                                Text(sample.subtitle, color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+            }
         }
-
-        val palette = paletteForContext()
-        val inflater = LayoutInflater.from(requireContext())
-        samples.forEachIndexed { idx, sample ->
-            val row = inflater.inflate(R.layout.item_page_row, list, false)
-            row.findViewById<TextView>(R.id.pr_title).text    = sample.title
-            row.findViewById<TextView>(R.id.pr_subtitle).text = sample.subtitle
-            val accentColor = palette[abs((key + idx).hashCode()) % palette.size]
-            row.findViewById<View>(R.id.pr_accent).backgroundTintList =
-                ColorStateList.valueOf(accentColor)
-            list.addView(row)
-        }
-    }
-
-    /** Same palette as the TileGrid — (bg, fg) pairs so the page header
-     *  icon visually matches its tile of the same id on the Home grid. */
-    private fun paletteBgFg(): List<Pair<Int, Int>> {
-        val ctx = requireContext()
-        return listOf(
-            ContextCompat.getColor(ctx, R.color.tile_blue_bg)   to ContextCompat.getColor(ctx, R.color.tile_blue_fg),
-            ContextCompat.getColor(ctx, R.color.tile_green_bg)  to ContextCompat.getColor(ctx, R.color.tile_green_fg),
-            ContextCompat.getColor(ctx, R.color.tile_purple_bg) to ContextCompat.getColor(ctx, R.color.tile_purple_fg),
-            ContextCompat.getColor(ctx, R.color.tile_pink_bg)   to ContextCompat.getColor(ctx, R.color.tile_pink_fg),
-            ContextCompat.getColor(ctx, R.color.tile_orange_bg) to ContextCompat.getColor(ctx, R.color.tile_orange_fg),
-            ContextCompat.getColor(ctx, R.color.tile_teal_bg)   to ContextCompat.getColor(ctx, R.color.tile_teal_fg),
-            ContextCompat.getColor(ctx, R.color.tile_amber_bg)  to ContextCompat.getColor(ctx, R.color.tile_amber_fg),
-            ContextCompat.getColor(ctx, R.color.tile_indigo_bg) to ContextCompat.getColor(ctx, R.color.tile_indigo_fg),
-        )
-    }
-
-    private fun paletteForContext(): IntArray {
-        val ctx = requireContext()
-        return intArrayOf(
-            ContextCompat.getColor(ctx, R.color.tile_blue_fg),
-            ContextCompat.getColor(ctx, R.color.tile_green_fg),
-            ContextCompat.getColor(ctx, R.color.tile_purple_fg),
-            ContextCompat.getColor(ctx, R.color.tile_pink_fg),
-            ContextCompat.getColor(ctx, R.color.tile_orange_fg),
-            ContextCompat.getColor(ctx, R.color.tile_teal_fg),
-            ContextCompat.getColor(ctx, R.color.tile_amber_fg),
-            ContextCompat.getColor(ctx, R.color.tile_indigo_fg),
-        )
     }
 
     companion object {
@@ -123,6 +121,23 @@ class PageContentFragment : Fragment(R.layout.fragment_page_content) {
         private const val ARG_PAGE_ID    = "page_id"
         private const val ARG_TITLE      = "title"
         private const val ARG_SUBTITLE   = "subtitle"
+
+        const val TAG_TITLE = "pagecontent:title"
+        const val TAG_SUBTITLE = "pagecontent:subtitle"
+        const val TAG_ICON = "pagecontent:icon"
+        const val TAG_EMPTY = "pagecontent:empty"
+        fun rowTag(i: Int) = "pagecontent:row:$i"
+
+        /** Which of the four stripe roles a row (or, at -1, the header icon) takes: stable per page+row. */
+        internal fun stripeSlot(key: String, idx: Int): Int = abs((if (idx < 0) key else key + idx).hashCode()) % 4
+
+        /** accent, ok, warn, bad — the palette's own hues, so a theme switch recolours the stripes. */
+        internal fun stripeColor(p: KitPalette, slot: Int): Color = when (slot) {
+            0 -> p.accent
+            1 -> p.ok
+            2 -> p.warn
+            else -> p.bad
+        }
 
         fun newInstance(
             sectionId: String,

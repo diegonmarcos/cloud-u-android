@@ -623,12 +623,13 @@
         "Robolectric tests BottomNavSelectedPillTest / ShellBottomNavCollapseTest inflate activity_main"
       ],
       "baseline": {
-        "view_screens": 21,
-        "layout_xml": 15,
-        "view_ui_files": 41,
+        "view_screens": 20,
+        "layout_xml": 13,
+        "view_ui_files": 40,
         "custom_views": 9
       },
       "done": [
+        "launcher/PageContentFragment (the universal page-content view: header + page_samples rows, SectionPages' default page) — KitComposeFragment; fragment_page_content.xml and item_page_row.xml deleted; the row stripes are the palette's accent/ok/warn/bad roles; PageContentComposeTest, #773",
         "recovery/RecoveryActivity (the stranded-device installer, deep-linked from the banner, the advisory notification, the RSS advisory rows and the DevControl page) — ComponentActivity + setContent under CloudKitTheme and the fixed RecoveryPalette (kit roles, no launcher theme: it must work when the theme data is what is broken); recovery/RecoveryBanner draws its card as a ComposeView in overlay_container (the host lookup is still a View until the shell moves, so the file still counts); RecoveryComposeTest, #773",
         "rss/RssFeedFragment (page:feed/all, the Infos-stack rss card) — KitComposeFragment; fragment_rss_feed.xml and item_rss_topic.xml deleted; the USER-above-INFRA grouping is the pure RssFeedFragment.plan, pinned by RssFeedPlanTest, #773",
         "cloud/TasksFragment, cloud/CalendarMonthFragment, cloud/NewsFeedFragment (the Infos stack's tasks / calendar_month / news cards, page:cal/month) — KitComposeFragments under CloudKitTheme; palette surface roles replace the purple/white literals; the news fetch is a coroutine tied to the card; CloudInfosPagesComposeTest, #773",

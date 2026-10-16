@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,13 +24,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
+import com.diegonmarcos.superapp.uikit.kitComposeView
 import com.diegonmarcos.superapp.updater.BootstrapInstall
 import com.diegonmarcos.superapp.updater.BuildAge
 import com.diegonmarcos.superapp.updater.BuildConfig as UpdaterBuildConfig
@@ -76,9 +76,10 @@ class RecoveryActivity : ComponentActivity() {
             setIntent(i)
             preselect = i.getStringExtra(EXTRA_APP_ID)
         }
-        setContent {
-            CloudKitTheme(RecoveryPalette.kit) { Screen(preselect) }
-        }
+        // setContentView, not activity-compose's setContent: ComponentActivity installs the view-tree
+        // owners the ComposeView needs, and the screen takes no dependency beyond libs:ui-kit.
+        val screen: ComposeView = kitComposeView(RecoveryPalette.kit) { Screen(preselect) }
+        setContentView(screen)
     }
 
     @Composable
