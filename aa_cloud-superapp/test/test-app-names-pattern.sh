@@ -174,7 +174,9 @@ print("== T6: an app whose gradle reads its build.json takes its launcher label 
 # Tauri template ac_cloud-c3-webserver builds with is the latter, and a T6 that
 # opened build.gradle only would skip it in silence — the #522 failure again.
 # In Kotlin DSL the parsed JSON is a Map, so the label reads buildJson["name"].
-reads_build_json = re.compile(r"JsonSlurper\(\)\s*\.parse\(\s*file\([^)]*build\.json")
+# Its OWN build.json only: a path that climbs into another application (file("../../ac_cloud-drive/build.json"),
+# read by ac_cloud-gallery for Cloud Drive's shared storage root) is a cross-app read, not the label's source.
+reads_build_json = re.compile(r"JsonSlurper\(\)\s*\.parse\(\s*file\((?![^)]*\bac_)[^)]*build\.json")
 derives_label = re.compile(r"resValue\s*\(?\s*[\"']string[\"']\s*,\s*[\"']app_name[\"']\s*,\s*buildJson(\.name\b|\[\s*\"name\"\s*\])")
 def module_gradle(directory, module):
     for name in ("build.gradle", "build.gradle.kts"):
