@@ -513,7 +513,7 @@ Coverage: 9 covered, 4 gaps — file:filesDir/git-sync/repos.json, file:filesDir
 
 ## cloud-keyboard — `com.diegonmarcos.cloudkeyboard`
 
-Module `ac_cloud-keyboard`; libs: lib-analytics, lib-autofill, lib-core, lib-devtools, lib-fleetconfig-model, lib-keyboard, lib-media, lib-text-tools, lib-translate, lib-voice.
+Module `ac_cloud-keyboard`; libs: lib-analytics, lib-autofill, lib-core, lib-devtools, lib-fleetconfig-model, lib-keyboard, lib-media, lib-text-tools, lib-translate, lib-ui-kit, lib-voice.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

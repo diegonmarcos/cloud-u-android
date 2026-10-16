@@ -56,6 +56,11 @@
       "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
       "type": "library"
     },
+    "libs:ui-kit": {
+      "type": "library",
+      "_doc": "2026-10-16 owner decision: all apps must be Compose. Shared BY REFERENCE: the fleet's Compose kit (CloudKitTheme + KitImeComposeView) libs:media, libs:voice and libs:translate build their keyboard surfaces on; listed so settings.gradle resolves the path and the ship workflow's path triggers see it.",
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit"
+    },
     "libs:text-tools": {
       "type": "library",
       "_doc_dir": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/ - settings.gradle points projectDir here instead of at a local copy.",

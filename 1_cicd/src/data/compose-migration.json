@@ -448,11 +448,9 @@
       "id": "libs:media",
       "scope": "in",
       "wave": 1,
-      "ui": "views",
+      "ui": "compose",
       "size": "S",
-      "screens_left": [
-        "MediaPanelView (custom)"
-      ],
+      "screens_left": [],
       "consumers": [
         "keyboard"
       ],
@@ -462,8 +460,8 @@
       "baseline": {
         "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 1,
-        "custom_views": 1
+        "view_ui_files": 0,
+        "custom_views": 0
       }
     },
     {

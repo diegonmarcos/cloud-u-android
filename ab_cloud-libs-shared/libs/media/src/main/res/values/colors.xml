@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Sticker/GIF panel's palette as KitPalette roles (MediaPanelView builds its CloudKitTheme from these;
+     the tab text keeps following the keyboard theme's textColorPrimary), so no colour is spelled in Kotlin.
+     Prefixed media_: this library is merged into the keyboard's resources and must not collide with its names. -->
+<resources>
+    <color name="media_surface">#00000000</color>
+    <color name="media_selected">#33FFFFFF</color>
+    <color name="media_text_fallback">#FFFFFFFF</color>
+    <color name="media_text_dim">#99FFFFFF</color>
+    <color name="media_accent">#FFB794F4</color>
+    <color name="media_hairline">#22FFFFFF</color>
+    <color name="media_ink">#FF000000</color>
+</resources>

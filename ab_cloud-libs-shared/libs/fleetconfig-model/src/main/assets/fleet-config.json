@@ -2614,6 +2614,7 @@
         "lib-media",
         "lib-text-tools",
         "lib-translate",
+        "lib-ui-kit",
         "lib-voice"
       ],
       "items": [
