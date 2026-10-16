@@ -79,7 +79,10 @@ class EdgeOverlayGestureTest {
         sh("logcat -c")   // count only what this test does
     }
 
+    @get:org.junit.Rule val name = org.junit.rules.TestName()
+
     @After fun tearDown() {
+        sh("logcat -d -v time > /data/local/tmp/log-${name.methodName}.txt")
         OneHandController.disable(ctx)
         SystemClock.sleep(300)
     }
@@ -89,10 +92,18 @@ class EdgeOverlayGestureTest {
         .mapNotNull { Regex("I ${VictimActivity.TAG}\\s*: (\\w+)").find(it)?.groupValues?.get(1) }
     private fun victimCount(w: String) = victimLog().count { it == w }
 
+    /** Everything needed to see WHY a gesture did not land: strips, victim events, the overlay windows' frames. */
+    private fun diag(): String = "\n--- diag: screen=${screenW}x${ctx.resources.displayMetrics.heightPixels} dens=$dens strips=${strips()}" +
+        "\nvictim=${victimLog()}" +
+        "\nwindows:\n" + sh("dumpsys window windows").lines().filter {
+            it.contains("Window{") || it.contains("mFrame") || it.contains("fl=") || it.contains("touchable region") || it.contains("mHasSurface")
+        }.filter { true }.take(120).joinToString("\n") +
+        "\nback-gesture: " + sh("dumpsys window | grep -i -m6 'exclusion\\|GestureExclusion'")
+
     private fun waitFor(what: String, ms: Long = 8_000, c: () -> Boolean) {
         val end = SystemClock.uptimeMillis() + ms
         while (SystemClock.uptimeMillis() < end) { if (c()) return; SystemClock.sleep(100) }
-        throw AssertionError("timed out waiting for $what\n" + sh("dumpsys window windows | grep -i -A2 'onehand\\|superapp' | head -40") + "victim=" + victimLog())
+        throw AssertionError("timed out waiting for $what" + diag())
     }
 
     private fun strips(): List<Rect> = OneHandOverlayService.instance!!.handleViews.map {
@@ -146,7 +157,7 @@ class EdgeOverlayGestureTest {
         var expect = 0
         for ((what, p) in probes) {
             tap(p.first, p.second); expect++
-            assertEquals("tap $what must reach the app below (clicks)", expect, victimCount("click"))
+            assertEquals("tap $what must reach the app below (clicks)" + diag(), expect, victimCount("click"))
         }
         val r = rightStrip()
         tap(r.left - dp(6), r.exactCenterY()); expect++

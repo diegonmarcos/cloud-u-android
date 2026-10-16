@@ -92,7 +92,7 @@ jobs:
           working-directory: aa_cloud-superapp
           # ONE line: the runner executes each script line in its own `sh -c`, so a variable (the exit
           # status) does not survive a line break. bash, because build.sh is bash (and not executable in git).
-          script: bash -c 'rc=0; bash ./build.sh instrument || rc=$?; mkdir -p test-out; adb pull /data/local/tmp/edge-menu-left.png test-out/; adb pull /data/local/tmp/edge-menu-right.png test-out/; adb logcat -d > test-out/logcat.txt; adb logcat -d -s EdgeOverlayTest:* OneHand:* > test-out/probe.txt; adb shell dumpsys window windows > test-out/windows.txt; exit $rc'
+          script: bash -c 'rc=0; bash ./build.sh instrument || rc=$?; mkdir -p test-out; adb pull /data/local/tmp/edge-menu-left.png test-out/; adb pull /data/local/tmp/edge-menu-right.png test-out/; adb pull /data/local/tmp/ test-out/tmp/; adb logcat -d > test-out/logcat.txt; adb logcat -d -s EdgeOverlayTest:* OneHand:* > test-out/probe.txt; adb shell dumpsys window windows > test-out/windows.txt; exit $rc'
 
       - name: Upload evidence (screenshots + logcat + reports)
         if: always()
