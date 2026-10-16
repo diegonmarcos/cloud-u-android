@@ -97,12 +97,14 @@ fun AcChooserSheet(state: AcChooserState, onFill: (AcChoice) -> Unit, onDismiss:
 
 /** After a submit: what could be saved, each with a box; the profile a detail goes into; "never here" for passwords. */
 @Composable
-fun AcSaveSheet(state: AcSaveState, onSave: (picked: Set<Int>, profileId: String?, never: Boolean) -> Unit, onDismiss: () -> Unit) {
+fun AcSaveSheet(state: AcSaveState, onSave: (picked: Set<Int>, profileId: String?, never: Boolean, alsoVault: Boolean) -> Unit, onDismiss: () -> Unit) {
     val p = LocalKitPalette.current
     var picked by remember(state) { mutableStateOf(state.proposals.indices.toSet()) }
     val hasProfile = state.proposals.any { it is AcProposal.ProfileRecord }
     val hasPassword = state.proposals.any { it is AcProposal.Password }
     var profileId by remember(state) { mutableStateOf<String?>(state.profiles.firstOrNull { it.isDefault }?.id ?: state.profiles.firstOrNull()?.id) }
+    var alsoVault by remember(state) { mutableStateOf(state.vaultUsable) }
+    val hasSecret = state.proposals.any { it is AcProposal.Password || it is AcProposal.CardSave }
     Column(
         Modifier.fillMaxWidth().heightIn(max = 460.dp).background(p.surface, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .clickable(remember { MutableInteractionSource() }, null) {}.verticalScroll(rememberScrollState()).padding(14.dp).testTag("browser:ac:save"),
@@ -128,11 +130,22 @@ fun AcSaveSheet(state: AcSaveState, onSave: (picked: Set<Int>, profileId: String
                 Text("A new profile", color = p.textPrimary, modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp))
             }
         }
+        if (hasSecret && state.vaultUsable) {
+            Text("Store in", color = p.textSecondary, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
+            Row(Modifier.fillMaxWidth().clickable { alsoVault = !alsoVault }.testTag("browser:ac:save:vaultbox"), verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(true, onCheckedChange = null, enabled = false)
+                Text("This phone (encrypted)", color = p.textPrimary, modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp))
+            }
+            Row(Modifier.fillMaxWidth().clickable { alsoVault = !alsoVault }.testTag("browser:ac:save:vaultalso"), verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(alsoVault, onCheckedChange = null)
+                Text("Also in Cloud Vault", color = p.textPrimary, modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp))
+            }
+        }
         state.vaultNote?.let { Text(it, color = p.textSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp).testTag("browser:ac:save:vault")) }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            if (hasPassword) TextButton({ onSave(emptySet(), profileId, true) }, modifier = Modifier.testTag("browser:ac:save:never")) { Text("Never here") }
+            if (hasPassword) TextButton({ onSave(emptySet(), profileId, true, false) }, modifier = Modifier.testTag("browser:ac:save:never")) { Text("Never here") }
             TextButton(onDismiss, modifier = Modifier.testTag("browser:ac:save:no")) { Text("Not now") }
-            TextButton({ onSave(picked, profileId, false) }, enabled = picked.isNotEmpty(), modifier = Modifier.testTag("browser:ac:save:yes")) { Text("Save") }
+            TextButton({ onSave(picked, profileId, false, alsoVault) }, enabled = picked.isNotEmpty(), modifier = Modifier.testTag("browser:ac:save:yes")) { Text("Save") }
         }
     }
 }
