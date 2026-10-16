@@ -63,7 +63,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withFrameNanos
+import androidx.compose.runtime.withFrameNanos
 
 /*
  * The panel half of the aggregator page: the card with its fold, the body each panel kind draws, the Filters row, and the

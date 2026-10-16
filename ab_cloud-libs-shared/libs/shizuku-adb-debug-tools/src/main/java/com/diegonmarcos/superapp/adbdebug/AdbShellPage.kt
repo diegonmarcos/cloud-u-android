@@ -351,11 +351,34 @@ fun AdbShellPage(modifier: Modifier = Modifier) {
 @Composable
 fun AdbShellScreen(dark: Boolean? = null) {
     val isDark = dark ?: isSystemInDarkTheme()
-    MaterialTheme(colorScheme = if (isDark) darkColorScheme() else lightColorScheme()) {
-        Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { AdbShellPage() }
+    // Dense, like every fleet Compose screen: a bare MaterialTheme(colorScheme) hands every Text a fixed 24.sp line and every
+    // Material control a 48 dp floor, which is what made the converted pages "huge" (density-guard). This lib does not depend
+    // on libs:ui-kit, so it carries the same two removals itself.
+    MaterialTheme(colorScheme = if (isDark) darkColorScheme() else lightColorScheme(), typography = denseTypography()) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalMinimumInteractiveComponentSize provides 36.dp,
+        ) {
+            Surface(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { AdbShellPage() }
+            }
         }
     }
+}
+
+/** Material's typography without the fixed line height and tracking that swell every dense Text (see [AdbShellScreen]). */
+private fun denseTypography(): androidx.compose.material3.Typography {
+    val b = androidx.compose.material3.Typography()
+    fun androidx.compose.ui.text.TextStyle.d() = copy(
+        lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified,
+        letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified, lineHeightStyle = null,
+    )
+    return b.copy(
+        displayLarge = b.displayLarge.d(), displayMedium = b.displayMedium.d(), displaySmall = b.displaySmall.d(),
+        headlineLarge = b.headlineLarge.d(), headlineMedium = b.headlineMedium.d(), headlineSmall = b.headlineSmall.d(),
+        titleLarge = b.titleLarge.d(), titleMedium = b.titleMedium.d(), titleSmall = b.titleSmall.d(),
+        bodyLarge = b.bodyLarge.d(), bodyMedium = b.bodyMedium.d(), bodySmall = b.bodySmall.d(),
+        labelLarge = b.labelLarge.d(), labelMedium = b.labelMedium.d(), labelSmall = b.labelSmall.d(),
+    )
 }
 
 /**

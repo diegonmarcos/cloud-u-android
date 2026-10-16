@@ -4,7 +4,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.ui.platform.ComposeView
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.kitComposeView
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.adbdebug.AdbShellScreen
 
@@ -15,7 +16,7 @@ import com.diegonmarcos.superapp.adbdebug.AdbShellScreen
  */
 class AdbShellFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View =
-        ComposeView(requireContext()).apply { setContent { AdbShellScreen(dark = true) } }
+        requireContext().let { it.kitComposeView(LauncherPalette.kit(it)) { AdbShellScreen(dark = true) } }
 
     companion object { fun newInstance() = AdbShellFragment() }
 }

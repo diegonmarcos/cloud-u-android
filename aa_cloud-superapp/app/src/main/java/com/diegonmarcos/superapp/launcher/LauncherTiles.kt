@@ -47,8 +47,9 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
  * cannot drift between them.
  *
  * [cols] / [pageDp] / [chromeDp] are the grid's column count, its page padding and the tile's own
- * margin+padding (what [GridColumns.iconPx] subtracts from the cell). [height] fixes the card's height
- * (a flat grid keeps the card's 128 dp; HomeGrouped's rows are 76).
+ * margin+padding (what [GridColumns.iconPx] subtracts from the cell). [height] is the CELL's height, margin
+ * included: a flat grid's card is item_tile.xml's 128 dp inside its 3 dp margin (134), HomeGrouped's rows are 76
+ * (a 70 dp card). TileSizeTest pins both.
  */
 @Composable
 internal fun LauncherTile(
@@ -60,7 +61,7 @@ internal fun LauncherTile(
     chromeDp: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    height: Dp = 128.dp,
+    height: Dp = TILE_CELL_HEIGHT,
 ) {
     val p = LocalKitPalette.current
     val ctx = LocalContext.current
@@ -90,6 +91,9 @@ internal fun LauncherTile(
             modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
     }
 }
+
+/** A flat grid cell: the old item_tile.xml card (128 dp) plus its 3 dp margin a side. */
+internal val TILE_CELL_HEIGHT: Dp = 134.dp
 
 /** The icon edge in dp: [GridColumns.iconPx] over the screen minus [pageDp], split [cols] ways, minus [chromeDp]. */
 internal fun tileIconDp(widthPx: Int, density: Float, cols: Int, pageDp: Int, chromeDp: Int): Dp {

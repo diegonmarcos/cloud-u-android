@@ -57,6 +57,11 @@ def main(argv):
                 continue
             scanned += 1
             src = strip_comments(open(full, encoding="utf-8", errors="replace").read())
+            cr = cfg.get("compose_roots")
+            if cr and any(rel.startswith(r) for r in cr["roots"]):
+                m = re.search(cr["pattern"], src)
+                if m and not any(n in src for n in cr["needs_any"]):
+                    bad.append("%s:%d [compose_root] %s" % (rel, src.count("\n", 0, m.start()) + 1, cr["why"]))
             for name, rx in rules.items():
                 if rel in cfg["theme_exempt"] and name == "bare_material_theme":
                     continue

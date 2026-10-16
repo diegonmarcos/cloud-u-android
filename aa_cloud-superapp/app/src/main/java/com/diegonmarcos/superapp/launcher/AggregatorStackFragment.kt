@@ -24,7 +24,7 @@ import com.diegonmarcos.superapp.settings.redrawOnGridColumns
 import com.diegonmarcos.superapp.shell.Collapsible
 import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.uikit.KitComposeFragment
-import kotlinx.coroutines.withFrameNanos
+import androidx.compose.runtime.withFrameNanos
 
 /**
  * Stack-render variant of an aggregator section. When an aggregator declares `stack_*` in build.json, the shell launches

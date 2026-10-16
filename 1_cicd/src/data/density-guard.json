@@ -1,5 +1,5 @@
 {
-  "_doc": "cloud-android-density-guard policy: the fleet's Compose hosts are dense and own window insets ONCE. Everything the guard knows is here. scan_roots: every Compose app and lib of the fleet except the three skip_dirs below (Matrix, Vault, Notes: not on the dense Material theme, see skip_dirs). Apps with their own Typography (Writer, Gallery, Drive, Search, Calc, Tools) are in scope: they keep their own scale but must drop the fixed lineHeight / letterSpacing. ac_cloud-store/web is the Kotlin/Wasm page (CloudKitTheme). rule_allow for scaffold_without_insets / nested_safe_drawing lists the STANDALONE Compose apps (Writer, Gallery, Drive, Search): each owns its Activity window and draws its own Scaffold / system-bar padding with no FleetChrome / BottomNavHost host above it, so those two host-stacking rules do not describe them (the typography and theme rules still do). MinimalistBlackFragment is the launcher home: no host above it, so it is the one owner of its insets.",
+  "_doc": "cloud-android-density-guard policy: the fleet's Compose hosts are dense and own window insets ONCE. Everything the guard knows is here. scan_roots: every Compose app and lib of the fleet except the three skip_dirs below (Matrix, Vault, Notes: not on the dense Material theme, see skip_dirs). Apps with their own Typography (Writer, Gallery, Drive, Search, Calc, Tools) are in scope: they keep their own scale but must drop the fixed lineHeight / letterSpacing. ac_cloud-store/web is the Kotlin/Wasm page (CloudKitTheme). rule_allow for scaffold_without_insets / nested_safe_drawing lists the STANDALONE Compose apps (Writer, Gallery, Drive, Search): each owns its Activity window and draws its own Scaffold / system-bar padding with no FleetChrome / BottomNavHost host above it, so those two host-stacking rules do not describe them (the typography and theme rules still do). MinimalistBlackFragment is the launcher home: no host above it, so it is the one owner of its insets. compose_roots: a ComposeView / setContent root in the SuperApp must sit under the dense theme (a file that builds one names CloudKitTheme / KitDenseMaterial / kitComposeView / KitComposeFragment).",
   "owner": "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt",
   "owner_needles": [
     "fun kitTypography",
@@ -79,5 +79,18 @@
     "ac_cloud-drive",
     "ac_cloud-search",
     "aa_cloud-superapp"
-  ]
+  ],
+  "compose_roots": {
+    "roots": [
+      "aa_cloud-superapp/"
+    ],
+    "pattern": "(?<![\\w.])ComposeView\\(|\\.setContent\\s*\\{",
+    "needs_any": [
+      "CloudKitTheme",
+      "KitDenseMaterial",
+      "kitComposeView",
+      "KitComposeFragment"
+    ],
+    "why": "A ComposeView / setContent root in the SuperApp that is not under CloudKitTheme (kitComposeView, KitComposeFragment) or KitDenseMaterial gets a bare Material theme: every Text a fixed 24.sp line and every control a 48dp floor, the 'buttons are huge' regression. Host it with kitComposeView(palette) { .. } or wrap its content in CloudKitTheme."
+  }
 }

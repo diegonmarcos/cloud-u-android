@@ -42,6 +42,13 @@ mutate stock-typography "$APP/Main.kt" 'val T = Typography()'
 mutate nested-system-bars "$APP/Main.kt" 'fun Z() { Box(Modifier.systemBarsPadding()) }'
 mutate nested-safe-drawing-insets "$APP/Main.kt" 'fun Z2() { Box(Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) }'
 d="$WORK/dense-typography"; fixture "$d"; echo 'val T = Typography().dense()' >> "$d/$APP/Main.kt"; expect "dense Typography passes" 0 "$d"
+# a ComposeView / setContent root in the SuperApp without the dense theme is a defect; under it, it is fine
+d="$WORK/root-bare"; fixture "$d"; mkdir -p "$d/aa_cloud-superapp/app/src/main/java"
+echo 'fun h(c: Context) = ComposeView(c).apply { setContent { Text("x") } }' > "$d/aa_cloud-superapp/app/src/main/java/H.kt"; expect "a bare SuperApp ComposeView root fails" 1 "$d"
+for ok_marker in 'CloudKitTheme(p) { }' 'KitDenseMaterial(s) { }' 'c.kitComposeView(p) { }'; do
+  d="$WORK/root-dense"; fixture "$d"; mkdir -p "$d/aa_cloud-superapp/app/src/main/java"
+  printf 'fun h(c: Context) = ComposeView(c).apply { setContent { %s } }\n' "$ok_marker" > "$d/aa_cloud-superapp/app/src/main/java/H.kt"; expect "a SuperApp ComposeView root under $ok_marker passes" 0 "$d"
+done
 # the apps with their own theme are scanned
 for app in ac_cloud-tasks ac_cloud-calc ac_cloud-tools-small-llms ac_cloud-writer ac_cloud-gallery ac_cloud-drive ac_cloud-search; do
   d="$WORK/root-$app"; fixture "$d"; mkdir -p "$d/$app/app/src/main/java"

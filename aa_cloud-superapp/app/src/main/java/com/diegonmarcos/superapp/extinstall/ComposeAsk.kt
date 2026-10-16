@@ -42,7 +42,7 @@ object ComposeAsk {
             (host.parent as? ViewGroup)?.removeView(host)
             onDismiss()
         }
-        host.setContent {
+        host.setContent { com.diegonmarcos.superapp.uikit.CloudKitTheme(com.diegonmarcos.superapp.ui.LauncherPalette.kit(act)) {
             val open = remember { mutableStateOf(true) }
             if (open.value) AlertDialog(
                 onDismissRequest = { if (dismissable) { open.value = false; close() } },
@@ -58,7 +58,7 @@ object ComposeAsk {
                         TextButton(onClick = { open.value = false; close(); c.run() }) { Text(c.label) }
                 },
             )
-        }
+        } }
         return runCatching {
             act.addContentView(host, ViewGroup.LayoutParams(0, 0)); true
         }.getOrElse { false }
