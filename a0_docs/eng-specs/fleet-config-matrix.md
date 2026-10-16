@@ -28,7 +28,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-calc | `com.diegonmarcos.cloudcalc` | 11 | 0 | 100% |
 | cloud-camera | `cld.camera` | 8 | 0 | 100% |
 | cloud-chat | `com.diegonmarcos.comms.chat` | 5 | 0 | 100% |
-| cloud-code | `com.diegonmarcos.code` | 7 | 3 | 70% |
+| cloud-code | `com.diegonmarcos.code` | 7 | 5 | 58% |
 | cloud-contacts | `com.diegonmarcos.cloudcontacts` | 4 | 2 | 66% |
 | cloud-dialer | `com.diegonmarcos.comms.dialer` | 3 | 2 | 60% |
 | cloud-drive | `com.diegonmarcos.clouddrive` | 9 | 6 | 60% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 2 | 71% |
-| **fleet** | | **212** | **46** | **82%** |
+| **fleet** | | **212** | **48** | **81%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -418,6 +418,7 @@ Module `ac_cloud-code`; libs: lib-ai, lib-core, lib-devtools, lib-fleetconfig-mo
 | `acode_theme` | prefs | config | yes | Acode editor colour scheme (key per theme colour) written by System.java so the crash/launch screens match the chosen theme; a user theme choice. |
 | `ads` | encrypted | device | no | Acode RewardPassManager ad-reward pass state; per-install ad counters, not configuration. |
 | `cloud_code_chat_secrets` | encrypted | secret | yes | Cloud Code Chat's OpenRouter token, pasted in Profile & Config: EncryptedSharedPreferences under a Keystore AES-256-GCM master key, shown masked, never handed to the WebView. A credential: migrates through the vault. |
+| `code_chat_sessions` | file | config | GAP | Cloud Code's chats, mirrored by the web layer from localStorage to files/chat-sessions.json (text and attachment names, never bytes or a token) and seeded back from it on a restored phone. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
@@ -428,10 +429,10 @@ Module `ac_cloud-code`; libs: lib-ai, lib-core, lib-devtools, lib-fleetconfig-mo
 | `ac_cloud-code/src/lib/projects.js saved folders list (localStorage)` | config | Added workspace folders / recent projects list; user state (links to files, not content). |
 | `prefs acode_sftp_profiles_v1 (+ ftp profiles)` | secret | Saved remote connections with credentials; vault. |
 | `ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.settings, .mcp.<agent>, .toggles.<agent>` | config | Chat defaults (agent, model, effort, permission mode), the MCP servers enabled per agent and the gateway toggles per agent; user state, copy it. |
-| `ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.sessions` | content | The chats kept on this phone (text and attachment names, never attachment bytes); user content. |
+| `ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.sessions` | config | The chats kept on this phone (text and attachment names, never attachment bytes); mirrored to files/chat-sessions.json and carried through the code_chat_sessions store. |
 | `encrypted prefs cloud_code_chat_secrets` | secret | The OpenRouter token pasted in Profile & Config; vault. |
 
-Coverage: 7 covered, 3 gaps — file:filesDir or app storage: Acode settings (www/ settings, keybindings, installed plugins, themes, fonts), file:ac_cloud-code/src/lib/projects.js saved folders list (localStorage), file:ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.settings, .mcp.<agent>, .toggles.<agent>.
+Coverage: 7 covered, 5 gaps — code_chat_sessions, file:filesDir or app storage: Acode settings (www/ settings, keybindings, installed plugins, themes, fonts), file:ac_cloud-code/src/lib/projects.js saved folders list (localStorage), file:ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.settings, .mcp.<agent>, .toggles.<agent>, file:ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.sessions.
 
 ## cloud-contacts — `com.diegonmarcos.cloudcontacts`
 

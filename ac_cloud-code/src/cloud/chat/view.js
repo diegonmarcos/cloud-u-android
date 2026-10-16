@@ -11,6 +11,7 @@ import targets from "../targets.gen.json";
 import { el, icon } from "../dom";
 import { option, sheet, toggleRow, page, closeOverlay } from "../chrome";
 import * as M from "./model";
+import fsOperation from "fileSystem";
 
 // nav.json is the tab's own declaration; the gateway and OpenRouter come from the shared AI contract (libs:ai ai.json),
 // copied into targets.gen.json by tools/resolve-targets.py (chat.ai): nothing here restates an endpoint or a path.
@@ -38,6 +39,39 @@ const plugin = () => window.CloudChat;
 
 function persist() {
 	M.saveSessions(localStorage, S.sessions);
+	mirror();
+}
+
+// The chats also live in files/chat-sessions.json, the file the fleet setup contract carries to a new
+// phone (store code_chat_sessions); localStorage stays the working copy.
+const MIRROR_NAME = "chat-sessions.json";
+const mirrorDir = () => window.cordova?.file?.dataDirectory || null;
+
+async function mirror() {
+	try {
+		const dir = mirrorDir();
+		const text = localStorage.getItem(`${M.KEY}sessions`);
+		if (!dir || text == null) return;
+		const f = fsOperation(`${dir}${MIRROR_NAME}`);
+		if (await f.exists()) await f.writeFile(text);
+		else await fsOperation(dir).createFile(MIRROR_NAME, text);
+	} catch {
+		// the file is a copy for the next phone; the chat goes on without it
+	}
+}
+
+/** A restored phone: the file arrived, localStorage is empty — the file seeds it, once. */
+async function seedFromMirror() {
+	try {
+		const dir = mirrorDir();
+		if (!dir || localStorage.getItem(`${M.KEY}sessions`) != null) return;
+		const f = fsOperation(`${dir}${MIRROR_NAME}`);
+		if (!(await f.exists())) return;
+		const text = await f.readFile("utf8");
+		if (text && JSON.parse(text)) { localStorage.setItem(`${M.KEY}sessions`, text); S.current = null; }
+	} catch {
+		// unreadable: start empty, as before
+	}
 }
 
 function current() {
@@ -111,6 +145,7 @@ let $controls;
 let $send;
 
 export async function renderChat(panel, chrome) {
+	await seedFromMirror();
 	S.panel = panel;
 	S.chrome = chrome;
 	current();

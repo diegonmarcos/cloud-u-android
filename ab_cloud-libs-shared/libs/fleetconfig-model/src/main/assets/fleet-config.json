@@ -1833,6 +1833,17 @@
       "used_by": [
         "ac_cloud-search"
       ]
+    },
+    "code_chat_sessions": {
+      "kind": "file",
+      "class": "config",
+      "files": [
+        "chat-sessions.json"
+      ],
+      "doc": "Cloud Code's chats, mirrored by the web layer from localStorage to files/chat-sessions.json (text and attachment names, never bytes or a token) and seeded back from it on a restored phone.",
+      "used_by": [
+        "ac_cloud-code"
+      ]
     }
   },
   "bundle": {
@@ -2527,8 +2538,9 @@
         {
           "id": "chat-sessions",
           "path": "ac_cloud-code/src/cloud/chat/model.js localStorage cloud-code.chat.sessions",
-          "class": "content",
-          "doc": "The chats kept on this phone (text and attachment names, never attachment bytes); user content."
+          "class": "config",
+          "doc": "The chats kept on this phone (text and attachment names, never attachment bytes); mirrored to files/chat-sessions.json and carried through the code_chat_sessions store.",
+          "store": "code_chat_sessions"
         },
         {
           "id": "chat-token",
