@@ -28,8 +28,9 @@ APP=packages/frontend/apps/android
 TOOLS="$(mktemp -d)"
 ( cd "$TOOLS" && npm init -y >/dev/null && npm i --no-audit --no-fund --no-package-lock --legacy-peer-deps "vitest@$VITEST" >/dev/null )
 ln -s "$TOOLS/node_modules" "$ROOT/$APP/node_modules"
-( cd "$ROOT/$APP" && "$TOOLS/node_modules/.bin/vitest" run --root . --config vitest.phase0.config.mts ) 2>&1 | tee /tmp/phase0-js.log
+( cd "$ROOT/$APP" && NO_COLOR=1 "$TOOLS/node_modules/.bin/vitest" run --root . --config vitest.phase0.config.mts ) 2>&1 | tee /tmp/phase0-js.log
 rm -f "$ROOT/$APP/node_modules"
-grep -Eq "Tests +3 passed \(3\)" /tmp/phase0-js.log || {
+# vitest colours its summary on a CI tty: strip the escapes before matching
+sed 's/\x1b\[[0-9;]*m//g' /tmp/phase0-js.log | grep -Eq "Tests +3 passed \(3\)" || {
   echo "::error::nbstore adapter spec did not run 3 tests green"; exit 1; }
 echo "PHASE0 STORAGE OK"
