@@ -78,6 +78,7 @@ jobs:
         env:
           BYPASS_NIX: "1"
           SUPERAPP_VARIANT: "x86_64"
+          INSTRUMENT_PREGRANT: "1"
           INSTRUMENT_CLASS: "com.diegonmarcos.superapp.EdgeOverlayGestureTest"
           VAULT_DIR: ${{ github.workspace }}/.vault
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
