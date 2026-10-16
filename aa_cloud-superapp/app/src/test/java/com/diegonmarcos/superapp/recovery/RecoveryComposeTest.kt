@@ -61,13 +61,13 @@ class RecoveryComposeTest : KitPageHarness() {
     @Test
     fun `B3 the fleet-channel line is for feed advisories only`() {
         draw(item(Advisory.Severity.WARN, "feed"))
-        compose.onNodeWithTag(RecoveryBanner.TAG_SOURCE).assert(hasText("advisory from the fleet channel"))
+        compose.onNodeWithTag(RecoveryBanner.TAG_SOURCE, useUnmergedTree = true).assert(hasText("advisory from the fleet channel"))
     }
 
     @Test
     fun `B3b a local advisory has no source line`() {
         draw(item(Advisory.Severity.WARN, "local"))
-        compose.onAllNodesWithTag(RecoveryBanner.TAG_SOURCE).assertCountEquals(0)
+        compose.onAllNodesWithTag(RecoveryBanner.TAG_SOURCE, useUnmergedTree = true).assertCountEquals(0)
     }
 
     @Test

@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
@@ -89,7 +90,7 @@ class PageContentFragment : KitComposeFragment() {
             }
             if (samples.isEmpty()) {
                 Column(Modifier.fillMaxWidth().padding(top = 24.dp).clip(RoundedCornerShape(20.dp))
-                    .background(p.surface).padding(20.dp).testTag(TAG_EMPTY),
+                    .background(p.surface).padding(20.dp).semantics(mergeDescendants = true) {}.testTag(TAG_EMPTY),
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(stringResource(R.string.page_empty_title), color = p.textPrimary,
                         style = MaterialTheme.typography.titleMedium)
