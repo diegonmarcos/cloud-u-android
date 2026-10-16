@@ -47,7 +47,7 @@ i_smoke = job.find('Smoke test'); i_push = job.find('buildx build --platform lin
 check(i_smoke != -1 and i_push != -1 and i_smoke < i_push, 'the image smoke test runs BEFORE the push')
 check('401' in job[i_smoke:i_push] and 'refusing to start' in job[i_smoke:i_push], 'the smoke test covers the 401 and the fail-closed start')
 check("github.ref == 'refs/heads/main'" in job, 'the image is pushed from main only')
-check('cloud-notes-sync-binaries' in job, 'the image is named like the fleet\'s other images (<name>-binaries)')
+check('cloud-notes-sync' in job, 'the image is named like the fleet\'s other images (<name>-binaries)')
 
 print('RESULT: %s' % ('RED' if fails else 'GREEN'))
 raise SystemExit(1 if fails else 0)

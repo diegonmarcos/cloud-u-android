@@ -62,6 +62,28 @@ describe('makeVerifier', () => {
   });
 });
 
+describe('forward-auth (the fleet introspect-proxy)', () => {
+  const answer = (status, subject) => async (url, init) => ({
+    status,
+    ok: status < 400,
+    headers: new Headers(subject ? { 'x-auth-subject': subject } : {}),
+    seen: { url, init },
+  });
+  it('2xx with the Bearer forwarded is valid and names the subject; 401 and errors are refused', async () => {
+    let seen;
+    const f = async (url, init) => { seen = { url, init }; return answer(200, 'diego')(url, init); };
+    const v = makeVerifier({ forwardAuthUrl: 'http://10.0.0.1:4182/auth', fetchImpl: f });
+    expect(await v('tok')).toEqual({ sub: 'diego' });
+    expect(seen.url).toBe('http://10.0.0.1:4182/auth');
+    expect(seen.init.headers.authorization).toBe('Bearer tok');
+    expect(await makeVerifier({ forwardAuthUrl: 'http://p/auth', fetchImpl: answer(401) })('tok')).toBeNull();
+    expect(await makeVerifier({ forwardAuthUrl: 'http://p/auth', fetchImpl: async () => { throw new Error('down'); } })('tok')).toBeNull();
+  });
+  it('is accepted as the production verifier', () => {
+    expect(typeof verifierFromEnv({ SYNC_FORWARD_AUTH_URL: 'http://p/auth' })).toBe('function');
+  });
+});
+
 describe('verifierFromEnv', () => {
   it('fails closed: no verifier configured means no server', () => {
     expect(() => verifierFromEnv({})).toThrow(/refusing to start/);

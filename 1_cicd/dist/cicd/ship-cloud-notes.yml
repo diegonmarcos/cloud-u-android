@@ -158,7 +158,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          IMG="ghcr.io/${{ github.repository_owner }}/cloud-notes-web-binaries"
+          IMG="ghcr.io/${{ github.repository_owner }}/cloud-notes-web"
           docker buildx build --platform linux/amd64,linux/arm64 -f "$STAGE/deploy/web/Dockerfile" -t "$IMG:latest" -t "$IMG:${{ github.sha }}" --push "$STAGE"
 
   # Phase 2 (cloud-notes-hybrid): our own Yjs sync server (Hocuspocus, MIT). The
@@ -213,7 +213,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          IMG="ghcr.io/${{ github.repository_owner }}/cloud-notes-sync-binaries"
+          IMG="ghcr.io/${{ github.repository_owner }}/cloud-notes-sync"
           docker buildx build --platform linux/amd64,linux/arm64 -t "$IMG:latest" -t "$IMG:${{ github.sha }}" --push ac_cloud-notes/sync-server
 
   build_and_publish:

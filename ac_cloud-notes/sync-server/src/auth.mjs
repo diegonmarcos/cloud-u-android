@@ -18,6 +18,8 @@ export function bearerFrom(headers, params) {
 /**
  * A verifier is `async (token) => principal | null`. Modes:
  *  - static:     a fixed token set (development, tests)
+ *  - forwardAuth: the fleet's introspect-proxy (GET <url> with the Bearer; 2xx = valid,
+ *                `X-Auth-Subject` names the principal) -- the same check the edge gate runs
  *  - introspect: RFC 7662 against `introspectUrl`; active:true and, when
  *                `requiredScope` is set, that scope; positive answers are cached
  *                for `cacheMs` (a revoked token stops within that window)
@@ -25,6 +27,7 @@ export function bearerFrom(headers, params) {
 export function makeVerifier({
   staticTokens = [],
   introspectUrl = '',
+  forwardAuthUrl = '',
   requiredScope = '',
   cacheMs = 60_000,
   fetchImpl = globalThis.fetch,
@@ -36,10 +39,24 @@ export function makeVerifier({
   return async function verify(token) {
     if (!token) return null;
     if (fixed.has(token)) return { sub: 'static' };
-    if (!introspectUrl) return null;
+    if (!introspectUrl && !forwardAuthUrl) return null;
 
     const hit = cache.get(token);
     if (hit && hit.until > now()) return hit.principal;
+
+    if (forwardAuthUrl) {
+      let res;
+      try {
+        res = await fetchImpl(forwardAuthUrl, { method: 'GET', headers: { authorization: `Bearer ${token}` } });
+      } catch {
+        return null; // proxy unreachable: closed
+      }
+      if (!(res.status >= 200 && res.status < 300)) return null;
+      const principal = { sub: String(res.headers?.get?.('x-auth-subject') ?? res.headers?.get?.('x-auth-user') ?? 'unknown') };
+      cache.set(token, { until: now() + cacheMs, principal });
+      if (cache.size > 1000) cache.delete(cache.keys().next().value);
+      return principal;
+    }
 
     let res;
     try {
@@ -70,8 +87,9 @@ export function makeVerifier({
 export function verifierFromEnv(env = process.env, extra = {}) {
   const staticTokens = (env.SYNC_STATIC_TOKENS ?? '').split(',').map(s => s.trim()).filter(Boolean);
   const introspectUrl = env.SYNC_INTROSPECT_URL ?? '';
-  if (staticTokens.length === 0 && !introspectUrl) {
-    throw new Error('refusing to start: set SYNC_INTROSPECT_URL (production) or SYNC_STATIC_TOKENS (development)');
+  const forwardAuthUrl = env.SYNC_FORWARD_AUTH_URL ?? '';
+  if (staticTokens.length === 0 && !introspectUrl && !forwardAuthUrl) {
+    throw new Error('refusing to start: set SYNC_FORWARD_AUTH_URL or SYNC_INTROSPECT_URL (production) or SYNC_STATIC_TOKENS (development)');
   }
-  return makeVerifier({ staticTokens, introspectUrl, requiredScope: env.SYNC_REQUIRED_SCOPE ?? '', ...extra });
+  return makeVerifier({ staticTokens, introspectUrl, forwardAuthUrl, requiredScope: env.SYNC_REQUIRED_SCOPE ?? '', ...extra });
 }

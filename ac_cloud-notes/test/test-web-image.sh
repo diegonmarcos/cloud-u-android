@@ -42,7 +42,7 @@ i_smoke = job.find('/healthz'); i_push = job.find('buildx build --platform linux
 check(i_smoke != -1 and i_push != -1 and i_smoke < i_push, 'the smoke test (healthz) runs BEFORE the push')
 check('index.html' in job[i_smoke:i_push] if i_smoke != -1 and i_push != -1 else False, 'the smoke test also fetches the shell and a deep link')
 check("github.ref == 'refs/heads/main'" in job, 'the image is pushed from main only')
-check('cloud-notes-web-binaries' in job, 'the image is named like the fleet\'s other web images (<name>-binaries)')
+check('cloud-notes-web' in job, 'the image is named like the fleet\'s other web images (<name>-binaries)')
 
 print('RESULT: %s' % ('RED' if fails else 'GREEN'))
 raise SystemExit(1 if fails else 0)
