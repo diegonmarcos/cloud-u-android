@@ -49,7 +49,7 @@ PY
   mkdir -p "$t/ac_cloud-demo/$APPKT" "$t/ac_cloud-demo/app"
   cat > "$t/ac_cloud-demo/build.json" <<'EOF'
 {"name":"cloud-demo","modules":{"app":{},"libs:bottomnav":{"dir":"../x"},"libs:ai":{"dir":"../y"}},
- "ui":{"bottom_nav":["a","b"],"top_bar":{"title":"Demo","drawer":true,"ai":true,"settings":["account","configs"]}}}
+ "ui":{"bottom_nav":["a","b"],"top_bar":{"drawer":true,"ai":true,"settings":["account","configs"]}}}
 EOF
   cat > "$t/ac_cloud-demo/app/build.gradle" <<'EOF'
 android { defaultConfig { buildConfigField "String", "UI_TOP_BAR_B64", "\"${uiTopBarB64}\"" } }

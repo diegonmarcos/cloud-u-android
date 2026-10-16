@@ -285,7 +285,6 @@
     ],
     "top_bar": {
       "_doc": "THE first row of the app (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger that opens a side drawer the CURRENT page fills (MainActivity's StoreDrawer: the Store's sections and the open section's pages), the title, and two circular buttons: AI (libs:ai's chat in an anchored panel) and Settings (Account launches Cloud Account, Configs opens the Settings section below). Settings left the island for the top bar's Settings > Configs: the section stays declared (it is the page Configs opens, and `tab=settings` still lands on it) but is no longer a bottom_nav id. No app draws its own copy of this row (cloud-android-top-bar-guard).",
-      "title": "Cloud Store",
       "drawer": true,
       "ai": true,
       "settings": [

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Cloud Store ADOPTS the fleet's AppTopBar (libs:bottomnav): hamburger + page drawer, title, AI and Settings.
 # What this holds, statically (no build, no device, no network):
-#   T1 build.json::ui.top_bar declares the bar: title, drawer, ai, settings [account, configs]
+#   T1 build.json::ui.top_bar declares the bar: drawer, ai, settings [account, configs] (the title is the app's build.json name, passed by the host)
 #   T2 Configs MOVED: ui.bottom_nav no longer lists settings (four island items), the settings section is still
 #      declared (it is the page Configs opens) and MainActivity still draws SettingsPage for it
 #   T3 MainActivity draws the declared bar with the SHARED AppTopBarScaffold: TopBarDecl from BuildConfig,
@@ -37,10 +37,10 @@ check() {  # check <root> -> number of failures
   local BJ="$R/ac_cloud-store/build.json" MA="$R/$APP/MainActivity.kt" DR="$R/$APP/StoreDrawer.kt"
   local GR="$R/ac_cloud-store/app/build.gradle" TS="$R/$BN/src/test/kotlin/com/diegonmarcos/superapp/bottomnav/AppTopBarTest.kt"
   for x in "$BJ" "$MA" "$DR" "$GR" "$TS"; do [ -f "$x" ] || { bad "missing ${x#$R/}"; return 1; }; done
-  python3 - "$BJ" <<'PY' && ok "T1 ui.top_bar declares title, drawer, ai and settings [account, configs]" || bad "T1 build.json ui.top_bar is not {title, drawer:true, ai:true, settings:[account, configs]}"
+  python3 - "$BJ" <<'PY' && ok "T1 ui.top_bar declares drawer, ai and settings [account, configs] and restates no app name" || bad "T1 build.json ui.top_bar is not {drawer:true, ai:true, settings:[account, configs]} (or restates a title)"
 import json, sys
 t = (json.load(open(sys.argv[1]))['ui'].get('top_bar') or {})
-sys.exit(0 if t.get('title') == 'Cloud Store' and t.get('drawer') is True and t.get('ai') is True and t.get('settings') == ['account', 'configs'] else 1)
+sys.exit(0 if 'title' not in t and t.get('drawer') is True and t.get('ai') is True and t.get('settings') == ['account', 'configs'] else 1)
 PY
   python3 - "$BJ" <<'PY' && ok "T2 settings left the island (four items) and stays a declared section" || bad "T2 ui.bottom_nav still lists settings, or the settings section is gone"
 import json, sys
@@ -113,7 +113,7 @@ while IFS='|' read -r file expr; do
   else echo "  PASS: caught: $file ${expr:0:70}"; PASS=$((PASS+1)); fi
 done <<MUT
 ac_cloud-store/build.json|s.replace('"drawer": true,', '"drawer": false,')
-ac_cloud-store/build.json|s.replace('"title": "Cloud Store",', '"title": "",')
+ac_cloud-store/build.json|s.replace('"drawer": true,', '"drawer": true,\n      "title": "Cloud Store",')
 ac_cloud-store/build.json|s.replace('"access"\n    ],\n    "top_bar"', '"access",\n      "settings"\n    ],\n    "top_bar"')
 ac_cloud-store/build.json|s.replace('"id": "settings",', '"id": "settingz",')
 ac_cloud-store/build.json|s.replace('":libs:bottomnav:testDebugUnitTest"', '":app:testDebugUnitTest"')

@@ -74,7 +74,7 @@ class AppTopBarTest {
         }
     }).around(compose)
 
-    private val full = TopBarDecl(title = "Cloud Store", drawer = true, ai = true, settings = listOf("account", "configs"))
+    private val full = TopBarDecl(drawer = true, ai = true, settings = listOf("account", "configs"))
 
     private var accountTaps = 0
     private var configsTaps = 0
@@ -86,6 +86,7 @@ class AppTopBarTest {
                 val account: () -> Unit = if (realAccount) rememberAccountLauncher() else ({ accountTaps++ })
                 AppTopBarScaffold(
                     decl = decl,
+                    title = "Cloud Store",
                     onAccount = account,
                     onConfigs = { configsTaps++ },
                     aiPanel = { close ->
@@ -114,7 +115,7 @@ class AppTopBarTest {
 
     @Test
     fun `the declaration reads drawer, ai and settings from build json`() {
-        val d = TopBarDecl.fromBuildConfig(b64("""{"title":"Cloud Store","drawer":true,"ai":true,"settings":["account","configs"]}"""))
+        val d = TopBarDecl.fromBuildConfig(b64("""{"drawer":true,"ai":true,"settings":["account","configs"]}"""))
         assertEquals(full, d)
         assertTrue(d!!.problems().isEmpty())
     }
@@ -322,7 +323,7 @@ class AppTopBarTest {
         compose.setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 val icon = rememberVectorPainter(Icons.Filled.Settings)
-                AppTopBarScaffold(full, onAccount = {}, onConfigs = {}) {
+                AppTopBarScaffold(full, "Cloud Store", onAccount = {}, onConfigs = {}) {
                     BottomNavHost(
                         entries = listOf(BottomNavEntry("one", "One", icon), BottomNavEntry("two", "Two", icon)),
                         selectedId = "one",

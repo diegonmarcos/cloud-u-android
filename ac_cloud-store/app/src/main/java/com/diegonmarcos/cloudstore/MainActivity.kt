@@ -142,6 +142,7 @@ class MainActivity : AppCompatActivity() {
             val topBar = TOP_BAR
             if (topBar == null) shell() else AppTopBarScaffold(
                 decl = topBar,
+                title = getString(R.string.app_name),
                 onAccount = rememberAccountLauncher(),
                 onConfigs = { selected = TAB_SETTINGS },
                 aiPanel = { AiFleetChatPanel(BuildConfig.AI_GATEWAY_URL) },

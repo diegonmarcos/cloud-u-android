@@ -3075,11 +3075,13 @@
       "module": "ac_cloud-store",
       "schema_version": 1,
       "libs": [
+        "lib-ai",
         "lib-appstore",
         "lib-bottomnav",
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
+        "lib-model-catalogue",
         "lib-shizuku-adb-debug-tools",
         "lib-sysdns",
         "lib-ui-kit",

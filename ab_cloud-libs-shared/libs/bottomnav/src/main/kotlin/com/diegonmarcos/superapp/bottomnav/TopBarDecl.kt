@@ -17,20 +17,18 @@ public object TopBarSettings {
 /**
  * THE top bar declaration of the fleet: `build.json::ui.top_bar` as an app reads it at runtime.
  *
- *   "top_bar": {"title": "Cloud Store", "drawer": true, "ai": true, "settings": ["account", "configs"]}
+ *   "top_bar": {"drawer": true, "ai": true, "settings": ["account", "configs"]}
  *
- *   title     the app's name, centred in the bar (blank = the host passes one)
  *   drawer    a hamburger at the left opens a side drawer whose content the CURRENT PAGE supplies ([TopBarDrawer])
  *   ai        a circular AI button at the right opens the shared libs:ai chat in an anchored panel
  *   settings  a circular Settings button at the right opens a dropdown of these entries ([TopBarSettings])
  *
- * The title in the middle is the app's own. An app bakes `UI_TOP_BAR_B64` (base64 of the object's JSON)
+ * The title in the middle is the app's own name (build.json::name, declared once: the host passes it, the declaration restates none). An app bakes `UI_TOP_BAR_B64` (base64 of the object's JSON)
  * into BuildConfig and [AppTopBarScaffold] draws exactly what it declares. No `top_bar` = no bar: [fromBuildConfig]
  * answers null. Parsing is FAIL-SOFT like [NavDecl]: a malformed blob is null, never a crash on launch; the
  * top-bar guard (cloud-android-top-bar-guard) is what makes it a build failure.
  */
 public data class TopBarDecl(
-    val title: String = "",
     val drawer: Boolean = false,
     val ai: Boolean = false,
     val settings: List<String> = emptyList(),
@@ -48,7 +46,6 @@ public data class TopBarDecl(
         public fun parse(json: Any): TopBarDecl? = runCatching {
             val o = MiniJson.parse(json.toString()) as? Map<*, *> ?: return null
             TopBarDecl(
-                title = (o["title"] as? String).orEmpty(),
                 drawer = o["drawer"] == true,
                 ai = o["ai"] == true,
                 settings = (o["settings"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
