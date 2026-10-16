@@ -7,7 +7,6 @@ import com.diegonmarcos.superapp.launcher.WebPageFragment
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
-import androidx.compose.ui.test.assertDoesNotExist
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
