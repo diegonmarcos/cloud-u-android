@@ -33,7 +33,7 @@ class ReplyQuoteConsumedWiringTest {
         // DialogFlagsSurviveRotationTest, which caught a reset hidden in prepare().
         val writers = lines(COMPOSE_VIEW_MODEL).filter { "_replyQuote" in it }
         assertEquals(
-            "⛔ exactly FOUR lines of $COMPOSE_VIEW_MODEL_PATH may so much as NAME `_replyQuote` " +
+            "⛔ exactly FIVE lines of $COMPOSE_VIEW_MODEL_PATH may so much as NAME `_replyQuote` " +
                 "— its declaration, its public flow, the one emission that posts the quote, and " +
                 "the one line that retires it. A fifth is a second writer the screen never sees: " +
                 "posted again behind its back, the caret jumps to the top of a reply being " +
@@ -44,6 +44,8 @@ class ReplyQuoteConsumedWiringTest {
                 "val replyQuote: StateFlow<String?> = _replyQuote.asStateFlow()",
                 "_replyQuote.value = null",
                 "_replyQuote.value = openingHtml(true, quoteBlock(original, resolveOutgoingDateZone(settings.quotedDatesUtc)))",
+                // A forward's original lands in the editor through the same flow.
+                "_replyQuote.value = openingHtml(true, editorBlock(BLOCK_FORWARD, blocks.html))",
             ).sorted(),
             writers.sorted(),
         )
