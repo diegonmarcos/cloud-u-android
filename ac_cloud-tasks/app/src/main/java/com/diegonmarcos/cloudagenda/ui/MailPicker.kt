@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -57,11 +56,11 @@ fun MailPickerDialog(source: MailSource, onPick: (MailItem) -> Unit, onDismiss: 
         items = rows
         problem = why
     }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        modifier = Modifier.testTag(MailPickerTags.DIALOG),
-        title = { Text("Pick a mail") },
-        text = {
+    SheetDialog(
+        "Pick a mail", onDismiss, Modifier.testTag(MailPickerTags.DIALOG),
+        actions = { TextButton(onClick = onDismiss, modifier = Modifier.testTag(MailPickerTags.CANCEL)) { Text("Cancel") } },
+    ) {
+        run {
             Column {
                 OutlinedTextField(query, { query = it }, label = { Text("Subject contains") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag(MailPickerTags.SEARCH))
                 if (problem != null) {
@@ -78,8 +77,6 @@ fun MailPickerDialog(source: MailSource, onPick: (MailItem) -> Unit, onDismiss: 
                     }
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.testTag(MailPickerTags.CANCEL)) { Text("Cancel") } },
-    )
+        }
+    }
 }

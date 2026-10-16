@@ -23,7 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -151,11 +150,11 @@ private fun ListRow(list: TaskList, selected: Boolean, onSelect: (TaskList) -> U
 @Composable
 fun NameDialog(title: String, initial: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf(initial) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { OutlinedTextField(text, { text = it }, singleLine = true, modifier = Modifier.testTag(DrawerTags.NAME_INPUT)) },
-        confirmButton = { TextButton(onClick = { onConfirm(text.trim()) }, enabled = text.isNotBlank(), modifier = Modifier.testTag(DrawerTags.NAME_OK)) { Text("OK") } },
-        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.testTag(DrawerTags.NAME_CANCEL)) { Text("Cancel") } },
-    )
+    SheetDialog(
+        title, onDismiss,
+        actions = {
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag(DrawerTags.NAME_CANCEL)) { Text("Cancel") }
+            TextButton(onClick = { onConfirm(text.trim()) }, enabled = text.isNotBlank(), modifier = Modifier.testTag(DrawerTags.NAME_OK)) { Text("OK") }
+        },
+    ) { OutlinedTextField(text, { text = it }, singleLine = true, modifier = Modifier.testTag(DrawerTags.NAME_INPUT)) }
 }

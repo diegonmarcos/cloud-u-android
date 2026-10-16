@@ -279,7 +279,7 @@ class TasksPageTest {
         env.repo.recordAgentRun(1, "backend_not_deployed", "the fleet AI gateway is not reachable")
         env.controller.refreshAgent()
         compose.waitForIdle()
-        compose.onNodeWithText("Agent backend not deployed: the fleet AI gateway is not reachable").assertIsDisplayed()
+        compose.onNodeWithText("Agent backend not deployed: the fleet AI gateway is not reachable").performScrollTo().assertIsDisplayed()
     }
 
     // ── the AI panel ────────────────────────────────────────────────────────────────────────────────────

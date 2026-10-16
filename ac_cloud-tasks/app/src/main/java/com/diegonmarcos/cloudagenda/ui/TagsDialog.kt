@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -65,11 +64,11 @@ fun TagsDialog(
 ) {
     val p = LocalKitPalette.current
     var newName by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        modifier = Modifier.testTag(TagTags.DIALOG),
-        title = { Text("Tags") },
-        text = {
+    SheetDialog(
+        "Tags", onDismiss, Modifier.testTag(TagTags.DIALOG),
+        actions = { TextButton(onClick = onDismiss, modifier = Modifier.testTag(TagTags.DONE)) { Text("Done") } },
+    ) {
+        run {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 LazyColumn(Modifier.heightIn(max = 280.dp)) {
                     items(tags, key = { it.id }) { t ->
@@ -98,7 +97,6 @@ fun TagsDialog(
                     ) { Text("Add") }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss, modifier = Modifier.testTag(TagTags.DONE)) { Text("Done") } },
-    )
+        }
+    }
 }
