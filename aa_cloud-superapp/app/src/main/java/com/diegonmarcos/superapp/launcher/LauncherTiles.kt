@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -66,14 +67,19 @@ internal fun LauncherTile(
     val p = LocalKitPalette.current
     val ctx = LocalContext.current
     val view = LocalView.current
-    val dm = ctx.resources.displayMetrics
-    val iconDp = remember(cols, pageDp, chromeDp) { tileIconDp(dm.widthPixels, dm.density, cols, pageDp, chromeDp) }
+    // The density Compose itself lays out with (LocalDensity), not the Activity resources': an in-process scale
+    // (SystemDisplay.wrap) or a hosting window with another Configuration must not make the glyph disagree with its tile.
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    val widthPx = ctx.resources.displayMetrics.widthPixels
+    val iconDp = remember(cols, pageDp, chromeDp, density, widthPx) { tileIconDp(widthPx, density, cols, pageDp, chromeDp) }
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
     // The old tile_press animation: a quick shrink while the finger is down.
     val scale by animateFloatAsState(if (pressed) 0.94f else 1f, label = "tile-press")
     Column(
-        modifier.height(height).padding(3.dp).scale(scale)
+        modifier.height(height).padding(3.dp)
+            .onSizeChanged { TileMetrics.tile(tileId, it.width, it.height, density) } // the CARD: inside the 3 dp margin
+            .scale(scale)
             .clip(RoundedCornerShape(16.dp)).background(p.surface)
             .clickable(interactionSource = src, indication = LocalIndication.current) {
                 Haptics.tap(view)
@@ -85,7 +91,8 @@ internal fun LauncherTile(
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(painterResource(iconRes), contentDescription = null, tint = p.textPrimary,
-            modifier = Modifier.padding(top = 4.dp).size(iconDp))
+            modifier = Modifier.padding(top = 4.dp).size(iconDp).testTag(tileIconTag(tileId))
+                .onSizeChanged { TileMetrics.icon(tileId, it.width, it.height, density) })
         Text(label, color = p.textPrimary, fontSize = GridColumns.labelSp(cols).sp, maxLines = 2,
             overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
@@ -99,7 +106,41 @@ internal val TILE_CELL_HEIGHT: Dp = 134.dp
 internal fun tileIconDp(widthPx: Int, density: Float, cols: Int, pageDp: Int, chromeDp: Int): Dp {
     val cell = GridColumns.cellPx(widthPx - (pageDp * density).toInt(), cols)
     val px = GridColumns.iconPx((32 * density).toInt(), cell, (chromeDp * density).toInt(), (16 * density).toInt())
-    return (px / density).dp
+    // Hard ceiling: the glyph is never larger than the 32 dp the View tile drew, whatever the arithmetic above says.
+    return (px / density).coerceAtMost(TILE_ICON_MAX_DP).dp
+}
+
+/** item_tile.xml's icon edge: the most a launcher tile glyph may be. */
+internal const val TILE_ICON_MAX_DP = 32f
+
+/**
+ * What the tiles REALLY measured on this device (px from layout, divided by the density they were laid out at), kept for
+ * Configs ▸ Observability ▸ Diagnostics and its remote read. Written from the composition, read from anywhere.
+ */
+object TileMetrics {
+    data class Sample(val id: String, val tileWDp: Float, val tileHDp: Float, val iconWDp: Float, val iconHDp: Float,
+                      val density: Float, val atMs: Long)
+
+    private val tiles = java.util.concurrent.ConcurrentHashMap<String, FloatArray>() // w,h,icon w,icon h,density
+    @Volatile private var last: String? = null
+
+    internal fun tile(id: String, w: Int, h: Int, density: Float) {
+        val a = tiles.getOrPut(id) { FloatArray(5) }; a[0] = w / density; a[1] = h / density; a[4] = density; last = id
+    }
+
+    internal fun icon(id: String, w: Int, h: Int, density: Float) {
+        val a = tiles.getOrPut(id) { FloatArray(5) }; a[2] = w / density; a[3] = h / density; a[4] = density; last = id
+    }
+
+    /** The most recently measured tile, or null before any grid has been drawn. */
+    fun latest(): Sample? = last?.let { id -> tiles[id]?.let { Sample(id, it[0], it[1], it[2], it[3], it[4], 0L) } }
+
+    /** The largest glyph any tile measured: the number that answers "are the icons huge". */
+    fun largestIconDp(): Float = tiles.values.maxOfOrNull { maxOf(it[2], it[3]) } ?: 0f
+
+    fun count(): Int = tiles.size
+
+    fun clear() { tiles.clear(); last = null }
 }
 
 /**
@@ -130,3 +171,4 @@ internal fun TileSubgroupHeader(text: String, modifier: Modifier = Modifier) {
 }
 
 internal fun tileTag(id: String) = "tile:$id"
+internal fun tileIconTag(id: String) = "tileicon:$id"

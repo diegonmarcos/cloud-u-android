@@ -17,6 +17,9 @@ object EdgeHandleWindow {
     const val MAX_THICKNESS_DP = 24
     const val MAX_LENGTH_DP = 160
 
+    /** The widest strip the owner may ask for in Configs (Samsung's gesture zone can be wider than the default strip clears). */
+    const val USER_MAX_THICKNESS_DP = 40
+
     /** NOT_TOUCH_MODAL: touches outside the strip go to the window behind. NOT_FOCUSABLE: never steals keys/IME. */
     const val FLAGS = LP.FLAG_NOT_FOCUSABLE or LP.FLAG_NOT_TOUCH_MODAL or
         LP.FLAG_LAYOUT_IN_SCREEN or LP.FLAG_LAYOUT_NO_LIMITS
@@ -28,9 +31,9 @@ object EdgeHandleWindow {
     data class Size(val widthPx: Int, val heightPx: Int)
 
     /** [lengthPx]/[thicknessPx] are what the config asked for; the result is clamped to the caps. */
-    fun size(edge: OneHandConfig.Edge, lengthPx: Int, thicknessPx: Int, density: Float): Size {
+    fun size(edge: OneHandConfig.Edge, lengthPx: Int, thicknessPx: Int, density: Float, maxThicknessDp: Int = MAX_THICKNESS_DP): Size {
         val len = lengthPx.coerceIn(1, (MAX_LENGTH_DP * density).toInt())
-        val thick = thicknessPx.coerceIn(1, (MAX_THICKNESS_DP * density).toInt())
+        val thick = thicknessPx.coerceIn(1, (maxThicknessDp * density).toInt())
         return if (edge == OneHandConfig.Edge.BOTTOM) Size(len, thick) else Size(thick, len)
     }
 }

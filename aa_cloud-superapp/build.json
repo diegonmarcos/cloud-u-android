@@ -4851,6 +4851,13 @@
             "group": "Observability"
           },
           {
+            "_doc": "Configs ▸ Observability ▸ Diagnostics: build SHA, device/Android/One UI, density/fontScale/dp, gesture-nav mode and insets, overlay permission, edge service + attached strip rects + last 20 touch events, measured Configs tile/icon dp. DiagnosticsFragment draws it; the same JSON is served read-only at /api/diagnostics/get (+ screenshot, open, inject) on the fleet debug API.",
+            "id": "diagnostics",
+            "label": "Diagnostics",
+            "icon": "ic_settings",
+            "group": "Observability"
+          },
+          {
             "_doc": "Tab 1 of Launcher — the PRESETS: things you pick in one tap. Three groups, declared in ui.launcher_presets (order, names and which declaration feeds each group): Sandboxes (ui.launcher_profiles — Work · Personal · Guest), Themes (ui.launcher_themes — Cloud Purple · Cloud Minimalistic) and Modes (ui.launcher_modes — Power · Focus · Saving Energy). LauncherPresetsFragment draws them and owns no name of its own. Its id is `presets`, not `profile`, because `profile` is already this section's own top-level page (the owner's identity) and a section cannot hold two pages under one id. Nothing persisted moves with the rename: LauncherProfilePrefs/LauncherThemePrefs/LauncherModePrefs key off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
             "id": "presets",
             "label": "Presets",

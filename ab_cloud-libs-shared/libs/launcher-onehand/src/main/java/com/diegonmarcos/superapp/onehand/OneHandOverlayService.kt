@@ -72,6 +72,7 @@ class OneHandOverlayService : Service() {
         }
         // #775: off stays off, and no overlay permission means nothing to host.
         if (!OneHandPrefs.isEnabled(this) || !Settings.canDrawOverlays(this)) {
+            EdgeEventLog.record("service", reason = if (!OneHandPrefs.isEnabled(this)) "stopped: switch off" else "stopped: no overlay permission")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -89,6 +90,44 @@ class OneHandOverlayService : Service() {
 
     /** The idle strip windows (emulator test + /api/overlays read their screen bounds). */
     val handleViews: List<View> get() = views.toList()
+
+    /** Where each strip really is on screen right now (Diagnostics + remote read): attached flag and absolute rect. */
+    data class StripRect(val id: String, val attached: Boolean, val left: Int, val top: Int, val width: Int, val height: Int)
+
+    fun stripRects(): List<StripRect> = views.mapIndexed { i, v ->
+        val loc = IntArray(2)
+        if (v.isAttachedToWindow) v.getLocationOnScreen(loc)
+        val lp = v.layoutParams as? WindowManager.LayoutParams
+        StripRect(cfg?.handles?.getOrNull(i)?.id ?: "h$i", v.isAttachedToWindow,
+            if (v.isAttachedToWindow) loc[0] else lp?.x ?: 0, if (v.isAttachedToWindow) loc[1] else lp?.y ?: 0,
+            v.width.takeIf { it > 0 } ?: lp?.width ?: 0, v.height.takeIf { it > 0 } ?: lp?.height ?: 0)
+    }
+
+    /**
+     * Test gesture into OUR OWN strip window (no system input, no permission): DOWN at the strip centre, hold, push
+     * inward [pushDp], UP. Runs the real touch listener, so the event log and machine see what a thumb would send.
+     * Returns false when no strip of [edge] is attached.
+     */
+    fun injectGesture(edge: OneHandConfig.Edge, holdMs: Long, pushDp: Int): Boolean {
+        val i = cfg?.handles?.indexOfFirst { it.edge == edge } ?: -1
+        val v = views.getOrNull(i)?.takeIf { it.isAttachedToWindow } ?: return false
+        val r = stripRects()[i]
+        val x0 = r.left + r.width / 2f; val y0 = r.top + r.height / 2f
+        val dir = if (edge == OneHandConfig.Edge.LEFT) 1f else -1f
+        val t0 = android.os.SystemClock.uptimeMillis()
+        fun ev(action: Int, t: Long, x: Float) = MotionEvent.obtain(t0, t, action, x, y0, 0)
+        EdgeEventLog.record("service", r.id, "injected test gesture hold=${holdMs}ms push=${pushDp}dp")
+        handler.post { v.dispatchTouchEvent(ev(MotionEvent.ACTION_DOWN, t0, x0)) }
+        val steps = 6
+        for (k in 1..steps) handler.postDelayed({
+            val t = android.os.SystemClock.uptimeMillis()
+            v.dispatchTouchEvent(ev(MotionEvent.ACTION_MOVE, t, x0 + dir * dp(pushDp) * k / steps))
+        }, holdMs + 40L * k)
+        handler.postDelayed({
+            v.dispatchTouchEvent(ev(MotionEvent.ACTION_UP, android.os.SystemClock.uptimeMillis(), x0 + dir * dp(pushDp)))
+        }, holdMs + 40L * (steps + 3))
+        return true
+    }
 
     /** True while the hold-then-push menu window is on screen. */
     val menuShown: Boolean get() = activated && preview?.isAttachedToWindow == true
@@ -148,7 +187,8 @@ class OneHandOverlayService : Service() {
         // Idle window = thin bounded strip, NOT_TOUCH_MODAL (outside it, touches reach the app below).
         val len = if (h.lengthDp > 0) dp(h.lengthDp)
             else (if (h.edge == OneHandConfig.Edge.BOTTOM) dm.widthPixels else dm.heightPixels) * h.lengthPct / 100
-        val size = EdgeHandleWindow.size(h.edge, len, dp(h.thicknessDp), dm.density)
+        val size = EdgeHandleWindow.size(h.edge, len, dp(OneHandPrefs.stripWidthDp(this)), dm.density,
+            EdgeHandleWindow.USER_MAX_THICKNESS_DP)
         val lp = WindowManager.LayoutParams(
             size.widthPx,
             size.heightPx,
@@ -164,7 +204,7 @@ class OneHandOverlayService : Service() {
         // PAST that strip (the safe zone). In 3-button mode there's no edge
         // gesture, so we hug the very edge (works perfectly there).
         val gestureNav = isGestureNav()
-        val inset = if (gestureNav) dp(cfg?.edgeInsetGestureDp ?: 28) else dp(h.edgeInsetDp)
+        val inset = dp(OneHandPrefs.edgeInsetDp(this) ?: if (gestureNav) cfg?.edgeInsetGestureDp ?: 28 else h.edgeInsetDp)
         Log.i(TAG, "addHandle ${h.id} gestureNav=$gestureNav inset=$inset")
         when (h.edge) {
             OneHandConfig.Edge.BOTTOM -> {
@@ -180,8 +220,13 @@ class OneHandOverlayService : Service() {
             }
         }
         lp.alpha = OVERLAY_ALPHA // < 0.8 → doesn't block the app's touches (untrusted-touch rule)
-        wm.addView(view, lp)
+        // A revoked grant (an update can drop it) throws here; a crash would take the whole service down silently.
+        if (runCatching { wm.addView(view, lp) }.onFailure {
+                EdgeEventLog.record("error", h.id, "addView failed: ${it.javaClass.simpleName} ${it.message}")
+                Log.w(TAG, "addHandle ${h.id} failed: $it")
+            }.isFailure) return
         views.add(view)
+        EdgeEventLog.record("service", h.id, "strip added ${lp.width}x${lp.height} at x=${lp.x} y=${lp.y} inset=$inset gestureNav=$gestureNav")
         Log.i(TAG, "addHandle ${h.id} edge=${h.edge} size=${lp.width}x${lp.height} x=${lp.x} y=${lp.y} inset=$inset")
         // CRITICAL for the LEFT handle: our inward swipe there IS the system
         // back-gesture direction, so without exclusion the OS steals it. The rect
@@ -206,6 +251,7 @@ class OneHandOverlayService : Service() {
         // the stream; the OS cannot hand a window's stream back to the app below.)
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                EdgeEventLog.record("down", h.id, "x=${e.rawX.toInt()} y=${e.rawY.toInt()}", e.rawX, e.rawY)
                 downX = e.rawX; downY = e.rawY; activated = false
                 val holdMs = EdgeGestureMachine.holdMs(ViewConfiguration.getLongPressTimeout().toLong(), c.longPressMs)
                 val m = EdgeGestureMachine(h.edge, holdMs,
@@ -213,13 +259,20 @@ class OneHandOverlayService : Service() {
                     .also { it.down(e.rawX, e.rawY, e.eventTime); machine = it }
                 holdCue?.let { handler.removeCallbacks(it) }
                 holdCue = Runnable {
-                    if (m.tick(android.os.SystemClock.uptimeMillis()))
+                    if (m.tick(android.os.SystemClock.uptimeMillis())) {
+                        EdgeEventLog.record("hold", h.id, "armed after ${holdMs}ms, push inward")
                         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS) // "armed": now push
+                    }
                 }.also { handler.postDelayed(it, holdMs) }
             }
             MotionEvent.ACTION_MOVE -> {
                 val m = machine ?: return true
+                val before = m.state
                 m.move(e.rawX, e.rawY, e.eventTime)
+                if (before == EdgeGestureMachine.State.PENDING && m.state == EdgeGestureMachine.State.PASS)
+                    EdgeEventLog.record("pass", h.id, "moved past slop before the hold elapsed", e.rawX, e.rawY)
+                if (before == EdgeGestureMachine.State.ARMED && m.state == EdgeGestureMachine.State.MENU)
+                    EdgeEventLog.record("push", h.id, "menu opened", e.rawX, e.rawY)
                 if (m.state == EdgeGestureMachine.State.MENU) {
                     if (!activated) {
                         activate(h)
@@ -230,13 +283,22 @@ class OneHandOverlayService : Service() {
             }
             MotionEvent.ACTION_UP -> {
                 val outcome = machine?.up(e.eventTime)
+                EdgeEventLog.record("up", h.id, when (outcome) {
+                    EdgeGestureMachine.Outcome.FIRE -> "fire"
+                    EdgeGestureMachine.Outcome.NONE -> "released armed, no push"
+                    EdgeGestureMachine.Outcome.TAP -> "tap/early release before hold"
+                    null -> "no gesture state"
+                }, e.rawX, e.rawY)
                 if (outcome == EdgeGestureMachine.Outcome.FIRE) {
                     val key = SwipeClassifier.classify(h.edge, e.rawX - downX, e.rawY - downY, dp(c.swipeThresholdDp))
                     key?.let { slot -> h.gestures[slot]?.let { it.perform(this, labelForAction(it)) } }
                 }
                 endGesture()
             }
-            MotionEvent.ACTION_CANCEL -> { machine?.cancel(); endGesture() }
+            MotionEvent.ACTION_CANCEL -> {
+                EdgeEventLog.record("cancel", h.id, "system cancelled the stream (state=${machine?.state})", e.rawX, e.rawY)
+                machine?.cancel(); endGesture()
+            }
         }
         return true
     }

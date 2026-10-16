@@ -133,4 +133,27 @@ object OneHandPrefs {
     fun setDebugVisible(ctx: Context, on: Boolean) {
         prefs(ctx).edit().putBoolean("debug_visible", on).apply()
     }
+
+    // ── Strip geometry the owner can tune on a phone whose gesture zone differs (Samsung sensitivity) ──
+    const val STRIP_DEFAULT_DP = 24
+    const val STRIP_MIN_DP = 12
+    const val INSET_MAX_DP = 48
+
+    /** Strip thickness; 24dp unless the owner changed it. Clamped so a hand-edited value cannot make a dead band. */
+    fun stripWidthDp(ctx: Context): Int =
+        prefs(ctx).getInt("strip_width_dp", STRIP_DEFAULT_DP).coerceIn(STRIP_MIN_DP, EdgeHandleWindow.USER_MAX_THICKNESS_DP)
+
+    fun setStripWidthDp(ctx: Context, dp: Int) {
+        prefs(ctx).edit().putInt("strip_width_dp", dp.coerceIn(STRIP_MIN_DP, EdgeHandleWindow.USER_MAX_THICKNESS_DP)).apply()
+    }
+
+    /** Owner-chosen distance of the strip from the screen edge; null = the shipped rule (build.json inset, wider in gesture nav). */
+    fun edgeInsetDp(ctx: Context): Int? =
+        prefs(ctx).takeIf { it.contains("edge_inset_dp") }?.getInt("edge_inset_dp", 0)?.coerceIn(0, INSET_MAX_DP)
+
+    fun setEdgeInsetDp(ctx: Context, dp: Int?) {
+        val e = prefs(ctx).edit()
+        if (dp == null) e.remove("edge_inset_dp") else e.putInt("edge_inset_dp", dp.coerceIn(0, INSET_MAX_DP))
+        e.apply()
+    }
 }

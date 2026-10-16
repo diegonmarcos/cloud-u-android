@@ -227,6 +227,10 @@ class App : Application(), WorkManagerConfiguration.Provider {
         runCatching { BadgeServices.ensureAll(this) }
         // #775: /api/overlays — what is drawn vs. what each switch says.
         runCatching { com.diegonmarcos.superapp.floatingnav.OverlaysDebugApi.register(this) }
+        // Diagnostics (Configs ▸ Observability ▸ Diagnostics) + its remote read /api/diagnostics/{get,screenshot,open,inject};
+        // the lifecycle callback also re-ensures the edge strips on ANY activity resume (an update kills the service).
+        runCatching { com.diegonmarcos.superapp.configs.Diagnostics.install(this) }
+        runCatching { com.diegonmarcos.superapp.configs.Diagnostics.register(this) }
         // #777: /api/notify/{groups,alerts} — the four shade groups and the fleet alerts.
         runCatching { com.diegonmarcos.superapp.notificationcenter.NotifyDebugApi.register(this) }
         // #777: the Alerts group is drawn from the store, so it comes back

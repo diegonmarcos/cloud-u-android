@@ -244,6 +244,22 @@ class OneHandFragment : KitComposeFragment() {
         }
         floatingState = floatingOn
         Text(status, color = LocalKitPalette.current.textPrimary, fontSize = 13.sp)
+        // An app update can drop "Display over other apps"; then every strip silently fails to draw. Say so, with the fix.
+        var overlayOk by remember { mutableStateOf(OneHandController.canDrawOverlay(ctx)) }
+        LaunchedEffect(Unit) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { overlayOk = OneHandController.canDrawOverlay(ctx) }
+        }
+        if (!overlayOk) {
+            Text("Edge menus cannot work: 'Display over other apps' is OFF for SuperApp (an update can revoke it).",
+                color = Color(0xFFFF8A80), fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag("onehand:overlay-banner"))
+            ConfigButton("Grant 'Display over other apps'", plate = Color(0xFFB3261E)) {
+                runCatching {
+                    ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        android.net.Uri.parse("package:" + ctx.packageName)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+            }
+        }
 
         ConfigSwitchRow("One-Hand edge handles", masterOn, tag = "master") { on ->
             if (on) {
@@ -333,9 +349,35 @@ class OneHandFragment : KitComposeFragment() {
                 "ring of ${r.items.size} shortcuts, no handle needed. It has no " +
                 "runtime switch — enable onehand.radial.enabled in build.json. Needs Android 14+; the detector is observe-only below that.")
 
+        // Samsung's back-gesture zone is wider than the default strip clears (Settings > Navigation bar > Back gesture
+        // sensitivity), and Edge panels sit on the right edge. Tune the strip here; the red outline below shows the result live.
+        subhead("Strip width and inset")
+        var stripDp by remember { mutableIntStateOf(OneHandPrefs.stripWidthDp(ctx)) }
+        var insetDp by remember { mutableStateOf(OneHandPrefs.edgeInsetDp(ctx)) }
+        val shownInset = insetDp ?: OneHandConfig.effective(ctx).let { c -> if (com.diegonmarcos.superapp.configs.Diagnostics.navMode(ctx) == 2) c.edgeInsetGestureDp else c.handles.firstOrNull()?.edgeInsetDp ?: 0 }
+        Text("Strip width: ${stripDp}dp (default ${OneHandPrefs.STRIP_DEFAULT_DP})", color = LocalKitPalette.current.textPrimary, fontSize = 13.sp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ConfigButton("Thinner", Modifier.weight(1f)) {
+                stripDp = (stripDp - 4).coerceAtLeast(OneHandPrefs.STRIP_MIN_DP); OneHandPrefs.setStripWidthDp(ctx, stripDp); OneHandController.refresh(ctx) }
+            ConfigButton("Wider", Modifier.weight(1f)) {
+                stripDp = (stripDp + 4).coerceAtMost(com.diegonmarcos.superapp.onehand.EdgeHandleWindow.USER_MAX_THICKNESS_DP); OneHandPrefs.setStripWidthDp(ctx, stripDp); OneHandController.refresh(ctx) }
+        }
+        Text("Distance from the screen edge: ${shownInset}dp" + (if (insetDp == null) " (automatic)" else " (set by you)"),
+            color = LocalKitPalette.current.textPrimary, fontSize = 13.sp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ConfigButton("Closer", Modifier.weight(1f)) {
+                insetDp = (shownInset - 4).coerceAtLeast(0); OneHandPrefs.setEdgeInsetDp(ctx, insetDp); OneHandController.refresh(ctx) }
+            ConfigButton("Farther", Modifier.weight(1f)) {
+                insetDp = (shownInset + 4).coerceAtMost(OneHandPrefs.INSET_MAX_DP); OneHandPrefs.setEdgeInsetDp(ctx, insetDp); OneHandController.refresh(ctx) }
+            ConfigButton("Auto", Modifier.weight(1f)) { insetDp = null; OneHandPrefs.setEdgeInsetDp(ctx, null); OneHandController.refresh(ctx) }
+        }
+        caption(
+            "Each press rebuilds the strips at once. Switch 'Show strip outline' on below to see them as red bars while you tune; " +
+            "Configs > Observability > Diagnostics lists where they really are and what the last touches did.")
+
         subhead("Troubleshooting")
         var debug by remember { mutableStateOf(OneHandPrefs.debugVisible(ctx)) }
-        ConfigSwitchRow("Show handles (debug — bright red bars)", debug, tag = "debug") { on ->
+        ConfigSwitchRow("Show strip outline (debug — bright red bars)", debug, tag = "debug") { on ->
             debug = on
             OneHandPrefs.setDebugVisible(ctx, on)
             OneHandController.refresh(ctx)  // rebuild handles with new visibility

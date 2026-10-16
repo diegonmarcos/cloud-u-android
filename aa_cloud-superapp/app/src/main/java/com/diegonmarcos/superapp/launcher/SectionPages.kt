@@ -110,6 +110,8 @@ object SectionPages {
         sectionId == "config" && pageId == "ipc"            -> com.diegonmarcos.superapp.appstore.IpcMeshFragment()
         // Configs > Network > ADB Shell: the privileged channel's full control (lib AdbShellPage).
         sectionId == "config" && pageId == "adb-shell"      -> com.diegonmarcos.superapp.configs.AdbShellFragment.newInstance()
+        // Configs ▸ Observability ▸ Diagnostics: the device's own numbers (edge strips + events, gesture insets, measured tiles).
+        sectionId == "config" && pageId == "diagnostics"    -> com.diegonmarcos.superapp.configs.DiagnosticsFragment.newInstance()
         sectionId == "config" && pageId == "wg"             -> WireGuardFragment.newInstance()
         // #740 Configs ▸ Mesh ▸ DNS — the fleet resolver, applied at the Cloud Mesh VPN.
         sectionId == "config" && pageId == "dns"            -> com.diegonmarcos.superapp.network.DnsFragment.newInstance()
