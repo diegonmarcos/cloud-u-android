@@ -860,8 +860,17 @@
     },
     {
       "id": "ac_cloud-tasks",
-      "scope": "out",
-      "reason": "Pure web wrapper: one WebView layout + a JS bridge. Out by the #773 brief."
+      "scope": "in",
+      "wave": 0,
+      "ui": "compose",
+      "size": "-",
+      "notes": "Compose (2026-10-16): it was a pure web wrapper (one WebView layout + a JS bridge, out by the #773 brief); the chrome (top row, page-managed drawer, island, page tabs), the Tasks page, the editor, Settings, the AI panel and the Agent pages are now Compose, and the old WebView is hosted inside that shell by ui/LegacyWeb.kt (a composable around AndroidView) for the Events / Calendar / Invites / Feeds pages. activity_main.xml, the WebView layout, is deleted. Held at zero from here: a View screen added to this app fails the ratchet.",
+      "baseline": {
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
+        "custom_views": 0
+      }
     },
     {
       "id": "ac_cloud-contacts",

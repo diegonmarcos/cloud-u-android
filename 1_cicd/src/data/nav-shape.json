@@ -83,7 +83,6 @@
     "ac_c3-morpheus": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
     "ac_c3-watchdog": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
     "ac_c3-watchtower": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
-    "ac_cloud-tasks": "Single WebView page (#868 decided 2026-10-06): the app hosts one web page with no native pages to navigate between; revisit if it gains native screens.",
     "ac_cloud-c3-webserver": "Exempt by class (#868 nav plan): server wrapper; it has no screens to navigate between.",
     "ac_cloud-media-center": "Exempt by class: Tauri app with no native screens; its seven pages are static web/ pages that draw their own bottom tabs, like Cloud Code's web nav.",
     "ac_cloud-chat": "Exempt by class (#868 nav plan): fork of an upstream chat client; navigation is the upstream's.",

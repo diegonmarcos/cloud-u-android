@@ -138,5 +138,10 @@ class TasksDb(context: Context, name: String? = FILE) : SQLiteOpenHelper(context
 
     companion object {
         const val FILE = "tasks.db"
+
+        @Volatile private var shared: TasksDb? = null
+
+        /** The one helper of the process: the UI, the AI tool and the worker share its connection instead of racing three. */
+        fun shared(context: Context): TasksDb = shared ?: synchronized(this) { shared ?: TasksDb(context).also { shared = it } }
     }
 }

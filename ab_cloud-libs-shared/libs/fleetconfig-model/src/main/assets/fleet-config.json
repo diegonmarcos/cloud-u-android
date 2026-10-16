@@ -319,6 +319,26 @@
         "ac_cloud-tasks"
       ]
     },
+    "tasks_prefs": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Tasks Settings > Appearance (light / dark / system) and where the user was: the top filter bar's status and tag selection and the list the Tasks page shows. The theme is the setting that moves to a new phone; the filter and the list id name rows of this phone's tasks database and mean nothing elsewhere.",
+      "keys": {
+        "filter": "device",
+        "selected_list": "device"
+      },
+      "used_by": [
+        "ac_cloud-tasks"
+      ]
+    },
+    "tasks_ai": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "Cloud Tasks AI panel (libs:ai): the model, Web switch and gateway agent last picked. The chat history itself is the sessions file ai-sessions.json under the app's files dir.",
+      "used_by": [
+        "ac_cloud-tasks"
+      ]
+    },
     "cal_legacy_todos": {
       "kind": "prefs",
       "class": "content",
@@ -2272,11 +2292,15 @@
       "module": "ac_cloud-tasks",
       "schema_version": 1,
       "libs": [
+        "lib-ai",
         "lib-analytics",
+        "lib-bottomnav",
         "lib-core",
         "lib-databackend",
         "lib-devtools",
         "lib-fleetconfig-model",
+        "lib-model-catalogue",
+        "lib-ui-kit",
         "lib-updater"
       ],
       "items": [
@@ -2285,6 +2309,12 @@
           "path": "app assets data/calendars.json (bundled) and engine state in app storage",
           "class": "content",
           "doc": "Calendar and todo data synced from CalDAV; the CalDAV url/username/password is in caldav_secure_prefs."
+        },
+        {
+          "id": "tasks-db",
+          "path": "databases/tasks.db",
+          "class": "content",
+          "doc": "The Tasks page's own data: projects, lists, tasks and subtasks, tags, attachment links, and the mail agent's declaration and proposals. SQLite with ordered, additive migrations; nothing ever wipes it. The JMAP / Authelia secret of the agent is in the Keystore-encrypted tasks_agent_secrets file, not here."
         }
       ]
     },

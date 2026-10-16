@@ -63,8 +63,10 @@ object TasksTags {
 }
 
 /** What the page needs from the app around it, beyond the controller: the mail source and the system pickers. */
-interface TasksHost : EditorActions {
+interface TasksHost {
     val mail: MailSource
+    fun pickDocument(kind: AttachmentKind)
+    fun open(a: Attachment)
 }
 
 private val StringSetSaver = listSaver<Set<String>, String>(save = { it.toList() }, restore = { it.toSet() })

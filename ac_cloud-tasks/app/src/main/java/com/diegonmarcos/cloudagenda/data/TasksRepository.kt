@@ -3,13 +3,14 @@ package com.diegonmarcos.cloudagenda.data
 import android.content.ContentValues
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import com.diegonmarcos.cloudagenda.agent.AgentStore
 import java.util.UUID
 
 /**
  * Every read and write of the tasks database. Synchronous (the controller calls it off the main thread), and every
  * multi-row write is one transaction. Deleting a project, list or task cascades through the foreign keys.
  */
-class TasksRepository(private val dbh: TasksDb, private val clock: () -> Long = System::currentTimeMillis) {
+class TasksRepository(private val dbh: TasksDb, private val clock: () -> Long = System::currentTimeMillis) : AgentStore {
 
     private val db: SQLiteDatabase get() = dbh.writableDatabase
 
@@ -184,7 +185,7 @@ class TasksRepository(private val dbh: TasksDb, private val clock: () -> Long = 
 
     // ── the mail agent: declaration and proposals ───────────────────────────────────────────────────────
 
-    fun agentConfig(): AgentConfig = db.rawQuery(
+    override fun agentConfig(): AgentConfig = db.rawQuery(
         "SELECT enabled, source, account, jmap_url, jmap_auth, mailboxes, frequency_minutes, agent, model, extract_events, " +
             "extract_bookings, extract_invoices, extract_deadlines, target_list_id, last_run_at, last_status, last_detail " +
             "FROM agent_config WHERE id = 1", null,
@@ -214,7 +215,7 @@ class TasksRepository(private val dbh: TasksDb, private val clock: () -> Long = 
         }
     }
 
-    fun recordAgentRun(at: Long, status: String, detail: String) {
+    override fun recordAgentRun(at: Long, status: String, detail: String) {
         db.transaction {
             val v = ContentValues().apply { put("last_run_at", at); put("last_status", status); put("last_detail", detail) }
             val n = update("agent_config", v, "id = 1", null)
@@ -223,7 +224,7 @@ class TasksRepository(private val dbh: TasksDb, private val clock: () -> Long = 
     }
 
     /** Stores new proposals; one already known for the same mail and title (in any state) is skipped. Returns how many were new. */
-    fun addProposals(drafts: List<ProposalDraft>): Int = db.transaction {
+    override fun addProposals(drafts: List<ProposalDraft>): Int = db.transaction {
         var added = 0
         for (d in drafts) {
             val id = insertWithOnConflict("proposals", null, ContentValues().apply {

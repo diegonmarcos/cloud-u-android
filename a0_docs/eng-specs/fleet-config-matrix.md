@@ -20,7 +20,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | c3-watchdog | `com.diegonmarcos.watchdog` | 1 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 1 | 0 | 100% |
 | cloud-account | `com.diegonmarcos.cloudaccount` | 13 | 0 | 100% |
-| cloud-tasks | `com.diegonmarcos.cloudagenda` | 4 | 0 | 100% |
+| cloud-tasks | `com.diegonmarcos.cloudagenda` | 5 | 0 | 100% |
 | cloud-browser | `com.diegonmarcos.cloudbrowser` | 9 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
 | cloud-media-center | `com.diegonmarcos.cloudmediacenter` | 1 | 0 | 100% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 2 | 71% |
-| **fleet** | | **212** | **48** | **81%** |
+| **fleet** | | **213** | **48** | **81%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -228,7 +228,7 @@ Coverage: 13 covered, 0 gaps.
 
 ## cloud-tasks — `com.diegonmarcos.cloudagenda`
 
-Module `ac_cloud-tasks`; libs: lib-analytics, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-updater.
+Module `ac_cloud-tasks`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -242,14 +242,17 @@ Module `ac_cloud-tasks`; libs: lib-analytics, lib-core, lib-databackend, lib-dev
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `tasks_ai` | prefs | device | no | Cloud Tasks AI panel (libs:ai): the model, Web switch and gateway agent last picked. The chat history itself is the sessions file ai-sessions.json under the app's files dir. |
+| `tasks_prefs` | prefs | config (keys: filter→device, selected_list→device) | yes | Cloud Tasks Settings > Appearance (light / dark / system) and where the user was: the top filter bar's status and tag selection and the list the Tasks page shows. The theme is the setting that moves to a new phone; the filter and the list id name rows of this phone's tasks database and mean nothing elsewhere. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
 | file | class | doc |
 |---|---|---|
 | `app assets data/calendars.json (bundled) and engine state in app storage` | content | Calendar and todo data synced from CalDAV; the CalDAV url/username/password is in caldav_secure_prefs. |
+| `databases/tasks.db` | content | The Tasks page's own data: projects, lists, tasks and subtasks, tags, attachment links, and the mail agent's declaration and proposals. SQLite with ordered, additive migrations; nothing ever wipes it. The JMAP / Authelia secret of the agent is in the Keystore-encrypted tasks_agent_secrets file, not here. |
 
-Coverage: 4 covered, 0 gaps.
+Coverage: 5 covered, 0 gaps.
 
 ## cloud-browser — `com.diegonmarcos.cloudbrowser`
 
