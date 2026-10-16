@@ -2,17 +2,44 @@ package com.diegonmarcos.superapp.chat
 
 import android.content.Context
 import android.os.Bundle
-import android.text.InputType
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * Comms/Mattermost page — login form when no session is saved, then a
@@ -24,124 +51,144 @@ import androidx.fragment.app.Fragment
  * opens skip straight to the list.
  *
  * Threading: every REST call runs on a dedicated background Thread.
- * Results are dispatched back to the main thread via View.post.
+ * Results land in Compose state (and Toasts on the main Handler).
  * This avoids hauling in kotlinx-coroutines as a new lib dep.
  *
  * Data model:
  *   • Pulled per refresh: teams[0] → categories + channels + members
  *   • Derived per channel: unread = totalMsgCount − member.msgCount
  *   • Empty categories silently skipped (no dead headers).
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. The page is a ComposeView under
+ * CloudKitTheme (libs:ui-kit) with its palette in the chat_* colour resources; the host
+ * contract (newInstance, MattermostPrefs) is unchanged.
  */
 class MattermostFragment : Fragment() {
 
+    /** What the channel list shows. */
+    private sealed interface Load {
+        data object Loading : Load
+        data class Done(val groups: List<Pair<MattermostCategory, List<ChannelRow>>>) : Load
+        data class Failed(val message: String) : Load
+    }
+
     private lateinit var prefs: MattermostPrefs
-    private lateinit var root: LinearLayout
-    private var listContainer: LinearLayout? = null
+    private val main = Handler(Looper.getMainLooper())
+
+    private var loggedIn by mutableStateOf(false)
+    private var loginStatus by mutableStateOf("")
+    private var signingIn by mutableStateOf(false)
+    private var load by mutableStateOf<Load>(Load.Loading)
 
     override fun onCreateView(inflater: LayoutInflater, c: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
         prefs = MattermostPrefs(ctx)
-        root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xFF000000.toInt())
-            val pad = dp(ctx, 16); setPadding(pad, pad, pad, pad)
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
+        loggedIn = prefs.isLoggedIn()
+        if (loggedIn) loadAndRender(ctx)
+        return ComposeView(ctx).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                val palette = KitPalette(
+                    surface = colorResource(R.color.chat_surface),
+                    surfaceSelected = colorResource(R.color.chat_selected),
+                    textPrimary = colorResource(R.color.chat_text),
+                    textSecondary = colorResource(R.color.chat_text_dim),
+                    accent = colorResource(R.color.chat_accent),
+                    hairline = colorResource(R.color.chat_hairline),
+                    tileInk = colorResource(R.color.chat_bg),
+                )
+                CloudKitTheme(palette) {
+                    Column(Modifier.fillMaxSize().background(colorResource(R.color.chat_bg)).padding(16.dp)) {
+                        if (loggedIn) ChannelList(ctx) else LoginForm(ctx)
+                    }
+                }
+            }
         }
-        if (prefs.isLoggedIn()) renderList(ctx) else renderLoginForm(ctx)
-        return root
     }
 
     // ─────────────────────────── login form ───────────────────────────
 
-    private fun renderLoginForm(ctx: Context) {
-        root.removeAllViews()
-        root.addView(header(ctx, "Mattermost — Sign in"))
-        val urlField = formField(ctx, "Server URL", prefs.serverUrl, InputType.TYPE_TEXT_VARIATION_URI)
-        val emailField = formField(ctx, "Email or username", "", InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
-        val passField = formField(ctx, "Password", "",
-            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
-        root.addView(urlField); root.addView(emailField); root.addView(passField)
-        val status = TextView(ctx).apply {
-            setTextColor(0xAAFFFFFF.toInt()); textSize = 12f
-            setPadding(0, dp(ctx, 8), 0, dp(ctx, 8))
-        }
-        root.addView(status)
-        val loginBtn = Button(ctx).apply { text = "Login" }
-        root.addView(loginBtn)
-        loginBtn.setOnClickListener {
-            val url = urlField.findViewWithTag<EditText>("input").text.toString().trim()
-            val email = emailField.findViewWithTag<EditText>("input").text.toString().trim()
-            val pass = passField.findViewWithTag<EditText>("input").text.toString()
-            if (url.isBlank() || email.isBlank() || pass.isBlank()) {
-                status.text = "All three fields required."
-                return@setOnClickListener
+    @Composable
+    private fun LoginForm(ctx: Context) {
+        val p = LocalKitPalette.current
+        var url by remember { mutableStateOf(prefs.serverUrl) }
+        var email by remember { mutableStateOf("") }
+        var pass by remember { mutableStateOf("") }
+        Header("Mattermost — Sign in")
+        Field("Server URL", url, KeyboardType.Uri) { url = it }
+        Field("Email or username", email, KeyboardType.Email) { email = it }
+        Field("Password", pass, KeyboardType.Password, secret = true) { pass = it }
+        Text(loginStatus, color = p.textSecondary, fontSize = 12.sp,
+            modifier = Modifier.padding(vertical = 8.dp))
+        Button(enabled = !signingIn, onClick = {
+            val u = url.trim(); val e = email.trim()
+            if (u.isBlank() || e.isBlank() || pass.isBlank()) {
+                loginStatus = "All three fields required."
+                return@Button
             }
-            status.text = "Signing in…"
-            loginBtn.isEnabled = false
+            loginStatus = "Signing in…"
+            signingIn = true
+            val password = pass
             Thread {
                 val result = runCatching {
-                    MattermostClient(serverUrl = url, token = "").login(email, pass)
+                    MattermostClient(serverUrl = u, token = "").login(e, password)
                 }
-                root.post {
+                main.post {
                     result.onSuccess { r ->
-                        prefs.serverUrl = url
+                        prefs.serverUrl = u
                         prefs.token = r.token
                         prefs.userId = r.user.id
-                        renderList(ctx)
-                    }.onFailure { e ->
-                        status.text = "Login failed: ${e.message}"
-                        loginBtn.isEnabled = true
+                        loggedIn = true
+                        signingIn = false
+                        loadAndRender(ctx)
+                    }.onFailure { err ->
+                        loginStatus = "Login failed: ${err.message}"
+                        signingIn = false
                     }
                 }
             }.start()
-        }
+        }) { Text("Login") }
     }
 
     // ─────────────────────────── list view ───────────────────────────
 
-    private fun renderList(ctx: Context) {
-        root.removeAllViews()
-        root.addView(header(ctx, "Mattermost"))
-        val controls = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        val refreshBtn = Button(ctx).apply { text = "Refresh" }
-        val signOutBtn = Button(ctx).apply { text = "Sign out" }
-        controls.addView(refreshBtn)
-        controls.addView(signOutBtn, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { leftMargin = dp(ctx, 8) })
-        root.addView(controls)
-        val scroll = ScrollView(ctx).apply {
-            isFillViewport = true
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT,
-            )
+    @Composable
+    private fun ChannelList(ctx: Context) {
+        val p = LocalKitPalette.current
+        Header("Mattermost")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { loadAndRender(ctx) }) { Text("Refresh") }
+            Button(onClick = {
+                prefs.clear()
+                loginStatus = ""
+                loggedIn = false
+            }) { Text("Sign out") }
         }
-        val list = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(ctx, 8); setPadding(0, p, 0, p)
+        Box(Modifier.fillMaxSize().padding(vertical = 8.dp)) {
+            when (val l = load) {
+                Load.Loading -> Text("Loading…", color = p.textSecondary, fontSize = 13.sp)
+                is Load.Failed -> Text(
+                    "Load failed: ${l.message}\nTap Sign out + back in if the token expired.",
+                    color = colorResource(R.color.chat_error), fontSize = 12.sp)
+                is Load.Done ->
+                    if (l.groups.isEmpty()) {
+                        Text("No categories yet on this team.", color = p.textSecondary, fontSize = 13.sp)
+                    } else {
+                        LazyColumn(Modifier.fillMaxSize()) {
+                            for ((cat, rows) in l.groups) {
+                                item(key = "cat:${cat.id}") { CategoryHeader(cat, rows.sumOf { it.unreadCount }) }
+                                for (row in rows) {
+                                    item(key = "ch:${cat.id}:${row.channel.id}") { ChannelItem(row) }
+                                }
+                            }
+                        }
+                    }
+            }
         }
-        listContainer = list
-        scroll.addView(list)
-        root.addView(scroll)
-        refreshBtn.setOnClickListener { loadAndRender(ctx) }
-        signOutBtn.setOnClickListener {
-            prefs.clear()
-            renderLoginForm(ctx)
-        }
-        loadAndRender(ctx)
     }
 
     private fun loadAndRender(ctx: Context) {
-        val list = listContainer ?: return
-        list.removeAllViews()
-        list.addView(TextView(ctx).apply {
-            text = "Loading…"; setTextColor(0xAAFFFFFF.toInt()); textSize = 13f
-        })
+        load = Load.Loading
         val client = MattermostClient(prefs.serverUrl, prefs.token)
         val userId = prefs.userId
         Thread {
@@ -164,56 +211,35 @@ class MattermostFragment : Fragment() {
                     }.filter { it.second.isNotEmpty() }
                 }
             }
-            root.post {
-                list.removeAllViews()
-                result.onSuccess { groups ->
-                    if (groups.isEmpty()) {
-                        list.addView(TextView(ctx).apply {
-                            text = "No categories yet on this team."
-                            setTextColor(0xAAFFFFFF.toInt()); textSize = 13f
-                        })
-                        return@onSuccess
+            main.post {
+                result.onSuccess { groups -> load = Load.Done(groups) }
+                    .onFailure { e ->
+                        load = Load.Failed(e.message ?: "")
+                        Toast.makeText(ctx, "Mattermost: ${e.message}", Toast.LENGTH_LONG).show()
                     }
-                    for ((cat, rows) in groups) {
-                        list.addView(categoryHeader(ctx, cat, rows.sumOf { it.unreadCount }))
-                        for (row in rows) list.addView(channelRow(ctx, row))
-                    }
-                }.onFailure { e ->
-                    list.addView(TextView(ctx).apply {
-                        text = "Load failed: ${e.message}\nTap Sign out + back in if the token expired."
-                        setTextColor(0xFFFF8888.toInt()); textSize = 12f
-                    })
-                    Toast.makeText(ctx, "Mattermost: ${e.message}", Toast.LENGTH_LONG).show()
-                }
             }
         }.start()
     }
 
-    // ─────────────────────────── widget helpers ───────────────────────────
+    // ─────────────────────────── widgets ───────────────────────────
 
-    private fun header(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextColor(0xFFE9D8FD.toInt())
-        textSize = 18f
-        typeface = android.graphics.Typeface.DEFAULT_BOLD
-        setPadding(0, 0, 0, dp(ctx, 12))
+    @Composable
+    private fun Header(text: String) {
+        Text(text, color = LocalKitPalette.current.accent, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 12.dp))
     }
 
-    private fun categoryHeader(ctx: Context, cat: MattermostCategory, totalUnread: Long): TextView =
-        TextView(ctx).apply {
-            text = if (totalUnread > 0) "${cat.displayName.ifBlank { cat.type }}  ·  $totalUnread"
-                   else cat.displayName.ifBlank { cat.type }
-            setTextColor(0xFFB794F4.toInt())
-            textSize = 13f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setPadding(0, dp(ctx, 14), 0, dp(ctx, 4))
-        }
+    @Composable
+    private fun CategoryHeader(cat: MattermostCategory, totalUnread: Long) {
+        val name = cat.displayName.ifBlank { cat.type }
+        Text(if (totalUnread > 0) "$name  ·  $totalUnread" else name,
+            color = colorResource(R.color.chat_category), fontSize = 13.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
+    }
 
-    private fun channelRow(ctx: Context, row: ChannelRow): View {
-        val ll = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(dp(ctx, 8), dp(ctx, 6), dp(ctx, 8), dp(ctx, 6))
-        }
+    @Composable
+    private fun ChannelItem(row: ChannelRow) {
+        val p = LocalKitPalette.current
         // Type prefix — # public, 🔒 private, @ DM, 👥 group DM.
         val prefix = when (row.channel.type) {
             "O" -> "# "
@@ -222,49 +248,33 @@ class MattermostFragment : Fragment() {
             "G" -> "👥 "
             else -> "?  "
         }
-        ll.addView(TextView(ctx).apply {
-            text = prefix + row.channel.displayName.ifBlank { row.channel.name }
-            setTextColor(if (row.unreadCount > 0) 0xFFFFFFFF.toInt() else 0xCCFFFFFF.toInt())
-            textSize = 14f
-            if (row.unreadCount > 0) typeface = android.graphics.Typeface.DEFAULT_BOLD
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        if (row.unreadCount > 0) {
-            val badgeText = if (row.mentionCount > 0)
-                "${row.unreadCount}  (@${row.mentionCount})"
-            else
-                row.unreadCount.toString()
-            ll.addView(TextView(ctx).apply {
-                text = badgeText
-                setTextColor(if (row.mentionCount > 0) 0xFFFF6B6B.toInt() else 0xFFB794F4.toInt())
-                textSize = 13f
-                typeface = android.graphics.Typeface.DEFAULT_BOLD
-            })
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)) {
+            Text(prefix + row.channel.displayName.ifBlank { row.channel.name },
+                color = if (row.unreadCount > 0) p.textPrimary else p.textSecondary.copy(alpha = 0.8f),
+                fontSize = 14.sp,
+                fontWeight = if (row.unreadCount > 0) FontWeight.Bold else FontWeight.Normal,
+                modifier = Modifier.weight(1f))
+            if (row.unreadCount > 0) {
+                val badgeText = if (row.mentionCount > 0)
+                    "${row.unreadCount}  (@${row.mentionCount})"
+                else
+                    row.unreadCount.toString()
+                Text(badgeText,
+                    color = if (row.mentionCount > 0) colorResource(R.color.chat_mention) else p.accent,
+                    fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
         }
-        return ll
     }
 
-    private fun formField(ctx: Context, label: String, initial: String, inputType: Int): View {
-        val ll = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(ctx, 8), 0, dp(ctx, 4))
-        }
-        ll.addView(TextView(ctx).apply {
-            text = label
-            setTextColor(0xAAFFFFFF.toInt())
-            textSize = 11f
-        })
-        ll.addView(EditText(ctx).apply {
-            tag = "input"
-            setText(initial)
-            setInputType(inputType)
-            setTextColor(0xFFFFFFFF.toInt())
-            textSize = 14f
-        })
-        return ll
+    @Composable
+    private fun Field(label: String, value: String, type: KeyboardType, secret: Boolean = false, onChange: (String) -> Unit) {
+        OutlinedTextField(
+            value = value, onValueChange = onChange, singleLine = true,
+            label = { Text(label, fontSize = 11.sp) },
+            visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
+            keyboardOptions = KeyboardOptions(keyboardType = type),
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp))
     }
-
-    private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
 
     companion object { fun newInstance() = MattermostFragment() }
 }

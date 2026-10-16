@@ -352,7 +352,8 @@
       "dir": "../ab_cloud-libs-shared/libs/chat",
       "type": "library",
       "depends_on": [
-        "libs:core"
+        "libs:core",
+        "libs:ui-kit"
       ],
       "comment": "Chat / messaging. Likely integrates with mattermost-bots (chat.diegonmarcos.com) — could fork Mattermost-Mobile / SimpleX / Conversations later."
     },
