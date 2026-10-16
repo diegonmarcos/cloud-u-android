@@ -145,15 +145,23 @@ export function anchorProbePoints(
   bound: { x: number; y: number; maxX: number; maxY: number; center: IVec },
   offset = ANCHOR_PROBE_OFFSET
 ): IVec[] {
+  // a corner probe lies on the centre-to-corner diagonal, so the ray from the centre meets the
+  // outline AT the corner of a rectangle (not at a point on a side)
+  const corner = (x: number, y: number): IVec => {
+    const dx = x - bound.center[0];
+    const dy = y - bound.center[1];
+    const len = Math.hypot(dx, dy) || 1;
+    return [x + (dx / len) * offset, y + (dy / len) * offset];
+  };
   return [
     [bound.center[0], bound.y - offset],
     [bound.center[0], bound.maxY + offset],
     [bound.x - offset, bound.center[1]],
     [bound.maxX + offset, bound.center[1]],
-    [bound.x - offset, bound.y - offset],
-    [bound.maxX + offset, bound.y - offset],
-    [bound.x - offset, bound.maxY + offset],
-    [bound.maxX + offset, bound.maxY + offset],
+    corner(bound.x, bound.y),
+    corner(bound.maxX, bound.y),
+    corner(bound.x, bound.maxY),
+    corner(bound.maxX, bound.maxY),
   ];
 }
 
