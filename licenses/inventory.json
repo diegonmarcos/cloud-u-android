@@ -47,7 +47,7 @@
    "LicenseRef-PublicDomain": 1
   },
   "npm": {
-   "MIT": 521,
+   "MIT": 524,
    "Apache-2.0": 31,
    "ISC": 10,
    "NOASSERTION": 8,
@@ -8675,6 +8675,42 @@
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
    "within_upstream_module": "notes"
   },
+  "npm:@hocuspocus/extension-sqlite": {
+   "kind": "npm",
+   "declared_in": [
+    "ac_cloud-notes/sync-server/package.json"
+   ],
+   "version": "4.7.1",
+   "scope": "shipped",
+   "licence": "MIT",
+   "licence_source": "package.json \"license\" of @hocuspocus/extension-sqlite 4.7.1 (ueberdosis/hocuspocus)",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
+   "within_upstream_module": "notes"
+  },
+  "npm:@hocuspocus/provider": {
+   "kind": "npm",
+   "declared_in": [
+    "ac_cloud-notes/sync-server/package.json"
+   ],
+   "version": "4.7.1",
+   "scope": "dev",
+   "licence": "MIT",
+   "licence_source": "package.json \"license\" of @hocuspocus/provider 4.7.1 (ueberdosis/hocuspocus)",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
+   "within_upstream_module": "notes"
+  },
+  "npm:@hocuspocus/server": {
+   "kind": "npm",
+   "declared_in": [
+    "ac_cloud-notes/sync-server/package.json"
+   ],
+   "version": "4.7.1",
+   "scope": "shipped",
+   "licence": "MIT",
+   "licence_source": "package.json \"license\" of @hocuspocus/server 4.7.1 (ueberdosis/hocuspocus)",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
+   "within_upstream_module": "notes"
+  },
   "npm:@istanbuljs/schema": {
    "kind": "npm",
    "declared_in": [
@@ -14960,6 +14996,7 @@
     "ac_cloud-notes/packages/frontend/i18n/package.json",
     "ac_cloud-notes/packages/frontend/routes/package.json",
     "ac_cloud-notes/packages/frontend/track/package.json",
+    "ac_cloud-notes/sync-server/package.json",
     "ac_cloud-vault/.claude/mcp/android-device-server/package.json"
    ],
    "version": "^4.1.11",
@@ -15097,7 +15134,8 @@
     "ac_cloud-notes/blocksuite/framework/sync/package.json",
     "ac_cloud-notes/blocksuite/playground/package.json",
     "ac_cloud-notes/packages/common/nbstore/package.json",
-    "ac_cloud-notes/packages/frontend/core/package.json"
+    "ac_cloud-notes/packages/frontend/core/package.json",
+    "ac_cloud-notes/sync-server/package.json"
    ],
    "version": "^1.0.6",
    "scope": "shipped",
@@ -15150,6 +15188,7 @@
     "ac_cloud-notes/packages/common/reader/package.json",
     "ac_cloud-notes/packages/frontend/apps/electron/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json",
+    "ac_cloud-notes/sync-server/package.json",
     "ac_cloud-notes/tools/doc-diff/package.json",
     "ac_cloud-notes/tools/revert-update/package.json"
    ],

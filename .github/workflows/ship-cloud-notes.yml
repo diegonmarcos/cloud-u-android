@@ -156,6 +156,57 @@ jobs:
           docker push "$IMG:latest"
           docker push "$IMG:${{ github.sha }}"
 
+  # Phase 2 (cloud-notes-hybrid): our own Yjs sync server (Hocuspocus, MIT). The
+  # suite is the acceptance run (A6.1 offline edits converge, A6.2 refused without
+  # a Bearer, A6.3 persistence across a restart); the image is smoke-tested before
+  # it is pushed, and pushed from main only. Registering it on the fleet behind the
+  # edge gate is the deploy step.
+  sync_server:
+    name: "Sync server (Hocuspocus): tests + image"
+    needs: storage_tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22.23.2
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+
+      - name: Acceptance suite (A6.1 / A6.2 / A6.3 + auth)
+        working-directory: ac_cloud-notes/sync-server
+        run: |
+          npm ci --no-audit --no-fund
+          NO_COLOR=1 npx vitest run 2>&1 | tee /tmp/sync-suite.log
+          sed 's/\x1b\[[0-9;]*m//g' /tmp/sync-suite.log | grep -Eq "Test Files +2 passed \(2\)" || { echo "::error::the sync suite did not run both files green"; exit 1; }
+
+      - name: Build the image
+        run: docker build -t cloud-notes-sync:ci ac_cloud-notes/sync-server
+
+      - name: Smoke test (healthz, 401 on a bare upgrade, refusal to start unconfigured)
+        run: |
+          # fail closed: no verifier configured -> the container must exit non-zero and say why
+          if docker run --rm cloud-notes-sync:ci > /tmp/unconfigured.log 2>&1; then echo "::error::the server started without a verifier"; exit 1; fi
+          grep -q "refusing to start" /tmp/unconfigured.log
+          docker run -d --name cn-sync -e SYNC_STATIC_TOKENS=smoke-only -p 11234:1234 cloud-notes-sync:ci
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:11234/healthz >/dev/null 2>&1 && break; sleep 1; done
+          curl -fsS http://127.0.0.1:11234/healthz | grep -q '^ok'
+          # a websocket upgrade without a token is refused with 401
+          curl -sS -i -m 5 -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" http://127.0.0.1:11234/ | head -1 | grep -q " 401 "
+          docker rm -f cn-sync
+
+      - name: Push to GHCR (main only)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          IMG="ghcr.io/${{ github.repository_owner }}/cloud-notes-sync-binaries"
+          docker tag cloud-notes-sync:ci "$IMG:latest"
+          docker tag cloud-notes-sync:ci "$IMG:${{ github.sha }}"
+          docker push "$IMG:latest"
+          docker push "$IMG:${{ github.sha }}"
+
   build_and_publish:
     needs: storage_tests
     name: "Build + publish (notes · arm64-v8a)"
