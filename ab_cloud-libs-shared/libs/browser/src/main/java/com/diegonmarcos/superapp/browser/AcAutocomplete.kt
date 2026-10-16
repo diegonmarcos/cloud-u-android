@@ -36,6 +36,8 @@ class AcAutocomplete(
     val bar = mutableStateOf<AcBar?>(null)
     val chooser = mutableStateOf<AcChooserState?>(null)
     val save = mutableStateOf<AcSaveState?>(null)
+    /** True once the encrypted stores are open (a Configs screen waiting for them redraws on this). */
+    val ready = mutableStateOf(false)
 
     private val ui = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor()
@@ -62,7 +64,9 @@ class AcAutocomplete(
     /** Open the stores off the main thread (the first open creates the Keystore keys). */
     fun warm() {
         if (holder != null) return
-        io.execute { runCatching { AcAndroid.open(ctx) }.getOrNull()?.let { holder = it; anyProfile = it.store.profiles().isNotEmpty() } }
+        io.execute {
+            runCatching { AcAndroid.open(ctx) }.getOrNull()?.let { holder = it; anyProfile = it.store.profiles().isNotEmpty(); ui.post { ready.value = true } }
+        }
     }
 
     fun attach(wv: WebView) { wv.addJavascriptInterface(Bridge(wv), JS_BRIDGE) }

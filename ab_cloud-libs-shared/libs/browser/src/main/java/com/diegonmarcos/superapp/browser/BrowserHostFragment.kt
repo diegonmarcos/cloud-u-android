@@ -1878,7 +1878,7 @@ class BrowserHostFragment : Fragment() {
     /** One native Autocomplete block of a Configs page, over the encrypted store. */
     @Composable
     private fun AcBlock(id: String) {
-        val store = ac.store
+        val store = if (ac.ready.value) ac.store else null
         if (store == null) {
             ac.warm()
             Text("Opening the encrypted store...", color = LocalKitPalette.current.textSecondary, modifier = Modifier.padding(8.dp))
@@ -1981,7 +1981,7 @@ class BrowserHostFragment : Fragment() {
         ac.warm()
         overlay { close ->
             val tick = remember { mutableIntStateOf(0) }
-            val store = ac.store
+            val store = if (ac.ready.value) ac.store else null
             val entries = tick.intValue.let { store?.memory().orEmpty() }
             AcSitePage(entries, origin, onForget = { store?.forgetMemory(it); tick.intValue += 1 },
                 onForgetSite = { store?.forgetSite(it); tick.intValue += 1 }, onClose = close)
