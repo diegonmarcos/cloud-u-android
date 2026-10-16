@@ -13,8 +13,10 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import java.net.HttpURLConnection
-import java.net.URL
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Base64
 
 /**
@@ -27,6 +29,8 @@ class JmapClient(
     private val server: String,
     email: String,
     password: String,
+    /** Every request goes through this client: the account's auth interceptor + cookie jar (see [MailHttp]). */
+    private val http: OkHttpClient = OkHttpClient(),
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val authHeader = "Basic " +
@@ -47,7 +51,7 @@ class JmapClient(
     sealed class Result<T> {
         data class Success<T>(val value: T) : Result<T>()
         data class HttpError<T>(val code: Int, val body: String) : Result<T>()
-        data class NetworkError<T>(val message: String) : Result<T>()
+        data class NetworkError<T>(val message: String, val cause: Throwable? = null) : Result<T>()
     }
 
     fun discover(): Result<Session> = wrap {
@@ -361,33 +365,25 @@ class JmapClient(
         Result.Success(block())
     } catch (h: HttpException) {
         Result.HttpError(h.code, h.body)
+    } catch (a: MailAuthRequiredException) {
+        // The gateway sent us to its sign-in page: report it as the 401 it stands for.
+        Result.HttpError(401, a.message.orEmpty())
     } catch (t: Throwable) {
-        Result.NetworkError(t.message ?: t.javaClass.simpleName)
+        Result.NetworkError(t.message ?: t.javaClass.simpleName, t)
     }
 
-    private fun httpGet(url: String): String = openConn(url, "GET").readBody()
+    private fun httpGet(url: String): String = exec(request(url).get().build())
 
-    private fun httpPost(url: String, payload: String): String = openConn(url, "POST").apply {
-        setRequestProperty("Content-Type", "application/json")
-        doOutput = true
-        outputStream.use { it.write(payload.toByteArray()) }
-    }.readBody()
+    private fun httpPost(url: String, payload: String): String =
+        exec(request(url).post(payload.toRequestBody("application/json".toMediaType())).build())
 
-    private fun openConn(url: String, method: String) =
-        (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = method
-            instanceFollowRedirects = true
-            connectTimeout = 15_000
-            readTimeout = 30_000
-            setRequestProperty("Authorization", authHeader)
-            setRequestProperty("Accept", "application/json")
-        }
+    private fun request(url: String) = Request.Builder().url(url)
+        .header("Authorization", authHeader)   // the interceptor swaps this for the Bearer token in BEARER mode
+        .header("Accept", "application/json")
 
-    private fun HttpURLConnection.readBody(): String {
-        val code = responseCode
-        val body = (if (code in 200..299) inputStream else errorStream)
-            ?.bufferedReader()?.use { it.readText() } ?: ""
-        if (code !in 200..299) throw HttpException(code, body)
-        return body
+    private fun exec(req: Request): String = http.newCall(req).execute().use { resp ->
+        val body = resp.body?.string().orEmpty()
+        if (!resp.isSuccessful) throw HttpException(resp.code, body)
+        body
     }
 }

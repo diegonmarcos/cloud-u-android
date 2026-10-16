@@ -1,6 +1,8 @@
 package com.diegonmarcos.superapp.mail
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -10,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,8 +41,19 @@ class MailDrawerFragment : KitComposeFragment() {
         val accountLabel = prefs.email.ifEmpty { "(not signed in)" }
         val server = prefs.server.ifEmpty { BuildConfig.JMAP_DEFAULT_SERVER }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp)) {
-            Text(accountLabel, color = p.textPrimary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            MailDim(server, MaterialTheme.typography.labelSmall)
+            val store = remember { MailAuthStore.of(requireContext()) }
+            // Every stored account with its auth chip (the active login alone when no list is stored).
+            val rows = prefs.accounts().map { it.email to it.jmap }.ifEmpty { listOf(accountLabel to server) }
+            for ((mail, srv) in rows) {
+                val chip = MailAuthStatuses.resolve(store.load(MailAuthStore.accountKey(srv.ifEmpty { server }, mail)), System.currentTimeMillis())
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column(Modifier.weight(1f)) {
+                        Text(mail, color = p.textPrimary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        MailDim(srv.ifEmpty { server }, MaterialTheme.typography.labelSmall)
+                    }
+                    MailAuthChip(chip)
+                }
+            }
             MailDivider()
             // Placeholder folder list. The labels live here so they read uniformly; eventually
             // replaced by a list driven by Mailbox/get.

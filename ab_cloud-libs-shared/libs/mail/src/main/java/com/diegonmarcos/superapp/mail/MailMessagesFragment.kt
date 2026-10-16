@@ -53,7 +53,7 @@ class MailMessagesFragment : KitComposeFragment() {
         val folderName = args.getString(ARG_FOLDER_NAME, "(unknown)")
         val folderId   = args.getString(ARG_FOLDER_ID,   "")
         val prefs = remember { JmapPrefs(ctx) }
-        val signedIn = prefs.email.isNotEmpty() && prefs.password.isNotEmpty()
+        val signedIn = prefs.signedIn(ctx)
 
         var status by remember {
             mutableStateOf(
@@ -70,7 +70,7 @@ class MailMessagesFragment : KitComposeFragment() {
         LaunchedEffect(folderId) {
             if (!signedIn || folderId.isEmpty()) return@LaunchedEffect
             val outcome = withContext(Dispatchers.IO) {
-                val client = JmapClient(prefs.server, prefs.email, prefs.password)
+                val client = prefs.jmapClient(ctx)
                 when (val s = client.discover()) {
                     is JmapClient.Result.Success     -> client.emails(s.value, folderId) to null
                     is JmapClient.Result.HttpError   -> null to "HTTP ${s.code}: ${s.body.take(200)}"

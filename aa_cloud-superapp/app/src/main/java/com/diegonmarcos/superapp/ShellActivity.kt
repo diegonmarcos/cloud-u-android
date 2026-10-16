@@ -1,4 +1,6 @@
 package com.diegonmarcos.superapp
+import com.diegonmarcos.superapp.mail.jmapClient
+import com.diegonmarcos.superapp.mail.signedIn
 import com.diegonmarcos.superapp.ui.snack
 import com.diegonmarcos.superapp.system.Trace
 import com.diegonmarcos.superapp.system.ShellOverride
@@ -205,15 +207,13 @@ open class ShellActivity : AppCompatActivity(),
     // 0777d9dd, 3334e872, eccd3f4f and every build since.
     private fun reapplyMailRules(anchor: android.view.View) {
         val prefs = com.diegonmarcos.superapp.mail.JmapPrefs(this)
-        if (prefs.email.isBlank() || prefs.password.isBlank()) {
+        if (!prefs.signedIn(this)) {
             anchor.snack(getString(com.diegonmarcos.superapp.mail.R.string.mail_messages_login_first))
             return
         }
         anchor.snack(getString(com.diegonmarcos.superapp.mail.R.string.reapply_rules_sent))
         Thread {
-            val client = com.diegonmarcos.superapp.mail.JmapClient(
-                prefs.server, prefs.email, prefs.password,
-            )
+            val client = prefs.jmapClient(this)
             val msg = when (val s = client.discover()) {
                 is com.diegonmarcos.superapp.mail.JmapClient.Result.Success ->
                     when (val r = client.createMailbox(s.value, REAPPLY_SENTINEL)) {
