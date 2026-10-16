@@ -298,19 +298,17 @@
       "id": "libs:ops",
       "scope": "in",
       "wave": 1,
-      "ui": "views",
+      "ui": "compose",
       "size": "S",
-      "screens_left": [
-        "DaguFragment"
-      ],
+      "screens_left": [],
       "consumers": [
         "superapp",
         "c3"
       ],
       "baseline": {
-        "view_screens": 1,
+        "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 1,
+        "view_ui_files": 0,
         "custom_views": 0
       }
     },

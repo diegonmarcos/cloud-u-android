@@ -343,7 +343,8 @@
       "dir": "../ab_cloud-libs-shared/libs/ops",
       "type": "library",
       "depends_on": [
-        "libs:core"
+        "libs:core",
+        "libs:ui-kit"
       ],
       "comment": "Cloud ops dashboard — c3-api, health checks, dagu trigger, container control."
     },

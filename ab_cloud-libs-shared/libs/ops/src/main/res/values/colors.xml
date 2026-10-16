@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Dagu page's palette as KitPalette roles plus its run-status dots (DaguFragment builds its
+     CloudKitTheme from these), so no colour is spelled in Kotlin. Prefixed ops_: this library is merged into
+     every consumer's resources and must not collide with an app's own names. -->
+<resources>
+    <color name="ops_bg">#FF000000</color>
+    <color name="ops_surface">#FF1A1A22</color>
+    <color name="ops_selected">#FF3B2A63</color>
+    <color name="ops_text">#FFFFFFFF</color>
+    <color name="ops_text_dim">#AAFFFFFF</color>
+    <color name="ops_accent">#FFE9D8FD</color>
+    <color name="ops_hairline">#33FFFFFF</color>
+    <color name="ops_error">#FFFF8888</color>
+    <color name="ops_status_running">#FF1565C0</color>
+    <color name="ops_status_error">#FFEF5350</color>
+    <color name="ops_status_cancel">#FFFFA726</color>
+    <color name="ops_status_success">#FF2E7D32</color>
+    <color name="ops_status_skipped">#FF9E9E9E</color>
+    <color name="ops_status_partial">#FFFFCA28</color>
+    <color name="ops_status_unknown">#FF555555</color>
+</resources>

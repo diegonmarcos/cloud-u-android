@@ -2,17 +2,50 @@ package com.diegonmarcos.superapp.ops.dagu
 
 import android.content.Context
 import android.os.Bundle
-import android.text.InputType
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.ops.R
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * Infos/Dagu — GitHub-Actions-style list of every registered DAG on
@@ -28,201 +61,181 @@ import androidx.fragment.app.Fragment
  *     prefs.
  *
  * Threading: every REST call runs on a dedicated background Thread.
- * Results dispatch back to the main thread via View.post. Same
+ * Results land in Compose state (and Toasts on the main Handler). Same
  * pattern MattermostFragment / JmapClient uses — keeps libs/ops
  * coroutine-free.
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. The page is a ComposeView under
+ * CloudKitTheme (libs:ui-kit) with its palette in the ops_* colour resources; the host
+ * contract (newInstance, DaguPrefs) is unchanged.
  */
 class DaguFragment : Fragment() {
 
+    /** What the DAG list shows. */
+    private sealed interface Load {
+        data object Loading : Load
+        data class Done(val dags: List<DaguDag>) : Load
+        data class Failed(val message: String) : Load
+    }
+
     private lateinit var prefs: DaguPrefs
-    private lateinit var root: LinearLayout
-    private var listContainer: LinearLayout? = null
+    private val main = Handler(Looper.getMainLooper())
+
+    private var loggedIn by mutableStateOf(false)
+    private var userLabel by mutableStateOf("")
+    private var loginStatus by mutableStateOf("")
+    private var testing by mutableStateOf(false)
+    private var load by mutableStateOf<Load>(Load.Loading)
+
+    /** fileNames with a start request in flight (a double-tap cannot queue two runs). */
+    private var starting by mutableStateOf<Set<String>>(emptySet())
 
     override fun onCreateView(inflater: LayoutInflater, c: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
         prefs = DaguPrefs(ctx)
-        root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xFF000000.toInt())
-            val pad = dp(ctx, 16); setPadding(pad, pad, pad, pad)
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
+        loggedIn = prefs.isLoggedIn()
+        userLabel = prefs.userLabel
+        if (loggedIn) loadAndRender(ctx)
+        return ComposeView(ctx).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                val palette = KitPalette(
+                    surface = colorResource(R.color.ops_surface),
+                    surfaceSelected = colorResource(R.color.ops_selected),
+                    textPrimary = colorResource(R.color.ops_text),
+                    textSecondary = colorResource(R.color.ops_text_dim),
+                    accent = colorResource(R.color.ops_accent),
+                    hairline = colorResource(R.color.ops_hairline),
+                    tileInk = colorResource(R.color.ops_bg),
+                )
+                CloudKitTheme(palette) {
+                    Column(Modifier.fillMaxSize().background(colorResource(R.color.ops_bg)).padding(16.dp)) {
+                        if (loggedIn) DagList(ctx) else LoginForm(ctx)
+                    }
+                }
+            }
         }
-        if (prefs.isLoggedIn()) renderList(ctx) else renderLoginForm(ctx)
-        return root
     }
 
     // ─────────────────────────── login form ───────────────────────────
 
-    private fun renderLoginForm(ctx: Context) {
-        root.removeAllViews()
-        root.addView(header(ctx, "Dagu — Sign in"))
-        root.addView(small(ctx,
+    @Composable
+    private fun LoginForm(ctx: Context) {
+        val p = LocalKitPalette.current
+        var url by remember { mutableStateOf(prefs.serverUrl) }
+        var token by remember { mutableStateOf("") }
+        var label by remember { mutableStateOf("") }
+        Header("Dagu — Sign in")
+        Small(
             "Paste an Authelia bearer token. Generate one on the laptop with:\n" +
                 "  python ~/git/cloud-vault/A0_keys/providers/authelia/oauth/get_token.py\n" +
-                "  jq -r .access_token ~/git/cloud-vault/A0_keys/providers/authelia/oauth/authelia_tokens.json"))
-        val urlField = formField(ctx, "Server URL", prefs.serverUrl, InputType.TYPE_TEXT_VARIATION_URI)
-        val tokenField = formField(ctx, "Bearer token", "",
-            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
-        val labelField = formField(ctx, "Label (optional)", "", InputType.TYPE_CLASS_TEXT)
-        root.addView(urlField); root.addView(tokenField); root.addView(labelField)
-        val status = TextView(ctx).apply {
-            setTextColor(0xAAFFFFFF.toInt()); textSize = 12f
-            setPadding(0, dp(ctx, 8), 0, dp(ctx, 8))
-        }
-        root.addView(status)
-        val saveBtn = Button(ctx).apply { text = "Save & test" }
-        root.addView(saveBtn)
-        saveBtn.setOnClickListener {
-            val url = urlField.findViewWithTag<EditText>("input").text.toString().trim()
-            val token = tokenField.findViewWithTag<EditText>("input").text.toString().trim()
-            val label = labelField.findViewWithTag<EditText>("input").text.toString().trim()
-            if (url.isBlank() || token.isBlank()) {
-                status.text = "Server URL and bearer token both required."
-                return@setOnClickListener
+                "  jq -r .access_token ~/git/cloud-vault/A0_keys/providers/authelia/oauth/authelia_tokens.json")
+        Field("Server URL", url, KeyboardType.Uri) { url = it }
+        Field("Bearer token", token, KeyboardType.Password, secret = true) { token = it }
+        Field("Label (optional)", label, KeyboardType.Text) { label = it }
+        Text(loginStatus, color = p.textSecondary, fontSize = 12.sp,
+            modifier = Modifier.padding(vertical = 8.dp))
+        Button(enabled = !testing, onClick = {
+            val u = url.trim(); val t = token.trim(); val l = label.trim()
+            if (u.isBlank() || t.isBlank()) {
+                loginStatus = "Server URL and bearer token both required."
+                return@Button
             }
-            status.text = "Testing…"
-            saveBtn.isEnabled = false
+            loginStatus = "Testing…"
+            testing = true
             Thread {
-                val result = runCatching { DaguClient(ctx, url, token).listDags() }
-                root.post {
+                val result = runCatching { DaguClient(ctx, u, t).listDags() }
+                main.post {
                     result.onSuccess {
-                        prefs.serverUrl = url
-                        prefs.bearerToken = token
-                        prefs.userLabel = label
-                        renderList(ctx)
+                        prefs.serverUrl = u
+                        prefs.bearerToken = t
+                        prefs.userLabel = l
+                        userLabel = l
+                        loggedIn = true
+                        testing = false
+                        loadAndRender(ctx)
                     }.onFailure { e ->
-                        status.text = "Test failed: ${e.message}"
-                        saveBtn.isEnabled = true
+                        loginStatus = "Test failed: ${e.message}"
+                        testing = false
                     }
                 }
             }.start()
-        }
+        }) { Text("Save & test") }
     }
 
     // ─────────────────────────── list view ───────────────────────────
 
-    private fun renderList(ctx: Context) {
-        root.removeAllViews()
-        root.addView(header(ctx, "Dagu — Workflow runs"))
-        if (prefs.userLabel.isNotBlank()) {
-            root.addView(small(ctx, "signed in as ${prefs.userLabel}"))
+    @Composable
+    private fun DagList(ctx: Context) {
+        val p = LocalKitPalette.current
+        Header("Dagu — Workflow runs")
+        if (userLabel.isNotBlank()) Small("signed in as $userLabel")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { loadAndRender(ctx) }) { Text("Refresh") }
+            Button(onClick = {
+                prefs.clear()
+                loginStatus = ""
+                loggedIn = false
+            }) { Text("Sign out") }
         }
-        val controls = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        val refreshBtn = Button(ctx).apply { text = "Refresh" }
-        val signOutBtn = Button(ctx).apply { text = "Sign out" }
-        controls.addView(refreshBtn)
-        controls.addView(signOutBtn, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { leftMargin = dp(ctx, 8) })
-        root.addView(controls)
-        val scroll = ScrollView(ctx).apply {
-            isFillViewport = true
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT,
-            )
+        Box(Modifier.fillMaxSize().padding(vertical = 8.dp)) {
+            when (val l = load) {
+                Load.Loading -> Text("Loading…", color = p.textSecondary, fontSize = 13.sp)
+                is Load.Failed -> Text(
+                    "Load failed: ${l.message}\nIf the token expired, Sign out + paste a fresh one.",
+                    color = colorResource(R.color.ops_error), fontSize = 12.sp)
+                is Load.Done ->
+                    if (l.dags.isEmpty()) {
+                        Text("No DAGs registered.", color = p.textSecondary, fontSize = 13.sp)
+                    } else {
+                        // Sort by last-run timestamp desc — most recent on top,
+                        // never-run DAGs at the bottom. Same default GHA shows.
+                        val sorted = remember(l) { l.dags.sortedByDescending { it.lastRun?.finishedAtMs ?: 0L } }
+                        LazyColumn(Modifier.fillMaxSize()) {
+                            items(sorted, key = { it.fileName }) { DagRow(ctx, it) }
+                        }
+                    }
+            }
         }
-        val list = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(ctx, 8); setPadding(0, p, 0, p)
-        }
-        listContainer = list
-        scroll.addView(list)
-        root.addView(scroll)
-        refreshBtn.setOnClickListener { loadAndRender(ctx) }
-        signOutBtn.setOnClickListener {
-            prefs.clear()
-            renderLoginForm(ctx)
-        }
-        loadAndRender(ctx)
     }
 
     private fun loadAndRender(ctx: Context) {
-        val list = listContainer ?: return
-        list.removeAllViews()
-        list.addView(TextView(ctx).apply {
-            text = "Loading…"; setTextColor(0xAAFFFFFF.toInt()); textSize = 13f
-        })
+        load = Load.Loading
         val client = DaguClient(ctx, prefs.serverUrl, prefs.bearerToken)
         Thread {
             val result = runCatching { client.listDags() }
-            root.post {
-                list.removeAllViews()
-                result.onSuccess { resp ->
-                    if (resp.dags.isEmpty()) {
-                        list.addView(TextView(ctx).apply {
-                            text = "No DAGs registered."
-                            setTextColor(0xAAFFFFFF.toInt()); textSize = 13f
-                        })
-                        return@onSuccess
+            main.post {
+                result.onSuccess { resp -> load = Load.Done(resp.dags) }
+                    .onFailure { e ->
+                        load = Load.Failed(e.message ?: "")
+                        Toast.makeText(ctx, "Dagu: ${e.message}", Toast.LENGTH_LONG).show()
                     }
-                    // Sort by last-run timestamp desc — most recent on top,
-                    // never-run DAGs at the bottom. Same default GHA shows.
-                    val sorted = resp.dags.sortedByDescending { it.lastRun?.finishedAtMs ?: 0L }
-                    for (d in sorted) list.addView(dagRow(ctx, d))
-                }.onFailure { e ->
-                    list.addView(TextView(ctx).apply {
-                        text = "Load failed: ${e.message}\nIf the token expired, Sign out + paste a fresh one."
-                        setTextColor(0xFFFF8888.toInt()); textSize = 12f
-                    })
-                    Toast.makeText(ctx, "Dagu: ${e.message}", Toast.LENGTH_LONG).show()
-                }
             }
         }.start()
     }
 
-    // ─────────────────────────── widget helpers ───────────────────────────
+    // ─────────────────────────── widgets ───────────────────────────
 
-    private fun dagRow(ctx: Context, d: DaguDag): View {
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(dp(ctx, 4), dp(ctx, 10), dp(ctx, 4), dp(ctx, 10))
-        }
-        // Status dot — coloured circle drawn as a TextView with a
-        // GradientDrawable background. Cheap + no asset.
-        val dot = TextView(ctx).apply {
-            val sz = dp(ctx, 12)
-            layoutParams = LinearLayout.LayoutParams(sz, sz).apply { topMargin = dp(ctx, 4) }
-            background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(statusColor(d.lastRun?.status ?: 0))
+    @Composable
+    private fun DagRow(ctx: Context, d: DaguDag) {
+        val p = LocalKitPalette.current
+        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 10.dp)) {
+            // Status dot — a coloured circle. Cheap + no asset.
+            Box(Modifier.padding(top = 4.dp).size(12.dp).clip(CircleShape)
+                .background(statusColor(d.lastRun?.status ?: 0)))
+            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                Text(d.displayLabel, color = p.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                val subParts = mutableListOf<String>()
+                subParts += statusLabel(d.lastRun?.status ?: 0)
+                d.lastRun?.finishedAtMs?.takeIf { it > 0L }?.let { subParts += "  ·  ${relativeAgo(it)}" }
+                if (d.schedule.isNotBlank()) subParts += "  ·  ⏰ ${d.schedule}"
+                Text(subParts.joinToString(""), color = p.textSecondary, fontSize = 12.sp)
+                if (d.description.isNotBlank()) {
+                    Text(d.description, color = p.textSecondary.copy(alpha = 0.55f), fontSize = 11.sp)
+                }
             }
+            RunButton(ctx, d)
         }
-        row.addView(dot)
-        val text = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(ctx, 10), 0, 0, 0)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        text.addView(TextView(ctx).apply {
-            this.text = d.displayLabel
-            setTextColor(0xFFFFFFFF.toInt())
-            textSize = 14f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-        })
-        val subParts = mutableListOf<String>()
-        subParts += statusLabel(d.lastRun?.status ?: 0)
-        d.lastRun?.finishedAtMs?.takeIf { it > 0L }?.let { subParts += "  ·  ${relativeAgo(it)}" }
-        if (d.schedule.isNotBlank()) subParts += "  ·  ⏰ ${d.schedule}"
-        text.addView(TextView(ctx).apply {
-            this.text = subParts.joinToString("")
-            setTextColor(0xAAFFFFFF.toInt())
-            textSize = 12f
-        })
-        if (d.description.isNotBlank()) {
-            text.addView(TextView(ctx).apply {
-                this.text = d.description
-                setTextColor(0x88FFFFFF.toInt())
-                textSize = 11f
-            })
-        }
-        row.addView(text)
-        row.addView(runButton(ctx, d))
-        return row
     }
 
     /**
@@ -236,26 +249,17 @@ class DaguFragment : Fragment() {
      * complete silently — the only quiet path would be the fragment
      * being gone, and then there is no UI left to talk to anyway.
      */
-    private fun runButton(ctx: Context, d: DaguDag): View {
-        val btn = Button(ctx).apply {
-            text = "Run"
-            textSize = 12f
-            isAllCaps = false
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { leftMargin = dp(ctx, 8) }
-        }
-        btn.setOnClickListener {
+    @Composable
+    private fun RunButton(ctx: Context, d: DaguDag) {
+        val busy = d.fileName in starting
+        Button(enabled = !busy, modifier = Modifier.padding(start = 8.dp), onClick = {
             // Disable immediately so a double-tap cannot queue two runs.
-            btn.isEnabled = false
-            btn.text = "Starting…"
+            starting = starting + d.fileName
             val client = DaguClient(ctx, prefs.serverUrl, prefs.bearerToken)
             Thread {
                 val result = runCatching { client.startDag(d.fileName) }
-                root.post {
-                    btn.isEnabled = true
-                    btn.text = "Run"
+                main.post {
+                    starting = starting - d.fileName
                     result.onSuccess { runId ->
                         Toast.makeText(
                             ctx,
@@ -273,21 +277,21 @@ class DaguFragment : Fragment() {
                     }
                 }
             }.start()
-        }
-        return btn
+        }) { Text(if (busy) "Starting…" else "Run", fontSize = 12.sp) }
     }
 
     /** Dagu status int → row dot colour. Lifted from Dagu's own
      *  internal/scheduler/scheduler.go status constants. */
-    private fun statusColor(status: Int): Int = when (status) {
-        1 -> 0xFF1565C0.toInt()  // running — blue
-        2 -> 0xFFEF5350.toInt()  // error — red
-        3 -> 0xFFFFA726.toInt()  // cancel — orange
-        4 -> 0xFF2E7D32.toInt()  // success — green
-        5 -> 0xFF9E9E9E.toInt()  // skipped — grey
-        6 -> 0xFFFFCA28.toInt()  // partial-success — amber
-        else -> 0xFF555555.toInt() // unknown / no runs — dim grey
-    }
+    @Composable
+    private fun statusColor(status: Int): Color = colorResource(when (status) {
+        1 -> R.color.ops_status_running    // blue
+        2 -> R.color.ops_status_error      // red
+        3 -> R.color.ops_status_cancel     // orange
+        4 -> R.color.ops_status_success    // green
+        5 -> R.color.ops_status_skipped    // grey
+        6 -> R.color.ops_status_partial    // amber
+        else -> R.color.ops_status_unknown // unknown / no runs — dim grey
+    })
 
     private fun statusLabel(status: Int): String = when (status) {
         1 -> "running"
@@ -315,42 +319,27 @@ class DaguFragment : Fragment() {
         }
     }
 
-    private fun header(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextColor(0xFFE9D8FD.toInt())
-        textSize = 18f
-        typeface = android.graphics.Typeface.DEFAULT_BOLD
-        setPadding(0, 0, 0, dp(ctx, 12))
+    @Composable
+    private fun Header(text: String) {
+        Text(text, color = LocalKitPalette.current.accent, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 12.dp))
     }
 
-    private fun small(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t
-        setTextColor(0x99FFFFFF.toInt())
-        textSize = 11f
-        setPadding(0, 0, 0, dp(ctx, 8))
+    @Composable
+    private fun Small(t: String) {
+        Text(t, color = LocalKitPalette.current.textSecondary, fontSize = 11.sp,
+            modifier = Modifier.padding(bottom = 8.dp))
     }
 
-    private fun formField(ctx: Context, label: String, initial: String, inputType: Int): View {
-        val ll = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(ctx, 8), 0, dp(ctx, 4))
-        }
-        ll.addView(TextView(ctx).apply {
-            text = label
-            setTextColor(0xAAFFFFFF.toInt())
-            textSize = 11f
-        })
-        ll.addView(EditText(ctx).apply {
-            tag = "input"
-            setText(initial)
-            setInputType(inputType)
-            setTextColor(0xFFFFFFFF.toInt())
-            textSize = 14f
-        })
-        return ll
+    @Composable
+    private fun Field(label: String, value: String, type: KeyboardType, secret: Boolean = false, onChange: (String) -> Unit) {
+        OutlinedTextField(
+            value = value, onValueChange = onChange, singleLine = true,
+            label = { Text(label, fontSize = 11.sp) },
+            visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
+            keyboardOptions = KeyboardOptions(keyboardType = type),
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp))
     }
-
-    private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
 
     companion object { fun newInstance() = DaguFragment() }
 }
