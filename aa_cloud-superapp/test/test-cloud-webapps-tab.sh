@@ -38,6 +38,7 @@ grep -qF 'You look to be offline' "$WP" && ok "T4 an offline page says so" || ba
 grep -qF 'sameSite(url, target.toString())' "$WP" && grep -qF '.launchUri(target.toString())' "$WP" \
   && ok "T4 other sites leave through the app's link rules" || bad "T4 a link to another site loads inside the pane"
 # mutation: dropping the marker must turn T3 red
-if sed 's/settings.userAgentString + UA_MARKER/settings.userAgentString/' "$WP" | grep -qF 'settings.userAgentString + UA_MARKER'; then
+MUT="$(sed 's/settings.userAgentString + UA_MARKER/settings.userAgentString/' "$WP")"
+if grep -qF 'settings.userAgentString + UA_MARKER' <<<"$MUT"; then
   bad "mutation: the UA check cannot see the marker go"; else ok "mutation: removing the marker is visible to T3"; fi
 echo "PASS=$PASS FAIL=$FAIL"; [ "$FAIL" -eq 0 ]
