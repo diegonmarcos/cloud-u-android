@@ -60,6 +60,7 @@
       "ab_cloud-libs-shared/libs/keyboard/"
     ],
     "stock_typography": [
+      "ab_cloud-libs-shared/libs/keyboard/",
       "ab_cloud-libs-shared/libs/ui-kit/"
     ]
   },
