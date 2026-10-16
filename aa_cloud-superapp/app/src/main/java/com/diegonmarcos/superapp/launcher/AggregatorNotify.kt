@@ -135,7 +135,7 @@ private fun PhoneCenter(state: AggregatorState, onOpen: (String) -> Unit) {
         // A MISSING CAPABILITY, not an empty inbox: grey, with the way to fix it attached.
         NotificationAccessOff(); return
     }
-    val total = remember(state.epoch) { PhoneNotificationStore.all(ctx).size }
+    val total = remember(state.epoch) { state.phoneFeed().size }
     if (total == 0) {
         // Granted and empty is a REAL state and a different one: amber, so it cannot be mistaken for the grey case.
         AggStateLine("silent · nothing captured", Tone.WARN); return
@@ -149,7 +149,7 @@ private fun PhoneCenter(state: AggregatorState, onOpen: (String) -> Unit) {
 private fun CloudCenter(state: AggregatorState, panel: Sections.StackPanel, onOpen: (String) -> Unit) {
     val ctx = LocalContext.current
     AggShadeLabel("IN-APP FEED")
-    val total = remember(state.epoch) { NotificationStore.all(ctx).size }
+    val total = remember(state.epoch) { state.localFeedTotal() }
     val local by remember { derivedStateOf { state.localFeedViews() } }
     if (local.isEmpty()) {
         if (total == 0) AggStateLine("silent · no in-app events", Tone.WARN)
@@ -458,7 +458,7 @@ private fun KindSummary(state: AggregatorState) {
     val granted = remember(state.epoch) { AggregatorModel.isNotificationAccessGranted(ctx) }
     val counted = remember(state.epoch, granted) {
         if (!granted) emptyMap<String, Int>() else {
-            val feed = PhoneNotificationStore.all(ctx)
+            val feed = state.phoneFeed()
             PhoneTaxonomy.prime(ctx, feed.associate { it.packageName to it.appLabel })
             feed.groupingBy { PhoneTaxonomy.folderIdOf(it.packageName, it.appLabel, ctx) }.eachCount()
         }
@@ -512,7 +512,7 @@ internal fun InboxNotifications(state: AggregatorState, panel: Sections.StackPan
         return
     }
     val empty = remember(state.epoch, folderId) {
-        val feed = PhoneNotificationStore.all(ctx)
+        val feed = state.phoneFeed()
         PhoneTaxonomy.prime(ctx, feed.associate { it.packageName to it.appLabel })
         AggregatorModel.inboxEntries(ctx, feed, app, folderId).isEmpty()
     }

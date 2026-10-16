@@ -159,6 +159,12 @@ internal class AggregatorState(
         return AggregatorModel.visibleGroups(groups, sortMode, showMode, readIds, visitSeenAt, now())
     }
 
+    /** The phone listener's captured feed (read here so the page has ONE reader of the notification stores). */
+    fun phoneFeed(): List<PhoneNotificationStore.Entry> = PhoneNotificationStore.all(ctx)
+
+    /** How many in-app events exist at all (the page's one reader of the store is this class). */
+    fun localFeedTotal(): Int = NotificationStore.all(ctx).size
+
     /** The in-app (SuperApp's own) feed, grouped per producer. */
     fun localFeedViews(): List<GroupView> {
         epoch
