@@ -199,12 +199,16 @@ class MainActivity : AppCompatActivity() {
         // Stopped activity → no frames → the reader's GL functor cannot draw, so a process kill
         // while backgrounded must not count as a fade-window crash.
         NavFadeGuard.onActivityStop(this)
+        app.sterna.push.ForegroundPush.onBackground()
     }
 
     override fun onStart() {
         super.onStart()
         application.container.appLock.onAppForegrounded(System.currentTimeMillis())
         NavFadeGuard.onActivityStart(this)
+        // Live JMAP push while the app is on screen, whatever the delivery setting (seconds, not
+        // the periodic worker's minutes).
+        app.sterna.push.ForegroundPush.onForeground(this)
         applySecureFlag()
     }
 
