@@ -1182,6 +1182,14 @@
         "lib-maps"
       ]
     },
+    "tracker_engine": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Tracking engine settings (sources, accurate-fix / cell / motion triggers), its progress counters and the learned step length.",
+      "used_by": [
+        "ac_cloud-nav"
+      ]
+    },
     "maps_tracker_state": {
       "kind": "prefs",
       "class": "device",
