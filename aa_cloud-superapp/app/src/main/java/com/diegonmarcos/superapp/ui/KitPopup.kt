@@ -68,7 +68,7 @@ object KitPopup {
         override fun calculatePosition(
             anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize,
         ): IntOffset {
-            val x = (when (align) { Align.END -> anchor.right - popupContentSize.width; Align.START -> anchor.left; Align.EDGE -> 0 })
+            val x = (when (align) { Align.END -> anchor.right - popupContentSize.width; Align.START -> anchor.left; Align.EDGE -> 0; Align.CENTER -> (windowSize.width - popupContentSize.width) / 2 })
                 .coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0))
             val below = anchor.bottom + gap
             val y = if (below + popupContentSize.height <= windowSize.height) below

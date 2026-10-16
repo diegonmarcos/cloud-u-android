@@ -1,22 +1,45 @@
 package com.diegonmarcos.superapp.cloud
-import com.diegonmarcos.superapp.ui.SystemInfoPopup
-import com.diegonmarcos.superapp.battery.BatteryEstimatePopup
-import com.diegonmarcos.superapp.network.NetworkInfoPopup
 
 import android.content.Context
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.GradientDrawable
-import android.os.Handler
-import android.os.Looper
 import android.os.SystemClock
-import android.view.Gravity
 import android.view.View
-import android.widget.LinearLayout
-import android.widget.PopupWindow
-import android.widget.ScrollView
-import android.widget.TextView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.diegonmarcos.superapp.ui.KitBubble
+import com.diegonmarcos.superapp.ui.KitPopup
+import kotlinx.coroutines.delay
 import java.text.DateFormatSymbols
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -54,385 +77,152 @@ object CalendarAgendaPopup {
             stopwatchAccumulatedMs
 
     fun show(ctx: Context, anchor: View) {
-        val d = ctx.resources.displayMetrics.density
-        val pad = (12 * d).toInt()
-
-        val container = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(pad, pad, pad, pad)
-            background = GradientDrawable().apply {
-                cornerRadius = 12f * d
-                setColor(0xEE111111.toInt())
-                setStroke(maxOf(1, (1 * d).toInt()), 0x44FFFFFF.toInt())
-            }
-        }
-
-        // Headline row — left: label + today's date (vertical stack);
-        // right: stopwatch widget (elapsed time + Start/Stop toggle).
-        // Horizontal LinearLayout with weight=1 on the left side so
-        // the stopwatch hugs the right edge regardless of date length.
-        val headerRow = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-        }
-        val headerLeft = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        headerLeft.addView(label(ctx, "Calendar"))
-        val todayLabel = SimpleDateFormat("EEEE  d MMM yyyy", Locale.getDefault())
-            .format(Calendar.getInstance().time)
-        headerLeft.addView(valueBig(ctx, todayLabel))
-        headerRow.addView(headerLeft)
-        headerRow.addView(buildStopwatch(ctx, d))
-        container.addView(headerRow)
-        container.addView(spacer(ctx, (8 * d).toInt()))
-
-        // Two views switched by the tab row: "Agenda" (7-day list) is the
-        // original content; "Calendar" is today's month grid. Both are
-        // built up-front and toggled via visibility so switching is
-        // instant and stateless (no rebuild, no flicker).
-        val agendaView = buildAgendaView(ctx, d)
-        val calendarView = buildMonthView(ctx, d)
-        calendarView.visibility = View.GONE
-
-        // Tab row — "Agenda" | "Calendar". Selected tab gets the purple
-        // accent + bold; the other dims. Matches the strip-popup family.
-        val tabAgenda = tab(ctx, d, "Agenda")
-        val tabCalendar = tab(ctx, d, "Calendar")
-        fun selectTab(agenda: Boolean) {
-            styleTab(tabAgenda, agenda)
-            styleTab(tabCalendar, !agenda)
-            agendaView.visibility = if (agenda) View.VISIBLE else View.GONE
-            calendarView.visibility = if (agenda) View.GONE else View.VISIBLE
-        }
-        tabAgenda.setOnClickListener { selectTab(true) }
-        tabCalendar.setOnClickListener { selectTab(false) }
-        val tabRow = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-            addView(tabAgenda)
-            addView(tabCalendar)
-        }
-        selectTab(true)
-        container.addView(tabRow)
-        container.addView(spacer(ctx, (8 * d).toInt()))
-        container.addView(agendaView)
-        container.addView(calendarView)
-
-        val pw = PopupWindow(
-            container,
-            (260 * d).toInt(),
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true,
-        ).apply {
-            isOutsideTouchable = true
-            isFocusable = true
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            elevation = 8 * d
-        }
-        // Horizontally SCREEN-centered, vertically dropped from the
-        // status strip. showAsDropDown is the right vertical
-        // primitive (matches Battery/SysInfo exactly — same
-        // sub-strip drop). For horizontal centering we compute
-        // xOffset so the popup's left edge lands at
-        // (screenWidth − popupWidth) / 2 regardless of the date/
-        // time anchor's actual screen-x position (which on this
-        // device is right-of-center, so Gravity.CENTER_HORIZONTAL
-        // alone biased the popup rightward).
-        val anchorLoc = IntArray(2); anchor.getLocationOnScreen(anchorLoc)
-        val screenW = ctx.resources.displayMetrics.widthPixels
-        val popupW  = (260 * d).toInt()
-        val xOffset = (screenW - popupW) / 2 - anchorLoc[0]
-        pw.showAsDropDown(anchor, xOffset, (6 * d).toInt(), Gravity.START)
+        // Horizontally SCREEN-centered, dropped from the status strip (the drop matches Battery/SysInfo exactly).
+        KitPopup.show(anchor, KitPopup.Align.CENTER) { CalendarBubble() }
     }
 
-    /** Agenda tab content: the original scrollable 7-day list (today +
-     *  next 6 days), with placeholder rows until libs:cal slice D
+    private val MONO = FontFamily.Monospace
+    private val LILAC = Color(0xFFE9D8FD)
+
+    /** The bubble itself, split from [show] so it can be drawn without a window. */
+    @Composable
+    internal fun CalendarBubble() {
+        var agenda by remember { mutableStateOf(true) }
+        KitBubble(Modifier.width(260.dp).testTag("cal:bubble")) {
+            // Headline row — left: label + today's date; right: the stopwatch.
+            Row(Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) {
+                    Text("Calendar", color = Color(0xAAFFFFFF), fontSize = 11.sp, fontFamily = MONO)
+                    Text(SimpleDateFormat("EEEE  d MMM yyyy", Locale.getDefault()).format(Calendar.getInstance().time),
+                        color = Color.White, fontSize = 16.sp, fontFamily = MONO, fontWeight = FontWeight.Bold)
+                }
+                Stopwatch()
+            }
+            Spacer(Modifier.height(8.dp))
+            // Two views switched by the tab row: "Agenda" (7-day list) and "Calendar" (this month's grid).
+            Row(Modifier.fillMaxWidth()) {
+                Tab("Agenda", agenda, Modifier.weight(1f)) { agenda = true }
+                Tab("Calendar", !agenda, Modifier.weight(1f)) { agenda = false }
+            }
+            Spacer(Modifier.height(8.dp))
+            if (agenda) AgendaView() else MonthView()
+        }
+    }
+
+    /** One pill-less tab label: selected = lilac, bold, a faint lilac plate; unselected = dim. */
+    @Composable
+    private fun Tab(text: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+        Text(text, fontSize = 13.sp, fontFamily = MONO, textAlign = TextAlign.Center,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) LILAC else Color(0x77FFFFFF),
+            modifier = modifier.background(if (selected) Color(0x33E9D8FD) else Color(0x11FFFFFF))
+                .clickable(onClick = onClick).padding(6.dp).testTag("cal:tab:$text"))
+    }
+
+    /** Agenda tab content: the scrollable 7-day list (today + next 6 days), with placeholder rows until libs:cal slice D
      *  (CalDAV) lands. Capped at 300dp so the bubble stays compact. */
-    private fun buildAgendaView(ctx: Context, d: Float): View {
-        val scroll = ScrollView(ctx).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                (300 * d).toInt(),
-            )
-            isVerticalScrollBarEnabled = true
+    @Composable
+    private fun AgendaView() {
+        val dayHeaderFmt = remember { SimpleDateFormat("EEE  d MMM", Locale.getDefault()) }
+        val days = remember {
+            val cal = Calendar.getInstance()
+            (0 until 7).map { i -> dayHeaderFmt.format(cal.time).also { cal.add(Calendar.DAY_OF_YEAR, 1) }.let { if (i == 0) "Today · $it" else it } }
         }
-        val body = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-        val dayHeaderFmt = SimpleDateFormat("EEE  d MMM", Locale.getDefault())
-        val cal = Calendar.getInstance()
-        for (i in 0 until 7) {
-            val row = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                val p = (6 * d).toInt(); setPadding(p, p, p, p)
-                val lp = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply { topMargin = (4 * d).toInt() }
-                layoutParams = lp
-                setBackgroundColor(if (i == 0) 0x441A0033 else 0x221A0033)
+        Column(Modifier.fillMaxWidth().height(300.dp).verticalScroll(rememberScrollState()).testTag("cal:agenda")) {
+            days.forEachIndexed { i, label ->
+                Column(Modifier.fillMaxWidth().padding(top = 4.dp).background(if (i == 0) Color(0x441A0033) else Color(0x221A0033)).padding(6.dp)) {
+                    Text(label, color = if (i == 0) LILAC else Color(0xCCFFFFFF), fontSize = 13.sp, fontFamily = MONO,
+                        fontWeight = if (i == 0) FontWeight.Bold else FontWeight.Normal)
+                    Text("no events", color = Color(0x77FFFFFF), fontSize = 11.sp, fontFamily = MONO, modifier = Modifier.padding(top = 2.dp))
+                }
             }
-            row.addView(TextView(ctx).apply {
-                text = if (i == 0) "Today · ${dayHeaderFmt.format(cal.time)}"
-                       else dayHeaderFmt.format(cal.time)
-                setTextColor(if (i == 0) 0xFFE9D8FD.toInt() else 0xCCFFFFFF.toInt())
-                textSize = 13f
-                typeface = if (i == 0) Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-                           else Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-            })
-            row.addView(TextView(ctx).apply {
-                text = "no events"
-                setTextColor(0x77FFFFFF.toInt())
-                textSize = 11f
-                typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-                setPadding(0, (2 * d).toInt(), 0, 0)
-            })
-            body.addView(row)
-            cal.add(Calendar.DAY_OF_YEAR, 1)
+            Text("CalDAV via libs:cal lands next; until then this is a placeholder. Same source as section:cal/agenda.",
+                color = Color(0x55FFFFFF), fontSize = 10.sp, fontFamily = MONO,
+                modifier = Modifier.padding(start = 2.dp, top = 10.dp, end = 2.dp, bottom = 2.dp))
         }
-        body.addView(TextView(ctx).apply {
-            text = "CalDAV via libs:cal lands next; until then this is a placeholder. Same source as section:cal/agenda."
-            setTextColor(0x55FFFFFF.toInt())
-            textSize = 10f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-            setPadding((2 * d).toInt(), (10 * d).toInt(), (2 * d).toInt(), (2 * d).toInt())
-        })
-        scroll.addView(body)
-        return scroll
     }
 
-    /** Calendar tab content: today's month as a 7-column grid. Weekday
-     *  header (locale first-day-of-week) + week rows; today's cell is
-     *  highlighted with the purple accent. Days outside the current
-     *  month render as empty leading/trailing cells. Events overlay
-     *  lands with libs:cal slice D — for now the grid is the structure. */
-    private fun buildMonthView(ctx: Context, d: Float): View {
-        val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-
-        val now = Calendar.getInstance()
+    /** Calendar tab content: this month as a 7-column grid. Weekday header (locale first-day-of-week) + week rows; today's
+     *  cell is a lilac disc. Days outside the month render as empty leading/trailing cells. */
+    @Composable
+    private fun MonthView() {
+        val now = remember { Calendar.getInstance() }
         val today = now.get(Calendar.DAY_OF_MONTH)
         val firstDow = now.firstDayOfWeek          // locale: 1=Sun..7=Sat
         val daysInMonth = now.getActualMaximum(Calendar.DAY_OF_MONTH)
-
-        // Month + year title.
-        col.addView(TextView(ctx).apply {
-            text = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(now.time)
-            setTextColor(0xFFE9D8FD.toInt())
-            textSize = 13f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setPadding(0, 0, 0, (6 * d).toInt())
-        })
-
-        // Weekday header row, rotated to start on the locale's first day.
-        val shortWeekdays = DateFormatSymbols(Locale.getDefault()).shortWeekdays // [_, Sun..Sat]
-        val weekRowLp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-        val headerWeek = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL; layoutParams = weekRowLp
-        }
-        for (i in 0 until 7) {
-            val dow = ((firstDow - 1 + i) % 7) + 1   // Calendar weekday 1..7
-            val name = shortWeekdays.getOrNull(dow)?.take(1) ?: ""
-            headerWeek.addView(TextView(ctx).apply {
-                text = name
-                setTextColor(0x88FFFFFF.toInt())
-                textSize = 11f
-                gravity = Gravity.CENTER
-                typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-                layoutParams = LinearLayout.LayoutParams(0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                setPadding(0, (3 * d).toInt(), 0, (3 * d).toInt())
-            })
-        }
-        col.addView(headerWeek)
-
-        // Leading blanks before day 1, then the day cells, padded to a
-        // full final week so every row has 7 columns.
-        val firstOfMonth = Calendar.getInstance().apply { set(Calendar.DAY_OF_MONTH, 1) }
-        val firstWeekday = firstOfMonth.get(Calendar.DAY_OF_WEEK)
+        val firstWeekday = remember { Calendar.getInstance().apply { set(Calendar.DAY_OF_MONTH, 1) }.get(Calendar.DAY_OF_WEEK) }
         val leadingBlanks = ((firstWeekday - firstDow) + 7) % 7
-        val totalCells = leadingBlanks + daysInMonth
-        val rows = (totalCells + 6) / 7
-
-        var dayNum = 1
-        for (r in 0 until rows) {
-            val week = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL; layoutParams = weekRowLp
-            }
-            for (c in 0 until 7) {
-                val cellIndex = r * 7 + c
-                val cell = TextView(ctx).apply {
-                    textSize = 12f
-                    gravity = Gravity.CENTER
-                    typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-                    layoutParams = LinearLayout.LayoutParams(0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        val m = (2 * d).toInt(); setMargins(m, m, m, m)
-                    }
-                    val p = (5 * d).toInt(); setPadding(0, p, 0, p)
+        val rows = (leadingBlanks + daysInMonth + 6) / 7
+        val shortWeekdays = remember { DateFormatSymbols(Locale.getDefault()).shortWeekdays } // [_, Sun..Sat]
+        Column(Modifier.fillMaxWidth().testTag("cal:month")) {
+            Text(SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(now.time), color = LILAC, fontSize = 13.sp,
+                fontFamily = MONO, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 6.dp))
+            Row(Modifier.fillMaxWidth()) {
+                for (i in 0 until 7) {
+                    val dow = ((firstDow - 1 + i) % 7) + 1   // Calendar weekday 1..7
+                    Text(shortWeekdays.getOrNull(dow)?.take(1) ?: "", color = Color(0x88FFFFFF), fontSize = 11.sp, fontFamily = MONO,
+                        fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f).padding(vertical = 3.dp))
                 }
-                if (cellIndex < leadingBlanks || dayNum > daysInMonth) {
-                    cell.text = ""
-                } else {
-                    val isToday = dayNum == today
-                    cell.text = dayNum.toString()
-                    cell.setTextColor(if (isToday) 0xFF111111.toInt() else 0xDDFFFFFF.toInt())
-                    if (isToday) {
-                        cell.typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-                        cell.background = GradientDrawable().apply {
-                            shape = GradientDrawable.OVAL
-                            setColor(0xFFE9D8FD.toInt())
-                        }
+            }
+            for (r in 0 until rows) {
+                Row(Modifier.fillMaxWidth()) {
+                    for (c in 0 until 7) {
+                        val day = r * 7 + c - leadingBlanks + 1
+                        val real = day in 1..daysInMonth
+                        val isToday = real && day == today
+                        Text(if (real) day.toString() else "", fontSize = 12.sp, fontFamily = MONO, textAlign = TextAlign.Center,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isToday) Color(0xFF111111) else Color(0xDDFFFFFF),
+                            modifier = Modifier.weight(1f).padding(2.dp)
+                                .background(if (isToday) LILAC else if (real) Color(0x221A0033) else Color.Transparent,
+                                    if (isToday) CircleShape else androidx.compose.ui.graphics.RectangleShape)
+                                .padding(vertical = 5.dp).let { if (isToday) it.testTag("cal:today") else it })
+                    }
+                }
+            }
+            Text("CalDAV event dots via libs:cal land next; the grid is the structure for now.", color = Color(0x55FFFFFF),
+                fontSize = 10.sp, fontFamily = MONO, modifier = Modifier.padding(start = 2.dp, top = 10.dp, end = 2.dp, bottom = 2.dp))
+        }
+    }
+
+    /** Top-right stopwatch: elapsed m:ss.t (20 sp bold) and a 22 dp play/stop disc beside it. Wired to the module-level state
+     *  above, so the timer keeps running while the popup is closed; long-press the time to reset. */
+    @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+    @Composable
+    private fun Stopwatch() {
+        var ms by remember { mutableLongStateOf(stopwatchCurrentMs()) }
+        var running by remember { mutableStateOf(stopwatchRunning) }
+        // 100 ms tick while the bubble is composed; it ends with it.
+        LaunchedEffect(Unit) { while (true) { ms = stopwatchCurrentMs(); delay(100L) } }
+        Row(Modifier.padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(formatStopwatch(ms), color = LILAC, fontSize = 20.sp, fontFamily = MONO, fontWeight = FontWeight.Bold,
+                modifier = Modifier.combinedClickable(onClick = {}, onLongClick = {
+                    // Long-press the time → reset to 0, so the user can start fresh without a third button.
+                    stopwatchRunning = false
+                    stopwatchAccumulatedMs = 0L
+                    stopwatchStartElapsedMs = 0L
+                    running = false; ms = 0L
+                }).testTag("cal:stopwatch:time"))
+            Box(Modifier.padding(start = 8.dp).size(22.dp).clip(CircleShape)
+                .background(if (running) Color(0xFFB91C1C) else Color(0xFF16A34A))
+                .clickable {
+                    if (stopwatchRunning) {
+                        stopwatchAccumulatedMs += SystemClock.elapsedRealtime() - stopwatchStartElapsedMs
+                        stopwatchRunning = false
                     } else {
-                        cell.setBackgroundColor(0x221A0033)
+                        stopwatchStartElapsedMs = SystemClock.elapsedRealtime()
+                        stopwatchRunning = true
                     }
-                    dayNum++
-                }
-                week.addView(cell)
+                    running = stopwatchRunning
+                    ms = stopwatchCurrentMs()
+                }.testTag("cal:stopwatch:toggle"), contentAlignment = Alignment.Center) {
+                Text(if (running) "■" else "▶", color = Color.White, fontSize = 10.sp)
             }
-            col.addView(week)
-        }
-
-        col.addView(TextView(ctx).apply {
-            text = "CalDAV event dots via libs:cal land next; the grid is the structure for now."
-            setTextColor(0x55FFFFFF.toInt())
-            textSize = 10f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-            setPadding((2 * d).toInt(), (10 * d).toInt(), (2 * d).toInt(), (2 * d).toInt())
-        })
-        return col
-    }
-
-    /** One pill-less tab label; selection styling applied by [styleTab]. */
-    private fun tab(ctx: Context, d: Float, text: String) = TextView(ctx).apply {
-        this.text = text
-        textSize = 13f
-        gravity = Gravity.CENTER
-        isClickable = true
-        isFocusable = true
-        layoutParams = LinearLayout.LayoutParams(0,
-            LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        val p = (6 * d).toInt(); setPadding(p, p, p, p)
-    }
-
-    /** Selected tab: purple accent text + bold + underline bar via a
-     *  bottom-only accent background. Unselected: dim, no bar. */
-    private fun styleTab(t: TextView, selected: Boolean) {
-        if (selected) {
-            t.setTextColor(0xFFE9D8FD.toInt())
-            t.typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            t.setBackgroundColor(0x33E9D8FD)
-        } else {
-            t.setTextColor(0x77FFFFFF.toInt())
-            t.typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-            t.setBackgroundColor(0x11FFFFFF)
         }
     }
 
-    /** Top-right stopwatch widget: elapsed mm:ss.t + Start/Stop
-     *  toggle button. Vertical stack — time on top, button below.
-     *  Wired to module-level state so the timer persists across
-     *  popup open/close cycles. Tick handler runs while attached
-     *  to the window and auto-cancels in onDetachedFromWindow,
-     *  which fires when the PopupWindow dismisses. */
-    private fun buildStopwatch(ctx: Context, d: Float): View {
-        // Horizontal: BIG time digits + small flat minimalist toggle
-        // glyph button immediately to its right. Reads as a single
-        // unit anchored to the top-right of the header. Time
-        // dominates visually (20sp bold); button is a 22dp solid
-        // circle with a play/pause glyph — no gradient, no border,
-        // no rounded-rect text "Start"/"Stop" — just intent at a
-        // glance.
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.END or Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { marginStart = (8 * d).toInt() }
-        }
-        val timeView = TextView(ctx).apply {
-            text = formatStopwatch(stopwatchCurrentMs())
-            setTextColor(0xFFE9D8FD.toInt())
-            textSize = 20f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            gravity = Gravity.END or Gravity.CENTER_VERTICAL
-            includeFontPadding = false
-        }
-        val runningGlyph = "■"
-        val stoppedGlyph = "▶"
-        val runningColor = 0xFFB91C1C.toInt()
-        val stoppedColor = 0xFF16A34A.toInt()
-        val btn = TextView(ctx).apply {
-            text = if (stopwatchRunning) runningGlyph else stoppedGlyph
-            textSize = 10f
-            setTextColor(0xFFFFFFFF.toInt())
-            gravity = Gravity.CENTER
-            includeFontPadding = false
-            isClickable = true
-            isFocusable = true
-            val sz = (22 * d).toInt()
-            layoutParams = LinearLayout.LayoutParams(sz, sz).apply {
-                marginStart = (8 * d).toInt()
-            }
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(if (stopwatchRunning) runningColor else stoppedColor)
-            }
-        }
-        btn.setOnClickListener {
-            if (stopwatchRunning) {
-                stopwatchAccumulatedMs += SystemClock.elapsedRealtime() - stopwatchStartElapsedMs
-                stopwatchRunning = false
-                btn.text = stoppedGlyph
-                (btn.background as? GradientDrawable)?.setColor(stoppedColor)
-            } else {
-                stopwatchStartElapsedMs = SystemClock.elapsedRealtime()
-                stopwatchRunning = true
-                btn.text = runningGlyph
-                (btn.background as? GradientDrawable)?.setColor(runningColor)
-            }
-            timeView.text = formatStopwatch(stopwatchCurrentMs())
-        }
-        // Long-press the time → reset to 0. Lets the user start
-        // fresh without needing a third button.
-        timeView.setOnLongClickListener {
-            stopwatchRunning = false
-            stopwatchAccumulatedMs = 0L
-            stopwatchStartElapsedMs = 0L
-            timeView.text = formatStopwatch(0L)
-            btn.text = stoppedGlyph
-            (btn.background as? GradientDrawable)?.setColor(stoppedColor)
-            true
-        }
-        // 100ms tick while attached. Detaches automatically when
-        // the PopupWindow dismisses; no leak risk.
-        row.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-            private val handler = Handler(Looper.getMainLooper())
-            private val runnable = object : Runnable {
-                override fun run() {
-                    timeView.text = formatStopwatch(stopwatchCurrentMs())
-                    handler.postDelayed(this, 100L)
-                }
-            }
-            override fun onViewAttachedToWindow(v: View) { handler.post(runnable) }
-            override fun onViewDetachedFromWindow(v: View) { handler.removeCallbacks(runnable) }
-        })
-        row.addView(timeView)
-        row.addView(btn)
-        return row
-    }
-
-    private fun formatStopwatch(ms: Long): String {
+    internal fun formatStopwatch(ms: Long): String {
         val totalSec = ms / 1000L
         val m = totalSec / 60L
         val s = totalSec % 60L
@@ -440,20 +230,5 @@ object CalendarAgendaPopup {
         return "%d:%02d.%d".format(m, s, tenths)
     }
 
-    private fun label(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t
-        setTextColor(0xAAFFFFFFL.toInt())
-        textSize = 11f
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-    }
-    private fun valueBig(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t
-        setTextColor(0xFFFFFFFFL.toInt())
-        textSize = 16f
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-    }
-    private fun spacer(ctx: Context, h: Int) = View(ctx).apply {
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, h)
-    }
+    internal fun resetStopwatchForTest() { stopwatchRunning = false; stopwatchAccumulatedMs = 0L; stopwatchStartElapsedMs = 0L }
 }

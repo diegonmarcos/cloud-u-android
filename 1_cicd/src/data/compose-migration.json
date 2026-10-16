@@ -625,10 +625,11 @@
       "baseline": {
         "view_screens": 1,
         "layout_xml": 5,
-        "view_ui_files": 14,
+        "view_ui_files": 13,
         "custom_views": 8
       },
       "done": [
+        "Calendar bubble in Compose (CalendarAgendaPopup: agenda, month grid, stopwatch over KitPopup Align.CENTER; CalendarAgendaPopupComposeTest)",
         "Network bubble in Compose (NetworkInfoPopup + its Cellular/ADB/Hotspot/GPS sections as composables over KitPopup; async facts via produceState, live GNSS bound to the section being on screen; NetworkInfoPopupComposeTest)",
         "System info bubble in Compose (SystemInfoPopup over the new KitPopup/KitBubble host: Compose Popup anchored under the tapped icon; SystemInfoPopupComposeTest)",
         "Notify badge panes in Compose (BadgePanes: group boxes, alert filters, per-badge customization; the posted notification's own RemoteViews stay a View inside AndroidView; BadgePanesLiveBadgeTest ported to the Compose harness)",
