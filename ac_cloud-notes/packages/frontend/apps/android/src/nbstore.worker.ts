@@ -9,6 +9,10 @@ import {
 } from '@affine/nbstore/cloud';
 import { idbStoragesIndexerOnly } from '@affine/nbstore/idb';
 import {
+  configureNotesSyncToken,
+  notesSyncStorages,
+} from '@affine/nbstore/notes-sync';
+import {
   bindNativeDBApis,
   type NativeDBApis,
   sqliteStorages,
@@ -28,6 +32,13 @@ configureSocketAuthMethod((endpoint, cb) => {
     .getValidAccessToken(endpoint)
     .then(token => cb(token ? { token, tokenType: 'jwt' } : {}))
     .catch(() => cb({ error: 'AUTH_SESSION_TEMPORARILY_UNAVAILABLE' }));
+});
+
+// our own sync server (Phase 2): the same fleet token the cloud socket used to ask for
+configureNotesSyncToken(async serverBaseUrl => {
+  const token = await authProvider.getValidAccessToken(serverBaseUrl);
+  if (!token) throw new Error('no fleet token for the sync server');
+  return token;
 });
 
 globalThis.addEventListener('message', e => {
@@ -71,6 +82,7 @@ const storeManager = new StoreManagerConsumer([
   ...sqliteStorages,
   ...broadcastChannelStorages,
   ...cloudStorages,
+  ...notesSyncStorages,
 ]);
 
 storeManager.bindConsumer(consumer);

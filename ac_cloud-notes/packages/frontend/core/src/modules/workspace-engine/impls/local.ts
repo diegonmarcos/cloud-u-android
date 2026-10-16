@@ -493,6 +493,16 @@ class LocalWorkspaceFlavourProvider implements WorkspaceFlavourProvider {
         },
       },
       remotes: {
+        ...(notesSyncServerUrl()
+          ? {
+              'notes-sync': {
+                doc: {
+                  name: 'NotesSyncDocStorage' as const,
+                  opts: { id: workspaceId, serverBaseUrl: notesSyncServerUrl() },
+                },
+              },
+            }
+          : {}),
         v1: {
           doc: this.DocStorageV1Type
             ? {
@@ -515,6 +525,22 @@ class LocalWorkspaceFlavourProvider implements WorkspaceFlavourProvider {
         },
       },
     };
+  }
+}
+
+/**
+ * Phase 2: the sync server this install pairs its workspaces with. Unset (the default) the
+ * workspace is purely local, exactly as before. Set `localStorage['cloud-notes:sync-url']`
+ * (or `window.cloudNotesSync = { serverBaseUrl }`) to https://<sync host>.
+ */
+function notesSyncServerUrl(): string | undefined {
+  try {
+    const injected = (globalThis as { cloudNotesSync?: { serverBaseUrl?: string } })
+      .cloudNotesSync?.serverBaseUrl;
+    const url = injected ?? globalThis.localStorage?.getItem('cloud-notes:sync-url');
+    return url && /^https?:\/\//.test(url) ? url : undefined;
+  } catch {
+    return undefined;
   }
 }
 

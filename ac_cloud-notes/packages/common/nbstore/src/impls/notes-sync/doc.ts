@@ -27,11 +27,23 @@ import {
 export interface NotesSyncDocStorageOptions extends DocStorageOptions {
   /** e.g. https://notes-sync.example.com (no trailing slash needed) */
   serverBaseUrl: string;
-  /** a Bearer token, or a function returning a fresh one for every request */
-  token: string | (() => string | Promise<string>);
+  /**
+   * a Bearer token, or a function returning a fresh one for every request. Absent: the getter
+   * the host installed with configureNotesSyncToken (the worker does, from the fleet token
+   * provider), so the token never travels through the serialized storage options.
+   */
+  token?: string | (() => string | Promise<string>);
   /** how often other clients' changes are looked for; 0 turns the poll off */
   pollMs?: number;
   fetch?: typeof fetch;
+}
+
+type TokenGetter = (serverBaseUrl: string) => string | Promise<string>;
+let hostTokenGetter: TokenGetter | undefined;
+
+/** The worker installs how a token is obtained for a sync server (the fleet token provider). */
+export function configureNotesSyncToken(getter: TokenGetter) {
+  hostTokenGetter = getter;
 }
 
 export class NotesSyncHttpError extends Error {
@@ -98,7 +110,12 @@ export class NotesSyncDocStorage extends DocStorageBase<NotesSyncDocStorageOptio
 
   private async bearer() {
     const t = this.options.token;
-    return typeof t === 'function' ? await t() : t;
+    if (typeof t === 'function') return await t();
+    if (typeof t === 'string') return t;
+    if (!hostTokenGetter) {
+      throw new NotesSyncHttpError(401, 'no sync token provider configured');
+    }
+    return await hostTokenGetter(this.baseUrl);
   }
 
   /** @internal one authenticated request; throws NotesSyncHttpError for anything not in `ok` */
