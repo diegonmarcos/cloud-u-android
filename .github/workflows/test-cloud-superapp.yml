@@ -14,7 +14,7 @@ name: "Test → Cloud SuperApp (emulator edge-menu gesture test)"
 on:
   workflow_dispatch: {}
   push:
-    branches: [main, "wip/edge-fix2"]
+    branches: [main]
     paths:
       - "1_cicd/src/cicd/test-cloud-superapp.yml"
       - "ab_cloud-libs-shared/libs/launcher-onehand/**"
