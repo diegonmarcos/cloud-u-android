@@ -291,7 +291,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
     }
 
     @Composable
-    private fun Field(value: String, onChange: (String) -> Unit, hint: String, type: KeyboardType = KeyboardType.Text) {
+    private fun KdeField(value: String, onChange: (String) -> Unit, hint: String, type: KeyboardType = KeyboardType.Text) {
         OutlinedTextField(
             value = value, onValueChange = onChange, singleLine = true,
             placeholder = { Text(hint) },
@@ -464,9 +464,9 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
             title = { Text("Edit ${r.device.label}") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Field(name, { name = it }, "Name")
-                    Field(ip, { ip = it }, "IP (wg)")
-                    Field(port, { port = it }, "Port", KeyboardType.Number)
+                    KdeField(name, { name = it }, "Name")
+                    KdeField(ip, { ip = it }, "IP (wg)")
+                    KdeField(port, { port = it }, "Port", KeyboardType.Number)
                 }
             },
             confirmButton = {
@@ -644,7 +644,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
                     if (id == null) toast(if (!inputOn) "Tap 'Start control' first" else "Connect & pair first")
                 })
             // Keyboard
-            Field(keys, { keys = it }, "Type, then Send keys")
+            KdeField(keys, { keys = it }, "Type, then Send keys")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Btn(label = "Send keys", weight = 2f, size = 12.sp, onClick = {
                     val id = target()
@@ -656,7 +656,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
                 Btn(label = "⏎", size = 12.sp, onClick = { target()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(12)) } })
             }
             // Big Screen
-            Field(bigScreen, { bigScreen = it }, "Send a line to Plasma Big Screen")
+            KdeField(bigScreen, { bigScreen = it }, "Send a line to Plasma Big Screen")
             WideBtn("Send to Big Screen", 12.sp) {
                 val id = target()
                 if (id == null) toast("Connect & pair first")
@@ -928,7 +928,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
                     if (id == null) toast("Connect & pair first")
                 })
             // Keyboard + navigation keys (KDE special-key codes).
-            Field(keys, { keys = it }, "Type, then Send")
+            KdeField(keys, { keys = it }, "Type, then Send")
             BtnRow(
                 "Send" to {
                     val id = tgt()
@@ -954,7 +954,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
     private fun ShareCard() {
         var text by remember { mutableStateOf("") }
         KdeCard("Share", "Send text or a link to the connected desktop.") {
-            Field(text, { text = it }, "Text or https://link")
+            KdeField(text, { text = it }, "Text or https://link")
             BtnRow(
                 "Send text" to {
                     if (text.isNotBlank()) { toTarget(SharePlugin.text(text)); text = "" }
@@ -975,8 +975,8 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
         var to by remember { mutableStateOf("") }
         var body by remember { mutableStateOf("") }
         KdeCard("Send SMS", "This phone sends the text (needs SMS permission).") {
-            Field(to, { to = it }, "Recipient number", KeyboardType.Phone)
-            Field(body, { body = it }, "Message")
+            KdeField(to, { to = it }, "Recipient number", KeyboardType.Phone)
+            KdeField(body, { body = it }, "Message")
             BtnRow(
                 "Send SMS" to {
                     val num = to.trim()
