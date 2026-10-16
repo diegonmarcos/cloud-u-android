@@ -31,6 +31,7 @@ import type { ExtensionType, Store } from '@blocksuite/store';
 import { CanvasRenderer } from '../../renderer/canvas-renderer.js';
 import type { SurfaceBlockComponent } from '../../surface-block.js';
 import { getBgGridGap } from '../../utils/get-bg-grip-gap.js';
+import { buildDeckPdf, sortFramesForDeck } from './deck-pdf.js';
 import { FileExporter } from './file-exporter.js';
 
 // oxlint-disable-next-line typescript/consistent-type-imports
@@ -516,6 +517,68 @@ export class ExportManager {
       (rootModel as RootBlockModel).props.title.toString() + '.pdf',
       pdfBase64
     );
+  }
+
+  /**
+   * Miro-style deck: one PDF page per frame, in presentation order, each page the size of its frame.
+   * Returns false when the doc is not an edgeless doc or has no frames.
+   */
+  async exportFramesPdf(): Promise<boolean> {
+    const rootModel = this.doc.root;
+    if (!rootModel || isInsidePageEditor(this.editorHost)) return false;
+    try {
+      await this._checkReady();
+    } catch (e: unknown) {
+      console.error('Failed to export the frames');
+      console.error(e);
+      return false;
+    }
+    const gfx = this.editorHost.std.get(GfxControllerIdentifier);
+    const surfaceBlock = gfx.surfaceComponent as SurfaceBlockComponent | null;
+    if (!surfaceBlock || !(surfaceBlock.renderer instanceof CanvasRenderer)) {
+      return false;
+    }
+    const frames = sortFramesForDeck(
+      this.doc.getModelsByFlavour('affine:frame') as unknown as Array<
+        GfxBlockElementModel & { props: { presentationIndex?: string } }
+      >
+    );
+    if (frames.length === 0) return false;
+
+    const pages = [];
+    for (const frame of frames) {
+      const bound = frame.elementBound;
+      const inside = gfx
+        .getElementsByBound(bound, { type: 'all' })
+        .filter(e => e !== frame && (e as { flavour?: string }).flavour !== 'affine:frame');
+      const blocks = inside.filter(
+        (e): e is GfxBlockElementModel => e instanceof GfxBlockElementModel
+      );
+      const elements = inside.filter(
+        (e): e is GfxPrimitiveElementModel => e instanceof GfxPrimitiveElementModel
+      );
+      const canvas = await this.edgelessToCanvas(
+        surfaceBlock.renderer,
+        bound,
+        gfx,
+        blocks,
+        elements
+      );
+      if (!canvas) return false;
+      pages.push({
+        pngDataUrl: canvas.toDataURL('image/png'),
+        width: canvas.width,
+        height: canvas.height,
+      });
+    }
+    const bytes = await buildDeckPdf(pages);
+    let binary = '';
+    for (const b of bytes) binary += String.fromCharCode(b);
+    FileExporter.exportFile(
+      (rootModel as RootBlockModel).props.title.toString() + '-deck.pdf',
+      'data:application/pdf;base64,' + btoa(binary)
+    );
+    return true;
   }
 
   async exportPng() {

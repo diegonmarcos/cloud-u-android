@@ -40,7 +40,8 @@ type ExportType =
   | 'markdown'
   | 'copy-markdown'
   | 'snapshot'
-  | 'pdf-export';
+  | 'pdf-export'
+  | 'frames-pdf';
 
 interface ExportHandlerOptions {
   page: Store;
@@ -204,6 +205,11 @@ async function exportHandler({
       if (!std) return false;
       await std.get(ExportManager).exportPng();
       return true;
+    }
+    case 'frames-pdf': {
+      const std = editorRoot?.std;
+      if (!std) return false;
+      return await std.get(ExportManager).exportFramesPdf();
     }
     case 'pdf-export': {
       await PdfTransformer.exportDoc(page);

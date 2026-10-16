@@ -34,6 +34,7 @@ interface ExportProps {
       | 'copy-markdown'
       | 'snapshot'
       | 'pdf-export'
+      | 'frames-pdf'
   ) => void;
   pageMode?: 'page' | 'edgeless';
   className?: string;
@@ -125,6 +126,15 @@ export const ExportMenuItems = ({
           type="pdf-export"
           icon={<PrinterIcon />}
           label={t['Export to PDF']()}
+        />
+      )}
+      {pageMode === 'edgeless' && (
+        <ExportMenuItem
+          onSelect={() => exportHandler('frames-pdf')}
+          className={className}
+          type="frames-pdf"
+          icon={<PrinterIcon />}
+          label="Export frames as PDF deck"
         />
       )}
       <ExportMenuItem

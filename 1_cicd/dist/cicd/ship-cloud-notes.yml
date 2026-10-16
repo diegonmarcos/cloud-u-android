@@ -219,7 +219,7 @@ jobs:
   # Notion / Miro pillar features live in blocksuite packages; their unit specs run here
   # (a real yarn install, the packages' own vitest config), so a feature without a test cannot ship green.
   blocksuite_tests:
-    name: "Blocksuite unit tests (data-view: gallery, relations, rollups)"
+    name: "Blocksuite unit tests (data-view gallery, surface deck)"
     needs: storage_tests
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -243,6 +243,14 @@ jobs:
           sed 's/\x1b\[[0-9;]*m//g' /tmp/dv.log > /tmp/dv.plain
           grep -Eq "Test Files .* passed" /tmp/dv.plain && ! grep -Eq "failed" /tmp/dv.plain || { echo "::error::data-view specs did not all pass"; exit 1; }
           grep -q "gallery.unit.spec" /tmp/dv.plain || { echo "::error::the gallery spec did not run"; exit 1; }
+
+      - name: surface unit specs (frames to PDF deck)
+        working-directory: ac_cloud-notes/blocksuite/affine/blocks/surface
+        run: |
+          NO_COLOR=1 yarn vitest run 2>&1 | tee /tmp/surface.log
+          sed 's/\x1b\[[0-9;]*m//g' /tmp/surface.log > /tmp/surface.plain
+          grep -Eq "Test Files .* passed" /tmp/surface.plain && ! grep -Eq "failed" /tmp/surface.plain || { echo "::error::surface specs did not all pass"; exit 1; }
+          grep -q "deck-pdf.unit.spec" /tmp/surface.plain || { echo "::error::the deck spec did not run"; exit 1; }
 
   build_and_publish:
     needs: storage_tests
