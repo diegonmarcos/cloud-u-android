@@ -46,6 +46,8 @@ class CloudAppsSearchTest : KitPageHarness() {
 
         assertTrue("Back with a query clears it", page.tryHandleBack())
         compose.waitForIdle()
+        // The bar drops its focus on the next frames (SearchBox clears it when `blurs` moves); then nothing is left to show.
+        compose.waitUntil(3_000) { compose.onAllNodesWithTag(SearchPanelTags.DROPDOWN).fetchSemanticsNodes().isEmpty() }
         compose.onAllNodesWithTag(SearchPanelTags.DROPDOWN).assertCountEquals(0)
     }
 
