@@ -1,0 +1,37 @@
+name: "top bar guard — an app that declares ui.top_bar draws it with libs:bottomnav's AppTopBar"
+
+# The owner kept asking for the same first row in every app (Cloud Tasks, Cloud Calc, Cloud Store): a hamburger
+# that opens a drawer the page fills, the title, and round AI and Settings buttons. libs:bottomnav's AppTopBar
+# (ab_cloud-libs-shared/libs/bottomnav) is that row, declared once in build.json::ui.top_bar.
+# cloud-android-top-bar-guard.py fails whenever an app that declares it draws a hamburger, a drawer, a top app
+# bar or a Cloud Account launch of its own, never calls AppTopBarScaffold, does not bake UI_TOP_BAR_B64, names a
+# settings entry the bar does not know, or declares ai without libs:ai; and whenever libs:bottomnav stops holding
+# the bar. Everything it knows is in 1_cicd/src/data/top-bar-guard.json.
+#
+# EVERY PUSH, NO PATH FILTER: the commit it must catch is any app's build.json or any app's Kotlin; see
+# 1_cicd/src/data/guard-triggers.json.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  top-bar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tester runs FIRST: it draws a copy of the bar in an app five ways, breaks the declaration, the
+      # wiring and the owner, requires the guard to fail (or refuse) each time, then requires a pass on the
+      # clean fleet and on the real tree. A gate whose red path is unproven reads as enforcement and
+      # enforces nothing.
+      - name: The guard still fails when a copy of the top bar appears
+        run: bash 1_cicd/src/scripts/test/top-bar-guard.test.sh
+
+      - name: Apps that declare ui.top_bar draw libs:bottomnav's AppTopBar
+        run: python3 1_cicd/src/scripts/cloud-android-top-bar-guard.py .

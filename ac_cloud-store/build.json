@@ -38,7 +38,9 @@
         "libs:bottomnav",
         "libs:sysdns",
         "libs:shizuku-adb-debug-tools",
-        "libs:fleetconfig-model"
+        "libs:fleetconfig-model",
+        "libs:ai",
+        "libs:model-catalogue"
       ]
     },
     "libs:core": {
@@ -89,6 +91,16 @@
     },
     "libs:bottomnav": {
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
+    },
+    "libs:ai": {
+      "_doc_dir": "The top bar's AI panel: the fleet's AI chat (libs:ai) over the fleet agent gateway (my-ai-api, mesh only), the same chat Cloud Code's AI page has. Shared BY REFERENCE. This app holds no OpenRouter token and reads none (decisions-use guard D5): the gateway holds the fleet key. Its mesh address is baked as BuildConfig.AI_GATEWAY_URL by libs/ai/ai-gateway.gradle.",
+      "dir": "../ab_cloud-libs-shared/libs/ai",
+      "type": "library"
+    },
+    "libs:model-catalogue": {
+      "_doc_dir": "libs:ai's `api` dependency: the shared agent descriptor (assets/agents/agents.json) its Agent picker lists. Listed so settings.gradle resolves the path.",
+      "dir": "../ab_cloud-libs-shared/libs/model-catalogue",
       "type": "library"
     }
   },
@@ -251,6 +263,11 @@
         "grep",
         "jq"
       ]
+    },
+    "unit": {
+      "_doc": "The shared top bar's Compose UI suite (libs:bottomnav AppTopBarTest, Robolectric, no emulator): the drawer a page supplies, the AI panel, the Settings dropdown, the Cloud Account launch intent and the Configs callback, run through THIS app because it is the first app to adopt AppTopBar. Scoped to :libs:bottomnav so a sibling lib's suite cannot turn this release red. Run by the ship workflow's 'JVM unit tests' step, after the JDK/SDK and the vault key (this project cannot configure without the shared key), through build.sh test.",
+      "task": ":libs:bottomnav:testDebugUnitTest",
+      "enabled": true
     }
   },
   "dns_handoff": {
@@ -264,9 +281,18 @@
       "cloud",
       "phone",
       "feed",
-      "access",
-      "settings"
+      "access"
     ],
+    "top_bar": {
+      "_doc": "THE first row of the app (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger that opens a side drawer the CURRENT page fills (MainActivity's StoreDrawer: the Store's sections and the open section's pages), the title, and two circular buttons: AI (libs:ai's chat in an anchored panel) and Settings (Account launches Cloud Account, Configs opens the Settings section below). Settings left the island for the top bar's Settings > Configs: the section stays declared (it is the page Configs opens, and `tab=settings` still lands on it) but is no longer a bottom_nav id. No app draws its own copy of this row (cloud-android-top-bar-guard).",
+      "title": "Cloud Store",
+      "drawer": true,
+      "ai": true,
+      "settings": [
+        "account",
+        "configs"
+      ]
+    },
     "sections": [
       {
         "id": "cloud",

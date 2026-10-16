@@ -47,10 +47,12 @@ on:
       # data manifests and this workflow file. fleet-refresh.yml (schedule
       # only) ships the app for a moved static lib or cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-store.yml"
+      #   input: "ab_cloud-libs-shared/libs/ai/**"
       #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      #   input: "ab_cloud-libs-shared/libs/model-catalogue/**"
       #   input: "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       #   input: "ab_cloud-libs-shared/libs/sysdns/**"
       #   input: "ab_cloud-libs-shared/libs/ui-kit/**"
@@ -101,7 +103,7 @@ jobs:
         run: |
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
-          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
+          # unit runs below, after the JDK/SDK and the vault key: this project cannot configure without them.
 
       # Publish-if-changed gate. Android builds are not byte-reproducible, so a
       # rebuild of unchanged source published different bytes, a different
@@ -172,6 +174,18 @@ jobs:
           else
             echo "variant=debug" >> "$GITHUB_OUTPUT"
           fi
+
+      # libs:bottomnav's Robolectric suite (AppTopBarTest: the drawer a page supplies, the AI panel, the Settings
+      # dropdown, the Cloud Account launch intent, the Configs callback). Same env as the build step: gradle cannot
+      # even CONFIGURE this project without the shared signing key. One ABI is enough: the suite is ABI-free.
+      - name: JVM unit tests (fatal on failure)
+        if: steps.gate.outputs.skip != 'true' && matrix.abi == 'arm64'
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
       - name: Build APK (engine)
         if: steps.gate.outputs.skip != 'true'

@@ -86,10 +86,11 @@ import androidx.compose.ui.window.PopupProperties
 @Composable
 public fun AppTopBarScaffold(
     decl: TopBarDecl,
-    title: String,
     onAccount: () -> Unit,
     onConfigs: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The app's name; the declared `ui.top_bar.title` unless the host says otherwise. */
+    title: String = decl.title,
     controller: AppTopBarController = rememberAppTopBarController(),
     labels: AppTopBarLabels = appTopBarLabels(),
     colors: AppTopBarColors = appTopBarColors(),

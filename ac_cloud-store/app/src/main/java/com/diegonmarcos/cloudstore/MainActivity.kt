@@ -31,12 +31,17 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import com.diegonmarcos.superapp.ai.AiFleetChatPanel
+import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavSection
 import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.bottomnav.TopBarDecl
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.islandEntries
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 import com.diegonmarcos.superapp.appstore.StoreDensity
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.compose.AndroidFragment
@@ -49,8 +54,12 @@ import com.diegonmarcos.superapp.updater.Updater
 
 /**
  * #865 The three store pages SuperApp shows under Config, as sections of the fleet island (#868):
- * Cloud (the constellation fleet), Phone (installed apps), Mesh and Settings (#866). The four are
- * build.json::ui.sections and ui.bottom_nav; [NAV] reads them, the island draws them.
+ * Cloud (the constellation fleet), Phone (installed apps), Feed and Access (#866). They are
+ * build.json::ui.sections and ui.bottom_nav; [NAV] reads them, the island draws them. Settings is the
+ * fifth section but no longer an island item: it is the page the top bar's Settings > Configs opens.
+ *
+ * The first row is the fleet's AppTopBar (libs:bottomnav), declared in build.json::ui.top_bar and read
+ * as [TOP_BAR]: a hamburger whose drawer is the page's ([StoreDrawer]), the title, AI and Settings.
  *
  * The pages are libs:appstore's Fragments, hosted with AndroidFragment. All
  * three stay composed and the hidden ones are sized to zero, so switching
@@ -97,13 +106,19 @@ class MainActivity : AppCompatActivity() {
         androidx.compose.runtime.LaunchedEffect(requested) {
             requested?.let { selected = it; requested = null }
         }
-        Box(Modifier.fillMaxSize().statusBarsPadding()) {
+        // Configs is not on the island any more (the top bar's Settings > Configs opens it), so Back leaves it for the home section.
+        androidx.activity.compose.BackHandler(enabled = selected == TAB_SETTINGS) { selected = NAV.default()?.id ?: TAB_CLOUD }
+        val shell: @androidx.compose.runtime.Composable () -> Unit = {
             BottomNavHost(
                 entries = NAV.islandEntries { rememberVectorPainter(iconFor(it)) },
                 selectedId = selected,
                 onSelect = { selected = it.id },
             ) {
             val section = NAV.section(selected)
+            // The drawer is the page's: the Store's sections, and the open section's own pages.
+            TopBarDrawer { close ->
+                StoreDrawer(NAV, selected, section?.takeIf { it.pages.size > 1 }?.let { pageOf(it) }, onSection = { selected = it }, onPage = { s, p -> selected = s; choose(s, p) }, close = close)
+            }
             Column(Modifier.fillMaxSize()) {
                 // A section with child pages gets the fleet's strip (Phone: Installed | Declared, Feed:
                 // Commits | CI-CD); the page below reads the choice (Phone from StorePages, Feed from here).
@@ -122,6 +137,16 @@ class MainActivity : AppCompatActivity() {
             }
             }
             }
+        }
+        Box(Modifier.fillMaxSize().statusBarsPadding()) {
+            val topBar = TOP_BAR
+            if (topBar == null) shell() else AppTopBarScaffold(
+                decl = topBar,
+                onAccount = rememberAccountLauncher(),
+                onConfigs = { selected = TAB_SETTINGS },
+                aiPanel = { AiFleetChatPanel(BuildConfig.AI_GATEWAY_URL) },
+                content = shell,
+            )
         }
     }
 
@@ -193,6 +218,9 @@ class MainActivity : AppCompatActivity() {
         val NAV: NavDecl by lazy {
             NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
         }
+
+        /** build.json::ui.top_bar as baked into BuildConfig: what the first row draws (null = the app declares no top bar). */
+        val TOP_BAR: TopBarDecl? by lazy { TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64) }
 
         /** The declared icon name → the glyph the island draws. */
         private fun iconFor(name: String): ImageVector = when (name) {

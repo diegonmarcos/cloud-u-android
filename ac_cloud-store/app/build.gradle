@@ -58,6 +58,10 @@ def uiBottomNav       = (buildJson.ui?.bottom_nav ?: []).join(',')
 def uiSectionsB64     = b64(buildJson.ui?.sections ?: [])
 def dnsHandoffAction = (buildJson.dns_handoff?.shortcut_action ?: '').toString()
 def uiDefaultSection  = (buildJson.ui?.default_section ?: '').toString()
+// The top bar declaration (libs:bottomnav TopBarDecl): ui.top_bar as base64 JSON, '' when the app declares none.
+def uiTopBarB64       = buildJson.ui?.top_bar ? b64(buildJson.ui.top_bar) : ''
+// The top bar's AI panel gateway: libs:ai's contract names the service, the fleet catalogue its mesh address (sets aiGatewayUrl).
+apply from: "$rootDir/../ab_cloud-libs-shared/libs/ai/ai-gateway.gradle"
 def profileDefault   = buildJson.ui?.profile_default ?: [:]
 def profileName      = (profileDefault.name      ?: '').toString()
 def profileEmail     = (profileDefault.email     ?: '').toString()
@@ -166,6 +170,8 @@ android {
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64",   "\"${uiPermissionsRolesB64}\""
         buildConfigField "String", "UI_BOTTOM_NAV",        "\"${uiBottomNav}\""
         buildConfigField "String", "UI_SECTIONS_B64",      "\"${uiSectionsB64}\""
+        buildConfigField "String", "UI_TOP_BAR_B64",       "\"${uiTopBarB64}\""
+        buildConfigField "String", "AI_GATEWAY_URL",       "\"${aiGatewayUrl}\""
         buildConfigField "String", "DNS_HANDOFF_ACTION",   "\"${dnsHandoffAction}\""
         buildConfigField "String", "UI_DEFAULT_SECTION",   "\"${uiDefaultSection}\""
         buildConfigField "String", "UI_PROFILE_NAME",      "\"${profileName}\""
@@ -230,6 +236,8 @@ dependencies {
     implementation project(':libs:sysdns')     // #874 FleetDnsBridge: the one resolver of this process
     // #868 the bottom island + NavDecl: the Store's four pages are ui.sections.
     implementation project(':libs:bottomnav')
+    // The top bar's AI panel: the fleet's AI chat over the fleet agent gateway (no token on the phone). It brings libs:model-catalogue along.
+    implementation project(':libs:ai')
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'

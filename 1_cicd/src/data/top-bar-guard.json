@@ -1,0 +1,45 @@
+{
+  "_doc": "TOP-BAR policy. The fleet draws its first row ONCE: libs:bottomnav's AppTopBar (ab_cloud-libs-shared/libs/bottomnav, package com.diegonmarcos.superapp.bottomnav): a hamburger that opens a side drawer the current page fills (TopBarDrawer), the app's title centred, and two circular buttons at the right, AI (the shared libs:ai chat in an anchored panel) and Settings (a dropdown: Account launches Cloud Account, Configs calls the host's own Configs page). An app DECLARES it in build.json::ui.top_bar and libs:bottomnav's TopBarDecl reads it. Consumed by 1_cicd/src/scripts/cloud-android-top-bar-guard.py, which fails when an app that declares ui.top_bar draws the row itself, or does not draw the declared one. Nothing in the script names an app, a path or a marker: adding a rule, a settings entry or a wiring needle is a DATA edit here.",
+  "_rule": "an app that declares ui.top_bar draws it with libs:bottomnav's AppTopBar; it does not hand-roll a hamburger, a drawer, a top app bar or a Cloud Account launch.",
+  "owner": "ab_cloud-libs-shared/libs/bottomnav",
+  "_doc_owner": "The one tree allowed to draw the bar. It must also still HOLD it (owner_must_hold): a guard whose owner was emptied would stay green for every app that copied the bar back out.",
+  "owner_must_hold": [
+    {"file": "src/main/kotlin/com/diegonmarcos/superapp/bottomnav/AppTopBar.kt", "needles": ["fun AppTopBarScaffold(", "fun AppTopBar(", "fun TopBarDrawer(", "class AppTopBarController"]},
+    {"file": "src/main/kotlin/com/diegonmarcos/superapp/bottomnav/TopBarDecl.kt", "needles": ["class TopBarDecl(", "fun fromBuildConfig("]},
+    {"file": "src/main/kotlin/com/diegonmarcos/superapp/bottomnav/AccountLaunch.kt", "needles": ["fun rememberAccountLauncher(", "cloudaccount"]}
+  ],
+  "scan_prefixes": ["aa_", "ab_", "ac_"],
+  "_doc_scan_prefixes": "A top-level directory starting with any of these may be an app. It is checked when its build.json::ui declares top_bar, whichever app that is: a new app that declares the bar is held to the rules the day it does.",
+  "skip_dirs": [".git", "node_modules", "build", "dist", "target", "z_archive", ".gradle", "web"],
+  "skip_path_parts": ["/src/test/", "/src/androidTest/", "/src/testDebug/", "/test/"],
+  "gradle_files": ["app/build.gradle", "app/build.gradle.kts"],
+  "known_settings": ["account", "configs"],
+  "_doc_known_settings": "The entries of the Settings dropdown (libs:bottomnav TopBarSettings.KNOWN). Account launches Cloud Account; Configs calls the host's own Configs page.",
+  "wiring": {
+    "bake": "UI_TOP_BAR_B64",
+    "scaffold": "AppTopBarScaffold(",
+    "ai": ["AiFleetChatPanel(", "AiChatPage("],
+    "settings": {
+      "account": ["rememberAccountLauncher(", "AccountLaunch."],
+      "configs": ["onConfigs ="]
+    }
+  },
+  "rules": {
+    "own-hamburger": {
+      "pattern": "Icons\\.(?:AutoMirrored\\.)?(?:Filled|Default|Rounded|Outlined|Sharp|TwoTone)\\.Menu\\b",
+      "why": "an app that declares ui.top_bar draws the hamburger with AppTopBar, not with its own Menu icon"
+    },
+    "own-drawer": {
+      "pattern": "\\b(?:ModalNavigationDrawer|DismissibleNavigationDrawer|PermanentNavigationDrawer|ModalDrawerSheet|DismissibleDrawerSheet)\\s*\\(",
+      "why": "the side drawer is AppTopBar's; a page fills it with TopBarDrawer { ... } instead of drawing a drawer"
+    },
+    "own-top-app-bar": {
+      "pattern": "\\b(?:CenterAlignedTopAppBar|SmallTopAppBar|MediumTopAppBar|LargeTopAppBar|TopAppBar)\\s*\\(",
+      "why": "the first row is AppTopBar; a Material top app bar beside it is a second copy"
+    },
+    "own-account-launch": {
+      "pattern": "cloudaccount\\.OPEN|\"com\\.diegonmarcos\\.cloudaccount\"",
+      "why": "the Account entry launches Cloud Account through the bar's rememberAccountLauncher / AccountLaunch, once for the fleet"
+    }
+  }
+}

@@ -55,6 +55,10 @@ val chat = AiChatState(host)
 AiChatPage(chat, materialAiTheme())
 ```
 
+An app that only wants this chat (gateway, history, no token) skips the wiring: `AiFleetChat.chat(context, BuildConfig.AI_GATEWAY_URL)`
+is the process's one `AiChatState` (sessions in `filesDir/ai-sessions.json`), and `AiFleetChatPanel(gatewayUrl)` is the page for a
+container that is not a whole screen: it is what libs:bottomnav's shared top bar (`AppTopBar`, `ui.top_bar.ai`) shows in its AI panel.
+
 `AiStandardHost` takes `AiTool`s too: a model-called tool that is `mutating` waits for the consent card
 (`AiSink.consent`), runs only after Allow, and is told "denied" on Deny. There is no tool in the lib: per-app
 tools come with the apps that need them.
