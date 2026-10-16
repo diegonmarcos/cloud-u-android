@@ -5,6 +5,7 @@ import app.sterna.core.data.text.Block
 import app.sterna.core.data.text.Inline
 import app.sterna.core.data.text.Link
 import app.sterna.core.data.text.Span
+import app.sterna.core.data.text.htmlBodyFrom
 import app.sterna.core.data.text.richBodyFrom
 import app.sterna.core.jmap.model.EmailBodyPart
 import kotlinx.coroutines.CoroutineScope
@@ -27,6 +28,8 @@ class SendOutbox(private val scope: CoroutineScope) {
         val bcc: String,
         val subject: String,
         val body: String,
+        /** The body as HTML - the composer's model. Null only for a draft built before it existed. */
+        val bodyHtml: String? = null,
         /**
          * The inline styling [body] carries (#131). Empty is the honest answer for a message with
          */
@@ -128,6 +131,7 @@ internal fun composeDraftOf(draft: MailRepository.OutboxDraft): SendOutbox.Compo
         bcc = draft.bcc,
         subject = draft.subject,
         body = rich.text,
+        bodyHtml = htmlBodyFrom(draft.htmlBody) { draft.body }.html,
         bodyRanges = rich.ranges,
         bodyBlocks = rich.blocks,
         bodyLinks = rich.links,

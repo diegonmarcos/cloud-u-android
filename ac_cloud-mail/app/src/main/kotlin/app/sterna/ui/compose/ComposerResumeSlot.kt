@@ -89,6 +89,9 @@ class ComposerResumeSlot(private val file: File) {
         }
     }
 
+    /** The slot that parks the HTML model of the same composer: the same format, a file beside this one. */
+    internal fun htmlSibling(): ComposerResumeSlot = ComposerResumeSlot(File(file.parentFile, file.name + HTML_SUFFIX))
+
     /** Reads back what [write] parked under [token], or `null` when the file is missing, unreadable,
      * truncated, or was written under a DIFFERENT token. A successful read ERASES the file — a
      *  resume is consumed once — while a refused read leaves it alone, the matching token still
@@ -104,6 +107,9 @@ class ComposerResumeSlot(private val file: File) {
         try {
             file.delete()
             tempFile().delete()
+            // …and the HTML model parked beside it: the cleartext of the message, same as the text.
+            File(file.parentFile, file.name + HTML_SUFFIX).delete()
+            File(file.parentFile, file.name + HTML_SUFFIX + ".tmp").delete()
         } catch (e: Exception) {
             // Nothing to do and nothing to say: the caller is on its way out of the composer.
         }
@@ -166,6 +172,9 @@ class ComposerResumeSlot(private val file: File) {
                 // A launch is not the place to fail over housekeeping.
             }
         }
+
+        /** The file name suffix of the slot that holds the HTML model. Starts with the composer prefix, so a sweep takes it too. */
+        internal const val HTML_SUFFIX = "-html"
 
         /** The only header ever WRITTEN: four families, two block groups, one link section. */
         private const val MAGIC = "sterna-composer-resume/4"
@@ -233,6 +242,14 @@ class ComposerResumeState(
      *  fall would be clean one rotation later and the save after that would destroy the server copy. */
     val bodyWasLost: Boolean = false,
 ) {
+    /**
+     * The body AS HTML (the composer's model) and its baseline, beside the plain-text [bodyState] they
+     * project to. Parked in a SECOND file next to the text one ([ComposerResumeSlot.htmlSibling]) and
+     * never in the parcel: a quoted newsletter is hundreds of kilobytes of markup.
+     */
+    val htmlState: MutableState<String> = mutableStateOf("")
+    val htmlBaselineState: MutableState<String> = mutableStateOf("")
+
     val bodyState: MutableState<TextFieldValue> = mutableStateOf(body)
     val baselineState: MutableState<String> = mutableStateOf(baseline)
     val rangesState: MutableState<Map<Inline, List<Span>>> = mutableStateOf(ranges)
@@ -283,6 +300,14 @@ internal fun saveComposerResume(state: ComposerResumeState, slot: ComposerResume
             state.baselineLinksState.value,
         ),
     )
+    // The HTML model, in its own file: written whenever there is one, and if THAT write fails the body
+    // is lost as far as the editor is concerned - the plain text alone would reopen it unformatted.
+    val html = state.htmlState.value
+    val htmlParked = html.isEmpty() ||
+        slot.htmlSibling().write(
+            token = state.token, body = html, selectionStart = 0, selectionEnd = 0,
+            baseline = state.htmlBaselineState.value,
+        )
     val carried = when {
         parked -> TOKEN_FORM + state.token
         body.text.length + baseline.length + encoded.length <= INLINE_LIMIT ->
@@ -295,7 +320,7 @@ internal fun saveComposerResume(state: ComposerResumeState, slot: ComposerResume
     // Never `null` from here on — the one `null` this function still returns is `state.closed`
     // above. A parcel with no value restores no state, and a restore that yields no state takes the
     // flag down with it.
-    if (state.bodyWasLost || carried == null) return LOST_FORM + carried.orEmpty()
+    if (state.bodyWasLost || carried == null || !htmlParked) return LOST_FORM + carried.orEmpty()
     return carried
 }
 
@@ -325,6 +350,9 @@ internal fun restoreComposerResume(saved: String, slot: ComposerResumeSlot): Com
     if (resume == null && !lost && !unreadable) return null
     // A name of its own, not the one just read: `read` has CONSUMED the file, so the composer
     // rebuilt here parks a new record — see [ComposerResumeState.token].
+    // The HTML model, by the token the parcel named. Absent for a composer that never had one (or a
+    // parcel from the build before the HTML editor): the screen then opens the text, wrapped.
+    val html = if (form.startsWith(TOKEN_FORM)) slot.htmlSibling().read(form.substring(TOKEN_FORM.length)) else null
     return ComposerResumeState(
         TextFieldValue(
             resume?.body.orEmpty(),
@@ -338,7 +366,10 @@ internal fun restoreComposerResume(saved: String, slot: ComposerResumeSlot): Com
         links = resume?.links.orEmpty(),
         baselineLinks = resume?.baselineLinks.orEmpty(),
         bodyWasLost = lost || unreadable,
-    )
+    ).also {
+        it.htmlState.value = html?.body.orEmpty()
+        it.htmlBaselineState.value = html?.baseline.orEmpty()
+    }
 }
 
 /** Reads `v:<start>:<end>:<bodyChars>:<styling>:<body><baseline>`; only the first four `:` are

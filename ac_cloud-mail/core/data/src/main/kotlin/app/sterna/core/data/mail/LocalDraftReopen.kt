@@ -8,6 +8,7 @@ import app.sterna.core.data.text.Inline
 import app.sterna.core.data.text.Link
 import app.sterna.core.data.text.RichBody
 import app.sterna.core.data.text.Span
+import app.sterna.core.data.text.htmlBodyFrom
 import app.sterna.core.data.text.richBodyFrom
 import app.sterna.core.jmap.model.EmailBodyPart
 import kotlinx.coroutines.CancellationException
@@ -45,6 +46,8 @@ data class LocalDraftPrefill(
     val bcc: String,
     val subject: String,
     val body: String,
+    /** The body as HTML - the composer's model; [body] and the styling beside it are the older projection. */
+    val bodyHtml: String? = null,
     val bodyRanges: Map<Inline, List<Span>> = emptyMap(),
     /** The list blocks [body] carries (#131). Dropped here, the next save stores the removal. */
     val bodyBlocks: List<Block> = emptyList(),
@@ -87,6 +90,7 @@ fun localDraftPrefill(row: LocalDraftEntity): LocalDraftPrefill {
         bcc = bcc.joinToString(", "),
         subject = row.subject,
         body = rich.text,
+        bodyHtml = htmlBodyFrom(row.htmlBody) { row.textBody }.html,
         bodyRanges = rich.ranges,
         bodyBlocks = rich.blocks,
         bodyLinks = rich.links,

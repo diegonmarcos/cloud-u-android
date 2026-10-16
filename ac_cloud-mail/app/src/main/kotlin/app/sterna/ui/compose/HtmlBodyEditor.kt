@@ -216,6 +216,7 @@ internal class HtmlEditorController {
     private var web: WebView? = null
     private var ready = false
     private var pending: String? = null
+    private var wantFocus = false
 
     var format by mutableStateOf(EditorFormat())
         internal set
@@ -250,6 +251,10 @@ internal class HtmlEditorController {
         pending?.let {
             pending = null
             run("Sterna.setHtml(${jsString(it)})")
+        }
+        if (wantFocus) {
+            wantFocus = false
+            focusNow()
         }
     }
 
@@ -290,7 +295,12 @@ internal class HtmlEditorController {
 
     fun applyScope(mode: String, text: String) = run("Sterna.applyScope(${jsString(mode)},${jsString(text)})")
 
+    /** Put the caret in the body and raise the keyboard - held until the page is up if it is not yet. */
     fun focusBody() {
+        if (ready) focusNow() else wantFocus = true
+    }
+
+    private fun focusNow() {
         val view = web ?: return
         view.requestFocus()
         run("Sterna.focus()")

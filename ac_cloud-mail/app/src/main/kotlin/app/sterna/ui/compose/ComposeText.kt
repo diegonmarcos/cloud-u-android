@@ -13,6 +13,7 @@ import app.sterna.core.data.pgp.PgpMode
 import app.sterna.core.data.pgp.encrypts
 import app.sterna.core.data.text.RichBody
 import app.sterna.core.data.text.Span
+import app.sterna.core.data.text.htmlBodyFrom
 import app.sterna.core.data.text.richBodyFrom
 import app.sterna.core.data.text.sanitiseReceivedHtml
 import app.sterna.core.data.text.htmlEscape
@@ -471,6 +472,8 @@ internal fun draftFieldsOf(o: Email, cached: Email?): DraftFields {
         bcc = bcc,
         subject = o.subject.orEmpty(),
         body = rich.text,
+        // The model: the draft's own html part (sanitised), else its text wrapped.
+        bodyHtml = htmlBodyFrom(o.htmlContent()) { originalPlainText(o) }.html,
         bodyRanges = rich.ranges,
         bodyBlocks = rich.blocks,
         bodyLinks = rich.links,

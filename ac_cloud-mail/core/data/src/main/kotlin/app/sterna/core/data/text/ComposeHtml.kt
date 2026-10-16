@@ -95,3 +95,36 @@ fun htmlBodyFrom(html: String?, plainText: () -> String): RichBody {
         ?: plainTextToHtml(plainText())
     return RichBody.ofHtml(source)
 }
+
+/**
+ * [parts] without the inline pictures [wireHtml] no longer references: a picture the owner deleted
+ * from the body again must not travel as an orphan `Content-ID` part. File attachments always stay.
+ */
+fun withoutUnusedInlineParts(
+    parts: List<app.sterna.core.jmap.model.EmailBodyPart>,
+    wireHtml: String,
+): List<app.sterna.core.jmap.model.EmailBodyPart> {
+    val used = cidsReferencedBy(wireHtml)
+    return parts.filter { p ->
+        val cid = p.cid?.trim()?.trim('<', '>')
+        val inline = p.disposition.equals("inline", ignoreCase = true) && !cid.isNullOrEmpty()
+        !inline || cid in used
+    }
+}
+
+private val DIV_TAG = Regex("(?i)<(/?)div\\b[^>]*>")
+
+/**
+ * The editor block [kind] out of [html] - its opening `<div data-sterna="…">` to the matching
+ * `</div>`, nested divs counted - or null when there is none. Used to carry a forwarded original
+ * into a body the owner has already begun, instead of dropping it.
+ */
+fun extractEditorBlock(html: String, kind: String): String? {
+    val open = Regex("(?i)<div\\s+$STERNA_BLOCK_ATTR\\s*=\\s*\"${Regex.escape(kind)}\"[^>]*>").find(html) ?: return null
+    var depth = 1
+    for (tag in DIV_TAG.findAll(html, open.range.last + 1)) {
+        depth += if (tag.groupValues[1] == "/") -1 else 1
+        if (depth == 0) return html.substring(open.range.first, tag.range.last + 1)
+    }
+    return null
+}

@@ -80,6 +80,11 @@ import app.sterna.ui.text.TextToolNamedItems
 import app.sterna.ui.text.TextToolUndo
 import app.sterna.ui.text.TextToolSurface
 import app.sterna.ui.text.TextTool
+import app.sterna.core.data.text.BLOCK_FORWARD
+import app.sterna.core.data.text.BLOCK_SIGNATURE
+import app.sterna.core.data.text.extractEditorBlock
+import app.sterna.core.data.text.plainTextToHtml
+import app.sterna.core.imap.htmlToPlainText
 import app.sterna.core.data.text.Span
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
@@ -281,11 +286,12 @@ fun ComposeScreen(
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let(viewModel::attach)
     }
-    // An inline picture: staged as an inline part with its own Content-ID, and a marker line put at
-    // the caret, which the send replaces with the `<img src="cid:…">` (see [inlineImageVerbatims]).
-    var inlineImageMarker by remember { mutableStateOf<String?>(null) }
+    // The body editor: a WebView page whose single contenteditable element IS the body - HTML, end to
+    // end. An inline picture is staged as an inline part with its own Content-ID and put into the page
+    // at the caret as an <img> tagged with it; the send swaps the preview for `cid:` (see [htmlForWire]).
+    val editor = remember { HtmlEditorController() }
     val inlineImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { viewModel.attachInlineImage(it) { marker -> inlineImageMarker = marker } }
+        uri?.let { viewModel.attachInlineImage(it) { cid, preview, name -> editor.image(preview, cid, name) } }
     }
     // OpenKeychain's passphrase/key dialog round-trip during a PGP send.
     val pgpLauncher = rememberPgpInteractionLauncher { data -> viewModel.retryPgpSend(data) }
@@ -494,27 +500,6 @@ fun ComposeScreen(
     // …and its links (#131), held the same way and for the same reason: `body` stays plain text,
     // and a link is a span over it that happens to carry an address.
     var links by resume.linksState
-    // What the next keystroke at the caret should carry, once a button was tapped with nothing
-    // selected; `null` = no instruction. Transient on purpose: a gesture in flight, not a value worth
-    // parking across a rotation.
-    var pending by remember { mutableStateOf<Set<Inline>?>(null) }
-    LaunchedEffect(inlineImageMarker) {
-        val marker = inlineImageMarker ?: return@LaunchedEffect
-        inlineImageMarker = null
-        // Put at the END of the body, on a line of its own: text added after everything leaves every
-        // span, list line and link exactly where it was, so no remap is needed (the screen's one
-        // remap is the keystroke's).
-        val text = body.text
-        val insert = (if (text.isNotEmpty() && !text.endsWith("\n")) "\n" else "") + marker + "\n"
-        val nextText = text + insert
-        val caret = nextText.length
-        body = TextFieldValue(nextText, TextRange(caret))
-    }
-    // Whether the link dialog is up (#131). `rememberSaveable`, like the composer's own dialogs: a
-    // rotation with it open brings the DIALOG back. It says nothing about what was typed INSIDE it:
-    // the two fields are plain `remember`s, so an address half typed is lost to a rotation — measured
-    // and accepted, not claimed here as though it were held.
-    var linkDialog by rememberSaveable { mutableStateOf(false) }
     var expanded by rememberSaveable { mutableStateOf(false) }
     // Whether the To field may fold its chips into a "+N" summary. False for everything except a
     // reply-all, where the whole point is that the recipient list is visible before a word is typed.
@@ -532,12 +517,45 @@ fun ComposeScreen(
     var baselineRanges by resume.baselineRangesState
     var baselineBlocks by resume.baselineBlocksState
     var baselineLinks by resume.baselineLinksState
+    // THE MODEL: the body as HTML, and the HTML it was opened with. `body` above is only its plain
+    // projection (htmlToPlainText) for the ~70 sites that ask "is there text", "is it the prefill";
+    // `ranges`, `blocks` and `links` stay empty - the markup is not described a second time.
+    var bodyHtml by resume.htmlState
+    var initialHtml by resume.htmlBaselineState
+    // The next page report is the baseline (a programmatic load, or a signature swap on a clean body).
+    var rebaseOnLoad by remember { mutableStateOf(false) }
+    var rebaseOnChange by remember { mutableStateOf(false) }
     // …the box included: a reopened outbox message can OPEN ticked, so "ticked" is not an edit while
     // ticking or clearing it is. Without this baseline, clearing the box then leaving sent the message
     // still asking (see [ComposeDirty]).
     var initialRequestReceipt by rememberSaveable { mutableStateOf(false) }
     // The body and its styling as one value: derived on every recomposition, never stored twice.
-    val rich = RichBody(body.text, ranges, blocks, links)
+    val rich = RichBody(body.text, ranges, blocks, links, html = bodyHtml.ifEmpty { null })
+    // The page's markup RIGHT NOW: the page reports edits after a short debounce, so every gesture
+    // that commits the body (send, schedule, save) asks the page itself first.
+    suspend fun freshRich(): RichBody {
+        val html = editor.currentHtml(bodyHtml)
+        bodyHtml = html
+        return RichBody(htmlToPlainText(html), emptyMap(), html = html)
+    }
+    // Take [html] as the whole body - a prefill, a reply's quote, a restored composer - into the page
+    // and into the plain projection, and (with [asBaseline]) as what "unchanged" means.
+    fun adoptHtml(html: String, asBaseline: Boolean) {
+        val text = htmlToPlainText(html)
+        bodyHtml = html
+        body = TextFieldValue(text)
+        ranges = emptyMap()
+        blocks = emptyList()
+        links = emptyList()
+        if (asBaseline) {
+            initialBody = text
+            baselineRanges = emptyMap()
+            baselineBlocks = emptyList()
+            baselineLinks = emptyList()
+            rebaseOnLoad = true
+        }
+        editor.load(html)
+    }
 
     // Text tools on a DRAFT. Unlike the reader's, this one applies: the body is the user's own
     // and the result belongs back in the field.
@@ -547,48 +565,42 @@ fun ComposeScreen(
     // user keeps typing while one is in flight; applying a reply against a range that has since
     // moved would overwrite whatever drifted into it. Same stale guard the keyboard's Enhance
     // makes, for the same reason.
-    var textToolTarget by remember { mutableStateOf<Pair<Span, String>?>(null) }
+    var textToolTarget by remember { mutableStateOf<EditorScope?>(null) }
     // The draft as it was before the last in-place tool changed it: one step, restored by the Undo icon.
     var textToolUndo by remember { mutableStateOf<TextToolUndo?>(null) }
     fun runTextTool(tool: TextTool) {
-        if (tool.readsThread) {
-            // Answer Prediction reads the THREAD and writes at the caret; the draft is not what is sent.
-            val thread = viewModel.answerSource
-            if (thread.isBlank()) {
-                Toast.makeText(context, context.getString(R.string.text_tool_no_thread), Toast.LENGTH_SHORT).show()
-                return
+        textToolScope.launch {
+            if (tool.readsThread) {
+                // Answer Prediction reads the THREAD and writes at the caret; the draft is not what is sent.
+                val thread = viewModel.answerSource
+                if (thread.isBlank()) {
+                    Toast.makeText(context, context.getString(R.string.text_tool_no_thread), Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                textToolTarget = EditorScope("caret", "")
+                textTools.run(textToolScope, tool, thread)
+                return@launch
             }
-            val caret = body.selection.start.coerceIn(0, body.text.length)
-            textToolTarget = Span(caret, caret) to ""
-            textTools.run(textToolScope, tool, thread)
-            return
+            // The selection, else the owner's own lines above the signature and the quote - asked of
+            // the page, which is where the body is.
+            val scopeNow = editor.scopeText() ?: return@launch
+            textToolTarget = scopeNow
+            textTools.run(textToolScope, tool, scopeNow.text)
         }
-        val span = TextToolScope.draftScope(body.text, Span.between(body.selection.start, body.selection.end))
-        val sent = body.text.substring(span.start, span.end)
-        textToolTarget = span to sent
-        textTools.run(textToolScope, tool, sent)
     }
-    // Splice a result into the draft as ONE undoable edit. Nothing here sends anything.
+    // Put a result into the draft as ONE undoable edit. Nothing here sends anything.
     fun applyTextTool(result: String) {
         val target = textToolTarget
-        val stillThere = target != null &&
-            target.first.end <= body.text.length &&
-            body.text.substring(target.first.start, target.first.end) == target.second
-        if (!stillThere) {
-            Toast.makeText(context, context.getString(R.string.text_tool_stale), Toast.LENGTH_SHORT).show()
-        } else {
-            textToolUndo = TextToolUndo(body, RichBody(body.text, ranges, blocks, links))
-            // splice, not a whole-body assignment: the inline styling, lists and links live
-            // BESIDE this text as offsets into it, and replacing a stretch without moving them
-            // leaves every style after the edit pointing at the wrong words.
-            val out = TextToolScope.splice(RichBody(body.text, ranges, blocks, links), target!!.first, result)
-            val caret = (target.first.start + result.length).coerceIn(0, out.text.length)
-            body = TextFieldValue(out.text, TextRange(caret))
-            ranges = out.ranges
-            blocks = out.blocks
-            links = out.links
+        textToolScope.launch {
+            val stillThere = target != null && (target.mode == "caret" || editor.scopeText() == target)
+            if (!stillThere) {
+                Toast.makeText(context, context.getString(R.string.text_tool_stale), Toast.LENGTH_SHORT).show()
+            } else {
+                textToolUndo = TextToolUndo(body, RichBody.ofHtml(editor.currentHtml(bodyHtml)))
+                editor.applyScope(target!!.mode, result)
+            }
+            textToolTarget = null
         }
-        textToolTarget = null
     }
     TextToolPanel(textTools) { result -> applyTextTool(result) }
     // Answer Prediction, Enhance and Check Grammar have no dialog: their result lands here, applied as an
@@ -611,39 +623,21 @@ fun ComposeScreen(
     val scope = rememberCoroutineScope()
 
     /**
-     * Apply a [SignatureChange] to the body and to its unsaved-changes baseline (D5, #206).
+     * Apply a [SignatureChange] to the body (D5, #206): the signature is a BLOCK of the HTML body, so
+     * the page swaps it for the new one - or inserts it above the quote, or below when the setting
+     * says so - unless the owner edited it, in which case the page leaves it alone.
      *
-     * ONE implementation, reached by both the "From" picker and the signature picker: they ask the
-     * same question of the body ("this signature became that one"), and two copies of this would let
-     * them disagree about what happens to a block the owner has edited.
+     * ONE implementation, reached by both the "From" picker and the signature picker. On a body that
+     * was untouched the swap is not an edit: the next report from the page becomes the baseline.
      */
     fun applySignatureChange(change: SignatureChange?) {
-        val rewrite: (String) -> String? = when (change) {
-            null -> return
-            is SignatureChange.Swap -> { text ->
-                replaceSignatureBlock(text, change.from, change.to, change.delimiter)
-            }
-            is SignatureChange.Insert -> { text ->
-                insertSignatureBlock(text, change.signature, change.belowQuote, change.delimiter)
-            }
-        }
-        // The rewrite works on the TEXT; the user's styling is carried across it by diffing (#131), so
-        // a bold word above the signature stays bold and stays put.
-        rewriteRichBody(RichBody(body.text, ranges, blocks, links), body.selection.start, rewrite)?.let { rewritten ->
-            body = TextFieldValue(
-                rewritten.text,
-                TextRange(body.selection.start.coerceAtMost(rewritten.text.length)),
-            )
-            ranges = rewritten.ranges
-            blocks = rewritten.blocks
-            links = rewritten.links
-            rewriteRichBody(RichBody(initialBody, baselineRanges, baselineBlocks, baselineLinks), 0, rewrite)?.let {
-                initialBody = it.text
-                baselineRanges = it.ranges
-                baselineBlocks = it.blocks
-                baselineLinks = it.links
-            }
-        }
+        if (change == null) return
+        rebaseOnChange = !htmlIsDirty(bodyHtml, initialHtml)
+        editor.replaceBlock(
+            BLOCK_SIGNATURE,
+            change.blockHtml,
+            belowQuote = (change as? SignatureChange.Insert)?.belowQuote ?: false,
+        )
     }
 
     // Land in the recipient field with the keyboard up, unless the recipients are already filled — a
@@ -651,9 +645,6 @@ fun ComposeScreen(
     // focus. The To field self-focuses via its `autoFocus` flag further down.
     val toFocus = remember { FocusRequester() }
     val subjectFocus = remember { FocusRequester() }
-    val bodyFocus = remember { FocusRequester() }
-    // Whether the body holds the focus: the formatting bar is shown for it alone (#131).
-    var bodyFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(prefill) {
         prefill?.let {
@@ -669,37 +660,14 @@ fun ComposeScreen(
                 // Caret at the end of the prefilled subject ("Re: …"), which is where an edit
                 // continues; it used to sit at offset 0 by accident of the String field.
                 subject = TextFieldValue(it.subject, TextRange(it.subject.length))
-                // Open with the caret where the writing continues: after the last character of a
-                // reopened draft, above the quoted original of a reply (#63), and for a mailto: link
-                // after the body the link supplied — which is also just above the signature (#83).
-                val caret = initialBodyCaret(
-                    bodyLength = it.body.length,
-                    focus = initialFocus,
-                    isDraft = draftId != null,
-                    linkBodyLength = linkBodyLength,
-                )
-                body = TextFieldValue(it.body, TextRange(caret ?: 0))
-                // …with the styling the prefill carried (#131). `emptyMap()` here opens a styled
-                // draft with its bold gone from the screen — and the next save stores that.
-                ranges = it.bodyRanges
-                // …and its lists, on the same terms: `emptyList()` here opens a draft that HELD a list
-                // without it, and the next save writes that removal.
-                blocks = it.bodyBlocks
-                // …and its LINKS, the last statement between the four reopen routes and the screen.
-                // `emptyList()` here is not "no link yet": the draft is judged reproducible because
-                // its anchor parsed, so the next save expunges the server original and stores this
-                // removal in its place.
-                links = it.bodyLinks
+                // The body IS html: the prefill's own markup (a reopened draft, a reply with its quote and
+                // signature), else its text wrapped. The caret opens on the first line, above the
+                // quote and the signature, which is where the answer is written.
+                adoptHtml(it.bodyHtml ?: plainTextToHtml(it.body), asBaseline = true)
                 initialTo = prefilledTo
                 initialCc = cc
                 initialBcc = bcc
                 initialSubject = it.subject
-                initialBody = it.body
-                // The baseline is what the prefill LANDED with, styling included: `emptyMap()` here
-                // makes a reopened styled draft look edited the moment it opens.
-                baselineRanges = it.bodyRanges
-                baselineBlocks = it.bodyBlocks
-                baselineLinks = it.bodyLinks
                 // This prefill CARRIED the quote — the original was not cached, so `prepare` built the
                 // whole body with it inside and there is no out-of-band hand-over to raise the flag.
                 // Without this post the flag stays false while the quote is plainly in the body, and
@@ -714,7 +682,7 @@ fun ComposeScreen(
                 // The To field self-focuses on first composition; the other two are asked here, once
                 // the prefill they open on is in place.
                 when (initialFocus) {
-                    ComposeFocus.BODY -> runCatching { bodyFocus.requestFocus() }
+                    ComposeFocus.BODY -> editor.focusBody()
                     ComposeFocus.SUBJECT -> runCatching { subjectFocus.requestFocus() }
                     ComposeFocus.RECIPIENTS -> Unit
                 }
@@ -732,15 +700,9 @@ fun ComposeScreen(
         // and its baseline would both be emptied, the reply losing its quote AND its signature.
         val quote = replyQuote ?: return@LaunchedEffect
         if (canApplyReplyQuote(applied, body.text, initialBody)) {
-            body = TextFieldValue(quote, TextRange(0))
-            // A quote replaces a plain prefill: neither the body nor its baseline carries styling.
-            ranges = emptyMap()
-            blocks = emptyList()
-            links = emptyList()
-            baselineRanges = emptyMap()
-            baselineBlocks = emptyList()
-            baselineLinks = emptyList()
-            initialBody = quote
+            // The whole opening - first line, signature, quote - replaces the plain prefill, and is the
+            // new baseline: it is not an edit.
+            adoptHtml(quote, asBaseline = true)
             // Dropped in exactly once, AFTER the write: the activity is recreated by a rotation while
             // the ViewModel survives, and an unconsumed quote replays here and puts the caret back at
             // offset 0. The write-then-retire ORDER guards nothing today — no line between the two
@@ -752,9 +714,16 @@ fun ComposeScreen(
             // effect ran", and a reply that genuinely has no quote would go out without a word.
             quoteLanded = true
         } else if (applied) {
-            // The user started writing before it arrived, so it is not dropped in over their text. Say
-            // so instead of silently sending a reply with no quote (B6).
-            viewModel.noticeQuoteNotAdded()
+            // A forward without its original is not a forward: it goes in at the END of what the owner
+            // has begun, as its own block. A reply's quote is not dropped over their text; say so
+            // instead of silently sending a reply with no quote (B6).
+            val original = if (composeOpening(mode).carriesOriginal) extractEditorBlock(quote, BLOCK_FORWARD) else null
+            if (original != null) {
+                editor.appendHtml(original)
+                quoteLanded = true
+            } else {
+                viewModel.noticeQuoteNotAdded()
+            }
             // Said exactly once, AFTER the notice — otherwise each activity recreation posts the toast
             // again, and they stack up in LENGTH_LONG.
             viewModel.consumeReplyQuote()
@@ -762,6 +731,10 @@ fun ComposeScreen(
         // No consume on the third way out (the quote came back before the header prefill landed):
         // nothing has posted it and nothing has announced it, so retiring it there would lose it.
     }
+
+    // A composer rebuilt by a rotation or a process death reopens the page on the markup it parked;
+    // a new one opens on an empty line (the prefill, when it comes, replaces it).
+    LaunchedEffect(Unit) { editor.load(bodyHtml) }
 
     // Which of the three screens a reopened draft gets. Taken HERE because it needs `applied`: once
     // the prefill has landed, the editor is drawn whatever the fetch is doing. `applied` survives
@@ -797,6 +770,8 @@ fun ComposeScreen(
         body = RichBody(body.text, ranges, blocks, links), initialBody = RichBody(initialBody, baselineRanges, baselineBlocks, baselineLinks),
         requestReceipt = requestReceipt, initialRequestReceipt = initialRequestReceipt,
         attachmentsTouched = attachmentsTouched,
+        // Formatting alone is an edit too: the text did not change when a word went bold.
+        htmlEdited = htmlIsDirty(bodyHtml, initialHtml),
     )
     val attemptClose = { if (dirty && !sending) viewModel.askDiscard() else cancel() }
 
@@ -809,7 +784,7 @@ fun ComposeScreen(
     // yet checked, allowed — the send resolves keys and reports precisely).
     val keysReady = !pgpMode.encrypts || allRecipients.none { recipientKeys[it] == false }
     val canSend = recipientTokens(to).isNotEmpty() && allRecipients.all(::isValidEmail) && keysReady
-    val sendNow = { viewModel.send(to, cc, bcc, subject.text, rich, requestReceipt) }
+    val sendNow: () -> Unit = { scope.launch { viewModel.send(to, cc, bcc, subject.text, freshRich(), requestReceipt) } }
     val proceedAfterAttachment = {
         if (recipientCount >= MANY_RECIPIENTS) viewModel.askManyRecipients() else sendNow()
     }
@@ -987,15 +962,17 @@ fun ComposeScreen(
                             // The confirmation belongs to the schedule, not to the tap: the view
                             // model answers `false` on every refusal it owns. Announced regardless,
                             // "Scheduled — …" is a sentence about a message that was not scheduled.
-                            if (viewModel.scheduleSend(to, cc, bcc, subject.text, rich, millis, requestReceipt)) {
-                                // The INSTANT, formatted as the Scheduled list formats it — never a
-                                // preset label, a sentence about another time.
-                                val shown = DateUtils.formatDateTime(context, millis, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_ABBREV_MONTH)
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.compose_scheduled_toast, shown),
-                                    Toast.LENGTH_SHORT,
-                                ).show()
+                            scope.launch {
+                                if (viewModel.scheduleSend(to, cc, bcc, subject.text, freshRich(), millis, requestReceipt)) {
+                                    // The INSTANT, formatted as the Scheduled list formats it — never a
+                                    // preset label, a sentence about another time.
+                                    val shown = DateUtils.formatDateTime(context, millis, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_ABBREV_MONTH)
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.compose_scheduled_toast, shown),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
                             }
                         }
                     },
@@ -1151,7 +1128,7 @@ fun ComposeScreen(
                             }, enabled = enabled) { Text(discardLabel, color = MaterialTheme.colorScheme.error) }
                             DiscardChoice.SAVE_DRAFT -> TextButton(onClick = {
                                 viewModel.clearDiscard()
-                                viewModel.saveDraft(to, cc, bcc, subject.text, rich, requestReceipt)
+                                scope.launch { viewModel.saveDraft(to, cc, bcc, subject.text, freshRich(), requestReceipt) }
                             }, enabled = enabled) { Text(stringResource(R.string.compose_discard_save)) }
                         }
                     }
@@ -1300,7 +1277,7 @@ fun ComposeScreen(
                             if (draftSaveAllowed(pgpMode)) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.compose_save_draft)) },
-                                    onClick = { moreMenu = false; viewModel.saveDraft(to, cc, bcc, subject.text, rich, requestReceipt) },
+                                    onClick = { moreMenu = false; scope.launch { viewModel.saveDraft(to, cc, bcc, subject.text, freshRich(), requestReceipt) } },
                                     enabled = !sending && canSaveDraft,
                                 )
                                 // A scheduled send is fired by a headless worker that can't sign, and
@@ -1382,15 +1359,17 @@ fun ComposeScreen(
                                             // answers `false` on the refusals it owns, and the banner
                                             // below is a sentence about a message that would not have
                                             // been scheduled at all.
-                                            if (viewModel.scheduleSend(to, cc, bcc, subject.text, rich, sendAt, requestReceipt)) {
-                                                // The LABEL, true of what was just scheduled: "In 1
-                                                // hour" is an hour from this tap, and "6 PM" is the 6 PM
-                                                // the entry was drawn for.
-                                                Toast.makeText(
-                                                    context,
-                                                    context.getString(R.string.compose_scheduled_toast, label),
-                                                    Toast.LENGTH_SHORT,
-                                                ).show()
+                                            scope.launch {
+                                                if (viewModel.scheduleSend(to, cc, bcc, subject.text, freshRich(), sendAt, requestReceipt)) {
+                                                    // The LABEL, true of what was just scheduled: "In 1
+                                                    // hour" is an hour from this tap, and "6 PM" is the 6 PM
+                                                    // the entry was drawn for.
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.compose_scheduled_toast, label),
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                }
                                             }
                                         } else {
                                             menuOpenedAt = System.currentTimeMillis()
@@ -1605,12 +1584,8 @@ fun ComposeScreen(
                 running = textTools.busy,
                 canUndo = textToolUndo != null,
                 onUndo = {
-                    textToolUndo?.let { u ->
-                        body = u.body
-                        ranges = u.rich.ranges
-                        blocks = u.rich.blocks
-                        links = u.rich.links
-                    }
+                    // The markup the tool found, put back whole.
+                    textToolUndo?.rich?.html?.let { adoptHtml(it, asBaseline = false) }
                     textToolUndo = null
                 },
                 onPick = ::runTextTool,
@@ -1690,139 +1665,42 @@ fun ComposeScreen(
             }
           }
 
-            // The value handed to the field is FLAT, and it is `body` itself: plain text, its
-            // own selection, its own composition. No span goes in there: Compose's editing buffer
-            // cannot hold one (`EditingBuffer.toAnnotatedString()` is `AnnotatedString(toString())`)
-            // and a span would restart the input on every keystroke. Styling is drawn one layer
-            // down, by `bodyTransformation`.
-            BasicTextField(
-                value = body,
-                onValueChange = { next ->
-                    // Read HERE, not `rich`: that one is captured at composition, and two callbacks
-                    // before a recomposition would remap from a stale body.
-                    val current = RichBody(body.text, ranges, blocks, links)
-                    if (next.text != body.text) {
-                        // One edit, whatever produced it: the styling follows the text by diffing, and
-                        // so do the lists AND the links — ONE remap, all three parts of its answer
-                        // taken. A second call would diff the same edit twice.
-                        val remapped = remapAfterEdit(current, next.text, span(body.selection), span(next.selection), pending)
-                        ranges = remapped.ranges
-                        blocks = remapped.blocks
-                        links = remapped.links
-                    } else if (next.selection != body.selection) {
-                        // The caret moved: a style armed for the next keystroke no longer applies.
-                        pending = null
-                    }
-                    body = TextFieldValue(next.text, next.selection, next.composition)
-                },
-                // The list markers AND the inline styling are drawn HERE and nowhere else (#131): in
-                // the text layer, by the one transformation a field has, so not one marker character
-                visualTransformation = bodyTransformation(rich, MaterialTheme.colorScheme.primary),
-                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                // Capitalisation ONLY: no imeAction here on purpose, because the body is the only
-                // multi-line field of the screen and an action would take the newline's place (#26).
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // Fills all the space below the header (so the whole area under it is the body's tap
-                    // target) with a bounded height, so the field scrolls its own content (#26).
-                    .weight(1f)
-                    .focusRequester(bodyFocus)
-                    .onFocusChanged { bodyFocused = it.isFocused },
-                decorationBox = { inner ->
-                    // The margins live INSIDE the field, not around it (#26): padding from the OUTSIDE
-                    // kept the margin out of the field's touch area, so a tap before the first character
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = MailMetrics.s16)
-                            .padding(top = MailMetrics.s12, bottom = MailMetrics.s16),
-                    ) {
-                        // …and no list either: a bullet tapped on an empty composer is drawn at the
-                        // start of the first line, exactly where the placeholder sits, and the two
-                        // overprint each other until the first keystroke.
-                        if (body.text.isEmpty() && blocks.isEmpty()) {
-                            Text(
-                                stringResource(R.string.compose_body_placeholder),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        inner()
+            // THE BODY: one editor page whose markup is the message. The formatting bar sits under it
+            // while it has the focus (bold, italic, underline, strike, headings, lists, quote, link,
+            // colour, alignment, picture, clear), and "Source" swaps the page for the raw HTML.
+            // `weight(1f)` so the page fills the space under the header and scrolls its own content (#26).
+            HtmlBodyPane(
+                controller = editor,
+                bodyHtml = bodyHtml,
+                placeholder = stringResource(R.string.compose_body_placeholder),
+                onChange = { html ->
+                    bodyHtml = html
+                    val text = htmlToPlainText(html)
+                    if (text != body.text) body = TextFieldValue(text)
+                    if (rebaseOnChange) {
+                        initialHtml = html
+                        initialBody = text
+                        rebaseOnChange = false
                     }
                 },
+                onLoaded = { html ->
+                    bodyHtml = html
+                    val text = htmlToPlainText(html)
+                    if (text != body.text) body = TextFieldValue(text)
+                    if (rebaseOnLoad) {
+                        initialHtml = html
+                        initialBody = text
+                        rebaseOnLoad = false
+                    }
+                },
+                onSourceEdit = { html ->
+                    bodyHtml = html
+                    val text = htmlToPlainText(html)
+                    if (text != body.text) body = TextFieldValue(text)
+                },
+                onInlineImage = { inlineImagePicker.launch("image/*") },
+                modifier = Modifier.weight(1f).fillMaxWidth(),
             )
-            // The formatting bar, only while the body has the focus (#131). No `imePadding()` and no
-            // inset of its own: the Column above already pads for the keyboard or the nav bar, and a
-            // second inset here would double it (#26).
-            if (bodyFocused) {
-                FormattingBar(
-                    active = pending ?: stylesAt(rich, span(body.selection)),
-                    activeList = listKindAt(rich, span(body.selection)),
-                    // Lit when the caret is IN a link — the same answer the dialog opens on, so "the
-                    // button is on" and "the dialog offers to edit it" cannot disagree.
-                    linkActive = linkAt(rich, span(body.selection)) != null,
-                    onLink = { linkDialog = true },
-                    onToggle = { kind ->
-                        val current = RichBody(body.text, ranges, blocks, links)
-                        val sel = span(body.selection)
-                        if (!sel.isEmpty) {
-                            ranges = toggleFormatting(current, sel, kind).ranges
-                        } else {
-                            pending = (pending ?: stylesAt(current, sel)).let { if (kind in it) it - kind else it + kind }
-                        }
-                    },
-                    onToggleList = { kind ->
-                        // No `pending` and no empty-selection branch, unlike the four families above:
-                        // a block is a run of LINES, so the caret alone already names one, and the tap
-                        // applies at once — the gesture in Gmail.
-                        val current = RichBody(body.text, ranges, blocks, links)
-                        blocks = toggleBlock(current, span(body.selection), kind).blocks
-                    },
-                    onClear = {
-                        val current = RichBody(body.text, ranges, blocks, links)
-                        val sel = span(body.selection)
-                        if (!sel.isEmpty) ranges = clearFormatting(current, sel).ranges else pending = emptySet()
-                    },
-                    onColor = { color ->
-                        // ONE colour per character: the others are taken off the selection first, then
-                        // the chosen one laid on (null = the default ink, nothing laid on).
-                        var current = RichBody(body.text, ranges, blocks, links)
-                        val sel = span(body.selection)
-                        if (!sel.isEmpty) {
-                            current = withTextColor(current, sel, color)
-                            ranges = current.ranges
-                        } else {
-                            val base = (pending ?: stylesAt(current, sel)) - TEXT_COLORS.toSet()
-                            pending = if (color == null) base else base + color
-                        }
-                    },
-                    onInlineImage = { inlineImagePicker.launch("image/*") },
-                )
-            }
-            if (linkDialog) {
-                // The body AND the caret go back into the composer's own state: `setLink` can INSERT
-                // the label, so the text changes as it does under a keystroke, and the caret must land
-                // after what was inserted or the next letter lands inside the link.
-                LinkDialog(
-                    body = rich,
-                    selection = span(body.selection),
-                    onApply = { applied ->
-                        val inserted = applied.text.length - rich.text.length
-                        body = TextFieldValue(applied.text, TextRange(body.selection.max + inserted))
-                        ranges = applied.ranges
-                        blocks = applied.blocks
-                        links = applied.links
-                        linkDialog = false
-                    },
-                    onRemove = { applied ->
-                        links = applied.links
-                        linkDialog = false
-                    },
-                    onDismiss = { linkDialog = false },
-                )
-            }
         }
         }
         // The tern that carries the message off-screen, top-right.
@@ -2367,134 +2245,6 @@ private fun pgpModeLabel(mode: PgpMode): Int = when (mode) {
     PgpMode.SIGN -> R.string.compose_pgp_sign
     PgpMode.ENCRYPT -> R.string.compose_pgp_encrypt
     PgpMode.ENCRYPT_UNSIGNED -> R.string.compose_pgp_encrypt_unsigned
-}
-
-/** The on-screen colour of a text-colour family: the very value its HTML writes. */
-private fun textColorOf(kind: Inline): Color =
-    Color(0xFF000000L or TEXT_COLOR_OF.getValue(kind).removePrefix("#").toLong(16))
-
-/**
- * The eight formatting buttons under the body (#131). Placed DOWN HERE on purpose:
- */
-@Composable
-private fun FormattingBar(
-    active: Set<Inline>,
-    activeList: BlockKind?,
-    linkActive: Boolean,
-    onLink: () -> Unit,
-    onToggle: (Inline) -> Unit,
-    onToggleList: (BlockKind) -> Unit,
-    onClear: () -> Unit,
-    onColor: (Inline?) -> Unit,
-    onInlineImage: () -> Unit,
-) {
-    var colorMenu by remember { mutableStateOf(false) }
-    // SCROLLABLE, since the bar went from five buttons to eight: 8 × 48 dp + 8 = 392 dp of fixed
-    // width. It no longer fits a 360 dp phone, let alone a multi-window pane or a large "display size"
-    // setting — where "clear formatting" would be off the screen with no way to reach it. Scrolling is
-    // what Gmail's own bar does. A scroll container, not a focusable one.
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = MailMetrics.s4),
-    ) {
-        FormattingButton(Inline.BOLD, Icons.Filled.FormatBold, R.string.compose_format_bold, active, onToggle)
-        FormattingButton(Inline.ITALIC, Icons.Filled.FormatItalic, R.string.compose_format_italic, active, onToggle)
-        FormattingButton(Inline.UNDERLINE, Icons.Filled.FormatUnderlined, R.string.compose_format_underline, active, onToggle)
-        FormattingButton(Inline.STRIKE, Icons.Filled.FormatStrikethrough, R.string.compose_format_strikethrough, active, onToggle)
-        ListButton(BlockKind.BULLET, Icons.Filled.FormatListBulleted, R.string.compose_format_list_bulleted, activeList, onToggleList)
-        ListButton(BlockKind.NUMBER, Icons.Filled.FormatListNumbered, R.string.compose_format_list_numbered, activeList, onToggleList)
-        ListButton(BlockKind.QUOTE, Icons.Filled.FormatQuote, R.string.compose_format_quote, activeList, onToggleList)
-        ListButton(BlockKind.HEADING, Icons.Filled.Title, R.string.compose_format_heading, activeList, onToggleList)
-        Box {
-            val activeColor = TEXT_COLORS.lastOrNull { it in active }
-            IconButton(onClick = { colorMenu = true }, modifier = Modifier.size(MailMetrics.s48).semantics { selected = activeColor != null }) {
-                Icon(
-                    Icons.Filled.FormatColorText,
-                    contentDescription = stringResource(R.string.compose_format_text_color),
-                    tint = activeColor?.let { textColorOf(it) } ?: LocalContentColor.current,
-                )
-            }
-            DropdownMenu(expanded = colorMenu, onDismissRequest = { colorMenu = false }) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.compose_format_color_default)) },
-                    onClick = { colorMenu = false; onColor(null) },
-                )
-                for ((kind, label) in listOf(
-                    Inline.RED to R.string.compose_format_color_red,
-                    Inline.BLUE to R.string.compose_format_color_blue,
-                    Inline.GREEN to R.string.compose_format_color_green,
-                )) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(label), color = textColorOf(kind)) },
-                        onClick = { colorMenu = false; onColor(kind) },
-                    )
-                }
-            }
-        }
-        IconButton(onClick = onInlineImage, modifier = Modifier.size(MailMetrics.s48)) {
-            Icon(Icons.Filled.InsertPhoto, contentDescription = stringResource(R.string.compose_format_inline_image))
-        }
-        // The link is not a family: it carries an address, so it opens a dialog instead of toggling,
-        // and it is lit by `linkAt` rather than by the `active` set.
-        IconButton(onClick = onLink, modifier = Modifier.size(MailMetrics.s48).semantics { selected = linkActive }) {
-            Icon(
-                Icons.Filled.Link,
-                contentDescription = stringResource(R.string.compose_format_link),
-                tint = if (linkActive) MaterialTheme.colorScheme.primary else LocalContentColor.current,
-            )
-        }
-        IconButton(onClick = onClear, modifier = Modifier.size(MailMetrics.s48)) {
-            Icon(Icons.Filled.FormatClear, contentDescription = stringResource(R.string.compose_format_clear))
-        }
-    }
-}
-
-/** One list's button, built exactly like [FormattingButton]. `activeList` is the kind covering the
- *  whole of the selection (or the caret's line), so at most one of the two is ever lit — a run of
- *  lines is of ONE kind. */
-@Composable
-private fun ListButton(
-    kind: BlockKind,
-    icon: ImageVector,
-    label: Int,
-    activeList: BlockKind?,
-    onToggleList: (BlockKind) -> Unit,
-) {
-    val isActive = kind == activeList
-    IconButton(
-        onClick = { onToggleList(kind) },
-        modifier = Modifier.size(MailMetrics.s48).semantics { selected = isActive },
-    ) {
-        Icon(
-            icon,
-            contentDescription = stringResource(label),
-            tint = if (isActive) MaterialTheme.colorScheme.primary else LocalContentColor.current,
-        )
-    }
-}
-
-/** One family's button: `selected` in the semantics and a primary tint while the family is active. */
-@Composable
-private fun FormattingButton(
-    kind: Inline,
-    icon: ImageVector,
-    label: Int,
-    active: Set<Inline>,
-    onToggle: (Inline) -> Unit,
-) {
-    val isActive = kind in active
-    IconButton(
-        onClick = { onToggle(kind) },
-        modifier = Modifier.size(MailMetrics.s48).semantics { selected = isActive },
-    ) {
-        Icon(
-            icon,
-            contentDescription = stringResource(label),
-            tint = if (isActive) MaterialTheme.colorScheme.primary else LocalContentColor.current,
-        )
-    }
 }
 
 /**

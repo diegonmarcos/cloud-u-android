@@ -24,6 +24,8 @@ internal object ComposeDirty {
         requestReceipt: Boolean,
         initialRequestReceipt: Boolean,
         attachmentsTouched: Boolean,
+        /** The markup differs from the one the body opened with, though the text may not. */
+        htmlEdited: Boolean = false,
     ): Boolean =
         // An undone send lives only on this screen: guard it even untouched, closing destroys it.
         onlyCopy ||
@@ -33,5 +35,12 @@ internal object ComposeDirty {
             subject != initialSubject ||
             body != initialBody ||
             requestReceipt != initialRequestReceipt ||
-            attachmentsTouched
+            attachmentsTouched ||
+            htmlEdited
 }
+
+/**
+ * Whether the body's markup was changed since it opened. False while there is no baseline yet (the
+ * page has not reported), so an empty new composer is never "edited" by the page settling.
+ */
+internal fun htmlIsDirty(html: String, baseline: String): Boolean = baseline.isNotEmpty() && html != baseline

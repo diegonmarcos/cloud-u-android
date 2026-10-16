@@ -44,18 +44,29 @@ import app.sterna.core.data.mail.unlessDraftBelongsElsewhere
 import app.sterna.core.data.pgp.PgpMode
 import app.sterna.core.data.pgp.encrypts
 import app.sterna.core.data.pgp.PgpResult
+import app.sterna.core.data.text.BLOCK_FORWARD
+import app.sterna.core.data.text.BLOCK_QUOTE
 import app.sterna.core.data.text.Block
 import app.sterna.core.data.text.Inline
 import app.sterna.core.data.text.Link
 import app.sterna.core.data.text.RichBody
 import app.sterna.core.data.text.Span
 import app.sterna.core.data.text.draftHtmlIsLossy
+import app.sterna.core.data.text.cidsReferencedBy
+import app.sterna.core.data.text.composeOpeningHtml
 import app.sterna.core.data.text.draftHtmlToSave
+import app.sterna.core.data.text.editorBlock
+import app.sterna.core.data.text.htmlBodyFrom
+import app.sterna.core.data.text.htmlForWire
+import app.sterna.core.data.text.signatureEditorBlock
+import app.sterna.core.data.text.withoutUnusedInlineParts
 import app.sterna.core.data.text.safeFileName
+import app.sterna.core.data.text.toHtml
 import app.sterna.core.data.text.toPlainText
 import app.sterna.core.imap.OutgoingAttachment
 import app.sterna.core.imap.OutgoingMessage
 import app.sterna.core.imap.OutgoingMime
+import app.sterna.core.imap.htmlToPlainText
 import app.sterna.core.imap.PgpMime
 import app.sterna.mail.MessageDestroyWorker
 import app.sterna.send.Outbox
@@ -106,6 +117,12 @@ data class DraftFields(
     val bcc: String = "",
     val subject: String,
     val body: String,
+    /**
+     * The body as HTML - THE model the composer edits. [body] is its plain projection (what the
+     * dirty checks and the "forgot the attachment" scan read). Null only for a prefill that has no
+     * body at all (headers only): the editor then keeps its empty line.
+     */
+    val bodyHtml: String? = null,
     /** The inline styling [body] carries (#131), beside it and not inside it. A route that reopens a
      *  styled body and drops this is not showing "no styling yet": it is showing the styling REMOVED,
      *  and the next save writes that removal. */
@@ -152,11 +169,20 @@ sealed interface SignatureChange {
      *  because the rewrite happens in the screen, while the setting lives in DataStore. */
     val delimiter: Boolean
 
-    data class Swap(val from: String, val to: String, override val delimiter: Boolean) : SignatureChange
+    /** The new signature as an editor block (see [signatureEditorBlock]); empty when there is none. */
+    val blockHtml: String
+
+    data class Swap(
+        val from: String,
+        val to: String,
+        override val delimiter: Boolean,
+        override val blockHtml: String = "",
+    ) : SignatureChange
     data class Insert(
         val signature: String,
         val belowQuote: Boolean,
         override val delimiter: Boolean,
+        override val blockHtml: String = "",
     ) : SignatureChange
 }
 
@@ -361,13 +387,15 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
         val new = signatureTextOf(option.identity)
         if (old == new) return null
         val delimiter = settings.signatureDelimiter.first()
-        if (old.isNotBlank()) return SignatureChange.Swap(old, new, delimiter)
+        val block = signatureEditorBlock(signatureHtmlOf(option.identity), new, delimiter)
+        if (old.isNotBlank()) return SignatureChange.Swap(old, new, delimiter, block)
         if (new.isBlank()) return null
         if (isReplyOrForward && !settings.signatureOnReplies.first()) return null
         return SignatureChange.Insert(
             signature = new,
             belowQuote = isReplyOrForward && settings.signatureBelowQuote.first(),
             delimiter = delimiter,
+            blockHtml = block,
         )
     }
 
@@ -444,34 +472,33 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
         val new = signatureTextOf(identity)
         if (old == new) return null
         val delimiter = settings.signatureDelimiter.first()
-        if (old.isNotBlank()) return SignatureChange.Swap(old, new, delimiter)
+        val block = signatureEditorBlock(signatureHtmlOf(identity), new, delimiter)
+        if (old.isNotBlank()) return SignatureChange.Swap(old, new, delimiter, block)
         if (new.isBlank()) return null
         return SignatureChange.Insert(
             signature = new,
             belowQuote = settings.signatureBelowQuote.first(),
             delimiter = delimiter,
+            blockHtml = block,
         )
     }
 
     /**
-     * The body a reply/forward opens with: the [quoted] original, plus the signature per the three
+     * The body every opening starts from, AS HTML: the owner's first line (the reader's suggested reply
+     * or a mailto: link's body, else an empty line to type on), the signature block per the three
+     * signature settings, and [quoteBlock] - the reply's quoted original or the forwarded one - with
+     * the signature above it or below it ([signatureBelowQuote]). A fresh message ([isReply] false)
+     * always opens with its signature; a reply or forward obeys "signature on replies".
      */
-    private suspend fun replyBody(quoted: String): String = withSuggestedReply(
-        suggestedReply,
-        if (!settings.signatureOnReplies.first()) {
-            quoted
+    private suspend fun openingHtml(isReply: Boolean, quoteBlock: String, typed: String = suggestedReply.orEmpty()): String {
+        val identity = selectedIdentity()
+        val signature = if (!isReply || settings.signatureOnReplies.first()) {
+            signatureEditorBlock(signatureHtmlOf(identity), signatureTextOf(identity), settings.signatureDelimiter.first())
         } else {
-            bodyWithSignature(
-                quoted,
-                signatureTextOf(selectedIdentity()),
-                settings.signatureBelowQuote.first(),
-                settings.signatureDelimiter.first(),
-            )
-        },
-    )
-
-    /** The quoted original of this reply in its wire shape (HTML), set whenever the editable quote is built. */
-    private var lastQuote: QuoteForHtml? = null
+            ""
+        }
+        return composeOpeningHtml(typed, signature, quoteBlock, isReply && settings.signatureBelowQuote.first())
+    }
 
     /**
      * The thread being answered, as plain text, for Answer Prediction. Set when the quote is built and
@@ -842,14 +869,13 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** Inline pictures put in the body: their marker text -> the Content-ID their staged part carries. */
-    private val inlineImages = LinkedHashMap<String, String>()
-
     /**
-     * Stage a picked picture as an INLINE part (its own Content-ID) and hand the screen the marker to
-     * put at the caret; the send replaces that marker with `<img src="cid:…">` (multipart/related).
+     * Stage a picked picture as an INLINE part (its own Content-ID) and hand the screen what the
+     * editor needs to show it: the Content-ID and a preview data: URI. The editor tags the `<img>`
+     * with the Content-ID and the send swaps the preview for `cid:` (multipart/related) - see
+     * [htmlForWire].
      */
-    fun attachInlineImage(uri: Uri, onMarker: (String) -> Unit) {
+    fun attachInlineImage(uri: Uri, onPicked: (cid: String, previewDataUri: String, name: String) -> Unit) {
         val app = getApplication<Application>()
         viewModelScope.launch {
             _attachmentStatus.value = app.getString(R.string.status_attaching)
@@ -864,12 +890,11 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
                 } ?: error(app.getString(R.string.status_read_file_failed))
                 val cid = "img${System.nanoTime()}@cloud-mail"
                 val part = stageOutgoing(credentials, bytes, type, name, disposition = "inline", cid = cid)
-                val marker = inlineImageMarker(name, inlineImages.keys)
-                inlineImages[marker] = cid
+                val preview = withContext(Dispatchers.Default) { inlinePreviewDataUri(type, bytes) }
                 _attachments.value = _attachments.value + part
                 _attachmentsTouched.value = true
                 _attachmentStatus.value = null
-                onMarker(marker)
+                onPicked(cid, preview, name)
             } catch (t: Throwable) {
                 Log.w(TAG, "Inline image failed", t)
                 _attachmentStatus.value = app.getString(R.string.status_attach_failed, t.message ?: "error")
@@ -1017,6 +1042,8 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
             handed?.let { d ->
                 _prefill.value = DraftFields(
                     to = d.to, cc = d.cc, bcc = d.bcc, subject = d.subject, body = d.body,
+                    // The model: the markup as it was queued, bold and links and all.
+                    bodyHtml = d.bodyHtml,
                     // The styling comes back with the text (#131): held in memory for an undone send,
                     // parsed out of the queued row's html for an Outbox → Edit. Dropped here, undoing
                     // a send hands back a message with its bold removed, and the re-send delivers the
@@ -1140,13 +1167,11 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
                     cc = cc.orEmpty(),
                     bcc = bcc.orEmpty(),
                     subject = subject.orEmpty(),
-                    // A fresh mail, so it opens with the signature below whatever the link carried.
-                    body = body.orEmpty() + signatureBlock(
-                        signatureTextOf(selectedIdentity()),
-                        settings.signatureDelimiter.first(),
-                    ),
+                    body = "",
                     expand = !cc.isNullOrBlank() || !bcc.isNullOrBlank(),
-                )
+                    // A fresh mail, so it opens with the signature below whatever the link carried: a
+                    // mailto: body or shared text is plain text, wrapped as HTML here.
+                ).withBodyHtml(openingHtml(false, "", typed = body.orEmpty()))
             }
             return
         }
@@ -1156,11 +1181,11 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
         // body, which already contains the signature it was saved with.
         if (replyToId == null) {
             viewModelScope.launch {
-                val block = signatureBlock(
-                    signatureTextOf(selectedIdentity()),
-                    settings.signatureDelimiter.first(),
-                )
-                if (block.isNotEmpty()) _prefill.value = DraftFields(to = "", subject = "", body = block)
+                val html = openingHtml(false, "", typed = "")
+                // An empty line alone is what the editor starts with anyway: only a signature is news.
+                if (html != composeOpeningHtml("", "", "", false)) {
+                    _prefill.value = DraftFields(to = "", subject = "", body = "").withBodyHtml(html)
+                }
             }
             return
         }
@@ -1218,8 +1243,16 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
                 // A forward's editable body stays empty; the original is carried at send time. Its
                 // "Fwd: …" subject came from the cache above — set it now only if nothing was cached.
                 if (cached == null) _prefill.value = buildPrefill(original, mode, selves(credentials))
-                runCatching { forwarded = buildForwarded(credentials, original) }
-                    .onFailure { prefillFailed() }
+                runCatching {
+                    val blocks = buildForwarded(credentials, original)
+                    forwarded = blocks
+                    // The original goes INTO the editor, header block, HTML body and all, so what the
+                    // owner sees is what is sent - and can be trimmed. Its attachments were staged by
+                    // [buildForwarded]. Not again after a process death: the editor came back with it.
+                    if (!quoteAlreadyOnScreen) {
+                        _replyQuote.value = openingHtml(true, editorBlock(BLOCK_FORWARD, blocks.html))
+                    }
+                }.onFailure { prefillFailed() }
                 return@launch
             }
 
@@ -1270,7 +1303,7 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
             } else if (!quoteAlreadyOnScreen) {
                 // The whole body, not just the quote: the screen swaps it in wholesale and must keep the
                 // signature the cache-first prefill put there.
-                _replyQuote.value = replyBody(quote(original, resolveOutgoingDateZone(settings.quotedDatesUtc)))
+                _replyQuote.value = openingHtml(true, quoteBlock(original, resolveOutgoingDateZone(settings.quotedDatesUtc)))
             }
         }
     }
@@ -1325,6 +1358,7 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
             bcc = fields.bcc,
             subject = fields.subject,
             body = fields.body,
+            bodyHtml = fields.bodyHtml,
             // …and the styling the row stored, out of the SAME projection as the text.
             bodyRanges = fields.bodyRanges,
             bodyBlocks = fields.bodyBlocks,
@@ -1595,8 +1629,9 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
                 val ccList = parseAddrs(cc)
                 val bccList = parseAddrs(bcc)
                 val identity = selectedIdentity()
-                val (textBody, htmlBody) = bodiesForSend(body, identity)
-                val attachments = _attachments.value
+                val (textBody, htmlBody) = bodiesForSend(body)
+                // A picture the owner took out of the body again must not ride along as an orphan part.
+                val attachments = withoutUnusedInlineParts(_attachments.value, htmlBody)
                 val replyTo = inReplyTo
                 val refs = references
                 // Sign/encrypt NOW, while the provider can still show UI — the outbox worker runs
@@ -1671,7 +1706,9 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
                     fromAccountId = _selectedFrom.value?.accountId,
                     fromIdentityEmail = identity?.email,
                     attachments = attachments, inReplyTo = replyTo, references = refs,
-                    forwardedText = forwarded?.text, forwardedHtml = forwarded?.html,
+                    // The forwarded original is a block of the body now, so undoing the send hands it
+                    // back inside [bodyHtml] - carrying it a second time would send it twice.
+                    bodyHtml = body.html,
                     pgpMode = mode.takeIf { it != PgpMode.OFF }?.name,
                     // The same answer as the row above, and deliberately the same VALUE: undoing this
                     // send reopens the composer from THIS record, whose local row has already been
@@ -1754,7 +1791,7 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
                 val recipients = parseAddrs(to)
                 require(recipients.isNotEmpty()) { getApplication<Application>().getString(R.string.status_add_recipient) }
                 val identity = selectedIdentity()
-                val (textBody, htmlBody) = bodiesForSend(body, identity)
+                val (textBody, htmlBody) = bodiesForSend(body)
                 // The same one answer as the send above: id and numbering together, the server draft
                 // named off the row when this composer was reopened from one (#95), then withheld
                 // WHOLE when the composer cannot show the message reproduces the draft (#63). The
@@ -1819,15 +1856,15 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /**
-     * The outgoing (text, html) bodies, carrying exactly what the composer shows — the signature is
+     * The outgoing (text, html) pair for [userBody], whose HTML is the model: the wire html is
+     * [htmlForWire] of exactly what the editor holds - signature, quote or forwarded original are
+     * blocks IN it - and the text alternative is derived from THAT html ([htmlToPlainText]), so the
+     * two halves of one message cannot disagree. The html is never null: a message leaves as
+     * multipart/alternative or not at all.
      */
-    private suspend fun bodiesForSend(userBody: RichBody, identity: StoredIdentity?): Pair<String, String?> {
-        val html = htmlBodyWithSignature(
-            userBody, signatureTextOf(identity), signatureHtmlOf(identity),
-            settings.signatureDelimiter.first(), lastQuote, inlineImages.toMap(),
-        )
-        val fwd = forwarded ?: return toPlainText(userBody) to html
-        return "${toPlainText(userBody)}\n\n${fwd.text}" to "$html<br><br>${fwd.html}"
+    private fun bodiesForSend(userBody: RichBody): Pair<String, String> {
+        val html = htmlForWire(userBody.html ?: toHtml(userBody))
+        return htmlToPlainText(html) to html
     }
 
     /**
@@ -2015,15 +2052,15 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
             ComposeOpening.FORWARD, ComposeOpening.FORWARD_ATTACHMENT -> DraftFields(
                 to = "",
                 subject = withPrefix(original.subject, opening.subjectPrefix),
-                // The editable body starts empty (just the user's note, plus the signature when the
-                // setting is on); the original is carried separately to send time so its formatting
-                // survives. See [buildForwarded].
-                body = replyBody(""),
-            )
+                body = "",
+                // The editable body starts with just the user's line and the signature when the setting
+                // is on; the original lands in the editor as its own block once it is fetched. See
+                // [buildForwarded].
+            ).withBodyHtml(openingHtml(true, ""))
             ComposeOpening.REPLY_ALL -> DraftFields(
                 to = replyAllRecipients(original, selves),
                 subject = withPrefix(original.subject, opening.subjectPrefix),
-                body = replyBody(if (quoteBody) quote(original, zone) else ""),
+                body = "",
                 // The one field a reply-all sets and a reply does not, and the reason is the reader's
                 // toolbar: reply-all is the DEFAULT action there now, so the composer has to make
                 // "this goes to all of them" impossible to miss rather than something to go looking
@@ -2034,38 +2071,37 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
                 // that can let the composer keep quiet about a quote it is showing after a process
                 // death.
                 quoted = quoteBody,
-            )
+            ).withBodyHtml(openingHtml(true, if (quoteBody) quoteBlock(original, zone) else ""))
             ComposeOpening.REPLY -> DraftFields(
                 to = replyRecipient(original),
                 subject = withPrefix(original.subject, opening.subjectPrefix),
-                body = replyBody(if (quoteBody) quote(original, zone) else ""),
+                body = "",
                 // Same claim as the reply-all above, and `quoteBody` and not `true`: when the full body
                 // could not be loaded the quote was skipped, and claiming otherwise would silence a
                 // failure the reader must hear about.
                 quoted = quoteBody,
-            )
+            ).withBodyHtml(openingHtml(true, if (quoteBody) quoteBlock(original, zone) else ""))
         }
     }
 
     /**
-     * The quoted original for a reply: a localised attribution line with the date formatted for the
+     * The quoted original for a reply, as the editor's quote block: a localised attribution line with
+     * the date formatted for the owner, then the original's own sanitised HTML in a `<blockquote>`
+     * (a text-only original is escaped, line breaks kept) - see [buildQuoteHtml].
      */
-    private fun quote(o: Email, zone: ZoneId): String {
+    private fun quoteBlock(o: Email, zone: ZoneId): String {
         val app = getApplication<Application>()
         val sender = o.from.firstOrNull()?.display() ?: app.getString(R.string.compose_quote_someone)
         val date = MailDates.formatFull(o.receivedAt, zone)
         val attribution = app.getString(R.string.compose_quote_attribution, date, sender)
-        val quoted = quotedOriginalText(o).lineSequence().joinToString("\n") { deepenQuote(it) }
-        // The same quote for the wire: the original's own sanitised HTML in a blockquote, swapped in for
-        // these "> " lines at send time while they are still intact in the body.
         val (raw, isHtml) = bodySource(o)
         answerSource = originalPlainText(o)
-        lastQuote = QuoteForHtml(
-            plain = "$attribution\n$quoted",
-            html = buildQuoteHtml(attribution, raw.takeIf { isHtml }, raw),
-        )
-        return "\n\n$attribution\n$quoted"
+        return editorBlock(BLOCK_QUOTE, buildQuoteHtml(attribution, raw.takeIf { isHtml }, raw))
     }
+
+    /** [html] as this prefill's body: the model, and its plain projection beside it. */
+    private fun DraftFields.withBodyHtml(html: String): DraftFields =
+        copy(bodyHtml = html, body = htmlToPlainText(html))
 
     /**
      * Prebuild the forwarded-original blocks (text + cleaned html) carried to send time, and re-stage the
