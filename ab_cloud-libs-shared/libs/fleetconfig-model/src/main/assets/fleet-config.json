@@ -596,6 +596,14 @@
         "ac_cloud-dialer"
       ]
     },
+    "cloud_dialer_sms": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Dialer SMS: which conversation threads the owner pinned or archived, the SIM the owner prefers, and the SIM each thread last sent on (SmsPrefs). The owner's own choices, so a new phone keeps them.",
+      "used_by": [
+        "ac_cloud-dialer"
+      ]
+    },
     "contacts_vcards": {
       "kind": "provider",
       "class": "config",
@@ -2637,6 +2645,7 @@
       "schema_version": 1,
       "libs": [
         "lib-analytics",
+        "lib-bottomnav",
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
@@ -2656,6 +2665,13 @@
           "class": "config",
           "doc": "Call log and blocked numbers, through CallHistoryBackup.",
           "store": "call_history"
+        },
+        {
+          "id": "dialer-sms-prefs",
+          "path": "shared_prefs/cloud_dialer_sms.xml (SmsPrefs)",
+          "class": "config",
+          "doc": "Pinned and archived SMS threads, the preferred SIM and the SIM each thread last sent on.",
+          "store": "cloud_dialer_sms"
         },
         {
           "id": "dialer-screening-log",
@@ -3064,10 +3080,12 @@
       "module": "ac_cloud-notes",
       "schema_version": 1,
       "libs": [
+        "lib-ai",
         "lib-bottomnav",
         "lib-core",
         "lib-devtools",
-        "lib-fleetconfig-model"
+        "lib-fleetconfig-model",
+        "lib-model-catalogue"
       ],
       "items": [
         {

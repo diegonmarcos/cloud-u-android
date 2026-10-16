@@ -16,7 +16,8 @@
   "_doc_skip_path_parts": "Test sources may name the roles and the endpoint to prove a host's behaviour (Cloud Search's SearchShellTest posts to the gateway through a fake). They draw nothing in the app.",
   "exempt": [
     {"path": "ac_cloud-matrix/", "why": "Element X, a vendored Matrix messenger: its chat is people talking to people, not an AI chat."},
-    {"path": "ac_cloud-chat/", "why": "Mattermost, a vendored team messenger: people talking to people, not an AI chat."}
+    {"path": "ac_cloud-chat/", "why": "Mattermost, a vendored team messenger: people talking to people, not an AI chat."},
+    {"path": "ac_cloud-dialer/app/src/main/kotlin/org/fossify/phone/sms/", "why": "Cloud Dialer's SMS screens (conversation list and thread): people texting people, not an AI chat."}
   ],
   "rules": {
     "role-bubble": {

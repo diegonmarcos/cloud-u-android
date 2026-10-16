@@ -193,6 +193,12 @@
       "why": "Upstream Fossify Phone: the ongoing/incoming call notification."
     },
     {
+      "path": "ac_cloud-dialer/app/src/main/kotlin/org/fossify/phone/sms/SmsNotifier.kt",
+      "kind": "domain_messages",
+      "notify_calls": 1,
+      "why": "Cloud Dialer SMS: the notification of an incoming text message — the user's messages, not an alert about the fleet."
+    },
+    {
       "path": "ac_cloud-vault/app/src/main/kotlin/com/x8bit/bitwarden/data/auth/manager/AuthRequestNotificationManagerImpl.kt",
       "kind": "domain_messages",
       "notify_calls": 1,
