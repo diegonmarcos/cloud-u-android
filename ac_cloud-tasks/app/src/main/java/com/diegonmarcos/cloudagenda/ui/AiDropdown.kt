@@ -2,16 +2,9 @@ package com.diegonmarcos.cloudagenda.ui
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import com.diegonmarcos.cloudagenda.BuildConfig
 import com.diegonmarcos.cloudagenda.agent.SearchTasksTool
 import com.diegonmarcos.cloudagenda.data.TasksRepository
@@ -66,20 +59,14 @@ object TasksAi {
 }
 
 /**
- * The AI button's drop-down panel: ONE box for search and chat -- ask a question, or ask it to find a task (it may
- * look through the tasks; it never changes them). The conversation is a libs:ai session kept for good; the page's
- * Sessions menu reopens any earlier one.
+ * The AI button's panel (anchored under the button by libs:bottomnav's AppTopBar): ONE box for search and chat -- ask a
+ * question, or ask it to find a task (it may look through the tasks; it never changes them). The conversation is a
+ * libs:ai session kept for good; the page's Sessions menu reopens any earlier one.
  */
 @Composable
-fun AiDropdown(chat: AiChatState, modifier: Modifier = Modifier) {
-    val c = MaterialTheme.colorScheme
-    Surface(
-        modifier.fillMaxWidth().fillMaxHeight(0.72f).border(1.dp, c.outlineVariant).testTag(ChromeTags.AI_PANEL),
-        color = c.surface, shadowElevation = 8.dp,
-    ) {
-        AiChatPage(
-            chat, materialAiTheme(AiStrings(hello = "Search or ask", helloSub = "One box: ask me anything, or have me find a task.")),
-            Modifier.imePadding(), sessionsList = true,
-        )
-    }
+fun AiPanel(chat: AiChatState, modifier: Modifier = Modifier) {
+    AiChatPage(
+        chat, materialAiTheme(AiStrings(hello = "Search or ask", helloSub = "One box: ask me anything, or have me find a task.")),
+        modifier.imePadding(), sessionsList = true,
+    )
 }

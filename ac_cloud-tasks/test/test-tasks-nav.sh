@@ -67,7 +67,8 @@ for k, v in sorted(ids.items()):
 # ── built from the fleet's pieces ─────────────────────────────────────────────────────────────────────────
 check("BottomNavHost(" in app_kt and "islandEntries" in app_kt, "the island is libs:bottomnav's BottomNavHost over the declared entries")
 check("PageTabs(" in app_kt and "stripSurface(" in app_kt, "tab strips are libs:bottomnav's PageTabs, their surface from the declaration")
-check("ModalNavigationDrawer(" in app_kt and "PageDrawerState" in app_kt, "the drawer is hosted by the shell and filled by the page")
+check("AppTopBarScaffold(" in app_kt and "rememberAccountLauncher(" in app_kt and "onConfigs =" in app_kt, "the first row is libs:bottomnav's AppTopBar, Account via the fleet launcher, Configs opening Settings")
+check("UI_TOP_BAR_B64" in read(APP, "app/build.gradle") and set(ui.get("top_bar", {}).get("settings", [])) == {"account", "configs"} and ui["top_bar"].get("drawer") and ui["top_bar"].get("ai"), "build.json::ui.top_bar declares drawer, ai and the Account / Configs settings, baked into BuildConfig")
 check("TasksTheme(" in app_kt, "the app is wrapped in the theme")
 theme = strip(read(SRC, "ui/Theme.kt"))
 check("CloudKitTheme(" in theme and "ThemeMode" in theme and "isDark(" in theme, "TasksTheme applies light / dark / system through CloudKitTheme")
@@ -84,19 +85,14 @@ check(not re.search(r"\b(BottomNavigationView|NavigationBar\s*[({]|NavigationRai
 check(not os.path.isdir(os.path.join(APP, "app/src/main/res/layout")), "no View layouts (res/layout is gone)")
 
 # ── the top row ───────────────────────────────────────────────────────────────────────────────────────────
-chrome = strip(read(SRC, "ui/Chrome.kt"))
-for tag in ("HAMBURGER", "AI", "PROFILE", "PROFILE_ACCOUNT", "PROFILE_SETTINGS"):
-    check(re.search(r"const val %s = " % tag, chrome) is not None and ("ChromeTags.%s" % tag) in chrome, "the top row wires %s" % tag)
-check('Text("Account")' in chrome and 'Text("Settings")' in chrome, "the Profile menu offers Account and Settings")
-check("CircleShape" in chrome, "the AI and Profile buttons are circular")
-check("fun PageDrawer(" in chrome and "DisposableEffect" in chrome, "the page-managed drawer API registers and unregisters with the page")
+check(not os.path.exists(os.path.join(SRC, "ui/Chrome.kt")) and not re.search(r"Icons\.\w+\.Menu\b|ModalNavigationDrawer|TopAppBar\s*\(", allsrc), "the app draws no hamburger, drawer or top app bar of its own")
 tasks_screen = strip(read(SRC, "ui/TasksScreen.kt"))
-check("PageDrawer {" in tasks_screen and "ProjectsDrawerContent(" in tasks_screen, "the Tasks page supplies the projects drawer")
+check("TopBarDrawer {" in tasks_screen and "ProjectsDrawerContent(" in tasks_screen, "the Tasks page fills the bar's drawer with the projects")
 check("expanded" in strip(read(SRC, "ui/ProjectsDrawer.kt")) and "emptySet<String>()" in tasks_screen, "projects start collapsed")
 
 # ── the AI panel ──────────────────────────────────────────────────────────────────────────────────────────
 ai = strip(read(SRC, "ui/AiDropdown.kt"))
-check("AiChatPage(" in ai and "AiFileSessions(" in ai and "sessionsList = true" in ai, "the AI panel is libs:ai's page over a persisted sessions file")
+check("AiChatPage(" in ai and "AiFileSessions(" in ai and "sessionsList = true" in ai and "aiPanel =" in app_kt, "the AI panel is libs:ai's page over a persisted sessions file")
 check("AiStandardHost(" in ai and "AiGatewayBackend(" in ai, "it talks to the fleet gateway through libs:ai")
 check(not re.search(r"\b(role|\"assistant\"|chat/completions|openrouter\.ai)", ai), "the app draws no chat of its own and names no endpoint")
 

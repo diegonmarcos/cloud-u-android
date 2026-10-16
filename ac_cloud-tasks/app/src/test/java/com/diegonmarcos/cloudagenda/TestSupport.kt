@@ -77,7 +77,6 @@ class FakeEnv(context: Context, seed: Boolean = true) : TasksEnv {
     init { if (!seed) repo.addProject("Mine") }
     override val controller = TasksController(repo, prefs, CoroutineScope(Dispatchers.Unconfined), Dispatchers.Unconfined).also { it.start() }
 
-    var accountOpened = 0
     var savedAgent: AgentConfig? = null
     var savedSecret: String = ""
     var savedMode: ThemeMode? = null
@@ -103,5 +102,4 @@ class FakeEnv(context: Context, seed: Boolean = true) : TasksEnv {
     override val secretAvailable: Boolean = true
     override fun saveAgent(config: AgentConfig, secret: String) { savedAgent = config; savedSecret = secret; controller.saveAgent(config) }
     override fun runAgent() {}
-    override fun openAccount() { accountOpened++ }
 }

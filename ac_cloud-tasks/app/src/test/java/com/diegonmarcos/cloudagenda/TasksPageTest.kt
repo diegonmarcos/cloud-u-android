@@ -16,7 +16,7 @@ import com.diegonmarcos.cloudagenda.data.AttachmentKind
 import com.diegonmarcos.cloudagenda.data.TaskFilter
 import com.diegonmarcos.cloudagenda.data.TaskStatus
 import com.diegonmarcos.cloudagenda.data.ThemeMode
-import com.diegonmarcos.cloudagenda.ui.ChromeTags
+import com.diegonmarcos.superapp.bottomnav.TopBarTags
 import com.diegonmarcos.cloudagenda.ui.DrawerTags
 import com.diegonmarcos.cloudagenda.ui.EditorTags
 import com.diegonmarcos.cloudagenda.ui.FilterTags
@@ -65,9 +65,9 @@ class TasksPageTest {
 
     @Test fun `the shell draws the top row and the declared island, and opens on Tasks`() {
         launch()
-        compose.onNodeWithTag(ChromeTags.HAMBURGER).assertIsDisplayed()
-        compose.onNodeWithTag(ChromeTags.AI).assertIsDisplayed()
-        compose.onNodeWithTag(ChromeTags.PROFILE).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.MENU).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.AI).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.SETTINGS).assertIsDisplayed()
         compose.onNodeWithTag(BottomNavTags.item("tasks")).assertIsDisplayed()
         compose.onNodeWithTag(BottomNavTags.item("calendar")).assertIsDisplayed()
         compose.onNodeWithTag(BottomNavTags.item("settings")).assertDoesNotExist()
@@ -88,7 +88,7 @@ class TasksPageTest {
         val env = launch()
         val project = env.controller.snapshot.projects.first()
         val lists = env.controller.snapshot.listsOf(project.id)
-        compose.onNodeWithTag(ChromeTags.HAMBURGER).performClick()
+        compose.onNodeWithTag(TopBarTags.MENU).performClick()
         compose.onNodeWithTag(DrawerTags.project(project.id)).assertIsDisplayed()
         compose.onNodeWithTag(DrawerTags.list(lists[0].id)).assertDoesNotExist()
         compose.onNodeWithTag(DrawerTags.list(lists[1].id)).assertDoesNotExist()
@@ -105,7 +105,7 @@ class TasksPageTest {
 
     @Test fun `the drawer offers New project through a name dialog`() {
         val env = launch()
-        compose.onNodeWithTag(ChromeTags.HAMBURGER).performClick()
+        compose.onNodeWithTag(TopBarTags.MENU).performClick()
         compose.onNodeWithTag(DrawerTags.ADD_PROJECT).performClick()
         compose.onNodeWithTag(DrawerTags.NAME_INPUT).assertIsDisplayed()
         compose.onNodeWithTag(DrawerTags.NAME_OK).assertIsNotEnabled()
@@ -224,29 +224,29 @@ class TasksPageTest {
 
     // ── Profile, Settings, theme, agent ─────────────────────────────────────────────────────────────────
 
-    @Test fun `Profile then Account hands off to Cloud Account`() {
-        val env = launch()
-        compose.onNodeWithTag(ChromeTags.PROFILE).performClick()
-        compose.onNodeWithTag(ChromeTags.PROFILE_ACCOUNT).performClick()
-        assertEquals(1, env.accountOpened)
+    @Test fun `the Settings button offers Account and Configs`() {
+        launch()
+        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
+        compose.onNodeWithTag(TopBarTags.settingsItem("account")).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).assertIsDisplayed()
     }
 
-    @Test fun `Profile then Settings opens the declared strip, and Back returns to Tasks`() {
+    @Test fun `Settings then Configs opens the declared strip, and the Tasks island item returns`() {
         launch()
-        compose.onNodeWithTag(ChromeTags.PROFILE).performClick()
-        compose.onNodeWithTag(ChromeTags.PROFILE_SETTINGS).performClick()
+        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
+        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).performClick()
         compose.waitForIdle()
         for (id in listOf("appearance", "agent", "inbox", "feeds")) compose.onNodeWithTag(PageTabsTags.tab(id)).assertExists()
         compose.onNodeWithTag(SettingsTags.APPEARANCE).assertIsDisplayed()
-        compose.onNodeWithTag(ChromeTags.BACK).performClick()
+        compose.onNodeWithTag(BottomNavTags.item("tasks")).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(TasksTags.PAGE).assertIsDisplayed()
     }
 
     @Test fun `choosing Dark in Appearance is saved`() {
         val env = launch()
-        compose.onNodeWithTag(ChromeTags.PROFILE).performClick()
-        compose.onNodeWithTag(ChromeTags.PROFILE_SETTINGS).performClick()
+        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
+        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(KitPartTags.segment(SettingsTags.THEME, "dark")).performClick()
         compose.waitForIdle()
@@ -258,8 +258,8 @@ class TasksPageTest {
 
     @Test fun `the Agent page saves its declaration and says no backend is deployed after a run that found none`() {
         val env = launch()
-        compose.onNodeWithTag(ChromeTags.PROFILE).performClick()
-        compose.onNodeWithTag(ChromeTags.PROFILE_SETTINGS).performClick()
+        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
+        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(PageTabsTags.tab("agent")).performClick()
         compose.waitForIdle()
@@ -286,11 +286,11 @@ class TasksPageTest {
 
     @Test fun `the AI button drops a panel down and a second tap closes it`() {
         launch()
-        compose.onNodeWithTag(ChromeTags.AI_PANEL).assertDoesNotExist()
-        compose.onNodeWithTag(ChromeTags.AI).performClick()
-        compose.onNodeWithTag(ChromeTags.AI_PANEL).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.AI_PANEL).assertDoesNotExist()
+        compose.onNodeWithTag(TopBarTags.AI).performClick()
+        compose.onNodeWithTag(TopBarTags.AI_PANEL).assertIsDisplayed()
         compose.onNodeWithTag(com.diegonmarcos.superapp.ai.AiTags.CHAT_INPUT).assertExists()
-        compose.onNodeWithTag(ChromeTags.AI).performClick()
-        compose.onNodeWithTag(ChromeTags.AI_PANEL).assertDoesNotExist()
+        compose.onNodeWithTag(TopBarTags.AI).performClick()
+        compose.onNodeWithTag(TopBarTags.AI_PANEL).assertDoesNotExist()
     }
 }

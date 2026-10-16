@@ -1,24 +1,21 @@
 package com.diegonmarcos.cloudagenda.ui
 
 import android.app.Activity
+import androidx.activity.compose.BackHandler
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -29,7 +26,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -42,14 +38,19 @@ import com.diegonmarcos.cloudagenda.data.ThemeMode
 import com.diegonmarcos.superapp.ai.AiAgent
 import com.diegonmarcos.superapp.ai.AiChatState
 import com.diegonmarcos.superapp.ai.AiModel
+import androidx.compose.ui.res.stringResource
+import com.diegonmarcos.cloudagenda.R
+import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
+import com.diegonmarcos.superapp.bottomnav.TopBarDecl
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Everything the shell needs from the app around it. MainActivity supplies the real one; the layout-tree tests a fake. */
@@ -70,7 +71,6 @@ interface TasksEnv {
     fun saveAgent(config: AgentConfig, secret: String)
     /** One pass of the agent, blocking; the result is in the declaration's status afterwards. */
     fun runAgent()
-    fun openAccount()
 }
 
 private val PageMapSaver = listSaver<androidx.compose.runtime.snapshots.SnapshotStateMap<String, String>, String>(
@@ -111,80 +111,65 @@ fun TasksApp(env: TasksEnv, nav: NavDecl = Declarations.nav) {
 }
 
 /**
- * The shell: the top row, the page-managed drawer, the page, and the fleet's bottom island. Navigation is the
- * declaration (build.json::ui) read through NavDecl: the island is ui.bottom_nav, a section's pages are its tab strip
- * (PageTabs). Settings is a declared section that is not on the island: Profile > Settings opens it, Back returns.
+ * The shell: the fleet's top bar (libs:bottomnav AppTopBar: hamburger and page-managed drawer, title, AI panel,
+ * Settings dropdown), the page, and the fleet's bottom island. Navigation is the declaration (build.json::ui) read
+ * through NavDecl: the island is ui.bottom_nav, a section's pages are its tab strip (PageTabs). Settings is a
+ * declared section that is not on the island: the top bar's Settings > Configs opens it, Back (or any island item) leaves.
  */
 @Composable
-fun TasksShell(env: TasksEnv, nav: NavDecl, themeMode: ThemeMode, onThemeMode: (ThemeMode) -> Unit) {
+fun TasksShell(env: TasksEnv, nav: NavDecl, themeMode: ThemeMode, onThemeMode: (ThemeMode) -> Unit, topBar: TopBarDecl? = Declarations.topBar) {
     val dark = LocalDarkTheme.current
-    val drawer = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    val pageDrawer = remember { PageDrawerState() }
 
     var section by rememberSaveable { mutableStateOf(nav.default()?.id ?: Ids.TASKS) }
     var returnTo by rememberSaveable { mutableStateOf(nav.default()?.id ?: Ids.TASKS) }
     val pageOf = rememberSaveable(saver = PageMapSaver) { mutableStateMapOf<String, String>() }
-    var aiOpen by rememberSaveable { mutableStateOf(false) }
 
     val current = nav.section(section)
     val pages = current?.pages.orEmpty()
     val page = current?.page(pageOf[section])?.id.orEmpty()
     val onIsland = section in nav.bottomNav
-    val title = when (section) {
-        Ids.SETTINGS -> "Settings"
-        Ids.TASKS -> current?.page(Ids.PAGE_TASKS)?.label ?: "Tasks"
-        else -> current?.page(page)?.label ?: current?.label.orEmpty()
-    }
 
-    fun go(id: String) { aiOpen = false; section = id }
+    fun go(id: String) { section = id }
+    BackHandler(enabled = section == Ids.SETTINGS) { go(returnTo) }
 
-    CompositionLocalProvider(LocalPageDrawer provides pageDrawer) {
-        ModalNavigationDrawer(
-            drawerState = drawer, gesturesEnabled = pageDrawer.hasContent,
-            drawerContent = { ModalDrawerSheet { DrawerSheet(pageDrawer, close = { scope.launch { drawer.close() } }) } },
-        ) {
-            BottomNavHost(
-                entries = nav.islandEntries { IconCatalog.painter(it) },
-                selectedId = if (onIsland) section else null,
-                onSelect = { entry -> go(entry.id) },
-            ) {
-                Column(Modifier.fillMaxSize()) {
-                    TopRow(
-                        title = title,
-                        onMenu = { aiOpen = false; scope.launch { drawer.open() } },
-                        onAi = { aiOpen = !aiOpen },
-                        onAccount = { env.openAccount() },
-                        onSettings = { if (section != Ids.SETTINGS) returnTo = section; go(Ids.SETTINGS) },
-                        aiOpen = aiOpen,
-                        onBack = if (section == Ids.SETTINGS) ({ go(returnTo) }) else null,
-                    )
-                    Box(Modifier.weight(1f).fillMaxWidth()) {
-                        Column(Modifier.fillMaxSize()) {
-                            if (pages.size > 1) {
-                                PageTabs(
-                                    pages = pages, selectedId = page, onSelect = { pageOf[section] = it.id },
-                                    underTopChrome = false, surface = nav.stripSurface(section, dark, page),
-                                )
-                            }
-                            Box(Modifier.weight(1f).fillMaxWidth()) {
-                                when (section) {
-                                    Ids.TASKS -> TasksScreen(env.controller, env.host, env.pickedLink, onPickedConsumed = env::consumePicked)
-                                    Ids.CALENDAR -> {
-                                        SectionPagesDrawer(pages, page) { pageOf[section] = it.id }
-                                        LegacyWeb(tab = webTabFor(page), Modifier.fillMaxSize())
-                                    }
-                                    Ids.SETTINGS -> {
-                                        SectionPagesDrawer(pages, page) { pageOf[section] = it.id }
-                                        SettingsContent(env, page, themeMode, onThemeMode)
-                                    }
-                                }
-                            }
-                        }
-                        if (aiOpen) AiDropdown(env.chat, Modifier.align(Alignment.TopCenter))
+    val content: @Composable () -> Unit = {
+        Column(Modifier.fillMaxSize()) {
+            if (pages.size > 1) {
+                PageTabs(
+                    pages = pages, selectedId = page, onSelect = { pageOf[section] = it.id },
+                    underTopChrome = false, surface = nav.stripSurface(section, dark, page),
+                )
+            }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                when (section) {
+                    Ids.TASKS -> if (page == Ids.PAGE_TASKS) TasksScreen(env.controller, env.host, env.pickedLink, onPickedConsumed = env::consumePicked)
+                    Ids.CALENDAR -> {
+                        SectionPagesDrawer(pages, page) { pageOf[section] = it.id }
+                        LegacyWeb(tab = webTabFor(page), Modifier.fillMaxSize())
+                    }
+                    Ids.SETTINGS -> {
+                        SectionPagesDrawer(pages, page) { pageOf[section] = it.id }
+                        SettingsContent(env, page, themeMode, onThemeMode)
                     }
                 }
             }
+        }
+    }
+
+    BottomNavHost(
+        entries = nav.islandEntries { IconCatalog.painter(it) },
+        selectedId = if (onIsland) section else null,
+        onSelect = { entry -> go(entry.id) },
+    ) {
+        Box(Modifier.fillMaxSize().statusBarsPadding()) {
+            if (topBar == null) content() else AppTopBarScaffold(
+                decl = topBar,
+                title = stringResource(R.string.app_name),
+                onAccount = rememberAccountLauncher(),
+                onConfigs = { if (section != Ids.SETTINGS) returnTo = section; go(Ids.SETTINGS) },
+                aiPanel = { AiPanel(env.chat) },
+                content = content,
+            )
         }
     }
 }
@@ -192,7 +177,7 @@ fun TasksShell(env: TasksEnv, nav: NavDecl, themeMode: ThemeMode, onThemeMode: (
 /** The drawer of a section with no content of its own: its pages, so the hamburger always has somewhere to go. */
 @Composable
 private fun SectionPagesDrawer(pages: List<NavPage>, selected: String, onSelect: (NavPage) -> Unit) {
-    PageDrawer { close ->
+    TopBarDrawer { close ->
         val p = LocalKitPalette.current
         Column(Modifier.verticalScroll(rememberScrollState()).padding(top = 24.dp)) {
             for (pg in pages) {

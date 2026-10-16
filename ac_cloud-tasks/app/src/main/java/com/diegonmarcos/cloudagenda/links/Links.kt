@@ -23,7 +23,7 @@ import com.diegonmarcos.cloudagenda.data.TasksRepository
  *    screenshot agent's records). The pick is the system document picker (a Cloud Drive document root appears in it
  *    when Drive offers one); the URI is stored, and opening it prefers Cloud Drive and falls back to any viewer.
  */
-class Links(private val context: Context, private val mailPackage: String, private val drivePackage: String, private val accountPackage: String) {
+class Links(private val context: Context, private val mailPackage: String, private val drivePackage: String) {
 
     fun open(a: Attachment) {
         val ok = when (a.kind) {
@@ -45,16 +45,6 @@ class Links(private val context: Context, private val mailPackage: String, priva
         val u = Uri.parse(uri)
         val view = Intent(Intent.ACTION_VIEW).setData(u).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         return start(Intent(view).setPackage(drivePackage)) || start(view)
-    }
-
-    /** Profile > Account: Cloud Account hosts libs:account; this app only hands off. */
-    fun openAccount(): Boolean {
-        val open = Intent(ACCOUNT_OPEN).setPackage(accountPackage)
-        if (start(open)) return true
-        val launch = context.packageManager.getLaunchIntentForPackage(accountPackage)
-        if (launch != null && start(launch)) return true
-        toast("Cloud Account is not installed")
-        return false
     }
 
     /** Keeps read access to a picked document across restarts (not every provider offers it; those still work this session). */
@@ -83,10 +73,6 @@ class Links(private val context: Context, private val mailPackage: String, priva
 
     private fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
 
-    companion object {
-        /** Cloud Account's OPEN action (its manifest: "SuperApp opens the page"). */
-        const val ACCOUNT_OPEN = "com.diegonmarcos.cloudaccount.OPEN"
-    }
 }
 
 /** An id the pickers hand back, as the attachment a task stores. */

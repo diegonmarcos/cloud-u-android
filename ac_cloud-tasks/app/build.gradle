@@ -120,6 +120,8 @@ if (!(uiDecl.sections instanceof List) || uiDecl.sections.isEmpty() || !(uiDecl.
 def uiSectionsB64   = b64(uiDecl.sections)
 def uiBottomNav     = uiDecl.bottom_nav.join(',')
 def uiDefaultSection = (uiDecl.default_section ?: uiDecl.bottom_nav[0]).toString()
+// The top bar declaration (libs:bottomnav TopBarDecl): ui.top_bar as base64 JSON, '' when the app declares none.
+def uiTopBarB64     = uiDecl.top_bar ? b64(uiDecl.top_bar) : ''
 
 // The AI dropdown's gateway: libs:ai's contract names the service, the fleet catalogue its mesh address (sets aiGatewayUrl).
 apply from: "$rootDir/../ab_cloud-libs-shared/libs/ai/ai-gateway.gradle"
@@ -227,6 +229,7 @@ android {
         buildConfigField "String", "UI_SECTIONS_B64",    "\"${uiSectionsB64}\""
         buildConfigField "String", "UI_BOTTOM_NAV",      "\"${uiBottomNav}\""
         buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
+        buildConfigField "String", "UI_TOP_BAR_B64",     "\"${uiTopBarB64}\""
         buildConfigField "String", "AI_GATEWAY_URL",     "\"${aiGatewayUrl}\""
         // The mail agent reads Cloud Mail through its read-only agent provider: <mailPackage>.agentmail.
         buildConfigField "String", "MAIL_PACKAGE",       "\"${mailPackage}\""

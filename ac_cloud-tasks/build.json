@@ -181,7 +181,16 @@
     }
   },
   "ui": {
-    "_doc": "#868 THE navigation declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island's ids, ui.sections the section each one opens, ui.default_section where the app opens. Tasks is the native Compose page (hamburger drawer = projects and lists). Calendar is the legacy tasks.html WebView, one page per tab of the old shell (Events, Calendar, Invites). Settings is NOT on the island: it opens from the top row's Profile menu, and its pages (Appearance, Agent, Inbox, Feeds) are the section's tab strip. Every section's `background` is `theme`: the strips follow the app's light / dark mode (Settings > Appearance), through NavDecl.stripSurface.",
+    "_doc": "#868 THE navigation declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island's ids, ui.sections the section each one opens, ui.default_section where the app opens. Tasks is the native Compose page (hamburger drawer = projects and lists). Calendar is the legacy tasks.html WebView, one page per tab of the old shell (Events, Calendar, Invites). Settings is NOT on the island: it opens from the top bar's Settings > Configs, and its pages (Appearance, Agent, Inbox, Feeds) are the section's tab strip. Every section's `background` is `theme`: the strips follow the app's light / dark mode (Settings > Appearance), through NavDecl.stripSurface.",
+    "top_bar": {
+      "_doc": "THE first row of the app (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger that opens a side drawer the CURRENT page fills (the Tasks page: the projects and their lists; Calendar and Settings: their pages), the title, and two circular buttons: AI (libs:ai's chat in an anchored panel, one box for search and chat, history kept) and Settings (Account launches Cloud Account; Configs opens the Settings section: Appearance, Agent, Inbox, Feeds). No app draws its own copy of this row (cloud-android-top-bar-guard).",
+      "drawer": true,
+      "ai": true,
+      "settings": [
+        "account",
+        "configs"
+      ]
+    },
     "bottom_nav": [
       "tasks",
       "calendar"

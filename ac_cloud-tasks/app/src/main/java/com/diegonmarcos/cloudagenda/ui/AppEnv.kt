@@ -36,7 +36,7 @@ class AppEnv(private val activity: ComponentActivity, private val launchPicker: 
     private val app = activity.applicationContext
     private val repo = TasksRepository(TasksDb.shared(app))
     private val prefs = TasksPrefs(app)
-    private val links = Links(app, BuildConfig.MAIL_PACKAGE, BuildConfig.DRIVE_PACKAGE, BuildConfig.ACCOUNT_PACKAGE)
+    private val links = Links(app, BuildConfig.MAIL_PACKAGE, BuildConfig.DRIVE_PACKAGE)
     private val secrets by lazy { AgentSecrets(app) }
     private val aiConfig by lazy { AiConfig.load(app) }
 
@@ -78,5 +78,4 @@ class AppEnv(private val activity: ComponentActivity, private val launchPicker: 
 
     override fun runAgent() { AgentRunners.build(app).run() }
 
-    override fun openAccount() { links.openAccount() }
 }
