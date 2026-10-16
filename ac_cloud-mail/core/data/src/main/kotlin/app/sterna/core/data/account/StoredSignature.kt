@@ -2,7 +2,6 @@ package app.sterna.core.data.account
 
 import app.sterna.core.data.text.htmlToText
 import app.sterna.core.data.text.looksLikeHtml
-import app.sterna.core.data.text.sanitiseReceivedHtml
 import kotlinx.serialization.Serializable
 
 /**
@@ -51,7 +50,7 @@ data class StoredSignature(
      * The pair (text, html) also travels through backup/restore and K-9 import, neither of which the
      * owner typed.
      */
-    fun renderableHtml(): String = if (isHtml) sanitiseReceivedHtml(html) else ""
+    fun renderableHtml(): String = if (isHtml) signatureWireHtml(html) else ""
 
     companion object {
         /**
