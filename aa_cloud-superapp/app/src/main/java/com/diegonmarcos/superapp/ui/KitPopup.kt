@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 object KitPopup {
 
     /** START/END: the bubble's left/right edge on the anchor's; EDGE: its left edge on the window's (x = 0). */
-    enum class Align { START, END, EDGE }
+    enum class Align { START, END, EDGE, CENTER }
 
     /** Show [content] under [anchor]. [close] dismisses it. Returns the closer for the caller to dismiss from outside, or null when no activity can host it. */
     fun show(anchor: View, align: Align = Align.END, content: @Composable (close: () -> Unit) -> Unit): (() -> Unit)? {
