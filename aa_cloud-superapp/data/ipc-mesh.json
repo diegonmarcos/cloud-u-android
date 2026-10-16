@@ -1856,7 +1856,9 @@
      "kind": "provider",
      "name": "AgentMailProvider",
      "authority": "<pkg>.agentmail",
-     "callers": []
+     "callers": [
+      "tasks"
+     ]
     },
     {
      "permission": null,
@@ -1905,6 +1907,7 @@
       "gallery",
       "mail",
       "notes",
+      "tasks",
       "vault"
      ]
     }
