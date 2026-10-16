@@ -41,6 +41,10 @@
         <domain>10.0.0.9</domain>
         <domain>10.0.0.10</domain>
 
+        <!-- The mesh's own DNS names (*.app): the AI panel's gateway (my-ai-api.app) and every other
+             mesh service the fleet names that way. -->
+        <domain includeSubdomains="true">app</domain>
+
         <!-- Home / office LAN typical first-octet pairs. Add more as
              needed; CIDR is not supported by this schema. -->
         <domain includeSubdomains="true">192.168.0.1</domain>

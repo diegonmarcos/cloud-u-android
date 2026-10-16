@@ -17,8 +17,9 @@
 # So T6 is the centre of this file: a page the declaration lists must resolve to a
 # real fragment, and no placeholder body may exist for one to fall back into.
 #
-#   T1  ONE tab declaration: exactly the five tabs, in declared order, Home in the
-#       CENTRE, and ui.default_section naming one that exists.
+#   T1  ONE tab declaration: exactly the five tabs, in declared order - Infra | Containers |
+#       Home | Ops | Observ (owner order, 2026-10-16) - Home in the CENTRE, ui.default_section
+#       = home (the app opens on Home), and Configs a declared section that is NOT on the bar.
 #   T2  NO ORPHANS, BOTH DIRECTIONS: every declared tab has a branch in the shell's
 #       dispatch and every branch answers a declared id.
 #   T3  the declaration is the ONLY order: no Kotlin file holds a second list of tab
@@ -26,7 +27,7 @@
 #   T4  every declared icon is a real DRAWABLE and every drawable is declared. The
 #       shell resolves icons by name with getIdentifier, so a name with
 #       no file resolves to 0 and draws a blank square — silently.
-#   T5  the Apps tab LAUNCHES the three real sibling APKs: each package equals that
+#   T5  the Ops tab (was Apps) LAUNCHES the three real sibling APKs: each package equals that
 #       sibling's own application_id, each id IS its fleet name, no tile carries a
 #       display `label` (#351, the copy #224 reverted), and each package is declared
 #       in AndroidManifest <queries> or API 30+ reports an installed app as absent.
@@ -44,6 +45,14 @@
 #       leaving the bottom inset to the island; it consumes nothing, and holds no
 #       hardcoded top margin or padding. Consuming the bottom would starve the island
 #       below of its own inset, which is exactly how #477's bug worked.
+#   T10 the FIRST ROW is the fleet's shared AppTopBar (ui.top_bar: drawer + ai + account/configs
+#       settings, baked as UI_TOP_BAR_B64, AppTopBarScaffold fed the AI panel, the Account launcher
+#       and Settings > Configs); no private top row and no Configs entry on the bottom nav.
+#   T11 the drawer is the full tree of the declared nav (C3Nav.drawerRows over every section) and
+#       the moved ids keep working: ui.aliases resolves every old section / page id to a declared one.
+#   T12 Containers = Topology | Table (the Public and Private pages merged into Table), Infra =
+#       the promoted Stack page, and the Table page's data (infra_slice.json routes) carries the
+#       seven columns' fields with an auth_type from the edge tiers.
 #   M   mutation-proof: every check above is shown able to go RED.
 #
 # OWN-SOURCE ONLY. python3, jq and grep.
@@ -78,7 +87,7 @@ secs = {s.get("id"): s for s in (ui.get("sections") or [])}
 ids = ui.get("bottom_nav") or []
 tabs = [secs.get(i) or {"id": i} for i in ids]
 labels = [t.get("label") for t in tabs]
-want = ["Topology", "Observ", "Home", "Apps", "Configs"]
+want = ["Infra", "Containers", "Home", "Ops", "Observ"]
 bad = []
 if len(ids) != 5: bad.append("ui.bottom_nav declares %d tabs, not five: %s" % (len(ids), ids))
 if labels != want: bad.append("ui.bottom_nav labels are %s, not %s in that order" % (labels, want))
@@ -88,6 +97,12 @@ if len(ids) == 5 and ids[2] != "home":
     bad.append("the CENTRE tab is %r, not home — every fleet five-tab shell puts Home centre" % ids[2])
 if ui.get("default_section") not in ids:
     bad.append("ui.default_section %r is not a declared id %s" % (ui.get("default_section"), ids))
+if ui.get("default_section") != "home":
+    bad.append("ui.default_section is %r, not home - the app opens on Home" % ui.get("default_section"))
+if "configs" in ids:
+    bad.append("Configs is on the bottom nav - it belongs behind the top bar's Settings dropdown")
+if "configs" not in secs:
+    bad.append("no configs section is declared - Settings > Configs would open nothing")
 if len(set(ids)) != len(ids): bad.append("two tabs share an id: %s" % ids)
 for t in tabs:
     for k in ("id", "label", "icon"):
@@ -101,7 +116,8 @@ PYTHON
 t2() {
     python3 - "$1" "$2" <<'PYTHON'
 import json, re, sys
-declared = list(json.load(open(sys.argv[1], encoding="utf-8"))["ui"].get("bottom_nav") or [])
+# every declared SECTION is dispatched (Configs is a section that is not on the bar)
+declared = [x.get("id") for x in (json.load(open(sys.argv[1], encoding="utf-8"))["ui"].get("sections") or [])]
 text = open(sys.argv[2], encoding="utf-8").read()
 m = re.search(r"val fragment = when \(tabId\) \{(.*?)\n        \}", text, re.S)
 if not m:
@@ -114,7 +130,7 @@ for tab in declared:
                    "an orphaned declaration, a tab that opens nothing" % tab)
 for br in branches:
     if br not in declared:
-        bad.append("the shell dispatches %r but ui.bottom_nav does not declare it — "
+        bad.append("the shell dispatches %r but ui.sections does not declare it — "
                    "an orphaned SCREEN, reachable from nothing" % br)
 if len(set(branches)) != len(branches):
     bad.append("the shell has a duplicate branch: %s" % branches)
@@ -127,7 +143,8 @@ PYTHON
 t3() {
     python3 - "$1" "$2" <<'PYTHON'
 import json, os, re, sys
-declared = list(json.load(open(sys.argv[1], encoding="utf-8"))["ui"].get("bottom_nav") or [])
+_ui = json.load(open(sys.argv[1], encoding="utf-8"))["ui"]
+declared = list(_ui.get("bottom_nav") or []) + [x.get("id") for x in (_ui.get("sections") or []) if x.get("id") not in (_ui.get("bottom_nav") or [])]
 bad = []
 for dirpath, _d, files in os.walk(sys.argv[2]):
     for f in files:
@@ -248,8 +265,8 @@ bad = []
 
 # (a) each paged tab's DECLARED pages must each resolve to a real fragment, and every
 #     dispatched page id must be declared. Read out of each pageFragment() when-block.
-for tab, cls in (("topology", "TopologyFragment"), ("observ", "ObservFragment"), ("apps", "AppsFragment"),
-                 ("configs", "ConfigsFragment")):
+for tab, cls in (("infra", "InfraFragment"), ("containers", "ContainersFragment"), ("observ", "ObservFragment"),
+                 ("ops", "OpsFragment"), ("configs", "ConfigsFragment")):
     sec = next((s for s in (ui.get("sections") or []) if s.get("id") == tab), {})
     declared = [p["id"] for p in (sec.get("pages") or [])]
     m = re.search(r"class %s : PagedFragment\(\).*?when \(pageId\) \{(.*?)\n    \}" % cls,
@@ -290,7 +307,7 @@ for dirpath, _d, files in os.walk(srcdir):
                            % (os.path.relpath(p, srcdir), b))
 
 # (c) no escape-hatch flag in the declaration: `implemented`, `stub`, `wip`, `placeholder`
-for tab in ("topology", "observ", "apps", "configs"):
+for tab in ("infra", "containers", "observ", "ops", "configs"):
     sec = next((s for s in (ui.get("sections") or []) if s.get("id") == tab), {})
     for p in (sec.get("pages") or []):
         for k in p:
@@ -416,6 +433,118 @@ sys.exit(1 if bad else 0)
 PYTHON
 }
 
+# t10 <build.json> <app/build.gradle> <src dir> : the FIRST ROW is the fleet's shared AppTopBar
+t10() {
+    python3 - "$1" "$2" "$3" <<'PYTHON'
+import json, os, re, sys
+ui = json.load(open(sys.argv[1], encoding="utf-8"))["ui"]
+gradle = open(sys.argv[2], encoding="utf-8").read()
+srcdir = sys.argv[3]
+bad = []
+tb = ui.get("top_bar") or {}
+if tb.get("drawer") is not True: bad.append("ui.top_bar.drawer is not true - no hamburger / drawer")
+if tb.get("ai") is not True: bad.append("ui.top_bar.ai is not true - no AI button")
+if (tb.get("settings") or []) != ["account", "configs"]:
+    bad.append("ui.top_bar.settings is %s, not [account, configs] (Profile/Settings dropdown)" % (tb.get("settings"),))
+if "UI_TOP_BAR_B64" not in gradle: bad.append("app/build.gradle does not bake UI_TOP_BAR_B64")
+if "project(':libs:ai')" not in gradle: bad.append("app/build.gradle does not link libs:ai - the AI panel has no chat")
+if "AI_GATEWAY_URL" not in gradle: bad.append("app/build.gradle does not bake AI_GATEWAY_URL for the shared chat")
+code = ""
+for dirpath, _d, files in os.walk(srcdir):
+    for f in files:
+        if f.endswith(".kt"):
+            t = open(os.path.join(dirpath, f), encoding="utf-8").read()
+            t = re.sub(r"/\*.*?\*/", "", t, flags=re.S)
+            code += re.sub(r"//[^\n]*", "", t) + "\n"
+for needle, why in (("AppTopBarScaffold(", "never draws the shared top bar"),
+                    ("AiFleetChatPanel(", "the AI button has no shared chat behind it"),
+                    ("rememberAccountLauncher(", "Settings > Account launches nothing"),
+                    ("onConfigs =", "Settings > Configs opens nothing"),
+                    ("TopBarDrawer", "the hamburger's drawer is empty")):
+    if needle not in code: bad.append("no Kotlin calls %s: %s" % (needle, why))
+# no private top row, no hand-rolled hamburger / drawer, no Configs entry on the island
+for pat, why in ((r"Icons\.\w+(?:\.\w+)?\.Menu\b", "a private hamburger"),
+                 (r"\b(?:ModalNavigationDrawer|ModalDrawerSheet|CenterAlignedTopAppBar|TopAppBar)\s*\(", "a private drawer / top app bar")):
+    if re.search(pat, code): bad.append("Kotlin draws %s beside the shared top bar" % why)
+if "configs" in (ui.get("bottom_nav") or []): bad.append("Configs is still an entry of the bottom nav")
+for b in bad: print("    " + b)
+sys.exit(1 if bad else 0)
+PYTHON
+}
+
+# t11 <build.json> <C3Nav.kt> <src dir> : the drawer tree is the declaration; moved ids keep working
+t11() {
+    python3 - "$1" "$2" "$3" <<'PYTHON'
+import json, os, re, sys
+ui = json.load(open(sys.argv[1], encoding="utf-8"))["ui"]
+nav = open(sys.argv[2], encoding="utf-8").read()
+srcdir = sys.argv[3]
+bad = []
+secs = {x["id"]: x for x in ui.get("sections") or []}
+def page_ids(pages):
+    out = []
+    for p in pages or []:
+        out.append(p["id"]); out += page_ids(p.get("pages"))
+    return out
+if "fun drawerRows(" not in nav or "nav.sections" not in nav:
+    bad.append("C3Nav.drawerRows is not built from every declared section (nav.sections)")
+al = ui.get("aliases") or {}
+for old, new in (al.get("sections") or {}).items():
+    if new not in secs: bad.append("ui.aliases.sections %r -> %r: no such section" % (old, new))
+    if old in secs: bad.append("ui.aliases.sections %r is still a declared section, so it is no alias" % old)
+for old, dest in (al.get("pages") or {}).items():
+    sec, _, pg = dest.partition("/")
+    if sec not in secs or pg not in page_ids(secs[sec].get("pages")):
+        bad.append("ui.aliases.pages %r -> %r: no such section/page" % (old, dest))
+# the ids that moved on 2026-10-16 must still resolve
+for old in ("topology", "apps", "public", "private", "stack"):
+    if old not in (al.get("sections") or {}) and old not in (al.get("pages") or {}) and old not in secs \
+            and not any(old in page_ids(x.get("pages")) for x in secs.values()):
+        bad.append("old id %r resolves to nothing - a deep link or saved tab naming it would break" % old)
+if "aliases" not in open(os.path.join(srcdir, "MainActivity.kt"), encoding="utf-8").read():
+    bad.append("MainActivity does not resolve ids through ui.aliases (deep links / restored tab)")
+for b in bad: print("    " + b)
+sys.exit(1 if bad else 0)
+PYTHON
+}
+
+# t12 <build.json> <infra_slice.json> <TabFragments.kt> : Containers = Topology | Table, Infra = Stack, Table's data
+t12() {
+    python3 - "$1" "$2" "$3" <<'PYTHON'
+import json, re, sys
+b = json.load(open(sys.argv[1], encoding="utf-8"))
+ui = b["ui"]
+sl = json.load(open(sys.argv[2], encoding="utf-8"))
+tabs = open(sys.argv[3], encoding="utf-8").read()
+bad = []
+secs = {x["id"]: x for x in ui.get("sections") or []}
+def pids(i): return [p["id"] for p in (secs.get(i) or {}).get("pages") or []]
+if pids("containers") != ["topology", "table"]: bad.append("Containers pages are %s, not [topology, table]" % pids("containers"))
+if pids("infra") != ["stack"]: bad.append("Infra pages are %s, not [stack]" % pids("infra"))
+c3 = ui["carried_c3"]
+topo, infra = c3.get("stack_topology") or [], c3.get("stack_infra") or []
+for k in ("c3_public", "c3_private"):
+    if any(p.get("kind") == k for p in topo): bad.append("Containers > Topology still embeds the %s address table" % k)
+if any(p.get("kind") == "tile_row" and p.get("title") == "More" for p in topo + infra):
+    bad.append("the More table is back on the Topology / Infra page (owner item 10: removed)")
+if not any(p.get("anchor") == "stack" for p in infra): bad.append("stack_infra lost the Stack card")
+if any(p.get("anchor") == "stack" for p in topo): bad.append("the Stack card is still on Containers > Topology (it moved to Infra)")
+if '"table" -> RoutesTableFragment()' not in tabs: bad.append("ContainersFragment resolves no RoutesTableFragment for the table page")
+if '"stack" -> C3StackFragment.newInstance(C3StackFragment.STACK_INFRA)' not in tabs: bad.append("InfraFragment does not render stack_infra")
+routes = sl.get("routes") or []
+if len(routes) < 50: bad.append("data/infra_slice.json carries %d routes - run data/gen_infra_slice.py" % len(routes))
+want = {"category", "container", "public_url", "auth_type", "private_url", "vm_name", "vm_addr"}
+for r in routes:
+    if set(r) != want: bad.append("route %r has fields %s, not the seven columns" % (r.get("container"), sorted(r))); break
+    if r["auth_type"] not in ("bearer", "woauth", "mesh", "open"): bad.append("route %r auth_type %r" % (r["container"], r["auth_type"])); break
+    if not r["public_url"] and r["auth_type"] != "mesh": bad.append("route %r has no public URL but is not mesh-only" % r["container"]); break
+if not {"bearer", "woauth", "mesh"} <= {r["auth_type"] for r in routes}:
+    bad.append("the shipped routes lack one of the three auth types Bearer / WOAuth / Mesh-only")
+for b_ in bad: print("    " + b_)
+sys.exit(1 if bad else 0)
+PYTHON
+}
+
 t1 "$BJ"                              && pass "T1 ui.bottom_nav is the five declared tabs, in order, Home centre" || fail "T1 the tab declaration is wrong"
 t2 "$BJ" "$MAIN"                      && pass "T2 declaration <-> shell dispatch agree BOTH ways: no orphan either side" || fail "T2 declaration and dispatch disagree"
 t3 "$BJ" "$SRC"                       && pass "T3 no parallel list of tab ids" || fail "T3 a second list of tab ids exists"
@@ -425,6 +554,9 @@ t6 "$BJ" "$TABS" "$SRC"               && pass "T6 NO PLACEHOLDER: every declared
 t7 "$MAIN" "$NAVKT" "$SRC"            && pass "T7 the shell HOSTS FRAGMENTS and reuses libs:bottomnav's island" || fail "T7 the shell is not a fragment host, or forks the nav"
 t9 "$BJ" "$SRC/AppsCatalog.kt" "$APP/data/infra_slice.json" && pass "T9 Services/Tools declaration is closed: tools, views and the derived slice agree" || fail "T9 apps_page and its renderers or slice disagree"
 t8 "$MAIN"                           && pass "T8 the top inset is READ (systemBars u displayCutout) and never consumed" || fail "T8 the top-overflow fix is not the declared one"
+t10 "$BJ" "$APP/app/build.gradle" "$SRC" && pass "T10 the first row is the shared AppTopBar (hamburger, AI, Account/Configs); no private top row, no Configs on the bottom nav" || fail "T10 the top bar is not the declared shared one"
+t11 "$BJ" "$SRC/C3Nav.kt" "$SRC"     && pass "T11 the drawer is the full declared tree and every moved id still resolves (ui.aliases)" || fail "T11 drawer tree or aliases broken"
+t12 "$BJ" "$APP/data/infra_slice.json" "$TABS" && pass "T12 Containers = Topology | Table, Infra = Stack, no More table, Table rows carry the seven columns" || fail "T12 the Containers/Infra pages or the Table data are wrong"
 
 # ── MUTATION PROOF ─────────────────────────────────────────────────────────
 echo
@@ -464,6 +596,9 @@ c_t5() { t5 "$1$A/build.json" "$1$A/app/src/main/AndroidManifest.xml" "$1"; }
 c_t6() { t6 "$1$A/build.json" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/pages/TabFragments.kt" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3"; }
 c_t7() { t7 "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/C3BottomNav.kt" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3"; }
 c_t8() { t8 "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt"; }
+c_t10() { t10 "$1$A/build.json" "$1$A/app/build.gradle" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3"; }
+c_t11() { t11 "$1$A/build.json" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/C3Nav.kt" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3"; }
+c_t12() { t12 "$1$A/build.json" "$1$A/data/infra_slice.json" "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/pages/TabFragments.kt"; }
 
 jqset() { python3 - "$1" "$2" <<'PY'
 import json,sys,collections
@@ -495,7 +630,7 @@ PY
 m_parallel()    { python3 - "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/C3BottomNav.kt" <<'PY'
 import sys
 p=sys.argv[1]; s=open(p).read(); b=s
-s=s.replace("object C3BottomNav {",'object C3BottomNav {\n    val order = listOf("topology", "observ", "home", "apps", "configs")\n')
+s=s.replace("object C3BottomNav {",'object C3BottomNav {\n    val order = listOf("infra", "containers", "home", "ops", "observ")\n')
 assert s!=b
 open(p,"w").write(s)
 PY
@@ -564,6 +699,27 @@ open(p,"w").write(s)
 PY
 }
 
+# T10 / T11 / T12
+m_no_topbar()    { jqset "$1$A/build.json" 'del d["ui"]["top_bar"]'; }
+m_configs_nav()  { jqset "$1$A/build.json" 'd["ui"]["bottom_nav"][4]="configs"'; }
+m_own_hamburger() { printf 'package com.diegonmarcos.cloudc3\nimport androidx.compose.material.icons.Icons\nval privateMenu = Icons.Filled.Menu\n' > "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/OwnTopRow.kt"; }
+m_no_ai_panel()  { python3 - "$1$A/app/src/main/java/com/diegonmarcos/cloudc3/MainActivity.kt" <<'PY'
+import sys
+p=sys.argv[1]; s=open(p).read(); b=s
+s=s.replace("AiFleetChatPanel(","AiOther(")
+assert s!=b
+open(p,"w").write(s)
+PY
+}
+m_default_topology() { jqset "$1$A/build.json" 'd["ui"]["default_section"]="containers"'; }
+m_alias_dead()   { jqset "$1$A/build.json" 'd["ui"]["aliases"]["sections"]["apps"]="nowhere"'; }
+m_alias_gone()   { jqset "$1$A/build.json" 'del d["ui"]["aliases"]["pages"]["public"]'; }
+m_more_back()    { jqset "$1$A/build.json" 'd["ui"]["carried_c3"]["stack_topology"].append(collections.OrderedDict([("kind","tile_row"),("title","More"),("tiles",[])]))'; }
+m_addr_back()    { jqset "$1$A/build.json" 'd["ui"]["carried_c3"]["stack_topology"].append(collections.OrderedDict([("kind","c3_public"),("title","Public")]))'; }
+m_table_dropped() { jqset "$1$A/build.json" 'sec("containers")["pages"]=[p for p in sec("containers")["pages"] if p["id"]!="table"]'; }
+m_route_field()  { jqset "$1$A/data/infra_slice.json" 'del d["routes"][0]["vm_addr"]'; }
+m_route_authless() { jqset "$1$A/data/infra_slice.json" 'd["routes"][0]["auth_type"]="anything"'; }
+
 mutate "a SIXTH tab appears in the declaration"           c_t1 m_sixth_tab
 mutate "Home is moved off the centre position"            c_t1 m_home_offset
 mutate "a declared tab loses its dispatch branch"         c_t2 m_drop_branch
@@ -585,10 +741,22 @@ mutate "a Compose file also builds a View (2026-10-15)"   c_t7 m_compose_screen
 mutate "the shell takes the BOTTOM inset (#477)"          c_t8 m_consume_insets
 mutate "the cutout is dropped from the inset read (#407)" c_t8 m_drop_cutout
 mutate "a tuned top padding is hardcoded in the shell"    c_t8 m_hardcode_top
+mutate "the shared top bar declaration is deleted"        c_t10 m_no_topbar
+mutate "Configs becomes an entry of the bottom nav"       c_t10 m_configs_nav
+mutate "a private hamburger is drawn beside the bar"      c_t10 m_own_hamburger
+mutate "the AI button loses the shared chat"              c_t10 m_no_ai_panel
+mutate "the app opens on Containers instead of Home"      c_t1 m_default_topology
+mutate "an old section id aliases to a section that is gone" c_t11 m_alias_dead
+mutate "an old page id (public) loses its alias"          c_t11 m_alias_gone
+mutate "the More table comes back on Topology"            c_t12 m_more_back
+mutate "an address table comes back on Topology"          c_t12 m_addr_back
+mutate "the Table page is dropped from Containers"        c_t12 m_table_dropped
+mutate "a route loses a Table column"                     c_t12 m_route_field
+mutate "a route carries an unknown auth type"             c_t12 m_route_authless
 
 echo
 if [ "$FAILURES" -ne 0 ] || [ "$MUT_FAIL" -ne 0 ]; then
     echo "FAIL  $FAILURES assertion(s) red, $MUT_FAIL mutation(s) void or hollow"
     exit 1
 fi
-echo "PASS  9 properties asserted, 21 mutations each proved able to go red"
+echo "PASS  12 properties asserted, 33 mutations each proved able to go red"

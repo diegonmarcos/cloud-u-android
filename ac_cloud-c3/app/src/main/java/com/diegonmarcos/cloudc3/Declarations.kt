@@ -3,6 +3,8 @@ package com.diegonmarcos.cloudc3
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.NavSection
+import com.diegonmarcos.superapp.bottomnav.TopBarDecl
+import com.diegonmarcos.cloudc3.pages.RoutesTableModel
 import java.util.Base64
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -72,15 +74,34 @@ object Declarations {
 
     val iconDefault: String get() = BuildConfig.UI_ICON_DEFAULT
     val externalApps: List<ExternalAppDecl> by lazy { parseExternalApps(decode(BuildConfig.UI_EXTERNAL_APPS_B64)) }
-    val topologyPages: List<NavPage> get() = pages("topology")
+    val infraPages: List<NavPage> get() = pages("infra")
+    val containersPages: List<NavPage> get() = pages("containers")
     val observPages: List<NavPage> get() = pages("observ")
     val configsPages: List<NavPage> get() = pages("configs")
-    val appsPages: List<NavPage> get() = pages("apps")
+    val opsPages: List<NavPage> get() = pages("ops")
+
+    /** ui.top_bar (libs:bottomnav TopBarDecl): the shared first row. Null = the app declares none. */
+    val topBar: TopBarDecl? by lazy { TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64) }
+
+    /** ui.aliases: ids that moved keep working ([C3Nav.resolve]). */
+    val aliases: Aliases by lazy { parseAliases(decode(BuildConfig.UI_ALIASES_B64)) }
+
+    /** The Containers > Table rows: data/infra_slice.json::routes. */
+    val routes: List<RoutesTableModel.Row> by lazy { RoutesTableModel.parse(infraSlice["routes"]) }
 
     /** ui.apps_page (the Services/Tools declaration) and the derived data/infra_slice.json. */
     val appsCatalog: AppsCatalog.Decl by lazy { AppsCatalog.parse(decode(BuildConfig.UI_APPS_PAGE_B64)) }
     val infraSlice: JsonObject by lazy { element(decode(BuildConfig.INFRA_SLICE_B64)) as? JsonObject ?: JsonObject(emptyMap()) }
     val opsBaseUrl: String get() = BuildConfig.C3_OPS_BASE_URL
+
+    /** Renamed section ids (old -> new) and moved page ids (old -> "section/page"). */
+    data class Aliases(val sections: Map<String, String> = emptyMap(), val pages: Map<String, String> = emptyMap())
+
+    fun parseAliases(text: String): Aliases {
+        val o = element(text) as? JsonObject ?: return Aliases()
+        fun map(k: String) = (o[k] as? JsonObject)?.mapNotNull { (a, v) -> (v as? JsonPrimitive)?.contentOrNull?.let { a to it } }?.toMap().orEmpty()
+        return Aliases(map("sections"), map("pages"))
+    }
 
     // ── parsing ───────────────────────────────────────────────────────────
 

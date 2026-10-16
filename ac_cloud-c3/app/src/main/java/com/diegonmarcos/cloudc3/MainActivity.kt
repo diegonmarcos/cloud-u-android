@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -28,14 +30,19 @@ import androidx.fragment.app.commit
 import com.diegonmarcos.cloudc3.cloud.C3HealthFragment
 import com.diegonmarcos.cloudc3.cloud.C3MeshFragment
 import com.diegonmarcos.cloudc3.cloud.C3StackFragment
-import com.diegonmarcos.cloudc3.pages.AppsFragment
 import com.diegonmarcos.cloudc3.pages.C3FragmentHost
 import com.diegonmarcos.cloudc3.pages.ConfigsFragment
+import com.diegonmarcos.cloudc3.pages.ContainersFragment
 import com.diegonmarcos.cloudc3.pages.HomeFragment
+import com.diegonmarcos.cloudc3.pages.InfraFragment
 import com.diegonmarcos.cloudc3.pages.ObservFragment
-import com.diegonmarcos.cloudc3.pages.TopologyFragment
+import com.diegonmarcos.cloudc3.pages.OpsFragment
+import com.diegonmarcos.cloudc3.pages.PagedFragment
 import com.diegonmarcos.cloudc3.pages.c3KitPalette
+import com.diegonmarcos.superapp.ai.AiFleetChatPanel
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
+import com.diegonmarcos.superapp.bottomnav.TopBarSettings
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitFragmentHostState
 
@@ -64,20 +71,23 @@ import com.diegonmarcos.superapp.uikit.KitFragmentHostState
  */
 class MainActivity : AppCompatActivity(),
     C3HealthFragment.UrlClickListener,
-    C3StackFragment.TargetListener {
+    C3StackFragment.TargetListener,
+    PagedFragment.PageListener {
 
+    /** Where the shell is: the tab on the island (or Configs, off it), the page inside it, and a serial that re-keys the host. */
     private var currentTab by mutableStateOf<String?>(null)
+    private var currentPage by mutableStateOf<String?>(null)
+    private var hostSerial by mutableIntStateOf(0)
+    private var cameFrom: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // The tab's fragment is re-added by the Compose host once it has a container for it.
         super.onCreate(KitFragmentHostState.withoutFragments(savedInstanceState))
         FleetChrome.apply(this)
 
-        val restored = savedInstanceState?.getString(STATE_TAB)
-        val initial = restored?.takeIf { id -> Declarations.tabs.any { it.id == id } }
-            ?: Declarations.defaultTab.takeIf { d -> Declarations.tabs.any { it.id == d } }
-            ?: Declarations.tabs.firstOrNull()?.id
-        initial?.let { show(it) }
+        // The app opens on ui.default_section (Home); a saved tab (or an old id) is resolved through ui.aliases.
+        C3Nav.start(Declarations.nav, Declarations.aliases, savedInstanceState?.getString(STATE_TAB))
+            ?.let { openPlace(it) }
         setContent { CloudKitTheme(c3KitPalette(this)) { Shell() } }
         if (savedInstanceState == null) handleDeepLink(intent)
     }
@@ -92,23 +102,36 @@ class MainActivity : AppCompatActivity(),
                         .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
                 ),
         ) {
-            // The page. Every tab replaces this one container, the way the SuperApp's shell
-            // does, so a page arrives as the Fragment it already is.
+            // The fleet's shared first row (AppTopBarScaffold, ui.top_bar) over the page and the island.
             val tab = currentTab
-            if (tab != null) {
-                C3FragmentHost(
-                    fm = supportFragmentManager,
-                    containerId = R.id.fragment_container,
-                    key = tab,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                ) { fragmentFor(tab) ?: Fragment() }
+            // Configs is off the island: Back from it returns to where the user came from.
+            BackHandler(enabled = tab != null && tab !in Declarations.nav.bottomNav) { openPlace(cameFromTarget()) }
+            C3Chrome(
+                selectedTab = tab,
+                selectedPage = currentPage,
+                onOpen = { openPlace(it) },
+                onAccount = rememberAccountLauncher(),
+                onConfigs = { openPlace(C3Nav.Target(TopBarSettings.CONFIGS)) },
+                aiPanel = { AiFleetChatPanel(BuildConfig.AI_GATEWAY_URL) },
+            ) {
+                // The page. Every tab replaces this one container, the way the SuperApp's shell
+                // does, so a page arrives as the Fragment it already is.
+                if (tab != null) {
+                    C3FragmentHost(
+                        fm = supportFragmentManager,
+                        containerId = R.id.fragment_container,
+                        key = "$tab#$hostSerial",
+                        modifier = Modifier.fillMaxSize(),
+                    ) { fragmentFor(tab, requestedPage) ?: Fragment() }
+                }
             }
-            // The fleet's ONE bottom nav (#531/#565): the same Compose island the SuperApp,
-            // mail, wallet, me and drive draw. Below the content so nothing a page draws can
-            // hide under it. C3BottomNav feeds it build.json::ui.bottom_nav.
-            C3BottomNav.Island(selectedId = tab, onOpen = { show(it) })
         }
     }
+
+    private var requestedPage: String? = null
+
+    private fun cameFromTarget(): C3Nav.Target =
+        C3Nav.start(Declarations.nav, Declarations.aliases, cameFrom) ?: C3Nav.Target(Declarations.defaultTab)
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -133,27 +156,42 @@ class MainActivity : AppCompatActivity(),
         outState.putString(STATE_TAB, currentTab)
     }
 
-    /** Open a tab: the island's pill moves with [currentTab] and the host swaps the page in. */
-    private fun show(tabId: String) {
-        if (tabId == currentTab) return
-        currentTab = tabId
+    /**
+     * Open a place: a tab, and optionally a page inside it. The island's pill moves with [currentTab] (a tab off
+     * the bar, Configs, lights none) and the host swaps the page in. Re-opening the tab and page already shown
+     * rebuilds nothing.
+     */
+    private fun openPlace(target: C3Nav.Target) {
+        if (target.section == currentTab && (target.page == null || target.page == currentPage)) return
+        if (Declarations.nav.section(target.section) == null) return
+        if (currentTab != null && currentTab in Declarations.nav.bottomNav) cameFrom = currentTab
+        currentTab = target.section
+        requestedPage = target.page
+        currentPage = target.page
+        hostSerial++
+    }
+
+    /** The tab's strip told us which page it shows, so the drawer can mark it. */
+    override fun onPageShown(tab: String, page: String) {
+        if (tab == currentTab) currentPage = page
     }
 
     /**
-     * The tab's page. THE ONE PLACE Kotlin names a tab id — the
-     * tester diffs this dispatch against build.json::ui.bottom_nav in BOTH directions, so a
-     * declared tab with no page and a page no declaration reaches are each a build
-     * failure. There is deliberately no companion list of these ids.
+     * The tab's page. THE ONE PLACE Kotlin names a tab id - the tester diffs this dispatch against
+     * build.json::ui.sections in BOTH directions, so a declared tab with no page and a page no
+     * declaration reaches are each a build failure. There is deliberately no companion list of these ids.
      */
-    private fun fragmentFor(tabId: String): Fragment? {
+    private fun fragmentFor(tabId: String, page: String?): Fragment? {
         val fragment = when (tabId) {
-            "topology" -> TopologyFragment()
+            "infra" -> InfraFragment()
+            "containers" -> ContainersFragment()
             "observ" -> ObservFragment()
             "home" -> HomeFragment()
-            "apps" -> AppsFragment()
+            "ops" -> OpsFragment()
             "configs" -> ConfigsFragment()
             else -> return null
         }
+        if (fragment is PagedFragment) fragment.arguments = PagedFragment.args(tabId, page)
         return fragment
     }
 
@@ -207,7 +245,11 @@ class MainActivity : AppCompatActivity(),
                     "wg/status", "observ/mesh" -> C3MeshFragment.newInstance()
                     else        -> null
                 }
-                if (fragment != null) {
+                // A page that MOVED (ui.aliases) or any declared page/section id opens in its tab.
+                val place = if (fragment == null) C3Nav.resolve(Declarations.nav, Declarations.aliases, page.substringAfter('/')) else null
+                if (place != null) {
+                    openPlace(place)
+                } else if (fragment != null) {
                     supportFragmentManager.commit {
                         setReorderingAllowed(true)
                         add(R.id.fragment_container, fragment)

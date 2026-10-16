@@ -1,6 +1,6 @@
 {
   "name": "cloud-c3",
-  "description": "Diego's Cloud C3 - the fleet's command-and-control surface as its own APK, lifted out of the SuperApp's C3 section (#648). A five-tab shell drawn by the fleet's bottom-nav island (libs:bottomnav) - Topology, Observ, Home, Apps, Configs - declared in ui.* below and baked through BuildConfig. THE SHELL IS VIEWS AND HOSTS FRAGMENTS, not Compose: the pages this app exists to show are the SuperApp's C3 Fragments, and they are MOVED here rather than reauthored, so the rendering, wording and behaviour are the ones that already shipped. BottomNavIslandView is libs:bottomnav's own documented View-side contract for exactly this case (the SuperApp, cloud-me and cloud-wallet shells use it), so hosting fragments is a first-class path. Topology is the address estate: the SuperApp's c3_public and c3_private cards, one C3HealthFragment scoped two ways over the declared service tables. Observ is Health, the SuperApp's own page:c3/health. Home is the overview. Apps LAUNCHES the three C3 sibling APKs that already exist as their own fleet members through ui.external_apps, the same extapp: idiom the SuperApp used, so nothing is re-implemented; the printed name is DERIVED from each fleet id by dropping the family prefix, because an application has ONE name (#351). Configs holds About. A PAGE IS DECLARED WHEN ITS FRAGMENT EXISTS AND NOT BEFORE: there is no not-built body and no flag that could excuse one, which is what lets test/test-c3-shell.sh assert that every declared page renders real content - the guard whose absence let an empty five-tab APK ship green. The five feed cards, the ntfy centre and the three container dashboards ARRIVED (#648, owner-escalated): the ENTIRE SuperApp c3 section declaration is carried verbatim under ui.sections and its two stacks render as the Topology and Observability pages, with Dagu and the WG mesh as their own pages. The top offset is the MEASURED systemBars u displayCutout inset, read in a non-consuming listener (#407/#477), never a tuned margin. Dark is the default theme (#336, #337). English is the base language (#299). Build via Nix devShell, one APK out.",
+  "description": "Diego's Cloud C3 - the fleet's command-and-control surface as its own APK, lifted out of the SuperApp's C3 section (#648). A five-tab shell drawn by the fleet's bottom-nav island (libs:bottomnav) - Infra, Containers, Home, Ops, Observ (opens on Home), under the fleet's AppTopBar with Configs behind its Settings button - declared in ui.* below and baked through BuildConfig. THE SHELL IS VIEWS AND HOSTS FRAGMENTS, not Compose: the pages this app exists to show are the SuperApp's C3 Fragments, and they are MOVED here rather than reauthored, so the rendering, wording and behaviour are the ones that already shipped. BottomNavIslandView is libs:bottomnav's own documented View-side contract for exactly this case (the SuperApp, cloud-me and cloud-wallet shells use it), so hosting fragments is a first-class path. Topology is the address estate: the SuperApp's c3_public and c3_private cards, one C3HealthFragment scoped two ways over the declared service tables. Observ is Health, the SuperApp's own page:c3/health. Home is the overview. Apps LAUNCHES the three C3 sibling APKs that already exist as their own fleet members through ui.external_apps, the same extapp: idiom the SuperApp used, so nothing is re-implemented; the printed name is DERIVED from each fleet id by dropping the family prefix, because an application has ONE name (#351). Configs holds About. A PAGE IS DECLARED WHEN ITS FRAGMENT EXISTS AND NOT BEFORE: there is no not-built body and no flag that could excuse one, which is what lets test/test-c3-shell.sh assert that every declared page renders real content - the guard whose absence let an empty five-tab APK ship green. The five feed cards, the ntfy centre and the three container dashboards ARRIVED (#648, owner-escalated): the ENTIRE SuperApp c3 section declaration is carried verbatim under ui.sections and its two stacks render as the Topology and Observability pages, with Dagu and the WG mesh as their own pages. The top offset is the MEASURED systemBars u displayCutout inset, read in a non-consuming listener (#407/#477), never a tuned margin. Dark is the default theme (#336, #337). English is the base language (#299). Build via Nix devShell, one APK out.",
   "category": "android",
   "vendored_engine": null,
   "android": {
@@ -93,7 +93,8 @@
         "libs:updater",
         "libs:bottomnav",
         "libs:ops",
-        "libs:ui-kit"
+        "libs:ui-kit",
+        "libs:ai"
       ]
     },
     "libs:core": {
@@ -133,41 +134,110 @@
       "_doc_dir": "2026-10-15 owner decision: all apps must be Compose. Shared BY REFERENCE: the fleet's Compose kit (CloudKitTheme + KitPalette) that AgentsFragment and CatalogFragment paint with.",
       "dir": "../ab_cloud-libs-shared/libs/ui-kit",
       "type": "library"
+    },
+    "libs:ai": {
+      "_doc_dir": "The AI panel behind the top bar's AI button: the fleet's AI chat (libs:ai), the SAME shared chat Cloud Code has, over the fleet agent gateway (my-ai-api, mesh only). Shared BY REFERENCE. The gateway's mesh address is baked as BuildConfig.AI_GATEWAY_URL by libs/ai/ai-gateway.gradle, which reads it from this app's data/services_private.json.",
+      "dir": "../ab_cloud-libs-shared/libs/ai",
+      "type": "library"
+    },
+    "libs:model-catalogue": {
+      "_doc_dir": "libs:ai's `api` dependency: the shared agent descriptor its Agent picker lists. Listed so settings.gradle resolves the path.",
+      "dir": "../ab_cloud-libs-shared/libs/model-catalogue",
+      "type": "library"
     }
   },
   "ui": {
     "_doc": "EVERY declarative list this app renders. app/build.gradle bakes each into BuildConfig as base64 JSON and Declarations.kt decodes it once; no screen reads a BuildConfig blob itself and no tab id, label or icon name is spelled in Kotlin.",
-    "_doc_nav": "#868 THE ONE navigation declaration (libs:bottomnav's NavDecl): ui.bottom_nav is the island's section ids in display order, Home deliberately the centre item the way every other fleet five-tab shell places it; ui.sections[] holds each section's id, label, icon and its `pages` (the pill strip PageTabsView draws over it); ui.default_section is the one it opens on. Order is load-bearing: reordering ui.bottom_nav reorders the bottom nav and nothing else changes, which is the property test/test-c3-shell.sh asserts. The section ids are the ONLY tab ids in the app: C3Shell dispatches on them and the tester diffs that dispatch against this array in both directions, so a section declared with no screen and a screen with no declared section are both build failures.",
+    "_doc_nav": "#868 THE ONE navigation declaration (libs:bottomnav's NavDecl): ui.bottom_nav is the island's section ids in display order - Infra | Containers | Home | Ops | Observ, Home deliberately the centre item the way every other fleet five-tab shell places it; ui.sections[] holds each section's id, label, icon and its `pages` (the pill strip PageTabs draws over it); ui.default_section is the one it opens on (Home). Configs is a section that is NOT on the bar: the top bar's Settings > Configs opens it. Order is load-bearing: reordering ui.bottom_nav reorders the bottom nav and nothing else changes, which is the property test/test-c3-shell.sh asserts. The section ids are the ONLY tab ids in the app: C3Shell dispatches on them and the tester diffs that dispatch against the sections in both directions, so a section declared with no screen and a screen with no declared section are both build failures. ui.aliases maps the ids that moved in the 2026-10-16 renames to where they live now.",
     "bottom_nav": [
-      "topology",
-      "observ",
+      "infra",
+      "containers",
       "home",
-      "apps",
-      "configs"
+      "ops",
+      "observ"
     ],
     "default_section": "home",
+    "top_bar": {
+      "_doc": "THE first row of the app (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger at the left that opens a side drawer (here: the full tree of every declared section and its pages, tappable), the app's name as the title, and two circular buttons at the right: AI (libs:ai's chat in an anchored panel over the fleet gateway - the same shared chat Cloud Code has) and Settings (a dropdown: Account launches Cloud Account, Configs opens the Configs section). No app draws its own copy of this row (cloud-android-top-bar-guard).",
+      "drawer": true,
+      "ai": true,
+      "settings": [
+        "account",
+        "configs"
+      ]
+    },
+    "_doc_aliases": "Ids that MOVED keep working: a deep link (page:c3/<id>, the launcher's shortcut_action), a saved tab or an old tester naming one is rewritten to where it lives now. `sections` maps a renamed section id to its new id (Topology became Containers, Apps became Ops); `pages` maps a moved page id to 'section/page' (the Public and Private URL pages merged into the Table page; the Stack page is Infra's). Kotlin reads this map and holds no id literal of its own.",
+    "aliases": {
+      "sections": {
+        "topology": "containers",
+        "apps": "ops"
+      },
+      "pages": {
+        "public": "containers/table",
+        "private": "containers/table",
+        "stack": "infra/stack"
+      }
+    },
     "sections": [
       {
-        "id": "topology",
-        "label": "Topology",
+        "id": "infra",
+        "label": "Infra",
+        "icon": "ic_p_sol_cloud",
+        "_doc": "Promoted to a main section from Containers > Topology > Stack (owner: 'move Stack to main menu as Infra'): the Stack dashboard (Providers, VMs, Dbs, APIs) with its own Index. One page, so no strip.",
+        "pages": [
+          {
+            "id": "stack",
+            "label": "Stack",
+            "icon": "ic_p_c3_stack",
+            "_doc": "C3StackFragment over ui.carried_c3.stack_infra: the Index row and the Stack card."
+          }
+        ]
+      },
+      {
+        "id": "containers",
+        "label": "Containers",
         "icon": "ic_p_c3_stack",
-        "_doc": "The address estate: the SuperApp's two c3_public / c3_private cards that sat under its Addresses heading. ONE fragment renders both, scoped — exactly how the SuperApp embedded it.",
+        "_doc": "Renamed from Topology (owner request, 2026-10-16). Two top tabs: Topology (the container dashboards, without the address tables) and Table (the former Public and Private URL pages merged into one sortable, filterable table over data/infra_slice.json::routes).",
         "pages": [
           {
             "id": "topology",
             "label": "Topology",
             "icon": "ic_p_c3_stack",
-            "_doc": "#648 the SuperApp's Topology tab CARRIED WHOLE: C3StackFragment renders ui.sections[c3].stack_topology — Index tile row, the Addresses heading with the c3_public / c3_private cards, the Containers heading with the Infra Apps / User Apps dashboards, the Stack dashboard with its four declared anchors, and the More row. The sibling Public/Private pages below stay: they are the same two cards standalone, exactly as this app already shipped them, and nothing is deleted in a copy job."
+            "_doc": "C3StackFragment renders ui.carried_c3.stack_topology: the Index row and the Infra Apps / User Apps dashboards. The embedded public-URL / private-URL address cards and the More row were removed; the data they showed is in the Table page."
           },
           {
-            "id": "public",
-            "label": "Public",
+            "id": "table",
+            "label": "Table",
+            "icon": "ic_link_tile",
+            "_doc": "RoutesTableFragment: one row per container - Category, Container, Public URL, Auth Type, Private URL, VM Name, VM IP:PORT. Sort by any column (tap the header), filter by Auth Type and VM, filter state persisted. Rows are data/infra_slice.json::routes, derived by data/gen_infra_slice.py from the edge auth tiers."
+          }
+        ]
+      },
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "ic_home"
+      },
+      {
+        "id": "ops",
+        "label": "Ops",
+        "icon": "ic_robot",
+        "_doc": "Renamed from Apps (owner request, 2026-10-16). Three pages, in the owner's order: Agents (the launchable C3 siblings), Services (composites over the Tools they use) and Tools (each engine on its own). Services and Tools are view-only and read ui.apps_page.",
+        "pages": [
+          {
+            "id": "agents",
+            "label": "Agents",
+            "icon": "ic_robot"
+          },
+          {
+            "id": "services",
+            "label": "Services",
             "icon": "ic_p_c3_stack"
           },
           {
-            "id": "private",
-            "label": "Private",
-            "icon": "ic_p_c3_health"
+            "id": "tools",
+            "label": "Tools",
+            "icon": "ic_p_c3_vms"
           }
         ]
       },
@@ -203,38 +273,10 @@
         ]
       },
       {
-        "id": "home",
-        "label": "Home",
-        "icon": "ic_home"
-      },
-      {
-        "id": "apps",
-        "label": "Apps",
-        "icon": "ic_robot",
-        "_doc": "Three pages, in the owner's order: Agents (the launchable C3 siblings), Services (composites over the Tools they use) and Tools (each engine on its own). Services and Tools are view-only and read ui.apps_page.",
-        "pages": [
-          {
-            "id": "agents",
-            "label": "Agents",
-            "icon": "ic_robot"
-          },
-          {
-            "id": "services",
-            "label": "Services",
-            "icon": "ic_p_c3_stack"
-          },
-          {
-            "id": "tools",
-            "label": "Tools",
-            "icon": "ic_p_c3_vms"
-          }
-        ]
-      },
-      {
         "id": "configs",
         "label": "Configs",
         "icon": "ic_settings",
-        "_doc": "This app's own settings. About is real because everything it shows is baked by gradle; a General page arrives when it has something to set.",
+        "_doc": "This app's own settings, NOT in ui.bottom_nav: the top bar's Settings > Configs opens it (libs:bottomnav AppTopBar, ui.top_bar). About is real because everything it shows is baked by gradle; a General page arrives when it has something to set.",
         "pages": [
           {
             "id": "about",
@@ -793,23 +835,11 @@
       ],
       "stack_topology": [
         {
-          "_doc": "INDEX of this page, not a set of deep links. Every tile is an `anchor:` target handled by StackAnchors inside AggregatorStackFragment: it scrolls this stack to the card that claimed the id, so the row is a table of contents for what is already below it rather than four ways to leave. The four `stack/*` ids address SUB-TABLES of the single `cloud_dashboard` Stack card — that card renders groups providers/dbs/mcpapi from data/cloud_services.json, and the group and subgroup headers it draws register their own anchors, so Providers · VMs · Dbs · APIs are addressable WITHOUT splitting one card into four panels the data does not have (VMs and Runners are both subgroups of `providers`; APIs and MCPs are both subgroups of `mcpapi`). WG mesh left this row: the WireGuard screen is Configs ▸ WireGuard (page:config/wg → WireGuardFragment) and does not need a second entry point here. Drive · Connections left it too and now lives under Cloud ▸ Apps ▸ Data Apps, pointing at the same page:drive/connections.",
+          "_doc": "INDEX of the Containers > Topology page: one `anchor:` tile per card below. The Pub URLs / Pvt URLs tiles left with the two address cards, which became the Containers > Table page (owner request, 2026-10-16); the Stack tiles went with the Stack section to Infra.",
           "kind": "tile_row",
           "title": "Index",
           "subtitle": "Jump to a table on this page",
           "tiles": [
-            {
-              "id": "pub-urls",
-              "label": "Pub URLs",
-              "icon": "ic_p_sol_cloud",
-              "target": "anchor:pub-urls"
-            },
-            {
-              "id": "pvt-urls",
-              "label": "Pvt URLs",
-              "icon": "ic_wg",
-              "target": "anchor:pvt-urls"
-            },
             {
               "id": "containers-infra",
               "label": "Cont. Infra",
@@ -821,7 +851,34 @@
               "label": "Cont. User",
               "icon": "ic_p_c3_stack",
               "target": "anchor:containers-user"
-            },
+            }
+          ]
+        },
+        {
+          "_doc": "Cloud dashboard — section_title dividers + 3 collapsible cloud_dashboard CARDS. 'Containers' heading → Infra Apps + User Apps (every container exactly once). 'Stack' heading → the Stack card (free cross-cut lists: Providers/VMs · DBs · MCP & API). Grouping + inventory DATA-DRIVEN from data/cloud_services.json (BuildConfig.CLOUD_SERVICES_B64), generated by data/gen_cloud_services.js from cloud/a_solutions. renderCloudDashboard draws an icon grid (ui.tile_columns/line) with a STATUS LIGHT under each icon (TCP-ping over WireGuard) + opens the URL in the in-app browser on tap. `group`/`groups` selects which cloud_services.json group(s) a card renders.",
+          "kind": "section_title",
+          "title": "Containers"
+        },
+        {
+          "kind": "cloud_dashboard",
+          "anchor": "containers-infra",
+          "title": "Infra Apps",
+          "group": "infra"
+        },
+        {
+          "kind": "cloud_dashboard",
+          "anchor": "containers-user",
+          "title": "User Apps",
+          "group": "user"
+        }
+      ],
+      "stack_infra": [
+        {
+          "_doc": "INDEX of the Infra page: the four `stack/*` anchors address sub-tables of the single Stack card below (see the card's _doc_anchors). Split off the Containers > Topology Index when the Stack section was promoted to its own main section, Infra (owner request, 2026-10-16).",
+          "kind": "tile_row",
+          "title": "Index",
+          "subtitle": "Jump to a table on this page",
+          "tiles": [
             {
               "id": "stack-providers",
               "label": "Providers",
@@ -847,46 +904,6 @@
               "target": "anchor:stack/apis"
             }
           ]
-        },
-        {
-          "_doc": "Heading over the two URL cards, so the Public/Private pair reads as one titled block the way 'Containers' and 'Stack' already do below. Same section_title kind — a plain heading between cards, not a card.",
-          "kind": "section_title",
-          "title": "Addresses"
-        },
-        {
-          "_doc": "Routed URLs — what the fleet EXPOSES and where each name actually goes. Data-driven from data/services_public.json (43 rows), the same regen.sh snapshot the C3 Health page reads, so nothing is hand-listed here and nothing can rot out of step with the infra: the panel kind c3_public already renders exactly the wanted shape (name · auth · https://<public_url> · 🔒 <private_dns, which is host:port> · vm). TITLE SAYS 'routes', deliberately, NOT 'internet-reachable': services_public.json means A PROXY ROUTE EXISTS, and regen.sh never reads wg_only — eight sibling MCPs are wg_only:true yet appear here on mcp.diegonmarcos.com routes, mesh-gated with a 403 fallback. Claiming those are public would make this card assert something false about the security posture, which is worse than not having the card; per-row wg_only would be truer still, but it is not in the snapshot and inventing it here rather than in regen.sh is exactly the rot this file avoids.",
-          "kind": "c3_public",
-          "anchor": "pub-urls",
-          "title": "Public URLs · proxy routes",
-          "subtitle": "public host → upstream host:port · a route exists, not necessarily open to the internet"
-        },
-        {
-          "_doc": "The other half: containers with NO proxy route at all — reachable only over the WireGuard mesh. Data-driven from data/services_private.json (60 rows) via the existing c3_private panel kind (name · protocol/db · service · 🔒 <private_dns, host:port> · vm). Together with the card above this answers 'what is exposed and where does it actually go' from ONE generated source rather than from either Caddyfile — which matters because there are two of them (infra-sec_caddy on gcp-proxy = mesh side, infra-sec_caddy-public on oci-analytics = public edge) and because the public edge's repo dist is NOT what is deployed.",
-          "kind": "c3_private",
-          "anchor": "pvt-urls",
-          "title": "Private URLs · mesh only",
-          "subtitle": "no proxy route — WireGuard host:port"
-        },
-        {
-          "_doc": "Cloud dashboard — section_title dividers + 3 collapsible cloud_dashboard CARDS. 'Containers' heading → Infra Apps + User Apps (every container exactly once). 'Stack' heading → the Stack card (free cross-cut lists: Providers/VMs · DBs · MCP & API). Grouping + inventory DATA-DRIVEN from data/cloud_services.json (BuildConfig.CLOUD_SERVICES_B64), generated by data/gen_cloud_services.js from cloud/a_solutions. renderCloudDashboard draws an icon grid (ui.tile_columns/line) with a STATUS LIGHT under each icon (TCP-ping over WireGuard) + opens the URL in the in-app browser on tap. `group`/`groups` selects which cloud_services.json group(s) a card renders.",
-          "kind": "section_title",
-          "title": "Containers"
-        },
-        {
-          "kind": "cloud_dashboard",
-          "anchor": "containers-infra",
-          "title": "Infra Apps",
-          "group": "infra"
-        },
-        {
-          "kind": "cloud_dashboard",
-          "anchor": "containers-user",
-          "title": "User Apps",
-          "group": "user"
-        },
-        {
-          "kind": "section_title",
-          "title": "Stack"
         },
         {
           "kind": "cloud_dashboard",
@@ -916,26 +933,6 @@
               "id": "stack/apis",
               "group": "mcpapi",
               "subgroup": "APIs"
-            }
-          ]
-        },
-        {
-          "_doc": "MORE — the same contract as Observability's row: ordinary `page:` targets to the full pages, sitting below everything the Index indexes so the table of contents is still read first. These two had no referrer anywhere in build.json once the Index became pure anchors. The distinction is real and not redundancy: `anchor:stack/vms` scrolls to the VMs sub-table inside the Stack card, while `page:c3/vms` opens the VMs PAGE, which carries per-VM detail the card's icon grid does not.",
-          "kind": "tile_row",
-          "title": "More",
-          "subtitle": "Open the full page behind a card",
-          "tiles": [
-            {
-              "id": "stack",
-              "label": "Stack",
-              "icon": "ic_p_c3_stack",
-              "target": "page:c3/stack"
-            },
-            {
-              "id": "vms",
-              "label": "VMs",
-              "icon": "ic_p_c3_vms",
-              "target": "page:c3/vms"
             }
           ]
         }

@@ -88,14 +88,14 @@ class HomeFragment : KitComposeFragment() {
             DownCard(report, onRefresh = { measureKey++ }) { name -> sheet = ContainerSheet.Target(name, name, "") }
 
             Card(
-                label("topology"),
+                label("containers"),
                 listOf(
                     stringResource(R.string.c3_health_section_public, pub),
                     stringResource(R.string.c3_health_section_private, priv),
                 ),
             )
             Card(label("observ"), Declarations.observPages.map { it.label })
-            Card(label("apps"), Declarations.externalApps.map { "${it.display} · ${it.packageName}" })
+            Card(label("ops"), Declarations.externalApps.map { "${it.display} · ${it.packageName}" })
         }
         sheet?.let { target ->
             ContainerSheet.Sheet(

@@ -138,6 +138,7 @@ object Stacks {
     )
 
     @Volatile private var cachedTopology: List<StackPanel>? = null
+    @Volatile private var cachedInfra:    List<StackPanel>? = null
     @Volatile private var cachedObserv:   List<StackPanel>? = null
     @Volatile private var cachedMesh:     Mesh?             = null
     @Volatile private var cachedDash:     CloudDash?        = null
@@ -145,6 +146,10 @@ object Stacks {
     /** stack_topology of the carried c3 section — the Topology page's panels. */
     fun stackTopology(): List<StackPanel> =
         cachedTopology ?: parseStack(BuildConfig.UI_STACK_TOPOLOGY_B64).also { cachedTopology = it }
+
+    /** stack_infra of the carried c3 section: the Infra page's panels (the Stack card, promoted out of Topology). */
+    fun stackInfra(): List<StackPanel> =
+        cachedInfra ?: parseStack(BuildConfig.UI_STACK_INFRA_B64).also { cachedInfra = it }
 
     /** stack_observability of the carried c3 section — the Observability page's panels. */
     fun stackObservability(): List<StackPanel> =

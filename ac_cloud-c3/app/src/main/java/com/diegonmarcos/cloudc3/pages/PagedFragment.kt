@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,13 +49,19 @@ abstract class PagedFragment : KitComposeFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val declared = pages()
-        val restored = savedInstanceState?.getString(STATE_PAGE)
+        val restored = savedInstanceState?.getString(STATE_PAGE) ?: arguments?.getString(ARG_PAGE)
         selected = restored?.takeIf { id -> declared.any { it.id == id } } ?: declared.firstOrNull()?.id
     }
 
     @Composable
     override fun Content() {
         val declared = remember { pages() }
+        // Tell the shell which page this tab shows, so its drawer marks it (the shell does not own the strip).
+        LaunchedEffect(selected) {
+            val tab = arguments?.getString(ARG_TAB)
+            val page = selected
+            if (tab != null && page != null) (activity as? PageListener)?.onPageShown(tab, page)
+        }
         Column(Modifier.fillMaxSize()) {
             // A single declared page needs no strip: the tab IS that page, and a one-item
             // picker is chrome that cannot be used. #868 the strip is libs:bottomnav's; the
@@ -87,7 +94,20 @@ abstract class PagedFragment : KitComposeFragment() {
         outState.putString(STATE_PAGE, selected)
     }
 
-    private companion object {
-        const val STATE_PAGE = "c3_selected_page"
+    /** The host that wants to know which page a tab is showing. */
+    interface PageListener {
+        fun onPageShown(tab: String, page: String)
+    }
+
+    companion object {
+        private const val STATE_PAGE = "c3_selected_page"
+        const val ARG_TAB = "c3_tab"
+        const val ARG_PAGE = "c3_page"
+
+        /** The arguments that open [tab] on [page] (null = its first page). */
+        fun args(tab: String, page: String?) = Bundle().apply {
+            putString(ARG_TAB, tab)
+            if (page != null) putString(ARG_PAGE, page)
+        }
     }
 }

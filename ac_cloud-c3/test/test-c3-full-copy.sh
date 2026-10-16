@@ -68,28 +68,46 @@ if not any(p.get("kind") == "notification_center" and p.get("stream") == "channe
     bad.append("stack_observability lost the NTFY centre (kind=notification_center, stream=channels)")
 if sum(1 for p in obs if p.get("kind") == "tile_row") < 2:
     bad.append("stack_observability has fewer than two tile_rows — the Index and More rows are part of the page")
+infra = c3.get("stack_infra") or []
+if not infra: bad.append("stack_infra is missing or empty - the whole Infra page is gone")
+# 2026-10-16: the two address cards left Topology; their data lives on in the Containers > Table page, so
+# 'lost nothing' is now: no row the cards showed is missing from data/infra_slice.json::routes.
 kinds_topo = [p.get("kind") for p in topo]
 for k in ("c3_public", "c3_private"):
-    if k not in kinds_topo:
-        bad.append("stack_topology lost the %r address card" % k)
-dash = [p for p in topo if p.get("kind") == "cloud_dashboard"]
+    if k in kinds_topo:
+        bad.append("stack_topology still embeds the %r address card - it moved to the Table page" % k)
+import os
+_here = os.path.abspath(app)
+_slice = json.load(open(os.path.join(_here, "data", "infra_slice.json"), encoding="utf-8"))
+_have = {(r.get("container"), bool(r.get("public_url"))) for r in _slice.get("routes") or []}
+for fn, key, has_pub in (("services_public.json", "name", True), ("services_private.json", "name", False)):
+    for row in json.load(open(os.path.join(_here, "data", fn), encoding="utf-8")):
+        if (row[key], has_pub) not in _have:
+            bad.append("the Table page lost %s row %r that the address cards showed" % (fn, row[key]))
+dash = [p for p in topo + infra if p.get("kind") == "cloud_dashboard"]
 if len(dash) != 3:
     bad.append("stack_topology carries %d cloud_dashboard cards, not the three the SuperApp declares "
                "(Infra Apps, User Apps, Stack)" % len(dash))
 dash_groups = sorted(tuple(sorted(([p.get("group")] if p.get("group") else []) + (p.get("groups") or []))) for p in dash)
 if dash_groups != sorted([("infra",), ("user",), ("dbs", "mcpapi", "providers")]):
     bad.append("the three dashboards' group bindings are %s, not infra / user / providers+dbs+mcpapi" % dash_groups)
-if sum(1 for p in topo if p.get("kind") == "tile_row") < 2:
-    bad.append("stack_topology has fewer than two tile_rows — the Index and More rows are part of the page")
+for _name, _stack in (("stack_topology", topo), ("stack_infra", infra)):
+    if not any(p.get("kind") == "tile_row" and p.get("title") == "Index" for p in _stack):
+        bad.append("%s lost its Index row" % _name)
+    if any(p.get("kind") == "tile_row" and p.get("title") == "More" for p in _stack):
+        bad.append("%s has a More row - owner item 10 removed the More table" % _name)
 if not (ui.get("ntfy") or {}).get("channels"):
     bad.append("ui.ntfy.channels is missing or empty — the NTFY centre would list no channel")
 for key in ("labels", "scopes", "taxon"):
     if key not in (ui.get("ntfy") or {}):
         bad.append("ui.ntfy lost %r — part of the SuperApp catalog the cards resolve through" % key)
 # the six stub ids must NOT be declared as pages of this app's tabs (#648: no placeholder)
-for tab in ("topology", "observ", "configs"):
+for tab in ("infra", "containers", "observ", "ops", "configs"):
     sec = next((s for s in (ui.get("sections") or []) if s.get("id") == tab), {})
     for p in (sec.get("pages") or []):
+        # infra/stack is REAL (C3StackFragment over stack_infra), not the SuperApp's sample-stub page of that id
+        if tab == "infra" and p.get("id") == "stack":
+            continue
         if p.get("id") in ("reports", "stack", "workflows", "vms", "logs", "gha"):
             bad.append("ui.sections[%s] declares %r, a SuperApp sample-stub page with no fragment anywhere — "
                        "declaring it here ships a placeholder" % (tab, p.get("id")))
@@ -105,7 +123,7 @@ import json, re, sys
 app = sys.argv[1]
 ui = json.load(open(app + "/build.json", encoding="utf-8"))["ui"]
 c3 = ui.get("carried_c3") or {}
-panels = (c3.get("stack_observability") or []) + (c3.get("stack_topology") or [])
+panels = (c3.get("stack_observability") or []) + (c3.get("stack_topology") or []) + (c3.get("stack_infra") or [])
 src = open(app + "/app/src/main/java/com/diegonmarcos/cloudc3/cloud/C3StackFragment.kt",
            encoding="utf-8").read()
 code = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
@@ -340,6 +358,7 @@ assert s!=b
 open(p,"w").write(s)
 PY
 }
+m_table_row_lost() { pyjson "$1/data/infra_slice.json" 'd["routes"]=d["routes"][1:]'; }
 m_dead_anchor() { pyjson "$1/build.json" 'c3=d["ui"]["carried_c3"]; c3["stack_topology"][0]["tiles"][0]["target"]="anchor:no-such-card"'; }
 m_orphan_page() { pyjson "$1/build.json" 'c3=d["ui"]["carried_c3"]; c3["stack_observability"][-1]["tiles"][0]["target"]="page:c3/nowhere"'; }
 m_drop_module() { pyjson "$1/build.json" 'del d["modules"]["libs:ops"]'; }
@@ -350,6 +369,7 @@ mutate "a copied source file is deleted"                    t3 m_lose_file
 mutate "a copied file is emptied but left in place"         t3 m_hollow_file
 mutate "libs:ops is dropped from the module graph"          t3 m_drop_module
 mutate "a carried blob is no longer baked"                  t4 m_unbake
+mutate "the Table page loses a row the address cards showed" t1 m_table_row_lost
 mutate "an Index tile targets an undeclared anchor"         t5 m_dead_anchor
 mutate "a More tile targets a page nothing dispatches"      t5 m_orphan_page
 
@@ -358,4 +378,4 @@ if [ "$FAILURES" -ne 0 ] || [ "$MUT_FAIL" -ne 0 ]; then
     echo "FAIL  $FAILURES assertion(s) red, $MUT_FAIL mutation(s) void or hollow"
     exit 1
 fi
-echo "PASS  5 properties asserted, 8 mutations each proved able to go red"
+echo "PASS  5 properties asserted, 9 mutations each proved able to go red"

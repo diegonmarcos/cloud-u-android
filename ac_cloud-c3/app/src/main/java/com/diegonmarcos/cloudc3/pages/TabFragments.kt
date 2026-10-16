@@ -34,19 +34,29 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
  */
 
 /**
- * TOPOLOGY — the SuperApp's Topology tab CARRIED WHOLE (#648, owner-escalated): the
- * `topology` page is [C3StackFragment] over the carried section's stack_topology — the
- * Index row, the Addresses heading with the c3_public/c3_private cards, the Containers
- * heading with the Infra Apps / User Apps dashboards, the Stack dashboard with its four
- * declared anchors, and the More row. The Public/Private pages stay: the same two cards
- * standalone, exactly as this app already shipped them — nothing is deleted in a copy job.
+ * INFRA - the Stack dashboard, promoted from Containers > Topology > Stack to a main section (owner request,
+ * 2026-10-16): [C3StackFragment] over ui.carried_c3.stack_infra - the Index row (Providers, VMs, Dbs, APIs) and the
+ * Stack card those anchors address.
  */
-class TopologyFragment : PagedFragment() {
-    override fun pages(): List<NavPage> = Declarations.topologyPages
+class InfraFragment : PagedFragment() {
+    override fun pages(): List<NavPage> = Declarations.infraPages
+    override fun pageFragment(pageId: String): Fragment? = when (pageId) {
+        "stack" -> C3StackFragment.newInstance(C3StackFragment.STACK_INFRA)
+        else -> null
+    }
+}
+
+/**
+ * CONTAINERS (was Topology) - two top tabs. `topology` is the SuperApp's Topology page minus its address cards:
+ * [C3StackFragment] over ui.carried_c3.stack_topology (the Index row and the Infra Apps / User Apps dashboards).
+ * `table` is [RoutesTableFragment]: the former Public and Private URL pages merged into one sortable, filterable
+ * table over data/infra_slice.json::routes.
+ */
+class ContainersFragment : PagedFragment() {
+    override fun pages(): List<NavPage> = Declarations.containersPages
     override fun pageFragment(pageId: String): Fragment? = when (pageId) {
         "topology" -> C3StackFragment.newInstance(C3StackFragment.STACK_TOPOLOGY)
-        "public" -> C3HealthFragment.newInstance(C3HealthFragment.SCOPE_PUBLIC)
-        "private" -> C3HealthFragment.newInstance(C3HealthFragment.SCOPE_PRIVATE)
+        "table" -> RoutesTableFragment()
         else -> null
     }
 }
@@ -70,12 +80,12 @@ class ObservFragment : PagedFragment() {
 }
 
 /**
- * APPS - the bottom-nav tab (id unchanged) as three pages in the owner's order: Agents (the
+ * OPS (was Apps) - the bottom-nav tab as three pages in the owner's order: Agents (the
  * launchable C3 siblings; the local webserver stays there as a launch tile, it is a cloud-c3
  * sub-app and not a fleet service), Services (composites) and Tools (each engine alone).
  */
-class AppsFragment : PagedFragment() {
-    override fun pages(): List<NavPage> = Declarations.appsPages
+class OpsFragment : PagedFragment() {
+    override fun pages(): List<NavPage> = Declarations.opsPages
     override fun pageFragment(pageId: String): Fragment? = when (pageId) {
         "agents" -> AgentsFragment()
         "services" -> CatalogFragment.newInstance(CatalogFragment.KIND_SERVICES)

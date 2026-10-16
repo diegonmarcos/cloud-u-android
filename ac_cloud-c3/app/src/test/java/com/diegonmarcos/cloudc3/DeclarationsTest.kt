@@ -56,7 +56,8 @@ class DeclarationsTest {
         val tabs = nav().bottomSections()
         assertEquals("every declared tab must parse; a dropped one is an invisible missing tab",
             5, tabs.size)
-        assertEquals(listOf("Topology", "Observ", "Home", "Apps", "Configs"), tabs.map { it.label })
+        assertEquals("owner order, 2026-10-16: Infra | Containers | Home | Ops | Observ; Configs is off the bar",
+            listOf("Infra", "Containers", "Home", "Ops", "Observ"), tabs.map { it.label })
         assertEquals("Home must be the centre item", "home", tabs[2].id)
         assertTrue("no tab may parse with a blank label or icon",
             tabs.all { it.label.isNotBlank() && it.icon.isNotBlank() })
@@ -126,7 +127,8 @@ class DeclarationsTest {
         // ui.carried_c3.stack_*), carried whole per the owner's escalation; dagu and the
         // WG mesh arrived with them. The SuperApp's sample-stub page ids stay undeclared,
         // which is what keeps "no placeholder in a shipped tab" assertable.
-        assertEquals(listOf("topology", "public", "private"), pageIds("topology"))
+        assertEquals(listOf("stack"), pageIds("infra"))
+        assertEquals("Public and Private URLs merged into Table", listOf("topology", "table"), pageIds("containers"))
         assertEquals(listOf("observability", "health", "dagu", "mesh"), pageIds("observ"))
         assertEquals(listOf("about"), pageIds("configs"))
     }
@@ -186,7 +188,7 @@ class DeclarationsTest {
     }
 
     @Test
-    fun `the Apps tab declares Agents then Services then Tools`() {
-        assertEquals(listOf("agents", "services", "tools"), pageIds("apps"))
+    fun `the Ops tab declares Agents then Services then Tools`() {
+        assertEquals(listOf("agents", "services", "tools"), pageIds("ops"))
     }
 }

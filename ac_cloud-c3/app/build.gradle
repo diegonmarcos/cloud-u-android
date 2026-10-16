@@ -78,9 +78,16 @@ def c3OpsBaseUrl       = (buildJson.ui.c3_ops?.base_url  ?: '').toString()
 // NtfyScopes and IndexTiles read the identical shapes they read there.
 def c3Section = buildJson.ui.carried_c3
 if (c3Section == null) throw new GradleException("build.json::ui.carried_c3 is missing — the Topology/Observability stacks would bake empty and the tabs would draw nothing")
-if (!c3Section.stack_topology || !c3Section.stack_observability) throw new GradleException("ui.carried_c3 is missing stack_topology / stack_observability — half the c3 surface would silently vanish")
+if (!c3Section.stack_topology || !c3Section.stack_observability || !c3Section.stack_infra) throw new GradleException("ui.carried_c3 is missing stack_topology / stack_infra / stack_observability — half the c3 surface would silently vanish")
 def stackTopologyB64   = b64(c3Section.stack_topology)
+def stackInfraB64      = b64(c3Section.stack_infra)
 def stackObservB64     = b64(c3Section.stack_observability)
+// The top bar declaration (libs:bottomnav TopBarDecl): ui.top_bar as base64 JSON, '' when the app declares none.
+def uiTopBarB64        = buildJson.ui?.top_bar ? b64(buildJson.ui.top_bar) : ''
+def uiAliasesB64       = b64(buildJson.ui.aliases ?: [:])
+// The top bar's AI panel: libs:ai's contract names the gateway service, the fleet catalogue (this app's
+// data/services_private.json) its mesh address (sets aiGatewayUrl).
+apply from: "$rootDir/../ab_cloud-libs-shared/libs/ai/ai-gateway.gradle"
 def uiNtfyB64          = b64(buildJson.ui.ntfy ?: [:])
 def tileColumns        = (buildJson.ui.tile_columns ?: 5) as int
 
@@ -191,7 +198,11 @@ android {
         buildConfigField "String", "SERVICES_PUBLIC_B64",  "\"${servicesPublicB64}\""
         buildConfigField "String", "SERVICES_PRIVATE_B64", "\"${servicesPrivateB64}\""
         buildConfigField "String", "UI_STACK_TOPOLOGY_B64", "\"${stackTopologyB64}\""
+        buildConfigField "String", "UI_STACK_INFRA_B64",    "\"${stackInfraB64}\""
         buildConfigField "String", "UI_STACK_OBSERV_B64",   "\"${stackObservB64}\""
+        buildConfigField "String", "UI_TOP_BAR_B64",        "\"${uiTopBarB64}\""
+        buildConfigField "String", "UI_ALIASES_B64",        "\"${uiAliasesB64}\""
+        buildConfigField "String", "AI_GATEWAY_URL",        "\"${aiGatewayUrl}\""
         buildConfigField "String", "UI_NTFY_B64",           "\"${uiNtfyB64}\""
         buildConfigField "int",    "UI_TILE_COLUMNS",       "${tileColumns}"
         buildConfigField "String", "CLOUD_SERVICES_B64",    "\"${cloudServicesB64}\""
@@ -264,6 +275,8 @@ dependencies {
     // 2026-10-15 owner decision: all apps must be Compose. The Agents and Catalog pages are
     // ComposeViews under the fleet's CloudKitTheme, shared BY REFERENCE like the modules above.
     implementation project(':libs:ui-kit')
+    // The top bar's AI button opens libs:ai's chat (AiFleetChatPanel), the same shared chat Cloud Code has.
+    implementation project(':libs:ai')
     implementation 'androidx.activity:activity-compose:1.9.3'
 
     // 2026-10-15 owner decision: all apps must be Compose. The bottom island is an

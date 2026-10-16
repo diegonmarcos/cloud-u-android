@@ -171,6 +171,7 @@ class C3StackFragment : KitComposeFragment() {
         val panels = remember(stackId) {
             when (stackId) {
                 STACK_TOPOLOGY -> Stacks.stackTopology()
+                STACK_INFRA -> Stacks.stackInfra()
                 STACK_OBSERVABILITY -> Stacks.stackObservability()
                 else -> emptyList()
             }
@@ -1378,6 +1379,7 @@ class C3StackFragment : KitComposeFragment() {
     companion object {
         private const val ARG_STACK = "stack"
         const val STACK_TOPOLOGY = "stack_topology"
+        const val STACK_INFRA = "stack_infra"
         const val STACK_OBSERVABILITY = "stack_observability"
 
         /** Archived-box keys, and the Archive section's own open/closed flag. Both
