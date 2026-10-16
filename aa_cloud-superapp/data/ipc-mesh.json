@@ -1600,7 +1600,23 @@
     "devtools",
     "fleetconfig-model"
    ],
-   "endpoints": []
+   "endpoints": [
+    {
+     "permission": null,
+     "level": "none",
+     "source": "ac_cloud-dialer/app/src/main/AndroidManifest.xml",
+     "component": ".sms.SmsComposeActivity",
+     "id": "deep_link:.sms.SmsComposeActivity",
+     "kind": "deep_link",
+     "name": "SmsComposeActivity",
+     "actions": [],
+     "uris": [
+      "mms://",
+      "mmsto://"
+     ],
+     "callers": []
+    }
+   ]
   },
   {
    "id": "drive",
