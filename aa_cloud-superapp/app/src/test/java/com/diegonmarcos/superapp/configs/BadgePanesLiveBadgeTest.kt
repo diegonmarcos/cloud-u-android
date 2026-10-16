@@ -11,8 +11,12 @@ import android.content.Context
 import android.content.Intent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.TextView
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.performClick
+import com.diegonmarcos.superapp.ui.KitPageHarness
 import androidx.core.app.NotificationCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.test.core.app.ApplicationProvider
@@ -22,11 +26,9 @@ import com.diegonmarcos.superapp.notificationcenter.BadgeDeclaration
 import com.diegonmarcos.superapp.notificationcenter.BadgeServices
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
@@ -44,15 +46,29 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
-class BadgePanesLiveBadgeTest {
+class BadgePanesLiveBadgeTest : KitPageHarness() {
 
     private val ctx: Context = ApplicationProvider.getApplicationContext()
 
     private fun all(v: View): List<View> =
         listOf(v) + if (v is ViewGroup) (0 until v.childCount).flatMap { all(v.getChildAt(it)) } else emptyList()
 
-    private fun render(): View =
-        BadgePanes.badges(Robolectric.buildActivity(FragmentActivity::class.java).setup().get()) {}
+    /** Draws the pane under the dense theme and returns the window's view tree (the notification's own RemoteViews live in it). */
+    private fun render(): View {
+        showKit { BadgePanes.badges {} }
+        compose.waitForIdle()
+        return compose.activity.window.decorView
+    }
+
+    /** Every text the pane draws in Compose. */
+    private fun composeTexts(): List<String> =
+        compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)).fetchSemanticsNodes()
+            .flatMap { n -> n.config[SemanticsProperties.Text].map { it.text } }
+
+    private fun tapPaneButton(label: String) {
+        compose.onAllNodesWithTag("pane-button:$label")[0].performClick()
+        compose.waitForIdle()
+    }
 
     /** A badge that needs no grant, so its state is decided by its service and
      *  its notification alone — the two things these tests control. */
@@ -90,7 +106,7 @@ class BadgePanesLiveBadgeTest {
         val b = badge()
         val n = post(b)
         val view = render()
-        val texts = all(view).filterIsInstance<TextView>().map { it.text.toString() }
+        val texts = all(view).filterIsInstance<TextView>().map { it.text.toString() } + composeTexts()
 
         val title = n.extras.getCharSequence(Notification.EXTRA_TITLE).toString()
         val text = n.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
@@ -105,10 +121,9 @@ class BadgePanesLiveBadgeTest {
         if (b.shows.isNotBlank())
             assertFalse("the pane still prints the declared description", texts.any { it.contains(b.shows) })
 
-        val open = all(view).filterIsInstance<Button>()
-            .firstOrNull { it.text == ctx.getString(R.string.push_open) }
-        assertNotNull("no Open button for the posted badge", open)
-        open!!.performClick()
+        assertTrue("no Open button for the posted badge",
+            compose.onAllNodesWithTag("pane-button:${ctx.getString(R.string.push_open)}").fetchSemanticsNodes().isNotEmpty())
+        tapPaneButton(ctx.getString(R.string.push_open))
         val started = shadowOf(ctx as Application).nextStartedActivity
         assertEquals(
             "Open did not fire the notification's own contentIntent",
@@ -122,7 +137,8 @@ class BadgePanesLiveBadgeTest {
     fun `a running owner with nothing posted reads not-in-the-shade`() {
         val b = badge()
         ownerRunning(b)
-        val texts = all(render()).filterIsInstance<TextView>().map { it.text.toString() }
+        render()
+        val texts = composeTexts()
         assertTrue(
             "${b.id}: service running, nothing posted, yet the pane said LIVE: $texts",
             stateRow(texts, b, R.string.push_state_live).isEmpty(),
@@ -140,7 +156,8 @@ class BadgePanesLiveBadgeTest {
         val b = badge()
         ownerRunning(b)
         post(b)
-        val texts = all(render()).filterIsInstance<TextView>().map { it.text.toString() }
+        render()
+        val texts = composeTexts()
         assertTrue("${b.id}: running and posted, not LIVE: $texts",
             stateRow(texts, b, R.string.push_state_live).isNotEmpty())
     }
@@ -150,11 +167,10 @@ class BadgePanesLiveBadgeTest {
     @Test
     fun `Launch all starts the owner of every launchable badge`() {
         val b = badge()
-        val view = render()
-        val launchAll = all(view).filterIsInstance<Button>()
-            .firstOrNull { it.text == ctx.getString(R.string.push_launch_all) }
-        assertNotNull("no Launch all button", launchAll)
-        launchAll!!.performClick()
+        render()
+        assertTrue("no Launch all button",
+            compose.onAllNodesWithTag("pane-button:${ctx.getString(R.string.push_launch_all)}").fetchSemanticsNodes().isNotEmpty())
+        tapPaneButton(ctx.getString(R.string.push_launch_all))
         val app = shadowOf(ctx as Application)
         val started = generateSequence { app.nextStartedService }.mapNotNull { it.component?.className }.toSet()
         assertTrue("${b.id}: its owner ${b.service} was not started; started $started", b.service in started)

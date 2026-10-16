@@ -204,8 +204,8 @@ private fun PanelBody(state: AggregatorState, index: Int, panel: Sections.StackP
         "notification_center" -> NotificationCenterBody(state, panel, onOpen)
         // The two halves of the retired Push tab (#580): views into the one notification centre, drawn by BadgePanes
         // from ui.notification_center — no second producer.
-        "notification_badges" -> BadgePane(state) { ctx, redraw -> BadgePanes.badges(ctx, redraw) }
-        "notification_badge_configs" -> BadgePane(state) { ctx, redraw -> BadgePanes.configs(ctx, redraw) }
+        "notification_badges" -> BadgePane(state) { redraw -> BadgePanes.badges(redraw) }
+        "notification_badge_configs" -> BadgePane(state) { redraw -> BadgePanes.configs(redraw) }
         "feed" -> FeedBody(panel, onOpen)
         "stats" -> { StatsBody(panel); InboxNotifications(state, panel, onOpen) }
         "class_inbox" -> ClassInboxBody(state, panel, onOpen)
@@ -244,17 +244,12 @@ private val EMBED_HOST_IDS = intArrayOf(
     R.id.stack_embed_4, R.id.stack_embed_5, R.id.stack_embed_6, R.id.stack_embed_7,
 )
 
-/** A View-built pane (BadgePanes) redrawn whenever [AggregatorState.badgeEpoch] moves: on return to the page, and when a
- *  switch moved in one pane has to repaint the other. Live state goes stale the moment a service dies. */
+/** A BadgePanes pane, redrawn whenever [AggregatorState.badgeEpoch] moves: on return to the page, and when a switch moved
+ *  in one pane has to repaint the other. Live state goes stale the moment a service dies. */
 @Composable
-private fun BadgePane(state: AggregatorState, make: (android.content.Context, () -> Unit) -> android.view.View) {
-    // `key` on the epoch: a bump disposes the pane and builds a fresh one, which is exactly the redraw both panes need.
-    androidx.compose.runtime.key(state.badgeEpoch) {
-        AndroidView(
-            modifier = Modifier.fillMaxWidth(),
-            factory = { ctx -> make(ctx) { state.badgeEpoch++ } },
-        )
-    }
+private fun BadgePane(state: AggregatorState, pane: @Composable (redraw: () -> Unit) -> Unit) {
+    // `key` on the epoch: a bump disposes the pane and composes a fresh one, which is exactly the redraw both panes need.
+    androidx.compose.runtime.key(state.badgeEpoch) { pane { state.badgeEpoch++ } }
 }
 
 // ── links and tiles ──────────────────────────────────────────────────

@@ -629,6 +629,7 @@
         "custom_views": 8
       },
       "done": [
+        "Notify badge panes in Compose (BadgePanes: group boxes, alert filters, per-badge customization; the posted notification's own RemoteViews stay a View inside AndroidView; BadgePanesLiveBadgeTest ported to the Compose harness)",
         "Configs ▸ Launcher ▸ Controls page in Compose (LauncherConfigFragment: switch grid, sliders with discrete steps, steppers, screensaver picker; the repaint registry became one epoch state; ControlFragment hosted via AndroidView; LauncherControlsComposeTest; testers remapped)",
         "Configs ▸ Permissions page in Compose (PermissionsFragment: grant-here, system pages, device tuning, auto-update, recovery; PermissionsComposeTest; testers remapped)",
         "Configs ▸ Launcher-edge/One-hand page in Compose (OneHandFragment: stars, edge menu, floating menu, home gestures; ConfigDropdown/ConfigSwitchRow widgets that write only on a tap; testers remapped, ConfigWidgetsComposeTest)",

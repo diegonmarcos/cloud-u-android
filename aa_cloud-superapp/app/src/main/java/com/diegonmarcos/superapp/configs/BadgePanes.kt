@@ -1,12 +1,34 @@
 package com.diegonmarcos.superapp.configs
 
 import android.content.Context
-import android.view.View
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.Switch
+import android.widget.FrameLayout
 import android.widget.Toast
-import android.widget.TextView
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.notificationcenter.BadgeCustomization
 import com.diegonmarcos.superapp.notificationcenter.BadgeDeclaration
@@ -15,13 +37,13 @@ import com.diegonmarcos.superapp.notificationcenter.AlertStore
 import com.diegonmarcos.superapp.notificationcenter.AlertsNotifier
 import com.diegonmarcos.superapp.notificationcenter.NotifyGroups
 import com.diegonmarcos.superapp.core.FleetAlerts
-import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * The persistent-badge views of Configs ▸ Launcher ▸ Notify — #515 / #518,
  * merged into the ntfy page by #580 (it was the Push tab, a page of its own).
  *
- * TWO VIEWS, both DERIVED from `build.json::ui.notification_center`, drawn by
+ * TWO PANES, both DERIVED from `build.json::ui.notification_center`, drawn by
  * AggregatorStackFragment for the panel kinds that name them:
  *
  *   1. [badges] — the badge boxes themselves, one per badge, as it appears in
@@ -60,23 +82,23 @@ object BadgePanes {
 
     /** View 1 — Launch-all, then the four groups (#777) in the owner's order,
      *  each with its members' boxes; a badge in no group is drawn after them. */
-    fun badges(ctx: Context, redraw: () -> Unit): View {
-        val root = column(ctx)
+    @Composable
+    fun badges(redraw: () -> Unit) {
+        val ctx = LocalContext.current
+        val view = LocalView.current
         val badges = BadgeDeclaration.badges(BadgeServices.declared)
-        if (badges.isEmpty()) {
-            root.addView(caption(ctx, ctx.getString(R.string.push_none_badges)))
-            return root
+        Column(Modifier.fillMaxWidth()) {
+            if (badges.isEmpty()) {
+                caption(ctx.getString(R.string.push_none_badges))
+                return@Column
+            }
+            caption(ctx.getString(R.string.push_section_badges_sub))
+            PaneButton(ctx.getString(R.string.push_launch_all)) { launched(ctx, view, redraw, BadgeServices.launchAll(ctx)) }
+            val groups = NotifyGroups.ordered(ctx)
+            groups.forEachIndexed { i, g -> groupBox(redraw, g, i, groups.size, badges) }
+            val grouped = groups.flatMap { it.members }.toSet()
+            for (b in badges.filter { it.id !in grouped }) badgeBox(redraw, b)
         }
-        root.addView(caption(ctx, ctx.getString(R.string.push_section_badges_sub)))
-        root.addView(Button(ctx).apply {
-            text = ctx.getString(R.string.push_launch_all)
-            setOnClickListener { launched(ctx, root, redraw, BadgeServices.launchAll(ctx)) }
-        })
-        val groups = NotifyGroups.ordered(ctx)
-        groups.forEachIndexed { i, g -> root.addView(groupBox(ctx, root, redraw, g, i, groups.size, badges)) }
-        val grouped = groups.flatMap { it.members }.toSet()
-        for (b in badges.filter { it.id !in grouped }) root.addView(badgeBox(ctx, root, redraw, b))
-        return root
     }
 
     // ───────────────────────── #777: the groups ─────────────────────────
@@ -87,99 +109,83 @@ object BadgePanes {
      * group gets its filters, Clear all and the alerts themselves. All of it
      * read from the declaration and the stores — no group or badge is named.
      */
+    @Composable
     private fun groupBox(
-        ctx: Context, host: View, redraw: () -> Unit, g: BadgeDeclaration.Group,
+        redraw: () -> Unit, g: BadgeDeclaration.Group,
         index: Int, count: Int, badges: List<BadgeDeclaration.Badge>,
-    ): View {
-        val p = LauncherPalette.of(ctx)
-        val col = column(ctx).apply { setPadding(0, dp(ctx, 14), 0, dp(ctx, 6)) }
+    ) {
+        val ctx = LocalContext.current
         val on = NotifyGroups.isEnabled(ctx, g)
-        col.addView(LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(Switch(ctx).apply {
-                text = g.label; textSize = 17f; setTextColor(p.textPrimary); isChecked = on
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                setOnCheckedChangeListener { _, v -> NotifyGroups.setEnabled(ctx, g, v); redraw() }
-            })
-            if (index > 0) addView(Button(ctx).apply {
-                text = "▲"; contentDescription = ctx.getString(R.string.notify_group_up)
-                setOnClickListener { NotifyGroups.move(ctx, g, -1); redraw() }
-            })
-            if (index < count - 1) addView(Button(ctx).apply {
-                text = "▼"; contentDescription = ctx.getString(R.string.notify_group_down)
-                setOnClickListener { NotifyGroups.move(ctx, g, +1); redraw() }
-            })
-        })
-        if (!on) return col
-        for (id in g.members) {
-            val b = badges.firstOrNull { it.id == id } ?: continue
-            if (g.members.size > 1) col.addView(Switch(ctx).apply {
-                text = ctx.getString(R.string.notify_member_show, b.label)
-                textSize = 13f; setTextColor(p.textPrimary)
-                isChecked = BadgeCustomization.bool(ctx, b, BadgeCustomization.KEY_ENABLED)
-                setOnCheckedChangeListener { _, v ->
+        Column(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                LabelSwitch(g.label, on, 17, "group:${g.id}", Modifier.weight(1f)) { v -> NotifyGroups.setEnabled(ctx, g, v); redraw() }
+                if (index > 0) PaneButton("▲", ctx.getString(R.string.notify_group_up)) { NotifyGroups.move(ctx, g, -1); redraw() }
+                if (index < count - 1) PaneButton("▼", ctx.getString(R.string.notify_group_down)) { NotifyGroups.move(ctx, g, +1); redraw() }
+            }
+            if (!on) return@Column
+            for (id in g.members) {
+                val b = badges.firstOrNull { it.id == id } ?: continue
+                if (g.members.size > 1) LabelSwitch(
+                    ctx.getString(R.string.notify_member_show, b.label), BadgeCustomization.bool(ctx, b, BadgeCustomization.KEY_ENABLED),
+                    13, "member:${b.id}",
+                ) { v ->
                     BadgeCustomization.set(ctx, b, BadgeCustomization.KEY_ENABLED, v)
                     NotifyGroups.apply(ctx); redraw()
                 }
-            })
-            col.addView(badgeBox(ctx, host, redraw, b))
+                badgeBox(redraw, b)
+            }
+            if (g.alerts) alertsBox(redraw)
         }
-        if (g.alerts) col.addView(alertsBox(ctx, redraw))
-        return col
     }
 
     /** The Alerts group's own controls: filters by severity and by app (an
      *  app appears once it has raised something), Clear all, and the list. */
-    private fun alertsBox(ctx: Context, redraw: () -> Unit): View {
-        val p = LauncherPalette.of(ctx)
-        val col = column(ctx)
-        col.addView(caption(ctx, ctx.getString(R.string.notify_alerts_filters)))
-        fun filter(label: String, muted: Boolean, set: (Boolean) -> Unit) = Switch(ctx).apply {
-            text = label; textSize = 13f; setTextColor(p.textPrimary); isChecked = !muted
-            setOnCheckedChangeListener { _, v -> set(!v); AlertsNotifier.refresh(ctx); redraw() }
-        }
-        for (sev in FleetAlerts.SEVERITIES) col.addView(filter(
-            ctx.getString(R.string.notify_alerts_show_severity, sev), AlertStore.severityMuted(ctx, sev),
-        ) { AlertStore.setSeverityMuted(ctx, sev, it) })
-        for (app in AlertStore.apps(ctx)) col.addView(filter(
-            ctx.getString(R.string.notify_alerts_show_app, AlertsNotifier.appLabel(ctx, app)), AlertStore.appMuted(ctx, app),
-        ) { AlertStore.setAppMuted(ctx, app, it) })
-        col.addView(Button(ctx).apply {
-            text = ctx.getString(R.string.notify_alerts_clear_all)
-            setOnClickListener {
+    @Composable
+    private fun alertsBox(redraw: () -> Unit) {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        Column(Modifier.fillMaxWidth()) {
+            caption(ctx.getString(R.string.notify_alerts_filters))
+            @Composable
+            fun filter(label: String, muted: Boolean, tag: String, set: (Boolean) -> Unit) =
+                LabelSwitch(label, !muted, 13, tag) { v -> set(!v); AlertsNotifier.refresh(ctx); redraw() }
+            for (sev in FleetAlerts.SEVERITIES) filter(
+                ctx.getString(R.string.notify_alerts_show_severity, sev), AlertStore.severityMuted(ctx, sev), "alerts:sev:$sev",
+            ) { AlertStore.setSeverityMuted(ctx, sev, it) }
+            for (app in AlertStore.apps(ctx)) filter(
+                ctx.getString(R.string.notify_alerts_show_app, AlertsNotifier.appLabel(ctx, app)), AlertStore.appMuted(ctx, app), "alerts:app:$app",
+            ) { AlertStore.setAppMuted(ctx, app, it) }
+            PaneButton(ctx.getString(R.string.notify_alerts_clear_all)) {
                 val n = AlertStore.clear(ctx)
                 AlertsNotifier.refresh(ctx)
                 Toast.makeText(ctx, ctx.getString(R.string.notify_alerts_cleared, n), Toast.LENGTH_SHORT).show()
                 redraw()
             }
-        })
-        val visible = AlertStore.visible(ctx)
-        if (visible.isEmpty()) col.addView(caption(ctx, ctx.getString(R.string.notify_alerts_none)))
-        for (a in visible) col.addView(TextView(ctx).apply {
-            text = "${AlertsNotifier.appLabel(ctx, a.app)} · ${a.severity} · ${a.title}" +
-                (if (a.text.isNotBlank()) "\n${a.text}" else "")
-            textSize = 13f
-            setTextColor(if (a.severity == FleetAlerts.ERROR) 0xFFE05252.toInt() else p.textPrimary)
-            setPadding(0, dp(ctx, 6), 0, dp(ctx, 6))
-        })
-        return col
+            val visible = AlertStore.visible(ctx)
+            if (visible.isEmpty()) caption(ctx.getString(R.string.notify_alerts_none))
+            for (a in visible) Text(
+                "${AlertsNotifier.appLabel(ctx, a.app)} · ${a.severity} · ${a.title}" +
+                    (if (a.text.isNotBlank()) "\n${a.text}" else ""),
+                fontSize = 13.sp,
+                color = if (a.severity == FleetAlerts.ERROR) Color(0xFFE05252) else p.textPrimary,
+                modifier = Modifier.padding(vertical = 6.dp),
+            )
+        }
     }
 
     /** View 2 — one customization menu per declared badge, same order. */
-    fun configs(ctx: Context, redraw: () -> Unit): View {
-        val root = column(ctx)
+    @Composable
+    fun configs(redraw: () -> Unit) {
+        val ctx = LocalContext.current
         val badges = BadgeDeclaration.badges(BadgeServices.declared)
-        if (badges.isEmpty()) {
-            root.addView(caption(ctx, ctx.getString(R.string.push_none_badges)))
-            return root
+        Column(Modifier.fillMaxWidth()) {
+            if (badges.isEmpty()) {
+                caption(ctx.getString(R.string.push_none_badges))
+                return@Column
+            }
+            caption(ctx.getString(R.string.push_section_custom_sub))
+            for (b in badges) customMenu(redraw, b)
         }
-        root.addView(caption(ctx, ctx.getString(R.string.push_section_custom_sub)))
-        for (b in badges) root.addView(customMenu(ctx, redraw, b))
-        return root
-    }
-
-    private fun column(ctx: Context) = LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
     }
 
     // ───────────────────────── View 1: the badges ────────────────────────
@@ -196,8 +202,11 @@ object BadgePanes {
      * badge's own tap) and Launch (put it back — a swiped or cleared badge
      * has nothing to render, so a dead badge is just its name and this button).
      */
-    private fun badgeBox(ctx: Context, host: View, redraw: () -> Unit, b: BadgeDeclaration.Badge): View {
-        val p = LauncherPalette.of(ctx)
+    @Composable
+    private fun badgeBox(redraw: () -> Unit, b: BadgeDeclaration.Badge) {
+        val ctx = LocalContext.current
+        val view = LocalView.current
+        val p = LocalKitPalette.current
         val live = BadgeServices.live(ctx, b)
         // A running owner with nothing in the shade is NOT live — that is
         // exactly the swiped-away badge the previous pane called green.
@@ -208,58 +217,51 @@ object BadgePanes {
                 it.copy(state = BadgeServices.State.DEAD, reason = ctx.getString(R.string.push_not_posted, b.channel))
             else it
         }
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(ctx, 10), 0, dp(ctx, 10))
-        }
-        val real = live?.let { BadgeServices.view(ctx, it, col) }
-        if (real != null) col.addView(real) else col.addView(TextView(ctx).apply {
-            text = b.label; textSize = 16f; setTextColor(p.textPrimary)
-        })
+        Column(Modifier.fillMaxWidth().padding(vertical = 10.dp).testTag("badge:${b.id}")) {
+            // The platform's own template for the posted Notification, inflated into a plain frame: a View, because
+            // RemoteViews can only be applied to one. Inflated once per composition of the pane (the host keys the pane on
+            // the badge epoch, so a redraw builds a fresh one).
+            val frame = remember(live) {
+                live?.let { n -> FrameLayout(ctx).also { f -> BadgeServices.view(ctx, n, f)?.let { f.addView(it) } } }
+            }
+            if (frame != null && frame.childCount > 0) {
+                AndroidView(modifier = Modifier.fillMaxWidth(), factory = { frame })
+            } else {
+                Text(b.label, fontSize = 16.sp, color = p.textPrimary)
+            }
 
-        val stateColour = when (st.state) {
-            BadgeServices.State.LIVE -> p.accent
-            // Nothing to say is not a fault: an idle on-demand badge.
-            BadgeServices.State.IDLE -> p.textSecondary
-            // Everything that is not LIVE is the same colour on purpose:
-            // "blocked" and "dead" are equally not-in-the-shade, and giving
-            // one of them a softer colour is how a missing badge reads as fine.
-            else -> 0xFFE05252.toInt()
-        }
-        val stateLabel = ctx.getString(
-            when (st.state) {
-                BadgeServices.State.LIVE -> R.string.push_state_live
-                BadgeServices.State.DEAD -> R.string.push_state_dead
-                BadgeServices.State.BLOCKED -> R.string.push_state_blocked
-                BadgeServices.State.DISABLED -> R.string.push_state_disabled
-                BadgeServices.State.NO_SERVICE -> R.string.push_state_no_service
-                BadgeServices.State.IDLE -> R.string.push_state_idle
-            },
-        )
-        col.addView(TextView(ctx).apply {
-            text = "$stateLabel · ${st.reason}"
-            textSize = 12f
-            setTextColor(stateColour)
-        })
+            val stateColour = when (st.state) {
+                BadgeServices.State.LIVE -> p.accent
+                // Nothing to say is not a fault: an idle on-demand badge.
+                BadgeServices.State.IDLE -> p.textSecondary
+                // Everything that is not LIVE is the same colour on purpose:
+                // "blocked" and "dead" are equally not-in-the-shade, and giving
+                // one of them a softer colour is how a missing badge reads as fine.
+                else -> Color(0xFFE05252)
+            }
+            val stateLabel = ctx.getString(
+                when (st.state) {
+                    BadgeServices.State.LIVE -> R.string.push_state_live
+                    BadgeServices.State.DEAD -> R.string.push_state_dead
+                    BadgeServices.State.BLOCKED -> R.string.push_state_blocked
+                    BadgeServices.State.DISABLED -> R.string.push_state_disabled
+                    BadgeServices.State.NO_SERVICE -> R.string.push_state_no_service
+                    BadgeServices.State.IDLE -> R.string.push_state_idle
+                },
+            )
+            Text("$stateLabel · ${st.reason}", fontSize = 12.sp, color = stateColour)
 
-        val tap = live?.contentIntent
-        col.addView(LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            if (tap != null) addView(Button(ctx).apply {
-                text = ctx.getString(R.string.push_open)
-                setOnClickListener { runCatching { tap.send() } }
-            })
-            addView(Button(ctx).apply {
-                text = ctx.getString(R.string.push_launch)
-                setOnClickListener { launched(ctx, host, redraw, mapOf(b to BadgeServices.launch(ctx, b))) }
-            })
-        })
-        return col
+            val tap = live?.contentIntent
+            Row {
+                if (tap != null) PaneButton(ctx.getString(R.string.push_open)) { runCatching { tap.send() } }
+                PaneButton(ctx.getString(R.string.push_launch)) { launched(ctx, view, redraw, mapOf(b to BadgeServices.launch(ctx, b))) }
+            }
+        }
     }
 
     /** Launch result → one toast (a refusal is never silent), then redraw once
      *  the owner has had a moment to post. */
-    private fun launched(ctx: Context, host: View, redraw: () -> Unit, results: Map<BadgeDeclaration.Badge, String?>) {
+    private fun launched(ctx: Context, view: android.view.View, redraw: () -> Unit, results: Map<BadgeDeclaration.Badge, String?>) {
         val refused = results.filterValues { it != null }
         Toast.makeText(
             ctx,
@@ -267,71 +269,52 @@ object BadgePanes {
             else refused.entries.joinToString("\n") { "${it.key.label}: ${it.value}" },
             Toast.LENGTH_LONG,
         ).show()
-        host.postDelayed({ if (host.isAttachedToWindow) redraw() }, REBUILD_DELAY_MS)
+        view.postDelayed({ if (view.isAttachedToWindow) redraw() }, REBUILD_DELAY_MS)
     }
 
     // ──────────────────── View 2: the customization ──────────────────────
 
-    private fun customMenu(ctx: Context, redraw: () -> Unit, b: BadgeDeclaration.Badge): View {
-        val p = LauncherPalette.of(ctx)
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(ctx, 10), 0, dp(ctx, 10))
-            addView(TextView(ctx).apply {
-                text = b.label; textSize = 15f; setTextColor(p.textPrimary)
-            })
+    @Composable
+    private fun customMenu(redraw: () -> Unit, b: BadgeDeclaration.Badge) {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        Column(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+            Text(b.label, fontSize = 15.sp, color = p.textPrimary)
+            if (b.customization.isEmpty()) {
+                Text(ctx.getString(R.string.push_producer_off), fontSize = 12.sp, color = p.textSecondary)
+                return@Column
+            }
+            for (opt in b.customization) control(redraw, b, opt)
         }
-        if (b.customization.isEmpty()) {
-            col.addView(TextView(ctx).apply {
-                text = ctx.getString(R.string.push_producer_off)
-                textSize = 12f; setTextColor(p.textSecondary)
-            })
-            return col
-        }
-        for (opt in b.customization) col.addView(control(ctx, redraw, b, opt))
-        return col
     }
 
     /** The declared `type` picks the widget. This method knows about option
      *  TYPES, never about option keys — so a new option in build.json gets a
      *  control here without a Kotlin edit. */
-    private fun control(ctx: Context, redraw: () -> Unit, b: BadgeDeclaration.Badge, opt: BadgeDeclaration.Option): View {
-        val p = LauncherPalette.of(ctx)
-        return when (opt.type) {
+    @Composable
+    private fun control(redraw: () -> Unit, b: BadgeDeclaration.Badge, opt: BadgeDeclaration.Option) {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        when (opt.type) {
             "choice" -> {
                 val values = opt.options
-                val row = TextView(ctx).apply {
-                    textSize = 13f
-                    setTextColor(p.textPrimary)
-                    setPadding(0, dp(ctx, 8), 0, dp(ctx, 8))
-                }
-                fun render() { row.text = "${opt.label}: ${BadgeCustomization.text(ctx, b, opt.key)}" }
-                render()
-                // Tap cycles. A declared choice is two or three values; a
-                // dialog to pick between three is more chrome than choice.
-                row.setOnClickListener {
-                    if (values.isEmpty()) return@setOnClickListener
-                    val cur = BadgeCustomization.text(ctx, b, opt.key)
-                    val next = values[(values.indexOf(cur).takeIf { it >= 0 }?.plus(1) ?: 0) % values.size]
-                    BadgeCustomization.set(ctx, b, opt.key, next)
-                    render()
-                    applyLive(ctx, redraw)
-                }
-                row
-            }
-            else -> {
-                val sw = Switch(ctx).apply {
-                    text = opt.label
-                    textSize = 13f
-                    setTextColor(p.textPrimary)
-                    setPadding(0, dp(ctx, 8), 0, dp(ctx, 8))
-                    isChecked = BadgeCustomization.bool(ctx, b, opt)
-                    setOnCheckedChangeListener { _, on ->
-                        BadgeCustomization.set(ctx, b, opt.key, on)
+                var shown by remember { mutableIntStateOf(0) }   // bumped on a tap so the line re-reads the store
+                Text("${opt.label}: ${shown.let { BadgeCustomization.text(ctx, b, opt.key) }}",
+                    fontSize = 13.sp, color = p.textPrimary,
+                    // Tap cycles. A declared choice is two or three values; a
+                    // dialog to pick between three is more chrome than choice.
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        if (values.isEmpty()) return@clickable
+                        val cur = BadgeCustomization.text(ctx, b, opt.key)
+                        val next = values[(values.indexOf(cur).takeIf { it >= 0 }?.plus(1) ?: 0) % values.size]
+                        BadgeCustomization.set(ctx, b, opt.key, next)
+                        shown++
                         applyLive(ctx, redraw)
-                    }
-                }
-                sw
+                    }.padding(vertical = 8.dp).testTag("badge-option:${b.id}:${opt.key}"))
+            }
+            else -> LabelSwitch(opt.label, BadgeCustomization.bool(ctx, b, opt), 13, "badge-option:${b.id}:${opt.key}") { on ->
+                BadgeCustomization.set(ctx, b, opt.key, on)
+                applyLive(ctx, redraw)
             }
         }
     }
@@ -349,12 +332,26 @@ object BadgePanes {
 
     // ────────────────────────────── Chrome ───────────────────────────────
 
-    private fun caption(ctx: Context, s: String) = TextView(ctx).apply {
-        text = s
-        textSize = 12f
-        setTextColor(LauncherPalette.of(ctx).textSecondary)
-        setPadding(0, 0, 0, dp(ctx, 8))
+    @Composable
+    private fun caption(s: String) {
+        Text(s, fontSize = 12.sp, color = LocalKitPalette.current.textSecondary, modifier = Modifier.padding(bottom = 8.dp))
     }
 
-    private fun dp(ctx: Context, v: Int): Int = (v * ctx.resources.displayMetrics.density).toInt()
+    @Composable
+    private fun LabelSwitch(
+        label: String, checked: Boolean, sizeSp: Int, tag: String, modifier: Modifier = Modifier, onChange: (Boolean) -> Unit,
+    ) {
+        Row(modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, fontSize = sizeSp.sp, color = LocalKitPalette.current.textPrimary, modifier = Modifier.weight(1f))
+            Switch(checked = checked, onCheckedChange = onChange, modifier = Modifier.testTag("switch:$tag"))
+        }
+    }
+
+    @Composable
+    private fun PaneButton(label: String, description: String? = null, onClick: () -> Unit) {
+        Button(onClick = onClick, modifier = Modifier.padding(end = 6.dp).let { m ->
+            if (description != null) m.semantics { contentDescription = description } else m
+        }.testTag("pane-button:$label")) { Text(label) }
+    }
 }
