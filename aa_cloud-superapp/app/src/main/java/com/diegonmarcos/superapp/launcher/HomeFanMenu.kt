@@ -1,18 +1,55 @@
 package com.diegonmarcos.superapp.launcher
-import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.settings.LauncherSettingsPrefs
 
-import android.animation.AnimatorSet
-import android.animation.ObjectAnimator
-import android.content.Context
-import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.OvershootInterpolator
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.PopupWindow
-import android.widget.TextView
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
+import com.diegonmarcos.superapp.extinstall.ComposeAsk
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
 
 /**
  * iOS-style folder-action fan menu — long-press the Home bottom-nav
@@ -69,211 +106,134 @@ object HomeFanMenu {
     private fun iconRes(ctx: android.content.Context, name: String): Int =
         if (name.isBlank()) 0 else Sections.iconResFor(ctx, name)
 
+    /** What the fan draws and the finger moves: the armed bubble, and where each bubble sits on the SCREEN. */
+    internal class FanState {
+        var highlighted by mutableIntStateOf(-1)
+        val centers = mutableStateMapOf<Int, androidx.compose.ui.geometry.Offset>()
+    }
+
     /** items ordering = render order = bubble index. Top entry FIRST so
      *  bubbles[0] is the centered top bubble; commit() reads items[idx]
      *  by the same index the finger-detection loop fills in. 1 item ⇒
      *  top-only; 2-4 items ⇒ 1 top + rest along the bottom row. */
     fun show(host: View, anchor: android.graphics.Rect, items: List<Pair<String, Pair<Int, String>>>, onPick: (target: String) -> Unit): Controller {
         val ctx = host.context
-        val container = android.widget.LinearLayout(ctx).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            isClickable = false; isFocusable = false
-            val pad = dp(ctx, 14); setPadding(pad, pad, pad, pad)
-            // Don't clip children — the highlighted bubble scales up 1.35×
-            // and the icon scales up further; clipping would chop the
-            // overflow back into the bubble's bounds.
-            clipChildren = false; clipToPadding = false
-        }
-        val topRow = android.widget.LinearLayout(ctx).apply {
-            orientation = android.widget.LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_HORIZONTAL
-            clipChildren = false; clipToPadding = false
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-        }
-        val bottomRow = android.widget.LinearLayout(ctx).apply {
-            orientation = android.widget.LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_HORIZONTAL
-            clipChildren = false; clipToPadding = false
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-        }
-        container.addView(topRow)
-        container.addView(bottomRow)
-        // bubbles[0] goes in the top row; bubbles[1..3] in the bottom row.
-        // The order matches `items` so commit() resolves the same index
-        // the finger-detection loop highlights.
-        val bubbles = items.mapIndexed { i, (target, art) ->
-            val bubble = makeBubble(ctx, art.first, art.second)
-            bubble.tag = target
-            if (i == 0) topRow.addView(bubble) else bottomRow.addView(bubble)
-            bubble
-        }
-
-        val popup = PopupWindow(
-            container,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            false,
-        ).apply {
-            isOutsideTouchable = false
-            isFocusable = false
-            isTouchable = false               // do NOT steal touches — main activity drives
-            elevation = dp(ctx, 10).toFloat()
-            setBackgroundDrawable(null)
-        }
-
-        // Measure the container so we know its actual width, then center
-        // horizontally over the anchor (the pressed nav item, in screen px).
-        container.measure(
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-        )
-        val containerW = container.measuredWidth
-        val containerH = container.measuredHeight
-        val cx = anchor.centerX()
-        val screenW = ctx.resources.displayMetrics.widthPixels
-        val margin = dp(ctx, 8)
-        val x  = (cx - containerW / 2).coerceIn(margin, screenW - containerW - margin)
-        val y  = anchor.top - containerH - dp(ctx, 12)
-        popup.showAtLocation(host, android.view.Gravity.NO_GRAVITY, x, y)
-
-        // Fan-in animation matched to the triangle layout:
-        //   • bubbles[0] = top centered → drop in from above (translationY < 0).
-        //   • bubbles[1..3] = bottom row, 3 wide → outer bubbles slide
-        //     inward toward the centred Tabs bubble; all rise from below
-        //     so the row reads as one coordinated motion.
-        for ((i, b) in bubbles.withIndex()) {
-            if (i == 0) {
-                animateIn(b, fromX = 0f, fromY = -dp(ctx, 20).toFloat())
-            } else {
-                val bIdx = i - 1                       // 0..2 in bottom row
-                val bMid = 1f                          // bottom row has 3 items
-                val fromX = (bMid - bIdx) * dp(ctx, 60).toFloat()
-                animateIn(b, fromX = fromX, fromY = dp(ctx, 20).toFloat())
-            }
-        }
-
-        var highlightedIdx: Int = -1
-
-        return object : Controller {
+        val state = FanState()
+        val act = ComposeAsk.activityOf(ctx)
+        val root = ComposeView(ctx)
+        var shown = false
+        fun dismissNow() { (root.parent as? ViewGroup)?.removeView(root) }
+        val controller = object : Controller {
             override fun updateFinger(rawX: Float, rawY: Float) {
-                // Find the bubble nearest the finger (screen coords). To
-                // figure each bubble's screen rect we use getLocationOnScreen.
-                var nearest = -1; var nearestD = Float.MAX_VALUE
-                val tmp = IntArray(2)
-                for ((i, b) in bubbles.withIndex()) {
-                    b.getLocationOnScreen(tmp)
-                    val cx = tmp[0] + b.width / 2f
-                    val cy = tmp[1] + b.height / 2f
-                    val dx = rawX - cx; val dy = rawY - cy
-                    val d = dx * dx + dy * dy
-                    // Activation radius (in px²) — only highlight when finger
-                    // is reasonably close (within ~140px of centre).
-                    if (d < 140f * 140f && d < nearestD) {
-                        nearest = i; nearestD = d
-                    }
-                }
-                if (nearest != highlightedIdx) {
-                    highlightedIdx = nearest
-                    for ((i, b) in bubbles.withIndex()) {
-                        val sel = i == highlightedIdx
-                        // Duration 0 when animations are off — the grow is what
-                        // tells you which bubble is armed, so it still applies,
-                        // it just snaps instead of easing.
-                        b.animate()
-                            .scaleX(if (sel) 1.35f else 1f)
-                            .scaleY(if (sel) 1.35f else 1f)
-                            .setDuration(if (anim(b)) 110 else 0).start()
-                        ((b.getChildAt(0) as? FrameLayout)?.background as? GradientDrawable)
-                            ?.setColor(if (sel) 0xFF7C3AED.toInt() else 0xFF1A0033.toInt())
-                    }
-                }
+                state.highlighted = nearest(state.centers, rawX, rawY)
             }
 
             override fun commit() {
-                val idx = highlightedIdx
-                if (idx in items.indices) {
-                    val target = items[idx].first
-                    onPick(target)
-                }
+                val idx = state.highlighted
+                if (idx in items.indices) onPick(items[idx].first)
                 dismiss()
             }
 
-            override fun dismiss() {
-                runCatching { popup.dismiss() }
+            override fun dismiss() { runCatching { dismissNow() } }
+        }
+        if (act == null || act.isFinishing) return controller
+        // Window <-> screen: the popup is positioned in WINDOW coordinates, the finger and the anchor are on the SCREEN.
+        val onScreen = IntArray(2); val inWindow = IntArray(2)
+        host.getLocationOnScreen(onScreen); host.getLocationInWindow(inWindow)
+        val dx = onScreen[0] - inWindow[0]; val dy = onScreen[1] - inWindow[1]
+        val animate = anim(host)
+        root.setContent {
+            CloudKitTheme(LauncherPalette.kit(act)) {
+                Popup(
+                    popupPositionProvider = FanPosition(anchor, dx, dy, (8 * host.resources.displayMetrics.density).toInt(),
+                        (12 * host.resources.displayMetrics.density).toInt()),
+                    // Not focusable and not dismissable: the main activity drives the gesture, the fan only draws it.
+                    properties = PopupProperties(focusable = false, dismissOnClickOutside = false, dismissOnBackPress = false, clippingEnabled = false),
+                ) {
+                    Fan(items, state, animate, dx, dy)
+                }
+            }
+        }
+        shown = runCatching { act.addContentView(root, ViewGroup.LayoutParams(0, 0)); true }.getOrElse { false }
+        return controller
+    }
+
+    /** Index of the bubble nearest the finger, or -1 beyond the ~140 px activation radius. */
+    internal fun nearest(centers: Map<Int, androidx.compose.ui.geometry.Offset>, x: Float, y: Float): Int {
+        var best = -1; var bestD = Float.MAX_VALUE
+        for ((i, c) in centers) {
+            val ddx = x - c.x; val ddy = y - c.y
+            val d = ddx * ddx + ddy * ddy
+            // Activation radius (in px²) — only highlight when finger is reasonably close (within ~140px of centre).
+            if (d < 140f * 140f && d < bestD) { best = i; bestD = d }
+        }
+        return best
+    }
+
+    /** Centred over the pressed item (kept 8 dp inside the window), 12 dp above it. */
+    private class FanPosition(
+        private val anchor: android.graphics.Rect, private val dx: Int, private val dy: Int,
+        private val margin: Int, private val gap: Int,
+    ) : PopupPositionProvider {
+        override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset {
+            val cx = anchor.centerX() - dx
+            val x = (cx - popupContentSize.width / 2).coerceIn(margin, (windowSize.width - popupContentSize.width - margin).coerceAtLeast(margin))
+            return IntOffset(x, anchor.top - dy - popupContentSize.height - gap)
+        }
+    }
+
+    /** The old OvershootInterpolator(1.6). */
+    private val OVERSHOOT = Easing { t -> val x = t - 1f; x * x * ((1.6f + 1f) * x + 1.6f) + 1f }
+
+    /** The fan: bubbles[0] in a centred top row, the rest along the bottom row. */
+    @Composable
+    internal fun Fan(items: List<Pair<String, Pair<Int, String>>>, state: FanState, animate: Boolean, dx: Int = 0, dy: Int = 0) {
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        Column(Modifier.padding(14.dp).testTag("fan:menu"), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row { items.firstOrNull()?.let { Bubble(0, it.second.first, it.second.second, state, animate, 0f, -20f, dx, dy) } }
+            Row {
+                items.drop(1).forEachIndexed { k, it ->
+                    // The outer bubbles slide inward toward the centred one; all rise from below.
+                    Bubble(k + 1, it.second.first, it.second.second, state, animate, (1f - k) * 60f, 20f, dx, dy)
+                }
             }
         }
     }
 
-    private fun makeBubble(ctx: Context, iconRes: Int, label: String): FrameLayout {
-        // Bubble matches the rest of the app's icon size (~40dp). Selection
-        // scale (1.35×) makes it grow to ~54dp — visibly enlarged but small
-        // enough that all three fan items stay readable.
-        val sz = dp(ctx, 40)
-        val cell = FrameLayout(ctx).apply {
-            // Cell wider than bubble so the scale-up doesn't clip horizontally.
-            layoutParams = android.widget.LinearLayout.LayoutParams(sz + dp(ctx, 20), sz + dp(ctx, 26))
-            clipChildren = false; clipToPadding = false
-        }
-        val bubble = FrameLayout(ctx).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(0xFF1A0033.toInt())
-                setStroke(2, 0x99B794F4.toInt())
+    @Composable
+    private fun Bubble(index: Int, iconRes: Int, label: String, state: FanState, animate: Boolean, fromX: Float, fromY: Float, dx: Int, dy: Int) {
+        val armed = state.highlighted == index
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        // Duration 0 when animations are off — the grow is what tells you which bubble is armed, so it still applies,
+        // it just snaps instead of easing.
+        val scale by animateFloatAsState(if (armed) 1.35f else 1f, tween(if (animate) 110 else 0), label = "fan-scale")
+        val enter = remember { Animatable(if (animate) 0f else 1f) }
+        LaunchedEffect(Unit) { if (animate) enter.animateTo(1f, tween(220, easing = OVERSHOOT)) }
+        // Cell wider than the bubble so the scale-up does not clip horizontally.
+        Column(
+            Modifier.width(60.dp).height(66.dp)
+                .graphicsLayer {
+                    val e = enter.value
+                    translationX = (1f - e) * fromX * density.density
+                    translationY = (1f - e) * fromY * density.density
+                    alpha = e.coerceIn(0f, 1f)
+                }
+                .onGloballyPositioned {
+                    val p = it.positionInWindow()
+                    // Centre of the BUBBLE (the top 40 dp of the cell), on the screen.
+                    state.centers[index] = androidx.compose.ui.geometry.Offset(
+                        p.x + dx + it.size.width / 2f, p.y + dy + 20f * density.density)
+                }.testTag("fan:bubble:$index"),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(Modifier.size(40.dp).scale(scale).clip(CircleShape)
+                .background(if (armed) Color(0xFF7C3AED) else Color(0xFF1A0033))
+                .border(2.dp, Color(0x99B794F4), CircleShape).padding(8.dp)) {
+                if (iconRes != 0) Icon(painterResource(iconRes), contentDescription = null, tint = Color(0xFFE9D8FD))
             }
-            layoutParams = FrameLayout.LayoutParams(sz, sz, android.view.Gravity.CENTER_HORIZONTAL)
-            clipChildren = false; clipToPadding = false
-        }
-        val icon = ImageView(ctx).apply {
-            setImageResource(iconRes)
-            imageTintList = android.content.res.ColorStateList.valueOf(0xFFE9D8FD.toInt())
-            val pad = dp(ctx, 8); setPadding(pad, pad, pad, pad)
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-            )
-        }
-        bubble.addView(icon)
-        cell.addView(bubble)
-        cell.addView(TextView(ctx).apply {
-            text = label
-            setTextColor(0xFFFFFFFF.toInt())
-            textSize = 11f
-            gravity = android.view.Gravity.CENTER
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-            ).apply {
-                topMargin = sz + dp(ctx, 4)
-                gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
-            }
-        })
-        return cell
-    }
-
-    private fun animateIn(v: View, fromX: Float, fromY: Float = 20f) {
-        // ponytail: master gate only — the fan has no per-feature toggle of its own.
-        // Off → skip the fan-in entirely and leave the bubble at its resting state.
-        if (!anim(v)) return
-        v.translationX = fromX; v.translationY = fromY; v.alpha = 0f
-        val ax = ObjectAnimator.ofFloat(v, "translationX", fromX, 0f)
-        val ay = ObjectAnimator.ofFloat(v, "translationY", fromY, 0f)
-        val aa = ObjectAnimator.ofFloat(v, "alpha", 0f, 1f)
-        AnimatorSet().apply {
-            duration = 220
-            interpolator = OvershootInterpolator(1.6f)
-            playTogether(ax, ay, aa)
-            start()
+            Text(label, color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
         }
     }
-
-    private fun dp(ctx: Context, v: Int): Int =
-        (v * ctx.resources.displayMetrics.density).toInt()
 
     /** Configs → "All animations" master switch. Defaults to on if prefs blow up. */
     private fun anim(v: View): Boolean =
