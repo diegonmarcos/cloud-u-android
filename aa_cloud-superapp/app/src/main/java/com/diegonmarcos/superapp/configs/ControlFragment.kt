@@ -1,23 +1,53 @@
 package com.diegonmarcos.superapp.configs
 
 import android.content.Context
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.SystemClock
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.battery.EnergyUsageDialog
 import com.diegonmarcos.superapp.launcher.Sections
@@ -25,6 +55,13 @@ import com.diegonmarcos.superapp.ui.Haptics
 import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.ui.StatusLight
 import com.diegonmarcos.superapp.ui.snack
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 
 /**
@@ -34,6 +71,9 @@ import java.util.concurrent.Executors
  * producer of that tab and hosts this fragment as a child ([newInstance] with
  * `embedded = true`), so every behaviour below — the ticker, the lights, tap and
  * hold — is this class's, unchanged, and the page around it owns none of it.
+ *
+ * Compose since #773 (was a LinearLayout of hand-built tiles): the tile is a composable, a tile's reading is state, and the
+ * ticker is a LaunchedEffect that runs only while the page is RESUMED.
  *
  * Every group and every tile is declared in `build.json::ui.control_panel` and
  * implemented in [DeviceControls]. This file draws them and nothing else: it
@@ -171,236 +211,155 @@ import java.util.concurrent.Executors
  * short reads, and a pool of them all binding services at once is how a
  * settings page becomes the thing that janks.
  */
-class ControlFragment : Fragment() {
+class ControlFragment : KitComposeFragment() {
 
-    /** Everything one TILE needs to refresh itself in place. Two tiles of the
-     *  same control hold two of these and the SAME [id] — which is all either
-     *  of them holds about the state, the rest being read live. */
-    private class Bound(
-        val id: String,
-        /** The declared label, repeated into the spoken description: a tile
-         *  announced on its own is a bare "On" belonging to nothing. */
-        val label: String,
-        val control: DeviceControls.Control,
-        val tile: View,
-        val badge: View,
-        val icon: ImageView,
-        val labelView: TextView,
-        val light: TextView,
-        val note: TextView,
-    ) {
-        /** The last reading the device gave, and WHEN — both written only by
-         *  a read that landed. [readAt] 0 means this tile has never been read,
-         *  which is an unknown like any other. */
-        var reading: Boolean? = null
-        var readAt: Long = 0L
-    }
+    /** What the device last said about one control, and WHEN. [readAt] 0 means never read, which is an unknown like any
+     *  other. Written only by a read that landed ([landed]) — the only thing a tile is ever painted from. A control drawn
+     *  in two groups has ONE of these and both tiles read it, which is what makes the Battery Hungers copy a second view of
+     *  one control rather than a second control. */
+    internal class Reading(val state: Boolean?, val readAt: Long, val blocked: String)
 
-    private val rows = mutableListOf<Bound>()
+    private val readings = mutableStateMapOf<String, Reading>()
+
+    /** Ids whose write is in flight: every tile of the control is disabled meanwhile, so a second tap cannot race the first. */
+    private val writing = mutableStateMapOf<String, Boolean>()
+
+    /** Bumped by the ticker so a reading ages into Unknown even when no read lands (a hung read must not hold the old answer). */
+    private var aged by androidx.compose.runtime.mutableIntStateOf(0)
+
     private val io = Executors.newSingleThreadExecutor { r -> Thread(r, "control-panel") }
-    private val main = Handler(Looper.getMainLooper())
+    private val ioDispatcher = io.asCoroutineDispatcher()
 
-    /**
-     * Age the lights, then read the device again — in that order, so a read
-     * that hangs or never comes back shows as Unknown rather than as the
-     * previous answer held indefinitely.
-     */
-    private val ticker = object : Runnable {
-        override fun run() {
-            for (row in rows) paintLight(row)
-            refresh()
-            main.postDelayed(this, REFRESH_MS)
-        }
-    }
-
-    override fun onCreateView(inf: LayoutInflater, c: ViewGroup?, s: Bundle?): View {
-        val ctx = requireContext()
-        val pad = dp(16)
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(pad, pad, pad, pad)
-        }
-
-        root.addView(title(ctx, getString(R.string.control_title)))
-        // The paragraph is a resource, but the four words it quotes are asked
-        // of StatusLight at render time — so a page that stopped drawing one
-        // of them could not go on describing it.
-        root.addView(caption(ctx, getString(R.string.control_caption,
-            StatusLight.text(ctx, StatusLight.State.ON),
-            StatusLight.text(ctx, StatusLight.State.OFF),
-            StatusLight.text(ctx, StatusLight.State.UNKNOWN),
-            StatusLight.text(ctx, StatusLight.State.UNVERIFIABLE),
-            REFRESH_MS / 1000)))
-
-        rows.clear()
-        val columns = DeviceControls.columns
-        for (group in DeviceControls.groups) {
-            root.addView(section(ctx, groupText(ctx, group.labelRes, group.label),
-                groupText(ctx, group.subtitleRes, group.subtitle)))
-            detailsLink(ctx, group)?.let { root.addView(it) }
-            // Chunked into rows of `columns`; the last row is padded with
-            // weightless spacers so four tiles and two tiles start at the same
-            // left edge instead of the short row spreading itself out.
-            for (line in group.rows.chunked(columns)) {
-                val strip = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-                for (decl in line) addTile(strip, ctx, decl)
-                repeat(columns - line.size) { strip.addView(spacer(ctx)) }
-                root.addView(strip)
-            }
-        }
-        // A build whose declaration failed to parse must say so rather than
-        // render an empty page that reads as "nothing is controllable here".
-        if (rows.isEmpty()) root.addView(caption(ctx, getString(R.string.control_none_declared)))
-
-        // Embedded, the host page is the scroller: a ScrollView inside a
-        // ScrollView would fight it for every vertical drag.
-        return if (arguments?.getBoolean(ARG_EMBEDDED) == true) root
-        else ScrollView(ctx).apply { addView(root) }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // Every one of these can be changed from outside this page — the
-        // notification shade, a Settings screen we just sent the user to, the
-        // fleet's own workers. Coming back is exactly when the displayed state
-        // is most likely to be stale, so the ticker runs immediately rather
-        // than after its first interval.
-        main.post(ticker)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        // Nothing is looking at these lights, so nothing polls for them. This
-        // is the whole battery story of the page.
-        main.removeCallbacks(ticker)
-    }
+    override fun palette() = LauncherPalette.kit(requireContext())
 
     override fun onDestroy() {
         super.onDestroy()
-        main.removeCallbacks(ticker)
         io.shutdownNow()
+    }
+
+    @Composable
+    override fun Content() {
+        val ctx = requireContext()
+        val scope = rememberCoroutineScope()
+        val p = LocalKitPalette.current
+        val columns = DeviceControls.columns
+        val lifecycle = viewLifecycleOwner.lifecycle
+        // Age the lights, then read the device again — in that order, so a read that hangs or never comes back shows as
+        // Unknown rather than as the previous answer held indefinitely. Runs ONLY while RESUMED: a page nobody is looking
+        // at costs nothing (no wakeups, no binder calls into the WireGuard engine, no shell channel probes).
+        LaunchedEffect(Unit) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (true) {
+                    aged++
+                    refresh(scope)
+                    delay(REFRESH_MS)
+                }
+            }
+        }
+        val embedded = arguments?.getBoolean(ARG_EMBEDDED) == true
+        // Embedded, the host page is the scroller: a scroll container inside a scroll container would fight it for every
+        // vertical drag.
+        val scroll = if (embedded) Modifier else Modifier.verticalScroll(rememberScrollState())
+        Column(Modifier.fillMaxWidth().then(scroll).padding(16.dp)) {
+            Text(stringResource(R.string.control_title), color = p.textPrimary, fontSize = 22.sp,
+                modifier = Modifier.padding(bottom = 4.dp).testTag(TAG_TITLE))
+            // The paragraph is a resource, but the four words it quotes are asked of StatusLight at render time — so a
+            // page that stopped drawing one of them could not go on describing it.
+            Text(stringResource(R.string.control_caption,
+                StatusLight.text(ctx, StatusLight.State.ON), StatusLight.text(ctx, StatusLight.State.OFF),
+                StatusLight.text(ctx, StatusLight.State.UNKNOWN), StatusLight.text(ctx, StatusLight.State.UNVERIFIABLE),
+                REFRESH_MS / 1000), color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+            var drawn = 0
+            for (group in DeviceControls.groups) {
+                GroupHeading(groupText(ctx, group.labelRes, group.label), groupText(ctx, group.subtitleRes, group.subtitle))
+                DetailsLink(group)
+                // Chunked into rows of `columns`; the last row is padded with weightless spacers so four tiles and two
+                // tiles start at the same left edge instead of the short row spreading itself out.
+                for (line in group.rows.chunked(columns)) {
+                    Row(Modifier.fillMaxWidth()) {
+                        for (decl in line) {
+                            val control = DeviceControls.byId[decl.id]
+                            // Dropped, never drawn — but the column still has to be held open or the tiles after it
+                            // slide left out of their grid positions.
+                            if (control == null) Spacer(Modifier.weight(1f)) else {
+                                drawn++
+                                Tile(decl, control, scope, Modifier.weight(1f))
+                            }
+                        }
+                        repeat(columns - line.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
+            // A build whose declaration failed to parse must say so rather than render an empty page that reads as
+            // "nothing is controllable here".
+            if (drawn == 0) Text(stringResource(R.string.control_none_declared), color = p.textSecondary, fontSize = 12.sp,
+                modifier = Modifier.padding(bottom = 8.dp))
+        }
     }
 
     // ─────────────────────────────── Tiles ──────────────────────────────
 
-    private fun addTile(strip: LinearLayout, ctx: Context, decl: DeviceControls.Row) {
-        val control = DeviceControls.byId[decl.id] ?: run {
-            // Dropped, never drawn — but the column still has to be held open
-            // or the tiles after it slide left out of their grid positions.
-            strip.addView(spacer(ctx)); return
+    /**
+     * A filled round badge holding the icon, the label under it, the status light under that. TAP switches (a control that
+     * cannot be set sends its tap where the setting lives); HOLD opens the settings screen behind it, and ALWAYS answers.
+     * Tap and hold do not fight: combinedClickable runs onClick only for a press that was not a long press.
+     */
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    private fun Tile(decl: DeviceControls.Row, control: DeviceControls.Control, scope: CoroutineScope, modifier: Modifier) {
+        val ctx = LocalContext.current
+        val view = LocalView.current
+        val p = LocalKitPalette.current
+        aged   // a reading older than STALE_MS stops counting; the ticker re-reads this every tick
+        val row = readings[decl.id]
+        val reading = reading(row)
+        val on = row?.state == true
+        val blocked = row?.blocked.orEmpty()
+        val state = StatusLight.of(reading, control.observed)
+        // BLACK WHEN OFF, WHITE WHEN ON — the same two theme roles swapped, never two literals.
+        val fill = if (on) p.textPrimary else p.surface
+        val ink = if (on) p.tileInk else p.textPrimary
+        val description = StatusLight.description(ctx, decl.label, state)
+        Column(
+            modifier.widthIn(min = TOUCH_TARGET_DP.dp).heightIn(min = TOUCH_TARGET_DP.dp)
+                .semantics(mergeDescendants = true) { contentDescription = description }
+                .combinedClickable(
+                    enabled = blocked.isEmpty() && writing[decl.id] != true,
+                    onLongClickLabel = stringResource(R.string.control_tile_open_action),
+                    onClick = {
+                        Haptics.tap(view)
+                        if (control.set != null) write(decl, control, !(currentlyOn(decl.id)), scope)
+                        else openOrSayThereIsNowhere(decl, control)
+                    },
+                    onLongClick = {
+                        Haptics.tap(view)
+                        openOrSayThereIsNowhere(decl, control)
+                    },
+                ).padding(8.dp).testTag(tileTag(decl.id)),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(Modifier.size(BADGE_DP.dp).clip(CircleShape).background(fill).testTag("control:badge:${decl.id}"),
+                contentAlignment = Alignment.Center) {
+                Icon(painterResource(Sections.iconResFor(ctx, decl.icon)), contentDescription = null, tint = ink,
+                    modifier = Modifier.size(ICON_DP.dp))
+            }
+            Text(decl.label, color = p.textPrimary, fontSize = 11.sp, maxLines = 2, textAlign = TextAlign.Center,
+                overflow = TextOverflow.Ellipsis)
+            Text(StatusLight.text(ctx, state), color = Color(StatusLight.colour(ctx, state)), fontSize = 10.sp,
+                textAlign = TextAlign.Center, modifier = Modifier.testTag("control:light:${decl.id}"))
+            // Only ever visible when the control names a reason it cannot move. A tile that just looked inert would say
+            // nothing about the grant it is waiting for.
+            if (blocked.isNotEmpty()) Text(blocked, color = colorResource(R.color.control_blocked), fontSize = 9.sp,
+                textAlign = TextAlign.Center, modifier = Modifier.testTag("control:note:${decl.id}"))
         }
-        val palette = LauncherPalette.of(ctx)
-
-        // The declared icon, resolved through the same name→drawable lookup
-        // every other declared surface in this app uses. Its tint is set by
-        // [paintTile], because the tint IS the on/off state.
-        val icon = ImageView(ctx).apply {
-            setImageResource(Sections.iconResFor(ctx, decl.icon))
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            layoutParams = LinearLayout.LayoutParams(dp(ICON_DP), dp(ICON_DP))
-        }
-
-        // The filled round badge. A GradientDrawable rather than a themed XML
-        // drawable because its fill has to be recoloured on every state
-        // change, and setColor on a live drawable is the cheap way to do that
-        // — no reinflation, no second drawable for the on state.
-        val badge = LinearLayout(ctx).apply {
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply { shape = GradientDrawable.OVAL }
-            layoutParams = LinearLayout.LayoutParams(dp(BADGE_DP), dp(BADGE_DP))
-            addView(icon)
-        }
-
-        val labelView = TextView(ctx).apply {
-            text = decl.label
-            textSize = 11f
-            gravity = Gravity.CENTER
-            maxLines = 2
-            setTextColor(palette.textPrimary)
-        }
-
-        val light = TextView(ctx).apply {
-            textSize = 10f
-            gravity = Gravity.CENTER
-        }
-
-        // Only ever visible when the control names a reason it cannot move.
-        // A tile that just looked inert would say nothing about the grant it
-        // is waiting for.
-        val note = TextView(ctx).apply {
-            textSize = 9f
-            gravity = Gravity.CENTER
-            visibility = View.GONE
-            setTextColor(ContextCompat.getColor(ctx, R.color.control_blocked))
-        }
-
-        val tile = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            // Weight 1 across the strip, so the grid divides the width evenly
-            // whatever the column count is. minimumHeight keeps the target
-            // real on a short tile: a dense grid nobody can hit is the next
-            // complaint after a grid that is too sparse.
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            minimumHeight = dp(TOUCH_TARGET_DP)
-            minimumWidth = dp(TOUCH_TARGET_DP)
-            val v = dp(8)
-            setPadding(v, v, v, v)
-            addView(badge)
-            addView(labelView)
-            addView(light)
-            addView(note)
-        }
-
-        // ONE announcement per tile, not four. Set after the children exist so
-        // there is no window where a child is separately focusable.
-        for (child in listOf(badge, icon, labelView, light, note)) {
-            child.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }
-        tile.isFocusable = true
-
-        // TAP. The only path from a gesture to a write in this file, and
-        // nothing calls it back. A control that cannot be set does not pretend
-        // to switch — its tap goes where the setting actually lives.
-        tile.setOnClickListener { view ->
-            Haptics.tap(view)
-            if (control.set != null) write(decl, control, !(currentlyOn(decl.id)))
-            else openOrSayThereIsNowhere(decl, control)
-        }
-
-        // HOLD. Returns true unconditionally — see the class header: that
-        // return is what stops the tap from also firing on the way out of the
-        // long press, and a `false` here is the whole defect.
-        tile.setOnLongClickListener { view ->
-            Haptics.tap(view)
-            openOrSayThereIsNowhere(decl, control)
-            true
-        }
-
-        // Name the long press for TalkBack. Without this it is an unnamed
-        // gesture, which is the same as not existing for anyone who cannot see
-        // that the grid has tiles worth holding.
-        ViewCompat.replaceAccessibilityAction(
-            tile,
-            AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_LONG_CLICK,
-            getString(R.string.control_tile_open_action),
-            null,
-        )
-
-        rows += Bound(decl.id, decl.label, control, tile, badge, icon, labelView, light, note)
-        paintTile(rows.last(), on = false)
-        paintLight(rows.last())
-        strip.addView(tile)
     }
 
     /**
-     * The settings screen behind a control, or a sentence saying there is not
-     * one.
+     * The settings screen behind a control, or a sentence saying there is not one.
      *
-     * NEVER A SILENT RETURN. Six controls have no `open`, and a hold on one of
-     * them that did nothing at all would be indistinguishable from a tile that
-     * is broken, from a gesture that was not registered, and from a page that
-     * has stopped responding.
+     * NEVER A SILENT RETURN. Six controls have no `open`, and a hold on one of them that did nothing at all would be
+     * indistinguishable from a tile that is broken, from a gesture that was not registered, and from a page that has
+     * stopped responding.
      */
     private fun openOrSayThereIsNowhere(decl: DeviceControls.Row, control: DeviceControls.Control) {
         val open = control.open
@@ -408,142 +367,60 @@ class ControlFragment : Fragment() {
         else view?.snack(getString(R.string.control_no_menu, decl.label))
     }
 
-    /** What this control is showing right now, from whichever tile of it was
-     *  painted last — they are all painted together, so any of them answers. */
-    private fun currentlyOn(id: String): Boolean =
-        rows.firstOrNull { it.id == id }?.let { it.reading == true } ?: false
+    /** What this control is showing right now: every tile of it reads the same entry, so any of them answers. */
+    private fun currentlyOn(id: String): Boolean = readings[id]?.state == true
 
     /**
-     * Re-read every control from the device and redraw every tile of it.
-     *
-     * ONE READ PER CONTROL, not one per tile. The ids are distinct-ed first,
-     * because a control drawn in two groups is still one thing to ask about
-     * and asking twice is two binder calls for one answer, every tick, for the
-     * life of the page.
+     * Re-read every control from the device and redraw every tile of it. ONE READ PER CONTROL, not one per tile: the ids
+     * are distinct-ed first, because a control drawn in two groups is still one thing to ask about.
      */
-    private fun refresh() {
-        // The ACTIVITY context, not the application one: a couple of controls
-        // have to reach the shell they live in (Admin mode repaints the Home
-        // grid, the mesh tile opens the WireGuard page). Held only for the
-        // length of one short read, and the executor is interrupted in
-        // onDestroy, so nothing queued outlives the screen.
+    private fun refresh(scope: CoroutineScope) {
         val ctx = context ?: return
-        val activity = activity ?: return
-        for (id in rows.map { it.id }.distinct()) {
+        for (id in DeviceControls.groups.flatMap { g -> g.rows.map { it.id } }.distinct()) {
             val control = DeviceControls.byId[id] ?: continue
-            io.execute {
+            scope.launch(ioDispatcher) {
                 val state = runCatching { control.read(ctx) }.getOrNull()
                 val blocked = runCatching { control.blocked(ctx) }.getOrDefault("")
-                main.post {
-                    if (!isAdded || activity.isFinishing) return@post
-                    landed(id, state, blocked)
-                }
+                withContext(kotlinx.coroutines.Dispatchers.Main) { if (isAdded) landed(id, state, blocked) }
             }
         }
     }
 
-    /**
-     * A read came back. This is the ONLY writer of a tile's reading, which is
-     * the only thing a tile is ever painted from — and it writes EVERY tile
-     * bearing the id, which is what makes the duplicate in Battery Hungers a
-     * second view of one control rather than a second control.
-     */
+    /** A read came back. This is the ONLY writer of a control's reading, and it writes the one entry EVERY tile bearing the id reads. */
     private fun landed(id: String, state: Boolean?, blocked: String) {
-        val now = SystemClock.elapsedRealtime()
-        for (row in rows.filter { it.id == id }) {
-            row.reading = state
-            row.readAt = now
-            draw(row, state, blocked)
-        }
+        readings[id] = Reading(state, SystemClock.elapsedRealtime(), blocked)
     }
 
     /**
-     * The tile's reading, or null once it has aged out.
+     * The control's reading, or null once it has aged out.
      *
-     * A reading older than [STALE_MS] is not an answer any more, and a tile
-     * that has never been read (readAt 0) never had one. Both are the same
-     * fact to the owner — nobody currently knows — so both are null, which
-     * [StatusLight] draws as Unknown rather than picking a colour.
+     * A reading older than [STALE_MS] is not an answer any more, and a control that has never been read (readAt 0) never
+     * had one. Both are the same fact to the owner — nobody currently knows — so both are null, which [StatusLight] draws
+     * as Unknown rather than picking a colour. The tile's own fill deliberately does not age out: un-filling a tile because
+     * a read grew old would look like the device turning off.
      */
-    private fun reading(row: Bound): Boolean? =
-        if (row.readAt != 0L && SystemClock.elapsedRealtime() - row.readAt <= STALE_MS) row.reading
+    private fun reading(row: Reading?): Boolean? =
+        if (row != null && row.readAt != 0L && SystemClock.elapsedRealtime() - row.readAt <= STALE_MS) row.state
         else null
 
     /**
-     * The tile's light, and the only place one is decided.
-     *
-     * TWO inputs, both from the same [DeviceControls.Control]: the reading,
-     * aged out by [reading], and whether that reading was a look at the thing
-     * or at a preference. Nothing else reaches here — not the fill, not the
-     * last write, not what the user asked for.
+     * Ask the device to change, then show what the device says. Every tile of this control is disabled for the duration
+     * so a second tap — on either of them — cannot race the first, and the result is always a fresh read:
+     * [DeviceControls.Verdict] decides only whether to explain, never what to display.
      */
-    private fun paintLight(row: Bound) {
-        val ctx = row.light.context
-        val state = StatusLight.of(reading(row), row.control.observed)
-        row.light.text = StatusLight.text(ctx, state)
-        row.light.setTextColor(StatusLight.colour(ctx, state))
-        // The WHOLE tile in words, from the SHARED component rather than a
-        // sentence assembled here. A grid of icons took away the row text a
-        // screen reader was reading, and the honest replacement is the same
-        // four-state word the light is drawn from — not a second "on/off"
-        // phrasing beside it, which would have to say "Off" for a tile that is
-        // merely unread and would then disagree with the light in the same
-        // breath.
-        row.tile.contentDescription = StatusLight.description(ctx, row.label, state)
-    }
-
-    /**
-     * BLACK WHEN OFF, WHITE WHEN ON — the same two theme roles swapped.
-     *
-     * Neither colour is written here. Both come from [LauncherPalette], so the
-     * inversion the owner asked for is the same gesture under every theme
-     * instead of a pair of literals that happen to suit one of them.
-     */
-    private fun paintTile(row: Bound, on: Boolean) {
-        val palette = LauncherPalette.of(row.tile.context)
-        val fill = if (on) palette.textPrimary else palette.surface
-        val ink = if (on) palette.tileInk else palette.textPrimary
-        (row.badge.background as? GradientDrawable)?.setColor(fill)
-        row.icon.imageTintList = android.content.res.ColorStateList.valueOf(ink)
-        row.labelView.setTextColor(palette.textPrimary)
-    }
-
-    /** Draw one tile's truth. [blocked] non-blank ⇒ the tile is disabled and
-     *  the reason appears under it, so it says what it is waiting for instead
-     *  of looking broken. */
-    private fun draw(row: Bound, state: Boolean?, blocked: String) {
-        paintTile(row, on = state == true)
-        paintLight(row)
-        row.tile.isEnabled = blocked.isEmpty()
-        if (blocked.isNotEmpty()) {
-            row.note.text = blocked
-            row.note.visibility = View.VISIBLE
-        } else {
-            row.note.visibility = View.GONE
-        }
-    }
-
-    /**
-     * Ask the device to change, then show what the device says.
-     *
-     * Every tile of this control is disabled for the duration so a second tap
-     * — on either of them — cannot race the first, and the result is always a
-     * fresh read: [DeviceControls.Verdict] decides only whether to explain,
-     * never what to display.
-     */
-    private fun write(decl: DeviceControls.Row, control: DeviceControls.Control, want: Boolean) {
+    private fun write(decl: DeviceControls.Row, control: DeviceControls.Control, want: Boolean, scope: CoroutineScope) {
         val set = control.set ?: return
-        val ctx = context ?: return          // see [refresh] on which context
-        val activity = activity ?: return
-        for (row in rows.filter { it.id == decl.id }) row.tile.isEnabled = false
-        io.execute {
+        val ctx = context ?: return
+        writing[decl.id] = true
+        scope.launch(ioDispatcher) {
             val verdict = runCatching { set(ctx, want) }.getOrElse {
                 DeviceControls.Verdict(false, it.message ?: it::class.java.simpleName)
             }
             val state = runCatching { control.read(ctx) }.getOrNull()
             val blocked = runCatching { control.blocked(ctx) }.getOrDefault("")
-            main.post {
-                if (!isAdded || activity.isFinishing) return@post
+            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                writing.remove(decl.id)
+                if (!isAdded) return@withContext
                 landed(decl.id, state, blocked)
                 if (!verdict.ok) {
                     view?.snack(getString(R.string.control_write_refused, decl.label, verdict.detail),
@@ -556,14 +433,10 @@ class ControlFragment : Fragment() {
     // ───────────────────────────── Chrome ───────────────────────────────
 
     /**
-     * A group's wording, from the string table when the declaration names a
-     * key for it.
-     *
-     * The key is DATA — build.json says which resource a group's heading is —
-     * so adding a group is still a declaration edit, while the words it shows
-     * are translated like everything else on the page. A declaration that
-     * names no key, or names one this build does not have, falls back to the
-     * English text sitting beside it rather than drawing an empty heading.
+     * A group's wording, from the string table when the declaration names a key for it. The key is DATA — build.json says
+     * which resource a group's heading is — so adding a group is still a declaration edit, while the words it shows are
+     * translated like everything else on the page. A declaration that names no key, or names one this build does not
+     * have, falls back to the English text sitting beside it rather than drawing an empty heading.
      */
     private fun groupText(ctx: Context, resName: String, fallback: String): String {
         if (resName.isBlank()) return fallback
@@ -571,126 +444,71 @@ class ControlFragment : Fragment() {
         return if (id != 0) ctx.getString(id) else fallback
     }
 
-    private fun title(ctx: Context, s: String) = TextView(ctx).apply {
-        text = s
-        textSize = 22f
-        setTextColor(LauncherPalette.of(ctx).textPrimary)
-        setPadding(0, 0, 0, dp(4))
-    }
-
-    private fun caption(ctx: Context, s: String) = TextView(ctx).apply {
-        text = s
-        textSize = 12f
-        setTextColor(LauncherPalette.of(ctx).textSecondary)
-        setPadding(0, 0, 0, dp(8))
-    }
-
-    /**
-     * The hand-off under a group heading, or null for a group that declares
-     * none — see [DeviceControls.Group.details].
-     *
-     * WHY THIS IS A LINK AND NOT MORE TILES. Battery Hungers gathers the
-     * controls a human judged expensive. That is a useful thing to have in one
-     * row and it is NOT an answer to "which apps are eating my battery": these
-     * are controls, not apps, and the flag behind them is an opinion written in
-     * `build.json`, not a measurement. The measured answer already exists —
-     * `libs:battery`'s [EnergyUsageDialog], which ranks apps by mAh and states
-     * on its own face how each number was arrived at — and it was reachable
-     * only from the developer page. So this opens THAT, rather than growing a
-     * second per-app list here that would drift from it.
-     *
-     * IT IS NOT A TILE, DELIBERATELY. Every tile on this page carries a
-     * [StatusLight], and a light means a reading about whether something is
-     * working. This opens a page; there is nothing about it to be on or off,
-     * and giving it a light would be inventing a state to fill a shape.
-     *
-     * FAILS CLOSED, TWICE. A `details` naming a surface this build does not
-     * implement draws nothing, and so does one whose label is missing from the
-     * string table — an affordance with no words is one the owner cannot know
-     * the meaning of before tapping it, which on a page about power is exactly
-     * the wrong time to guess.
-     */
-    private fun detailsLink(ctx: Context, group: DeviceControls.Group): View? {
-        if (group.details.isBlank()) return null
-        val labelId = ctx.resources.getIdentifier(group.detailsRes, "string", ctx.packageName)
-        if (labelId == 0) return null
-        if (group.details != DETAILS_ENERGY_USAGE) return null
-        return TextView(ctx).apply {
-            text = ctx.getString(labelId)
-            textSize = 12f
-            setTextColor(LauncherPalette.of(ctx).accent)
-            setPadding(0, dp(6), 0, dp(2))
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { view ->
-                Haptics.tap(view)
-                EnergyUsageDialog().show(parentFragmentManager, EnergyUsageDialog.TAG)
-            }
-            // Announced as a button, not as a line of prose a screen reader
-            // would read past without offering to activate it.
-            ViewCompat.replaceAccessibilityAction(
-                this,
-                AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK,
-                ctx.getString(R.string.control_group_details_action),
-                null,
-            )
+    @Composable
+    private fun GroupHeading(label: String, subtitle: String) {
+        val p = LocalKitPalette.current
+        Column(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp)) {
+            Text(label.uppercase(), color = p.accent, fontSize = 12.sp)
+            if (subtitle.isNotBlank()) Text(subtitle, color = p.textSecondary, fontSize = 11.sp)
         }
     }
 
-    private fun section(ctx: Context, label: String, subtitle: String) = LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(16), 0, dp(4))
-        addView(TextView(ctx).apply {
-            text = label.uppercase()
-            textSize = 12f
-            setTextColor(LauncherPalette.of(ctx).accent)
-        })
-        if (subtitle.isNotBlank()) addView(TextView(ctx).apply {
-            text = subtitle
-            textSize = 11f
-            setTextColor(LauncherPalette.of(ctx).textSecondary)
-        })
+    /**
+     * The hand-off under a group heading, or nothing for a group that declares none — see [DeviceControls.Group.details].
+     *
+     * WHY THIS IS A LINK AND NOT MORE TILES. Battery Hungers gathers the controls a human judged expensive. That is a
+     * useful thing to have in one row and it is NOT an answer to "which apps are eating my battery": these are controls,
+     * not apps. The measured answer already exists — `libs:battery`'s [EnergyUsageDialog] — so this opens THAT, rather than
+     * growing a second per-app list here that would drift from it. It is not a tile (no light: there is nothing about it to
+     * be on or off) and it FAILS CLOSED, twice: an unknown surface, or a label missing from the string table, draws nothing.
+     */
+    @Composable
+    private fun DetailsLink(group: DeviceControls.Group) {
+        val ctx = LocalContext.current
+        val view = LocalView.current
+        val p = LocalKitPalette.current
+        if (group.details.isBlank()) return
+        val labelId = ctx.resources.getIdentifier(group.detailsRes, "string", ctx.packageName)
+        if (labelId == 0) return
+        if (group.details != DETAILS_ENERGY_USAGE) return
+        Text(ctx.getString(labelId), color = p.accent, fontSize = 12.sp,
+            modifier = Modifier.padding(top = 6.dp, bottom = 2.dp).clickable(
+                onClickLabel = ctx.getString(R.string.control_group_details_action),
+            ) {
+                Haptics.tap(view)
+                EnergyUsageDialog().show(parentFragmentManager, EnergyUsageDialog.TAG)
+            }.testTag("control:details:${group.id}"))
     }
-
-    /** Holds a grid column open where there is no tile for it. */
-    private fun spacer(ctx: Context) = View(ctx).apply {
-        layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
-    }
-
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     companion object {
 
-        /** Poll cadence WHILE VISIBLE — the launcher status strip's, so the
-         *  two live surfaces in this app do not tick at two different rates. */
+        /** Poll cadence WHILE VISIBLE — the launcher status strip's, so the two live surfaces in this app do not tick at
+         *  two different rates. */
         private const val REFRESH_MS = 10_000L
 
-        /** How long a reading counts as an answer. Two missed ticks plus
-         *  slack: long enough that an ordinary slow read does not blink the
-         *  light, short enough that nothing on screen is ever a minute old. */
+        /** How long a reading counts as an answer. Two missed ticks plus slack: long enough that an ordinary slow read does
+         *  not blink the light, short enough that nothing on screen is ever a minute old. */
         private const val STALE_MS = 25_000L
 
-        /** The filled round badge, and the icon centred in it. Samsung's own
-         *  quick-settings proportions: a badge comfortably past the 48dp
-         *  minimum touch target on its own, with the icon about half of it. */
-        /** The one surface [detailsLink] knows how to open, named as
-         *  `build.json` names it. A declaration is data; the class it resolves
-         *  to cannot be, so the mapping lives here — the same split as
-         *  [Sections.iconResFor] between a declared icon name and a drawable. */
+        /** The one surface [DetailsLink] knows how to open, named as `build.json` names it. A declaration is data; the
+         *  class it resolves to cannot be, so the mapping lives here. */
         private const val DETAILS_ENERGY_USAGE = "energy_usage"
 
+        /** The filled round badge, and the icon centred in it. Samsung's own quick-settings proportions: a badge
+         *  comfortably past the 48dp minimum touch target on its own, with the icon about half of it. */
         private const val BADGE_DP = 56
         private const val ICON_DP = 26
 
-        /** The floor for a whole tile, badge and label together. Android's
-         *  accessibility minimum is 48dp in both directions and a grid of
-         *  tiles below it is a grid that gets mis-tapped. */
+        /** The floor for a whole tile, badge and label together. Android's accessibility minimum is 48dp in both
+         *  directions and a grid of tiles below it is a grid that gets mis-tapped. */
         private const val TOUCH_TARGET_DP = 48
 
         private const val ARG_EMBEDDED = "embedded"
 
-        /** [embedded]: drawn inside another page's scroll view instead of
-         *  wearing its own. */
+        const val TAG_TITLE = "control:title"
+        fun tileTag(id: String) = "control:tile:$id"
+
+        /** [embedded]: drawn inside another page's scroll view instead of wearing its own. */
         fun newInstance(embedded: Boolean = false): ControlFragment =
             ControlFragment().apply { arguments = Bundle().apply { putBoolean(ARG_EMBEDDED, embedded) } }
     }

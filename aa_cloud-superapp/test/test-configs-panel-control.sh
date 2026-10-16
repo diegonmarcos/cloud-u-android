@@ -234,9 +234,9 @@ fi
 echo "== T8: the UI never displays the state that was ASKED for =="
 ui_fail=""
 # The tile's fill may only be set from the value just read BACK.
-grep -q 'paintTile(row, on = state == true)' "$FRAGMENT" \
+grep -q 'val on = row?.state == true' "$FRAGMENT" \
   || ui_fail="$ui_fail no-read-back-assignment"
-grep -qE 'paintTile\([^)]*on = (want|on)\b' "$FRAGMENT" \
+grep -qE '\bon = (want|!?currentlyOn)\b' "$FRAGMENT" \
   && ui_fail="$ui_fail paints-the-request"
 # NOT A COMPOUND BUTTON ANY MORE, and that is stronger than the detached
 # listener the list version needed. Assigning Switch.isChecked FIRES
@@ -261,9 +261,9 @@ PY
 grep -q 'if (control.set != null) write(' "$FRAGMENT" \
   || ui_fail="$ui_fail tap-not-gated-on-set"
 # A blocked tile must be disabled AND say why.
-grep -q 'row.tile.isEnabled = blocked.isEmpty()' "$FRAGMENT" \
+grep -q 'enabled = blocked.isEmpty()' "$FRAGMENT" \
   || ui_fail="$ui_fail blocked-tile-still-enabled"
-grep -q 'row.note.text = blocked' "$FRAGMENT" \
+grep -q 'if (blocked.isNotEmpty()) Text(blocked,' "$FRAGMENT" \
   || ui_fail="$ui_fail blocked-reason-not-shown"
 [ -z "$ui_fail" ] \
   && ok "tiles are filled from the device read; no CompoundButton to re-fire" \
@@ -457,7 +457,7 @@ grep -qE '0x[fF][fF][0-9A-Fa-f]{6}' "$STATUS" \
   && light_fail="$light_fail StatusLight-hardcodes-a-colour"
 grep -q 'StatusLight.colour(' "$FRAGMENT" || light_fail="$light_fail fragment-does-not-use-the-token"
 # setTextColor on the light must take StatusLight's answer and nothing else.
-grep -qE 'light\.setTextColor\(StatusLight\.colour\(' "$FRAGMENT" \
+grep -qE 'Color\(StatusLight\.colour\(' "$FRAGMENT" \
   || light_fail="$light_fail light-painted-from-something-else"
 # StatusLight must resolve through resources, and those resources must exist.
 grep -q 'ContextCompat.getColor' "$STATUS" || light_fail="$light_fail StatusLight-does-not-resolve-a-resource"
@@ -527,12 +527,12 @@ PY
 grep -q 'runCatching { control.read(ctx) }.getOrNull()' "$FRAGMENT" \
   || unknown_fail="$unknown_fail throwing-read-not-nulled"
 # A row never read, or read too long ago, has no answer to show.
-grep -q 'if (row.readAt != 0L' "$FRAGMENT" || unknown_fail="$unknown_fail never-read-not-unknown"
+grep -q 'row.readAt != 0L' "$FRAGMENT" || unknown_fail="$unknown_fail never-read-not-unknown"
 grep -q 'SystemClock.elapsedRealtime() - row.readAt <= STALE_MS' "$FRAGMENT" \
   || unknown_fail="$unknown_fail stale-reading-still-shown"
 # The light is painted from reading(), which is the function that ages out -
 # painting from row.reading directly would skip the staleness rule entirely.
-grep -q 'StatusLight.of(reading(row), row.control.observed)' "$FRAGMENT" \
+grep -q 'val reading = reading(row)' "$FRAGMENT" && grep -q 'StatusLight.of(reading, control.observed)' "$FRAGMENT" \
   || unknown_fail="$unknown_fail light-bypasses-the-stale-check"
 # Nothing may coerce a null reading into a boolean on the way to a light.
 grep -qE 'reading\(row\)\s*(\?:|== true)' "$FRAGMENT" \
@@ -546,18 +546,17 @@ echo "== T16: the lights poll only while the page is VISIBLE, and age out slower
 # probing shell channels while the owner is in another app is a battery cost
 # with no reader.
 life_fail=""
-grep -q 'main.post(ticker)' "$FRAGMENT"            || life_fail="$life_fail no-start-on-resume"
-grep -q 'main.removeCallbacks(ticker)' "$FRAGMENT" || life_fail="$life_fail never-stopped"
-grep -q 'override fun onPause()' "$FRAGMENT"       || life_fail="$life_fail no-onPause"
-# The stop must be in onPause, not only in onDestroy - a fragment that is merely
-# covered still runs its handler.
-python3 - "$FRAGMENT" <<'PY' || life_fail="$life_fail stop-not-in-onPause"
+grep -q 'repeatOnLifecycle(Lifecycle.State.RESUMED)' "$FRAGMENT" || life_fail="$life_fail no-start-on-resume"
+# repeatOnLifecycle(RESUMED) cancels its block the moment the page drops below RESUMED (onPause), so the stop is structural.
+grep -q 'while (true) {' "$FRAGMENT" || life_fail="$life_fail no-loop"
+# The loop must live INSIDE the lifecycle block, not outside it - outside, a covered page would keep polling.
+python3 - "$FRAGMENT" <<'PY' || life_fail="$life_fail loop-not-inside-repeatOnLifecycle"
 import re, sys
 s = open(sys.argv[1]).read()
-m = re.search(r'override fun onPause\(\).*?\n    \}', s, re.S)
-sys.exit(0 if m and 'removeCallbacks(ticker)' in m.group(0) else 1)
+m = re.search(r'repeatOnLifecycle\(Lifecycle\.State\.RESUMED\)\s*\{(.*?)\n            \}', s, re.S)
+sys.exit(0 if m and 'while (true)' in m.group(1) and 'refresh(scope)' in m.group(1) else 1)
 PY
-grep -q 'main.postDelayed(this, REFRESH_MS)' "$FRAGMENT" || life_fail="$life_fail ticker-does-not-repeat"
+grep -q 'delay(REFRESH_MS)' "$FRAGMENT" || life_fail="$life_fail ticker-does-not-repeat"
 # A reading must outlive the interval that refreshes it, or every row blinks to
 # Unknown between ticks and the light becomes noise the owner learns to ignore.
 python3 - "$FRAGMENT" <<'PY' || life_fail="$life_fail stale-window-shorter-than-poll"
@@ -661,7 +660,7 @@ if glyph.get('ON') == glyph.get('OFF'):
     problems.append('ON and OFF share a glyph - colour is the only channel')
 
 # ── and the panel must ask for it that way ───────────────────────────────
-if 'StatusLight.of(reading(row), row.control.observed)' not in open(sys.argv[3]).read():
+if 'StatusLight.of(reading, control.observed)' not in open(sys.argv[3]).read():
     problems.append('the fragment does not light its rows from (reading, observed)')
 
 # ── no observing read may consult the store its own write touches ────────
@@ -764,12 +763,12 @@ PYX
 # screen reader, and four separately-announced fragments of one row is worse
 # than the row was. It is still StatusLight's own sentence — the shared one,
 # not a second phrasing assembled in the fragment.
-grep -q 'row.tile.contentDescription = StatusLight.description(' "$FRAGMENT" \
+grep -q 'StatusLight.description(ctx, decl.label, state)' "$FRAGMENT" && grep -q 'contentDescription = description' "$FRAGMENT" \
   || a11y_fail="$a11y_fail tile-has-no-content-description"
 grep -qE 'State\.(ON|OFF|UNKNOWN|UNVERIFIABLE) -> "(On|Off|Unknown|Not verifiable)"' "$STATUS" \
   && a11y_fail="$a11y_fail state-word-hardcoded-in-kotlin"
-grep -q 'getString(R.string.control_title)' "$FRAGMENT"   || a11y_fail="$a11y_fail title-not-a-resource"
-grep -q 'getString(R.string.control_caption' "$FRAGMENT"  || a11y_fail="$a11y_fail caption-not-a-resource"
+grep -q 'stringResource(R.string.control_title)' "$FRAGMENT"   || a11y_fail="$a11y_fail title-not-a-resource"
+grep -q 'stringResource(R.string.control_caption' "$FRAGMENT"  || a11y_fail="$a11y_fail caption-not-a-resource"
 grep -q 'getString(R.string.control_write_refused' "$FRAGMENT" \
   || a11y_fail="$a11y_fail snackbar-not-a-resource"
 # EVERY locale carries them, not only the default: the day a values-es lands,
@@ -816,10 +815,10 @@ for g in cp['groups']:
 sys.exit(0 if len(drawn) > len(set(drawn)) else 1)
 PY
 # A read that lands fans out to every tile of that control...
-grep -q 'for (row in rows.filter { it.id == id })' "$FRAGMENT" \
+grep -q 'readings\[id\] = Reading(' "$FRAGMENT" \
   || dup_fail="$dup_fail landed-updates-one-tile"
 # ...and so does the disable during a write.
-grep -q 'for (row in rows.filter { it.id == decl.id }) row.tile.isEnabled = false' "$FRAGMENT" \
+grep -q 'writing\[decl.id\] = true' "$FRAGMENT" \
   || dup_fail="$dup_fail write-disables-one-tile"
 # NOTHING may route a reading through firstOrNull. currentlyOn() is allowed to
 # ask any one tile what the last reading was precisely BECAUSE they are all
@@ -915,18 +914,21 @@ echo "== T23: a hold opens the menu and does NOT also switch the control =="
 # removing the second route, not swallowing the second event: a timestamp guard
 # would hide the symptom and break a genuine fast double tap with it.
 gest_fail=""
-python3 - "$FRAGMENT" <<'PY' || gest_fail="$gest_fail long-press-does-not-consume"
+# Compose has no listener whose return value lets a tap through behind the hold: combinedClickable runs onClick only for a
+# press that was NOT a long press. What can still go wrong is a SECOND route - a plain clickable()/pointerInput on the tile
+# alongside it, which would fire the tap on the way out of the hold - so the tile has exactly one gesture modifier, and it is
+# the combined one carrying both handlers.
+python3 - "$FRAGMENT" <<'PY' || gest_fail="$gest_fail tile-gesture-is-not-one-combinedClickable"
 import re, sys
 code = open(sys.argv[1], encoding='utf-8').read()
 code = re.sub(r'/\*.*?\*/', '', code, flags=re.S)
 code = re.sub(r'//[^\n]*', '', code)
-m = re.search(r'setOnLongClickListener\s*\{(.*?)\n        \}', code, re.S)
-if not m:
-    sys.exit(1)
-body = [ln.strip() for ln in m.group(1).splitlines() if ln.strip()]
-# The value of the lambda is its LAST expression. Anything but a bare `true`
-# lets the tap through behind the hold.
-sys.exit(0 if body and body[-1] == 'true' else 1)
+m = re.search(r'private fun Tile\(.*?\n    \}\n', code, re.S)
+if not m: sys.exit(1)
+body = m.group(0)
+one = body.count('combinedClickable(') == 1 and 'onClick = {' in body and 'onLongClick = {' in body
+second = re.search(r'(?<![A-Za-z])clickable\(|pointerInput\(|detectTapGestures', body)
+sys.exit(0 if one and not second else 1)
 PY
 # Exactly ONE gesture path reaches a write. A second one is the double-dispatch
 # shape, whatever it is spelled.
@@ -958,11 +960,11 @@ body = m.group(0)
 # Both arms accounted for: one opens, the other says there is nowhere to open.
 sys.exit(0 if 'if (open != null) open(' in body and 'snack(' in body else 1)
 PY
-grep -q 'setOnLongClickListener' "$FRAGMENT" || silent_fail="$silent_fail no-long-press-at-all"
+grep -q 'onLongClick = {' "$FRAGMENT" || silent_fail="$silent_fail no-long-press-at-all"
 python3 - "$FRAGMENT" <<'PY' || silent_fail="$silent_fail hold-bypasses-the-fallback"
 import re, sys
 code = open(sys.argv[1], encoding='utf-8').read()
-m = re.search(r'setOnLongClickListener\s*\{(.*?)\n        \}', code, re.S)
+m = re.search(r'onLongClick = \{(.*?)\n                    \},', code, re.S)
 sys.exit(0 if m and 'openOrSayThereIsNowhere(' in m.group(1) else 1)
 PY
 # DATA: at least one declared control really has nowhere to go, or the fallback
@@ -1052,9 +1054,9 @@ for theme in d['launcher_themes']:
 
 # And the fragment must express it as the SWAP, not as two colours it chose.
 code = re.sub(r'//[^\n]*', '', re.sub(r'/\*.*?\*/', '', open(fragment).read(), flags=re.S))
-if 'if (on) palette.textPrimary else palette.surface' not in code:
+if 'if (on) p.textPrimary else p.surface' not in code:
     problems.append('the fill is not the text_primary/surface swap')
-if 'if (on) palette.tileInk else palette.textPrimary' not in code:
+if 'if (on) p.tileInk else p.textPrimary' not in code:
     problems.append('the icon is not the tile_ink/text_primary swap')
 print('; '.join(problems) or 'OK')
 PY
@@ -1080,9 +1082,9 @@ columns = json.load(open(sys.argv[2]))['ui']['control_panel'].get('columns', 0)
 # leaving room for a 56dp badge plus its gutters.
 sys.exit(0 if ok and 2 <= columns <= 5 and 360 / columns >= 64 else 1)
 PY
-grep -q 'minimumHeight = dp(TOUCH_TARGET_DP)' "$FRAGMENT" \
+grep -q 'heightIn(min = TOUCH_TARGET_DP.dp)' "$FRAGMENT" \
   || size_fail="$size_fail no-minimum-height-on-the-tile"
-grep -q 'minimumWidth = dp(TOUCH_TARGET_DP)' "$FRAGMENT" \
+grep -q 'widthIn(min = TOUCH_TARGET_DP.dp)' "$FRAGMENT" \
   || size_fail="$size_fail no-minimum-width-on-the-tile"
 [ -z "$size_fail" ] \
   && ok "badge, tile floor and column count all clear the 48dp target" \
@@ -1174,8 +1176,8 @@ esac
 # (g) THE #228 RULE, AGAIN. The hand-off is a link to a page; it has no state,
 #     so it must not be given a light. A light here would be a status indicator
 #     driven by nothing — the exact shape of the private copies #228 removed.
-det_body="$(awk '/private fun detailsLink/,/^    private fun section/' "$FRAGMENT")"
-[ -n "$det_body" ] || details_fail="$details_fail detailsLink-not-found"
+det_body="$(awk '/private fun DetailsLink/,/^    companion object/' "$FRAGMENT")"
+[ -n "$det_body" ] || details_fail="$details_fail DetailsLink-not-found"
 case "$det_body" in
   *StatusLight*) details_fail="$details_fail details-link-carries-a-status-light" ;;
 esac

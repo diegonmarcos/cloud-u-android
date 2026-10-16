@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.launcher
 
 import android.app.Application
-import androidx.compose.ui.test.assertHeightIsAtMost
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -9,6 +8,7 @@ import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -42,7 +42,8 @@ class TileSizeTest : KitPageHarness() {
     fun `Z3 a group heading is not a 24 sp line`() {
         showKit { TileGroupHeader("Setup", androidx.compose.ui.Modifier.testTag("h")) }
         // 14 + 6 dp padding + one 11 sp caption line; a stock Material bodyLarge line would be 24 sp on its own.
-        compose.onNodeWithTag("h").assertHeightIsAtMost(40.dp)
+        val h = compose.onNodeWithTag("h").fetchSemanticsNode().size.height
+        assertTrue("heading is $h px", h <= with(compose.density) { 40.dp.roundToPx() })
     }
 
     @Test
