@@ -284,6 +284,10 @@ dependencies {
     }
 
     implementation(libs.appyx.core)
+    // The fleet setup handlers (io.element.android.x.fleet) read and edit the app's DataStores.
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.coroutines.core)
+    implementation(projects.libraries.preferences.api)
     implementation(libs.androidx.splash)
     implementation(libs.androidx.core)
     implementation(libs.androidx.corektx)

@@ -23,6 +23,9 @@ import kotlin.reflect.KClass
 interface AppGraph : NodeFactoriesBindings {
     val sessionGraphFactory: SessionGraph.Factory
 
+    /** The app's DataStore factory, so the fleet setup handlers use the same instances. */
+    val preferenceDataStoreFactory: io.element.android.libraries.preferences.api.store.PreferenceDataStoreFactory
+
     @Multibinds
     val workerProviders:
         Map<KClass<out ListenableWorker>, MetroWorkerFactory.WorkerInstanceFactory<*>>

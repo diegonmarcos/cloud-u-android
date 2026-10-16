@@ -40,6 +40,9 @@ class ElementXApplication : Application(), DependencyInjectionGraphOwner, Config
 
         logApplicationInfo(this)
 
+        // The fleet setup contract serves the migrating DataStores through the app's own instances.
+        io.element.android.x.fleet.DataStoreSetupHandler.registerAll(graph.preferenceDataStoreFactory)
+
         // Disable the strict offset check for anchored draggable components, as it can cause issues with bottom sheets.
         // Remove once https://issuetracker.google.com/issues/477038695 is fixed.
         isAnchoredDraggableComponentsStrictOffsetCheckEnabled = false
