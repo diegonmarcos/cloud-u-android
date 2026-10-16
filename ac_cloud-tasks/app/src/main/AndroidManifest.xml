@@ -16,8 +16,15 @@
         <!-- The cal ENGINE (build.json::engines.cal): without this line the engine is
              invisible on API 30+ and Cloud Tasks would say "install it" with it installed. -->
         <package android:name="${calEnginePackage}" />
-        <!-- Cloud Drive: its Screenshot agent provider feeds Agents ▸ Screenshot events. -->
-        <package android:name="com.diegonmarcos.clouddrive" />
+        <!-- Cloud Drive: its Screenshot agent provider feeds Agents ▸ Screenshot events, and the Image / File
+             attachments of a task open in it (build.json fleet row drive). -->
+        <package android:name="${drivePackage}" />
+        <!-- Cloud Mail: the mail agent reads it through its read-only agent provider (<package>.agentmail), the
+             task editor's Mail picker lists its messages, and a Mail attachment opens it. Without this line
+             Cloud Mail is invisible on API 30+ and reads exactly like "not installed". -->
+        <package android:name="${mailPackage}" />
+        <!-- Cloud Account: Profile ▸ Account opens it (com.diegonmarcos.cloudaccount.OPEN). -->
+        <package android:name="${accountPackage}" />
     </queries>
 
     <application

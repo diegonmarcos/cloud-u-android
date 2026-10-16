@@ -1,6 +1,9 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    // 2026-10-15 owner decision: all apps must be Compose. The whole chrome and every page but the legacy
+    // calendar web tabs (Events / Calendar / Invites, still tasks.html) are Compose now.
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 def gradleScriptStartMs = System.currentTimeMillis()
@@ -108,6 +111,19 @@ def depPattern = ~/\b(implementation|api|compileOnly|runtimeOnly)\s*[\(\s]\s*['"
 def stackFrameworksB64 = b64(stackDeps.toList())
 def stackTreeB64 = "—".bytes.encodeBase64().toString()
 
+// #868 the navigation is ONE declaration (build.json::ui.bottom_nav + ui.sections + ui.default_section), drawn by
+// libs:bottomnav and read at runtime through its NavDecl. Baked whole, so the APK needs no network to draw its chrome.
+def uiDecl = buildJson.ui ?: [:]
+if (!(uiDecl.sections instanceof List) || uiDecl.sections.isEmpty() || !(uiDecl.bottom_nav instanceof List) || uiDecl.bottom_nav.isEmpty()) {
+    throw new GradleException("build.json::ui.bottom_nav / ui.sections must declare the shell's navigation (#868)")
+}
+def uiSectionsB64   = b64(uiDecl.sections)
+def uiBottomNav     = uiDecl.bottom_nav.join(',')
+def uiDefaultSection = (uiDecl.default_section ?: uiDecl.bottom_nav[0]).toString()
+
+// The AI dropdown's gateway: libs:ai's contract names the service, the fleet catalogue its mesh address (sets aiGatewayUrl).
+apply from: "$rootDir/../ab_cloud-libs-shared/libs/ai/ai-gateway.gradle"
+
 def calendarsFile = file("../data/calendars.json")
 def calendarsJson = calendarsFile.exists() ? calendarsFile.text : "{}"
 def calendarsB64  = calendarsJson.bytes.encodeBase64().toString()
@@ -128,6 +144,17 @@ if (calEngineFleet == null) {
         "($fleetAppsFile) — Cloud Tasks would bind a package no Store row installs.")
 }
 def calEnginePackage = calEngineFleet.package.toString()
+// The fleet apps this one hands off to / reads, by their Store row id: a name the fleet manifest lacks fails the build,
+// so a renamed package cannot leave a link that silently opens nothing.
+def fleetApps = new groovy.json.JsonSlurper().parse(fleetAppsFile).apps
+def fleetPackage = { String fid ->
+    def row = fleetApps.find { it.id == fid }
+    if (row == null) throw new GradleException("constellation fleet manifest has no app '${fid}' ($fleetAppsFile)")
+    row.package.toString()
+}
+def mailPackage    = fleetPackage('mail')
+def accountPackage = fleetPackage('account')
+def drivePackage   = fleetPackage('drive')
 def calEngineAction  = calEngineDecl.action.toString().replace('{package}', calEnginePackage)
 def calEngineMinContract = calEngineDecl.min_contract as int
 if (calEngineMinContract < 1) {
@@ -197,6 +224,15 @@ android {
         buildConfigField "String", "UI_STACK_FRAMEWORKS_JSON_B64", "\"${stackFrameworksB64}\""
         buildConfigField "String", "UI_STACK_FOLDER_TREE_B64",     "\"${stackTreeB64}\""
         buildConfigField "String", "CALENDARS_B64", "\"${calendarsB64}\""
+        buildConfigField "String", "UI_SECTIONS_B64",    "\"${uiSectionsB64}\""
+        buildConfigField "String", "UI_BOTTOM_NAV",      "\"${uiBottomNav}\""
+        buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
+        buildConfigField "String", "AI_GATEWAY_URL",     "\"${aiGatewayUrl}\""
+        // The mail agent reads Cloud Mail through its read-only agent provider: <mailPackage>.agentmail.
+        buildConfigField "String", "MAIL_PACKAGE",       "\"${mailPackage}\""
+        buildConfigField "String", "ACCOUNT_PACKAGE",    "\"${accountPackage}\""
+        buildConfigField "String", "DRIVE_PACKAGE",      "\"${drivePackage}\""
+
         buildConfigField "long",   "STACK_GRADLE_CONFIG_MS",  "${System.currentTimeMillis() - gradleScriptStartMs}L"
         buildConfigField "long",   "STACK_BUILD_AVG_SECS",    "${buildAvgSecs}L"
         buildConfigField "long",   "STACK_BUILD_LAST_SECS",   "${buildLastSecs}L"
@@ -204,11 +240,27 @@ android {
         buildConfigField "String", "CAL_ENGINE_PACKAGE",      "\"${calEnginePackage}\""
         buildConfigField "String", "CAL_ENGINE_ACTION",       "\"${calEngineAction}\""
         buildConfigField "int",    "CAL_ENGINE_MIN_CONTRACT", "${calEngineMinContract}"
-        manifestPlaceholders = [calEnginePackage: calEnginePackage]
+        manifestPlaceholders = [calEnginePackage: calEnginePackage, mailPackage: mailPackage, accountPackage: accountPackage, drivePackage: drivePackage]
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
-    buildFeatures { buildConfig = true }
+    buildFeatures {
+        buildConfig = true
+        compose = true
+    }
+
+    testOptions {
+        unitTests {
+            // The Compose layout-tree tests render the real chrome under Robolectric (the libs:bottomnav precedent).
+            includeAndroidResources = true
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
 
     // ONE shared Cloud-constellation key — same key as SuperApp/Nav/Comms/Wallet/IDE.
     signingConfigs {
@@ -243,6 +295,11 @@ dependencies {
     implementation project(':libs:core')
     implementation project(':libs:databackend')   // #825 DataBackendClient: this app binds an engine
     implementation project(':libs:updater')
+    // #868 the fleet's bottom island + page tabs, the Compose kit (CloudKitTheme, palette roles) and the AI chat
+    // (sessions, persistent history, Agent and Model pickers) -- one implementation each, shared by reference.
+    implementation project(':libs:bottomnav')
+    implementation project(':libs:ui-kit')
+    implementation project(':libs:ai')   // brings libs:model-catalogue along (api)
     // libs:cal is NOT linked: it ships as Cloud-Lib-Cal.apk and the app
     // reaches it through core's DataBackendClient (see CalBridge). Re-adding
     // this line puts the calendar engine back in the app and makes the engine
@@ -254,6 +311,29 @@ dependencies {
     // CalDAV credentials (URL/username/password) at rest: EncryptedSharedPreferences.
     // See CalBridge.kt's CaldavPrefs — secrets are never baked into BuildConfig or logged.
     implementation 'androidx.security:security-crypto:1.1.0'
+
+    // The Compose toolchain of the whole chrome: the same BOM the libraries pin, so app and libraries compose
+    // against one toolchain (compose-bom-guard).
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.animation:animation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-core'
+    implementation 'androidx.activity:activity-compose:1.9.3'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    // The mail agent's worker (libs:updater already schedules its own periodic check with the same version).
+    implementation 'androidx.work:work-runtime-ktx:2.9.1'
+
+    // The JVM suite (build.json::tests.unit): data model, migrations, seeding, filters, the agent's parsing, and the
+    // Robolectric Compose layout-tree tests of the chrome -- the libs:bottomnav test stack.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+    testImplementation platform('androidx.compose:compose-bom:2025.11.01')
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
+    // The real org.json for the extraction parser's JVM tests (Android's own is a stub in plain JUnit).
+    testImplementation 'org.json:json:20240303'
 
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

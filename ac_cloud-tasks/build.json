@@ -1,6 +1,6 @@
 {
   "name": "cloud-tasks",
-  "description": "Diego's Cloud Tasks (formerly Cloud Agenda, before that Cloud Calendar) — standalone Android task, calendar and event app. The applicationId stays com.diegonmarcos.cloudagenda so installed phones update in place. WebView UI with a five-tab shell (Tasks, Events, Calendar, Invites, Configs) that opens on Tasks: a colourful month grid with per-calendar arc indicators plus an agenda list view, an analog clock face, public-ICS feed sync (holidays, moon phases, sports, Berlin events), and CalDAV/VTODO tasks against a self-hosted Radicale. Build via Nix devShell, one APK out.",
+  "description": "Diego's Cloud Tasks (formerly Cloud Agenda, before that Cloud Calendar) — standalone Android task, calendar and event app. The applicationId stays com.diegonmarcos.cloudagenda so installed phones update in place. Jetpack Compose chrome (CloudKitTheme light/dark/system, libs:bottomnav island + page tabs, a page-managed hamburger drawer, AI and Profile buttons in the top row, libs:ai chat with persistent history) over a local tasks database (projects > lists > tasks > subtasks, statuses, tags, links to Cloud Mail / Cloud Drive items) and a mail agent that proposes tasks for review. The Events, Calendar and Invites pages are still the legacy tasks.html WebView (public-ICS feed sync, CalDAV against a self-hosted Radicale). Build via Nix devShell, one APK out.",
   "category": "android",
   "build": {
     "type": "gradle",
@@ -33,7 +33,10 @@
       "type": "application",
       "depends_on": [
         "libs:core",
-        "libs:updater"
+        "libs:updater",
+        "libs:bottomnav",
+        "libs:ui-kit",
+        "libs:ai"
       ]
     },
     "libs:core": {
@@ -63,6 +66,26 @@
     },
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
+    },
+    "libs:bottomnav": {
+      "_doc": "#868 the fleet's bottom island (BottomNavIsland) and page-tab strip (PageTabs), and NavDecl, which reads ui.bottom_nav/ui.sections as baked into BuildConfig.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
+    },
+    "libs:ui-kit": {
+      "_doc": "The Compose kit: CloudKitTheme and the palette roles every page paints with, the settings rows, chips, segmented picks and banners. Shared BY REFERENCE.",
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit",
+      "type": "library"
+    },
+    "libs:ai": {
+      "_doc_dir": "The AI dropdown: the fleet's AI chat (libs:ai) over the fleet agent gateway (my-ai-api, mesh only), sessions kept in the app's files dir so the history is permanent. Shared BY REFERENCE. This app holds no OpenRouter token and reads none (decisions-use guard D5): the gateway holds the fleet key. Its mesh address is baked as BuildConfig.AI_GATEWAY_URL by libs/ai/ai-gateway.gradle. The mail agent's extraction calls the same gateway.",
+      "dir": "../ab_cloud-libs-shared/libs/ai",
+      "type": "library"
+    },
+    "libs:model-catalogue": {
+      "_doc_dir": "libs:ai's `api` dependency: the shared agent descriptor (assets/agents/agents.json) its Agent picker and the Agent settings page list. Listed so settings.gradle resolves the path.",
+      "dir": "../ab_cloud-libs-shared/libs/model-catalogue",
+      "type": "library"
     }
   },
   "engines": {
@@ -157,9 +180,92 @@
       "site_id": "1"
     }
   },
+  "ui": {
+    "_doc": "#868 THE navigation declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island's ids, ui.sections the section each one opens, ui.default_section where the app opens. Tasks is the native Compose page (hamburger drawer = projects and lists). Calendar is the legacy tasks.html WebView, one page per tab of the old shell (Events, Calendar, Invites). Settings is NOT on the island: it opens from the top row's Profile menu, and its pages (Appearance, Agent, Inbox, Feeds) are the section's tab strip. Every section's `background` is `theme`: the strips follow the app's light / dark mode (Settings > Appearance), through NavDecl.stripSurface.",
+    "bottom_nav": [
+      "tasks",
+      "calendar"
+    ],
+    "default_section": "tasks",
+    "sections": [
+      {
+        "id": "tasks",
+        "label": "Tasks",
+        "icon": "tasks",
+        "background": "theme",
+        "pages": [
+          {
+            "id": "tasks",
+            "label": "Tasks"
+          }
+        ]
+      },
+      {
+        "id": "calendar",
+        "label": "Calendar",
+        "icon": "calendar",
+        "background": "theme",
+        "pages": [
+          {
+            "id": "events",
+            "label": "Events"
+          },
+          {
+            "id": "calendar",
+            "label": "Calendar"
+          },
+          {
+            "id": "invites",
+            "label": "Invites"
+          }
+        ]
+      },
+      {
+        "id": "settings",
+        "label": "Settings",
+        "icon": "settings",
+        "background": "theme",
+        "pages": [
+          {
+            "id": "appearance",
+            "label": "Appearance"
+          },
+          {
+            "id": "agent",
+            "label": "Agent"
+          },
+          {
+            "id": "inbox",
+            "label": "Inbox"
+          },
+          {
+            "id": "feeds",
+            "label": "Feeds"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": {
+    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds. shell = the static testers under test/ (the declared navigation and its Kotlin ids; the screenshot parser). unit = gradle test: the data model, migrations, seeding, filter logic and the mail agent's parsing as JVM tests, and the Robolectric Compose layout-tree tests of the chrome (drawer, top row, filter bar, task editor).",
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3",
+        "grep",
+        "node"
+      ],
+      "_doc_requires": "test-agents-parser.sh runs the screenshot parser under node; a missing tool must fail the preflight rather than draw a verdict from its own absence."
+    },
+    "unit": {
+      "task": "test",
+      "enabled": true
+    }
+  },
   "_doc_fleet_agents": "This app's agents, in the fleet agent registry's one shape (aa_cloud-superapp/build.json::_doc_fleet_agents). Consolidated into aa_cloud-superapp/data/fleet-agents.json by 1_cicd/src/scripts/cloud-android-fleet-agents.py and shown in Cloud SuperApp ▸ Configs ▸ Apps ▸ Agents ▸ Fleet agents.",
   "fleet_agents": [
-    {"id": "screenshot-events", "name": "Screenshot events agent", "kind": "on-device worker", "trigger": "new Screenshot agent records from Cloud Drive (read past its own cursor)", "summary": "Finds events in Cloud Drive screenshot records and offers them under Invites; accepted ones land in the agents calendar.", "open": "page:configs/agents", "status": {"source": "none", "reason": "its on/off switch and last scan live in Cloud Tasks private preferences; Cloud Tasks has no provider for them yet"}}
+    {"id": "screenshot-events", "name": "Screenshot events agent", "kind": "on-device worker", "trigger": "new Screenshot agent records from Cloud Drive (read past its own cursor)", "summary": "Finds events in Cloud Drive screenshot records and offers them under Invites; accepted ones land in the agents calendar.", "open": "page:settings/feeds", "status": {"source": "none", "reason": "its on/off switch and last scan live in Cloud Tasks private preferences; Cloud Tasks has no provider for them yet"}},
+    {"id": "mail-tasks", "name": "Mail tasks agent", "kind": "on-device worker", "trigger": "periodic (Settings > Agent > frequency) or Run now", "summary": "Reads mail through Cloud Mail's agent provider, asks the fleet AI gateway for events, bookings, invoices and deadlines, and proposes tasks; nothing is created until approved in Settings > Inbox.", "open": "page:settings/agent", "status": {"source": "workmanager", "unique": "tasks-mail-agent"}}
   ],
   "web": {"kind": "container", "target": "calendar-radicale"}
 }

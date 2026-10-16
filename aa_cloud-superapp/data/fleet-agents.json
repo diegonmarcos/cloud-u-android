@@ -511,10 +511,26 @@
       "kind": "on-device worker",
       "trigger": "new Screenshot agent records from Cloud Drive (read past its own cursor)",
       "summary": "Finds events in Cloud Drive screenshot records and offers them under Invites; accepted ones land in the agents calendar.",
-      "open": "extapp:cloud-tasks#page:configs/agents",
+      "open": "extapp:cloud-tasks#page:settings/feeds",
       "status": {
         "source": "none",
         "reason": "its on/off switch and last scan live in Cloud Tasks private preferences; Cloud Tasks has no provider for them yet"
+      },
+      "declared_in": "ac_cloud-tasks/build.json"
+    },
+    {
+      "id": "cloud-tasks/mail-tasks",
+      "name": "Mail tasks agent",
+      "app": "cloud-tasks",
+      "app_label": "Cloud Tasks",
+      "package": "com.diegonmarcos.cloudagenda",
+      "kind": "on-device worker",
+      "trigger": "periodic (Settings > Agent > frequency) or Run now",
+      "summary": "Reads mail through Cloud Mail's agent provider, asks the fleet AI gateway for events, bookings, invoices and deadlines, and proposes tasks; nothing is created until approved in Settings > Inbox.",
+      "open": "extapp:cloud-tasks#page:settings/agent",
+      "status": {
+        "source": "workmanager",
+        "unique": "tasks-mail-agent"
       },
       "declared_in": "ac_cloud-tasks/build.json"
     }
