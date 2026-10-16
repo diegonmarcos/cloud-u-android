@@ -11,6 +11,7 @@ import androidx.paging.map
 import androidx.sqlite.db.SimpleSQLiteQuery
 import app.sterna.core.data.text.AuthClassifier
 import app.sterna.core.data.text.htmlToText
+import app.sterna.core.data.text.plainTextToHtml
 import app.sterna.core.data.account.AccountCredentials
 import app.sterna.core.data.account.AccountStore
 import app.sterna.core.data.account.AuthType
@@ -4484,7 +4485,9 @@ class MailRepository(
             bcc = bcc,
             subject = subject,
             body = body,
-            html = html,
+            // ALWAYS an html part: [OutgoingMime] then writes multipart/alternative. A null here
+            // would be a text/plain-only message, which this app never sends.
+            html = html ?: plainTextToHtml(body),
             inReplyTo = inReplyTo.firstOrNull(),
             references = references.joinToString(" ").ifBlank { null },
             messageId = newMessageId(credentials.username),
@@ -4753,7 +4756,8 @@ class MailRepository(
             bcc = bccTrimmed.map { EmailAddress(email = it) },
             subject = row.subject,
             textBody = row.textBody,
-            // Read off the ROW: the styling the save stored (#131), null for a plain draft.
+            // Read off the ROW: the styling the save stored (#131). Null is wrapped from the text
+            // INSIDE saveDraft - a JMAP draft always carries an htmlBody part.
             htmlBody = row.htmlBody,
             draftMailboxId = draftsId,
             inReplyTo = inReplyTo,
@@ -5037,7 +5041,9 @@ class MailRepository(
                 bcc = bccTrimmed.joinToString(",").ifBlank { null },
                 subject = subject,
                 textBody = if (encrypted) "" else body,
-                htmlBody = if (encrypted) null else htmlBody,
+                // HTML always (a text-only caller gets its text wrapped, see [plainTextToHtml]): a
+                // row without an html part is how a quick reply once left as plain text.
+                htmlBody = if (encrypted) null else htmlBody ?: plainTextToHtml(body),
                 fromName = fromName,
                 fromEmail = fromEmail,
                 inReplyTo = inReplyTo.joinToString(" ").ifBlank { null },

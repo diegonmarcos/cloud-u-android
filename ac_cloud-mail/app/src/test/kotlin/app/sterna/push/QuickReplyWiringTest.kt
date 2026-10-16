@@ -170,7 +170,7 @@ class QuickReplyWiringTest {
         assertEquals(
             "the queueing must be the guarded thing: a throw from enqueueSend (require() on an " +
                 "empty recipient, a full disk) has to read as NOT queued",
-            listOf("runCatching { send(repo, credentials, emailId, outcome) }.isSuccess"),
+            listOf("runCatching { send(context, repo, settings, credentials, emailId, outcome) }.isSuccess"),
             codeLinesNaming(body, "runCatching { send("),
         )
         assertEquals(
@@ -262,8 +262,13 @@ class QuickReplyWiringTest {
             codeLinesNaming(body, "fetchWithinBudget("),
         )
         assertEquals(
-            "the recipient, subject and body handed to the Outbox are the decided ones",
-            listOf("to = listOf(outcome.to),", "subject = outcome.subject,", "body = outcome.body,"),
+            "the recipient, subject and body handed to the Outbox are the decided ones - the body " +
+                "through [quickReplyBodies], so the reply leaves as HTML with the original quoted",
+            listOf(
+                "val bodies = quickReplyBodies(outcome.body, fetched, attribution)",
+                "to = listOf(outcome.to),",
+                "subject = outcome.subject,",
+            ),
             codeLinesNaming(body, "outcome."),
         )
         assertEquals(

@@ -13,7 +13,6 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -107,30 +106,30 @@ class DraftHtmlOnTheWireTest {
         )
     }
 
-    // --- 2. a plain draft is byte for byte what it was ------------------------------------------
+    // --- 2. a draft with no styling is still HTML: its text, wrapped --------------------------------
 
-    @Test fun `a draft with no styling carries no html part at all`() {
+    @Test fun `a draft handed no html still carries an html part, made from the text`() {
         val draft = savedDraft(null)
 
-        assertNull(
-            "⛔ every draft this app has ever saved is this shape. An empty htmlBody part list, " +
-                "or one built from the text, would give them all a second MIME part and change " +
-                "how every other client renders them.",
-            draft["htmlBody"],
-        )
+        val html = draft["htmlBody"]?.jsonArray
+            ?: error("a draft left with no htmlBody part: this app never stores text only: $draft")
+        assertEquals(listOf("text/html"), types(html))
+        val values = draft["bodyValues"]!!.jsonObject
+        assertEquals("<div>see you there</div>", values["html"]?.jsonObject?.get("value")?.jsonPrimitive?.content)
     }
 
-    @Test fun `a draft with no styling carries exactly one body value`() {
-        val values = savedDraft(null)["bodyValues"]!!.jsonObject
+    @Test fun `a draft with no styling still carries its text part first`() {
+        val draft = savedDraft(null)
+        val values = draft["bodyValues"]!!.jsonObject
 
-        assertEquals(setOf("body"), values.keys)
+        assertEquals(setOf("body", "html"), values.keys)
         assertEquals("see you there", values["body"]?.jsonObject?.get("value")?.jsonPrimitive?.content)
-    }
-
-    @Test fun `a plain draft still says its one part is text-plain`() {
-        val draft = savedDraft(null)
-
         assertEquals(listOf("text/plain"), types(draft["textBody"]?.jsonArray))
         assertTrue("the draft keywords are untouched", draft.containsKey("keywords"))
+    }
+
+    @Test fun `wrapping text escapes markup and keeps line breaks`() {
+        assertEquals("<div>a &lt;b&gt; &amp; c<br>d</div>", htmlOfPlainText("a <b> & c\r\nd"))
+        assertEquals("<div><br></div>", htmlOfPlainText(""))
     }
 }

@@ -10,6 +10,7 @@ import app.sterna.core.imap.OutgoingAttachment
 import app.sterna.core.imap.OutgoingMessage
 import app.sterna.core.jmap.model.EmailBodyPart
 import kotlinx.coroutines.NonCancellable
+import app.sterna.core.data.text.plainTextToHtml
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
@@ -202,7 +203,8 @@ internal fun localDraftOutgoing(
         bcc = bcc,
         subject = row.subject,
         body = row.textBody,
-        html = row.htmlBody,
+        // A draft is HTML on the server too: one stored as text only is wrapped on its way out.
+        html = row.htmlBody ?: plainTextToHtml(row.textBody),
         inReplyTo = row.inReplyTo?.split(" ")?.firstOrNull { it.isNotBlank() },
         references = row.references,
         messageId = row.messageId,

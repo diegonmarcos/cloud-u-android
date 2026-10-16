@@ -7,6 +7,7 @@ import app.sterna.container
 import app.sterna.core.data.filter.FilterScriptWarning
 import app.sterna.core.data.filter.refreshedFilterWarning
 import app.sterna.core.data.mail.VacationState
+import app.sterna.core.data.text.plainTextToHtml
 import app.sterna.core.jmap.model.VacationResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -141,7 +142,8 @@ class VacationViewModel(application: Application) : AndroidViewModel(application
                     toDate = s.toDate?.let { isoEndOfDay(it) },
                     subject = s.subject.ifBlank { null },
                     textBody = s.message.ifBlank { null },
-                    htmlBody = null,
+                    // The auto-reply leaves as HTML too: the text, wrapped. Never a text-only reply.
+                    htmlBody = s.message.ifBlank { null }?.let { plainTextToHtml(it) },
                 )
                 repo.saveVacation(credentials, vacation)
                 serverEdits = s.edits()

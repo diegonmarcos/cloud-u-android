@@ -1599,6 +1599,8 @@ class JmapClient internal constructor(
         bcc: List<EmailAddress> = emptyList(),
         subject: String,
         textBody: String,
+        /** The HTML body. Null is not "no html part": the part is ALWAYS written, from [textBody]
+         *  wrapped by [htmlOfPlainText] — a message never leaves this client as text only. */
         htmlBody: String? = null,
         draftMailboxId: String,
         sentMailboxId: String,
@@ -1666,14 +1668,12 @@ class JmapClient internal constructor(
                                     putJsonArray("textBody") {
                                         addJsonObject { put("partId", "textbody"); put("type", "text/plain") }
                                     }
-                                    if (htmlBody != null) {
-                                        putJsonArray("htmlBody") {
-                                            addJsonObject { put("partId", "htmlbody"); put("type", "text/html") }
-                                        }
+                                    putJsonArray("htmlBody") {
+                                        addJsonObject { put("partId", "htmlbody"); put("type", "text/html") }
                                     }
                                     putJsonObject("bodyValues") {
                                         putJsonObject("textbody") { put("value", textBody) }
-                                        if (htmlBody != null) putJsonObject("htmlbody") { put("value", htmlBody) }
+                                        putJsonObject("htmlbody") { put("value", htmlBody ?: htmlOfPlainText(textBody)) }
                                     }
                                 }
                             }
@@ -2043,14 +2043,12 @@ class JmapClient internal constructor(
                         // The styling the composer stored, as the SECOND alternative and never in
                         // place of the first: the same shape `sendEmail` writes. Absent, nothing is
                         // emitted at all — a plain draft's create is unchanged (#131).
-                    if (htmlBody != null) {
-                        putJsonArray("htmlBody") {
-                            addJsonObject { put("partId", "html"); put("type", "text/html") }
-                        }
+                    putJsonArray("htmlBody") {
+                        addJsonObject { put("partId", "html"); put("type", "text/html") }
                     }
                     putJsonObject("bodyValues") {
                         putJsonObject("body") { put("value", textBody) }
-                        if (htmlBody != null) putJsonObject("html") { put("value", htmlBody) }
+                        putJsonObject("html") { put("value", htmlBody ?: htmlOfPlainText(textBody)) }
                     }
                 }
             }
@@ -2853,4 +2851,12 @@ internal fun deliveryRefusals(deliveryStatus: JsonObject?): List<String> {
 internal fun JsonObjectBuilder.putMembershipPatch(add: String?, remove: String?) {
     if (add != null) put("mailboxIds/$add", JsonPrimitive(true))
     if (remove != null && remove != add) put("mailboxIds/$remove", JsonNull)
+}
+
+/** [text] as an HTML body: escaped, line breaks as `<br>`, in a `<div>`. The JMAP client's own copy of
+ *  core:data's `plainTextToHtml` (this module cannot see core:data): the floor under `htmlBody`. */
+internal fun htmlOfPlainText(text: String): String {
+    val unified = text.replace("\r\n", "\n").replace('\r', '\n')
+    if (unified.isEmpty()) return "<div><br></div>"
+    return "<div>" + unified.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>") + "</div>"
 }

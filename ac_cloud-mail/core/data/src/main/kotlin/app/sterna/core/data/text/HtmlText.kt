@@ -17,6 +17,17 @@ fun htmlEscapeMultiline(s: String): String =
     htmlEscape(s).replace("\n", "<br>")
 
 /**
+ * Plain [text] as the HTML body of a message: escaped, every line break a `<br>`, in one `<div>`. THE
+ * conversion for anything that arrives as text (a quick reply typed in the shade, an invitation reply,
+ * a share-sheet text, an old text-only draft) — mail leaves this app as HTML only, so text is wrapped
+ * HERE, once, never ad hoc at a send path. An empty text is an empty line, not an empty string.
+ */
+fun plainTextToHtml(text: String): String {
+    val unified = text.replace("\r\n", "\n").replace('\r', '\n')
+    return if (unified.isEmpty()) "<div><br></div>" else "<div>" + htmlEscapeMultiline(unified) + "</div>"
+}
+
+/**
  * Best-effort HTML→plain-text for quoting/editing an HTML-only original and for flattening an
  * imported signature. Converts block boundaries to newlines so paragraphs/rows don't collapse.
  *

@@ -1,6 +1,11 @@
 package app.sterna.push
 
+import app.sterna.core.data.text.plainTextToHtml
 import app.sterna.core.jmap.model.Email
+import app.sterna.ui.compose.bodySource
+import app.sterna.ui.compose.buildQuoteHtml
+import app.sterna.ui.compose.deepenQuote
+import app.sterna.ui.compose.quotedOriginalText
 import app.sterna.ui.compose.replyRecipient
 
 /**
@@ -50,3 +55,28 @@ fun quickReplyOutcome(text: String?, cached: Email?): QuickReplyOutcome {
 
 private fun replySubject(subject: String?): String =
     subject.orEmpty().let { if (it.startsWith("Re:", ignoreCase = true)) it else "Re: $it" }
+
+/** A quick reply's two alternatives: [text] for a client with no HTML, [html] for the rest. */
+data class QuickReplyBodies(val text: String, val html: String)
+
+/**
+ * The body of a reply typed in the notification shade, as the composer would have made it: the typed
+ * text as HTML, then - when [original] was fetched WITH its body - the "On <date>, <name> wrote:" line
+ * and the original's sanitised HTML in a blockquote ([buildQuoteHtml], the composer's own builder).
+ * The text half is the typed text and the "> " quote lines. Never text only: the shade has no editor,
+ * but what leaves is the same multipart/alternative every other reply is.
+ */
+fun quickReplyBodies(typed: String, original: Email?, attribution: String): QuickReplyBodies {
+    val reply = typed.trim()
+    val replyHtml = plainTextToHtml(reply)
+    // A headers-only fetch has nothing to quote; a bodiless "quote" of a preview would misquote.
+    if (original == null || original.bodyValues.isEmpty() || attribution.isBlank()) {
+        return QuickReplyBodies(reply, replyHtml)
+    }
+    val (raw, isHtml) = bodySource(original)
+    val quotedText = quotedOriginalText(original).lineSequence().joinToString("\n") { deepenQuote(it) }
+    return QuickReplyBodies(
+        text = "$reply\n\n$attribution\n$quotedText",
+        html = replyHtml + "<br>" + buildQuoteHtml(attribution, raw.takeIf { isHtml }, raw),
+    )
+}

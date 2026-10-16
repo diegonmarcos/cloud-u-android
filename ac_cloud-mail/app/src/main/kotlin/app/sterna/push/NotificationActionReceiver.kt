@@ -12,6 +12,8 @@ import app.sterna.core.data.mail.MailRepository
 import app.sterna.core.data.settings.NotificationContent
 import app.sterna.core.data.settings.SettingsRepository
 import app.sterna.core.jmap.model.Email
+import app.sterna.ui.compose.resolveOutgoingDateZone
+import app.sterna.util.MailDates
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -144,7 +146,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
         }
         val outcome = quickReplyOutcome(text, cached)
         val queued = outcome is QuickReplyOutcome.Send && credentials != null &&
-            runCatching { send(repo, credentials, emailId, outcome) }.isSuccess
+            runCatching { send(context, repo, settings, credentials, emailId, outcome) }.isSuccess
         when (val act = quickReplyAct(outcome, queued)) {
             QuickReplyAct.DoNothing -> Unit
             QuickReplyAct.Dismiss -> dismiss(context, accountId, credentials, emailId, notifId)
@@ -162,17 +164,32 @@ class NotificationActionReceiver : BroadcastReceiver() {
      * Hand the reply to the Outbox, which is what makes the text durable: sent when there is a
      */
     private suspend fun send(
+        context: Context,
         repo: MailRepository,
+        settings: SettingsRepository,
         credentials: AccountCredentials,
         emailId: String,
         outcome: QuickReplyOutcome.Send,
     ) {
         val fetched = fetchWithinBudget(repo, credentials, emailId)
+        // The composer's own quote, in HTML, under the typed text: a reply from the shade leaves as
+        // multipart/alternative like every other reply (see [quickReplyBodies]).
+        val sender = fetched?.from?.firstOrNull()?.display()
+            ?: context.getString(R.string.compose_quote_someone)
+        val attribution = fetched?.let {
+            context.getString(
+                R.string.compose_quote_attribution,
+                MailDates.formatFull(it.receivedAt, resolveOutgoingDateZone(settings.quotedDatesUtc)),
+                sender,
+            )
+        }.orEmpty()
+        val bodies = quickReplyBodies(outcome.body, fetched, attribution)
         repo.enqueueSend(
             credentials = credentials,
             to = listOf(outcome.to),
             subject = outcome.subject,
-            body = outcome.body,
+            body = bodies.text,
+            htmlBody = bodies.html,
             inReplyTo = fetched?.messageId.orEmpty(),
             references = fetched?.references.orEmpty() + fetched?.messageId.orEmpty(),
             // A quick reply is typed in the shade and replaces no saved draft.
