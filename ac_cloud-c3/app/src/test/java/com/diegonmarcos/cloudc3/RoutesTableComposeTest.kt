@@ -23,6 +23,7 @@ import com.diegonmarcos.cloudc3.pages.RoutesTableModel.Column
 import com.diegonmarcos.cloudc3.pages.RoutesTableScreen
 import com.diegonmarcos.cloudc3.pages.RoutesTags
 import org.junit.Assert.assertEquals
+import androidx.compose.ui.semantics.getOrNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
