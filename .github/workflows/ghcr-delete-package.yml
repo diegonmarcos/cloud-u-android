@@ -1,0 +1,33 @@
+name: "ghcr delete package (one-off, allowlisted)"
+
+# A GHCR package's visibility is fixed at creation. The Cloud Notes images were
+# created private by a PAT push; the owner ordered them deleted so the next CI run
+# (publish-ghcr: GITHUB_TOKEN + source label) recreates them linked to the repo.
+# Only the allowlisted names can be deleted. Delete-only: the publish-module guard
+# exempts this file narrowly (no push verbs, GHCR_TOKEN only as GH_TOKEN env).
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "cloud-notes-web or cloud-notes-sync"
+        required: true
+        type: choice
+        options: [cloud-notes-web, cloud-notes-sync]
+
+permissions:
+  contents: read
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete the package (allowlist, then DELETE)
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          PKG: ${{ inputs.package }}
+        run: |
+          set -euo pipefail
+          case "$PKG" in cloud-notes-web|cloud-notes-sync) ;; *) echo "::error::$PKG is not allowlisted"; exit 1;; esac
+          if gh api -X DELETE "/user/packages/container/$PKG"; then echo "deleted $PKG"
+          else echo "::error::DELETE failed: the PAT secret lacks delete:packages (or the package is gone)"; exit 1; fi

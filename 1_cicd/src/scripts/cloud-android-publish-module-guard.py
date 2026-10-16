@@ -34,6 +34,12 @@ MODULE = "1_cicd/src/actions/publish-ghcr"
 SCAN = [("1_cicd/src/cicd", (".yml",)), ("1_cicd/src/templates", (".in", ".yml")),
         ("1_cicd/src/scripts", (".sh", ".py"))]
 SKIP = {"1_cicd/src/scripts/cloud-android-publish-module-guard.py"}
+# Narrow exemption: dispatch-only, DELETE/GET-only workflows that need the PAT
+# (GHCR_TOKEN) because GITHUB_TOKEN cannot delete or list user packages. They may
+# mention GHCR_TOKEN only as `GH_TOKEN: ${{ secrets.GHCR_TOKEN }}` and may contain
+# no push/login/release verb at all.
+EXEMPT = {"1_cicd/src/cicd/ghcr-delete-package.yml", "1_cicd/src/cicd/ghcr-visibility-audit.yml"}
+DELETE_ALLOW = {"cloud-notes-web", "cloud-notes-sync"}
 PUSH = re.compile(
     r"(\boras\s+(push|login)\b|\bdocker\s+(push|login)\b|\bbuildx\s+build\b.*--push\b|"
     r"docker/(login|build-push)-action|\bgh\s+release\s+(create|upload)\b|GHCR_TOKEN)")
@@ -62,7 +68,7 @@ def _scan():
                 continue
             for f in sorted(fn):
                 rel = os.path.relpath(os.path.join(dp, f), ROOT)
-                if rel in SKIP or not f.endswith(exts):
+                if rel in SKIP or rel in EXEMPT or not f.endswith(exts):
                     continue
                 n = count(read(rel))
                 if n:
@@ -93,6 +99,26 @@ for rel, n in sorted(seen.items()):
 for rel, allowed in sorted(baseline.items()):
     if rel not in seen and allowed:
         fail("%s: baseline lists %d but the file has none -- remove it from %s" % (rel, allowed, BASELINE))
+
+# the exempt workflows stay delete/read-only
+for rel in sorted(EXEMPT):
+    try:
+        t = read(rel)
+    except OSError:
+        continue
+    for line in t.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        if "GHCR_TOKEN" in line and not re.fullmatch(r"\s*GH_TOKEN: \$\{\{ secrets\.GHCR_TOKEN \}\}\s*", line):
+            fail("%s: GHCR_TOKEN may only appear as `GH_TOKEN: ${{ secrets.GHCR_TOKEN }}`" % rel)
+        if re.search(r"\b(oras\s+(push|login)|docker\s+(push|login)|--push\b|gh\s+release)", line):
+            fail("%s: an exempt workflow may not push or release" % rel)
+    if rel.endswith("delete-package.yml"):
+        if "-X DELETE" not in t:
+            fail("%s: lost its DELETE call" % rel)
+        names = set(re.findall(r"cloud-[a-z0-9-]+", " ".join(l for l in t.splitlines() if "case " in l or "options:" in l)))
+        if names - DELETE_ALLOW:
+            fail("%s: allowlist grew beyond %s: %s" % (rel, sorted(DELETE_ALLOW), sorted(names - DELETE_ALLOW)))
 
 # the module itself
 try:

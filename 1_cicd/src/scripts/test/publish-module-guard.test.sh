@@ -62,4 +62,13 @@ expect_fail "a stale (too high) baseline cannot hide a migration" "lower it"
 fresh; printf '      - uses: ./.github/actions/publish-ghcr\n        with:\n          token: ${{ secrets.GHCR_TOKEN }}\n' >> "$WORK/c/1_cicd/src/cicd/ship-cloud-notes.yml"
 expect_fail "a caller hands the module a PAT" "non-GITHUB_TOKEN"
 
+fresh; printf '      - run: oras push ghcr.io/o/x:latest f\n' >> "$WORK/c/1_cicd/src/cicd/ghcr-delete-package.yml"
+expect_fail "the delete workflow may not push" "exempt workflow may not push"
+
+fresh; sed -i 's/cloud-notes-sync) ;;/cloud-notes-sync|cloud-other) ;;/' "$WORK/c/1_cicd/src/cicd/ghcr-delete-package.yml"
+expect_fail "the delete allowlist cannot grow" "allowlist grew"
+
+fresh; printf '          X: ${{ secrets.GHCR_TOKEN }}\n' >> "$WORK/c/1_cicd/src/cicd/ghcr-visibility-audit.yml"
+expect_fail "the audit may not spread the PAT" "may only appear"
+
 [ "$FAILURES" -eq 0 ] && echo "publish-module-guard.test: all cases ok" || { echo "publish-module-guard.test: $FAILURES FAILED"; exit 1; }

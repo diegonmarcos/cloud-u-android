@@ -1,0 +1,32 @@
+name: "ghcr visibility audit (read-only)"
+
+# Lists every container package of the owner and compares its visibility with the
+# visibility of the repository it is linked to. Read-only: GHCR_TOKEN is used only
+# as GH_TOKEN for `gh api` GETs (the publish-module guard exempts this file narrowly).
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Package visibility vs linked repository
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api --paginate "/user/packages?package_type=container&per_page=100" \
+            --jq '.[] | [.name, .visibility, (.repository.full_name // "-")] | @tsv' > pk.tsv
+          echo "packages: $(wc -l < pk.tsv)"
+          bad=0
+          while IFS=$'\t' read -r name vis repo; do
+            if [ "$repo" = "-" ]; then echo "UNLINKED  $name ($vis)"; continue; fi
+            priv="$(gh api "/repos/$repo" --jq .private 2>/dev/null || echo unknown)"
+            want=public; [ "$priv" = "true" ] && want=private
+            if [ "$vis" != "$want" ]; then echo "MISMATCH  $name: package=$vis repo($repo)=$want"; bad=$((bad+1)); fi
+          done < pk.tsv
+          echo "mismatches: $bad"
