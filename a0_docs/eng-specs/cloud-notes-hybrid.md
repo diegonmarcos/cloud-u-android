@@ -71,8 +71,8 @@ Mechanics: the shell knows only ids. It dispatches `cloud-notes:nav {section, pa
 "planned" toast. The editor's own bottom tabs hide (`window.cloudNotesNativeNav`). `test/test-nav-routes.sh` fails if
 `build.json::ui`, the web table, the workbench routes and the Kotlin event name drift apart.
 
-Open point: the Pages "doc tree" (Notion sidebar) is Phase 5; today `All` is the flat list, and the top bar's
-drawer (0c) lists the newest pages.
+The Pages doc tree already exists: the Home page's virtual scroller shows the `modules/organize` folders, and the top
+bar's drawer (0c) lists the newest pages. What is missing is only drag-to-re-parent on mobile (Phase 5).
 
 ### 0c. Top bar (DONE)
 
@@ -137,10 +137,10 @@ Acceptance tests:
 | Edgeless canvas: shapes, text, brush, mind map, connectors, frames, groups | EXISTS | `blocksuite/affine/gfx/*`, `blocks/frame` |
 | Present frames (navigator) | EXISTS | frame navigator in edgeless toolbar |
 | Boards list (all edgeless docs) | BUILD | filter on `primaryMode = edgeless`; wires Canvas › Boards |
-| Magnetic anchors (connector snaps to 4/8 anchor points, follows resize) | PARTIAL | connectors attach to elements; anchor set + snap UI BUILD |
-| Frames → PDF deck (one page per frame, in order) | BUILD | reuse `adapters/pdf` renderer per frame; Android share sheet |
+| Magnetic anchors (connector snaps to 4/8 anchor points, follows resize) | DONE (device: snap feel) | `connector-manager.ts` eight anchors, 16 px pull; spec `connector-anchors.unit.spec.ts` |
+| Frames → PDF deck (one page per frame, in order) | DONE (device: canvas rendering, share sheet) | `export-manager/deck-pdf.ts`, export menu `frames-pdf`; spec `deck-pdf.unit.spec.ts` |
 | Sticky speed-capture (one tap = new sticky at viewport centre, keyboard up, next-sticky on Enter) | BUILD | edgeless note shortcut in the Canvas toolbar |
-| Doc inside canvas as live portal (edits flow both ways) | PARTIAL | `embed-synced-doc` renders a live doc; resize/zoom-to-edit behaviour BUILD |
+| Doc inside canvas as live portal (edits flow both ways) | DONE (device: touch editing in a scaled frame) | `portal` prop on `embed-synced-doc`, toolbar toggle "Edit in place", `syncedDocStoreOptions`; spec `portal.unit.spec.ts` (A3.5) |
 | Obsidian `.canvas` ↔ Edgeless import/export | BUILD | JSON Canvas spec: text/file/link/group nodes, edges with sides; file nodes become portals |
 
 Acceptance tests:
@@ -175,10 +175,10 @@ Acceptance tests:
 | Nested pages (`/page` inline, sub-page blocks) | PARTIAL | linked-doc and embed exist; true `/page` that creates a child doc and shows it as a block BUILD |
 | Doc tree sidebar (Notion-style, drag to re-parent) | PARTIAL | `modules/organize` folders exist (desktop); mobile tree under Pages BUILD |
 | Database: Table, Kanban, Calendar views | EXISTS | `blocksuite/affine/data-view` |
-| **Gallery view** | BUILD | new view preset beside table/kanban/calendar (cover = first image property) |
-| **Relations** (row ↔ row across databases, two-way) | BUILD | new property type |
-| **Rollups** (count/sum/min/max/percent over a relation) | BUILD | depends on relations |
-| **Synced blocks** (one block, many pages) | PARTIAL | `embed-synced-doc` syncs a whole doc; block-level sync BUILD |
+| **Gallery view** | DONE (device: UI) | new view preset beside table/kanban/calendar (cover = first image property) |
+| **Relations** (row ↔ row across databases, two-way) | DONE | new property type |
+| **Rollups** (count/sum/min/max/percent over a relation) | DONE | depends on relations |
+| **Synced blocks** (one block, many pages) | PARTIAL | two-way text binding `SyncedBlocksExtension` done and tested (A5.6 model); the creation UI ("copy as synced block") is still missing |
 | Templates, favourites | EXISTS | `template-doc`, `favorite` |
 
 Acceptance tests:
@@ -271,3 +271,7 @@ Acceptance tests:
 
 1 Vault interop (M) → 2 Links/tags/daily (M) → 3 Canvas (L) → 4 Graph (M) → 5 Notion (L) → 6 Sync (L) → 7 Search/AI (M) → 8 Fleet/release (M).
 Phases 1–2 first because they make the existing vault usable on the phone; 6 can start in parallel (server is independent of the editor).
+
+## Acceptance checks that still need a device
+
+A4.2 (graph 1.5 s / 30 fps), A6.4 (airplane-mode edit survives kill), A6.5 (APK web and container web agree), the 0c top-bar pixel gap, frames-PDF canvas rendering and share sheet, snap feel of magnetic anchors, Gallery UI, touch editing inside a portal. Everything else above is asserted in the `storage_tests`, `sync_server` and `blocksuite_tests` CI jobs.
