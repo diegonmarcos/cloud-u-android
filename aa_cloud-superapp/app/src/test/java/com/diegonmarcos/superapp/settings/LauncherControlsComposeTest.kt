@@ -38,7 +38,7 @@ class LauncherControlsComposeTest : KitPageHarness() {
     fun `L2 a stepper writes the grid width`() {
         show(LauncherConfigFragment.newInstance(LauncherConfigFragment.SCOPE_UI))
         val before = GridColumns.cloud(ctx)
-        compose.onNodeWithTag("stepper:More icons per row", useUnmergedTree = true).performScrollTo().performClick()
+        compose.onNodeWithTag("stepper:Cloud apps:More icons per row", useUnmergedTree = true).performScrollTo().performClick()
         compose.waitForIdle()
         assertEquals(GridColumns.clamp(before + 1), GridColumns.cloud(ctx))
     }

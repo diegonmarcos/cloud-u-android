@@ -318,7 +318,7 @@ class LauncherConfigFragment : KitComposeFragment() {
                     Haptics.tap(view)
                     cur = next
                     onChange(next)
-                }.testTag("stepper:$desc"), contentAlignment = Alignment.Center) {
+                }.testTag("stepper:$label:$desc"), contentAlignment = Alignment.Center) {
                 Text(glyph, color = p.textPrimary, style = MaterialTheme.typography.headlineSmall)
             }
         }
