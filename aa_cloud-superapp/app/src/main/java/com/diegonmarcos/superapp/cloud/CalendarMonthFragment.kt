@@ -89,12 +89,12 @@ class CalendarMonthFragment : KitComposeFragment() {
                                     .clip(CircleShape)
                                     .then(if (isToday) Modifier.background(p.accent) else Modifier)
                                     // Placeholder for day-tap; the CalDAV slice surfaces the day agenda here.
-                                    .clickable { },
+                                    .clickable { }
+                                    .testTag(dayTag(day)),
                                     contentAlignment = Alignment.Center) {
                                     Text(day.toString(), color = if (isToday) p.tileInk else p.textPrimary,
                                         fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        modifier = Modifier.testTag(dayTag(day)))
+                                        style = MaterialTheme.typography.bodyLarge)
                                 }
                             }
                         }

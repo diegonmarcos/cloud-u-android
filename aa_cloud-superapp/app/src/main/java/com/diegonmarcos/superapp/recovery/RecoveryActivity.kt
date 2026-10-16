@@ -1,23 +1,44 @@
 package com.diegonmarcos.superapp.recovery
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.util.TypedValue
-import android.view.Gravity
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import com.diegonmarcos.superapp.updater.BootstrapInstall
 import com.diegonmarcos.superapp.updater.BuildAge
 import com.diegonmarcos.superapp.updater.BuildConfig as UpdaterBuildConfig
 import com.diegonmarcos.superapp.updater.Fleet
-import kotlin.concurrent.thread
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * RECOVERY — the screen a stranded device can always reach.
@@ -39,162 +60,114 @@ import kotlin.concurrent.thread
  * notification that has to route through the launcher's tile grammar to reach
  * a screen is a notification that lands on Home when that grammar changes.
  *
- * Programmatic views, no layout XML — this screen must keep working when the
- * rest of the app does not, and every resource it does not need is one less
- * thing that can be missing.
+ * Compose since #773 (was programmatic Views): it still needs no layout XML and no launcher
+ * theme — it draws under [RecoveryPalette], fixed, so the screen keeps working when the
+ * rest of the app does not.
  */
-class RecoveryActivity : Activity() {
+class RecoveryActivity : ComponentActivity() {
 
-    private lateinit var list: LinearLayout
-
-    private fun dp(v: Int) = TypedValue.applyDimension(
-        TypedValue.COMPLEX_UNIT_DIP, v.toFloat(), resources.displayMetrics).toInt()
+    /** The app to put first; replaced when the activity is re-launched at another row. */
+    private var preselect by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xFF0A0A0C.toInt())
-            setPadding(dp(14), dp(28), dp(14), dp(14))
+        preselect = intent?.getStringExtra(EXTRA_APP_ID)
+        addOnNewIntentListener { i ->
+            setIntent(i)
+            preselect = i.getStringExtra(EXTRA_APP_ID)
         }
-        root.addView(TextView(this).apply {
-            text = "Recovery — direct install"
-            setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            typeface = Typeface.DEFAULT_BOLD
-        })
-        root.addView(TextView(this).apply {
-            text = "Downloads the published build and hands it to Android's own " +
+        setContent {
+            CloudKitTheme(RecoveryPalette.kit) { Screen(preselect) }
+        }
+    }
+
+    @Composable
+    private fun Screen(preselect: String?) {
+        val p = LocalKitPalette.current
+        Column(Modifier.fillMaxSize().background(RecoveryPalette.page)
+            .padding(start = 14.dp, top = 28.dp, end = 14.dp, bottom = 14.dp)) {
+            Text("Recovery — direct install", color = p.textPrimary, fontSize = 18.sp,
+                fontWeight = FontWeight.Bold, modifier = Modifier.testTag(TAG_TITLE))
+            Text("Downloads the published build and hands it to Android's own " +
                 "installer. Works with no pairing, no Shizuku and no special " +
-                "access — you will just be asked to confirm each install."
-            setTextColor(0xFF9A9AA4.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f)
-            setPadding(0, dp(6), 0, dp(4))
-        })
-        if (!BootstrapInstall.canRequestInstalls(this)) root.addView(TextView(this).apply {
-            // Not a gate — Android offers the grant inline on the first attempt.
-            // Saying so first is the difference between an unexpected settings
-            // screen and an expected one.
-            text = "Android will first ask you to allow this app to install apps. " +
-                "That is expected; allow it and the install continues."
-            setTextColor(0xFFD08A2A.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-            setPadding(0, dp(4), 0, dp(4))
-        })
-
-        list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        root.addView(ScrollView(this).apply {
-            addView(list)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
-        })
-        setContentView(root)
-        render(intent?.getStringExtra(EXTRA_APP_ID))
-    }
-
-    override fun onNewIntent(intent: Intent?) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        render(intent?.getStringExtra(EXTRA_APP_ID))
-    }
-
-    /** [preselect] first, then everything else. The banner and the notification
-     *  both know WHICH app is stuck, and making the user hunt for it in a
-     *  40-entry list is how a one-tap fix becomes a support request. */
-    private fun render(preselect: String?) {
-        list.removeAllViews()
-        val fleet = runCatching { Fleet.parse(UpdaterBuildConfig.CONSTELLATION_FLEET_B64) }
-            .getOrDefault(emptyList())
-            .filter { !it.blocked }
-        if (fleet.isEmpty()) {
-            list.addView(TextView(this).apply {
-                text = "No fleet manifest in this build — nothing to recover from here."
-                setTextColor(0xFF9A9AA4.toInt())
-            })
-            return
-        }
-        // Self ALWAYS first after any preselection: this app is the one whose
-        // breakage takes every other recovery path down with it.
-        val ordered = fleet.sortedBy {
-            when {
-                it.id == preselect -> 0
-                it.pkg == packageName -> 1
-                else -> 2
+                "access — you will just be asked to confirm each install.",
+                color = p.textSecondary, fontSize = 11.5.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
+            if (!BootstrapInstall.canRequestInstalls(this@RecoveryActivity)) {
+                // Not a gate — Android offers the grant inline on the first attempt.
+                // Saying so first is the difference between an unexpected settings
+                // screen and an expected one.
+                Text("Android will first ask you to allow this app to install apps. " +
+                    "That is expected; allow it and the install continues.",
+                    color = p.warn, fontSize = 11.sp, modifier = Modifier.padding(vertical = 4.dp).testTag(TAG_GRANT_NOTE))
+            }
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                val fleet = remember {
+                    runCatching { Fleet.parse(UpdaterBuildConfig.CONSTELLATION_FLEET_B64) }
+                        .getOrDefault(emptyList()).filter { !it.blocked }
+                }
+                if (fleet.isEmpty()) {
+                    Text("No fleet manifest in this build — nothing to recover from here.",
+                        color = p.textSecondary, modifier = Modifier.testTag(TAG_EMPTY))
+                } else {
+                    for (app in ordered(fleet, { it.id }, { it.pkg }, preselect, packageName)) {
+                        AppCard(app, highlight = app.id == preselect)
+                    }
+                }
             }
         }
-        ordered.forEach { list.addView(row(it, highlight = it.id == preselect)) }
     }
 
-    private fun row(app: Fleet.App, highlight: Boolean): ViewGroup {
-        val card = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat()
-                setColor(0xFF16161A.toInt())
-                if (highlight) setStroke(dp(2), 0xFFE0553F.toInt())
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { setMargins(0, 0, 0, dp(8)) }
-        }
-        card.addView(TextView(this).apply {
-            text = app.label + if (app.pkg == packageName) "  (this app)" else ""
-            setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f)
-            typeface = Typeface.DEFAULT_BOLD
-        })
+    @Composable
+    private fun AppCard(app: Fleet.App, highlight: Boolean) {
+        val p = LocalKitPalette.current
+        val scope = rememberCoroutineScope()
         // WHAT YOU HAVE, stated before anything is downloaded. The version the
         // fetch will actually install is only knowable after the fetch, so the
         // status line below is rewritten with both numbers once it lands —
         // "is it really newer?" must be answerable from the screen, not taken
         // on trust because a button said Install.
-        val installedCode = BootstrapInstall.installedVersionCode(this, app.pkg)
-            ?: app.altId?.let { BootstrapInstall.installedVersionCode(this, it) }
-        val status = TextView(this).apply {
-            text = if (installedCode == null) "not installed"
-                   else "installed: build ${BuildAge.describe(installedCode)}"
-            setTextColor(0xFF9A9AA4.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-            setPadding(0, dp(3), 0, dp(6))
+        val installedCode = remember(app.id) {
+            BootstrapInstall.installedVersionCode(this, app.pkg)
+                ?: app.altId?.let { BootstrapInstall.installedVersionCode(this, it) }
         }
-        card.addView(status)
-
-        val go = TextView(this).apply {
-            text = "Download + install directly"
-            setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            gravity = Gravity.CENTER
-            setPadding(dp(10), dp(8), dp(10), dp(8))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(9).toFloat(); setColor(0xFF1F6F43.toInt())
-            }
+        var status by remember(app.id) {
+            mutableStateOf(if (installedCode == null) "not installed"
+                           else "installed: build ${BuildAge.describe(installedCode)}")
         }
-        go.setOnClickListener {
-            go.isEnabled = false
-            status.text = "fetching…"
-            thread(name = "recovery-${app.id}") {
-                val r = BootstrapInstall.launch(this@RecoveryActivity, app)
-                runOnUiThread {
-                    go.isEnabled = true
-                    r.onSuccess { c ->
-                        // Report the EVIDENCE, not just success: "digest
-                        // sha256:…" and "size 32012393 B" are different
-                        // guarantees and the screen should not imply they are
-                        // the same one.
-                        status.text = c.versionLine() +
-                            (c.behindBy?.let { "\n$it" } ?: "") +
-                            "\nverified by ${c.evidence}" +
-                            if (c.isNewer) "" else "\nNOTE: this is not newer than what you have."
-                    }.onFailure {
-                        status.text = "could not fetch: ${it.message}"
+        var busy by remember(app.id) { mutableStateOf(false) }
+        val shape = RoundedCornerShape(12.dp)
+        Column(Modifier.fillMaxWidth().padding(bottom = 8.dp).clip(shape).background(p.surface)
+            .then(if (highlight) Modifier.border(2.dp, p.bad, shape) else Modifier)
+            .padding(horizontal = 12.dp, vertical = 10.dp).testTag(cardTag(app.id))) {
+            Text(app.label + if (app.pkg == packageName) "  (this app)" else "",
+                color = p.textPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
+            Text(status, color = p.textSecondary, fontSize = 11.sp,
+                modifier = Modifier.padding(top = 3.dp, bottom = 6.dp).testTag(statusTag(app.id)))
+            Text("Download + install directly", color = p.textPrimary, fontSize = 12.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(9.dp)).background(p.ok)
+                    .clickable(enabled = !busy) {
+                        busy = true
+                        status = "fetching…"
+                        scope.launch {
+                            val r = withContext(Dispatchers.IO) { BootstrapInstall.launch(this@RecoveryActivity, app) }
+                            busy = false
+                            r.onSuccess { c ->
+                                // Report the EVIDENCE, not just success: "digest
+                                // sha256:…" and "size 32012393 B" are different
+                                // guarantees and the screen should not imply they are
+                                // the same one.
+                                status = c.versionLine() +
+                                    (c.behindBy?.let { "\n$it" } ?: "") +
+                                    "\nverified by ${c.evidence}" +
+                                    if (c.isNewer) "" else "\nNOTE: this is not newer than what you have."
+                            }.onFailure {
+                                status = "could not fetch: ${it.message}"
+                            }
+                        }
                     }
-                }
-            }
+                    .padding(horizontal = 10.dp, vertical = 8.dp).testTag(goTag(app.id)))
         }
-        card.addView(go)
-        return card
     }
 
     override fun onResume() {
@@ -207,6 +180,29 @@ class RecoveryActivity : Activity() {
 
     companion object {
         const val EXTRA_APP_ID = "recovery_app_id"
+
+        const val TAG_TITLE = "recovery:title"
+        const val TAG_GRANT_NOTE = "recovery:grant-note"
+        const val TAG_EMPTY = "recovery:empty"
+        fun cardTag(id: String) = "recovery:card:$id"
+        fun statusTag(id: String) = "recovery:status:$id"
+        fun goTag(id: String) = "recovery:go:$id"
+
+        /**
+         * [preselect] first, then this app, then everything else. The banner and the notification
+         * both know WHICH app is stuck, and making the user hunt for it in a 40-entry list is how a
+         * one-tap fix becomes a support request. Self is ALWAYS next: this app is the one whose
+         * breakage takes every other recovery path down with it. Stable within a rank.
+         */
+        internal fun <T> ordered(items: List<T>, id: (T) -> String, pkg: (T) -> String,
+                                 preselect: String?, selfPkg: String): List<T> =
+            items.sortedBy {
+                when {
+                    id(it) == preselect -> 0
+                    pkg(it) == selfPkg -> 1
+                    else -> 2
+                }
+            }
 
         /** Deep link straight at [appId]'s row. Null opens the list. */
         fun intent(ctx: Context, appId: String?): Intent =

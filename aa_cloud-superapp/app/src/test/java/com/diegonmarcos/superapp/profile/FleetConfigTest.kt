@@ -190,7 +190,8 @@ class FleetConfigTest {
         assertEquals("a Room store is a named gap", listOf("room:notes"), gap.gaps)
         assertEquals("a prefs store is covered", listOf("x_prefs"), gap.covered)
         assertTrue("mail's account links move", "sterna_account" in mail.covered)
-        assertTrue(mail.percent in 1..99)
+        assertTrue("mail is covered at least in part", mail.percent in 1..100)
+        assertTrue("a partly covered app reports a partial percent", gap.percent in 1..99)
         for (app in m.apps.values) m.coverage(app).let { c -> assertEquals(c.total, c.covered.size + c.gaps.size) }
     }
 }
