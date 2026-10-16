@@ -4845,15 +4845,15 @@
             "group": "Fleet"
           },
           {
-            "id": "about",
-            "label": "About",
+            "_doc": "Configs ▸ Observability ▸ Diagnostics: build SHA, device/Android/One UI, density/fontScale/dp, gesture-nav mode and insets, overlay permission, edge service + attached strip rects + last 20 touch events, measured Configs tile/icon dp. DiagnosticsFragment draws it; the same JSON is served read-only at /api/diagnostics/get (+ screenshot, open, inject) on the fleet debug API.",
+            "id": "diagnostics",
+            "label": "Diagnostics",
             "icon": "ic_settings",
             "group": "Observability"
           },
           {
-            "_doc": "Configs ▸ Observability ▸ Diagnostics: build SHA, device/Android/One UI, density/fontScale/dp, gesture-nav mode and insets, overlay permission, edge service + attached strip rects + last 20 touch events, measured Configs tile/icon dp. DiagnosticsFragment draws it; the same JSON is served read-only at /api/diagnostics/get (+ screenshot, open, inject) on the fleet debug API.",
-            "id": "diagnostics",
-            "label": "Diagnostics",
+            "id": "about",
+            "label": "About",
             "icon": "ic_settings",
             "group": "Observability"
           },
