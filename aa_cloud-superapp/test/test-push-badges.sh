@@ -343,8 +343,8 @@ elif 'v7/finance/quote' in q:
     print('v7 is in the fetch path - it needs a cookie+crumb and 401s unauthenticated')
 elif 'ACTION_VIEW' in s:
     print('the badge leaves the app via ACTION_VIEW - #156 removed six of those')
-elif 'shortcut_action' not in s:
-    print('the tap does not route through the in-app shortcut_action handler')
+elif 'BadgeClick.pi(' not in s or 'shortcut_action' not in open(msvc.rsplit('/',1)[0] + '/BadgeClick.kt').read():
+    print('the tap does not route through the shared BadgeClick (in-app shortcut_action handler)')
 elif 'isPowerSaveMode' not in s:
     print('power saving is not honoured - the badge would poll flat out on a dying battery')
 else:
