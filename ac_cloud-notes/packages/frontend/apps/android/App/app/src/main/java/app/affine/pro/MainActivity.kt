@@ -21,6 +21,8 @@ import app.affine.pro.plugin.MobileBackPlugin
 import app.affine.pro.plugin.PreviewPlugin
 import app.affine.pro.utils.dp2px
 import app.affine.pro.utils.px2dp
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
+import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.getcapacitor.BridgeActivity
 import com.getcapacitor.BridgeWebChromeClient
 import com.getcapacitor.WebViewListener
@@ -67,11 +69,32 @@ class MainActivity : BridgeActivity(), AFFiNEThemePlugin.Callback {
         installSplashScreen()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        FleetChrome.apply(this)
         ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
             navHeight = px2dp(insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom)
             ViewCompat.onApplyWindowInsets(v, insets)
         }
         setupOpenFileFab()
+        setupNativeNav()
+    }
+
+    // #868: the fleet bottom island + page tabs (libs:bottomnav) replace the editor's own
+    // tab bar; the web half hides its tabs once it sees cloudNotesNativeNav (setup.ts).
+    private fun setupNativeNav() {
+        val decl = NavDecl.fromBuildConfig(
+            BuildConfig.UI_SECTIONS_B64,
+            BuildConfig.UI_BOTTOM_NAV,
+            BuildConfig.UI_DEFAULT_SECTION,
+        )
+        NativeNav(
+            decl = decl,
+            webView = bridge.webView,
+            icon = { name ->
+                @Suppress("DiscouragedApi")
+                resources.getIdentifier("ic_nav_$name", "drawable", packageName)
+            },
+            run = { js -> bridge.webView.post { bridge.webView.evaluateJavascript(js, null) } },
+        ).attach(bridge.webView.parent as CoordinatorLayout)
     }
 
     // #469: the ONE feature over upstream — open a file from emulated storage.

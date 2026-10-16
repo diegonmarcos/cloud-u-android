@@ -34,6 +34,14 @@ apply from: 'capacitor.build.gradle'
 def buildJson = new groovy.json.JsonSlurper().parse(file('../../../../../../build.json'))
 def androidMeta = buildJson.android
 
+// #868 the navigation is ONE declaration (build.json::ui), drawn by libs:bottomnav.
+// Baked exactly like the rest of the fleet: UI_BOTTOM_NAV (comma ids), UI_SECTIONS_B64
+// (the sections, base64) and UI_DEFAULT_SECTION; NavDecl.fromBuildConfig reads them.
+def uiDecl = buildJson.ui ?: [:]
+def uiBottomNav = (uiDecl.bottom_nav ?: []).join(',')
+def uiSectionsB64 = groovy.json.JsonOutput.toJson(uiDecl.sections ?: []).bytes.encodeBase64().toString()
+def uiDefaultSection = uiDecl.default_section ?: ''
+
 // #830 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
 // Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
 // derivation as the rest of the fleet (#826): GITHUB_SHA first, `git rev-parse` locally, 8 hex.
@@ -64,6 +72,9 @@ android {
         versionCode = androidMeta.version_code
         versionName = "${androidMeta.version_name} (sha-${shortSha})"
         buildConfigField "String", "GIT_SHORT_SHA", "\"${shortSha}\""
+        buildConfigField "String", "UI_BOTTOM_NAV", "\"${uiBottomNav}\""
+        buildConfigField "String", "UI_SECTIONS_B64", "\"${uiSectionsB64}\""
+        buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
         // #522: the LAUNCHER LABEL. It lived in res/values/strings.xml as the
         // literal "AFFiNE" — the upstream project's name rendered as this
         // product's identity on the owner's home screen, the #380/#381/#390/#424
@@ -132,6 +143,8 @@ dependencies {
     // merges the fleet provider, receiver, <queries> and the signature
     // permission into this APK; nothing here calls it (settings.gradle).
     implementation project(':libs:core')
+    // #868 the fleet's bottom island + top page tabs (build.json::modules).
+    implementation project(':libs:bottomnav')
 
     implementation libs.androidx.appcompat
     implementation libs.androidx.browser

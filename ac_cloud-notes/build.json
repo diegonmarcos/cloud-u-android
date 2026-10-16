@@ -37,11 +37,118 @@
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/devtools"
     },
+    "libs:bottomnav": {
+      "_doc_dir": "#868 the fleet's bottom island + top page tabs (NavDecl, PageTabsView), shared BY REFERENCE. Cloud Notes draws its five-way nav (Home | Pages | Canvas | Graph | Search) with it from ui.* above and drives the WebView through the cloud-notes:nav event.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav"
+    },
     "libs:fleetconfig-model": {
       "_doc": "#873 libs:core `api`s this module (the setup provider every app serves, describe / export / apply / status); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
       "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
       "type": "library"
     }
+  },
+  "ui": {
+    "_doc_nav": "#868 THE NAVIGATION IS ONE DECLARATION, drawn by libs:bottomnav (island = ui.bottom_nav, top tabs = ui.sections[].pages via PageTabsView). Cloud Notes is 'Miro + Notion + Obsidian' in one app (a0_docs/eng-specs/cloud-notes-hybrid.md); the five bottom items are the five ways in: Home (recent, daily note) | Pages (Notion-style docs: all, tags, collections, new) | Canvas (Miro-style edgeless boards) | Graph (Obsidian-style: global, local, tags) | Search (find, ask/AI). Only ids live here: the web half (core/src/mobile/components/native-nav-routes.ts) maps every `<section>/<page>` to an AFFiNE workbench route or action, and test/test-nav-routes.sh fails if the two drift. A page with a non-blank `action` is a LAUNCH tab (creates something) and leaves the strip where it was. Settings/Profile are not a bottom item: they stay AFFiNE's own workspace menu, reached from Home's page header, so the island keeps five equal cells.",
+    "bottom_nav": [
+      "home",
+      "pages",
+      "canvas",
+      "graph",
+      "search"
+    ],
+    "default_section": "home",
+    "sections": [
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "pages": [
+          {
+            "id": "recent",
+            "label": "Recent"
+          },
+          {
+            "id": "daily",
+            "label": "Daily"
+          }
+        ]
+      },
+      {
+        "id": "pages",
+        "label": "Pages",
+        "icon": "pages",
+        "pages": [
+          {
+            "id": "all",
+            "label": "All"
+          },
+          {
+            "id": "tags",
+            "label": "Tags"
+          },
+          {
+            "id": "collections",
+            "label": "Collections"
+          },
+          {
+            "id": "new",
+            "label": "New page",
+            "action": "launch"
+          }
+        ]
+      },
+      {
+        "id": "canvas",
+        "label": "Canvas",
+        "icon": "canvas",
+        "pages": [
+          {
+            "id": "boards",
+            "label": "Boards"
+          },
+          {
+            "id": "new",
+            "label": "New board",
+            "action": "launch"
+          }
+        ]
+      },
+      {
+        "id": "graph",
+        "label": "Graph",
+        "icon": "graph",
+        "pages": [
+          {
+            "id": "global",
+            "label": "Global"
+          },
+          {
+            "id": "local",
+            "label": "Local"
+          },
+          {
+            "id": "tags",
+            "label": "Tags"
+          }
+        ]
+      },
+      {
+        "id": "search",
+        "label": "Search",
+        "icon": "search",
+        "pages": [
+          {
+            "id": "search",
+            "label": "Search"
+          },
+          {
+            "id": "ask",
+            "label": "Ask"
+          }
+        ]
+      }
+    ]
   },
   "signing": {
     "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",

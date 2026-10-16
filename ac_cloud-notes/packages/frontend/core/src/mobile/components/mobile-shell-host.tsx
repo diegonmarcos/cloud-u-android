@@ -12,6 +12,8 @@ import {
 
 import { MobileBackCoordinator } from '../modules/back-coordinator';
 import { AppTabs } from './app-tabs';
+import { NativeNavBridge } from './native-nav-bridge';
+import { hasNativeNav } from './native-nav-routes';
 import { MobileNavigationMenuHost } from './navigation/menu-host';
 
 type TabsMetadata = {
@@ -51,11 +53,13 @@ export const MobileShellHost = ({ children }: PropsWithChildren) => {
   return (
     <TabsMetadataContext.Provider value={value}>
       <MobileNavigationMenuHost>{children}</MobileNavigationMenuHost>
+      <NativeNavBridge />
       <AppTabs
         background={
           metadata?.background ?? cssVarV2('layer/background/mobile/primary')
         }
-        hidden={metadata?.hidden}
+        // the Compose shell's island replaces these tabs (cloud-notes-hybrid)
+        hidden={metadata?.hidden || hasNativeNav()}
       />
     </TabsMetadataContext.Provider>
   );

@@ -38,7 +38,7 @@ const h = vi.hoisted(() => {
         return { success: true };
       },
       getDocSnapshot: async ({ id, docId }: any) =>
-        state(id).snaps[docId] ?? undefined,
+        state(id).snaps[docId] ?? {}, // Capacitor resolves bare resolve() as {}
     };
   };
   return { disk, b64, unb64, makePlugin, plugin: { current: makePlugin() } };

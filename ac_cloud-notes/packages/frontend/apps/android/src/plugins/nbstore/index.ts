@@ -49,7 +49,9 @@ export const NbStoreNativeDBApis: NativeDBApis = {
     docId: string
   ): Promise<DocRecord | null> {
     const snapshot = await NbStore.getDocSnapshot({ id, docId });
-    return snapshot
+    // Capacitor resolves a bare call.resolve() as {} (truthy): treat a record
+    // without bin as "no snapshot".
+    return snapshot?.bin
       ? {
           bin: base64ToUint8Array(snapshot.bin),
           docId: snapshot.docId,

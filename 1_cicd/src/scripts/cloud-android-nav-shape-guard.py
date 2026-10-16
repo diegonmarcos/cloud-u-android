@@ -185,7 +185,7 @@ def check_parity(root, app, spec, code, bad):
                 bad.append(f"N7 {app}: {rel(p)}:{line_of(text, m.start())} assigns `{m.group(1)}` on an island/strip view — "
                            f"the property is gone on purpose; the look is libs:bottomnav's alone")
     names = re.compile(n7["resource_names"])
-    for t in (os.path.join(root, app, "app", "src", "main", "res"), os.path.join(root, app, "src", "main", "res")):
+    for t in (os.path.join(d, "src", "main", "res") for d in module_dirs(root, app)):
         for p in walk(t, (".xml",)):
             if f"{os.sep}values" not in p:
                 continue
@@ -198,10 +198,23 @@ def check_parity(root, app, spec, code, bad):
                    f"(edge-to-edge, transparent bars); call the lib's FleetChrome from the main activity")
 
 
+def module_dirs(root, app):
+    """The app's Gradle module dirs: ./app and ./ (the fleet convention) plus build.json
+    android.gradle_module when the Android project is nested (Cloud Notes vendors AFFiNE's, #868)."""
+    dirs = [os.path.join(root, app, "app"), os.path.join(root, app)]
+    try:
+        gm = (json.load(open(os.path.join(root, app, "build.json"))).get("android") or {}).get("gradle_module")
+    except (OSError, ValueError):
+        gm = None
+    if isinstance(gm, str) and gm.strip("./"):
+        dirs.append(os.path.normpath(os.path.join(root, app, gm)))
+    return dirs
+
+
 def app_code(root, app):
     """{path: comment-blanked source} of an app's main Kotlin/Java."""
     out = {}
-    for t in (os.path.join(root, app, "app", "src", "main"), os.path.join(root, app, "src", "main")):
+    for t in (os.path.join(d, "src", "main") for d in module_dirs(root, app)):
         for p in walk(t, (".kt", ".java")):
             out[p] = blank_comments(read(p))
     return out
@@ -270,6 +283,8 @@ def check_app(root, app, ui, spec, bad):
     # N2
     gradles = [p for pat in ("build.gradle*", os.path.join("app", "build.gradle*"), "settings.gradle*")
                for p in glob.glob(os.path.join(root, app, pat))]
+    for d in module_dirs(root, app)[2:]:  # a nested Android project: its module and its settings
+        gradles += glob.glob(os.path.join(d, "build.gradle*")) + glob.glob(os.path.join(os.path.dirname(d), "settings.gradle*"))
     try:
         cfg = json.load(open(os.path.join(root, app, "build.json")))
     except (OSError, ValueError):
@@ -286,7 +301,7 @@ def check_app(root, app, ui, spec, bad):
             bad.append(f"N4 {app}: build.gradle does not bake {field}")
 
     # sources
-    tops = [os.path.join(root, app, "app", "src", "main"), os.path.join(root, app, "src", "main")]
+    tops = [os.path.join(d, "src", "main") for d in module_dirs(root, app)]
     kt, xml = [], []
     for t in tops:
         kt += list(walk(t, (".kt", ".java")))

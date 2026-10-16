@@ -5,6 +5,10 @@ import './proxy';
 
 import { viewportRuntimeConfig } from '@blocksuite/affine/std/gfx';
 
+// The Compose shell draws the bottom nav (libs:bottomnav); the web's own tabs hide.
+(window as unknown as { cloudNotesNativeNav?: boolean }).cloudNotesNativeNav =
+  true;
+
 // Android WebView is less prone to the iOS WKWebView process kill, so keep the
 // user-facing zoom range unchanged. These knobs only reduce gesture-time work
 // and low-zoom canvas memory while preserving the normal-zoom render quality.
