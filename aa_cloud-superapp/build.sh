@@ -327,7 +327,20 @@ step_test() {
   _resolve_media_keys
   run_gradle "$task"
 }
-step_instrument() { log "Test: instrumented (needs device)"; in_nix gradle connectedAndroidTest; }
+# Same prerequisites as step_build (this project cannot even CONFIGURE without the shared signing key or compile
+# without the firestack aar) - the old bare `gradle connectedAndroidTest` could do neither. INSTRUMENT_CLASS=<fqcn>
+# narrows the run to one test class (CI: the edge-overlay gesture test).
+step_instrument() {
+  log "Test: instrumented (needs device)"
+  _resolve_signing
+  _resolve_media_keys
+  _export_variant_abis
+  if [ -n "${INSTRUMENT_CLASS:-}" ]; then
+    run_gradle :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=${INSTRUMENT_CLASS}"
+  else
+    run_gradle :app:connectedDebugAndroidTest
+  fi
+}
 step_lint()       { log "Lint"; in_nix gradle lint; }
 step_clean()      { log "Clean"; in_nix gradle clean; rm -rf "$DIST_DIR"; }
 step_shell()      { log "Entering Nix devShell"; exec nix develop "$SCRIPT_DIR"; }
