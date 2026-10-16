@@ -100,7 +100,7 @@ has "$SCREEN" 'if (!request.hasGesture()) return true' \
   "H3 a navigation without a real tap is refused, so a message cannot act by being viewed"
 
 # ── H4 remote pictures: blocked first, loadable on request, and still THERE to load ──
-has "$READER" '!plainText && (manualShow || senderAllowed)' \
+has "$READER" 'manualShow || senderAllowed' \
   "H4 remote pictures need the user's request or a remembered sender"
 has "$SCREEN" 'if (!blockRemote) return null' "H4 the load-time gate is what decides a fetch"
 # Default-deny by SCHEME, not by naming http: "//evil.test/x.gif" arrives with no scheme at all.

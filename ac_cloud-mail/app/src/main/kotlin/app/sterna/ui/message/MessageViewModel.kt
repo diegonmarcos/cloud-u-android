@@ -312,12 +312,6 @@ private fun Email.markRead(): Email =
  *  in the reader's first frames was fetched straight away, silently. */
 internal const val CONFIRM_LINKS_UNLOADED = true
 
-/** What the reader's REMOTE-IMAGE decision assumes about the reading-mode setting (#149) while
- *  DataStore has not answered: plain text, i.e. no image fetched — an image fetched has already told
- *  the sender the mail was opened. It is only the IMAGE half: what is RENDERED in that window is the
- *  stored default, or the reader would see a flash of text on every message swiped past. */
-internal const val PLAIN_TEXT_UNLOADED_FOR_IMAGES = true
-
 /**
  * Which failure to open a message earns a sentence of OUR own, and which keeps the text it carries.
  */
@@ -633,26 +627,6 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
     fun printConsumed() {
         _printRequested.value = false
     }
-
-    /** This message's DEVIATION from the reading-mode setting (#149): null = follow the setting.
-     *  Not an `or` — with the setting on, the menu offers "Show HTML" and has to deliver it.
-     *  TRANSITORY: reset on load, nothing stored. It is pure UI over the body already in hand and must
-     *  never re-open or re-decrypt the message, or every toggle replays the OpenKeychain round-trip. */
-    private val _plainText = MutableStateFlow<Boolean?>(null)
-    val plainText = _plainText.asStateFlow()
-
-    fun setPlainText(on: Boolean) {
-        _plainText.value = on
-    }
-
-    /**
-     * The stored reading-mode setting (#149) — null while DataStore has not answered, which the reader
-     */
-    val plainTextSetting: StateFlow<Boolean?> = settings.plainText.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = null,
-    )
 
     /** The raw-headers viewer (#60): null while closed. Headers are pulled on demand so the normal
      *  reader path never fetches them. */
@@ -1304,7 +1278,6 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
         _replyBarVisible.value = false
         _manualShowImages.value = false
         _printRequested.value = false
-        _plainText.value = null
         _headers.value = null
         // The same three lines as [dismissAttachedMessage], written out: ReaderStateResetOnLoadTest
         // reads this prologue for `_attachedMessage.value`, and a helper would hide it.

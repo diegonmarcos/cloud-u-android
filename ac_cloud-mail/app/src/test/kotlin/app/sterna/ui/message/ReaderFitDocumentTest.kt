@@ -38,8 +38,8 @@ class ReaderFitDocumentTest {
     private val light = EmailTheme("#ffffff", "#111111", "#0b5fff", false)
     private val dark = EmailTheme("#101418", "#e3e3e3", "#a8c7fa", dark = true)
 
-    private fun doc(theme: EmailTheme, plainText: Boolean = false): String =
-        buildHtmlDocument(email(), theme = theme, plainText = plainText, noContent = noContent)
+    private fun doc(theme: EmailTheme): String =
+        buildHtmlDocument(email(), theme = theme, noContent = noContent)
 
     /** Everything between `<style>` and `</style>` — the rules OUR page brings. */
     private fun stylesheet(doc: String): String =
@@ -180,11 +180,15 @@ class ReaderFitDocumentTest {
 
     // ── What must NOT have changed ───────────────────────────────────────────────────────────────
 
-    @Test fun `the plaintext path still paints its own wrapped body`() {
+    @Test fun `a text-only message still paints its own wrapped body`() {
         // HTML is new here; plain text is what he has been reading for weeks. The fit rules are
         // harmless to it, but the rule that wraps the body WE paint must still be there and must
         // still be the app's own font.
-        val page = buildHtmlDocument(email(), theme = light, plainText = true, noContent = noContent)
+        val page = buildHtmlDocument(Email(
+            id = "1",
+            textBody = listOf(EmailBodyPart(partId = "t", type = "text/plain")),
+            bodyValues = mapOf("t" to EmailBodyValue(value = "hello")),
+        ), theme = light, noContent = noContent)
         assertTrue(
             "the derived plain-text body must still be wrapped by pre.plain.\nDocument was:\n$page",
             "pre.plain { white-space: pre-wrap; word-wrap: break-word; font-family: sans-serif; }" in page,

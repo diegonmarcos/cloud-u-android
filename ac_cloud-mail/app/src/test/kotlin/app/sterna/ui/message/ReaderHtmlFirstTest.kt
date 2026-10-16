@@ -24,18 +24,14 @@ class ReaderHtmlFirstTest {
     }
 
     @Test fun `with both parts the html one is rendered`() {
-        val body = readerBody(email("<p>Rich <b>words</b></p>", "plain words"), plainText = false, derivedNotice = "d", noContent = "n")
+        val body = readerBody(email("<p>Rich <b>words</b></p>", "plain words"), noContent = "n")
         assertTrue(body.richHtml)
         assertTrue(body.fragment, "<b>words</b>" in body.fragment)
         assertFalse(body.fragment, "plain words" in body.fragment)
     }
 
-    @Test fun `the default reading mode is html`() {
-        assertFalse(plainTextForBody(override = null, setting = null))
-    }
-
     @Test fun `a text-only mail is escaped html with its web addresses linked`() {
-        val body = readerBody(email(null, "see https://example.org/a?x=1&y=2, ok <b>"), plainText = false, derivedNotice = "d", noContent = "n")
+        val body = readerBody(email(null, "see https://example.org/a?x=1&y=2, ok <b>"), noContent = "n")
         assertFalse(body.richHtml)
         assertTrue(body.fragment, "<a href=\"https://example.org/a?x=1&amp;y=2\">https://example.org/a?x=1&amp;y=2</a>," in body.fragment)
         assertTrue(body.fragment, "&lt;b&gt;" in body.fragment)

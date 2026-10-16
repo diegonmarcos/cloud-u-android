@@ -16,6 +16,7 @@
 #   E5  the composer's body is the HTML editor page, not a text field
 #   E6  the reader renders the html part before it ever looks at the text one
 #   E7  an attached message is shown as html too
+#   E8  there is NO plain-text reading mode: no setting, no menu entry, no toggle, no body switch
 #   M*  MUTATIONS: each of the above, broken on purpose, in memory, must be CAUGHT
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
@@ -33,6 +34,11 @@ FILES = {
     'receiver': 'app/src/main/kotlin/app/sterna/push/NotificationActionReceiver.kt',
     'reader': 'app/src/main/kotlin/app/sterna/ui/message/ReaderBody.kt',
     'attached': 'app/src/main/kotlin/app/sterna/ui/message/AttachedMessage.kt',
+    'reading': 'app/src/main/kotlin/app/sterna/ui/message/MessageScreen.kt',
+    'readervm': 'app/src/main/kotlin/app/sterna/ui/message/MessageViewModel.kt',
+    'settings': 'core/data/src/main/kotlin/app/sterna/core/data/settings/SettingsRepository.kt',
+    'settingsui': 'app/src/main/kotlin/app/sterna/ui/settings/SettingsScreen.kt',
+    'strings': 'app/src/main/res/values/strings.xml',
 }
 MAIN = {k: open(os.path.join(APP, v), encoding='utf-8').read() for k, v in FILES.items()}
 
@@ -95,11 +101,21 @@ def audit(s, all_main_sources):
     h, t = rb.find('htmlContent()'), rb.find('textContent()')
     if h < 0 or t < 0 or h > t:
         p.append('E6 the reader looks at the text part before (or without) the html part')
-    if 'const val PLAIN_TEXT_DEFAULT = false' not in open(os.path.join(APP, 'core/data/src/main/kotlin/app/sterna/core/data/settings/SettingsRepository.kt'), encoding='utf-8').read():
-        p.append('E6 the reader defaults to plain text')
     # E7
     if 'html = parsed.html' not in s['attached']:
         p.append('E7 an attached message is no longer given its html')
+    # E8: the reader reads HTML, full stop.
+    for key, needles in (
+        ('reader', ('plainText', 'PLAIN_TEXT', 'readingModesDiffer')),
+        ('reading', ('plainText', 'imageMode', 'setPlainText', 'message_show_plain_text', 'message_show_html')),
+        ('readervm', ('plainText', 'PLAIN_TEXT')),
+        ('settings', ('plainText', 'PLAIN_TEXT', 'KEY_PLAIN_TEXT')),
+        ('settingsui', ('plainText', 'settings_plain_text')),
+        ('strings', ('settings_plain_text', 'message_show_plain_text')),
+    ):
+        for n in needles:
+            if n in s[key]:
+                p.append(f'E8 a plain-text reading mode is back: {key} names {n}')
     return p
 
 
@@ -155,6 +171,12 @@ MUTATIONS = [
      'BasicTextField(\n                value = body,\n            ) ; HtmlBodyPane2('),
     ('M9 reader: text part first', 'reader',
      'email.htmlContent()?.takeIf { it.isNotBlank() }', 'email.textContent()?.takeIf { it.isNotBlank() }'),
+    ('M11 a plain-text switch in the settings store', 'settings',
+     'suspend fun setReplyBar(', 'val plainText: kotlinx.coroutines.flow.Flow<Boolean> = dataStore.data.map { false }\n\n    suspend fun setReplyBar('),
+    ('M12 a Show-plain-text entry in the reader', 'reading',
+     'val imagesOnceOffered = !showRemote', 'val imagesOnceOffered = !showRemote // R.string.message_show_plain_text'),
+    ('M13 the reader body takes a plainText switch', 'reader',
+     'internal fun readerBody(', 'internal fun readerBody(plainText: Boolean = false, '),
     ('M10 attached message: text only', 'attached', 'html = parsed.html', 'html = null // parsed.html'),
 ]
 for label, key, old, new in MUTATIONS:

@@ -166,9 +166,6 @@
     <!-- Message -->
     <string name="message_title_fallback">Messaggio</string>
     <string name="message_back">Indietro</string>
-    <string name="message_show_plain_text">Mostra testo semplice</string>
-    <string name="message_show_html">Mostra HTML</string>
-    <string name="message_plain_text_derived">Testo derivato dalla versione HTML.</string>
     <string name="message_show_images">Mostra immagini</string>
     <string name="message_copy_code">Copia codice</string>
     <string name="message_code_copied">Codice copiato</string>
@@ -367,8 +364,6 @@
     <string name="settings_signature_below_quote_subtitle">In una risposta, metterla sotto il messaggio citato anziché sopra</string>
     <string name="settings_reply_bar_title">Barra di risposta</string>
     <string name="settings_reply_bar_subtitle">Mostra Rispondi e Inoltra in fondo al messaggio. Senza la barra, Rispondi a tutti è l\'icona della barra in alto, e Rispondi e Inoltra sono nel suo menu.</string>
-    <string name="settings_plain_text_title">Testo semplice</string>
-    <string name="settings_plain_text_subtitle">Aprire i messaggi come testo anziché come HTML. Il menu del lettore continua a cambiare un singolo messaggio in entrambi i sensi.</string>
     <string name="settings_signature_delimiter_title">Riga separatrice prima della firma</string>
     <string name="settings_signature_delimiter_subtitle">Le altre app di posta riconoscono la tua firma da questa riga «-- » e possono nasconderla quando citano il tuo messaggio; senza di essa non possono più, e il campo firma contiene allora esattamente ciò che viene inviato.</string>
     <string name="settings_swipe_right_title">Scorri a destra</string>

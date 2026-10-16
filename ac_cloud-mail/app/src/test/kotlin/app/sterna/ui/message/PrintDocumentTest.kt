@@ -21,8 +21,8 @@ class PrintDocumentTest {
         date = "DATE-SENTINEL",
     )
 
-    private val rich = ReaderBody("<p>BODY-SENTINEL</p>", richHtml = true, derived = false)
-    private val plain = ReaderBody("<pre class=\"plain\">BODY-SENTINEL</pre>", richHtml = false, derived = false)
+    private val rich = ReaderBody("<p>BODY-SENTINEL</p>", richHtml = true)
+    private val plain = ReaderBody("<pre class=\"plain\">BODY-SENTINEL</pre>", richHtml = false)
 
     /**
      * Paper goes out WHOLE. The reader folds the trailing quoted history behind a `<details>`
@@ -31,7 +31,6 @@ class PrintDocumentTest {
         val quoted = ReaderBody(
             "<p>My answer.</p><blockquote type=\"cite\"><p>Forty messages.</p></blockquote>",
             richHtml = true,
-            derived = false,
         )
         val doc = buildPrintDocument(header(), labels, quoted)
 
@@ -129,7 +128,7 @@ class PrintDocumentTest {
     }
 
     @Test fun `a rich body gets its inline images embedded`() {
-        val body = ReaderBody("<p><img src=\"cid:logo\"></p>", richHtml = true, derived = false)
+        val body = ReaderBody("<p><img src=\"cid:logo\"></p>", richHtml = true)
         val doc = buildPrintDocument(header(), labels, body, inlineImages = mapOf("logo" to "data:image/png;base64,AAA"))
 
         assertTrue(
@@ -172,7 +171,6 @@ class PrintDocumentTest {
         val body = ReaderBody(
             "<style>@media (prefers-color-scheme: dark) { body { background: #000 } }</style><p>BODY-SENTINEL</p>",
             richHtml = true,
-            derived = false,
         )
         val doc = buildPrintDocument(header(), labels, body)
 
@@ -189,7 +187,7 @@ class PrintDocumentTest {
     }
 
     @Test fun `a plain-text body is left alone, even when its text quotes a dark-mode media query`() {
-        val body = ReaderBody("<pre class=\"plain\">prefers-color-scheme: dark</pre>", richHtml = false, derived = false)
+        val body = ReaderBody("<pre class=\"plain\">prefers-color-scheme: dark</pre>", richHtml = false)
         val doc = buildPrintDocument(header(), labels, body)
 
         assertTrue(

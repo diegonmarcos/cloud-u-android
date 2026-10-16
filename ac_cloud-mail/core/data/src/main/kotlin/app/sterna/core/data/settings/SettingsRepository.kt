@@ -234,15 +234,6 @@ class SettingsRepository(context: Context) {
         dataStore.edit { it[KEY_REPLY_BAR] = enabled }
     }
 
-    /** Whether a message OPENS as text rather than as its own HTML (#149). OFF by default. It
-     *  decides what a message opens as, not what it can be shown as — the reader's menu still
-     *  switches the message in hand. Global, not per account, for [replyBar]'s reason. */
-    val plainText: Flow<Boolean> = dataStore.data.map(::plainTextFrom)
-
-    suspend fun setPlainText(enabled: Boolean) {
-        dataStore.edit { it[KEY_PLAIN_TEXT] = enabled }
-    }
-
     /** Whether the dates the composer writes into an outgoing message — a reply's quote attribution
      *  line and a forward's Date header — are rendered in UTC rather than in the device's time zone
      *  (#120). OFF by default. Global: the question is about the device, not about a mailbox. */
@@ -386,7 +377,6 @@ class SettingsRepository(context: Context) {
         signatureBelowQuote = signatureBelowQuote.first(),
         signatureDelimiter = signatureDelimiter.first(),
         replyBar = replyBar.first(),
-        plainText = plainText.first(),
         quotedDatesUtc = quotedDatesUtc.first(),
         pureBlack = pureBlack.first(),
         listMonogram = listMonogram.first(),
@@ -424,7 +414,6 @@ class SettingsRepository(context: Context) {
         backup.signatureBelowQuote?.let { setSignatureBelowQuote(it) }
         backup.signatureDelimiter?.let { setSignatureDelimiter(it) }
         backup.replyBar?.let { setReplyBar(it) }
-        backup.plainText?.let { setPlainText(it) }
         backup.quotedDatesUtc?.let { setQuotedDatesUtc(it) }
         backup.pureBlack?.let { setPureBlack(it) }
         backup.listMonogram?.let { setListMonogram(it) }
@@ -581,18 +570,6 @@ const val LIST_MONOGRAM_DEFAULT = true
 /** Whether message-list rows start with the sender's initials, read from the stored preferences. */
 internal fun listMonogramFrom(prefs: Preferences): Boolean =
     prefs[KEY_LIST_MONOGRAM] ?: LIST_MONOGRAM_DEFAULT
-
-/** The key the plain-text reading switch is stored under. */
-internal val KEY_PLAIN_TEXT = booleanPreferencesKey("plain_text")
-
-/**
- * What a message opens as when nobody has touched the switch: its own HTML (#149). OFF
- * deliberately — a default of `true` would change what every message looks like on update.
- */
-const val PLAIN_TEXT_DEFAULT = false
-
-/** Whether a message opens as text rather than as its own HTML, read from the stored preferences. */
-internal fun plainTextFrom(prefs: Preferences): Boolean = prefs[KEY_PLAIN_TEXT] ?: PLAIN_TEXT_DEFAULT
 
 /** The key the quoted-dates-in-UTC switch is stored under. */
 internal val KEY_QUOTED_DATES_UTC = booleanPreferencesKey("quoted_dates_utc")

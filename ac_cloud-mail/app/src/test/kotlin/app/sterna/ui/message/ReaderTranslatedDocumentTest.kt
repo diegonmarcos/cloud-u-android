@@ -23,7 +23,7 @@ class ReaderTranslatedDocumentTest {
     private val light = EmailTheme("#ffffff", "#111111", "#0b5fff", false)
     private val dark = EmailTheme("#101418", "#e3e3e3", "#a8c7fa", true)
 
-    private fun fragmentOf(theme: EmailTheme) = readerBody(email, false, "derived", "none").fragment
+    private fun fragmentOf(theme: EmailTheme) = readerBody(email, "none").fragment
 
     private fun doc(theme: EmailTheme, translated: String?) =
         buildHtmlDocument(email, theme = theme, noContent = "none", translatedFragment = translated)

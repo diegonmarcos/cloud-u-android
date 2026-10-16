@@ -239,7 +239,7 @@ has "$SIGNATURE" 'if (isHtml) signatureWireHtml(html) else ""' \
 
 # The quoted original's own coverage, restated here because THIS is the change that could have
 # quietly moved it: received markup is still reduced at readerBody's single point.
-has "$UI/message/ReaderBody.kt" 'ReaderBody(sanitiseReceivedHtml(it), richHtml = true, derived = false)' \
+has "$UI/message/ReaderBody.kt" 'ReaderBody(sanitiseReceivedHtml(it), richHtml = true)' \
   "N5 a received message's markup is still sanitised before it is rendered"
 
 # ── N6 nine languages ──

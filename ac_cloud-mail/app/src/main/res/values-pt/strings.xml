@@ -166,9 +166,6 @@
     <!-- Message -->
     <string name="message_title_fallback">Mensagem</string>
     <string name="message_back">Voltar</string>
-    <string name="message_show_plain_text">Mostrar texto simples</string>
-    <string name="message_show_html">Mostrar HTML</string>
-    <string name="message_plain_text_derived">Texto derivado da versão HTML.</string>
     <string name="message_show_images">Mostrar imagens</string>
     <string name="message_copy_code">Copiar código</string>
     <string name="message_code_copied">Código copiado</string>
@@ -367,8 +364,6 @@
     <string name="settings_signature_below_quote_subtitle">Numa resposta, colocá-la sob a mensagem citada em vez de acima</string>
     <string name="settings_reply_bar_title">Barra de resposta</string>
     <string name="settings_reply_bar_subtitle">Mostrar Responder e Encaminhar na parte inferior da mensagem. Sem a barra, Responder a todos é o ícone da barra superior, e Responder e Encaminhar estão no menu dela.</string>
-    <string name="settings_plain_text_title">Texto simples</string>
-    <string name="settings_plain_text_subtitle">Abrir as mensagens como texto em vez do seu HTML. O menu do leitor continua a alternar uma mensagem específica nos dois sentidos.</string>
     <string name="settings_signature_delimiter_title">Linha separadora antes da assinatura</string>
     <string name="settings_signature_delimiter_subtitle">Outras aplicações de correio reconhecem a sua assinatura por esta linha «-- » e conseguem ocultá-la ao citar a sua mensagem; sem ela deixam de conseguir, e o campo da assinatura passa a conter exactamente o que é enviado.</string>
     <string name="settings_swipe_right_title">Deslizar para a direita</string>

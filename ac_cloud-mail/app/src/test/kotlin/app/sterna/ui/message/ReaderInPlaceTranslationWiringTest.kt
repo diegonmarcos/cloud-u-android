@@ -24,7 +24,7 @@ class ReaderInPlaceTranslationWiringTest {
         assertFalse("the reader no longer runs Translate through the dialog's runner", "textTools.run(" in screen)
         assertTrue(
             "Translate is routed to the in-place pipeline",
-            "translate = { viewModel.translateNow(readerBody(email, plainText, derivedNotice, noContent).fragment) }," in screen,
+            "translate = { viewModel.translateNow(readerBody(email, noContent).fragment) }," in screen,
         )
         assertTrue("Resume is routed to the summary box", "summarise = { viewModel.summariseNow(receivedTextToolSource(email)) }," in screen)
     }

@@ -631,7 +631,6 @@ private fun ReadingScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
     val signatureBelowQuote by viewModel.signatureBelowQuote.collectAsStateWithLifecycle()
     val signatureDelimiter by viewModel.signatureDelimiter.collectAsStateWithLifecycle()
     val replyBar by viewModel.replyBar.collectAsStateWithLifecycle()
-    val plainText by viewModel.plainText.collectAsStateWithLifecycle()
     val options = listOf(
         SwipeAction.TOGGLE_READ, SwipeAction.DELETE, SwipeAction.ARCHIVE, SwipeAction.FLAG, SwipeAction.NONE,
     )
@@ -667,14 +666,6 @@ private fun ReadingScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     selected = messageTextSize,
                     optionLabel = { textSizeLabel(context, it) },
                     onSelect = viewModel::setMessageTextSize,
-                )
-                // What a message opens as (#149). The subtitle must not promise anything about
-                // remote images, which are only cut while the text mode is actually on.
-                SettingSwitch(
-                    title = stringResource(R.string.settings_plain_text_title),
-                    subtitle = stringResource(R.string.settings_plain_text_subtitle),
-                    checked = plainText,
-                    onCheckedChange = viewModel::setPlainText,
                 )
                 SettingMultiChoiceRow(
                     title = stringResource(R.string.settings_mark_read_title),

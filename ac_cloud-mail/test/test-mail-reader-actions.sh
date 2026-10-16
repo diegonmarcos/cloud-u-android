@@ -12,7 +12,7 @@
 #   B1  the AI Resume box never writes back to the stored body
 #   R1  the default reply action resolves to reply-all, and single reply is still reachable
 #   A1  the TOP ROW is exactly Star, Move to folder, Reply-all, Mark unread (+ overflow)  (#293)
-#   A2  the READING ICON ROW (AI tools, Show images, plain text) is drawn UNDER the tags  (#293)
+#   A2  the READING ICON ROW (AI tools, Show images, Copy Code) is drawn UNDER the tags  (#293)
 #   A3  the OVERFLOW lists every function as a NAMED entry -- no icon row, no icon-only item
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
@@ -387,8 +387,6 @@ if "val readingActions: @Composable () -> Unit = {" in content:
         ("surface = textTools.surface", "drawn from the READ surface's own declaration"),
         ("contentDescription = stringResource(R.string.message_show_images)", "Show images is an ICON in it"),
         ("viewModel::showImagesOnce", "...wired to the one-time show"),
-        ("R.string.message_show_plain_text", "Show as plain text is an ICON in it"),
-        ("viewModel.setPlainText(!plainText)", "...wired to the reading-mode toggle"),
         ("CopyCodeIcon()", "Copy Code is an ICON in it (#438), drawn from its one declaration (#500)"),
     ):
         ok(f"A2 {why}") if needle in row else bad(f"A2 {why} -- missing {needle!r}")
@@ -425,7 +423,7 @@ if items and not unnamed:
 else:
     bad(f"A3 overflow entries without a text label first: {unnamed or 'no entries at all'}")
 for label in ("message_reply", "message_reply_all", "message_forward", "message_flag", "inbox_move_to_folder",
-              "message_mark_unread", "message_labels", "message_show_images", "message_show_plain_text",
+              "message_mark_unread", "message_labels", "message_show_images",
               "message_copy_code",
               "message_archive", "message_delete", "message_unsubscribe", "message_view_headers",
               "message_export_eml", "message_print"):

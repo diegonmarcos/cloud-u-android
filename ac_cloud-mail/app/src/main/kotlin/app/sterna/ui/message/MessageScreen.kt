@@ -768,11 +768,9 @@ private fun runReaderTool(
     viewModel: MessageViewModel,
     tool: TextTool,
     email: Email,
-    plainText: Boolean,
-    derivedNotice: String,
     noContent: String,
 ) = tool.onReader(
-    translate = { viewModel.translateNow(readerBody(email, plainText, derivedNotice, noContent).fragment) },
+    translate = { viewModel.translateNow(readerBody(email, noContent).fragment) },
     summarise = { viewModel.summariseNow(receivedTextToolSource(email)) },
 )
 
@@ -865,13 +863,6 @@ private fun MessageActions(
     val imageAllowlist by viewModel.imageAllowlist.collectAsStateWithLifecycle()
     // Per-message manual override; the sender allowlist auto-shows without it.
     val manualShow by viewModel.manualShowImages.collectAsStateWithLifecycle()
-    // Reading mode (#149): the stored setting, this message's deviation from it, and the two answers
-    // they resolve to — what is RENDERED, and what the remote-image question is decided against. The
-    // second is not the first while the setting is still being read: see plainTextForImages.
-    val plainTextOverride by viewModel.plainText.collectAsStateWithLifecycle()
-    val plainTextSetting by viewModel.plainTextSetting.collectAsStateWithLifecycle()
-    val plainText = plainTextForBody(plainTextOverride, plainTextSetting)
-    val imageMode = plainTextForImages(plainTextOverride, plainTextSetting)
     // Folders the move-to-folder entry offers: this message's OWN account's, minus its current one
     // (#73). Empty hides the entry rather than opening a picker with nothing to pick.
     val folders by viewModel.moveTargets.collectAsStateWithLifecycle()
@@ -895,16 +886,8 @@ private fun MessageActions(
     val loaded = state as? MessageState.Loaded ?: return
     val senderEmail = loaded.email.from.firstOrNull()?.email
     val senderAllowed = senderEmail?.lowercase()?.let { it in imageAllowlist } == true
-    val showRemote = showRemoteImages(imageMode, manualShow, senderAllowed)
-    // Is the reading-mode entry worth offering on THIS message (#149)? On mail with no HTML part both
-    // modes build the same <pre>, and the entry only ever flipped its own label. The verdict comes
-    // from building both bodies ([readingModesDiffer]), so it needs the same localised strings the
-    // page renders. Remembered on the message and those strings: it renders the body twice.
-    val derivedNotice = stringResource(R.string.message_plain_text_derived)
+    val showRemote = showRemoteImages(manualShow, senderAllowed)
     val noContent = stringResource(R.string.message_no_content)
-    val readingModeUseful = remember(loaded.email, derivedNotice, noContent) {
-        readingModesDiffer(loaded.email, derivedNotice, noContent)
-    }
     // Text tools on a RECEIVED message. onApply is null and stays null: this body is a record
     // of what somebody sent, so the result is shown to read or copy and the stored message is
     // never written to. See TextToolScope.
@@ -1111,46 +1094,17 @@ private fun MessageActions(
                     enabled = !translation.running && !readerSummary.running,
                     onClick = {
                         menuOpen = false
-                        runReaderTool(viewModel, tool, loaded.email, plainText, derivedNotice, noContent)
+                        runReaderTool(viewModel, tool, loaded.email, noContent)
                     },
                 )
             }
-            // Show images, once, for this message: offered only while images are actually blocked
-            // (`!showRemote`) and only outside plain-text mode, guarded on `imageMode` rather than
-            // `plainText` because the two differ only while DataStore has not answered, and there a
-            // `plainText` guard makes the menu contradict itself.
-            val imagesOnceOffered = !imageMode && !showRemote
+            // Show images, once, for this message: offered only while images are actually blocked.
+            val imagesOnceOffered = !showRemote
             if (imagesOnceOffered) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.message_show_images)) },
                     leadingIcon = { Icon(Icons.Filled.Image, contentDescription = null) },
                     onClick = { menuOpen = false; viewModel.showImagesOnce() },
-                )
-            }
-            // Reading mode (#149). The label says what the tap DOES, so it follows the mode actually
-            // RENDERED — which is why the entry reads "Show HTML" on a message the setting opened as
-            // text. Transitory: the deviation is forgotten when the message is left.
-            //
-            // Offered only when switching would actually CHANGE the screen: an entry that promises a
-            // rendering and hands back the identical document is a dead action.
-            if (readingModeUseful) {
-                HorizontalDivider()
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            stringResource(
-                                if (plainText) R.string.message_show_html
-                                else R.string.message_show_plain_text,
-                            ),
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            if (plainText) Icons.Filled.Code else Icons.Filled.Description,
-                            contentDescription = null,
-                        )
-                    },
-                    onClick = { menuOpen = false; viewModel.setPlainText(!plainText) },
                 )
             }
             // Copy Code (#438). The reading row's icon and this named entry run the SAME gesture —
@@ -1169,30 +1123,25 @@ private fun MessageActions(
             // which is why it is not also an icon in the reading row under the tags: its meaning —
             // this sender, every message, from now on — no tooltip can carry.
             //
-            // Stands down in plain-text mode: there is no image to allow, and the toggle would
-            // silently change the next message anyway. Guarded on `imageMode`, NOT on `plainText`,
-            // the same variable `showRemote` is decided on: the two differ only while DataStore has
-            // not answered, and there a `plainText` guard makes the menu contradict itself.
-            if (!imageMode) {
-                if (senderEmail != null) {
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(
-                                    if (senderAllowed) R.string.message_images_stop_sender
-                                    else R.string.message_images_always_sender,
-                                ),
-                            )
-                        },
-                        leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
-                        onClick = {
-                            menuOpen = false
-                            viewModel.setImagesAlwaysAllowed(senderEmail, !senderAllowed)
-                        },
-                    )
-                }
+            if (senderEmail != null) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                if (senderAllowed) R.string.message_images_stop_sender
+                                else R.string.message_images_always_sender,
+                            ),
+                        )
+                    },
+                    leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        viewModel.setImagesAlwaysAllowed(senderEmail, !senderAllowed)
+                    },
+                )
             }
+
             // Triage actions. Archive and Delete are HERE rather than on the row: the row's slots
             // went to the actions the owner named, and these two are the only ones on this screen
             // with a faster route already — a swipe on the message list, which is where triage
@@ -1826,19 +1775,13 @@ private fun MessageContent(
     // On this `val`, never on the `showRemoteImages(...)` call: ReaderBodyTest counts that line.
     val manualShowRaw by viewModel.manualShowImages.collectAsStateWithLifecycle()
     val manualShow = everActive && manualShowRaw
-    // Reading mode (#149), resolved exactly as the menu above resolves it: the stored setting, this
-    // message's deviation from it, and the two answers.
-    val plainTextOverride by viewModel.plainText.collectAsStateWithLifecycle()
-    val plainTextSetting by viewModel.plainTextSetting.collectAsStateWithLifecycle()
-    val plainText = plainTextForBody(plainTextOverride, plainTextSetting)
-    val imageMode = plainTextForImages(plainTextOverride, plainTextSetting)
     val senderEmail = (state as? MessageState.Loaded)?.email?.from?.firstOrNull()?.email
     // `everActive` first, and on THIS line rather than on `blockRemote`: `senderAllowed` is the
     // single producer of the answer, so gating it here closes the rendered page, the printed document
     // and `shouldInterceptRequest` in one move. Allowing a sender from the open message must not let
     // the neighbour beside it fetch his pictures and report that it was opened.
     val senderAllowed = everActive && senderEmail?.lowercase()?.let { it in imageAllowlist } == true
-    val showRemote = showRemoteImages(imageMode, manualShow, senderAllowed)
+    val showRemote = showRemoteImages(manualShow, senderAllowed)
     // The per-sender filter rule offered from the participants panel. The Trash is named from the
     // account's OWN cached folder list (no network), the script state is read once when the panel
     // opens, and which of the four answers all that makes is senderRuleEntry()'s.
@@ -1898,7 +1841,6 @@ private fun MessageContent(
         date = stringResource(R.string.compose_forward_date),
     )
     val printNoSubject = stringResource(R.string.message_no_subject)
-    val printDerivedNotice = stringResource(R.string.message_plain_text_derived)
     val printNoContent = stringResource(R.string.message_no_content)
     val appName = stringResource(R.string.app_name)
     LaunchedEffect(printRequested) {
@@ -1919,7 +1861,7 @@ private fun MessageContent(
             cc = printAddresses(full.cc),
             date = formatFull(receivedAt),
         )
-        val body = readerBody(full, plainText, printDerivedNotice, printNoContent)
+        val body = readerBody(full, printNoContent)
         val doc = buildPrintDocument(header, printLabels, body, msg.inlineImages)
         printDocument(activity, doc, printJobName(header.subject, appName), blockRemote = !showRemote)
     }
@@ -1973,9 +1915,6 @@ private fun MessageContent(
     val readerSummary by viewModel.summary.collectAsStateWithLifecycle()
     val replyAllWith = LocalReplyAllWith.current
     val readingEmail = (state as? MessageState.Loaded)?.email
-    val readingModeOffered = remember(readingEmail, printDerivedNotice, printNoContent) {
-        readingEmail != null && readingModesDiffer(readingEmail, printDerivedNotice, printNoContent)
-    }
     val clipboard = LocalClipboardManager.current
     val readingActions: @Composable () -> Unit = {
         TextToolIconRow(
@@ -1995,26 +1934,14 @@ private fun MessageContent(
             enabled = !translation.running && !readerSummary.running,
             skip = { it == TextTool.RESUME && messages.firstOrNull()?.body == null },
             trailing = {
-                // The row reads "Translate Resume | Show images Show Plain Text | Copy Code"
-                // (#438): the literal `|` separates the AI group from the display group and the
-                // display group from Copy Code. The display group exists only when at least one
-                // of its icons is honest to draw; Copy Code is always its own group.
-                if ((!imageMode && !showRemote) || readingModeOffered) {
+                // The row reads "Translate Resume | Show images | Copy Code" (#438): the literal `|`
+                // separates the AI group from the display group and the display group from Copy
+                // Code. The display group exists only when its icon is honest to draw; Copy Code is
+                // always its own group.
+                if (!showRemote) {
                     ReadingGroupSeparator()
-                }
-                if (!imageMode && !showRemote) {
                     IconButton(onClick = viewModel::showImagesOnce) {
                         Icon(Icons.Filled.Image, contentDescription = stringResource(R.string.message_show_images))
-                    }
-                }
-                if (readingModeOffered) {
-                    IconButton(onClick = { viewModel.setPlainText(!plainText) }) {
-                        Icon(
-                            if (plainText) Icons.Filled.Code else Icons.Filled.Description,
-                            contentDescription = stringResource(
-                                if (plainText) R.string.message_show_html else R.string.message_show_plain_text,
-                            ),
-                        )
                     }
                 }
                 ReadingGroupSeparator()
@@ -2023,7 +1950,7 @@ private fun MessageContent(
                 }
             },
         ) { tool ->
-            readingEmail?.let { runReaderTool(viewModel, tool, it, plainText, printDerivedNotice, printNoContent) }
+            readingEmail?.let { runReaderTool(viewModel, tool, it, printNoContent) }
         }
     }
     val senderRule = SenderRuleOffer(
@@ -2044,9 +1971,9 @@ private fun MessageContent(
     // there the ViewModel brings back whatever is kept for it (translation, summary) and does what
     // Configs switched on - nothing here decides that, it only says WHICH text.
     val hasBody = messages.firstOrNull()?.body != null
-    val readerFragment = remember(readingEmail, hasBody, plainText, printDerivedNotice, printNoContent) {
+    val readerFragment = remember(readingEmail, hasBody, printNoContent) {
         readingEmail?.takeIf { hasBody }
-            ?.let { readerBody(it, plainText, printDerivedNotice, printNoContent).fragment }
+            ?.let { readerBody(it, printNoContent).fragment }
     }
     LaunchedEffect(readerFragment) {
         val email = readingEmail
@@ -2112,7 +2039,6 @@ private fun MessageContent(
                 calendar = calendar,
                 onRespondToInvite = viewModel::respondToInvite,
                 textZoom = messageTextSize.zoom,
-                plainText = plainText,
                 replyBarEnabled = replyBarEnabled,
                 onBarVisibleChanged = viewModel::setReplyBarVisible,
                 onComposeTo = onComposeTo,
@@ -2176,11 +2102,6 @@ private fun ConversationBody(
     calendar: CalendarInvite?,
     onRespondToInvite: (String) -> Unit,
     textZoom: Int,
-    /** Read the message as text rather than as its HTML (#149). It selects the document below and
-     *  decides, with it, whether remote images are allowed at all — and nothing else here: the reveal
-     *  machinery is keyed on the message id, so a toggle rebuilds the document without putting the
-     *  spinner back over a body already on screen. */
-    plainText: Boolean,
     /** Whether the bottom Reply/Forward bar is wanted at all (#63). It gates the bar's visibility and
      *  the blank the document reserves for it, and NOTHING else. */
     replyBarEnabled: Boolean,
@@ -2235,13 +2156,6 @@ private fun ConversationBody(
     var bodyReady by remember(msg.id) { mutableStateOf(false) }
     val barReveal = remember(msg.id) { BarReveal() }
     var showBar by remember(msg.id) { mutableStateOf(false) }
-    // A reading-mode switch (#149) puts a DIFFERENT body under the same message id, so the geometry
-    // folded in so far is about a document that is gone: the newsletter's 8000 px range would outlive
-    // its 900 px flattening, and the bar would never come back in either mode.
-    // Keyed on `plainText` and on NOTHING else: the document is also rebuilt by an inline-image
-    // insert, a theme change or a header resize, and forgetting the range on those paths would take
-    // the bar away mid-read, which is exactly #63.
-    LaunchedEffect(plainText) { barReveal.documentReplaced() }
     // The VISIBLE Reply/Forward bar is fixed chrome at the pager level (#62): this page only reports
     // whether its state wants the bar. The invisible measuring copy below stays in-page — it only
     // reserves the bar's height in the document.
@@ -2327,26 +2241,23 @@ private fun ConversationBody(
                 val bottomSpacerCss = bodySpacerCss(bottomInsetPx, bodyViewportPx)
                 // The "derived text" and "no content" lines are resolved here, where a Composable can
                 // read resources, and handed to the document already localised.
-                val derivedNotice = stringResource(R.string.message_plain_text_derived)
                 val noContent = stringResource(R.string.message_no_content)
                 // The quote-fold button's label, resolved here for the same reason as the two
                 // above. A locale change recreates the activity, so it is safe in the key below.
                 val quoteLabel = stringResource(R.string.message_quoted_text)
                 val deceptiveLinkLabel = stringResource(R.string.message_link_goes_to)
-                // plainText is part of the key, or the toggle would change the mode and re-render the
-                // SAME document.
                 // The two spacers enter the key as the LENGTHS themselves, which depend on two
                 // screen measurements only — never on the page's scale. Anything a pinch can change
                 // must stay out of this key: it would rebuild the document under the reader's finger,
                 // flash white, send her back to the top and reset the zoom, in a loop.
                 val html = remember(
                     full, msg.inlineImages, emailTheme, topSpacerCss, bottomSpacerCss,
-                    plainText, derivedNotice, noContent, quoteLabel, deceptiveLinkLabel,
+                    noContent, quoteLabel, deceptiveLinkLabel,
                     translatedFragment,
                 ) {
                     buildHtmlDocument(
                         full, msg.inlineImages, emailTheme, topSpacerCss, bottomSpacerCss,
-                        plainText, derivedNotice, noContent, quoteLabel, deceptiveLinkLabel,
+                        noContent, quoteLabel, deceptiveLinkLabel,
                         translatedFragment = translatedFragment,
                     )
                 }
@@ -5096,8 +5007,6 @@ internal fun buildHtmlDocument(
     // the unit is `vh`; "0" is a valid CSS length and means "nothing measured yet".
     topSpacerCss: String = "0",
     bottomSpacerCss: String = "0",
-    plainText: Boolean = false,
-    derivedNotice: String = "",
     // NO DEFAULT, unlike every parameter above it. A default of "" would let a caller build the
     // document of a body-less message and get `<p></p>` back: the empty screen this string exists to
     // prevent. Whoever builds a document says what the reader is told when there is nothing to show.
@@ -5117,7 +5026,7 @@ internal fun buildHtmlDocument(
 ): String {
     // Which part of the message the document carries, and what that implies for the page, is
     // decided in ONE place a test can run — see [readerBody].
-    val body = readerBody(email, plainText, derivedNotice, noContent)
+    val body = readerBody(email, noContent)
     var inner = translatedFragment ?: body.fragment
     // The two rewrites below UNDO MARKUP the message wrote, so they apply only while the document
     // actually carries that markup — [ReaderBody.richHtml], NOT "the message has HTML" (#149). A body

@@ -166,9 +166,6 @@
     <!-- Message -->
     <string name="message_title_fallback">Mensaje</string>
     <string name="message_back">Atrás</string>
-    <string name="message_show_plain_text">Mostrar texto sin formato</string>
-    <string name="message_show_html">Mostrar HTML</string>
-    <string name="message_plain_text_derived">Texto derivado de la versión HTML.</string>
     <string name="message_show_images">Mostrar imágenes</string>
     <string name="message_copy_code">Copiar código</string>
     <string name="message_code_copied">Código copiado</string>
@@ -367,8 +364,6 @@
     <string name="settings_signature_below_quote_subtitle">En una respuesta, colocarla bajo el mensaje citado en vez de encima</string>
     <string name="settings_reply_bar_title">Barra de respuesta</string>
     <string name="settings_reply_bar_subtitle">Mostrar Responder y Reenviar en la parte inferior del mensaje. Con la barra desactivada, Responder a todos es el icono de la barra superior, y Responder y Reenviar están en su menú.</string>
-    <string name="settings_plain_text_title">Texto sin formato</string>
-    <string name="settings_plain_text_subtitle">Abrir los mensajes como texto en lugar de su HTML. El menú del lector sigue cambiando un mensaje concreto en cualquier sentido.</string>
     <string name="settings_signature_delimiter_title">Línea separadora antes de la firma</string>
     <string name="settings_signature_delimiter_subtitle">Otras aplicaciones de correo reconocen tu firma por esta línea «-- » y pueden ocultarla al citar tu mensaje; sin ella ya no pueden, y el campo de firma contiene entonces exactamente lo que se envía.</string>
     <string name="settings_swipe_right_title">Deslizar a la derecha</string>

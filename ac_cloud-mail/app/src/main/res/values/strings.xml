@@ -307,9 +307,6 @@
     <!-- Message -->
     <string name="message_title_fallback">Message</string>
     <string name="message_back">Back</string>
-    <string name="message_show_plain_text">Show plain text</string>
-    <string name="message_show_html">Show HTML</string>
-    <string name="message_plain_text_derived">Text derived from the HTML version.</string>
     <string name="message_show_images">Show images</string>
     <string name="message_copy_code">Copy Code</string>
     <string name="message_code_copied">Code copied</string>
@@ -692,8 +689,6 @@
     <string name="settings_signature_below_quote_subtitle">In a reply, put it under the quoted message instead of above it</string>
     <string name="settings_reply_bar_title">Reply bar</string>
     <string name="settings_reply_bar_subtitle">Show Reply and Forward at the bottom of a message. With the bar off, Reply all is the toolbar icon at the top, and Reply and Forward are in its menu.</string>
-    <string name="settings_plain_text_title">Plain text</string>
-    <string name="settings_plain_text_subtitle">Open messages as text instead of their HTML. The menu in an open message switches it either way.</string>
     <string name="settings_signature_delimiter_title">Separator line above the signature</string>
     <string name="settings_signature_delimiter_subtitle">Other mail apps recognise your signature by this “-- ” line and can hide it when quoting your message; without it they no longer can, and the signature field then holds exactly what is sent.</string>
     <string name="settings_swipe_right_title">Swipe right</string>

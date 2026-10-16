@@ -166,9 +166,6 @@
     <!-- Message -->
     <string name="message_title_fallback">Nachricht</string>
     <string name="message_back">Zurück</string>
-    <string name="message_show_plain_text">Klartext anzeigen</string>
-    <string name="message_show_html">HTML anzeigen</string>
-    <string name="message_plain_text_derived">Text aus der HTML-Fassung abgeleitet.</string>
     <string name="message_show_images">Bilder anzeigen</string>
     <string name="message_copy_code">Code kopieren</string>
     <string name="message_code_copied">Code kopiert</string>
@@ -367,8 +364,6 @@
     <string name="settings_signature_below_quote_subtitle">In einer Antwort unter die zitierte Nachricht setzen statt darüber</string>
     <string name="settings_reply_bar_title">Antwortleiste</string>
     <string name="settings_reply_bar_subtitle">Antworten und Weiterleiten am unteren Rand einer Nachricht anzeigen. Ohne die Leiste ist Allen antworten das Symbol oben, und Antworten und Weiterleiten stehen in deren Menü.</string>
-    <string name="settings_plain_text_title">Klartext</string>
-    <string name="settings_plain_text_subtitle">Nachrichten als Text statt als HTML öffnen. Das Menü im Lesebereich schaltet eine einzelne Nachricht weiterhin in beide Richtungen um.</string>
     <string name="settings_signature_delimiter_title">Trennzeile vor der Signatur</string>
     <string name="settings_signature_delimiter_subtitle">Andere E-Mail-Programme erkennen Ihre Signatur an dieser Zeile „-- “ und können sie beim Zitieren Ihrer Nachricht ausblenden; ohne sie geht das nicht mehr, und das Signaturfeld enthält dann genau das, was gesendet wird.</string>
     <string name="settings_swipe_right_title">Nach rechts wischen</string>

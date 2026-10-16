@@ -166,9 +166,6 @@
     <!-- Message -->
     <string name="message_title_fallback">Письмо</string>
     <string name="message_back">Назад</string>
-    <string name="message_show_plain_text">Показать обычный текст</string>
-    <string name="message_show_html">Показать HTML</string>
-    <string name="message_plain_text_derived">Текст получен из HTML-версии.</string>
     <string name="message_show_images">Показать изображения</string>
     <string name="message_copy_code">Скопировать код</string>
     <string name="message_code_copied">Код скопирован</string>
@@ -367,8 +364,6 @@
     <string name="settings_signature_below_quote_subtitle">В ответе размещать её под цитатой, а не над ней</string>
     <string name="settings_reply_bar_title">Панель ответа</string>
     <string name="settings_reply_bar_subtitle">Показывать «Ответить» и «Переслать» внизу сообщения. Без панели «Ответить всем» — значок на верхней панели, а «Ответить» и «Переслать» находятся в её меню.</string>
-    <string name="settings_plain_text_title">Обычный текст</string>
-    <string name="settings_plain_text_subtitle">Открывать письма как текст вместо HTML. Меню при чтении письма по-прежнему переключает отдельное письмо в обе стороны.</string>
     <string name="settings_signature_delimiter_title">Строка-разделитель перед подписью</string>
     <string name="settings_signature_delimiter_subtitle">Другие почтовые программы узнают вашу подпись по этой строке «-- » и могут скрывать её при цитировании письма; без неё они этого больше не смогут, а поле подписи будет содержать ровно то, что уходит в письме.</string>
     <string name="settings_swipe_right_title">Смахивание вправо</string>

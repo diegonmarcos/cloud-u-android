@@ -166,9 +166,6 @@
     <!-- Message -->
     <string name="message_title_fallback">Bericht</string>
     <string name="message_back">Terug</string>
-    <string name="message_show_plain_text">Platte tekst tonen</string>
-    <string name="message_show_html">HTML tonen</string>
-    <string name="message_plain_text_derived">Tekst afgeleid van de HTML-versie.</string>
     <string name="message_show_images">Afbeeldingen tonen</string>
     <string name="message_copy_code">Code kopiëren</string>
     <string name="message_code_copied">Code gekopieerd</string>
@@ -367,8 +364,6 @@
     <string name="settings_signature_below_quote_subtitle">Zet die in een antwoord onder het geciteerde bericht in plaats van erboven</string>
     <string name="settings_reply_bar_title">Antwoordbalk</string>
     <string name="settings_reply_bar_subtitle">Beantwoorden en Doorsturen onderaan een bericht tonen. Zonder de balk is Allen beantwoorden het pictogram in de balk bovenaan, en staan Beantwoorden en Doorsturen in het menu daarvan.</string>
-    <string name="settings_plain_text_title">Platte tekst</string>
-    <string name="settings_plain_text_subtitle">Berichten als tekst openen in plaats van als HTML. Het menu in de leesweergave schakelt een afzonderlijk bericht nog steeds beide kanten op.</string>
     <string name="settings_signature_delimiter_title">Scheidingsregel boven de ondertekening</string>
     <string name="settings_signature_delimiter_subtitle">Andere e-mailapps herkennen je ondertekening aan deze regel “-- ” en kunnen die verbergen bij het citeren van je bericht; zonder die regel kan dat niet meer, en het ondertekeningsveld bevat dan precies wat er wordt verzonden.</string>
     <string name="settings_swipe_right_title">Naar rechts vegen</string>

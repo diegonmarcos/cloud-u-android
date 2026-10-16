@@ -47,7 +47,7 @@ data class SettingsBackup(
     val signatureDelimiter: Boolean? = null,
     /** Whether the reader shows the Reply/Forward bar along the bottom of a message (#63). */
     val replyBar: Boolean? = null,
-    /** Whether a message opens as text rather than as its own HTML (#149). */
+    /** RETIRED: the reader has no plain-text mode any more. Still read from an old export, never applied. */
     val plainText: Boolean? = null,
     /** Whether a reply's quote line and a forward's Date header are written in UTC (#120). */
     val quotedDatesUtc: Boolean? = null,

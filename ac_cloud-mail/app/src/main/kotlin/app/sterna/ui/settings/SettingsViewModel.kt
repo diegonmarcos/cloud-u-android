@@ -9,7 +9,6 @@ import app.sterna.core.data.account.K9SettingsImporter
 import app.sterna.core.data.settings.LIST_MONOGRAM_DEFAULT
 import app.sterna.core.data.settings.ListDensity
 import app.sterna.core.data.settings.MessageTextSize
-import app.sterna.core.data.settings.PLAIN_TEXT_DEFAULT
 import app.sterna.core.data.settings.QUOTED_DATES_UTC_DEFAULT
 import app.sterna.core.data.settings.PreviewLines
 import app.sterna.core.data.settings.PURE_BLACK_DEFAULT
@@ -468,18 +467,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setReplyBar(enabled: Boolean) {
         viewModelScope.launch { settings.setReplyBar(enabled) }
-    }
-
-    // PLAIN_TEXT_DEFAULT, not a literal, as at replyBar above (#149). The reader seeds the same
-    // setting with null instead, deliberately: see MessageViewModel.
-    val plainText = settings.plainText.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = PLAIN_TEXT_DEFAULT,
-    )
-
-    fun setPlainText(enabled: Boolean) {
-        viewModelScope.launch { settings.setPlainText(enabled) }
     }
 
     // QUOTED_DATES_UTC_DEFAULT, not a literal, as at replyBar above (#120). The composer never

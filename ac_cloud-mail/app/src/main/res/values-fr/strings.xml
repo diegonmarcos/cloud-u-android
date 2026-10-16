@@ -166,9 +166,6 @@
     <!-- Message -->
     <string name="message_title_fallback">Message</string>
     <string name="message_back">Retour</string>
-    <string name="message_show_plain_text">Afficher le texte brut</string>
-    <string name="message_show_html">Afficher le HTML</string>
-    <string name="message_plain_text_derived">Texte dérivé de la version HTML.</string>
     <string name="message_show_images">Afficher les images</string>
     <string name="message_copy_code">Copier le code</string>
     <string name="message_code_copied">Code copié</string>
@@ -367,8 +364,6 @@
     <string name="settings_signature_below_quote_subtitle">Dans une réponse, la placer sous le message cité plutôt qu\'au-dessus</string>
     <string name="settings_reply_bar_title">Barre de réponse</string>
     <string name="settings_reply_bar_subtitle">Afficher Répondre et Transférer en bas d\'un message. Sans la barre, Répondre à tous est l\'icône de la barre du haut, et Répondre et Transférer sont dans son menu.</string>
-    <string name="settings_plain_text_title">Texte brut</string>
-    <string name="settings_plain_text_subtitle">Ouvrir les messages en texte plutôt qu\'en HTML. Le menu du lecteur bascule toujours un message précis dans un sens ou dans l\'autre.</string>
     <string name="settings_signature_delimiter_title">Ligne de séparation avant la signature</string>
     <string name="settings_signature_delimiter_subtitle">Les autres logiciels de messagerie reconnaissent votre signature à cette ligne « -- » et peuvent la masquer en citant votre message ; sans elle ils ne le peuvent plus, et le champ signature contient alors exactement ce qui est envoyé.</string>
     <string name="settings_swipe_right_title">Balayer vers la droite</string>

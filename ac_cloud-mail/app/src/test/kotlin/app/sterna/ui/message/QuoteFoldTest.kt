@@ -271,12 +271,14 @@ class QuoteFoldTest {
         }
     }
 
-    @Test fun `plain-text mode folds nothing`() {
+    @Test fun `a text-only message folds nothing`() {
         val doc = buildHtmlDocument(
-            richEmail(simple),
+            Email(
+            id = "1",
+            textBody = listOf(EmailBodyPart(partId = "t", type = "text/plain")),
+            bodyValues = mapOf("t" to EmailBodyValue(value = "> quoted\nhello")),
+        ),
             theme = light,
-            plainText = true,
-            derivedNotice = "DERIVED",
             noContent = noContent,
             quoteLabel = label,
         )

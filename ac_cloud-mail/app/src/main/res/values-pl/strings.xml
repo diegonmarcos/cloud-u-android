@@ -166,9 +166,6 @@
     <!-- Message -->
     <string name="message_title_fallback">Wiadomość</string>
     <string name="message_back">Wstecz</string>
-    <string name="message_show_plain_text">Pokaż zwykły tekst</string>
-    <string name="message_show_html">Pokaż HTML</string>
-    <string name="message_plain_text_derived">Tekst uzyskany z wersji HTML.</string>
     <string name="message_show_images">Pokaż obrazy</string>
     <string name="message_copy_code">Kopiuj kod</string>
     <string name="message_code_copied">Kod skopiowany</string>
@@ -367,8 +364,6 @@
     <string name="settings_signature_below_quote_subtitle">W odpowiedzi umieszczaj go pod cytowaną wiadomością zamiast nad nią</string>
     <string name="settings_reply_bar_title">Pasek odpowiedzi</string>
     <string name="settings_reply_bar_subtitle">Pokazuj Odpowiedz i Przekaż na dole wiadomości. Bez paska Odpowiedz wszystkim jest ikoną na górnym pasku, a Odpowiedz i Przekaż są w jego menu.</string>
-    <string name="settings_plain_text_title">Zwykły tekst</string>
-    <string name="settings_plain_text_subtitle">Otwieraj wiadomości jako tekst zamiast HTML. Menu w czytniku nadal przełącza pojedynczą wiadomość w obie strony.</string>
     <string name="settings_signature_delimiter_title">Wiersz oddzielający przed podpisem</string>
     <string name="settings_signature_delimiter_subtitle">Inne programy pocztowe rozpoznają Twój podpis po tym wierszu „-- ” i potrafią go ukryć przy cytowaniu wiadomości; bez niego już nie potrafią, a pole podpisu zawiera wtedy dokładnie to, co zostanie wysłane.</string>
     <string name="settings_swipe_right_title">Przesunięcie w prawo</string>
