@@ -26,7 +26,9 @@ class AdbIdentityTest {
 
     private fun derived(app: String): AdbIdentity {
         val b = JSONObject(File(repo(), "$app/build.json").readText())
-        return AdbIdentity.derive(b.getString("name"), b.getJSONObject("android").getString("application_id"), "unused.fallback")
+        // Nix-on-Droid and Termux declare no android.application_id (their build.json is a rootfs content-address input);
+        // the lib then presents the running package, so a missing id derives from the name, never throws.
+        return AdbIdentity.derive(b.getString("name"), b.optJSONObject("android")?.optString("application_id"), "unused.fallback")
     }
 
     @Test fun theStorePresentsAsCloudStoreAndNotAsTheSuperApp() {
