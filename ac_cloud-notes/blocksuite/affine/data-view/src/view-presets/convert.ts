@@ -1,5 +1,6 @@
 import { createViewConvert } from '../core/view/convert.js';
 import { calendarViewModel } from './calendar/index.js';
+import { galleryViewModel } from './gallery/index.js';
 import { kanbanViewModel } from './kanban/index.js';
 import { tableViewModel } from './table/index.js';
 
@@ -12,7 +13,26 @@ const calendarCardToHeader = (card?: { titleColumnId?: string }) => ({
   titleColumn: card?.titleColumnId,
 });
 
+const headerToGalleryCard = (header?: { titleColumn?: string }) => ({
+  titleColumnId: header?.titleColumn,
+  visiblePropertyIds: [],
+});
+
+const galleryCardToHeader = (card?: { titleColumnId?: string }) => ({
+  titleColumn: card?.titleColumnId,
+});
+
 export const viewConverts = [
+  createViewConvert(tableViewModel, galleryViewModel, data => ({
+    filter: data.filter,
+    sort: data.sort,
+    card: headerToGalleryCard(data.header),
+  })),
+  createViewConvert(galleryViewModel, tableViewModel, data => ({
+    filter: data.filter,
+    sort: data.sort,
+    header: galleryCardToHeader(data.card),
+  })),
   createViewConvert(tableViewModel, kanbanViewModel, data => ({
     filter: data.filter,
     header: data.header,

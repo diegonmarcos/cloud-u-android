@@ -216,6 +216,34 @@ jobs:
           IMG="ghcr.io/${{ github.repository_owner }}/cloud-notes-sync"
           docker buildx build --platform linux/amd64,linux/arm64 -t "$IMG:latest" -t "$IMG:${{ github.sha }}" --push ac_cloud-notes/sync-server
 
+  # Notion / Miro pillar features live in blocksuite packages; their unit specs run here
+  # (a real yarn install, the packages' own vitest config), so a feature without a test cannot ship green.
+  blocksuite_tests:
+    name: "Blocksuite unit tests (data-view: gallery, relations, rollups)"
+    needs: storage_tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22.23.2
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+
+      - name: yarn install (immutable)
+        working-directory: ac_cloud-notes
+        run: yarn install --immutable
+
+      - name: data-view unit specs
+        working-directory: ac_cloud-notes/blocksuite/affine/data-view
+        run: |
+          NO_COLOR=1 yarn vitest run 2>&1 | tee /tmp/dv.log
+          sed 's/\x1b\[[0-9;]*m//g' /tmp/dv.log > /tmp/dv.plain
+          grep -Eq "Test Files .* passed" /tmp/dv.plain && ! grep -Eq "failed" /tmp/dv.plain || { echo "::error::data-view specs did not all pass"; exit 1; }
+          grep -q "gallery.unit.spec" /tmp/dv.plain || { echo "::error::the gallery spec did not run"; exit 1; }
+
   build_and_publish:
     needs: storage_tests
     name: "Build + publish (notes · arm64-v8a)"
