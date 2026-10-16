@@ -336,9 +336,9 @@ step_instrument() {
   _resolve_media_keys
   _export_variant_abis
   if [ -n "${INSTRUMENT_CLASS:-}" ]; then
-    run_gradle :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=${INSTRUMENT_CLASS}"
+    run_gradle -PnoMinify :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=${INSTRUMENT_CLASS}"
   else
-    run_gradle :app:connectedDebugAndroidTest
+    run_gradle -PnoMinify :app:connectedDebugAndroidTest
   fi
 }
 step_lint()       { log "Lint"; in_nix gradle lint; }
