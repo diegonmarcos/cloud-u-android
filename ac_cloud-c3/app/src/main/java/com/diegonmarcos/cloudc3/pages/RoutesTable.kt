@@ -319,7 +319,7 @@ private fun LightSheet(
             if (legs.isEmpty()) Text("No endpoint to check.", color = c.onSurface, style = MaterialTheme.typography.bodyMedium)
             legs.forEach { (leg, target) ->
                 val r = probe?.legs?.get(leg)
-                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag(RoutesTags.leg(leg.id))) {
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag(RoutesTags.leg(leg.id)).semantics(mergeDescendants = true) {}) {
                     Text("${leg.label}: ${r?.status?.name ?: "NOT CHECKED"}", fontWeight = FontWeight.SemiBold,
                         color = c.onSurface, style = MaterialTheme.typography.bodyMedium)
                     Text(target, color = c.primary, style = MaterialTheme.typography.bodySmall)
