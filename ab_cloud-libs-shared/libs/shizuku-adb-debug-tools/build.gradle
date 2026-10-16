@@ -67,6 +67,10 @@ def sfcCfgB64 = groovy.json.JsonOutput.toJson(sfcCfg).bytes.encodeBase64().toStr
 // shizuku_client is a terminal-owned block the SuperApp never redeclares.
 def shizukuClientJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
 def shizukuClient    = shizukuClientJson.shizuku_client ?: [:]
+// The HOST app's own identity (name + application_id): AdbIdentity derives the pairing label, key subject and the
+// state scope from these, so nothing about the adb identity is typed in Kotlin. rootDir is the CONSUMING app.
+def hostAppName = (shizukuClientJson.name ?: '') as String
+def hostAppId   = (shizukuClientJson.android?.application_id ?: '') as String
 def shizukuClientB64 = groovy.json.JsonOutput.toJson(shizukuClient).bytes.encodeBase64().toString()
 
 // ── Declared needs (consumer-owned) ─────────────────────────────────
@@ -97,6 +101,8 @@ android {
         buildConfigField "String", "SFC_CONFIG_B64",          "\"${sfcCfgB64}\""
         buildConfigField "String", "SHIZUKU_CLIENT_B64",      "\"${shizukuClientB64}\""
         buildConfigField "String", "CHANNEL_NEEDS_B64",       "\"${privilegedChannelB64}\""
+        buildConfigField "String", "HOST_APP_NAME",           "\"${hostAppName}\""
+        buildConfigField "String", "HOST_APP_ID",             "\"${hostAppId}\""
     }
     buildFeatures {
         buildConfig = true

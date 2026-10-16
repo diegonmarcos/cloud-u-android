@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.updater
 
 import android.content.Context
 import com.diegonmarcos.superapp.core.FleetAlerts
+import com.diegonmarcos.superapp.core.StoreNotifyPrefs
 
 /**
  * #894 One alert per unattended pass, not one per app.
@@ -149,6 +150,9 @@ object PassLedgerStore {
             val s = load(ctx)
             when {
                 PassLedger.shouldRaise(s) -> {
+                    // Configs ▸ Notifications: the pass summary is "Failures" when anything failed, else "Install done".
+                    val kind = if (s.failed.isNotEmpty()) StoreNotifyPrefs.Kind.FAILURES else StoreNotifyPrefs.Kind.INSTALL_DONE
+                    if (!StoreNotifyPrefs.allows(ctx, kind, StoreNotifyPrefs.Channel.PUSH)) return
                     FleetAlerts.raise(ctx, FleetAlerts.Alert(
                         title = PassLedger.title(s) ?: return,
                         text = PassLedger.text(s, UpdaterHost.storeName),

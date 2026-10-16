@@ -45,7 +45,7 @@ object AdbShellServer {
 
         val server = ServerSocket(port, 8, InetAddress.getByName("127.0.0.1"))
         val uid = runCatching { android.os.Process.myUid() }.getOrDefault(-1)
-        System.out.println("superapp-adb: listening 127.0.0.1:$port (uid=$uid)")
+        System.out.println("adb-shell-server: listening 127.0.0.1:$port (uid=$uid)")
         System.out.flush()
 
         while (true) {

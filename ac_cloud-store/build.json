@@ -265,8 +265,8 @@
       ]
     },
     "unit": {
-      "_doc": "The shared top bar's Compose UI suite (libs:bottomnav AppTopBarTest, Robolectric, no emulator): the drawer a page supplies, the AI panel, the Settings dropdown, the Cloud Account launch intent and the Configs callback, run through THIS app because it is the first app to adopt AppTopBar. Scoped to :libs:bottomnav so a sibling lib's suite cannot turn this release red. Run by the ship workflow's 'JVM unit tests' step, after the JDK/SDK and the vault key (this project cannot configure without the shared key), through build.sh test.",
-      "task": ":libs:bottomnav:testDebugUnitTest",
+      "_doc": "The shared top bar's Compose UI suite (libs:bottomnav AppTopBarTest, Robolectric, no emulator): the drawer a page supplies, the AI panel, the Settings dropdown, the Cloud Account launch intent and the Configs callback, run through THIS app because it is the first app to adopt AppTopBar. `storeUnitTests` (this app's root build.gradle) runs :libs:bottomnav (the top bar, the page strip, the Configs menu over the declared pages), :libs:shizuku-adb-debug-tools (per-app ADB identity and state scope) and :libs:core (the notification matrix), and nothing else, so a sibling lib's suite cannot turn this release red. Run by the ship workflow's 'JVM unit tests' step, after the JDK/SDK and the vault key (this project cannot configure without the shared key), through build.sh test.",
+      "task": "storeUnitTests",
       "enabled": true
     }
   },
@@ -284,7 +284,7 @@
       "access"
     ],
     "top_bar": {
-      "_doc": "THE first row of the app (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger that opens a side drawer the CURRENT page fills (MainActivity's StoreDrawer: the Store's sections and the open section's pages), the title, and two circular buttons: AI (libs:ai's chat in an anchored panel) and Settings (Account launches Cloud Account, Configs opens the Settings section below). Settings left the island for the top bar's Settings > Configs: the section stays declared (it is the page Configs opens, and `tab=settings` still lands on it) but is no longer a bottom_nav id. No app draws its own copy of this row (cloud-android-top-bar-guard).",
+      "_doc": "THE first row of the app (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger that opens a side drawer the CURRENT page fills (MainActivity's StoreDrawer: the Store's sections and the open section's pages), the title, and two circular buttons: AI (libs:ai's chat in an anchored panel) and Settings (Account launches Cloud Account, Configs opens the Settings section below). Settings left the island for the top bar's Settings > Configs, which is a PAGE with its own top tabs (Sources | ADB Shell | AI | Notifications | About, the `settings` section's pages below, drawn by PageTabs and filled by ConfigsPage; test-store-configs-pages.sh holds the set): the section stays declared (it is the page Configs opens, and `tab=settings` still lands on it) but is no longer a bottom_nav id. No app draws its own copy of this row (cloud-android-top-bar-guard).",
       "drawer": true,
       "ai": true,
       "settings": [
@@ -360,7 +360,28 @@
         "id": "settings",
         "label": "Settings",
         "icon": "settings",
-        "pages": []
+        "pages": [
+          {
+            "id": "sources",
+            "label": "Sources"
+          },
+          {
+            "id": "adb",
+            "label": "ADB Shell"
+          },
+          {
+            "id": "ai",
+            "label": "AI"
+          },
+          {
+            "id": "notifications",
+            "label": "Notifications"
+          },
+          {
+            "id": "about",
+            "label": "About"
+          }
+        ]
       }
     ],
     "default_section": "cloud"

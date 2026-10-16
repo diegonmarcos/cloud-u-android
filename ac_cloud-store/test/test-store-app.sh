@@ -120,7 +120,8 @@ check() {
   # the settings line names the source that really answered (never "SuperApp" for a token Cloud Account supplied)
   printf '%s' "$fb" | grep -q 'enum class Source { ACCOUNT, SUPERAPP, OWN, NONE }' && printf '%s' "$fb" | grep -q 'fromAccount(ctx).isNotEmpty() -> Source.ACCOUNT' && printf '%s' "$fb" | grep -q 'fromSuperApp(ctx).isNotEmpty() -> Source.SUPERAPP' && ok "FleetBearer.source tells Cloud Account from SuperApp, in the resolve order" || bad "FleetBearer.source does not name Cloud Account / SuperApp separately"
   local ma; ma="$(strip "$S/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt")"
-  printf '%s' "$ma" | grep -q 'Source.ACCOUNT -> "Supplied by Cloud Account' && printf '%s' "$ma" | grep -q 'Source.SUPERAPP -> "Supplied by Cloud SuperApp' && printf '%s' "$ma" | grep -q 'Source.OWN -> "Using the token entered below' && ok "the Store's bearer line names its real source (Account, SuperApp or its own entry)" || bad "the Store's bearer line does not name Cloud Account / SuperApp / its own entry"
+  local cp; cp="$(strip "$S/app/src/main/java/com/diegonmarcos/cloudstore/ConfigsPage.kt")"
+  printf '%s' "$cp" | grep -q 'Source.ACCOUNT -> "Supplied by Cloud Account' && printf '%s' "$cp" | grep -q 'Source.SUPERAPP -> "Supplied by Cloud SuperApp' && printf '%s' "$cp" | grep -q 'Source.OWN -> "Using the token entered below' && ok "the Store's bearer line names its real source (Account, SuperApp or its own entry)" || bad "the Store's bearer line does not name Cloud Account / SuperApp / its own entry"
   local pv; pv="$(strip "$P/cloud/FleetBearerProvider.kt")"
   printf '%s' "$pv" | grep -q 'checkCallingPermission(FleetConfig.PERMISSION)' && printf '%s' "$pv" | grep -q 'method != FleetBearer.METHOD_BEARER' && ok "provider re-checks CONSTELLATION_DATA in call() and serves one method" || bad "provider does not re-check the permission or accepts other methods"
   python3 - "$PM" <<'PY' && ok "manifest exports the provider behind CONSTELLATION_DATA" || bad "provider missing from the manifest or not signature-guarded"
@@ -129,7 +130,7 @@ m = re.search(r'<provider\b[^>]*FleetBearerProvider[^>]*>', open(sys.argv[1], en
 sys.exit(0 if m and 'fleetbearer' in m.group(0) and 'permission.CONSTELLATION_DATA' in m.group(0) else 1)
 PY
   if printf '%s%s' "$pv" "$fb" | grep -Eq 'Log\.|println|\.bearerToken *=|DaguPrefs\(ctx\)\.edit|\.clear\('; then bad "the bearer path logs or writes the token"; else ok "the bearer path never logs and the provider never writes"; fi
-  grep -q 'TAB_SETTINGS' "$MA" && grep -q 'FleetBearer.Own(' "$MA" && ok "Cloud Store has a token entry in its settings" || bad "Cloud Store has no token entry"
+  grep -q 'TAB_SETTINGS' "$MA" && grep -q 'ConfigsPage(pageOf' "$MA" && grep -q 'FleetBearer.Own(' "$S/app/src/main/java/com/diegonmarcos/cloudstore/ConfigsPage.kt" && ok "Cloud Store has a token entry in Configs > Sources" || bad "Cloud Store has no token entry"
   # 6. #869 density
   local DN="$L/StoreDensity.kt"
   [ -f "$DN" ] || { bad "StoreDensity.kt (the density declaration) is missing"; return $((fails+1)); }
@@ -140,7 +141,7 @@ v = [float(re.search(r'const val %s = ([0-9.]+)f' % n, s).group(1)) if re.search
 sys.exit(0 if 'object StoreDensity' in s and all(0 < x < 1 for x in v) else 1)
 PY
   local lit=0 f
-  for f in "$L"/*.kt "$LA"/*.kt "$MA" "$S"/app/src/main/java/com/diegonmarcos/cloudstore/FeedPage.kt "$S"/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt; do
+  for f in "$L"/*.kt "$LA"/*.kt "$MA" "$S"/app/src/main/java/com/diegonmarcos/cloudstore/ConfigsPage.kt "$S"/app/src/main/java/com/diegonmarcos/cloudstore/FeedPage.kt "$S"/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt; do
     [ "$(basename "$f")" = StoreDensity.kt ] && continue
     if strip "$f" | grep -Eq 'dp\([^()]+(\(\))?, *[0-9]+\)|textSize *= *[0-9.]+f|, *[0-9]{2}f *[,)]|[0-9] *\* *[a-z]*\.?resources\.displayMetrics\.density|[1-9][0-9.]*\.(dp|sp)\b'; then
       echo "    size literal in $(basename "$f")"; lit=$((lit+1)); fi
@@ -152,7 +153,7 @@ PY
     grep -qE 'fun (dp|sdp)\(' "$f" && ! grep -qE 'fun dp\(ctx: Context, v: Int\) = StoreDensity.dp\(ctx, v\)|fun sdp\(step: Int\): Dp = StoreDensity.dpValue\(step\).dp' "$f" && nodel=$((nodel+1))
   done
   [ $nodel -eq 0 ] && ok "every local dp helper delegates to StoreDensity" || bad "$nodel dp helper(s) scale on their own"
-  grep -q 'StoreDensity\.' "$MA" && ok "Cloud Store's screens read StoreDensity" || bad "Cloud Store's MainActivity does not read StoreDensity"
+  grep -q 'StoreDensity\.' "$S/app/src/main/java/com/diegonmarcos/cloudstore/ConfigsPage.kt" && ok "Cloud Store's screens read StoreDensity" || bad "Cloud Store's Configs page does not read StoreDensity"
   grep -q 'StoreDensity\.T_' "$L/StoreCloudFragment.kt" && grep -q 'StoreDensity\.T_' "$L/StorePhoneFragment.kt" && ok "the Cloud and Phone shelves draw their type from the ramp" || bad "a shelf page does not use the StoreDensity type ramp"
   # 7. #868 the fleet nav pattern: the island's five pages (#896) are build.json::ui.sections, the bar is the shared island
   python3 - "$S/build.json" "$L/../../../../../assets/appstore-feeds.json" <<'PY' && ok "ui.bottom_nav is cloud, phone, feed, access (four, each a ui.sections id; settings is the section the top bar's Configs opens), Phone's pages are installed|search|declared, Feed's the declared feeds, Access's mesh|ipc|android|cloud, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, feed, access (+ the settings section)"
@@ -264,14 +265,14 @@ mutate "StoreDns loses the preset hook" lib/StoreDns.kt '@Volatile var resolve:'
 mutate "Cloud Store feeds lose the bearer" "$A" 'FleetBearer.resolve(this)' '""' || M=$((M+1))
 mutate "own token preferred over the fleet's" lib/FleetBearer.kt 'fromAccount(ctx).ifEmpty { fromSuperApp(ctx) }.ifEmpty { Own(ctx).token.trim() }' 'Own(ctx).token.trim().ifEmpty { fromAccount(ctx) }.ifEmpty { fromSuperApp(ctx) }' || M=$((M+1))
 mutate "a token from Cloud Account labelled SuperApp" lib/FleetBearer.kt 'fromAccount(ctx).isNotEmpty() -> Source.ACCOUNT' 'fromAccount(ctx).isNotEmpty() -> Source.SUPERAPP' || M=$((M+1))
-mutate "the bearer line loses Cloud Account" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'Source.ACCOUNT -> "Supplied by Cloud Account' 'Source.ACCOUNT -> "Supplied by Cloud SuperApp' || M=$((M+1))
+mutate "the bearer line loses Cloud Account" store/app/src/main/java/com/diegonmarcos/cloudstore/ConfigsPage.kt 'Source.ACCOUNT -> "Supplied by Cloud Account' 'Source.ACCOUNT -> "Supplied by Cloud SuperApp' || M=$((M+1))
 mutate "provider skips the permission re-check" super/cloud/FleetBearerProvider.kt 'checkCallingPermission(FleetConfig.PERMISSION)' 'checkCallingPermission("x")' || M=$((M+1))
 mutate "provider unguarded in the manifest" super.xml 'android:authorities="${applicationId}.fleetbearer"
             android:exported="true"
             android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"' 'android:authorities="${applicationId}.fleetbearer"
             android:exported="true"' || M=$((M+1))
 mutate "provider logs the token" super/cloud/FleetBearerProvider.kt 'return Bundle().apply { putBoolean(FleetBearer.KEY_OK, true)' 'android.util.Log.i("x", token); return Bundle().apply { putBoolean(FleetBearer.KEY_OK, true)' || M=$((M+1))
-mutate "Cloud Store loses the token entry" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'FleetBearer.Own(' 'FleetBearer.Ownx(' || M=$((M+1))
+mutate "Cloud Store loses the token entry" store/app/src/main/java/com/diegonmarcos/cloudstore/ConfigsPage.kt 'FleetBearer.Own(' 'FleetBearer.Ownx(' || M=$((M+1))
 mutate "a dp literal back in the Cloud shelf" lib/StoreCloudFragment.kt 'verticalScroll(scroll).padding(sdp(StoreDensity.S12))' 'verticalScroll(scroll).padding(14.dp)' || M=$((M+1))
 mutate "a font size literal back in the Phone shelf" lib/StorePhoneFragment.kt 'color = Ink.WHITE.ink(), fontSize = StoreDensity.T_TITLE.sp,
                     fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))' 'color = Ink.WHITE.ink(), fontSize = 14.sp,
@@ -279,7 +280,7 @@ mutate "a font size literal back in the Phone shelf" lib/StorePhoneFragment.kt '
 mutate "a note size literal back in the mesh" lib/AppsMesh.kt 'size = StoreDensity.T_BODY, color = if (gaps.isEmpty()) GREEN else RED' 'size = 13.sp.value, color = if (gaps.isEmpty()) GREEN else RED' || M=$((M+1))
 mutate "density turned off" lib/StoreDensity.kt 'const val SCALE = 0.7f' 'const val SCALE = 1.0f' || M=$((M+1))
 mutate "declaration deleted" lib/StoreDensity.kt 'object StoreDensity' 'object Other' || M=$((M+1))
-mutate "Cloud Store hardcodes a dp" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'padding(top = StoreDensity.dpValue(StoreDensity.S8).dp)' 'padding(top = 8.dp)' || M=$((M+1))
+mutate "Cloud Store hardcodes a dp" store/app/src/main/java/com/diegonmarcos/cloudstore/ConfigsPage.kt 'padding(top = StoreDensity.dpValue(StoreDensity.S8).dp)' 'padding(top = 8.dp)' || M=$((M+1))
 mutate "a helper scales on its own" lib/StoreBar.kt 'internal fun sdp(step: Int): Dp = StoreDensity.dpValue(step).dp' 'internal fun sdp(step: Int): Dp = step.dp' || M=$((M+1))
 
 echo "== RESULT: real tree $REAL failure(s), $M mutation(s) not caught =="

@@ -11,6 +11,9 @@
 #   G3  every app whose gradle links the lib exposes the page and declares build.json::privileged_channel.needs
 #   G4  the page is ONE composable, with no minimum height and no Material Button (which reserves 40 dp)
 #   G5  the chips (Store bar, Permissions, Dev control) open the page rather than carry a control
+#   G6  every app presents ITS OWN identity: the lib hard-codes no app label (pairing name, key subject, server
+#       process name) and derives them from the host's build.json (AdbIdentity); the Store's channel status is
+#       held per package (AdbScope), so it never reads another app's state
 # Then each violation is planted in a scratch copy and must turn a check red.
 #
 # Usage: ./test-adb-shell-one-place.sh
@@ -107,13 +110,30 @@ for f, why in (("ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarc
 pp = code("ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/PermsPage.kt")
 ok('go("setup", "adb-shell")' in pp, "Account's Perms page links to Setup > ADB Shell", "Account's Perms page does not link to the ADB Shell page")
 
+# G6: per-app identity (the lib derives it from the HOST's build.json; no app's label is typed in the shared code)
+LIB = "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools"
+adbsrc = f"{LIB}/src/main/java/com/diegonmarcos/superapp/adbdebug"
+lit = re.compile(r'"[^"\n]*(CloudSuperApp|superapp-ad[b\[])[^"\n]*"')
+hard = [p for p in sources if p.startswith(LIB + "/src/main") and lit.search(code(p))]
+ok(not hard, "no shared ADB code hard-codes an app label (pairing name, key subject, server process)", "hard-coded app identity in the shared ADB code: " + ", ".join(hard))
+am = code(f"{adbsrc}/AdbManager.kt")
+ok("identity.deviceName" in am and "identity.certSubject" in am and "AdbIdentity.host(" in am, "AdbManager names the pairing and the key from the host's AdbIdentity", "AdbManager does not derive its pairing name and key subject from AdbIdentity")
+gr = open(f"{R}/{LIB}/build.gradle", encoding="utf-8").read()
+ok("HOST_APP_NAME" in gr and "HOST_APP_ID" in gr and "shizukuClientJson.name" in gr, "the lib bakes the consuming app's build.json name + application_id", "the lib does not bake HOST_APP_NAME / HOST_APP_ID from the consuming build.json")
+ss = code("ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreStatus.kt")
+ok("AdbScope" in ss and "packageName" in ss and not re.search(r"@Volatile\s+private\s+var\s+probe\b", ss), "the Store bar's channel status is held per package (AdbScope)", "StoreStatus keeps one process-wide probe that any app's state could fill")
+bs = code(f"{adbsrc}/AdbShellBootstrap.kt")
+ok("niceName()" in bs.split("pkill", 1)[1][:80] if "pkill" in bs else False, "restarting the server kills THIS app's process name, never another app's", "the server restart kills a hard-coded process name")
+
 if mode == "--files":
     keep = set(allow_files) | {h["file"] for h in hosts.values()} | {f"{pdir}/{f}" for f in pg["files"]}
     keep |= {f"{pg['lib']}/src/main/AndroidManifest.xml", "1_cicd/src/data/adb-shell-one-place.json",
              "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreBar.kt",
              "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs/PermissionsFragment.kt",
              "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/devcontrol/DevControlFragment.kt",
-             "ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/PermsPage.kt"}
+             "ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/PermsPage.kt",
+             f"{adbsrc}/AdbManager.kt", f"{adbsrc}/AdbShellBootstrap.kt", f"{LIB}/build.gradle",
+             "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreStatus.kt"}
     keep |= {f"{a}/build.json" for a in hosts} | {f"{a}/privileged-channel.json" for a in hosts}
     for c in consumers:
         for g in ("app/build.gradle", "build.gradle", "settings.gradle"):
@@ -155,7 +175,12 @@ mutate "a new place opens Developer options" $A/devcontrol/DevControlFragment.kt
 mutate "Shizuku prompt in a screen" $A/configs/PermissionsFragment.kt '' $'\nfun s(c: android.content.Context) { ShizukuStatus.act(c) }\n' || M=$((M+1))
 mutate "a stale allowlist entry" $A/system/PrivilegedPlaneWorker.kt 'EmbeddedAdbChannel.autoConnect(' 'EmbeddedAdbChannel.everPaired(' || M=$((M+1))
 mutate "Termux loses its page entry" ac_cloud-termux/app/src/main/java/com/termux/app/activities/SettingsActivity.java 'AdbShellLink.INSTANCE.open(' 'Unit.open(' || M=$((M+1))
-mutate "Store loses its page" $S/MainActivity.kt 'AdbShellPage()' 'Unit' || M=$((M+1))
+mutate "Store loses its page" $S/ConfigsPage.kt 'AdbShellPage()' 'Unit' || M=$((M+1))
+mutate "the Store pairs under the SuperApp's name" $P/AdbManager.kt 'getDeviceName(): String = identity.deviceName' 'getDeviceName(): String = "CloudSuperApp"' || M=$((M+1))
+mutate "the key subject is the SuperApp's" $P/AdbManager.kt 'X500Name(identity.certSubject)' 'X500Name("CN=cloud-superapp, OU=adbdebug")' || M=$((M+1))
+mutate "a server restart kills the SuperApp's process" $P/AdbShellBootstrap.kt "pkill -f '\${niceName().dropLast(1)}[\${niceName().last()}]'" "pkill -f 'superapp-ad[b]'" || M=$((M+1))
+mutate "the identity is no longer baked from the host" ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/build.gradle 'HOST_APP_NAME' 'HOST_APP_NAMEX' || M=$((M+1))
+mutate "the Store status is one process-wide probe" ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreStatus.kt 'private val probes = AdbScope<ControlStatus.Probe>()' '@Volatile private var probe: ControlStatus.Probe? = null' || M=$((M+1))
 mutate "Store drops its declared needs" ac_cloud-store/build.json '"privileged_channel"' '"privileged_channel_x"' || M=$((M+1))
 mutate "Nix-on-Droid drops its declared needs" ac_cloud-nix-on-droid/privileged-channel.json '"needs"' '"needs_x"' || M=$((M+1))
 mutate "a sixth app links the lib with no page" ac_cloud-fake/app/build.gradle '' $'dependencies { implementation project(\':libs:shizuku-adb-debug-tools\') }\n' || M=$((M+1))

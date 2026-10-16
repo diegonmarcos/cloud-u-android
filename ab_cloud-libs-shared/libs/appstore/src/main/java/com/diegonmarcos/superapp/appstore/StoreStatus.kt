@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.appstore
 
 import android.content.Context
+import com.diegonmarcos.superapp.adbdebug.AdbScope
 import com.diegonmarcos.superapp.adbdebug.ChannelMode
 import com.diegonmarcos.superapp.adbdebug.ChannelModePrefs
 import com.diegonmarcos.superapp.adbdebug.ControlStatus
@@ -19,27 +20,30 @@ import kotlin.concurrent.thread
  */
 internal object StoreStatus {
 
-    @Volatile private var probe: ControlStatus.Probe? = null
+    /** The probe belongs to ONE app: [AdbScope] serves it only to the package it was built for, so a status measured
+     *  over another app's connection, keys or server is never shown here. */
+    private val probes = AdbScope<ControlStatus.Probe>()
     @Volatile private var ppViaShell: ControlStatus.Tri? = null
     private val running = AtomicBoolean(false)
 
-    private fun probe(ctx: Context): ControlStatus.Probe = probe ?: synchronized(this) {
-        probe ?: ControlStatus.Probe(object : ControlStatus.Backend {
+    private fun probe(ctx: Context): ControlStatus.Probe = probes.get(ctx.packageName) {
+        ControlStatus.Probe(object : ControlStatus.Backend {
             val app = ctx.applicationContext
             override fun paired() = EmbeddedAdbChannel.everPaired(app)
             override fun id(): Pair<String, String?>? =
                 ShellChannels.active(app)?.let { it.name() to it.exec(app, "id") }
             override fun shizukuState() =
                 if (ChannelModePrefs.current(app) == ChannelMode.SHIZUKU) ShizukuStatus.current(app) else null
-        }).also {
-            probe = it
-            // Switching the mode re-probes at once; the install route already follows (it reads the mode per call).
-            ChannelModePrefs.addListener { invalidate() }
-        }
+        })
     }
 
-    fun channel(): ControlStatus.ChannelStatus? = probe?.peek()
-    fun fresh(): Boolean = probe?.fresh() == true
+    init {
+        // Switching the mode re-probes at once; the install route already follows (it reads the mode per call).
+        ChannelModePrefs.addListener { invalidate() }
+    }
+
+    fun channel(ctx: Context): ControlStatus.ChannelStatus? = probes.peek(ctx.packageName)?.peek()
+    fun fresh(ctx: Context): Boolean = probes.peek(ctx.packageName)?.fresh() == true
 
     /** Cheap provider read; falls back to the last shell-read answer when the provider has none. */
     fun playProtect(ctx: Context): ControlStatus.Tri {
@@ -47,7 +51,7 @@ internal object StoreStatus {
         return if (t == ControlStatus.Tri.UNKNOWN) ppViaShell ?: t else t
     }
 
-    fun invalidate() { probe?.invalidate(); ppViaShell = null }
+    fun invalidate() { probes.current { it.invalidate() }; ppViaShell = null }
 
     /** Re-probe off the main thread (single flight), then [done] (call-site posts to the UI). */
     fun refresh(ctx: Context, done: () -> Unit) {

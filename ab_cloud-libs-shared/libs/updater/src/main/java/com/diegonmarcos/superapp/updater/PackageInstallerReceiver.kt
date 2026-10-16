@@ -17,6 +17,7 @@ import com.diegonmarcos.superapp.core.FleetAlerts
 import com.diegonmarcos.superapp.core.NotificationStore
 import com.diegonmarcos.superapp.core.SilentChannels
 import com.diegonmarcos.superapp.core.StoreNotifyGate
+import com.diegonmarcos.superapp.core.StoreNotifyPrefs
 
 /**
  * Receives PackageInstaller status callbacks. Forwards the system
@@ -420,6 +421,8 @@ class PackageInstallerReceiver : BroadcastReceiver() {
      *  "shown" and the caller must not tell anyone to tap it (#588). */
     private fun notifyConfirm(context: Context, confirm: Intent, subject: String): Boolean =
         StoreNotifyGate.mayPost(context) && runCatching {
+            // Configs ▸ Notifications: "update available" on the notification channel (default on).
+            if (!StoreNotifyPrefs.allows(context, StoreNotifyPrefs.Kind.UPDATE_AVAILABLE, StoreNotifyPrefs.Channel.PUSH)) return@runCatching false
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             // Silent in Cloud Store (a new "_silent_v2" channel, LOW: no sound, no pop-up), unchanged elsewhere.
             val channel = SilentChannels.ensure(context, NOTIF_CHANNEL, "Updater", NotificationManager.IMPORTANCE_HIGH)
@@ -453,12 +456,16 @@ class PackageInstallerReceiver : BroadcastReceiver() {
         // #894 Store / update messages are Cloud Store's: this package posts none (no feed entry,
         // no toast, no alert).
         if (!StoreNotifyGate.mayPost(context)) return
+        // Configs ▸ Notifications: a failure is "Failures", any other result "Install done"; each on its own two channels.
+        val kind = if (severity == NotificationStore.Sev.ERROR) StoreNotifyPrefs.Kind.FAILURES else StoreNotifyPrefs.Kind.INSTALL_DONE
+        val toFeed = StoreNotifyPrefs.allows(context, kind, StoreNotifyPrefs.Channel.IN_APP)
+        val toPush = StoreNotifyPrefs.allows(context, kind, StoreNotifyPrefs.Channel.PUSH)
         // Mirror into the in-app feed so the launcher badge AND the
         // Cloud-SuperApp Notifications panel reflect the same event.
         // Without this push the framework notification (and its badge)
         // shows up but the in-app list stays empty — exactly the bug
         // the user reported.
-        runCatching {
+        if (toFeed) runCatching {
             NotificationStore.push(
                 ctx      = context,
                 source   = "Updater",
@@ -479,6 +486,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
         val unattended = runCatching { AutoUpdatePrefs.unattendedPass(context) }.getOrDefault(false)
         val routine = severity != NotificationStore.Sev.ERROR
         if (unattended && routine) return
+        if (!toPush) return
         try {
             Toast.makeText(context, short, Toast.LENGTH_LONG).show()
         } catch (_: Throwable) { /* off-Looper thread — skip toast */ }

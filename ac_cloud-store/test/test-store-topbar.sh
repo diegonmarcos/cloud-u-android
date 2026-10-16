@@ -11,7 +11,7 @@
 #      section's pages and the island sections from the NavDecl (no section or page typed in Kotlin)
 #   T5 the build carries it: gradle bakes UI_TOP_BAR_B64 and AI_GATEWAY_URL, applies libs:ai's ai-gateway.gradle,
 #      links libs:ai; build.json::modules has libs:ai + libs:model-catalogue and the app depends on them
-#   T6 the shared bar's Compose UI suite runs through this app: tests.unit.task is libs:bottomnav's unit task, and
+#   T6 the shared bar's Compose UI suite runs through this app: tests.unit.task is storeUnitTests, which depends on libs:bottomnav's unit task, and
 #      AppTopBarTest still drives the drawer, the AI panel, the Settings entries, the Account intent, Configs
 # Then each planted defect must turn it red (a check that cannot fail is not a check).
 set -u
@@ -49,8 +49,8 @@ secs = [s['id'] for s in ui['sections']]
 sys.exit(0 if ui['bottom_nav'] == ['cloud', 'phone', 'feed', 'access'] and 'settings' in secs else 1)
 PY
   local ma; ma="$(strip "$MA")"
-  printf '%s' "$ma" | grep -q 'if (selected == TAB_SETTINGS) SettingsPage()' \
-    && ok "T2 the settings section still draws the Configs page" || bad "T2 MainActivity no longer draws SettingsPage for the settings section"
+  printf '%s' "$ma" | grep -q 'if (selected == TAB_SETTINGS) section?.let { ConfigsPage(pageOf(it)) }' \
+    && ok "T2 the settings section still draws the Configs page (ConfigsPage, with its declared pages)" || bad "T2 MainActivity no longer draws ConfigsPage for the settings section"
   printf '%s' "$ma" | grep -q 'AppTopBarScaffold(' && printf '%s' "$ma" | grep -q 'TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64)' \
     && ok "T3 MainActivity draws the declared bar with the shared AppTopBarScaffold" || bad "T3 MainActivity does not feed AppTopBarScaffold from the baked TopBarDecl"
   printf '%s' "$ma" | grep -q 'onAccount = rememberAccountLauncher()' \
@@ -80,10 +80,10 @@ m = json.load(open(sys.argv[1]))['modules']
 dep = m['app']['depends_on']
 sys.exit(0 if 'libs:ai' in m and 'libs:model-catalogue' in m and 'libs:ai' in dep and 'libs:model-catalogue' in dep else 1)
 PY
-  python3 - "$BJ" <<'PY' && ok "T6 tests.unit runs libs:bottomnav's unit suite through this app" || bad "T6 tests.unit is not :libs:bottomnav:testDebugUnitTest"
+  python3 - "$BJ" <<'PY' && ok "T6 tests.unit runs the storeUnitTests task (libs:bottomnav's suite among them) through this app" || bad "T6 tests.unit is not storeUnitTests"
 import json, sys
 u = (json.load(open(sys.argv[1])).get('tests') or {}).get('unit') or {}
-sys.exit(0 if u.get('task') == ':libs:bottomnav:testDebugUnitTest' and u.get('enabled') is True else 1)
+sys.exit(0 if u.get('task') == 'storeUnitTests' and u.get('enabled') is True and ':libs:bottomnav:testDebugUnitTest' in open(sys.argv[1].replace('build.json', 'build.gradle')).read() else 1)
 PY
   local n=0 t
   for t in 'hamburger opens the drawer' 'AI opens an anchored panel' 'Settings lists exactly the declared entries' 'Account launches Cloud Account by its OPEN intent' "Configs calls the host's callback"; do
@@ -116,14 +116,14 @@ ac_cloud-store/build.json|s.replace('"drawer": true,', '"drawer": false,')
 ac_cloud-store/build.json|s.replace('"drawer": true,', '"drawer": true,\n      "title": "Cloud Store",')
 ac_cloud-store/build.json|s.replace('"access"\n    ],\n    "top_bar"', '"access",\n      "settings"\n    ],\n    "top_bar"')
 ac_cloud-store/build.json|s.replace('"id": "settings",', '"id": "settingz",')
-ac_cloud-store/build.json|s.replace('":libs:bottomnav:testDebugUnitTest"', '":app:testDebugUnitTest"')
+ac_cloud-store/build.json|s.replace('"storeUnitTests"', '":app:testDebugUnitTest"')
 ac_cloud-store/build.json|s.replace('"libs:ai",\n        "libs:model-catalogue"\n      ]', '"libs:model-catalogue"\n      ]')
 $APP/MainActivity.kt|s.replace('AppTopBarScaffold(', 'AppTopBarScaffoldx(')
 $APP/MainActivity.kt|s.replace('onAccount = rememberAccountLauncher()', 'onAccount = { }')
 $APP/MainActivity.kt|s.replace('onConfigs = { selected = TAB_SETTINGS }', 'onConfigs = { }')
 $APP/MainActivity.kt|s.replace('aiPanel = { AiFleetChatPanel(BuildConfig.AI_GATEWAY_URL) }', 'aiPanel = { }')
 $APP/MainActivity.kt|s.replace('TopBarDrawer {', 'TopBarDrawerx {')
-$APP/MainActivity.kt|s.replace('if (selected == TAB_SETTINGS) SettingsPage()', '')
+$APP/MainActivity.kt|s.replace('if (selected == TAB_SETTINGS) section?.let { ConfigsPage(pageOf(it)) }', '')
 $APP/MainActivity.kt|s.replace('import com.diegonmarcos.superapp.ai.AiFleetChatPanel', 'import com.diegonmarcos.superapp.ai.AiFleetChatPanel\nimport androidx.compose.material3.DropdownMenu') + '\nfun x() { DropdownMenu(expanded = false, onDismissRequest = {}) {} }\n'
 $APP/StoreDrawer.kt|s.replace('nav.bottomSections().forEach', 'listOf<NavSection>().forEach')
 $APP/StoreDrawer.kt|s.replace('Eyebrow("Store")', 'Eyebrow("Cloud")')

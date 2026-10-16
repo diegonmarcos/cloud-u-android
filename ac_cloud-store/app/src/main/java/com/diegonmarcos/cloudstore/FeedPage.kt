@@ -48,6 +48,11 @@ fun FeedPage(feedId: String) {
         Text("No feed is declared.", Modifier.padding(pad), color = DIM, fontSize = StoreDensity.T_META.sp)
         return
     }
+    // Configs > Sources can switch a feed off: it is not read, and the page says where to turn it back on.
+    if (!com.diegonmarcos.superapp.appstore.StoreSourcePrefs.enabled(ctx, feed.id)) {
+        Text("${feed.label} is off. Turn it on in Settings > Configs > Sources.", Modifier.padding(pad), color = DIM, fontSize = StoreDensity.T_META.sp)
+        return
+    }
     var loaded by remember(feed.id) { mutableStateOf<Loaded?>(null) }
     LaunchedEffect(feed.id) {
         loaded = withContext(Dispatchers.IO) {

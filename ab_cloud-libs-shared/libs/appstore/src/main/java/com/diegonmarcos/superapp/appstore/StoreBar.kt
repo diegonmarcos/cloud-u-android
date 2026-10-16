@@ -186,7 +186,7 @@ object StoreBar {
         val wifiOnly = remember(tick) { AutoUpdatePrefs.requireUnmetered(ctx) }
         val silent = remember(tick) { AutoUpdatePrefs.canInstallSilently(ctx) }
         val pp = remember(tick) { StoreStatus.playProtect(ctx) }
-        val ch = remember(chan, tick) { StoreStatus.channel() }
+        val ch = remember(chan, tick) { StoreStatus.channel(ctx) }
 
         Column(modifier.testTag(TAG)) {
             Row {
@@ -281,9 +281,9 @@ object StoreBar {
     fun ChannelButton(modifier: Modifier = Modifier, onChange: () -> Unit = {}) {
         val ctx = LocalContext.current
         var tick by remember { mutableIntStateOf(0) }
-        val ch = remember(tick) { StoreStatus.channel() }
+        val ch = remember(tick) { StoreStatus.channel(ctx) }
         LaunchedEffect(tick) {
-            if (!StoreStatus.fresh()) StoreStatus.refresh(ctx) { MAIN.post { tick++; onChange() } }
+            if (!StoreStatus.fresh(ctx)) StoreStatus.refresh(ctx) { MAIN.post { tick++; onChange() } }
         }
         val chLabel = ch?.shizuku?.let { ChannelSelector.shizukuLabel(it) } ?: when (ch?.state) {
             null -> ctx.getString(R.string.store_bar_channel_checking)

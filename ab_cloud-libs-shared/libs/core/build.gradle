@@ -52,6 +52,9 @@ dependencies {
 
     implementation 'androidx.core:core-ktx:1.13.1'
 
+    // StoreNotifyPrefsTest: the pure notification-matrix logic, no device.
+    testImplementation 'junit:junit:4.13.2'
+
     // #783 FleetConfig reads and writes an app's EncryptedSharedPreferences through the same
     // cipher the app uses (default MasterKey). compileOnly, NOT implementation: only an app that
     // keeps an encrypted store has one to migrate, and that app already ships the cipher. As an

@@ -250,6 +250,20 @@ fun AiChatPage(
 }
 
 /**
+ * The AI settings controls with no conversation: the host's Agent and Model pickers (the very ones the chat page
+ * draws, so a choice made here is the choice the chat uses) over the process's [chat]. A host's Configs ▸ AI page
+ * draws this and its own words around it; no token is read or shown (the gateway holds the fleet key).
+ */
+@Composable
+fun AiSettingsPickers(chat: AiChatState, theme: AiTheme, modifier: Modifier = Modifier) {
+    LaunchedEffect(Unit) { if (chat.models.isEmpty()) chat.models = withContext(Dispatchers.IO) { runCatching { chat.host().models() }.getOrDefault(emptyList()) } }
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        AgentSelect(chat, theme)
+        ModelSelect(chat, theme)
+    }
+}
+
+/**
  * The consent card: the exact action in words, Allow and Deny. It is the ONE place a waiting action is decided:
  * nothing runs until Allow, and Deny tells the model "denied". [allowTag]/[denyTag]/[tag] let a host keep its own test tags.
  */

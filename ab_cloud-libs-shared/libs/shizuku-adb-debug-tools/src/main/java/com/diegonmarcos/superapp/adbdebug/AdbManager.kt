@@ -32,7 +32,9 @@ import java.util.Date
  */
 class AdbManager private constructor(ctx: Context) : AbsAdbConnectionManager() {
 
-    private val keyStore: KeyStore = loadOrCreate(ctx.applicationContext)
+    /** This app's own identity (build.json name + application id): the pairing label and key subject are its, not another app's. */
+    private val identity = AdbIdentity.host(ctx.packageName)
+    private val keyStore: KeyStore = loadOrCreate(ctx.applicationContext, identity)
 
     init {
         // adb's feature negotiation keys off the client API level.
@@ -45,11 +47,11 @@ class AdbManager private constructor(ctx: Context) : AbsAdbConnectionManager() {
     override fun getCertificate(): Certificate =
         keyStore.getCertificate(ALIAS)
 
-    override fun getDeviceName(): String = "CloudSuperApp"
+    override fun getDeviceName(): String = identity.deviceName
 
     companion object {
         private const val KEYSTORE_FILE = "adbdebug_identity.p12"
-        private const val ALIAS = "identity"
+        private const val ALIAS = AdbIdentity.ALIAS
         // Guards only the on-disk PKCS12 (already in app-private storage);
         // not a network/credential secret — a fixed local value is fine.
         private val PASSWORD = "adbdebug-local".toCharArray()
@@ -62,7 +64,7 @@ class AdbManager private constructor(ctx: Context) : AbsAdbConnectionManager() {
         fun getInstance(ctx: Context): AdbManager =
             instance ?: AdbManager(ctx).also { instance = it }
 
-        private fun loadOrCreate(ctx: Context): KeyStore {
+        private fun loadOrCreate(ctx: Context, identity: AdbIdentity): KeyStore {
             val file = File(ctx.filesDir, KEYSTORE_FILE)
             val ks = KeyStore.getInstance("PKCS12")
             if (file.exists()) {
@@ -73,7 +75,7 @@ class AdbManager private constructor(ctx: Context) : AbsAdbConnectionManager() {
                 ks.load(null, null)
                 val kp = KeyPairGenerator.getInstance("RSA")
                     .apply { initialize(2048) }.generateKeyPair()
-                val cert = selfSign(kp)
+                val cert = selfSign(kp, identity)
                 ks.setKeyEntry(ALIAS, kp.private, PASSWORD, arrayOf<Certificate>(cert))
                 file.outputStream().use { ks.store(it, PASSWORD) }
                 // A new key is a new identity adbd has never trusted: whatever pairing this app
@@ -83,8 +85,8 @@ class AdbManager private constructor(ctx: Context) : AbsAdbConnectionManager() {
             return ks
         }
 
-        private fun selfSign(kp: KeyPair): X509Certificate {
-            val subject = X500Name("CN=CloudSuperApp, OU=adbdebug, O=diegonmarcos")
+        private fun selfSign(kp: KeyPair, identity: AdbIdentity): X509Certificate {
+            val subject = X500Name(identity.certSubject)
             val now = System.currentTimeMillis()
             val notBefore = Date(now - 24L * 60 * 60 * 1000)
             val notAfter = Date(now + 20L * 365 * 24 * 60 * 60 * 1000)
