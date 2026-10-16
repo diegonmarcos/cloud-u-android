@@ -57,9 +57,10 @@ object FleetPolicy {
 
     class Manifest(val json: JSONObject) {
         val migrate: Set<String> = json.optJSONArray("migrate").strings().toSet()
-        /** Kinds this contract carries: prefs and encrypted by default, `provider` through the handler the
-         *  app registers ([SetupStores.register]) — for data that lives outside the app, like the contacts. */
-        val portable = setOf("prefs", "encrypted", "provider")
+        /** Kinds this contract carries: prefs and encrypted by default; `provider` and `datastore` through the
+         *  handler the app registers ([SetupStores.register]) — a DataStore must be read through the app's own
+         *  instance, and provider data (the contacts) lives outside the app. */
+        val portable = setOf("prefs", "encrypted", "provider", "datastore")
 
         val stores: Map<String, Store> = json.optJSONObject("stores").let { o ->
             o?.keys()?.asSequence()?.associateWith { n ->

@@ -250,6 +250,8 @@ class SternaApplication : Application() {
         VaultMailImport.run(this, container.accountStore)
         // The fleet setup contract serves the signatures out of the accounts blob (store mail_signatures).
         app.sterna.fleet.SignaturesSetupHandler.register(container.accountStore)
+        // and the settings DataStore (store datastore:settings), through the app's own instance.
+        app.sterna.fleet.SettingsSetupHandler.register()
         // Arm the periodic self-update check. Idempotent, and it CANCELS itself when
         // the Auto-update toggle is off, so this one call is both the arm and the
         // disarm - there is no second place that has to remember to stop it.

@@ -1539,7 +1539,7 @@
       ]
     },
     "mail_signatures": {
-      "kind": "file",
+      "kind": "provider",
       "class": "config",
       "doc": "Mail signatures, one per sending identity (named, HTML source plus derived plain text, and which one is the default), keyed by the identity's ADDRESS because account ids are minted per install. Not a file of its own: a view onto the identities in the accounts blob (sterna_account) that composing reads, served by Mail's registered SetupStores handler (SignaturesSetupHandler) so Cloud Account's bundle export captures them and its import hands them back. The key * addresses every identity (a bare .html file imported on Cloud Account's Connections page).",
       "used_by": [

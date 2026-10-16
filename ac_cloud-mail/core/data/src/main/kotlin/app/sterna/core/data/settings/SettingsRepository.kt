@@ -63,6 +63,10 @@ enum class NotificationContent { BODY_PREVIEW, SENDER_AND_SUBJECT, SENDER_ONLY, 
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
+/** The app's one instance of the settings store, for the fleet setup contract's handler (a second
+ *  DataStore over the same file in one process is an error). */
+fun Context.mailSettingsDataStore(): DataStore<Preferences> = applicationContext.settingsDataStore
+
 /**
  * Reactive app-preferences store backed by a Preferences [DataStore]. Separate from
  */

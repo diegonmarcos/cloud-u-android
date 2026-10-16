@@ -376,6 +376,9 @@ android {
 dependencies {
     implementation(project(":core:jmap"))
     implementation(project(":core:data"))
+    // The fleet setup handler reads and edits the settings DataStore through the app's own instance.
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.kotlinx.coroutines.core)
     implementation(project(":libs:openpgp-api"))
 
     // Enhance and Translate. NOT the engines - this is the binder they are reached
