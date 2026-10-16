@@ -54,10 +54,12 @@ on:
       # data manifests and this workflow file. fleet-refresh.yml (schedule
       # only) ships the app for a moved static lib or cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-notes.yml"
+      #   input: "ab_cloud-libs-shared/libs/ai/**"
       #   input: "ab_cloud-libs-shared/libs/bottomnav/**"
       #   input: "ab_cloud-libs-shared/libs/core/**"
       #   input: "ab_cloud-libs-shared/libs/devtools/**"
       #   input: "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      #   input: "ab_cloud-libs-shared/libs/model-catalogue/**"
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/scripts/cloud-notes-engine.sh"
       - "ac_cloud-notes/**"

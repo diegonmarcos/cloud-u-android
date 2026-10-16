@@ -24,4 +24,17 @@ class NativeNavScriptTest {
         assertTrue(js, js.contains("section:\"a\\\"});alert(1);//\""))
         assertTrue(js, js.contains("page:\"b\\\\\""))
     }
+
+    @Test
+    fun settingsAndDocScriptsCarryIdsOnly() {
+        assertEquals(
+            "window.dispatchEvent(new Event('cloud-notes:open-settings'))",
+            NativeNavScript.openSettings(),
+        )
+        assertEquals(
+            "window.dispatchEvent(new CustomEvent('cloud-notes:open-doc',{detail:{id:\"d1\"}}))",
+            NativeNavScript.openDoc("d1"),
+        )
+        assertTrue(NativeNavScript.openDoc("a\"});x(//").contains("id:\"a\\\"});x(//\""))
+    }
 }

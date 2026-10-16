@@ -170,7 +170,11 @@ def app_findings(repo, cfg, app, top_bar, build):
         bad.append("%s: ui.top_bar is declared but build.json::modules has no libs:bottomnav" % app)
     if top_bar.get("ai") is True and "libs:ai" not in modules:
         bad.append("%s: ui.top_bar.ai is declared but build.json::modules has no libs:ai (the AI panel is libs:ai's chat)" % app)
-    gradle = "".join(filter(None, (read(os.path.join(repo, app, g)) for g in cfg.get("gradle_files", ["app/build.gradle", "app/build.gradle.kts"]))))
+    gradle_files = list(cfg.get("gradle_files", ["app/build.gradle", "app/build.gradle.kts"]))
+    gm = (build.get("android") or {}).get("gradle_module")
+    if isinstance(gm, str) and gm.strip("./"):  # a nested Android project (Cloud Notes vendors AFFiNE's)
+        gradle_files += [norm(os.path.join(gm, "build.gradle")), norm(os.path.join(gm, "build.gradle.kts"))]
+    gradle = "".join(filter(None, (read(os.path.join(repo, app, g)) for g in gradle_files)))
     if cfg["wiring"]["bake"] not in gradle:
         bad.append("%s: its app gradle does not bake %s: the bar's declaration never reaches the app" % (app, cfg["wiring"]["bake"]))
     files = kotlin_files(repo, app, cfg)

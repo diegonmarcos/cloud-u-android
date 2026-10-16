@@ -9,6 +9,16 @@ import { viewportRuntimeConfig } from '@blocksuite/affine/std/gfx';
 (window as unknown as { cloudNotesNativeNav?: boolean }).cloudNotesNativeNav =
   true;
 
+// ONE source of the top inset: the Compose shell's top bar owns the status bar and
+// places the WebView below it, so the web half must not pad for the status bar a
+// second time (SafeArea reads --safe-area-inset-top, which Capacitor's SystemBars
+// fills with the status bar height). !important beats the injected inline value.
+{
+  const style = document.createElement('style');
+  style.textContent = ':root{--safe-area-inset-top:0px !important}';
+  document.documentElement.appendChild(style);
+}
+
 // Android WebView is less prone to the iOS WKWebView process kill, so keep the
 // user-facing zoom range unchanged. These knobs only reduce gesture-time work
 // and low-zoom canvas memory while preserving the normal-zoom render quality.

@@ -8,6 +8,38 @@
 
 export const NATIVE_NAV_EVENT = 'cloud-notes:nav';
 
+/** Top bar > Settings > Configs: open AFFiNE's own settings dialog. */
+export const NATIVE_OPEN_SETTINGS_EVENT = 'cloud-notes:open-settings';
+
+/** A page picked in the top bar's drawer; detail is `{ id }`. */
+export const NATIVE_OPEN_DOC_EVENT = 'cloud-notes:open-doc';
+
+/** The native object (Kotlin NativeTopBar.Host) the drawer's page list is pushed to. */
+export interface CloudNotesHost {
+  setDocs(json: string): void;
+}
+
+export interface DrawerDocInput {
+  id: string;
+  title?: string;
+  trash?: boolean;
+  updatedDate?: number;
+}
+
+export interface DrawerDoc {
+  id: string;
+  title: string;
+}
+
+/** The pages the drawer lists: not trashed, newest edit first, at most `limit`. */
+export function drawerDocs(metas: DrawerDocInput[], limit = 40): DrawerDoc[] {
+  return metas
+    .filter(m => !m.trash)
+    .sort((a, b) => (b.updatedDate ?? 0) - (a.updatedDate ?? 0))
+    .slice(0, limit)
+    .map(m => ({ id: m.id, title: m.title?.trim() || 'Untitled' }));
+}
+
 export interface NativeNavDetail {
   section: string;
   /** page id inside the section, or null for the section's first page */

@@ -23,6 +23,7 @@ import app.affine.pro.utils.dp2px
 import app.affine.pro.utils.px2dp
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.TopBarDecl
 import com.getcapacitor.BridgeActivity
 import com.getcapacitor.BridgeWebChromeClient
 import com.getcapacitor.WebViewListener
@@ -86,15 +87,32 @@ class MainActivity : BridgeActivity(), AFFiNEThemePlugin.Callback {
             BuildConfig.UI_BOTTOM_NAV,
             BuildConfig.UI_DEFAULT_SECTION,
         )
-        NativeNav(
+        val parent = bridge.webView.parent as CoordinatorLayout
+        val run = { js: String -> bridge.webView.post { bridge.webView.evaluateJavascript(js, null) } }
+        val nav = NativeNav(
             decl = decl,
             webView = bridge.webView,
             icon = { name ->
                 @Suppress("DiscouragedApi")
                 resources.getIdentifier("ic_nav_$name", "drawable", packageName)
             },
-            run = { js -> bridge.webView.post { bridge.webView.evaluateJavascript(js, null) } },
-        ).attach(bridge.webView.parent as CoordinatorLayout)
+            run = run,
+        )
+        nav.attach(parent)
+        // The fleet's first row (libs:bottomnav AppTopBar, build.json::ui.top_bar). It reports its
+        // height, status bar included, and NativeNav places the strip and the WebView below it.
+        TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64)?.let { topDecl ->
+            val topBar = NativeTopBar(
+                decl = topDecl,
+                title = applicationInfo.loadLabel(packageManager).toString(),
+                nav = nav,
+                navDecl = decl,
+                gatewayUrl = BuildConfig.AI_GATEWAY_URL,
+                run = run,
+            )
+            bridge.webView.addJavascriptInterface(topBar.host(), "CloudNotesHost")
+            topBar.attach(parent) { px -> nav.setTopInset(px) }
+        }
     }
 
     // #469: the ONE feature over upstream — open a file from emulated storage.

@@ -42,6 +42,16 @@
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav"
     },
+    "libs:ai": {
+      "_doc_dir": "The top bar's AI panel (and the Search > Ask page): the fleet's AI chat (libs:ai) over the fleet agent gateway (my-ai-api, mesh only). Shared BY REFERENCE. This app holds no OpenRouter token and reads none (decisions-use guard D5): the gateway holds the fleet key. Its mesh address is baked as BuildConfig.AI_GATEWAY_URL by libs/ai/ai-gateway.gradle (ext.aiFleetRoot names the repository root: this Android project is nested).",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/ai"
+    },
+    "libs:model-catalogue": {
+      "_doc_dir": "libs:ai's `api` dependency: the shared agent descriptor its Agent picker lists. Listed so settings.gradle resolves the path.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/model-catalogue"
+    },
     "libs:fleetconfig-model": {
       "_doc": "#873 libs:core `api`s this module (the setup provider every app serves, describe / export / apply / status); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
       "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
@@ -49,7 +59,7 @@
     }
   },
   "ui": {
-    "_doc_nav": "#868 THE NAVIGATION IS ONE DECLARATION, drawn by libs:bottomnav (island = ui.bottom_nav, top tabs = ui.sections[].pages via PageTabsView). Cloud Notes is 'Miro + Notion + Obsidian' in one app (a0_docs/eng-specs/cloud-notes-hybrid.md); the five bottom items are the five ways in: Home (recent, daily note) | Pages (Notion-style docs: all, tags, collections, new) | Canvas (Miro-style edgeless boards) | Graph (Obsidian-style: global, local, tags) | Search (find, ask/AI). Only ids live here: the web half (core/src/mobile/components/native-nav-routes.ts) maps every `<section>/<page>` to an AFFiNE workbench route or action, and test/test-nav-routes.sh fails if the two drift. A page with a non-blank `action` is a LAUNCH tab (creates something) and leaves the strip where it was. Settings/Profile are not a bottom item: they stay AFFiNE's own workspace menu, reached from Home's page header, so the island keeps five equal cells.",
+    "_doc_nav": "#868 THE NAVIGATION IS ONE DECLARATION, drawn by libs:bottomnav (island = ui.bottom_nav, top tabs = ui.sections[].pages via PageTabsView). Cloud Notes is 'Miro + Notion + Obsidian' in one app (a0_docs/eng-specs/cloud-notes-hybrid.md); the five bottom items are the five ways in: Home (recent, daily note) | Pages (Notion-style docs: all, tags, collections, new) | Canvas (Miro-style edgeless boards) | Graph (Obsidian-style: global, local, tags) | Search (find, ask/AI). Only ids live here: the web half (core/src/mobile/components/native-nav-routes.ts) maps every `<section>/<page>` to an AFFiNE workbench route or action, and test/test-nav-routes.sh fails if the two drift. A page with a non-blank `action` is a LAUNCH tab (creates something) and leaves the strip where it was. Settings/Profile are not a bottom item: they are the top bar's Settings dropdown (top_bar below), so the island keeps five equal cells.",
     "bottom_nav": [
       "home",
       "pages",
@@ -58,6 +68,15 @@
       "search"
     ],
     "default_section": "home",
+    "top_bar": {
+      "_doc": "THE first row (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger whose drawer is Cloud Notes' own (NativeTopBar: the five sections and the editor's pages, pushed by the web half through window.CloudNotesHost.setDocs), the title (the launcher label), AI (libs:ai's shared chat) and Settings (Account launches Cloud Account; Configs asks the web half, through the cloud-notes:open-settings event, to open AFFiNE's own settings dialog). The status-bar inset is owned HERE: NativeTopBar reports its height and NativeNav puts the page strip and the WebView below it; the web half adds no status-bar padding of its own (setup.ts). No app draws its own copy of this row (cloud-android-top-bar-guard).",
+      "drawer": true,
+      "ai": true,
+      "settings": [
+        "account",
+        "configs"
+      ]
+    },
     "sections": [
       {
         "id": "home",

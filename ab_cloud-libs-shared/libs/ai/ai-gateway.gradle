@@ -6,8 +6,13 @@
 // The gateway's SERVICE is named by the shared contract (assets/ai/ai.json::gateway.service); its mesh
 // address comes from the fleet's private catalogue (ac_cloud-c3/data/services_private.json, read only).
 // Nothing here restates either, so a moved gateway is one data edit in the catalogue.
-def aiContract = new groovy.json.JsonSlurper().parse(new File(rootDir, '../ab_cloud-libs-shared/libs/ai/src/main/assets/ai/ai.json'))
-def aiPrivate = new groovy.json.JsonSlurper().parse(new File(rootDir, '../ac_cloud-c3/data/services_private.json'))
+//
+// The fleet root is the parent of the app's gradle root (every app keeps its gradle root at <app>/), unless the app
+// sets `ext.aiFleetRoot` first: an app whose Android project is nested (Cloud Notes vendors AFFiNE's, four levels
+// down) names the repository root itself.
+def aiFleetRoot = project.hasProperty('aiFleetRoot') ? new File(project.property('aiFleetRoot').toString()) : new File(rootDir, '..')
+def aiContract = new groovy.json.JsonSlurper().parse(new File(aiFleetRoot, 'ab_cloud-libs-shared/libs/ai/src/main/assets/ai/ai.json'))
+def aiPrivate = new groovy.json.JsonSlurper().parse(new File(aiFleetRoot, 'ac_cloud-c3/data/services_private.json'))
 def aiRow = (aiPrivate instanceof List ? aiPrivate : (aiPrivate.services ?: aiPrivate.values())).find { it.name == aiContract.gateway.service }
 if (aiRow?.private_dns == null)
     throw new GradleException("AI gateway '${aiContract.gateway.service}' has no private_dns in ac_cloud-c3/data/services_private.json")

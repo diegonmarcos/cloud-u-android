@@ -41,6 +41,12 @@ def uiDecl = buildJson.ui ?: [:]
 def uiBottomNav = (uiDecl.bottom_nav ?: []).join(',')
 def uiSectionsB64 = groovy.json.JsonOutput.toJson(uiDecl.sections ?: []).bytes.encodeBase64().toString()
 def uiDefaultSection = uiDecl.default_section ?: ''
+// The top bar declaration (libs:bottomnav TopBarDecl): ui.top_bar as base64 JSON, '' when the app declares none.
+def uiTopBarB64 = uiDecl.top_bar ? groovy.json.JsonOutput.toJson(uiDecl.top_bar).bytes.encodeBase64().toString() : ''
+// The top bar's AI panel gateway (libs:ai's contract names the service, the fleet catalogue its mesh address).
+// This gradle root is nested five levels below the repository root, which the script cannot guess.
+ext.aiFleetRoot = file('../../../../../../..').canonicalPath
+apply from: "${ext.aiFleetRoot}/ab_cloud-libs-shared/libs/ai/ai-gateway.gradle"
 
 // #830 the build commit, baked into versionName "(sha-xxxxxxxx)" + BuildConfig.GIT_SHORT_SHA so
 // Store Details (libs/appstore BuiltFrom) and About can name the installed build. Same
@@ -75,6 +81,8 @@ android {
         buildConfigField "String", "UI_BOTTOM_NAV", "\"${uiBottomNav}\""
         buildConfigField "String", "UI_SECTIONS_B64", "\"${uiSectionsB64}\""
         buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
+        buildConfigField "String", "UI_TOP_BAR_B64", "\"${uiTopBarB64}\""
+        buildConfigField "String", "AI_GATEWAY_URL", "\"${aiGatewayUrl}\""
         // #522: the LAUNCHER LABEL. It lived in res/values/strings.xml as the
         // literal "AFFiNE" — the upstream project's name rendered as this
         // product's identity on the owner's home screen, the #380/#381/#390/#424
@@ -145,6 +153,8 @@ dependencies {
     implementation project(':libs:core')
     // #868 the fleet's bottom island + top page tabs (build.json::modules).
     implementation project(':libs:bottomnav')
+    // The top bar's AI panel: the fleet's AI chat over the fleet agent gateway (no token on the phone).
+    implementation project(':libs:ai')
 
     implementation libs.androidx.appcompat
     implementation libs.androidx.browser

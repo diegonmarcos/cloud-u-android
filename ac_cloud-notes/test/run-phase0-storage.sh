@@ -23,14 +23,14 @@ cargo test -p affine_mobile_native --lib -- --nocapture 2>&1 | tee /tmp/phase0-r
 grep -q "test tests::$RUST_TEST ... ok" /tmp/phase0-rust.log || {
   echo "::error::Rust test $RUST_TEST did not run and pass"; exit 1; }
 
-echo "== js: nbstore adapter spec =="
-APP=packages/frontend/apps/android
+echo "== js: light web specs (nbstore adapter, nav routes) =="
+SPECS=2
 TOOLS="$(mktemp -d)"
 ( cd "$TOOLS" && npm init -y >/dev/null && npm i --no-audit --no-fund --no-package-lock --legacy-peer-deps "vitest@$VITEST" >/dev/null )
-ln -s "$TOOLS/node_modules" "$ROOT/$APP/node_modules"
-( cd "$ROOT/$APP" && NO_COLOR=1 "$TOOLS/node_modules/.bin/vitest" run --root . --config vitest.phase0.config.mts ) 2>&1 | tee /tmp/phase0-js.log
-rm -f "$ROOT/$APP/node_modules"
+ln -s "$TOOLS/node_modules" "$ROOT/node_modules"
+( cd "$ROOT" && NO_COLOR=1 "$TOOLS/node_modules/.bin/vitest" run --config packages/frontend/apps/android/vitest.phase0.config.mts ) 2>&1 | tee /tmp/phase0-js.log
+rm -f "$ROOT/node_modules"
 # vitest colours its summary on a CI tty: strip the escapes before matching
-sed 's/\x1b\[[0-9;]*m//g' /tmp/phase0-js.log | grep -Eq "Tests +3 passed \(3\)" || {
-  echo "::error::nbstore adapter spec did not run 3 tests green"; exit 1; }
+sed 's/\x1b\[[0-9;]*m//g' /tmp/phase0-js.log | grep -Eq "Test Files +$SPECS passed \($SPECS\)" || {
+  echo "::error::the $SPECS web specs did not all run green"; exit 1; }
 echo "PHASE0 STORAGE OK"
