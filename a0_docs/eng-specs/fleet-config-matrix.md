@@ -904,7 +904,7 @@ Coverage: 2 covered, 1 gaps — room:PrivilegedAppDatabase.
 
 ## cloud-wallet — `com.diegonmarcos.cloudwallet`
 
-Module `ac_cloud-wallet`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-updater, lib-wallet.
+Module `ac_cloud-wallet`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-ui-kit, lib-updater, lib-wallet.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
