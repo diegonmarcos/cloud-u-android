@@ -3,20 +3,36 @@ package com.diegonmarcos.ide
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.graphics.Color
 import android.os.Bundle
-import android.text.InputType
-import android.view.Gravity
-import android.view.ViewGroup
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.diegonmarcos.ide.update.UpdateProgress
 import com.diegonmarcos.ide.update.Updater
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * Configs — Update + About, equal to Cloud-SuperApp. "Check for updates" runs
@@ -24,44 +40,27 @@ import com.diegonmarcos.ide.update.Updater
  * UpdateOverlay (UpdateProgress-driven). "About" opens AboutActivity — the FULL
  * SuperApp About architecture (12 sections, long-press-copy, Copy All Infos).
  * Visual language from Ui (dark surface, purple accent, rounded ripple cards).
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. The page is a ComposeView under
+ * CloudKitTheme (Ui.composeView); the connection editor is a Compose dialog.
  */
 class ConfigsActivity : AppCompatActivity() {
 
     private var overlayShown = false
 
+    /** The terminal-status line under its header, and the colour it earned once probed. */
+    private var statusSub by mutableStateOf("")
+    private var statusColor by mutableStateOf<Color?>(null)
+
+    /** The fallback sshd instructions: null until a probe says there is something to fall back from. */
+    private var setupSteps by mutableStateOf<String?>(null)
+
+    /** The backend whose connection override is being edited (null = dialog closed). */
+    private var editingConn by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         title = getString(R.string.configs_title)
-
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = ViewGroup.LayoutParams(MATCH, MATCH)
-        }
-        Ui.screen(this, root)
-
-        val body = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(12), dp(20), dp(24))
-        }
-
-        body.addView(Ui.header(
-            this,
-            getString(R.string.configs_title),
-            getString(
-                R.string.cfg_autoupdate,
-                if (BuildConfig.AUTO_UPDATE_ENABLED) "on" else "off",
-                BuildConfig.AUTO_UPDATE_INTERVAL_HOURS,
-                BuildConfig.AUTO_UPDATE_TAG,
-            ),
-        ))
-
-        // ── Update ────────────────────────────────────────────────────────
-        body.addView(Ui.appCard(
-            this, "⟳",
-            getString(R.string.cfg_check_updates),
-            "${BuildConfig.GHCR_NAMESPACE}/${BuildConfig.GHCR_IMAGE}:${BuildConfig.AUTO_UPDATE_TAG}",
-            enabled = true,
-        ) { startUpdateCheck() })
 
         // ── Terminal status, probed on open ───────────────────────────────
         // Zero setup is the normal case: the selected terminal is probed through its
@@ -71,106 +70,119 @@ class ConfigsActivity : AppCompatActivity() {
         // shows.
         val currentBackend = TerminalSessions.activeBackend(this)
         val probeTarget = TerminalTargets.effectiveTarget(this, currentBackend)
-        val statusHeader = Ui.header(
-            this,
-            getString(R.string.cfg_terminal_status_title),
-            getString(R.string.cfg_terminal_status_checking, probeTarget.label),
-        )
-        body.addView(statusHeader)
-        val setupSlot = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        body.addView(setupSlot)
+        statusSub = getString(R.string.cfg_terminal_status_checking, probeTarget.label)
         Thread {
             val p = TerminalSessions.probe(this, SshBackend(this), probeTarget)
             runOnUiThread {
                 if (isFinishing || isDestroyed) return@runOnUiThread
-                val sub = (statusHeader as LinearLayout).getChildAt(1) as TextView
-                sub.text = when {
+                statusSub = when {
                     p.native -> getString(R.string.cfg_terminal_status_native, probeTarget.label)
                     p.usable -> getString(R.string.cfg_terminal_status_ssh, probeTarget.label)
                     else -> getString(R.string.cfg_terminal_status_failed, p.message)
                 }
-                sub.setTextColor(if (p.usable) Color.GREEN else Color.RED)
+                statusColor = Color(getColor(if (p.usable) R.color.ide_ok else R.color.ide_bad))
                 // The fallback instructions, GENERATED from data/terminal-targets.json (one
                 // block per declared backend, so ports/users/commands are the values the app
                 // dials) — and only when there is something to fall back from.
-                if (!p.native) setupSlot.addView(Ui.header(
-                    this,
-                    getString(R.string.cfg_terminal_setup_title),
-                    getString(R.string.cfg_terminal_setup_steps, terminalSetupBlocks()),
-                ))
+                if (!p.native) setupSteps = getString(R.string.cfg_terminal_setup_steps, terminalSetupBlocks())
             }
         }.also { it.isDaemon = true }.start()
 
-        // ── Terminal backend switcher ─────────────────────────────────────
-        val backendTarget  = TerminalTargets.forBackend(currentBackend)
-        body.addView(Ui.appCard(
-            this, "⌨",
-            getString(R.string.cfg_terminal_backend),
-            getString(R.string.cfg_terminal_backend_sub, backendTarget.label,
-                backendTarget.host, backendTarget.port),
-            enabled = true,
+        setContent { Page(currentBackend) }
+    }
+
+    @Composable
+    private fun Page(currentBackend: String) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 24.dp),
         ) {
-            // Advance to the NEXT declared backend, wrapping. Cycling the
-            // declared list is what keeps the choice DATA: this used to be an
-            // if/else over the two IdePrefs constants, so a third entry in
-            // terminal-targets.json would have been switcher-unreachable.
-            val keys = TerminalTargets.all().map { it.key }
-            if (keys.size > 1) {
-                val at = keys.indexOf(backendTarget.key)
-                IdePrefs.setTerminalBackend(this, keys[(at + 1) % keys.size])
-                recreate()
+            Ui.Header(
+                getString(R.string.configs_title),
+                getString(
+                    R.string.cfg_autoupdate,
+                    if (BuildConfig.AUTO_UPDATE_ENABLED) "on" else "off",
+                    BuildConfig.AUTO_UPDATE_INTERVAL_HOURS,
+                    BuildConfig.AUTO_UPDATE_TAG,
+                ),
+            )
+
+            // ── Update ────────────────────────────────────────────────────
+            Ui.AppCard(
+                "⟳",
+                getString(R.string.cfg_check_updates),
+                "${BuildConfig.GHCR_NAMESPACE}/${BuildConfig.GHCR_IMAGE}:${BuildConfig.AUTO_UPDATE_TAG}",
+            ) { startUpdateCheck() }
+
+            // ── Terminal status ───────────────────────────────────────────
+            Ui.Header(getString(R.string.cfg_terminal_status_title), statusSub, statusColor)
+            setupSteps?.let { Ui.Header(getString(R.string.cfg_terminal_setup_title), it) }
+
+            // ── Terminal backend switcher ─────────────────────────────────
+            val backendTarget = TerminalTargets.forBackend(currentBackend)
+            Ui.AppCard(
+                "⌨",
+                getString(R.string.cfg_terminal_backend),
+                getString(R.string.cfg_terminal_backend_sub, backendTarget.label,
+                    backendTarget.host, backendTarget.port),
+            ) {
+                // Advance to the NEXT declared backend, wrapping. Cycling the
+                // declared list is what keeps the choice DATA: this used to be an
+                // if/else over the two IdePrefs constants, so a third entry in
+                // terminal-targets.json would have been switcher-unreachable.
+                val keys = TerminalTargets.all().map { it.key }
+                if (keys.size > 1) {
+                    val at = keys.indexOf(backendTarget.key)
+                    IdePrefs.setTerminalBackend(applicationContext, keys[(at + 1) % keys.size])
+                    recreate()
+                }
             }
-        })
 
-        // ── Terminal connection overrides ─────────────────────────────────
-        val effectiveTarget = TerminalTargets.effectiveTarget(this, currentBackend)
-        body.addView(Ui.appCard(
-            this, "⚙",
-            getString(R.string.cfg_terminal_conn),
-            getString(R.string.cfg_terminal_conn_sub, effectiveTarget.label),
-            enabled = true,
-        ) { showTerminalConnDialog(currentBackend) })
+            // ── Terminal connection overrides ─────────────────────────────
+            val effectiveTarget = TerminalTargets.effectiveTarget(this@ConfigsActivity, currentBackend)
+            Ui.AppCard(
+                "⚙",
+                getString(R.string.cfg_terminal_conn),
+                getString(R.string.cfg_terminal_conn_sub, effectiveTarget.label),
+            ) { editingConn = currentBackend }
 
-        // ── #787 wake lock while a shell is open (ON by default) ──────────
-        val wakeWanted = IdePrefs.wakeLockWanted(this)
-        body.addView(Ui.appCard(
-            this, "⏻",
-            getString(R.string.cfg_wake_lock),
-            getString(if (wakeWanted) R.string.cfg_wake_lock_on else R.string.cfg_wake_lock_off),
-            enabled = true,
-        ) {
-            IdePrefs.setWakeLockWanted(this, !wakeWanted)
-            TerminalWakeLock.sync(this)
-            recreate()
-        })
+            // ── #787 wake lock while a shell is open (ON by default) ──────
+            val wakeWanted = IdePrefs.wakeLockWanted(this@ConfigsActivity)
+            Ui.AppCard(
+                "⏻",
+                getString(R.string.cfg_wake_lock),
+                getString(if (wakeWanted) R.string.cfg_wake_lock_on else R.string.cfg_wake_lock_off),
+            ) { toggleWakeLock(wakeWanted) }
 
-        // ── Terminal SSH key — copy to authorized_keys ────────────────────
-        body.addView(Ui.appCard(
-            this, "🔑",
-            getString(R.string.cfg_terminal_ssh_key),
-            getString(R.string.cfg_terminal_ssh_key_sub),
-            enabled = true,
-        ) {
-            val pubKey = SshBackend(this).publicKeyOpenSsh()
-            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            cm.setPrimaryClip(ClipData.newPlainText("cloud-myterminal-terminal pubkey", pubKey))
-            Toast.makeText(this, getString(R.string.cfg_terminal_ssh_key_copied), Toast.LENGTH_LONG).show()
-        })
+            // ── Terminal SSH key — copy to authorized_keys ────────────────
+            Ui.AppCard(
+                "🔑",
+                getString(R.string.cfg_terminal_ssh_key),
+                getString(R.string.cfg_terminal_ssh_key_sub),
+            ) { copySshKey() }
 
-        // ── About — the FULL SuperApp-architecture page ───────────────────
-        body.addView(Ui.appCard(
-            this, "ℹ",
-            getString(R.string.cfg_about),
-            "v${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA}",
-            enabled = true,
-        ) { startActivity(android.content.Intent(this, AboutActivity::class.java)) })
-
-        val scroll = android.widget.ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
+            // ── About — the FULL SuperApp-architecture page ───────────────
+            Ui.AppCard(
+                "ℹ",
+                getString(R.string.cfg_about),
+                "v${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA}",
+            ) { startActivity(android.content.Intent(this@ConfigsActivity, AboutActivity::class.java)) }
         }
-        scroll.addView(body)
-        root.addView(scroll)
-        setContentView(root)
+        editingConn?.let { ConnDialog(it) { editingConn = null } }
+    }
+
+    /** #787 flip the wake-lock choice and re-sync the lock. */
+    private fun toggleWakeLock(wakeWanted: Boolean) {
+        IdePrefs.setWakeLockWanted(this, !wakeWanted)
+        TerminalWakeLock.sync(this)
+        recreate()
+    }
+
+    private fun copySshKey() {
+        val pubKey = SshBackend(this).publicKeyOpenSsh()
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(ClipData.newPlainText("cloud-myterminal-terminal pubkey", pubKey))
+        Toast.makeText(this, getString(R.string.cfg_terminal_ssh_key_copied), Toast.LENGTH_LONG).show()
     }
 
     private fun startUpdateCheck() {
@@ -202,143 +214,96 @@ class ConfigsActivity : AppCompatActivity() {
             )
         }
 
-    private fun showTerminalConnDialog(backend: String) {
-        val effective = TerminalTargets.effectiveTarget(this, backend)
-        val ssh = SshBackend(this)
+    /** Host / port / user override for [backend], with a live connection test. */
+    @Composable
+    private fun ConnDialog(backend: String, onClose: () -> Unit) {
+        val p = LocalKitPalette.current
+        val activity = this@ConfigsActivity
+        val effective = remember(backend) { TerminalTargets.effectiveTarget(activity, backend) }
+        val ssh = remember { SshBackend(activity) }
+        var host by remember { mutableStateOf(effective.host) }
+        var port by remember { mutableStateOf(effective.port.toString()) }
+        var user by remember { mutableStateOf(effective.user) }
+        var status by remember { mutableStateOf("") }
+        var statusTone by remember { mutableStateOf<Color?>(null) }
+        val ok = colorResource(R.color.ide_ok)
+        val bad = colorResource(R.color.ide_bad)
 
-        // ── Dialog content view ───────────────────────────────────────────
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(16), dp(20), dp(8))
-        }
-
-        // Hint line
-        container.addView(TextView(this).apply {
-            text = "Connecting to ${effective.label} — SSH"
-            textSize = 13f
-            setTextColor(Ui.TEXT_DIM)
-            setPadding(0, 0, 0, dp(14))
-        })
-
-        // Host
-        container.addView(TextView(this).apply {
-            text = getString(R.string.term_conn_host)
-            textSize = 12f
-            setTextColor(Ui.TEXT_DIM)
-        })
-        val hostEdit = EditText(this).apply {
-            setText(effective.host)
-            textSize = 15f
-            setTextColor(Ui.TEXT)
-            setHintTextColor(Ui.TEXT_DIM)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
-            setPadding(0, dp(4), 0, dp(12))
-            setBackgroundColor(Color.TRANSPARENT)
-        }
-        container.addView(hostEdit)
-
-        // Port
-        container.addView(TextView(this).apply {
-            text = getString(R.string.term_conn_port)
-            textSize = 12f
-            setTextColor(Ui.TEXT_DIM)
-        })
-        val portEdit = EditText(this).apply {
-            setText(effective.port.toString())
-            textSize = 15f
-            setTextColor(Ui.TEXT)
-            setHintTextColor(Ui.TEXT_DIM)
-            inputType = InputType.TYPE_CLASS_NUMBER
-            setPadding(0, dp(4), 0, dp(12))
-            setBackgroundColor(Color.TRANSPARENT)
-        }
-        container.addView(portEdit)
-
-        // User
-        container.addView(TextView(this).apply {
-            text = getString(R.string.term_conn_user)
-            textSize = 12f
-            setTextColor(Ui.TEXT_DIM)
-        })
-        val userEdit = EditText(this).apply {
-            setText(effective.user)
-            textSize = 15f
-            setTextColor(Ui.TEXT)
-            setHintTextColor(Ui.TEXT_DIM)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-            setPadding(0, dp(4), 0, dp(16))
-            setBackgroundColor(Color.TRANSPARENT)
-        }
-        container.addView(userEdit)
-
-        // Test button + status label
-        val statusView = TextView(this).apply {
-            textSize = 13f
-            setTextColor(Ui.TEXT_DIM)
-            setPadding(0, dp(6), 0, 0)
-            gravity = Gravity.CENTER_HORIZONTAL
-        }
-        val testBtn = Button(this).apply {
-            text = getString(R.string.term_conn_test)
-            setOnClickListener {
-                val host = hostEdit.text.toString().trim()
-                val portStr = portEdit.text.toString().trim()
-                val user = userEdit.text.toString().trim()
-                val port = portStr.toIntOrNull() ?: -1
-                if (host.isBlank() || port <= 0 || user.isBlank()) {
-                    statusView.setTextColor(Color.RED)
-                    statusView.text = "Fill in valid host, port and user first"
-                    return@setOnClickListener
+        AlertDialog(
+            onDismissRequest = onClose,
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Hint line
+                    Text("Connecting to ${effective.label} — SSH", color = p.textSecondary, fontSize = 13.sp)
+                    OutlinedTextField(
+                        value = host, onValueChange = { host = it }, singleLine = true,
+                        label = { Text(activity.getString(R.string.term_conn_host)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = port, onValueChange = { port = it }, singleLine = true,
+                        label = { Text(activity.getString(R.string.term_conn_port)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = user, onValueChange = { user = it }, singleLine = true,
+                        label = { Text(activity.getString(R.string.term_conn_user)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    // Test button + status label
+                    Button(
+                        onClick = {
+                            val h = host.trim(); val u = user.trim()
+                            val pt = port.trim().toIntOrNull() ?: -1
+                            if (h.isBlank() || pt <= 0 || u.isBlank()) {
+                                statusTone = bad
+                                status = "Fill in valid host, port and user first"
+                            } else {
+                                val probe = TerminalTargets.Target(
+                                    key   = effective.key,
+                                    label = effective.label,
+                                    host  = h,
+                                    port  = pt,
+                                    user  = u,
+                                )
+                                statusTone = null
+                                status = activity.getString(R.string.term_conn_testing)
+                                Thread {
+                                    val err = ssh.testConnection(probe)
+                                    activity.runOnUiThread {
+                                        if (err == null) {
+                                            statusTone = ok
+                                            status = activity.getString(R.string.term_conn_ok)
+                                        } else {
+                                            statusTone = bad
+                                            status = "✗ $err"
+                                        }
+                                    }
+                                }.also { it.isDaemon = true }.start()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(activity.getString(R.string.term_conn_test)) }
+                    Text(status, color = statusTone ?: p.textSecondary, fontSize = 13.sp)
                 }
-                val probe = TerminalTargets.Target(
-                    key   = effective.key,
-                    label = effective.label,
-                    host  = host,
-                    port  = port,
-                    user  = user,
-                )
-                statusView.setTextColor(Ui.TEXT_DIM)
-                statusView.text = getString(R.string.term_conn_testing)
-                Thread {
-                    val err = ssh.testConnection(probe)
-                    runOnUiThread {
-                        if (err == null) {
-                            statusView.setTextColor(Color.GREEN)
-                            statusView.text = getString(R.string.term_conn_ok)
-                        } else {
-                            statusView.setTextColor(Color.RED)
-                            statusView.text = "✗ $err"
-                        }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val h = host.trim(); val u = user.trim()
+                    val pt = port.trim().toIntOrNull()
+                    if (h.isBlank() || pt == null || pt <= 0 || u.isBlank()) {
+                        Toast.makeText(activity, "Invalid host, port or user — not saved", Toast.LENGTH_LONG).show()
+                    } else {
+                        IdePrefs.setTerminalConn(activity, backend, h, pt, u)
+                        Toast.makeText(activity, activity.getString(R.string.term_conn_saved), Toast.LENGTH_SHORT).show()
+                        onClose()
+                        recreate()
                     }
-                }.also { it.isDaemon = true }.start()
-            }
-        }
-        container.addView(testBtn)
-        container.addView(statusView)
-
-        // ── Build dialog ──────────────────────────────────────────────────
-        AlertDialog.Builder(this)
-            .setView(container)
-            .setPositiveButton(getString(R.string.term_conn_save)) { _, _ ->
-                val host = hostEdit.text.toString().trim()
-                val portStr = portEdit.text.toString().trim()
-                val user = userEdit.text.toString().trim()
-                val port = portStr.toIntOrNull()
-                if (host.isBlank() || port == null || port <= 0 || user.isBlank()) {
-                    Toast.makeText(this, "Invalid host, port or user — not saved", Toast.LENGTH_LONG).show()
-                    return@setPositiveButton
-                }
-                IdePrefs.setTerminalConn(this, backend, host, port, user)
-                Toast.makeText(this, getString(R.string.term_conn_saved), Toast.LENGTH_SHORT).show()
-                recreate()
-            }
-            .setNegativeButton(getString(R.string.term_conn_cancel), null)
-            .show()
-    }
-
-    private fun dp(v: Int): Int = Ui.dp(this, v)
-
-    companion object {
-        private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
+                }) { Text(activity.getString(R.string.term_conn_save)) }
+            },
+            dismissButton = { TextButton(onClick = onClose) { Text(activity.getString(R.string.term_conn_cancel)) } },
+        )
     }
 }

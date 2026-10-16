@@ -2769,7 +2769,8 @@
         "lib-analytics",
         "lib-core",
         "lib-devtools",
-        "lib-fleetconfig-model"
+        "lib-fleetconfig-model",
+        "lib-ui-kit"
       ],
       "items": [
         {

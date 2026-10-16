@@ -1,6 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    // 2026-10-16 owner decision: all apps must be Compose; every screen is a ComposeView under CloudKitTheme.
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 // ── Data-driven config bake ─────────────────────────────────────────────
@@ -190,6 +192,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        compose = true
         // ICloudSession.aidl — the client half of the fleet terminals' session service
         // (TerminalSessions); the same file is the server's in both terminals.
         aidl = true
@@ -241,6 +244,7 @@ dependencies {
     // #743 fleet mesh membership: core defines + requests CONSTELLATION_DATA and
     // carries libs:devtools (fleet provider, MESH_MEMBER receiver and query).
     implementation project(':libs:core')
+    implementation project(':libs:ui-kit')   // CloudKitTheme + KitPalette: Ui.kt's theme
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.google.android.material:material:1.12.0'
@@ -261,6 +265,11 @@ dependencies {
     implementation 'org.bouncycastle:bcprov-jdk15to18:1.81'
     // WebViewCompat.addDocumentStartJavaScript — injects Transport shim before page scripts.
     implementation 'androidx.webkit:webkit:1.11.0'
+    // Compose: the BOM is the one every Compose module in the fleet resolves.
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
 
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test:runner:1.6.2'

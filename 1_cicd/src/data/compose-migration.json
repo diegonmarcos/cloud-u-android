@@ -762,20 +762,14 @@
       "id": "ac_cloud-myterminal",
       "scope": "in",
       "wave": 3,
-      "ui": "views",
+      "ui": "compose",
       "size": "M",
-      "screens_left": [
-        "MainActivity",
-        "ConfigsActivity",
-        "AboutActivity",
-        "DevControlActivity",
-        "UpdateOverlay"
-      ],
-      "notes": "Programmatic Views (Ui.kt helpers). The terminal surface itself (if any) stays an AndroidView.",
+      "screens_left": [],
+      "notes": "All Compose (2026-10-16): every screen is a ComposeView under CloudKitTheme (Ui.composeView; ide_* colour resources) — the terminal shell with its gear and native-browser overlay, Configs (with the connection editor as a Compose dialog), About (the page as data, drawn by composables), Dev Control and the update overlay (a ComponentDialog). The two WebViews (terminal frontend, browser page) stay WebViews hosted through AndroidView. Kotlin 1.9.24 -> 2.3.20 for the standalone compose compiler plugin.",
       "baseline": {
-        "view_screens": 5,
+        "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 6,
+        "view_ui_files": 0,
         "custom_views": 0
       }
     },

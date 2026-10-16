@@ -655,7 +655,7 @@ Coverage: 4 covered, 1 gaps — datastore:settings.
 
 ## cloud-myterminal — `com.diegonmarcos.ide`
 
-Module `ac_cloud-myterminal`; libs: lib-analytics, lib-core, lib-devtools, lib-fleetconfig-model.
+Module `ac_cloud-myterminal`; libs: lib-analytics, lib-core, lib-devtools, lib-fleetconfig-model, lib-ui-kit.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

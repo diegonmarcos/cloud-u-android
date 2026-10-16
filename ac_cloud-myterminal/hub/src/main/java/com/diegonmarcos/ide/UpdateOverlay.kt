@@ -1,21 +1,37 @@
 package com.diegonmarcos.ide
 
 import android.app.Dialog
-import android.graphics.Color
-import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.Gravity
 import android.view.ViewGroup
-import android.view.Window
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
+import androidx.activity.ComponentDialog
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.DialogFragment
 import com.diegonmarcos.ide.update.UpdateProgress
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitPalette
 
 /**
  * Fullscreen update overlay — the cloud-myterminal equivalent of aa_cloud-superapp's
@@ -29,45 +45,58 @@ import com.diegonmarcos.ide.update.UpdateProgress
  *   UpToDate         → "Up to date" + auto-dismiss
  *   Done             → "Done"
  *   Failed           → message + Dismiss
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. The overlay is a ComposeView under
+ * CloudKitTheme in a ComponentDialog (which gives it its view-tree owners); the same
+ * UpdateProgress contract drives it.
  */
 class UpdateOverlay : DialogFragment() {
 
-    private lateinit var titleView: TextView
-    private lateinit var detailView: TextView
-    private lateinit var bar: ProgressBar
-    private lateinit var dismissBtn: Button
+    private var title by mutableStateOf("")
+    private var detail by mutableStateOf("")
+
+    /** null = indeterminate bar; otherwise 0..100. */
+    private var percent by mutableStateOf<Int?>(null)
+    private var dismissShown by mutableStateOf(false)
     private val main = Handler(Looper.getMainLooper())
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val ctx = requireContext()
-        val dialog = Dialog(ctx, android.R.style.Theme_Translucent_NoTitleBar)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(0xE6000000.toInt()))
-
-        val column = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            val p = dp(24); setPadding(p, p, p, p)
-            layoutParams = ViewGroup.LayoutParams(MATCH, MATCH)
-        }
-        titleView = TextView(ctx).apply {
-            setTextColor(0xFFE9D8FD.toInt()); textSize = 22f; typeface = Typeface.DEFAULT_BOLD
-        }
-        bar = ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal).apply {
-            isIndeterminate = true; max = 100
-            layoutParams = LinearLayout.LayoutParams(MATCH, dp(8)).apply {
-                topMargin = dp(20); bottomMargin = dp(8)
+        val dialog = ComponentDialog(ctx, android.R.style.Theme_Translucent_NoTitleBar)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(ctx.getColor(R.color.ide_scrim)))
+        dialog.setContentView(ComposeView(ctx).apply {
+            setContent {
+                val palette = KitPalette(
+                    surface = colorResource(R.color.ide_card),
+                    surfaceSelected = colorResource(R.color.ide_accent),
+                    textPrimary = colorResource(R.color.ide_text),
+                    textSecondary = colorResource(R.color.ide_text_dim),
+                    accent = colorResource(R.color.ide_accent),
+                    hairline = colorResource(R.color.ide_card_stroke),
+                    tileInk = colorResource(R.color.ide_ink),
+                )
+                CloudKitTheme(palette) { Body() }
             }
-        }
-        detailView = TextView(ctx).apply { setTextColor(0xCCFFFFFF.toInt()); textSize = 14f }
-        dismissBtn = Button(ctx).apply {
-            text = "Dismiss"; visibility = android.view.View.GONE
-            setOnClickListener { dismissAllowingStateLoss() }
-        }
-        column.addView(titleView); column.addView(bar); column.addView(detailView); column.addView(dismissBtn)
-        dialog.setContentView(column)
+        })
         dialog.setCanceledOnTouchOutside(false)
         return dialog
+    }
+
+    @Composable
+    private fun Body() {
+        Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.Start,
+        ) {
+            Text(title, color = colorResource(R.color.ide_lavender), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            val pct = percent
+            val barMod = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 8.dp).height(8.dp)
+            if (pct == null) LinearProgressIndicator(modifier = barMod)
+            else LinearProgressIndicator(progress = { pct / 100f }, modifier = barMod)
+            Text(detail, color = colorResource(R.color.ide_text_dim), fontSize = 14.sp)
+            if (dismissShown) Button(onClick = { dismissAllowingStateLoss() }) { Text("Dismiss") }
+        }
     }
 
     override fun onStart() {
@@ -85,42 +114,41 @@ class UpdateOverlay : DialogFragment() {
         when (state) {
             is UpdateProgress.State.Idle -> {}
             is UpdateProgress.State.CheckingManifest -> {
-                titleView.text = "Checking for updates…"; detailView.text = "Reading GHCR manifest"
-                bar.isIndeterminate = true; dismissBtn.visibility = android.view.View.GONE
+                title = "Checking for updates…"; detail = "Reading GHCR manifest"
+                percent = null; dismissShown = false
             }
             is UpdateProgress.State.Downloading -> {
-                titleView.text = "Downloading ${state.percent}%"
-                detailView.text = "${state.bytes.toMib()} / ${state.total.toMib()} MiB"
-                bar.isIndeterminate = state.total <= 0; bar.progress = state.percent
+                title = "Downloading ${state.percent}%"
+                detail = "${state.bytes.toMib()} / ${state.total.toMib()} MiB"
+                percent = if (state.total <= 0) null else state.percent
             }
             is UpdateProgress.State.Installing -> {
-                titleView.text = "Installing…"; detailView.text = "Handing the APK to the system installer"
-                bar.isIndeterminate = true
+                title = "Installing…"; detail = "Handing the APK to the system installer"
+                percent = null
             }
             is UpdateProgress.State.UpToDate -> {
-                titleView.text = "Up to date"; detailView.text = "Latest: ${state.tag}"
-                bar.isIndeterminate = false; bar.progress = 100
+                title = "Up to date"; detail = "Latest: ${state.tag}"
+                percent = 100
                 autoClose()
             }
             is UpdateProgress.State.Done -> {
-                titleView.text = "Done"; detailView.text = "Update complete"
-                bar.isIndeterminate = false; bar.progress = 100; autoClose()
+                title = "Done"; detail = "Update complete"
+                percent = 100; autoClose()
             }
             is UpdateProgress.State.Failed -> {
-                titleView.text = "Update failed"; detailView.text = state.message
-                bar.isIndeterminate = false; bar.progress = 0
-                dismissBtn.visibility = android.view.View.VISIBLE
+                title = "Update failed"; detail = state.message
+                percent = 0
+                dismissShown = true
             }
         }
     }
 
     private fun autoClose() {
-        dismissBtn.visibility = android.view.View.VISIBLE
+        dismissShown = true
         main.postDelayed({ if (isAdded) dismissAllowingStateLoss() }, 1800)
     }
 
     private fun Long.toMib(): String = "%.2f".format(this / (1024.0 * 1024.0))
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     companion object {
         const val TAG = "update_overlay"

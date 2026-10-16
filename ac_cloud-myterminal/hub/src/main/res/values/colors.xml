@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The hub's palette as KitPalette roles (Ui.kt builds its CloudKitTheme from these) plus the few extra
+     colours its screens name, so no colour is spelled in Kotlin. -->
+<resources>
+    <color name="ide_bg">#FF0B0B10</color>
+    <color name="ide_card">#FF17171F</color>
+    <color name="ide_card_stroke">#33FFFFFF</color>
+    <color name="ide_accent">#FF7C3AED</color>
+    <color name="ide_accent_soft">#FFB794F4</color>
+    <color name="ide_text">#FFF5F3FF</color>
+    <color name="ide_text_dim">#99FFFFFF</color>
+    <color name="ide_lavender">#FFE9D8FD</color>
+    <color name="ide_ink">#FFFFFFFF</color>
+    <color name="ide_ok">#FF8BE9A0</color>
+    <color name="ide_warn">#FFFFCC80</color>
+    <color name="ide_bad">#FFFF8B8B</color>
+    <color name="ide_scrim">#E6000000</color>
+    <color name="ide_browser_bg">#FF232629</color>
+</resources>

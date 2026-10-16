@@ -130,7 +130,7 @@ def wiring(root):
             ("a shell closing on its own is counted", "shells.remove(id)\n                TerminalWakeLock.sync(ctx, shells.size)" in open_shell),
             ("a shell killed is counted", "TerminalWakeLock.sync(ctx, shells.size)" in body(backend, "fun kill(")),
             ("disconnectAll drops it", "TerminalWakeLock.sync(ctx, 0)" in body(backend, "fun disconnectAll(")),
-            ("Configs toggles the choice and re-syncs", "IdePrefs.setWakeLockWanted(this, !wakeWanted)\n            TerminalWakeLock.sync(this)" in configs),
+            ("Configs toggles the choice and re-syncs", "IdePrefs.setWakeLockWanted(this, !wakeWanted) TerminalWakeLock.sync(this)" in " ".join(configs.split())),
             ("the exemption is requested once", "!IdePrefs.batteryExemptionAsked(app)" in owner
              and "IdePrefs.setBatteryExemptionAsked(app)" in owner),
             ("/api/terminal and /api/terminal/wakelock answer the state",

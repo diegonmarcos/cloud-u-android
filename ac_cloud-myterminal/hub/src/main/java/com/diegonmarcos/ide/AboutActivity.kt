@@ -4,17 +4,36 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Base64
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import com.diegonmarcos.ide.update.UpdateProgress
 import com.diegonmarcos.ide.update.Updater
 import org.json.JSONArray
@@ -41,8 +60,20 @@ class AboutActivity : AppCompatActivity() {
      *  Infos" can dump the entire page as text. */
     private var infoBuf = StringBuilder()
 
-    private lateinit var updateProgress: ProgressBar
-    private lateinit var updateStatus: TextView
+    /** Live updater state for the Updates section's progress bar + status line. */
+    private var updateState by mutableStateOf<UpdateProgress.State>(UpdateProgress.State.Idle)
+    private var updateText by mutableStateOf("")
+
+    // The page as data: the helpers below collect it (and mirror it into infoBuf) while onCreate
+    // runs, and AboutPage draws it. One sealed list instead of a View tree.
+    private sealed interface Item
+    private class Title(val text: String) : Item
+    private class SectionItem(val head: String, val items: List<Item>) : Item
+    private class RowItem(val key: String, val value: String) : Item
+    private class Small(val text: String) : Item
+    private class ActionItem(val label: String, val onClick: () -> Unit) : Item
+    private object UpdatePanel : Item
+    private class Items { val list = mutableListOf<Item>(); fun addView(i: Item) { list += i } }
 
     private val notifPermLauncher =
         registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {
@@ -58,14 +89,7 @@ class AboutActivity : AppCompatActivity() {
         infoBuf = StringBuilder()
 
         val ctx = this
-        val scroll = ScrollView(ctx).apply {
-            layoutParams = ViewGroup.LayoutParams(MATCH, MATCH)
-        }
-        val column = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(16); setPadding(pad, pad, pad, pad)
-        }
-        scroll.addView(column)
+        val column = Items()
 
         column.addView(title(ctx, getString(R.string.about_heading, getString(R.string.app_name))))
 
@@ -260,19 +284,10 @@ class AboutActivity : AppCompatActivity() {
 
         // ── Updates ────────────────────────────────────────────────────
         section(ctx, column, "Updates") {
-            updateProgress = ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal).apply {
-                max = 100; visibility = View.GONE
-            }
-            it.addView(updateProgress)
-            updateStatus = TextView(ctx).apply {
-                setTextColor(0xCCFFFFFF.toInt())
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                setPadding(0, dp(6), 0, dp(8))
-            }
-            it.addView(updateStatus)
+            it.addView(UpdatePanel)
             it.addView(actionButton(ctx, getString(R.string.about_check_updates)) {
                 Updater.checkNow(ctx)
-                updateStatus.text = getString(R.string.about_update_started)
+                updateText = getString(R.string.about_update_started)
             })
         }
 
@@ -304,7 +319,7 @@ class AboutActivity : AppCompatActivity() {
                 Toast.LENGTH_SHORT).show()
         })
 
-        setContentView(scroll)
+        setContent { AboutPage(column.list) }
     }
 
     override fun onResume() {
@@ -318,118 +333,95 @@ class AboutActivity : AppCompatActivity() {
     }
 
     private fun renderProgress(s: UpdateProgress.State) {
-        if (!::updateProgress.isInitialized) return
-        when (s) {
-            is UpdateProgress.State.Idle -> {
-                updateProgress.visibility = View.GONE; updateStatus.text = ""
-            }
-            is UpdateProgress.State.CheckingManifest -> {
-                updateProgress.visibility = View.VISIBLE; updateProgress.isIndeterminate = true
-                updateStatus.text = "Checking GHCR manifest…"
-            }
-            is UpdateProgress.State.Downloading -> {
-                updateProgress.visibility = View.VISIBLE; updateProgress.isIndeterminate = false
-                updateProgress.progress = s.percent
-                updateStatus.text = "Downloading: ${s.percent}%"
-            }
-            is UpdateProgress.State.Installing -> {
-                updateProgress.visibility = View.VISIBLE; updateProgress.isIndeterminate = true
-                updateStatus.text = "Installing…"
-            }
-            is UpdateProgress.State.UpToDate -> {
-                updateProgress.visibility = View.GONE
-                updateStatus.text = "Up to date (${s.tag})."
-            }
-            is UpdateProgress.State.Done -> {
-                updateProgress.visibility = View.GONE
-                updateStatus.text = "Update complete."
-            }
-            is UpdateProgress.State.Failed -> {
-                updateProgress.visibility = View.GONE
-                updateStatus.text = "Failed: ${s.message}"
-            }
+        updateState = s
+        updateText = when (s) {
+            is UpdateProgress.State.Idle -> ""
+            is UpdateProgress.State.CheckingManifest -> "Checking GHCR manifest…"
+            is UpdateProgress.State.Downloading -> "Downloading: ${s.percent}%"
+            is UpdateProgress.State.Installing -> "Installing…"
+            is UpdateProgress.State.UpToDate -> "Up to date (${s.tag})."
+            is UpdateProgress.State.Done -> "Update complete."
+            is UpdateProgress.State.Failed -> "Failed: ${s.message}"
         }
     }
 
     // ── helpers (ported from DevControlFragment via comms) ─────────────
 
-    private fun section(ctx: Context, host: LinearLayout, head: String, body: (LinearLayout) -> Unit) {
+    private fun section(ctx: Context, host: Items, head: String, body: (Items) -> Unit) {
         infoBuf.append("\n## ").append(head).append("\n")
-        host.addView(sectionHeader(ctx, head))
-        val grp = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, dp(8))
-        }
-        host.addView(grp)
+        val grp = Items()
+        host.addView(SectionItem(head, grp.list))
         body(grp)
     }
 
-    private fun row(ctx: Context, host: LinearLayout, key: String, value: String): TextView {
+    private fun row(ctx: Context, host: Items, key: String, value: String) {
         infoBuf.append("  ").append(key).append(": ").append(value).append("\n")
-        val rowView = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(4), 0, dp(4))
+        host.addView(RowItem(key, value))
+    }
+
+    private fun title(ctx: Context, text: String): Item {
+        infoBuf.append("# ").append(text).append("\n")
+        return Title(text)
+    }
+
+    private fun small(ctx: Context, text: String): Item {
+        infoBuf.append("  ").append(text).append("\n")
+        return Small(text)
+    }
+
+    private fun actionButton(ctx: Context, label: String, onClick: () -> Unit): Item = ActionItem(label, onClick)
+
+    // ── the page ────────────────────────────────────────────────────────
+
+    @Composable
+    private fun AboutPage(items: List<Item>) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            for (item in items) Block(item)
         }
-        rowView.addView(TextView(ctx).apply {
-            text = key
-            setTextColor(0xCCFFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            layoutParams = LinearLayout.LayoutParams(dp(120), LinearLayout.LayoutParams.WRAP_CONTENT)
-        })
-        val valueView = TextView(ctx).apply {
-            text = value
-            setTextColor(0xFFB794F4.toInt())
-            typeface = Typeface.MONOSPACE
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setTextIsSelectable(true)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            setOnLongClickListener {
-                copy(ctx, "$key: $value")
-                Toast.makeText(ctx, "Copied $key", Toast.LENGTH_SHORT).show(); true
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    private fun Block(item: Item) {
+        val p = LocalKitPalette.current
+        val soft = colorResource(R.color.ide_accent_soft)
+        when (item) {
+            is Title -> Text(item.text, color = colorResource(R.color.ide_lavender), fontSize = 24.sp,
+                fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+            is SectionItem -> Column(Modifier.padding(bottom = 8.dp)) {
+                Text(item.head, color = p.accent, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
+                for (child in item.items) Block(child)
+            }
+            is RowItem -> Row(
+                Modifier.fillMaxWidth().combinedClickable(onClick = {}, onLongClick = {
+                    copy(this@AboutActivity, "${item.key}: ${item.value}")
+                    Toast.makeText(this@AboutActivity, "Copied ${item.key}", Toast.LENGTH_SHORT).show()
+                }).padding(vertical = 4.dp),
+            ) {
+                Text(item.key, color = p.textPrimary.copy(alpha = 0.8f), fontSize = 12.sp, modifier = Modifier.width(120.dp))
+                Text(item.value, color = soft, fontSize = 12.sp, fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.weight(1f))
+            }
+            is Small -> Text(item.text, color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
+            is ActionItem -> Text(
+                item.label, color = p.textPrimary, fontSize = 14.sp, textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp).fillMaxWidth().background(p.accent)
+                    .clickable { item.onClick() }.padding(horizontal = 12.dp, vertical = 10.dp),
+            )
+            is UpdatePanel -> Column {
+                val st = updateState
+                when {
+                    st is UpdateProgress.State.Downloading ->
+                        LinearProgressIndicator(progress = { st.percent / 100f }, modifier = Modifier.fillMaxWidth())
+                    st is UpdateProgress.State.CheckingManifest || st is UpdateProgress.State.Installing ->
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    else -> {}
+                }
+                Text(updateText, color = p.textPrimary.copy(alpha = 0.8f), fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 8.dp))
             }
         }
-        rowView.addView(valueView)
-        host.addView(rowView)
-        return valueView
-    }
-
-    private fun title(ctx: Context, text: String) = TextView(ctx).apply {
-        infoBuf.append("# ").append(text).append("\n")
-        this.text = text
-        setTextColor(0xFFE9D8FD.toInt())
-        typeface = Typeface.DEFAULT_BOLD
-        setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-        setPadding(0, 0, 0, dp(12))
-    }
-
-    private fun sectionHeader(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextColor(0xFF7C3AED.toInt())
-        typeface = Typeface.DEFAULT_BOLD
-        setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-        setPadding(0, dp(14), 0, dp(4))
-    }
-
-    private fun small(ctx: Context, text: String) = TextView(ctx).apply {
-        infoBuf.append("  ").append(text).append("\n")
-        this.text = text
-        setTextColor(0x99FFFFFF.toInt())
-        setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-        setPadding(0, dp(4), 0, dp(4))
-    }
-
-    private fun actionButton(ctx: Context, label: String, onClick: () -> Unit) = TextView(ctx).apply {
-        text = label
-        setTextColor(0xFFFFFFFF.toInt())
-        setBackgroundColor(0xFF7C3AED.toInt())
-        gravity = android.view.Gravity.CENTER
-        setPadding(dp(12), dp(10), dp(12), dp(10))
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { topMargin = dp(8) }
-        isClickable = true; isFocusable = true
-        setOnClickListener { onClick() }
     }
 
     private fun copy(ctx: Context, v: String) {
@@ -510,10 +502,4 @@ class AboutActivity : AppCompatActivity() {
         else                   -> "$bytes B"
     }
 
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
-    companion object {
-        private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
-        private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
-    }
 }
