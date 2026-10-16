@@ -918,14 +918,6 @@ android {
     // hubPackage, ...) and have never compiled in CI - no workflow ran them. They are left out of the
     // androidTest compile until they are ported, so the edge-overlay gesture test (the emulator workflow
     // test-cloud-superapp.yml) can build. Delete a name from this list when its test is fixed.
-    sourceSets {
-        androidTest {
-            java {
-                exclude '**/ExternalAppsTest.kt', '**/FloatingNavConfigTest.kt', '**/HomeAppsFoldersTest.kt', '**/KdeConfigsPageTest.kt'
-            }
-        }
-    }
-
     // #512. Robolectric inflates REAL layouts against the REAL merged
     // resources + theme, so a test can read what a widget actually resolved
     // instead of what an XML file says. Every event is logged with full
@@ -1154,4 +1146,11 @@ dependencies {
     testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}
+
+// Four instrumented sources have never compiled in CI (APIs moved: Sections.forks,
+// PhoneFolders, ...). Left out of the androidTest Kotlin compile until ported, so the edge-overlay gesture test
+// (workflow test-cloud-superapp.yml) can build. Delete a name from this list when its test is fixed.
+tasks.matching { it.name == 'compileDebugAndroidTestKotlin' }.configureEach {
+    exclude '**/ExternalAppsTest.kt', '**/FloatingNavConfigTest.kt', '**/HomeAppsFoldersTest.kt', '**/KdeConfigsPageTest.kt'
 }
