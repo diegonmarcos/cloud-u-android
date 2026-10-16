@@ -21,6 +21,7 @@ on:
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "aa_cloud-superapp/app/src/androidTest/**"
       - "aa_cloud-superapp/build.sh"
+      - "aa_cloud-superapp/app/build.gradle"
 permissions:
   contents: read
 
