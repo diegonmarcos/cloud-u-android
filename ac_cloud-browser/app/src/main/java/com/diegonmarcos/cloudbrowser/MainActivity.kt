@@ -2,14 +2,38 @@ package com.diegonmarcos.cloudbrowser
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.fragment.app.commit
-import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.browser.BrowserHostFragment
 import com.diegonmarcos.superapp.browser.BrowserSearchPageHost
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitFragmentHost
+import com.diegonmarcos.superapp.uikit.KitFragmentHostState
+import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.superapp.updater.UpdateOverlayFragment
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
@@ -30,40 +54,56 @@ import com.diegonmarcos.superapp.updater.Updater
  * the host fragment's page, Tabs its tab switcher (#886), Search and Configs open the Search add-on's
  * page and the browser settings OVER it (the host's own overlays), and the pill follows the host: it
  * goes back to Browser (or Tabs, when the switcher is showing) the moment the last overlay closes.
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. The shell is a Compose screen under CloudKitTheme
+ * (libs:ui-kit): the host fragment sits in a KitFragmentHost and the island is libs:bottomnav's
+ * BottomNavIsland composable.
  */
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var bottomNav: BottomNavIslandView
+    /** The island's selected item (null = none); the host moves it through [BrowserHostFragment.onOverlaysClosed]. */
+    private var selectedId by mutableStateOf<String?>(null)
     private val decl: NavDecl by lazy {
         NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        // The host fragment is re-added by KitFragmentHost once Compose has a container for it.
+        super.onCreate(KitFragmentHostState.withoutFragments(savedInstanceState))
         FleetChrome.apply(this)
-        setContentView(R.layout.activity_main)
         supportFragmentManager.addFragmentOnAttachListener { _, f ->
             // The pill follows the host: Tabs while the tab switcher is what is showing, else Browser.
             if (f is BrowserHostFragment) f.onOverlaysClosed = {
-                bottomNav.selectedId = decl.section(if (f.isTabsOpen) "tabs" else "browser")?.id
+                selectedId = decl.section(if (f.isTabsOpen) "tabs" else "browser")?.id
             }
         }
-        buildBottomNav()
-        // While the keyboard is up the island would sit between it and the page, taking the room the
-        // address suggestions need; it comes back the moment the keyboard goes.
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
-            val ime = insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime())
-            bottomNav.visibility = if (ime) android.view.View.GONE else android.view.View.VISIBLE
-            androidx.core.view.ViewCompat.onApplyWindowInsets(v, insets)
-        }
-
-        if (savedInstanceState == null) {
-            val openUrl = intent?.dataString?.takeIf { it.isNotBlank() }
-            supportFragmentManager.commit {
-                replace(
-                    R.id.fragment_container,
-                    BrowserHostFragment.newInstance(openUrl, BuildConfig.UI_BROWSER_CONFIG_B64),
-                )
+        selectedId = decl.default()?.id
+        // A link that started this activity opens once; a recreation brings the browser back on its own tabs.
+        val openUrl = if (savedInstanceState == null) intent?.dataString?.takeIf { it.isNotBlank() } else null
+        setContent {
+            val palette = KitPalette(
+                surface = colorResource(R.color.browser_surface),
+                surfaceSelected = colorResource(R.color.browser_selected),
+                textPrimary = colorResource(R.color.browser_text),
+                textSecondary = colorResource(R.color.browser_text_dim),
+                accent = colorResource(R.color.browser_accent),
+                hairline = colorResource(R.color.browser_hairline),
+                tileInk = colorResource(R.color.browser_ink),
+            )
+            CloudKitTheme(palette) {
+                // While the keyboard is up the island would sit between it and the page, taking the room the
+                // address suggestions need; it comes back the moment the keyboard goes.
+                val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+                Column(
+                    Modifier.fillMaxSize().background(colorResource(R.color.browser_bg))
+                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+                        .imePadding(),
+                ) {
+                    KitFragmentHost(R.id.fragment_container, Modifier.weight(1f).fillMaxWidth()) {
+                        BrowserHostFragment.newInstance(openUrl, BuildConfig.UI_BROWSER_CONFIG_B64)
+                    }
+                    if (!imeVisible) Island()
+                }
             }
         }
 
@@ -78,15 +118,20 @@ class MainActivity : AppCompatActivity() {
      * drawable. A tap on Search / Configs asks the live host to draw that page over itself; a tap
      * on Browser closes whatever is open. The island's look is the lib's.
      */
-    private fun buildBottomNav() {
-        bottomNav = ActivityCompat.requireViewById(this, R.id.bottom_nav)
-        bottomNav.items = decl.viewItems { icon ->
-            @Suppress("DiscouragedApi")
-            resources.getIdentifier("ic_nav_$icon", "drawable", packageName)
+    @androidx.compose.runtime.Composable
+    private fun Island() {
+        val items = remember {
+            decl.viewItems { icon ->
+                @Suppress("DiscouragedApi")
+                resources.getIdentifier("ic_nav_$icon", "drawable", packageName)
+            }
         }
-        bottomNav.selectedId = decl.default()?.id
-        bottomNav.onSelect = { id -> openSection(id) }
-        bottomNav.onReselect = { id -> if (id != decl.default()?.id) openSection(id) }
+        val entries = items.map { BottomNavEntry(it.id, it.label, painterResource(it.icon)) }
+        BottomNavIsland(
+            entries = entries,
+            selectedId = selectedId,
+            onSelect = { e -> if (e.id != selectedId || e.id != decl.default()?.id) openSection(e.id) },
+        )
     }
 
     private fun openSection(id: String) {
@@ -106,7 +151,7 @@ class MainActivity : AppCompatActivity() {
             "configs" -> host.openSettings()
         }
         // closeOverlays reset the pill to Browser; an overlay that opened puts it on its own item.
-        bottomNav.selectedId = id
+        selectedId = id
     }
 
     override fun onNewIntent(intent: Intent) {

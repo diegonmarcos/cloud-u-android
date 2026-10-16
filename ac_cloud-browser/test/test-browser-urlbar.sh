@@ -45,7 +45,7 @@ def check(root, ok):
     manifest = open(os.path.join(root, "ac_cloud-browser/app/src/main/AndroidManifest.xml"), encoding="utf-8").read()
     ok('android:windowSoftInputMode="adjustResize"' in manifest, "U2 the window resizes with the keyboard")
     mainact = src.get(APP + "/MainActivity.kt", "")
-    ok("WindowInsetsCompat.Type.ime()" in mainact and "bottomNav.visibility" in mainact, "U2 the island steps aside while the keyboard is up")
+    ok("WindowInsets.ime" in mainact and "if (!imeVisible) Island()" in mainact, "U2 the island steps aside while the keyboard is up")
     ok("Title(searchTitle(engineLabel))" in panel and 'Title("History")' in panel and 'Title("Favorites")' in panel, "U3 three titled sections: Web search, History, Favorites")
     ok(panel.find("Title(searchTitle") < panel.find('Title("History")') < panel.find('Title("Favorites")'), "U3 they come in that order")
     ok("Web search" in panel and "searchLimit: Int = SEARCH_LIMIT" in sug and "historyLimit: Int = HISTORY_LIMIT" in sug and "favLimit: Int = FAV_LIMIT" in sug, "U3 each section is capped")
@@ -77,7 +77,7 @@ main("url bar", check, [
     ("the scrim stops dismissing", PANEL, "clickable(onClick = onDismiss)", "clickable(onClick = {})", "dimmed page dismisses"),
     ("back leaves the panel up", FRAG, "suggestState.visible -> dismissSuggestions()", "false -> dismissSuggestions()", "back dismisses"),
     ("the window stops resizing", "ac_cloud-browser/app/src/main/AndroidManifest.xml", 'android:windowSoftInputMode="adjustResize"', "", "resizes with the keyboard"),
-    ("the island covers the keyboard room", APP + "/MainActivity.kt", "bottomNav.visibility = if (ime)", "bottomNav.alpha = if (ime)", "steps aside"),
+    ("the island covers the keyboard room", APP + "/MainActivity.kt", "if (!imeVisible) Island()", "Island()", "steps aside"),
     ("the History title goes", PANEL, 'add(Title("History"))', 'add(Title(""))', "three titled sections"),
     ("the Favorites section goes", PANEL, 'add(Title("Favorites"))', 'add(Title(""))', "three titled sections"),
     ("Favorites jumps ahead of History", PANEL, 'if (sections.history.isNotEmpty()) { add(Title("History"))', 'if (sections.favourites.isNotEmpty()) { add(Title("Favorites")); sections.favourites.forEach { add(Item(it)) } }\n            if (sections.history.isNotEmpty()) { add(Title("History"))', "come in that order"),

@@ -7,8 +7,8 @@
 #   S1 build.json::ui is ONE declaration: bottom_nav = favourites|tabs|browser|search|configs, default_section browser
 #      (the web tabs, address bar and every overlay stay libs:browser's own UI: no pages).
 #   S2 the app compiles libs:bottomnav and bakes UI_BOTTOM_NAV + UI_SECTIONS_B64 + UI_DEFAULT_SECTION.
-#   S3 MainActivity draws the bar with BottomNavIslandView fed by NavDecl; activity_main.xml hosts
-#      that view below the host fragment, not a BottomNavigationView.
+#   S3 MainActivity (a Compose screen) draws the bar with libs:bottomnav's BottomNavIsland fed by NavDecl,
+#      below the host fragment, not a BottomNavigationView.
 #   S4 Search and Configs are the HOST's own pages (BrowserHostFragment.openSearch/openSettings,
 #      the public doors onto its private pages) and the pill follows the host's overlays (onOverlaysClosed).
 #   S5 no hand-rolled nav widget in the app or libs:browser (nav-shape-guard N3).
@@ -41,7 +41,7 @@ CFG = json.loads(r'''{
  ],
  "must": {
   "app/src/main/java/com/diegonmarcos/cloudbrowser/MainActivity.kt": [
-   "BottomNavIslandView",
+   "BottomNavIsland(",
    "NavDecl.fromBuildConfig",
    "viewItems",
    "openSearch()",
@@ -52,9 +52,6 @@ CFG = json.loads(r'''{
    "isTabsOpen",
    "onOverlaysClosed",
    "dismissOverlays()"
-  ],
-  "app/src/main/res/layout/activity_main.xml": [
-   "com.diegonmarcos.superapp.bottomnav.BottomNavIslandView"
   ],
   "../ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserHostFragment.kt": [
    "fun openSearch()",
@@ -71,7 +68,7 @@ CFG = json.loads(r'''{
  "must_token_mutations": [
   [
    "app/src/main/java/com/diegonmarcos/cloudbrowser/MainActivity.kt",
-   "BottomNavIslandView"
+   "BottomNavIsland("
   ],
   [
    "app/src/main/java/com/diegonmarcos/cloudbrowser/MainActivity.kt",
@@ -80,10 +77,6 @@ CFG = json.loads(r'''{
   [
    "app/src/main/java/com/diegonmarcos/cloudbrowser/MainActivity.kt",
    "NavDecl.fromBuildConfig"
-  ],
-  [
-   "app/src/main/res/layout/activity_main.xml",
-   "com.diegonmarcos.superapp.bottomnav.BottomNavIslandView"
   ],
   [
    "../ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserHostFragment.kt",

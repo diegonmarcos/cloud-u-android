@@ -3,14 +3,27 @@ package com.diegonmarcos.cloudbrowser
 import android.app.Activity
 import android.os.Bundle
 import android.util.Base64
-import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Button
-import android.widget.LinearLayout
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.viewinterop.AndroidView
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitPalette
 import org.json.JSONObject
 import java.net.URI
 
@@ -32,6 +45,9 @@ import java.net.URI
  * together. The activity is guarded by a SIGNATURE-level permission in the manifest: the fleet
  * shares one signing key, so only a fleet app can start a mission — no third-party app can ask
  * this browser for a cookie.
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. The surface is a Compose screen under
+ * CloudKitTheme (libs:ui-kit): the sign-in page's WebView hosted through AndroidView, and the Done button.
  */
 class AuthMissionActivity : AppCompatActivity() {
 
@@ -53,22 +69,7 @@ class AuthMissionActivity : AppCompatActivity() {
         if (url.isBlank()) { refuse("no url in the mission"); return }
         if (capture != CAPTURE_COOKIE) { refuse("this browser captures a session cookie only; '$capture' is not a declared capture"); return }
 
-        val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val web = WebView(this)
-        column.addView(web, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-
-        // "Done" reads the session cookie for the declared cookie_url and returns it.
-        val done = Button(this).apply {
-            text = getString(R.string.auth_mission_done)
-            setOnClickListener {
-                val cookie = CookieManager.getInstance().getCookie(cookieUrl).orEmpty()
-                if (cookie.isBlank()) text = getString(R.string.auth_mission_no_cookie)
-                else returnCookie(cookie)
-            }
-        }
-        column.addView(done, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
@@ -81,7 +82,29 @@ class AuthMissionActivity : AppCompatActivity() {
                 return false
             }
         }
-        setContentView(column)
+        setContent {
+            val palette = KitPalette(
+                surface = colorResource(R.color.browser_surface),
+                surfaceSelected = colorResource(R.color.browser_selected),
+                textPrimary = colorResource(R.color.browser_text),
+                textSecondary = colorResource(R.color.browser_text_dim),
+                accent = colorResource(R.color.browser_accent),
+                hairline = colorResource(R.color.browser_hairline),
+                tileInk = colorResource(R.color.browser_ink),
+            )
+            CloudKitTheme(palette) {
+                var doneLabel by remember { mutableStateOf(getString(R.string.auth_mission_done)) }
+                Column(Modifier.fillMaxSize().background(colorResource(R.color.browser_bg))) {
+                    AndroidView(factory = { web }, modifier = Modifier.weight(1f).fillMaxWidth())
+                    // "Done" reads the session cookie for the declared cookie_url and returns it.
+                    Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                        val cookie = CookieManager.getInstance().getCookie(cookieUrl).orEmpty()
+                        if (cookie.isBlank()) doneLabel = getString(R.string.auth_mission_no_cookie)
+                        else returnCookie(cookie)
+                    }) { Text(doneLabel) }
+                }
+            }
+        }
         web.loadUrl(url)
     }
 

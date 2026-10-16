@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The id MainActivity's KitFragmentHost gives the container BrowserHostFragment lives in (it used to be the
+     layout's FrameLayout). -->
+<resources>
+    <item name="fragment_container" type="id" />
+</resources>

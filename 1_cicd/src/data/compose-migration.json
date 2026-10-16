@@ -716,17 +716,14 @@
       "id": "ac_cloud-browser",
       "scope": "in",
       "wave": 3,
-      "ui": "views",
+      "ui": "compose",
       "size": "S",
-      "screens_left": [
-        "MainActivity",
-        "AuthMissionActivity"
-      ],
-      "notes": "FrameLayout host for the browser engine (libs:browser).",
+      "screens_left": [],
+      "notes": "All Compose (2026-10-16): MainActivity and AuthMissionActivity are Compose screens under CloudKitTheme; BrowserHostFragment sits in libs:ui-kit KitFragmentHost under libs:bottomnav BottomNavIsland, and the auth-mission sign-in WebView is hosted through AndroidView.",
       "baseline": {
-        "view_screens": 2,
-        "layout_xml": 1,
-        "view_ui_files": 1,
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
         "custom_views": 0
       }
     },
