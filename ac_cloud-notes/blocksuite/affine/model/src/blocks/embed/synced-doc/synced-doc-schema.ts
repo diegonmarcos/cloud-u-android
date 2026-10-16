@@ -19,6 +19,7 @@ export const defaultEmbedSyncedDocBlockProps: EmbedSyncedDocBlockProps = {
   caption: undefined,
   scale: undefined,
   preFoldHeight: undefined,
+  portal: undefined,
   // title & description aliases
   title: undefined,
   description: undefined,

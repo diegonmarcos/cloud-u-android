@@ -18,6 +18,11 @@ export type EmbedSyncedDocBlockProps = {
    * a.k.a the fourth number of the `xywh`
    */
   preFoldHeight?: number;
+  /**
+   * Live portal: the embedded doc is editable in place on the canvas
+   * instead of being a read-only preview.
+   */
+  portal?: boolean;
 } & ReferenceInfo &
   GfxCompatibleProps;
 

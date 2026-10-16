@@ -33,6 +33,7 @@ import {
   CopyIcon,
   DeleteIcon,
   DuplicateIcon,
+  EditIcon,
   ExpandFullIcon,
   InsertIntoPageIcon,
   OpenInNewIcon,
@@ -423,6 +424,25 @@ const builtinSurfaceToolbarConfig = {
       },
     },
     captionAction,
+    {
+      id: 'f.portal',
+      content(ctx) {
+        const model = ctx.getCurrentBlockByType(
+          EmbedSyncedDocBlockComponent
+        )?.model;
+        if (!model || ctx.store.readonly) return null;
+        const on = model.props.portal === true;
+        return html`<editor-icon-button
+          aria-label="Edit in place"
+          .tooltip=${on ? 'Stop editing in place' : 'Edit in place'}
+          .active=${on}
+          @click=${() =>
+            ctx.store.updateBlock(model, { portal: on ? undefined : true })}
+        >
+          ${EditIcon()}
+        </editor-icon-button>`;
+      },
+    },
     {
       id: 'e.scale',
       content(ctx) {

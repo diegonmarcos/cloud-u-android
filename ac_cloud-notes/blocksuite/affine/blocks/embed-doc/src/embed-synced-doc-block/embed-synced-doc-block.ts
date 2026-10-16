@@ -14,6 +14,7 @@ import {
   type EmbedSyncedDocModel,
   NoteDisplayMode,
   type ReferenceInfo,
+  syncedDocStoreOptions,
 } from '@blocksuite/affine-model';
 import { REFERENCE_NODE } from '@blocksuite/affine-shared/consts';
 import {
@@ -34,7 +35,7 @@ import {
   LifeCycleWatcher,
 } from '@blocksuite/std';
 import { GfxControllerIdentifier, GfxExtension } from '@blocksuite/std/gfx';
-import { type GetStoreOptions, type Query, Text } from '@blocksuite/store';
+import { type Query, Text } from '@blocksuite/store';
 import { computed, signal } from '@preact/signals-core';
 import { html, nothing, type PropertyValues } from 'lit';
 import { query, state } from 'lit/decorators.js';
@@ -233,6 +234,7 @@ export class EmbedSyncedDocBlockComponent extends EmbedBlockComponent<EmbedSynce
             [editorMode]: true,
             [theme]: true,
             surface: false,
+            portal: this.model.props.portal === true,
             selected: this.selected$.value,
             'show-hover-border': true,
             'comment-highlighted': this.isCommentHighlighted,
@@ -413,8 +415,11 @@ export class EmbedSyncedDocBlockComponent extends EmbedBlockComponent<EmbedSynce
   }
 
   get syncedDoc() {
-    const options: GetStoreOptions = { readonly: true };
-    if (this.isPageMode) options.query = this._pageFilter;
+    const options = syncedDocStoreOptions({
+      portal: this.model.props.portal,
+      parentReadonly: this.store.readonly,
+      query: this.isPageMode ? this._pageFilter : undefined,
+    });
     const doc = this.std.workspace.getDoc(this.model.props.pageId);
     return doc?.getStore(options) ?? null;
   }

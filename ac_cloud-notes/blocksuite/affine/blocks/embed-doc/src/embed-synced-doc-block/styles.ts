@@ -51,6 +51,9 @@ export const blockStyles = css`
   .affine-embed-synced-doc-editor {
     pointer-events: none;
   }
+  .affine-embed-synced-doc-container.portal .affine-embed-synced-doc-editor {
+    pointer-events: auto;
+  }
 
   .affine-embed-synced-doc-container {
     border: 1px solid transparent;
