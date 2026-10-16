@@ -150,8 +150,11 @@ fi
 # consuming path.
 command -v unzip >/dev/null 2>&1 || {
   errlog "firestack: unzip is required to verify the aar's shape (a skipped check is a false pass)"; exit 1; }
-unzip -l "$TMP" | grep -q "classes.jar"         || { errlog "firestack: pinned aar has no classes.jar"; exit 1; }
-unzip -l "$TMP" | grep -q "AndroidManifest.xml" || { errlog "firestack: pinned aar has no AndroidManifest.xml"; exit 1; }
+# Capture the listing first: `unzip -l | grep -q` under pipefail fails whenever grep -q exits early and unzip
+# takes SIGPIPE - a size-dependent flake that rejected a perfectly good aar ("has no classes.jar").
+LISTING="$(unzip -l "$TMP")"
+grep -q "classes.jar" <<<"$LISTING"|| { errlog "firestack: pinned aar has no classes.jar"; exit 1; }
+grep -q "AndroidManifest.xml" <<<"$LISTING"|| { errlog "firestack: pinned aar has no AndroidManifest.xml"; exit 1; }
 
 # Only now does it become the real aar.
 mv "$TMP" "$AAR"
