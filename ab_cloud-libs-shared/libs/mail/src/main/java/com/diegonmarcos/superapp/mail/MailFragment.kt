@@ -1,14 +1,36 @@
 package com.diegonmarcos.superapp.mail
 
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -22,77 +44,104 @@ import kotlinx.serialization.json.Json
  *
  * Default server pulled from BuildConfig.JMAP_DEFAULT_SERVER which the gradle
  * eval injects from build.json::ui.sections[mail].jmap_default_server.
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. A KitComposeFragment over the host theme's colours.
  */
-class MailFragment : Fragment() {
+class MailFragment : KitComposeFragment() {
 
     private val prettyJson = Json { prettyPrint = true; ignoreUnknownKeys = true }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View =
-        inflater.inflate(R.layout.fragment_mail, container, false)
+    override fun palette(): KitPalette = requireContext().mailKitPalette()
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    @Composable
+    override fun Content() {
         val ctx = requireContext()
-        val prefs = JmapPrefs(ctx)
+        val p = LocalKitPalette.current
+        val prefs = remember { JmapPrefs(ctx) }
+        val scope = rememberCoroutineScope()
 
-        val etServer:   TextInputEditText = view.findViewById(R.id.et_server)
-        val etEmail:    TextInputEditText = view.findViewById(R.id.et_email)
-        val etPassword: TextInputEditText = view.findViewById(R.id.et_password)
-        val btnConnect: MaterialButton    = view.findViewById(R.id.btn_connect)
-        val btnLogout:  MaterialButton    = view.findViewById(R.id.btn_logout)
-        val tvStatus:   TextView          = view.findViewById(R.id.tv_status)
-        val tvSession:  TextView          = view.findViewById(R.id.tv_session)
+        var server by remember { mutableStateOf(prefs.server.ifEmpty { BuildConfig.JMAP_DEFAULT_SERVER }) }
+        var email by remember { mutableStateOf(prefs.email) }
+        var password by remember { mutableStateOf(prefs.password) }
+        var showPassword by remember { mutableStateOf(false) }
+        var status by remember { mutableStateOf("") }
+        var session by remember { mutableStateOf("") }
 
-        etServer.setText(prefs.server.ifEmpty { BuildConfig.JMAP_DEFAULT_SERVER })
-        etEmail.setText(prefs.email)
-        etPassword.setText(prefs.password)
-
-        btnConnect.setOnClickListener {
-            val server   = etServer.text.toString().trim()
-            val email    = etEmail.text.toString().trim()
-            val password = etPassword.text.toString()
-            prefs.server   = server
-            prefs.email    = email
-            prefs.password = password
-
-            tvStatus.setText(R.string.mail_status_connecting)
-            tvSession.text = ""
-            viewLifecycleOwner.lifecycleScope.launch {
-                val result = withContext(Dispatchers.IO) {
-                    JmapClient(server, email, password).discover()
-                }
-                when (result) {
-                    is JmapClient.Result.Success -> {
-                        val s = result.value
-                        tvStatus.text = getString(R.string.mail_status_ok, s.primaryAccountId)
-                        tvSession.text = buildString {
-                            appendLine("${getString(R.string.mail_session_apiurl)}: ${s.apiUrl}")
-                            appendLine("downloadUrl: ${s.downloadUrl}")
-                            appendLine("uploadUrl:   ${s.uploadUrl}")
-                            appendLine("eventSrcUrl: ${s.eventSourceUrl}")
-                            appendLine()
-                            appendLine(getString(R.string.mail_session_accounts) + ":")
-                            s.accounts.forEach { (id, name) -> appendLine("  $id  → $name") }
-                            appendLine()
-                            appendLine("── full session ──")
-                            appendLine(prettyJson.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), s.raw))
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            OutlinedTextField(
+                value = server, onValueChange = { server = it }, singleLine = true,
+                label = { Text(stringResource(R.string.mail_server_hint)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = email, onValueChange = { email = it }, singleLine = true,
+                label = { Text(stringResource(R.string.mail_email_hint)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            OutlinedTextField(
+                value = password, onValueChange = { password = it }, singleLine = true,
+                label = { Text(stringResource(R.string.mail_password_hint)) },
+                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                trailingIcon = {
+                    TextButton(onClick = { showPassword = !showPassword }) { Text(if (showPassword) "🙈" else "👁") }
+                },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        val srv = server.trim()
+                        val mail = email.trim()
+                        prefs.server = srv
+                        prefs.email = mail
+                        prefs.password = password
+                        status = ctx.getString(R.string.mail_status_connecting)
+                        session = ""
+                        scope.launch {
+                            val result = withContext(Dispatchers.IO) { JmapClient(srv, mail, password).discover() }
+                            when (result) {
+                                is JmapClient.Result.Success -> {
+                                    val s = result.value
+                                    status = ctx.getString(R.string.mail_status_ok, s.primaryAccountId)
+                                    session = buildString {
+                                        appendLine("${ctx.getString(R.string.mail_session_apiurl)}: ${s.apiUrl}")
+                                        appendLine("downloadUrl: ${s.downloadUrl}")
+                                        appendLine("uploadUrl:   ${s.uploadUrl}")
+                                        appendLine("eventSrcUrl: ${s.eventSourceUrl}")
+                                        appendLine()
+                                        appendLine(ctx.getString(R.string.mail_session_accounts) + ":")
+                                        s.accounts.forEach { (id, name) -> appendLine("  $id  → $name") }
+                                        appendLine()
+                                        appendLine("── full session ──")
+                                        appendLine(prettyJson.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), s.raw))
+                                    }
+                                }
+                                is JmapClient.Result.HttpError ->
+                                    status = ctx.getString(R.string.mail_status_http, result.code, result.body.take(200))
+                                is JmapClient.Result.NetworkError ->
+                                    status = ctx.getString(R.string.mail_status_net, result.message)
+                            }
                         }
-                    }
-                    is JmapClient.Result.HttpError ->
-                        tvStatus.text = getString(R.string.mail_status_http, result.code, result.body.take(200))
-                    is JmapClient.Result.NetworkError ->
-                        tvStatus.text = getString(R.string.mail_status_net, result.message)
-                }
+                    },
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.mail_connect)) }
+                TextButton(onClick = {
+                    prefs.clear()
+                    server = BuildConfig.JMAP_DEFAULT_SERVER
+                    email = ""
+                    password = ""
+                    status = ""
+                    session = ""
+                }) { Text(stringResource(R.string.mail_logout)) }
             }
-        }
-
-        btnLogout.setOnClickListener {
-            prefs.clear()
-            etServer.setText(BuildConfig.JMAP_DEFAULT_SERVER)
-            etEmail.setText("")
-            etPassword.setText("")
-            tvStatus.text = ""
-            tvSession.text = ""
+            Text(status, color = p.textPrimary, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
+            SelectionContainer {
+                Text(session, color = p.textPrimary, style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+            }
         }
     }
 

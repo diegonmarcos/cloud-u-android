@@ -1,17 +1,31 @@
 package com.diegonmarcos.superapp.mail
 
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
-import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
@@ -24,38 +38,37 @@ import java.time.format.DateTimeFormatter
  * Args (set by [MailFoldersFragment] click handler):
  *  - ARG_FOLDER_ID    JMAP mailbox id passed into Email/query.filter.inMailbox
  *  - ARG_FOLDER_NAME  display title only
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. A KitComposeFragment over the host theme's colours.
  */
-class MailMessagesFragment : Fragment(R.layout.fragment_mail_messages) {
+class MailMessagesFragment : KitComposeFragment() {
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    override fun palette(): KitPalette = requireContext().mailKitPalette()
+
+    @Composable
+    override fun Content() {
+        val ctx = requireContext()
+        val p = LocalKitPalette.current
         val args = arguments ?: Bundle.EMPTY
         val folderName = args.getString(ARG_FOLDER_NAME, "(unknown)")
         val folderId   = args.getString(ARG_FOLDER_ID,   "")
+        val prefs = remember { JmapPrefs(ctx) }
+        val signedIn = prefs.email.isNotEmpty() && prefs.password.isNotEmpty()
 
-        val titleTv  = view.findViewById<TextView>(R.id.messages_title)
-        val statusTv = view.findViewById<TextView>(R.id.messages_subtitle)
-        val list     = view.findViewById<LinearLayout>(R.id.messages_list)
-        val spinner  = view.findViewById<ProgressBar>(R.id.messages_loading)
-
-        titleTv.text = folderName
-
-        val prefs = JmapPrefs(requireContext())
-        if (prefs.email.isEmpty() || prefs.password.isEmpty()) {
-            spinner.isVisible = false
-            statusTv.setText(R.string.mail_messages_login_first)
-            return
+        var status by remember {
+            mutableStateOf(
+                when {
+                    !signedIn -> ctx.getString(R.string.mail_messages_login_first)
+                    folderId.isEmpty() -> ctx.getString(R.string.mail_messages_no_folder)
+                    else -> ctx.getString(R.string.mail_messages_loading)
+                },
+            )
         }
-        if (folderId.isEmpty()) {
-            spinner.isVisible = false
-            statusTv.setText(R.string.mail_messages_no_folder)
-            return
-        }
+        var loading by remember { mutableStateOf(signedIn && folderId.isNotEmpty()) }
+        var emails by remember { mutableStateOf<List<JmapClient.Email>>(emptyList()) }
 
-        spinner.isVisible = true
-        statusTv.setText(R.string.mail_messages_loading)
-
-        viewLifecycleOwner.lifecycleScope.launch {
+        LaunchedEffect(folderId) {
+            if (!signedIn || folderId.isEmpty()) return@LaunchedEffect
             val outcome = withContext(Dispatchers.IO) {
                 val client = JmapClient(prefs.server, prefs.email, prefs.password)
                 when (val s = client.discover()) {
@@ -64,57 +77,58 @@ class MailMessagesFragment : Fragment(R.layout.fragment_mail_messages) {
                     is JmapClient.Result.NetworkError -> null to "net: ${s.message}"
                 }
             }
-            spinner.isVisible = false
+            loading = false
             val (result, sessionErr) = outcome
             if (sessionErr != null) {
-                statusTv.text = getString(R.string.mail_messages_error, sessionErr)
-                return@launch
+                status = ctx.getString(R.string.mail_messages_error, sessionErr)
+                return@LaunchedEffect
             }
             when (val r = result!!) {
                 is JmapClient.Result.Success ->
-                    renderMessages(list, statusTv, r.value)
+                    if (r.value.isEmpty()) {
+                        status = ctx.getString(R.string.mail_messages_empty)
+                    } else {
+                        status = ctx.resources.getQuantityString(R.plurals.mail_messages_count, r.value.size, r.value.size)
+                        emails = r.value
+                    }
                 is JmapClient.Result.HttpError ->
-                    statusTv.text = getString(R.string.mail_messages_error, "HTTP ${r.code}: ${r.body.take(200)}")
+                    status = ctx.getString(R.string.mail_messages_error, "HTTP ${r.code}: ${r.body.take(200)}")
                 is JmapClient.Result.NetworkError ->
-                    statusTv.text = getString(R.string.mail_messages_error, r.message)
+                    status = ctx.getString(R.string.mail_messages_error, r.message)
             }
         }
-    }
 
-    private fun renderMessages(
-        container: LinearLayout,
-        status: TextView,
-        emails: List<JmapClient.Email>,
-    ) {
-        container.removeAllViews()
-        if (emails.isEmpty()) {
-            status.setText(R.string.mail_messages_empty)
-            return
-        }
-        status.text = resources.getQuantityString(
-            R.plurals.mail_messages_count, emails.size, emails.size,
-        )
-        val inflater = LayoutInflater.from(requireContext())
-        for (email in emails) {
-            val row = inflater.inflate(R.layout.item_mail_message, container, false)
-            row.findViewById<TextView>(R.id.tv_msg_from).text =
-                if (email.from.isNotBlank()) email.from else "(no sender)"
-            row.findViewById<TextView>(R.id.tv_msg_subject).text =
-                if (email.subject.isNotBlank()) email.subject else "(no subject)"
-            row.findViewById<TextView>(R.id.tv_msg_preview).text = email.preview
-            row.findViewById<TextView>(R.id.tv_msg_date).text = formatDate(email.receivedAt)
-            row.setOnClickListener {
-                (activity as? MailHost)?.openMailPage(
-                    pageId = MailPages.MESSAGE,
-                    args = bundleOf(
-                        MailMessageBodyFragment.ARG_EMAIL_ID to email.id,
-                        MailMessageBodyFragment.ARG_SUBJECT  to email.subject,
-                        MailMessageBodyFragment.ARG_FROM     to email.from,
-                        MailMessageBodyFragment.ARG_DATE     to email.receivedAt,
-                    ),
-                )
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 10.dp)) {
+            Text(folderName, color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+            MailStatus(loading, status, Modifier.padding(top = 4.dp))
+            MailDivider()
+            for (email in emails) {
+                Column(
+                    Modifier.fillMaxWidth().clickable {
+                        (activity as? MailHost)?.openMailPage(
+                            pageId = MailPages.MESSAGE,
+                            args = bundleOf(
+                                MailMessageBodyFragment.ARG_EMAIL_ID to email.id,
+                                MailMessageBodyFragment.ARG_SUBJECT  to email.subject,
+                                MailMessageBodyFragment.ARG_FROM     to email.from,
+                                MailMessageBodyFragment.ARG_DATE     to email.receivedAt,
+                            ),
+                        )
+                    }.padding(horizontal = 12.dp, vertical = 10.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(email.from.ifBlank { "(no sender)" }, color = p.textPrimary,
+                            style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f))
+                        MailDim(formatDate(email.receivedAt), MaterialTheme.typography.labelSmall,
+                            Modifier.padding(start = 8.dp), mono = true)
+                    }
+                    Text(email.subject.ifBlank { "(no subject)" }, color = p.textPrimary,
+                        style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp))
+                    MailDim(email.preview, MaterialTheme.typography.bodySmall, Modifier.padding(top = 2.dp))
+                }
             }
-            container.addView(row)
         }
     }
 

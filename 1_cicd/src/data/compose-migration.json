@@ -422,24 +422,17 @@
       "id": "libs:mail",
       "scope": "in",
       "wave": 1,
-      "ui": "views",
+      "ui": "compose",
       "size": "M",
-      "screens_left": [
-        "MailFragment",
-        "MailDrawerFragment",
-        "MailFoldersFragment",
-        "MailMessagesFragment",
-        "MailMessageBodyFragment",
-        "MailPagePlaceholder"
-      ],
+      "screens_left": [],
       "consumers": [
         "superapp"
       ],
-      "notes": "8 XML layouts + RecyclerView adapters. cloud-mail (Compose) is the reference look.",
+      "notes": "All Compose (2026-10-16): the six pages are KitComposeFragments under CloudKitTheme, their palette the host app's Material theme roles (Context.mailKitPalette); the eight layouts are deleted. Same newInstance/MailHost/MailPages contracts.",
       "baseline": {
-        "view_screens": 6,
-        "layout_xml": 8,
-        "view_ui_files": 6,
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
         "custom_views": 0
       }
     },
