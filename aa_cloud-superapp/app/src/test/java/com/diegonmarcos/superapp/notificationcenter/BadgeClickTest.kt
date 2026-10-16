@@ -1,6 +1,5 @@
 package com.diegonmarcos.superapp.notificationcenter
 
-import androidx.health.connect.client.HealthConnectClient
 import com.diegonmarcos.superapp.health.StepsToday
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -12,6 +11,9 @@ import java.time.ZoneId
 
 /** Click-target resolution of the Weather / Health badges, and the Health badge's steps rules. */
 class BadgeClickTest {
+    // HealthConnectClient.SDK_* values (the SDK is not on the app test classpath).
+    private val SDK_UNAVAILABLE = 1; private val SDK_UPDATE_REQUIRED = 2; private val SDK_AVAILABLE = 3
+
     @Test fun weatherOpensTheProvidersPageForThePosition() {
         val u = BadgeClick.weatherUrl(48.8566, 2.3522)
         assertTrue(u, u.startsWith("https://open-meteo.com/en/docs#latitude=48.8566&longitude=2.3522"))
@@ -33,11 +35,11 @@ class BadgeClickTest {
     // ── permission state mapping ─────────────────────────────────────
     @Test fun permissionStateMapping() {
         val g = setOf(StepsToday.READ_STEPS)
-        assertEquals(StepsToday.Perm.GRANTED, StepsToday.permState(HealthConnectClient.SDK_AVAILABLE, g))
-        assertEquals(StepsToday.Perm.DENIED, StepsToday.permState(HealthConnectClient.SDK_AVAILABLE, emptySet()))
-        assertEquals(StepsToday.Perm.DENIED, StepsToday.permState(HealthConnectClient.SDK_AVAILABLE, setOf("android.permission.health.READ_DISTANCE")))
-        assertEquals(StepsToday.Perm.UPDATE_REQUIRED, StepsToday.permState(HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED, g))
-        assertEquals(StepsToday.Perm.UNAVAILABLE, StepsToday.permState(HealthConnectClient.SDK_UNAVAILABLE, g))
+        assertEquals(StepsToday.Perm.GRANTED, StepsToday.permState(SDK_AVAILABLE, g))
+        assertEquals(StepsToday.Perm.DENIED, StepsToday.permState(SDK_AVAILABLE, emptySet()))
+        assertEquals(StepsToday.Perm.DENIED, StepsToday.permState(SDK_AVAILABLE, setOf("android.permission.health.READ_DISTANCE")))
+        assertEquals(StepsToday.Perm.UPDATE_REQUIRED, StepsToday.permState(SDK_UPDATE_REQUIRED, g))
+        assertEquals(StepsToday.Perm.UNAVAILABLE, StepsToday.permState(SDK_UNAVAILABLE, g))
     }
 
     // ── aggregation range: the LOCAL day ─────────────────────────────
