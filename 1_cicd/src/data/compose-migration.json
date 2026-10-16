@@ -569,20 +569,19 @@
       "id": "libs:browser",
       "scope": "in",
       "wave": 3,
-      "ui": "views",
+      "ui": "mixed",
       "size": "S",
       "screens_left": [
-        "BrowserHostFragment",
-        "BrowserTabGrid (custom)"
+        "BrowserTabGrid (custom: the RecyclerView + ItemTouchHelper tab switcher, hosted in the Compose host via AndroidView)"
       ],
       "consumers": [
         "browser"
       ],
       "notes": "Host of the engine view: the engine stays an AndroidView, the chrome around it becomes Compose.",
       "baseline": {
-        "view_screens": 1,
+        "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 2,
+        "view_ui_files": 1,
         "custom_views": 1
       }
     },

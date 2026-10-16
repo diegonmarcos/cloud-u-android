@@ -4,9 +4,7 @@ package com.diegonmarcos.superapp.browser
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
+import androidx.compose.ui.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -14,18 +12,66 @@ import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitPalette
-import com.diegonmarcos.superapp.uikit.kitComposeView
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import org.json.JSONObject
 import com.diegonmarcos.superapp.browser.R
 import java.io.File
@@ -96,10 +142,21 @@ class BrowserHostFragment : Fragment() {
         }
     }
     /** The Tabs view shows normal or incognito tabs, one at a time. */
-    private var tabFilter = BrowserTabsBar.Filter.NORMAL
+    private var tabFilter by mutableStateOf(BrowserTabsBar.Filter.NORMAL)
     private lateinit var browserSettings: BrowserSettings
     private lateinit var config: BrowserConfig
-    private lateinit var rootContainer: FrameLayout
+    /** What the page area shows: the tab switcher, or one tab's address bar over its WebView. */
+    private sealed interface Screen {
+        data object Grid : Screen
+        /** [id] is unique per showDetail, so a switch to another tab rebuilds the whole screen. */
+        class Detail(val id: Int, val tab: BrowserTab, val webView: WebView) : Screen
+    }
+    private var screen by mutableStateOf<Screen>(Screen.Grid)
+    /** Bumped whenever the tab switcher's rows must be re-read. */
+    private var gridVersion by mutableIntStateOf(0)
+    private var detailSeq = 0
+    /** The host view (a ComposeView): what a Snackbar anchors to. */
+    private var hostView: View? = null
     private var webView: WebView? = null
     private var mode: Mode = Mode.GRID
     /** The ARG_OPEN_URL is consumed once: a rotation must not reopen it over where the user went. */
@@ -110,7 +167,8 @@ class BrowserHostFragment : Fragment() {
     /** The next page start is the reader's own render, not a navigation away from it. */
     private var readerPending = false
     /** #802 the Compose surfaces drawn over the page; back closes the top one first. */
-    private val overlays = ArrayList<View>()
+    private class OverlayEntry(val bottom: Boolean, val side: Boolean, val content: @Composable (close: () -> Unit) -> Unit)
+    private val overlays = mutableStateListOf<OverlayEntry>()
 
     /** #868 the host shell's island opens the host's own pages: the Search add-on's page, the settings, none. */
     fun openSearch() = showSearchPage()
@@ -185,14 +243,11 @@ class BrowserHostFragment : Fragment() {
             android.util.Log.i(TAG, "seeded $seeded default pinned tab(s) on first run")
         }
 
-        rootContainer = FrameLayout(ctx).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
-            background = androidx.core.content.ContextCompat.getDrawable(
-                ctx, R.drawable.bg_gradient_black_purple)
+        val root = ComposeView(ctx).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent { CloudKitTheme(palette()) { Root() } }
         }
+        hostView = root
 
         val openUrl = arguments?.getString(ARG_OPEN_URL)
         // #886 a fragment that outlives its view (rotation) comes back on the tab it was showing.
@@ -208,7 +263,7 @@ class BrowserHostFragment : Fragment() {
         } else {
             showGrid()
         }
-        return rootContainer
+        return root
     }
 
     /** #802 a write from outside the screen (debug route, fleet import) shows up live. */
@@ -249,62 +304,10 @@ class BrowserHostFragment : Fragment() {
     private fun showGrid() {
         mode = Mode.GRID
         teardownWebView()
-        val ctx = requireContext()
-
-        val column = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-            )
-        }
-
-        column.addView(tabsBar(ctx))
-        if (PrivateProfile.showNotice(profileSupported, tabFilter)) column.addView(TextView(ctx).apply {
-            text = PrivateProfile.NOTICE; textSize = 12f; setTextColor(0xCCFFFFFF.toInt()); alpha = 0.8f
-            setPadding(dp(8), dp(2), dp(8), dp(2))
-        })
-
-        val incog = tabFilter == BrowserTabsBar.Filter.INCOGNITO
-        if (incog) column.setBackgroundColor(0xFF121212.toInt())
-        val tabs = BrowserTabsBar.filter(prefs.all(), tabFilter)
-        if (tabs.isEmpty()) {
-            column.addView(TextView(ctx).apply {
-                text = if (incog) "No incognito tabs. Tap New Incognito to open one." else "No tabs yet. Tap New Tab to open a URL or search."
-                setTextColor(0xCCFFFFFF.toInt())
-                alpha = 0.7f
-                val pad = dp(20); setPadding(pad, pad, pad, pad)
-            })
-        } else {
-            val grid = BrowserTabGrid(
-                ctx,
-                onOpen = { tab -> prefs.setActiveId(tab.key); showDetail(tab) },
-                onSwipeClose = { tab -> swipeClose(tab) },
-                onPin = { tab -> prefs.setPinnedById(tab.key, !tab.pinned); showGrid() },
-                onMenu = { tab, anchor -> showTabMenu(tab, anchor) },
-                onToggleGroup = { g ->
-                    prefs.setGroupCollapsed(g, g !in prefs.collapsedGroups()); showGrid()
-                },
-                onReorder = { urls -> prefs.reorder(urls) },
-                onDropOnTab = { drag, target ->
-                    prefs.dropOnTab(drag, target)?.let { c -> grouped(c); showGrid() }
-                },
-                onDropOnGroup = { drag, g ->
-                    prefs.dropOnGroup(drag, g)?.let { c -> grouped(c); showGrid() }
-                },
-                onEditGroup = { g -> showGroupEditor(g) },
-                groupColors = { prefs.groupColors() },
-            )
-            grid.layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
-            grid.submit(BrowserGridRows.build(tabs, prefs.collapsedGroups()))
-            column.addView(grid)
-        }
-
         overlays.clear()
         onOverlaysClosed?.invoke()
-        rootContainer.removeAllViews()
-        rootContainer.addView(column)
+        screen = Screen.Grid
+        gridVersion++
     }
 
     /**
@@ -340,15 +343,21 @@ class BrowserHostFragment : Fragment() {
      */
     private fun swipeClose(tab: BrowserTab) {
         if (SwipeGesture.needsConfirm(tab)) {
-            androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle("Close pinned tab?")
-                .setMessage("“${tab.title.ifBlank { tab.url }}” is pinned. Unpin it and close it?")
-                .setNegativeButton("Keep", null)
-                .setPositiveButton("Unpin and close") { _, _ ->
-                    prefs.setPinnedById(tab.key, false)
-                    closeWithUndo(tab)   // undo restores the tab as it was: pinned
-                }
-                .show()
+            overlay { close ->
+                AlertDialog(
+                    onDismissRequest = close,
+                    title = { Text("Close pinned tab?") },
+                    text = { Text("“${tab.title.ifBlank { tab.url }}” is pinned. Unpin it and close it?") },
+                    dismissButton = { TextButton(onClick = close) { Text("Keep") } },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            close()
+                            prefs.setPinnedById(tab.key, false)
+                            closeWithUndo(tab)   // undo restores the tab as it was: pinned
+                        }) { Text("Unpin and close") }
+                    },
+                )
+            }
             return
         }
         closeWithUndo(tab)
@@ -361,7 +370,7 @@ class BrowserHostFragment : Fragment() {
         showGrid()
         val bar = runCatching {
             com.google.android.material.snackbar.Snackbar
-                .make(rootContainer, "Closed “${tab.title.ifBlank { tab.url }}”", 5000)
+                .make(requireView(), "Closed “${tab.title.ifBlank { tab.url }}”", 5000)
                 .setAction("Undo") {
                     prefs.restore(swipeClose.pending ?: return@setAction)
                     swipeClose.undo(prefs.all())
@@ -403,82 +412,58 @@ class BrowserHostFragment : Fragment() {
     }
 
     private fun promptForGroup(tab: BrowserTab) {
-        val ctx = requireContext()
-        val input = android.widget.EditText(ctx).apply {
-            hint = "Group name"
-            setText(tab.group)
-            setTextColor(Color.WHITE)
-            setHintTextColor(0x80FFFFFF.toInt())
+        overlay { close ->
+            var name by remember { mutableStateOf(tab.group) }
+            AlertDialog(
+                onDismissRequest = close,
+                title = { Text("Group") },
+                text = {
+                    OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true,
+                        label = { Text("Group name") })
+                },
+                dismissButton = { TextButton(onClick = close) { Text("Cancel") } },
+                confirmButton = {
+                    TextButton(onClick = {
+                        close()
+                        prefs.setGroupById(tab.key, name); showGrid()
+                    }) { Text("Save") }
+                },
+            )
         }
-        androidx.appcompat.app.AlertDialog.Builder(ctx)
-            .setTitle("Group")
-            .setView(input)
-            .setPositiveButton("Save") { _, _ ->
-                prefs.setGroupById(tab.key, input.text.toString()); showGrid()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     /** The Tabs row: dense, no minHeight, scrolls sideways rather than wrapping on a narrow screen. */
-    private fun tabsBar(ctx: Context): View {
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            setPadding(dp(6), dp(4), dp(6), dp(2))
-        }
-        for (item in BrowserTabsBar.items(tabFilter)) {
-            row.addView(when (item) {
-                is BrowserTabsBar.Item.Sep -> TextView(ctx).apply {
-                    text = BrowserTabsBar.SEP; setTextColor(0x80FFFFFF.toInt()); isSingleLine = true
-                    setPadding(dp(2), 0, dp(2), 0)
-                }
-                is BrowserTabsBar.Item.Action -> TextView(ctx).apply {
-                    val toggle = item.id == BrowserTabsBar.Id.NORMAL || item.id == BrowserTabsBar.Id.INCOGNITO
-                    text = item.label
-                    contentDescription = item.label
-                    isSingleLine = true
-                    textSize = 13f
-                    setTextColor(Color.WHITE)
-                    typeface = if (item.active) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-                    alpha = if (toggle && !item.active) 0.65f else 1f
-                    if (item.active) background = GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE; cornerRadius = dp(8).toFloat()
-                        setColor(if (item.id == BrowserTabsBar.Id.INCOGNITO) 0xFF4B5563.toInt() else 0xFF7C3AED.toInt())
-                    }
-                    setPadding(dp(6), dp(3), dp(6), dp(3))
-                    setOnClickListener {
-                        when (item.id) {
-                            BrowserTabsBar.Id.NEW_TAB -> promptForUrl(private_ = false)
-                            BrowserTabsBar.Id.NEW_INCOGNITO -> { tabFilter = BrowserTabsBar.Filter.INCOGNITO; promptForUrl(private_ = true) }
-                            BrowserTabsBar.Id.NORMAL -> { tabFilter = BrowserTabsBar.Filter.NORMAL; showGrid() }
-                            BrowserTabsBar.Id.INCOGNITO -> { tabFilter = BrowserTabsBar.Filter.INCOGNITO; showGrid() }
-                            BrowserTabsBar.Id.HISTORY -> showHistory()
-                        }
+    @Composable
+    private fun TabsBar() {
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(start = 6.dp, top = 4.dp, end = 6.dp, bottom = 2.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            for (item in BrowserTabsBar.items(tabFilter)) {
+                when (item) {
+                    is BrowserTabsBar.Item.Sep -> Text(BrowserTabsBar.SEP, color = Color.White.copy(alpha = 0.5f), maxLines = 1,
+                        modifier = Modifier.padding(horizontal = 2.dp))
+                    is BrowserTabsBar.Item.Action -> {
+                        val toggle = item.id == BrowserTabsBar.Id.NORMAL || item.id == BrowserTabsBar.Id.INCOGNITO
+                        Text(item.label, color = Color.White, fontSize = 13.sp, maxLines = 1,
+                            fontWeight = if (item.active) FontWeight.Bold else FontWeight.Normal,
+                            modifier = Modifier
+                                .alpha(if (toggle && !item.active) 0.65f else 1f)
+                                .then(if (item.active) Modifier.clip(RoundedCornerShape(8.dp)).background(
+                                    if (item.id == BrowserTabsBar.Id.INCOGNITO) Color(0xFF4B5563) else Color(0xFF7C3AED)) else Modifier)
+                                .clickable {
+                                    when (item.id) {
+                                        BrowserTabsBar.Id.NEW_TAB -> promptForUrl(private_ = false)
+                                        BrowserTabsBar.Id.NEW_INCOGNITO -> { tabFilter = BrowserTabsBar.Filter.INCOGNITO; promptForUrl(private_ = true) }
+                                        BrowserTabsBar.Id.NORMAL -> { tabFilter = BrowserTabsBar.Filter.NORMAL; showGrid() }
+                                        BrowserTabsBar.Id.INCOGNITO -> { tabFilter = BrowserTabsBar.Filter.INCOGNITO; showGrid() }
+                                        BrowserTabsBar.Id.HISTORY -> showHistory()
+                                    }
+                                }
+                                .padding(horizontal = 6.dp, vertical = 3.dp))
                     }
                 }
-            })
-        }
-        return android.widget.HorizontalScrollView(ctx).apply {
-            isHorizontalScrollBarEnabled = false
-            addView(row)
+            }
         }
     }
-
-    private fun pill(ctx: Context, text: String, onTap: () -> Unit): View =
-        TextView(ctx).apply {
-            this.text = text
-            setTextColor(Color.WHITE)
-            typeface = Typeface.DEFAULT_BOLD
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(18).toFloat()
-                setColor(0xFF7C3AED.toInt())
-            }
-            val px = dp(14); val py = dp(8)
-            setPadding(px, py, px, py)
-            setOnClickListener { onTap() }
-        }
 
     /**
      * New tab, as a Compose screen: the field and the same three-section suggestions as the address bar
@@ -745,8 +730,11 @@ class BrowserHostFragment : Fragment() {
     /** #886 what the strip draws, as Compose state the host refreshes when a tab's page, title, icon or group changes. */
     private class StripModel(val tabs: List<BrowserTab>, val activeKey: String, val group: String, val color: Int)
     private val strip = androidx.compose.runtime.mutableStateOf(StripModel(emptyList(), "", "", 0))
-    private var addressField: android.widget.EditText? = null
-    private var settingAddress = false
+    /** The address bar's text, caret and selection; written by the page's own navigation while the field is not focused. */
+    private var addressValue by mutableStateOf(TextFieldValue(""))
+    private var addressFocused = false
+    /** Set by the detail screen once composed: gives up the field's focus and closes the keyboard. */
+    private var clearAddressFocus: () -> Unit = {}
 
     private fun refreshStrip() {
         val all = prefs.all()
@@ -786,7 +774,7 @@ class BrowserHostFragment : Fragment() {
     private fun onCommitted(tabKey: String, view: WebView?, url: String?) {
         if (!BrowserTabStore.shouldCommit(url) || readerOn) return
         prefs.commit(tabKey, url, view?.title)
-        addressField?.let { f -> if (!f.isFocused) { settingAddress = true; f.setText(url); settingAddress = false } }
+        if (!addressFocused && url != null) addressValue = TextFieldValue(url)
         refreshStrip()
     }
 
@@ -813,75 +801,8 @@ class BrowserHostFragment : Fragment() {
         val url = tab.url
         val ctx = requireContext()
         suggestState.visible = false
-        val column = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-
-        val bar = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            setBackgroundColor(0xCC1A0033.toInt())
-            val pad = dp(8); setPadding(pad, pad, pad, pad)
-        }
-        // Address bar: a plain field. Its suggestions are the Compose panel over the page (below), so
-        // there is no PopupWindow to land on top of the bar or the keyboard.
-        val urlBar = android.widget.EditText(ctx).apply {
-            setText(url)
-            setTextColor(Color.WHITE)
-            setHintTextColor(0x80FFFFFF.toInt())
-            setBackgroundColor(Color.TRANSPARENT)
-            isSingleLine = true
-            hint = "Search ${engine().label}, or type a URL"
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
-            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_GO
-            setSelectAllOnFocus(true)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            val m = dp(8); setPadding(m, 0, m, 0)
-            addTextChangedListener(object : android.text.TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-                override fun afterTextChanged(e: android.text.Editable?) {
-                    if (settingAddress || !isFocused) return
-                    val q = e?.toString().orEmpty()
-                    suggestState.visible = q.isNotBlank()
-                    refreshSuggestions(suggestState, q, currentTab()?.isPrivate == true)
-                }
-            })
-            // Losing focus does NOT hide the panel: touching a row of it moves focus to the Compose view
-            // on ACTION_DOWN, and hiding it then would eat the tap. It leaves by the dismiss paths
-            // (dimmed page, back, Go, a pick, a tab change).
-            setOnFocusChangeListener { v, has ->
-                if (has) (v as android.widget.EditText).text?.toString()?.takeIf { it.isNotBlank() && it != currentTab()?.url }?.let {
-                    suggestState.visible = true; refreshSuggestions(suggestState, it, currentTab()?.isPrivate == true)
-                }
-            }
-            setOnEditorActionListener { v, actionId, _ ->
-                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_GO) {
-                    val next = BrowserSearch.resolve(text.toString(), engine())
-                    dismissSuggestions()
-                    // #886 the tab being typed in navigates IN PLACE (it keeps its pin, group, order and
-                    // back stack); it used to be closed and re-added, which dropped all four.
-                    if (next.isNotEmpty()) webView?.loadUrl(next)
-                    true
-                } else false
-            }
-        }
-        addressField = urlBar
-        bar.addView(barButton(ctx, "‹") { runAction("back") })
-        bar.addView(barButton(ctx, "›") { runAction("forward") })
-        bar.addView(urlBar)
-
-        bar.addView(barButton(ctx, "⋮") { showMenuSheet() })
-        column.addView(bar)
-
-        // #886 the strip of tab icons for this tab's group, under the bar; on by default.
-        refreshStripFor(tab)
-        if (browserSettings.bool("tab_strip") != false) {
-            column.addView(ctx.kitComposeView(palette()) {
-                val m = strip.value
-                BrowserTabStrip(m.tabs, m.activeKey, m.group, m.color,
-                    onSelect = { t -> if (t.key != currentTab()?.key) { prefs.setActiveId(t.key); showDetail(prefs.byId(t.key) ?: t) } },
-                    onNew = { promptForUrl(private_ = currentTab()?.isPrivate == true, joinTabKey = currentTab()?.key) })
-            }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT) })
-        }
+        addressValue = TextFieldValue(url)
+        addressFocused = false
 
         webView = WebView(ctx).apply {
             bindProfile(this, tab)   // before anything loads
@@ -912,8 +833,6 @@ class BrowserHostFragment : Fragment() {
             // #802 a private tab keeps nothing in the HTTP cache.
             if (tab.isPrivate) settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
             applySettings(this, url)
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView?, startedUrl: String?, favicon: Bitmap?) {
                     super.onPageStarted(view, startedUrl, favicon)
@@ -1013,39 +932,10 @@ class BrowserHostFragment : Fragment() {
             }
             if (tab.isPrivate || !BrowserWebState.restore(ctx, this, tabKey)) loadUrl(url)
         }
-        // The page area: the WebView, and over it the suggestions panel, which is a CHILD of this frame
-        // (so it sits under the bar and ends at the frame's bottom: above the keyboard, never over it).
-        val content = FrameLayout(ctx).apply {
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
-            addView(webView)
-            addView(ctx.kitComposeView(palette()) {
-                BrowserSuggestOverlay(suggestState, onPick = { s -> pickSuggestion(s) }, onDismiss = { dismissSuggestions() })
-            }.apply {
-                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
-            })
-            addView(ctx.kitComposeView(palette()) {
-                BrowserAutofillChip(domAutofill.chip.value, domAutofill.save.value,
-                    onFill = { t -> domAutofill.fill(t) }, onSnippet = { sn -> domAutofill.insert(sn) }, onDismiss = { domAutofill.dismiss() }, onSave = { yes -> domAutofill.confirmSave(yes) })
-            }.apply {
-                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
-                    android.view.Gravity.BOTTOM or android.view.Gravity.START)
-            })
-            addView(ctx.kitComposeView(palette()) {
-                BrowserTranslateChip(translateState.value, translateEngineLabel, onTap = {
-                    if (translateState.value is PageTranslator.State.Failed && !translator.active) translateState.value = PageTranslator.State.Idle
-                    else translator.restore()
-                })
-            }.apply {
-                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
-                    android.view.Gravity.TOP or android.view.Gravity.END)
-            })
-        }
-        column.addView(content)
-
         overlays.clear()
         onOverlaysClosed?.invoke()
-        rootContainer.removeAllViews()
-        rootContainer.addView(column)
+        refreshStripFor(tab)
+        screen = Screen.Detail(++detailSeq, tab, webView!!)
     }
 
     /** #893 the child window of a window.open, over the page; closing it (window.close, back) returns to the opener. */
@@ -1097,7 +987,7 @@ class BrowserHostFragment : Fragment() {
     private fun dismissSuggestions() {
         suggestState.visible = false
         pendingRemote?.let { ui.removeCallbacks(it) }
-        addressField?.let { f -> f.clearFocus(); hideKeyboard(f) }
+        clearAddressFocus()
     }
 
     /** A row picked: an open tab switches to it; a search or a visited page loads in THIS tab. */
@@ -1353,7 +1243,7 @@ class BrowserHostFragment : Fragment() {
 
     /** #823 the assistant's conversation: kept here so it survives closing the side panel. */
     private val agentState = AgentPanelState()
-    private var agentPanel: View? = null
+    private var agentPanel: OverlayEntry? = null
 
     /**
      * #823 the assistant as a Compose side panel over the page (the page stays visible and usable
@@ -1362,7 +1252,7 @@ class BrowserHostFragment : Fragment() {
     private fun showAgentChat() {
         if (BrowserAgentHost.ask == null) return toast("The assistant is not available in this app")
         val panel = BrowserAgentPanelHost.panel ?: return toast("The assistant is not available in this app")
-        if (agentPanel?.parent != null) return
+        if (agentPanel in overlays) return
         agentPanel = overlay(side = true) { close ->
             panel(agentState, AgentPanelActions(
                 onSend = { text ->
@@ -1464,22 +1354,35 @@ class BrowserHostFragment : Fragment() {
     private fun showSearchWith() {
         val engines = config.addons.searchEngines()
         if (engines.isEmpty()) return toast("The Search add-on declares no engines")
-        val ctx = requireContext()
-        val input = android.widget.EditText(ctx).apply {
-            setTextColor(Color.WHITE); setHintTextColor(0x80FFFFFF.toInt()); isSingleLine = true
+        overlay { close ->
+            var pick by remember { mutableIntStateOf(0) }
+            var query by remember { mutableStateOf("") }
+            AlertDialog(
+                onDismissRequest = close,
+                title = { Text("Search with") },
+                text = {
+                    Column {
+                        engines.forEachIndexed { i, e ->
+                            Row(Modifier.fillMaxWidth().clickable { pick = i }.padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(selected = pick == i, onClick = { pick = i })
+                                Text(e.label)
+                            }
+                        }
+                        OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
+                            label = { Text("Search for…") })
+                    }
+                },
+                dismissButton = { TextButton(onClick = close) { Text("Cancel") } },
+                confirmButton = {
+                    TextButton(onClick = {
+                        close()
+                        val q = query.trim()
+                        if (q.isNotEmpty()) openEntryUrl(BrowserSearch.searchUrl(q, engines[pick]))
+                    }) { Text("Search") }
+                },
+            )
         }
-        input.hint = "Search for…"
-        var pick = 0
-        androidx.appcompat.app.AlertDialog.Builder(ctx)
-            .setTitle("Search with")
-            .setSingleChoiceItems(engines.map { it.label }.toTypedArray(), 0) { _, i -> pick = i }
-            .setView(input)
-            .setPositiveButton("Search") { _, _ ->
-                val q = input.text.toString().trim()
-                if (q.isNotEmpty()) openEntryUrl(BrowserSearch.searchUrl(q, engines[pick]))
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     private fun openEntryUrl(url: String) = openUrlInTab(url)
@@ -1625,35 +1528,192 @@ class BrowserHostFragment : Fragment() {
         fun r(k: String, d: Int) = c[k] ?: d
         return KitPalette.fromArgb(
             r("surface", 0xFF1A0033.toInt()), r("surface_selected", 0xFF2D0A55.toInt()),
-            r("text_primary", Color.WHITE), r("text_secondary", 0x99FFFFFF.toInt()),
-            r("accent", 0xFF7C3AED.toInt()), r("hairline", 0x33FFFFFF), r("tile_ink", Color.BLACK),
+            r("text_primary", 0xFFFFFFFF.toInt()), r("text_secondary", 0x99FFFFFF.toInt()),
+            r("accent", 0xFF7C3AED.toInt()), r("hairline", 0x33FFFFFF), r("tile_ink", 0xFF000000.toInt()),
         )
     }
 
     /** Draw [content] over the page; it is handed its own close. Back closes the top one. */
     /** [side]: a panel on the right edge, the page left visible and usable beside it (#823 the assistant). */
-    private fun overlay(bottom: Boolean = false, side: Boolean = false, content: @Composable (close: () -> Unit) -> Unit): View? {
-        val ctx = context ?: return null
-        lateinit var v: View
-        val close = { rootContainer.removeView(v); overlays.remove(v); if (overlays.isEmpty()) onOverlaysClosed?.invoke(); Unit }
-        v = ctx.kitComposeView(palette()) { content(close) }
-        v.layoutParams = if (side) FrameLayout.LayoutParams(
-            minOf((resources.displayMetrics.widthPixels * 0.88f).toInt(), dp(480)),
-            FrameLayout.LayoutParams.MATCH_PARENT, android.view.Gravity.END,
-        ) else FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            if (bottom) FrameLayout.LayoutParams.WRAP_CONTENT else FrameLayout.LayoutParams.MATCH_PARENT,
-            if (bottom) android.view.Gravity.BOTTOM else android.view.Gravity.NO_GRAVITY,
-        )
-        overlays.add(v)
-        rootContainer.addView(v)
-        return v
+    private fun overlay(bottom: Boolean = false, side: Boolean = false, content: @Composable (close: () -> Unit) -> Unit): OverlayEntry? {
+        if (!isAdded) return null
+        val entry = OverlayEntry(bottom, side, content)
+        overlays.add(entry)
+        return entry
+    }
+
+    private fun closeOverlay(entry: OverlayEntry) {
+        if (overlays.remove(entry) && overlays.isEmpty()) onOverlaysClosed?.invoke()
     }
 
     private fun closeOverlays() {
-        overlays.toList().forEach { rootContainer.removeView(it) }
         overlays.clear()
         onOverlaysClosed?.invoke()
+    }
+
+    // ── the screen: the tab switcher, or one tab's address bar over its WebView ──────────────
+
+    @Composable
+    private fun Root() {
+        Box(Modifier.fillMaxSize().background(
+            androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF2D1B69), Color(0xFF000000), Color(0xFF2D1B69))))) {
+            when (val sc = screen) {
+                Screen.Grid -> GridScreen()
+                is Screen.Detail -> key(sc.id) { DetailScreen(sc) }
+            }
+            overlays.toList().forEach { e -> key(e) { OverlayHost(e) } }
+        }
+    }
+
+    @Composable
+    private fun BoxScope.OverlayHost(e: OverlayEntry) {
+        val close = remember(e) { { closeOverlay(e) } }
+        val screenW = LocalConfiguration.current.screenWidthDp
+        val place = when {
+            e.side -> Modifier.align(Alignment.CenterEnd).width(minOf((screenW * 0.88f).toInt(), 480).dp).fillMaxHeight()
+            e.bottom -> Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            // A full-screen layer takes the touches the page below would otherwise get.
+            else -> Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+        }
+        Box(place) { e.content(close) }
+    }
+
+    @Composable
+    private fun GridScreen() {
+        val version = gridVersion
+        val filter = tabFilter
+        val incog = filter == BrowserTabsBar.Filter.INCOGNITO
+        Column(Modifier.fillMaxSize().then(if (incog) Modifier.background(Color(0xFF121212)) else Modifier)) {
+            TabsBar()
+            if (PrivateProfile.showNotice(profileSupported, filter)) {
+                Text(PrivateProfile.NOTICE, fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+            }
+            val tabs = remember(version, filter) { BrowserTabsBar.filter(prefs.all(), filter) }
+            if (tabs.isEmpty()) {
+                Text(if (incog) "No incognito tabs. Tap New Incognito to open one." else "No tabs yet. Tap New Tab to open a URL or search.",
+                    color = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(20.dp))
+            } else {
+                // The tab switcher stays the RecyclerView-based renderer: long-press drag, swipe-to-close and
+                // drop-onto-a-group are ItemTouchHelper's, hosted here through AndroidView.
+                AndroidView(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    factory = { ctx ->
+                        BrowserTabGrid(
+                            ctx,
+                            onOpen = { tab -> prefs.setActiveId(tab.key); showDetail(tab) },
+                            onSwipeClose = { tab -> swipeClose(tab) },
+                            onPin = { tab -> prefs.setPinnedById(tab.key, !tab.pinned); showGrid() },
+                            onMenu = { tab, anchor -> showTabMenu(tab, anchor) },
+                            onToggleGroup = { g ->
+                                prefs.setGroupCollapsed(g, g !in prefs.collapsedGroups()); showGrid()
+                            },
+                            onReorder = { urls -> prefs.reorder(urls) },
+                            onDropOnTab = { drag, target ->
+                                prefs.dropOnTab(drag, target)?.let { c -> grouped(c); showGrid() }
+                            },
+                            onDropOnGroup = { drag, g ->
+                                prefs.dropOnGroup(drag, g)?.let { c -> grouped(c); showGrid() }
+                            },
+                            onEditGroup = { g -> showGroupEditor(g) },
+                            groupColors = { prefs.groupColors() },
+                        )
+                    },
+                    update = { grid -> grid.submit(BrowserGridRows.build(tabs, prefs.collapsedGroups())) },
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun DetailScreen(sc: Screen.Detail) {
+        val focus = LocalFocusManager.current
+        val keyboard = LocalSoftwareKeyboardController.current
+        SideEffect { clearAddressFocus = { focus.clearFocus(); keyboard?.hide() } }
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().background(Color(0xCC1A0033)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                BarButton("‹") { runAction("back") }
+                BarButton("›") { runAction("forward") }
+                // Address bar: a plain field. Its suggestions are the Compose panel over the page (below), so
+                // there is no PopupWindow to land on top of the bar or the keyboard.
+                BasicTextField(
+                    value = addressValue,
+                    onValueChange = { v ->
+                        val changed = v.text != addressValue.text
+                        addressValue = v
+                        if (changed && addressFocused) {
+                            val q = v.text
+                            suggestState.visible = q.isNotBlank()
+                            refreshSuggestions(suggestState, q, currentTab()?.isPrivate == true)
+                        }
+                    },
+                    singleLine = true,
+                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
+                    cursorBrush = SolidColor(Color.White),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                    keyboardActions = KeyboardActions(onGo = {
+                        val next = BrowserSearch.resolve(addressValue.text, engine())
+                        dismissSuggestions()
+                        // #886 the tab being typed in navigates IN PLACE (it keeps its pin, group, order and
+                        // back stack); it used to be closed and re-added, which dropped all four.
+                        if (next.isNotEmpty()) webView?.loadUrl(next)
+                    }),
+                    // Losing focus does NOT hide the panel: touching a row of it moves focus to the Compose view
+                    // on the press, and hiding it then would eat the tap. It leaves by the dismiss paths
+                    // (dimmed page, back, Go, a pick, a tab change).
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp).onFocusChanged { f ->
+                        val had = addressFocused
+                        addressFocused = f.isFocused
+                        if (f.isFocused && !had) {
+                            addressValue = addressValue.copy(selection = TextRange(0, addressValue.text.length))
+                            addressValue.text.takeIf { it.isNotBlank() && it != currentTab()?.url }?.let {
+                                suggestState.visible = true; refreshSuggestions(suggestState, it, currentTab()?.isPrivate == true)
+                            }
+                        }
+                    },
+                    decorationBox = { inner ->
+                        Box {
+                            if (addressValue.text.isEmpty()) {
+                                Text("Search ${engine().label}, or type a URL", color = Color.White.copy(alpha = 0.5f), fontSize = 16.sp, maxLines = 1)
+                            }
+                            inner()
+                        }
+                    },
+                )
+                BarButton("⋮") { showMenuSheet() }
+            }
+
+            // #886 the strip of tab icons for this tab's group, under the bar; on by default.
+            if (browserSettings.bool("tab_strip") != false) {
+                val m = strip.value
+                BrowserTabStrip(m.tabs, m.activeKey, m.group, m.color,
+                    onSelect = { t -> if (t.key != currentTab()?.key) { prefs.setActiveId(t.key); showDetail(prefs.byId(t.key) ?: t) } },
+                    onNew = { promptForUrl(private_ = currentTab()?.isPrivate == true, joinTabKey = currentTab()?.key) })
+            }
+
+            // The page area: the WebView, and over it the suggestions panel, which is a CHILD of this frame
+            // (so it sits under the bar and ends at the frame's bottom: above the keyboard, never over it).
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                AndroidView(factory = { sc.webView }, modifier = Modifier.fillMaxSize())
+                BrowserSuggestOverlay(suggestState, onPick = { s -> pickSuggestion(s) }, onDismiss = { dismissSuggestions() })
+                Box(Modifier.align(Alignment.BottomStart)) {
+                    BrowserAutofillChip(domAutofill.chip.value, domAutofill.save.value,
+                        onFill = { t -> domAutofill.fill(t) }, onSnippet = { sn -> domAutofill.insert(sn) }, onDismiss = { domAutofill.dismiss() }, onSave = { yes -> domAutofill.confirmSave(yes) })
+                }
+                Box(Modifier.align(Alignment.TopEnd)) {
+                    BrowserTranslateChip(translateState.value, translateEngineLabel, onTap = {
+                        if (translateState.value is PageTranslator.State.Failed && !translator.active) translateState.value = PageTranslator.State.Idle
+                        else translator.restore()
+                    })
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun BarButton(label: String, onTap: () -> Unit) {
+        Text(label, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.clickable { onTap() }.padding(horizontal = 8.dp))
     }
 
     /** What the menu's `requires` and `checked` are resolved against, right now. */
@@ -1963,7 +2023,7 @@ class BrowserHostFragment : Fragment() {
             when {
                 suggestState.visible -> dismissSuggestions()
                 overlays.isNotEmpty() -> {
-                    rootContainer.removeView(overlays.last()); overlays.removeAt(overlays.lastIndex)
+                    overlays.removeAt(overlays.lastIndex)
                     if (overlays.isEmpty()) onOverlaysClosed?.invoke()
                 }
                 mode is Mode.DETAIL && wv?.canGoBack() == true -> wv.goBack()
@@ -1978,15 +2038,6 @@ class BrowserHostFragment : Fragment() {
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
     }
 
-    private fun barButton(ctx: Context, label: String, onTap: () -> Unit): View = TextView(ctx).apply {
-        text = label
-        setTextColor(Color.WHITE)
-        typeface = Typeface.DEFAULT_BOLD
-        setTextAppearance(android.R.style.TextAppearance_Material_Title)
-        val pad = dp(8); setPadding(pad, 0, pad, 0)
-        setOnClickListener { onTap() }
-    }
-
     private fun openInExternalBrowser(url: String) {
         startActivity(
             android.content.Intent.createChooser(
@@ -1994,12 +2045,6 @@ class BrowserHostFragment : Fragment() {
                     android.content.Intent.ACTION_VIEW,
                     android.net.Uri.parse(url)),
                 "Open with"))
-    }
-
-    private fun hideKeyboard(v: View) {
-        val imm = v.context.getSystemService(Context.INPUT_METHOD_SERVICE)
-            as? android.view.inputmethod.InputMethodManager
-        imm?.hideSoftInputFromWindow(v.windowToken, 0)
     }
 
     /** Mode WebAuthn was enabled with on the current WebView (null = this WebView cannot do it). */
@@ -2025,16 +2070,24 @@ class BrowserHostFragment : Fragment() {
         if (!isAdded || passkeyOfferedFor == target) return
         val launch = PasskeySupport.secureBrowserLaunch(target, browserPackage()) ?: return
         passkeyOfferedFor = target
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("Passkey needed")
-            .setMessage("This sign-in asks for a passkey, which this in-app page cannot provide. Continue in your secure browser. " +
-                "Cloud Browser never sees your passkey or password. The session stays in that browser.")
-            .setPositiveButton("Continue sign-in in secure browser") { _, _ ->
-                runCatching { startActivity(PasskeySupport.secureBrowserIntent(launch)) }
-                    .onFailure { toast("No browser found") }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        overlay { close ->
+            AlertDialog(
+                onDismissRequest = close,
+                title = { Text("Passkey needed") },
+                text = {
+                    Text("This sign-in asks for a passkey, which this in-app page cannot provide. Continue in your secure browser. " +
+                        "Cloud Browser never sees your passkey or password. The session stays in that browser.")
+                },
+                dismissButton = { TextButton(onClick = close) { Text("Cancel") } },
+                confirmButton = {
+                    TextButton(onClick = {
+                        close()
+                        runCatching { startActivity(PasskeySupport.secureBrowserIntent(launch)) }
+                            .onFailure { toast("No browser found") }
+                    }) { Text("Continue sign-in in secure browser") }
+                },
+            )
+        }
     }
 
     /** The system browser that is not us. */

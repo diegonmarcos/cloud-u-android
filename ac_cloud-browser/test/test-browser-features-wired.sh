@@ -142,19 +142,19 @@ check(not leaks,
 # ── 6. suggestion dropdown, drawing on local sources ─────────────────
 # #886 the dropdown is a Compose panel laid out IN the page area (a child of the frame holding the
 # WebView), not an AutoCompleteTextView's PopupWindow, which landed on top of the bar and the keyboard.
-check(has("BrowserHostFragment", "BrowserSuggestOverlay(suggestState", "FrameLayout(ctx).apply"),
+check(has("BrowserHostFragment", "BrowserSuggestOverlay(suggestState", "AndroidView(factory = { sc.webView }"),
       "6: the address field has a dropdown, drawn inside the page frame")
 check(not has("BrowserHostFragment", "AutoCompleteTextView") and not has("BrowserHostFragment", "showDropDown("),
       "6: no PopupWindow dropdown is left to overlap the bar or the keyboard")
 check(has("BrowserHostFragment", "BrowserSuggest.sections(", "prefs.all(), history.all()"),
       "6: it is fed from open tabs and local history")
-check(has("BrowserHostFragment", "addressField = urlBar", "refreshSuggestions(suggestState"),
+check(has("BrowserHostFragment", "addressValue = v", "refreshSuggestions(suggestState"),
       "6: the DETAIL-mode address bar drives that panel")
 check(has("BrowserSuggest", "Source.TAB", "Source.HISTORY", "Source.SEARCH"),
       "6: those are the only three sources there are")
 
 # ── 7. the address bar searches ──────────────────────────────────────
-check(has("BrowserHostFragment", "BrowserSearch.resolve(text.toString(), engine())"),
+check(has("BrowserHostFragment", "BrowserSearch.resolve(addressValue.text, engine())"),
       "7: the address bar resolves through the engine, not straight to a URL")
 # #802 the engine picker became a catalogue setting: an enum whose values ARE the app's
 # engine list (values_from), drawn by the generic settings page.
