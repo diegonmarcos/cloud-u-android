@@ -38,6 +38,8 @@ object StepsTags {
     const val SOURCE = "steps:source"
     const val GRANT = "steps:grant"
     const val INSTALL = "steps:install"
+    const val STATUS = "steps:status"
+    const val HINT = "steps:hint"
     const val CHART = "steps:chart"
     const val PERIOD = "steps"
     fun total(which: String) = "steps:total:$which"
@@ -104,11 +106,15 @@ private fun SourceBanner(ui: StepsUi, onGrant: () -> Unit, onInstall: () -> Unit
         SourceStatus.READY -> "Source: Health Connect" to KitState.OK
         SourceStatus.NEEDS_PERMISSION -> "Health Connect is installed but steps are not allowed yet. Showing this phone's own step counter (on-device fallback)." to KitState.WARN
         SourceStatus.HEALTH_CONNECT_MISSING -> "Health Connect is not available. Showing this phone's own step counter (on-device fallback)." to KitState.WARN
+        SourceStatus.HEALTH_CONNECT_UPDATE -> "Health Connect needs an update before it can share steps. Showing this phone's own step counter (on-device fallback)." to KitState.WARN
+        SourceStatus.HEALTH_CONNECT_ERROR -> "Health Connect could not be read just now. Showing this phone's own step counter (on-device fallback)." to KitState.WARN
         SourceStatus.DEVICE_FALLBACK -> "Source: this phone's own step counter (on-device fallback)" to KitState.WARN
     }
     KitStatusBanner(text, state, tag = StepsTags.SOURCE)
-    if (ui.status == SourceStatus.NEEDS_PERMISSION) OutlinedButton(onClick = onGrant, modifier = Modifier.testTag(StepsTags.GRANT)) { Text("Allow reading steps") }
-    if (ui.status == SourceStatus.HEALTH_CONNECT_MISSING) OutlinedButton(onClick = onInstall, modifier = Modifier.testTag(StepsTags.INSTALL)) { Text("Get Health Connect") }
+    if (ui.diag.statusLine.isNotBlank()) Text(ui.diag.statusLine, Modifier.testTag(StepsTags.STATUS), color = LocalKitPalette.current.textSecondary, style = MaterialTheme.typography.bodySmall)
+    ui.diag.hint?.let { Text(it, Modifier.testTag(StepsTags.HINT), color = LocalKitPalette.current.textPrimary, style = MaterialTheme.typography.bodySmall) }
+    if (ui.status == SourceStatus.NEEDS_PERMISSION) OutlinedButton(onClick = onGrant, modifier = Modifier.testTag(StepsTags.GRANT)) { Text("Grant access") }
+    if (ui.status == SourceStatus.HEALTH_CONNECT_MISSING || ui.status == SourceStatus.HEALTH_CONNECT_UPDATE) OutlinedButton(onClick = onInstall, modifier = Modifier.testTag(StepsTags.INSTALL)) { Text("Get Health Connect") }
 }
 
 @Composable

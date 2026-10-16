@@ -40,7 +40,7 @@ class TimelineFragment : KitComposeFragment(), TimelineHost {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        current = pages().first().id
+        current = arguments?.getString(ARG_PAGE)?.takeIf { id -> pages().any { it.id == id } } ?: pages().first().id
     }
 
     private fun pages(): List<NavPage> = NavConfig.decl.section("timeline")?.pages.orEmpty().ifEmpty { DEFAULT_PAGES }
@@ -72,6 +72,7 @@ class TimelineFragment : KitComposeFragment(), TimelineHost {
     }
 
     companion object {
+        const val ARG_PAGE = "page"
         const val PAGE_EXPLORED = "explored"
         const val PAGE_DAILY = "daily"
         const val PAGE_STOPS = "stops"

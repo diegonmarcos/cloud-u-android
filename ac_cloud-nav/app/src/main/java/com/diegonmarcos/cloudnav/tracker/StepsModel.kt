@@ -7,7 +7,10 @@ import java.time.ZoneId
 enum class StepsSource { HEALTH_CONNECT, DEVICE }
 
 /** Why the Steps page is on its data source, and what the user can do about it. */
-enum class SourceStatus { READY, NEEDS_PERMISSION, HEALTH_CONNECT_MISSING, DEVICE_FALLBACK }
+enum class SourceStatus { READY, NEEDS_PERMISSION, HEALTH_CONNECT_MISSING, HEALTH_CONNECT_UPDATE, HEALTH_CONNECT_ERROR, DEVICE_FALLBACK }
+
+/** The status line (source, permission, last data time) and the "why is it zero" hint shown on the Steps page. */
+data class StepsDiag(val statusLine: String = "", val hint: String? = null)
 
 data class PlaceView(val label: String, val predicted: Boolean, val radiusM: Int)
 
@@ -26,6 +29,7 @@ data class StepsUi(
     val daily: Map<LocalDate, Long> = emptyMap(),
     val days: List<DayCard> = emptyList(),
     val today: LocalDate = LocalDate.now(),
+    val diag: StepsDiag = StepsDiag(),
 )
 
 object StepsModel {
@@ -46,7 +50,7 @@ object StepsModel {
      */
     fun build(
         source: StepsSource, status: SourceStatus, daily: Map<LocalDate, Long>, slices: List<StepSlice>,
-        fixes: List<PlaceFix>, zone: ZoneId, nowMs: Long, stepM: Double, label: (PlaceFix) -> String,
+        fixes: List<PlaceFix>, zone: ZoneId, nowMs: Long, stepM: Double, label: (PlaceFix) -> String, diag: StepsDiag = StepsDiag(),
     ): StepsUi {
         val today = Instant.ofEpochMilli(nowMs).atZone(zone).toLocalDate()
         val cards = (0 until CARD_DAYS).map { today.minusDays(it.toLong()) }.map { day ->
@@ -58,6 +62,6 @@ object StepsModel {
             }
             DayCard(day, daily[day] ?: segs.sumOf { it.steps }, picks, segs)
         }
-        return StepsUi(source, status, false, StepStats.totals(daily, today), daily, cards, today)
+        return StepsUi(source, status, false, StepStats.totals(daily, today), daily, cards, today, diag)
     }
 }

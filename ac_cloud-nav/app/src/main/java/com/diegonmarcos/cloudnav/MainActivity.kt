@@ -48,6 +48,8 @@ class MainActivity : AppCompatActivity() {
     /** A geo: location handed in by another app, consumed by the Places tab on
      *  its next creation (see [fragmentForSection]). */
     private var pendingGeo: GeoTarget? = null
+    /** A page inside the next-built section (deep link), consumed once. */
+    private var pendingPage: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // The page fragment is added by the Compose host once it is on screen, so a restored one would have nowhere to attach.
@@ -65,7 +67,9 @@ class MainActivity : AppCompatActivity() {
             // A geo: launch (Cloud Nav declared as a maps app) opens straight on
             // the Places map at the requested location; otherwise the default tab.
             val geo = geoTargetOf(intent)
+            val deep = deepLinkOf(intent)
             if (geo != null) { pendingGeo = geo; switchTo(TAB_PLACES) }
+            else if (deep != null) openDeepLink(deep)
             else switchTo(defaultSection())
         } else {
             currentTab = savedTab ?: defaultSection()
@@ -82,9 +86,19 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        deepLinkOf(intent)?.let { openDeepLink(it); return }
         val geo = geoTargetOf(intent) ?: return
         pendingGeo = geo
         switchTo(TAB_PLACES)
+    }
+
+    /** `shortcut_action` = `page:<section>/<page>`, e.g. the SuperApp's Health badge: page:timeline/steps. */
+    private fun deepLinkOf(intent: Intent?): NavDeepLink.Target? =
+        NavDeepLink.parse(intent?.getStringExtra("shortcut_action"))?.takeIf { NavConfig.decl.section(it.section) != null }
+
+    private fun openDeepLink(t: NavDeepLink.Target) {
+        pendingPage = t.page
+        switchTo(t.section)
     }
 
     private fun geoTargetOf(intent: Intent?): GeoTarget? {
@@ -123,7 +137,7 @@ class MainActivity : AppCompatActivity() {
         // Consume a pending geo: location once, so a hand-off from another app
         // lands on the map at that point / runs that search.
         "places"     -> pendingGeo?.let { g -> pendingGeo = null; PlacesFragment.forGeo(g) } ?: PlacesFragment()
-        "timeline"   -> TimelineFragment()
+        "timeline"   -> TimelineFragment().also { f -> pendingPage?.let { pg -> pendingPage = null; f.arguments = Bundle().apply { putString(TimelineFragment.ARG_PAGE, pg) } } }
         "configs"    -> ConfigsFragment()
         else         -> RoutesFragment()
     }

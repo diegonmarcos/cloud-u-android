@@ -7,6 +7,7 @@ import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.diegonmarcos.cloudnav.maps.MapsDb
@@ -43,21 +44,61 @@ class StepsRepository(private val ctx: Context) {
         val hcStatus = HealthConnectClient.getSdkStatus(ctx)
         if (hcStatus == HealthConnectClient.SDK_AVAILABLE) {
             val client = HealthConnectClient.getOrCreate(ctx)
-            if (client.permissionController.getGrantedPermissions().containsAll(READ_STEPS)) {
-                runCatching {
-                    val daily = hcDaily(client, zone)
-                    val slices = hcSlices(client, dayStart, now)
-                    return@withContext StepsModel.build(StepsSource.HEALTH_CONNECT, SourceStatus.READY, daily, slices, fixes, zone, now, stepM, label)
+            val granted = runCatching { client.permissionController.getGrantedPermissions() }.getOrDefault(emptySet())
+            val perm = StepsDiagnostics.permState(hcStatus, granted, READ_STEPS)
+            if (perm == PermState.GRANTED) {
+                val hc = runCatching {
+                    val daily = hcDaily(client, zone).toMutableMap()
+                    val today = hcToday(client, zone, now)
+                    // The aggregate over the local day is the de-duplicated truth for today; the per-period group can lag it.
+                    daily[Instant.ofEpochMilli(now).atZone(zone).toLocalDate()] = today.steps
+                    Triple(daily, hcSlices(client, dayStart, now), today)
                 }
+                hc.getOrNull()?.let { (daily, slices, today) ->
+                    val diag = StepsDiag(
+                        StepsDiagnostics.statusLine("Health Connect", perm, today.lastDataMs, today.origins, zone),
+                        StepsDiagnostics.hint(perm, today.steps, today.origins))
+                    return@withContext StepsModel.build(StepsSource.HEALTH_CONNECT, SourceStatus.READY, daily, slices, fixes, zone, now, stepM, label, diag)
+                }
+                // Granted but the read threw: say so, never relabel it as "not allowed".
+                return@withContext device(SourceStatus.HEALTH_CONNECT_ERROR, zone, now, dayStart, fixes, stepM, label, perm,
+                    "Health Connect read failed: ${hc.exceptionOrNull()?.javaClass?.simpleName}")
             }
-            return@withContext device(SourceStatus.NEEDS_PERMISSION, zone, now, dayStart, fixes, stepM, label)
+            return@withContext device(SourceStatus.NEEDS_PERMISSION, zone, now, dayStart, fixes, stepM, label, perm)
         }
-        device(SourceStatus.HEALTH_CONNECT_MISSING, zone, now, dayStart, fixes, stepM, label)
+        val perm = StepsDiagnostics.permState(hcStatus, emptySet(), READ_STEPS)
+        val st = if (perm == PermState.UPDATE_REQUIRED) SourceStatus.HEALTH_CONNECT_UPDATE else SourceStatus.HEALTH_CONNECT_MISSING
+        device(st, zone, now, dayStart, fixes, stepM, label, perm)
     }
 
-    private fun device(st: SourceStatus, zone: ZoneId, now: Long, dayStart: Long, fixes: List<PlaceFix>, stepM: Double, label: (PlaceFix) -> String): StepsUi {
+    /** Today's steps from Health Connect's de-duplicating aggregate over the local day, plus who wrote them and when. */
+    private class HcToday(val steps: Long, val origins: Set<String>, val lastDataMs: Long?)
+
+    private suspend fun hcToday(c: HealthConnectClient, zone: ZoneId, now: Long): HcToday {
+        val (from, to) = StepsDiagnostics.todayRange(Instant.ofEpochMilli(now), zone)
+        val range = TimeRangeFilter.between(from, to)
+        val agg = c.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), range))
+        val last = c.readRecords(ReadRecordsRequest(StepsRecord::class, range, ascendingOrder = false, pageSize = 1))
+            .records.firstOrNull()?.endTime?.toEpochMilli()
+        return HcToday(agg[StepsRecord.COUNT_TOTAL] ?: 0L, agg.dataOrigins.map { it.packageName }.toSet(), last)
+    }
+
+    private fun device(st: SourceStatus, zone: ZoneId, now: Long, dayStart: Long, fixes: List<PlaceFix>, stepM: Double, label: (PlaceFix) -> String,
+                       perm: PermState = PermState.UNAVAILABLE, extra: String? = null): StepsUi {
         val all = EngineDb.get(ctx).slices(now - HISTORY_DAYS * 86_400_000L, now)
-        return StepsModel.build(StepsSource.DEVICE, st, StepStats.perDay(all, zone), all.filter { it.startMs >= dayStart }, fixes, zone, now, stepM, label)
+        val prefs = EnginePrefs(ctx)
+        val recog = android.os.Build.VERSION.SDK_INT < 29 ||
+            androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.ACTIVITY_RECOGNITION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val engine = when {
+            !recog -> "physical-activity permission (ACTIVITY_RECOGNITION) is not granted, so the step counter cannot be read (Configs > Tracker)"
+            !prefs.config.enabled -> "tracker engine is off (Configs > Tracker), so nothing is sampled"
+            else -> "tracker engine samples every 15 min, last sample " + (prefs.lastSampleMs.takeIf { it > 0 }?.let { StepsFormat.time(it, zone) } ?: "never")
+        }
+        val last = all.maxOfOrNull { it.endMs }
+        val diag = StepsDiag(
+            StepsDiagnostics.statusLine("this phone's step counter", perm, last, emptySet(), zone) + " | " + engine,
+            listOfNotNull(StepsDiagnostics.hint(perm, 0, emptySet()), extra).joinToString(" ").ifBlank { null })
+        return StepsModel.build(StepsSource.DEVICE, st, StepStats.perDay(all, zone), all.filter { it.startMs >= dayStart }, fixes, zone, now, stepM, label, diag)
     }
 
     private suspend fun hcDaily(c: HealthConnectClient, zone: ZoneId): Map<LocalDate, Long> {
