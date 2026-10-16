@@ -64,4 +64,20 @@ class EdgeGestureMachine(
     }
 
     fun cancel() { state = State.IDLE }
+
+    companion object {
+        /** A tap lasts well under this; a hold shorter than it would claim taps. */
+        const val MIN_HOLD_MS = 150L
+
+        /**
+         * Hold time = the build.json value ([configuredMs], > 0) capped by the system long-press time. The
+         * system value alone is wrong for the owner: Accessibility "touch and hold delay" can make it 1.5 s,
+         * and the menu then feels dead. Never below [MIN_HOLD_MS], so a tap still passes.
+         */
+        fun holdMs(systemMs: Long, configuredMs: Int): Long =
+            (if (configuredMs > 0) minOf(systemMs, configuredMs.toLong()) else systemMs).coerceAtLeast(MIN_HOLD_MS)
+
+        /** A thumb resting on a 24dp strip rolls; allow twice the platform slop before the touch is a sweep. */
+        fun slopPx(touchSlopPx: Float): Float = touchSlopPx * 2f
+    }
 }

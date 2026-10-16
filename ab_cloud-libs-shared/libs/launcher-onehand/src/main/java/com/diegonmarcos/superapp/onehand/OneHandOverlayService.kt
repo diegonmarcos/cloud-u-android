@@ -87,6 +87,12 @@ class OneHandOverlayService : Service() {
     /** Edge-handle windows currently added (read by the app's /api/overlays). */
     val handleCount: Int get() = views.size
 
+    /** The idle strip windows (emulator test + /api/overlays read their screen bounds). */
+    val handleViews: List<View> get() = views.toList()
+
+    /** True while the hold-then-push menu window is on screen. */
+    val menuShown: Boolean get() = activated && preview?.isAttachedToWindow == true
+
     fun showHandles() {
         hideHandles()
         // #775: the switch is checked at the draw, not only by the callers that
@@ -201,14 +207,15 @@ class OneHandOverlayService : Service() {
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 downX = e.rawX; downY = e.rawY; activated = false
-                val m = EdgeGestureMachine(h.edge, ViewConfiguration.getLongPressTimeout().toLong(),
-                    ViewConfiguration.get(this).scaledTouchSlop.toFloat(), dp(c.swipeThresholdDp).toFloat())
+                val holdMs = EdgeGestureMachine.holdMs(ViewConfiguration.getLongPressTimeout().toLong(), c.longPressMs)
+                val m = EdgeGestureMachine(h.edge, holdMs,
+                    EdgeGestureMachine.slopPx(ViewConfiguration.get(this).scaledTouchSlop.toFloat()), dp(c.swipeThresholdDp).toFloat())
                     .also { it.down(e.rawX, e.rawY, e.eventTime); machine = it }
                 holdCue?.let { handler.removeCallbacks(it) }
                 holdCue = Runnable {
                     if (m.tick(android.os.SystemClock.uptimeMillis()))
                         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS) // "armed": now push
-                }.also { handler.postDelayed(it, ViewConfiguration.getLongPressTimeout().toLong()) }
+                }.also { handler.postDelayed(it, holdMs) }
             }
             MotionEvent.ACTION_MOVE -> {
                 val m = machine ?: return true

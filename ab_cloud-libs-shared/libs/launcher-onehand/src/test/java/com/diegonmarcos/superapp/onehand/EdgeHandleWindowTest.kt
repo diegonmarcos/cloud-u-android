@@ -11,7 +11,7 @@ class EdgeHandleWindowTest {
 
     @Test fun declaredFullHeightWideStripIsClampedThin() {
         val s = EdgeHandleWindow.size(OneHandConfig.Edge.RIGHT, lengthPx = 2400, thicknessPx = (32 * d).toInt(), density = d)
-        assertTrue("width ${s.widthPx}", s.widthPx <= (16 * d).toInt())
+        assertTrue("width ${s.widthPx}", s.widthPx <= (24 * d).toInt())
         assertEquals((EdgeHandleWindow.MAX_LENGTH_DP * d).toInt(), s.heightPx)
     }
 
@@ -22,7 +22,14 @@ class EdgeHandleWindowTest {
 
     @Test fun bottomEdgeIsWideAndShort() {
         val s = EdgeHandleWindow.size(OneHandConfig.Edge.BOTTOM, 1080, (40 * d).toInt(), d)
-        assertTrue(s.heightPx <= (16 * d).toInt()); assertEquals((160 * d).toInt(), s.widthPx)
+        assertTrue(s.heightPx <= (24 * d).toInt()); assertEquals((160 * d).toInt(), s.widthPx)
+    }
+
+    @Test fun stripSpansTheSystemBackGestureBand() {
+        // ~24dp is the AOSP back-gesture inset: a thinner border strip is wholly inside it and never reachable.
+        assertTrue(EdgeHandleWindow.MAX_THICKNESS_DP >= 24)
+        val s = EdgeHandleWindow.size(OneHandConfig.Edge.LEFT, 400, (32 * d).toInt(), d)
+        assertEquals((24 * d).toInt(), s.widthPx)
     }
 
     @Test fun idleFlags() {

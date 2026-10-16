@@ -9,7 +9,12 @@ import android.view.WindowManager.LayoutParams as LP
  * (<= the 200dp system-gesture-exclusion cap).
  */
 object EdgeHandleWindow {
-    const val MAX_THICKNESS_DP = 12
+    /**
+     * 24dp, not 12: a 12dp strip at the border sits wholly inside the system back-gesture band (~24dp) and
+     * the curved-edge touch-reject zone, so a thumb never lands on it and the menu "doesn't work at all".
+     * 24dp spans that band; the strip's [systemGestureExclusionRects] keep the back gesture off it.
+     */
+    const val MAX_THICKNESS_DP = 24
     const val MAX_LENGTH_DP = 160
 
     /** NOT_TOUCH_MODAL: touches outside the strip go to the window behind. NOT_FOCUSABLE: never steals keys/IME. */
