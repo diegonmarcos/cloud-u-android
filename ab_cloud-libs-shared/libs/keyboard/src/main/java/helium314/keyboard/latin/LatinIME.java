@@ -7,7 +7,6 @@
 package helium314.keyboard.latin;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -74,7 +73,6 @@ import helium314.keyboard.latin.utils.FoldableUtils;
 import helium314.keyboard.latin.utils.GestureDataGatheringKt;
 import helium314.keyboard.latin.utils.GestureDataGatheringSettings;
 import helium314.keyboard.latin.utils.InlineAutofillUtils;
-import helium314.keyboard.latin.utils.InputMethodPickerKt;
 import helium314.keyboard.latin.utils.JniUtils;
 import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.LeakGuardHandlerWrapper;
@@ -196,7 +194,7 @@ public class LatinIME extends InputMethodService implements
     }
     final RestartAfterDeviceUnlockReceiver mRestartAfterDeviceUnlockReceiver = new RestartAfterDeviceUnlockReceiver();
 
-    private AlertDialog mOptionsDialog;
+    private helium314.keyboard.latin.utils.InputMethodPickerView mInputPicker;
 
     private final boolean mIsHardwareAcceleratedDrawingEnabled;
 
@@ -830,6 +828,7 @@ public class LatinIME extends InputMethodService implements
         hostPanel(mVoiceBar, frame);
         hostPanel(mEmojiSearchBar, frame);
         hostPanel(mEnhanceBar, frame);
+        hostPanel(mInputPicker, frame);
         if (mTranslateBar != null) {
             mTranslateBar.setPalette(translatePalette());
             mTranslateBar.setMaxHeight(translateBarMaxHeight());
@@ -1441,10 +1440,7 @@ public class LatinIME extends InputMethodService implements
         mKeyboardSwitcher.onHideWindow();
 
         if (TRACE) Debug.stopMethodTracing();
-        if (isShowingOptionDialog()) {
-            mOptionsDialog.dismiss();
-            mOptionsDialog = null;
-        }
+        hideInputPicker();
         super.hideWindow();
     }
 
@@ -1698,16 +1694,27 @@ public class LatinIME extends InputMethodService implements
 
     public boolean showInputPickerDialog() {
         if (isShowingOptionDialog()) return false;
+        if (mInputView == null) return false;
         if (mRichImm.hasMultipleEnabledIMEsOrSubtypes(true)) {
-            mOptionsDialog = InputMethodPickerKt.createInputMethodPickerDialog(this, mRichImm, mKeyboardSwitcher.getMainKeyboardView().getWindowToken());
-            mOptionsDialog.show();
+            final View strip = mInputView.findViewById(R.id.strip_container);
+            if (strip == null || !(strip.getParent() instanceof android.widget.LinearLayout)) return false;
+            if (mInputPicker == null)
+                mInputPicker = new helium314.keyboard.latin.utils.InputMethodPickerView(this);
+            mInputPicker.load(mRichImm, this::hideInputPicker);
+            hostPanel(mInputPicker, (android.widget.LinearLayout) strip.getParent());
+            mInputPicker.setVisibility(View.VISIBLE);
             return true;
         }
         return false;
     }
 
+    private void hideInputPicker() {
+        if (mInputPicker != null) mInputPicker.setVisibility(View.GONE);
+    }
+
+    /** The input method picker is a panel above the keys, like the bars. */
     private boolean isShowingOptionDialog() {
-        return mOptionsDialog != null && mOptionsDialog.isShowing();
+        return isPanelUp(mInputPicker);
     }
 
     // called when language switch key is pressed (either the keyboard key, or long-press comma)

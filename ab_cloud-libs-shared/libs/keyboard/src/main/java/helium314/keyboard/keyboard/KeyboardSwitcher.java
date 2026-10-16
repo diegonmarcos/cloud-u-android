@@ -39,6 +39,7 @@ import helium314.keyboard.keyboard.emoji.EmojiPalettesView;
 import helium314.keyboard.keyboard.internal.KeyboardState;
 import helium314.keyboard.keyboard.internal.keyboard_parser.EmojiParserKt;
 import helium314.keyboard.latin.utils.FloatingKeyboardUtils;
+import helium314.keyboard.latin.FakeToastView;
 import helium314.keyboard.latin.InputView;
 import helium314.keyboard.latin.KeyboardWrapperView;
 import helium314.keyboard.latin.LatinIME;
@@ -75,7 +76,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private SuggestionStripView mSuggestionStripView;
     private FrameLayout mStripContainer;
     private ClipboardHistoryView mClipboardHistoryView;
-    private TextView mFakeToastView;
+    private FakeToastView mFakeToastView;
     private ImageView mBackgroundGatheringIndicator;
     private LatinIME mLatinIME;
     private RichInputMethodManager mRichImm;
@@ -657,12 +658,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private void showFakeToast(final String text, final int timeMillis) {
         if (mFakeToastView.getVisibility() == View.VISIBLE) return;
 
-        final Drawable appIcon = mFakeToastView.getCompoundDrawables()[0];
-        if (appIcon != null) {
-            final int bound = mFakeToastView.getLineHeight();
-            appIcon.setBounds(0, 0, bound, bound);
-            mFakeToastView.setCompoundDrawables(appIcon, null, null, null);
-        }
         mFakeToastView.setText(text);
         mFakeToastView.setVisibility(View.VISIBLE);
         mFakeToastView.bringToFront();
