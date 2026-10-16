@@ -134,7 +134,7 @@ has "$ADB/AdbShellBootstrap.kt" 'fun ensureServer(ctx: Context, ladder: List<She
 has "$ADB/AdbShellBootstrap.kt" 'if (listening && LocalShellChannel.probe(ctx)) return true' "bootstrap is a no-op only while the server ANSWERS (a listening socket is not a server)"
 has "$ADB/AdbShellBootstrap.kt" 'it !== LocalShellChannel && it.isReady(ctx)' "bootstrap runs through the active NON-local channel"
 has "$ADB/AdbShellBootstrap.kt" '"") + shellCommand(ctx)' "bootstrap runs the SAME launch line the server-command shows"
-has "$ADB/AdbShellBootstrap.kt" "pkill -f 'superapp-ad[b]'; sleep 1; " "a listening-but-mute server (the previous APK's process, shell uid) is killed by nice-name through the fallback first"
+has "$ADB/AdbShellBootstrap.kt" "pkill -f '\${niceName().dropLast(1)}[\${niceName().last()}]'; sleep 1; " "a listening-but-mute server (the previous APK's process, shell uid) is killed by ITS OWN nice-name (never another app's) through the fallback first"
 has "$ADB/ShellChannel.kt" 'it !== LocalShellChannel || it.probe(ctx)' "active() asks the own server to execute before trusting its socket"
 has "$ADB/LocalShellChannel.kt" 'override fun probe(ctx: Context)' "the own server has its own probe"
 has "$ADB/LocalShellChannel.kt" 'soTimeout = 2_000' "that probe gives up in 2 s, not the exec's 15"
