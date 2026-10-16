@@ -116,6 +116,7 @@ private fun Tool(id: String, label: String, enabled: Boolean = true, onClick: ()
 
 @Composable
 private fun SheetToolbar(st: SheetState) {
+    st.rev // read: Undo/Redo enablement follows every change
     val ctx = LocalContext.current
     var fmtMenu by remember { mutableStateOf(false) }
     var fileMenu by remember { mutableStateOf(false) }
@@ -399,6 +400,7 @@ private fun GridCell(st: SheetState, sheet: String, c: Int, r: Int, w: androidx.
 /** The sheet tabs at the bottom: one per sheet, + to add, the selected tab's menu renames, duplicates, deletes and moves it. */
 @Composable
 private fun SheetTabs(st: SheetState) {
+    st.rev // read: the tabs follow add / rename / delete / reorder
     var menu by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf("") }
     val names = st.wb.sheetNames()
