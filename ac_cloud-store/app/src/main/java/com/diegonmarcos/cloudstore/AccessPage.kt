@@ -133,7 +133,7 @@ private fun AndroidPermsPage() {
     if (selected !in options) selected = PermsGrant.ALL
     val shown = PermsGrant.view(apps, selected)
     val plan = remember(apps) { PermsGrant.plan(apps, kind) }
-    val up = chan >= 0 && PermsGrantDevice.channelUp()
+    val up = chan >= 0 && PermsGrantDevice.channelUp(ctx)
     val reason = PermsGrant.disabledReason(up)
     var confirm by remember { mutableStateOf(false) }
     var running by remember { mutableStateOf(false) }
