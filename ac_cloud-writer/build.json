@@ -168,7 +168,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "z-ai/glm-5.3-flash",
-        "pricing_as_of": "2026-10-15",
+        "pricing_as_of": "2026-10-16",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -195,8 +195,8 @@
               "fp8",
               "bf16"
             ],
-            "prompt": 0.075,
-            "completion": 0.2,
+            "prompt": 0.0938,
+            "completion": 0.25,
             "note": "24B open weights, no category ranking; cheap European-language rewriting."
           },
           {
@@ -244,7 +244,6 @@
               "fp8"
             ],
             "trained_for": [
-              "health",
               "roleplay",
               "translation"
             ],
@@ -262,8 +261,8 @@
               "bf16",
               "fp16"
             ],
-            "prompt": 0.59,
-            "completion": 0.79,
+            "prompt": 0.1,
+            "completion": 0.32,
             "note": "70B open weights, no category ranking — a general fallback, not a specialist."
           },
           {
@@ -299,8 +298,10 @@
             "name": "DeepSeek V4 Flash 0731",
             "open": true,
             "quant": [
+              "fp32",
               "fp4",
-              "fp8"
+              "fp8",
+              "nvfp4"
             ],
             "trained_for": [
               "academia",
@@ -316,8 +317,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.016,
-            "completion": 0.64,
+            "prompt": 0.0068,
+            "completion": 1.28,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
           {
@@ -336,8 +337,8 @@
               "science",
               "technology"
             ],
-            "prompt": 0.02,
-            "completion": 7,
+            "prompt": 0.037,
+            "completion": 9,
             "note": "Ranked in ten categories including translation; the formal-register GLM."
           },
           {
@@ -363,8 +364,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.15,
-            "completion": 0.5,
+            "prompt": 0.0121,
+            "completion": 0.9,
             "note": "The provider default: ranked in all twelve categories, and the cheapest all-rounder after DeepSeek."
           },
           {

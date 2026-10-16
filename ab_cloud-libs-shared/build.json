@@ -3139,7 +3139,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-10-15",
+        "pricing_as_of": "2026-10-16",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -3157,7 +3157,7 @@
             "open": true,
             "params_b": 24,
             "quant": ["fp8", "bf16"],
-            "prompt": 0.075, "completion": 0.2,
+            "prompt": 0.0938, "completion": 0.25,
             "note": "24B open weights, no category ranking; cheap European-language rewriting."
           },
           {
@@ -3186,7 +3186,7 @@
             "open": true,
             "params_b": 31,
             "quant": ["bf16", "fp4", "fp8"],
-            "trained_for": ["health", "roleplay", "translation"],
+            "trained_for": ["roleplay", "translation"],
             "prompt": 0.2, "completion": 0.4,
             "note": "Translation-ranked, served at four precisions; more headroom than the 26B."
           },
@@ -3196,7 +3196,7 @@
             "open": true,
             "params_b": 70,
             "quant": ["fp8", "bf16", "fp16"],
-            "prompt": 0.59, "completion": 0.79,
+            "prompt": 0.1, "completion": 0.32,
             "note": "70B open weights, no category ranking — a general fallback, not a specialist."
           },
           {
@@ -3221,9 +3221,9 @@
             "id": "deepseek/deepseek-v4-flash-0731",
             "name": "DeepSeek V4 Flash 0731",
             "open": true,
-            "quant": ["fp4", "fp8"],
+            "quant": ["fp32", "fp4", "fp8", "nvfp4"],
             "trained_for": ["academia", "finance", "health", "legal", "marketing", "marketing/seo", "programming", "roleplay", "science", "technology", "translation", "trivia"],
-            "prompt": 0.016, "completion": 0.64,
+            "prompt": 0.0068, "completion": 1.28,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
           {
@@ -3232,7 +3232,7 @@
             "open": true,
             "quant": ["fp4", "fp8", "nvfp4"],
             "trained_for": ["legal", "programming", "roleplay", "science", "technology"],
-            "prompt": 0.02, "completion": 7,
+            "prompt": 0.037, "completion": 9,
             "note": "Ranked in ten categories including translation; the formal-register GLM."
           },
           {
@@ -3241,7 +3241,7 @@
             "open": true,
             "quant": ["fp4", "fp8", "nvfp4"],
             "trained_for": ["academia", "finance", "health", "legal", "marketing", "marketing/seo", "programming", "roleplay", "science", "technology", "translation", "trivia"],
-            "prompt": 0.15, "completion": 0.5,
+            "prompt": 0.0121, "completion": 0.9,
             "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
           },
           {
