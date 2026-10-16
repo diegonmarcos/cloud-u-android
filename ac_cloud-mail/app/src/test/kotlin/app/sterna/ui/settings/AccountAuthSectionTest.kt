@@ -3,7 +3,14 @@ package app.sterna.ui.settings
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createComposeRule
+import android.content.ComponentName
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import org.junit.rules.RuleChain
+import org.junit.rules.TestRule
+import org.junit.runners.model.Statement
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import app.sterna.core.data.account.GatewayMode
@@ -24,7 +31,24 @@ import java.io.File
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class AccountAuthSectionTest {
-    @get:Rule val compose = createComposeRule()
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
+    // The app's manifest has no entry for the activity the compose rule launches.
+    @get:Rule
+    val rules: RuleChain = RuleChain.outerRule(TestRule { base, _ ->
+        object : Statement() {
+            override fun evaluate() {
+                val app = RuntimeEnvironment.getApplication()
+                shadowOf(app.packageManager).addActivityIfNotPresent(ComponentName(app, ComponentActivity::class.java))
+                base.evaluate()
+            }
+        }
+    }).around(compose)
+
+    private val root: File by lazy {
+        generateSequence(File("").absoluteFile) { it.parentFile }
+            .firstOrNull { File(it, "app/src/main/res/values/strings.xml").isFile } ?: error("checkout not found")
+    }
 
     private val modes = mutableListOf<GatewayMode>()
     private var signIns = 0
@@ -66,14 +90,14 @@ class AccountAuthSectionTest {
     }
 
     @Test fun `the account screen hosts the section and the list shows the chip`() {
-        val screen = File("src/main/kotlin/app/sterna/ui/settings/SettingsScreen.kt").readText()
+        val screen = File(root, "app/src/main/kotlin/app/sterna/ui/settings/SettingsScreen.kt").readText()
         assertTrue(screen.contains("AccountAuthSection("))
         assertTrue(screen.contains("AutheliaSignInDialog("))
         assertTrue(screen.contains("gateway = "))
-        val keys = Regex("""R\.string\.gw_\w+""").findAll(File("src/main/kotlin/app/sterna/ui/settings/AccountAuthSection.kt").readText())
+        val keys = Regex("""R\.string\.gw_\w+""").findAll(File(root, "app/src/main/kotlin/app/sterna/ui/settings/AccountAuthSection.kt").readText())
             .map { it.value.removePrefix("R.string.") }.toSet()
         for (loc in listOf("", "-de", "-es", "-fr", "-it", "-nl", "-pl", "-pt", "-ru")) {
-            val xml = File("src/main/res/values$loc/strings.xml").readText()
+            val xml = File(root, "app/src/main/res/values$loc/strings.xml").readText()
             for (k in keys) assertTrue("values$loc lacks $k", xml.contains("name=\"$k\""))
         }
     }
