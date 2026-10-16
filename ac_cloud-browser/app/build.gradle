@@ -263,6 +263,20 @@ android {
 
     buildFeatures { buildConfig = true; compose = true }
 
+    testOptions {
+        unitTests {
+            // #900 the Compose UI tests (page dropdown, Configs tabs, Autocomplete editor) run under Robolectric against the
+            // app's real resources, the way libs:bottomnav's PageTabsTest and cloud-search's SearchShellTest do.
+            includeAndroidResources = true
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
     // ONE shared Cloud-constellation key — same key as SuperApp/Nav/Comms/Wallet/IDE.
     signingConfigs {
         debug {
@@ -326,6 +340,9 @@ dependencies {
     // on the test classpath the config tests could only assert the
     // exception. Standard Android fix, test-only: never reaches the APK.
     testImplementation 'org.json:json:20240303'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+    testImplementation platform('androidx.compose:compose-bom:2025.11.01')
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
 
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
