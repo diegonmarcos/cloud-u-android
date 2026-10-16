@@ -1,29 +1,60 @@
 package com.diegonmarcos.superapp.firewall
 
 import android.app.Activity
-import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.RadioButton
-import android.widget.RadioGroup
-import android.widget.ScrollView
-import android.widget.Switch
-import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.DialogFragment
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitConfirmDialog
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.KitSwitchRow
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * Firewall control screen — opened from the About → Firewall gray button.
  *
  * A master switch enables/disables the no-root engine (requesting the
  * system VPN consent on first enable). Below it, a scrollable list of
- * launchable apps each with a per-app block toggle. Views are built
- * programmatically (no resource deps) to match EnergyUsageDialog's style.
+ * launchable apps, each opening a per-app rule editor.
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. The dialog is a ComposeView under
+ * CloudKitTheme (libs:ui-kit) with its palette in the fw_* colour resources; the host contract
+ * (DialogFragment, TAG) is unchanged.
  */
 class FirewallDialog : DialogFragment() {
 
@@ -36,79 +67,36 @@ class FirewallDialog : DialogFragment() {
         refreshHeader()
     }
 
-    private lateinit var headerState: TextView
-    private lateinit var masterSwitch: Switch
+    /** What the header and the master switch show; re-read by [refreshHeader]. */
+    private var info by mutableStateOf<FirewallInfo.State?>(null)
+
+    /** Bumped after a rule is saved so every row re-reads its summary. */
+    private var ruleVersion by mutableIntStateOf(0)
+
+    /** The app whose rule editor is open, if any. */
+    private var editing by mutableStateOf<ApplicationInfo?>(null)
+    private var usagePrompt by mutableStateOf(false)
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         val ctx = requireContext()
-        val density = resources.displayMetrics.density
-        fun dp(v: Int) = (v * density).toInt()
-
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(20), dp(20), dp(20))
-            setBackgroundColor(0xFF111317.toInt())
-        }
-
-        root.addView(TextView(ctx).apply {
-            text = "Firewall"
-            textSize = 20f
-            setTextColor(0xFFFFFFFF.toInt())
-        })
-        headerState = TextView(ctx).apply {
-            setTextColor(0x99FFFFFF.toInt())
-            textSize = 12f
-            setPadding(0, dp(4), 0, dp(12))
-        }
-        root.addView(headerState)
-
-        // Master enable row.
-        val masterRow = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        masterRow.addView(TextView(ctx).apply {
-            text = "Firewall enabled"
-            setTextColor(0xFFFFFFFF.toInt())
-            textSize = 15f
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        masterSwitch = Switch(ctx).apply {
-            isChecked = FirewallController.isEnabled(ctx)
-            setOnClickListener { onMasterToggle(isChecked) }
-        }
-        masterRow.addView(masterSwitch)
-        root.addView(masterRow)
-
-        root.addView(TextView(ctx).apply {
-            text = "Per-app rules apply while the firewall is on. Enabling takes " +
-                "the device VPN slot, so the WireGuard tunnel can't run at the " +
-                "same time (the staged firestack merge unifies them). The fleet's " +
-                "${FirewallVpnService.FLEET_ENGINES.size} engine APKs are never blocked: they " +
-                "carry no screen and work for the app that binds them. The notification names " +
-                "every app the firewall is blocking right now."
-            setTextColor(0x77FFFFFF.toInt())
-            textSize = 11f
-            setPadding(0, dp(6), 0, dp(12))
-        })
-
-        // Per-app block list (launchable apps only, alphabetical).
-        val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val pm = ctx.packageManager
-        pm.getInstalledApplications(0)
-            .filter { pm.getLaunchIntentForPackage(it.packageName) != null && it.packageName != ctx.packageName }
-            .sortedBy { pm.getApplicationLabel(it).toString().lowercase() }
-            .forEach { list.addView(appRow(ctx, it, ::dp)) }
-
-        root.addView(ScrollView(ctx).apply {
-            addView(list)
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
-        })
-
         refreshHeader()
-        return root
+        return ComposeView(ctx).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                val palette = KitPalette(
+                    surface = colorResource(R.color.fw_card),
+                    surfaceSelected = colorResource(R.color.fw_selected),
+                    textPrimary = colorResource(R.color.fw_text),
+                    textSecondary = colorResource(R.color.fw_text_dim),
+                    accent = colorResource(R.color.fw_accent),
+                    hairline = colorResource(R.color.fw_hairline),
+                    tileInk = colorResource(R.color.fw_bg),
+                )
+                CloudKitTheme(palette) { Screen() }
+            }
+        }
     }
 
     override fun onStart() {
@@ -119,26 +107,67 @@ class FirewallDialog : DialogFragment() {
         )
     }
 
-    /** One app row: label + current-rule summary; tap opens the axis editor. */
-    private fun appRow(ctx: Context, app: ApplicationInfo, dp: (Int) -> Int): View {
-        val pm = ctx.packageManager
-        val summary = TextView(ctx).apply {
-            setTextColor(0x88FFFFFF.toInt())
-            textSize = 11f
+    @Composable
+    private fun Screen() {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        val s = info
+        // Per-app block list (launchable apps only, alphabetical).
+        val apps = remember {
+            val pm = ctx.packageManager
+            pm.getInstalledApplications(0)
+                .filter { pm.getLaunchIntentForPackage(it.packageName) != null && it.packageName != ctx.packageName }
+                .map { it to pm.getApplicationLabel(it).toString() }
+                .sortedBy { it.second.lowercase() }
         }
-        fun renderSummary() { summary.text = summarize(FirewallRules.rule(ctx, app.packageName)) }
-        renderSummary()
-        return LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(8), 0, dp(8))
-            isClickable = true
-            setOnClickListener { editApp(ctx, app, dp) { renderSummary() } }
-            addView(TextView(ctx).apply {
-                text = pm.getApplicationLabel(app).toString()
-                setTextColor(0xFFFFFFFF.toInt())
-                textSize = 14f
-            })
-            addView(summary)
+        Column(Modifier.fillMaxSize().background(colorResource(R.color.fw_bg)).padding(20.dp)) {
+            Text("Firewall", color = p.textPrimary, fontSize = 20.sp)
+            Text(
+                if (s == null) "" else
+                    "${FirewallInfo.fmtState(s)} · ${s.blockedCount} blocked · ${s.transport}" +
+                        (if (s.systemVpnActive) " · VPN" else ""),
+                color = p.textSecondary, fontSize = 12.sp,
+                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
+
+            // Master enable row.
+            KitSwitchRow("Firewall enabled", "", s?.enabled ?: false) { onMasterToggle(it) }
+
+            Text(
+                "Per-app rules apply while the firewall is on. Enabling takes " +
+                    "the device VPN slot, so the WireGuard tunnel can't run at the " +
+                    "same time (the staged firestack merge unifies them). The fleet's " +
+                    "${FirewallVpnService.FLEET_ENGINES.size} engine APKs are never blocked: they " +
+                    "carry no screen and work for the app that binds them. The notification names " +
+                    "every app the firewall is blocking right now.",
+                color = p.textSecondary.copy(alpha = 0.6f), fontSize = 11.sp,
+                modifier = Modifier.padding(top = 6.dp, bottom = 12.dp))
+
+            LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
+                items(apps, key = { it.first.packageName }) { (app, label) ->
+                    val summary = remember(ruleVersion, app.packageName) {
+                        summarize(FirewallRules.rule(ctx, app.packageName))
+                    }
+                    Column(Modifier.fillMaxWidth().clickable { editing = app }.padding(vertical = 8.dp)) {
+                        Text(label, color = p.textPrimary, fontSize = 14.sp)
+                        Text(summary,
+                            color = p.textSecondary, fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+
+        editing?.let { app -> RuleEditor(app, apps.firstOrNull { it.first == app }?.second ?: app.packageName) }
+        if (usagePrompt) {
+            KitConfirmDialog(
+                title = "Usage access needed",
+                text = "\"No background data\" needs Usage Access to detect which app is in the foreground. Grant it now?",
+                confirmLabel = "Open settings", dismissLabel = "Later",
+                onConfirm = {
+                    usagePrompt = false
+                    runCatching { startActivity(android.content.Intent(FirewallConditions.USAGE_ACCESS_SETTINGS)) }
+                },
+                onDismiss = { usagePrompt = false },
+            )
         }
     }
 
@@ -169,94 +198,68 @@ class FirewallDialog : DialogFragment() {
      * data on Wi-Fi / Cellular / Cloud-VPN, background data, and a direction
      * selector. All combine (blocked if any axis blocks).
      */
-    private fun editApp(ctx: Context, app: ApplicationInfo, dp: (Int) -> Int, onDone: () -> Unit) {
-        val r = FirewallRules.rule(ctx, app.packageName)
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(12), dp(20), dp(4))
-        }
-
-        fun axisRow(label: String, on: Boolean): Switch {
-            val sw = Switch(ctx).apply { isChecked = on }
-            col.addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, dp(6), 0, dp(6))
-                addView(TextView(ctx).apply {
-                    text = label; textSize = 15f
-                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                })
-                addView(sw)
-            })
-            return sw
-        }
-
-        col.addView(TextView(ctx).apply {
-            text = "Data axes — turn OFF to block that path"; textSize = 11f
-            setTextColor(0x88000000.toInt()); setPadding(0, 0, 0, dp(4))
-        })
-        val wifi = axisRow("Wi-Fi data", r.wifi)
-        val cell = axisRow("Cellular data", r.cellular)
-        val bg = axisRow("Background data", r.background)
-
-        col.addView(TextView(ctx).apply {
-            text = "Cloud VPN — a strong override: forces the app VPN-only " +
-                "(ignores Wi-Fi/Cellular; app talks ONLY through the tunnel)"
-            textSize = 11f
-            setTextColor(0x88000000.toInt()); setPadding(0, dp(10), 0, dp(2))
-        })
+    @Composable
+    private fun RuleEditor(app: ApplicationInfo, label: String) {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        val r = remember(app.packageName) { FirewallRules.rule(ctx, app.packageName) }
+        var wifi by remember(app.packageName) { mutableStateOf(r.wifi) }
+        var cell by remember(app.packageName) { mutableStateOf(r.cellular) }
+        var bg by remember(app.packageName) { mutableStateOf(r.background) }
+        var vpnMode by remember(app.packageName) { mutableStateOf(r.vpnMode) }
+        var direction by remember(app.packageName) { mutableStateOf(r.direction) }
         val vpnModes = listOf(
             VpnMode.NONE to "None",
             VpnMode.WG0_ONLY to "wg0 VPN only",
             VpnMode.WG_PUBLIC_ONLY to "wg-public VPN only",
         )
-        val vpnGroup = RadioGroup(ctx)
-        vpnModes.forEachIndexed { i, (m, label) ->
-            vpnGroup.addView(RadioButton(ctx).apply { id = i + 1; text = label; isChecked = m == r.vpnMode })
-        }
-        col.addView(vpnGroup)
-
-        col.addView(TextView(ctx).apply {
-            text = "Direction"; textSize = 11f
-            setTextColor(0x88000000.toInt()); setPadding(0, dp(10), 0, dp(2))
-        })
         val dirs = listOf(
             Direction.NONE to "None", Direction.ALL to "Block all",
             Direction.IN to "Block incoming", Direction.OUT to "Block outgoing",
         )
-        val group = RadioGroup(ctx)
-        dirs.forEachIndexed { i, (d, label) ->
-            // ids offset by 1 so a checked button never collides with View "no id" (0/-1)
-            group.addView(RadioButton(ctx).apply { id = i + 1; text = label; isChecked = d == r.direction })
-        }
-        col.addView(group)
+        AlertDialog(
+            onDismissRequest = { editing = null },
+            title = { Text(label) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text("Data axes — turn OFF to block that path", color = p.textSecondary, fontSize = 11.sp,
+                        modifier = Modifier.padding(bottom = 4.dp))
+                    KitSwitchRow("Wi-Fi data", "", wifi) { wifi = it }
+                    KitSwitchRow("Cellular data", "", cell) { cell = it }
+                    KitSwitchRow("Background data", "", bg) { bg = it }
 
-        android.app.AlertDialog.Builder(ctx)
-            .setTitle(ctx.packageManager.getApplicationLabel(app))
-            .setView(ScrollView(ctx).apply { addView(col) })
-            .setPositiveButton("Save") { _, _ ->
-                val direction = dirs.getOrNull(group.checkedRadioButtonId - 1)?.first ?: Direction.NONE
-                val vpnMode = vpnModes.getOrNull(vpnGroup.checkedRadioButtonId - 1)?.first ?: VpnMode.NONE
-                val rule = AppRule(wifi.isChecked, cell.isChecked, bg.isChecked, vpnMode, direction)
-                FirewallRules.setRule(ctx, app.packageName, rule)
-                FirewallController.refresh(ctx)
-                if (!rule.background && !FirewallConditions.hasUsageAccess(ctx)) promptUsageAccess(ctx)
-                onDone(); refreshHeader()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+                    Text("Cloud VPN — a strong override: forces the app VPN-only " +
+                        "(ignores Wi-Fi/Cellular; app talks ONLY through the tunnel)",
+                        color = p.textSecondary, fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
+                    vpnModes.forEach { (m, l) -> RadioRow(l, vpnMode == m) { vpnMode = m } }
+
+                    Text("Direction", color = p.textSecondary, fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
+                    dirs.forEach { (d, l) -> RadioRow(l, direction == d) { direction = d } }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val rule = AppRule(wifi, cell, bg, vpnMode, direction)
+                    FirewallRules.setRule(ctx, app.packageName, rule)
+                    FirewallController.refresh(ctx)
+                    if (!rule.background && !FirewallConditions.hasUsageAccess(ctx)) usagePrompt = true
+                    editing = null; ruleVersion++; refreshHeader()
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { editing = null }) { Text("Cancel") } },
+        )
     }
 
-    /** "No background data" needs usage-access to know the foreground app. */
-    private fun promptUsageAccess(ctx: Context) {
-        android.app.AlertDialog.Builder(ctx)
-            .setTitle("Usage access needed")
-            .setMessage("\"No background data\" needs Usage Access to detect which app is in the foreground. Grant it now?")
-            .setPositiveButton("Open settings") { _, _ ->
-                runCatching { startActivity(android.content.Intent(FirewallConditions.USAGE_ACCESS_SETTINGS)) }
-            }
-            .setNegativeButton("Later", null)
-            .show()
+    @Composable
+    private fun RadioRow(label: String, selected: Boolean, onClick: () -> Unit) {
+        Row(Modifier.fillMaxWidth().selectable(selected, role = Role.RadioButton, onClick = onClick)
+            .padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = selected, onClick = null)
+            Text(label, color = LocalKitPalette.current.textPrimary, fontSize = 15.sp,
+                modifier = Modifier.padding(start = 12.dp))
+        }
     }
 
     private fun onMasterToggle(enable: Boolean) {
@@ -272,12 +275,7 @@ class FirewallDialog : DialogFragment() {
 
     private fun refreshHeader() {
         val ctx = context ?: return
-        val s = FirewallInfo.read(ctx)
-        if (::headerState.isInitialized) {
-            headerState.text = "${FirewallInfo.fmtState(s)} · ${s.blockedCount} blocked · ${s.transport}" +
-                (if (s.systemVpnActive) " · VPN" else "")
-        }
-        if (::masterSwitch.isInitialized) masterSwitch.isChecked = s.enabled
+        info = FirewallInfo.read(ctx)
     }
 
     companion object { const val TAG = "FirewallDialog" }

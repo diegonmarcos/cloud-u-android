@@ -19,6 +19,9 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
+    // 2026-10-16 owner decision: all apps must be Compose. FirewallDialog is a ComposeView under CloudKitTheme;
+    // the compiler is resolved from each consuming root build (declared `apply false` there).
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 // Resolved like libs:updater resolves it (projectDir, so both consumers — the SuperApp and
@@ -45,6 +48,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        compose = true
     }
 
     compileOptions {
@@ -58,9 +62,15 @@ android {
 
 dependencies {
     implementation project(':libs:core')
+    api project(':libs:ui-kit')   // CloudKitTheme
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.annotation:annotation:1.8.2'
     implementation 'androidx.fragment:fragment-ktx:1.8.5'
+    // FirewallDialog is a ComposeView; the BOM is the one every Compose module in the fleet resolves.
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
 
     // firestack netstack aar — the Phase-3 merged VpnService. A PREBUILT,
     // PINNED artifact: both consumers run ../fetch-firestack.sh before gradle

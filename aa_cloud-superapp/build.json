@@ -393,7 +393,8 @@
       "dir": "../ab_cloud-libs-shared/libs/firewall",
       "type": "library",
       "depends_on": [
-        "libs:core"
+        "libs:core",
+        "libs:ui-kit"
       ],
       "comment": "No-root per-app outbound firewall. v2 = data-driven conditional per-app rules (FirewallRules/FirewallDecider/FirewallConditions, presets in assets/firewall_presets.json); interim drain-engine (FirewallVpnService). Phase 3 will consume the firestack netstack aar (flatDir libs/firewall/firestack/, `implementation(name:'firestack', ext:'aar')`) to run WG + per-app filtering + IN/OUT in one VpnService. Surfaced in About under Battery (info rows + 'Firewall Details' → FirewallDialog master switch + per-app preset picker)."
     },

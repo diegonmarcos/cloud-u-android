@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Firewall screen's palette as KitPalette roles (FirewallDialog builds its CloudKitTheme from these),
+     so no colour is spelled in Kotlin. Prefixed fw_: this library is merged into every consumer's resources
+     and must not collide with an app's own names. -->
+<resources>
+    <color name="fw_bg">#FF111317</color>
+    <color name="fw_card">#FF1B1E24</color>
+    <color name="fw_selected">#FF2B3038</color>
+    <color name="fw_text">#FFFFFFFF</color>
+    <color name="fw_text_dim">#99FFFFFF</color>
+    <color name="fw_accent">#FFB794F4</color>
+    <color name="fw_hairline">#33FFFFFF</color>
+</resources>
