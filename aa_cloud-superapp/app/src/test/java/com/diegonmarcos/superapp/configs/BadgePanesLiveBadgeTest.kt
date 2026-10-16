@@ -50,6 +50,9 @@ class BadgePanesLiveBadgeTest : KitPageHarness() {
 
     private val ctx: Context = ApplicationProvider.getApplicationContext()
 
+    @org.junit.Before
+    fun logToStdout() { org.robolectric.shadows.ShadowLog.stream = System.out }
+
     private fun all(v: View): List<View> =
         listOf(v) + if (v is ViewGroup) (0 until v.childCount).flatMap { all(v.getChildAt(it)) } else emptyList()
 

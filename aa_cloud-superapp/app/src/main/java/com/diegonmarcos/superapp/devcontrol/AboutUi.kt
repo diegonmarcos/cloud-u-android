@@ -83,7 +83,7 @@ internal fun AboutMacroHeader(macro: AboutBlock.Macro) {
 @Composable
 internal fun AboutSectionView(section: AboutSection) {
     val p = LocalKitPalette.current
-    Column(Modifier.fillMaxWidth().testTag(AboutTags.section(section.head))) {
+    Column(Modifier.fillMaxWidth().testTag(AboutTags.infoSection(section.head))) {
         Text(section.head, color = p.accent, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
         Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {

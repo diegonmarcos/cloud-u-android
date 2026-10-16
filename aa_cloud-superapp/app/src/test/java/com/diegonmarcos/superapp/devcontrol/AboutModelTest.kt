@@ -57,8 +57,8 @@ class AboutModelTest {
     @Test
     fun `A3 back links close every macro group`() {
         val page = AboutPage { true }
-        page.macro("📱  APP & BUILD"); page.section("A") {}
-        page.macro("☁  REPO & RELEASES"); page.section("B") {}
+        page.macro("📱  APP & BUILD"); page.infoSection("A") {}
+        page.macro("☁  REPO & RELEASES"); page.infoSection("B") {}
         page.macro("🖥️  DEVICE"); page.copyAllButton()
         val out = page.withBackLinks()
         assertEquals(listOf("APP & BUILD", "REPO & RELEASES", "DEVICE"), page.macros.map { it.label })
@@ -75,7 +75,7 @@ class AboutModelTest {
     @Test
     fun `A4 the buffer is the heading then the rows`() {
         val page = AboutPage { true }
-        page.macro("X"); page.section("Heading") { row("Name", "Value"); small("note") }
+        page.macro("X"); page.infoSection("Heading") { row("Name", "Value"); small("note") }
         val s = page.sections.single()
         s.load(scope)
         assertEquals("\n## Heading\n  Name: Value\n", s.buf.toString())
