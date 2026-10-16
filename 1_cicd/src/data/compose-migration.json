@@ -348,21 +348,20 @@
       "id": "libs:kde-connect",
       "scope": "in",
       "wave": 1,
-      "ui": "views",
+      "ui": "compose",
       "size": "M",
-      "screens_left": [
-        "KdeConnectFragment"
-      ],
+      "screens_left": [],
       "consumers": [
         "superapp"
       ],
+      "notes": "All Compose (2026-10-16): KdeConnectFragment is a ComposeView under CloudKitTheme (kde_* colour resources); peer selector, device card, clipboard, remote, media, presenter, actions, remote desktop, share, photo, SMS, plugins, self-test and probe are composables, touch pads are pointerInput surfaces. test-apps-mesh.sh C6 reads the Page composable.",
       "risks": [
         "androidTest KdeConfigsPageTest drives this page on device"
       ],
       "baseline": {
-        "view_screens": 1,
+        "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 1,
+        "view_ui_files": 0,
         "custom_views": 0
       }
     },

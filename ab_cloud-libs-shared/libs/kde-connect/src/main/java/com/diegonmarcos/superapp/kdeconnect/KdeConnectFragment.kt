@@ -1,21 +1,107 @@
 package com.diegonmarcos.superapp.kdeconnect
 
-import android.graphics.Typeface
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitCard
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.coroutines.launch
+import kotlin.math.abs
+
+/** The two status lights' colours, resolved from kde_dot_* when drawn. */
+internal enum class KdeDot(val res: Int) {
+    IDLE(R.color.kde_dot_idle),   // gray  — not connected
+    BUSY(R.color.kde_dot_busy),   // amber — connecting/handshaking
+    OK(R.color.kde_dot_ok),       // green — connected & paired
+    ERR(R.color.kde_dot_err),     // red   — error
+}
+
+/** Which palette role a result line is drawn in. */
+internal enum class KdeTone { PLAIN, DIM, OK, WARN, BAD }
+
+/** One line of the probe trace / self-test result. */
+internal class KdeTestLine(val text: String, val tone: KdeTone, val bold: Boolean = false)
+
+/** The selected peer's card state: effective name/host/port plus the two lights. */
+internal class KdePeerState(
+    val device: KdeConnectConfig.Device,
+    label: String,
+    host: String,
+    port: Int,
+    pairedBefore: Boolean,
+) {
+    var label by mutableStateOf(label)
+    var host by mutableStateOf(host)       // effective (override or default) wg ip
+    var port by mutableStateOf(port)
+    var deviceId: String? = null
+    var connDot by mutableStateOf(KdeDot.IDLE)
+    var connText by mutableStateOf("Not connected")
+    var pairDot by mutableStateOf(if (pairedBefore) KdeDot.OK else KdeDot.IDLE)
+    var pairText by mutableStateOf(if (pairedBefore) "Paired" else "Not paired")
+    var pingEnabled by mutableStateOf(pairedBefore)   // tappable once paired (auto-reconnects)
+    var pairLabel by mutableStateOf("Pair")
+}
 
 /**
  * Configs ▸ KDE page — driver for our SELF-CONTAINED KDE-Connect client
@@ -23,27 +109,12 @@ import kotlinx.coroutines.launch
  * (build.json::ui.kde_connect.devices) gets Connect → Pair → Ping over the
  * wg0 mesh, with live state. Pairing remembers the peer's TLS cert; reconnects
  * are cert-pinned.
+ *
+ * 2026-10-16 owner decision: all apps must be Compose. The page is a ComposeView under
+ * CloudKitTheme (libs:ui-kit) with its palette in the kde_* colour resources; the host
+ * contract (newInstance, the peer selector's test tag) is unchanged.
  */
 class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
-
-    private class Row(
-        val device: KdeConnectConfig.Device,
-        val title: TextView,
-        val connDot: View, val connText: TextView,
-        val pairDot: View, val pairText: TextView,
-        val connect: Button, val pairBtn: Button, val ping: Button, val edit: Button,
-        var host: String,           // effective (override or default) wg ip
-        var port: Int,
-        var label: String,
-        var deviceId: String? = null,
-    )
-
-    // Status light colours.
-    private val DOT_IDLE = 0xFF9E9E9E.toInt()      // gray  — not connected
-    private val DOT_BUSY = 0xFFFFB300.toInt()      // amber — connecting/handshaking
-    private val DOT_LINK = 0xFF42A5F5.toInt()      // blue  — connected, not paired
-    private val DOT_OK   = 0xFF4CAF50.toInt()      // green — connected & paired
-    private val DOT_ERR  = 0xFFE53935.toInt()      // red   — error
 
     /** SAF picker for "Send file" → KDE share payload upload. Registered at
      *  field init (before the fragment is STARTED) per the ActivityResult API. */
@@ -51,324 +122,394 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
         uri?.let { onFilePicked(it) }
     }
 
-    private fun dotColor(dot: View, color: Int) {
-        (dot.background as? android.graphics.drawable.GradientDrawable)?.setColor(color)
-    }
-    private fun setConn(row: Row, color: Int, text: String) {
-        dotColor(row.connDot, color); row.connText.text = text
-    }
-    private fun setPair(row: Row, color: Int, text: String) {
-        dotColor(row.pairDot, color); row.pairText.text = text
-    }
-    /** A small round status light view. */
-    private fun lightDot(ctx: android.content.Context, color: Int): View = View(ctx).apply {
-        val sz = dp(9)
-        layoutParams = LinearLayout.LayoutParams(sz, sz).apply { marginEnd = dp(7) }
-        background = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(color)
-        }
-    }
-    private fun lightRow(ctx: android.content.Context, dot: View, text: TextView): View =
-        LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            setPadding(0, dp(3), 0, dp(3))
-            addView(dot); addView(text)
-        }
-
-    private val rows = mutableListOf<Row>()
+    /** The one peer card on the page (null when no peer is declared). */
+    private var peer: KdePeerState? by mutableStateOf(null)
 
     override fun onCreateView(inflater: LayoutInflater, c: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
         KdeConnectManager.init(ctx)
         val cfg = KdeConnectConfig.get()
-
-        val scroll = ScrollView(ctx).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        }
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(20); setPadding(pad, pad, pad, pad)
-        }
-        scroll.addView(root)
-
-        root.addView(TextView(ctx).apply {
-            text = "KDE Connect"
-            textSize = 22f; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(0xFFFFFFFF.toInt()); setPadding(0, 0, 0, dp(2))
-        })
-        root.addView(TextView(ctx).apply {
-            text = "Self-contained client · this device = ${KdeIdentity.deviceName(ctx)} " +
-                "(${KdeConnectManager.ownDeviceId().take(14)}…)"
-            setTextColor(0x99FFFFFF.toInt()); textSize = 12f; setPadding(0, 0, 0, dp(16))
-        })
-
         // #733 THE PEER SELECTOR, at the top: which peer this whole page talks
         // to. The list is KdePeers.all() — declared KDE devices, then the wg
         // mesh nodes — and only the selected peer's card is drawn, so every
         // action below has exactly one target.
         val peers = KdePeers.all()
+        selectPeer(ctx, KdePeers.selected(ctx, peers))
+        return ComposeView(ctx).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                val palette = KitPalette(
+                    surface = colorResource(R.color.kde_surface),
+                    surfaceSelected = colorResource(R.color.kde_surface_selected),
+                    textPrimary = colorResource(R.color.kde_text),
+                    textSecondary = colorResource(R.color.kde_text_dim),
+                    accent = colorResource(R.color.kde_accent),
+                    hairline = colorResource(R.color.kde_hairline),
+                    tileInk = colorResource(R.color.kde_ink),
+                    ok = colorResource(R.color.kde_ok),
+                    warn = colorResource(R.color.kde_warn),
+                    bad = colorResource(R.color.kde_bad),
+                )
+                CloudKitTheme(palette) { Page(ctx, cfg, peers) }
+            }
+        }
+    }
+
+    @Composable
+    private fun Page(ctx: Context, cfg: KdeConnectConfig.Config, peers: List<KdeConnectConfig.Device>) {
+        val p = LocalKitPalette.current
+        val self = remember {
+            "Self-contained client · this device = ${KdeIdentity.deviceName(ctx)} " +
+                "(${KdeConnectManager.ownDeviceId().take(14)}…)"
+        }
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
+            Text("KDE Connect", color = p.textPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 2.dp))
+            Text(self, color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 16.dp))
+
+            PeerSelector(ctx, peers)
+            peer?.let { DeviceCard(ctx, it) }
+
+            // Clipboard — right after the device cards, because everything it
+            // does needs a paired device to be there first.
+            ClipboardCard(ctx)
+            // Remote control (touchpad / keyboard / big-screen senders)
+            RemoteCard()
+            // Media remote + system volume (mpris / systemvolume senders)
+            MediaCard()
+            // Presenter (laser pointer + slide nav)
+            PresenterCard()
+            // One-shot actions (ring / browse / virtual monitor)
+            ActionsCard()
+            // Remote Desktop control (session + mouse/keyboard surface)
+            RemoteDesktopCard()
+            // Share text/links to the desktop (share sender)
+            ShareCard()
+            // Photo capture (open camera)
+            PhotoCard(ctx)
+            // Send SMS (this phone sends it)
+            SmsCard(ctx)
+            // Plugins catalog (data-driven from build.json)
+            if (cfg.plugins.isNotEmpty()) PluginsCard(ctx, cfg)
+            // Self-test — exercise every enabled plugin
+            SelfTestCard(ctx, cfg)
+            // Probe section — wg0 / hosts / peers / LAN reachability
+            ProbeSection(ctx)
+
+            // Explicit hand-off to the official client (separate from our own
+            // self-contained pairing) — opens it if installed, else a toast.
+            Spacer8()
+            WideBtn("Open KDE Connect (App)", 12.sp) { openClient(cfg.pkg) }
+
+            Text(
+                "Connect dials <device>:${cfg.discoveryPort} over wg0, runs the KDE Connect " +
+                    "TLS handshake (we are the TLS server), and re-exchanges identity encrypted. " +
+                    "Pair once to trust the device's certificate; later connections are cert-pinned.",
+                color = p.textSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 16.dp),
+            )
+        }
+    }
+
+    // ── Small building blocks ─────────────────────────────────────────────
+
+    @Composable
+    private fun Spacer8() { Box(Modifier.height(8.dp)) }
+
+    /** A rounded card with a bold title + dim subtitle, then [content]. */
+    @Composable
+    private fun KdeCard(title: String, subtitle: String?, content: @Composable ColumnScope.() -> Unit) {
+        val p = LocalKitPalette.current
+        KitCard(Modifier.padding(bottom = 12.dp)) {
+            Column {
+                Text(title, color = p.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                if (subtitle != null) {
+                    Text(subtitle, color = p.textSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+            content()
+        }
+    }
+
+    /** One compact button of an equal-weight row. */
+    @Composable
+    private fun RowScope.Btn(
+        label: String,
+        onClick: () -> Unit,
+        weight: Float = 1f,
+        enabled: Boolean = true,
+        size: TextUnit = 13.sp,
+    ) {
+        Button(
+            onClick = onClick, enabled = enabled, modifier = Modifier.weight(weight),
+            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+        ) { Text(label, fontSize = size, maxLines = 1) }
+    }
+
+    /** A horizontal row of equal-weight compact buttons (label → action). */
+    @Composable
+    private fun BtnRow(vararg btns: Pair<String, () -> Unit>) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for ((label, action) in btns) Btn(label = label, onClick = action)
+        }
+    }
+
+    /** A full-width button. */
+    @Composable
+    private fun WideBtn(label: String, size: TextUnit = 13.sp, onClick: () -> Unit) {
+        Button(onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(label, fontSize = size) }
+    }
+
+    /** A small round status light + its text. */
+    @Composable
+    private fun LightRow(dot: KdeDot, text: String) {
+        val p = LocalKitPalette.current
+        Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.padding(end = 7.dp).size(9.dp).clip(CircleShape).background(colorResource(dot.res)))
+            Text(text, color = p.accent, fontSize = 12.5.sp)
+        }
+    }
+
+    @Composable
+    private fun toneColor(t: KdeTone): Color {
+        val p = LocalKitPalette.current
+        return when (t) {
+            KdeTone.PLAIN -> p.textPrimary
+            KdeTone.DIM -> p.textSecondary
+            KdeTone.OK -> p.ok
+            KdeTone.WARN -> p.warn
+            KdeTone.BAD -> p.bad
+        }
+    }
+
+    @Composable
+    private fun MonoLines(lines: List<KdeTestLine>, size: TextUnit) {
+        for (l in lines) {
+            Text(l.text, color = toneColor(l.tone), fontFamily = FontFamily.Monospace, fontSize = size,
+                fontWeight = if (l.bold) FontWeight.Bold else FontWeight.Normal,
+                modifier = Modifier.padding(vertical = 2.dp))
+        }
+    }
+
+    @Composable
+    private fun Field(value: String, onChange: (String) -> Unit, hint: String, type: KeyboardType = KeyboardType.Text) {
+        OutlinedTextField(
+            value = value, onValueChange = onChange, singleLine = true,
+            placeholder = { Text(hint) },
+            keyboardOptions = KeyboardOptions(keyboardType = type),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+
+    /**
+     * A touch surface: [onMove] gets each drag delta (px) and the surface size, [onUp] gets whether the
+     * finger moved and how long it was held (ms) when it lifts.
+     */
+    @Composable
+    private fun Pad(
+        height: Int,
+        tag: String,
+        onMove: (dx: Float, dy: Float, w: Float, h: Float) -> Unit,
+        onUp: (moved: Boolean, heldMs: Long) -> Unit,
+    ) {
+        val p = LocalKitPalette.current
+        val move by rememberUpdatedState(onMove)
+        val up by rememberUpdatedState(onUp)
+        val shape = RoundedCornerShape(10.dp)
+        Box(
+            Modifier.fillMaxWidth().height(height.dp).clip(shape)
+                .background(p.surfaceSelected).border(1.dp, p.hairline, shape)
+                .testTag(tag)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        down.consume()
+                        var last: Offset = down.position
+                        var moved = false
+                        var held = 0L
+                        while (true) {
+                            val ev = awaitPointerEvent()
+                            val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                            held = ch.uptimeMillis - down.uptimeMillis
+                            if (!ch.pressed) break
+                            val d = ch.position - last
+                            last = ch.position
+                            if (abs(d.x) > 2 || abs(d.y) > 2) moved = true
+                            if (d != Offset.Zero) move(d.x, d.y, size.width.toFloat(), size.height.toFloat())
+                            ch.consume()
+                        }
+                        up(moved, held)
+                    }
+                },
+        )
+    }
+
+    // ── Peer selector + device card ───────────────────────────────────────
+
+    @Composable
+    private fun PeerSelector(ctx: Context, peers: List<KdeConnectConfig.Device>) {
+        val p = LocalKitPalette.current
         if (peers.isEmpty()) {
-            root.addView(TextView(ctx).apply {
-                text = "No peers declared in build.json::ui.kde_connect.devices or data/mesh.json"
-                setTextColor(0xFFFF8B8B.toInt())
-            })
+            Text("No peers declared in build.json::ui.kde_connect.devices or data/mesh.json", color = p.bad)
+            return
         }
-        val deviceBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val selector = Button(ctx).apply {
-            isAllCaps = false; textSize = 14f; tag = PEER_SELECTOR_TAG
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(10) }
+        var open by remember { mutableStateOf(false) }
+        val cur = peer
+        Button(
+            onClick = { open = true },
+            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp).testTag(PEER_SELECTOR_TAG),
+        ) {
+            Text(cur?.let { "Peer: ${it.device.label} · ${it.device.wgIp}  ▾" } ?: "Peer: none", fontSize = 14.sp)
         }
-        fun show(peer: KdeConnectConfig.Device?) {
-            selector.text = peer?.let { "Peer: ${it.label} · ${it.wgIp}  ▾" } ?: "Peer: none"
-            rows.clear(); deviceBox.removeAllViews()
-            peer?.let { deviceBox.addView(buildCard(ctx, it)) }
+        if (open) {
+            AlertDialog(
+                onDismissRequest = { open = false },
+                title = { Text("Peer") },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        for (d in peers) {
+                            TextButton(
+                                onClick = { KdePeers.select(ctx, d.id); selectPeer(ctx, d); open = false },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text("${d.label} · ${d.wgIp}", modifier = Modifier.fillMaxWidth()) }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = { TextButton(onClick = { open = false }) { Text("Cancel") } },
+            )
         }
-        selector.setOnClickListener {
-            android.app.AlertDialog.Builder(ctx).setTitle("Peer")
-                .setItems(peers.map { "${it.label} · ${it.wgIp}" }.toTypedArray()) { _, i ->
-                    KdePeers.select(ctx, peers[i].id); show(peers[i])
-                }.show()
-        }
-        if (peers.isNotEmpty()) root.addView(selector)
-        root.addView(deviceBox)
-        show(KdePeers.selected(ctx, peers))
-
-        // ── Clipboard — right after the device cards, because everything it
-        //    does needs a paired device to be there first.
-        root.addView(buildClipboardCard(ctx))
-
-        // ── Remote control (touchpad / keyboard / big-screen senders) ──────
-        root.addView(buildRemoteSection(ctx))
-        // ── Media remote + system volume (mpris / systemvolume senders) ────
-        root.addView(buildMediaCard(ctx))
-        // ── Presenter (laser pointer + slide nav) ──────────────────────────
-        root.addView(buildPresenterCard(ctx))
-        // ── One-shot actions (ring / browse / virtual monitor) ─────────────
-        root.addView(buildActionsCard(ctx))
-        // ── Remote Desktop control (session + mouse/keyboard surface) ──────
-        root.addView(buildRemoteDesktopCard(ctx))
-        // ── Share text/links to the desktop (share sender) ─────────────────
-        root.addView(buildShareCard(ctx))
-        // ── Photo capture (open camera) ────────────────────────────────────
-        root.addView(buildPhotoCard(ctx))
-        // ── Send SMS (this phone sends it) ─────────────────────────────────
-        root.addView(buildSmsCard(ctx))
-
-        // ── Plugins catalog (data-driven from build.json) ──────────────────
-        if (cfg.plugins.isNotEmpty()) root.addView(buildPluginsSection(ctx, cfg))
-
-        // ── Self-test — exercise every enabled plugin ──────────────────────
-        root.addView(buildSelfTestCard(ctx, cfg))
-
-        // ── Probe section — wg0 / hosts / peers / LAN reachability ──────────
-        root.addView(TextView(ctx).apply {
-            text = "Probe"
-            textSize = 16f; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(0xFFFFFFFF.toInt()); setPadding(0, dp(8), 0, dp(4))
-        })
-        val probeBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        root.addView(Button(ctx).apply {
-            text = "Probe wg0 · hosts · peers · LAN"; isAllCaps = false; textSize = 12f
-            setOnClickListener { runProbe(probeBox) }
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        })
-        root.addView(probeBox)
-
-        // Explicit hand-off to the official client (separate from our own
-        // self-contained pairing) — opens it if installed, else a toast.
-        root.addView(Button(ctx).apply {
-            text = "Open KDE Connect (App)"; isAllCaps = false; textSize = 12f
-            setOnClickListener { openClient(cfg.pkg) }
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(8) }
-        })
-
-        root.addView(TextView(ctx).apply {
-            text = "Connect dials <device>:${cfg.discoveryPort} over wg0, runs the KDE Connect " +
-                "TLS handshake (we are the TLS server), and re-exchanges identity encrypted. " +
-                "Pair once to trust the device's certificate; later connections are cert-pinned."
-            setTextColor(0x77FFFFFF.toInt()); textSize = 11f
-            gravity = Gravity.START; setPadding(0, dp(16), 0, 0)
-        })
-        return scroll
     }
 
-    private fun buildCard(ctx: android.content.Context, device: KdeConnectConfig.Device): View {
-        val card = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(14); setPadding(p, p, p, p)
-            background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat(); setColor(0x22FFFFFF)
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(12) }
+    /** Make [device] the one card on the page (effective name/host/port come from the Edit overrides). */
+    private fun selectPeer(ctx: Context, device: KdeConnectConfig.Device?) {
+        peer = device?.let {
+            val dprefs = KdeDevicePrefs(ctx)
+            val paired = it.id.isNotBlank() && KdeConnectManager.isPaired(it.id)
+            KdePeerState(
+                it, dprefs.label(it.id, it.label), dprefs.host(it.id, it.wgIp),
+                dprefs.port(it.id, KdeConnectConfig.get().discoveryPort), paired,
+            ).also { r -> refreshPairButton(r) }
         }
-        // Effective name/host/port — build.json defaults, overridable via Edit.
-        val dprefs = KdeDevicePrefs(ctx)
-        var effLabel = dprefs.label(device.id, device.label)
-        var effHost = dprefs.host(device.id, device.wgIp)
-        var effPort = dprefs.port(device.id, KdeConnectConfig.get().discoveryPort)
-        val title = TextView(ctx).apply {
-            text = "$effLabel  ·  $effHost:$effPort"
-            setTextColor(0xFFFFFFFF.toInt()); textSize = 15f; typeface = Typeface.DEFAULT_BOLD
-        }
-        card.addView(title)
-
-        // Two status lights: connection + pairing.
-        val pairedBefore = device.id.isNotBlank() && KdeConnectManager.isPaired(device.id)
-        val connDot = lightDot(ctx, DOT_IDLE)
-        val connText = TextView(ctx).apply { setTextColor(0xFFE9D8FD.toInt()); textSize = 12.5f
-            text = "Not connected" }
-        val pairDot = lightDot(ctx, if (pairedBefore) DOT_OK else DOT_IDLE)
-        val pairText = TextView(ctx).apply { setTextColor(0xFFE9D8FD.toInt()); textSize = 12.5f
-            text = if (pairedBefore) "Paired" else "Not paired" }
-        card.addView(lightRow(ctx, connDot, connText))
-        card.addView(LinearLayout(ctx).apply { addView(lightRow(ctx, pairDot, pairText))
-            setPadding(0, 0, 0, dp(8)) })
-
-        val btnRow = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        fun mkBtn(label: String): Button = Button(ctx).apply {
-            text = label; isAllCaps = false; textSize = 12f
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        val connect = mkBtn("Connect")
-        val pairBtn = mkBtn("Pair")
-        val ping = mkBtn("Ping").apply { isEnabled = pairedBefore }   // tappable once paired (auto-reconnects)
-        val edit = mkBtn("Edit")
-        btnRow.addView(connect); btnRow.addView(pairBtn); btnRow.addView(ping); btnRow.addView(edit)
-        card.addView(btnRow)
-
-        val row = Row(device, title, connDot, connText, pairDot, pairText,
-            connect, pairBtn, ping, edit, effHost, effPort, effLabel)
-        rows += row
-        refreshPairButton(row)
-
-        connect.setOnClickListener {
-            setConn(row, DOT_BUSY, "Connecting…")
-            viewLifecycleOwner.lifecycleScope.launch {
-                KdeConnectManager.connect(row.host, row.port)
-                    .onFailure { setConn(row, DOT_ERR, "Couldn't connect: ${it.message}") }
-            }
-        }
-        // Merged Pair/Unpair: label follows the paired state. Pairing is keyed
-        // by the persistent device id (row.device.id == manager's idFor(host)),
-        // so Unpair works even before connecting; Pair needs a live link.
-        pairBtn.setOnClickListener {
-            val liveId = row.deviceId
-            val key = (liveId ?: row.device.id).takeIf { it.isNotBlank() }
-            when {
-                key != null && KdeConnectManager.isPaired(key) -> {
-                    KdeConnectManager.unpair(key)
-                    setPair(row, DOT_IDLE, "Not paired"); refreshPairButton(row)
-                }
-                liveId != null -> {
-                    if (!KdeConnectManager.requestPair(liveId)) toast("Connect first")
-                    else setPair(row, DOT_BUSY, "Pair request sent — accept on ${row.label}")
-                }
-                else -> toast("Connect first")
-            }
-        }
-        ping.setOnClickListener {
-            val msg = "Ping from ${KdeIdentity.deviceName(requireContext())}"
-            val live = row.deviceId?.takeIf { KdeConnectManager.isConnected(it) }
-            if (live != null) {
-                if (!KdeConnectManager.sendPing(live, msg)) toast("Send failed — reconnecting…")
-                else return@setOnClickListener
-            }
-            // No live link (dropped or first use) — re-dial this device, then ping.
-            toast("Reconnecting…")
-            viewLifecycleOwner.lifecycleScope.launch {
-                KdeConnectManager.connect(row.host, row.port)
-                    .onSuccess { id -> KdeConnectManager.sendPing(id, msg) }
-                    .onFailure { toast("Couldn't reconnect: ${it.message}") }
-            }
-        }
-        edit.setOnClickListener { showEditDialog(ctx, row, dprefs) }
-        return card
     }
 
-    /** Pair button shows "Unpair" when paired, "Pair" otherwise. Falls back to
-     *  the persistent device id (the key the manager + the pair light both use)
-     *  so a remembered pairing reads "Unpair" before this session connects. */
-    private fun refreshPairButton(row: Row) {
-        val key = row.deviceId ?: row.device.id
-        val paired = key.isNotBlank() && KdeConnectManager.isPaired(key)
-        row.pairBtn.text = if (paired) "Unpair" else "Pair"
+    @Composable
+    private fun DeviceCard(ctx: Context, r: KdePeerState) {
+        val p = LocalKitPalette.current
+        val dprefs = remember { KdeDevicePrefs(ctx) }
+        var editing by remember(r) { mutableStateOf(false) }
+        KitCard(Modifier.padding(bottom = 12.dp)) {
+            Text("${r.label}  ·  ${r.host}:${r.port}", color = p.textPrimary, fontSize = 15.sp,
+                fontWeight = FontWeight.Bold)
+            // Two status lights: connection + pairing.
+            Column {
+                LightRow(r.connDot, r.connText)
+                LightRow(r.pairDot, r.pairText)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Btn(label = "Connect", size = 12.sp, onClick = {
+                    setConn(r, KdeDot.BUSY, "Connecting…")
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        KdeConnectManager.connect(r.host, r.port)
+                            .onFailure { setConn(r, KdeDot.ERR, "Couldn't connect: ${it.message}") }
+                    }
+                })
+                // Merged Pair/Unpair: label follows the paired state. Pairing is keyed
+                // by the persistent device id (r.device.id == manager's idFor(host)),
+                // so Unpair works even before connecting; Pair needs a live link.
+                Btn(label = r.pairLabel, size = 12.sp, onClick = {
+                    val liveId = r.deviceId
+                    val key = (liveId ?: r.device.id).takeIf { it.isNotBlank() }
+                    when {
+                        key != null && KdeConnectManager.isPaired(key) -> {
+                            KdeConnectManager.unpair(key)
+                            setPair(r, KdeDot.IDLE, "Not paired"); refreshPairButton(r)
+                        }
+                        liveId != null -> {
+                            if (!KdeConnectManager.requestPair(liveId)) toast("Connect first")
+                            else setPair(r, KdeDot.BUSY, "Pair request sent — accept on ${r.label}")
+                        }
+                        else -> toast("Connect first")
+                    }
+                })
+                Btn(label = "Ping", size = 12.sp, enabled = r.pingEnabled, onClick = {
+                    val msg = "Ping from ${KdeIdentity.deviceName(ctx)}"
+                    val live = r.deviceId?.takeIf { KdeConnectManager.isConnected(it) }
+                    val sent = live != null && KdeConnectManager.sendPing(live, msg)
+                    if (!sent) {
+                        if (live != null) toast("Send failed — reconnecting…")
+                        // No live link (dropped or first use) — re-dial this device, then ping.
+                        toast("Reconnecting…")
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            KdeConnectManager.connect(r.host, r.port)
+                                .onSuccess { id -> KdeConnectManager.sendPing(id, msg) }
+                                .onFailure { toast("Couldn't reconnect: ${it.message}") }
+                        }
+                    }
+                })
+                Btn(label = "Edit", size = 12.sp, onClick = { editing = true })
+            }
+        }
+        if (editing) EditDialog(r, dprefs) { editing = false }
     }
 
     /** Edit dialog for the device Name / IP / Port — persists an override on
      *  top of the build.json default. */
-    private fun showEditDialog(ctx: android.content.Context, row: Row, dprefs: KdeDevicePrefs) {
-        val pad = dp(16)
-        val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad, pad, 0) }
-        fun field(hint: String, value: String, numeric: Boolean) = android.widget.EditText(ctx).apply {
-            this.hint = hint; setText(value); isSingleLine = true
-            if (numeric) inputType = android.text.InputType.TYPE_CLASS_NUMBER
-        }
-        val nameF = field("Name", row.label, false)
-        val ipF   = field("IP (wg)", row.host, false)
-        val portF = field("Port", row.port.toString(), true)
-        box.addView(nameF); box.addView(ipF); box.addView(portF)
-        androidx.appcompat.app.AlertDialog.Builder(ctx)
-            .setTitle("Edit ${row.device.label}")
-            .setView(box)
-            .setPositiveButton("Save") { _, _ ->
-                row.label = nameF.text.toString().ifBlank { row.label }
-                row.host = ipF.text.toString().ifBlank { row.host }
-                row.port = portF.text.toString().toIntOrNull() ?: row.port
-                dprefs.save(row.device.id, row.label, row.host, row.port)
-                row.title.text = "${row.label}  ·  ${row.host}:${row.port}"
-            }
-            .setNeutralButton("Reset to default") { _, _ ->
-                dprefs.save(row.device.id, row.device.label, row.device.wgIp,
-                    KdeConnectConfig.get().discoveryPort)
-                row.label = row.device.label; row.host = row.device.wgIp
-                row.port = KdeConnectConfig.get().discoveryPort
-                row.title.text = "${row.label}  ·  ${row.host}:${row.port}"
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+    @Composable
+    private fun EditDialog(r: KdePeerState, dprefs: KdeDevicePrefs, onClose: () -> Unit) {
+        var name by remember { mutableStateOf(r.label) }
+        var ip by remember { mutableStateOf(r.host) }
+        var port by remember { mutableStateOf(r.port.toString()) }
+        AlertDialog(
+            onDismissRequest = onClose,
+            title = { Text("Edit ${r.device.label}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Field(name, { name = it }, "Name")
+                    Field(ip, { ip = it }, "IP (wg)")
+                    Field(port, { port = it }, "Port", KeyboardType.Number)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    r.label = name.ifBlank { r.label }
+                    r.host = ip.ifBlank { r.host }
+                    r.port = port.toIntOrNull() ?: r.port
+                    dprefs.save(r.device.id, r.label, r.host, r.port)
+                    onClose()
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        dprefs.save(r.device.id, r.device.label, r.device.wgIp,
+                            KdeConnectConfig.get().discoveryPort)
+                        r.label = r.device.label; r.host = r.device.wgIp
+                        r.port = KdeConnectConfig.get().discoveryPort
+                        onClose()
+                    }) { Text("Reset to default") }
+                    TextButton(onClick = onClose) { Text("Cancel") }
+                }
+            },
+        )
     }
 
-    /** Run the read-only reachability probe and render its step trace. */
-    private fun runProbe(box: LinearLayout) {
-        val ctx = requireContext()
-        box.removeAllViews()
-        box.addView(TextView(ctx).apply {
-            text = "• probing…"; setTextColor(0xCCFFFFFF.toInt())
-            typeface = Typeface.MONOSPACE; textSize = 12.5f
-        })
-        viewLifecycleOwner.lifecycleScope.launch {
-            val steps = KdeConnectDiscovery.probeAll(ctx)
-            box.removeAllViews()
-            for (s in steps) box.addView(stepRow(s))
-        }
-    }
+    private fun setConn(r: KdePeerState, dot: KdeDot, text: String) { r.connDot = dot; r.connText = text }
+    private fun setPair(r: KdePeerState, dot: KdeDot, text: String) { r.pairDot = dot; r.pairText = text }
 
-    private fun stepRow(step: KdeConnectDiscovery.Step): View {
-        val mark = when (step.ok) { true -> "✓"; false -> "✗"; null -> "•" }
-        val color = when (step.ok) {
-            true -> 0xFF8BE9A0.toInt(); false -> 0xFFFF8B8B.toInt(); null -> 0xCCFFFFFF.toInt()
-        }
-        return TextView(requireContext()).apply {
-            text = "$mark  ${step.label}: ${step.detail}"
-            setTextColor(color); typeface = Typeface.MONOSPACE; textSize = 12.5f
-            setPadding(0, dp(3), 0, dp(3))
-        }
+    /** Pair button shows "Unpair" when paired, "Pair" otherwise. Falls back to
+     *  the persistent device id (the key the manager + the pair light both use)
+     *  so a remembered pairing reads "Unpair" before this session connects. */
+    private fun refreshPairButton(r: KdePeerState) {
+        val key = r.deviceId ?: r.device.id
+        val paired = key.isNotBlank() && KdeConnectManager.isPaired(key)
+        r.pairLabel = if (paired) "Unpair" else "Pair"
     }
 
     /** Open the installed official client, or toast if absent. */
     private fun openClient(pkg: String) {
         val intent = requireContext().packageManager.getLaunchIntentForPackage(pkg)
         if (intent != null) {
-            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(intent)
         } else toast("KDE Connect ($pkg) is not installed")
     }
@@ -387,30 +528,30 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
      *  the peer wg IP ([host]) — known from the first CONNECTING event — and on
      *  the discovered deviceId once the handshake yields one. */
     override fun onState(deviceId: String, host: String?, state: KdeConnectManager.State, detail: String) {
-        val row = rows.firstOrNull { host != null && it.host == host }
-            ?: rows.firstOrNull { deviceId.isNotBlank() && it.deviceId == deviceId }
-            ?: return
+        val row = peer?.takeIf {
+            (host != null && it.host == host) || (deviceId.isNotBlank() && it.deviceId == deviceId)
+        } ?: return
         if (deviceId.isNotBlank()) row.deviceId = deviceId
         val pairKey = row.deviceId ?: row.device.id
         val paired = pairKey.isNotBlank() && KdeConnectManager.isPaired(pairKey)
         when (state) {
-            KdeConnectManager.State.CONNECTING   -> setConn(row, DOT_BUSY, "Connecting…")
-            KdeConnectManager.State.HANDSHAKING  -> setConn(row, DOT_BUSY, "Connecting (securing)…")
+            KdeConnectManager.State.CONNECTING   -> setConn(row, KdeDot.BUSY, "Connecting…")
+            KdeConnectManager.State.HANDSHAKING  -> setConn(row, KdeDot.BUSY, "Connecting (securing)…")
             KdeConnectManager.State.NEEDS_PAIRING -> {
-                setConn(row, DOT_OK, "Connected"); setPair(row, DOT_IDLE, "Not paired")
+                setConn(row, KdeDot.OK, "Connected"); setPair(row, KdeDot.IDLE, "Not paired")
             }
             KdeConnectManager.State.PAIRED       -> {
                 val keyPart = detail.substringAfter(" · ", "")
-                setConn(row, DOT_OK, "Connected")
-                setPair(row, DOT_OK, "Paired" + if (keyPart.isNotBlank()) " · $keyPart" else "")
+                setConn(row, KdeDot.OK, "Connected")
+                setPair(row, KdeDot.OK, "Paired" + if (keyPart.isNotBlank()) " · $keyPart" else "")
             }
             KdeConnectManager.State.DISCONNECTED -> {
-                setConn(row, DOT_IDLE, "Not connected")
-                setPair(row, if (paired) DOT_OK else DOT_IDLE, if (paired) "Paired" else "Not paired")
+                setConn(row, KdeDot.IDLE, "Not connected")
+                setPair(row, if (paired) KdeDot.OK else KdeDot.IDLE, if (paired) "Paired" else "Not paired")
             }
-            KdeConnectManager.State.ERROR        -> setConn(row, DOT_ERR, "Error: $detail")
+            KdeConnectManager.State.ERROR        -> setConn(row, KdeDot.ERR, "Error: $detail")
         }
-        row.ping.isEnabled = paired   // paired → tappable; the handler auto-reconnects if the link dropped
+        row.pingEnabled = paired   // paired → tappable; the handler auto-reconnects if the link dropped
         refreshPairButton(row)
     }
 
@@ -418,199 +559,114 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
      *  never "whichever link happens to be open first". Matched by the id the
      *  handshake reported, the declared id, or the address the link dialled. */
     private fun selectedLiveId(): String? {
-        val row = rows.firstOrNull() ?: return null
+        val row = peer ?: return null
         return KdeConnectManager.connectedIds().firstOrNull { id ->
             id == row.deviceId || id == row.device.id ||
                 KdeConnectManager.link(id)?.peerAddress?.hostAddress == row.host
         }
     }
 
-    private fun toast(m: String) = Toast.makeText(requireContext(), m, Toast.LENGTH_SHORT).show()
+    private fun toast(m: String) {
+        context?.let { Toast.makeText(it, m, Toast.LENGTH_SHORT).show() }
+    }
+
+    // ── Plugins catalog ───────────────────────────────────────────────────
+
     /** The full KDE Connect plugin catalog — active (we implement + advertise)
      *  in lavender, planned in gray. Data-driven from build.json plugins[]. */
-    private fun buildPluginsSection(ctx: android.content.Context, cfg: KdeConnectConfig.Config): View {
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(14); setPadding(p, p, p, p)
-            background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat(); setColor(0x22FFFFFF)
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(12) }
-        }
-        val prefs = KdePluginPrefs(ctx)
-        val header = TextView(ctx).apply {
-            setTextColor(0xFFFFFFFF.toInt()); textSize = 15f; typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, 0, 0, dp(2))
-        }
-        fun updateHeader() {
-            val on = cfg.plugins.count { prefs.isEnabled(it.id) }
-            header.text = "Plugins  ·  $on enabled / ${cfg.plugins.size} total"
-        }
-        updateHeader()
-        col.addView(header)
-        col.addView(TextView(ctx).apply {
-            text = "Tap a plugin to enable/disable it (counts above update live). " +
-                "● handled · ● advertised (no handler yet) · ◌ off."
-            setTextColor(0x77FFFFFF.toInt()); textSize = 11f; setPadding(0, 0, 0, dp(8))
-        })
+    @Composable
+    private fun PluginsCard(ctx: Context, cfg: KdeConnectConfig.Config) {
+        val p = LocalKitPalette.current
+        val view = LocalView.current
+        val prefs = remember { KdePluginPrefs(ctx) }
+        var rev by remember { mutableStateOf(0) }
+        val enabled = remember(rev) { cfg.plugins.associate { it.id to prefs.isEnabled(it.id) } }
         // Handled = a registered plugin actually processes/sends this packet.
-        val handledPackets = KdePluginRegistry.plugins.flatMap { it.incoming + it.outgoing }.toSet()
-        for (pl in cfg.plugins.sortedByDescending { it.packet in handledPackets }) {
-            val real = pl.packet in handledPackets
-            val rowTv = TextView(ctx).apply {
-                typeface = Typeface.MONOSPACE; textSize = 12f
-                setPadding(0, dp(3), 0, dp(3))
-            }
-            fun render() {
-                val on = prefs.isEnabled(pl.id)
+        val handledPackets = remember { KdePluginRegistry.plugins.flatMap { it.incoming + it.outgoing }.toSet() }
+        val on = enabled.values.count { it }
+        KdeCard(
+            "Plugins  ·  $on enabled / ${cfg.plugins.size} total",
+            "Tap a plugin to enable/disable it (counts above update live). " +
+                "● handled · ● advertised (no handler yet) · ◌ off.",
+        ) {
+            for (pl in cfg.plugins.sortedByDescending { it.packet in handledPackets }) {
+                val isOn = enabled[pl.id] == true
+                val real = pl.packet in handledPackets
                 val arrow = when (pl.dir) { "in" -> "↓"; "out" -> "↑"; else -> "↕" }
-                rowTv.text = "${if (on) "●" else "◌"}  ${pl.name}  $arrow   ${pl.packet}"
-                rowTv.setTextColor(when {
-                    !on   -> 0x77FFFFFF.toInt()           // off — dim
-                    real  -> 0xFFE9D8FD.toInt()           // handled — lavender
-                    else  -> 0xFFFFCC80.toInt()           // advertised-only — amber
-                })
+                Text(
+                    "${if (isOn) "●" else "◌"}  ${pl.name}  $arrow   ${pl.packet}",
+                    color = when {
+                        !isOn -> p.textSecondary        // off — dim
+                        real  -> p.accent               // handled — lavender
+                        else  -> p.warn                 // advertised-only — amber
+                    },
+                    fontFamily = FontFamily.Monospace, fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        prefs.toggle(pl.id); rev++
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    }.padding(vertical = 3.dp),
+                )
             }
-            render()
-            rowTv.setOnClickListener {
-                prefs.toggle(pl.id); render(); updateHeader()
-                rowTv.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-            }
-            col.addView(rowTv)
         }
-        return col
     }
+
+    // ── Remote control ────────────────────────────────────────────────────
 
     /** Remote control card — drives the connected desktop: touchpad (move +
      *  tap-click), keyboard, and Big Screen text. Senders: RemoteInputPlugin /
-     *  BigScreenPlugin. Targets the first connected device. */
-    private fun buildRemoteSection(ctx: android.content.Context): View {
+     *  BigScreenPlugin. Targets the selected peer's live link. */
+    @Composable
+    private fun RemoteCard() {
         // Master input-share gate: when OFF the pad/keys send nothing (so the
         // phone in your pocket can't nudge the desktop cursor). Tap Start to arm.
-        var inputOn = false
+        var inputOn by remember { mutableStateOf(false) }
         fun target(): String? = if (inputOn) selectedLiveId() else null
+        var keys by remember { mutableStateOf("") }
+        var bigScreen by remember { mutableStateOf("") }
 
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(14); setPadding(p, p, p, p)
-            background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat(); setColor(0x22FFFFFF)
+        KdeCard("Remote control",
+            "Controls the connected desktop. Drag the pad to move the cursor · tap = click · long-press area = right-click.") {
+            // Share toggle — arm/disarm sending input to the desktop
+            WideBtn(if (inputOn) "■ Stop control" else "▶ Start control") {
+                inputOn = !inputOn
+                toast(if (inputOn) "Input control ON — pad & keys drive the desktop" else "Input control OFF")
             }
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(12) }
-        }
-        col.addView(TextView(ctx).apply {
-            text = "Remote control"
-            setTextColor(0xFFFFFFFF.toInt()); textSize = 15f; typeface = Typeface.DEFAULT_BOLD
-        })
-        col.addView(TextView(ctx).apply {
-            text = "Controls the connected desktop. Drag the pad to move the cursor · tap = click · long-press area = right-click."
-            setTextColor(0x77FFFFFF.toInt()); textSize = 11f; setPadding(0, dp(2), 0, dp(8))
-        })
-
-        // ── Share toggle — arm/disarm sending input to the desktop ────────
-        val shareBtn = Button(ctx).apply {
-            text = "▶ Start control"; isAllCaps = false; textSize = 13f
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dp(6) }
-        }
-        shareBtn.setOnClickListener {
-            inputOn = !inputOn
-            shareBtn.text = if (inputOn) "■ Stop control" else "▶ Start control"
-            toastUnit(if (inputOn) "Input control ON — pad & keys drive the desktop"
-                      else "Input control OFF")
-        }
-        col.addView(shareBtn)
-
-        // ── Touchpad ────────────────────────────────────────────────────
-        val pad = View(ctx).apply {
-            background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = dp(10).toFloat(); setColor(0x33000000)
-                setStroke(maxOf(1, dp(1)), 0x44FFFFFF)
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(150))
-        }
-        var lastX = 0f; var lastY = 0f; var moved = false; var downT = 0L
-        pad.setOnTouchListener { v, e ->
-            val id = target()
-            when (e.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    lastX = e.x; lastY = e.y; moved = false; downT = android.os.SystemClock.uptimeMillis(); true
-                }
-                android.view.MotionEvent.ACTION_MOVE -> {
-                    val dx = e.x - lastX; val dy = e.y - lastY; lastX = e.x; lastY = e.y
-                    if (kotlin.math.abs(dx) > 2 || kotlin.math.abs(dy) > 2) moved = true
-                    if (id != null) KdeConnectManager.send(id, RemoteInputPlugin.move(dx, dy))
-                    true
-                }
-                android.view.MotionEvent.ACTION_UP -> {
-                    val held = android.os.SystemClock.uptimeMillis() - downT
+            // Touchpad
+            Pad(150, "kde:pad:remote",
+                onMove = { dx, dy, _, _ ->
+                    target()?.let { KdeConnectManager.send(it, RemoteInputPlugin.move(dx, dy)) }
+                },
+                onUp = { moved, held ->
+                    val id = target()
                     if (!moved && id != null) {
                         KdeConnectManager.send(id, if (held > 500) RemoteInputPlugin.rightClick() else RemoteInputPlugin.click())
                     }
                     if (id == null) toast(if (!inputOn) "Tap 'Start control' first" else "Connect & pair first")
-                    v.performClick(); true
-                }
-                else -> false
+                })
+            // Keyboard
+            Field(keys, { keys = it }, "Type, then Send keys")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Btn(label = "Send keys", weight = 2f, size = 12.sp, onClick = {
+                    val id = target()
+                    if (id == null) toast("Connect & pair first")
+                    else if (keys.isNotEmpty()) { KdeConnectManager.send(id, RemoteInputPlugin.key(keys)); keys = "" }
+                })
+                // KDE special keys: 1 = Backspace, 12 = Enter/Return.
+                Btn(label = "⌫", size = 12.sp, onClick = { target()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(1)) } })
+                Btn(label = "⏎", size = 12.sp, onClick = { target()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(12)) } })
+            }
+            // Big Screen
+            Field(bigScreen, { bigScreen = it }, "Send a line to Plasma Big Screen")
+            WideBtn("Send to Big Screen", 12.sp) {
+                val id = target()
+                if (id == null) toast("Connect & pair first")
+                else if (bigScreen.isNotEmpty()) { KdeConnectManager.send(id, BigScreenPlugin.stt(bigScreen)); bigScreen = "" }
             }
         }
-        col.addView(pad)
-
-        // ── Keyboard ────────────────────────────────────────────────────
-        val keyF = android.widget.EditText(ctx).apply {
-            hint = "Type, then Send keys"; isSingleLine = true
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(8) }
-        }
-        col.addView(keyF)
-        val keyRow = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        fun mkBtn(label: String, weight: Float = 1f) = Button(ctx).apply {
-            text = label; isAllCaps = false; textSize = 12f
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weight)
-        }
-        val sendKeys = mkBtn("Send keys", 2f)
-        val backspace = mkBtn("⌫")
-        val enter = mkBtn("⏎")
-        sendKeys.setOnClickListener {
-            val id = target() ?: return@setOnClickListener toastUnit("Connect & pair first")
-            val t = keyF.text.toString()
-            if (t.isNotEmpty()) { KdeConnectManager.send(id, RemoteInputPlugin.key(t)); keyF.setText("") }
-        }
-        // KDE special keys: 1 = Backspace, 12 = Enter/Return.
-        backspace.setOnClickListener { target()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(1)) } }
-        enter.setOnClickListener { target()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(12)) } }
-        keyRow.addView(sendKeys); keyRow.addView(backspace); keyRow.addView(enter)
-        col.addView(keyRow)
-
-        // ── Big Screen ──────────────────────────────────────────────────
-        val bsF = android.widget.EditText(ctx).apply {
-            hint = "Send a line to Plasma Big Screen"; isSingleLine = true
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(8) }
-        }
-        col.addView(bsF)
-        col.addView(Button(ctx).apply {
-            text = "Send to Big Screen"; isAllCaps = false; textSize = 12f
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            setOnClickListener {
-                val id = target() ?: return@setOnClickListener toastUnit("Connect & pair first")
-                val t = bsF.text.toString()
-                if (t.isNotEmpty()) { KdeConnectManager.send(id, BigScreenPlugin.stt(t)); bsF.setText("") }
-            }
-        })
-        return col
     }
 
-    // ── Shared card scaffolding ────────────────────────────────────────────
-    /** A rounded translucent card with a bold title + dim subtitle. */
+    // ── Clipboard ─────────────────────────────────────────────────────────
+
     /**
      * Clipboard — both sides, as lists rather than a single slot.
      *
@@ -630,11 +686,10 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
      * only while this page is focused, so the list is what we saw while it was
      * open. Both limits are printed on the card rather than hidden.
      */
-    private fun buildClipboardCard(ctx: android.content.Context): View {
-        val prefs = KdePluginPrefs(ctx)
-        val col = card(ctx, "Clipboard",
-            "Both clipboards, kept as lists — not just the last thing copied.")
-
+    @Composable
+    private fun ClipboardCard(ctx: Context) {
+        val p = LocalKitPalette.current
+        val prefs = remember { KdePluginPrefs(ctx) }
         // Which clipboard app receives an incoming clip. ONE setPrimaryClip
         // either way, because that is the only cross-app clipboard API Android
         // has; Cloud-Keyboard's pinned lists live in its own Room DB behind a
@@ -642,162 +697,115 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
         // What differs is what happens NEXT: Cloud-Keyboard files the clip into
         // its history where it can be pinned, the stock clipboard just replaces
         // its one slot. Said out loud so the card promises no pin it cannot make.
-        val ours = runCatching {
-            ctx.packageManager.getPackageInfo(CLOUD_KEYBOARD_PKG, 0); true
-        }.getOrDefault(false)
-
-        val toggle = TextView(ctx).apply {
-            setTextColor(0xFFFFFFFF.toInt()); textSize = 13f
-            setPadding(0, dp(2), 0, dp(4))
-            isClickable = true; isFocusable = true
+        val ours = remember {
+            runCatching { ctx.packageManager.getPackageInfo(CLOUD_KEYBOARD_PKG, 0); true }.getOrDefault(false)
         }
-        val note = TextView(ctx).apply {
-            text = (if (ours)
-                "Cloud-Keyboard is installed: an incoming clip lands in its history, where you can pin it. "
-            else
-                "Stock clipboard: an incoming clip replaces the single slot. Install Cloud-Keyboard for pinned lists. ") +
-                "Pins stay local — the protocol has no packet for them."
-            setTextColor(0x77FFFFFF.toInt()); textSize = 11f
-            setPadding(0, 0, 0, dp(6))
-        }
-        val listTv = TextView(ctx).apply {
-            typeface = Typeface.MONOSPACE; textSize = 12f
-            setTextColor(0xFFFFFFFF.toInt()); setPadding(0, dp(2), 0, dp(6))
-        }
-
         // Which list is on screen. Kept as state rather than two panes so a
         // long history does not push the buttons off the bottom of the card.
-        var shown = SHOW_BOTH
+        var shown by remember { mutableStateOf(SHOW_BOTH) }
+        var rev by remember { mutableStateOf(0) }
+        val syncOn = remember(rev) { prefs.isEnabled(ClipboardPlugin.id) }
+        val listText = remember(rev, shown) { clipboardLists(ctx, shown) }
 
-        fun preview(t: String): String =
-            if (t.length <= 90) t else t.take(90) + "…"
-        fun ago(at: Long): String {
-            if (at == 0L) return "nothing received yet"
-            val secs = (System.currentTimeMillis() - at) / 1000
-            return when {
-                secs < 60 -> "${secs}s ago"
-                secs < 3600 -> "${secs / 60}m ago"
-                else -> "${secs / 3600}h ago"
-            }
+        KdeCard("Clipboard", "Both clipboards, kept as lists — not just the last thing copied.") {
+            Text(
+                if (syncOn) "● Sync is ON — tap to turn off" else "◌ Sync is OFF — tap to turn on",
+                color = if (syncOn) p.ok else p.textSecondary, fontSize = 13.sp,
+                modifier = Modifier.fillMaxWidth().clickable {
+                    prefs.toggle(ClipboardPlugin.id)
+                    rev++
+                    toast(if (prefs.isEnabled(ClipboardPlugin.id))
+                        "Clipboard sync on — reconnect to advertise it" else "Clipboard sync off")
+                }.padding(vertical = 2.dp),
+            )
+            Text(
+                (if (ours)
+                    "Cloud-Keyboard is installed: an incoming clip lands in its history, where you can pin it. "
+                else
+                    "Stock clipboard: an incoming clip replaces the single slot. Install Cloud-Keyboard for pinned lists. ") +
+                    "Pins stay local — the protocol has no packet for them.",
+                color = p.textSecondary, fontSize = 11.sp,
+            )
+            Text(listText, color = p.textPrimary, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+            BtnRow(
+                "View desktop" to { shown = SHOW_HOST; rev++ },
+                "View ours" to { shown = SHOW_OURS; rev++ },
+                "Refresh" to { shown = SHOW_BOTH; rev++ },
+            )
+            BtnRow(
+                "Send ours" to {
+                    val text = KdeClipboardStore.ourText(ctx)
+                    if (text.isEmpty()) toast("This phone's clipboard is empty (or Android refused the read)")
+                    else { toTarget(ClipboardPlugin.build(text)); rev++; toast("Sent ${text.length} chars") }
+                },
+                "Get host" to {
+                    // Epoch timestamp: we are claiming our clipboard is as old as
+                    // possible, so the desktop's is newer and it answers with its
+                    // own. The reply lands in ClipboardPlugin and shows up on the
+                    // next refresh; there is nothing to await here.
+                    toTarget(ClipboardPlugin.buildConnect(KdeClipboardStore.ourText(ctx), 0L))
+                    toast("Asked the desktop — tap Refresh in a moment")
+                },
+                "Merge all" to {
+                    val n = KdeClipboardStore.mergeAll(ctx)
+                    shown = SHOW_BOTH; rev++
+                    toast("Merged into $n entr${if (n == 1) "y" else "ies"} on both lists")
+                },
+            )
         }
-        fun render(title: String, items: List<String>): String =
-            if (items.isEmpty()) "$title\n  (empty)"
-            else "$title\n" + items.take(12).mapIndexed { i, t -> "  ${i + 1}. ${preview(t)}" }
-                .joinToString("\n") + (if (items.size > 12) "\n  … ${items.size - 12} more" else "")
-
-        fun refresh() {
-            // Reading the clipboard is only allowed while focused, so every
-            // refresh is also our one chance to notice what is on this phone.
-            KdeClipboardStore.rememberOurs(ctx)
-            val on = prefs.isEnabled(ClipboardPlugin.id)
-            toggle.text = if (on) "● Sync is ON — tap to turn off"
-                          else "◌ Sync is OFF — tap to turn on"
-            toggle.setTextColor(if (on) 0xFF9AE6B4.toInt() else 0x99FFFFFF.toInt())
-            val host = KdeClipboardStore.hostHistory(ctx)
-            val mine = KdeClipboardStore.ourHistory(ctx)
-            listTv.text = when (shown) {
-                SHOW_HOST -> render("Desktop  ·  ${host.size} item(s)  ·  last ${ago(KdeClipboardStore.hostAt(ctx))}", host)
-                SHOW_OURS -> render("This phone  ·  ${mine.size} item(s)", mine)
-                else -> render("Desktop  ·  ${host.size}", host.take(4)) + "\n\n" +
-                        render("This phone  ·  ${mine.size}", mine.take(4))
-            }
-        }
-        toggle.setOnClickListener {
-            prefs.toggle(ClipboardPlugin.id)
-            refresh()
-            toast(if (prefs.isEnabled(ClipboardPlugin.id))
-                "Clipboard sync on — reconnect to advertise it" else "Clipboard sync off")
-        }
-        refresh()
-
-        col.addView(toggle)
-        col.addView(note)
-        col.addView(listTv)
-        col.addView(btnRow(ctx,
-            "View desktop" to { shown = SHOW_HOST; refresh() },
-            "View ours" to { shown = SHOW_OURS; refresh() },
-            "Refresh" to { shown = SHOW_BOTH; refresh() },
-        ))
-        col.addView(btnRow(ctx,
-            "Send ours" to {
-                val text = KdeClipboardStore.ourText(ctx)
-                if (text.isEmpty()) toast("This phone's clipboard is empty (or Android refused the read)")
-                else { toTarget(ClipboardPlugin.build(text)); refresh(); toast("Sent ${text.length} chars") }
-            },
-            "Get host" to {
-                // Epoch timestamp: we are claiming our clipboard is as old as
-                // possible, so the desktop's is newer and it answers with its
-                // own. The reply lands in ClipboardPlugin and shows up on the
-                // next refresh; there is nothing to await here.
-                toTarget(ClipboardPlugin.buildConnect(KdeClipboardStore.ourText(ctx), 0L))
-                toast("Asked the desktop — tap Refresh in a moment")
-            },
-            "Merge all" to {
-                val n = KdeClipboardStore.mergeAll(ctx)
-                shown = SHOW_BOTH; refresh()
-                toast("Merged into $n entr${if (n == 1) "y" else "ies"} on both lists")
-            },
-        ))
-        return col
     }
 
-    /** Which clipboard list [buildClipboardCard] is showing. */
-    private val SHOW_BOTH = 0
-    private val SHOW_HOST = 1
-    private val SHOW_OURS = 2
-
-    /** Our own clipboard app — see [buildClipboardCard]. */
-    private val CLOUD_KEYBOARD_PKG = "com.diegonmarcos.cloudkeyboard"
-
-    private fun card(ctx: android.content.Context, title: String, subtitle: String?): LinearLayout {
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(14); setPadding(p, p, p, p)
-            background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat(); setColor(0x22FFFFFF)
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(12) }
+    /** The text of the list(s) on show. Reading the clipboard is only allowed
+     *  while focused, so every refresh is also our one chance to notice what is
+     *  on this phone. */
+    private fun clipboardLists(ctx: Context, shown: Int): String {
+        KdeClipboardStore.rememberOurs(ctx)
+        val host = KdeClipboardStore.hostHistory(ctx)
+        val mine = KdeClipboardStore.ourHistory(ctx)
+        return when (shown) {
+            SHOW_HOST -> renderClips("Desktop  ·  ${host.size} item(s)  ·  last ${ago(KdeClipboardStore.hostAt(ctx))}", host)
+            SHOW_OURS -> renderClips("This phone  ·  ${mine.size} item(s)", mine)
+            else -> renderClips("Desktop  ·  ${host.size}", host.take(4)) + "\n\n" +
+                renderClips("This phone  ·  ${mine.size}", mine.take(4))
         }
-        col.addView(TextView(ctx).apply {
-            text = title; setTextColor(0xFFFFFFFF.toInt()); textSize = 15f; typeface = Typeface.DEFAULT_BOLD
-        })
-        if (subtitle != null) col.addView(TextView(ctx).apply {
-            text = subtitle; setTextColor(0x77FFFFFF.toInt()); textSize = 11f
-            setPadding(0, dp(2), 0, dp(8))
-        })
-        return col
     }
-    /** A horizontal row of equal-weight compact buttons (label → action). */
-    private fun btnRow(ctx: android.content.Context, vararg btns: Pair<String, () -> Unit>): View {
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL; setPadding(0, dp(2), 0, dp(2))
+
+    private fun preview(t: String): String = if (t.length <= 90) t else t.take(90) + "…"
+
+    private fun ago(at: Long): String {
+        if (at == 0L) return "nothing received yet"
+        val secs = (System.currentTimeMillis() - at) / 1000
+        return when {
+            secs < 60 -> "${secs}s ago"
+            secs < 3600 -> "${secs / 60}m ago"
+            else -> "${secs / 3600}h ago"
         }
-        for ((label, action) in btns) row.addView(Button(ctx).apply {
-            text = label; isAllCaps = false; textSize = 13f
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            setOnClickListener { action() }
-        })
-        return row
     }
+
+    private fun renderClips(title: String, items: List<String>): String =
+        if (items.isEmpty()) "$title\n  (empty)"
+        else "$title\n" + items.take(12).mapIndexed { i, t -> "  ${i + 1}. ${preview(t)}" }
+            .joinToString("\n") + (if (items.size > 12) "\n  … ${items.size - 12} more" else "")
+
+    // ── Sending ───────────────────────────────────────────────────────────
+
     /** Run [then] against a live link; if the link dropped, transparently
      *  re-dial the first device first (KDE reconnects on demand rather than
      *  holding one socket forever). */
     private fun targetOrReconnect(then: (String) -> Unit) {
         val live = selectedLiveId()
         if (live != null) { then(live); return }
-        val row = rows.firstOrNull() ?: return toastUnit("No device")
+        val row = peer ?: return toast("No device")
         if (row.deviceId?.let { KdeConnectManager.isPaired(it) } != true &&
-            !KdeConnectManager.isPaired(row.device.id)) return toastUnit("Pair first")
-        toastUnit("Reconnecting…")
+            !KdeConnectManager.isPaired(row.device.id)) return toast("Pair first")
+        toast("Reconnecting…")
         viewLifecycleOwner.lifecycleScope.launch {
             KdeConnectManager.connect(row.host, row.port)
                 .onSuccess { id ->
                     if (KdeConnectManager.isConnected(id)) then(id)
-                    else toastUnit("Reconnected — tap again")
+                    else toast("Reconnected — tap again")
                 }
-                .onFailure { toastUnit("Couldn't reconnect: ${it.message}") }
+                .onFailure { toast("Couldn't reconnect: ${it.message}") }
         }
     }
 
@@ -805,268 +813,209 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
      *  share payload channel (SharePlugin opens the TLS payload server). */
     private fun onFilePicked(uri: Uri) {
         val id = selectedLiveId()
-        if (id == null) { toastUnit("Connect & pair a desktop first"); return }
+        if (id == null) { toast("Connect & pair a desktop first"); return }
         val link = KdeConnectManager.link(id)
-        if (link == null) { toastUnit("No live link"); return }
-        if (SharePlugin.sendFile(requireContext(), link, uri)) toastUnit("Sending file…")
-        else toastUnit("Couldn't start file send")
+        if (link == null) { toast("No live link"); return }
+        if (SharePlugin.sendFile(requireContext(), link, uri)) toast("Sending file…")
+        else toast("Couldn't start file send")
     }
 
     /** Send a sender packet to a live link (reconnecting if needed). */
     private fun toTarget(packet: NetworkPacket?) {
-        if (packet == null) return toastUnit("No desktop state yet — try again")
+        if (packet == null) return toast("No desktop state yet — try again")
         targetOrReconnect { id -> KdeConnectManager.send(id, packet) }
     }
 
+    // ── Media / presenter / actions ───────────────────────────────────────
+
     /** Media remote — drives the desktop's player (mpris) + master volume
      *  (systemvolume). Requests current state on first open. */
-    private fun buildMediaCard(ctx: android.content.Context): View {
-        val col = card(ctx, "Media remote",
-            "Controls the connected desktop's player and system volume.")
-        col.addView(btnRow(ctx,
-            "⏮" to { toTarget(MprisPlugin.command("Previous")) },
-            "⏯" to { toTarget(MprisPlugin.command("PlayPause")) },
-            "⏭" to { toTarget(MprisPlugin.command("Next")) },
-        ))
-        col.addView(btnRow(ctx,
-            "Vol −" to { volNudge(-10) },
-            "Mute"  to { toTarget(RemoteSystemVolumePlugin.mute(true)) },
-            "Vol +" to { volNudge(+10) },
-        ))
-        return col
+    @Composable
+    private fun MediaCard() {
+        KdeCard("Media remote", "Controls the connected desktop's player and system volume.") {
+            BtnRow(
+                "⏮" to { toTarget(MprisPlugin.command("Previous")) },
+                "⏯" to { toTarget(MprisPlugin.command("PlayPause")) },
+                "⏭" to { toTarget(MprisPlugin.command("Next")) },
+            )
+            BtnRow(
+                "Vol −" to { volNudge(-10) },
+                "Mute"  to { toTarget(RemoteSystemVolumePlugin.mute(true)) },
+                "Vol +" to { volNudge(+10) },
+            )
+        }
     }
+
     /** Nudge desktop volume; if we don't have its sink state yet, request it. */
     private fun volNudge(delta: Int) = targetOrReconnect { id ->
         val pkt = RemoteSystemVolumePlugin.nudge(delta)
         if (pkt == null) {
             KdeConnectManager.send(id, RemoteSystemVolumePlugin.requestSinks())
-            toastUnit("Fetching desktop volume — tap again")
+            toast("Fetching desktop volume — tap again")
         } else KdeConnectManager.send(id, pkt)
     }
 
     /** Presenter — a laser-pointer pad (drag) + slide navigation. The pointer
      *  uses kdeconnect.presenter; prev/next use mousepad PageUp/PageDown. */
-    private fun buildPresenterCard(ctx: android.content.Context): View {
-        val col = card(ctx, "Presenter",
-            "Drag the pad to move the on-screen laser · release to hide it.")
-        val pad = View(ctx).apply {
-            background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = dp(10).toFloat(); setColor(0x33000000); setStroke(maxOf(1, dp(1)), 0x44FFFFFF)
-            }
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(110))
-        }
-        var lastX = 0f; var lastY = 0f
-        pad.setOnTouchListener { v, e ->
-            val id = selectedLiveId()
-            when (e.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> { lastX = e.x; lastY = e.y; true }
-                android.view.MotionEvent.ACTION_MOVE -> {
-                    val dx = (e.x - lastX) / v.width.coerceAtLeast(1)
-                    val dy = (e.y - lastY) / v.height.coerceAtLeast(1)
-                    lastX = e.x; lastY = e.y
-                    if (id != null) KdeConnectManager.send(id, PresenterPlugin.pointer(dx, dy))
-                    true
-                }
-                android.view.MotionEvent.ACTION_UP -> {
+    @Composable
+    private fun PresenterCard() {
+        KdeCard("Presenter", "Drag the pad to move the on-screen laser · release to hide it.") {
+            Pad(110, "kde:pad:presenter",
+                onMove = { dx, dy, w, h ->
+                    selectedLiveId()?.let {
+                        KdeConnectManager.send(it, PresenterPlugin.pointer(dx / w.coerceAtLeast(1f), dy / h.coerceAtLeast(1f)))
+                    }
+                },
+                onUp = { _, _ ->
+                    val id = selectedLiveId()
                     if (id != null) KdeConnectManager.send(id, PresenterPlugin.stop())
-                    else toastUnit("Connect & pair first")
-                    v.performClick(); true
-                }
-                else -> false
-            }
+                    else toast("Connect & pair first")
+                })
+            BtnRow(
+                "◀ Prev" to { toTarget(RemoteInputPlugin.specialKey(7)) },   // PageUp
+                "Next ▶" to { toTarget(RemoteInputPlugin.specialKey(8)) },   // PageDown
+            )
         }
-        col.addView(pad)
-        col.addView(btnRow(ctx,
-            "◀ Prev" to { toTarget(RemoteInputPlugin.specialKey(7)) },   // PageUp
-            "Next ▶" to { toTarget(RemoteInputPlugin.specialKey(8)) },   // PageDown
-        ))
-        return col
     }
 
     /** One-shot sender actions — ring the desktop, ask it to expose its files,
      *  start a virtual monitor, or open a remote-desktop session. */
-    private fun buildActionsCard(ctx: android.content.Context): View {
-        val col = card(ctx, "Actions", "Single-tap requests to the connected desktop.")
-        col.addView(btnRow(ctx,
-            "🔔 Ring desktop" to { toTarget(FindMyPhonePlugin.ring()) },
-            "📁 Send file" to { pickFile.launch("*/*") },
-        ))
-        col.addView(btnRow(ctx,
-            "🖥 Monitor" to { toTarget(VirtualMonitorPlugin.request()) },
-            "🔒 Lock desktop" to { toTarget(LockDevicePlugin.lockRemote(true)) },
-        ))
-        return col
+    @Composable
+    private fun ActionsCard() {
+        KdeCard("Actions", "Single-tap requests to the connected desktop.") {
+            BtnRow(
+                "🔔 Ring desktop" to { toTarget(FindMyPhonePlugin.ring()) },
+                "📁 Send file" to { pickFile.launch("*/*") },
+            )
+            BtnRow(
+                "🖥 Monitor" to { toTarget(VirtualMonitorPlugin.request()) },
+                "🔒 Lock desktop" to { toTarget(LockDevicePlugin.lockRemote(true)) },
+            )
+        }
     }
 
     /** Remote Desktop control — asks Plasma to start a remote-desktop session
      *  (kdeconnect.remotedesktop), then exposes a full mouse + keyboard surface
      *  to drive it (mousepad senders: move/click/right-click/keys/arrows). */
-    private fun buildRemoteDesktopCard(ctx: android.content.Context): View {
+    @Composable
+    private fun RemoteDesktopCard() {
         fun tgt(): String? = selectedLiveId()
-        val col = card(ctx, "Remote Desktop control",
-            "Asks Plasma to start a remote-desktop session (KDE streams the screen via an RDP/virtual-monitor portal). Drive it with the pad/keys below; full on-phone viewing needs an RDP client.")
         // Stateful start/stop — label follows the session state.
-        var rdpActive = false
-        val sessionBtn = Button(ctx).apply {
-            text = "▶ Start Remote Desktop Control"; isAllCaps = false; textSize = 13f
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        }
-        sessionBtn.setOnClickListener {
-            if (!rdpActive) {
-                toTarget(RemoteDesktopPlugin.request())
-                rdpActive = true; sessionBtn.text = "■ Stop Remote Desktop Control"
-                toastUnit("Requested a remote-desktop session on the desktop")
-            } else {
-                toTarget(RemoteDesktopPlugin.stop())
-                rdpActive = false; sessionBtn.text = "▶ Start Remote Desktop Control"
-                toastUnit("Stopped the remote-desktop session")
-            }
-        }
-        col.addView(sessionBtn)
-        // Mouse surface.
-        val pad = View(ctx).apply {
-            background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = dp(10).toFloat(); setColor(0x33000000); setStroke(maxOf(1, dp(1)), 0x44FFFFFF)
-            }
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(140))
-                .apply { topMargin = dp(6) }
-        }
-        var lastX = 0f; var lastY = 0f; var moved = false; var downT = 0L
-        pad.setOnTouchListener { v, e ->
-            val id = tgt()
-            when (e.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    lastX = e.x; lastY = e.y; moved = false; downT = android.os.SystemClock.uptimeMillis(); true
+        var rdpActive by remember { mutableStateOf(false) }
+        var keys by remember { mutableStateOf("") }
+        KdeCard("Remote Desktop control",
+            "Asks Plasma to start a remote-desktop session (KDE streams the screen via an RDP/virtual-monitor portal). Drive it with the pad/keys below; full on-phone viewing needs an RDP client.") {
+            WideBtn(if (rdpActive) "■ Stop Remote Desktop Control" else "▶ Start Remote Desktop Control") {
+                if (!rdpActive) {
+                    toTarget(RemoteDesktopPlugin.request())
+                    rdpActive = true
+                    toast("Requested a remote-desktop session on the desktop")
+                } else {
+                    toTarget(RemoteDesktopPlugin.stop())
+                    rdpActive = false
+                    toast("Stopped the remote-desktop session")
                 }
-                android.view.MotionEvent.ACTION_MOVE -> {
-                    val dx = e.x - lastX; val dy = e.y - lastY; lastX = e.x; lastY = e.y
-                    if (kotlin.math.abs(dx) > 2 || kotlin.math.abs(dy) > 2) moved = true
-                    if (id != null) KdeConnectManager.send(id, RemoteInputPlugin.move(dx, dy))
-                    true
-                }
-                android.view.MotionEvent.ACTION_UP -> {
-                    val held = android.os.SystemClock.uptimeMillis() - downT
+            }
+            // Mouse surface.
+            Pad(140, "kde:pad:rdp",
+                onMove = { dx, dy, _, _ ->
+                    tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.move(dx, dy)) }
+                },
+                onUp = { moved, held ->
+                    val id = tgt()
                     if (!moved && id != null)
                         KdeConnectManager.send(id, if (held > 500) RemoteInputPlugin.rightClick() else RemoteInputPlugin.click())
-                    if (id == null) toastUnit("Connect & pair first")
-                    v.performClick(); true
-                }
-                else -> false
-            }
+                    if (id == null) toast("Connect & pair first")
+                })
+            // Keyboard + navigation keys (KDE special-key codes).
+            Field(keys, { keys = it }, "Type, then Send")
+            BtnRow(
+                "Send" to {
+                    val id = tgt()
+                    if (id == null) toast("Connect & pair first")
+                    else if (keys.isNotEmpty()) { KdeConnectManager.send(id, RemoteInputPlugin.key(keys)); keys = "" }
+                },
+                "⌫" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(1)) } },
+                "⏎" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(12)) } },
+                "Esc" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(14)) } },
+            )
+            BtnRow(
+                "←" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(3)) } },
+                "↑" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(4)) } },
+                "↓" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(6)) } },
+                "→" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(5)) } },
+            )
         }
-        col.addView(pad)
-        // Keyboard + navigation keys (KDE special-key codes).
-        val keyF = android.widget.EditText(ctx).apply {
-            hint = "Type, then Send"; isSingleLine = true
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(6) }
-        }
-        col.addView(keyF)
-        col.addView(btnRow(ctx,
-            "Send" to {
-                val id = tgt()
-                val t = keyF.text.toString()
-                if (id == null) toastUnit("Connect & pair first")
-                else if (t.isNotEmpty()) { KdeConnectManager.send(id, RemoteInputPlugin.key(t)); keyF.setText("") }
-            },
-            "⌫" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(1)) } },
-            "⏎" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(12)) } },
-            "Esc" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(14)) } },
-        ))
-        col.addView(btnRow(ctx,
-            "←" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(3)) } },
-            "↑" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(4)) } },
-            "↓" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(6)) } },
-            "→" to { tgt()?.let { KdeConnectManager.send(it, RemoteInputPlugin.specialKey(5)) } },
-        ))
-        return col
     }
 
     /** Share — push text or a link to the connected desktop (kdeconnect.share).
      *  A link opens in the desktop browser; text lands on its clipboard. */
-    private fun buildShareCard(ctx: android.content.Context): View {
-        val col = card(ctx, "Share", "Send text or a link to the connected desktop.")
-        val f = android.widget.EditText(ctx).apply {
-            hint = "Text or https://link"; isSingleLine = true
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+    @Composable
+    private fun ShareCard() {
+        var text by remember { mutableStateOf("") }
+        KdeCard("Share", "Send text or a link to the connected desktop.") {
+            Field(text, { text = it }, "Text or https://link")
+            BtnRow(
+                "Send text" to {
+                    if (text.isNotBlank()) { toTarget(SharePlugin.text(text)); text = "" }
+                },
+                "Send link" to {
+                    val t = text.trim()
+                    if (t.isNotBlank()) { toTarget(SharePlugin.url(t)); text = "" }
+                },
+            )
         }
-        col.addView(f)
-        col.addView(btnRow(ctx,
-            "Send text" to {
-                val t = f.text.toString()
-                if (t.isNotBlank()) { toTarget(SharePlugin.text(t)); f.setText("") }
-            },
-            "Send link" to {
-                val t = f.text.toString().trim()
-                if (t.isNotBlank()) { toTarget(SharePlugin.url(t)); f.setText("") }
-            },
-        ))
-        return col
     }
 
     /** Send SMS — this phone sends the message directly via SmsManager (the
      *  phone is the SMS device; the desktop normally drives this via
      *  kdeconnect.sms.request). Needs the runtime SEND_SMS grant. */
-    private fun buildSmsCard(ctx: android.content.Context): View {
-        val col = card(ctx, "Send SMS", "This phone sends the text (needs SMS permission).")
-        val toF = android.widget.EditText(ctx).apply {
-            hint = "Recipient number"; isSingleLine = true
-            inputType = android.text.InputType.TYPE_CLASS_PHONE
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+    @Composable
+    private fun SmsCard(ctx: Context) {
+        var to by remember { mutableStateOf("") }
+        var body by remember { mutableStateOf("") }
+        KdeCard("Send SMS", "This phone sends the text (needs SMS permission).") {
+            Field(to, { to = it }, "Recipient number", KeyboardType.Phone)
+            Field(body, { body = it }, "Message")
+            BtnRow(
+                "Send SMS" to {
+                    val num = to.trim()
+                    when {
+                        num.isBlank() || body.isBlank() -> toast("Recipient and message required")
+                        SmsPlugin.sendDirect(ctx, num, body) -> { toast("SMS sent"); body = "" }
+                        else -> toast("Couldn't send — grant SMS permission")
+                    }
+                },
+            )
         }
-        val bodyF = android.widget.EditText(ctx).apply {
-            hint = "Message"; isSingleLine = true
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(4) }
-        }
-        col.addView(toF); col.addView(bodyF)
-        col.addView(btnRow(ctx,
-            "Send SMS" to {
-                val to = toF.text.toString().trim(); val body = bodyF.text.toString()
-                when {
-                    to.isBlank() || body.isBlank() -> toastUnit("Recipient and message required")
-                    SmsPlugin.sendDirect(ctx, to, body) -> { toastUnit("SMS sent"); bodyF.setText("") }
-                    else -> toastUnit("Couldn't send — grant SMS permission")
-                }
-            },
-        ))
-        return col
     }
 
     /** Photo capture — opens the camera (the desktop normally triggers this via
      *  kdeconnect.photo.request; the button lets you fire it locally too). */
-    private fun buildPhotoCard(ctx: android.content.Context): View {
-        val col = card(ctx, "Photo capture",
-            "Open the camera. (Desktop sends kdeconnect.photo.request to trigger it remotely.)")
-        col.addView(btnRow(ctx,
-            "📷 Open camera" to { PhotoPlugin.capture(ctx) },
-        ))
-        return col
+    @Composable
+    private fun PhotoCard(ctx: Context) {
+        KdeCard("Photo capture",
+            "Open the camera. (Desktop sends kdeconnect.photo.request to trigger it remotely.)") {
+            BtnRow("📷 Open camera" to { PhotoPlugin.capture(ctx) })
+        }
     }
+
+    // ── Self-test + probe ─────────────────────────────────────────────────
 
     /** Self-test — for every enabled plugin, report whether a handler is wired
      *  (packet known to the registry) and, when connected+paired, fire a
      *  representative packet for the sender plugins and confirm it left. */
-    private fun buildSelfTestCard(ctx: android.content.Context, cfg: KdeConnectConfig.Config): View {
-        val col = card(ctx, "Self-test", "Tap to exercise every enabled plugin and list the result.")
-        val out = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        col.addView(Button(ctx).apply {
-            text = "Test all plugins"; isAllCaps = false; textSize = 13f
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            setOnClickListener { runSelfTest(ctx, cfg, out) }
-        })
-        col.addView(out)
-        return col
+    @Composable
+    private fun SelfTestCard(ctx: Context, cfg: KdeConnectConfig.Config) {
+        var lines by remember { mutableStateOf<List<KdeTestLine>>(emptyList()) }
+        KdeCard("Self-test", "Tap to exercise every enabled plugin and list the result.") {
+            WideBtn("Test all plugins") { lines = runSelfTest(ctx, cfg) }
+            Column { MonoLines(lines, 12.sp) }
+        }
     }
 
-    private fun runSelfTest(ctx: android.content.Context, cfg: KdeConnectConfig.Config, out: LinearLayout) {
-        out.removeAllViews()
+    private fun runSelfTest(ctx: Context, cfg: KdeConnectConfig.Config): List<KdeTestLine> {
+        val out = mutableListOf<KdeTestLine>()
         val prefs = KdePluginPrefs(ctx)
         val handled = KdePluginRegistry.plugins.flatMap { it.incoming + it.outgoing }.toSet()
         val target = selectedLiveId()
@@ -1090,37 +1039,60 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
             val on = prefs.isEnabled(pl.id)
             val wired = pl.packet in handled
             val probe = probes[pl.id]
-            val mark: String; val color: Int; val note: String
+            val mark: String; val tone: KdeTone; val note: String
             when {
-                !on -> { mark = "◌"; color = 0x77FFFFFF.toInt(); note = "disabled" }
-                !wired -> { mark = "✗"; color = 0xFFFF8B8B.toInt(); note = "no handler"; fail++ }
+                !on -> { mark = "◌"; tone = KdeTone.DIM; note = "disabled" }
+                !wired -> { mark = "✗"; tone = KdeTone.BAD; note = "no handler"; fail++ }
                 probe != null && target != null -> {
                     runCatching { probe()?.let { KdeConnectManager.send(target, it) } }
-                    mark = "✓"; color = 0xFF8BE9A0.toInt(); note = "sent"; pass++
+                    mark = "✓"; tone = KdeTone.OK; note = "sent"; pass++
                 }
-                probe != null -> { mark = "•"; color = 0xFFFFCC80.toInt(); note = "ready (not connected)"; pass++ }
-                else -> { mark = "✓"; color = 0xFF8BE9A0.toInt(); note = "handler ok"; pass++ }
+                probe != null -> { mark = "•"; tone = KdeTone.WARN; note = "ready (not connected)"; pass++ }
+                else -> { mark = "✓"; tone = KdeTone.OK; note = "handler ok"; pass++ }
             }
-            out.addView(TextView(ctx).apply {
-                text = "$mark  ${pl.name} — $note"
-                setTextColor(color); typeface = Typeface.MONOSPACE; textSize = 12f
-                setPadding(0, dp(2), 0, dp(2))
-            })
+            out += KdeTestLine("$mark  ${pl.name} — $note", tone)
         }
-        out.addView(TextView(ctx).apply {
-            text = "→ $pass ok · $fail failed · ${cfg.plugins.size} total" +
-                if (target == null) "  (connect+pair to fire senders)" else ""
-            setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD; textSize = 12.5f
-            setPadding(0, dp(6), 0, 0)
-        })
+        out += KdeTestLine(
+            "→ $pass ok · $fail failed · ${cfg.plugins.size} total" +
+                if (target == null) "  (connect+pair to fire senders)" else "",
+            KdeTone.PLAIN, bold = true,
+        )
+        return out
     }
 
-    private fun toastUnit(m: String) { toast(m) }
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+    /** Run the read-only reachability probe and render its step trace. */
+    @Composable
+    private fun ProbeSection(ctx: Context) {
+        val p = LocalKitPalette.current
+        var steps by remember { mutableStateOf<List<KdeTestLine>>(emptyList()) }
+        Text("Probe", color = p.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+        WideBtn("Probe wg0 · hosts · peers · LAN", 12.sp) {
+            steps = listOf(KdeTestLine("• probing…", KdeTone.PLAIN))
+            viewLifecycleOwner.lifecycleScope.launch {
+                steps = KdeConnectDiscovery.probeAll(ctx).map { stepLine(it) }
+            }
+        }
+        Column { MonoLines(steps, 12.5.sp) }
+    }
+
+    private fun stepLine(step: KdeConnectDiscovery.Step): KdeTestLine {
+        val mark = when (step.ok) { true -> "✓"; false -> "✗"; null -> "•" }
+        val tone = when (step.ok) { true -> KdeTone.OK; false -> KdeTone.BAD; null -> KdeTone.PLAIN }
+        return KdeTestLine("$mark  ${step.label}: ${step.detail}", tone)
+    }
 
     companion object {
         fun newInstance() = KdeConnectFragment()
         /** #733 the peer selector's view tag (KdeConnectPeerSelectorTest finds it by this). */
         const val PEER_SELECTOR_TAG = "kde-peer-selector"
+
+        /** Which clipboard list [ClipboardCard] is showing. */
+        private const val SHOW_BOTH = 0
+        private const val SHOW_HOST = 1
+        private const val SHOW_OURS = 2
+
+        /** Our own clipboard app — see [ClipboardCard]. */
+        private const val CLOUD_KEYBOARD_PKG = "com.diegonmarcos.cloudkeyboard"
     }
 }

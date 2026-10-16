@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The KDE Connect page's palette as KitPalette roles plus its status-light colours (KdeConnectFragment builds
+     its CloudKitTheme from these), so no colour is spelled in Kotlin. Prefixed kde_: this library is merged
+     into the app's resources and must not collide with its names. -->
+<resources>
+    <color name="kde_surface">#22FFFFFF</color>
+    <color name="kde_surface_selected">#33000000</color>
+    <color name="kde_text">#FFFFFFFF</color>
+    <color name="kde_text_dim">#99FFFFFF</color>
+    <color name="kde_accent">#FFE9D8FD</color>
+    <color name="kde_hairline">#44FFFFFF</color>
+    <color name="kde_ink">#FF000000</color>
+    <color name="kde_ok">#FF8BE9A0</color>
+    <color name="kde_warn">#FFFFCC80</color>
+    <color name="kde_bad">#FFFF8B8B</color>
+    <!-- Status lights: gray not connected, amber connecting, green connected/paired, red error. -->
+    <color name="kde_dot_idle">#FF9E9E9E</color>
+    <color name="kde_dot_busy">#FFFFB300</color>
+    <color name="kde_dot_ok">#FF4CAF50</color>
+    <color name="kde_dot_err">#FFE53935</color>
+</resources>

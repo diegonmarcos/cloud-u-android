@@ -172,9 +172,9 @@ printf '%s' "$KF" | grep -qF 'connectedIds().firstOrNull()' \
   || ok "no action targets 'the first open link'"
 n="$(printf '%s' "$KF" | grep -cF 'selectedLiveId()')"
 [ "$n" -ge 6 ] && ok "$n call sites target the selected peer" || bad "only $n call sites use selectedLiveId()"
-cv="$(fn "$KDE/KdeConnectFragment.kt" onCreateView)"
-sel="$(printf '%s\n' "$cv" | grep -nF 'root.addView(selector)' | cut -d: -f1)"
-clip="$(printf '%s\n' "$cv" | grep -nF 'root.addView(buildClipboardCard' | cut -d: -f1)"
+cv="$(fn "$KDE/KdeConnectFragment.kt" Page)"
+sel="$(printf '%s\n' "$cv" | grep -nF 'PeerSelector(' | cut -d: -f1)"
+clip="$(printf '%s\n' "$cv" | grep -nF 'ClipboardCard(' | cut -d: -f1)"
 [ -n "$sel" ] && [ -n "$clip" ] && [ "$sel" -lt "$clip" ] && ok "the selector sits at the top, above every action card" \
   || bad "the peer selector is not drawn above the action cards (selector@$sel clipboard@$clip)"
 
