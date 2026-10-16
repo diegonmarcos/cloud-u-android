@@ -1,12 +1,23 @@
 package com.diegonmarcos.superapp.cloud
 import com.diegonmarcos.superapp.R
 
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * C3 · WG Mesh — renders the canonical wg-mesh/v1 snapshot
@@ -26,17 +37,24 @@ import androidx.fragment.app.Fragment
  * it's the wstunnel TCP/443 transport of the same wg0 network. The
  * UI groups by transport so it reads as two networks (which is how
  * the user perceives them).
+ *
+ * Compose since #773 (was fragment_c3_mesh.xml); all rendering lives in [MeshView].
  */
-class C3MeshFragment : Fragment(R.layout.fragment_c3_mesh) {
+class C3MeshFragment : KitComposeFragment() {
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        val root   = view.findViewById<LinearLayout>(R.id.mesh_root)
-        val status = view.findViewById<TextView>(R.id.mesh_status)
-        // All rendering lives in the shared [MeshView] builder so the same
-        // table can be folded into the single WireGuard page.
-        status.text = MeshView.statusText(requireContext())
-        MeshView.render(requireContext(), LayoutInflater.from(requireContext()), root)
+    override fun palette() = LauncherPalette.kit(requireContext())
+
+    @Composable
+    override fun Content() {
+        val p = LocalKitPalette.current
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
+            Text(stringResource(R.string.mesh_title), color = p.textPrimary,
+                style = MaterialTheme.typography.headlineSmall)
+            Text(MeshView.statusText(LocalContext.current), color = p.textSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 2.dp, bottom = 12.dp).alpha(0.9f).testTag(MeshView.TAG_STATUS))
+            MeshView.Content()
+        }
     }
 
     companion object { fun newInstance() = C3MeshFragment() }
