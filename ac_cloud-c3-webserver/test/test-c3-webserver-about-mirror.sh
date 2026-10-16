@@ -5,7 +5,7 @@
 # The Home tab is an about-this-phone page in the SHAPE of superapp's About:
 # macro groups under superapp's own headers, in superapp's order. The groups
 # live in server/src/about.rs::MACROS; superapp's live in DevControlFragment.kt
-# as macroHeader(ctx, "...") calls. A label typed slightly differently, a
+# as macro("...") calls. A label typed slightly differently, a
 # group superapp does not have, or two groups swapped is the drift this
 # catches. Groups superapp has that a plain process cannot fill (REPO &
 # RELEASES, MESH, DEV TOOLS, LOGCAT) may be absent: the check is "an ordered
@@ -28,12 +28,12 @@ block = re.search(r"pub const MACROS: &\[&str\] = &\[(.*?)\];", about, re.S)
 if not block:
     print("  FAIL about.rs has no `pub const MACROS: &[&str]`"); sys.exit(1)
 mine = re.findall(r'"([^"]+)"', block.group(1))
-theirs = re.findall(r'macroHeader\(ctx, "([^"]+)"\)', open(sys.argv[2], encoding="utf-8").read())
+theirs = re.findall(r'\bmacro\("([^"]+)"\)', open(sys.argv[2], encoding="utf-8").read())
 bad = []
 if not mine:
     bad.append("about.rs::MACROS is empty — Home would have no groups")
 if not theirs:
-    bad.append("no macroHeader(ctx, \"...\") in DevControlFragment.kt — the detection matched nothing")
+    bad.append("no macro(\"...\") in DevControlFragment.kt — the detection matched nothing")
 pos = -1
 for label in mine:
     if label not in theirs:
