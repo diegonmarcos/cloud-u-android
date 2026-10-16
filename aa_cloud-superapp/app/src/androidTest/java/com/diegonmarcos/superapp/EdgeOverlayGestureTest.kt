@@ -67,26 +67,32 @@ class EdgeOverlayGestureTest {
         assertTrue("SYSTEM_ALERT_WINDOW not granted", Settings.canDrawOverlays(ctx))
         OneHandPrefs.setDebugVisible(ctx, false)
         OneHandController.enable(ctx)          // persists ON and startService() — with no SuperApp activity alive
-        val i = Intent(inst.context, VictimActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        inst.startActivitySync(i)
-        waitFor("victim activity") { VictimActivity.instance != null }
+        // The victim lives in the test package's own process: start it from here, read it back through logcat.
+        sh("logcat -c")
+        inst.context.startActivity(Intent(inst.context, VictimActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        waitFor("victim activity") { victimLog().contains("ready") }
         waitFor("overlay service + 2 strips laid out", 15_000) {
             val s = OneHandOverlayService.instance
             s != null && s.handleCount == 2 && s.handleViews.all { it.width > 0 && it.isAttachedToWindow }
         }
         SystemClock.sleep(1000)
+        sh("logcat -c")   // count only what this test does
     }
 
     @After fun tearDown() {
         OneHandController.disable(ctx)
-        VictimActivity.instance?.finish()
-        waitFor("victim activity gone") { VictimActivity.instance == null }
+        SystemClock.sleep(300)
     }
+
+    /** What the app below reported since setUp: one word per line ("ready", "down", "click", "stop"). */
+    private fun victimLog(): List<String> = sh("logcat -d -s ${VictimActivity.TAG}:I").lines()
+        .mapNotNull { Regex("I ${VictimActivity.TAG}\\s*: (\\w+)").find(it)?.groupValues?.get(1) }
+    private fun victimCount(w: String) = victimLog().count { it == w }
 
     private fun waitFor(what: String, ms: Long = 8_000, c: () -> Boolean) {
         val end = SystemClock.uptimeMillis() + ms
         while (SystemClock.uptimeMillis() < end) { if (c()) return; SystemClock.sleep(100) }
-        throw AssertionError("timed out waiting for $what\n" + sh("dumpsys window windows | grep -i -A2 'onehand\\|superapp' | head -40"))
+        throw AssertionError("timed out waiting for $what\n" + sh("dumpsys window windows | grep -i -A2 'onehand\\|superapp' | head -40") + "victim=" + victimLog())
     }
 
     private fun strips(): List<Rect> = OneHandOverlayService.instance!!.handleViews.map {
@@ -114,7 +120,6 @@ class EdgeOverlayGestureTest {
         ua.takeScreenshot()?.let { b -> File(out, "$name.png").outputStream().use { b.compress(Bitmap.CompressFormat.PNG, 90, it) } }
     }
 
-    private fun victim() = VictimActivity.instance!!
     private fun svc() = OneHandOverlayService.instance!!
 
     // ── tests ────────────────────────────────────────────────────────────────────────────────────
@@ -141,11 +146,11 @@ class EdgeOverlayGestureTest {
         var expect = 0
         for ((what, p) in probes) {
             tap(p.first, p.second); expect++
-            assertEquals("tap $what must reach the app below (clicks)", expect, victim().clicks.get())
+            assertEquals("tap $what must reach the app below (clicks)", expect, victimCount("click"))
         }
         val r = rightStrip()
         tap(r.left - dp(6), r.exactCenterY()); expect++
-        assertEquals("tap left of the right strip reaches the app", expect, victim().clicks.get())
+        assertEquals("tap left of the right strip reaches the app", expect, victimCount("click"))
         assertFalse("a tap must never open the menu", svc().menuShown)
     }
 
@@ -153,7 +158,7 @@ class EdgeOverlayGestureTest {
         val l = leftStrip()
         tap(l.exactCenterX(), l.exactCenterY())
         assertFalse(svc().menuShown)
-        assertFalse("app below must still be in front", victim().stopped)
+        assertFalse("app below must still be in front", (victimCount("stop") > 0))
     }
 
     @Test fun sweepWithoutHoldOpensNothing() {
@@ -163,7 +168,7 @@ class EdgeOverlayGestureTest {
         assertFalse("a sweep with no hold must not open the menu", svc().menuShown)
         up(x + dp(80), y); SystemClock.sleep(300)
         assertFalse(svc().menuShown)
-        assertEquals("sweep must not click the app below", 0, victim().clicks.get())
+        assertEquals("sweep must not click the app below", 0, victimCount("click"))
     }
 
     private fun holdThenPush(edgeLeft: Boolean) {
@@ -180,8 +185,8 @@ class EdgeOverlayGestureTest {
         Log.i(TAG, "windows:\n" + sh("dumpsys window windows | grep -i 'onehand\\|Window #' | head -20"))
         up(x + dir * dp(96), y)
         waitFor("menu window removed after release", 3_000) { !svc().menuShown }
-        assertEquals("hold+push must not click the app below", 0, victim().clicks.get())
-        assertFalse("system back gesture stole the touch (app below was backgrounded)", victim().stopped)
+        assertEquals("hold+push must not click the app below", 0, victimCount("click"))
+        assertFalse("system back gesture stole the touch (app below was backgrounded)", (victimCount("stop") > 0))
     }
 
     @Test fun holdThenPushInwardOpensTheMenuFromTheLeftEdge() = holdThenPush(true)
