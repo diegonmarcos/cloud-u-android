@@ -263,6 +263,9 @@ step_instrument() {
   log "Test: instrumented (needs device)"
   _resolve_signing
   _export_variant_abis
+  # The JVM suites (tracker/timeline rules, libs:maps TimelineHost) run here: this is the CI job that has
+  # gradle, the SDK and the key. (Ship's "unit" step runs before any of them are set up.)
+  in_nix gradle :app:testDebugUnitTest :libs:maps:testDebugUnitTest
   in_nix gradle connectedAndroidTest
 }
 step_lint()       { log "Lint"; in_nix gradle lint; }

@@ -2438,10 +2438,6 @@
       "requires": [
         "python3"
       ]
-    },
-    "unit": {
-      "_doc": "JVM unit tests (app/src/test: tracker engine rules, dead reckoning, segmentation, aggregation, day picker; libs:maps TimelineHostTest). build.sh test runs :app:testDebugUnitTest and :libs:maps:testDebugUnitTest.",
-      "task": ":app:testDebugUnitTest"
     }
   }
 }
