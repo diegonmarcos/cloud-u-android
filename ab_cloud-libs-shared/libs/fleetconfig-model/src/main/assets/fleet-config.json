@@ -610,10 +610,7 @@
       "doc": "Cloud C3 > Containers > Table: the chosen sort column and direction, the Auth Type and VM filters, the category filter and the search text, as one string under the key 'state'.",
       "used_by": [
         "ac_cloud-c3"
-      ],
-      "keys": {
-        "state": "config"
-      }
+      ]
     },
     "contacts_vcards": {
       "kind": "provider",
@@ -2414,11 +2411,13 @@
       "module": "ac_cloud-c3",
       "schema_version": 1,
       "libs": [
+        "lib-ai",
         "lib-analytics",
         "lib-bottomnav",
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model",
+        "lib-model-catalogue",
         "lib-ops",
         "lib-ui-kit",
         "lib-updater"

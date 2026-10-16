@@ -316,12 +316,12 @@ Coverage: 1 covered, 0 gaps.
 
 ## cloud-c3 — `com.diegonmarcos.cloudc3`
 
-Module `ac_cloud-c3`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-ops, lib-ui-kit, lib-updater.
+Module `ac_cloud-c3`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-ops, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
-| `c3_routes_table` | prefs | config (keys: state→config) | yes | Cloud C3 > Containers > Table: the chosen sort column and direction, the Auth Type and VM filters, the category filter and the search text, as one string under the key 'state'. |
+| `c3_routes_table` | prefs | config | yes | Cloud C3 > Containers > Table: the chosen sort column and direction, the Auth Type and VM filters, the category filter and the search text, as one string under the key 'state'. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dagu_prefs` | encrypted | config (keys: bearer_token→secret) | yes | Dagu server URL and user label are account links; bearer_token is a credential. |
 | `dagu_prefs_fallback` | prefs | config (keys: bearer_token→secret) | yes | Plain-prefs fallback of dagu_prefs (same keys). |
