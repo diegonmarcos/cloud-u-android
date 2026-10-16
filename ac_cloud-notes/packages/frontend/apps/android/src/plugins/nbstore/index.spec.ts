@@ -59,6 +59,8 @@ vi.mock('@affine/nbstore', () => ({
     id,
   }),
 }));
+// type-only import in index.ts, but the bundler keeps it as a side-effect import
+vi.mock('@affine/nbstore/sqlite', () => ({}));
 vi.mock('@capacitor/core', () => ({
   registerPlugin: () =>
     new Proxy(

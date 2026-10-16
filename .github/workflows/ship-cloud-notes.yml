@@ -74,7 +74,33 @@ env:
   FORK: notes
 
 jobs:
+  # Phase 0 (cloud-notes-hybrid) storage round trip. Runs on every trigger (never
+  # behind the publish gate: a storage regression must be red even when no APK
+  # would be published) and gates the 40-minute build. The runner script greps
+  # its own output, so a green job means the named tests RAN and passed.
+  storage_tests:
+    name: "Phase 0 storage tests (Rust on-disk reopen + JS adapter)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22.23.2
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+
+      - name: Set up Rust 1.97.1 (pinned by rust-toolchain.toml)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.97.1"
+
+      - name: Phase 0 storage tests
+        run: sh ac_cloud-notes/test/run-phase0-storage.sh
+
   build_and_publish:
+    needs: storage_tests
     name: "Build + publish (notes · arm64-v8a)"
     runs-on: ubuntu-latest
     timeout-minutes: 120
