@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The "app below" for EdgeOverlayGestureTest: a plain activity of the TEST package, so the edge overlay
+         (SuperApp's uid) sits over a foreign uid exactly as it does over a real app. -->
+    <application>
+        <activity
+            android:name="com.diegonmarcos.superapp.edgetest.VictimActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+    </application>
+</manifest>
