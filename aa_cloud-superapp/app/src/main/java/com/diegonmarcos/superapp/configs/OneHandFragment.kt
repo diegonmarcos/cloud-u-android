@@ -1,20 +1,39 @@
 package com.diegonmarcos.superapp.configs
 
 import android.content.Context
-import android.os.Bundle
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.Spinner
-import android.widget.Switch
-import android.widget.TextView
 import android.widget.Toast
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.launcher.SectionPages
 import com.diegonmarcos.superapp.launcher.Sections
@@ -26,8 +45,16 @@ import com.diegonmarcos.superapp.onehand.OneHandController
 import com.diegonmarcos.superapp.onehand.OneHandPrefs
 import com.diegonmarcos.superapp.floatingnav.FloatingNavPrefs
 import com.diegonmarcos.superapp.floatingnav.FloatingNavService
+import com.diegonmarcos.superapp.settings.ConfigButton
+import com.diegonmarcos.superapp.settings.ConfigDropdown
+import com.diegonmarcos.superapp.settings.ConfigRadioRow
+import com.diegonmarcos.superapp.settings.ConfigSwitchRow
+import com.diegonmarcos.superapp.settings.DropdownOption
 import com.diegonmarcos.superapp.settings.HomeSwipePrefs
 import com.diegonmarcos.superapp.ui.AppIconCache
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * Configs > Launcher > One-Hand (the second tab of that page; it was a
@@ -38,6 +65,9 @@ import com.diegonmarcos.superapp.ui.AppIconCache
  * the right handle's in the RIGHT column. Grant the two permissions in the
  * centralized Configs > Permissions page.
  *
+ * Compose since #773 (was a ScrollView of hand-built Views with platform Spinners): each sector picker is a
+ * [ConfigDropdown], whose selection is a user tap only, so merely opening the page can no longer write an override.
+ *
  * This module also owns the THREE home-screen stars (see MainActivity /
  * libs:launcher-onehand — not editable from this screen, this is descriptive only):
  *   - Sirius   — full multi-level circular-menu (Suite/Infos/Labs/Configs…)
@@ -45,51 +75,48 @@ import com.diegonmarcos.superapp.ui.AppIconCache
  *   - Centauri — SAME arc-menu as Canopus, showing the last 9 recently-opened
  *                Android apps (needs Usage-access, Configs > Permissions)
  */
-class OneHandFragment : Fragment() {
+class OneHandFragment : KitComposeFragment() {
 
-    private lateinit var status: TextView
-    private lateinit var toggle: Switch
-    private lateinit var floatingToggle: Switch
+    /** Redraw key of the two mirrored columns of sector pickers: the reset bumps it so they re-read the (now empty) store
+     *  instead of showing the discarded entries. */
+    private var editorEpoch by mutableIntStateOf(0)
 
-    /** The two mirrored columns of sector pickers, held so the reset button can
-     *  redraw them without rebuilding the rest of the page. */
-    private lateinit var edgeMenuGrid: LinearLayout
-    private var contentPadding = 0
+    private var showResetConfirm by mutableStateOf(false)
 
     private data class Option(
         val label: String, val action: GestureAction?,
         val icon: android.graphics.drawable.Drawable? = null,
     )
 
-    override fun onCreateView(inf: LayoutInflater, c: ViewGroup?, s: Bundle?): View {
+    override fun palette() = LauncherPalette.kit(requireContext())
+
+    @Composable
+    override fun Content() {
         val ctx = requireContext()
-        val pad = dp(16)
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL; setPadding(pad, pad, pad, pad)
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            Text("One-Hand", color = LocalKitPalette.current.textPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 4.dp).testTag(TAG_TITLE))
+            caption(
+                "Everything reachable with the thumb alone: the three Home-screen " +
+                "stars, the edge menu that works on top of any app, and the four " +
+                "Home swipes. Content and defaults are data-driven from " +
+                "build.json::onehand — the switches and pickers below are runtime " +
+                "overrides kept in the onehand_prefs store, and each one says which " +
+                "it is.")
+
+            section("Home-Screen Stars")
+            addStars(ctx)
+
+            section("Edge Menu")
+            addEdgeMenu(ctx)
+
+            section("Floating menu")
+            addFloatingMenu(ctx)
+
+            section("Home-Screen Gestures")
+            addHomeGestures(ctx)
         }
-
-        root.addView(title(ctx, "One-Hand"))
-        root.addView(caption(ctx,
-            "Everything reachable with the thumb alone: the three Home-screen " +
-            "stars, the edge menu that works on top of any app, and the four " +
-            "Home swipes. Content and defaults are data-driven from " +
-            "build.json::onehand — the switches and pickers below are runtime " +
-            "overrides kept in the onehand_prefs store, and each one says which " +
-            "it is."))
-
-        section(root, ctx, "Home-Screen Stars")
-        addStars(root, ctx)
-
-        section(root, ctx, "Edge Menu")
-        addEdgeMenu(root, ctx, pad)
-
-        section(root, ctx, "Floating menu")
-        addFloatingMenu(root, ctx, pad)
-
-        section(root, ctx, "Home-Screen Gestures")
-        addHomeGestures(root, ctx)
-
-        return ScrollView(ctx).apply { addView(root) }
+        if (showResetConfirm) ResetConfirm(ctx)
     }
 
     // ────────────────────────────── 1. Stars ──────────────────────────────
@@ -99,16 +126,17 @@ class OneHandFragment : Fragment() {
      * switch here. Every card is read from the SAME config the star itself
      * reads, so this page cannot drift from what the star draws.
      */
-    private fun addStars(root: LinearLayout, ctx: Context) {
+    @Composable
+    private fun addStars(ctx: Context) {
         val cm = CircularMenu.config()
 
-        root.addView(caption(ctx, getString(R.string.onehand_stars_intro, cm.starPairOffsetXDp)))
+        caption(stringResource(R.string.onehand_stars_intro, cm.starPairOffsetXDp))
 
         // The one distinction the whole design rests on. Everything a star can
         // show is either a place you GO or a thing you DO, and the ring it
         // lands on is what tells them apart.
-        root.addView(subhead(ctx, "Two rings, two meanings"))
-        root.addView(caption(ctx,
+        subhead("Two rings, two meanings")
+        caption(
             "OUTER full circle — APPS / PAGES. Where you GO. A branch redraws " +
             "the ring one level deeper, so the outer ring is a tree you walk " +
             "with the thumb; a leaf navigates and closes. Nothing on this ring " +
@@ -118,10 +146,10 @@ class OneHandFragment : Fragment() {
             "which is why it sits apart on its own smaller disc, " +
             "${cm.ringGapDp}dp inside the outer ring — the gap IS the meaning.\n\n" +
             "Same two rings on every star. Only the source of each ring " +
-            "changes, which is the whole difference between them:"))
+            "changes, which is the whole difference between them:")
 
         val nodes = cm.nodes
-        starCard(ctx, root, "✦ Sirius — all apps",
+        starCard("✦ Sirius — all apps",
             "screen centre · radius ${cm.radiusDp}dp",
             "The full section tree. " +
                 "${nodes.count { it.childKey != null }} of its ${nodes.size} entries " +
@@ -129,7 +157,7 @@ class OneHandFragment : Fragment() {
             nodes.map { it.label },
             cm.actions.map { it.label })
 
-        starCard(ctx, root, "✦ Centauri — recent apps",
+        starCard("✦ Centauri — recent apps",
             "midway to the island · shares Canopus's half-moon fan",
             "The last 9 Android apps you opened, newest first, with their real " +
                 "launcher icons — a live list from the system, not build.json. " +
@@ -142,10 +170,10 @@ class OneHandFragment : Fragment() {
         // that is about this app's own pages rather than the phone's apps, which
         // is the distinction the card has to carry — the two stars are side by
         // side and wear the identical glyph.
-        starCard(ctx, root, getString(R.string.onehand_star_recent_tabs_name),
-            getString(R.string.onehand_star_recent_tabs_place, cm.starPairOffsetXDp),
-            getString(R.string.onehand_star_recent_tabs_what),
-            listOf(getString(R.string.onehand_star_recent_tabs_outer)),
+        starCard(stringResource(R.string.onehand_star_recent_tabs_name),
+            stringResource(R.string.onehand_star_recent_tabs_place, cm.starPairOffsetXDp),
+            stringResource(R.string.onehand_star_recent_tabs_what),
+            listOf(stringResource(R.string.onehand_star_recent_tabs_outer)),
             emptyList())
 
         // Polaris gets its own three lines rather than a starCard, because
@@ -154,14 +182,14 @@ class OneHandFragment : Fragment() {
         // instead of a star that goes straight somewhere.
         val search = CircularMenu.searchStar()
         if (search.enabled) {
-            root.addView(subhead(ctx, getString(R.string.onehand_star_search_name)))
-            root.addView(caption(ctx, getString(R.string.onehand_star_search_place, search.topOffsetDp)))
-            root.addView(caption(ctx, getString(R.string.onehand_star_search_what)))
-            root.addView(caption(ctx, "  → ${search.target}"))
+            subhead(stringResource(R.string.onehand_star_search_name))
+            caption(stringResource(R.string.onehand_star_search_place, search.topOffsetDp))
+            caption(stringResource(R.string.onehand_star_search_what))
+            caption("  → ${search.target}")
         }
 
         val arc = ArcMenu.config()
-        starCard(ctx, root, "✦ Canopus — configs",
+        starCard("✦ Canopus — configs",
             "above the bottom-nav island · radius ${arc.radiusDp}dp",
             "The pages of the \"${arc.section}\" section, so the settings you " +
                 "reach for most are one thumb-touch from Home instead of two " +
@@ -169,121 +197,131 @@ class OneHandFragment : Fragment() {
             SectionPages.pagesFor(arc.section).map { it.label },
             CircularMenu.actionsOf("arc_menu").map { it.label })
 
-        root.addView(caption(ctx,
+        caption(
             "Glyph ${cm.starGlyph} and size ${cm.starSizeSp}sp are shared by all " +
             "of them (onehand.circular_menu.star), so they always match. Editing " +
             "any ring means editing build.json and shipping an APK — these are " +
-            "baked at build time, not runtime settings."))
+            "baked at build time, not runtime settings.")
     }
 
     /** One star: name, where it sits, and its two rings spelled out. */
-    private fun starCard(
-        ctx: Context, root: LinearLayout, name: String, place: String,
-        what: String, outer: List<String>, inner: List<String>,
-    ) {
-        root.addView(subhead(ctx, name))
-        root.addView(caption(ctx, place))
-        root.addView(caption(ctx, what))
-        root.addView(caption(ctx, "  ◯ Outer — apps/pages (${outer.size}): " +
-            if (outer.isEmpty()) "—" else outer.joinToString(" · ")))
-        root.addView(caption(ctx, "  ◑ Inner — actions (${inner.size}): " +
-            if (inner.isEmpty()) "none" else inner.joinToString(" · ")))
+    @Composable
+    private fun starCard(name: String, place: String, what: String, outer: List<String>, inner: List<String>) {
+        subhead(name)
+        caption(place)
+        caption(what)
+        caption("  ◯ Outer — apps/pages (${outer.size}): " +
+            if (outer.isEmpty()) "—" else outer.joinToString(" · "))
+        caption("  ◑ Inner — actions (${inner.size}): " +
+            if (inner.isEmpty()) "none" else inner.joinToString(" · "))
     }
 
     // ───────────────────────────── 2. Edge menu ─────────────────────────────
 
-    private fun addEdgeMenu(root: LinearLayout, ctx: Context, pad: Int) {
+    @Composable
+    private fun addEdgeMenu(ctx: Context) {
         val cfg = OneHandConfig.effective(ctx)
 
-        root.addView(caption(ctx,
+        caption(
             "Two handles pinned to the screen edges, live on top of whatever app " +
             "is in front. Each handle answers several gestures, and every gesture " +
             "can be pointed at an action or at any installed app. Unlike the " +
-            "stars this needs two system permissions, so it can be off."))
+            "stars this needs two system permissions, so it can be off.")
 
-        status = TextView(ctx)
-        root.addView(status)
-
-        toggle = Switch(ctx).apply {
-            text = "One-Hand edge handles"; setPadding(0, pad, 0, pad)
-            setOnCheckedChangeListener { _, on ->
-                if (on) {
-                    if (OneHandController.ready(ctx)) OneHandController.enable(ctx)
-                    else { isChecked = false; Toast.makeText(ctx,
-                        "Grant 'Display over apps' in Configs › Permissions",
-                        Toast.LENGTH_LONG).show() }
-                } else OneHandController.disable(ctx)
+        // Re-read on every return to the page: the grants are made on another screen.
+        var status by remember { mutableStateOf("") }
+        var masterOn by remember { mutableStateOf(OneHandController.isOn(ctx)) }
+        var floatingOn by remember { mutableStateOf(FloatingNavPrefs.enabled(ctx)) }
+        val lifecycle = viewLifecycleOwner.lifecycle
+        LaunchedEffect(Unit) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                val overlay = if (OneHandController.canDrawOverlay(ctx)) "✓" else "✗"
+                status = "Requires (grant in Configs › Permissions):\n" +
+                    "Display over apps: $overlay"
+                masterOn = OneHandController.isOn(ctx)
+                floatingOn = FloatingNavPrefs.enabled(ctx)
             }
         }
-        root.addView(toggle)
+        floatingState = floatingOn
+        Text(status, color = LocalKitPalette.current.textPrimary, fontSize = 13.sp)
+
+        ConfigSwitchRow("One-Hand edge handles", masterOn, tag = "master") { on ->
+            if (on) {
+                if (OneHandController.ready(ctx)) { masterOn = true; OneHandController.enable(ctx) }
+                else { masterOn = false; Toast.makeText(ctx,
+                    "Grant 'Display over apps' in Configs › Permissions",
+                    Toast.LENGTH_LONG).show() }
+            } else { masterOn = false; OneHandController.disable(ctx) }
+        }
 
         // How the menu is summoned. Swipe (Samsung edge-panel style) is the default:
         // touch the edge handle + drag inward. A plain tap passes through to the app.
-        root.addView(subhead(ctx, "Activation"))
+        subhead("Activation")
         val triggers = listOf(
             OneHandConfig.Trigger.SWIPE to "Hold & swipe in (Samsung edge style)",
             OneHandConfig.Trigger.LONG_PRESS to "Long-press the handle",
             OneHandConfig.Trigger.TOUCH to "Touch the handle",
         )
-        root.addView(android.widget.RadioGroup(ctx).apply {
-            val current = cfg.trigger
-            triggers.forEach { (t, label) ->
-                addView(android.widget.RadioButton(ctx).apply {
-                    text = label; id = View.generateViewId(); isChecked = t == current
-                    setOnClickListener { OneHandPrefs.setTrigger(ctx, t); OneHandController.refresh(ctx) }
-                })
+        var trigger by remember { mutableStateOf(cfg.trigger) }
+        triggers.forEach { (t, label) ->
+            ConfigRadioRow(label, selected = trigger == t, tag = t.name) {
+                trigger = t
+                OneHandPrefs.setTrigger(ctx, t); OneHandController.refresh(ctx)
             }
-        })
-        root.addView(caption(ctx,
+        }
+        caption(
             "Saved as a runtime override. Swipe-in needs ${cfg.swipeThresholdDp}dp " +
             "of inward travel before it counts; long-press needs " +
             "${cfg.longPressMs}ms. Both come from onehand.defaults — under them " +
             "the touch passes through to the app underneath, which is what keeps " +
-            "the handles from stealing edge swipes."))
+            "the handles from stealing edge swipes.")
 
         // Two mirrored columns: left-edge handles on the left, right on the right.
-        root.addView(subhead(ctx, "Handle gestures"))
-        root.addView(caption(ctx,
+        subhead("Handle gestures")
+        caption(
             "One block per handle, mirrored to the edge it lives on. Every row " +
             "is a runtime override; 'None' clears it back to the build.json " +
             "default. The app list holds your build.json favourites (★) first, " +
-            "then every launchable app on the phone."))
-        contentPadding = pad
-        edgeMenuGrid = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        root.addView(edgeMenuGrid)
-        fillHandleEditors(ctx)
+            "then every launchable app on the phone.")
+        val (editorCfg, options) = remember(editorEpoch) { fillHandleEditors(ctx) }
+        Row(Modifier.fillMaxWidth().testTag("onehand:editors"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (rightColumn in listOf(false, true)) {
+                Column(Modifier.weight(1f)) {
+                    editorCfg.handles.filter { (it.edge == OneHandConfig.Edge.RIGHT) == rightColumn }.forEach { handle ->
+                        androidx.compose.runtime.key(editorEpoch, handle.id) { addHandleEditor(ctx, handle, options) }
+                    }
+                }
+            }
+        }
 
         // The owner's own "reset to default", asked for on this surface after
         // task #258 changed the baked order and his stored overrides hid it.
         // ONE button for BOTH handles: the twelve entries he sent were a single
         // layout described as two blocks, so resetting one side and not the
         // other would leave him with half the design he asked for.
-        root.addView(android.widget.Button(ctx).apply {
-            text = getString(R.string.onehand_edge_reset_button)
-            setOnClickListener { confirmEdgeMenuReset(ctx) }
-        })
-        root.addView(caption(ctx, getString(R.string.onehand_edge_reset_caption)))
+        ConfigButton(stringResource(R.string.onehand_edge_reset_button)) { confirmEdgeMenuReset(ctx) }
+        caption(stringResource(R.string.onehand_edge_reset_caption))
 
         // Full disclosure: the geometry is real and it is NOT editable here.
         // Saying so beats letting someone hunt for a slider that was never built.
-        root.addView(subhead(ctx, "Handle placement (build-time)"))
-        root.addView(caption(ctx, cfg.handles.joinToString("\n") { h ->
+        subhead("Handle placement (build-time)")
+        caption(cfg.handles.joinToString("\n") { h ->
             val len = if (h.lengthDp > 0) "${h.lengthDp}dp" else "${h.lengthPct}% of the edge"
             "  ${h.id}: ${h.edge.name.lowercase()} edge · ${h.positionPct}% down · " +
                 "$len long · ${h.thicknessDp}dp thick · ${h.transparency}% transparent" +
                 (if (h.edgeInsetDp > 0) " · inset ${h.edgeInsetDp}dp" else "")
-        }))
-        root.addView(caption(ctx,
+        })
+        caption(
             "Baked in onehand.handles — no runtime override exists, so changing " +
             "these means editing build.json. The inset is deliberate on curved " +
             "screens: the border pixels sit on the curve where touch is " +
-            "unreliable. Gesture-nav inset: ${cfg.edgeInsetGestureDp}dp."))
+            "unreliable. Gesture-nav inset: ${cfg.edgeInsetGestureDp}dp.")
 
         // A whole feature the page never mentioned. Off by default, and with no
         // switch anywhere, so without this block it is invisible.
-        root.addView(subhead(ctx, "Two-finger radial menu"))
+        subhead("Two-finger radial menu")
         val r = cfg.radial
-        root.addView(caption(ctx,
+        caption(
             if (r.enabled)
                 "ON. Hold two fingers still for ${r.holdMs}ms anywhere " +
                 "(within ${r.slopDp}dp of drift) and a ${r.radiusDp}dp ring of " +
@@ -293,199 +331,166 @@ class OneHandFragment : Fragment() {
                 "OFF. A separate summon: two fingers held still for " +
                 "${r.holdMs}ms anywhere on screen open a ${r.radiusDp}dp " +
                 "ring of ${r.items.size} shortcuts, no handle needed. It has no " +
-                "runtime switch — enable onehand.radial.enabled in build.json. Needs Android 14+; the detector is observe-only below that."))
+                "runtime switch — enable onehand.radial.enabled in build.json. Needs Android 14+; the detector is observe-only below that.")
 
-        root.addView(subhead(ctx, "Troubleshooting"))
-        root.addView(Switch(ctx).apply {
-            text = "Show handles (debug — bright red bars)"
-            isChecked = OneHandPrefs.debugVisible(ctx)
-            setOnCheckedChangeListener { _, on ->
-                OneHandPrefs.setDebugVisible(ctx, on)
-                OneHandController.refresh(ctx)  // rebuild handles with new visibility
-            }
-        })
-        root.addView(caption(ctx,
-            "The handles are invisible by default — paint them red to find out " +
-            "where they actually are before blaming a gesture."))
-        root.addView(android.widget.Button(ctx).apply {
-            text = "Activate 30s (test)"
-            setOnClickListener {
-                val ok = OneHandController.testActivate(ctx, 30_000L)
-                Toast.makeText(ctx,
-                    if (ok) "One-Hand ON for 30s, then auto-off"
-                    else "Grant Display-over-apps first (Configs › Permissions)",
-                    Toast.LENGTH_LONG).show()
-            }
-        })
-        root.addView(caption(ctx,
-            "Turns everything on for 30 seconds and off again, so a permission " +
-            "check does not leave the handles enabled."))
-    }
-
-    /**
-     * (Re)draw the per-sector pickers from the CURRENT stored state.
-     *
-     * Called once while the page is built and again after a reset. A Spinner
-     * keeps whatever selection it was constructed with, so clearing the store
-     * without redrawing would leave the discarded entries on display — the
-     * classic "the button does nothing" report, from a button that did exactly
-     * what it said.
-     */
-    private fun fillHandleEditors(ctx: Context) {
-        val cfg = OneHandConfig.effective(ctx)
-        val options = buildOptions(cfg)
-        edgeMenuGrid.removeAllViews()
-        val leftColumn = column(ctx)
-        val rightColumn = column(ctx)
-        edgeMenuGrid.addView(leftColumn)
-        edgeMenuGrid.addView(rightColumn)
-        cfg.handles.forEach { handle ->
-            val target = if (handle.edge == OneHandConfig.Edge.RIGHT) rightColumn else leftColumn
-            addHandleEditor(target, ctx, handle, options, contentPadding)
+        subhead("Troubleshooting")
+        var debug by remember { mutableStateOf(OneHandPrefs.debugVisible(ctx)) }
+        ConfigSwitchRow("Show handles (debug — bright red bars)", debug, tag = "debug") { on ->
+            debug = on
+            OneHandPrefs.setDebugVisible(ctx, on)
+            OneHandController.refresh(ctx)  // rebuild handles with new visibility
         }
+        caption(
+            "The handles are invisible by default — paint them red to find out " +
+            "where they actually are before blaming a gesture.")
+        ConfigButton("Activate 30s (test)") {
+            val ok = OneHandController.testActivate(ctx, 30_000L)
+            Toast.makeText(ctx,
+                if (ok) "One-Hand ON for 30s, then auto-off"
+                else "Grant Display-over-apps first (Configs › Permissions)",
+                Toast.LENGTH_LONG).show()
+        }
+        caption(
+            "Turns everything on for 30 seconds and off again, so a permission " +
+            "check does not leave the handles enabled.")
+    }
+
+    /** The floating button's switch state, set by [addEdgeMenu]'s resume effect and read by [addFloatingMenu] (one page, one value). */
+    private var floatingState by mutableStateOf(false)
+
+    /**
+     * (Re)read the per-sector pickers' inputs from the CURRENT stored state.
+     *
+     * Called once while the page is composed and again after a reset (the epoch moves). A picker keeps whatever selection
+     * it was constructed with, so clearing the store without re-reading would leave the discarded entries on display — the
+     * classic "the button does nothing" report, from a button that did exactly what it said. Nothing from the previous
+     * read is kept: the config and the option list are rebuilt whole, and the pickers are keyed on the epoch.
+     */
+    private fun fillHandleEditors(ctx: Context): Pair<OneHandConfig, List<Option>> {
+        val cfg = OneHandConfig.effective(ctx)
+        return cfg to buildOptions(cfg)
     }
 
     /**
-     * Confirm, then discard the stored edge-menu overrides.
+     * Ask, then discard the stored edge-menu overrides.
      *
-     * Confirmed because it throws away work only the owner can reproduce, and
-     * confirmed in the shape the other destructive actions in this app already
-     * use (ProfileFragment's clear-credential and erase-profile): a Material
-     * dialog that SAYS WHAT IS LOST rather than asking "are you sure", Cancel on
-     * the negative button, the verb on the positive one.
+     * Confirmed because it throws away work only the owner can reproduce, and confirmed in the shape the other destructive
+     * actions in this app already use: a dialog that SAYS WHAT IS LOST rather than asking "are you sure", Cancel on the
+     * dismiss button, the verb on the confirm one.
      *
-     * The message also lists what survives. This page carries four unrelated
-     * groups of settings in one scroll — stars, edge menus, the floating button,
-     * the Home swipes — and only one of them is being discarded; a reset that
-     * left the owner unsure which is a reset he will not press.
+     * The message also lists what survives. This page carries four unrelated groups of settings in one scroll — stars,
+     * edge menus, the floating button, the Home swipes — and only one of them is being discarded; a reset that left the
+     * owner unsure which is a reset he will not press.
      */
-    private fun confirmEdgeMenuReset(ctx: Context) {
-        val stored = OneHandPrefs.edgeMenuOverrideCount(ctx)
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
-            .setTitle(R.string.onehand_edge_reset_title)
-            .setMessage(getString(R.string.onehand_edge_reset_message, stored))
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.onehand_edge_reset_confirm) { _, _ ->
-                val removed = OneHandPrefs.clearEdgeMenuOverrides(ctx)
-                // Both surfaces that draw these entries, because they are two
-                // different windows: the pickers on this page, and the overlay
-                // the edge-menu service owns on top of every other app.
-                fillHandleEditors(ctx)
-                OneHandController.refresh(ctx)
-                Toast.makeText(ctx, getString(R.string.onehand_edge_reset_done, removed),
-                    Toast.LENGTH_LONG).show()
-            }
-            .show()
+    private fun confirmEdgeMenuReset(@Suppress("UNUSED_PARAMETER") ctx: Context) { showResetConfirm = true }
+
+    @Composable
+    private fun ResetConfirm(ctx: Context) {
+        val stored = remember { OneHandPrefs.edgeMenuOverrideCount(ctx) }
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = { Text(stringResource(R.string.onehand_edge_reset_title)) },
+            text = { Text(stringResource(R.string.onehand_edge_reset_message, stored)) },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirm = false }) { Text(stringResource(android.R.string.cancel)) }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showResetConfirm = false
+                    resetEdgeMenu(ctx)
+                }, modifier = Modifier.testTag("onehand:reset-confirm")) { Text(stringResource(R.string.onehand_edge_reset_confirm)) }
+            },
+        )
+    }
+
+    /** The delete, reachable ONLY from the confirm button above. */
+    private fun resetEdgeMenu(ctx: Context) {
+        val removed = OneHandPrefs.clearEdgeMenuOverrides(ctx)
+        // Both surfaces that draw these entries, because they are two different windows: the pickers on this page, and the
+        // overlay the edge-menu service owns on top of every other app.
+        editorEpoch++
+        OneHandController.refresh(ctx)
+        Toast.makeText(ctx, getString(R.string.onehand_edge_reset_done, removed), Toast.LENGTH_LONG).show()
     }
 
     // ───────────────────────── 3. Floating menu ─────────────────────────
 
     /**
-     * A separate service from the edge handles: different lifetime (both need only the
-     * overlay permission). It is a START_STICKY
-     * foreground service, so once on it OUTLIVES the SuperApp — closing the app
-     * does not take the button with it, which is the whole point of it and the
-     * reason it needs an off switch that sticks just as hard.
+     * A separate service from the edge handles: different lifetime (both need only the overlay permission). It is a
+     * START_STICKY foreground service, so once on it OUTLIVES the SuperApp — closing the app does not take the button with
+     * it, which is the whole point of it and the reason it needs an off switch that sticks just as hard.
      */
-    private fun addFloatingMenu(root: LinearLayout, ctx: Context, pad: Int) {
-        root.addView(caption(ctx,
+    @Composable
+    private fun addFloatingMenu(ctx: Context) {
+        caption(
             "A round button that floats over every app and opens the same nav " +
             "menu. Runs as a foreground service, so it stays after Cloud " +
             "SuperApp is closed and returns after a reboot. Needs only " +
-            "'Display over apps' — no accessibility grant."))
-        floatingToggle = Switch(ctx).apply {
-            text = "Floating button (persists when the app is closed)"
-            setPadding(0, pad, 0, pad)
-            // Set the state BEFORE wiring the listener, so opening this screen
-            // cannot start or stop the service by itself.
-            isChecked = FloatingNavPrefs.enabled(ctx)
-            setOnCheckedChangeListener { _, on ->
-                if (on && !android.provider.Settings.canDrawOverlays(ctx)) {
-                    isChecked = false
-                    Toast.makeText(ctx,
-                        "Grant 'Display over apps' in Configs › Permissions",
-                        Toast.LENGTH_LONG).show()
-                    return@setOnCheckedChangeListener
-                }
+            "'Display over apps' — no accessibility grant.")
+        // The state is READ from the store; only a user tap writes it, so opening this screen cannot start or stop the service.
+        ConfigSwitchRow("Floating button (persists when the app is closed)", floatingState, tag = "floating") { on ->
+            if (on && !android.provider.Settings.canDrawOverlays(ctx)) {
+                floatingState = false
+                Toast.makeText(ctx,
+                    "Grant 'Display over apps' in Configs › Permissions",
+                    Toast.LENGTH_LONG).show()
+            } else {
+                floatingState = on
                 FloatingNavService.setEnabled(ctx, on)
             }
         }
-        root.addView(floatingToggle)
 
-        root.addView(android.widget.Button(ctx).apply {
-            text = "Reset position to top-center"
-            setOnClickListener { FloatingNavService.resetPosition(ctx) }
-        })
-        root.addView(caption(ctx,
+        ConfigButton("Reset position to top-center") { FloatingNavService.resetPosition(ctx) }
+        caption(
             "The button remembers wherever you drag it. This forgets that spot, " +
             "so it goes back to the middle of the top edge — measured from the " +
             "screen as it is right now, so it lands correctly whatever the size " +
             "or rotation. A visible button moves at once; a switched-off one " +
-            "comes back centred."))
+            "comes back centred.")
     }
 
     // ─────────────────────────── 4. Home gestures ───────────────────────────
 
-    private fun addHomeGestures(root: LinearLayout, ctx: Context) {
+    @Composable
+    private fun addHomeGestures(ctx: Context) {
         // Runtime-editable overrides of build.json::onehand.home_swipes. These
         // fire ONLY while on the Home section (MainActivity guards on
         // currentSection == "home"); off-home the inner fragment owns the gesture.
-        root.addView(caption(ctx,
+        caption(
             "Swipes on the Home screen itself — no handle, no permission, no " +
             "star. They fire ONLY while Home is the current section: open any " +
             "other section and the page you are on owns the gesture again, so " +
-            "these can never eat a list scroll or a map pan."))
-        addHomeSwipePicker(root, ctx, "Swipe up",    { HomeSwipePrefs(ctx).up },    { HomeSwipePrefs(ctx).up = it })
-        addHomeSwipePicker(root, ctx, "Swipe left",  { HomeSwipePrefs(ctx).left },  { HomeSwipePrefs(ctx).left = it })
-        addHomeSwipePicker(root, ctx, "Swipe right", { HomeSwipePrefs(ctx).right }, { HomeSwipePrefs(ctx).right = it })
-        addHomeSwipePicker(root, ctx, "Swipe down",  { HomeSwipePrefs(ctx).down },  { HomeSwipePrefs(ctx).down = it })
-        root.addView(caption(ctx,
+            "these can never eat a list scroll or a map pan.")
+        addHomeSwipePicker("Swipe up",    { HomeSwipePrefs(ctx).up },    { HomeSwipePrefs(ctx).up = it })
+        addHomeSwipePicker("Swipe left",  { HomeSwipePrefs(ctx).left },  { HomeSwipePrefs(ctx).left = it })
+        addHomeSwipePicker("Swipe right", { HomeSwipePrefs(ctx).right }, { HomeSwipePrefs(ctx).right = it })
+        addHomeSwipePicker("Swipe down",  { HomeSwipePrefs(ctx).down },  { HomeSwipePrefs(ctx).down = it })
+        caption(
             "Runtime overrides; defaults come from onehand.home_swipes, baked " +
-            "into BuildConfig at build time."))
+            "into BuildConfig at build time.")
     }
 
     // ──────────────────────────── small builders ────────────────────────────
 
-    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-
-    private fun title(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; textSize = 22f
-        setTypeface(typeface, android.graphics.Typeface.BOLD)
-        setPadding(0, 0, 0, dp(4))
+    /** Section rule + heading — the top-level parts of this page. */
+    @Composable
+    private fun section(t: String) {
+        Column(Modifier.fillMaxWidth().padding(top = 20.dp)) {
+            Column(Modifier.fillMaxWidth().height(1.dp).background(Color(0x33FFFFFF))) {}
+            Text(t, color = LocalKitPalette.current.textPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 12.dp, bottom = 6.dp).testTag("onehand:section:$t"))
+        }
     }
 
-    /** Section rule + heading — the three top-level parts of this page. */
-    private fun section(root: LinearLayout, ctx: Context, t: String) {
-        root.addView(View(ctx).apply {
-            setBackgroundColor(0x33FFFFFF)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
-                topMargin = dp(20); bottomMargin = dp(12)
-            }
-        })
-        root.addView(TextView(ctx).apply {
-            text = t; textSize = 17f
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
-            setPadding(0, 0, 0, dp(6))
-        })
+    @Composable
+    private fun subhead(t: String) {
+        Text(t, color = LocalKitPalette.current.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 12.dp, bottom = 2.dp))
     }
 
-    private fun subhead(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; textSize = 15f
-        setTypeface(typeface, android.graphics.Typeface.BOLD)
-        setPadding(0, dp(12), 0, dp(2))
-    }
-
-    private fun caption(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t
-        setTextColor(0x99FFFFFF.toInt())
-        setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-        setPadding(0, 0, 0, dp(6))
-    }
-
-    private fun column(ctx: Context) = LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+    @Composable
+    private fun caption(t: String) {
+        Text(t, color = LocalKitPalette.current.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
     }
 
     private fun buildOptions(cfg: OneHandConfig): List<Option> = buildList {
@@ -551,123 +556,55 @@ class OneHandFragment : Fragment() {
             ?.let { n -> Sections.iconResFor(ctx, n).takeIf { r -> r != 0 } }
             ?.let { r -> ctx.getDrawable(r) }
 
-    private fun optionAdapter(ctx: Context, options: List<Option>) =
-        object : ArrayAdapter<Option>(ctx, 0, options) {
-            override fun getView(pos: Int, cv: View?, parent: ViewGroup) = rowView(ctx, options[pos])
-            override fun getDropDownView(pos: Int, cv: View?, parent: ViewGroup) = rowView(ctx, options[pos])
-        }
-
-    /** One spinner row: app icon (if any) + label. */
-    private fun rowView(ctx: Context, o: Option): View {
-        val d = resources.displayMetrics.density
-        fun dp(v: Int) = (v * d).toInt()
-        return LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(10), dp(8), dp(10))
-            o.icon?.let {
-                addView(android.widget.ImageView(ctx).apply {
-                    setImageDrawable(it)
-                    layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginEnd = dp(10) }
-                })
-            }
-            addView(TextView(ctx).apply { text = o.label })
+    /** One home-swipe row: a caption + a picker over the shared action vocabulary. Reads the current value via [get],
+     *  persists via [set]. */
+    @Composable
+    private fun addHomeSwipePicker(label: String, get: () -> String, set: (String) -> Unit) {
+        Text(label, color = LocalKitPalette.current.textPrimary, modifier = Modifier.padding(top = 8.dp))
+        val actions = HomeSwipePrefs.ACTIONS
+        val cur = actions.indexOfFirst { it.first == get() }.coerceAtLeast(0)
+        var selected by remember { mutableIntStateOf(cur) }
+        ConfigDropdown(actions.map { DropdownOption(it.second) }, selected, tag = label) { pos ->
+            selected = pos
+            set(actions[pos].first)
         }
     }
 
-    private fun addHandleEditor(
-        col: LinearLayout, ctx: Context, h: OneHandConfig.Handle,
-        options: List<Option>, pad: Int,
-    ) {
-        col.addView(TextView(ctx).apply {
-            text = "${h.edge.name.lowercase().replaceFirstChar { it.uppercase() }} handle"
-            gravity = Gravity.CENTER; setPadding(0, pad, 0, pad / 2); textSize = 16f
-        })
+    /** One handle's block: its title and one picker per sector. */
+    @Composable
+    private fun addHandleEditor(ctx: Context, h: OneHandConfig.Handle, options: List<Option>) {
+        Text("${h.edge.name.lowercase().replaceFirstChar { it.uppercase() }} handle",
+            color = LocalKitPalette.current.textPrimary, fontSize = 16.sp, textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp))
         for (slot in OneHandConfig.slotsFor(h.edge)) {
-            col.addView(TextView(ctx).apply {
-                text = slot.label; gravity = Gravity.CENTER; setPadding(0, pad / 2, 0, 0)
-            })
+            Text(slot.label, color = LocalKitPalette.current.textPrimary, textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             val current = h.gestures[slot.key]
             val hit = options.indexOfFirst { it.action?.serialize() == current?.serialize() }
             // NOT coerceAtLeast(0). Index 0 is "None", so a target the list did
             // not contain silently displayed a WORKING sector as empty — and
-            // because the spinner persists what it displays, one careless tap
+            // because the picker persists what it displays, one careless tap
             // then wrote that None over the real action. That is the mechanism
             // behind all three "AI Claude is missing" reports. A target we
             // cannot name now gets its own visible row, carrying the unchanged
             // action, so it reads as wrong instead of reading as unset.
             val rowOptions =
                 if (hit >= 0) options
-                else options + Option(getString(R.string.onehand_sector_unresolved,
+                else options + Option(stringResource(R.string.onehand_sector_unresolved,
                     current?.serialize().orEmpty()), current)
-            val sel = if (hit >= 0) hit else rowOptions.lastIndex
-            val adapter = optionAdapter(ctx, rowOptions)
-            col.addView(Spinner(ctx).apply {
-                this.adapter = adapter; setSelection(sel)
-                // Spinner.setSelection POSTS its callback, so a listener attached
-                // here still receives the PROGRAMMATIC selection and used to
-                // persist it. Merely opening this screen therefore wrote an
-                // override for every slot at whatever happened to be displayed —
-                // and for an unmapped slot that is "None", which then shadowed
-                // the build.json default forever. That is why a new default
-                // could be shipped and never appear on a device that had once
-                // visited this screen.
-                //
-                // Our post() is queued AFTER the one setSelection made, so by
-                // the time suppress clears, the programmatic callback has been
-                // and gone. Only real user choices are written.
-                var suppress = true
-                post { suppress = false }
-                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onNothingSelected(p: AdapterView<*>?) {}
-                    override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                        if (suppress) return
-                        OneHandPrefs.setAction(ctx, h.id, slot.key, rowOptions[pos].action)
-                        OneHandController.refresh(ctx)
-                    }
-                }
-            })
+            var sel by remember { mutableIntStateOf(if (hit >= 0) hit else rowOptions.lastIndex) }
+            // A selection happens ONLY on a tap (see ConfigDropdown), so merely opening this screen writes nothing — the
+            // programmatic-selection callback the old Spinner delivered, and its `suppress` flag, no longer exist.
+            ConfigDropdown(rowOptions.map { DropdownOption(it.label, it.icon) }, sel, tag = "${h.id}:${slot.key}") { pos ->
+                sel = pos
+                OneHandPrefs.setAction(ctx, h.id, slot.key, rowOptions[pos].action)
+                OneHandController.refresh(ctx)
+            }
         }
     }
 
-    /** One home-swipe row: a caption + a Spinner over the shared action
-     *  vocabulary. Reads the current value via [get], persists via [set]. */
-    private fun addHomeSwipePicker(
-        col: LinearLayout, ctx: Context, label: String,
-        get: () -> String, set: (String) -> Unit,
-    ) {
-        val d = resources.displayMetrics.density
-        col.addView(TextView(ctx).apply {
-            text = label; setPadding(0, (8 * d).toInt(), 0, 0)
-        })
-        val actions = HomeSwipePrefs.ACTIONS
-        val adapter = ArrayAdapter(
-            ctx, android.R.layout.simple_spinner_dropdown_item, actions.map { it.second })
-        val cur = actions.indexOfFirst { it.first == get() }.coerceAtLeast(0)
-        col.addView(Spinner(ctx).apply {
-            this.adapter = adapter; setSelection(cur)
-            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onNothingSelected(p: AdapterView<*>?) {}
-                override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                    set(actions[pos].first)
-                }
-            }
-        })
+    companion object {
+        const val TAG_TITLE = "onehand:title"
+        fun newInstance() = OneHandFragment()
     }
-
-    override fun onResume() {
-        super.onResume()
-        val ctx = requireContext()
-        val overlay = if (OneHandController.canDrawOverlay(ctx)) "✓" else "✗"
-        status.text = "Requires (grant in Configs › Permissions):\n" +
-            "Display over apps: $overlay"
-        toggle.isChecked = OneHandController.isOn(ctx)
-        // Only assign when it differs: Switch fires its listener on a real
-        // change, and re-applying the same value would pointlessly restart the
-        // service every time this screen is resumed.
-        val fOn = FloatingNavPrefs.enabled(ctx)
-        if (floatingToggle.isChecked != fOn) floatingToggle.isChecked = fOn
-    }
-
-    companion object { fun newInstance() = OneHandFragment() }
 }

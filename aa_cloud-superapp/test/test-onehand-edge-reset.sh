@@ -129,31 +129,37 @@ code "$FRAG" | grep -qF 'FloatingNavService.resetPosition' \
   || bad "FloatingNavService.resetPosition has gone — an unrelated feature lost its control"
 
 echo "== T2: the reset cannot fire without the confirmation =="
-CONFIRM="$(body "$FRAG" confirmEdgeMenuReset)"
+# Compose: the dialog is ResetConfirm (confirmButton/dismissButton) and the delete is resetEdgeMenu, reachable only from it.
+CONFIRM="$(body "$FRAG" ResetConfirm)
+$(body "$FRAG" resetEdgeMenu)"
+OPENER="$(body "$FRAG" confirmEdgeMenuReset)"
 CLEAR_CALLS=$(code "$FRAG" | grep -cF 'OneHandPrefs.clearEdgeMenuOverrides(')
 [ "$CLEAR_CALLS" = "1" ] \
   && ok "the fragment calls clearEdgeMenuOverrides exactly once" \
   || bad "$CLEAR_CALLS live calls to clearEdgeMenuOverrides — a second one is a path around the dialog"
 grep -qF 'OneHandPrefs.clearEdgeMenuOverrides(' <<<"$CONFIRM" \
-  && ok "and that call is inside confirmEdgeMenuReset" \
-  || bad "the clear is not inside confirmEdgeMenuReset — it fires without asking"
+  && ok "and that call is inside the confirmation (resetEdgeMenu, called from ResetConfirm)" \
+  || bad "the clear is not inside the confirmation — it fires without asking"
 # Order matters: the delete has to sit INSIDE the positive-button lambda, not
 # before the builder. Compare line numbers within the extracted function.
-POS_LINE=$(grep -nF 'setPositiveButton' <<<"$CONFIRM" | head -1 | cut -d: -f1)
-DEL_LINE=$(grep -nF 'OneHandPrefs.clearEdgeMenuOverrides(' <<<"$CONFIRM" | head -1 | cut -d: -f1)
+POS_LINE=$(grep -nF 'confirmButton =' <<<"$CONFIRM" | head -1 | cut -d: -f1)
+DEL_LINE=$(grep -nF 'resetEdgeMenu(ctx)' <<<"$CONFIRM" | head -1 | cut -d: -f1)
 if [ -n "$POS_LINE" ] && [ -n "$DEL_LINE" ] && [ "$DEL_LINE" -gt "$POS_LINE" ]; then
-  ok "the delete is inside the positive button's handler (line $DEL_LINE after setPositiveButton at $POS_LINE)"
+  ok "the delete is inside the positive button's handler (line $DEL_LINE after confirmButton at $POS_LINE)"
 else
-  bad "the delete does not follow setPositiveButton (positive='$POS_LINE' delete='$DEL_LINE') — it may run on open"
+  bad "the delete does not follow confirmButton (positive='$POS_LINE' delete='$DEL_LINE') — it may run on open"
 fi
-grep -qF 'setNegativeButton' <<<"$CONFIRM" \
+grep -qF 'dismissButton =' <<<"$CONFIRM" \
   && ok "the dialog offers a way out that changes nothing" \
   || bad "the dialog has no negative button — the only exit is to reset"
 # The button must open the dialog, never the delete.
-BTN_BLOCK="$(awk '/onehand_edge_reset_button/ { inside = 1 } inside; inside && /\}\)/ { exit }' "$FRAG")"
+BTN_BLOCK="$(grep -F 'onehand_edge_reset_button' "$FRAG" | grep -F ConfigButton)"
 grep -qF 'confirmEdgeMenuReset(' <<<"$BTN_BLOCK" \
   && ok "the button's click handler opens the confirmation" \
   || bad "the button does not call confirmEdgeMenuReset"
+grep -qF 'showResetConfirm = true' <<<"$OPENER" && ! grep -qF 'clearEdgeMenuOverrides' <<<"$OPENER" \
+  && ok "confirmEdgeMenuReset only opens the dialog (flag), it does not delete" \
+  || bad "confirmEdgeMenuReset does not just open the dialog"
 grep -qF 'clearEdgeMenuOverrides' <<<"$BTN_BLOCK" \
   && bad "the button deletes directly — the confirmation is decoration" \
   || ok "the button does not delete directly"
@@ -351,7 +357,7 @@ print(sum(1 for h in d['onehand']['handles'] for s in h['gestures'] if s != 'cen
 
 echo "== T8: the menu repaints without an app restart =="
 # Two surfaces draw these entries and they are two different windows.
-grep -qF 'fillHandleEditors(' <<<"$CONFIRM" \
+grep -qF 'editorEpoch++' <<<"$CONFIRM" \
   && ok "the reset redraws the pickers on this page" \
   || bad "the reset does not redraw the pickers — the discarded entries would stay on screen"
 grep -qF 'OneHandController.refresh(' <<<"$CONFIRM" \
@@ -361,9 +367,10 @@ FILLBODY="$(body "$FRAG" fillHandleEditors)"
 grep -qF 'OneHandConfig.effective(ctx)' <<<"$FILLBODY" \
   && ok "the redraw RE-READS the config rather than reusing what the page was built with" \
   || bad "fillHandleEditors does not re-read the config — it would repaint the same stale values"
-grep -qF 'removeAllViews()' <<<"$FILLBODY" \
-  && ok "and clears the old pickers first, so a Spinner cannot keep its old selection" \
-  || bad "fillHandleEditors does not clear the old views — the columns would be drawn twice"
+# Compose has no removeAllViews: the pickers are keyed on editorEpoch, so a bump discards their remembered selection.
+{ grep -qF 'remember(editorEpoch)' "$FRAG" && grep -qF 'key(editorEpoch' "$FRAG"; } \
+  && ok "and the pickers are keyed on the epoch, so a dropdown cannot keep its old selection" \
+  || bad "the pickers are not keyed on editorEpoch — the columns would keep the discarded entries"
 REFRESHBODY="$(body "$CONTROLLER" refresh)"
 grep -qF 'startIfEnabled(ctx)' <<<"$REFRESHBODY" \
   && grep -qF 'showHandles()' <<<"$(body "$SERVICE" onStartCommand)" \

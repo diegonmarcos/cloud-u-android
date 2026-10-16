@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -96,4 +97,55 @@ internal fun ConfigCheckRow(label: String, checked: Boolean, enabled: Boolean = 
 @Composable
 internal fun ConfigColumn(modifier: Modifier = Modifier, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     Column(modifier.fillMaxWidth().padding(18.dp), content = content)
+}
+
+/** One entry of a [ConfigDropdown]: the row text and, optionally, the app/page icon drawn before it. */
+internal class DropdownOption(val label: String, val icon: android.graphics.drawable.Drawable? = null)
+
+/**
+ * A pick-one list that opens under the field. Replaces the platform Spinner: a selection happens ONLY when the user taps a
+ * row (there is no programmatic-selection callback to suppress, which is the whole reason the old pickers carried a
+ * `suppress` flag), and the field shows the option [selected] points at.
+ */
+@Composable
+internal fun ConfigDropdown(options: List<DropdownOption>, selected: Int, tag: String, onSelect: (Int) -> Unit) {
+    val p = LocalKitPalette.current
+    var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth()) {
+        DropdownRow(options.getOrNull(selected), trailing = if (open) "▴" else "▾",
+            modifier = Modifier.clickable { open = true }.testTag("cfg:dropdown:$tag"))
+        androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEachIndexed { i, o ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { DropdownRow(o, trailing = "") },
+                    onClick = { open = false; onSelect(i) },
+                    modifier = Modifier.testTag("cfg:option:$tag:$i"),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DropdownRow(o: DropdownOption?, trailing: String, modifier: Modifier = Modifier) {
+    val p = LocalKitPalette.current
+    Row(modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        o?.icon?.let {
+            com.diegonmarcos.superapp.apps.AppIcon(it, 28.dp, Modifier.padding(end = 10.dp))
+        }
+        Text(o?.label.orEmpty(), color = p.textPrimary, style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f))
+        if (trailing.isNotEmpty()) Text(trailing, color = p.textSecondary)
+    }
+}
+
+/** A labelled switch row (the old platform Switch with its text): the whole row toggles. */
+@Composable
+internal fun ConfigSwitchRow(label: String, checked: Boolean, tag: String = label, onChange: (Boolean) -> Unit) {
+    val p = LocalKitPalette.current
+    Row(Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
+        .padding(vertical = 8.dp).testTag("cfg:switch:$tag"), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = p.textPrimary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        androidx.compose.material3.Switch(checked = checked, onCheckedChange = null)
+    }
 }
