@@ -111,8 +111,8 @@ check("isPanelUp(mTranslateBar)" in ins and not stale, f"P3 the insets reserve h
 print("== P4 the bar wears the keyboard's colours ==")
 lits = sorted(set(re.findall(r"0x[0-9A-Fa-f]{8}", bar)))
 check(not lits, f"P4 TranslateBarView has no hard-coded ARGB colour {lits or ''}")
-check(re.search(r"Color\.(WHITE|BLACK|DKGRAY|GRAY)", bar) is None, "P4 TranslateBarView paints nothing in fixed Color.*")
-check("fun setPalette(" in bar and "setBackgroundColor(p.background)" in body(bar, r"private fun applyPalette\("),
+check(re.search(r"Color\.(WHITE|BLACK|DKGRAY|GRAY|White|Black|DarkGray|Gray)\b", bar) is None, "P4 TranslateBarView paints nothing in fixed Color.*")
+check("fun setPalette(" in bar and "setBackgroundColor(p.background)" in body(bar, r"fun setPalette\("),
       "P4 the bar's background comes from the palette")
 tp = body(ime, r"TranslatePalette translatePalette\(")
 check("fromKeyboard(" in tp and "ColorType.MAIN_BACKGROUND" in tp and "ColorType.KEY_TEXT" in tp and "mColors" in tp,
@@ -126,12 +126,12 @@ check("readableOn(" in pal and "MIN_TEXT_CONTRAST = 4.5" in pal and not re.searc
 print("== P5 the bar fits above the keys ==")
 check("setMaxHeight(translateBarMaxHeight())" in tt and "getWrapperView()" in body(ime, r"private int translateBarMaxHeight\("),
       "P5 LatinIME caps the bar at the keys' height")
-om = body(bar, r"override fun onMeasure\(")
-check("maxBarHeight" in om and "MeasureSpec.AT_MOST" in om, "P5 the bar's onMeasure honours the cap")
+om = body(bar, r"override fun Body\(")
+check("maxBarHeight" in om and "heightIn(max" in om, "P5 the bar's onMeasure honours the cap")
 
 print("== P6 the bar closes back to the keyboard ==")
-cl = re.search(r"closeView = TextView\(context\)\.apply \{(.*?)\n        \}", bar, re.S)
-check(cl is not None and "onClose?.run()" in cl.group(1) and "contentDescription" in cl.group(1),
+cl = re.search(r"contentDescription = ctx\.getString\(R\.string\.translate_bar_close\)[^}]*\}\s*\.clickable \{ onClose\?\.run\(\) \}", bar)
+check(cl is not None,
       "P6 a labelled close control runs onClose")
 check("this::hideTranslateBar);" in tt, "P6 onClose is hideTranslateBar (the keyboard stays up)")
 kd = body(ime, r"public boolean onKeyDown\(")
@@ -176,7 +176,7 @@ mutate "the insets reserve a stale bar's height" "$IME" \
 mutate "the fixed near-black slab comes back" "$BAR" \
     "s=s.replace('        setBackgroundColor(p.background)\n','        setBackgroundColor(0xF21B1B20.toInt())\n',1)" "P4 TranslateBarView has no hard-coded"
 mutate "white text whatever the theme" "$BAR" \
-    "s=s.replace('previewView.setTextColor(palette.text)\n        previewView.setTypeface(null, Typeface.NORMAL)','previewView.setTextColor(android.graphics.Color.WHITE)\n        previewView.setTypeface(null, Typeface.NORMAL)',1)" "P4 TranslateBarView paints nothing"
+    "s=s.replace('Color(if (showingStatus) p.muted else p.text)','Color.White',1)" "P4 TranslateBarView paints nothing"
 mutate "the open keeps an old palette" "$IME" \
     "s=s.replace('        } else {\n            mTranslateBar.setPalette(translatePalette());\n','        } else {\n',1)" "P4 every open"
 mutate "no height cap" "$IME" \

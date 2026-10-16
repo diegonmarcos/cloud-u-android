@@ -103,7 +103,7 @@ while IFS='|' read -r res action; do
     || bad "T5 chip $res is missing or not wired to $action ($T/TranslateBarView.kt)"
 import re, sys
 code = open(sys.argv[1], encoding='utf-8').read()
-m = re.search(r'chip\(context\.getString\(R\.string\.%s\)\)\s*\{([^}]*)\}'
+m = re.search(r'Chip\(ctx\.getString\(R\.string\.%s\)[^{]*\{([^}]*)\}'
               % re.escape(sys.argv[2]), code)
 sys.exit(0 if m and sys.argv[3] in m.group(1) else 1)
 PY

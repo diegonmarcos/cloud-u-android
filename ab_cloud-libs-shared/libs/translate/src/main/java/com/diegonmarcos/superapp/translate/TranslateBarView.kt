@@ -4,22 +4,59 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.BackgroundColorSpan
+import android.util.AttributeSet
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputConnection
-import android.widget.ArrayAdapter
-import android.widget.LinearLayout
-import android.widget.ListPopupWindow
-import android.widget.TextView
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.diegonmarcos.superapp.uikit.KitImeComposeView
+import com.diegonmarcos.superapp.uikit.KitPalette
 import java.util.Locale
 
 /**
@@ -87,7 +124,9 @@ enum class TranslateEdit {
  * Settings + recent pairs: [TranslatePrefs]. Engine: [Translator].
  * Lives in libs:translate; the cloud-keyboard tree (libs/keyboard) hosts it in LatinIME.
  */
-class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
+class TranslateBarView @JvmOverloads constructor(
+    context: Context, attrs: AttributeSet? = null
+) : KitImeComposeView(context, attrs), ImeTextBox {
 
     /** Supplies the current InputConnection (the IME's getCurrentInputConnection). */
     fun interface IcProvider { fun get(): InputConnection? }
@@ -106,16 +145,16 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     // No colour of its own: the host hands in the KEYBOARD's palette ([setPalette]).
     // The fixed near-black slab that used to sit here is what made the bar a black box
     // on a light keyboard — see [TranslatePalette].
-    private var palette = TranslatePalette.DARK
+    private var palette by mutableStateOf(TranslatePalette.DARK)
     /** Ceiling the host sets so the bar never outgrows the keys under it; 0 = none yet. */
-    private var maxBarHeight = 0
+    private var maxBarHeight by mutableIntStateOf(0)
 
     private var icp: IcProvider? = null
     private var onClose: Runnable? = null
     private var keyboardLang = "en"
-    private var fromTag = AUTO
-    private var toTag = "en"
-    private var detectedTag: String? = null
+    private var fromTag by mutableStateOf(AUTO)
+    private var toTag by mutableStateOf("en")
+    private var detectedTag by mutableStateOf<String?>(null)
     private var translated: String? = null
 
     /**
@@ -164,103 +203,44 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     // the box the moment the user taps it again. See [KeyHandoff].
     private val keys = KeyHandoff()
     private var liveCommit = TranslatePrefs.DEFAULT_LIVE_COMMIT
-    private var applyMode = TranslatePrefs.DEFAULT_APPLY_MODE
+    private var applyMode by mutableStateOf(TranslatePrefs.DEFAULT_APPLY_MODE)
 
-    private val fromChip: TextView
-    private val toChip: TextView
-    private val swapView: TextView
-    private val closeView: TextView
-    private val inputView: TranslateInputView
-    private val inputScroll: CappedScrollView
-    private val inputCap: Int
-    private val previewView: TextView
-    private val insertBtn: TextView
-    private val replaceBtn: TextView
-    private val actionChips = ArrayList<TextView>()
+    // What the bar shows besides the chips.
+    private var previewText by mutableStateOf("")
+    /** True while [previewText] holds a status line rather than a translation. */
+    private var showingStatus by mutableStateOf(true)
+    private var insertVisible by mutableStateOf(true)   // Insert/Replace hide while live commit writes the field
+    private var inputTick by mutableIntStateOf(0)       // bumped to re-apply [editor] onto [inputView]
+    private var picker by mutableStateOf<Picker?>(null)
+    private var menu by mutableStateOf<List<MenuItem>?>(null)
+
+    /** One row of the long-press edit menu. */
+    private class MenuItem(val label: String, val run: () -> Unit)
+
+    // The input box stays the View it always was — its grapheme-aware tap / double-tap / drag /
+    // long-press handling (and the enhance bar, which shares it) is not worth re-deriving — hosted
+    // in the Compose bar through AndroidView.
+    private val inputView = TranslateInputView(context).apply {
+        textSize = 16f; setPadding(dp(10), dp(6), dp(10), dp(6))
+        isClickable = true
+    }
+    // Capped and SCROLLABLE, not capped by maxLines: the bar must stay short
+    // enough to leave the keys visible, but a maxLines cap makes everything past
+    // the last line unreachable — the caret walks off the box and the user is
+    // editing text they cannot see. INPUT_LINES is a window, not a limit.
+    private val inputScroll = CappedScrollView(context, inputView.lineHeight * INPUT_LINES + dp(12)).apply {
+        isFillViewport = true
+        addView(inputView, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+    }
     private val ui = Handler(Looper.getMainLooper())
     private var pending: Runnable? = null
     private var slow: Runnable? = null
 
     init {
-        orientation = VERTICAL
-        setPadding(dp(10), dp(4), dp(10), dp(8))
         // Opaque from the first frame, even before the host's palette arrives: a bar that
         // draws nothing is the IME window showing through, which is black.
         setBackgroundColor(palette.background)
-
-        // ── Row 1: From  ⇄  To ............................. ✕ ───────────────
-        val row = LinearLayout(context).apply { orientation = HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        fromChip = chip("") { showLangMenu(fromChip, true) }
-        toChip = chip("") { showLangMenu(toChip, false) }
-        row.addView(fromChip)
-        swapView = TextView(context).apply {
-            text = "⇄"; textSize = 18f; gravity = Gravity.CENTER
-            minWidth = dp(44); minHeight = dp(40)
-            contentDescription = context.getString(R.string.translate_bar_swap)
-            isClickable = true; setOnClickListener { swap() }
-        }
-        row.addView(swapView)
-        row.addView(toChip)
-        row.addView(View(context), LayoutParams(0, 1, 1f)) // spacer
-        // The way back to the keyboard. A real touch target (48dp), not a 16sp glyph
-        // with a few dp of padding that a thumb misses and lands on the app behind.
-        closeView = TextView(context).apply {
-            text = "✕"; textSize = 18f; gravity = Gravity.CENTER
-            minWidth = dp(48); minHeight = dp(44)
-            contentDescription = context.getString(R.string.translate_bar_close)
-            isClickable = true
-            setOnClickListener { onClose?.run() }
-        }
-        row.addView(closeView)
-        addView(row, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-
-        // ── Row 2: input buffer ──────────────────────────────────────────────
-        inputView = TranslateInputView(context).apply {
-            textSize = 16f; setPadding(dp(10), dp(6), dp(10), dp(6))
-            isClickable = true
-        }
         attachInputTouch()
-        // Capped and SCROLLABLE, not capped by maxLines: the bar must stay short
-        // enough to leave the keys visible, but a maxLines cap makes everything past
-        // the last line unreachable — the caret walks off the box and the user is
-        // editing text they cannot see. INPUT_LINES is a window, not a limit.
-        inputScroll = CappedScrollView(context, inputView.lineHeight * INPUT_LINES + dp(12)).apply {
-            isFillViewport = true
-            addView(inputView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        }
-        inputCap = inputScroll.maxHeight   // the window's natural size; onMeasure may shrink it to fit
-        addView(inputScroll, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(2)
-        })
-
-        // ── Row 3: the result / status ───────────────────────────────────────
-        previewView = TextView(context).apply {
-            textSize = 15f; maxLines = 3; ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(dp(10), dp(6), dp(10), dp(6))
-            minHeight = dp(34)
-        }
-        addView(previewView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(6); bottomMargin = dp(6)
-        })
-
-        // ── Row 4: actions ───────────────────────────────────────────────────
-        val actions = LinearLayout(context).apply { orientation = HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        insertBtn = chip(context.getString(R.string.translate_bar_insert)) { apply(TranslatePrefs.APPLY_INSERT) }
-        replaceBtn = chip(context.getString(R.string.translate_bar_replace)) { apply(TranslatePrefs.APPLY_REPLACE) }
-        actions.addView(insertBtn); actions.gap()
-        actions.addView(replaceBtn); actions.gap()
-        actions.addView(chip(context.getString(R.string.translate_bar_paste)) { paste() }.also { actionChips.add(it) }); actions.gap()
-        actions.addView(chip(context.getString(R.string.translate_bar_copy)) { copy() }.also { actionChips.add(it) }); actions.gap()
-        actions.addView(chip(context.getString(R.string.translate_bar_clear)) { clear() }.also { actionChips.add(it) })
-        // Scrolls sideways rather than clipping the last chip on a narrow screen or at a
-        // large font scale.
-        addView(android.widget.HorizontalScrollView(context).apply {
-            isHorizontalScrollBarEnabled = false
-            addView(actions)
-        }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-
-        applyPalette()
-        renderInput(); renderChips(); highlightPrimary()
     }
 
     /**
@@ -270,9 +250,7 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     fun setPalette(p: TranslatePalette) {
         if (p == palette) return
         palette = p
-        applyPalette()
-        renderInput(); highlightPrimary()
-        showStatusColours()
+        setBackgroundColor(p.background)
     }
 
     /**
@@ -283,37 +261,17 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     fun setMaxHeight(px: Int) {
         if (px == maxBarHeight) return
         maxBarHeight = px
-        requestLayout()
     }
 
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        inputScroll.maxHeight = inputCap
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-        val cap = maxBarHeight
-        if (cap > 0 && measuredHeight > cap) {
-            val over = measuredHeight - cap
-            inputScroll.maxHeight = maxOf(inputView.lineHeight + dp(12), inputCap - over)
-            inputScroll.forceLayout()   // its spec may not change, and the cap did
-            super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(cap, MeasureSpec.AT_MOST))
-        }
-    }
-
-    private fun applyPalette() {
-        val p = palette
-        setBackgroundColor(p.background)
-        swapView.setTextColor(p.muted)
-        closeView.setTextColor(p.text)
-        // The boxes are outlined as well as filled: on a near-white or near-black keyboard
-        // a surface can only step a little off the background, and the outline is what
-        // says where the input ends and the result begins.
-        inputScroll.background = boxBg(p.surface, p.outline)
-        previewView.background = boxBg(p.surface, p.outline)
-        inputView.caretColor = p.caret
-        for (c in listOf(fromChip, toChip) + actionChips) {
-            c.background = chipBg(p.chip); c.setTextColor(p.onChip)
-        }
-        // insertBtn / replaceBtn: highlightPrimary() colours them, primary vs not.
-    }
+    override fun palette(): KitPalette = KitPalette.fromArgb(
+        surface = palette.surface,
+        surfaceSelected = palette.chip,
+        textPrimary = palette.text,
+        textSecondary = palette.muted,
+        accent = palette.accent,
+        hairline = palette.outline,
+        tileInk = palette.onAccent,
+    )
 
     /** Wire the bar to the IME. [keyboardLang] = active subtype language (detection fallback + default target). */
     fun bind(provider: IcProvider, keyboardLang: String, onCloseAction: Runnable) {
@@ -344,9 +302,8 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
                 ?: DEFAULT_LANGS.firstOrNull { it != fromTag && langs.contains(it) } ?: toTag
         }
         // Live-commit writes straight into the field — Insert/Replace would double it.
-        insertBtn.visibility = if (liveCommit) View.GONE else View.VISIBLE
-        replaceBtn.visibility = insertBtn.visibility
-        highlightPrimary(); renderInput(); renderChips()
+        insertVisible = !liveCommit
+        renderInput()
         // Say it on open, not after the first keystroke: with no engine every key
         // would otherwise "Translating…" for 300 ms and then fail, one key at a time.
         val client = TranslateEngines.client
@@ -449,30 +406,19 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
         inputView.attachEditing(editor, onClaim = keys::reclaim, onChange = ::renderInput, onMenu = ::showEditMenu)
 
     private fun showEditMenu() {
-        val labels = ArrayList<String>()
-        val actions = ArrayList<() -> Unit>()
-        fun item(label: String, run: () -> Unit) { labels.add(label); actions.add(run) }
-        item("Paste") { paste() }
+        val items = ArrayList<MenuItem>()
+        items.add(MenuItem("Paste") { paste() })
         if (editor.hasSelection()) {
-            item("Cut") { cutSelection() }
-            item("Copy selection") { copySelection() }
+            items.add(MenuItem("Cut") { cutSelection() })
+            items.add(MenuItem("Copy selection") { copySelection() })
         }
         if (editor.selLo() != 0 || editor.selHi() != editor.length)
-            item("Select all") { editor.selectAll(); renderInput() }
+            items.add(MenuItem("Select all") { editor.selectAll(); renderInput() })
         // Only offered when there is something to put back, so the menu never promises
         // an undo that does nothing.
-        if (editor.canUndo()) item("Undo") { editor.undo(); onChanged() }
-        item("Clear") { clear() }
-        val popup = ListPopupWindow(context)
-        popup.anchorView = inputView
-        popup.setBackgroundDrawable(roundBg(palette.surface, 12))
-        popup.setAdapter(object : ArrayAdapter<String>(context, android.R.layout.simple_list_item_1, labels) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
-                (super.getView(position, convertView, parent) as TextView).apply { setTextColor(palette.text) }
-        })
-        popup.width = dp(200)
-        popup.setOnItemClickListener { _, _, pos, _ -> popup.dismiss(); actions[pos]() }
-        popup.show()
+        if (editor.canUndo()) items.add(MenuItem("Undo") { editor.undo(); onChanged() })
+        items.add(MenuItem("Clear") { clear() })
+        menu = items
     }
 
     private fun onChanged() {
@@ -502,10 +448,8 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
         translated = out
         showingStatus = false
         val det = r.detected
-        if (fromTag == AUTO && det != null && det != "und") { detectedTag = det; renderChips() }
-        previewView.text = out
-        previewView.setTextColor(palette.text)
-        previewView.setTypeface(null, Typeface.NORMAL)
+        if (fromTag == AUTO && det != null && det != "und") detectedTag = det
+        previewText = out
         if (liveCommit) pushOutput(out)
     }
 
@@ -551,7 +495,7 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
             ?: run { toast(context.getString(R.string.translate_bar_no_detection)); return })
             else fromTag
         fromTag = toTag; toTag = f; detectedTag = null
-        renderChips(); onChanged()
+        onChanged()
     }
 
     /**
@@ -638,8 +582,7 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
         output = Output.LOST
         // There still has to be a way to get the translation out, and live commit
         // is no longer one of them.
-        insertBtn.visibility = View.VISIBLE
-        replaceBtn.visibility = View.VISIBLE
+        insertVisible = true
         showStatus(context.getString(R.string.translate_bar_taken_over))
     }
 
@@ -655,21 +598,27 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     }
 
     // ── rendering ────────────────────────────────────────────────────────────
-    private fun renderInput() {
+    /** Re-apply [editor]'s state onto the hosted input view (see [applyInput]). */
+    private fun renderInput() { inputTick++ }
+
+    private fun applyInput() {
+        inputTick // read: a bump re-runs the AndroidView update that calls this
+        val p = palette
+        inputView.caretColor = p.caret
         if (editor.isEmpty) {
             inputView.text = context.getString(R.string.translate_bar_hint)
-            inputView.setTextColor(palette.hint)
+            inputView.setTextColor(p.hint)
             inputView.setTypeface(null, Typeface.ITALIC)
             inputView.caret = -1
             return
         }
-        inputView.setTextColor(palette.text)
+        inputView.setTextColor(p.text)
         inputView.setTypeface(null, Typeface.NORMAL)
         // A copy, not the live StringBuilder: the TextView would otherwise render a
         // buffer that keeps mutating underneath its layout.
         if (editor.hasSelection()) {
             inputView.text = SpannableString(editor.text).apply {
-                setSpan(BackgroundColorSpan(palette.selection), editor.selLo(), editor.selHi(),
+                setSpan(BackgroundColorSpan(p.selection), editor.selLo(), editor.selHi(),
                     Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             inputView.caret = -1          // a range and an insertion point are mutually exclusive
@@ -685,35 +634,9 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
         inputView.post { inputView.revealCaret() }
     }
 
-    /** True while [previewView] holds a status line rather than a translation. */
-    private var showingStatus = true
-
     private fun showStatus(msg: String) {
         showingStatus = true
-        previewView.text = msg
-        showStatusColours()
-    }
-
-    private fun showStatusColours() {
-        if (!showingStatus) { previewView.setTextColor(palette.text); return }
-        previewView.setTextColor(palette.muted)
-        previewView.setTypeface(null, Typeface.ITALIC)
-    }
-
-    private fun renderChips() {
-        fromChip.text = if (fromTag == AUTO) "AUTO" + (detectedTag?.let { " (${it.uppercase()})" } ?: "") + " ▾"
-                        else fromTag.uppercase() + " ▾"
-        toChip.text = toTag.uppercase() + " ▾"
-    }
-
-    private fun highlightPrimary() {
-        val p = palette
-        val insertPrimary = applyMode == TranslatePrefs.APPLY_INSERT
-        val replacePrimary = applyMode == TranslatePrefs.APPLY_REPLACE
-        insertBtn.background = chipBg(if (insertPrimary) p.accent else p.chip)
-        insertBtn.setTextColor(if (insertPrimary) p.onAccent else p.onChip)
-        replaceBtn.background = chipBg(if (replacePrimary) p.accent else p.chip)
-        replaceBtn.setTextColor(if (replacePrimary) p.onAccent else p.onChip)
+        previewText = msg
     }
 
     // ── language picker ──────────────────────────────────────────────────────
@@ -732,13 +655,15 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
         class Language(val code: String) : LangRow()
     }
 
+    private class Picker(val isFrom: Boolean, val rows: List<LangRow>)
+
     /**
      * Tap a chip → picker, in three sections: Recent pairs (both sides at once),
-     * Most used, then every language. Headers are real rows but disabled, and the
-     * click handler reads `rows[pos]` instead of doing index arithmetic against the
-     * section sizes — the arithmetic is what broke as soon as headers existed.
+     * Most used, then every language. Headers are real rows but not clickable, and the
+     * click handler reads the row it was given instead of doing index arithmetic against
+     * the section sizes — the arithmetic is what broke as soon as headers existed.
      */
-    private fun showLangMenu(anchor: View, isFrom: Boolean) {
+    private fun showLangMenu(isFrom: Boolean) {
         val langs = toLangs()
         val recents = TranslatePrefs.recentPairs(context)
         val rows = ArrayList<LangRow>()
@@ -751,66 +676,146 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
         MOST_USED.filter { langs.contains(it) }.forEach { rows.add(LangRow.Language(it)) }
         rows.add(LangRow.Header("All languages"))
         langs.forEach { rows.add(LangRow.Language(it)) }
+        picker = Picker(isFrom, rows)
+    }
 
-        val lpw = ListPopupWindow(context)
-        lpw.anchorView = anchor
-        lpw.isModal = true
-        // The keyboard's colours, not the platform popup's: the rows below set their own
-        // text colour, and on a light system popup the old white rows were invisible.
-        lpw.setBackgroundDrawable(roundBg(palette.surface, 12))
-        lpw.width = dp(260)
-        lpw.height = dp(320)
-        lpw.setAdapter(object : ArrayAdapter<LangRow>(context, android.R.layout.simple_list_item_1, rows) {
-            override fun areAllItemsEnabled() = false
-            override fun isEnabled(position: Int) = rows[position] !is LangRow.Header
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val v = super.getView(position, convertView, parent) as TextView
-                val row = rows[position]
-                if (row is LangRow.Header) {
-                    v.text = row.label
-                    v.setTextColor(palette.muted); v.textSize = 12f
-                    v.setTypeface(null, Typeface.BOLD); v.setAllCaps(true)
-                } else {
-                    v.text = when (row) {
-                        is LangRow.RecentPair -> "${langName(row.from)} → ${langName(row.to)}"
-                        is LangRow.Language -> if (row.code == AUTO) "Auto-detect" else langName(row.code)
-                        else -> ""
-                    }
-                    v.setTextColor(palette.text); v.textSize = 16f
-                    v.setTypeface(null, Typeface.NORMAL); v.setAllCaps(false)
-                }
-                return v
-            }
-        })
-        lpw.setOnItemClickListener { _, _, pos, _ ->
-            when (val row = rows[pos]) {
-                is LangRow.Header -> return@setOnItemClickListener   // disabled above; belt and braces
-                is LangRow.RecentPair -> { fromTag = row.from; toTag = row.to }
-                is LangRow.Language -> if (isFrom) fromTag = row.code else toTag = row.code
-            }
-            detectedTag = null
-            lpw.dismiss(); renderChips(); onChanged()
+    private fun pick(p: Picker, row: LangRow) {
+        when (row) {
+            is LangRow.Header -> return
+            is LangRow.RecentPair -> { fromTag = row.from; toTag = row.to }
+            is LangRow.Language -> if (p.isFrom) fromTag = row.code else toTag = row.code
         }
-        lpw.show()
+        detectedTag = null
+        picker = null
+        onChanged()
     }
 
     private fun langName(code: String): String =
         Locale(code).displayLanguage.let { n -> if (n.equals(code, ignoreCase = true)) code.uppercase() else "$n  ($code)" }
 
-    // ── view helpers ─────────────────────────────────────────────────────────
-    private fun chip(label: String, onTap: () -> Unit) = TextView(context).apply {
-        text = label; textSize = 14f; gravity = Gravity.CENTER
-        setPadding(dp(14), dp(6), dp(14), dp(6))
-        minHeight = dp(36)
-        isClickable = true; setOnClickListener { onTap() }
-        layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
+    // ── the bar ──────────────────────────────────────────────────────────────
+    @Composable
+    override fun Body() {
+        val p = palette
+        val cap: Dp = with(LocalDensity.current) { if (maxBarHeight > 0) maxBarHeight.toDp() else Dp.Unspecified }
+        Box(Modifier.fillMaxWidth().then(if (cap != Dp.Unspecified) Modifier.heightIn(max = cap) else Modifier)
+            .background(Color(p.background))) {
+            Main(p)
+            picker?.let { PickerPanel(p, it) }
+            menu?.let { MenuPanel(p, it) }
+        }
     }
-    private fun chipBg(color: Int) = GradientDrawable().apply { cornerRadius = dp(18).toFloat(); setColor(color) }
-    private fun roundBg(color: Int, radiusDp: Int) = GradientDrawable().apply { cornerRadius = dp(radiusDp).toFloat(); setColor(color) }
-    private fun boxBg(fill: Int, outline: Int) = roundBg(fill, 10).apply {
-        setStroke(dp(1), outline)
+
+    @Composable
+    private fun Main(p: TranslatePalette) {
+        val ctx = LocalContext.current
+        val surface = Color(p.surface)
+        val box = RoundedCornerShape(10.dp)
+        Column(Modifier.fillMaxWidth().padding(start = 10.dp, top = 4.dp, end = 10.dp, bottom = 8.dp)) {
+            // ── Row 1: From  ⇄  To ............................. ✕ ───────────────
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Chip(if (fromTag == AUTO) "AUTO" + (detectedTag?.let { " (${it.uppercase()})" } ?: "") + " ▾"
+                     else fromTag.uppercase() + " ▾", Color(p.chip), Color(p.onChip)) { showLangMenu(true) }
+                Text("⇄", color = Color(p.muted), fontSize = 18.sp, textAlign = TextAlign.Center,
+                    modifier = Modifier.sizeIn(minWidth = 44.dp, minHeight = 40.dp)
+                        .semantics { contentDescription = ctx.getString(R.string.translate_bar_swap) }
+                        .clickable { swap() }.padding(top = 8.dp))
+                Chip(toTag.uppercase() + " ▾", Color(p.chip), Color(p.onChip)) { showLangMenu(false) }
+                Spacer(Modifier.weight(1f))
+                // The way back to the keyboard. A real touch target (48dp), not a 16sp glyph
+                // with a few dp of padding that a thumb misses and lands on the app behind.
+                Text("✕", color = Color(p.text), fontSize = 18.sp, textAlign = TextAlign.Center,
+                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 44.dp)
+                        .semantics { contentDescription = ctx.getString(R.string.translate_bar_close) }
+                        .clickable { onClose?.run() }.padding(top = 10.dp))
+            }
+
+            // ── Row 2: input buffer ──────────────────────────────────────────
+            Box(Modifier.fillMaxWidth().padding(top = 2.dp).weight(1f, fill = false)
+                .clip(box).background(surface).border(1.dp, Color(p.outline), box)) {
+                AndroidView(factory = { inputScroll }, update = { applyInput() }, modifier = Modifier.fillMaxWidth())
+            }
+
+            // ── Row 3: the result / status ───────────────────────────────────
+            Text(previewText,
+                color = Color(if (showingStatus) p.muted else p.text), fontSize = 15.sp,
+                fontStyle = if (showingStatus) FontStyle.Italic else FontStyle.Normal,
+                maxLines = 3, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp)
+                    .clip(box).background(surface).border(1.dp, Color(p.outline), box)
+                    .sizeIn(minHeight = 34.dp).padding(horizontal = 10.dp, vertical = 6.dp))
+
+            // ── Row 4: actions ───────────────────────────────────────────────
+            // Scrolls sideways rather than clipping the last chip on a narrow screen or at a
+            // large font scale.
+            Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val insertPrimary = applyMode == TranslatePrefs.APPLY_INSERT
+                val replacePrimary = applyMode == TranslatePrefs.APPLY_REPLACE
+                if (insertVisible) {
+                    Chip(ctx.getString(R.string.translate_bar_insert),
+                        Color(if (insertPrimary) p.accent else p.chip), Color(if (insertPrimary) p.onAccent else p.onChip)
+                    ) { apply(TranslatePrefs.APPLY_INSERT) }
+                    Chip(ctx.getString(R.string.translate_bar_replace),
+                        Color(if (replacePrimary) p.accent else p.chip), Color(if (replacePrimary) p.onAccent else p.onChip)
+                    ) { apply(TranslatePrefs.APPLY_REPLACE) }
+                }
+                Chip(ctx.getString(R.string.translate_bar_paste), Color(p.chip), Color(p.onChip)) { paste() }
+                Chip(ctx.getString(R.string.translate_bar_copy), Color(p.chip), Color(p.onChip)) { copy() }
+                Chip(ctx.getString(R.string.translate_bar_clear), Color(p.chip), Color(p.onChip)) { clear() }
+            }
+        }
     }
-    private fun LinearLayout.gap() = addView(View(context), LayoutParams(dp(6), 1))
+
+    /** The language picker, over the bar: a list with real section headers that cannot be picked. */
+    @Composable
+    private fun PickerPanel(p: TranslatePalette, state: Picker) {
+        Column(Modifier.fillMaxWidth().background(Color(p.surface)).padding(vertical = 4.dp)) {
+            Text("✕", color = Color(p.text), fontSize = 18.sp, textAlign = TextAlign.End,
+                modifier = Modifier.fillMaxWidth().clickable { picker = null }.padding(horizontal = 16.dp, vertical = 6.dp))
+            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+                items(state.rows) { row ->
+                    when (row) {
+                        is LangRow.Header -> Text(row.label.uppercase(), color = Color(p.muted), fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp))
+                        else -> Text(
+                            when (row) {
+                                is LangRow.RecentPair -> "${langName(row.from)} → ${langName(row.to)}"
+                                is LangRow.Language -> if (row.code == AUTO) "Auto-detect" else langName(row.code)
+                                else -> ""
+                            },
+                            color = Color(p.text), fontSize = 16.sp,
+                            modifier = Modifier.fillMaxWidth().clickable { pick(state, row) }
+                                .padding(horizontal = 16.dp, vertical = 10.dp))
+                    }
+                }
+            }
+        }
+    }
+
+    /** The long-press edit menu, over the bar. */
+    @Composable
+    private fun MenuPanel(p: TranslatePalette, items: List<MenuItem>) {
+        Column(Modifier.fillMaxWidth().background(Color(p.surface)).padding(vertical = 4.dp)) {
+            for (item in items) {
+                Text(item.label, color = Color(p.text), fontSize = 16.sp,
+                    modifier = Modifier.fillMaxWidth().clickable { menu = null; item.run() }
+                        .padding(horizontal = 16.dp, vertical = 10.dp))
+            }
+            Text("✕", color = Color(p.muted), fontSize = 18.sp, textAlign = TextAlign.End,
+                modifier = Modifier.fillMaxWidth().clickable { menu = null }.padding(horizontal = 16.dp, vertical = 6.dp))
+        }
+    }
+
+    @Composable
+    private fun Chip(label: String, bg: Color, fg: Color, onClick: () -> Unit) {
+        Text(label, color = fg, fontSize = 14.sp, textAlign = TextAlign.Center, maxLines = 1,
+            modifier = Modifier.clip(RoundedCornerShape(18.dp)).background(bg).clickable { onClick() }
+                .sizeIn(minHeight = 36.dp).padding(horizontal = 14.dp, vertical = 8.dp))
+    }
+
+    // ── helpers ──────────────────────────────────────────────────────────────
     private fun toast(msg: String) = Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
     private fun dp(v: Int) = TypedValue.applyDimension(
         TypedValue.COMPLEX_UNIT_DIP, v.toFloat(), resources.displayMetrics).toInt()

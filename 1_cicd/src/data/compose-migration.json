@@ -528,11 +528,10 @@
       "id": "libs:translate",
       "scope": "in",
       "wave": 5,
-      "ui": "views",
+      "ui": "mixed",
       "size": "S",
       "screens_left": [
-        "TranslateBarView",
-        "TranslateInputView",
+        "TranslateInputView (custom, the caret-drawing text box the enhance bar shares: stays a View, hosted in the Compose bar via AndroidView)",
         "CappedScrollView (custom)"
       ],
       "consumers": [
@@ -544,8 +543,8 @@
       "baseline": {
         "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 2,
-        "custom_views": 3
+        "view_ui_files": 1,
+        "custom_views": 2
       }
     },
     {
