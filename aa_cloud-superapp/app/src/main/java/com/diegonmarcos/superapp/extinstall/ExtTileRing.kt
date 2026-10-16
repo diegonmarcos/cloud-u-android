@@ -142,7 +142,7 @@ object ExtTileRing {
 
         fun place() {
             ring.setBounds(0, 0, tile.width, tile.height)
-            val icon = byId(tile, R.id.tile_icon) ?: firstImage(tile)
+            val icon = firstImage(tile)
             ring.iconRect = icon?.let { offsetIn(tile, it) }
             tile.invalidate()
         }
@@ -150,12 +150,6 @@ object ExtTileRing {
         fun refresh() {
             ring.progress = ExtInstallViews.tile(ExtAppInstalls.snapshot(pkg))
             tile.invalidate()
-        }
-
-        private fun byId(v: View, id: Int): View? {
-            if (v.id == id) return v
-            if (v is ViewGroup) for (i in 0 until v.childCount) byId(v.getChildAt(i), id)?.let { return it }
-            return null
         }
 
         private fun firstImage(v: View): View? {
