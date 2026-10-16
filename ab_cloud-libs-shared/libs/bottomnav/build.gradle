@@ -18,6 +18,10 @@
 // under whichever AGP the app that pulls it in uses. The versions below match cloud-mail's
 // catalog.
 //
+// The app TOP bar (AppTopBar: hamburger + drawer slot, title, AI panel, Settings dropdown, declared by
+// build.json::ui.top_bar) lives beside the island because the page tabs and the island are the rest of the same
+// chrome; its AI panel is a slot, so this module does not link libs:ai (the host fills it).
+//
 // TESTED where it builds: src/test/ (Robolectric, JVM, no emulator) runs as
 // :libs:bottomnav:testReleaseUnitTest inside the consuming app's own `testReleaseUnitTest`
 // (ac_cloud-mail/build.json::tests.unit). The consuming app's ship workflow watches this
@@ -92,6 +96,8 @@ dependencies {
     implementation 'androidx.compose.material3:material3'
     implementation 'androidx.compose.material:material-icons-extended'
     implementation 'androidx.navigation:navigation-compose:2.8.5'
+    // AppTopBar's drawer closes on Back (BackHandler); navigation-compose already carries it, named here so it is not by accident.
+    implementation 'androidx.activity:activity-compose:1.9.3'
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
     implementation 'androidx.core:core-ktx:1.15.0'
 

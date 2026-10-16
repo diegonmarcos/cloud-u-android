@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The lib ships no app strings: cloud-mail's nav labels moved to ac_cloud-mail with #868. -->
+<!-- The app top bar's own words (AppTopBar): the accessibility labels of its three buttons and the
+     Settings dropdown's entries. The app's TITLE is the app's, never here. -->
 <resources>
+    <string name="app_top_bar_menu">Open menu</string>
+    <string name="app_top_bar_menu_close">Close menu</string>
+    <string name="app_top_bar_drawer">Menu</string>
+    <string name="app_top_bar_ai">AI</string>
+    <string name="app_top_bar_ai_panel">AI chat</string>
+    <string name="app_top_bar_settings">Settings</string>
+    <string name="app_top_bar_account">Account</string>
+    <string name="app_top_bar_configs">Configs</string>
+    <string name="app_top_bar_account_missing">Cloud Account is not installed</string>
 </resources>
