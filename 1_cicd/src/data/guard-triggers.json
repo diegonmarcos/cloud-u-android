@@ -24,7 +24,8 @@
     "top-bar-guard.yml": "reads every app's build.json for ui.top_bar and scans the declaring apps' Kotlin for a second copy of the bar; the commit it must catch can be any app's build.json or source",
     "update-ack-guard.yml": "scans every app's update routes (10k files traced)",
     "licence-inventory-guard.yml": "#805: the subjects it must catch are a new top-level directory, binary or vendored LICENSE anywhere in the tree; a filter would be 'everything'",
-    "commit-msg-guard.yml": "#670: checks commit messages, which every push carries whatever paths it touches"
+    "commit-msg-guard.yml": "#670: checks commit messages, which every push carries whatever paths it touches",
+    "publish-module-guard.yml": "scans every workflow, template and script in 1_cicd/src for hand-rolled ghcr/release pushes; the offending line can be anywhere"
   },
   "filtered": {
     "analytics-retry-guard.yml": {

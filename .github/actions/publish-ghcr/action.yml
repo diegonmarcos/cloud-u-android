@@ -1,0 +1,70 @@
+name: publish-ghcr
+description: >-
+  THE ONE way this fleet publishes to ghcr.io or a GitHub release. Always the
+  workflow's own GITHUB_TOKEN (never a PAT), always the source-repo label and
+  annotation, so the package is linked to the repository and takes ITS
+  visibility at creation. Verifies the result is anonymously pullable when the
+  repository is public. A workflow step that pushes any other way fails
+  cloud-android-publish-module-guard.py.
+
+inputs:
+  kind:
+    description: "image (docker buildx, multi-arch) | oras (OCI artifact, e.g. an APK) | release (gh release upload)"
+    required: true
+  name:
+    description: "image/oras: package name under ghcr.io/<owner>/ (e.g. cloud-notes-web)"
+    default: ""
+  context:
+    description: "image: docker build context"
+    default: "."
+  dockerfile:
+    description: "image: Dockerfile path (default <context>/Dockerfile)"
+    default: ""
+  platforms:
+    description: "image: buildx platforms"
+    default: "linux/amd64,linux/arm64"
+  tags:
+    description: "image/oras: space-separated tags. Default: latest and the commit sha"
+    default: ""
+  file:
+    description: "oras: the file to push. release: space-separated files to upload"
+    default: ""
+  media-type:
+    description: "oras: media type of the file (also used as the artifact type)"
+    default: "application/vnd.android.package-archive"
+  description:
+    description: "org.opencontainers.image.description"
+    default: ""
+  licenses:
+    description: "org.opencontainers.image.licenses (SPDX)"
+    default: ""
+  tag:
+    description: "release: the release tag (created if missing)"
+    default: ""
+  token:
+    description: "Always the workflow GITHUB_TOKEN. Do not pass a PAT: a package created by a PAT belongs to the account and is born private."
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Publish (${{ inputs.kind }})
+      shell: bash
+      env:
+        P_KIND: ${{ inputs.kind }}
+        P_NAME: ${{ inputs.name }}
+        P_CONTEXT: ${{ inputs.context }}
+        P_DOCKERFILE: ${{ inputs.dockerfile }}
+        P_PLATFORMS: ${{ inputs.platforms }}
+        P_TAGS: ${{ inputs.tags }}
+        P_FILE: ${{ inputs.file }}
+        P_MEDIA_TYPE: ${{ inputs.media-type }}
+        P_DESCRIPTION: ${{ inputs.description }}
+        P_LICENSES: ${{ inputs.licenses }}
+        P_TAG: ${{ inputs.tag }}
+        P_TOKEN: ${{ inputs.token }}
+        P_OWNER: ${{ github.repository_owner }}
+        P_REPO: ${{ github.repository }}
+        P_ACTOR: ${{ github.actor }}
+        P_SHA: ${{ github.sha }}
+      run: bash "$GITHUB_ACTION_PATH/publish.sh"

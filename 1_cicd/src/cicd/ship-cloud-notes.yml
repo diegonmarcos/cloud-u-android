@@ -157,10 +157,14 @@ jobs:
 
       - name: Push to GHCR (main only, amd64 + arm64)
         if: github.ref == 'refs/heads/main'
-        run: |
-          echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          IMG="ghcr.io/${{ github.repository_owner }}/cloud-notes-web"
-          docker buildx build --platform linux/amd64,linux/arm64 -f "$STAGE/deploy/web/Dockerfile" -t "$IMG:latest" -t "$IMG:${{ github.sha }}" --push "$STAGE"
+        uses: ./.github/actions/publish-ghcr
+        with:
+          kind: image
+          name: cloud-notes-web
+          context: ${{ env.STAGE }}
+          dockerfile: ${{ env.STAGE }}/deploy/web/Dockerfile
+          description: Cloud Notes web app (static, behind the edge gate)
+          licenses: MIT
 
   # Phase 2 (cloud-notes-hybrid): our own Yjs sync server (Hocuspocus, MIT). The
   # suite is the acceptance run (A6.1 offline edits converge, A6.2 refused without
@@ -213,10 +217,13 @@ jobs:
 
       - name: Push to GHCR (main only, amd64 + arm64)
         if: github.ref == 'refs/heads/main'
-        run: |
-          echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          IMG="ghcr.io/${{ github.repository_owner }}/cloud-notes-sync"
-          docker buildx build --platform linux/amd64,linux/arm64 -t "$IMG:latest" -t "$IMG:${{ github.sha }}" --push ac_cloud-notes/sync-server
+        uses: ./.github/actions/publish-ghcr
+        with:
+          kind: image
+          name: cloud-notes-sync
+          context: ac_cloud-notes/sync-server
+          description: Cloud Notes sync server (Hocuspocus, Bearer auth)
+          licenses: MIT
 
   # Notion / Miro pillar features live in blocksuite packages; their unit specs run here
   # (a real yarn install, the packages' own vitest config), so a feature without a test cannot ship green.

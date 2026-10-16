@@ -1,0 +1,25 @@
+name: "publish module guard — every ghcr/release publish goes through publish-ghcr"
+
+# Packages must follow their repository's visibility, automatically (owner rule).
+# That is only true if nobody hand-rolls a push: see the docstring of
+# 1_cicd/src/scripts/cloud-android-publish-module-guard.py. Both steps matter: the
+# second proves the guard fails when a hand-rolled push (or a PAT) comes back.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish-module:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No push/login/release outside the publish module (beyond the shrinking baseline)
+        run: python3 1_cicd/src/scripts/cloud-android-publish-module-guard.py
+      - name: The guard still fails when a hand-rolled push comes back
+        run: bash 1_cicd/src/scripts/test/publish-module-guard.test.sh
