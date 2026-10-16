@@ -837,8 +837,8 @@
       ],
       "baseline": {
         "view_screens": 0,
-        "layout_xml": 12,
-        "view_ui_files": 15,
+        "layout_xml": 11,
+        "view_ui_files": 14,
         "custom_views": 15
       }
     },
