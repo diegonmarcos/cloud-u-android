@@ -55,10 +55,10 @@ absent "$ROOT/app/src/main/assets/zoomies" "app/ no longer bundles zoomies asset
 # runtime path unchanged: PetStrengthView still reads "zoomies/<animal>" from assets.
 has "$PET" 'zoomies/$animal' "asset path 'zoomies/<animal>' unchanged (lib assets merge to same path)"
 
-echo "== T4: module build.gradle is a minimal android library (appcompat, no config) =="
+echo "== T4: module build.gradle is a minimal android library (Compose UI, no config) =="
 has "$LIB/build.gradle" "com.android.library"                         "android library plugin"
 has "$LIB/build.gradle" "namespace 'com.diegonmarcos.superapp.zoomies'" "namespace set"
-has "$LIB/build.gradle" "androidx.appcompat:appcompat"                "declares appcompat (AppCompatImageView)"
+has "$LIB/build.gradle" "androidx.compose.ui:ui"                       "declares Compose UI (PetStrengthView is a Compose view)"
 
 echo "== T5: data-driven wiring — build.json module + app dependency =="
 # settings.gradle iterates build.json::modules, so the module MUST be declared there.
