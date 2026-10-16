@@ -243,6 +243,8 @@ step_test() {
   # The signingConfig throws during configuration without ANDROID_KEYSTORE_*, for every task (CI's unit
   # step runs this entry), so resolve it first. The app's tracker/timeline rules + libs:maps' host test.
   log "Test: JVM unit tests"
+  # CI's unit step has gradle on PATH but no nix.
+  command -v nix >/dev/null 2>&1 || export BYPASS_NIX=1
   # The unit step runs before any vault checkout, and a test task signs nothing: when the shared key is not
   # resolvable here, hand the signingConfig an existing file just so configuration passes. Never used to sign.
   if ! ( _resolve_signing ) >/dev/null 2>&1; then
