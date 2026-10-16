@@ -75,6 +75,7 @@ import {
   type ExternalDirListing,
   type ExternalFileReadResult,
 } from './plugins/external-file';
+import { collectVault, toVaultFiles, vaultNameOf } from './vault-import';
 import { HashCash } from './plugins/hashcash';
 import { MobileBack } from './plugins/mobile-back';
 import { NbStoreNativeDBApis } from './plugins/nbstore';
@@ -594,6 +595,64 @@ const openExternalFile = async (path: string) => {
   }
 };
 
+// Phase 1 (cloud-notes-hybrid): "Import this folder as a vault". The folder is
+// walked through the same plugin (vault-import.ts) and every note goes to the
+// Obsidian importer in ONE call, so [[wikilinks]] between the notes resolve.
+// Text only: images and other attachments are reported as skipped, never
+// dropped silently. Resolved at event time, like openExternalFile (#513).
+const importVaultFolder = async (root: string) => {
+  let collected: Awaited<ReturnType<typeof collectVault>>;
+  try {
+    collected = await collectVault(ExternalFile, root);
+  } catch (err: unknown) {
+    reportExternalFileError(err, 'Cannot read folder');
+    return;
+  }
+  if (collected.notes.length === 0) {
+    notify.error({
+      title: 'Nothing to import',
+      message: 'No .md notes were found in this folder or below it.',
+    });
+    return;
+  }
+
+  const workspaceId = frameworkProvider
+    .get(GlobalContextService)
+    .globalContext.workspaceId.get();
+  const workspaceRef = workspaceId
+    ? frameworkProvider.get(WorkspacesService).openByWorkspaceId(workspaceId)
+    : null;
+  if (!workspaceRef) {
+    notify.error({
+      title: 'Cannot import',
+      message: 'Open a workspace first — there is nowhere to import the vault into.',
+    });
+    return;
+  }
+
+  const { workspace, dispose: disposeWorkspace } = workspaceRef;
+  try {
+    await workspace.scope
+      .get(ImportService)
+      .importObsidianVault(toVaultFiles(collected.notes, vaultNameOf(root)));
+    const skipped = collected.skipped.length;
+    notify.success({
+      title: 'Vault imported',
+      message:
+        `${collected.notes.length} notes imported` +
+        (skipped ? `, ${skipped} entries skipped (attachments and non-notes)` : '') +
+        (collected.truncated ? '. A size limit stopped the walk early.' : '.'),
+    });
+  } catch (err: unknown) {
+    notify.error({
+      title: 'Vault import failed',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  } finally {
+    disposeWorkspace();
+  }
+};
+
 // #547 — the file explorer: the FAB's event opens this browser over the
 // device's visible storage instead of asking for a typed path. It lists one
 // folder at a time through ExternalFilePlugin.listDir (the native side offers
@@ -651,6 +710,16 @@ const ExternalFileOpener = () => {
     >
       <div style={{ ...row, display: 'flex', gap: 12, fontWeight: 600 }}>
         <span style={{ flex: 1, overflowWrap: 'anywhere' }}>{listing.path}</span>
+        <button
+          type="button"
+          onClick={() => {
+            const root = listing.path;
+            setListing(null);
+            importVaultFolder(root).catch(console.error);
+          }}
+        >
+          Import as vault
+        </button>
         <button type="button" onClick={() => setListing(null)}>
           Close
         </button>
