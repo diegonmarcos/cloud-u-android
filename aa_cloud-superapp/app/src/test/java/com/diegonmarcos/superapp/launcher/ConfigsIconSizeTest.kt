@@ -3,6 +3,8 @@ package com.diegonmarcos.superapp.launcher
 import android.app.Application
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.unit.height
+import androidx.compose.ui.unit.width
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import org.junit.Assert.assertEquals
