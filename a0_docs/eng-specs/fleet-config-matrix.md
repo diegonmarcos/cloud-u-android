@@ -38,7 +38,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-me | `com.diegonmarcos.cloudme` | 3 | 0 | 100% |
 | cloud-gallery | `com.diegonmarcos.mediacenter` | 4 | 1 | 80% |
 | cloud-myterminal | `com.diegonmarcos.ide` | 6 | 0 | 100% |
-| cloud-nav | `com.diegonmarcos.cloudnav` | 10 | 0 | 100% |
+| cloud-nav | `com.diegonmarcos.cloudnav` | 11 | 0 | 100% |
 | cloud-news | `com.diegonmarcos.cloudnews` | 3 | 1 | 75% |
 | cloud-terminal-nix | `cld.termux.nix` | 9 | 7 | 56% |
 | cloud-notes | `com.diegonmarcos.cloudnotes` | 1 | 1 | 50% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 2 | 71% |
-| **fleet** | | **213** | **48** | **81%** |
+| **fleet** | | **214** | **48** | **81%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -710,6 +710,7 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtool
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. |
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
+| `tracker_engine` | prefs | config | yes | Tracking engine settings (sources, accurate-fix / cell / motion triggers), its progress counters and the learned step length. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
@@ -717,7 +718,7 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtool
 |---|---|---|
 | `externalFilesDir/trace/trace.log, crashes/` | device | Debug trace and crash dumps. |
 
-Coverage: 10 covered, 0 gaps.
+Coverage: 11 covered, 0 gaps.
 
 ## cloud-news — `com.diegonmarcos.cloudnews`
 
