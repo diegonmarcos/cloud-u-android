@@ -260,6 +260,22 @@
         "lib-browser"
       ]
     },
+    "browser_ac_profiles": {
+      "kind": "encrypted",
+      "class": "secret",
+      "doc": "#900 Autocomplete: the personal profiles (many-valued names, addresses, phones, emails, ID documents, birth dates, organisations), the per-site memory (values typed on one site: customer number, member ID) and the never-save lists. EncryptedSharedPreferences, MasterKey AES256_GCM. Imports the old browser_autofill profile once; never deletes it.",
+      "used_by": [
+        "lib-browser"
+      ]
+    },
+    "browser_ac_secrets": {
+      "kind": "encrypted",
+      "class": "device",
+      "doc": "#900 Autocomplete: saved sign-ins and cards. EncryptedSharedPreferences over which every password, card number and code is sealed again (AES-256-GCM, Android Keystore key cloud_browser_ac_v1, record-bound AAD), so it never migrates in the clear: the Keystore key does not leave the phone, and Cloud Vault is the fleet's migration path for secrets.",
+      "used_by": [
+        "lib-browser"
+      ]
+    },
     "browser_bookmarks": {
       "kind": "prefs",
       "class": "config",

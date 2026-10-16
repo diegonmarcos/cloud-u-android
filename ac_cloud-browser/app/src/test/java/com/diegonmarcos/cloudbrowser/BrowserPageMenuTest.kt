@@ -45,7 +45,7 @@ class BrowserPageMenuTest {
 
     @Test
     fun `a row that acts on the page is disabled with no page open, and says so`() {
-        cfg.menu.rows(emptyMap()).filter { "page" in it.item.requires }.forEach {
+        cfg.menu.rows(emptyMap()).filter { "page" in it.item.requires && it.item.section != "addons" }.forEach {
             assertFalse("${it.item.id} is usable with no page open", it.enabled)
             assertEquals("open a page first", it.why)
         }

@@ -58,6 +58,18 @@ object VaultAutofill {
         }
     }
 
+    /**
+     * #900 "also send it to the vault": tell Android's autofill framework the form was submitted, so Cloud Vault's own
+     * save flow (its add-item screen, which the user confirms) can open. Nothing is handed over by the browser itself.
+     */
+    fun commitSave(wv: WebView): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+        val am = wv.context.getSystemService(AutofillManager::class.java) ?: return false
+        if (!am.isEnabled) return false
+        am.commit()
+        return true
+    }
+
     /** Cloud Vault's own screen (it has no search-by-host extra to pass). */
     fun open(ctx: Context, pkg: String?): String? {
         val i = pkg?.let { ctx.packageManager.getLaunchIntentForPackage(it) } ?: return "Cloud Vault is not installed"

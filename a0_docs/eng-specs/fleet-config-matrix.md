@@ -21,7 +21,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | c3-watchtower | `com.diegonmarcos.watchtower` | 2 | 0 | 100% |
 | cloud-account | `com.diegonmarcos.cloudaccount` | 15 | 0 | 100% |
 | cloud-tasks | `com.diegonmarcos.cloudagenda` | 6 | 0 | 100% |
-| cloud-browser | `com.diegonmarcos.cloudbrowser` | 10 | 0 | 100% |
+| cloud-browser | `com.diegonmarcos.cloudbrowser` | 11 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 2 | 0 | 100% |
 | cloud-media-center | `com.diegonmarcos.cloudmediacenter` | 2 | 0 | 100% |
 | cloud-c3 | `com.diegonmarcos.cloudc3` | 8 | 0 | 100% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 6 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 3 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 6 | 2 | 75% |
-| **fleet** | | **255** | **48** | **84%** |
+| **fleet** | | **256** | **48** | **84%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -269,6 +269,8 @@ Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottom
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
+| `browser_ac_profiles` | encrypted | secret | yes | #900 Autocomplete: the personal profiles (many-valued names, addresses, phones, emails, ID documents, birth dates, organisations), the per-site memory (values typed on one site: customer number, member ID) and the never-save lists. EncryptedSharedPreferences, MasterKey AES256_GCM. Imports the old browser_autofill profile once; never deletes it. |
+| `browser_ac_secrets` | encrypted | device | no | #900 Autocomplete: saved sign-ins and cards. EncryptedSharedPreferences over which every password, card number and code is sealed again (AES-256-GCM, Android Keystore key cloud_browser_ac_v1, record-bound AAD), so it never migrates in the clear: the Keystore key does not leave the phone, and Cloud Vault is the fleet's migration path for secrets. |
 | `browser_autofill` | encrypted | secret | yes | #802 the browser's autofill profile: identity + addresses + card METADATA (label, holder, last4, expiry, type) — never a card number or security code. vault_profile/vault_addresses are the vault bundle's about.profile/about.addresses (cockpit derived_settings, applied by server → runtime); profile is what was imported on the phone. |
 | `browser_bookmarks` | prefs | config | yes | #802 the browser's bookmarks with their folders (bookmarks_json: url, title, folder path, ts). |
 | `browser_downloads` | prefs | device | no | #802 index of the downloads the browser started (DownloadManager ids and file names on THIS phone); the files themselves stay in Downloads. |
@@ -289,7 +291,7 @@ Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottom
 |---|---|---|
 | `browser_settings` | config | #802 every user setting is a key of the declared browser_settings store (libs:browser BrowserSettings over build.json::ui.browser.settings); tabs and history are the lib's own declared stores. Nothing is kept outside them. |
 
-Coverage: 10 covered, 0 gaps.
+Coverage: 11 covered, 0 gaps.
 
 ## cloud-c3-webserver — `com.diegonmarcos.cloudwebserver`
 
