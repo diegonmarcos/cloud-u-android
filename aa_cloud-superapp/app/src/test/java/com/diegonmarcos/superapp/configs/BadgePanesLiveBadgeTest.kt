@@ -16,6 +16,8 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.foundation.verticalScroll
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import androidx.core.app.NotificationCompat
 import androidx.fragment.app.FragmentActivity
@@ -58,7 +60,13 @@ class BadgePanesLiveBadgeTest : KitPageHarness() {
 
     /** Draws the pane under the dense theme and returns the window's view tree (the notification's own RemoteViews live in it). */
     private fun render(): View {
-        showKit { BadgePanes.badges {} }
+        // Scrollable like the page that hosts it: the pane is taller than the test screen.
+        showKit {
+            androidx.compose.foundation.layout.Box(
+                androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                BadgePanes.badges {}
+            }
+        }
         compose.waitForIdle()
         return compose.activity.window.decorView
     }
@@ -69,7 +77,7 @@ class BadgePanesLiveBadgeTest : KitPageHarness() {
             .flatMap { n -> n.config[SemanticsProperties.Text].map { it.text } }
 
     private fun tapPaneButton(label: String) {
-        compose.onAllNodesWithTag("pane-button:$label")[0].performClick()
+        compose.onAllNodesWithTag("pane-button:$label")[0].performScrollTo().performClick()
         compose.waitForIdle()
     }
 

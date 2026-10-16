@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import org.junit.Assert.assertEquals
@@ -37,7 +38,7 @@ class NetworkInfoPopupComposeTest : KitPageHarness() {
     fun `N2 a light dismisses the bubble`() {
         var dismissed = 0
         showKit { NetworkInfoPopup.NetworkBubble(ctx, null) { dismissed++ } }
-        compose.onNodeWithTag("netpop:light:WiFi").performClick()
+        compose.onNodeWithTag("netpop:light:WiFi").performScrollTo().performClick()
         assertEquals(1, dismissed)
     }
 
