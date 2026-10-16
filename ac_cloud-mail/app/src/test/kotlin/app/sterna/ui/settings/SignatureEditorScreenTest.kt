@@ -28,6 +28,8 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLooper
+import java.util.concurrent.TimeUnit
 
 /**
  * The full-screen signature editor, rendered: HTML typed into the source pane reaches the preview
@@ -57,6 +59,12 @@ class SignatureEditorScreenTest {
         }
     }).around(compose)
 
+    /** The debounce is a real-time delay on the main looper, which Robolectric only moves when told to. */
+    private fun settle() {
+        ShadowLooper.idleMainLooper(PREVIEW_DEBOUNCE_MS + 100, TimeUnit.MILLISECONDS)
+        compose.waitForIdle()
+    }
+
     private val saved = mutableListOf<Triple<String, String, Boolean>>()
 
     private fun show(state: SignatureEditorState) {
@@ -76,7 +84,7 @@ class SignatureEditorScreenTest {
     @Test fun typingHtmlUpdatesThePreviewWithTheSignatureAsSent() {
         show(SignatureEditorState("", "Work", false))
         compose.onNodeWithTag("sig-source").performTextInput("<b>Alex</b>")
-        compose.waitForIdle()
+        settle()
         compose.onNodeWithTag("preview-doc").assertTextContains(signatureBlockHtml("<b>Alex</b>", true), substring = true)
         compose.onNodeWithTag("preview-doc").assertTextContains("<b>Alex</b>", substring = true)
     }
@@ -84,7 +92,7 @@ class SignatureEditorScreenTest {
     @Test fun theSanitisedMarkupIsWhatThePreviewShows() {
         show(SignatureEditorState("", "Work", false))
         compose.onNodeWithTag("sig-source").performTextInput("<i>hi</i><script>alert(1)</script>")
-        compose.waitForIdle()
+        settle()
         val doc = compose.onNodeWithTag("preview-doc")
         doc.assertTextContains("<i>hi</i>", substring = true)
         // not asserting absence on the node (it has no negative matcher): the same string is pinned in SignaturePreviewTest
@@ -95,7 +103,7 @@ class SignatureEditorScreenTest {
         show(SignatureEditorState("", "Work", false))
         compose.onNodeWithTag("sig-validation-summary").assertTextContains("No problems found", substring = true)
         compose.onNodeWithTag("sig-source").performTextInput("<div>")
-        compose.waitForIdle()
+        settle()
         compose.onNodeWithTag("sig-validation-summary").assertTextContains("1 errors", substring = true)
     }
 
@@ -103,7 +111,7 @@ class SignatureEditorScreenTest {
         show(SignatureEditorState("<p>old</p>", "Work", false))
         compose.onNodeWithTag("sig-save").assertIsNotEnabled()
         compose.onNodeWithTag("sig-source").performTextInput("x")
-        compose.waitForIdle()
+        settle()
         compose.onNodeWithTag("sig-save").assertIsEnabled().performClick()
         assertEquals(1, saved.size)
         assertEquals("Work", saved[0].first)
@@ -114,7 +122,7 @@ class SignatureEditorScreenTest {
     @Test fun thePreviewOptionsChangeTheFrameNotTheSignature() {
         show(SignatureEditorState("<b>Alex</b>", "Work", false))
         compose.onNodeWithTag("sig-opt-dark").performClick()
-        compose.waitForIdle()
+        settle()
         compose.onNodeWithTag("preview-doc").assertTextContains("#1f1f1f", substring = true)
         compose.onNodeWithTag("preview-doc").assertTextContains(signatureBlockHtml("<b>Alex</b>", true), substring = true)
     }

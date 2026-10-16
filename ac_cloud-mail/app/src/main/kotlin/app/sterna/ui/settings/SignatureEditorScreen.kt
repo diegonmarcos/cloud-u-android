@@ -601,7 +601,7 @@ private fun ValidationPanel(
     val notes = issues.count { it.severity == SignatureValidator.Severity.INFO }
     Column(Modifier.fillMaxWidth().background(scheme.surfaceContainer)) {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(horizontal = MailMetrics.s12, vertical = MailMetrics.s8),
+            Modifier.fillMaxWidth().testTag("sig-validation-summary").clickable(onClick = onToggle).padding(horizontal = MailMetrics.s12, vertical = MailMetrics.s8),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -609,7 +609,7 @@ private fun ValidationPanel(
                 else stringResource(R.string.sigedit_validation_summary, errors, warnings, notes),
                 style = MaterialTheme.typography.labelLarge,
                 color = if (errors > 0) scheme.error else scheme.onSurface,
-                modifier = Modifier.weight(1f).testTag("sig-validation-summary"),
+                modifier = Modifier.weight(1f),
             )
             if (issues.isNotEmpty()) {
                 Icon(if (open) Icons.Filled.ExpandMore else Icons.Filled.ExpandLess, contentDescription = null)
