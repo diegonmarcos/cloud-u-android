@@ -5,6 +5,7 @@ import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.isUnspecified
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.uikit.KitDensity
 import org.junit.Assert.assertEquals
