@@ -124,8 +124,8 @@ class EdgeOverlayGestureTest {
         Log.i(TAG, "left=$l right=$r screenW=$screenW dens=$dens")
         assertEquals(2, svc.handleCount)
         for (s in listOf(l, r)) {
-            assertTrue("strip ${s.width}px wide", s.width <= dp(24).toInt() + 1 && s.width >= dp(20).toInt())
-            assertTrue("strip ${s.height}px tall", s.height <= dp(160).toInt() + 1)
+            assertTrue("strip ${s.width()}px wide", s.width() <= dp(24).toInt() + 1 && s.width() >= dp(20).toInt())
+            assertTrue("strip ${s.height()}px tall", s.height() <= dp(160).toInt() + 1)
         }
         assertTrue("left strip hugs the left edge", l.left <= dp(2).toInt())
         assertTrue("right strip hugs the right edge", r.right >= screenW - dp(2).toInt())
