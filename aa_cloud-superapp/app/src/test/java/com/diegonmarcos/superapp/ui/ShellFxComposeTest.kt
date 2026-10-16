@@ -28,6 +28,7 @@ class ShellFxComposeTest : KitPageHarness() {
 
     @Test
     fun `X1 every layer composes at its size`() {
+        ShellFxState.frozen = true
         showKit {
             Box(Modifier.size(300.dp, 200.dp).testTag("galaxy")) { GalaxyBackdrop(Modifier.size(300.dp, 200.dp)) }
             Box(Modifier.size(120.dp, 22.dp).testTag("island")) {
@@ -39,6 +40,7 @@ class ShellFxComposeTest : KitPageHarness() {
         for (tag in listOf("galaxy", "island", "line")) compose.onNodeWithTag(tag).assertExists()
         val n = compose.onNodeWithTag("island").fetchSemanticsNode()
         assertTrue(n.size.width > n.size.height)
+        ShellFxState.frozen = false
     }
 
     @Test

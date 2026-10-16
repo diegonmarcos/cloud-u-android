@@ -52,6 +52,9 @@ object ShellFxState {
     var pets by mutableStateOf(true)
         private set
 
+    /** Tests set this so the layers draw one still frame; a looping frame clock never lets Compose's idle wait return. */
+    internal var frozen by mutableStateOf(false)
+
     /** Re-read "Stars animation", "Island animation" and "Pets". Called at start and whenever one of them flips. */
     fun refresh(ctx: Context) {
         val p = runCatching { LauncherSettingsPrefs(ctx) }.getOrNull()
@@ -74,8 +77,8 @@ object ShellFxState {
 @Composable
 private fun rememberPhase(periodMs: Long, running: Boolean): Float {
     var phase by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(running, periodMs) {
-        if (!running) return@LaunchedEffect
+    LaunchedEffect(running, periodMs, ShellFxState.frozen) {
+        if (!running || ShellFxState.frozen) return@LaunchedEffect
         val start = withFrameNanos { it }
         val base = phase
         while (true) {
