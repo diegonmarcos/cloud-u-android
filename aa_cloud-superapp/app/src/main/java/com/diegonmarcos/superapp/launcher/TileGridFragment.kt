@@ -2,37 +2,41 @@ package com.diegonmarcos.superapp.launcher
 import com.diegonmarcos.superapp.settings.GridColumns
 import com.diegonmarcos.superapp.settings.redrawOnGridColumns
 import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
-import android.content.res.ColorStateList
-import android.graphics.drawable.GradientDrawable
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.HapticFeedbackConstants
-import android.view.animation.AnimationUtils
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
-import androidx.core.content.ContextCompat
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
-import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
-import kotlin.math.abs
 
 /**
- * Drive-style tile grid. Each tile is a MaterialCardView with a tinted
- * circular icon container + label below. Background + foreground colours
- * cycle through a curated palette (see colors.xml), keyed by tile id so
- * the same tile always lands on the same colour. Click ripple + a quick
- * "press" scale animation give the grid its tactile feel.
+ * Drive-style tile grid. Each tile is a glass card with a glyph fitted to its column and a label
+ * below ([LauncherTile]); the click ripple and a quick "press" scale give the grid its tactile feel.
+ * Compose since #773 (was fragment_tile_grid.xml + item_tile.xml): [plan] lays the tiles out in rows
+ * and headings as data, so a test pins the row shapes.
  *
  * Generic API: see [Tile]. The Activity dispatches the tile's id string
  * to the matching nav action via [TileClickListener].
  */
-class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
+class TileGridFragment : KitComposeFragment() {
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,8 +70,18 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         val rowBreak: Boolean = false,
     )
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    /** One thing in the grid's column: a heading, or a row of tile indices (separators included). */
+    internal sealed class GridItem {
+        class Header(val text: String) : GridItem()
+        class SubHeader(val text: String) : GridItem()
+        /** [first] is the index of the row's first tile, [span] how many items (tiles and separators) it holds. */
+        class TileRow(val first: Int, val span: Int, val slots: Int) : GridItem()
+    }
+
+    override fun palette() = LauncherPalette.kit(requireContext())
+
+    @Composable
+    override fun Content() {
         val args  = requireArguments()
         val title = args.getString(ARG_TITLE).orEmpty()
         val ids    = args.getStringArray(ARG_TILE_IDS)    ?: emptyArray()
@@ -76,193 +90,47 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         val groups = args.getStringArray(ARG_TILE_GROUPS) ?: emptyArray()
         val subs   = args.getStringArray(ARG_TILE_SUBS)   ?: emptyArray()
         val breaks = args.getBooleanArray(ARG_TILE_BREAKS) ?: BooleanArray(0)
+        val p = LocalKitPalette.current
 
-        view.findViewById<TextView>(R.id.tile_grid_title).text = title
-
-        val empty = view.findViewById<TextView>(R.id.tile_grid_empty)
-        val grid  = view.findViewById<LinearLayout>(R.id.grid_container)
-        grid.removeAllViews()
-
-        if (ids.isEmpty()) {
-            empty.isVisible = true
-            return
-        }
-
-        val inflater = LayoutInflater.from(requireContext())
-        val palette  = tilePalette(requireContext())
-        // build.json::ui.tile_columns is the default; the Controls stepper overrides it.
-        // A section may declare its own count (Configs: 8); else the Cloud grid's.
-        val cols = args.getInt(ARG_COLS, 0).takeIf { it > 0 } ?: GridColumns.cloud(requireContext())
-        var i = 0
-        var shownGroup: String? = null
-        var shownSub:   String? = null
-        while (i < ids.size) {
-            // Group header, then the subgroup header under it. Both are the
-            // words build.json declared. Blank = ungrouped, which is every
-            // other section — they render exactly as before.
-            //
-            // A new group RESETS shownSub: "Setup" under Watchdog and a "Setup"
-            // that arrived again under a later group are two headings, and
-            // remembering the old one would silently swallow the second.
-            val g = groups.getOrNull(i).orEmpty()
-            val s = subs.getOrNull(i).orEmpty()
-            if (g.isNotEmpty() && g != shownGroup) {
-                grid.addView(groupHeader(g)); shownGroup = g; shownSub = null
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(6.dp)) {
+            Text(title.uppercase(), color = p.accent, style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(start = 10.dp, top = 12.dp, end = 10.dp, bottom = 4.dp).testTag(TAG_TITLE))
+            if (ids.isEmpty()) {
+                Text(stringResource(R.string.tile_grid_empty), color = p.textPrimary,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.fillMaxWidth().padding(top = 24.dp).testTag(TAG_EMPTY),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                return@Column
             }
-            if (s.isNotEmpty() && s != shownSub) { grid.addView(subgroupHeader(s)); shownSub = s }
-            // A row never straddles a group OR subgroup boundary: count how many
-            // of the next `cols` tiles still belong to this exact pair, and start
-            // the next one on a fresh row.
-            // A declared row_break stops the run too — `span == 0 ||` so the
-            // tile carrying the break still starts a row instead of a row of
-            // zero tiles that would loop forever.
-            // Separator pages ride INLINE: they take only their own text width and never
-            // a column slot, so `span` counts items while `slots` counts the tiles that
-            // fill the `cols` columns.
-            var span = 0
-            var slots = 0
-            while (i + span < ids.size && groups.getOrNull(i + span).orEmpty() == g &&
-                subs.getOrNull(i + span).orEmpty() == s &&
-                (span == 0 || !breaks.getOrElse(i + span) { false })) {
-                val sep = ids[i + span].startsWith(SEPARATOR_PREFIX)
-                if (!sep && slots == cols) break
-                if (!sep) slots++
-                span++
-            }
-            // wrap_content row → tile keeps its item_tile.xml fixed height,
-            // ScrollView handles overflow. Auto-fit blew up single-row
-            // sections into giant tiles.
-            val row = LinearLayout(requireContext()).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                )
-                orientation = LinearLayout.HORIZONTAL
-                weightSum = cols.toFloat()
-            }
-            for (k in 0 until span) {
-                if (ids[i + k].startsWith(SEPARATOR_PREFIX)) { row.addView(separatorView(requireContext(), labels[i + k])); continue }
-                val tileView = inflater.inflate(R.layout.item_tile, row, false)
-                (tileView.layoutParams as LinearLayout.LayoutParams).apply {
-                    width  = 0
-                    weight = 1f
+            // build.json::ui.tile_columns is the default; the Controls stepper overrides it.
+            // A section may declare its own count (Configs: 8); else the Cloud grid's.
+            val cols = args.getInt(ARG_COLS, 0).takeIf { it > 0 } ?: GridColumns.cloud(requireContext())
+            val click = { id: String -> (activity as? TileClickListener)?.onTileClicked(id); Unit }
+            for (item in plan(ids, groups, subs, breaks, cols)) {
+                when (item) {
+                    is GridItem.Header -> TileGroupHeader(item.text, Modifier.testTag(headerTag(item.text)))
+                    is GridItem.SubHeader -> TileSubgroupHeader(item.text, Modifier.testTag(subHeaderTag(item.text)))
+                    // wrap_content row → tile keeps its fixed height, the column scrolls. Auto-fit blew up
+                    // single-row sections into giant tiles.
+                    is GridItem.TileRow -> Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+                        for (k in 0 until item.span) {
+                            val at = item.first + k
+                            if (ids[at].startsWith(SEPARATOR_PREFIX)) { TileSeparator(labels[at]); continue }
+                            LauncherTile(
+                                tileId = ids[at], label = labels[at],
+                                iconRes = icons.getOrNull(at)?.takeIf { it != 0 } ?: R.drawable.ic_settings,
+                                cols = cols, pageDp = 0, chromeDp = 18,
+                                onClick = { click(ids[at]) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        // A short last row of a group gets spacers so the next group starts on its own row.
+                        for (k in item.slots until cols) Spacer(Modifier.weight(1f))
+                    }
                 }
-                bindTile(
-                    tileView    = tileView,
-                    tileId      = ids[i + k],
-                    label       = labels[i + k],
-                    iconRes     = icons.getOrNull(i + k)?.takeIf { it != 0 } ?: R.drawable.ic_settings,
-                    palette     = palette,
-                    cols        = cols,
-                )
-                row.addView(tileView)
             }
-            // A short last row of a group gets spacers so the next group starts on its own row.
-            for (k in slots until cols) {
-                row.addView(View(requireContext()).apply { layoutParams = LinearLayout.LayoutParams(0, 1, 1f) })
-            }
-            grid.addView(row)
-            i += span
         }
     }
-
-    /** Wire one tile: tint icon-circle background + icon foreground from the
-     *  palette, set label + click handler with a "press" anim. */
-    private fun bindTile(
-        tileView: View,
-        tileId: String,
-        label: String,
-        @DrawableRes iconRes: Int,
-        palette: List<Pair<Int, Int>>,
-        cols: Int,
-    ) {
-        val slot = abs(tileId.hashCode()) % palette.size
-        val (bg, fg) = palette[slot]
-
-        tileView.findViewById<TextView>(R.id.tile_label).text = label
-        com.diegonmarcos.superapp.settings.fitTileIcon(tileView, R.id.tile_icon_bg, cols, 0, 18)
-
-        // Plain icon — no glass coin behind it. Linktree pattern: the
-        // tile CARD carries the glass surface (bg_tile_glass), the
-        // icon itself is just a small white glyph (filter:invert(1)
-        // equivalent — near-white violet tint here).
-        tileView.findViewById<FrameLayout>(R.id.tile_icon_bg).background = null
-
-        val icon = tileView.findViewById<ImageView>(R.id.tile_icon)
-        icon.setImageResource(iconRes)
-        icon.imageTintList = ColorStateList.valueOf(0xFFE9D8FD.toInt())
-
-        val press = AnimationUtils.loadAnimation(requireContext(), R.anim.tile_press)
-        tileView.setOnClickListener { v ->
-            v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            v.startAnimation(press)
-            (activity as? TileClickListener)?.onTileClicked(tileId)
-        }
-        com.diegonmarcos.superapp.extinstall.ExtTileRing.attach(tileView, tileId)
-    }
-
-    /** A `separator` page as a CHARACTER: the same TextView the Data Apps row draws
-     *  (GroupedTilesFragment.separatorCell) — faint, caption, wrap_content wide. */
-    private fun separatorView(ctx: android.content.Context, text: String): View =
-        TextView(ctx).apply {
-            this.text = text
-            setTextColor(0x66FFFFFF)
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            gravity = android.view.Gravity.CENTER
-            isClickable = false
-            isFocusable = false
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            val pad = (6 * resources.displayMetrics.density).toInt()
-            setPadding(pad, pad, pad, pad)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.MATCH_PARENT,
-            )
-        }
-
-    /** Section heading between tile rows. Built in code rather than as a
-     *  layout — one TextView, no state, nothing to inflate. */
-    private fun groupHeader(text: String): TextView {
-        val d = resources.displayMetrics.density
-        return TextView(requireContext()).apply {
-            this.text = text.uppercase()
-            setTextColor(0xFF9C8BC4.toInt())
-            textSize = 11f
-            letterSpacing = 0.12f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setPadding((14 * d).toInt(), (14 * d).toInt(), (14 * d).toInt(), (6 * d).toInt())
-        }
-    }
-
-    /** The heading one level BELOW [groupHeader] — same TextView, indented and
-     *  a shade quieter so the two levels read as a hierarchy rather than as two
-     *  sections that happen to follow one another. Its text is declared
-     *  (`subgroup` in build.json), like every other word on this screen. */
-    private fun subgroupHeader(text: String): TextView {
-        val d = resources.displayMetrics.density
-        return TextView(requireContext()).apply {
-            this.text = text.uppercase()
-            setTextColor(0xFF7E71A0.toInt())
-            textSize = 10f
-            letterSpacing = 0.10f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setPadding((26 * d).toInt(), (6 * d).toInt(), (14 * d).toInt(), (4 * d).toInt())
-        }
-    }
-
-    private fun tilePalette(ctx: android.content.Context): List<Pair<Int, Int>> = listOf(
-        ctx.color(R.color.tile_blue_bg)   to ctx.color(R.color.tile_blue_fg),
-        ctx.color(R.color.tile_green_bg)  to ctx.color(R.color.tile_green_fg),
-        ctx.color(R.color.tile_purple_bg) to ctx.color(R.color.tile_purple_fg),
-        ctx.color(R.color.tile_pink_bg)   to ctx.color(R.color.tile_pink_fg),
-        ctx.color(R.color.tile_orange_bg) to ctx.color(R.color.tile_orange_fg),
-        ctx.color(R.color.tile_teal_bg)   to ctx.color(R.color.tile_teal_fg),
-        ctx.color(R.color.tile_amber_bg)  to ctx.color(R.color.tile_amber_fg),
-        ctx.color(R.color.tile_indigo_bg) to ctx.color(R.color.tile_indigo_fg),
-    )
-
-    @ColorInt
-    private fun android.content.Context.color(id: Int): Int = ContextCompat.getColor(this, id)
 
     companion object {
         private const val ARG_TITLE       = "title"
@@ -275,6 +143,60 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         const val SEPARATOR_PREFIX = "separator:"
         private const val ARG_COLS        = "tile_columns"
         private const val ARG_TILE_BREAKS = "tile_breaks"
+
+        const val TAG_TITLE = "tilegrid:title"
+        const val TAG_EMPTY = "tilegrid:empty"
+        fun headerTag(text: String) = "tilegrid:group:$text"
+        fun subHeaderTag(text: String) = "tilegrid:subgroup:$text"
+
+        /**
+         * Lay [ids] out for [cols] columns: headings where the declared group / subgroup changes, tile
+         * rows between them.
+         */
+        internal fun plan(ids: Array<String>, groups: Array<String>, subs: Array<String>,
+                          breaks: BooleanArray, cols: Int): List<GridItem> {
+            val items = mutableListOf<GridItem>()
+            var i = 0
+            var shownGroup: String? = null
+            var shownSub:   String? = null
+            while (i < ids.size) {
+                // Group header, then the subgroup header under it. Both are the
+                // words build.json declared. Blank = ungrouped, which is every
+                // other section — they render exactly as before.
+                //
+                // A new group RESETS shownSub: "Setup" under Watchdog and a "Setup"
+                // that arrived again under a later group are two headings, and
+                // remembering the old one would silently swallow the second.
+                val g = groups.getOrNull(i).orEmpty()
+                val s = subs.getOrNull(i).orEmpty()
+                if (g.isNotEmpty() && g != shownGroup) {
+                    items += GridItem.Header(g); shownGroup = g; shownSub = null
+                }
+                if (s.isNotEmpty() && s != shownSub) { items += GridItem.SubHeader(s); shownSub = s }
+                // A row never straddles a group OR subgroup boundary: count how many
+                // of the next `cols` tiles still belong to this exact pair, and start
+                // the next one on a fresh row.
+                // A declared row_break stops the run too — `span == 0 ||` so the
+                // tile carrying the break still starts a row instead of a row of
+                // zero tiles that would loop forever.
+                // Separator pages ride INLINE: they take only their own text width and never
+                // a column slot, so `span` counts items while `slots` counts the tiles that
+                // fill the `cols` columns.
+                var span = 0
+                var slots = 0
+                while (i + span < ids.size && groups.getOrNull(i + span).orEmpty() == g &&
+                    subs.getOrNull(i + span).orEmpty() == s &&
+                    (span == 0 || !breaks.getOrElse(i + span) { false })) {
+                    val sep = ids[i + span].startsWith(SEPARATOR_PREFIX)
+                    if (!sep && slots == cols) break
+                    if (!sep) slots++
+                    span++
+                }
+                items += GridItem.TileRow(i, span, slots)
+                i += span
+            }
+            return items
+        }
 
         fun newInstance(title: String, tiles: List<Tile>, columns: Int = 0) = TileGridFragment().apply {
             arguments = bundleOf(

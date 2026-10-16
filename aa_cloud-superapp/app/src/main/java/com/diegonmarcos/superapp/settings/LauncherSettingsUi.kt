@@ -163,15 +163,3 @@ internal fun Fragment.redrawOnGridColumns(kind: GridColumns.Kind) {
         }
     })
 }
-
-/** Shrink an `R.layout.item_tile` icon (32 dp wanted) to fit its column: the
- *  screen minus [pageDp] of page padding, split [cols] ways, minus [chromeDp]
- *  of tile margin + padding. */
-internal fun fitTileIcon(tile: View, iconBgId: Int, cols: Int, pageDp: Int, chromeDp: Int) {
-    val bg = tile.findViewById<View>(iconBgId) ?: return
-    val dm = tile.resources.displayMetrics
-    val d = dm.density
-    val cell = GridColumns.cellPx(dm.widthPixels - (pageDp * d).toInt(), cols)
-    val sz = GridColumns.iconPx((32 * d).toInt(), cell, (chromeDp * d).toInt(), (16 * d).toInt())
-    bg.layoutParams = bg.layoutParams.also { it.width = sz; it.height = sz }
-}

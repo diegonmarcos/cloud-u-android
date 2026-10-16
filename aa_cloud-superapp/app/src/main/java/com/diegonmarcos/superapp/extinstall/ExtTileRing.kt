@@ -33,6 +33,8 @@ object ExtTileRing {
     }
 
     private val views = HashMap<String, WeakReference<View>>()
+    /** Compose hosts (no per-tile View to anchor a popup on: a busy tap there asks through [ComposeAsk]). */
+    private val hosts = HashMap<String, WeakReference<View>>()
 
     /** Bind (or rebind, for a recycled tile) [tile] to [tileId]'s install row. */
     fun attach(tile: View, tileId: String) {
@@ -46,12 +48,17 @@ object ExtTileRing {
         b.bind()
     }
 
+    /** Compose tiles ([extInstallRing]) register the ComposeView that hosts them, so a finished install can
+     *  launch when the user is still looking at its tile; a View tile registers itself through [attach]. */
+    fun showing(pkg: String, host: View) { hosts[pkg] = WeakReference(host) }
+    fun hidden(pkg: String, host: View) { if (hosts[pkg]?.get() === host) hosts.remove(pkg) }
+
     /** The current on-screen tile for [pkg], if any. */
     private fun viewFor(pkg: String): View? = views[pkg]?.get()?.takeIf { it.isAttachedToWindow }
 
     /** Install finished: launch it if the user is still on the screen with that tile. */
     fun onInstalled(ctx: Context, pkg: String) {
-        val v = viewFor(pkg) ?: return
+        val v = viewFor(pkg) ?: hosts[pkg]?.get()?.takeIf { it.isAttachedToWindow } ?: return
         if (v.isShown && v.hasWindowFocus()) ExtAppInstalls.launch(v.context, pkg)
     }
 

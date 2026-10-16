@@ -41,8 +41,12 @@ class ExtInstallReuseTest {
     }
 
     @Test fun tilesWearTheRing() {
-        for (f in listOf("launcher/TileGridFragment.kt", "launcher/HomeGroupedFragment.kt", "launcher/GroupedTilesFragment.kt"))
-            assertTrue(f, src(f).contains("ExtTileRing.attach("))
+        // The Compose tile (LauncherTile) wears the ring once for every grid built on it...
+        assertTrue(src("launcher/LauncherTiles.kt").contains(".extInstallRing("))
+        for (f in listOf("launcher/TileGridFragment.kt", "launcher/HomeGroupedFragment.kt"))
+            assertTrue("$f draws its tiles with LauncherTile", src(f).contains("LauncherTile("))
+        // ...and the grid still on Views binds it itself.
+        assertTrue(src("launcher/GroupedTilesFragment.kt").contains("ExtTileRing.attach("))
     }
 
     @Test fun notificationIsQuietAndThrottled() {

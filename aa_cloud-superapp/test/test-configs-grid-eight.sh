@@ -28,15 +28,19 @@ grep -q 'columns = section.gridColumns' "$KT/LauncherNavController.kt" && ok "se
 grep -q 'o.optInt("grid_columns"' "$KT/Sections.kt" && ok "Sections parses grid_columns" || bad "Sections does not parse grid_columns"
 grep -q 'args.getInt(ARG_COLS, 0).takeIf { it > 0 } ?: GridColumns.cloud' "$KT/TileGridFragment.kt" \
   && ok "TileGridFragment uses the declared count, else the Cloud grid's" || bad "TileGridFragment ignores the declared count"
-grep -q 'cols, 0, 18)' "$KT/TileGridFragment.kt" && ok "icon is sized from THIS grid's column count" || bad "icon size not derived from the grid's columns"
+grep -q 'cols = cols, pageDp = 0, chromeDp = 18' "$KT/TileGridFragment.kt" && ok "icon is sized from THIS grid's column count" || bad "icon size not derived from the grid's columns"
 
 echo "== G3: the separator is inline =="
-sep="$(awk '/private fun separatorView/{f=1} f{print} f&&/^        }$/{exit}' "$KT/TileGridFragment.kt")"
-echo "$sep" | grep -q 'WRAP_CONTENT' && ! echo "$sep" | grep -qE 'LayoutParams\(0,' && ok "separator is wrap_content wide (no weight, no slot)" || bad "separator is not wrap_content"
+# The separator is the composable TileSeparator (LauncherTiles.kt): text as wide as itself, no weight, no slot.
+sep="$(awk '/^internal fun TileSeparator/{f=1} f{print} f&&/^}$/{exit}' "$KT/LauncherTiles.kt")"
+echo "$sep" | grep -q 'Text(' && ! echo "$sep" | grep -qE 'weight\(|fillMaxWidth|clickable' && ok "separator is as wide as its text (no weight, no fill, no slot, not clickable)" || bad "separator is not wrap_content"
 ref="$(awk '/private fun separatorCell/{f=1} f{print} f&&/^        }$/{exit}' "$KT/GroupedTilesFragment.kt")"
-for tok in '0x66FFFFFF' 'TextAppearance_Material_Caption' 'Gravity.CENTER' 'IMPORTANT_FOR_ACCESSIBILITY_NO'; do
-  echo "$ref" | grep -q "$tok" && echo "$sep" | grep -q "$tok" && ok "same as Data Apps: $tok" || bad "differs from Data Apps' separatorCell: $tok"
-done
+# Data Apps' separatorCell still draws 0x66FFFFFF (40% ink), the caption, centred, hidden from accessibility;
+# TileSeparator draws the same four things in Compose terms.
+echo "$ref" | grep -q '0x66FFFFFF' && echo "$sep" | grep -q 'alpha = 0.4f' && ok "same as Data Apps: the faint 0x66 ink" || bad "differs from Data Apps' separatorCell: ink"
+echo "$ref" | grep -q 'TextAppearance_Material_Caption' && echo "$sep" | grep -q 'fontSize = 12.sp' && ok "same as Data Apps: caption size" || bad "differs from Data Apps' separatorCell: caption"
+echo "$ref" | grep -q 'Gravity.CENTER' && echo "$sep" | grep -q 'TextAlign.Center' && ok "same as Data Apps: centred" || bad "differs from Data Apps' separatorCell: gravity"
+echo "$ref" | grep -q 'IMPORTANT_FOR_ACCESSIBILITY_NO' && echo "$sep" | grep -q 'clearAndSetSemantics' && ok "same as Data Apps: hidden from accessibility" || bad "differs from Data Apps' separatorCell: accessibility"
 grep -q 'if (!sep) slots++' "$KT/TileGridFragment.kt" && grep -q 'if (!sep && slots == cols) break' "$KT/TileGridFragment.kt" \
   && ok "separators are not counted against the column slots" || bad "separators count as column slots"
 

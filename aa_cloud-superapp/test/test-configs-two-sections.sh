@@ -268,7 +268,7 @@ grep -qF 'subgroup = po.optString("subgroup", "")' "$SECTIONS" \
 grep -qF 'subgroup = if (p.isAction) "" else p.subgroup' "$NAV" \
   && ok "the nav controller carries subgroup through to the tile" \
   || bad "subgroup never reaches TileGridFragment — Setup/Observability would not draw"
-grep -qF 'grid.addView(subgroupHeader(s))' "$GRID" \
+grep -qF 'items += GridItem.SubHeader(s)' "$GRID" \
   && ok "TileGridFragment draws a subgroup header" \
   || bad "no subgroup header is drawn — the Setup subsections would run together"
 grep -qF 'subs.getOrNull(i + span).orEmpty() == s' "$GRID" \
