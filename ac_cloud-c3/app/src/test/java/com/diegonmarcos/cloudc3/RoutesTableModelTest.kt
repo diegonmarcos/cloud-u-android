@@ -112,6 +112,67 @@ class RoutesTableModelTest {
     }
 
     @Test
+    fun `search matches every column, case-insensitively`() {
+        val r = M.Row("Tools", "Gitea", "git.example.com", "woauth", "gitea.app:3002", "oci-A1-f_0", "10.0.0.6:3002")
+        for (q in listOf("tools", "GITEA", "git.example", "wo", "woauth", "gitea.app", "oci-a1", "10.0.0.6:3002", "  Tools  ", ""))
+            assertTrue("'$q' should match", M.matches(r, q))
+        for (q in listOf("nope", "bearer", "10.0.0.7"))
+            assertTrue("'$q' should not match", !M.matches(r, q))
+    }
+
+    @Test
+    fun `every word must match some column, so words narrow the search`() {
+        val r = M.Row("tools", "gitea", "git.example.com", "bearer", "gitea.app:1", "oci-a", "10.0.0.6:1")
+        assertTrue(M.matches(r, "bearer oci"))
+        assertTrue(M.matches(r, "oci bearer"))
+        assertTrue(!M.matches(r, "bearer zzz"))
+    }
+
+    @Test
+    fun `search ANDs with the auth and vm filters and the sort`() {
+        assertEquals(listOf("alpha", "charlie"), names(M.State(query = "example.com", auth = setOf("woauth", "bearer"))))
+        assertEquals(listOf("alpha"), names(M.State(query = "ALPHA", auth = setOf("woauth", "bearer"), vms = setOf("vm-a"))))
+        assertEquals(emptyList<String>(), names(M.State(query = "alpha", auth = setOf("mesh"))))
+        assertEquals(listOf("echo", "charlie", "alpha"), names(M.State(Column.CONTAINER, false, query = "example.com")))
+        assertEquals(5, names(M.State(query = "   ")).size)
+    }
+
+    @Test
+    fun `the query is persisted with the filters, even with separators in it`() {
+        val s = M.State(Column.PUBLIC_URL, false, setOf("mesh"), setOf("vm-a"), "a;b|c, d%é")
+        assertEquals(s, M.decode(M.encode(s)))
+        assertEquals("old four-field state still decodes", M.State(Column.CONTAINER, true), M.decode("container;asc;;"))
+    }
+
+    @Test
+    fun `open maps each value to its target`() {
+        assertEquals(M.OpenTarget.Url("https://git.example.com"), M.openTarget(Column.PUBLIC_URL, "git.example.com"))
+        assertEquals(M.OpenTarget.Url("https://api.example.com/svc"), M.openTarget(Column.PUBLIC_URL, " api.example.com/svc "))
+        assertEquals(M.OpenTarget.Url("http://gitea.app:3002"), M.openTarget(Column.PRIVATE_URL, "gitea.app:3002"))
+        assertEquals(M.OpenTarget.Url("http://10.0.0.6:3002"), M.openTarget(Column.VM_ADDR, "10.0.0.6:3002"))
+        assertEquals(M.OpenTarget.Url("http://10.0.0.6"), M.openTarget(Column.VM_ADDR, "10.0.0.6"))
+        assertEquals(M.OpenTarget.Container("gitea"), M.openTarget(Column.CONTAINER, "gitea"))
+        assertEquals(M.OpenTarget.Vm("oci-A1-f_0"), M.openTarget(Column.VM_NAME, "oci-A1-f_0"))
+        assertEquals(M.OpenTarget.Category("tools"), M.openTarget(Column.CATEGORY, "tools"))
+    }
+
+    @Test
+    fun `values that cannot be opened map to nothing`() {
+        for (c in Column.entries) assertEquals("blank $c", null, M.openTarget(c, "  "))
+        assertEquals("auth type opens nothing", null, M.openTarget(Column.AUTH_TYPE, "Bearer"))
+        assertEquals("a private name with no address", null, M.openTarget(Column.PRIVATE_URL, "cloud-builder-x"))
+    }
+
+    @Test
+    fun `category filter is exact and ANDs with the rest, and persists`() {
+        assertEquals(listOf("charlie"), names(M.State(category = "tools")))
+        assertEquals(emptyList<String>(), names(M.State(category = "tools", auth = setOf("mesh"))))
+        assertEquals(listOf("alpha"), names(M.State(category = "app", query = "alpha")))
+        val s = M.State(category = "t;ools", query = "q")
+        assertEquals(s, M.decode(M.encode(s)))
+    }
+
+    @Test
     fun `the shipped slice parses into rows the table can show`() {
         var dir = File("").absoluteFile
         while (dir.parentFile != null && !File(dir, "data/infra_slice.json").isFile) dir = dir.parentFile

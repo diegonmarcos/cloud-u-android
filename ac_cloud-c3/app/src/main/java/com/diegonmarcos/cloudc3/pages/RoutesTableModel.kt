@@ -60,6 +60,10 @@ object RoutesTableModel {
         val ascending: Boolean = true,
         val auth: Set<String> = emptySet(),
         val vms: Set<String> = emptySet(),
+        /** Free text; blank = no search. */
+        val query: String = "",
+        /** Exactly this category (set by Open on a category cell); blank = all. */
+        val category: String = "",
     )
 
     /** Rows from the slice's `routes` array; a missing or malformed array is an empty table, never a crash. */
@@ -73,7 +77,8 @@ object RoutesTableModel {
     /** Filter, then sort. Blank cells sort LAST in both directions, so a column's gaps never lead the table. */
     fun view(rows: List<Row>, state: State): List<Row> {
         val kept = rows.filter { r ->
-            (state.auth.isEmpty() || r.authType in state.auth) && (state.vms.isEmpty() || r.vmName in state.vms)
+            (state.auth.isEmpty() || r.authType in state.auth) && (state.vms.isEmpty() || r.vmName in state.vms) &&
+                (state.category.isEmpty() || r.category == state.category) && matches(r, state.query)
         }
         val byText = Comparator<Row> { a, b ->
             val x = a.text(state.sort)
@@ -86,6 +91,48 @@ object RoutesTableModel {
             }
         }
         return kept.sortedWith(byText.thenBy(String.CASE_INSENSITIVE_ORDER) { it.container })
+    }
+
+    /**
+     * The search predicate: every whitespace-separated word of [query] must appear (case-insensitive) in at least
+     * one of the row's seven shown cells, so "bearer oci" finds Bearer rows on an oci VM. Blank matches everything.
+     */
+    fun matches(row: Row, query: String): Boolean {
+        val words = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
+        if (words.isEmpty()) return true
+        val cells = Column.entries.map { row.text(it).lowercase() }
+        return words.all { w -> cells.any { w in it } }
+    }
+
+    /** What Open does with a cell. */
+    sealed interface OpenTarget {
+        /** A URL for the browser / C3's existing open pattern. */
+        data class Url(val url: String) : OpenTarget
+        /** The container's detail sheet in C3. */
+        data class Container(val name: String) : OpenTarget
+        /** The VM's place in C3 (the Infra page's VMs). */
+        data class Vm(val name: String) : OpenTarget
+        /** Filter the table to this category. */
+        data class Category(val name: String) : OpenTarget
+    }
+
+    /**
+     * The value-to-target mapping for the long-press menu; null = nothing to open (Open and Copy & Open are
+     * disabled). Public URLs are https; private URLs and IP:PORT are http on the mesh (private names without a dot
+     * or a port, e.g. a local tool, have no address to open); Auth Type opens nothing.
+     */
+    fun openTarget(column: Column, value: String): OpenTarget? {
+        val v = value.trim()
+        if (v.isEmpty()) return null
+        return when (column) {
+            Column.PUBLIC_URL -> OpenTarget.Url(if (v.contains("://")) v else "https://$v")
+            Column.PRIVATE_URL -> if (v.contains("://")) OpenTarget.Url(v) else if ('.' in v || ':' in v) OpenTarget.Url("http://$v") else null
+            Column.VM_ADDR -> OpenTarget.Url(if (v.contains("://")) v else "http://$v")
+            Column.CONTAINER -> OpenTarget.Container(v)
+            Column.VM_NAME -> OpenTarget.Vm(v)
+            Column.CATEGORY -> OpenTarget.Category(v)
+            Column.AUTH_TYPE -> null
+        }
     }
 
     /** Tap on a header: the sorted column flips direction, any other column starts ascending. */
@@ -109,16 +156,18 @@ object RoutesTableModel {
     // ── persistence: one line of text, tolerant of anything ────────────────────────────────
 
     fun encode(s: State): String =
-        listOf(s.sort.key, if (s.ascending) "asc" else "desc", s.auth.sorted().joinToString(","), s.vms.sorted().joinToString("|"))
-            .joinToString(";")
+        listOf(s.sort.key, if (s.ascending) "asc" else "desc", s.auth.sorted().joinToString(","), s.vms.sorted().joinToString("|"),
+            java.net.URLEncoder.encode(s.query, "UTF-8"), java.net.URLEncoder.encode(s.category, "UTF-8")).joinToString(";")
 
     /** Anything unreadable is the default state: stale or hand-edited preferences cannot break the page. */
     fun decode(text: String?): State {
         val p = text?.split(';') ?: return State()
-        if (p.size != 4) return State()
+        if (p.size !in 4..6) return State()
         val col = Column.entries.firstOrNull { it.key == p[0] } ?: return State()
         val asc = when (p[1]) { "asc" -> true; "desc" -> false; else -> return State() }
-        return State(col, asc, p[2].split(',').filter { it.isNotBlank() }.toSet(), p[3].split('|').filter { it.isNotBlank() }.toSet())
+        return State(col, asc, p[2].split(',').filter { it.isNotBlank() }.toSet(), p[3].split('|').filter { it.isNotBlank() }.toSet(),
+            p.getOrNull(4)?.let { runCatching { java.net.URLDecoder.decode(it, "UTF-8") }.getOrNull() }.orEmpty(),
+            p.getOrNull(5)?.let { runCatching { java.net.URLDecoder.decode(it, "UTF-8") }.getOrNull() }.orEmpty())
     }
 
     private fun Set<String>.toggled(x: String): Set<String> = if (x in this) this - x else this + x

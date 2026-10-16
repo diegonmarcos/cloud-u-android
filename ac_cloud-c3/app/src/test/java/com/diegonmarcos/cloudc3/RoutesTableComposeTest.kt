@@ -7,9 +7,17 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.assertExists
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
+import org.junit.Assert.assertTrue
 import com.diegonmarcos.cloudc3.pages.RoutesTableModel
 import com.diegonmarcos.cloudc3.pages.RoutesTableModel.Column
 import com.diegonmarcos.cloudc3.pages.RoutesTableScreen
@@ -134,6 +142,143 @@ class RoutesTableComposeTest {
         assertEquals(listOf("delta", "bravo"), containers())
         compose.onNodeWithTag(RoutesTags.COUNT).assertTextEquals("2 of 4 rows")
         compose.onNodeWithTag(RoutesTags.header(Column.CONTAINER)).assertTextContains("\u25BC", substring = true)
+    }
+
+    private fun type(text: String) {
+        compose.onNodeWithTag(RoutesTags.SEARCH).performTextInput(text)
+        compose.mainClock.advanceTimeBy(1000)
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `typing filters live across all columns and updates the count`() {
+        show()
+        type("EXAMPLE")
+        assertEquals(listOf("alpha", "charlie"), containers())
+        compose.onNodeWithTag(RoutesTags.COUNT).assertTextEquals("2 of 4 rows")
+        compose.onNodeWithTag(RoutesTags.SEARCH).performTextClearance()
+        type("bravo.app")
+        assertEquals("private URL column is searched too", listOf("bravo"), containers())
+    }
+
+    @Test
+    fun `search combines with the chips and is handed out for persistence`() {
+        show()
+        tap(RoutesTags.vmChip("vm-a"))
+        type("a")
+        assertEquals(listOf("alpha", "bravo"), containers())
+        type("lph")
+        assertEquals(listOf("alpha"), containers())
+        assertTrue(states.last().query.contains("lph") && states.last().vms == setOf("vm-a"))
+    }
+
+    @Test
+    fun `the clear button empties the box and restores every row`() {
+        show()
+        type("alpha")
+        assertEquals(listOf("alpha"), containers())
+        tap(RoutesTags.SEARCH_CLEAR)
+        compose.mainClock.advanceTimeBy(1000)
+        compose.waitForIdle()
+        assertEquals(4, containers().size)
+        compose.onNodeWithTag(RoutesTags.COUNT).assertTextEquals("4 rows")
+        assertTrue(compose.onAllNodesWithTag(RoutesTags.SEARCH_CLEAR).fetchSemanticsNodes().isEmpty())
+        assertEquals("", states.last().query)
+    }
+
+    @Test
+    fun `a restored query is shown in the box and applied`() {
+        show(initial = RoutesTableModel.State(query = "delta"))
+        assertEquals(listOf("delta"), containers())
+        compose.onNodeWithTag(RoutesTags.SEARCH).assertTextContains("delta")
+    }
+
+    private val opened = mutableListOf<RoutesTableModel.OpenTarget>()
+
+    private fun showWithOpen() {
+        compose.setContent {
+            MaterialTheme(colorScheme = darkColorScheme()) { RoutesTableScreen(rows, onState = { states += it }, onOpen = { opened += it }) }
+        }
+        compose.waitForIdle()
+    }
+
+    private fun longPress(col: Column, index: Int = 0) {
+        compose.onAllNodesWithTag(RoutesTags.cell(col))[index].performTouchInput { longClick() }
+        compose.waitForIdle()
+    }
+
+    private fun clipboard(): String? {
+        val cm = RuntimeEnvironment.getApplication().getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        return cm.primaryClip?.getItemAt(0)?.text?.toString()
+    }
+
+    @Test
+    fun `long-press on any cell opens Copy, Open and Copy and Open`() {
+        showWithOpen()
+        for (col in Column.entries) {
+            longPress(col)
+            for (tag in listOf(RoutesTags.MENU_COPY, RoutesTags.MENU_OPEN, RoutesTags.MENU_COPY_OPEN)) compose.onNodeWithTag(tag).assertExists()
+            compose.onNodeWithTag(RoutesTags.MENU_COPY).performClick()
+            compose.waitForIdle()
+        }
+    }
+
+    @Test
+    fun `Copy puts the cell value on the clipboard`() {
+        showWithOpen()
+        longPress(Column.CONTAINER, 2)
+        compose.onNodeWithTag(RoutesTags.MENU_COPY).performClick()
+        assertEquals("charlie", clipboard())
+        assertTrue("Copy alone opens nothing", opened.isEmpty())
+    }
+
+    @Test
+    fun `Open on a public url opens its https address, Copy and Open does both`() {
+        showWithOpen()
+        longPress(Column.PUBLIC_URL, 0)
+        compose.onNodeWithTag(RoutesTags.MENU_OPEN).performClick()
+        assertEquals(listOf<RoutesTableModel.OpenTarget>(RoutesTableModel.OpenTarget.Url("https://alpha.example.com")), opened)
+        longPress(Column.PRIVATE_URL, 0)
+        compose.onNodeWithTag(RoutesTags.MENU_COPY_OPEN).performClick()
+        assertEquals("alpha.app:80", clipboard())
+        assertEquals(RoutesTableModel.OpenTarget.Url("http://alpha.app:80"), opened.last())
+    }
+
+    @Test
+    fun `Open on a container and a vm hands out their targets`() {
+        showWithOpen()
+        longPress(Column.CONTAINER, 0)
+        compose.onNodeWithTag(RoutesTags.MENU_OPEN).performClick()
+        longPress(Column.VM_NAME, 0)
+        compose.onNodeWithTag(RoutesTags.MENU_OPEN).performClick()
+        assertEquals(listOf(RoutesTableModel.OpenTarget.Container("alpha"), RoutesTableModel.OpenTarget.Vm("vm-a")), opened)
+    }
+
+    @Test
+    fun `Open on a category filters the table to it, and the chip clears it`() {
+        showWithOpen()
+        longPress(Column.CATEGORY, 0)
+        compose.onNodeWithTag(RoutesTags.MENU_OPEN).performClick()
+        compose.waitForIdle()
+        assertEquals("app", states.last().category)
+        compose.onNodeWithTag(RoutesTags.CATEGORY_CHIP).assertExists()
+        tap(RoutesTags.CATEGORY_CHIP)
+        assertEquals("", states.last().category)
+    }
+
+    @Test
+    fun `values that cannot be opened disable Open and Copy and Open, and a blank cell disables Copy`() {
+        showWithOpen()
+        longPress(Column.AUTH_TYPE, 0)
+        compose.onNodeWithTag(RoutesTags.MENU_OPEN).assertIsNotEnabled()
+        compose.onNodeWithTag(RoutesTags.MENU_COPY_OPEN).assertIsNotEnabled()
+        compose.onNodeWithTag(RoutesTags.MENU_COPY).assertIsEnabled()
+        compose.onNodeWithTag(RoutesTags.MENU_COPY).performClick()
+        compose.waitForIdle()
+        // charlie is the only row with a public url... bravo/delta have none: sorted by container, bravo is index 1
+        longPress(Column.PUBLIC_URL, 1)
+        compose.onNodeWithTag(RoutesTags.MENU_COPY).assertIsNotEnabled()
+        compose.onNodeWithTag(RoutesTags.MENU_OPEN).assertIsNotEnabled()
     }
 
     @Test

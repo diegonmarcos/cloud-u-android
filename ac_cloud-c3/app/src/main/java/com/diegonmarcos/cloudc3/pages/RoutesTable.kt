@@ -1,6 +1,16 @@
 package com.diegonmarcos.cloudc3.pages
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
+import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,7 +30,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.graphics.SolidColor
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +53,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.cloudc3.Declarations
 import com.diegonmarcos.cloudc3.cloud.C3HealthFragment
+import com.diegonmarcos.cloudc3.cloud.C3StackFragment
+import com.diegonmarcos.cloudc3.cloud.ContainerSheet
 import com.diegonmarcos.cloudc3.pages.RoutesTableModel.Column as Col
 import com.diegonmarcos.superapp.uikit.KitComposeFragment
 import com.diegonmarcos.superapp.uikit.KitPalette
@@ -46,6 +63,12 @@ import com.diegonmarcos.superapp.uikit.KitPalette
 object RoutesTags {
     const val SCREEN = "routes_screen"
     const val COUNT = "routes_count"
+    const val CATEGORY_CHIP = "routes_category_chip"
+    const val MENU_COPY = "routes_menu_copy"
+    const val MENU_OPEN = "routes_menu_open"
+    const val MENU_COPY_OPEN = "routes_menu_copy_open"
+    const val SEARCH = "routes_search"
+    const val SEARCH_CLEAR = "routes_search_clear"
     const val LIST = "routes_list"
     fun header(c: Col) = "routes_header_${c.key}"
     fun cell(c: Col) = "routes_cell_${c.key}"
@@ -84,18 +107,22 @@ private val headers = mapOf(
  * are multi-select chips; the count line says how many rows the filters leave. [initial] and [onState] carry the
  * sort and filters so the host can persist them.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RoutesTableScreen(
     rows: List<RoutesTableModel.Row>,
     initial: RoutesTableModel.State = RoutesTableModel.State(),
     onState: (RoutesTableModel.State) -> Unit = {},
     onOpenUrl: (String) -> Unit = {},
+    onOpen: (RoutesTableModel.OpenTarget) -> Unit = {},
 ) {
     var state by remember { mutableStateOf(initial) }
     fun update(s: RoutesTableModel.State) { state = s; onState(s) }
     val shown = remember(rows, state) { RoutesTableModel.view(rows, state) }
     val scroll = rememberScrollState()
     val c = MaterialTheme.colorScheme
+    val ctx = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     Column(Modifier.fillMaxSize().testTag(RoutesTags.SCREEN)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
             ChipRow("Auth") {
@@ -108,6 +135,10 @@ fun RoutesTableScreen(
                     Chip(vm, vm in state.vms, RoutesTags.vmChip(vm)) { update(RoutesTableModel.toggleVm(state, vm)) }
                 }
             }
+            if (state.category.isNotEmpty()) ChipRow("Cat") {
+                Chip("${state.category}  \u00D7", true, RoutesTags.CATEGORY_CHIP) { update(state.copy(category = "")) }
+            }
+            SearchBox(state.query) { update(state.copy(query = it)) }
             Text(
                 RoutesTableModel.countLine(shown.size, rows.size),
                 Modifier.padding(top = 2.dp).testTag(RoutesTags.COUNT),
@@ -137,20 +168,87 @@ fun RoutesTableScreen(
                     Col.entries.forEach { col ->
                         val text = r.text(col)
                         val open = col == Col.PUBLIC_URL && text.isNotBlank()
-                        Text(
-                            text,
-                            Modifier.width(widths.getValue(col)).padding(horizontal = 8.dp, vertical = 5.dp)
-                                .then(if (open) Modifier.clickable(role = Role.Button) { onOpenUrl("https://$text") } else Modifier)
-                                .testTag(RoutesTags.cell(col)),
-                            color = if (open) c.primary else c.onSurface,
-                            style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        )
+                        var menu by remember { mutableStateOf(false) }
+                        Box {
+                            Text(
+                                text,
+                                Modifier.width(widths.getValue(col)).padding(horizontal = 8.dp, vertical = 5.dp)
+                                    .combinedClickable(
+                                        role = Role.Button,
+                                        onClick = { if (open) onOpenUrl("https://$text") },
+                                        onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu = true },
+                                    )
+                                    .testTag(RoutesTags.cell(col)),
+                                color = if (open) c.primary else c.onSurface,
+                                style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                            val target = RoutesTableModel.openTarget(col, text)
+                            fun doOpen() {
+                                if (target is RoutesTableModel.OpenTarget.Category) update(state.copy(category = target.name))
+                                else if (target != null) onOpen(target)
+                            }
+                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                DropdownMenuItem(text = { Text("Copy") }, enabled = text.isNotBlank(),
+                                    modifier = Modifier.testTag(RoutesTags.MENU_COPY),
+                                    onClick = { menu = false; copyToClipboard(ctx, text) })
+                                DropdownMenuItem(text = { Text("Open") }, enabled = target != null,
+                                    modifier = Modifier.testTag(RoutesTags.MENU_OPEN),
+                                    onClick = { menu = false; doOpen() })
+                                DropdownMenuItem(text = { Text("Copy & Open") }, enabled = target != null && text.isNotBlank(),
+                                    modifier = Modifier.testTag(RoutesTags.MENU_COPY_OPEN),
+                                    onClick = { menu = false; copyToClipboard(ctx, text); doOpen() })
+                            }
+                        }
                     }
                 }
             }
         }
     }
 }
+
+/** Copy [text] to the system clipboard and say so. */
+private fun copyToClipboard(ctx: Context, text: String) {
+    runCatching {
+        (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("c3", text))
+        Toast.makeText(ctx, "Copied", Toast.LENGTH_SHORT).show()
+    }
+}
+
+/** Free-text search under the filters: live (debounced), with a clear button. [onQuery] gets the settled text. */
+@Composable
+private fun SearchBox(query: String, onQuery: (String) -> Unit) {
+    val c = MaterialTheme.colorScheme
+    var text by remember { mutableStateOf(query) }
+    val latest by rememberUpdatedState(onQuery)
+    LaunchedEffect(text) {
+        if (text != query) { delay(SEARCH_DEBOUNCE_MS); latest(text) }
+    }
+    Row(
+        Modifier.fillMaxWidth().padding(top = 4.dp).clip(RoundedCornerShape(8.dp))
+            .border(BorderStroke(1.dp, c.outline.copy(alpha = 0.4f)), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.weight(1f)) {
+            if (text.isEmpty()) Text("Search all columns", color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            BasicTextField(
+                value = text, onValueChange = { text = it }, singleLine = true,
+                textStyle = MaterialTheme.typography.bodySmall.copy(color = c.onSurface),
+                cursorBrush = SolidColor(c.primary),
+                modifier = Modifier.fillMaxWidth().testTag(RoutesTags.SEARCH),
+            )
+        }
+        if (text.isNotEmpty()) {
+            Text(
+                "\u00D7",
+                Modifier.clickable(role = Role.Button) { text = ""; latest("") }.padding(horizontal = 8.dp)
+                    .testTag(RoutesTags.SEARCH_CLEAR).semantics { contentDescription = "Clear search" },
+                color = c.onSurface, style = MaterialTheme.typography.titleMedium,
+            )
+        }
+    }
+}
+
+private const val SEARCH_DEBOUNCE_MS = 200L
 
 @Composable
 private fun ChipRow(label: String, chips: @Composable () -> Unit) {
@@ -182,7 +280,8 @@ class RoutesTableFragment : KitComposeFragment() {
 
     @Composable
     override fun Content() {
-        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val ctx = LocalContext.current
+        var container by remember { mutableStateOf<String?>(null) }
         val store = remember { PrefsRoutesStateStore(ctx) }
         val initial = remember { store.load() }
         RoutesTableScreen(
@@ -190,6 +289,22 @@ class RoutesTableFragment : KitComposeFragment() {
             initial = initial,
             onState = store::save,
             onOpenUrl = { (activity as? C3HealthFragment.UrlClickListener)?.onUrlClicked(it) },
+            onOpen = { t ->
+                when (t) {
+                    is RoutesTableModel.OpenTarget.Url -> (activity as? C3HealthFragment.UrlClickListener)?.onUrlClicked(t.url)
+                    is RoutesTableModel.OpenTarget.Container -> container = t.name
+                    // The VM's place is the Infra page (Stack > VMs); C3 has no page per VM.
+                    is RoutesTableModel.OpenTarget.Vm -> (activity as? C3StackFragment.TargetListener)?.onTargetClicked("page:c3/stack")
+                    is RoutesTableModel.OpenTarget.Category -> Unit // handled inside the screen: it sets the category filter
+                }
+            },
         )
+        container?.let { name ->
+            ContainerSheet.Sheet(
+                target = ContainerSheet.Target(name, name, ""),
+                onOpenUrl = { url -> (activity as? C3HealthFragment.UrlClickListener)?.onUrlClicked(url) },
+                onDismiss = { container = null },
+            )
+        }
     }
 }

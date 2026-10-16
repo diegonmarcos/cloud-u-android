@@ -530,6 +530,12 @@ if any(p.get("kind") == "tile_row" and p.get("title") == "More" for p in topo + 
 if not any(p.get("anchor") == "stack" for p in infra): bad.append("stack_infra lost the Stack card")
 if any(p.get("anchor") == "stack" for p in topo): bad.append("the Stack card is still on Containers > Topology (it moved to Infra)")
 if '"table" -> RoutesTableFragment()' not in tabs: bad.append("ContainersFragment resolves no RoutesTableFragment for the table page")
+_rt = open(sys.argv[3].replace("TabFragments.kt", "RoutesTable.kt"), encoding="utf-8").read()
+_rm = open(sys.argv[3].replace("TabFragments.kt", "RoutesTableModel.kt"), encoding="utf-8").read()
+if "SearchBox(" not in _rt or "fun matches(" not in _rm or "state.query" not in _rm:
+    bad.append("the Table page lost its search box / predicate (owner item 11)")
+if "onLongClick" not in _rt or "Copy & Open" not in _rt or "fun openTarget(" not in _rm:
+    bad.append("the Table page lost its long-press Copy / Open / Copy & Open menu (owner item 12)")
 if '"stack" -> C3StackFragment.newInstance(C3StackFragment.STACK_INFRA)' not in tabs: bad.append("InfraFragment does not render stack_infra")
 routes = sl.get("routes") or []
 if len(routes) < 50: bad.append("data/infra_slice.json carries %d routes - run data/gen_infra_slice.py" % len(routes))

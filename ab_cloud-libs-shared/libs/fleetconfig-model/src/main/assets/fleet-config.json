@@ -604,6 +604,17 @@
         "ac_cloud-dialer"
       ]
     },
+    "c3_routes_table": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud C3 > Containers > Table: the chosen sort column and direction, the Auth Type and VM filters, the category filter and the search text, as one string under the key 'state'.",
+      "used_by": [
+        "ac_cloud-c3"
+      ],
+      "keys": {
+        "state": "config"
+      }
+    },
     "contacts_vcards": {
       "kind": "provider",
       "class": "config",
