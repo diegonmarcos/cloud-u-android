@@ -63,11 +63,7 @@ class EdgeOverlayGestureTest {
         // The app's own wireless-debugging bootstrap raises SystemUI's "Allow wireless debugging?" dialog on a fresh
         // emulator: it sits above everything, hides non-system overlays (HIDE_NON_SYSTEM_OVERLAY_WINDOWS) and eats
         // touches - the CI run that showed it had every edge gesture fail behind it. Switch it off and dismiss it.
-        sh("settings put global adb_wifi_enabled 0")
-        repeat(6) {
-            if (!sh("dumpsys window windows").contains("WifiDebuggingActivity")) return@repeat
-            sh("input keyevent KEYCODE_BACK"); SystemClock.sleep(600)
-        }
+        clearPrompt()
         // The owner's setup: gesture navigation (back swipe from the screen edge).
         sh("cmd overlay enable com.android.internal.systemui.navbar.gestural")
         SystemClock.sleep(2500)
@@ -131,7 +127,15 @@ class EdgeOverlayGestureTest {
     private fun inject(action: Int, x: Float, y: Float) {
         val e = ev(action, x, y); ua.injectInputEvent(e, true); e.recycle()
     }
-    private fun down(x: Float, y: Float) { downT = SystemClock.uptimeMillis(); inject(MotionEvent.ACTION_DOWN, x, y) }
+    /** The app re-raises SystemUI's wireless-debugging prompt on its own schedule: clear it before every gesture. */
+    private fun clearPrompt() {
+        sh("settings put global adb_wifi_enabled 0")
+        repeat(6) {
+            if (!sh("dumpsys window windows").contains("WifiDebuggingActivity")) return
+            sh("input keyevent KEYCODE_BACK"); SystemClock.sleep(600)
+        }
+    }
+    private fun down(x: Float, y: Float) { clearPrompt(); downT = SystemClock.uptimeMillis(); inject(MotionEvent.ACTION_DOWN, x, y) }
     private fun move(x: Float, y: Float) = inject(MotionEvent.ACTION_MOVE, x, y)
     private fun up(x: Float, y: Float) = inject(MotionEvent.ACTION_UP, x, y)
     private fun tap(x: Float, y: Float) { down(x, y); SystemClock.sleep(60); up(x, y); SystemClock.sleep(400) }
