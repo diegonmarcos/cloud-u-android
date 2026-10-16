@@ -29,7 +29,7 @@ grep -qE 'pageId == "firewall" +-> .*FirewallDialog\(\)\.apply \{ showsDialog = 
   || bad "config/firewall does not embed FirewallDialog (showsDialog = false)"
 
 echo "== F3: About is read-only for the firewall =="
-blk="$(awk '/section\(ctx, column, "Firewall"\)/{f=1} f{print} f&&/^        }$/{exit}' "$KT/devcontrol/DevControlFragment.kt")"
+blk="$(awk '/section\("Firewall"\) \{/{f=1} f{print} f&&/^        }$/{exit}' "$KT/devcontrol/DevControlFragment.kt")"
 [ -n "$blk" ] || bad "About's Firewall block not found"
 echo "$blk" | grep -qE 'FirewallDialog|FirewallController|FirewallRules|FirewallPrefs' \
   && bad "About's Firewall block touches the engine's controls" || ok "About's Firewall block uses no engine control"

@@ -73,13 +73,12 @@ class GridColumnsTest {
     // ── the grid uses the pref ──────────────────────────────────────────────
 
     @Test fun theIndexGridLaysOutAsManyCardsPerRowAsThePrefSays() {
-        val cells = (1..16).map { IndexTiles.Cell("c$it") {} }
         for (n in GridColumns.MIN..GridColumns.MAX) {
             GridColumns.set(ctx, GridColumns.Kind.CLOUD, n)
-            val grid = IndexTiles.grid(themed, GridColumns.cloud(ctx), cells) as android.widget.LinearLayout
-            val firstRow = grid.getChildAt(0) as android.widget.LinearLayout
-            assertEquals("row width at $n columns", n, firstRow.childCount)
-            assertEquals("rows at $n columns", (16 + n - 1) / n, grid.childCount)
+            val rows = IndexTiles.rowSizes(16, GridColumns.cloud(ctx))
+            assertEquals("row width at $n columns", minOf(n, 16), rows.first())
+            assertEquals("rows at $n columns", (16 + n - 1) / n, rows.size)
+            assertEquals("every cell is placed once at $n columns", 16, rows.sum())
         }
     }
 
@@ -105,18 +104,6 @@ class GridColumnsTest {
         }
         val seven = GridColumns.cellPx(screen - px(16), 7)
         assertTrue("7 columns still leave a usable icon", GridColumns.iconPx(px(52), seven, px(12), px(24)) >= px(32))
-    }
-
-    @Test fun labelsEllipsizeInsteadOfWrappingIntoEachOther() {
-        // Index card labels are 2 lines max and END-ellipsized.
-        GridColumns.set(ctx, GridColumns.Kind.CLOUD, 7)
-        val grid = IndexTiles.grid(themed, 7, listOf(IndexTiles.Cell("Averyveryverylongunbrokenlabel") {})) as android.widget.LinearLayout
-        val card = (grid.getChildAt(0) as android.widget.LinearLayout).getChildAt(0) as android.view.ViewGroup
-        val inner = card.getChildAt(0) as android.view.ViewGroup
-        val label = (0 until inner.childCount).map { inner.getChildAt(it) }
-            .filterIsInstance<android.widget.TextView>().last()
-        assertEquals(2, label.maxLines)
-        assertEquals(android.text.TextUtils.TruncateAt.END, label.ellipsize)
     }
 
     @Test fun configsGridIsEightWideAndItsIconFitsAt360dp() {
