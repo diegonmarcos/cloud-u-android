@@ -149,8 +149,8 @@ check(bool(search_icon) and os.path.isfile(mine) and os.path.isfile(theirs) and 
 print("== T4: a not-installed extapp tile is the #249 placeholder, localised ==")
 kt = os.path.join(app, "app/src/main/java/com/diegonmarcos/superapp")
 grouped = code(os.path.join(kt, "launcher/GroupedTilesFragment.kt"))
-cell = grouped[grouped.find("private fun tileCell"):]
-cell = cell[:cell.find("\n    private fun ", 1)]
+cell = grouped[grouped.find("internal fun TileCell"):]
+cell = cell[:cell.find("\n}\n", 1)]
 check("Sections.extappMissing(ctx, tile.target)" in cell, "tileCell asks Sections.extappMissing about its target")
 for token in ("R.drawable.ic_app_not_installed", "R.string.phone_app_not_installed_tile_hint",
               "R.string.phone_app_not_installed"):
@@ -196,7 +196,7 @@ check((by.get("Search") or {}).get("tint") is False, "the Search tile declares t
 check(not any(t.get("tint") is False for t in tiles if t.get("label") != "Search"),
       "no other AGI tile opts out of the tint")
 check('tint       = t.optBoolean("tint", true)' in sections, "Sections parses a tile's `tint`, default true")
-check(re.search(r"if \(missing \|\| tile\.tint\) imageTintList", cell),
+check(re.search(r"if \(missing\) p\.textSecondary else if \(tile\.tint\) p\.textPrimary else", cell),
       "tileCell tints only a missing tile or one with tint:true")
 
 print("-- test-agi-tiles: %d passed, %d failed" % (passed, failed))

@@ -42,23 +42,23 @@ grep -q 'SearchEngine.sections(' "$PANEL" && ok "the panel's sections come from 
   || bad "SearchPanel does not draw SearchEngine.sections"
 
 echo "== T2: three places, one panel =="
-grep -q 'InlineSearch(this, SearchEntry.CLOUD_APPS_PAGE' "$SRC/launcher/GroupedTilesFragment.kt" \
+grep -q 'SearchSession(this, SearchEntry.CLOUD_APPS_PAGE' "$SRC/launcher/GroupedTilesFragment.kt" \
   && ok "Cloud > Apps mounts the shared panel inline" || bad "Cloud > Apps does not mount InlineSearch"
-grep -q 'InlineSearch(this, SearchEntry.HOME_SHEET' "$SRC/launcher/AppDrawerSheetFragment.kt" \
-  && grep -q 'GroupedTilesFragment.mountSearch(inline, host)' "$SRC/launcher/AppDrawerSheetFragment.kt" \
+grep -q 'SearchSession(this, SearchEntry.HOME_SHEET' "$SRC/launcher/AppDrawerSheetFragment.kt" \
+  && grep -q 'SearchFrame(session, "Search"' "$SRC/launcher/AppDrawerSheetFragment.kt" \
   && ok "the Home swipe sheet mounts the shared panel inline, the same way" || bad "the swipe sheet does not mount InlineSearch"
 grep -q 'SearchSheetFragment.newInstance()' "$SRC/ShellActivity.kt" \
   && ok "the Home star (action:open_search) opens the shared panel full screen" || bad "openSearchSheet does not open SearchSheetFragment"
 grep -q 'SearchEntry.HOME_STAR' "$SHEET" && ok "the full-screen sheet is the Home star's entry" || bad "SearchSheetFragment is not SearchEntry.HOME_STAR"
 grep -q 'KitSearchBar(' "$PANEL" && ok "the bar is libs:ui-kit's KitSearchBar" || bad "SearchBox is not KitSearchBar"
 # The bar sits at the TOP of Cloud > Apps now: it is the first child of the inline root.
-python3 - "$SRC/launcher/GroupedTilesFragment.kt" <<'PY' && ok "the inline bar is added above the page, not under it" || bad "the inline bar is not the first child"
+python3 - "$SRC/search/SearchFrame.kt" <<'PY' && ok "the inline bar is added above the page, not under it" || bad "the inline bar is not the first child"
 import re, sys
 s = open(sys.argv[1]).read()
-m = re.search(r'fun mountSearch\(.*?\n        \}', s, re.S)
+m = re.search(r'fun SearchFrame\(.*', s, re.S)
 body = m.group(0) if m else ''
-bar, frame = body.find('addView(search.bar'), body.find('addView(frame')
-sys.exit(0 if 0 <= bar < frame else 1)
+bar, content = body.find('SearchBox('), body.find('content()')
+sys.exit(0 if 0 <= bar < content else 1)
 PY
 
 echo "== T3: libs:search is the engine, not a UI =="
