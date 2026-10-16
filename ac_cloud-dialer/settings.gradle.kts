@@ -42,3 +42,7 @@ project(":libs:devtools").projectDir = file("../ab_cloud-libs-shared/libs/devtoo
 // #873 libs:core declares `api project(':libs:fleetconfig-model')` (the setup contract): the include is not optional.
 include(":libs:fleetconfig-model")
 project(":libs:fleetconfig-model").projectDir = file("../ab_cloud-libs-shared/libs/fleetconfig-model")
+// 2026-10-16 owner decision: all apps must be Compose. The fleet's Compose kit (CloudKitTheme + KitPalette):
+// ScreeningLogActivity and CallProviderChooserSheet paint with it.
+include(":libs:ui-kit")
+project(":libs:ui-kit").projectDir = file("../ab_cloud-libs-shared/libs/ui-kit")

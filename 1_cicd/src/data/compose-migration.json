@@ -851,7 +851,7 @@
       "id": "ac_cloud-dialer",
       "scope": "in",
       "wave": 4,
-      "ui": "views",
+      "ui": "compose",
       "size": "M",
       "roots": [
         "app/src/main/kotlin/org/fossify/phone/updater",
@@ -861,22 +861,17 @@
         "app/src/main/kotlin/org/fossify/phone/helpers/CallProviders.kt",
         "app/src/main/kotlin/org/fossify/phone/helpers/ScreeningLogStore.kt",
         "app/src/main/kotlin/org/fossify/phone/extensions/CallProviderExt.kt",
-        "app/src/main/res/layout/activity_screening_log.xml",
-        "app/src/main/res/layout/item_call_provider.xml",
-        "app/src/main/res/layout/item_screened_call.xml"
+        "app/src/main/kotlin/org/fossify/phone/extensions/DialerKitPalette.kt"
       ],
-      "screens_left": [
-        "ScreeningLogActivity",
-        "CallProviderChooserSheet"
-      ],
-      "notes": "Fossify Phone fork. Only OUR additions are counted (roots): ScreeningLogActivity and CallProviderChooserSheet. Upstream screens stay Views; our additions extend Fossify SimpleActivity / BaseBottomSheetDialogFragment, so they become Compose content inside those bases.",
+      "screens_left": [],
+      "notes": "Fossify Phone fork. Only OUR additions are counted (roots), and they are all Compose (2026-10-16): ScreeningLogActivity (SimpleActivity hosting a ComposeView under CloudKitTheme) and CallProviderChooserSheet (BaseBottomSheetDialogFragment hosting composable rows); both take their palette from the Fossify theme through DialerKitPalette. Upstream screens stay Views.",
       "risks": [
         "edits to upstream activity_call/activity_main/item_recent_call are first-party but inseparable from upstream layouts — not counted, not migrated"
       ],
       "baseline": {
-        "view_screens": 2,
-        "layout_xml": 3,
-        "view_ui_files": 2,
+        "view_screens": 0,
+        "layout_xml": 0,
+        "view_ui_files": 0,
         "custom_views": 0
       },
       "screen_bases": [

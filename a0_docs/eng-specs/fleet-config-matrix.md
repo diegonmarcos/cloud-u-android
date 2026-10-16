@@ -456,7 +456,7 @@ Coverage: 4 covered, 0 gaps.
 
 ## cloud-dialer — `com.diegonmarcos.comms.dialer`
 
-Module `ac_cloud-dialer`; libs: lib-analytics, lib-core, lib-devtools, lib-fleetconfig-model.
+Module `ac_cloud-dialer`; libs: lib-analytics, lib-core, lib-devtools, lib-fleetconfig-model, lib-ui-kit.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
