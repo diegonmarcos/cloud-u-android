@@ -2,12 +2,8 @@ package com.diegonmarcos.superapp.settings
 
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.ui.Haptics
-import com.diegonmarcos.superapp.ui.LauncherPalette
 
-import android.content.Context
 import android.view.View
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -36,38 +32,11 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
  * so they lift out as top-level functions with no state to carry.
  */
 
-internal fun dp(ctx: Context, v: Int): Int =
-    (v * ctx.resources.displayMetrics.density).toInt()
-
-internal fun spacer(ctx: Context, h: Int): View = View(ctx).apply {
-    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, h)
-}
-
-/** Section title + caption block. */
-internal fun sectionHeader(ctx: Context, title: String, subtitle: String): View {
-    val palette = LauncherPalette.of(ctx)
-    return LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        addView(TextView(ctx).apply {
-            text = title
-            setTextColor(palette.textPrimary)
-            setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-            setPadding(0, 0, 0, dp(ctx, 8))
-        })
-        addView(TextView(ctx).apply {
-            text = subtitle
-            setTextColor(palette.textSecondary)
-            setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-            setPadding(0, 0, 0, dp(ctx, 16))
-        })
-    }
-}
-
 /** A vertical gap, in dp. */
 @Composable
 internal fun GapDp(h: Int) { Spacer(Modifier.height(h.dp)) }
 
-/** Compose [sectionHeader]: section title + caption block. */
+/** Section title + caption block. */
 @Composable
 internal fun SectionHeaderUi(title: String, subtitle: String) {
     val p = LocalKitPalette.current
