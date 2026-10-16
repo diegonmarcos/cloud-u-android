@@ -4,16 +4,25 @@ _cloud-data-consolidated.json. NOTHING here is hand-listed: the tool set comes f
 build.json::ui.apps_page.tools[].source, every host/zone/rule is READ from the consolidated
 export. Secrets: only env-var NAMES and peer NAMES are carried - never a key or password value.
 
-  python3 data/gen_infra_slice.py [consolidated.json]   (default: fetch cloud-infra main raw)
+  python3 data/gen_infra_slice.py [consolidated.json [caddy-build.json]]   (default: fetch main raw)
+
+`routes` (the Containers > Table rows) is built by data/c3_routes.py from data/services_public.json +
+services_private.json, the consolidated export (service facts, VM addresses) and the edge auth tiers of
+cloud-u-containers infra-sec_caddy/build.json caddy_config.edge_auth.
 """
 import json, os, sys, urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import c3_routes
 URL = "https://raw.githubusercontent.com/diegonmarcos/cloud-infra/main/1_cloud-configs/dist/_cloud-data-consolidated.json"
 bj = json.load(open(os.path.join(HERE, "..", "build.json")))
 decl = bj["ui"]["apps_page"]
 src = sys.argv[1] if len(sys.argv) > 1 else None
+CADDY_URL = "https://raw.githubusercontent.com/diegonmarcos/cloud-u-containers/main/infra-sec_caddy/build.json"
+caddy_src = sys.argv[2] if len(sys.argv) > 2 else None
 d = json.load(open(src)) if src else json.load(urllib.request.urlopen(URL))
 S = d["services"]
+edge_auth = (json.load(open(caddy_src)) if caddy_src else json.load(urllib.request.urlopen(CADDY_URL)))["caddy_config"]["edge_auth"]
 short = lambda s, n=180: (s or "")[:n]
 
 def proxy_of(sv):
@@ -97,6 +106,10 @@ out = {
              "hosts": [{"service": s, "host": S[s].get("domain"), "vm": S[s].get("vm")}
                        for s in ("maddy", "stalwart", "cloud-webmail", "mail-puller") if s in S]},
     "containers_per_vm": per_vm,
+    "routes": c3_routes.build_routes(
+        json.load(open(os.path.join(HERE, "services_public.json"))),
+        json.load(open(os.path.join(HERE, "services_private.json"))),
+        S, d["vms"], edge_auth),
 }
 json.dump(out, open(os.path.join(HERE, "infra_slice.json"), "w"), indent=1, ensure_ascii=False)
-print("wrote infra_slice.json:", len(out["tools"]), "tools,", len(hosts), "hosts")
+print("wrote infra_slice.json:", len(out["tools"]), "tools,", len(hosts), "hosts,", len(out["routes"]), "routes")
