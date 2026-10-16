@@ -173,7 +173,7 @@ class MediaPanelView @JvmOverloads constructor(
             Box(Modifier.fillMaxWidth().weight(1f)) {
                 LazyVerticalGrid(GridCells.Fixed(if (type == MediaType.GIF) 3 else 4), Modifier.fillMaxSize()) {
                     itemsIndexed(items, key = { i, m -> "$i:${m.previewUrl}" }) { _, item ->
-                        RemoteImage(item.previewUrl, Modifier.fillMaxWidth().aspectRatio(1f).padding(2.dp)
+                        MediaRemoteImage(item.previewUrl, Modifier.fillMaxWidth().aspectRatio(1f).padding(2.dp)
                             .clickable { onPick(item) })
                     }
                 }
@@ -182,55 +182,6 @@ class MediaPanelView @JvmOverloads constructor(
                         modifier = Modifier.align(Alignment.Center).padding(horizontal = 8.dp, vertical = 16.dp))
                 }
             }
-        }
-    }
-
-    /** A thumbnail loaded by the shared Coil loader (its GIF/WebP decoders animate the drawable). */
-    @Composable
-    private fun RemoteImage(url: String, modifier: Modifier) {
-        val ctx = LocalContext.current
-        var drawable by remember(url) { mutableStateOf<Drawable?>(null) }
-        DisposableEffect(url) {
-            val request = ImageRequest.Builder(ctx).data(url).target(onSuccess = { drawable = it }).build()
-            val handle = MediaRuntime.imageLoader(ctx).enqueue(request)
-            onDispose { handle.dispose() }
-        }
-        val d = drawable
-        if (d != null) {
-            val painter = remember(d) { DrawablePainter(d) }
-            DisposableEffect(painter) {
-                painter.start()
-                onDispose { painter.stop() }
-            }
-            Image(painter, contentDescription = null, modifier = modifier, contentScale = ContentScale.Crop)
-        } else {
-            Box(modifier)
-        }
-    }
-}
-
-/** Draws an Android [Drawable] (animated ones included) into a Compose canvas. */
-private class DrawablePainter(private val d: Drawable) : Painter() {
-    private var tick by mutableIntStateOf(0)
-    private val handler = Handler(Looper.getMainLooper())
-    private val callback = object : Drawable.Callback {
-        override fun invalidateDrawable(who: Drawable) { tick++ }
-        override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) { handler.postAtTime(what, `when`) }
-        override fun unscheduleDrawable(who: Drawable, what: Runnable) { handler.removeCallbacks(what) }
-    }
-
-    fun start() { d.callback = callback; (d as? Animatable)?.start() }
-    fun stop() { (d as? Animatable)?.stop(); d.callback = null }
-
-    override val intrinsicSize: Size
-        get() = if (d.intrinsicWidth > 0 && d.intrinsicHeight > 0)
-            Size(d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat()) else Size.Unspecified
-
-    override fun DrawScope.onDraw() {
-        tick // read, so a frame the drawable invalidates redraws
-        drawIntoCanvas { c ->
-            d.setBounds(0, 0, size.width.roundToInt(), size.height.roundToInt())
-            d.draw(c.nativeCanvas)
         }
     }
 }

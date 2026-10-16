@@ -4,34 +4,58 @@ package helium314.keyboard.latin
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.text.SpannableString
 import android.text.Spanned
-import android.text.TextUtils
 import android.text.style.BackgroundColorSpan
 import android.util.TypedValue
-import android.view.Gravity
-import android.view.View
-import android.widget.ArrayAdapter
-import android.widget.HorizontalScrollView
-import android.widget.LinearLayout
-import android.widget.ListPopupWindow
-import android.widget.TextView
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.edit
 import com.diegonmarcos.superapp.translate.CappedScrollView
 import com.diegonmarcos.superapp.translate.ImeTextBox
 import com.diegonmarcos.superapp.translate.TextBoxEditor
 import com.diegonmarcos.superapp.translate.TranslateEdit
 import com.diegonmarcos.superapp.translate.TranslateInputView
+import com.diegonmarcos.superapp.uikit.KitImeComposeView
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
+import helium314.keyboard.latin.utils.toKitPalette
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -72,7 +96,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * it would have missed the next ones. Everything routed at a box now arrives through
  * [ImeTextBox], which LatinIME resolves in one place.
  */
-class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
+class EnhanceBarView(context: Context) : KitImeComposeView(context), ImeTextBox {
 
     /** Supplies the IME's current rich connection; null while no field is attached. */
     fun interface ConnectionProvider { fun get(): RichInputConnection? }
@@ -89,14 +113,6 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
         /** Lines of rewrite visible at once; more scrolls rather than growing into the keyboard. */
         private const val OUTPUT_LINES = 5
     }
-
-    // Same palette as the translate bar — the two panels are one feature to the eye.
-    private val bg = 0xF21B1B20.toInt()
-    private val chipColor = 0xFF34343F.toInt()
-    private val chipPrimary = 0xFF3D5AFE.toInt()
-    private val muted = 0xFFB0B0B8.toInt()
-    private val hintColor = 0xFF6E6E78.toInt()
-    private val selectionColor = 0x803D5AFE.toInt()
 
     private var provider: ConnectionProvider? = null
     private var onClose: Runnable? = null
@@ -135,12 +151,38 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
      */
     private var editingOutput = false
 
-    private val sourceView: TextView
-    private val sizeView: TextView
-    private val outputView: TranslateInputView
-    private val statusView: TextView
-    private val undoChip: TextView
-    private val options: List<Option>
+    // What the bar shows besides the chips (Compose state; the output box is the TranslateInputView
+    // the translate bar uses too, hosted through AndroidView).
+    private var sourceText by mutableStateOf("")
+    private var sourceBlank by mutableStateOf(true)
+    private var sizeText by mutableStateOf("")
+    private var statusText by mutableStateOf("")
+    private var undoVisible by mutableStateOf(false)
+    private var optTick by mutableIntStateOf(0)      // bumped when an option preference changes
+    private var outputTick by mutableIntStateOf(0)   // bumped to re-apply [editor] onto [outputView]
+    private var menu by mutableStateOf<List<MenuItem>?>(null)
+    private var optionPick by mutableStateOf<Option?>(null)
+
+    /** One row of the output box's long-press menu. */
+    private class MenuItem(val label: String, val run: () -> Unit)
+
+    private val outputView = TranslateInputView(context).apply {
+        textSize = 16f; setPadding(0, dp(6), 0, 0)
+        isClickable = true
+    }
+    // Inside a height-capped scroller: a rewrite of several paragraphs used to
+    // show its first four lines and no more, which read as "the rest was
+    // dropped". A vertical drag now scrolls; a horizontal drag still selects.
+    private val outputScroll = CappedScrollView(context, outputView.lineHeight * OUTPUT_LINES + dp(6)).apply {
+        isVerticalScrollBarEnabled = true
+        addView(outputView)
+    }
+    private val options: List<Option> = listOf(
+        Option(Settings.PREF_ENHANCE_STYLE, AiRouter.styles, AiRouter.defaultStyle),
+        Option(Settings.PREF_ENHANCE_TONE, AiRouter.tones, AiRouter.defaultTone),
+        Option(Settings.PREF_ENHANCE_LENGTH, AiRouter.lengths, AiRouter.defaultLength),
+        Option(Settings.PREF_ENHANCE_LANGUAGE, AiRouter.languages, AiRouter.defaultLanguage),
+    ).filter { it.entries.isNotEmpty() }
 
     // Cached, not single-threaded: a Generate stuck in a provider's read timeout must not
     // hold the next Generate in a queue behind it for the whole timeout.
@@ -151,110 +193,123 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
 
     /** One option chip, backed by a registry list from build.json::keyboard_ai and its preference. */
     private inner class Option(val key: String, val entries: List<AiRouter.Style>, val fallback: String) {
-        val chip: TextView = chip("") { showOptionMenu(this) }
         fun current(): AiRouter.Style? {
             val id = context.prefs().getString(key, fallback) ?: fallback
             return entries.firstOrNull { it.id == id } ?: entries.firstOrNull { it.id == fallback }
         }
         fun set(id: String) {
             context.prefs().edit { putString(key, id) }
-            render()
+            optTick++
         }
-        fun render() { chip.text = current()?.label ?: "—" }
+        fun label() = current()?.label ?: "—"
     }
 
     init {
-        orientation = VERTICAL
-        setPadding(dp(10), dp(6), dp(10), dp(8))
-        setBackgroundColor(bg)
-
-        // ── Row 1: the Text Enhancements options .................. ✕ ─────────
-        options = listOf(
-            Option(Settings.PREF_ENHANCE_STYLE, AiRouter.styles, AiRouter.defaultStyle),
-            Option(Settings.PREF_ENHANCE_TONE, AiRouter.tones, AiRouter.defaultTone),
-            Option(Settings.PREF_ENHANCE_LENGTH, AiRouter.lengths, AiRouter.defaultLength),
-            Option(Settings.PREF_ENHANCE_LANGUAGE, AiRouter.languages, AiRouter.defaultLanguage),
-        ).filter { it.entries.isNotEmpty() }
-        val chips = LinearLayout(context).apply { orientation = HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        options.forEachIndexed { i, option ->
-            if (i > 0) chips.gap()
-            chips.addView(option.chip)
-        }
-        // Four chips do not fit on a phone in portrait, so they scroll rather than shrink.
-        val optionRow = LinearLayout(context).apply { orientation = HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        optionRow.addView(HorizontalScrollView(context).apply {
-            isHorizontalScrollBarEnabled = false
-            addView(chips)
-        }, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
-        optionRow.addView(TextView(context).apply {
-            text = "✕"; setTextColor(muted); textSize = 16f
-            setPadding(dp(10), dp(2), dp(4), dp(2)); isClickable = true
-            setOnClickListener { onClose?.run() }
-        })
-        addView(optionRow, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-
-        // ── Row 2: what will be rewritten, and how much of it there is ───────
-        // Tapping it is also how the keys go back to the app's field after a
-        // detour into the output box — "type over there" is what the row means.
-        // Two lines with a visible "…": the whole field is read whatever this
-        // shows, and the size beside it is what says so.
-        sourceView = TextView(context).apply {
-            textSize = 14f; setTextColor(muted); maxLines = 2; setPadding(0, dp(6), 0, 0)
-            ellipsize = TextUtils.TruncateAt.END
-            isClickable = true
-            setOnClickListener { focusField() }
-        }
-        sizeView = TextView(context).apply {
-            textSize = 12f; setTextColor(hintColor); setPadding(dp(8), dp(6), 0, 0)
-            gravity = Gravity.END
-        }
-        val sourceRow = LinearLayout(context).apply { orientation = HORIZONTAL; gravity = Gravity.TOP }
-        sourceRow.addView(sourceView, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
-        sourceRow.addView(sizeView, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
-        addView(sourceRow, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-
-        // ── Row 3: the rewrite, editable ─────────────────────────────────────
-        // Inside a height-capped scroller: a rewrite of several paragraphs used to
-        // show its first four lines and no more, which read as "the rest was
-        // dropped". A vertical drag now scrolls; a horizontal drag still selects.
-        outputView = TranslateInputView(context).apply {
-            textSize = 16f; setTextColor(Color.WHITE); setPadding(0, dp(6), 0, 0)
-            isClickable = true
-        }
         attachOutputTouch()
-        addView(CappedScrollView(context, outputView.lineHeight * OUTPUT_LINES + dp(6)).apply {
-            isVerticalScrollBarEnabled = true
-            addView(outputView)
-        }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-
-        // ── Row 4: status ────────────────────────────────────────────────────
-        statusView = TextView(context).apply {
-            textSize = 13f; setTextColor(hintColor); maxLines = 2; setPadding(0, dp(4), 0, dp(6))
-        }
-        addView(statusView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-
-        // ── Row 5: actions ───────────────────────────────────────────────────
-        val actions = LinearLayout(context).apply { orientation = HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        actions.addView(chip(str(R.string.enhance_bar_generate), chipPrimary) { generate(false) }); actions.gap()
-        // "Text Resume" — the owner's name for SUMMARISE, not a curriculum vitae and not resuming
-        // anything paused. It sits here rather than on a toolbar key of its own because this bar
-        // already is the surface a Resume needs: it reads the same source the ENHANCE key would,
-        // and it shows a result the user can read, edit and Copy before anything is applied. A
-        // second toolbar entry would have bought nothing and spent it in the one row of this
-        // keyboard that has gone blank, scrolled wrong and crashed in three separate defects.
-        actions.addView(chip(str(R.string.resume_bar_resume)) { resume() }); actions.gap()
-        actions.addView(chip(str(R.string.enhance_bar_copy)) { copyOutput() }); actions.gap()
-        actions.addView(chip(str(R.string.enhance_bar_paste)) { applyOutput() }); actions.gap()
-        actions.addView(chip(str(R.string.enhance_bar_replace)) { generate(true) }); actions.gap()
-        undoChip = chip(str(R.string.enhance_bar_undo)) { undo() }.apply { visibility = GONE }
-        actions.addView(undoChip); actions.gap()
-        actions.addView(chip(str(R.string.enhance_bar_clear)) { clear() })
-        addView(HorizontalScrollView(context).apply {
-            isHorizontalScrollBarEnabled = false
-            addView(actions)
-        }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-
         renderOutput()
+    }
+
+    // Same palette as the translate bar — the two panels are one feature to the eye: the keyboard theme's.
+    override fun palette(): KitPalette = Settings.getValues().mColors.toKitPalette()
+
+    // ── the bar ──────────────────────────────────────────────────────────────
+    @Composable
+    override fun Body() {
+        val p = LocalKitPalette.current
+        val hint = p.textSecondary.copy(alpha = 0.7f)
+        Box(Modifier.fillMaxWidth().background(p.surface)) {
+            Column(Modifier.fillMaxWidth().padding(start = 10.dp, top = 6.dp, end = 10.dp, bottom = 8.dp)) {
+                // ── Row 1: the Text Enhancements options .................. ✕ ─────────
+                // Four chips do not fit on a phone in portrait, so they scroll rather than shrink.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        optTick // read: a chosen entry re-labels its chip
+                        options.forEach { option -> Chip(option.label(), p.surfaceSelected, p.textPrimary) { optionPick = option } }
+                    }
+                    Text("✕", color = p.textSecondary, fontSize = 16.sp,
+                        modifier = Modifier.clickable { onClose?.run() }.padding(start = 10.dp, top = 2.dp, end = 4.dp, bottom = 2.dp))
+                }
+
+                // ── Row 2: what will be rewritten, and how much of it there is ───────
+                // Tapping it is also how the keys go back to the app's field after a
+                // detour into the output box — "type over there" is what the row means.
+                // Two lines with a visible "…": the whole field is read whatever this
+                // shows, and the size beside it is what says so.
+                Row(verticalAlignment = Alignment.Top) {
+                    Text(sourceText, color = p.textSecondary, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        fontStyle = if (sourceBlank) FontStyle.Italic else FontStyle.Normal,
+                        modifier = Modifier.weight(1f).clickable { focusField() }.padding(top = 6.dp))
+                    Text(sizeText, color = hint, fontSize = 12.sp, textAlign = TextAlign.End,
+                        modifier = Modifier.padding(start = 8.dp, top = 6.dp))
+                }
+
+                // ── Row 3: the rewrite, editable ─────────────────────────────────────
+                AndroidView(factory = { outputScroll }, update = { applyOutputView() }, modifier = Modifier.fillMaxWidth())
+
+                // ── Row 4: status ────────────────────────────────────────────────────
+                if (statusText.isNotEmpty())
+                    Text(statusText, color = hint, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 6.dp))
+
+                // ── Row 5: actions ───────────────────────────────────────────────────
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Chip(str(R.string.enhance_bar_generate), p.accent, p.tileInk) { generate(false) }
+                    // "Text Resume" — the owner's name for SUMMARISE, not a curriculum vitae and not resuming
+                    // anything paused. It sits here rather than on a toolbar key of its own because this bar
+                    // already is the surface a Resume needs: it reads the same source the ENHANCE key would,
+                    // and it shows a result the user can read, edit and Copy before anything is applied. A
+                    // second toolbar entry would have bought nothing and spent it in the one row of this
+                    // keyboard that has gone blank, scrolled wrong and crashed in three separate defects.
+                    Chip(str(R.string.resume_bar_resume), p.surfaceSelected, p.textPrimary) { resume() }
+                    Chip(str(R.string.enhance_bar_copy), p.surfaceSelected, p.textPrimary) { copyOutput() }
+                    Chip(str(R.string.enhance_bar_paste), p.surfaceSelected, p.textPrimary) { applyOutput() }
+                    Chip(str(R.string.enhance_bar_replace), p.surfaceSelected, p.textPrimary) { generate(true) }
+                    if (undoVisible) Chip(str(R.string.enhance_bar_undo), p.surfaceSelected, p.textPrimary) { undo() }
+                    Chip(str(R.string.enhance_bar_clear), p.surfaceSelected, p.textPrimary) { clear() }
+                }
+            }
+            optionPick?.let { OptionPanel(p, it) }
+            menu?.let { MenuPanel(p, it) }
+        }
+    }
+
+    @Composable
+    private fun Chip(label: String, bg: Color, fg: Color, onClick: () -> Unit) {
+        Text(label, color = fg, fontSize = 13.sp, maxLines = 1,
+            modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(bg).clickable { onClick() }
+                .padding(horizontal = 12.dp, vertical = 6.dp))
+    }
+
+    /** Tap a chip -> the entries of that registry list, over the bar. */
+    @Composable
+    private fun OptionPanel(p: KitPalette, option: Option) {
+        Column(Modifier.fillMaxWidth().background(p.surface).padding(vertical = 4.dp)) {
+            Text("✕", color = p.textSecondary, fontSize = 18.sp, textAlign = TextAlign.End,
+                modifier = Modifier.fillMaxWidth().clickable { optionPick = null }.padding(horizontal = 16.dp, vertical = 6.dp))
+            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+                items(option.entries) { entry ->
+                    Text(entry.label, color = p.textPrimary, fontSize = 16.sp,
+                        modifier = Modifier.fillMaxWidth().clickable { optionPick = null; option.set(entry.id) }
+                            .padding(horizontal = 16.dp, vertical = 10.dp))
+                }
+            }
+        }
+    }
+
+    /** The output box's long-press menu, over the bar. */
+    @Composable
+    private fun MenuPanel(p: KitPalette, items: List<MenuItem>) {
+        Column(Modifier.fillMaxWidth().background(p.surface).padding(vertical = 4.dp)) {
+            for (item in items) {
+                Text(item.label, color = p.textPrimary, fontSize = 16.sp,
+                    modifier = Modifier.fillMaxWidth().clickable { menu = null; item.run() }
+                        .padding(horizontal = 16.dp, vertical = 10.dp))
+            }
+            Text("✕", color = p.textSecondary, fontSize = 18.sp, textAlign = TextAlign.End,
+                modifier = Modifier.fillMaxWidth().clickable { menu = null }.padding(horizontal = 16.dp, vertical = 6.dp))
+        }
     }
 
     /** Wire the bar to the IME. */
@@ -271,7 +326,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
         editingOutput = false
         held = Held.REWRITE   // a fresh session holds nothing, and nothing is not a summary
         editor.reset()
-        options.forEach { it.render() }
+        optTick++
         reloadTarget()
         renderOutput()
         showStatus("")
@@ -491,7 +546,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
         if (TextEnhancer.apply(context, connection, t, text)) {
             // Undo needs to find the rewrite again later, which takes real coordinates.
             lastApplied = if (t.addressable) t to text else null
-            undoChip.visibility = if (lastApplied != null) VISIBLE else GONE
+            undoVisible = lastApplied != null
             showStatus(str(R.string.enhance_bar_replaced))
             editingOutput = false   // the text lives in the field now — type there
             reloadTarget()   // the field is now the rewrite: enhancing again starts from it
@@ -513,7 +568,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
         if (!TextEnhancer.stillThere(context, connection, applied)) { showStatus(str(R.string.enhance_stale)); return }
         if (TextEnhancer.apply(context, connection, applied, original.text)) {
             lastApplied = null
-            undoChip.visibility = GONE
+            undoVisible = false
             showStatus(str(R.string.enhance_bar_undone))
             reloadTarget()
         } else {
@@ -539,12 +594,9 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
         target = if (connection == null) null else TextEnhancer.target(context, connection)
         val text = target?.text.orEmpty()
         val shown = if (text.isBlank()) str(R.string.enhance_bar_no_source) else text
-        // Setting the same text again still re-lays out the line; a paused user rereads often.
-        if (sourceView.text.toString() != shown) {
-            sourceView.text = shown
-            sourceView.setTypeface(null, if (text.isBlank()) Typeface.ITALIC else Typeface.NORMAL)
-        }
-        sizeView.text = if (text.isBlank()) "" else sizeOf(text)
+        sourceText = shown
+        sourceBlank = text.isBlank()
+        sizeText = if (text.isBlank()) "" else sizeOf(text)
     }
 
     /**
@@ -609,59 +661,44 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
             onChange = ::renderOutput, onMenu = ::showEditMenu)
 
     private fun showEditMenu() {
-        val labels = ArrayList<String>()
-        val actions = ArrayList<() -> Unit>()
-        fun item(label: String, run: () -> Unit) { labels.add(label); actions.add(run) }
-        item(str(R.string.enhance_bar_menu_paste)) { pasteIntoBox() }
+        val items = ArrayList<MenuItem>()
+        items.add(MenuItem(str(R.string.enhance_bar_menu_paste)) { pasteIntoBox() })
         if (editor.hasSelection()) {
-            item(str(R.string.enhance_bar_menu_cut)) { cutSelection() }
-            item(str(R.string.enhance_bar_menu_copy)) { copySelection() }
+            items.add(MenuItem(str(R.string.enhance_bar_menu_cut)) { cutSelection() })
+            items.add(MenuItem(str(R.string.enhance_bar_menu_copy)) { copySelection() })
         }
         if (editor.selLo() != 0 || editor.selHi() != editor.length)
-            item(str(R.string.enhance_bar_menu_select_all)) { editor.selectAll(); renderOutput() }
+            items.add(MenuItem(str(R.string.enhance_bar_menu_select_all)) { editor.selectAll(); renderOutput() })
         // Undo of what landed IN THE BOX — a Generate or a Resume arriving on top of
         // text the user had typed there. Distinct from the Undo chip in the action row,
         // which puts the FIELD back; offered only when there is something to restore.
-        if (editor.canUndo()) item(str(R.string.enhance_bar_undo)) { editor.undo(); renderOutput() }
-        item(str(R.string.enhance_bar_clear)) { clear() }
-        val popup = ListPopupWindow(context)
-        popup.anchorView = outputView
-        popup.setAdapter(ArrayAdapter(context, android.R.layout.simple_list_item_1, labels))
-        popup.width = dp(200)
-        popup.setOnItemClickListener { _, _, pos, _ -> popup.dismiss(); actions[pos]() }
-        popup.show()
-    }
-
-    /** Tap a chip → the entries of that registry list, current one first in the list order. */
-    private fun showOptionMenu(option: Option) {
-        val entries = option.entries
-        val popup = ListPopupWindow(context)
-        popup.anchorView = option.chip
-        popup.isModal = true
-        popup.width = dp(260)
-        popup.height = dp(320)
-        popup.setAdapter(ArrayAdapter(context, android.R.layout.simple_list_item_1, entries.map { it.label }))
-        popup.setOnItemClickListener { _, _, pos, _ ->
-            popup.dismiss()
-            option.set(entries[pos].id)
-        }
-        popup.show()
+        if (editor.canUndo()) items.add(MenuItem(str(R.string.enhance_bar_undo)) { editor.undo(); renderOutput() })
+        items.add(MenuItem(str(R.string.enhance_bar_clear)) { clear() })
+        menu = items
     }
 
     // ── rendering ────────────────────────────────────────────────────────────
-    private fun renderOutput() {
+    /** Re-apply [editor]'s state onto the hosted output view (see [applyOutputView]). */
+    private fun renderOutput() { outputTick++ }
+
+    private fun applyOutputView() {
+        outputTick // read: a bump re-runs the AndroidView update that calls this
+        val p = palette()
+        val text = p.textPrimary.toArgb()
+        val hint = p.textSecondary.copy(alpha = 0.7f).toArgb()
+        outputView.caretColor = text
         if (editor.isEmpty) {
             outputView.text = str(R.string.enhance_bar_output_hint)
-            outputView.setTextColor(hintColor)
-            outputView.setTypeface(null, Typeface.ITALIC)
+            outputView.setTextColor(hint)
+            outputView.setTypeface(null, android.graphics.Typeface.ITALIC)
             outputView.caret = -1
             return
         }
-        outputView.setTextColor(Color.WHITE)
-        outputView.setTypeface(null, Typeface.NORMAL)
+        outputView.setTextColor(text)
+        outputView.setTypeface(null, android.graphics.Typeface.NORMAL)
         if (editor.hasSelection()) {
             outputView.text = SpannableString(editor.text).apply {
-                setSpan(BackgroundColorSpan(selectionColor), editor.selLo(), editor.selHi(),
+                setSpan(BackgroundColorSpan(p.accent.copy(alpha = 0.5f).toArgb()), editor.selLo(), editor.selHi(),
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             outputView.caret = -1
@@ -675,20 +712,9 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
         outputView.post { outputView.revealCaret() }
     }
 
-    private fun showStatus(msg: String) {
-        statusView.text = msg
-        statusView.visibility = if (msg.isEmpty()) View.GONE else View.VISIBLE
-    }
+    private fun showStatus(msg: String) { statusText = msg }
 
-    // ── view helpers ─────────────────────────────────────────────────────────
-    private fun chip(label: String, color: Int = chipColor, onTap: () -> Unit) = TextView(context).apply {
-        text = label; setTextColor(Color.WHITE); textSize = 13f
-        setPadding(dp(12), dp(3), dp(12), dp(3))
-        background = GradientDrawable().apply { cornerRadius = dp(14).toFloat(); setColor(color) }
-        isClickable = true; setOnClickListener { onTap() }
-        layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
-    }
-    private fun LinearLayout.gap() = addView(View(context), LayoutParams(dp(6), 1))
+    // ── helpers ──────────────────────────────────────────────────────────────
     private fun str(id: Int): String = context.getString(id)
     private fun toast(msg: String) = Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
     private fun dp(v: Int) = TypedValue.applyDimension(

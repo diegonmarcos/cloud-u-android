@@ -2,30 +2,49 @@
 package helium314.keyboard.keyboard.emoji
 
 import android.content.Context
-import android.graphics.Color
-import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
-import android.util.TypedValue
-import android.view.Gravity
-import android.view.View
 import android.view.inputmethod.InputConnection
-import android.widget.HorizontalScrollView
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.view.inputmethod.InputContentInfoCompat
 import com.diegonmarcos.superapp.media.GifProvider
 import com.diegonmarcos.superapp.media.MediaCommit
 import com.diegonmarcos.superapp.media.MediaItem
+import com.diegonmarcos.superapp.media.MediaRemoteImage
 import com.diegonmarcos.superapp.media.MediaRuntime
 import com.diegonmarcos.superapp.media.StickerRepo
+import com.diegonmarcos.superapp.uikit.KitImeComposeView
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import helium314.keyboard.keyboard.internal.keyboard_parser.getEmojiDefaultVersion
 import helium314.keyboard.latin.SingleDictionaryFacilitator
 import helium314.keyboard.latin.common.splitOnWhitespace
 import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.dictionary.DictionaryFactory
+import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.DictionaryInfoUtils
+import helium314.keyboard.latin.utils.toKitPalette
 import java.util.Locale
 import java.util.concurrent.Executors
 
@@ -43,8 +62,11 @@ import java.util.concurrent.Executors
  * appendCodePoint/backspace (LatinIME.onEvent) rather than via a focusable
  * EditText, because the on-screen keyboard only ever commits to the app's own
  * InputConnection, not to arbitrary child views of the IME's window.
+ *
+ * Compose under CloudKitTheme (the keyboard theme's palette roles); the public surface the IME drives
+ * (bind / onShown / appendCodePoint / backspace) is unchanged.
  */
-class EmojiSearchBarView(context: Context) : LinearLayout(context) {
+class EmojiSearchBarView(context: Context) : KitImeComposeView(context) {
 
     fun interface IcProvider { fun get(): InputConnection? }
     fun interface MediaPicker { fun commit(info: InputContentInfoCompat) }
@@ -60,11 +82,11 @@ class EmojiSearchBarView(context: Context) : LinearLayout(context) {
     private var locale: Locale = Locale.getDefault()
 
     private val buffer = StringBuilder()
-    private val inputView: TextView
-    private val emojiRow: LinearLayout
-    private val stickerRow: LinearLayout
-    private val gifRow: LinearLayout
-    private val emptyLabel: TextView
+    private var typed by mutableStateOf("")
+    private var emojis by mutableStateOf<List<String>>(emptyList())
+    private var stickers by mutableStateOf<List<MediaItem>>(emptyList())
+    private var gifs by mutableStateOf<List<MediaItem>>(emptyList())
+    private var emptyText by mutableStateOf<String?>(HINT)
 
     private var dictionaryFacilitator: SingleDictionaryFacilitator? = null
     private var dictionaryLocale: Locale? = null
@@ -72,51 +94,46 @@ class EmojiSearchBarView(context: Context) : LinearLayout(context) {
 
     companion object {
         private const val CELL_DP = 40
+        private const val HINT = "Type to search emoji, stickers and GIFs…"
     }
 
-    init {
-        orientation = VERTICAL
-        setPadding(dp(10), dp(6), dp(10), dp(8))
-        setBackgroundColor(0xF21B1B20.toInt())
+    override fun palette(): KitPalette = Settings.getValues().mColors.toKitPalette()
 
-        val row = LinearLayout(context).apply { orientation = HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        inputView = TextView(context).apply {
-            textSize = 16f; setTextColor(Color.WHITE); maxLines = 1
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+    @Composable
+    override fun Body() {
+        val p = LocalKitPalette.current
+        Column(Modifier.fillMaxWidth().background(p.surface).padding(start = 10.dp, top = 6.dp, end = 10.dp, bottom = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(typed, color = p.textPrimary, fontSize = 16.sp, maxLines = 1,
+                    modifier = Modifier.weight(1f).padding(4.dp))
+                Text("✕", color = p.textSecondary, fontSize = 16.sp,
+                    modifier = Modifier.clickable { onClose?.run() }.padding(start = 10.dp, top = 2.dp, end = 4.dp, bottom = 2.dp))
+            }
+            emptyText?.let {
+                Text(it, color = p.textSecondary, fontStyle = FontStyle.Italic, textAlign = TextAlign.Start,
+                    modifier = Modifier.padding(start = 4.dp, top = 8.dp, end = 4.dp, bottom = 4.dp))
+            }
+            ResultRow {
+                emojis.forEach { emoji ->
+                    Box(Modifier.size(CELL_DP.dp).clickable { commitEmoji(emoji) }, contentAlignment = Alignment.Center) {
+                        Text(emoji, fontSize = 22.sp, color = p.textPrimary)
+                    }
+                }
+            }
+            ResultRow { stickers.forEach { MediaCell(it) } }
+            ResultRow { gifs.forEach { MediaCell(it) } }
         }
-        row.addView(inputView, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
-        row.addView(TextView(context).apply {
-            text = "✕"; setTextColor(0xFFB0B0B8.toInt()); textSize = 16f
-            setPadding(dp(10), dp(2), dp(4), dp(2)); isClickable = true
-            setOnClickListener { onClose?.run() }
-        })
-        addView(row, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-
-        emptyLabel = TextView(context).apply {
-            text = "Type to search emoji, stickers and GIFs…"
-            setTextColor(0xFF6E6E78.toInt()); setTypeface(null, Typeface.ITALIC)
-            setPadding(dp(4), dp(8), dp(4), dp(4))
-        }
-        addView(emptyLabel)
-
-        emojiRow = resultRow()
-        stickerRow = resultRow()
-        gifRow = resultRow()
-        renderInput()
     }
 
-    private fun resultRow(): LinearLayout {
-        val strip = LinearLayout(context).apply { orientation = HORIZONTAL }
-        val scroller = HorizontalScrollView(context).apply {
-            isHorizontalScrollBarEnabled = false
-            addView(strip, stripLayoutParams())
-        }
-        addView(scroller, LayoutParams(LayoutParams.MATCH_PARENT, dp(CELL_DP + 8)))
-        return strip
+    @Composable
+    private fun ResultRow(content: @Composable () -> Unit) {
+        Row(Modifier.fillMaxWidth().height((CELL_DP + 8).dp).horizontalScroll(rememberScrollState())) { content() }
     }
 
-    private fun stripLayoutParams() =
-        LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT)
+    @Composable
+    private fun MediaCell(item: MediaItem) {
+        MediaRemoteImage(item.previewUrl, Modifier.padding(end = 4.dp).size(CELL_DP.dp).clickable { commitMedia(item) })
+    }
 
     /** Wire the bar to the IME. Mirrors TranslateBarView.bind. */
     fun bind(provider: IcProvider, picker: MediaPicker, currentLocale: Locale, onCloseAction: Runnable) {
@@ -128,7 +145,7 @@ class EmojiSearchBarView(context: Context) : LinearLayout(context) {
 
     fun onShown() {
         buffer.setLength(0)
-        renderInput()
+        typed = ""
         clearResults()
     }
 
@@ -143,7 +160,7 @@ class EmojiSearchBarView(context: Context) : LinearLayout(context) {
     }
 
     private fun onChanged() {
-        renderInput()
+        typed = buffer.toString()
         pending?.let { ui.removeCallbacks(it) }
         val text = buffer.toString().trim()
         if (text.isEmpty()) { clearResults(); return }
@@ -153,29 +170,22 @@ class EmojiSearchBarView(context: Context) : LinearLayout(context) {
     }
 
     private fun clearResults() {
-        emojiRow.removeAllViews(); stickerRow.removeAllViews(); gifRow.removeAllViews()
-        emptyLabel.visibility = View.VISIBLE
-        emptyLabel.text = "Type to search emoji, stickers and GIFs…"
-    }
-
-    private fun renderInput() {
-        inputView.text = if (buffer.isEmpty()) "" else buffer
+        emojis = emptyList(); stickers = emptyList(); gifs = emptyList()
+        emptyText = HINT
     }
 
     private fun search(query: String) {
         val token = ++searchToken
         io.submit {
-            val emojis = searchEmoji(query)
-            val stickers = searchStickers(query)
-            val gifs = searchGifs(query)
+            val foundEmojis = searchEmoji(query)
+            val foundStickers = searchStickers(query)
+            val foundGifs = searchGifs(query)
             main.post {
                 if (token != searchToken) return@post
-                emptyLabel.visibility =
-                    if (emojis.isEmpty() && stickers.isEmpty() && gifs.isEmpty()) View.VISIBLE else View.GONE
-                emptyLabel.text = "No results."
-                fillEmojiRow(emojis)
-                fillMediaRow(stickerRow, stickers)
-                fillMediaRow(gifRow, gifs)
+                emptyText = if (foundEmojis.isEmpty() && foundStickers.isEmpty() && foundGifs.isEmpty()) "No results." else null
+                emojis = foundEmojis
+                stickers = foundStickers
+                gifs = foundGifs
             }
         }
     }
@@ -208,33 +218,6 @@ class EmojiSearchBarView(context: Context) : LinearLayout(context) {
         return runCatching { GifProvider.from(conf).fetch(query, 24) }.getOrDefault(emptyList())
     }
 
-    private fun fillEmojiRow(emojis: List<String>) {
-        emojiRow.removeAllViews()
-        emojis.forEach { emoji ->
-            emojiRow.addView(TextView(context).apply {
-                text = emoji; textSize = 22f; gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(dp(CELL_DP), dp(CELL_DP))
-                isClickable = true
-                setOnClickListener { commitEmoji(emoji) }
-            })
-        }
-    }
-
-    private fun fillMediaRow(row: LinearLayout, items: List<MediaItem>) {
-        row.removeAllViews()
-        items.forEach { item ->
-            row.addView(ImageView(context).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(CELL_DP), dp(CELL_DP)).apply {
-                    marginEnd = dp(4)
-                }
-                scaleType = ImageView.ScaleType.CENTER_CROP
-                isClickable = true
-                setOnClickListener { commitMedia(item) }
-                MediaRuntime.load(context, this, item.previewUrl)
-            })
-        }
-    }
-
     private fun commitEmoji(emoji: String) {
         icp?.get()?.commitText(emoji, 1)
         onClose?.run()
@@ -253,7 +236,4 @@ class EmojiSearchBarView(context: Context) : LinearLayout(context) {
         dictionaryFacilitator?.closeDictionaries()
         dictionaryFacilitator = null
     }
-
-    private fun dp(v: Int) = TypedValue.applyDimension(
-        TypedValue.COMPLEX_UNIT_DIP, v.toFloat(), resources.displayMetrics).toInt()
 }
