@@ -39,17 +39,21 @@ class MailAuthHttpTest {
     private fun client(creds: MailAuthCreds, onRefresh: (String, Long) -> Unit = { _, _ -> }, onRejected: () -> Unit = {}) =
         MailHttp.client("https://jmap.diegonmarcos.com", { creds }, onRefresh, onRejected, base = toLocal)
 
-    @Test fun `bearer mode puts Authorization Bearer on the request`() {
+    @Test fun `bearer mode puts the fleet token in X-Fleet-Authorization`() {
         server.enqueue(MockResponse().setBody("{}"))
         get(client(MailAuthCreds(MailAuthMode.BEARER, bearer = " tok-123 ")))
-        assertEquals("Bearer tok-123", server.takeRequest().getHeader("Authorization"))
+        val r = server.takeRequest()
+        assertEquals("Bearer tok-123", r.getHeader("X-Fleet-Authorization"))
+        assertNull(r.getHeader("Authorization"))
     }
 
-    @Test fun `bearer replaces the Basic login rather than adding a second Authorization`() {
+    @Test fun `bearer keeps the mailbox Basic login in Authorization`() {
         server.enqueue(MockResponse().setBody("{}"))
         val c = client(MailAuthCreds(MailAuthMode.BEARER, bearer = "tok"))
         c.newCall(Request.Builder().url(url()).header("Authorization", "Basic abc").build()).execute().close()
-        assertEquals(listOf("Bearer tok"), server.takeRequest().headers.values("Authorization"))
+        val r = server.takeRequest()
+        assertEquals(listOf("Basic abc"), r.headers.values("Authorization"))
+        assertEquals("Bearer tok", r.getHeader("X-Fleet-Authorization"))
     }
 
     @Test fun `mode none leaves the request as the caller built it`() {
@@ -79,7 +83,7 @@ class MailAuthHttpTest {
     @Test fun `credentials never travel to a foreign host`() {
         server.enqueue(MockResponse().setBody("{}"))
         get(client(MailAuthCreds(MailAuthMode.BEARER, bearer = "tok")), url("evil.example.com"))
-        assertNull(server.takeRequest().getHeader("Authorization"))
+        assertNull(server.takeRequest().getHeader("X-Fleet-Authorization"))
         server.enqueue(MockResponse().setBody("{}"))
         get(client(MailAuthCreds(MailAuthMode.AUTHELIA, sessionCookie = "s")), url("evil.example.com"))
         assertNull(server.takeRequest().getHeader("Cookie"))
@@ -90,6 +94,11 @@ class MailAuthHttpTest {
     @Test fun `a 401 under a gateway mode reports the rejection, under none it does not`() {
         var rejected = 0
         server.enqueue(MockResponse().setResponseCode(401))
+        // A bare 401 is the gate's: reported, and surfaced as a sign-in-required failure.
+        try { get(client(MailAuthCreds(MailAuthMode.BEARER, bearer = "t"), onRejected = { rejected++ })); throw AssertionError("gate 401 must fail") } catch (e: MailAuthRequiredException) { /* expected */ }
+        assertEquals(1, rejected)
+        // A mailbox 401 (Stalwart's own problem+json) is the account login: not a gateway rejection.
+        server.enqueue(MockResponse().setResponseCode(401).setHeader("Content-Type", "application/problem+json").setHeader("WWW-Authenticate", "Basic realm=\"Stalwart Server\""))
         assertEquals(401, get(client(MailAuthCreds(MailAuthMode.BEARER, bearer = "t"), onRejected = { rejected++ })))
         assertEquals(1, rejected)
         server.enqueue(MockResponse().setResponseCode(401))
@@ -104,7 +113,7 @@ class MailAuthHttpTest {
         val c = client(MailAuthCreds(MailAuthMode.AUTHELIA, sessionCookie = "dead"), onRejected = { rejected++ })
         try { get(c); throw AssertionError("expected the portal redirect to fail") } catch (e: MailAuthRequiredException) { /* expected */ }
         assertEquals(1, rejected)
-        assertEquals(ConnProblem.UNAUTHORIZED, ConnErrors.classify(null, MailAuthRequiredException("x")))
+        assertEquals(ConnProblem.GATE_REJECTED, ConnErrors.classify(null, MailAuthRequiredException("x")))
     }
 
     @Test fun `the JMAP client maps the portal redirect to a 401 result`() {
