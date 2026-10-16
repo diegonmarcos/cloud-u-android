@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.devcontrol
 
 import android.app.Application
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -16,7 +17,7 @@ import org.robolectric.annotation.Config
  * #773 — Configs ▸ About in Compose (was a ScrollView of Views, every block built before the first frame).
  *
  *   D1 the page draws its title and an Index card per macro group
- *   D2 the block at the top loads without a scroll (the opening viewport is the trigger)
+ *   D2 a block loads when it scrolls into view and not before (the viewport is the trigger)
  *   D3 an Index card jumps to its group and the group's blocks load
  *   D4 the page ends with the Copy All button
  */
@@ -33,8 +34,11 @@ class AboutComposeTest : KitPageHarness() {
     }
 
     @Test
-    fun `D2 the opening block loads by itself`() {
+    fun `D2 a block loads when it scrolls into view, not before`() {
         show(DevControlFragment.newInstance())
+        // The 470 px test screen is filled by the title and the Index card: nothing below is composed, so nothing ran.
+        compose.onAllNodesWithTag(AboutTags.row("Version")).assertCountEquals(0)
+        compose.onNodeWithTag(AboutTags.LIST).performScrollToNode(hasTestTag(AboutTags.macro("APP & BUILD")))
         compose.waitUntil(10_000) { compose.onAllNodesWithTag(AboutTags.row("Version")).fetchSemanticsNodes().isNotEmpty() }
     }
 

@@ -43,7 +43,9 @@ class IndexTileGridComposeTest : KitPageHarness() {
         text.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
         val layout = results.single()
         assertTrue("at most ${IndexTiles.LABEL_MAX_LINES} lines", layout.lineCount <= IndexTiles.LABEL_MAX_LINES)
-        assertTrue("and the overflow is ellipsized", layout.isLineEllipsized(layout.lineCount - 1))
+        // Robolectric's text shadow does not ellipsize, so assert what the text was ASKED to do.
+        assertEquals(IndexTiles.LABEL_MAX_LINES, layout.layoutInput.maxLines)
+        assertEquals(androidx.compose.ui.text.style.TextOverflow.Ellipsis, layout.layoutInput.overflow)
     }
 
     @Test

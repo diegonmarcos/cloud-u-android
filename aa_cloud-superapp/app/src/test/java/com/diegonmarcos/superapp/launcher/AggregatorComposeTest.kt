@@ -107,7 +107,7 @@ class AggregatorComposeTest : KitPageHarness() {
         assertTrue(st.isArchived("pkg.a"))
         // Remembered per page, like every other choice on it.
         assertEquals("yes", StackFilters.selected(ctx, "g3-page", st.yesNo(AggregatorModel.ARCHIVED_PREFIX + "pkg.a")))
-        compose.onNodeWithTag(AggTags.groupArchive("pkg.a")).assertTextContains(AggregatorModel.ARCHIVE_LABEL)
+        compose.onNodeWithTag(AggTags.groupArchive("pkg.a")).assertTextContains(AggregatorModel.ARCHIVE_RESTORE_LABEL)
     }
 
     @Test
