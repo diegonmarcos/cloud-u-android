@@ -9,6 +9,7 @@ import {
 import { computed, type ReadonlySignal } from '@preact/signals-core';
 
 import type { TypeInstance } from '../logical/type.js';
+import type { RelationSpace } from '../relation/relation.js';
 import type { PropertyMetaConfig } from '../property/property-config.js';
 import type { DatabaseFlags } from '../types.js';
 import type { ViewConvertConfig } from '../view/convert.js';
@@ -16,6 +17,8 @@ import type { DataViewDataType, ViewMeta } from '../view/data-view.js';
 import type { ViewManager } from '../view-manager/view-manager.js';
 
 export interface DataSource {
+  /** relations/rollups need the other databases of the workspace; sources that have none leave this out */
+  relationContext?(): { space: RelationSpace; databaseId: string } | undefined;
   readonly$: ReadonlySignal<boolean>;
   properties$: ReadonlySignal<string[]>;
   featureFlags$: ReadonlySignal<DatabaseFlags>;

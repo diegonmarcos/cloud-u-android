@@ -15,6 +15,9 @@ import {
   DataSourceBase,
   type DataViewDataType,
   type PropertyMetaConfig,
+  relationSet,
+  relationValue,
+  rollupValue,
   type TypeInstance,
   type ViewManager,
   ViewManagerBase,
@@ -28,6 +31,7 @@ import { type BlockModel } from '@blocksuite/store';
 import { computed, type ReadonlySignal, signal } from '@preact/signals-core';
 
 import { getIcon } from './block-icons.js';
+import { StoreRelationSpace } from './properties/relation/space.js';
 import {
   databaseBlockProperties,
   databasePropertyConverts,
@@ -103,6 +107,14 @@ export class DatabaseBlockDataSource extends DataSourceBase {
       },
     },
   };
+
+  private _relationSpace?: StoreRelationSpace;
+
+  /** The other databases of this doc, for relation and rollup properties. */
+  relationContext() {
+    this._relationSpace ??= new StoreRelationSpace(this._model.store);
+    return { space: this._relationSpace, databaseId: this._model.id };
+  }
 
   isSpacialProperty(propertyType: string): boolean {
     return this.spacialProperties[propertyType] !== undefined;
@@ -242,6 +254,20 @@ export class DatabaseBlockDataSource extends DataSourceBase {
     if (type == null) {
       return;
     }
+    if (type === 'relation') {
+      const { space, databaseId } = this.relationContext();
+      relationSet(
+        space,
+        databaseId,
+        rowId,
+        propertyId,
+        Array.isArray(value) ? (value as string[]) : []
+      );
+      return;
+    }
+    if (type === 'rollup') {
+      return; // computed
+    }
     const update = this.propertyMetaGet(type)?.config.rawValue.setValue;
     const old = this.cellValueGet(rowId, propertyId);
     const updateFn =
@@ -275,6 +301,14 @@ export class DatabaseBlockDataSource extends DataSourceBase {
     }
     if (this.isSpacialProperty(type)) {
       return this.spacialValueGet(rowId, propertyId, type);
+    }
+    if (type === 'relation') {
+      const { space, databaseId } = this.relationContext();
+      return relationValue(space, databaseId, rowId, propertyId);
+    }
+    if (type === 'rollup') {
+      const { space, databaseId } = this.relationContext();
+      return rollupValue(space, databaseId, rowId, propertyId);
     }
     const meta = this.propertyMetaGet(type);
     if (!meta) {

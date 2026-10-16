@@ -7,6 +7,7 @@ export * from './database-block';
 export * from './detail-panel/block-renderer';
 export * from './detail-panel/note-renderer';
 export * from './properties';
+export * from './properties/relation/space.js';
 export * from './properties/rich-text/cell-renderer';
 export * from './selection.js';
 export * from './service';
