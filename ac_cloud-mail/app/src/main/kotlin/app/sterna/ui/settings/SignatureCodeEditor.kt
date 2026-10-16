@@ -130,7 +130,7 @@ internal fun SignatureCodeEditor(
         )
         Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
             BasicTextField(
-                value = state.field,
+                value = state.textField,
                 onValueChange = state::typed,
                 textStyle = textStyle,
                 cursorBrush = SolidColor(scheme.primary),

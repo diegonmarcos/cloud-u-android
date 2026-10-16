@@ -24,7 +24,7 @@ internal class SignatureEditorState(
     name: String = baselineName,
     makeDefault: Boolean = baselineDefault,
 ) {
-    var field by mutableStateOf(TextFieldValue(source, selection))
+    var textField by mutableStateOf(TextFieldValue(source, selection))
         private set
     var name by mutableStateOf(name)
     var makeDefault by mutableStateOf(makeDefault)
@@ -35,22 +35,22 @@ internal class SignatureEditorState(
     var canRedo by mutableStateOf(false)
         private set
 
-    val source: String get() = field.text
+    val source: String get() = textField.text
     val dirty: Boolean get() = source != baselineSource || name != baselineName || makeDefault != baselineDefault
 
     private fun show(edit: Edit) {
-        field = TextFieldValue(edit.text, TextRange(edit.start.coerceAtMost(edit.text.length), edit.end.coerceAtMost(edit.text.length)))
+        textField = TextFieldValue(edit.text, TextRange(edit.start.coerceAtMost(edit.text.length), edit.end.coerceAtMost(edit.text.length)))
         canUndo = history.canUndo
         canRedo = history.canRedo
     }
 
     /** The field as the keyboard changed it: typing assists apply, a burst of typing is one undo step. */
     fun typed(v: TextFieldValue) {
-        if (v.text == field.text) {
-            field = v
+        if (v.text == textField.text) {
+            textField = v
             return
         }
-        val before = Edit(field.text, field.selection.min, field.selection.max)
+        val before = Edit(textField.text, textField.selection.min, textField.selection.max)
         val raw = Edit(v.text, v.selection.min, v.selection.max)
         val assisted = SignatureEditing.afterTyping(before, raw)
         history.record(assisted ?: raw, merge = assisted == null)
@@ -67,7 +67,7 @@ internal class SignatureEditorState(
 
     /** Tab / Shift+Tab. */
     fun tab(outdent: Boolean) {
-        commit(SignatureEditing.tab(field.text, field.selection.start, field.selection.end, outdent))
+        commit(SignatureEditing.tab(textField.text, textField.selection.start, textField.selection.end, outdent))
     }
 
     /** Import, reset, reload: the whole source replaced, as one undoable step. */
@@ -77,7 +77,7 @@ internal class SignatureEditorState(
 
     /** What the visual pane reported. A burst of edits there is one step, like typing. */
     fun fromVisual(text: String) {
-        if (text == field.text) return
+        if (text == textField.text) return
         val edit = Edit(text, text.length, text.length)
         history.record(edit, merge = true)
         show(edit)
@@ -86,7 +86,7 @@ internal class SignatureEditorState(
     fun select(start: Int, end: Int) {
         val s = start.coerceIn(0, source.length)
         val e = end.coerceIn(0, source.length)
-        field = field.copy(selection = TextRange(s, e))
+        textField = textField.copy(selection = TextRange(s, e))
     }
 
     fun undo() {
@@ -100,7 +100,7 @@ internal class SignatureEditorState(
     companion object {
         /** Survives rotation and process death; the undo history is rebuilt from the saved text. */
         fun saver(baselineSource: String, baselineName: String, baselineDefault: Boolean) = listSaver<SignatureEditorState, Any>(
-            save = { listOf(it.source, it.field.selection.start, it.field.selection.end, it.name, it.makeDefault) },
+            save = { listOf(it.source, it.textField.selection.start, it.textField.selection.end, it.name, it.makeDefault) },
             restore = {
                 SignatureEditorState(
                     baselineSource, baselineName, baselineDefault,

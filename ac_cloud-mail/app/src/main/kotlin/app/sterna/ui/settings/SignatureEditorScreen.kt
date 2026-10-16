@@ -86,11 +86,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.sterna.R
 import app.sterna.ui.components.Icon
+import app.sterna.ui.mailNav
 import app.sterna.ui.components.IconButton
 import app.sterna.ui.theme.LocalSternaDarkTheme
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.PageTabs
-import com.diegonmarcos.superapp.bottomnav.TabSurface
 import app.sterna.core.data.account.SignatureTransfer
 import app.sterna.core.data.account.StoredSignature
 import app.sterna.core.data.text.looksLikeHtml
@@ -242,7 +242,7 @@ internal fun SignatureEditorScreen(
     }
 
     fun styleOrWrap(command: String, wrap: (String, Int, Int) -> SignatureHtmlTools.Edit) {
-        if (isVisual) handle.exec(command) else state.commit(wrap(state.source, state.field.selection.start, state.field.selection.end))
+        if (isVisual) handle.exec(command) else state.commit(wrap(state.source, state.textField.selection.start, state.textField.selection.end))
     }
 
     Surface(
@@ -319,7 +319,7 @@ internal fun SignatureEditorScreen(
                 ToolButton(Icons.Filled.Image, R.string.settings_signature_image) { prompt = Prompt.IMAGE }
                 ToolButton(Icons.Filled.TableChart, R.string.sigedit_table) { prompt = Prompt.TABLE }
                 ToolButton(Icons.Filled.HorizontalRule, R.string.sigedit_divider) {
-                    state.commit(SignatureEditing.divider(state.source, state.field.selection.start, state.field.selection.end))
+                    state.commit(SignatureEditing.divider(state.source, state.textField.selection.start, state.textField.selection.end))
                 }
                 ToolButton(Icons.Filled.Share, R.string.sigedit_social) { prompt = Prompt.SOCIAL }
                 ToolButton(Icons.Filled.FormatColorText, R.string.settings_signature_colour) { prompt = Prompt.COLOUR }
@@ -330,7 +330,7 @@ internal fun SignatureEditorScreen(
                         FONT_SIZES.forEach { px ->
                             DropdownMenuItem(text = { Text("$px px") }, onClick = {
                                 sizeMenu = false
-                                state.commit(SignatureEditing.fontSize(state.source, state.field.selection.start, state.field.selection.end, px))
+                                state.commit(SignatureEditing.fontSize(state.source, state.textField.selection.start, state.textField.selection.end, px))
                             })
                         }
                     }
@@ -347,7 +347,7 @@ internal fun SignatureEditorScreen(
                             DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = {
                                 alignMenu = false
                                 if (isVisual) handle.exec(command)
-                                else state.commit(SignatureEditing.align(state.source, state.field.selection.start, state.field.selection.end, a))
+                                else state.commit(SignatureEditing.align(state.source, state.textField.selection.start, state.textField.selection.end, a))
                             })
                         }
                     }
@@ -361,7 +361,7 @@ internal fun SignatureEditorScreen(
                     onReplacement = { replacement = it },
                     count = matches.size,
                     onStep = { forward ->
-                        SignatureEditing.step(matches, state.field.selection.max, forward)?.let {
+                        SignatureEditing.step(matches, state.textField.selection.max, forward)?.let {
                             state.select(it, it + query.length)
                             focusSource()
                         }
@@ -389,7 +389,7 @@ internal fun SignatureEditorScreen(
                             onSelect = { pane = it.id.toInt() },
                             modifier = Modifier.padding(horizontal = MailMetrics.s12),
                             underTopChrome = false,
-                            surface = if (LocalSternaDarkTheme.current) TabSurface.Dark else TabSurface.Light,
+                            surface = mailNav.stripSurface("mail", LocalSternaDarkTheme.current),
                         )
                     }
                     val sourcePane: @Composable (Modifier) -> Unit = { m ->
@@ -485,7 +485,7 @@ internal fun SignatureEditorScreen(
             swatches = prompt == Prompt.COLOUR,
             onDismiss = { prompt = Prompt.NONE },
             onApply = { input ->
-                val at = state.field.selection
+                val at = state.textField.selection
                 val ok = when (prompt) {
                     Prompt.LINK ->
                         if (isVisual) SignatureHtmlTools.safeLinkUrl(input)?.also { handle.exec("createLink", it) } != null
@@ -502,7 +502,7 @@ internal fun SignatureEditorScreen(
         Prompt.TABLE -> TablePrompt(
             onDismiss = { prompt = Prompt.NONE },
             onApply = { rows, cols ->
-                val at = state.field.selection
+                val at = state.textField.selection
                 val ok = state.commit(SignatureEditing.table(state.source, at.start, at.end, rows, cols))
                 if (ok) prompt = Prompt.NONE
                 ok
@@ -511,7 +511,7 @@ internal fun SignatureEditorScreen(
         Prompt.SOCIAL -> SocialPrompt(
             onDismiss = { prompt = Prompt.NONE },
             onApply = { entries ->
-                val at = state.field.selection
+                val at = state.textField.selection
                 val ok = state.commit(SignatureEditing.social(state.source, at.start, at.end, entries))
                 if (ok) prompt = Prompt.NONE
                 ok
