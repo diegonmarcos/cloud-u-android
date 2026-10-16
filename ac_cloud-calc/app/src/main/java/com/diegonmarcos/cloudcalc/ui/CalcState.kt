@@ -28,6 +28,21 @@ class CalcState(private val prefs: SharedPreferences?, private val now: () -> Lo
         tabBySection[section] = tab
         tab = tabBySection[id]?.takeIf { t -> tabs.any { it.id == t } } ?: tabs.first().id
     }
+    /** The page the round Configs button came from, so a second press goes back to it. */
+    private var configsFrom: String? = null
+    val onConfigs: Boolean get() = Declarations.configsTab?.id == tab
+
+    /** The round top-right button: open Configs, or from Configs go back to the page it was opened from. */
+    fun toggleConfigs() {
+        val c = Declarations.configsTab ?: return
+        if (tab == c.id) {
+            tab = configsFrom?.takeIf { t -> Declarations.tabs.any { it.id == t } } ?: Declarations.defaultTab
+            configsFrom = null
+        } else {
+            configsFrom = tab
+            tab = c.id
+        }
+    }
     val history = mutableStateListOf<Logic.Entry>().apply { addAll(Logic.decode(prefs?.getString(KEY, null))) }
 
     /** Text a history tap sends to an expression mode: (mode id, text). */

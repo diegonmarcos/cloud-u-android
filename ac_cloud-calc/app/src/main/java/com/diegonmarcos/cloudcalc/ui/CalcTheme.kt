@@ -57,4 +57,11 @@ object CalcMetrics {
     val plotHeight: Dp = 280.dp
     val spectrumHeight: Dp = 180.dp
     val stroke: Dp = 2.dp
+    /** The round Configs button at the top-right of the top row. */
+    val roundButton: Dp = 40.dp
+    /** The Sheet grid: default cell, row-header column, and the drag strip that resizes a column or row. */
+    val cellWidth: Dp = 88.dp
+    val cellHeight: Dp = 32.dp
+    val headerWidth: Dp = 44.dp
+    val resizeHandle: Dp = 14.dp
 }

@@ -6,6 +6,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
@@ -54,7 +58,7 @@ fun CalcShell(api: CalcApi, state: CalcState) {
             modifier = Modifier.testTag(CalcTags.SHELL),
         ) {
             Column(Modifier.fillMaxSize()) {
-                PageStrip(state)
+                TopRow(state)
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     key(state.tab) { TabContent(state.tab) }
                 }
@@ -63,16 +67,50 @@ fun CalcShell(api: CalcApi, state: CalcState) {
     }
 }
 
-/** The selected section's pages (build.json::ui.sections[].pages) as the top pill strip. */
+/**
+ * The top row: the selected section's pages as the pill strip (a section with ONE page draws none)
+ * and, at its right end, the round Configs button (the fleet's Profile/Configs circle).
+ */
 @Composable
-private fun PageStrip(state: CalcState) {
+private fun TopRow(state: CalcState) {
     val pages = Declarations.nav.section(state.section)?.pages.orEmpty()
-    PageTabs(
-        pages = pages,
-        selectedId = state.tab,
-        onSelect = { state.tab = it.id },
-        modifier = Modifier.testTag(CalcTags.PAGES),
-    )
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Box(Modifier.weight(1f)) {
+            if (pages.size > 1) {
+                PageTabs(
+                    pages = pages,
+                    selectedId = state.tab,
+                    onSelect = { state.tab = it.id },
+                    modifier = Modifier.testTag(CalcTags.PAGES),
+                )
+            }
+        }
+        if (Declarations.configsTab != null) ConfigsButton(state)
+    }
+}
+
+/** The round Configs button: top-right of the top row, below the status bar; pressed again it goes back. */
+@Composable
+private fun ConfigsButton(state: CalcState) {
+    val on = state.onConfigs
+    val label = Declarations.configsTab?.label.orEmpty()
+    Box(
+        Modifier
+            .statusBarsPadding()
+            .padding(top = CalcMetrics.gap, end = CalcMetrics.gap, bottom = CalcMetrics.gap)
+            .size(CalcMetrics.roundButton)
+            .clip(CircleShape)
+            .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(role = Role.Button, onClickLabel = label) { state.toggleConfigs() }
+            .testTag(CalcTags.CONFIGS_BUTTON),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            IconCatalog.vector(Declarations.configsTab?.icon.orEmpty()),
+            contentDescription = label,
+            tint = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable
@@ -125,6 +163,7 @@ object CalcTags {
     const val SHELL = "calc_shell"
     const val STRIP = "calc_mode_strip"
     const val PAGES = "calc_page_strip"
+    const val CONFIGS_BUTTON = "calc_configs_button"
     const val INPUT = "calc_input"
     const val RESULT = "calc_result"
     const val DISPLAY = "calc_display"

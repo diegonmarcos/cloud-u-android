@@ -2,6 +2,8 @@ package com.diegonmarcos.cloudcalc.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CurrencyExchange
@@ -56,6 +58,8 @@ object IconCatalog {
         "event" -> Icons.Filled.Event
         "payments" -> Icons.Filled.Payments
         "graphic_eq" -> Icons.Filled.GraphicEq
+        "table_chart" -> Icons.Filled.TableChart
+        "auto_awesome" -> Icons.Filled.AutoAwesome
         else -> fallback
     }
 }

@@ -106,6 +106,8 @@ fun ModeScreen(mode: Declarations.Mode) {
             "stopwatch" -> StopwatchMode(mode)
             "interval" -> IntervalMode(mode)
             "bedtime" -> BedtimeMode(mode)
+            "sheet" -> SheetMode(mode)
+            "ai" -> AiMode(mode)
             "jev" -> JevMode(mode)
             "jev_token" -> JevTokenMode(mode)
             "jev_routing" -> JevRoutingMode(mode)

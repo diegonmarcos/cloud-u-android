@@ -86,6 +86,8 @@ object Declarations {
     /** Every page of every section, in declared order (what #770 called ui.tabs). */
     val tabs: List<Tab> by lazy { tabsIn(nav) }
     val modes: List<Mode> by lazy { parseModes(decode(BuildConfig.UI_MODES_B64)) }
+    /** The page of the section that is NOT on the bar (Configs): the round top-right button opens it. Null when every section is on the bar. */
+    val configsTab: Tab? get() = nav.sections.firstOrNull { it.id !in nav.bottomNav }?.let { s -> tabs.firstOrNull { it.section == s.id } }
     /** Where the app opens: the default section's first page. */
     val defaultTab: String get() = nav.default()?.pages?.firstOrNull()?.id ?: tabs.first().id
 

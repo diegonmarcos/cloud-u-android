@@ -91,6 +91,9 @@ def calcEngineAction      = calcEngineDecl.action.toString().replace('{package}'
 def calcEngineMinContract = calcEngineDecl.min_contract as int
 if (calcEngineMinContract < 1) throw new GradleException("build.json::engines.calc.min_contract must be >= 1")
 
+// The AI page's gateway: libs:ai's contract names the service, the fleet catalogue its mesh address (sets aiGatewayUrl).
+apply from: "$rootDir/../ab_cloud-libs-shared/libs/ai/ai-gateway.gradle"
+
 // Stack tallies for About, the c3/drive/wallet shape; the folder tree stays a placeholder
 // (javac's 65,535-byte constant cap).
 def stackStats = [:]
@@ -144,6 +147,7 @@ android {
         buildConfigField "String", "CAMERA_CONFIG_B64", "\"${cameraConfigB64}\""
         buildConfigField "String", "DEBUG_API_CAMERA_GROUP", "\"${cameraGroup}\""
         buildConfigField "String", "DEBUG_API_IMAGE_GROUP", "\"${imageGroup}\""
+        buildConfigField "String", "AI_GATEWAY_URL",  "\"${aiGatewayUrl}\""
         buildConfigField "String", "CALC_ENGINE_PACKAGE",      "\"${calcEnginePackage}\""
         buildConfigField "String", "CALC_ENGINE_ACTION",       "\"${calcEngineAction}\""
         buildConfigField "int",    "CALC_ENGINE_MIN_CONTRACT", "${calcEngineMinContract}"
@@ -218,6 +222,10 @@ dependencies {
     implementation project(':clock')
     // The Jev section's logic (#770): plain JVM, mutation-tested on its own (jev/build.gradle).
     implementation project(':jev')
+    // The Sheet page's engine and workbook (plain JVM, its own suite).
+    implementation project(':sheet')
+    // The AI page: the fleet's AI chat over the agent gateway and OpenRouter. It brings libs:model-catalogue along.
+    implementation project(':libs:ai')
     // The Sound tools' maths (#772): plain JVM, mutation-tested on its own (sound/build.gradle).
     implementation project(':sound')
     // #772 the Decisions client (Http, Decision) the Jev and Sound screens hold; shared with the image engine.

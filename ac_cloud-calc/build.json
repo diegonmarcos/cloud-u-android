@@ -114,8 +114,14 @@
         "libs:decisions",
         "measure",
         "libs:ml-l-image",
-        "libs:ml-l-sound"
+        "libs:ml-l-sound",
+        "sheet",
+        "libs:ai"
       ]
+    },
+    "sheet": {
+      "_doc": "The Sheet page's logic as a plain-JVM Kotlin module (sheet/): the formula engine (parser, evaluator, SUM/AVERAGE/MIN/MAX/COUNT/COUNTA/IF/AND/OR/NOT/ROUND/ABS/SQRT/POWER/MOD/CONCAT/CONCATENATE/LEN/UPPER/LOWER/TODAY/NOW, #DIV/0! #REF! #NAME? #VALUE! #CIRC!), the workbook (sheets, dependency recalculation, insert/delete with reference adjustment, formats, clipboard, undo/redo), CSV and the workbook JSON file. No Android in it. The grid, files and the AI tools are app/.../ui/SheetScreens.kt and sheet/.",
+      "type": "library"
     },
     "clock": {
       "_doc": "#768 the Clock section's rules as a plain-JVM Kotlin module (clock/): alarm recurrence across repeat days and DST, timers, stopwatch laps, interval phases, what each AlarmManager wakeup does, and the stored JSON. No Android in it, so its suite runs without Robolectric and PIT mutation-tests it on every `gradle test` (clock/build.gradle). The Android half (AlarmManager, the foreground service, receivers, screens) is app/…/clock and ui/ClockScreens.kt.",
@@ -141,6 +147,16 @@
     "libs:ml-l-sound": {
       "_doc": "#798 the CONTRACT half of the fleet's sound identification (ISoundEngine wire, SoundEngine client, sound.json: routes, thresholds, capture length), shared with Cloud Camera: 'What is this sound?' answers on device by default (YAMNet's 521 AudioSet classes), the decision model stays an optional route. YAMNet runs in Cloud-Lib-Ml-L-Sound-Yamnet.apk, which this app binds after a contract handshake and never compiles (a `contract` lib, no L4 edge).",
       "dir": "../ab_cloud-libs-shared/libs/ml-l-sound",
+      "type": "library"
+    },
+    "libs:ai": {
+      "_doc_dir": "The AI page: the fleet's AI chat (libs:ai) over the fleet agent gateway (my-ai-api, mesh only) and OpenRouter with the fleet Account's token, which this app already reads for Jev (decide/JevStore.kt). Shared BY REFERENCE. The gateway's mesh address is baked as BuildConfig.AI_GATEWAY_URL by libs/ai/ai-gateway.gradle.",
+      "dir": "../ab_cloud-libs-shared/libs/ai",
+      "type": "library"
+    },
+    "libs:model-catalogue": {
+      "_doc_dir": "libs:ai's `api` dependency: the shared agent descriptor (assets/agents/agents.json) its Agent picker lists. Listed so settings.gradle resolves the path.",
+      "dir": "../ab_cloud-libs-shared/libs/model-catalogue",
       "type": "library"
     },
     "libs:decisions": {
@@ -573,12 +589,12 @@
   "ui": {
     "_doc": "EVERY list this app renders. app/build.gradle bakes ui.* into BuildConfig as base64 JSON and Declarations.kt decodes it once; no tab id, mode id, key or form is spelled in Kotlin.",
     "_doc_sections": "#868 THE ONE navigation declaration (libs:bottomnav's NavDecl), INVERTED from #770: ui.bottom_nav is the island's section ids in display order, ui.sections[] are Calculator, Measure and Jev, each with `pages` - the ten tabs (what #770 called ui.tabs), drawn as the section's top PageTabs strip - and ui.default_section is where the app opens (its first page). Calculator = the traditional calculators (#767), Measure = sensors and the clock & timers (#768), Jev = natural-language requests routed by a decision model, and its Configs. A page shows the modes whose `tab` is its id, in ui.modes order, as the sub-strip under the page strip. test/test-calc-shell.sh fails on a section with no page, a page with no mode and a mode naming no page.",
-    "bottom_nav": ["calculator", "measure", "jev"],
+    "bottom_nav": ["calculator", "sheet", "ai", "measure", "jev"],
     "default_section": "calculator",
     "sections": [
       {
         "id": "calculator",
-        "label": "Calculator",
+        "label": "Calc",
         "icon": "calculate",
         "pages": [
           {
@@ -609,6 +625,30 @@
         ]
       },
       {
+        "id": "sheet",
+        "label": "Sheet",
+        "icon": "table_chart",
+        "pages": [
+          {
+            "id": "sheet",
+            "label": "Sheet",
+            "icon": "table_chart"
+          }
+        ]
+      },
+      {
+        "id": "ai",
+        "label": "AI",
+        "icon": "auto_awesome",
+        "pages": [
+          {
+            "id": "ai",
+            "label": "AI",
+            "icon": "auto_awesome"
+          }
+        ]
+      },
+      {
         "id": "measure",
         "label": "Measure",
         "icon": "speed",
@@ -632,14 +672,22 @@
       },
       {
         "id": "jev",
-        "label": "Jev",
+        "label": "JEV",
         "icon": "psychology",
         "pages": [
           {
             "id": "ask",
             "label": "Ask",
             "icon": "ask"
-          },
+          }
+        ]
+      },
+      {
+        "id": "settings",
+        "label": "Configs",
+        "icon": "settings",
+        "_doc": "NOT in ui.bottom_nav: the Configs page is opened by the round button at the top-right of the top row (the fleet's Profile/Configs circle), and that button is the first section that is not on the bar.",
+        "pages": [
           {
             "id": "configs",
             "label": "Configs",
@@ -1786,6 +1834,20 @@
           ],
           "bedtime_default": "23:00"
         }
+      },
+      {
+        "id": "sheet",
+        "label": "Sheet",
+        "tab": "sheet",
+        "kind": "sheet",
+        "_doc": "The spreadsheet (:sheet module): grid, edit bar, formulas, several sheets, workbook files. Its data is the user's workbooks in app storage, not this declaration."
+      },
+      {
+        "id": "ai",
+        "label": "AI",
+        "tab": "ai",
+        "kind": "ai",
+        "_doc": "The fleet's AI chat (libs:ai): the agent gateway and OpenRouter, sessions, agent and model pickers. Two tools read and write the Sheet selection."
       },
       {
         "id": "jev",
