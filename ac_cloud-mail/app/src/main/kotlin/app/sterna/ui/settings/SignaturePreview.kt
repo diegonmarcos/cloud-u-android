@@ -53,7 +53,6 @@ internal object SignaturePreview {
         val script = if (options.visual) "<script nonce=\"$NONCE\">$VISUAL_SCRIPT</script>" else ""
         val scriptSrc = if (options.visual) "; script-src 'nonce-$NONCE'" else ""
         return "<!doctype html><html><head><meta charset=\"utf-8\">" +
-            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
             "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src https: http: data:; style-src 'unsafe-inline'$scriptSrc\">" +
             "<style>html{background:$page}body{margin:0;padding:8px}" +
             ".mail{max-width:${width}px;margin:0 auto;padding:14px 16px;background:$card;color:$fg;" +

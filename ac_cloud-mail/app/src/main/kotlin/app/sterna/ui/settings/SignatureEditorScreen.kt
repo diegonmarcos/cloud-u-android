@@ -54,14 +54,10 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -85,11 +81,16 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.sterna.R
+import app.sterna.ui.components.Icon
+import app.sterna.ui.components.IconButton
+import app.sterna.ui.theme.LocalSternaDarkTheme
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.bottomnav.TabSurface
 import app.sterna.core.data.account.SignatureTransfer
 import app.sterna.core.data.account.StoredSignature
 import app.sterna.core.data.text.looksLikeHtml
@@ -372,16 +373,24 @@ internal fun SignatureEditorScreen(
 
             // ---- panes -------------------------------------------------------------------------------
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-                val wide = maxWidth >= 600.dp
+                val wide = maxWidth >= MailMetrics.s256 * 3
                 val showSource = wide || pane != PANE_PREVIEW
                 val showPreview = wide || pane != PANE_SOURCE
                 Column(Modifier.fillMaxSize()) {
                     if (!wide) {
-                        TabRow(selectedTabIndex = pane) {
-                            listOf(R.string.sigedit_source, R.string.sigedit_preview, R.string.sigedit_split).forEachIndexed { index, label ->
-                                Tab(selected = pane == index, onClick = { pane = index }, text = { Text(stringResource(label)) })
-                            }
-                        }
+                        val pages = listOf(
+                            NavPage(PANE_SOURCE.toString(), stringResource(R.string.sigedit_source)),
+                            NavPage(PANE_PREVIEW.toString(), stringResource(R.string.sigedit_preview)),
+                            NavPage(PANE_SPLIT.toString(), stringResource(R.string.sigedit_split)),
+                        )
+                        PageTabs(
+                            pages = pages,
+                            selectedId = pane.toString(),
+                            onSelect = { pane = it.id.toInt() },
+                            modifier = Modifier.padding(horizontal = MailMetrics.s12),
+                            underTopChrome = false,
+                            surface = if (LocalSternaDarkTheme.current) TabSurface.Dark else TabSurface.Light,
+                        )
                     }
                     val sourcePane: @Composable (Modifier) -> Unit = { m ->
                         SignatureCodeEditor(state, markers, matches, query.length, onFind = { findOpen = true }, focus = focus, modifier = m)
@@ -607,7 +616,7 @@ private fun ValidationPanel(
             }
         }
         if (open && issues.isNotEmpty()) {
-            Column(Modifier.heightIn(max = 160.dp).verticalScroll(rememberScrollState())) {
+            Column(Modifier.heightIn(max = MailMetrics.s256).verticalScroll(rememberScrollState())) {
                 issues.forEach { issue ->
                     Row(
                         Modifier.fillMaxWidth().clickable { onPick(issue) }.padding(horizontal = MailMetrics.s12, vertical = MailMetrics.s4),
@@ -618,7 +627,7 @@ private fun ValidationPanel(
                             SignatureValidator.Severity.WARNING -> Icons.Filled.Warning to scheme.tertiary
                             SignatureValidator.Severity.INFO -> Icons.Filled.Info to scheme.secondary
                         }
-                        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+                        Icon(icon, contentDescription = null, tint = tint)
                         Text(
                             "${issue.line}: " + issueMessage(issue),
                             style = MaterialTheme.typography.bodySmall,

@@ -38,8 +38,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.sterna.ui.theme.MailMetrics
 
 /** Paints [SignatureHtmlTools.highlight] over the text; the text itself, and so every offset, is untouched. */
@@ -65,7 +63,9 @@ internal class HighlightTransformation(
     }
 }
 
-internal val CODE_STYLE = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 20.sp)
+/** The dense body style in monospace; gutter and field share it, so their lines stay level. */
+@Composable
+internal fun codeStyle(): TextStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
 
 /**
  * The monospace source pane: line numbers with error / warning markers in the gutter, HTML syntax colours,
@@ -116,15 +116,16 @@ internal fun SignatureCodeEditor(
             }
         }
     }
-    val textStyle = CODE_STYLE.copy(color = scheme.onSurface)
+    val codeStyle = codeStyle()
+    val textStyle = codeStyle.copy(color = scheme.onSurface)
     Row(modifier.fillMaxSize().background(scheme.surfaceContainerLowest).verticalScroll(rememberScrollState())) {
         Text(
             gutter,
-            style = CODE_STYLE,
+            style = codeStyle,
             textAlign = TextAlign.End,
             modifier = Modifier
                 .background(scheme.surfaceContainerLow)
-                .padding(horizontal = MailMetrics.s8, vertical = 8.dp)
+                .padding(horizontal = MailMetrics.s8, vertical = MailMetrics.s10)
                 .testTag("sig-gutter"),
         )
         Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
@@ -136,7 +137,7 @@ internal fun SignatureCodeEditor(
                 visualTransformation = transformation,
                 softWrap = false,
                 modifier = Modifier
-                    .padding(horizontal = MailMetrics.s8, vertical = 8.dp)
+                    .padding(horizontal = MailMetrics.s8, vertical = MailMetrics.s10)
                     .focusRequester(focus)
                     .testTag("sig-source")
                     .onPreviewKeyEvent { e -> handleKey(e, state, onFind) },
