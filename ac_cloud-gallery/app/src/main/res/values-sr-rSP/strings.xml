@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Gallery</string>
     <string name="app_name_gallery">Галерија</string>
     <string name="change_app_name">Назив апликације</string>
     <string name="change_app_name_summary">Промените назив апликације који се приказује у покретачу</string>

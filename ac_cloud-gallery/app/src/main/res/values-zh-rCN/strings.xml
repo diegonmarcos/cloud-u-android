@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Gallery</string>
     <string name="app_name_gallery">图库</string>
     <string name="change_app_name">应用名称</string>
     <string name="change_app_name_summary">更改启动器上显示的应用名称</string>

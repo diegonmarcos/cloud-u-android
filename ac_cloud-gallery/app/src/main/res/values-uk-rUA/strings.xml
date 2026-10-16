@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Gallery</string>
     <string name="app_name_gallery">Галерея</string>
     <string name="change_app_name">Назва додатку</string>
     <string name="change_app_name_summary">Змінити назву додатку в запускачі програм</string>

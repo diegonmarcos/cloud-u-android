@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Gallery</string>
     <string name="app_name_gallery">المعرض</string>
     <string name="change_app_name">اسم التطبيق</string>
     <string name="change_app_name_summary">غيّر اسم التطبيق الذي يظهر على المُطلق</string>

@@ -80,6 +80,9 @@ val gitShortSha: String = (System.getenv("GITHUB_SHA")?.takeIf { it.isNotBlank()
 
 val galleryVersion = "5.1.1"
 
+@Suppress("UNCHECKED_CAST")
+val buildJson = groovy.json.JsonSlurper().parse(file("../build.json")) as Map<String, Any?>
+
 apkVersioning {
     flavorVersionCodes.set(abiVersionCodes)
     versionCodeMultiplier.set(10)
@@ -134,6 +137,8 @@ android {
     ndkVersion = "29.0.14033849"
 
     defaultConfig {
+        // Launcher label = build.json::name, the application's one name (#351).
+        resValue("string", "app_name", buildJson["name"].toString())
         applicationId = "com.diegonmarcos.mediacenter"
         minSdk = 29
         targetSdk = 37
