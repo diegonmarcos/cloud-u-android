@@ -33,7 +33,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-dialer | `com.diegonmarcos.comms.dialer` | 3 | 0 | 100% |
 | cloud-drive | `com.diegonmarcos.clouddrive` | 9 | 4 | 69% |
 | cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 4 | 0 | 100% |
-| cloud-mail | `com.diegonmarcos.comms.mail` | 8 | 2 | 80% |
+| cloud-mail | `com.diegonmarcos.comms.mail` | 9 | 2 | 81% |
 | cloud-matrix | `com.diegonmarcos.comms.matrix` | 1 | 9 | 10% |
 | cloud-me | `com.diegonmarcos.cloudme` | 3 | 0 | 100% |
 | cloud-gallery | `com.diegonmarcos.mediacenter` | 4 | 1 | 80% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 0 | 100% |
-| **fleet** | | **211** | **36** | **85%** |
+| **fleet** | | **212** | **36** | **85%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -546,6 +546,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-databackend, lib-devt
 | `datastore:settings` | datastore | config (keys: album_last_sort_obj→device, album_last_view_obj→device, album_media_sort_obj→device, forced_last_screen→device, has_primed_contacts→device, has_seen_welcome→device, header_banner_dismissed→device, last_screen→device, last_seen_version→device, search_history_v2→content, setup_completed_version→device) | GAP | Mail (sterna) settings: theme, app_style (CLOUD_DARK default, GMAIL_DARK, CLOUD_EINK - the whole-app look), density, swipe actions, signature, PGP provider, notification content, quiet hours, image allowlist, RSS feeds. Same file name used by gallery. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `gateway_auth` | prefs | secret | yes | Cloud Mail (ac_cloud-mail) per-account edge-gate sign-in: one Keystore AES-256-GCM sealed JSON blob per account id (key gw_<id>) holding the Authelia flag and the captured authelia_session cookie. A credential: sealed, never logged, replayed only to the account's own domain. |
 | `list_view` | prefs | config | yes | Mail list view choices per account and folder (key account\|folder): group mode (subject, sender, none), rank (newest, sender, subject) and the combinable filters (starred, unread, attachments, codes), stored as group;rank;FILTERS. Unset means the global conversation-view and sort settings apply. |
 | `mail_notifications` | prefs | config | yes | Mail new-message notification actions: remind_delay_minutes (default 60) is how long the Remind button waits before re-posting the notification. |
 | `mail_signatures` | file | config | GAP | Mail signatures, one per sending identity (named, HTML source plus derived plain text, and which one is the default), keyed by the identity's ADDRESS because account ids are minted per install. Not a file of its own: a view onto the identities in the accounts blob (sterna_account) that composing reads, served by Mail's registered SetupStores handler (SignaturesSetupHandler) so Cloud Account's bundle export captures them and its import hands them back. The key * addresses every identity (a bare .html file imported on Cloud Account's Connections page). |
@@ -568,7 +569,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-databackend, lib-devt
 | `shared_prefs/sterna_account.xml accounts JSON` | secret | Mail account server/IMAP/SMTP/JMAP settings and credentials; account link is config but travels with the secret through the vault; passwords encrypted with a device Keystore key and cannot be copied raw. |
 | `Room SternaDatabase tables (mailboxes watched/muted/collapsed in account JSON)` | device | No settings tables in Room; per-account watched, muted (the Inbox's Notify about new mail, default on) and collapsed folders live in the account JSON. |
 
-Coverage: 8 covered, 2 gaps — datastore:settings, mail_signatures.
+Coverage: 9 covered, 2 gaps — datastore:settings, mail_signatures.
 
 ## cloud-matrix — `com.diegonmarcos.comms.matrix`
 

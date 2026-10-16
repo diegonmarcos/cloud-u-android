@@ -1078,6 +1078,15 @@
         "aa_cloud-superapp"
       ]
     },
+    "gateway_auth": {
+      "kind": "prefs",
+      "class": "secret",
+      "doc": "Cloud Mail (ac_cloud-mail) per-account edge-gate sign-in: one Keystore AES-256-GCM sealed JSON blob per account id (key gw_<id>) holding the Authelia flag and the captured authelia_session cookie. A credential: sealed, never logged, replayed only to the account's own domain.",
+      "helper": "ac_cloud-mail/core/data/src/main/kotlin/app/sterna/core/data/account/GatewayAuthStore.kt",
+      "used_by": [
+        "ac_cloud-mail"
+      ]
+    },
     "mail_auth_prefs": {
       "kind": "encrypted",
       "class": "secret",
