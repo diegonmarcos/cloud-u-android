@@ -822,7 +822,7 @@ class PermissionsFragment : KitComposeFragment() {
     }.getOrDefault(false)
 
     private fun grantedFiles(): Boolean =
-        if (android.os.Build.VERSION.SDK_INT >= 30) android.os.Environment.isExternalStorageManager() else true
+        if (android.os.Build.VERSION.SDK_INT >= 30) runCatching { android.os.Environment.isExternalStorageManager() }.getOrDefault(false) else true
 
     private fun grantedBatteryOptim(ctx: Context): Boolean = runCatching {
         (ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager)
