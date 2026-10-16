@@ -3,7 +3,9 @@ package com.diegonmarcos.superapp.cloud
 import android.app.Application
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.ui.KitPageHarness
@@ -33,7 +35,7 @@ class ContainerSheetComposeTest : KitPageHarness() {
         compose.onNodeWithTag("container:pane:infos").assertExists()
         compose.onNodeWithText("Container").assertExists()
         compose.onNodeWithText("App").assertExists()
-        compose.onNodeWithText(c.name, substring = true).assertExists()
+        compose.onAllNodesWithText(c.name, substring = true)[0].assertExists()
     }
 
     @Test
@@ -51,7 +53,7 @@ class ContainerSheetComposeTest : KitPageHarness() {
         var closed = 0
         showKit { ContainerSheet.Sheet(c.name, c.name, "", { closed++ }) }
         compose.onNodeWithTag(PageTabsTags.tab("actions")).performClick()
-        compose.onNodeWithTag("container:action:Open").performClick()
+        compose.onNodeWithTag("container:action:Open").performScrollTo().performClick()
         assertEquals(1, closed)
     }
 }

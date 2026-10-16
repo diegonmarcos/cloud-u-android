@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.media
 
 import android.app.Application
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -38,7 +39,12 @@ class MusicControlsPopupComposeTest : KitPageHarness() {
 
     @Test
     fun `P2 the card is the compact landscape box`() {
-        showKit { MusicControlsCard(ctx, null, null) {} }
+        // A popup is measured loosely; the test frame is a tight match-parent one, which beats any fixed height.
+        showKit {
+            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.wrapContentSize(androidx.compose.ui.Alignment.TopStart)) {
+                MusicControlsCard(ctx, null, null) {}
+            }
+        }
         val n = compose.onNodeWithTag("music:card").fetchSemanticsNode()
         val dm = ctx.resources.displayMetrics
         assertEquals((MusicControlsPopup.POPUP_HEIGHT_DP * dm.density).toInt(), n.size.height)
