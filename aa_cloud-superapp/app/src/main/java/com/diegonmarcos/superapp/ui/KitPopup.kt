@@ -8,6 +8,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -142,7 +143,7 @@ object KitDialog {
                     properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
                 ) {
                     androidx.compose.foundation.layout.Box(
-                        Modifier.androidx_fillMax().background(Color(0xCC000000)).clickable(
+                        Modifier.fillMaxSize().background(Color(0xCC000000)).clickable(
                             interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                             indication = null, onClick = ::close),
                         contentAlignment = androidx.compose.ui.Alignment.Center,
@@ -158,5 +159,4 @@ object KitDialog {
         return runCatching { act.addContentView(host, ViewGroup.LayoutParams(0, 0)); true }.getOrElse { false }
     }
 
-    private fun Modifier.androidx_fillMax(): Modifier = this.then(androidx.compose.foundation.layout.fillMaxSize())
 }
