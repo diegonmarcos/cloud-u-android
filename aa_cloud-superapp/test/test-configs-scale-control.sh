@@ -164,11 +164,11 @@ ROW="$(body "$CFG" "    " "private fun sliderRow(")"
 if [ -z "$ROW" ]; then
   bad "T5: sliderRow not found"
 else
-  grep -q 'tickMark =' <<<"$ROW" \
-    && ok "T5: the marks are the platform's own tickMark — drawn once per step, from the SeekBar's own range" \
-    || bad "T5: no tickMark — a hand-drawn tick bar would be a second copy of the range and would drift off the stops"
-  grep -q 'override fun onProgressChanged' <<<"$ROW" \
-    && grep -q 'readout.text = p.toString()' <<<"$ROW" \
+  grep -q 'steps = if (ticks) (max - min - 1).coerceAtLeast(0) else 0' <<<"$ROW" && grep -q 'valueRange = min.toFloat()..max.toFloat()' <<<"$ROW" \
+    && ok "T5: the marks are the slider's own discrete steps — drawn once per step, from the slider's own range" \
+    || bad "T5: no steps from the range — a hand-drawn tick bar would be a second copy of the range and would drift off the stops"
+  grep -q 'onValueChange = { progress = it.toInt().coerceIn(min, max) }' <<<"$ROW" \
+    && grep -q 'Text(progress.toString()' <<<"$ROW" \
     && ok "T5: the current step is shown and follows the finger, not the release" \
     || bad "T5: nothing shows the current step live — 'we can see in which level is' is the whole request"
   grep -q 'preset.value.coerceIn(min, max)' <<<"$ROW" \
@@ -190,8 +190,8 @@ if [ -n "$ROW" ]; then
   done
   # The positive half: the fix has to be that the row updates ITSELF. A button
   # that neither reloads nor repaints just leaves a stale handle on screen.
-  grep -q 'bar.progress = ' <<<"$ROW" \
-    && ok "T6: it repaints in place by setting progress on the bar it built" \
+  grep -q 'progress = preset.value.coerceIn(min, max)' <<<"$ROW" \
+    && ok "T6: it repaints in place by setting the progress state the slider is drawn from" \
     || bad "T6: nothing updates the view in place, so the only way to show the restore is a reload"
 fi
 # A trailing lambda binds to the LAST parameter. sliderRow grew two parameters

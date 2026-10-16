@@ -8,7 +8,22 @@ import android.content.Context
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * The chrome the Launcher tabs share.
@@ -48,41 +63,32 @@ internal fun sectionHeader(ctx: Context, title: String, subtitle: String): View 
     }
 }
 
-/** Selectable card used by both the Profiles and the Modes pickers — label up
- *  top, optional subtitle beneath, selected-state filled in brand purple,
- *  unselected on 13% white. */
-internal fun genericTile(
-    ctx: Context,
-    label: String,
-    subtitle: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-): View {
-    val palette = LauncherPalette.of(ctx)
-    val tile = LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        val pad = dp(ctx, 14); setPadding(pad, pad, pad, pad)
-        setBackgroundColor(if (isSelected) palette.surfaceSelected else palette.surface)
-        isClickable = true; isFocusable = true
-        setOnClickListener {
-            Haptics.tap(it)
-            onClick()
-        }
+/** A vertical gap, in dp. */
+@Composable
+internal fun GapDp(h: Int) { Spacer(Modifier.height(h.dp)) }
+
+/** Compose [sectionHeader]: section title + caption block. */
+@Composable
+internal fun SectionHeaderUi(title: String, subtitle: String) {
+    val p = LocalKitPalette.current
+    Column(Modifier.fillMaxWidth()) {
+        Text(title, color = p.textPrimary, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
+        Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 16.dp))
     }
-    tile.addView(TextView(ctx).apply {
-        text = (if (isSelected) "● " else "○ ") + label
-        setTextColor(palette.textPrimary)
-        setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-    })
-    if (subtitle.isNotBlank()) {
-        tile.addView(TextView(ctx).apply {
-            text = subtitle
-            setTextColor(palette.textSecondary)
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setPadding(0, dp(ctx, 4), 0, 0)
-        })
+}
+
+/** Selectable card used by the Controls pickers — label up top, optional subtitle beneath, selected-state filled in the
+ *  brand's selected surface, unselected on the plain surface. */
+@Composable
+internal fun GenericTileUi(label: String, subtitle: String, isSelected: Boolean, onClick: () -> Unit) {
+    val p = LocalKitPalette.current
+    val view = LocalView.current
+    Column(Modifier.fillMaxWidth().background(if (isSelected) p.surfaceSelected else p.surface)
+        .clickable { Haptics.tap(view); onClick() }.padding(14.dp).testTag("generic-tile:$label")) {
+        Text((if (isSelected) "● " else "○ ") + label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+        if (subtitle.isNotBlank()) Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(top = 4.dp))
     }
-    return tile
 }
 
 /** Force the fragment to rebuild so picker selections refresh. detach+attach in

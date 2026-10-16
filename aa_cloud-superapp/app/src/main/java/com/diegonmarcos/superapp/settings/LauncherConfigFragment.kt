@@ -1,36 +1,62 @@
 package com.diegonmarcos.superapp.settings
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.R
-import com.diegonmarcos.superapp.system.BackgroundOrchestrator
 import com.diegonmarcos.superapp.system.SystemDisplay
 import com.diegonmarcos.superapp.configs.DeviceControls
 import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.ui.Haptics
 import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.ui.StatusLight
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import com.diegonmarcos.superapp.ShellActivity
-import com.diegonmarcos.superapp.apps.PhoneAppsFragment
 
 import android.content.Intent
-import android.content.res.ColorStateList
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
-import android.os.Bundle
 import android.provider.Settings
 import android.util.Base64
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.SeekBar
-import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.widget.SwitchCompat
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.fragment.app.FragmentContainerView
 import org.json.JSONArray
 
 /**
@@ -48,45 +74,32 @@ import org.json.JSONArray
  * engine was moved, not copied. The tab was called "Modes" back when a theme
  * was called a mode; the name Modes now belongs to Presets ▸ Modes.
  */
-class LauncherConfigFragment : Fragment() {
+class LauncherConfigFragment : KitComposeFragment() {
 
     /**
-     * Rows on this page that can repaint THEMSELVES from the store.
+     * The redraw key of every row that can repaint ITSELF from the store.
      *
      * #349: every control here used to answer a flip with [rerenderPage] — a
      * detach+attach of the whole fragment — to change one badge and one derived
      * label. That rebuilt twenty-four tiles and two pickers, and threw the
      * scroll position away on every tap.
      *
-     * A row registers a lambda that RE-READS the store and repaints, so nothing
-     * cached in a captured `val` can go stale: the registry is the only state,
-     * and it is refilled from scratch by [onCreateView].
+     * A row reads the store when it is drawn and takes this epoch as an input,
+     * so a bump re-asks every one of them and nothing cached in a captured
+     * `val` can go stale: the store is the only state, and the scroll position
+     * lives in the page, which a bump does not touch.
      */
-    private val repaints = mutableListOf<() -> Unit>()
+    private var repaintEpoch by mutableIntStateOf(0)
 
-    /** Every registered row re-reads the store and repaints. The whole of what
-     *  a flip now costs. */
-    private fun repaintFromStore() = repaints.forEach { it() }
+    /** Every row re-reads the store and repaints. The whole of what a flip now costs. */
+    private fun repaintFromStore() { repaintEpoch++ }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        // This view is being built from nothing, so every lambda in here points
-        // at views that are about to be thrown away.
-        repaints.clear()
-        val palette = LauncherPalette.of(ctx)
+    override fun palette() = LauncherPalette.kit(requireContext())
 
-        val scroll = ScrollView(ctx).apply {
-            isFillViewport = true
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
-        }
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(ctx, 16); setPadding(pad, pad, pad, pad)
-        }
-        scroll.addView(root)
+    @Composable
+    override fun Content() {
+        val ctx = requireContext()
+        val epoch = repaintEpoch
 
         // Configs ▸ Launcher ▸ Controls ▸ Panels is two tabs over this ONE producer:
         // UI (look, layout, animation, screensaver, brightness) and Tools (the device
@@ -95,259 +108,230 @@ class LauncherConfigFragment : Fragment() {
         val showUi = scope != SCOPE_TOOLS
         val showTools = scope != SCOPE_UI
 
-        // The device switch board leads. ControlFragment is embedded, not
-        // re-implemented: one implementation of every tile, one place its
-        // behaviour is asserted. It is committed only when nothing is already
-        // attached at the host — on a restore the FragmentManager re-binds the
-        // existing child to the same stable id and must not be overwritten.
-        if (showTools) {
-        val gridHost = FrameLayout(ctx).apply {
-            id = R.id.controls_grid_host
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-        }
-        root.addView(gridHost)
-        if (childFragmentManager.findFragmentById(R.id.controls_grid_host) == null) {
-            childFragmentManager.beginTransaction()
-                .replace(R.id.controls_grid_host,
-                    com.diegonmarcos.superapp.configs.ControlFragment.newInstance(embedded = true))
-                .commit()
-        }
-        }
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            // The device switch board leads. ControlFragment is embedded, not
+            // re-implemented: one implementation of every tile, one place its
+            // behaviour is asserted. It is committed only when nothing is already
+            // attached at the host — on a restore the FragmentManager re-binds the
+            // existing child to the same stable id and must not be overwritten.
+            if (showTools) ControlsGridHost()
 
-        if (showUi) {
-        // ── Screensaver section ────────────────────────────────────
-        val settingsPrefs = LauncherSettingsPrefs(ctx)
-        root.addView(spacer(ctx, dp(ctx, 24)))
-        root.addView(sectionHeader(ctx, "Screensaver",
-            "Which screensaver the floating-nav ‘Screensaver’ action shows, and the idle auto-start timer."))
-        // Same shape as the mode tiles above: the ● / ○ is derived from the
-        // store, so the box is refilled rather than the page rebuilt.
-        val saversBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        root.addView(saversBox)
-        fun fillSavers() {
-            saversBox.removeAllViews()
-            val currentSaver = settingsPrefs.screensaver
-            for (saver in LauncherSettingsPrefs.Config.screensavers) {
-                saversBox.addView(
-                    genericTile(ctx, saver.label, saver.subtitle, saver.id == currentSaver) {
+            if (showUi) {
+                // ── Screensaver section ────────────────────────────────────
+                val settingsPrefs = remember { LauncherSettingsPrefs(ctx) }
+                GapDp(24)
+                SectionHeaderUi("Screensaver",
+                    "Which screensaver the floating-nav ‘Screensaver’ action shows, and the idle auto-start timer.")
+                // Same shape as the mode tiles above: the ● / ○ is derived from the
+                // store, so the box is repainted rather than the page rebuilt.
+                val currentSaver = epoch.let { settingsPrefs.screensaver }
+                for (saver in LauncherSettingsPrefs.Config.screensavers) {
+                    GenericTileUi(saver.label, saver.subtitle, saver.id == currentSaver) {
                         settingsPrefs.screensaver = saver.id
                         repaintFromStore()
-                    })
-                saversBox.addView(spacer(ctx, dp(ctx, 8)))
-            }
-        }
-        fillSavers()
-        repaints += { fillSavers() }
-        // Idle auto-start timer (seconds; 0 = never).
-        val st = LauncherSettingsPrefs.Config.screensaverTimeout
-        root.addView(sliderRow(ctx, st.label, st.subtitle, st.min, st.max,
-            settingsPrefs.screensaverTimeout) { v -> settingsPrefs.screensaverTimeout = v })
+                    }
+                    GapDp(8)
+                }
+                // Idle auto-start timer (seconds; 0 = never).
+                val st = LauncherSettingsPrefs.Config.screensaverTimeout
+                sliderRow(st.label, st.subtitle, st.min, st.max,
+                    settingsPrefs.screensaverTimeout) { v -> settingsPrefs.screensaverTimeout = v }
 
-        // ── Toggles ────────────────────────────────────────────────
-        // One box per build.json::ui.launcher_settings.toggle_groups entry, in
-        // declared order, holding the toggles that name it. This replaced a
-        // `filter { it.battery }` / `filter { !it.battery }` split, which could
-        // express exactly two boxes and no more — the four the owner asked for
-        // were a Kotlin change under that shape and are a data change under this
-        // one. A group with no toggles draws nothing rather than an empty header.
-        val allToggles = LauncherSettingsPrefs.Config.toggles
-        for (group in LauncherSettingsPrefs.Config.groups) {
-            val rows = allToggles.filter { it.group == group.id }
-            if (rows.isEmpty()) continue
+                // ── Toggles ────────────────────────────────────────────────
+                // One box per build.json::ui.launcher_settings.toggle_groups entry, in
+                // declared order, holding the toggles that name it. This replaced a
+                // `filter { it.battery }` / `filter { !it.battery }` split, which could
+                // express exactly two boxes and no more — the four the owner asked for
+                // were a Kotlin change under that shape and are a data change under this
+                // one. A group with no toggles draws nothing rather than an empty header.
+                val allToggles = LauncherSettingsPrefs.Config.toggles
+                for (group in LauncherSettingsPrefs.Config.groups) {
+                    val rows = allToggles.filter { it.group == group.id }
+                    if (rows.isEmpty()) continue
 
-            root.addView(spacer(ctx, dp(ctx, 24)))
-            root.addView(sectionHeader(ctx, group.label, group.subtitle))
+                    GapDp(24)
+                    SectionHeaderUi(group.label, group.subtitle)
 
-            if (group.master) {
-                // The master's own position is DERIVED from its children, so it
-                // is passed as a question, not an answer: flipping one child
-                // below has to move this switch, and it re-asks instead of
-                // being told.
-                root.addView(toggleRow(ctx, group.masterLabel, group.masterSubtitle,
-                    { rows.all { settingsPrefs.toggle(it) } }) { on ->
-                    // A master must not stomp a user-owned switch either: the
-                    // edge menus are not the master's to turn off.
-                    rows.filterNot { it.userOwned }.forEach { settingsPrefs.setToggle(it, on) }
-                    onToggleChanged()
-                    repaintFromStore() // reflect the child switches
-                })
-                root.addView(spacer(ctx, dp(ctx, 8)))
-            }
+                    if (group.master) {
+                        // The master's own position is DERIVED from its children, so it
+                        // is passed as a question, not an answer: flipping one child
+                        // below has to move this switch, and it re-asks instead of
+                        // being told.
+                        toggleRow(group.masterLabel, group.masterSubtitle, epoch,
+                            { rows.all { settingsPrefs.toggle(it) } }) { on ->
+                            // A master must not stomp a user-owned switch either: the
+                            // edge menus are not the master's to turn off.
+                            rows.filterNot { it.userOwned }.forEach { settingsPrefs.setToggle(it, on) }
+                            onToggleChanged()
+                            repaintFromStore() // reflect the child switches
+                        }
+                        GapDp(8)
+                    }
 
-            root.addView(toggleGrid(ctx, rows, settingsPrefs) { t, on ->
-                // Dark mode is a device-wide setting written over the shell
-                // channel, so it is the one switch that must not be flipped
-                // on this thread — and the one that has to say so when
-                // there is no channel, instead of lighting up and doing nothing.
-                if (t.store == LauncherSettingsPrefs.Config.STORE_NIGHTMODE) {
-                    if (!SystemDisplay.hasChannel(ctx)) Toast.makeText(
-                        ctx, "Dark mode needs the shell channel — turn on wireless debugging first.",
-                        Toast.LENGTH_LONG).show()
-                    // A switch thumb moved under the finger; a tile does not. So
-                    // the repaint has to be asked for, and only AFTER the write
-                    // lands — repaint eagerly and the grid draws the old value.
-                    else Thread({
+                    toggleGrid(rows, settingsPrefs, epoch) { t, on ->
+                        // Dark mode is a device-wide setting written over the shell
+                        // channel, so it is the one switch that must not be flipped
+                        // on this thread — and the one that has to say so when
+                        // there is no channel, instead of lighting up and doing nothing.
+                        if (t.store == LauncherSettingsPrefs.Config.STORE_NIGHTMODE) {
+                            if (!SystemDisplay.hasChannel(ctx)) Toast.makeText(
+                                ctx, "Dark mode needs the shell channel — turn on wireless debugging first.",
+                                Toast.LENGTH_LONG).show()
+                            // A switch thumb moved under the finger; a tile does not. So
+                            // the repaint has to be asked for, and only AFTER the write
+                            // lands — repaint eagerly and the grid draws the old value.
+                            else Thread({
+                                settingsPrefs.setToggle(t, on)
+                                view?.post { repaintFromStore() }
+                            }, "night-mode").start()
+                            return@toggleGrid
+                        }
                         settingsPrefs.setToggle(t, on)
-                        root.post { repaintFromStore() }
-                    }, "night-mode").start()
-                    return@toggleGrid
-                }
-                settingsPrefs.setToggle(t, on)
-                // Eye protection = the ANDROID SYSTEM night-light (blue-light
-                // filter), NOT a custom overlay — open its settings to enable.
-                if (t.id == "eye_protection" && on) {
-                    runCatching { startActivity(Intent("android.settings.NIGHT_DISPLAY_SETTINGS")) }
-                        .onFailure { runCatching { startActivity(Intent(Settings.ACTION_DISPLAY_SETTINGS)) } }
-                }
-                onToggleChanged()
-                // The tile that was tapped repaints itself, and the mode tiles
-                // refill — a hand-flip can move the selected mode into its
-                // "modified" state, and that label is derived, not stored. What
-                // this used to do was detach and re-attach the whole fragment
-                // for those two facts: #349's "the page reloads".
-                repaintFromStore()
-            })
-            root.addView(spacer(ctx, dp(ctx, 8)))
+                        // Eye protection = the ANDROID SYSTEM night-light (blue-light
+                        // filter), NOT a custom overlay — open its settings to enable.
+                        if (t.id == "eye_protection" && on) {
+                            runCatching { startActivity(Intent("android.settings.NIGHT_DISPLAY_SETTINGS")) }
+                                .onFailure { runCatching { startActivity(Intent(Settings.ACTION_DISPLAY_SETTINGS)) } }
+                        }
+                        onToggleChanged()
+                        // The tile that was tapped repaints itself, and the mode tiles
+                        // refill — a hand-flip can move the selected mode into its
+                        // "modified" state, and that label is derived, not stored. What
+                        // this used to do was detach and re-attach the whole fragment
+                        // for those two facts: #349's "the page reloads".
+                        repaintFromStore()
+                    }
+                    GapDp(8)
 
-            // Scale lives in the Others box because it is the same kind of
-            // whole-UI preference as the switches above it — Samsung draws
-            // Screen zoom and Font size on this screen too, as two separate
-            // knobs that drift apart. SystemDisplay drives both from this one.
-            if (group.id == "others") {
-                val sc = LauncherSettingsPrefs.Config.scale
-                // ticks, the one-tap sizes AND the shipped default all come off
-                // the SAME declared record the range does (#384, #408). Nothing
-                // about this control is written twice, so no edit to build.json
-                // can leave a button setting a number the slider never had, or
-                // a button called "Default" that is not what the app installs
-                // with — Slider.default IS the shipped preset's value.
-                root.addView(sliderRow(ctx, sc.label, sc.subtitle, sc.min, sc.max, settingsPrefs.scale,
-                    ticks = sc.ticks, presets = sc.presets) { v ->
-                    // #601: SystemDisplay.wrap applies this in-process, so the
-                    // change needs no shell channel — just a re-read, which
-                    // recreate() gets by re-running attachBaseContext.
-                    settingsPrefs.scale = v
-                    SystemDisplay.applyScale(ctx)
-                })
-                root.addView(spacer(ctx, dp(ctx, 8)))
-            }
-        }
-        // ── Icons per row ──────────────────────────────────────────
-        // Two separate steppers, one per grid family. Neither writes until it is
-        // tapped, so a phone that never touches them keeps following the
-        // shipped defaults (see GridColumns). The grids redraw themselves when
-        // the stored value changes.
-        root.addView(spacer(ctx, dp(ctx, 24)))
-        root.addView(sectionHeader(ctx, "Icons per row",
-            "How many icons the Cloud apps and Phone apps grids fit on a line (${GridColumns.MIN}–${GridColumns.MAX})."))
-        root.addView(stepperRow(ctx, "Cloud apps", "Cloud grids",
-            GridColumns.cloud(ctx)) { GridColumns.set(ctx, GridColumns.Kind.CLOUD, it) })
-        root.addView(spacer(ctx, dp(ctx, 8)))
-        root.addView(stepperRow(ctx, "Phone apps", "Phone grids",
-            GridColumns.phone(ctx)) { GridColumns.set(ctx, GridColumns.Kind.PHONE, it) })
-        root.addView(spacer(ctx, dp(ctx, 8)))
-
-        // Screen brightness (device-wide → needs WRITE_SETTINGS)
-        val b = LauncherSettingsPrefs.Config.brightness
-        root.addView(sliderRow(ctx, b.label, b.subtitle, b.min, b.max,
-            settingsPrefs.brightness.let { if (it < b.min) b.min else it }) { v ->
-            settingsPrefs.brightness = v
-            applySystemBrightness(ctx, v)
-        })
-        }
-
-        // "Set as default launcher" CTA
-        if (showTools) {
-        root.addView(spacer(ctx, dp(ctx, 16)))
-        root.addView(TextView(ctx).apply {
-            text = if (isDefaultLauncher(ctx))
-                "✓ SuperApp is the active default launcher."
-            else
-                "SuperApp is NOT the default launcher yet."
-            setTextColor(palette.textPrimary)
-            setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-            setPadding(0, 0, 0, dp(ctx, 8))
-        })
-        root.addView(TextView(ctx).apply {
-            text = "Set as default launcher →"
-            setTextColor(palette.accent)
-            setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-            setPadding(dp(ctx, 12), dp(ctx, 12), dp(ctx, 12), dp(ctx, 12))
-            setBackgroundColor(palette.surfaceSelected)
-            isClickable = true; isFocusable = true
-            setOnClickListener {
-                Haptics.tap(it)
-                runCatching {
-                    startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
-                }.onFailure {
-                    runCatching {
-                        startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+                    // Scale lives in the Others box because it is the same kind of
+                    // whole-UI preference as the switches above it — Samsung draws
+                    // Screen zoom and Font size on this screen too, as two separate
+                    // knobs that drift apart. SystemDisplay drives both from this one.
+                    if (group.id == "others") {
+                        val sc = LauncherSettingsPrefs.Config.scale
+                        // ticks, the one-tap sizes AND the shipped default all come off
+                        // the SAME declared record the range does (#384, #408). Nothing
+                        // about this control is written twice, so no edit to build.json
+                        // can leave a button setting a number the slider never had, or
+                        // a button called "Default" that is not what the app installs
+                        // with — Slider.default IS the shipped preset's value.
+                        sliderRow(sc.label, sc.subtitle, sc.min, sc.max, settingsPrefs.scale,
+                            ticks = sc.ticks, presets = sc.presets) { v ->
+                            // #601: SystemDisplay.wrap applies this in-process, so the
+                            // change needs no shell channel — just a re-read, which
+                            // recreate() gets by re-running attachBaseContext.
+                            settingsPrefs.scale = v
+                            SystemDisplay.applyScale(ctx)
+                        }
+                        GapDp(8)
                     }
                 }
-            }
-        })
-        }
+                // ── Icons per row ──────────────────────────────────────────
+                // Two separate steppers, one per grid family. Neither writes until it is
+                // tapped, so a phone that never touches them keeps following the
+                // shipped defaults (see GridColumns). The grids redraw themselves when
+                // the stored value changes.
+                GapDp(24)
+                SectionHeaderUi("Icons per row",
+                    "How many icons the Cloud apps and Phone apps grids fit on a line (${GridColumns.MIN}–${GridColumns.MAX}).")
+                stepperRow("Cloud apps", "Cloud grids",
+                    GridColumns.cloud(ctx)) { GridColumns.set(ctx, GridColumns.Kind.CLOUD, it) }
+                GapDp(8)
+                stepperRow("Phone apps", "Phone grids",
+                    GridColumns.phone(ctx)) { GridColumns.set(ctx, GridColumns.Kind.PHONE, it) }
+                GapDp(8)
 
-        return scroll
+                // Screen brightness (device-wide → needs WRITE_SETTINGS)
+                val b = LauncherSettingsPrefs.Config.brightness
+                sliderRow(b.label, b.subtitle, b.min, b.max,
+                    settingsPrefs.brightness.let { if (it < b.min) b.min else it }) { v ->
+                    settingsPrefs.brightness = v
+                    applySystemBrightness(ctx, v)
+                }
+            }
+
+            // "Set as default launcher" CTA
+            if (showTools) {
+                val p = LocalKitPalette.current
+                val view = LocalView.current
+                GapDp(16)
+                Text(if (isDefaultLauncher(ctx))
+                    "✓ SuperApp is the active default launcher."
+                else
+                    "SuperApp is NOT the default launcher yet.",
+                    color = p.textPrimary, style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp))
+                Text("Set as default launcher →", color = p.accent, style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.fillMaxWidth().background(p.surfaceSelected).clickable {
+                        Haptics.tap(view)
+                        runCatching {
+                            startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+                        }.onFailure {
+                            runCatching {
+                                startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+                            }
+                        }
+                    }.padding(12.dp).testTag("launcher:default-cta"))
+            }
+        }
+    }
+
+    /** The Control grid, hosted as a child fragment so its ticker, lights and tap/hold are untouched. */
+    @Composable
+    private fun ControlsGridHost() {
+        val hostId = R.id.controls_grid_host
+        val committed = remember { BooleanArray(1) }
+        AndroidView(
+            modifier = Modifier.fillMaxWidth(),
+            factory = { c -> FragmentContainerView(c).apply { id = hostId } },
+            update = { v ->
+                if (!committed[0]) {
+                    committed[0] = true
+                    v.post {
+                        if (isAdded && childFragmentManager.findFragmentById(hostId) == null) {
+                            childFragmentManager.beginTransaction()
+                                .replace(hostId,
+                                    com.diegonmarcos.superapp.configs.ControlFragment.newInstance(embedded = true))
+                                .commitAllowingStateLoss()
+                        }
+                    }
+                }
+            },
+        )
     }
 
     /** Compact −/+ stepper over [GridColumns.MIN]..[GridColumns.MAX]. */
+    @Composable
     private fun stepperRow(
-        ctx: android.content.Context,
         label: String, subtitle: String, value: Int,
         onChange: (Int) -> Unit,
-    ): View {
-        val palette = LauncherPalette.of(ctx)
-        var cur = GridColumns.clamp(value)
-        val readout = TextView(ctx).apply {
-            gravity = Gravity.CENTER
-            minWidth = dp(ctx, 36)
-            setTextColor(palette.accent)
-            setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-        }
-        fun btn(glyph: String, desc: String, delta: Int) = TextView(ctx).apply {
-            text = glyph
-            gravity = Gravity.CENTER
-            contentDescription = desc
-            setTextColor(palette.textPrimary)
-            setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-            setBackgroundColor(palette.surfaceSelected)
-            isClickable = true; isFocusable = true
-            layoutParams = LinearLayout.LayoutParams(dp(ctx, 44), dp(ctx, 44))
-            setOnClickListener {
-                val next = GridColumns.clamp(cur + delta)
-                if (next == cur) return@setOnClickListener
-                Haptics.tap(it)
-                cur = next; readout.text = next.toString()
-                onChange(next)
+    ) {
+        val p = LocalKitPalette.current
+        val view = LocalView.current
+        var cur by remember { mutableIntStateOf(GridColumns.clamp(value)) }
+        @Composable
+        fun btn(glyph: String, desc: String, delta: Int) {
+            Box(Modifier.size(44.dp).background(p.surfaceSelected).semantics { contentDescription = desc }
+                .clickable {
+                    val next = GridColumns.clamp(cur + delta)
+                    if (next == cur) return@clickable
+                    Haptics.tap(view)
+                    cur = next
+                    onChange(next)
+                }.testTag("stepper:$desc"), contentAlignment = Alignment.Center) {
+                Text(glyph, color = p.textPrimary, style = MaterialTheme.typography.headlineSmall)
             }
         }
-        readout.text = cur.toString()
-        return LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            val pad = dp(ctx, 14); setPadding(pad, dp(ctx, 8), pad, dp(ctx, 8))
-            setBackgroundColor(palette.surface)
-            addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                addView(TextView(ctx).apply {
-                    text = label
-                    setTextColor(palette.textPrimary)
-                    setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-                })
-                addView(TextView(ctx).apply {
-                    text = subtitle
-                    setTextColor(palette.textSecondary)
-                    setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                })
-            })
-            addView(btn("−", "Fewer icons per row", -1))
-            addView(readout)
-            addView(btn("+", "More icons per row", 1))
+        Row(Modifier.fillMaxWidth().background(p.surface).padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+                Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
+            }
+            btn("−", "Fewer icons per row", -1)
+            Text(cur.toString(), color = p.accent, style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center, modifier = Modifier.width(36.dp).testTag("stepper:readout:$label"))
+            btn("+", "More icons per row", 1)
         }
     }
 
@@ -355,56 +339,28 @@ class LauncherConfigFragment : Fragment() {
      *
      *  [checked] is a QUESTION, not a value: this row is the group master and
      *  its position is derived from the children below it, which the user can
-     *  flip one at a time. It is re-asked on every [repaintFromStore]. */
+     *  flip one at a time. It is re-asked on every [repaintFromStore] (the
+     *  [epoch] is the input that makes that happen). */
+    @Composable
     private fun toggleRow(
-        ctx: android.content.Context,
-        label: String, subtitle: String, checked: () -> Boolean,
+        label: String, subtitle: String, epoch: Int, checked: () -> Boolean,
         onChange: (Boolean) -> Unit,
-    ): View {
-        val palette = LauncherPalette.of(ctx)
-        return LinearLayout(ctx).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        val pad = dp(ctx, 14); setPadding(pad, pad, pad, pad)
-        setBackgroundColor(palette.surface)
-        addView(LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            addView(TextView(ctx).apply {
-                text = label
-                setTextColor(palette.textPrimary)
-                setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-            })
-            if (subtitle.isNotBlank()) addView(TextView(ctx).apply {
-                text = subtitle
-                setTextColor(palette.textSecondary)
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            })
-        })
-        // Persist FIRST, then buzz — otherwise Haptics.tap reads the
-        // stale (pre-toggle) value and the "Vibration on tap" switch
-        // itself silently no-ops when flipped ON.
-        val listener = android.widget.CompoundButton.OnCheckedChangeListener { v, isOn ->
-            onChange(isOn); Haptics.tap(v)
-        }
-        val sw = SwitchCompat(ctx).apply {
-            isChecked = checked()
-            setOnCheckedChangeListener(listener)
-        }
-        // Follow the children without being rebuilt. The listener is DETACHED
-        // for the write: setChecked fires it, and a sync that re-entered
-        // onChange would write the master's new position straight back over
-        // every child — turning "you turned one thing off" into "everything
-        // off".
-        repaints += {
-            val want = checked()
-            if (sw.isChecked != want) {
-                sw.setOnCheckedChangeListener(null)
-                sw.isChecked = want
-                sw.setOnCheckedChangeListener(listener)
+    ) {
+        val p = LocalKitPalette.current
+        val view = LocalView.current
+        // The Switch reports a user flip only: following the children is a new `checked`, never a callback, so a sync can
+        // not re-enter onChange and write the master's new position over every child.
+        val on = epoch.let { checked() }
+        Row(Modifier.fillMaxWidth().background(p.surface).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+                if (subtitle.isNotBlank()) Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
             }
-        }
-        addView(sw)
+            // Persist FIRST, then buzz — otherwise Haptics.tap reads the
+            // stale (pre-toggle) value and the "Vibration on tap" switch
+            // itself silently no-ops when flipped ON.
+            Switch(checked = on, onCheckedChange = { isOn -> onChange(isOn); Haptics.tap(view) },
+                modifier = Modifier.testTag("master:$label"))
         }
     }
 
@@ -434,123 +390,79 @@ class LauncherConfigFragment : Fragment() {
      * no state of its own: it re-reads [prefs] each time it paints, which is
      * why [prefs] is passed down here instead of a boolean.
      */
+    @Composable
     private fun toggleGrid(
-        ctx: android.content.Context,
         items: List<LauncherSettingsPrefs.Item>,
         prefs: LauncherSettingsPrefs,
+        epoch: Int,
         onFlip: (LauncherSettingsPrefs.Item, Boolean) -> Unit,
-    ): View {
+    ) {
         val columns = DeviceControls.columns
-        val grid = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(LauncherPalette.of(ctx).surface)
-            val pad = dp(ctx, 8); setPadding(pad, pad, pad, pad)
-        }
-        var strip: LinearLayout? = null
-        items.forEachIndexed { index, item ->
-            if (index % columns == 0) {
-                strip = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-                grid.addView(strip)
+        Column(Modifier.fillMaxWidth().background(LocalKitPalette.current.surface).padding(8.dp)) {
+            for (strip in items.chunked(columns)) {
+                Row(Modifier.fillMaxWidth()) {
+                    for (item in strip) Box(Modifier.weight(1f)) { toggleTile(item, prefs, epoch, onFlip) }
+                    // Pad the last strip so four tiles over three columns leaves the fourth
+                    // under the first, not stretched to a third of the screen.
+                    repeat(columns - strip.size) { Spacer(Modifier.weight(1f)) }
+                }
             }
-            strip?.addView(toggleTile(ctx, item, prefs, onFlip))
         }
-        // Pad the last strip so four tiles over three columns leaves the fourth
-        // under the first, not stretched to a third of the screen.
-        val remainder = items.size % columns
-        if (remainder != 0) repeat(columns - remainder) {
-            strip?.addView(View(ctx).apply {
-                layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
-            })
-        }
-        return grid
     }
 
     /** One cell of [toggleGrid]: filled badge + icon + label + status light.
      *  Badge fill and icon ink are the same two palette colours swapped, so a
      *  tile reads as on or off before any word on it is read. */
+    @Composable
     private fun toggleTile(
-        ctx: android.content.Context,
         item: LauncherSettingsPrefs.Item,
         prefs: LauncherSettingsPrefs,
+        epoch: Int,
         onFlip: (LauncherSettingsPrefs.Item, Boolean) -> Unit,
-    ): View {
-        val palette = LauncherPalette.of(ctx)
-
-        val badgeFill = GradientDrawable().apply { shape = GradientDrawable.OVAL }
-        val icon = ImageView(ctx).apply {
-            setImageResource(Sections.iconResFor(ctx, item.icon))
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            layoutParams = FrameLayout.LayoutParams(dp(ctx, TILE_ICON_DP), dp(ctx, TILE_ICON_DP),
-                Gravity.CENTER)
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }
-        val badge = FrameLayout(ctx).apply {
-            background = badgeFill
-            layoutParams = LinearLayout.LayoutParams(dp(ctx, TILE_BADGE_DP), dp(ctx, TILE_BADGE_DP))
-                .apply { gravity = Gravity.CENTER_HORIZONTAL }
-            addView(icon)
-        }
-        val status = TextView(ctx).apply {
-            textSize = 9f
-            gravity = Gravity.CENTER
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }
-
-        val cell = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            val pad = dp(ctx, 6); setPadding(pad, pad, pad, pad)
-            isClickable = true; isFocusable = true
-            addView(badge)
-            addView(TextView(ctx).apply {
-                text = item.label
-                setTextColor(palette.textPrimary)
-                textSize = 11f
-                gravity = Gravity.CENTER
-                setPadding(0, dp(ctx, 6), 0, 0)
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            })
-            addView(status)
-        }
-
+    ) {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        val view = LocalView.current
         // Badge fill and icon ink are the same two palette colours swapped, plus
         // the status word under them — the three things that say on or off, and
         // the only three a flip changes. Read from the store every time: a
         // store-backed switch (dark mode) is a VIEW OF the owning store and can
         // change without this page being touched at all.
-        fun paint() {
-            val on = prefs.toggle(item)
-            val state = if (on) StatusLight.State.ON else StatusLight.State.OFF
-            badgeFill.setColor(if (on) palette.accent else palette.surfaceSelected)
-            icon.imageTintList = ColorStateList.valueOf(
-                if (on) palette.surface else palette.textSecondary)
-            status.text = StatusLight.text(ctx, state)
-            status.setTextColor(StatusLight.colour(ctx, state))
-            // The grid replaced labelled rows with icons, which took the text a
-            // screen reader was reading off the screen — so the whole tile
-            // carries the sentence and its children are skipped. It carries the
-            // STATE too, so it has to be re-spoken when the state moves.
-            cell.contentDescription = StatusLight.description(ctx, item.label, state)
+        val on = epoch.let { prefs.toggle(item) }
+        val state = if (on) StatusLight.State.ON else StatusLight.State.OFF
+        Column(
+            Modifier.fillMaxWidth().padding(6.dp)
+                // The grid replaced labelled rows with icons, which took the text a
+                // screen reader was reading off the screen — so the whole tile
+                // carries the sentence and its children are skipped. It carries the
+                // STATE too, so it has to be re-spoken when the state moves.
+                .semantics(mergeDescendants = true) { contentDescription = StatusLight.description(ctx, item.label, state) }
+                .clickable {
+                    Haptics.tap(view)
+                    // Asked of the store, not of a value captured when this tile was
+                    // built. The tile now outlives its own flips, so a captured `on`
+                    // would be right once and wrong every time after.
+                    onFlip(item, !prefs.toggle(item))
+                }.testTag("toggle:${item.id}"),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(Modifier.size(TILE_BADGE_DP.dp).clip(CircleShape).background(if (on) p.accent else p.surfaceSelected),
+                contentAlignment = Alignment.Center) {
+                Icon(painterResource(Sections.iconResFor(ctx, item.icon)), contentDescription = null,
+                    tint = if (on) p.surface else p.textSecondary, modifier = Modifier.size(TILE_ICON_DP.dp))
+            }
+            Text(item.label, color = p.textPrimary, fontSize = 11.sp, textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 6.dp))
+            Text(StatusLight.text(ctx, state), color = Color(StatusLight.colour(ctx, state)), fontSize = 9.sp,
+                textAlign = TextAlign.Center)
         }
-        paint()
-        repaints += { paint() }
-
-        cell.setOnClickListener {
-            Haptics.tap(it)
-            // Asked of the store, not of a value captured when this tile was
-            // built. The tile now outlives its own flips, so a captured `on`
-            // would be right once and wrong every time after.
-            onFlip(item, !prefs.toggle(item))
-        }
-        return cell
     }
 
-    /** A label + SeekBar row. [value] pre-positions the thumb; onChange fires
+    /** A label + slider row. [value] pre-positions the handle; [onChange] fires
      *  on release so we don't spam writes while dragging.
      *
      *  [ticks] (#384) draws one mark per step under the line and puts the
-     *  current step beside the label. A SeekBar's progress was ALREADY an
+     *  current step beside the label. The slider's value was ALREADY an
      *  integer, so the handle always landed on a step — what was missing was
      *  any way to SEE that, which is the whole of the owner's "then it don't
      *  have middle range numbers and we can see in which level is". Marks +
@@ -564,111 +476,67 @@ class LauncherConfigFragment : Fragment() {
      *  shipped one and must not: that is Slider.default's job, derived from the
      *  same records, so the button and the first install cannot disagree.
      *
-     *  NEITHER reloads the page. The restore path writes the store, sets
-     *  `progress` on THIS SeekBar and calls the same onChange a drag would, so
-     *  it costs one view update — not the detach+attach (#349a) or the
+     *  NEITHER reloads the page. The restore path writes the store, moves the
+     *  handle of THIS slider and calls the same onChange a drag would, so it
+     *  costs one state update — not the detach+attach (#349a) or the
      *  Activity.recreate (#349b) that made a tap on this page lose the scroll
      *  position and come back on the Profiles tab. */
+    @Composable
     private fun sliderRow(
-        ctx: android.content.Context,
         label: String, subtitle: String, min: Int, max: Int, value: Int,
         ticks: Boolean = false,
         presets: List<LauncherSettingsPrefs.Preset> = emptyList(),
         onChange: (Int) -> Unit,
-    ): View {
-        val palette = LauncherPalette.of(ctx)
-        return LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        val pad = dp(ctx, 14); setPadding(pad, pad, pad, pad)
-        setBackgroundColor(palette.surface)
-        // The live step readout. Built before the header so the header can hold
-        // it, and updated from onProgressChanged so it follows the FINGER, not
-        // the release — a number that only catches up when you let go is the
+    ) {
+        val p = LocalKitPalette.current
+        val view = LocalView.current
+        // The live step. It follows the FINGER, not the release — a number that only catches up when you let go is the
         // same "which level am I on" question with an extra second of delay.
-        val readout = TextView(ctx).apply {
-            setTextColor(palette.accent)
-            setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-        }
-        addView(LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(TextView(ctx).apply {
-                text = label
-                setTextColor(palette.textPrimary)
-                setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            if (ticks) addView(readout)
-        })
-        if (subtitle.isNotBlank()) addView(TextView(ctx).apply {
-            text = subtitle
-            setTextColor(palette.textSecondary)
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setPadding(0, 0, 0, dp(ctx, 4))
-        })
-        val bar = SeekBar(ctx).apply {
-            this.min = min
-            this.max = max
-            // The platform's own discrete-slider mark: AbsSeekBar draws this
-            // drawable once per step across the track, so the marks and the
-            // stops are the SAME fact and cannot drift. A hand-drawn tick bar
-            // under the line would be a second copy of the range (#170).
-            if (ticks) tickMark = android.graphics.drawable.ShapeDrawable(
-                android.graphics.drawable.shapes.OvalShape()).apply {
-                intrinsicWidth = dp(ctx, 4); intrinsicHeight = dp(ctx, 4)
-                paint.color = palette.textSecondary
+        var progress by remember { mutableIntStateOf(value.coerceIn(min, max)) }
+        Column(Modifier.fillMaxWidth().background(p.surface).padding(14.dp)) {
+            Row(Modifier.fillMaxWidth()) {
+                Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                if (ticks) Text(progress.toString(), color = p.accent, style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.testTag("slider:readout:$label"))
             }
-            progress = value.coerceIn(min, max)
-            readout.text = progress.toString()
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
-                    readout.text = p.toString()
-                }
-                override fun onStartTrackingTouch(sb: SeekBar) {}
-                override fun onStopTrackingTouch(sb: SeekBar) { onChange(sb.progress) }
-            })
-        }
-        addView(bar)
-        if (ticks) addView(LinearLayout(ctx).apply {
-            // The two ends named, so the row reads as a scale even before the
-            // handle is touched. Derived from the declared bounds.
-            orientation = LinearLayout.HORIZONTAL
-            addView(TextView(ctx).apply {
-                text = min.toString()
-                setTextColor(palette.textSecondary)
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            addView(TextView(ctx).apply {
-                text = max.toString()
-                setTextColor(palette.textSecondary)
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            })
-        })
-        if (presets.isNotEmpty()) addView(LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(ctx, 8), 0, 0)
-            // One button per DECLARED preset, in declared order. A loop and not
-            // two blocks: a third size is then a build.json entry, the way a
-            // fourth toggle group was (#384's "a third box was a code change").
-            for (preset in presets) addView(TextView(ctx).apply {
-                // The number is shown, and it is the declared one — a label
-                // reading "Default" over a handle that landed somewhere else is
-                // the disagreement this whole row is shaped to prevent.
-                text = "${preset.label} (${preset.value})"
-                setTextColor(palette.accent)
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                setPadding(0, 0, dp(ctx, 18), 0)
-                isClickable = true; isFocusable = true
-                setOnClickListener {
-                    Haptics.tap(it)
-                    // Setting progress moves the handle and re-fires
-                    // onProgressChanged (so the readout follows) but NOT
-                    // onStopTrackingTouch, which is a touch-only callback — so
-                    // the write is asked for explicitly here and happens
-                    // exactly once.
-                    bar.progress = preset.value.coerceIn(min, max)
-                    onChange(bar.progress)
-                }
-            })
-        })
+            if (subtitle.isNotBlank()) Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(bottom = 4.dp))
+            // One stop per step: the slider's own discrete marks are drawn from the SAME range as the stops, so the marks
+            // and the stops are one fact and cannot drift. A hand-drawn tick bar under the line would be a second copy of
+            // the range (#170).
+            Slider(
+                value = progress.toFloat(),
+                onValueChange = { progress = it.toInt().coerceIn(min, max) },
+                onValueChangeFinished = { onChange(progress) },
+                valueRange = min.toFloat()..max.toFloat(),
+                steps = if (ticks) (max - min - 1).coerceAtLeast(0) else 0,
+                modifier = Modifier.fillMaxWidth().testTag("slider:$label"),
+            )
+            if (ticks) Row(Modifier.fillMaxWidth()) {
+                // The two ends named, so the row reads as a scale even before the
+                // handle is touched. Derived from the declared bounds.
+                Text(min.toString(), color = p.textSecondary, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+                Text(max.toString(), color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
+            }
+            if (presets.isNotEmpty()) Row(Modifier.padding(top = 8.dp)) {
+                // One button per DECLARED preset, in declared order. A loop and not
+                // two blocks: a third size is then a build.json entry, the way a
+                // fourth toggle group was (#384's "a third box was a code change").
+                for (preset in presets) Text(
+                    // The number is shown, and it is the declared one — a label
+                    // reading "Default" over a handle that landed somewhere else is
+                    // the disagreement this whole row is shaped to prevent.
+                    "${preset.label} (${preset.value})",
+                    color = p.accent, style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(end = 18.dp).clickable {
+                        Haptics.tap(view)
+                        // Moving the handle is a state write and does not fire the
+                        // release callback, so the write is asked for explicitly here
+                        // and happens exactly once.
+                        progress = preset.value.coerceIn(min, max)
+                        onChange(progress)
+                    }.testTag("slider:preset:${preset.label}"))
+            }
         }
     }
 

@@ -147,14 +147,15 @@ for fn in "private fun toggleTile" "private fun toggleGrid" "private fun toggleR
     ok "T4: ${fn##* } does not rebuild the page"
   fi
 done
-# The flip handlers are LAMBDAS passed from onCreateView, so the four functions
+# The flip handlers are LAMBDAS passed from Content (the Compose page body, what
+# onCreateView was), so the four functions
 # above can be clean while every call site rebuilds — which is exactly how this
-# shipped. onCreateView is where the mode tiles, the screensaver picker, the
+# shipped. Content is where the mode tiles, the screensaver picker, the
 # master and the grid are all wired, and none of them may reach rerenderPage.
-if grep -q 'rerenderPage' <<<"$(body "$CFG" "    " "override fun onCreateView(")"; then
-  bad "T4: a control wired in onCreateView still answers a tap with a full page rebuild (#349a)"
+if grep -q 'rerenderPage' <<<"$(body "$CFG" "    " "override fun Content(")"; then
+  bad "T4: a control wired in Content still answers a tap with a full page rebuild (#349a)"
 else
-  ok "T4: nothing wired in onCreateView rebuilds the page"
+  ok "T4: nothing wired in Content rebuilds the page"
 fi
 # One use is allowed to remain in the whole file: the Power Saving slot chooser,
 # a DIALOG choice on #340's surface rather than a toggle. Two would mean a flip
@@ -174,21 +175,26 @@ fi
 echo "== a row repaints itself, from the store, in place =="
 
 # ── T5 ────────────────────────────────────────────────────────────────────────
-grep -q 'private val repaints = mutableListOf<() -> Unit>()' "$CFG" \
-  && ok "T5: the page has a repaint registry" \
-  || bad "T5: no repaint registry on the Controls page"
-grep -q 'repaints.clear()' "$CFG" \
-  && ok "T5: the registry is emptied by onCreateView, so it cannot hold dead views" \
-  || bad "T5: the registry is never cleared — a rebuilt page would repaint detached views"
+# Compose: the registry of repaint lambdas became ONE state, the repaint epoch. A row takes it as an input, so a bump
+# re-asks every row; there is nothing to clear (no dead views to hold) and nothing to register.
+grep -q 'private var repaintEpoch by mutableIntStateOf(0)' "$CFG" \
+  && ok "T5: the page has a repaint epoch (the state every row re-reads from the store on)" \
+  || bad "T5: no repaint epoch on the Controls page"
+grep -q 'private fun repaintFromStore() { repaintEpoch++ }' "$CFG" \
+  && ok "T5: repaintFromStore bumps it - the whole of what a flip costs" \
+  || bad "T5: repaintFromStore does not bump the epoch"
+! grep -qE 'mutableListOf<\(\) -> Unit>|repaints\.clear\(\)|repaints \+=' "$CFG" \
+  && ok "T5: no registry of view-bound lambdas is left to go stale" \
+  || bad "T5: a repaint registry crept back - lambdas bound to views that a rebuild throws away"
 TILE="$(body "$CFG" "    " "private fun toggleTile(")"
 if grep -q 'prefs: LauncherSettingsPrefs' <<<"$TILE"; then
   ok "T5: toggleTile takes the store, not an on/off snapshot"
 else
   bad "T5: toggleTile still takes a captured boolean — it can only refresh by being rebuilt"
 fi
-grep -q 'repaints +=' <<<"$TILE" \
-  && ok "T5: a tile registers its own repaint" \
-  || bad "T5: a tile registers no repaint — it cannot follow a master flip"
+grep -q 'epoch: Int' <<<"$TILE" && grep -q 'epoch.let { prefs.toggle(item) }' <<<"$TILE" \
+  && ok "T5: a tile takes the epoch and re-reads the store on it - it repaints itself" \
+  || bad "T5: a tile does not read the store on the epoch - it cannot follow a master flip"
 grep -q 'onFlip(item, !prefs.toggle(item))' <<<"$TILE" \
   && ok "T5: a tap reads the CURRENT stored value, not the one captured at build time" \
   || bad "T5: the tap still flips a captured value — right once, wrong every time after"
@@ -200,10 +206,13 @@ if grep -q 'checked: () -> Boolean' <<<"$ROW"; then
 else
   bad "T6: the master takes a snapshot boolean — a child flip cannot move it"
 fi
-if grep -q 'setOnCheckedChangeListener(null)' <<<"$ROW"; then
-  ok "T6: the master detaches its listener before a programmatic sync"
+# No listener to detach in Compose: the Switch gets its position as `checked` (asked on the epoch) and reports a USER flip
+# only, so following the children can never re-enter onChange.
+if grep -q 'epoch.let { checked() }' <<<"$ROW" && grep -q 'Switch(checked = on, onCheckedChange' <<<"$ROW" \
+   && ! grep -q 'isChecked' <<<"$ROW"; then
+  ok "T6: the master is driven by its question; a sync is a new `checked`, never an onChange"
 else
-  bad "T6: syncing the master re-enters onChange and writes its position over every child"
+  bad "T6: syncing the master can re-enter onChange and write its position over every child"
 fi
 
 echo "== (b) the lost tab: the strip has to survive the recreate =="

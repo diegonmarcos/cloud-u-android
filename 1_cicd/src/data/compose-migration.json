@@ -623,12 +623,13 @@
         "Robolectric tests BottomNavSelectedPillTest / ShellBottomNavCollapseTest inflate activity_main"
       ],
       "baseline": {
-        "view_screens": 2,
+        "view_screens": 1,
         "layout_xml": 5,
-        "view_ui_files": 18,
+        "view_ui_files": 17,
         "custom_views": 8
       },
       "done": [
+        "Configs ▸ Launcher ▸ Controls page in Compose (LauncherConfigFragment: switch grid, sliders with discrete steps, steppers, screensaver picker; the repaint registry became one epoch state; ControlFragment hosted via AndroidView; LauncherControlsComposeTest; testers remapped)",
         "Configs ▸ Permissions page in Compose (PermissionsFragment: grant-here, system pages, device tuning, auto-update, recovery; PermissionsComposeTest; testers remapped)",
         "Configs ▸ Launcher-edge/One-hand page in Compose (OneHandFragment: stars, edge menu, floating menu, home gestures; ConfigDropdown/ConfigSwitchRow widgets that write only on a tap; testers remapped, ConfigWidgetsComposeTest)",
         "configs/ControlFragment (Launcher ▸ Controls switchboard: tile = composable, readings are state per control id read by every tile of it, the ticker is a LaunchedEffect under repeatOnLifecycle(RESUMED), tap/hold are one combinedClickable) and network/DnsFragment (DnsModel + a Compose page over the shared settings/ConfigWidgets: heading, caption, read-out, button, radio and check rows); test-configs-panel-control and test-fleet-dns read the new shape; #773",
