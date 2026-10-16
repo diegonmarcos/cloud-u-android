@@ -107,7 +107,6 @@ import kotlinx.coroutines.withContext
  * only installed apps. The difference is not cosmetic: it is the
  * difference between a list somebody wrote and a list the device
  * reported.
- */
  *
  * Compose since #773: one LazyColumn; every Quickmarks line is ONE sideways-scrolling LazyRow (#260); All Apps
  * and Smart Folders are produced after the first frame, Smart Folders off the main thread and collapsed at
