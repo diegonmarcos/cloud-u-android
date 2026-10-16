@@ -767,7 +767,6 @@
       "size": "L",
       "screens_left": [
         "MainActivity",
-        "RoutesFragment",
         "NavigationFragment",
         "SpaceViewActivity",
         "TerrainActivity",
@@ -779,9 +778,9 @@
         "test-cloud-nav.yml runs this app's own suite"
       ],
       "baseline": {
-        "view_screens": 6,
+        "view_screens": 5,
         "layout_xml": 1,
-        "view_ui_files": 5,
+        "view_ui_files": 4,
         "custom_views": 8
       }
     },

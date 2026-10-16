@@ -1,30 +1,53 @@
 package com.diegonmarcos.cloudnav.routes
 
-import android.os.Bundle
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
-import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.fragment.app.Fragment
-import com.diegonmarcos.cloudnav.SearchUi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.cloudnav.FragmentHost
+import com.diegonmarcos.cloudnav.NavChip
+import com.diegonmarcos.cloudnav.R
+import com.diegonmarcos.cloudnav.ResultPicker
 import com.diegonmarcos.cloudnav.maps.MapsMapFragment
 import com.diegonmarcos.cloudnav.maps.MapsProviderClient
 import com.diegonmarcos.cloudnav.maps.MapsRouting
-import com.diegonmarcos.cloudnav.maps.MapsStopsFragment
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.card.MaterialCardView
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
-import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.diegonmarcos.cloudnav.tracker.TrackerInk
+import com.diegonmarcos.superapp.uikit.KitCard
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.KitSearchBar
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /**
  * Routes tab — multi-stop routing with a drawn route line, a travel-mode
@@ -37,145 +60,105 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
  *     car/walk/bike/bus; great-circle estimate for boat/flight/swim).
  *   • The ⤢ expand icon opens a sheet comparing distance + time across ALL
  *     modes at once.
+ *
+ * Compose (KitComposeFragment): the map is libs:maps' fragment inside a [FragmentHost].
  */
-class RoutesFragment : Fragment() {
+class RoutesFragment : KitComposeFragment() {
 
-    private val mapFragment = MapsMapFragment.newInstance(fab = true, autoLocate = true)
+    private var mapFragment: MapsMapFragment? = null
 
-    private data class Stop(var label: String, var latLon: Pair<Double, Double>?)
-    private val stops = mutableListOf(Stop("Your location", null))
+    private val stops = mutableStateListOf(Stop(RouteStops.YOUR_LOCATION, null))
 
     private val modes by lazy { MapsRouting.modes() }
-    private var activeModeId = MapsRouting.defaultModeId()
+    private var activeModeId by mutableStateOf(MapsRouting.defaultModeId())
 
-    private lateinit var stopList: LinearLayout
-    private lateinit var searchCard: MaterialCardView
-    private lateinit var summary: TextView
-    private lateinit var statsBehavior: BottomSheetBehavior<View>
-    private lateinit var statsContainer: LinearLayout
+    private var query by mutableStateOf("")
+    private var summary by mutableStateOf("Add a destination to see the route")
+    private var statsOpen by mutableStateOf(false)
+    private var statsNote by mutableStateOf<String?>(null)
+    private val stats = mutableStateMapOf<String, String>()   // mode id -> "distance · time"
+    private var editing by mutableStateOf<Int?>(null)         // the stop whose action menu is open
+    private var renaming by mutableStateOf<Int?>(null)        // the stop being re-searched
+    private val picker = ResultPicker()
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?,
-    ): View {
-        val ctx = requireContext()
-        val root = CoordinatorLayout(ctx)
+    override fun palette(): KitPalette = TrackerInk.palette()
 
-        val mapHost = FrameLayout(ctx).apply { id = View.generateViewId() }
-        root.addView(mapHost, CoordinatorLayout.LayoutParams(MATCH, MATCH))
+    /** A fresh map page, wired to this tab. Called by the host each time its container is new. */
+    private fun newMap(): MapsMapFragment = MapsMapFragment.newInstance(fab = true, autoLocate = true).also { map ->
+        mapFragment = map
         // Recompute once the user locates (the "Your location" origin resolves).
         // onUserLocation uses android.location.Location — no MapLibre type leaks
         // into the app module (unlike onMapReady).
-        mapFragment.onUserLocation = { recomputeRoute() }
+        map.onUserLocation = { recomputeRoute() }
         // Long-press the map → mark that spot as a stop and (re)trace the route.
-        mapFragment.onMapLongClick = { lat, lon -> addStopFromMap(lat, lon) }
-        if (childFragmentManager.findFragmentById(mapHost.id) == null) {
-            childFragmentManager.beginTransaction().replace(mapHost.id, mapFragment).commit()
-        }
-
-        // Top routing card.
-        val card = MaterialCardView(ctx).apply { radius = dpf(20f); cardElevation = dpf(8f); useCompatPadding = true; setCardBackgroundColor(COL_CARD) }
-        val panel = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), dp(12), dp(14), dp(12))
-        }
-
-        // Title row + expand-stats.
-        val titleRow = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        titleRow.addView(TextView(ctx).apply {
-            text = "Route"; textSize = 16f; setTextColor(COL_PRIMARY)
-        }, LinearLayout.LayoutParams(0, WRAP, 1f))
-        titleRow.addView(TextView(ctx).apply {
-            text = "⤢"; textSize = 20f; setTextColor(COL_ACCENT)
-            setPadding(dp(8), 0, dp(8), 0); isClickable = true
-            contentDescription = "All travel options"
-            setOnClickListener { openStats() }
-        })
-        panel.addView(titleRow)
-
-        // Search + (+).
-        val searchRow = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        searchCard = SearchUi.searchCard(ctx, "Add a stop — place, address, city…") { q -> addDestination(q) }
-        searchRow.addView(searchCard, LinearLayout.LayoutParams(0, WRAP, 1f))
-        searchRow.addView(FloatingActionButton(ctx).apply {
-            setImageResource(android.R.drawable.ic_input_add)
-            contentDescription = "Add stop"; size = FloatingActionButton.SIZE_MINI
-            setOnClickListener { addDestination(SearchUi.field(searchCard).text.toString()) }
-        }, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = dp(6) })
-        panel.addView(searchRow, LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = dp(6) })
-
-        // Mode switcher.
-        val modeChips = ChipGroup(ctx).apply { isSingleLine = true; isSingleSelection = true; chipSpacingHorizontal = dp(6) }
-        modes.forEachIndexed { i, m ->
-            modeChips.addView(Chip(ctx).apply {
-                id = View.generateViewId()
-                text = "${m.emoji} ${m.label}"
-                isCheckable = true
-                isChecked = m.id == activeModeId
-                setOnClickListener { activeModeId = m.id; recomputeRoute() }
-            })
-        }
-        panel.addView(HorizontalScrollView(ctx).apply { isHorizontalScrollBarEnabled = false; addView(modeChips) },
-            LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = dp(6) })
-
-        // Stops list.
-        stopList = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        panel.addView(stopList)
-
-        // Active-mode summary.
-        summary = TextView(ctx).apply {
-            text = "Add a destination to see the route"; textSize = 13f; setTextColor(COL_SECONDARY)
-            setPadding(0, dp(6), 0, 0)
-        }
-        panel.addView(summary)
-
-        card.addView(panel)
-        root.addView(card, CoordinatorLayout.LayoutParams(MATCH, WRAP).apply {
-            gravity = Gravity.TOP; setMargins(dp(8), dp(8), dp(8), 0)
-        })
-
-        // All-modes stats bottom sheet.
-        root.addView(buildStatsSheet(ctx))
-
-        renderStops()
-        return root
+        map.onMapLongClick = { lat, lon -> addStopFromMap(lat, lon) }
     }
 
-    private fun buildStatsSheet(ctx: android.content.Context): View {
-        val sheet = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(MapsStopsFragment.COL_SURFACE)
-            setPadding(dp(16), dp(8), dp(16), dp(8))
+    @Composable
+    override fun Content() {
+        val p = LocalKitPalette.current
+        val keyboard = LocalSoftwareKeyboardController.current
+        Box(Modifier.fillMaxSize()) {
+            FragmentHost(childFragmentManager, R.id.nav_host_routes, 0, Modifier.fillMaxSize()) { newMap() }
+
+            // Top routing card.
+            KitCard(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(8.dp).testTag(RoutesTags.CARD)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Route", Modifier.weight(1f), color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+                    Text("⤢", Modifier.testTag(RoutesTags.EXPAND).clickable { openStats() }.padding(horizontal = 8.dp),
+                        color = p.accent, style = MaterialTheme.typography.titleLarge)
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    KitSearchBar(query, { query = it }, { addDestination(query); keyboard?.hide() }, Modifier.weight(1f),
+                        placeholder = "Add a stop — place, address, city…")
+                    Text("+", Modifier.testTag(RoutesTags.ADD).clip(RoundedCornerShape(50)).background(p.accent)
+                        .clickable { addDestination(query); keyboard?.hide() }.padding(horizontal = 14.dp, vertical = 4.dp),
+                        color = p.tileInk, style = MaterialTheme.typography.titleLarge)
+                }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    modes.forEach { m ->
+                        NavChip("${m.emoji} ${m.label}", m.id == activeModeId, { activeModeId = m.id; recomputeRoute() }, tag = "mode:${m.id}")
+                    }
+                }
+                stops.forEachIndexed { i, s ->
+                    Text("${i + 1}.  ${s.label}", Modifier.fillMaxWidth().testTag(RoutesTags.stop(i)).clickable { editing = i }.padding(vertical = 4.dp),
+                        color = if (s.latLon == null) p.accent else p.textPrimary, style = MaterialTheme.typography.bodyMedium)
+                }
+                Text(summary, Modifier.testTag(RoutesTags.SUMMARY), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+            }
+
+            if (statsOpen) StatsSheet(Modifier.align(Alignment.BottomCenter), modes, stats, statsNote) { statsOpen = false }
         }
-        sheet.addView(View(ctx).apply {
-            setBackgroundColor(0xFFCCCCCC.toInt())
-            layoutParams = LinearLayout.LayoutParams(dp(40), dp(4)).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(8) }
-        })
-        sheet.addView(TextView(ctx).apply {
-            text = "Travel options"; setTextColor(COL_PRIMARY)
-            setTextAppearance(android.R.style.TextAppearance_Material_Subhead); setPadding(0, 0, 0, dp(8))
-        })
-        statsContainer = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        sheet.addView(ScrollView(ctx).apply { addView(statsContainer) }, LinearLayout.LayoutParams(MATCH, 0, 1f))
-        statsBehavior = BottomSheetBehavior<View>().apply {
-            isHideable = true; peekHeight = dp(56); state = BottomSheetBehavior.STATE_HIDDEN
-        }
-        sheet.layoutParams = CoordinatorLayout.LayoutParams(MATCH, MATCH).apply { behavior = statsBehavior }
-        return sheet
+
+        picker.Host()
+        editing?.let { i -> stops.getOrNull(i)?.let { s -> StopActions(s.label, { editing = null }) { action ->
+            editing = null
+            when (action) {
+                StopAction.RENAME -> renaming = i
+                StopAction.UP -> { moveStop(i, -1) }
+                StopAction.DOWN -> { moveStop(i, 1) }
+                StopAction.REMOVE -> { stops.removeAt(i); recomputeRoute() }
+            }
+        } } }
+        renaming?.let { i -> stops.getOrNull(i)?.let { s -> RenameDialog(s.label, { renaming = null }) { q ->
+            renaming = null
+            renameStop(i, q)
+        } } }
     }
 
     // ── stops ────────────────────────────────────────────────────────
-    private fun addDestination(query: String) {
-        if (query.isBlank()) return
+    private fun addDestination(q: String) {
+        if (q.isBlank()) return
         val ctx = context ?: return
-        val center = mapFragment.centerTarget()
+        val center = mapFragment?.centerTarget()
         Thread {
-            val hits = MapsProviderClient.forwardSearch(ctx, query, center?.first ?: 0.0, center?.second ?: 0.0)
+            val hits = MapsProviderClient.forwardSearch(ctx, q, center?.first ?: 0.0, center?.second ?: 0.0)
             ui {
-                if (hits.isEmpty()) { Toast.makeText(ctx, "No match for \"$query\"", Toast.LENGTH_SHORT).show(); return@ui }
-                SearchUi.chooseResult(ctx, hits) { hit ->
+                if (hits.isEmpty()) { Toast.makeText(ctx, "No match for \"$q\"", Toast.LENGTH_SHORT).show(); return@ui }
+                picker.offer(hits) { hit ->
                     stops.add(Stop(hit.title, hit.lat to hit.lon))
-                    SearchUi.field(searchCard).text?.clear()
-                    renderStops(); recomputeRoute()
+                    query = ""
+                    recomputeRoute()
                 }
             }
         }.start()
@@ -185,9 +168,9 @@ class RoutesFragment : Fragment() {
      *  the route traces right away), then reverse-geocode a nicer label. */
     private fun addStopFromMap(lat: Double, lon: Double) {
         val ctx = context ?: return
-        val stop = Stop("Dropped pin (%.4f, %.4f)".format(lat, lon), lat to lon)
+        val stop = Stop(RouteStops.droppedPinLabel(lat, lon), lat to lon)
         stops.add(stop)
-        renderStops(); recomputeRoute()
+        recomputeRoute()
         Toast.makeText(ctx, "Marked — tracing route…", Toast.LENGTH_SHORT).show()
         Thread {
             val r = MapsProviderClient.reverseGeocode(ctx, lat, lon)
@@ -195,142 +178,153 @@ class RoutesFragment : Fragment() {
                 ?: r?.city ?: return@Thread
             ui {
                 val idx = stops.indexOf(stop)
-                if (idx >= 0) { stops[idx] = Stop(name, lat to lon); renderStops() }
+                if (idx >= 0) stops[idx] = Stop(name, lat to lon)
             }
         }.start()
     }
 
-    private fun renderStops() {
-        stopList.removeAllViews()
-        stops.forEachIndexed { i, s ->
-            stopList.addView(TextView(requireContext()).apply {
-                text = "${i + 1}.  ${s.label}"
-                textSize = 14f
-                setTextColor(if (s.latLon == null) COL_ACCENT else COL_PRIMARY)
-                setPadding(0, dp(4), 0, dp(4)); isClickable = true
-                setOnClickListener { editStop(i) }
-            })
-        }
+    private fun moveStop(index: Int, delta: Int) {
+        val moved = RouteStops.moved(stops.toList(), index, delta)
+        stops.clear(); stops.addAll(moved)
+        recomputeRoute()
     }
 
-    private fun editStop(index: Int) {
+    private fun renameStop(index: Int, q: String) {
         val ctx = context ?: return
-        val actions = arrayOf("Rename / re-search", "Move up", "Move down", "Remove")
-        AlertDialog.Builder(ctx)
-            .setTitle(stops[index].label)
-            .setItems(actions) { _, which ->
-                when (which) {
-                    0 -> renameStop(index)
-                    1 -> if (index > 0) { stops.swap(index, index - 1); renderStops(); recomputeRoute() }
-                    2 -> if (index < stops.size - 1) { stops.swap(index, index + 1); renderStops(); recomputeRoute() }
-                    3 -> { stops.removeAt(index); renderStops(); recomputeRoute() }
+        if (q.isBlank()) return
+        val center = mapFragment?.centerTarget()
+        Thread {
+            val hits = MapsProviderClient.forwardSearch(ctx, q, center?.first ?: 0.0, center?.second ?: 0.0)
+            ui {
+                if (hits.isEmpty()) { Toast.makeText(ctx, "No match", Toast.LENGTH_SHORT).show(); return@ui }
+                picker.offer(hits) { hit ->
+                    if (index in stops.indices) stops[index] = Stop(hit.title, hit.lat to hit.lon)
+                    recomputeRoute()
                 }
             }
-            .show()
+        }.start()
     }
-
-    private fun renameStop(index: Int) {
-        val ctx = context ?: return
-        val input = EditText(ctx).apply { setText(stops[index].label); setSelection(text.length) }
-        AlertDialog.Builder(ctx)
-            .setTitle("Edit stop")
-            .setView(input)
-            .setPositiveButton("Search") { _, _ ->
-                val q = input.text.toString()
-                if (q.isBlank()) return@setPositiveButton
-                val center = mapFragment.centerTarget()
-                Thread {
-                    val hits = MapsProviderClient.forwardSearch(ctx, q, center?.first ?: 0.0, center?.second ?: 0.0)
-                    ui {
-                        if (hits.isEmpty()) { Toast.makeText(ctx, "No match", Toast.LENGTH_SHORT).show(); return@ui }
-                        SearchUi.chooseResult(ctx, hits) { hit ->
-                            stops[index] = Stop(hit.title, hit.lat to hit.lon)
-                            renderStops(); recomputeRoute()
-                        }
-                    }
-                }.start()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun MutableList<Stop>.swap(a: Int, b: Int) { val t = this[a]; this[a] = this[b]; this[b] = t }
 
     // ── routing ──────────────────────────────────────────────────────
-    private fun coordsForRoute(): List<DoubleArray> {
-        val out = ArrayList<DoubleArray>()
-        for (s in stops) {
-            val ll = s.latLon ?: if (s.label == "Your location") mapFragment.myLatLon() else null
-            if (ll != null) out.add(doubleArrayOf(ll.first, ll.second))
-        }
-        return out
-    }
+    private fun coordsForRoute(): List<DoubleArray> = RouteStops.coords(stops.toList(), mapFragment?.myLatLon())
 
     private fun recomputeRoute() {
         if (!isAdded) return
+        val map = mapFragment ?: return
         val pins = stops.mapNotNull { it.latLon }.map { MapsMapFragment.Pin(it.first, it.second, MapsMapFragment.COLOR_RESULT) }
-        mapFragment.setPins(pins)
+        map.setPins(pins)
         val coords = coordsForRoute()
         if (coords.size < 2) {
-            mapFragment.clearRoute()
-            summary.text = if (stops.any { it.latLon != null }) "Tap the locate button to set your start" else "Add a destination to see the route"
+            map.clearRoute()
+            summary = RouteStops.idleSummary(stops.toList())
             return
         }
         val mode = modes.firstOrNull { it.id == activeModeId } ?: return
-        summary.text = "Routing…"
-        val ctx = context ?: return
+        summary = "Routing…"
         Thread {
             val r = MapsRouting.route(mode, coords)
             ui {
-                if (r == null) { summary.text = "No ${mode.label.lowercase()} route found"; mapFragment.clearRoute(); return@ui }
-                mapFragment.setRoute(r.geometry)
-                summary.text = "${mode.emoji} ${MapsRouting.fmtDistance(r.distanceKm)} · ${MapsRouting.fmtDuration(r.durationSec)}" +
+                if (r == null) { summary = "No ${mode.label.lowercase()} route found"; map.clearRoute(); return@ui }
+                map.setRoute(r.geometry)
+                summary = "${mode.emoji} ${MapsRouting.fmtDistance(r.distanceKm)} · ${MapsRouting.fmtDuration(r.durationSec)}" +
                     if (r.estimated) "  (est.)" else ""
-                if (pins.isNotEmpty()) mapFragment.fitTo(pins)
+                if (pins.isNotEmpty()) map.fitTo(pins)
             }
         }.start()
     }
 
     private fun openStats() {
-        val ctx = context ?: return
         val coords = coordsForRoute()
-        statsContainer.removeAllViews()
+        stats.clear()
+        statsOpen = true
         if (coords.size < 2) {
-            statsContainer.addView(TextView(ctx).apply {
-                text = "Add at least one destination (and your location) to compare travel options."
-                setTextColor(COL_SECONDARY)
-            })
-            statsBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            statsNote = "Add at least one destination (and your location) to compare travel options."
             return
         }
+        statsNote = null
         modes.forEach { mode ->
-            val row = TextView(ctx).apply {
-                text = "${mode.emoji} ${mode.label}     …"
-                textSize = 15f; setTextColor(COL_PRIMARY); setPadding(0, dp(10), 0, dp(10))
-            }
-            statsContainer.addView(row)
+            stats[mode.id] = "…"
             Thread {
                 val r = MapsRouting.route(mode, coords)
                 ui {
-                    row.text = "${mode.emoji} ${mode.label}     " + if (r == null) "—" else
+                    stats[mode.id] = if (r == null) "—" else
                         "${MapsRouting.fmtDistance(r.distanceKm)} · ${MapsRouting.fmtDuration(r.durationSec)}" +
                             if (r.estimated) " (est.)" else ""
                 }
             }.start()
         }
-        statsBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
     }
 
     private fun ui(block: () -> Unit) { if (!isAdded) return; requireActivity().runOnUiThread { if (isAdded) block() } }
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-    private fun dpf(v: Float): Float = v * resources.displayMetrics.density
+}
 
-    private companion object {
-        const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
-        const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
-        const val COL_PRIMARY = 0xFFECEFF4.toInt()   // near-white (dark theme)
-        const val COL_SECONDARY = 0xFF9AA3B2.toInt() // muted grey
-        const val COL_ACCENT = 0xFF4ADE80.toInt()    // vivid green
-        const val COL_CARD = 0xFF141A25.toInt()      // dark card container
+object RoutesTags {
+    const val CARD = "routes:card"
+    const val EXPAND = "routes:expand"
+    const val ADD = "routes:add"
+    const val SUMMARY = "routes:summary"
+    const val STATS = "routes:stats"
+    const val STATS_CLOSE = "routes:stats:close"
+    const val RENAME_FIELD = "routes:rename:field"
+    const val RENAME_GO = "routes:rename:go"
+    fun stop(i: Int) = "routes:stop:$i"
+    fun action(a: StopAction) = "routes:action:${a.name.lowercase()}"
+    fun stat(modeId: String) = "routes:stat:$modeId"
+}
+
+enum class StopAction(val label: String) {
+    RENAME("Rename / re-search"), UP("Move up"), DOWN("Move down"), REMOVE("Remove")
+}
+
+/** The all-modes comparison over the map. */
+@Composable
+private fun StatsSheet(modifier: Modifier, modes: List<MapsRouting.Mode>, stats: Map<String, String>, note: String?, onClose: () -> Unit) {
+    val p = LocalKitPalette.current
+    Column(modifier.fillMaxWidth().testTag(RoutesTags.STATS).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+        .background(p.surface).padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Box(Modifier.align(Alignment.CenterHorizontally).width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(p.hairline))
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Travel options", Modifier.weight(1f), color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+            Text("✕", Modifier.testTag(RoutesTags.STATS_CLOSE).clickable(onClick = onClose).padding(8.dp), color = p.textSecondary,
+                style = MaterialTheme.typography.titleMedium)
+        }
+        Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
+            if (note != null) Text(note, color = p.textSecondary, style = MaterialTheme.typography.bodyMedium)
+            else modes.forEach { m ->
+                Text("${m.emoji} ${m.label}     ${stats[m.id] ?: "…"}", Modifier.testTag(RoutesTags.stat(m.id)).padding(vertical = 10.dp),
+                    color = p.textPrimary, style = MaterialTheme.typography.bodyLarge)
+            }
+        }
     }
+}
+
+@Composable
+private fun StopActions(title: String, onDismiss: () -> Unit, onPick: (StopAction) -> Unit) {
+    val p = LocalKitPalette.current
+    AlertDialog(
+        onDismissRequest = onDismiss, containerColor = p.surfaceSelected, titleContentColor = p.textPrimary,
+        title = { Text(title) },
+        text = {
+            Column {
+                for (a in StopAction.values()) {
+                    Text(a.label, Modifier.fillMaxWidth().testTag(RoutesTags.action(a)).clickable { onPick(a) }.padding(vertical = 12.dp),
+                        color = p.textPrimary, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        },
+        confirmButton = {},
+    )
+}
+
+@Composable
+private fun RenameDialog(current: String, onDismiss: () -> Unit, onSearch: (String) -> Unit) {
+    val p = LocalKitPalette.current
+    var text by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss, containerColor = p.surfaceSelected, titleContentColor = p.textPrimary,
+        title = { Text("Edit stop") },
+        text = { OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth().testTag(RoutesTags.RENAME_FIELD), singleLine = true) },
+        confirmButton = { TextButton(onClick = { onSearch(text) }, modifier = Modifier.testTag(RoutesTags.RENAME_GO)) { Text("Search", color = p.accent) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = p.accent) } },
+    )
 }
