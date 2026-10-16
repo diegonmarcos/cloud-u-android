@@ -6,19 +6,22 @@ import com.diegonmarcos.superapp.battery.SysfsProc
 
 import android.app.ActivityManager
 import android.content.Context
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import android.os.SystemClock
-import android.view.Gravity
 import android.view.View
-import android.widget.LinearLayout
-import android.widget.PopupWindow
-import android.widget.TextView
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * System info popup — shown when the user taps the RAM% or Storage%
@@ -40,106 +43,79 @@ import android.widget.TextView
 object SystemInfoPopup {
 
     fun show(ctx: Context, anchor: View) {
-        val d = ctx.resources.displayMetrics.density
-        val pad = (12 * d).toInt()
-        val container = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(pad, pad, pad, pad)
-            background = GradientDrawable().apply {
-                cornerRadius = 12f * d
-                setColor(0xEE111111.toInt())
-                setStroke(maxOf(1, (1 * d).toInt()), 0x44FFFFFF.toInt())
+        KitPopup.show(anchor, KitPopup.Align.END) { SystemInfoBubble(ctx) }
+    }
+
+    /** The bubble itself, split from [show] so it can be drawn without a window. */
+    @Composable
+    internal fun SystemInfoBubble(ctx: Context) {
+        KitBubble(Modifier.testTag("sysinfo:bubble")) {
+            Label("Device")
+            ValueBig("${Build.MANUFACTURER} · ${Build.MODEL}")
+            Gap(10)
+
+            Label("Android")
+            ValueSmall("${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
+            Gap(4)
+
+            Label("App")
+            ValueSmall("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA}")
+            ValueSmall(BuildConfig.BUILD_TIMESTAMP)
+            Gap(6)
+
+            Label("Memory")
+            ValueSmall(readMemory(ctx))
+            Gap(4)
+
+            Label("Swap")
+            ValueSmall(readSwap())
+            Gap(4)
+
+            Label("Storage")
+            ValueSmall(readStorage())
+            Gap(4)
+
+            Label("CPU")
+            ValueSmall("${Runtime.getRuntime().availableProcessors()} cores · ${primaryAbi()}")
+            Gap(4)
+
+            // CPU load — /proc/loadavg three windows (1m · 5m · 15m) +
+            // /proc/uptime busy seconds. No perm needed. Hidden when the
+            // kernel files aren't readable on this device (very rare).
+            SysfsProc.cpuLoad()?.let { c ->
+                Label("CPU load  (1m · 5m · 15m)")
+                ValueSmall("${" %.2f".format(c.loadAvg1m).trim()} (${"%.1f".format(c.loadAvg1m / c.cores)}x) · ${"%.2f".format(c.loadAvg5m)} · ${"%.2f".format(c.loadAvg15m)}")
+                Gap(4)
+                Label("CPU usage")
+                ValueSmall("${(c.busyFraction * 100).toInt()}% (${c.cores}c)")
+                Gap(4)
+                Label("CPU busy / idle  (Σ ${c.cores} cores)")
+                ValueSmall("busy %s · idle %s · %.1f %%".format(
+                    fmtSecs(c.busyAggregateSec.toLong()), fmtSecs(c.idleAggregateSec.toLong()), c.busyFraction * 100.0))
+                Gap(4)
             }
-        }
 
-        container.addView(label(ctx, "Device"))
-        container.addView(valueBig(ctx, "${Build.MANUFACTURER} · ${Build.MODEL}"))
-        container.addView(spacer(ctx, (10 * d).toInt()))
-
-        container.addView(label(ctx, "Android"))
-        container.addView(valueSmall(ctx, "${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})"))
-        container.addView(spacer(ctx, (4 * d).toInt()))
-
-        container.addView(label(ctx, "App"))
-        container.addView(valueSmall(ctx,
-            "${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA}"))
-        container.addView(valueSmall(ctx, BuildConfig.BUILD_TIMESTAMP))
-        container.addView(spacer(ctx, (6 * d).toInt()))
-
-        container.addView(label(ctx, "Memory"))
-        container.addView(valueSmall(ctx, readMemory(ctx)))
-        container.addView(spacer(ctx, (4 * d).toInt()))
-
-        container.addView(label(ctx, "Swap"))
-        container.addView(valueSmall(ctx, readSwap()))
-        container.addView(spacer(ctx, (4 * d).toInt()))
-
-        container.addView(label(ctx, "Storage"))
-        container.addView(valueSmall(ctx, readStorage()))
-        container.addView(spacer(ctx, (4 * d).toInt()))
-
-        container.addView(label(ctx, "CPU"))
-        container.addView(valueSmall(ctx,
-            "${Runtime.getRuntime().availableProcessors()} cores · ${primaryAbi()}"))
-        container.addView(spacer(ctx, (4 * d).toInt()))
-
-        // CPU load — /proc/loadavg three windows (1m · 5m · 15m) +
-        // /proc/uptime busy seconds. No perm needed. Hidden when the
-        // kernel files aren't readable on this device (very rare).
-        SysfsProc.cpuLoad()?.let { c ->
-            container.addView(label(ctx, "CPU load  (1m · 5m · 15m)"))
-            container.addView(valueSmall(ctx,
-                "${" %.2f".format(c.loadAvg1m).trim()} (${"%.1f".format(c.loadAvg1m / c.cores)}x) · ${"%.2f".format(c.loadAvg5m)} · ${"%.2f".format(c.loadAvg15m)}"))
-            container.addView(spacer(ctx, (4 * d).toInt()))
-            container.addView(label(ctx, "CPU usage"))
-            container.addView(valueSmall(ctx,
-                "${(c.busyFraction * 100).toInt()}% (${c.cores}c)"))
-            container.addView(spacer(ctx, (4 * d).toInt()))
-            container.addView(label(ctx, "CPU busy / idle  (Σ ${c.cores} cores)"))
-            container.addView(valueSmall(ctx,
-                "busy %s · idle %s · %.1f %%".format(
-                    fmtSecs(c.busyAggregateSec.toLong()),
-                    fmtSecs(c.idleAggregateSec.toLong()),
-                    c.busyFraction * 100.0,
-                )))
-            container.addView(spacer(ctx, (4 * d).toInt()))
-        }
-
-        // PSI — /proc/pressure/{cpu,io,memory}. Available on Android
-        // kernels with CONFIG_PSI. Silently omitted when unreadable.
-        run {
+            // PSI — /proc/pressure/{cpu,io,memory}. Available on Android
+            // kernels with CONFIG_PSI. Silently omitted when unreadable.
             val cpu = readPsi("cpu")
             val io  = readPsi("io")
             val mem = readPsi("memory")
             if (cpu != null || io != null || mem != null) {
-                container.addView(label(ctx, "PSI  (some 10s/1min · full 10s/1min)"))
+                Label("PSI  (some 10s/1min · full 10s/1min)")
                 val f2 = { v: Float -> "%.2f".format(v) }
                 fun psiRow(name: String, p: Map<String, Float>?): String {
                     if (p == null) return "$name  —"
                     return "%-4s  some ${f2(p["some10"] ?: 0f)}/${f2(p["some60"] ?: 0f)}  full ${f2(p["full10"] ?: 0f)}/${f2(p["full60"] ?: 0f)}".format(name)
                 }
-                container.addView(valueSmall(ctx, psiRow("CPU", cpu)))
-                container.addView(valueSmall(ctx, psiRow("IO", io)))
-                container.addView(valueSmall(ctx, psiRow("MEM", mem)))
-                container.addView(spacer(ctx, (4 * d).toInt()))
+                ValueSmall(psiRow("CPU", cpu))
+                ValueSmall(psiRow("IO", io))
+                ValueSmall(psiRow("MEM", mem))
+                Gap(4)
             }
-        }
 
-        container.addView(label(ctx, "Uptime"))
-        container.addView(valueSmall(ctx, readUptime()))
-
-        val pw = PopupWindow(
-            container,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true,
-        ).apply {
-            isOutsideTouchable = true
-            isFocusable = true
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            elevation = 8 * d
+            Label("Uptime")
+            ValueSmall(readUptime())
         }
-        pw.showAsDropDown(anchor, 0, (6 * d).toInt(), Gravity.END)
     }
 
     private fun readMemory(ctx: Context): String {
@@ -242,26 +218,16 @@ object SystemInfoPopup {
         result
     }.getOrNull()
 
-    private fun label(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t
-        setTextColor(0xAAFFFFFFL.toInt())
-        textSize = 11f
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-    }
-    private fun valueBig(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t
-        setTextColor(0xFFFFFFFFL.toInt())
-        textSize = 18f
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-    }
-    private fun valueSmall(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t
-        setTextColor(0xFFFFFFFFL.toInt())
-        textSize = 12f
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-    }
-    private fun spacer(ctx: Context, h: Int) = View(ctx).apply {
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, h)
-    }
+    @Composable
+    private fun Label(t: String) = Text(t, color = Color(0xAAFFFFFF), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+
+    @Composable
+    private fun ValueBig(t: String) =
+        Text(t, color = Color.White, fontSize = 18.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+
+    @Composable
+    private fun ValueSmall(t: String) = Text(t, color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+
+    @Composable
+    private fun Gap(dp: Int) = Spacer(Modifier.height(dp.dp))
 }
