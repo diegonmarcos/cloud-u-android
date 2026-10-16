@@ -335,6 +335,17 @@ step_instrument() {
   _resolve_signing
   _resolve_media_keys
   _export_variant_abis
+  # The app grants ITSELF READ_LOGS / DUMP / WRITE_SECURE_SETTINGS / SYSTEM_ALERT_WINDOW / usage-access over an adb
+  # channel at start-up, and the OS kills the process the moment a grant changes its gids - which kills the
+  # instrumentation mid-test (seen on the CI emulator). Grant them from the shell BEFORE the run so the app finds
+  # them held (INSTRUMENT_PREGRANT=1; gradle reinstalls with -r, which keeps grants).
+  if [ "${INSTRUMENT_PREGRANT:-0}" = "1" ]; then
+    local pkg; pkg="$(_release_var '.android.application_id')"
+    run_gradle -PnoMinify :app:installDebug
+    for p in READ_LOGS DUMP WRITE_SECURE_SETTINGS; do adb shell pm grant "$pkg" "android.permission.$p" || true; done
+    adb shell appops set "$pkg" SYSTEM_ALERT_WINDOW allow || true
+    adb shell appops set "$pkg" GET_USAGE_STATS allow || true
+  fi
   if [ -n "${INSTRUMENT_CLASS:-}" ]; then
     run_gradle -PnoMinify :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=${INSTRUMENT_CLASS}"
   else
