@@ -39,10 +39,10 @@ object KitPopup {
     /** START/END: the bubble's left/right edge on the anchor's; EDGE: its left edge on the window's (x = 0). */
     enum class Align { START, END, EDGE }
 
-    /** Show [content] under [anchor]. [close] dismisses it. False when no activity can host it. */
-    fun show(anchor: View, align: Align = Align.END, content: @Composable (close: () -> Unit) -> Unit): Boolean {
-        val act = ComposeAsk.activityOf(anchor.context) ?: return false
-        if (act.isFinishing) return false
+    /** Show [content] under [anchor]. [close] dismisses it. Returns the closer for the caller to dismiss from outside, or null when no activity can host it. */
+    fun show(anchor: View, align: Align = Align.END, content: @Composable (close: () -> Unit) -> Unit): (() -> Unit)? {
+        val act = ComposeAsk.activityOf(anchor.context) ?: return null
+        if (act.isFinishing) return null
         val loc = IntArray(2)
         anchor.getLocationInWindow(loc)
         val rect = IntRect(loc[0], loc[1], loc[0] + anchor.width, loc[1] + anchor.height)
@@ -62,7 +62,7 @@ object KitPopup {
                 }
             }
         }
-        return runCatching { act.addContentView(host, ViewGroup.LayoutParams(0, 0)); true }.getOrElse { false }
+        return if (runCatching { act.addContentView(host, ViewGroup.LayoutParams(0, 0)); true }.getOrElse { false }) ::close else null
     }
 
     /** Under the anchor, edge-aligned to it, kept inside the window; above it when there is no room below. */

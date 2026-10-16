@@ -624,11 +624,12 @@
       ],
       "baseline": {
         "view_screens": 1,
-        "layout_xml": 5,
-        "view_ui_files": 10,
+        "layout_xml": 4,
+        "view_ui_files": 9,
         "custom_views": 8
       },
       "done": [
+        "Now-playing card in Compose (MusicControlsPopup over KitPopup Align.CENTER; popup_music_controls.xml deleted; session callbacks via DisposableEffect, 500 ms tick via LaunchedEffect; MusicControlsPopupComposeTest)",
         "Home fan menu in Compose (HomeFanMenu: non-touchable Compose Popup driven by the host's pointer stream; HomeFanMenuComposeTest)",
         "App long-press menu in Compose (AppLongPressMenu over the new KitDialog host: Actions/Configs/URLs sections as data, composed; AppLongPressMenuComposeTest)",
         "Container sheet in Compose (ContainerSheet over the new KitSheet ModalBottomSheet host; Infos/Actions with the shared PageTabs; status colour still resolved through StatusLight; ContainerSheetComposeTest)",

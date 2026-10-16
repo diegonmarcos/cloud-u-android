@@ -1,25 +1,67 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 package com.diegonmarcos.superapp.media
-import com.diegonmarcos.superapp.App
-import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.R
-import com.diegonmarcos.superapp.cloud.CalendarAgendaPopup
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.view.LayoutInflater
 import android.view.View
-import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.PopupWindow
-import android.widget.SeekBar
-import android.widget.TextView
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.diegonmarcos.superapp.apps.AppIcon
 import com.diegonmarcos.superapp.ui.AppIconCache
+import com.diegonmarcos.superapp.ui.KitPopup
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 /**
  * Samsung One-UI-style now-playing controls popup, anchored under
@@ -47,41 +89,7 @@ import com.diegonmarcos.superapp.ui.AppIconCache
  */
 class MusicControlsPopup(private val ctx: Context) {
 
-    companion object {
-        /** Fixed popup height in dp — the compact landscape box that
-         *  ends just after the transport buttons. Applied as an
-         *  EXPLICIT window height (see show()) so the album art can't
-         *  inflate the popup down the screen. 167 ≈ 196 × 0.85 (the
-         *  15% trim taken off the top/bottom padding). */
-        private const val POPUP_HEIGHT_DP = 167f
-
-        /** Shazam package — the leftmost popup button launches it. */
-        private const val SHAZAM_PKG = "com.shazam.android"
-
-        /** Quick-launch streaming apps shown beside "Nothing playing"
-         *  in the idle popup state. Order = display order. */
-        private val IDLE_LAUNCH_PKGS = listOf(
-            "com.aspiro.tidal",                       // Tidal
-            "com.spotify.music",                      // Spotify
-            "com.google.android.apps.youtube.music",  // YT Music ("Google Music")
-            "com.google.android.youtube",             // YouTube
-            "com.vimeo.android.videoapp",             // Vimeo
-        )
-    }
-
-    private var popup: PopupWindow? = null
-    private var tickHandler: Handler? = null
-    private var tickRunnable: Runnable? = null
-    private var attachedController: MediaController? = null
-
-    private val controllerCallback = object : MediaController.Callback() {
-        override fun onPlaybackStateChanged(state: PlaybackState?) {
-            refreshState(attachedController)
-        }
-        override fun onMetadataChanged(metadata: MediaMetadata?) {
-            refreshMetadata(attachedController)
-        }
-    }
+    private var closer: (() -> Unit)? = null
 
     fun show(
         anchor: View,
@@ -89,365 +97,283 @@ class MusicControlsPopup(private val ctx: Context) {
         playingPackage: String?,
     ) {
         dismiss()
-        // NOTE: controller/playingPackage may be NULL — nothing is
-        // playing. We STILL open the popup (user wants the tap to work
-        // even when idle); it just renders an empty "Nothing playing"
-        // card with inert controls. All controller-dependent wiring
-        // below is guarded on a non-null controller.
-
-        val view = LayoutInflater.from(ctx).inflate(
-            R.layout.popup_music_controls, null, false)
-
-        // App icon (left) — load the playing app's launcher icon
-        // + wire it to open the app on tap. When idle there's no
-        // package, so leave the icon empty and the tap inert.
-        val iconView = view.findViewById<ImageView>(R.id.music_popup_icon)
-        if (playingPackage != null) {
-            AppIconCache.into(iconView, playingPackage)
-            iconView.setOnClickListener {
-                runCatching {
-                    val intent = ctx.packageManager.getLaunchIntentForPackage(playingPackage)
-                    if (intent != null) ctx.startActivity(intent)
-                }
-                dismiss()
-            }
-        } else {
-            iconView.setImageDrawable(null)
-        }
-
-        // Shazam (leftmost) — opens the Shazam app; works regardless of
-        // whether anything is playing. Monochrome white glyph (from the
-        // layout) to match the rest of the transport row — no coloured
-        // app icon.
-        val shazamBtn = view.findViewById<ImageButton>(R.id.music_popup_shazam)
-        shazamBtn.setOnClickListener {
-            val intent = ctx.packageManager.getLaunchIntentForPackage(SHAZAM_PKG)
-                ?: android.content.Intent(
-                    android.content.Intent.ACTION_VIEW,
-                    android.net.Uri.parse("market://details?id=$SHAZAM_PKG"),
-                )
-            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            runCatching { ctx.startActivity(intent) }
-            dismiss()
-        }
-
-        // Favourite (heart) — reflects the session's current heart
-        // rating when published, toggles on tap, and pushes the new
-        // heart rating back to the session when a controller exists
-        // (apps that honour setRating will sync; others just track the
-        // local visual state).
-        val heartBtn = view.findViewById<ImageButton>(R.id.music_popup_favourite)
-        var faved = runCatching {
-            controller?.metadata?.getRating(MediaMetadata.METADATA_KEY_USER_RATING)
-                ?.takeIf { it.isRated }?.hasHeart() == true
-        }.getOrDefault(false)
-        heartBtn.setImageResource(
-            if (faved) R.drawable.ic_music_heart_filled else R.drawable.ic_music_heart)
-        heartBtn.setOnClickListener {
-            faved = !faved
-            heartBtn.setImageResource(
-                if (faved) R.drawable.ic_music_heart_filled else R.drawable.ic_music_heart)
-            if (controller != null) {
-                runCatching {
-                    controller.transportControls.setRating(
-                        android.media.Rating.newHeartRating(faved))
-                }
-            }
-        }
-
-        if (controller != null) {
-            // Transport buttons — send commands via TransportControls.
-            // No-op safely when an action isn't supported by the
-            // session (most apps support all three even if greyed out
-            // visually; we don't bother checking session.flags).
-            view.findViewById<ImageButton>(R.id.music_popup_prev).setOnClickListener {
-                runCatching { controller.transportControls.skipToPrevious() }
-            }
-            view.findViewById<ImageButton>(R.id.music_popup_next).setOnClickListener {
-                runCatching { controller.transportControls.skipToNext() }
-            }
-            view.findViewById<ImageButton>(R.id.music_popup_play_pause).setOnClickListener {
-                val playing = controller.playbackState?.state == PlaybackState.STATE_PLAYING
-                runCatching {
-                    if (playing) controller.transportControls.pause()
-                    else controller.transportControls.play()
-                }
-            }
-
-            // SeekBar drag — only commit on user release so we don't
-            // spam the controller while the thumb is moving. The 1Hz
-            // tick refreshes the progress when the user isn't dragging.
-            val seek = view.findViewById<SeekBar>(R.id.music_popup_progress)
-            seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                private var userDragging = false
-                override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {}
-                override fun onStartTrackingTouch(sb: SeekBar?) { userDragging = true }
-                override fun onStopTrackingTouch(sb: SeekBar?) {
-                    userDragging = false
-                    val durationMs = controller.metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
-                    if (durationMs > 0L) {
-                        val pos = (durationMs * (sb?.progress ?: 0) / seek.max).coerceAtLeast(0)
-                        runCatching { controller.transportControls.seekTo(pos) }
-                    }
-                }
-            })
-        } else {
-            // Idle placeholder — no track, inert progress bar.
-            view.findViewById<TextView>(R.id.music_popup_title).text = "Nothing playing"
-            view.findViewById<TextView>(R.id.music_popup_artist).text = ""
-            view.findViewById<TextView>(R.id.music_popup_route).text = ""
-            view.findViewById<TextView>(R.id.music_popup_volume).text = ""
-            view.findViewById<TextView>(R.id.music_popup_time_elapsed).text = "0:00"
-            view.findViewById<TextView>(R.id.music_popup_time_total).text = "0:00"
-            view.findViewById<SeekBar>(R.id.music_popup_progress).apply {
-                progress = 0
-                isEnabled = false
-            }
-            view.findViewById<ImageView>(R.id.music_popup_art_bg).setImageDrawable(null)
-            populateIdleLaunchers(view.findViewById(R.id.music_popup_idle_apps))
-        }
-
-        // Title marquee needs isSelected=true to actually scroll.
-        view.findViewById<TextView>(R.id.music_popup_title).isSelected = true
-
-        // WIDE + SHORT landscape card (Samsung media-card shape):
-        // horizontally spans nearly the full screen (left-icon to
-        // right-icon — small side margins), vertically a compact fixed
-        // box that ends right after the transport buttons.
-        //
-        // CRITICAL: the popup HEIGHT must be an EXPLICIT pixel value on
-        // the PopupWindow itself — NOT WRAP_CONTENT. With WRAP_CONTENT
-        // the window measures its root view with an AT_MOST(screen)
-        // height spec, and the root card's layout_height="…dp" is NOT
-        // enforced as a measure constraint for a window root. So the
-        // full-bleed album ImageView (match_parent + a large bitmap +
-        // centerCrop) measures to the bitmap's intrinsic height →
-        // window wraps to ~screen height → the card ran all the way
-        // down the screen. Passing an EXPLICIT window height caps
-        // everything inside to that box; the album art then centerCrops
-        // INTO it. Both dims derived from real screen metrics.
-        val dm = ctx.resources.displayMetrics
-        val screenW = dm.widthPixels
-        val popupW = (screenW * 0.92f).toInt()
-        val popupH = (POPUP_HEIGHT_DP * dm.density).toInt()
-
-        // PopupWindow setup — outsideTouchable so the user can tap
-        // outside to dismiss; focusable=true so back-press dismisses.
-        val pw = PopupWindow(
-            view,
-            popupW,
-            popupH,
-            true,
-        )
-        pw.isOutsideTouchable = true
-        pw.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-        // Drop-shadow elevation for the floating card feel.
-        pw.elevation = 16f * ctx.resources.displayMetrics.density
-        pw.setOnDismissListener { detachController() }
-        popup = pw
-
-        attachedController = controller
-        if (controller != null) {
-            controller.registerCallback(controllerCallback, Handler(Looper.getMainLooper()))
-            refreshMetadata(controller)
-            refreshState(controller)
-            startTicking(view, controller)
-        }
-
-        // Horizontally SCREEN-centered (not anchor-centered). The
-        // mini-island anchor isn't at screen center, so a plain
-        // Gravity.CENTER_HORIZONTAL biases the popup toward the
-        // anchor's side. Compute xOffset so the popup's left edge
-        // lands at (screenWidth − popupWidth) / 2 regardless of
-        // where the anchor sits — same fix CalendarAgendaPopup uses.
-        val anchorLoc = IntArray(2); anchor.getLocationOnScreen(anchorLoc)
-        val xOffset = (screenW - popupW) / 2 - anchorLoc[0]
-        pw.showAsDropDown(anchor, xOffset, 4, android.view.Gravity.START)
+        // NOTE: controller/playingPackage may be NULL — nothing is playing. We STILL open the popup (user wants the tap to
+        // work even when idle); it just renders an empty "Nothing playing" card with inert controls.
+        closer = KitPopup.show(anchor, KitPopup.Align.CENTER) { close -> MusicControlsCard(ctx, controller, playingPackage, close) }
     }
 
     fun dismiss() {
-        popup?.dismiss()
-        popup = null
+        closer?.invoke()
+        closer = null
     }
 
-    private fun detachController() {
-        tickHandler?.removeCallbacks(tickRunnable ?: return)
-        tickHandler = null
-        tickRunnable = null
-        attachedController?.let { c ->
-            runCatching { c.unregisterCallback(controllerCallback) }
+    companion object {
+        /** Fixed popup height in dp — the compact landscape box that ends just after the transport buttons. */
+        internal const val POPUP_HEIGHT_DP = 167
+
+        /** Shazam package — the leftmost popup button launches it. */
+        internal const val SHAZAM_PKG = "com.shazam.android"
+
+        /** Quick-launch streaming apps shown beside "Nothing playing" in the idle popup state. Order = display order. */
+        internal val IDLE_LAUNCH_PKGS = listOf(
+            "com.aspiro.tidal",                       // Tidal
+            "com.spotify.music",                      // Spotify
+            "com.google.android.apps.youtube.music",  // YT Music ("Google Music")
+            "com.google.android.youtube",             // YouTube
+            "com.vimeo.android.videoapp",             // Vimeo
+        )
+
+        internal fun formatTime(ms: Long): String {
+            val totalSec = ms / 1000L
+            val m = totalSec / 60L
+            val s = totalSec % 60L
+            return "%d:%02d".format(m, s)
         }
-        attachedController = null
     }
+}
 
-    private fun refreshMetadata(c: MediaController?) {
-        val view = popup?.contentView ?: return
+private val SHADOW = TextStyle(shadow = Shadow(Color.Black, androidx.compose.ui.geometry.Offset(0f, 2f), 4f))
+
+/** What the card shows of the session: metadata, art, play state, heart. Fed by the controller's callbacks. */
+private class MusicSnapshot(c: MediaController?) {
+    var title by mutableStateOf("")
+    var artist by mutableStateOf("")
+    var art by mutableStateOf<Bitmap?>(null)
+    var playing by mutableStateOf(false)
+
+    init { refreshMetadata(c); refreshState(c) }
+
+    fun refreshMetadata(c: MediaController?) {
         val md = c?.metadata
-        val title = md?.let {
-            it.getString(MediaMetadata.METADATA_KEY_TITLE)
-                ?: it.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)
+        title = md?.let {
+            it.getString(MediaMetadata.METADATA_KEY_TITLE) ?: it.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)
         }?.takeIf { it.isNotBlank() } ?: ""
-        val artist = md?.let {
+        artist = md?.let {
             it.getString(MediaMetadata.METADATA_KEY_ARTIST)
                 ?: it.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
                 ?: it.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE)
         }?.takeIf { it.isNotBlank() } ?: ""
-        view.findViewById<TextView>(R.id.music_popup_title).text = title
-        view.findViewById<TextView>(R.id.music_popup_artist).text = artist
-        // Album cover → full-bleed card BACKGROUND (centerCrop, dimmed
-        // by the scrim). Prefer ALBUM_ART, fall back to ART, then
-        // DISPLAY_ICON. When the session publishes no art the
-        // background stays transparent and the card's black shows
-        // through. The small left icon stays the APP icon (the
-        // launch target), set at show() time — independent of the art.
-        val art = md?.let {
+        // Album cover → full-bleed card BACKGROUND. Prefer ALBUM_ART, fall back to ART, then DISPLAY_ICON; none → the black card.
+        art = md?.let {
             it.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
                 ?: it.getBitmap(MediaMetadata.METADATA_KEY_ART)
                 ?: it.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
         }
-        view.findViewById<ImageView>(R.id.music_popup_art_bg)
-            .setImageBitmap(art) // null clears it → black card background
     }
 
-    private fun refreshState(c: MediaController?) {
-        val view = popup?.contentView ?: return
-        val playing = c?.playbackState?.state == PlaybackState.STATE_PLAYING
-        view.findViewById<ImageButton>(R.id.music_popup_play_pause).setImageResource(
-            if (playing) android.R.drawable.ic_media_pause
-            else android.R.drawable.ic_media_play
-        )
+    fun refreshState(c: MediaController?) { playing = c?.playbackState?.state == PlaybackState.STATE_PLAYING }
+}
+
+/** The card, split from [MusicControlsPopup.show] so it can be drawn without a window. */
+@Composable
+internal fun MusicControlsCard(ctx: Context, controller: MediaController?, playingPackage: String?, close: () -> Unit) {
+    val dm = ctx.resources.displayMetrics
+    val snap = remember(controller) { MusicSnapshot(controller) }
+    // Registered while the card is composed, unregistered with it - the old attach/detachController.
+    DisposableEffect(controller) {
+        val cb = object : MediaController.Callback() {
+            override fun onPlaybackStateChanged(state: PlaybackState?) { snap.refreshState(controller) }
+            override fun onMetadataChanged(metadata: MediaMetadata?) { snap.refreshMetadata(controller) }
+        }
+        controller?.registerCallback(cb, Handler(Looper.getMainLooper()))
+        onDispose { controller?.let { runCatching { it.unregisterCallback(cb) } } }
+    }
+    var faved by remember(controller) {
+        mutableStateOf(runCatching {
+            controller?.metadata?.getRating(MediaMetadata.METADATA_KEY_USER_RATING)?.takeIf { it.isRated }?.hasHeart() == true
+        }.getOrDefault(false))
     }
 
-    private fun startTicking(root: View, c: MediaController) {
-        val handler = Handler(Looper.getMainLooper())
-        val seek = root.findViewById<SeekBar>(R.id.music_popup_progress)
-        val elapsedView = root.findViewById<TextView>(R.id.music_popup_time_elapsed)
-        val totalView = root.findViewById<TextView>(R.id.music_popup_time_total)
-        val routeView = root.findViewById<TextView>(R.id.music_popup_route)
-        val volumeView = root.findViewById<TextView>(R.id.music_popup_volume)
-        val r = object : Runnable {
-            override fun run() {
-                val durationMs = c.metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
-                val state = c.playbackState
-                val nowPos = if (state != null && state.state == PlaybackState.STATE_PLAYING) {
-                    val elapsed = SystemClock.elapsedRealtime() - state.lastPositionUpdateTime
-                    state.position + (elapsed * state.playbackSpeed).toLong()
-                } else {
-                    state?.position ?: 0L
+    // WIDE + SHORT landscape card (Samsung media-card shape): nearly the full screen wide, a compact fixed box tall that ends
+    // right after the transport buttons. The art is clipped INTO that box, so it can never inflate the card.
+    val shape = RoundedCornerShape(20.dp)
+    Box(Modifier.width((dm.widthPixels * 0.92f / dm.density).dp).height(MusicControlsPopup.POPUP_HEIGHT_DP.dp)
+        .clip(shape).background(Color.Black).border(1.dp, Color(0x55B794F4), shape).testTag("music:card")) {
+        snap.art?.let {
+            Image(it.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        }
+        // Dark scrim over the art for text/button contrast.
+        Box(Modifier.fillMaxSize().background(Color(0xA6000000)))
+        Column(Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 14.dp, vertical = 7.dp)) {
+            // Row 1: app icon (tap → open the playing app) + title / artist (+ the idle quick-launch strip).
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val icon by produceState<android.graphics.drawable.Drawable?>(null, playingPackage) {
+                    value = playingPackage?.let { withContext(Dispatchers.IO) { AppIconCache.load(ctx, it) } }
                 }
-                if (durationMs > 0L) {
-                    seek.progress = (nowPos.toFloat() / durationMs * seek.max).toInt().coerceIn(0, seek.max)
-                    totalView.text = formatTime(durationMs)
-                } else {
-                    seek.progress = 0
-                    totalView.text = "--:--"
+                Box(Modifier.size(44.dp).clickable(enabled = playingPackage != null) {
+                    runCatching {
+                        val intent = ctx.packageManager.getLaunchIntentForPackage(playingPackage!!)
+                        if (intent != null) ctx.startActivity(intent)
+                    }
+                    close()
+                }.testTag("music:app-icon")) { AppIcon(icon, 44.dp) }
+                Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                    Text(if (controller == null) "Nothing playing" else snap.title, color = Color(0xFFF5F5F5), fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium, maxLines = 1, style = SHADOW.copy(fontSize = 14.sp),
+                        modifier = Modifier.basicMarquee().testTag("music:title"))
+                    Text(snap.artist, color = Color(0xFFD4D4D4), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = SHADOW.copy(fontSize = 11.sp), modifier = Modifier.padding(top = 2.dp))
                 }
-                elapsedView.text = formatTime(nowPos.coerceAtLeast(0L))
-                applyRoute(routeView)
-                volumeView.text = volumeLabel(c)
-                handler.postDelayed(this, 500L)
+                if (controller == null) IdleLaunchers(ctx, close)
+            }
+            if (controller != null) LiveRows(ctx, controller, snap) else IdleRows()
+            // Row 3: Shazam | prev | play/pause | next | heart.
+            Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Glyph(R.drawable.ic_music_recognise, 34, "music:shazam", Color.White) {
+                    val intent = ctx.packageManager.getLaunchIntentForPackage(MusicControlsPopup.SHAZAM_PKG)
+                        ?: android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("market://details?id=${MusicControlsPopup.SHAZAM_PKG}"))
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    runCatching { ctx.startActivity(intent) }
+                    close()
+                }
+                Spacer(Modifier.width(14.dp))
+                Glyph(android.R.drawable.ic_media_previous, 38, "music:prev", Color.White) {
+                    controller?.let { runCatching { it.transportControls.skipToPrevious() } }
+                }
+                Spacer(Modifier.width(14.dp))
+                Glyph(if (snap.playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play, 46, "music:play", Color.White) {
+                    controller?.let { c ->
+                        val playing = c.playbackState?.state == PlaybackState.STATE_PLAYING
+                        runCatching { if (playing) c.transportControls.pause() else c.transportControls.play() }
+                    }
+                }
+                Spacer(Modifier.width(14.dp))
+                Glyph(android.R.drawable.ic_media_next, 38, "music:next", Color.White) {
+                    controller?.let { runCatching { it.transportControls.skipToNext() } }
+                }
+                Spacer(Modifier.width(14.dp))
+                // Favourite (heart): reflects the session's heart rating when published, toggles on tap, and pushes the new
+                // rating back when a controller exists (apps that honour setRating sync; others track the local look).
+                Glyph(if (faved) R.drawable.ic_music_heart_filled else R.drawable.ic_music_heart, 34, "music:heart", null) {
+                    faved = !faved
+                    controller?.let { runCatching { it.transportControls.setRating(android.media.Rating.newHeartRating(faved)) } }
+                }
             }
         }
-        handler.post(r)
-        tickHandler = handler
-        tickRunnable = r
     }
+}
 
-    /** Set the route TextView's text + a MONOCHROME (white-tinted)
-     *  leading icon — bluetooth / headphones / speaker. Replaces the
-     *  previous colour emoji (🎧/🔊). Uses the deprecated-but-accurate
-     *  "is audio going there NOW" booleans (isBluetoothA2dpOn /
-     *  isWiredHeadsetOn — these reflect the ACTIVE route, unlike
-     *  getDevices which lists all CONNECTED outputs), with a
-     *  device-name lookup for the Bluetooth case so the label can read
-     *  the actual headset name when available. */
-    @Suppress("DEPRECATION")
-    private fun applyRoute(routeView: TextView) {
-        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
-        val (iconRes, label) = when {
-            am == null -> return
-            am.isBluetoothA2dpOn -> {
-                val name = runCatching {
-                    am.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
-                        .firstOrNull {
-                            it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
-                                it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET
-                        }?.productName?.toString()
-                }.getOrNull()?.takeIf { it.isNotBlank() }
-                R.drawable.ic_route_bluetooth to (name ?: "Bluetooth")
-            }
-            am.isWiredHeadsetOn -> R.drawable.ic_route_headphones to "Headphones"
-            else -> R.drawable.ic_route_speaker to "Phone speaker"
-        }
-        routeView.text = label
-        routeView.setCompoundDrawablesRelativeWithIntrinsicBounds(iconRes, 0, 0, 0)
-        routeView.compoundDrawablePadding =
-            (5 * ctx.resources.displayMetrics.density).toInt()
-    }
+@Composable
+private fun Glyph(res: Int, sizeDp: Int, tag: String, tint: Color?, onClick: () -> Unit) {
+    val m = Modifier.size(sizeDp.dp).clickable(onClick = onClick).padding(6.dp).testTag(tag)
+    if (tint != null) Icon(painterResource(res), contentDescription = null, tint = tint, modifier = m)
+    else Image(painterResource(res), contentDescription = null, modifier = m)
+}
 
-    /** Fill the idle quick-launch strip with the streaming apps'
-     *  launcher icons (real icon when installed, generic glyph + Play
-     *  Store deep-link otherwise). Tap opens the app and dismisses. */
-    private fun populateIdleLaunchers(strip: LinearLayout) {
-        strip.removeAllViews()
-        val pm = ctx.packageManager
-        val d = ctx.resources.displayMetrics.density
-        val sz = (26 * d).toInt()
-        val gap = (6 * d).toInt()
-        var firstAdded = false
-        for (pkg in IDLE_LAUNCH_PKGS) {
-            val iv = ImageView(ctx)
-            AppIconCache.into(iv, pkg)
-            iv.layoutParams = LinearLayout.LayoutParams(sz, sz).apply {
-                if (firstAdded) marginStart = gap
+/** Idle: the streaming apps' launcher icons beside "Nothing playing"; tap opens the app (or its Play listing) and closes. */
+@Composable
+private fun IdleLaunchers(ctx: Context, close: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("music:idle-apps")) {
+        for ((i, pkg) in MusicControlsPopup.IDLE_LAUNCH_PKGS.withIndex()) {
+            val icon by produceState<android.graphics.drawable.Drawable?>(AppIconCache.cached(pkg), pkg) {
+                if (value == null) value = withContext(Dispatchers.IO) { AppIconCache.load(ctx, pkg) }
             }
-            iv.scaleType = ImageView.ScaleType.FIT_CENTER
-            // AppIconCache.into() painted a cache hit already; a pending or
-            // missing icon shows the fallback glyph until (unless) it lands.
-            if (iv.drawable == null) {
-                iv.setImageResource(R.drawable.ic_music_recognise)
-                iv.imageTintList =
-                    android.content.res.ColorStateList.valueOf(0xCCFFFFFF.toInt())
-            }
-            iv.isClickable = true
-            iv.isFocusable = true
-            iv.setOnClickListener {
-                val intent = pm.getLaunchIntentForPackage(pkg)
-                    ?: android.content.Intent(
-                        android.content.Intent.ACTION_VIEW,
-                        android.net.Uri.parse("market://details?id=$pkg"),
-                    )
+            Box(Modifier.padding(start = if (i > 0) 6.dp else 0.dp).size(26.dp).clickable {
+                val intent = ctx.packageManager.getLaunchIntentForPackage(pkg)
+                    ?: android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$pkg"))
                 intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                 runCatching { ctx.startActivity(intent) }
-                dismiss()
+                close()
+            }.testTag("music:idle:$pkg")) {
+                if (icon != null) AppIcon(icon, 26.dp)
+                else Icon(painterResource(R.drawable.ic_music_recognise), null, tint = Color(0xCCFFFFFF))
             }
-            strip.addView(iv)
-            firstAdded = true
         }
-        strip.visibility = View.VISIBLE
     }
+}
 
-    /** Session volume as a percent. Prefers the MediaController's own
-     *  PlaybackInfo (accurate for both LOCAL and REMOTE/cast sessions);
-     *  falls back to the system STREAM_MUSIC volume when the session
-     *  doesn't publish PlaybackInfo. */
-    private fun volumeLabel(c: MediaController): String {
-        val info = c.playbackInfo
-        val pct = if (info != null && info.maxVolume > 0) {
-            (info.currentVolume * 100f / info.maxVolume).toInt()
-        } else {
-            val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
-            val max = am?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 0
-            val cur = am?.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) ?: 0
-            if (max > 0) cur * 100 / max else return ""
+/** Idle placeholder - no track, an inert progress bar. */
+@Composable
+private fun IdleRows() {
+    Spacer(Modifier.height(14.dp))
+    Slider(value = 0f, onValueChange = {}, enabled = false, modifier = Modifier.fillMaxWidth().padding(top = 6.dp).testTag("music:progress"))
+    Row(Modifier.fillMaxWidth()) {
+        Text("0:00", color = Color(0xFFE0E0E0), fontSize = 10.sp)
+        Spacer(Modifier.weight(1f))
+        Text("0:00", color = Color(0xFFE0E0E0), fontSize = 10.sp)
+    }
+}
+
+/** Rows 2: the audio route + session volume, the progress bar and the times; refreshed on a 500 ms tick. */
+@Composable
+private fun LiveRows(ctx: Context, c: MediaController, snap: MusicSnapshot) {
+    var nowPos by remember { mutableStateOf(0L) }
+    var duration by remember { mutableStateOf(0L) }
+    var route by remember { mutableStateOf(Route(R.drawable.ic_route_speaker, "")) }
+    var volume by remember { mutableStateOf("") }
+    var dragging by remember { mutableStateOf<Float?>(null) }
+    LaunchedEffect(c) {
+        while (true) {
+            duration = c.metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
+            val state = c.playbackState
+            nowPos = if (state != null && state.state == PlaybackState.STATE_PLAYING) {
+                val elapsed = SystemClock.elapsedRealtime() - state.lastPositionUpdateTime
+                state.position + (elapsed * state.playbackSpeed).toLong()
+            } else state?.position ?: 0L
+            routeOf(ctx)?.let { route = it }
+            volume = volumeLabel(ctx, c)
+            delay(500L)
         }
-        return "Vol $pct%"
     }
+    // Audio-route + volume info row. Left: where the media is playing. Right: the session volume percent.
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(painterResource(route.icon), null, tint = Color.White, modifier = Modifier.size(12.dp))
+        Text(route.label, color = Color(0xFFE0E0E0), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            style = SHADOW.copy(fontSize = 11.sp), modifier = Modifier.weight(1f).padding(start = 5.dp).testTag("music:route"))
+        Text(volume, color = Color(0xFFE0E0E0), fontSize = 11.sp, modifier = Modifier.padding(start = 8.dp).testTag("music:volume"))
+    }
+    val fraction = if (duration > 0L) (nowPos.toFloat() / duration).coerceIn(0f, 1f) else 0f
+    // Only commit on release so the controller is not spammed while the thumb moves; the tick refreshes it otherwise.
+    Slider(value = dragging ?: fraction, onValueChange = { dragging = it },
+        onValueChangeFinished = {
+            val f = dragging
+            dragging = null
+            if (f != null && duration > 0L) runCatching { c.transportControls.seekTo((duration * f).toLong().coerceAtLeast(0)) }
+        },
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp).testTag("music:progress"))
+    Row(Modifier.fillMaxWidth()) {
+        Text(MusicControlsPopup.formatTime(nowPos.coerceAtLeast(0L)), color = Color(0xFFE0E0E0), fontSize = 10.sp,
+            modifier = Modifier.testTag("music:elapsed"))
+        Spacer(Modifier.weight(1f))
+        Text(if (duration > 0L) MusicControlsPopup.formatTime(duration) else "--:--", color = Color(0xFFE0E0E0), fontSize = 10.sp)
+    }
+}
 
-    private fun formatTime(ms: Long): String {
-        val totalSec = ms / 1000L
-        val m = totalSec / 60L
-        val s = totalSec % 60L
-        return "%d:%02d".format(m, s)
+private class Route(val icon: Int, val label: String)
+
+/** Where audio is going NOW: bluetooth (by the headset's name when known) / headphones / the phone speaker. Uses the
+ *  deprecated-but-accurate "is audio going there NOW" booleans (they reflect the ACTIVE route, unlike getDevices). */
+@Suppress("DEPRECATION")
+private fun routeOf(ctx: Context): Route? {
+    val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return null
+    return when {
+        am.isBluetoothA2dpOn -> {
+            val name = runCatching {
+                am.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
+                    .firstOrNull {
+                        it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                            it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET
+                    }?.productName?.toString()
+            }.getOrNull()?.takeIf { it.isNotBlank() }
+            Route(R.drawable.ic_route_bluetooth, name ?: "Bluetooth")
+        }
+        am.isWiredHeadsetOn -> Route(R.drawable.ic_route_headphones, "Headphones")
+        else -> Route(R.drawable.ic_route_speaker, "Phone speaker")
     }
+}
+
+/** Session volume as a percent. Prefers the MediaController's own PlaybackInfo (accurate for LOCAL and REMOTE/cast sessions);
+ *  falls back to the system STREAM_MUSIC volume when the session publishes none. */
+private fun volumeLabel(ctx: Context, c: MediaController): String {
+    val info = c.playbackInfo
+    val pct = if (info != null && info.maxVolume > 0) {
+        (info.currentVolume * 100f / info.maxVolume).toInt()
+    } else {
+        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+        val max = am?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 0
+        val cur = am?.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) ?: 0
+        if (max > 0) cur * 100 / max else return ""
+    }
+    return "Vol $pct%"
 }
