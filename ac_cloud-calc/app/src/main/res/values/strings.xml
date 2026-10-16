@@ -241,4 +241,42 @@
         <item quantity="other">%1$d timers</item>
     </plurals>
     <string name="sound_answered_by">Answered by: %1$s</string>
+    <string name="sheet_file">File</string>
+    <string name="sheet_new">New workbook</string>
+    <string name="sheet_open">Open…</string>
+    <string name="sheet_save_as">Save as…</string>
+    <string name="sheet_import_csv">Import CSV into this sheet</string>
+    <string name="sheet_export_csv">Export this sheet as CSV</string>
+    <string name="sheet_import_json">Import workbook file</string>
+    <string name="sheet_export_json">Export workbook file</string>
+    <string name="sheet_undo">Undo</string>
+    <string name="sheet_redo">Redo</string>
+    <string name="sheet_cut">Cut</string>
+    <string name="sheet_copy">Copy</string>
+    <string name="sheet_paste">Paste</string>
+    <string name="sheet_clear">Clear</string>
+    <string name="sheet_ins_row">+Row</string>
+    <string name="sheet_del_row">−Row</string>
+    <string name="sheet_ins_col">+Col</string>
+    <string name="sheet_del_col">−Col</string>
+    <string name="sheet_range">Range</string>
+    <string name="sheet_range_on">Range ●</string>
+    <string name="sheet_format">Format</string>
+    <string name="sheet_fmt_general">General</string>
+    <string name="sheet_fmt_number0">Number, 0 decimals</string>
+    <string name="sheet_fmt_number2">Number, 2 decimals</string>
+    <string name="sheet_fmt_percent">Percent</string>
+    <string name="sheet_fmt_currency">Currency</string>
+    <string name="sheet_fmt_date">Date</string>
+    <string name="sheet_edit_hint">Value or =formula</string>
+    <string name="sheet_rename">Rename</string>
+    <string name="sheet_duplicate">Duplicate</string>
+    <string name="sheet_delete">Delete</string>
+    <string name="sheet_move_left">Move left</string>
+    <string name="sheet_move_right">Move right</string>
+    <string name="sheet_ok">OK</string>
+    <string name="sheet_cancel">Cancel</string>
+    <string name="sheet_no_files">No saved workbooks yet. The open workbook is saved automatically.</string>
+    <string name="sheet_opened">Workbook opened</string>
+    <string name="sheet_not_workbook">That file is not a Cloud Calc workbook</string>
 </resources>

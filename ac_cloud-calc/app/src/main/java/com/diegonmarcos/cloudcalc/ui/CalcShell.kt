@@ -164,6 +164,7 @@ object CalcTags {
     const val STRIP = "calc_mode_strip"
     const val PAGES = "calc_page_strip"
     const val CONFIGS_BUTTON = "calc_configs_button"
+    const val AI_PAGE = "calc_ai_page"
     const val INPUT = "calc_input"
     const val RESULT = "calc_result"
     const val DISPLAY = "calc_display"
