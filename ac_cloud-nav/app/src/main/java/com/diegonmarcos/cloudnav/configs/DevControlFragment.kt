@@ -8,16 +8,16 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.graphics.Typeface
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
-import androidx.fragment.app.Fragment
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import com.diegonmarcos.cloudnav.tracker.TrackerInk
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.cloudnav.AppProcessUptime
 import com.diegonmarcos.cloudnav.BuildConfig
 import com.diegonmarcos.cloudnav.PermAskTracker
@@ -37,13 +37,16 @@ import java.util.TimeZone
  * Mesh, Health Connect, Floating Nav, Shizuku exact-energy) and the
  * launcher-only sections (Release/GHCR, Sections-count, Lock-screen).
  */
-class DevControlFragment : Fragment() {
+class DevControlFragment : KitComposeFragment() {
+
+    /** The Debug channel's capture output, shown by the page's monospace block. */
+    private var debugOut by mutableStateOf("(tap Capture to fill)")
 
     /** Accumulator that mirrors everything written to the UI by
      *  [title] / [section] / [row] + the inline folder-tree block, so
      *  the "Copy All Infos" button at the bottom can dump the whole
      *  page to the clipboard as plain text. Reset at the start of
-     *  every onCreateView so it stays in sync after a reattach. */
+     *  every [buildAbout] so it stays in sync after a reattach. */
     private var infoBuf = StringBuilder()
 
     /** Standard permission request — wired to the Notifications button
@@ -367,22 +370,24 @@ class DevControlFragment : Fragment() {
         startActivity(intent)
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        infoBuf = StringBuilder()
-        val scroll = ScrollView(ctx).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
-        }
-        val column = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(16); setPadding(pad, pad, pad, pad)
-        }
-        scroll.addView(column)
+    override fun palette(): KitPalette = TrackerInk.palette()
 
-        column.addView(title(ctx, "About Cloud Nav"))
+    @Composable
+    override fun Content() {
+        val ctx = LocalContext.current
+        val items = remember { buildAbout(ctx) }
+        AboutPage(items) { k, v ->
+            copy(ctx, "$k: $v")
+            Toast.makeText(ctx, "Copied $k", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** The whole page as data: [section] / [row] / the helpers below append [AboutItem]s to a sink. */
+    private fun buildAbout(ctx: Context): List<AboutItem> {
+        infoBuf = StringBuilder()
+        val column = AboutSink()
+
+        column.add(title(ctx, "About Cloud Nav"))
 
         // ══ DEBUG CHANNEL — first thing on the page: one-tap capture of the
         //    full diagnostic bundle (identity + this app's own logcat + trace +
@@ -390,25 +395,13 @@ class DevControlFragment : Fragment() {
         //    Copy-to-clipboard / Share / Send-to-c3-cloud-sink / Save-to-
         //    Downloads. Exists so "what build am I actually running and what
         //    is it logging" is answerable from the phone in two taps.
-        column.addView(macroHeader(ctx, "🐞  DEBUG CHANNEL"))
+        column.add(macroHeader(ctx, "🐞  DEBUG CHANNEL"))
         section(ctx, column, "Capture & send logs") {
             row(ctx, it, "Build",   BuildConfig.VERSION_NAME)
             row(ctx, it, "Sha",     BuildConfig.GIT_SHORT_SHA)
             row(ctx, it, "Code",    BuildConfig.VERSION_CODE.toString())
             row(ctx, it, "c3 sink", DevBuildConfig.LOG_SINK_URL.ifBlank { "(disabled)" })
-            it.addView(small(ctx, "Capture = identity + last 500 logcat lines + trace + crashes. Copy → clipboard · Share → any app · Send → c3 log sink (stream: ${DevBuildConfig.LOG_SINK_STREAM}) · Save → Downloads."))
-
-            val out = TextView(ctx).apply {
-                text = "(tap Capture to fill)"
-                typeface = Typeface.MONOSPACE
-                setTextColor(0xFFE9D8FD.toInt())
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                setTextIsSelectable(true)
-                setPadding(dp(8), dp(8), dp(8), dp(8))
-                setBackgroundColor(0x33000000)
-                maxLines = 28
-                ellipsize = android.text.TextUtils.TruncateAt.END
-            }
+            it.add(small(ctx, "Capture = identity + last 500 logcat lines + trace + crashes. Copy → clipboard · Share → any app · Send → c3 log sink (stream: ${DevBuildConfig.LOG_SINK_STREAM}) · Save → Downloads."))
 
             var bundle = ""
             // Capture off-thread (logcat exec + file reads), act on main.
@@ -420,20 +413,16 @@ class DevControlFragment : Fragment() {
                     activity?.runOnUiThread { if (isAdded) action(b) }
                 }.start()
             }
-            fun btn(label: String, onTap: () -> Unit) = android.widget.Button(ctx).apply {
-                text = label
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                setOnClickListener { onTap() }
-            }
+            fun btn(label: String, onTap: () -> Unit) = label to onTap
 
-            val row1 = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            row1.addView(btn("Capture") { bundle = ""; withBundle { b -> out.text = b.take(20_000) } })
-            row1.addView(btn("Copy") { withBundle { b ->
+            val row1 = mutableListOf<Pair<String, () -> Unit>>()
+            row1.add(btn("Capture") { bundle = ""; withBundle { b -> debugOut = b.take(20_000) } })
+            row1.add(btn("Copy") { withBundle { b ->
                 val cm = ctxAny().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 cm.setPrimaryClip(ClipData.newPlainText("cloud-nav-debug", b))
                 Toast.makeText(ctxAny(), "Debug bundle copied (${b.length} chars)", Toast.LENGTH_SHORT).show()
             } })
-            row1.addView(btn("Share") { withBundle { b ->
+            row1.add(btn("Share") { withBundle { b ->
                 val send = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_SUBJECT, "cloud-nav debug ${BuildConfig.GIT_SHORT_SHA}")
@@ -441,10 +430,10 @@ class DevControlFragment : Fragment() {
                 }
                 startActivity(Intent.createChooser(send, "Send debug logs"))
             } })
-            it.addView(row1)
+            it.add(AboutItem.ButtonRow(row1))
 
-            val row2 = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            row2.addView(btn("Send → c3") {
+            val row2 = mutableListOf<Pair<String, () -> Unit>>()
+            row2.add(btn("Send → c3") {
                 val appCtx = ctxAny().applicationContext
                 Thread {
                     if (bundle.isEmpty()) bundle = DevControlServer.diagnosticRecord(appCtx)
@@ -458,7 +447,7 @@ class DevControlFragment : Fragment() {
                     }
                 }.start()
             })
-            row2.addView(btn("Save ⤓") {
+            row2.add(btn("Save ⤓") {
                 val appCtx = ctxAny().applicationContext
                 Thread {
                     if (bundle.isEmpty()) bundle = DevControlServer.diagnosticRecord(appCtx)
@@ -473,13 +462,13 @@ class DevControlFragment : Fragment() {
                     }
                 }.start()
             })
-            it.addView(row2)
-            it.addView(out)
+            it.add(AboutItem.ButtonRow(row2))
+            it.add(AboutItem.Mono({ debugOut }, 28))
         }
 
         // ══ CLOUD macro section — who/what this device is in the cloud
         //    mesh: the owner profile + repos + consolidated config.
-        column.addView(macroHeader(ctx, "☁  CLOUD"))
+        column.add(macroHeader(ctx, "☁  CLOUD"))
 
         section(ctx, column, "Profile") {
             val prof = ProfilePrefs(ctxAny())
@@ -490,16 +479,16 @@ class DevControlFragment : Fragment() {
             val site = prof.website.ifBlank { BuildConfig.UI_PROFILE_WEBSITE }
             if (site.isNotBlank()) row(ctx, it, "Website", site)
             // Repos — data-driven from build.json::ui.profile_default.repos.
-            it.addView(small(ctx, "Repos:"))
+            it.add(small(ctx, "Repos:"))
             for ((label, url) in parseProfileRepos()) row(ctx, it, label, url)
             // The consolidated cloud-data config that feeds the mesh.
-            it.addView(small(ctx, "Config source:"))
+            it.add(small(ctx, "Config source:"))
             row(ctx, it, "Consolidated", BuildConfig.UI_CONSOLIDATED_CONFIG.ifBlank { "—" })
         }
 
         // ══ PHONE macro section — everything about THIS Android device:
         //    the app build, perms, battery, memory, network, etc.
-        column.addView(macroHeader(ctx, "📱  PHONE"))
+        column.add(macroHeader(ctx, "📱  PHONE"))
 
         section(ctx, column, "App") {
             row(ctx, it, "Name",         BuildConfig.APPLICATION_ID)
@@ -563,7 +552,7 @@ class DevControlFragment : Fragment() {
             row(ctx, it, "Data root",   dataDir.absolutePath)
             row(ctx, it, "External",    ctxAny.getExternalFilesDir(null)?.absolutePath ?: "—")
             row(ctx, it, "Trace log",   sizeStr(File(ctxAny.getExternalFilesDir(null), "trace/trace.log").length()))
-            it.addView(small(ctx, "Breakdown — same buckets Android system settings shows:"))
+            it.add(small(ctx, "Breakdown — same buckets Android system settings shows:"))
             row(ctx, it, "Aplicación",  sizeStr(apkBytes))
             row(ctx, it, "Datos",       sizeStr(dataBytes))
             row(ctx, it, "Caché",       sizeStr(cacheBytes))
@@ -575,7 +564,7 @@ class DevControlFragment : Fragment() {
             //    See BuildConfig.UI_PERMISSIONS_RUNTIME_B64. Replaces the
             //    previously hardcoded Pair list (FIRE rule 6).
             val perms = parseRuntimePermissions()
-            it.addView(small(ctx, "Runtime perms — States: ✓ Granted · ⏳ Ask each time · ✗ Denied (don't ask) · ◯ Not requested. Restricted-by-policy perms (SMS, Phone, Call Log) often stay at ✗ Denied (don't ask) on non-default handlers — toggle via system settings."))
+            it.add(small(ctx, "Runtime perms — States: ✓ Granted · ⏳ Ask each time · ✗ Denied (don't ask) · ◯ Not requested. Restricted-by-policy perms (SMS, Phone, Call Log) often stay at ✗ Denied (don't ask) on non-default handlers — toggle via system settings."))
             for ((label, perm) in perms) {
                 row(ctx, it, label, permissionState(perm))
             }
@@ -583,7 +572,7 @@ class DevControlFragment : Fragment() {
             // ── Special access — single-flag toggles handled by separate
             //    system surfaces (not in the runtime perms flow). Each is
             //    a synchronous check against a system service.
-            it.addView(small(ctx, "Special access — system-toggles outside the runtime perms flow:"))
+            it.add(small(ctx, "Special access — system-toggles outside the runtime perms flow:"))
             row(ctx, it, "Battery Optimization", specialAccessBattery(ctxAny()))
             row(ctx, it, "Default launcher",   specialAccessLauncher(ctxAny()))
             // ── Single-holder RoleManager roles (Default phone app, Spam
@@ -604,7 +593,7 @@ class DevControlFragment : Fragment() {
             // command (it's a signature|privileged perm, can't be granted
             // via Settings; the only user-grant path is adb pm grant).
             if (specialAccessDumpGranted(ctxAny()).not()) {
-                it.addView(actionButton(ctx, "Copy DUMP grant command for adb") {
+                it.add(actionButton(ctx, "Copy DUMP grant command for adb") {
                     val pkg = ctxAny().packageName
                     val cmd = "adb shell pm grant $pkg android.permission.DUMP"
                     copy(ctxAny(), cmd)
@@ -618,15 +607,15 @@ class DevControlFragment : Fragment() {
             //    Almost always PROTECTION_NORMAL (INTERNET, VIBRATE,
             //    WAKE_LOCK, FOREGROUND_SERVICE_*) — full transparency
             //    of what the app CAN do without you ever clicking "Allow".
-            it.addView(small(ctx, "System auto-granted — protection-NORMAL perms granted at install, no user prompt. This is what the app can already do without ever asking."))
+            it.add(small(ctx, "System auto-granted — protection-NORMAL perms granted at install, no user prompt. This is what the app can already do without ever asking."))
             for ((label, status) in collectAutoGrantedPerms(ctxAny())) {
                 row(ctx, it, label, status)
             }
 
             // ── GRANT — one-tap system dialog. Buttons gray out (✓) once
             //    the perm is held.
-            it.addView(small(ctx, "Grant — one-tap system dialog:"))
-            it.addView(permButtonRow(ctx,
+            it.add(small(ctx, "Grant — one-tap system dialog:"))
+            it.add(permButtonRow(ctx,
                 permButton(ctx, "Grant Notif. (write)", grantedNotifWrite(ctxAny())) { requestNotificationsPermission() },
                 permButton(ctx, "Request All Perms", null) {
                     requestAllPermissions(perms.map { p -> p.second }.toTypedArray())
@@ -634,12 +623,12 @@ class DevControlFragment : Fragment() {
             ))
             // ── SET — open the menu and toggle manually (these can't be
             //    granted by a one-tap dialog; each is a Settings jump).
-            it.addView(small(ctx, "Set — open the menu and toggle manually:"))
-            it.addView(permButtonRow(ctx,
+            it.add(small(ctx, "Set — open the menu and toggle manually:"))
+            it.add(permButtonRow(ctx,
                 permButton(ctx, "Set Usage Access", com.diegonmarcos.cloudnav.EnergyWatchdog.hasUsageAccess(ctxAny())) { openUsageAccessSettings() },
                 permButton(ctx, "Set Files Access", grantedFiles()) { openManageAllFilesSettings() },
             ))
-            it.addView(permButtonRow(ctx,
+            it.add(permButtonRow(ctx,
                 permButton(ctx, "Set Battery No-Optim", grantedBatteryOptim(ctxAny())) { openBatteryOptimizationSettings() },
                 permButton(ctx, "Set Samsung Never-Sleep", null) { openSamsungNeverSleepingSettings() },
                 permButton(ctx, "Set App Settings", null) { openAppSettings() },
@@ -649,13 +638,13 @@ class DevControlFragment : Fragment() {
             //    The app can't grant another app a role, so jump to the
             //    system Default-Apps picker where the user selects Cloud-Comms
             //    as Phone app + Caller ID & spam app.
-            it.addView(small(ctx, "Set defaults — pick the Cloud-Comms phone fork as Phone app + Caller ID & spam app:"))
-            it.addView(permButtonRow(ctx,
+            it.add(small(ctx, "Set defaults — pick the Cloud-Comms phone fork as Phone app + Caller ID & spam app:"))
+            it.add(permButtonRow(ctx,
                 permButton(ctx, "Set Default Apps (Phone · Spam)", null) { openDefaultAppsSettings() },
             ))
             // ── Display-over-apps — SYSTEM_ALERT_WINDOW.
-            it.addView(small(ctx, "Display over apps — grant 'Display over other apps':"))
-            it.addView(permButtonRow(ctx,
+            it.add(small(ctx, "Display over apps — grant 'Display over other apps':"))
+            it.add(permButtonRow(ctx,
                 permButton(ctx, "Set Display-over-apps", android.provider.Settings.canDrawOverlays(ctxAny())) { openOverlaySettings() },
             ))
             // ── Auto-update — silent self-update toggle (default ON). When ON
@@ -663,12 +652,12 @@ class DevControlFragment : Fragment() {
             //    prompt); OFF falls back to the normal install prompt. Silent
             //    only actually skips the prompt once "Install unknown apps" is
             //    granted below — Android transparently prompts without it.
-            it.addView(small(ctx, "Auto-update — silent self-update (default ON). Grant 'Install unknown apps' to skip the install prompt:"))
+            it.add(small(ctx, "Auto-update — silent self-update (default ON). Grant 'Install unknown apps' to skip the install prompt:"))
             row(ctx, it, "Auto-update (silent)",
                 if (com.diegonmarcos.superapp.updater.AutoUpdatePrefs.silent(ctxAny())) "✓ ON" else "✗ OFF")
             row(ctx, it, "Install unknown apps",
                 if (com.diegonmarcos.superapp.updater.AutoUpdatePrefs.canInstallSilently(ctxAny())) "✓ Granted" else "◯ Not granted")
-            it.addView(permButtonRow(ctx,
+            it.add(permButtonRow(ctx,
                 permButton(ctx, "Auto-update: " + (if (com.diegonmarcos.superapp.updater.AutoUpdatePrefs.silent(ctxAny())) "ON" else "OFF"),
                            com.diegonmarcos.superapp.updater.AutoUpdatePrefs.silent(ctxAny())) {
                     val now = !com.diegonmarcos.superapp.updater.AutoUpdatePrefs.silent(ctxAny())
@@ -681,7 +670,7 @@ class DevControlFragment : Fragment() {
             ))
             // ── Copy the full status block (matches what's rendered above).
             //    Utility action (not a pending grant) → darker violet.
-            it.addView(actionButton(ctx, "Copy All Perms Status", DARK_VIOLET) {
+            it.add(actionButton(ctx, "Copy All Perms Status", dark = true) {
                 copy(ctxAny(), buildAllPermsStatus(ctxAny()))
                 Toast.makeText(ctxAny(), "Copied full permission status", Toast.LENGTH_SHORT).show()
             })
@@ -785,17 +774,17 @@ class DevControlFragment : Fragment() {
             row(ctx, it, "Power source",      bs.powerWSource)
             row(ctx, it, "Unplug anchor src", bs.unplugAnchorSource)
             row(ctx, it, "Plug anchor src",   bs.plugAnchorSource)
-            it.addView(small(ctx, "Battery-stats internals (mAh per-component, wakelocks, wakeups) are system-only. Grant Usage Access + Set Battery No Optimization shortcuts live in the Permissions section above."))
+            it.add(small(ctx, "Battery-stats internals (mAh per-component, wakelocks, wakeups) are system-only. Grant Usage Access + Set Battery No Optimization shortcuts live in the Permissions section above."))
             // Deep BatteryManager / sticky-intent dump — merged in from
             // the former separate "Battery (deep)" section (one Battery
             // section, not two).
-            it.addView(small(ctx, "— Deep (BatteryManager + sticky intent) —"))
+            it.add(small(ctx, "— Deep (BatteryManager + sticky intent) —"))
             renderBatteryDeep(ctx, it)
             // AccuBattery-style energy page — device state→draw
             // attribution, per-foreground-app draw, and our own subsystem
             // ledger (what INSIDE the app costs). Backed by the
             // EnergyWatchdog Tier-1 sampler + EnergyLedger.
-            it.addView(actionButton(ctx, "⚡ Open Energy Usage (AccuBattery-style)") {
+            it.add(actionButton(ctx, "⚡ Open Energy Usage (AccuBattery-style)") {
                 runCatching {
                     com.diegonmarcos.cloudnav.EnergyUsageDialog()
                         .show(parentFragmentManager, com.diegonmarcos.cloudnav.EnergyUsageDialog.TAG)
@@ -932,7 +921,7 @@ class DevControlFragment : Fragment() {
             row(ctx, it, "Swap used",
                 if (swapUsed < 0 || swapTotal == 0L) "—" else sizeStr(swapUsed))
 
-            it.addView(small(ctx, "PSS = process-attributable RSS after sharing. JVM heap is the growable section of the Dalvik PSS bucket. CPU avg % is utime+stime / wall-time × 100 — 1-thread (100% = one core saturated) or per-core (100% = ALL cores saturated). Sustained > 50% with the screen off may indicate a background work leak. Storage = data partition (where the app + caches live). Swap is typically zRAM on Android — counts AGAINST physical RAM but appears as virtual."))
+            it.add(small(ctx, "PSS = process-attributable RSS after sharing. JVM heap is the growable section of the Dalvik PSS bucket. CPU avg % is utime+stime / wall-time × 100 — 1-thread (100% = one core saturated) or per-core (100% = ALL cores saturated). Sustained > 50% with the screen off may indicate a background work leak. Storage = data partition (where the app + caches live). Swap is typically zRAM on Android — counts AGAINST physical RAM but appears as virtual."))
         }
 
         // IPC Contract — the cross-app intent/IPC surface Cloud Nav
@@ -941,7 +930,7 @@ class DevControlFragment : Fragment() {
         section(ctx, column, "IPC Contract") {
             val entries = collectIpcContract(requireContext())
             if (entries.isEmpty()) {
-                it.addView(small(ctx, "No IPC contract declared yet — no exported/consumed cross-app intents, services, or providers beyond the framework defaults."))
+                it.add(small(ctx, "No IPC contract declared yet — no exported/consumed cross-app intents, services, or providers beyond the framework defaults."))
             } else {
                 for ((k, v) in entries) row(ctx, it, k, v)
             }
@@ -989,12 +978,12 @@ class DevControlFragment : Fragment() {
             // "<unknown ssid>" — surface that as the user-facing hint.
             val wm = ctxAny().applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
             if (wm == null || !wm.isWifiEnabled) {
-                it.addView(small(ctx, "Wi-Fi is off."))
+                it.add(small(ctx, "Wi-Fi is off."))
             } else {
                 @Suppress("DEPRECATION")
                 val info = runCatching { wm.connectionInfo }.getOrNull()
                 if (info == null) {
-                    it.addView(small(ctx, "No Wi-Fi connection info."))
+                    it.add(small(ctx, "No Wi-Fi connection info."))
                 } else {
                     val ssid = info.ssid?.trim('"').orEmpty()
                     row(ctx, it, "SSID",       if (ssid.isBlank() || ssid == "<unknown ssid>") "Needs location permission" else ssid)
@@ -1025,24 +1014,19 @@ class DevControlFragment : Fragment() {
                 else           -> "✗ Reachable from LAN — bind addr ${bound ?: "?"}"
             })
             row(ctx, it, "Token",    prefs.token)
-            it.addView(small(ctx, "Bearer token — long-press to copy. Endpoints follow /api/{group}/{op} (e.g. /api/system/info, /api/diagnostics/logcat, /api/tracker/counts). Full catalog: GET /api/docs."))
+            it.add(small(ctx, "Bearer token — long-press to copy. Endpoints follow /api/{group}/{op} (e.g. /api/system/info, /api/diagnostics/logcat, /api/tracker/counts). Full catalog: GET /api/docs."))
 
             // Toggle Switch: persists pref + start/stop the server live.
-            it.addView(android.widget.Switch(ctx).apply {
-                text = "API enabled"
-                isChecked = prefs.enabled
-                val pad = dp(6); setPadding(pad, pad, pad, pad)
-                setOnCheckedChangeListener { _, checked ->
-                    prefs.enabled = checked
-                    if (checked) {
-                        DevControlServer.start(requireContext().applicationContext)
-                    } else {
-                        DevControlServer.stop()
-                    }
-                    // Re-render so Status/Bound/scope reflect the new state.
-                    parentFragmentManager.beginTransaction().detach(this@DevControlFragment).commitNow()
-                    parentFragmentManager.beginTransaction().attach(this@DevControlFragment).commitNow()
+            it.add(AboutItem.Toggle("API enabled", prefs.enabled) { checked ->
+                prefs.enabled = checked
+                if (checked) {
+                    DevControlServer.start(requireContext().applicationContext)
+                } else {
+                    DevControlServer.stop()
                 }
+                // Re-render so Status/Bound/scope reflect the new state.
+                parentFragmentManager.beginTransaction().detach(this@DevControlFragment).commitNow()
+                parentFragmentManager.beginTransaction().attach(this@DevControlFragment).commitNow()
             })
 
             // Regenerate REMOVED: the token is now declarative (BuildConfig.FLEET_TOKEN
@@ -1115,7 +1099,7 @@ class DevControlFragment : Fragment() {
                     ?.sortedBy { it.name }
             }.getOrNull()
             if (zones.isNullOrEmpty()) {
-                it.addView(small(ctx, "No thermal zones readable (kernel restricts /sys/class/thermal on most modern devices)."))
+                it.add(small(ctx, "No thermal zones readable (kernel restricts /sys/class/thermal on most modern devices)."))
             } else {
                 for (z in zones) {
                     val type = runCatching { File(z, "type").readText().trim() }.getOrDefault(z.name)
@@ -1134,42 +1118,42 @@ class DevControlFragment : Fragment() {
         // so the section is one big scrollable table the user can
         // long-press individual rows to copy.
         section(ctx, column, "SYSFS-PROC") {
-            it.addView(small(ctx, "Raw kernel-side telemetry — no runtime permission needed. World-readable /sys/class/* and /proc/* paths. Use this as the audit surface; promote interesting rows to dedicated UI elsewhere."))
+            it.add(small(ctx, "Raw kernel-side telemetry — no runtime permission needed. World-readable /sys/class/* and /proc/* paths. Use this as the audit surface; promote interesting rows to dedicated UI elsewhere."))
 
-            it.addView(small(ctx, "── /sys/class/power_supply/battery/"))
+            it.add(small(ctx, "── /sys/class/power_supply/battery/"))
             for ((k, v) in SysfsProc.battery()) row(ctx, it, k, v)
 
-            it.addView(small(ctx, "── /sys/class/power_supply/{usb,ac,wireless,main}/"))
+            it.add(small(ctx, "── /sys/class/power_supply/{usb,ac,wireless,main}/"))
             val chargerRows = SysfsProc.chargers()
-            if (chargerRows.isEmpty()) it.addView(small(ctx, "(no charger nodes readable)"))
+            if (chargerRows.isEmpty()) it.add(small(ctx, "(no charger nodes readable)"))
             for ((k, v) in chargerRows) row(ctx, it, k, v)
 
-            it.addView(small(ctx, "── /proc/loadavg + /proc/uptime  (CPU load in seconds)"))
+            it.add(small(ctx, "── /proc/loadavg + /proc/uptime  (CPU load in seconds)"))
             for ((k, v) in SysfsProc.cpuLoadRows()) row(ctx, it, k, v)
 
-            it.addView(small(ctx, "── /proc/stat  (cumulative jiffies → seconds, ALL cores)"))
+            it.add(small(ctx, "── /proc/stat  (cumulative jiffies → seconds, ALL cores)"))
             for ((k, v) in SysfsProc.procStatRows()) row(ctx, it, k, v)
 
-            it.addView(small(ctx, "── /sys/devices/system/cpu/cpu*/cpufreq/"))
+            it.add(small(ctx, "── /sys/devices/system/cpu/cpu*/cpufreq/"))
             for ((k, v) in SysfsProc.cpuFreqs()) row(ctx, it, k, v)
 
-            it.addView(small(ctx, "── /sys/class/thermal/thermal_zone*/"))
+            it.add(small(ctx, "── /sys/class/thermal/thermal_zone*/"))
             val thermalRows = SysfsProc.thermal()
-            if (thermalRows.isEmpty()) it.addView(small(ctx, "(no zones readable — vendor restriction)"))
+            if (thermalRows.isEmpty()) it.add(small(ctx, "(no zones readable — vendor restriction)"))
             for ((k, v) in thermalRows) row(ctx, it, k, v)
 
-            it.addView(small(ctx, "── /proc/meminfo  (selected)"))
+            it.add(small(ctx, "── /proc/meminfo  (selected)"))
             for ((k, v) in SysfsProc.memInfo()) row(ctx, it, k, v)
 
-            it.addView(small(ctx, "── /sys/class/net/*/statistics/"))
+            it.add(small(ctx, "── /sys/class/net/*/statistics/"))
             for ((k, v) in SysfsProc.network()) row(ctx, it, k, v)
 
-            it.addView(small(ctx, "── /proc/diskstats"))
+            it.add(small(ctx, "── /proc/diskstats"))
             val diskRows = SysfsProc.diskstats()
-            if (diskRows.isEmpty()) it.addView(small(ctx, "(no diskstats readable)"))
+            if (diskRows.isEmpty()) it.add(small(ctx, "(no diskstats readable)"))
             for ((k, v) in diskRows) row(ctx, it, k, v)
 
-            it.addView(small(ctx, "── /proc/self/  (this app's own kernel-side stats)"))
+            it.add(small(ctx, "── /proc/self/  (this app's own kernel-side stats)"))
             for ((k, v) in SysfsProc.selfProc()) row(ctx, it, k, v)
         }
 
@@ -1323,7 +1307,7 @@ class DevControlFragment : Fragment() {
         section(ctx, column, "Stack") {
             // Languages — decode the base64 JSON blob the build emitted.
             // Format: {"Kotlin":{"files":N,"loc":M}, …}
-            it.addView(small(ctx, "What's actually inside this APK — scanned by the build, never a hardcoded list."))
+            it.add(small(ctx, "What's actually inside this APK — scanned by the build, never a hardcoded list."))
             val langB64 = BuildConfig.UI_STACK_LANGUAGES_JSON_B64
             val langJson = runCatching { String(android.util.Base64.decode(langB64, android.util.Base64.DEFAULT)) }.getOrDefault("{}")
             val langs = runCatching {
@@ -1348,7 +1332,7 @@ class DevControlFragment : Fragment() {
 
             // Frameworks — sorted unique Maven coordinates that the
             // gradle scripts depend on. Internal :libs:* are skipped.
-            it.addView(small(ctx, "Frameworks (Maven coordinates from every *.gradle in the repo):"))
+            it.add(small(ctx, "Frameworks (Maven coordinates from every *.gradle in the repo):"))
             val fwB64 = BuildConfig.UI_STACK_FRAMEWORKS_JSON_B64
             val fwJson = runCatching { String(android.util.Base64.decode(fwB64, android.util.Base64.DEFAULT)) }.getOrDefault("[]")
             val frameworks = runCatching {
@@ -1366,7 +1350,7 @@ class DevControlFragment : Fragment() {
             }
 
             // Local internal modules — derived from build.json::modules.
-            it.addView(small(ctx, "Internal modules (build.json::modules, project(':libs:*')):"))
+            it.add(small(ctx, "Internal modules (build.json::modules, project(':libs:*')):"))
             // Modules are part of buildJson::modules but we don't have it
             // here — list nativeLibraryDir contents (per-ABI native libs)
             // instead, which is its own useful "what's in here" line.
@@ -1386,7 +1370,7 @@ class DevControlFragment : Fragment() {
             // list` at gradle config time — full wall-clock from queue
             // to "completed" of the GHA `ship-cloud-nav.yml`
             // workflow, sampling the most-recent N successful runs.
-            it.addView(small(ctx, "Build metrics (from GitHub Actions history):"))
+            it.add(small(ctx, "Build metrics (from GitHub Actions history):"))
             fun fmtSecs(s: Long): String = when {
                 s < 0     -> "—"
                 s < 60    -> "${s}s"
@@ -1401,20 +1385,12 @@ class DevControlFragment : Fragment() {
 
             // Folder tree — 2 levels under ~/git/cloud-u-android/, showing every
             // ea_* sibling clone and its immediate sub-dirs.
-            it.addView(small(ctx, "Folder tree (depth 3, ea_* siblings only):"))
+            it.add(small(ctx, "Folder tree (depth 3, ea_* siblings only):"))
             val treeB64 = BuildConfig.UI_STACK_FOLDER_TREE_B64
             val treeStr = runCatching { String(android.util.Base64.decode(treeB64, android.util.Base64.DEFAULT)) }
                 .getOrDefault("—")
             infoBuf.append("\n```\n").append(treeStr).append("\n```\n")
-            it.addView(TextView(ctx).apply {
-                text = treeStr
-                setTextColor(0xFFE9D8FD.toInt())
-                typeface = Typeface.MONOSPACE
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                setPadding(dp(8), dp(8), dp(8), dp(8))
-                setBackgroundColor(0x33000000)
-                setTextIsSelectable(true)
-            })
+            it.add(AboutItem.Mono({ treeStr }))
         }
 
         section(ctx, column, "Locale & time") {
@@ -1446,7 +1422,7 @@ class DevControlFragment : Fragment() {
         // title / section / row helper + the inline folder-tree block,
         // so this captures whatever was actually drawn — no parallel
         // data collection to keep in sync.
-        column.addView(actionButton(ctx, "Copy All Infos") {
+        column.add(actionButton(ctx, "Copy All Infos") {
             val snapshot = infoBuf.toString()
             copy(ctx, snapshot)
             Toast.makeText(ctx,
@@ -1454,96 +1430,33 @@ class DevControlFragment : Fragment() {
                 Toast.LENGTH_SHORT).show()
         })
 
-        return scroll
+        return column.items
     }
 
     // ── helpers ──────────────────────────────────────────────────────
 
-    private fun section(ctx: Context, host: LinearLayout, head: String, body: (LinearLayout) -> Unit) {
+    private fun section(ctx: Context, host: AboutSink, head: String, body: (AboutSink) -> Unit) {
         infoBuf.append("\n## ").append(head).append("\n")
-        host.addView(sectionHeader(ctx, head))
-        val grp = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, dp(8))
-        }
-        host.addView(grp)
-        body(grp)
+        host.add(AboutItem.Header(head))
+        body(host)
     }
 
-    private fun row(ctx: Context, host: LinearLayout, key: String, value: String): TextView {
+    private fun row(ctx: Context, host: AboutSink, key: String, value: String) {
         infoBuf.append("  ").append(key).append(": ").append(value).append("\n")
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(4), 0, dp(4))
-        }
-        row.addView(TextView(ctx).apply {
-            text = key
-            setTextColor(0xCCFFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            layoutParams = LinearLayout.LayoutParams(dp(110), LinearLayout.LayoutParams.WRAP_CONTENT)
-        })
-        // Capture the value TextView so callers that need to update it
-        // later can rebind .text without rebuilding the row. Plain
-        // callers ignore the return.
-        val valueView = TextView(ctx).apply {
-            text = value
-            setTextColor(0xFFB794F4.toInt())
-            typeface = Typeface.MONOSPACE
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setTextIsSelectable(true)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            setOnLongClickListener {
-                copy(ctx, "$key: $value")
-                Toast.makeText(ctx, "Copied $key", Toast.LENGTH_SHORT).show(); true
-            }
-        }
-        row.addView(valueView)
-        host.addView(row)
-        return valueView
+        host.add(AboutItem.Row(key, value))
     }
 
-    private fun title(ctx: Context, text: String) = TextView(ctx).apply {
+    private fun title(ctx: Context, text: String): AboutItem {
         infoBuf.append("# ").append(text).append("\n")
-        this.text = text
-        setTextColor(0xFFE9D8FD.toInt())
-        typeface = Typeface.DEFAULT_BOLD
-        setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-        setPadding(0, 0, 0, dp(12))
+        return AboutItem.Title(text)
     }
 
-    private fun sectionHeader(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextColor(0xFF7C3AED.toInt())
-        typeface = Typeface.DEFAULT_BOLD
-        setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-        setPadding(0, dp(14), 0, dp(4))
-    }
+    private fun small(ctx: Context, text: String): AboutItem = AboutItem.Small(text)
 
-    private fun small(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextColor(0x99FFFFFF.toInt())
-        setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-        setPadding(0, dp(4), 0, dp(4))
-    }
-
-    // bg defaults to the light-violet "action needed" shade; pass
-    // DARK_VIOLET for utility buttons that aren't a pending grant (e.g.
-    // "Copy All Perms Status") so the light violet stays reserved for the
+    // dark = a utility button (e.g. "Copy All Perms Status"), so the accent stays reserved for the
     // rows that still need the user to act.
-    private fun actionButton(ctx: Context, label: String, bg: Int = 0xFF7C3AED.toInt(), onClick: () -> Unit) = TextView(ctx).apply {
-        text = label
-        setTextColor(0xFFFFFFFF.toInt())
-        setBackgroundColor(bg)
-        gravity = android.view.Gravity.CENTER
-        setPadding(dp(12), dp(10), dp(12), dp(10))
-        val lp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { topMargin = dp(8) }
-        layoutParams = lp
-        isClickable = true; isFocusable = true
-        setOnClickListener { onClick() }
-    }
+    private fun actionButton(ctx: Context, label: String, dark: Boolean = false, onClick: () -> Unit): AboutItem =
+        AboutItem.Action(label, dark, onClick)
 
     private fun copy(ctx: Context, v: String) {
         val clip = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -1553,7 +1466,7 @@ class DevControlFragment : Fragment() {
     /** Deep BatteryManager + sticky-intent dump — rendered inline inside
      *  the "Battery & Usage" section (merged from the former standalone
      *  "Battery (deep)" section so there's a single Battery section). */
-    private fun renderBatteryDeep(ctx: Context, host: LinearLayout) {
+    private fun renderBatteryDeep(ctx: Context, host: AboutSink) {
         val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as? android.os.BatteryManager
         val battery = runCatching {
             ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
@@ -1619,20 +1532,7 @@ class DevControlFragment : Fragment() {
 
     /** Big macro-section divider ("☁ CLOUD", "📱 PHONE") splitting the
      *  About page into the cloud-identity half and the phone-device half. */
-    private fun macroHeader(ctx: Context, text: String) = TextView(ctx).apply {
-        this.text = text
-        setTextColor(0xFFE9D8FD.toInt())
-        textSize = 17f
-        setTypeface(typeface, android.graphics.Typeface.BOLD)
-        setBackgroundColor(0x22B794F4.toInt())
-        val p = dp(8)
-        val lp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { topMargin = dp(20) }
-        layoutParams = lp
-        setPadding(p, dp(12), p, dp(10))
-    }
+    private fun macroHeader(ctx: Context, text: String): AboutItem = AboutItem.Macro(text)
 
     /** Repo {label,url} list for the Profile section — data-driven from
      *  build.json::ui.profile_default.repos (UI_PROFILE_REPOS_B64). */
@@ -1670,45 +1570,10 @@ class DevControlFragment : Fragment() {
      *   false → purple (action needed)
      *   null  → purple (a plain action with no grant state, e.g. bulk). */
     private fun permButton(ctx: Context, label: String, granted: Boolean?, onClick: () -> Unit) =
-        TextView(ctx).apply {
-            gravity = android.view.Gravity.CENTER
-            textSize = 12f
-            setPadding(dp(8), dp(10), dp(8), dp(10))
-            maxLines = 3
-            minHeight = dp(64)
-            val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            layoutParams = lp
-            isClickable = true; isFocusable = true
-            stylePermButton(this, label, granted)
-            setOnClickListener { onClick() }
-        }
+        PermBtn(label, granted, onClick)
 
-    /** Paint a perm button by grant state — extracted so async-resolved
-     *  states and live toggles can re-skin the same view after creation.
-     *  Palette convention:
-     *    • granted / satisfied → dark slate (0xFF2A2A33), grey ✓ text
-     *    • still needs action  → light violet (0xFF7C3AED), white text */
-    private fun stylePermButton(tv: TextView, label: String, granted: Boolean?) {
-        tv.text = if (granted == true) "✓ $label" else label
-        tv.setTextColor(if (granted == true) 0xFF9CA3AF.toInt() else 0xFFFFFFFF.toInt())
-        tv.setBackgroundColor(if (granted == true) 0xFF2A2A33.toInt() else 0xFF7C3AED.toInt())
-    }
-
-    /** Lay out perm buttons in a weighted horizontal row (4dp gaps). */
-    private fun permButtonRow(ctx: Context, vararg btns: View): View {
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(8) }
-        }
-        for ((i, b) in btns.withIndex()) {
-            (b.layoutParams as? LinearLayout.LayoutParams)?.leftMargin = if (i > 0) dp(4) else 0
-            row.addView(b)
-        }
-        return row
-    }
+    /** Lay out perm buttons in a weighted horizontal row. */
+    private fun permButtonRow(ctx: Context, vararg btns: PermBtn): AboutItem = AboutItem.PermRow(btns.toList())
 
     // ── granted predicates for the gray-out colouring ───────────────
     private fun grantedNotifWrite(ctx: Context): Boolean =
@@ -1788,7 +1653,6 @@ class DevControlFragment : Fragment() {
     private fun fmtMillis(ms: Long): String =
         DateFormat.getDateTimeInstance().format(Date(ms))
 
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     // ── Permissions helpers ────────────────────────────────────────
     // Data-driven runtime perm list — decodes UI_PERMISSIONS_RUNTIME_B64
@@ -1979,10 +1843,5 @@ class DevControlFragment : Fragment() {
 
     companion object {
         fun newInstance() = DevControlFragment()
-
-        /** Deep violet for utility buttons (Copy) — distinct from the light
-         *  "action needed" violet (0xFF7C3AED) so light stays reserved for
-         *  rows that still need a user action. */
-        private val DARK_VIOLET = 0xFF4C1D95.toInt()
     }
 }

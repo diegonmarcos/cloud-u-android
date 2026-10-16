@@ -770,7 +770,6 @@
         "RoutesFragment",
         "NavigationFragment",
         "PlacesFragment",
-        "DevControlFragment",
         "SpaceViewActivity",
         "TerrainActivity",
         "ConstellationsActivity",
@@ -782,9 +781,9 @@
         "test-cloud-nav.yml runs this app's own suite"
       ],
       "baseline": {
-        "view_screens": 9,
+        "view_screens": 8,
         "layout_xml": 1,
-        "view_ui_files": 9,
+        "view_ui_files": 8,
         "custom_views": 8
       }
     },
