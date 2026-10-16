@@ -38,6 +38,17 @@ def check(root, ok):
             ok(f in whys, "fact `%s` says why in requires_why" % f)
         if it.get("checked"):
             ok('"%s" to' % it["checked"] in facts, "toggle `%s` shows a fact facts() produces" % i)
+    # #900 a Configs row is a button too: it needs its branch, its facts and its words, and sits on a declared page.
+    bj = build_json(root)["ui"]["browser"]
+    pages = [s["id"] for s in bj.get("settings_sections", [])]
+    addon_rows = [dict(m, page=m.get("page")) for a in bj.get("addons", []) for m in a.get("menu", []) if m.get("scope") == "global"]
+    for r in bj.get("configs", {}).get("rows", []) + addon_rows:
+        i = r["id"]
+        ok(r.get("page") in pages, "Configs row `%s` is on a declared page" % i, str(r.get("page")))
+        ok(re.search(r'"%s"(\s*,\s*"[a-z_]+")*\s*->' % re.escape(i), run), "Configs row `%s` has its branch in runAction" % i)
+        for f in r.get("requires", []):
+            ok(f.startswith("addon:") or '"%s" to' % f in facts, "fact `%s` (needed by Configs row `%s`) is produced by facts()" % (f, i))
+            ok(f.startswith("addon:") or f in whys, "fact `%s` says why in requires_why" % f)
     allsrc = "\n".join(src.values())
     ok("PopupMenu" not in allsrc, "no PopupMenu is left (the menus are the Compose sheet)")
     ok("Mozilla/5.0" not in allsrc, "no user-agent string is a Kotlin literal")
@@ -64,6 +75,7 @@ main("menu wiring", check, [
     ("a UA literal in Kotlin", FRAG, "private fun closeOverlays() {", 'private val ua = "Mozilla/5.0 (X11)"\n    private fun closeOverlays() {', "user-agent"),
     ("menu/act stops gating api:false rows", API, "!item.api ->", "false ->", "refuses a row"),
     ("a required fact is never produced", FRAG, '"can_go_forward" to', '"cannot_go_forward" to', "`can_go_forward`"),
-    ("a row in an undeclared section", BJ, '"section": "library"', '"section": "nowhere"', "declared section"),
+    ("a row in an undeclared section", BJ, '"id": "site_settings",\n            "section": "site"', '"id": "site_settings",\n            "section": "nowhere"', "declared section"),
+    ("a Configs row loses its branch", FRAG, '"sites_manage" ->', '"sites_manage_gone" ->', "`sites_manage` has its branch"),
 ])
 PYEOF

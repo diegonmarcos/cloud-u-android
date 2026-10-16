@@ -51,6 +51,10 @@ data class BrowserConfig(
     val settingsSections: List<Pair<String, String>> = emptyList(),
     /** #893 the favourites seeded on first run (and per new entry); expanded from build.json at build time. */
     val favourites: FavSeed = FavSeed.EMPTY,
+    /** #900 the Configs pages: the top tabs, each page's global rows and native blocks. */
+    val configs: BrowserConfigPages = BrowserConfigPages.EMPTY,
+    /** #900 hosts whose subresources "Block trackers" answers empty (this app's content, not the library's). */
+    val trackerHosts: List<String> = emptyList(),
 ) {
 
     /** The configured default, or the first engine, or Qwant. Never null. */
@@ -125,6 +129,11 @@ data class BrowserConfig(
                 if (m.sections.none { it.id == "addons" }) m
                 else BrowserMenu(m.sections, m.items + addons.all.flatMap { it.menu }, m.whys)
             }
+            val sections = o.optJSONArray("settings_sections").let { a ->
+                if (a == null) emptyList() else (0 until a.length()).mapNotNull { i ->
+                    a.optJSONObject(i)?.let { it.optString("id") to it.optString("label", it.optString("id")) }
+                }.filter { it.first.isNotEmpty() }
+            }
             return BrowserConfig(
                 defaultPinnedTabs = pins,
                 engines = finalEngines,
@@ -142,10 +151,10 @@ data class BrowserConfig(
                 readerCss = o.optString("reader_css"),
                 favourites = FavSeed.parse(o.optJSONObject("favourites")),
                 sitePerms = BrowserSitePolicy.parsePerms(o.optJSONArray("site_permissions")),
-                settingsSections = o.optJSONArray("settings_sections").let { a ->
-                    if (a == null) emptyList() else (0 until a.length()).mapNotNull { i ->
-                        a.optJSONObject(i)?.let { it.optString("id") to it.optString("label", it.optString("id")) }
-                    }.filter { it.first.isNotEmpty() }
+                settingsSections = sections,
+                configs = BrowserConfigPages.parse(o.optJSONObject("configs"), sections, addons),
+                trackerHosts = o.optJSONArray("tracker_hosts").let { a ->
+                    if (a == null) emptyList() else (0 until a.length()).map { i -> a.optString(i).trim().lowercase() }.filter { it.isNotEmpty() }
                 },
                 clearData = o.optJSONArray("clear_data").let { a ->
                     if (a == null) emptyList() else (0 until a.length()).mapNotNull { i ->

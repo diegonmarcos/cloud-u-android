@@ -15,8 +15,10 @@ data class BrowserAddon(
     val requiresPackage: String?,
     /** device | remote */
     val engine: String,
-    /** Its rows in the menu's Add-ons section. */
+    /** Its rows in the PAGE menu's Page tools section (scope page, the default). */
     val menu: List<BrowserMenuItem>,
+    /** #900 Its GLOBAL rows (scope global): they sit on a Configs page, never in the page dropdown. */
+    val configRows: List<BrowserConfigRow> = emptyList(),
     /** Its own declared block (remote endpoint, tools, …), handed to it verbatim. */
     val config: JSONObject,
 )
@@ -83,16 +85,22 @@ class BrowserAddons(val all: List<BrowserAddon>) {
                 val id = o.optString("id").trim()
                 if (id.isEmpty()) return@mapNotNull null
                 val perms = o.optJSONArray("permissions")?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty()
-                val menu = o.optJSONArray("menu")?.let { a ->
-                    (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { m ->
+                val entries = o.optJSONArray("menu")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } }.orEmpty()
+                // #900 a global entry belongs to a Configs page; only a page entry joins the page dropdown.
+                val configRows = entries.filter { it.optString("scope") == "global" }.map { m ->
+                    val req = m.optJSONArray("requires")?.let { r -> (0 until r.length()).map { r.optString(it) } }.orEmpty()
+                    BrowserConfigRow(m.optString("id"), m.optString("label", m.optString("id")), m.optString("page"), listOf("addon:$id") + req)
+                }
+                val menu = entries.filter { it.optString("scope") != "global" }.let { a ->
+                    a.map { m ->
                         val req = m.optJSONArray("requires")?.let { r -> (0 until r.length()).map { r.optString(it) } }.orEmpty()
                         BrowserMenuItem(m.optString("id"), "addons", m.optString("label", m.optString("id")),
                             m.optString("kind", "action"), listOf("addon:$id") + req, m.optString("checked").ifBlank { null },
                             m.optBoolean("api", false))
                     }
-                }.orEmpty()
+                }
                 BrowserAddon(id, o.optString("label", id), o.optString("doc"), o.optBoolean("default_enabled", false),
-                    perms, o.optString("requires_package").ifBlank { null }, o.optString("engine", "device"), menu, o)
+                    perms, o.optString("requires_package").ifBlank { null }, o.optString("engine", "device"), menu, configRows, o)
             })
         }
     }

@@ -21,6 +21,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -145,6 +146,10 @@ class BrowserHostFragment : Fragment() {
     private var tabFilter by mutableStateOf(BrowserTabsBar.Filter.NORMAL)
     private lateinit var browserSettings: BrowserSettings
     private lateinit var config: BrowserConfig
+    /** #900 Block trackers: the app's declared hosts. */
+    private val trackers by lazy { BrowserTrackers(config.trackerHosts) }
+    /** The host of the page the WebView is on, kept for shouldInterceptRequest (WebView methods may not be called off the main thread). */
+    @Volatile private var pageHostNow = ""
     /** What the page area shows: the tab switcher, or one tab's address bar over its WebView. */
     private sealed interface Screen {
         data object Grid : Screen
@@ -173,6 +178,10 @@ class BrowserHostFragment : Fragment() {
     /** #868 the host shell's island opens the host's own pages: the Search add-on's page, the settings, none. */
     fun openSearch() = showSearchPage()
     fun openSettings() = showSettings()
+    /** #900 a top tab of the Configs section was picked: that page replaces the one showing. */
+    fun openConfigsPage(pageId: String) = showSettings(pageId)
+    /** #900 the ids of the Configs pages in tab order (the host shell checks its tabs against them). */
+    val configsPageIds: List<String> get() = config.configs.pages.map { it.first }
     fun dismissOverlays() = closeOverlays()
     /** #893 Fav is a destination of the nav island: the saved pages (list, open, remove). */
     fun openFavourites() = showBookmarks()
@@ -839,8 +848,18 @@ class BrowserHostFragment : Fragment() {
                     // A real navigation leaves reader view; the reader's own render does not.
                     if (readerPending) readerPending = false else { readerOn = false; translator.abandon() }
                     domAutofill.dismiss()
+                    pageHostNow = BrowserSitePolicy.hostOf(startedUrl)
                     // Settings, then this host's shields: a host that was shielded must not leave JS off for the next.
                     view?.let { applySettings(it, startedUrl) }
+                }
+
+                /** #900 Block trackers: a subresource to a declared tracker host is answered empty (off the main thread: no WebView calls). */
+                override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest?): android.webkit.WebResourceResponse? {
+                    val r = request ?: return null
+                    val page = pageHostNow
+                    if (page.isNotEmpty() && trackers.shouldBlock(r.url.host.orEmpty().lowercase(), page, r.isForMainFrame) && trackersBlocked(page))
+                        return android.webkit.WebResourceResponse("text/plain", "utf-8", java.io.ByteArrayInputStream(ByteArray(0)))
+                    return null
                 }
 
                 /** #887 inside a saved copy, a link to a page the copy holds opens the saved page, not the network. */
@@ -1154,7 +1173,9 @@ class BrowserHostFragment : Fragment() {
         val s = wv.settings
         browserSettings.bool("javascript")?.let { s.javaScriptEnabled = it }
         browserSettings.bool("load_images")?.let { s.loadsImagesAutomatically = it }
-        browserSettings.int("text_zoom")?.let { s.textZoom = it }
+        // #900 this site's own zoom (page menu > Zoom) beats the global text size.
+        val siteHost = BrowserSitePolicy.hostOf(url)
+        (siteHost.takeIf { it.isNotEmpty() }?.let { sitePerms.zoom(it) } ?: browserSettings.int("text_zoom"))?.let { s.textZoom = it }
         // #893 third-party cookies are ON unless the user blocks them (WebView's own default is off, which breaks sign-in).
         cookiesOf(wv).setAcceptThirdPartyCookies(wv, browserSettings.bool("block_third_party_cookies") != true)
         applyViewMode(wv)
@@ -1169,6 +1190,12 @@ class BrowserHostFragment : Fragment() {
         if (host.isEmpty()) return
         if (shieldDenied(host, "javascript")) wv.settings.javaScriptEnabled = false
         if (shieldDenied(host, "images")) wv.settings.loadsImagesAutomatically = false
+    }
+
+    /** #900 are trackers blocked on [host]? Its rule, else the global setting's default. Safe off the main thread. */
+    private fun trackersBlocked(host: String): Boolean {
+        val dflt = if (browserSettings.bool("block_trackers") == false) BrowserSitePolicy.ALLOW else BrowserSitePolicy.DENY
+        return BrowserSitePolicy.resolve(sitePerms.rules(), host, "trackers", dflt) == BrowserSitePolicy.DENY
     }
 
     private fun shieldDenied(host: String, perm: String): Boolean =
@@ -1215,7 +1242,10 @@ class BrowserHostFragment : Fragment() {
             BrowserSetting(it.id, "enum", it.default, BrowserSitePolicy.VALUES, label = it.label, section = host)
         })
         overlay { close ->
-            BrowserSettingsScreen(cat, value = { k -> config.sitePerms.first { it.id == k }.let { sitePerms.resolve(host, it) } },
+            BrowserSettingsScreen(cat, value = { k ->
+                // #900 trackers: the global setting moves the default of a host with no rule.
+                if (k == "trackers") (if (trackersBlocked(host)) BrowserSitePolicy.DENY else BrowserSitePolicy.ALLOW)
+                else config.sitePerms.first { it.id == k }.let { sitePerms.resolve(host, it) } },
                 onSet = { k, v -> sitePerms.set(host, k, v.toString()); webView?.let { applySettings(it) } },
                 extra = emptyList(), onExtra = {}, onClose = { close(); webView?.reload() })
         }
@@ -1733,6 +1763,7 @@ class BrowserHostFragment : Fragment() {
             "profile_present" to (runCatching { !BrowserProfileStore(requireContext()).load().isEmpty }.getOrDefault(false)),
             "shield_js" to (page && shieldDenied(BrowserSitePolicy.hostOf(wv!!.url), "javascript")),
             "shield_images" to (page && shieldDenied(BrowserSitePolicy.hostOf(wv!!.url), "images")),
+            "shield_trackers" to (page && trackersBlocked(BrowserSitePolicy.hostOf(wv!!.url))),
             "text_tools" to BrowserPageActions.textTools(requireContext()).isServingAppInstalled(),
             "can_be_default" to BrowserPageActions.canRequestDefault(requireContext()),
         )
@@ -1774,19 +1805,58 @@ class BrowserHostFragment : Fragment() {
         }
     }
 
-    private fun showSettings() {
-        val rows = config.menu.grouped(facts()).firstOrNull { it.first.id == SETTINGS_SECTION }
-            ?.second.orEmpty().filter { it.item.id != "settings" }
-        val inSection = rows.filter { it.item.settingsSection != null }.groupBy({ it.item.settingsSection!! }, { it.sheet() })
-        val extra = rows.filter { it.item.settingsSection == null }.map { it.sheet() }
-        overlay { close ->
-            BrowserSettingsScreen(
-                config.settings, value = { browserSettings.value(it) },
-                onSet = { k, v -> browserSettings.put(k, v) },
-                extra = extra, onExtra = { id -> close(); runAction(id) }, onClose = close,
-                sections = config.settingsSections, extraIn = inSection,
+    /** The Configs overlay showing now, so a top-tab switch replaces it instead of stacking a second page. */
+    private var configsEntry: OverlayEntry? = null
+
+    /**
+     * #900 Configs is a section of top tabs (libs:bottomnav PageTabs, drawn by the host shell): [pageId] is the
+     * tab picked (the first one when null). An app that declares no pages gets the one long settings list.
+     */
+    private fun showSettings(pageId: String? = null) {
+        val pages = config.configs
+        val page = pageId?.takeIf { id -> pages.pages.any { it.first == id } } ?: pages.first()
+        configsEntry?.let { overlays.remove(it) }
+        if (page == null) {
+            configsEntry = overlay { close ->
+                BrowserSettingsScreen(
+                    config.settings, value = { browserSettings.value(it) },
+                    onSet = { k, v -> browserSettings.put(k, v) },
+                    extra = emptyList(), onExtra = {}, onClose = close, sections = config.settingsSections,
+                )
+            }
+            return
+        }
+        configsEntry = overlay { close ->
+            BrowserConfigsPageScreen(
+                pageId = page, title = pages.title(page), catalogue = config.settings,
+                value = { browserSettings.value(it) }, onSet = { k, v -> browserSettings.put(k, v) },
+                rows = pages.resolve(page, allFacts(), config.menu.whys),
+                onRow = { id -> close(); runAction(id) },
+                native = { ConfigsNative(pages.nativeFor(page)) },
             )
         }
+    }
+
+    /** The native blocks of a Configs page, by the ids build.json::ui.browser.configs.native names. */
+    @Composable
+    private fun ColumnScope.ConfigsNative(ids: List<String>) {
+        ids.forEach { id ->
+            when (id) {
+                "about" -> BrowserAboutBlock(aboutLines())
+            }
+        }
+    }
+
+    private fun aboutLines(): List<Pair<String, String>> {
+        val ctx = requireContext()
+        val pi = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0) }.getOrNull()
+        val wv = runCatching { WebView.getCurrentWebViewPackage() }.getOrNull()
+        return listOf(
+            "App" to ctx.packageName,
+            "Version" to (pi?.versionName ?: "unknown"),
+            "WebView" to (wv?.let { "${it.packageName} ${it.versionName}" } ?: "unknown"),
+            "Android" to "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})",
+        )
     }
 
     private fun showFindBar() {
@@ -1814,13 +1884,27 @@ class BrowserHostFragment : Fragment() {
         }
     }
 
-    private fun showZoom() {
+    private fun showSiteZoom(host: String) {
+        overlay(bottom = true) { close ->
+            var cur by remember { mutableStateOf(sitePerms.zoom(host)) }
+            BrowserSiteZoomPanel(host, cur, browserSettings.int("text_zoom") ?: 100,
+                onSet = { p -> sitePerms.setZoom(host, p); cur = p; webView?.let { applySettings(it) } }, onClose = close)
+        }
+    }
+
+    private fun showSiteAutocomplete(host: String) {
+        toast("Autocomplete for $host")
+    }
+
+    /** #900 Configs > Site settings: every host that has a rule of its own; tap one to change its permissions. */
+    private fun showSites() {
+        val hosts = BrowserSitePolicy.hostsWithRules(sitePerms.rules())
+        val rows = hosts.map { (h, rules) -> ListRow(h, h, rules.entries.sortedBy { it.key }.joinToString(", ") { "${it.key} ${it.value}" }) }
         overlay { close ->
-            BrowserSettingsScreen(
-                BrowserSettingsCatalogue(config.settings.settings.filter { it.key == "text_zoom" }),
-                value = { browserSettings.value(it) }, onSet = { k, v -> browserSettings.put(k, v) },
-                extra = emptyList(), onExtra = {}, onClose = close,
-            )
+            BrowserListScreen("Sites with custom settings", rows, "No site has settings of its own yet: page menu > This site.",
+                onOpen = { r -> close(); showSiteSettings(r.id) },
+                onRemove = { r -> sitePerms.forget(r.id); close(); showSites() },
+                onClose = close)
         }
     }
 
@@ -1955,11 +2039,39 @@ class BrowserHostFragment : Fragment() {
                 }
             }
             "zoom" -> {
+                // #900 zoom is for THIS site (the global text size is Configs > Appearance).
+                val host = BrowserSitePolicy.hostOf(url).ifEmpty { return needPage() }
                 val v = args["value"]
-                if (v == null) { showZoom(); done(ok()) }
-                else done(browserSettings.set("text_zoom", v)?.let { ok().put("ok", false).put("error", it) }
-                    ?: ok().put("text_zoom", browserSettings.int("text_zoom")))
+                when {
+                    v == null -> { showSiteZoom(host); done(ok().put("host", host)) }
+                    v == "reset" -> { sitePerms.setZoom(host, null); wv?.let { applySettings(it) }; done(ok().put("host", host).put("zoom", JSONObject.NULL)) }
+                    v.toIntOrNull() == null -> done(ok().put("ok", false).put("error", "value= is a percent ${BrowserSitePolicy.ZOOM_MIN}..${BrowserSitePolicy.ZOOM_MAX}, or reset"))
+                    else -> { sitePerms.setZoom(host, v.toInt()); wv?.let { applySettings(it) }; done(ok().put("host", host).put("zoom", sitePerms.zoom(host))) }
+                }
             }
+            "view_source" -> {
+                wv ?: return needPage()
+                BrowserPageActions.run(wv, "(function(){return JSON.stringify({html:document.documentElement.outerHTML.slice(0,60000)});})()") { r ->
+                    val src = r?.optString("html").orEmpty().ifEmpty { "(nothing to show)" }
+                    overlay { close ->
+                        BrowserTextPanel("Source of ${BrowserSitePolicy.hostOf(url)} (the page as it is now)", src,
+                            listOf(SheetRow("copy", "Copy")), onPick = { copyText("source", src, "Source copied") }, onClose = close)
+                    }
+                    done(ok().put("length", src.length))
+                }
+            }
+            "shield_trackers" -> {
+                val host = BrowserSitePolicy.hostOf(url).ifEmpty { return needPage() }
+                val next = if (trackersBlocked(host)) BrowserSitePolicy.ALLOW else BrowserSitePolicy.DENY
+                sitePerms.set(host, "trackers", next)
+                wv?.reload()
+                done(ok().put("trackers", next))
+            }
+            "site_autocomplete" -> {
+                val host = BrowserSitePolicy.hostOf(url).ifEmpty { return needPage() }
+                showSiteAutocomplete(host); done(ok().put("host", host))
+            }
+            "sites_manage" -> { showSites(); done(ok()) }
             "translate" -> { wv ?: return needPage(); done(toggleTranslate()) }
             "summarize_topics" -> { wv ?: return needPage(); showTopics(wv); done(ok().put("started", true)) }
             "save_page" -> { wv ?: return needPage(); startSave(wv, false, done) }

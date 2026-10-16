@@ -158,7 +158,7 @@
           "type": "string",
           "default": "",
           "label": "Homepage",
-          "section": "search",
+          "section": "general",
           "class": "config",
           "doc": "What an empty New tab opens. Empty = nothing (the dialog just closes)."
         },
@@ -196,7 +196,7 @@
           "type": "bool",
           "default": true,
           "label": "JavaScript",
-          "section": "privacy",
+          "section": "site",
           "class": "config",
           "doc": "Run page scripts. Off breaks most sites; per-site shields come later."
         },
@@ -205,7 +205,7 @@
           "type": "bool",
           "default": true,
           "label": "Load images",
-          "section": "privacy",
+          "section": "site",
           "class": "config",
           "doc": "Off saves data on metered networks."
         },
@@ -223,7 +223,7 @@
           "type": "string",
           "default": "",
           "label": "Download folder",
-          "section": "data",
+          "section": "downloads",
           "class": "device",
           "doc": "Sub-folder of the phone's Downloads that downloads land in. Empty = Downloads itself. Device-class: a path on this phone."
         },
@@ -241,7 +241,7 @@
           "type": "bool",
           "default": true,
           "label": "Autofill",
-          "section": "privacy",
+          "section": "autocomplete",
           "class": "config",
           "doc": "Pages expose their fields to Android's Autofill Framework (Cloud Vault fills logins and cards there), and Fill from profile is offered."
         },
@@ -250,7 +250,7 @@
           "type": "bool",
           "default": true,
           "label": "Fill contact & address forms",
-          "section": "privacy",
+          "section": "autocomplete",
           "class": "config",
           "doc": "Tier 2 DOM autofill (a0_docs/eng-specs/autofill-3-tier.md): focusing a name, email, phone or address field offers a chip that fills the form from your Cloud Account profiles. Never passwords, codes or cards (Cloud Vault fills those), never a login form's email. Private tabs show a chip that names no profile and fill only on an explicit pick."
         },
@@ -259,7 +259,7 @@
           "type": "bool",
           "default": true,
           "label": "Offer to save new addresses",
-          "section": "privacy",
+          "section": "autocomplete",
           "class": "config",
           "doc": "After you submit an address form with an address Cloud Account does not have yet, ask whether to save it there. Nothing is saved without your tap, and never from a private tab."
         },
@@ -272,7 +272,7 @@
           ],
           "default": "model",
           "label": "Summarize with",
-          "section": "translate",
+          "section": "general",
           "class": "config",
           "doc": "#823 Where Summarize the page runs: model = the fleet's AI model (needs the network and the fleet Account's OpenRouter token; falls back on device when it cannot answer); on_device = on the phone, offline (ML Kit's summarizer where the phone has it, else the page's key sentences)."
         },
@@ -312,7 +312,7 @@
           ],
           "default": "on_device",
           "label": "Translate with",
-          "section": "translate",
+          "section": "general",
           "class": "config",
           "value_labels": {
             "on_device": "On-device ML",
@@ -339,7 +339,7 @@
           ],
           "default": "device",
           "label": "Translate into",
-          "section": "translate",
+          "section": "general",
           "class": "config",
           "value_labels": {
             "device": "Phone language",
@@ -364,7 +364,7 @@
           "min": 0,
           "max": 3,
           "label": "Offline site depth",
-          "section": "data",
+          "section": "downloads",
           "class": "config",
           "doc": "Save site offline follows same-site links this many levels from the page you are on (0 = only that page)."
         },
@@ -375,7 +375,7 @@
           "min": 1,
           "max": 200,
           "label": "Offline site: max pages",
-          "section": "data",
+          "section": "downloads",
           "class": "config",
           "doc": "Save site offline stops after this many pages."
         },
@@ -386,9 +386,72 @@
           "min": 5,
           "max": 500,
           "label": "Offline site: max size (MB)",
-          "section": "data",
+          "section": "downloads",
           "class": "config",
           "doc": "Save site offline stops when the copy reaches this size."
+        },
+        {
+          "key": "block_trackers",
+          "type": "bool",
+          "default": true,
+          "label": "Block trackers",
+          "section": "privacy",
+          "class": "config",
+          "doc": "Subresource requests to the declared tracker hosts are answered empty on every site. A site can allow them (page menu > This site > Block trackers here)."
+        },
+        {
+          "key": "site_memory",
+          "type": "bool",
+          "default": true,
+          "label": "Remember values typed on a site",
+          "section": "autocomplete",
+          "class": "config",
+          "doc": "After you submit a form, offer to remember a value you typed that is not generic personal data (a customer number, a member ID) for that site and form only. Never from a private tab, never a password, card, code or search box."
+        },
+        {
+          "key": "offer_save_profile_data",
+          "type": "bool",
+          "default": true,
+          "label": "Offer to add new details to a profile",
+          "section": "autocomplete",
+          "class": "config",
+          "doc": "After you submit a form with a name, address, phone, email, birth date or document that none of your profiles holds, ask which profile to add it to. Nothing is saved without your tap, and never from a private tab."
+        },
+        {
+          "key": "offer_save_password",
+          "type": "bool",
+          "default": true,
+          "label": "Offer to save passwords",
+          "section": "passwords",
+          "class": "config",
+          "doc": "After a sign-in or sign-up form is submitted with a new or changed password, ask whether to save it on this phone (encrypted)."
+        },
+        {
+          "key": "secrets_require_unlock",
+          "type": "bool",
+          "default": true,
+          "label": "Ask for fingerprint or screen lock",
+          "section": "passwords",
+          "class": "device",
+          "doc": "Before a saved password or card is revealed or filled, ask for the fingerprint, face or screen lock. Off means anyone holding the unlocked phone can fill them."
+        },
+        {
+          "key": "offer_save_card",
+          "type": "bool",
+          "default": true,
+          "label": "Offer to save cards",
+          "section": "payment",
+          "class": "config",
+          "doc": "After a checkout form with a card is submitted, ask whether to save the card on this phone (encrypted)."
+        },
+        {
+          "key": "autofill_use_vault",
+          "type": "bool",
+          "default": false,
+          "label": "Use Cloud Vault for passwords & cards",
+          "section": "sync",
+          "class": "config",
+          "doc": "The browser fills from its own store first, then asks Cloud Vault (through Android's autofill); what Cloud Vault fills wins over the local copy, and a new password or card is also handed to Cloud Vault's save. Off = local only. Cloud Vault not installed or locked = local only, with the reason shown."
         }
       ],
       "_doc_favourites": "#893 THE FAVOURITES SEED (Fav = the bookmarks, one store). Not typed here: app/build.gradle EXPANDS `sources` at build time into `items` (title, url, group) from the fleet's own declaration, aa_cloud-superapp/data/services_public.json (every public edge endpoint) and services_private.json (the mesh-internal HTTP endpoints, shown and opened as declared, they answer on the mesh), and bakes the result inside UI_BROWSER_CONFIG_B64, so a seed change rebuilds only Cloud Browser. BrowserBookmarks.applySeed adds each entry ONCE (first run, and any entry a later `version` brings), never overwrites an edit and never re-adds what the user deleted. No credentials: only the url as declared. VERSION 2 adds the \"GitHub Pages\" group from data/github_pages.json, DERIVED by tools/gen-github-pages.py from the front project's published list (every site diegonmarcos.github.io serves, one row per project); existing users get those links through the same once-per-entry merge, so their edits and deletions stand. Regenerate with `python3 ac_cloud-browser/tools/gen-github-pages.py --probe`; test/test-browser-github-pages.sh holds the file (parses, no duplicates, https on the Pages host).",
@@ -441,7 +504,7 @@
       },
       "_doc_reader_css": "#802 the stylesheet reader mode renders the extracted article with (assets/browser/reader.js does the extraction).",
       "reader_css": "body{max-width:42em;margin:auto;padding:1em;font:18px/1.6 Georgia,serif;background:#111;color:#eee}img,video{max-width:100%;height:auto}a{color:#a78bfa}pre{white-space:pre-wrap}",
-      "_doc_menu": "#802 THE OVERFLOW MENU, declared. libs:browser BrowserMenu parses it; the Compose sheet draws `sections` in order (section `icons` is the top icon row; the `settings` section's other rows are also listed at the foot of the Settings page); every item's `action` id is one branch of BrowserHostFragment.runAction (test-browser-menu-wired.sh holds that). requires = page facts that must all be true (page, can_go_back, can_go_forward, text_tools, can_be_default); requires_why says why a row is disabled. checked = the fact a toggle shows. api: true = /api/browser/menu/act may run it (non-destructive page actions only).",
+      "_doc_menu": "#802/#900 THE PAGE DROPDOWN (top-right of the browser view), declared. It holds ONLY what acts on the current page or domain: the icon row (back, forward, reload, bookmark, save), Page (find, share, copy URL, open in another app, desktop site, zoom for this site, translate, summarise, reader, view source, print, home screen, save offline, autofill this page), This site (permissions, trackers, JavaScript, images, cookies, site data, this site's autocomplete entries) and Page tools (the enabled add-ons' page rows). Everything global (settings, history, clear browsing data, tabs, add-on management, default browser, vault) lives in Configs: ui.browser.configs.rows and the settings' `section` (= the Configs page). test-browser-page-menu.sh holds that no global row comes back. libs:browser BrowserMenu parses it; the Compose sheet draws `sections` in order (section `icons` is the top icon row); every item's `action` id is one branch of BrowserHostFragment.runAction (test-browser-menu-wired.sh holds that). requires = page facts that must all be true; requires_why says why a row is disabled. checked = the fact a toggle shows. api: true = /api/browser/menu/act may run it (non-destructive page actions only).",
       "menu": {
         "sections": [
           {
@@ -449,28 +512,16 @@
             "label": ""
           },
           {
-            "id": "tabs",
-            "label": "Tabs"
-          },
-          {
             "id": "page",
             "label": "Page"
           },
           {
-            "id": "privacy",
-            "label": "Privacy"
-          },
-          {
-            "id": "library",
-            "label": "Library"
+            "id": "site",
+            "label": "This site"
           },
           {
             "id": "addons",
-            "label": "Add-ons"
-          },
-          {
-            "id": "settings",
-            "label": "Settings"
+            "label": "Page tools"
           }
         ],
         "requires_why": {
@@ -530,39 +581,6 @@
             ]
           },
           {
-            "id": "new_tab",
-            "section": "tabs",
-            "label": "New tab"
-          },
-          {
-            "id": "new_private_tab",
-            "section": "tabs",
-            "label": "New private tab"
-          },
-          {
-            "id": "tab_groups",
-            "section": "tabs",
-            "label": "Tab groups…"
-          },
-          {
-            "id": "pin_tab",
-            "section": "tabs",
-            "label": "Pin tab",
-            "kind": "toggle",
-            "checked": "pinned",
-            "requires": [
-              "page"
-            ]
-          },
-          {
-            "id": "close_tab",
-            "section": "tabs",
-            "label": "Close tab",
-            "requires": [
-              "page"
-            ]
-          },
-          {
             "id": "find",
             "section": "page",
             "label": "Find in page",
@@ -583,6 +601,69 @@
             "id": "copy_url",
             "section": "page",
             "label": "Copy URL",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "open_external",
+            "section": "page",
+            "label": "Open in another app…",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "desktop",
+            "section": "page",
+            "label": "Desktop site",
+            "kind": "toggle",
+            "checked": "desktop_mode",
+            "api": true
+          },
+          {
+            "id": "zoom",
+            "section": "page",
+            "label": "Zoom (this site)…",
+            "requires": [
+              "page"
+            ],
+            "api": true
+          },
+          {
+            "id": "translate",
+            "section": "page",
+            "label": "Translate page",
+            "requires": [
+              "page",
+              "text_tools"
+            ],
+            "kind": "toggle",
+            "checked": "translated"
+          },
+          {
+            "id": "summarize_topics",
+            "section": "page",
+            "label": "Summarise page by topics",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "reader",
+            "section": "page",
+            "label": "Reader mode",
+            "kind": "toggle",
+            "checked": "reader_on",
+            "requires": [
+              "page"
+            ],
+            "api": true
+          },
+          {
+            "id": "view_source",
+            "section": "page",
+            "label": "View source",
             "requires": [
               "page"
             ]
@@ -620,82 +701,35 @@
             ]
           },
           {
-            "id": "desktop",
-            "section": "page",
-            "label": "Desktop site",
-            "kind": "toggle",
-            "checked": "desktop_mode",
-            "api": true
-          },
-          {
-            "id": "reader",
-            "section": "page",
-            "label": "Reader mode",
-            "kind": "toggle",
-            "checked": "reader_on",
-            "requires": [
-              "page"
-            ],
-            "api": true
-          },
-          {
-            "id": "zoom",
-            "section": "page",
-            "label": "Text size…",
-            "api": true
-          },
-          {
-            "id": "translate",
-            "section": "page",
-            "label": "Translate page",
-            "requires": [
-              "page",
-              "text_tools"
-            ],
-            "kind": "toggle",
-            "checked": "translated"
-          },
-          {
-            "id": "summarize_topics",
-            "section": "page",
-            "label": "Summarise page by topics",
-            "requires": [
-              "page"
-            ]
-          },
-          {
             "id": "fill_profile",
             "section": "page",
-            "label": "Fill from profile",
+            "label": "Autofill this page…",
             "requires": [
               "page",
               "profile_present"
             ]
           },
           {
-            "id": "open_external",
-            "section": "page",
-            "label": "Open in another browser…",
-            "requires": [
-              "page"
-            ]
-          },
-          {
             "id": "site_settings",
-            "section": "privacy",
-            "label": "Site settings (this site)",
+            "section": "site",
+            "label": "Permissions: camera, microphone, location…",
             "requires": [
               "page"
             ]
           },
           {
-            "id": "clear_data",
-            "section": "privacy",
-            "label": "Clear browsing data…"
+            "id": "shield_trackers",
+            "section": "site",
+            "label": "Block trackers here",
+            "kind": "toggle",
+            "checked": "shield_trackers",
+            "requires": [
+              "page"
+            ]
           },
           {
             "id": "shield_js",
-            "section": "privacy",
+            "section": "site",
             "label": "Block JavaScript here",
             "kind": "toggle",
             "checked": "shield_js",
@@ -705,7 +739,7 @@
           },
           {
             "id": "shield_images",
-            "section": "privacy",
+            "section": "site",
             "label": "Block images here",
             "kind": "toggle",
             "checked": "shield_images",
@@ -715,7 +749,7 @@
           },
           {
             "id": "clear_site_cookies",
-            "section": "privacy",
+            "section": "site",
             "label": "Clear cookies for this site",
             "requires": [
               "page"
@@ -723,69 +757,114 @@
           },
           {
             "id": "clear_site_data",
-            "section": "privacy",
-            "label": "Clear site data for this site…",
-            "_doc": "This site's cookies and its storage (local/session storage, IndexedDB, service workers, cache storage), each its own box. Never autofill data: that is Cloud Account's (Configs > Data & storage > Autofill data). a0_docs/eng-specs/autofill-3-tier.md 3.1.",
+            "section": "site",
+            "label": "Site data: cookies & storage…",
             "requires": [
               "page"
+            ],
+            "_doc": "This site's cookies and its storage (local/session storage, IndexedDB, service workers, cache storage), each its own box. Never autofill data: that is Configs > Autocomplete. a0_docs/eng-specs/autofill-3-tier.md 3.1."
+          },
+          {
+            "id": "site_autocomplete",
+            "section": "site",
+            "label": "Autocomplete for this site…",
+            "requires": [
+              "page"
+            ]
+          }
+        ]
+      },
+      "_doc_configs": "#900 CONFIGS, declared. Each Configs page (ui.sections[configs].pages = the top tabs = settings_sections) draws the settings whose `section` is that page, then its `rows` (global actions that used to sit in the page menu; same runAction branches), then its `native` blocks (the Autocomplete, Passwords, Cards, Vault and About sections libs:browser draws itself). An add-on menu entry with scope:global and page:<id> joins that page's rows. The page dropdown holds none of these (test-browser-page-menu.sh).",
+      "configs": {
+        "native": {
+          "autocomplete": [
+            "profiles",
+            "sites",
+            "passwords",
+            "cards",
+            "vault"
+          ],
+          "passwords": [
+            "passwords"
+          ],
+          "payment": [
+            "cards"
+          ],
+          "sync": [
+            "vault"
+          ],
+          "about": [
+            "about"
+          ]
+        },
+        "rows": [
+          {
+            "id": "bookmarks",
+            "label": "Bookmarks",
+            "page": "general"
+          },
+          {
+            "id": "default_browser",
+            "label": "Set as default browser",
+            "page": "general",
+            "requires": [
+              "can_be_default"
             ]
           },
           {
             "id": "history",
-            "section": "library",
-            "label": "History"
+            "label": "History",
+            "page": "privacy"
           },
           {
-            "id": "bookmarks",
-            "section": "library",
-            "label": "Bookmarks"
-          },
-          {
-            "id": "downloads",
-            "section": "library",
-            "label": "Downloads"
-          },
-          {
-            "id": "addons_manage",
-            "section": "addons",
-            "label": "Manage add-ons…",
-            "kind": "screen"
-          },
-          {
-            "id": "settings",
-            "section": "settings",
-            "label": "Settings",
-            "kind": "screen"
-          },
-          {
-            "id": "profile",
-            "section": "settings",
-            "label": "Profile (autofill)",
-            "kind": "screen",
-            "settings_section": "privacy"
-          },
-          {
-            "id": "offline_manage",
-            "section": "settings",
-            "label": "Offline copies…",
-            "kind": "screen",
-            "settings_section": "data"
+            "id": "clear_data",
+            "label": "Clear browsing data…",
+            "page": "privacy"
           },
           {
             "id": "storage_manage",
-            "section": "settings",
             "label": "Storage & cookies…",
-            "kind": "screen",
-            "settings_section": "data"
+            "page": "privacy"
           },
           {
-            "id": "default_browser",
-            "section": "settings",
-            "label": "Set as default browser",
-            "requires": [
-              "can_be_default"
-            ],
-            "settings_section": "advanced"
+            "id": "sites_manage",
+            "label": "Sites with custom settings…",
+            "page": "site"
+          },
+          {
+            "id": "profile",
+            "label": "Import a profile (CSV, Firefox, Bitwarden)…",
+            "page": "autocomplete"
+          },
+          {
+            "id": "downloads",
+            "label": "Downloads",
+            "page": "downloads"
+          },
+          {
+            "id": "offline_manage",
+            "label": "Offline copies…",
+            "page": "downloads"
+          },
+          {
+            "id": "new_tab",
+            "label": "New tab",
+            "page": "tabs"
+          },
+          {
+            "id": "new_private_tab",
+            "label": "New private tab",
+            "page": "tabs"
+          },
+          {
+            "id": "tab_groups",
+            "label": "Tab groups…",
+            "page": "tabs"
+          },
+          {
+            "id": "addons_manage",
+            "label": "Manage add-ons…",
+            "page": "advanced"
           }
         ]
       },
@@ -834,7 +913,57 @@
           "id": "images",
           "label": "Images",
           "default": "allow"
+        },
+        {
+          "id": "trackers",
+          "label": "Trackers (deny = blocked)",
+          "default": "deny"
         }
+      ],
+      "_doc_tracker_hosts": "#900 Block trackers here: a subresource request to one of these hosts (or a subdomain) is answered empty while the site's `trackers` permission is deny (the default; setting block_trackers moves the default). Content of THIS app: libs:browser ships no list (BrowserTrackers matches whatever it is handed).",
+      "tracker_hosts": [
+        "adnxs.com",
+        "ads-twitter.com",
+        "adservice.google.com",
+        "adsrvr.org",
+        "amazon-adsystem.com",
+        "amplitude.com",
+        "analytics.tiktok.com",
+        "bat.bing.com",
+        "bugsnag.com",
+        "casalemedia.com",
+        "chartbeat.com",
+        "chartbeat.net",
+        "clarity.ms",
+        "connect.facebook.net",
+        "crazyegg.com",
+        "criteo.com",
+        "criteo.net",
+        "doubleclick.net",
+        "facebook.net",
+        "fullstory.com",
+        "google-analytics.com",
+        "googleadservices.com",
+        "googlesyndication.com",
+        "googletagmanager.com",
+        "googletagservices.com",
+        "hotjar.com",
+        "mc.yandex.ru",
+        "mixpanel.com",
+        "moatads.com",
+        "mouseflow.com",
+        "newrelic.com",
+        "nr-data.net",
+        "openx.net",
+        "optimizely.com",
+        "outbrain.com",
+        "pubmatic.com",
+        "quantserve.com",
+        "rubiconproject.com",
+        "scorecardresearch.com",
+        "segment.com",
+        "segment.io",
+        "taboola.com"
       ],
       "_doc_clear_data": "#802 the boxes of Clear browsing data; each id is one branch of libs:browser BrowserClearData.clear (test-browser-privacy-wired.sh holds that).",
       "clear_data": [
@@ -910,11 +1039,15 @@
           "menu": [
             {
               "id": "search_with",
-              "label": "Search with…"
+              "label": "Search with…",
+              "scope": "global",
+              "page": "search"
             },
             {
               "id": "search_chat",
-              "label": "Search & AI"
+              "label": "Search & AI",
+              "scope": "global",
+              "page": "search"
             }
           ]
         },
@@ -1139,48 +1272,76 @@
             },
             {
               "id": "vault_open",
-              "label": "Open Cloud Vault"
+              "label": "Open Cloud Vault",
+              "scope": "global",
+              "page": "sync"
             },
             {
               "id": "vault_set_service",
-              "label": "Use Cloud Vault for autofill…"
+              "label": "Use Cloud Vault for autofill…",
+              "scope": "global",
+              "page": "sync"
             }
           ]
         }
       ],
-      "_doc_settings_sections": "#886 Configs is organised BY TOPIC: each setting's `section` is one of these ids, drawn in this order under this title (BrowserSettingsLayout); a topic with nothing in it is not drawn. Menu rows of the settings section may carry settings_section to sit at the end of a topic.",
+      "_doc_settings_sections": "#886/#900 Configs is organised BY PAGE: each setting's `section` is one of these ids = one of the top tabs of the Configs section (ui.sections[configs].pages, same ids, same order: test-browser-page-menu.sh holds that). A page with nothing in it is still a tab (its rows or native blocks fill it).",
       "settings_sections": [
+        {
+          "id": "general",
+          "label": "General"
+        },
         {
           "id": "search",
           "label": "Search"
         },
         {
           "id": "privacy",
-          "label": "Privacy & security"
+          "label": "Privacy & Security"
         },
         {
-          "id": "tabs",
-          "label": "Tabs & groups"
+          "id": "site",
+          "label": "Site settings"
         },
         {
-          "id": "translate",
-          "label": "Translate & summary"
+          "id": "autocomplete",
+          "label": "Autocomplete"
+        },
+        {
+          "id": "passwords",
+          "label": "Passwords"
+        },
+        {
+          "id": "payment",
+          "label": "Payment"
+        },
+        {
+          "id": "downloads",
+          "label": "Downloads"
         },
         {
           "id": "appearance",
           "label": "Appearance"
         },
         {
-          "id": "data",
-          "label": "Data & storage"
+          "id": "tabs",
+          "label": "Tabs"
+        },
+        {
+          "id": "sync",
+          "label": "Sync & Vault"
         },
         {
           "id": "advanced",
           "label": "Advanced"
+        },
+        {
+          "id": "about",
+          "label": "About"
         }
       ]
     },
-    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. browser = BrowserHostFragment's page (its address bar, tab strip and overlays are the lib's own UI, so the section has no pages), tabs = the tab switcher (BrowserHostFragment.openTabs: the grid, where a tab dropped on another makes a group; #886 moved it from a button into the island), favourites = the bookmarks as a list or icon grid over it (BrowserHostFragment.openFavourites, #893; island order Fav, Tabs, Browser, Search, Configs), search = the Search add-on's page over it (BrowserHostFragment.showSearchPage), configs = the browser settings over it (showSettings). MainActivity feeds the island from NavDecl and follows the host's overlays so the pill goes back to Browser when one closes.",
+    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. browser = BrowserHostFragment's page (its address bar, tab strip and overlays are the lib's own UI, so the section has no pages), tabs = the tab switcher (BrowserHostFragment.openTabs: the grid, where a tab dropped on another makes a group; #886 moved it from a button into the island), favourites = the bookmarks as a list or icon grid over it (BrowserHostFragment.openFavourites, #893; island order Fav, Tabs, Browser, Search, Configs), search = the Search add-on's page over it (BrowserHostFragment.showSearchPage), configs = the browser settings over it (showSettings), one top tab (PageTabs, scrolling sideways) per Configs page: ui.sections[configs].pages = settings_sections (#900). MainActivity feeds the island from NavDecl and follows the host's overlays so the pill goes back to Browser when one closes.",
     "bottom_nav": [
       "favourites",
       "tabs",
@@ -1217,7 +1378,60 @@
         "id": "configs",
         "label": "Configs",
         "icon": "configs",
-        "pages": []
+        "pages": [
+          {
+            "id": "general",
+            "label": "General"
+          },
+          {
+            "id": "search",
+            "label": "Search"
+          },
+          {
+            "id": "privacy",
+            "label": "Privacy & Security"
+          },
+          {
+            "id": "site",
+            "label": "Site settings"
+          },
+          {
+            "id": "autocomplete",
+            "label": "Autocomplete"
+          },
+          {
+            "id": "passwords",
+            "label": "Passwords"
+          },
+          {
+            "id": "payment",
+            "label": "Payment"
+          },
+          {
+            "id": "downloads",
+            "label": "Downloads"
+          },
+          {
+            "id": "appearance",
+            "label": "Appearance"
+          },
+          {
+            "id": "tabs",
+            "label": "Tabs"
+          },
+          {
+            "id": "sync",
+            "label": "Sync & Vault"
+          },
+          {
+            "id": "advanced",
+            "label": "Advanced"
+          },
+          {
+            "id": "about",
+            "label": "About"
+          }
+        ]
       }
     ],
     "default_section": "browser",

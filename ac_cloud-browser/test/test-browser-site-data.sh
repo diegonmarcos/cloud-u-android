@@ -35,14 +35,15 @@ def check(root, ok):
     mi = {i["id"]: i for i in b["menu"]["items"]}
     st = {s["key"]: s for s in b["settings"]}
     # D1
-    for i, sec in (("save_page", "page"), ("save_site", "page"), ("clear_site_cookies", "privacy")):
+    for i, sec in (("save_page", "page"), ("save_site", "page"), ("clear_site_cookies", "site")):
         ok(i in mi and mi[i]["section"] == sec and "page" in mi[i].get("requires", []), "D1 `%s` is a page-menu row (per-site)" % i)
         ok('"%s" ->' % i in frag, "D1 `%s` has its runAction branch" % i)
-    for i in ("offline_manage", "storage_manage"):
-        ok(i in mi and mi[i].get("settings_section") == "data", "D1 `%s` is a row of Configs ▸ Data & storage" % i)
+    crow = {r["id"]: r for r in b["configs"]["rows"]}
+    for i, pg in (("offline_manage", "downloads"), ("storage_manage", "privacy")):
+        ok(i in crow and crow[i].get("page") == pg and i not in mi, "D1 `%s` is a row of Configs > %s, not of the page menu" % (i, pg))
         ok('"%s" ->' % i in frag, "D1 `%s` has its runAction branch" % i)
     for k in ("offline_depth", "offline_max_pages", "offline_max_mb"):
-        ok(k in st and st[k]["section"] == "data" and st[k]["type"] == "int", "D2 limit `%s` is a Data & storage setting" % k)
+        ok(k in st and st[k]["section"] == "downloads" and st[k]["type"] == "int", "D2 limit `%s` is a Downloads setting" % k)
     # D2
     ok('CrawlLimits.of(browserSettings.int("offline_depth"), browserSettings.int("offline_max_pages"), browserSettings.int("offline_max_mb"))' in frag, "D2 a site save reads its limits from the settings")
     ok("SiteScope.sameOrigin(startUrl, finalUrl)" in off, "D2 a redirect off the site is not saved")

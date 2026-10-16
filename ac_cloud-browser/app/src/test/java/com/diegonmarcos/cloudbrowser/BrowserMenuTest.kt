@@ -20,8 +20,12 @@ class BrowserMenuTest {
     fun `every declared row survives the parse, in a declared section, in order`() {
         // The declared rows plus each add-on's rows (#802 I7: they join the Add-ons section).
         val addons = browser.optJSONArray("addons")
-        val addonRows = (0 until (addons?.length() ?: 0)).sumOf { addons!!.getJSONObject(it).optJSONArray("menu")?.length() ?: 0 }
-        assertTrue("the add-ons contribute rows", addonRows > 0)
+        // #900 only an add-on's PAGE rows join the dropdown; its global rows (scope global) sit on a Configs page.
+        val addonRows = (0 until (addons?.length() ?: 0)).sumOf { i ->
+            val m = addons!!.getJSONObject(i).optJSONArray("menu")
+            (0 until (m?.length() ?: 0)).count { m!!.getJSONObject(it).optString("scope") != "global" }
+        }
+        assertTrue("the add-ons contribute page rows", addonRows > 0)
         assertEquals(browser.getJSONObject("menu").getJSONArray("items").length() + addonRows, menu.items.size)
         val ids = menu.sections.map { it.id }
         val declared = browser.getJSONObject("menu").getJSONArray("sections").let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("id") } }
@@ -35,9 +39,9 @@ class BrowserMenuTest {
         val noPage = menu.rows(emptyMap()).associateBy { it.item.id }
         assertFalse(noPage.getValue("find").enabled)
         assertEquals("open a page first", noPage.getValue("find").why)
-        // A row with no requirement is always usable.
-        assertTrue(noPage.getValue("new_tab").enabled)
-        assertNull(noPage.getValue("new_tab").why)
+        // A row with no requirement is always usable (#900: the dropdown has few; desktop site is one).
+        assertTrue(noPage.getValue("desktop").enabled)
+        assertNull(noPage.getValue("desktop").why)
     }
 
     @Test
@@ -57,7 +61,7 @@ class BrowserMenuTest {
         assertEquals(false, rows.getValue("reader").checked)
         assertNull(rows.getValue("share").checked)
         assertTrue(menu.item("find")!!.api)
-        assertFalse(menu.item("close_tab")!!.api)   // destructive: never over loopback
+        assertFalse(menu.item("clear_site_data")!!.api)   // destructive: never over loopback
     }
 
     @Test

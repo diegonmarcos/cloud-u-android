@@ -156,32 +156,7 @@ fun BrowserSettingsScreen(
             KitSectionHeader(title, "", Modifier.padding(top = 8.dp).testTag("browser:settings:section:$id"))
             catalogue.settings.filter { it.section == id }.forEach { s ->
                 val v = tick.let { value(s.key) }   // reading tick re-reads the store after a write
-                val set = { x: Any -> onSet(s.key, x); tick += 1 }
-                when (s.type) {
-                    "bool" -> KitSwitchRow(s.label, s.doc, v == true, { set(it) }, Modifier.testTag("browser:setting:${s.key}"))
-                    "enum" -> {
-                        KitSettingsRow(s.label, s.doc.take(90), Modifier.testTag("browser:setting:${s.key}"))
-                        FlowRow(Modifier.padding(start = 4.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            s.values.forEach { opt ->
-                                FilterChip(selected = v == opt, onClick = { set(opt) },
-                                    label = { Text(BrowserSettingsLayout.optionLabel(s, opt)) },
-                                    modifier = Modifier.testTag("browser:setting:${s.key}:$opt"))
-                            }
-                        }
-                    }
-                    "int" -> {
-                        var f by remember(v) { mutableFloatStateOf(((v as? Int) ?: s.min ?: 0).toFloat()) }
-                        KitSettingsRow(s.label, "${f.toInt()}", Modifier.testTag("browser:setting:${s.key}"))
-                        Slider(f, { f = it }, valueRange = (s.min ?: 0).toFloat()..(s.max ?: 100).toFloat(),
-                            onValueChangeFinished = { set(f.toInt()) })
-                    }
-                    "string" -> {
-                        var t by remember(v) { mutableStateOf(v?.toString().orEmpty()) }
-                        OutlinedTextField(t, { t = it }, Modifier.fillMaxWidth().testTag("browser:setting:${s.key}"),
-                            singleLine = true, label = { Text(s.label) }, supportingText = { Text(s.doc) },
-                            trailingIcon = { TextButton({ set(t) }) { Text("Save") } })
-                    }
-                }
+                BrowserSettingRow(s, v) { x -> onSet(s.key, x); tick += 1 }
             }
             extraIn[id].orEmpty().forEach { r ->
                 KitSettingsRow(r.label, if (r.enabled) "" else r.why.orEmpty(), Modifier.testTag("browser:menu:${r.id}"),
@@ -194,6 +169,40 @@ fun BrowserSettingsScreen(
                 KitSettingsRow(r.label, if (r.enabled) "" else r.why.orEmpty(), Modifier.testTag("browser:menu:${r.id}"),
                     onClick = if (r.enabled) ({ onExtra(r.id) }) else null)
             }
+        }
+    }
+}
+
+/**
+ * One catalogue setting as its dense row: a switch per bool, chips per enum, a slider per int, a field per
+ * string. Shared by the settings screen (site permissions, zoom) and every Configs page (#900).
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun BrowserSettingRow(s: BrowserSetting, v: Any?, set: (Any) -> Unit) {
+    when (s.type) {
+        "bool" -> KitSwitchRow(s.label, s.doc, v == true, { set(it) }, Modifier.testTag("browser:setting:${s.key}"))
+        "enum" -> {
+            KitSettingsRow(s.label, s.doc.take(90), Modifier.testTag("browser:setting:${s.key}"))
+            FlowRow(Modifier.padding(start = 4.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                s.values.forEach { opt ->
+                    FilterChip(selected = v == opt, onClick = { set(opt) },
+                        label = { Text(BrowserSettingsLayout.optionLabel(s, opt)) },
+                        modifier = Modifier.testTag("browser:setting:${s.key}:$opt"))
+                }
+            }
+        }
+        "int" -> {
+            var f by remember(v) { mutableFloatStateOf(((v as? Int) ?: s.min ?: 0).toFloat()) }
+            KitSettingsRow(s.label, "${f.toInt()}", Modifier.testTag("browser:setting:${s.key}"))
+            Slider(f, { f = it }, valueRange = (s.min ?: 0).toFloat()..(s.max ?: 100).toFloat(),
+                onValueChangeFinished = { set(f.toInt()) })
+        }
+        "string" -> {
+            var t by remember(v) { mutableStateOf(v?.toString().orEmpty()) }
+            OutlinedTextField(t, { t = it }, Modifier.fillMaxWidth().testTag("browser:setting:${s.key}"),
+                singleLine = true, label = { Text(s.label) }, supportingText = { Text(s.doc) },
+                trailingIcon = { TextButton({ set(t) }) { Text("Save") } })
         }
     }
 }
