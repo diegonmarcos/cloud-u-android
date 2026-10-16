@@ -347,11 +347,12 @@ class AcAutocomplete(
         if (proposals.isEmpty()) return
         val vs = vaultState()
         save.value = AcSaveState(AcSite.registrable(host), proposals, h.store.profiles(),
-            if (vs.usable) "Cloud Vault will also be asked to save it" else if (flag("autofill_use_vault") == true) "Cloud Vault: ${vs.reason}" else null)
+            if (vs.usable) "Cloud Vault is available: its own save screen opens for you to confirm" else if (flag("autofill_use_vault") == true) "Cloud Vault: ${vs.reason}" else null,
+            vaultUsable = vs.usable)
     }
 
-    /** The save prompt answered: [picked] indexes into the proposals; [profileId] null = a new profile. [never] = never offer a password here. */
-    fun confirmSave(picked: Set<Int>, profileId: String?, never: Boolean) {
+    /** The save prompt answered: [picked] indexes into the proposals; [profileId] null = a new profile; [never] = never offer a password here; [alsoVault] = also open Cloud Vault's own save for a password or card. */
+    fun confirmSave(picked: Set<Int>, profileId: String?, never: Boolean, alsoVault: Boolean = false) {
         val st = save.value ?: return
         save.value = null
         val h = holder ?: return
@@ -379,7 +380,7 @@ class AcAutocomplete(
             }
         }
         // "also sends it to the vault": Android's own save flow, which opens Cloud Vault's add-item screen for the user to confirm.
-        if ((anyPassword || st.proposals.any { it is AcProposal.CardSave && picked.contains(st.proposals.indexOf(it)) }) && vaultState().usable) page?.let { VaultAutofill.commitSave(it) }
+        if (alsoVault && (anyPassword || st.proposals.any { it is AcProposal.CardSave && picked.contains(st.proposals.indexOf(it)) }) && vaultState().usable) page?.let { VaultAutofill.commitSave(it) }
     }
 
     fun dismissSave() { save.value = null }

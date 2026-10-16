@@ -1739,7 +1739,7 @@ class BrowserHostFragment : Fragment() {
                 BrowserSuggestOverlay(suggestState, onPick = { s -> pickSuggestion(s) }, onDismiss = { dismissSuggestions() })
                 Column(Modifier.align(Alignment.BottomStart)) {
                     ac.chooser.value?.let { AcChooserSheet(it, onFill = { c -> ac.chooserFill(c) }, onDismiss = { ac.chooserDismiss() }) }
-                    ac.save.value?.let { AcSaveSheet(it, onSave = { picked, pid, never -> ac.confirmSave(picked, pid, never) }, onDismiss = { ac.dismissSave() }) }
+                    ac.save.value?.let { AcSaveSheet(it, onSave = { picked, pid, never, vault -> ac.confirmSave(picked, pid, never, vault) }, onDismiss = { ac.dismissSave() }) }
                     AcFillBar(ac.bar.value, onPick = { ac.pick(it) }, onDismiss = { ac.dismiss() })
                     BrowserAutofillChip(domAutofill.chip.value, domAutofill.save.value,
                         onFill = { t -> domAutofill.fill(t) }, onSnippet = { sn -> domAutofill.insert(sn) }, onDismiss = { domAutofill.dismiss() }, onSave = { yes -> domAutofill.confirmSave(yes) })
@@ -2330,7 +2330,6 @@ class BrowserHostFragment : Fragment() {
         private const val TAG = "Browser"
         /** The declared menu section drawn as the icon row, and the one the Settings page lists. */
         private const val ICON_SECTION = "icons"
-        private const val SETTINGS_SECTION = "settings"
         private const val ARG_OPEN_URL = "open_url"
         private const val ARG_CONFIG_B64 = "config_b64"
         private const val REMOTE_SUGGEST_DELAY_MS = 250L

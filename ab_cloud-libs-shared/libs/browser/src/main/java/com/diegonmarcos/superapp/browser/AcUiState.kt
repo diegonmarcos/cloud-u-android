@@ -10,4 +10,4 @@ data class AcBar(val chips: List<AcChip>, val note: String? = null)
 class AcChooserState(val title: String, val profiles: List<AcProfile>, val plan: AcChoicePlan, val fields: List<AcField>, val initial: AcChoice)
 
 /** The save prompt after a submit: what could be remembered, and the profiles it could go into. */
-class AcSaveState(val site: String, val proposals: List<AcProposal>, val profiles: List<AcProfile>, val vaultNote: String?)
+class AcSaveState(val site: String, val proposals: List<AcProposal>, val profiles: List<AcProfile>, val vaultNote: String?, val vaultUsable: Boolean = false)

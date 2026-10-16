@@ -16,6 +16,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
@@ -90,7 +91,8 @@ class BrowserConfigsTabsUiTest {
     @Test
     fun `the tabs are drawn left to right in that order, and the strip scrolls sideways`() {
         showTabs()
-        val lefts = order.map { id -> compose.onNodeWithTag(PageTabsTags.tab(id), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.left }
+        // positionInRoot, not boundsInRoot: a tab scrolled out of the strip has a clipped (empty) visible rect but a real position
+        val lefts = order.map { id -> compose.onNodeWithTag(PageTabsTags.tab(id), useUnmergedTree = true).fetchSemanticsNode().positionInRoot.x }
         assertEquals("tabs run left to right in the declared order", lefts.sorted(), lefts)
         assertEquals("every tab is distinct", order.size, lefts.toSet().size)
         compose.onNodeWithTag(PageTabsTags.STRIP, useUnmergedTree = true)
@@ -100,7 +102,7 @@ class BrowserConfigsTabsUiTest {
     @Test
     fun `a tap selects a tab and reports the page`() {
         showTabs()
-        compose.onNodeWithTag(PageTabsTags.tab("autocomplete"), useUnmergedTree = true).performClick()
+        compose.onNodeWithTag(PageTabsTags.tab("autocomplete"), useUnmergedTree = true).performScrollTo().performClick()
         compose.waitForIdle()
         assertEquals(listOf("autocomplete"), taps)
         compose.onNodeWithTag(PageTabsTags.tab("autocomplete"), useUnmergedTree = true).assertIsSelected()
@@ -140,7 +142,8 @@ class BrowserConfigsTabsUiTest {
             showPage(p, bareMode = true)
             cfg.settings.settings.forEach { s -> if (on("browser:setting:${s.key}")) seen[s.key] = (seen[s.key] ?: 0) + 1 }
         }
-        cfg.settings.settings.forEach { assertEquals("${it.key} is drawn on exactly one page", 1, seen[it.key]) }
+        // a `set` setting (the enabled add-ons) is drawn by its own screen (Advanced > Manage add-ons), not as a row
+        cfg.settings.settings.filter { it.type != "set" }.forEach { assertEquals("${it.key} is drawn on exactly one page", 1, seen[it.key]) }
     }
 
     @Test

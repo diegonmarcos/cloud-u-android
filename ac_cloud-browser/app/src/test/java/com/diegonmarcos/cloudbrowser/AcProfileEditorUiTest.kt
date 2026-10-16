@@ -27,6 +27,10 @@ import com.diegonmarcos.superapp.browser.AcName
 import com.diegonmarcos.superapp.browser.AcProfile
 import com.diegonmarcos.superapp.browser.AcProfileEditor
 import com.diegonmarcos.superapp.browser.AcProfilesSection
+import com.diegonmarcos.superapp.browser.AcMemoryEntry
+import com.diegonmarcos.superapp.browser.AcProposal
+import com.diegonmarcos.superapp.browser.AcSaveSheet
+import com.diegonmarcos.superapp.browser.AcSaveState
 import com.diegonmarcos.superapp.browser.AcTokens
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitPalette
@@ -196,5 +200,40 @@ class AcProfileEditorUiTest {
         compose.onNodeWithTag("browser:ac:chip:login:2", useUnmergedTree = true).performClick()
         assertEquals("login:2", picked); assertNotNull(picked)
         assertTrue(on("browser:ac:note"))
+    }
+
+    private val proposals = listOf(
+        AcProposal.Password("example.com", "ana", "pw", null, false),
+        AcProposal.ProfileRecord(AcTokens.G_NAME, name = AcName(given = "Anita")),
+        AcProposal.SiteValue(AcMemoryEntry(origin = "example.com", formSig = "f", fieldKey = "kundennr", value = "K-1")),
+    )
+    private val profiles = listOf(AcProfile(id = "es", label = "Test - ES", isDefault = true), AcProfile(id = "br", label = "Test - BR"))
+
+    @Test
+    fun `the save prompt offers each find with a box, the profile to add details to, and the vault only when it can be asked`() {
+        var args: List<Any?>? = null
+        compose.setContent { CloudKitTheme(palette) {
+            AcSaveSheet(AcSaveState("example.com", proposals, profiles, "Cloud Vault is available", vaultUsable = true),
+                onSave = { picked, pid, never, vault -> args = listOf(picked, pid, never, vault) }, onDismiss = {})
+        } }
+        compose.waitForIdle()
+        (0..2).forEach { assertTrue("item $it", on("browser:ac:save:item:$it")) }
+        assertTrue(on("browser:ac:save:profile:es") && on("browser:ac:save:profile:br") && on("browser:ac:save:profile:new"))
+        assertTrue("a password offers 'never here'", on("browser:ac:save:never"))
+        assertTrue("the vault is a choice because a password is being saved and the vault can be asked", on("browser:ac:save:vaultalso"))
+        tap("browser:ac:save:item:2")      // untick the per-site value
+        tap("browser:ac:save:profile:br")
+        tap("browser:ac:save:vaultalso")   // on by default, tick it off
+        tap("browser:ac:save:yes")
+        assertEquals(listOf<Any?>(setOf(0, 1), "br", false, false), args)
+    }
+
+    @Test
+    fun `without a vault to ask the save prompt has no vault choice and without a password no never-here`() {
+        compose.setContent { CloudKitTheme(palette) {
+            AcSaveSheet(AcSaveState("example.com", proposals.drop(1), profiles, null, vaultUsable = false), onSave = { _, _, _, _ -> }, onDismiss = {})
+        } }
+        compose.waitForIdle()
+        assertFalse(on("browser:ac:save:vaultalso")); assertFalse(on("browser:ac:save:never"))
     }
 }
