@@ -15,6 +15,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
@@ -116,7 +117,8 @@ class ConfigsMenuTest {
         val pages = configs()
         show(pages)
         for (p in pages) {
-            compose.onNodeWithTag(PageTabsTags.tab(p.id), useUnmergedTree = true).performClick()
+            // the strip scrolls: bring the tab on screen first, or the tap lands on its neighbour (CI: "about" opened "notifications")
+            compose.onNodeWithTag(PageTabsTags.tab(p.id), useUnmergedTree = true).performScrollTo().performClick()
             compose.waitForIdle()
             assertEquals(p.id, openPage)
             compose.onNodeWithTag("body_${p.id}").assertIsDisplayed()
