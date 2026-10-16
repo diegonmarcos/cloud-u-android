@@ -129,10 +129,10 @@ internal class MessageExporter(private val app: Application, private val repo: M
                 cleanUp()
                 say(app.getString(R.string.message_export_cancelled))
                 throw c
-            } catch (_: ExportCancelled) {
+            } catch (e: ExportCancelled) {
                 cleanUp()
                 say(app.getString(R.string.message_export_cancelled))
-            } catch (_: ContentTooLargeException) {
+            } catch (e: ContentTooLargeException) {
                 cleanUp()
                 say(app.getString(R.string.status_attachment_too_large))
             } catch (t: Throwable) {

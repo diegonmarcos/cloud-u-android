@@ -108,7 +108,7 @@ class MhtmlBuilderTest {
         try {
             writeMhtml(ByteArrayOutputStream(), msg, LABELS, isCancelled = { ++calls > 2 })
             org.junit.Assert.fail("expected ExportCancelled")
-        } catch (_: ExportCancelled) {
+        } catch (e: ExportCancelled) {
         }
     }
 
@@ -117,5 +117,14 @@ class MhtmlBuilderTest {
         writeMhtml(ByteArrayOutputStream(), msg, LABELS, progress = { d, t -> last = d to t })
         assertEquals((png.size + pdf.size).toLong(), last.second)
         assertEquals(last.second, last.first)
+    }
+}
+
+class MhtmlNonAsciiNameTest {
+    @Test fun `a non-ascii filename travels as RFC 2231 next to its ascii shadow`() {
+        val out = ByteArrayOutputStream()
+        writeMhtml(out, message(parts = listOf(part("Rapport été.pdf", byteArrayOf(1)))), LABELS)
+        val disp = parseMime(out.toString(Charsets.ISO_8859_1)).parts[1].first["content-disposition"]
+        assertEquals("attachment; filename=\"Rapport _t_.pdf\"; filename*=UTF-8''Rapport%20%C3%A9t%C3%A9.pdf", disp)
     }
 }

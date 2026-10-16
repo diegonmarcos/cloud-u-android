@@ -43,6 +43,6 @@ class ZipBuilderTest {
         try {
             writeAttachmentsZip(ByteArrayOutputStream(), listOf(part("a", ByteArray(10))), isCancelled = { true })
             org.junit.Assert.fail()
-        } catch (_: ExportCancelled) {}
+        } catch (e: ExportCancelled) {}
     }
 }

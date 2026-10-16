@@ -60,7 +60,9 @@ fun writeMhtml(
         } else {
             put("Content-Location: attachment/${headerSafe(name)}$CRLF")
         }
-        put("Content-Disposition: ${if (part.inline && cid != null) "inline" else "attachment"}; filename=\"${headerSafe(name)}\"$CRLF$CRLF")
+        // RFC 2231 `filename*` carries the real (non-ASCII) name; the quoted ASCII shadow is for old readers.
+        val star = if (name.any { it.code > 126 || it.code < 32 }) "; filename*=UTF-8''" + pctEncode(name) else ""
+        put("Content-Disposition: ${if (part.inline && cid != null) "inline" else "attachment"}; filename=\"${headerSafe(name)}\"$star$CRLF$CRLF")
         part.open().use { input ->
             val enc = Base64Lines(w)
             copyChunked(input, chunk, isCancelled) { buf, n ->
@@ -110,6 +112,11 @@ private fun encodedWords(s: String): List<String> {
 
 private fun encodedWord(b: ByteArray) =
     "=?UTF-8?B?" + java.util.Base64.getEncoder().encodeToString(b) + "?="
+
+internal fun pctEncode(s: String): String = s.toByteArray(Charsets.UTF_8).joinToString("") { b ->
+    val v = b.toInt() and 0xFF
+    if (v.toChar().isLetterOrDigit() && v < 128 || v.toChar() in "-._~") v.toChar().toString() else "%%%02X".format(v)
+}
 
 /** A value safe inside a quoted header parameter: no quotes, backslashes or line breaks; non-ASCII as `_`-free RFC 2047 is not valid in params, so the ASCII shadow is kept. */
 internal fun headerSafe(s: String): String =
