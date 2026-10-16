@@ -4,7 +4,6 @@ import com.diegonmarcos.cloudc3.pages.RoutesTableModel as M
 import com.diegonmarcos.cloudc3.pages.RoutesTableModel.Column
 import java.io.File
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -175,9 +174,8 @@ class RoutesTableModelTest {
     @Test
     fun `the shipped slice parses into rows the table can show`() {
         var dir = File("").absoluteFile
-        while (dir.parentFile != null && !File(dir, "data/infra_slice.json").isFile) dir = dir.parentFile
-        val slice = Json.parseToJsonElement(File(dir, "data/infra_slice.json").readText()).jsonObject
-        val shipped = M.parse(slice["routes"])
+        while (dir.parentFile != null && !File(dir, "data/routes.json").isFile) dir = dir.parentFile
+        val shipped = M.parse(Json.parseToJsonElement(File(dir, "data/routes.json").readText()))
         assertTrue("routes missing from data/infra_slice.json", shipped.size > 50)
         assertTrue(shipped.all { it.authType in M.Auth.entries.map { a -> a.id } })
         assertTrue("a row with no public URL can only be mesh-only", shipped.filter { it.publicUrl.isBlank() }.all { it.authType == "mesh" })
