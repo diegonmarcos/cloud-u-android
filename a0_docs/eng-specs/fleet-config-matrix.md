@@ -24,7 +24,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-browser | `com.diegonmarcos.cloudbrowser` | 9 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 1 | 0 | 100% |
 | cloud-media-center | `com.diegonmarcos.cloudmediacenter` | 1 | 0 | 100% |
-| cloud-c3 | `com.diegonmarcos.cloudc3` | 6 | 0 | 100% |
+| cloud-c3 | `com.diegonmarcos.cloudc3` | 7 | 0 | 100% |
 | cloud-calc | `com.diegonmarcos.cloudcalc` | 11 | 0 | 100% |
 | cloud-camera | `cld.camera` | 8 | 0 | 100% |
 | cloud-chat | `com.diegonmarcos.comms.chat` | 5 | 0 | 100% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 5 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 2 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 5 | 2 | 71% |
-| **fleet** | | **216** | **48** | **81%** |
+| **fleet** | | **217** | **48** | **81%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -321,6 +321,7 @@ Module `ac_cloud-c3`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `auto_update` | prefs | config (keys: last_check_at→device, last_remote_bytes→device, last_remote_digest→device, unattended_pass→device) | yes | Auto-update toggles (enabled, require_silent/unmetered) are settings; last_check/remote digest/bytes/unattended_pass are state. |
+| `c3_routes_table` | prefs | config (keys: state→config) | yes | Cloud C3 > Containers > Table: the chosen sort column and direction, the Auth Type and VM filters, the category filter and the search text, as one string under the key 'state'. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dagu_prefs` | encrypted | config (keys: bearer_token→secret) | yes | Dagu server URL and user label are account links; bearer_token is a credential. |
 | `dagu_prefs_fallback` | prefs | config (keys: bearer_token→secret) | yes | Plain-prefs fallback of dagu_prefs (same keys). |
@@ -333,7 +334,7 @@ Module `ac_cloud-c3`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
-Coverage: 6 covered, 0 gaps.
+Coverage: 7 covered, 0 gaps.
 
 ## cloud-calc — `com.diegonmarcos.cloudcalc`
 
