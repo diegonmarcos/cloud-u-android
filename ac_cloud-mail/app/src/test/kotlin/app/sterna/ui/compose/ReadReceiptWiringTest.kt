@@ -419,13 +419,13 @@ class ReadReceiptWiringTest {
          * What the composer hands to send/scheduleSend, positionally — the receipt is the last one.
          */
         private val SEND_ARGUMENTS =
-            listOf("to", "cc", "bcc", "subject.text", "rich", "requestReceipt")
+            listOf("to", "cc", "bcc", "subject.text", "freshRich()", "requestReceipt")
 
         /**
          * …and to saveDraft, which takes the SAME `rich` since #131: the draft is stored with its
          */
         private val SAVE_ARGUMENTS =
-            listOf("to", "cc", "bcc", "subject.text", "rich", "requestReceipt")
+            listOf("to", "cc", "bcc", "subject.text", "freshRich()", "requestReceipt")
 
         private val root: File by lazy {
             generateSequence(File("").absoluteFile) { it.parentFile }

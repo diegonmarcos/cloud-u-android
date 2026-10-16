@@ -198,6 +198,7 @@ class LocalDraftReopenWiringTest {
                 "bcc = fields.bcc,",
                 "subject = fields.subject,",
                 "body = fields.body,",
+                "bodyHtml = fields.bodyHtml,",
                 // …and the styling the row stored (#131), out of the same projection as the text.
                 // Left out, a draft this app styled reopens with its bold gone from the screen,
                 // and the next save stores that removal.

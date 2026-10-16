@@ -230,7 +230,10 @@ class QuoteOnScreenSilencesPrepareWiringTest {
             // own closing `)`, so the claim still cannot drift onto another DraftFields --
             // a reopened draft, a mailto: link -- and raise the screen's flag over a body
             // that carries no quote.
-            val block = all.drop(at + 1).takeWhile { it != ")" }
+            // The `quoted = ` line now sits ABOVE the anchor (the body is attached afterwards, as
+            // `).withBodyHtml(...)`), inside the DraftFields call that this line closes.
+            val start = all.subList(0, at).indexOfLast { it.endsWith("-> DraftFields(") }
+            val block = all.subList(start + 1, at)
             assertEquals(
                 "in $COMPOSE_VIEW_MODEL_PATH the DraftFields opened by the reply body\n    $bodyLine\n" +
                     "(line index $at) must carry 'quoted = quoteBody,' before it closes: the " +

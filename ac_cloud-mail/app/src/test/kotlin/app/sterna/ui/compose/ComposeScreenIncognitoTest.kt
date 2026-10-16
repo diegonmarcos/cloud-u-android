@@ -76,9 +76,9 @@ class ComposeScreenIncognitoTest {
         // Not vacuous: the composer really does have five fields today (To/Cc/Bcc share one
         // composable), at three call sites.
         assertEquals(
-            "ComposeScreen.kt no longer has the 3 BasicTextField call sites this rule was written " +
+            "ComposeScreen.kt no longer has the 2 BasicTextField call sites (the body is the HTML page) this rule was written " +
                 "for — re-read it before trusting this test",
-            3,
+            2,
             composeScreen.count { FIELD in it },
         )
         val stray = fieldsOutside(composeScreen, COMPOSER_FUN)
