@@ -9,29 +9,62 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
-/** #886 parts 1, 2, 5 and 9 as DECLARED: Configs by topic, the translate engine setting, Tabs in the island, the strip on by default. */
+/** #886/#900 as DECLARED: Configs by page (the top tabs), the translate engine setting, Tabs in the island, the strip on by default. */
 class BrowserConfigsLayoutTest {
 
     private val root = JSONObject(File("../build.json").readText())
     private val cfg = BrowserConfig.parse(root.getJSONObject("ui").getJSONObject("browser").toString())
 
+    private val pageIds = listOf("general", "search", "privacy", "site", "autocomplete", "passwords", "payment", "downloads",
+        "appearance", "tabs", "sync", "advanced", "about")
+
     @Test
-    fun `every setting sits in a declared topic and every topic holds something`() {
+    fun `every setting sits on a declared Configs page and every page holds something`() {
         val ids = cfg.settingsSections.map { it.first }
-        assertEquals(listOf("search", "privacy", "tabs", "translate", "appearance", "data", "advanced"), ids)
+        assertEquals(pageIds, ids)
         val used = cfg.settings.settings.map { it.section }.toSet()
-        assertTrue("undeclared topics: ${used - ids.toSet()}", ids.containsAll(used))
-        // advanced holds the add-ons switch; data holds the download folder and the offline limits: none is empty
-        for (id in ids) assertTrue("topic $id is empty", cfg.settings.settings.any { it.section == id } || cfg.menu.items.any { it.settingsSection == id })
+        assertTrue("undeclared pages: ${used - ids.toSet()}", ids.containsAll(used))
+        for (id in ids) assertTrue("page $id is empty",
+            cfg.settings.settings.any { it.section == id } || cfg.configs.rowsFor(id).isNotEmpty() || cfg.configs.nativeFor(id).isNotEmpty())
     }
 
     @Test
-    fun `the page draws topics in the declared order under their titles`() {
+    fun `the top tabs of the Configs section are the settings pages, in the same order`() {
+        val secs = root.getJSONObject("ui").getJSONArray("sections")
+        val configs = (0 until secs.length()).map { secs.getJSONObject(it) }.first { it.getString("id") == "configs" }
+        val tabs = configs.getJSONArray("pages").let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("id") } }
+        assertEquals(cfg.settingsSections.map { it.first }, tabs)
+        assertEquals(listOf("General", "Search", "Privacy & Security", "Site settings", "Autocomplete", "Passwords", "Payment",
+            "Downloads", "Appearance", "Tabs", "Sync & Vault", "Advanced", "About"), cfg.settingsSections.map { it.second })
+    }
+
+    @Test
+    fun `the page draws its settings in the declared order and an undeclared section is still drawn`() {
         val order = BrowserSettingsLayout.order(cfg.settings.settings, cfg.settingsSections, emptySet())
-        assertEquals(listOf("Search", "Privacy & security", "Tabs & groups", "Translate & summary", "Appearance", "Data & storage", "Advanced"), order.map { it.second })
-        // an undeclared section is still drawn, after the declared ones, rather than lost
+        assertEquals(cfg.settingsSections.filter { sec -> cfg.settings.settings.any { it.section == sec.first } }.map { it.second },
+            order.map { it.second })
         val extra = BrowserSettingsLayout.order(cfg.settings.settings + cfg.settings.settings.first().copy(key = "x", section = "mystery"), cfg.settingsSections, emptySet())
         assertEquals("Mystery", extra.last().second)
+    }
+
+    @Test
+    fun `a row on no declared page is dropped, and add-on global rows join their page`() {
+        assertTrue(cfg.configs.rowsFor("search").map { it.id }.containsAll(listOf("search_with", "search_chat")))
+        assertTrue(cfg.configs.rowsFor("sync").map { it.id }.containsAll(listOf("vault_open", "vault_set_service")))
+        assertEquals(listOf("addon:search"), cfg.configs.rowsFor("search").first { it.id == "search_with" }.requires)
+        val none = com.diegonmarcos.superapp.browser.BrowserConfigPages.parse(
+            JSONObject("""{"rows":[{"id":"x","label":"X","page":"ghost"},{"id":"y","label":"Y","page":"p"}]}"""),
+            listOf("p" to "P"), com.diegonmarcos.superapp.browser.BrowserAddons.EMPTY)
+        assertEquals(listOf("y"), none.rows.map { it.id })
+    }
+
+    @Test
+    fun `a Configs row needing a fact the page cannot give is disabled and says why`() {
+        val facts = emptyMap<String, Boolean>()
+        val r = cfg.configs.resolve("general", facts, cfg.menu.whys).first { it.id == "default_browser" }
+        assertFalse(r.enabled)
+        assertEquals("already the default browser, or Android offers no browser role", r.why)
+        assertTrue(cfg.configs.resolve("general", facts, cfg.menu.whys).first { it.id == "bookmarks" }.enabled)
     }
 
     @Test
@@ -40,7 +73,7 @@ class BrowserConfigsLayoutTest {
         assertEquals("enum", s.type)
         assertEquals(listOf("on_device", "openrouter"), s.values)
         assertEquals("on_device", s.default)
-        assertEquals("translate", s.section)
+        assertEquals("general", s.section)
         assertEquals("OpenRouter (LLM)", s.valueLabels["openrouter"])
         assertEquals("device", cfg.settings["translate_target"]!!.default)
     }

@@ -28,6 +28,7 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.browser.BrowserHostFragment
 import com.diegonmarcos.superapp.browser.BrowserSearchPageHost
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
@@ -52,7 +53,8 @@ import com.diegonmarcos.superapp.updater.Updater
  *
  * #868 The bottom bar is libs:bottomnav's island, fed by NavDecl from build.json::ui: Browser is
  * the host fragment's page, Tabs its tab switcher (#886), Search and Configs open the Search add-on's
- * page and the browser settings OVER it (the host's own overlays), and the pill follows the host: it
+ * page and the browser settings OVER it (the host's own overlays), Configs under a strip of top tabs (#900: libs:bottomnav
+ * PageTabs, one per config category, declared in ui.sections[configs].pages), and the pill follows the host: it
  * goes back to Browser (or Tabs, when the switcher is showing) the moment the last overlay closes.
  *
  * 2026-10-16 owner decision: all apps must be Compose. The shell is a Compose screen under CloudKitTheme
@@ -63,6 +65,8 @@ class MainActivity : AppCompatActivity() {
 
     /** The island's selected item (null = none); the host moves it through [BrowserHostFragment.onOverlaysClosed]. */
     private var selectedId by mutableStateOf<String?>(null)
+    /** #900 the Configs top tab showing (a ui.sections[configs].pages id), while Configs is the island's item. */
+    private var configsPage by mutableStateOf<String?>(null)
     private val decl: NavDecl by lazy {
         NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
     }
@@ -99,6 +103,11 @@ class MainActivity : AppCompatActivity() {
                         .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
                         .imePadding(),
                 ) {
+                    // #900 Configs is a section of top tabs (one per config category), sideways-scrolling when they do not fit.
+                    if (selectedId == "configs") {
+                        val tabs = remember { decl.section("configs")?.pages.orEmpty() }
+                        PageTabs(tabs, configsPage, onSelect = { pg -> openConfigsPage(pg.id) }, underTopChrome = false)
+                    }
                     KitFragmentHost(R.id.fragment_container, Modifier.weight(1f).fillMaxWidth()) {
                         BrowserHostFragment.newInstance(openUrl, BuildConfig.UI_BROWSER_CONFIG_B64)
                     }
@@ -148,10 +157,20 @@ class MainActivity : AppCompatActivity() {
                 // No Search page installed: the host only says so, nothing opened, the pill stays.
                 if (BrowserSearchPageHost.page == null) return
             }
-            "configs" -> host.openSettings()
+            "configs" -> {
+                configsPage = decl.section("configs")?.pages?.firstOrNull()?.id
+                host.openSettings()
+            }
         }
         // closeOverlays reset the pill to Browser; an overlay that opened puts it on its own item.
         selectedId = id
+    }
+
+    /** A Configs top tab was picked: the host swaps the page under it. */
+    private fun openConfigsPage(id: String) {
+        val host = supportFragmentManager.findFragmentById(R.id.fragment_container) as? BrowserHostFragment ?: return
+        configsPage = id
+        host.openConfigsPage(id)
     }
 
     override fun onNewIntent(intent: Intent) {

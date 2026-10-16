@@ -273,8 +273,8 @@ Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottom
 | `browser_bookmarks` | prefs | config | yes | #802 the browser's bookmarks with their folders (bookmarks_json: url, title, folder path, ts). |
 | `browser_downloads` | prefs | device | no | #802 index of the downloads the browser started (DownloadManager ids and file names on THIS phone); the files themselves stay in Downloads. |
 | `browser_history` | prefs | content | no | Browsing history entries the user accumulated. |
-| `browser_settings` | prefs | config (keys: download_dir→device) | yes | #802 the browser's settings catalogue (ac_cloud-browser/build.json::ui.browser.settings): search engine, homepage, desktop site, text size, JavaScript, images, third-party cookies; one typed key per declared setting. Served by /api/browser/settings. |
-| `browser_site_permissions` | prefs | config | yes | #802 per-site decisions host\|permission -> allow/deny/ask (location, camera, microphone, and the javascript/images shields); a rule covers subdomains. |
+| `browser_settings` | prefs | config (keys: download_dir→device, secrets_require_unlock→device) | yes | #802 the browser's settings catalogue (ac_cloud-browser/build.json::ui.browser.settings): search engine, homepage, desktop site, text size, JavaScript, images, third-party cookies; one typed key per declared setting. Served by /api/browser/settings. |
+| `browser_site_permissions` | prefs | config | yes | #802 per-site decisions host\|permission -> allow/deny/ask (location, camera, microphone, and the javascript/images/trackers shields); a rule covers subdomains. #900 also host\|zoom -> the site's text zoom in percent. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |

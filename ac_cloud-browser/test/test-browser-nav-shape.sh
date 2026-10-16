@@ -5,7 +5,8 @@
 #
 # What this certifies, statically (the nav is data, the bar and the strips are libs:bottomnav's):
 #   S1 build.json::ui is ONE declaration: bottom_nav = favourites|tabs|browser|search|configs, default_section browser
-#      (the web tabs, address bar and every overlay stay libs:browser's own UI: no pages).
+#      (the web tabs, address bar and every overlay stay libs:browser's own UI: no pages; #900 Configs alone has pages, its
+#      13 top tabs, drawn by PageTabs in MainActivity: test-browser-page-menu.sh holds their ids and order).
 #   S2 the app compiles libs:bottomnav and bakes UI_BOTTOM_NAV + UI_SECTIONS_B64 + UI_DEFAULT_SECTION.
 #   S3 MainActivity (a Compose screen) draws the bar with libs:bottomnav's BottomNavIsland fed by NavDecl,
 #      below the host fragment, not a BottomNavigationView.

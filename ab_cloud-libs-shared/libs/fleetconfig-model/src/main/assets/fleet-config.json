@@ -292,13 +292,14 @@
         "lib-browser"
       ],
       "keys": {
-        "download_dir": "device"
+        "download_dir": "device",
+        "secrets_require_unlock": "device"
       }
     },
     "browser_site_permissions": {
       "kind": "prefs",
       "class": "config",
-      "doc": "#802 per-site decisions host|permission -> allow/deny/ask (location, camera, microphone, and the javascript/images shields); a rule covers subdomains.",
+      "doc": "#802 per-site decisions host|permission -> allow/deny/ask (location, camera, microphone, and the javascript/images/trackers shields); a rule covers subdomains. #900 also host|zoom -> the site's text zoom in percent.",
       "used_by": [
         "lib-browser"
       ]

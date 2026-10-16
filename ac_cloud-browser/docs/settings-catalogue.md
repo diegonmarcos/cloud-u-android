@@ -6,24 +6,31 @@ catalogue, never this file. test-browser-settings-catalogue.sh fails when it is 
 | key | type | default | allowed | section | class | what it does |
 |---|---|---|---|---|---|---|
 | `search_engine_id` | enum | duckduckgo | qwant, duckduckgo, google | search | config | Where a typed query that is not a URL goes. |
-| `homepage` | string | "" |  | search | config | What an empty New tab opens. Empty = nothing (the dialog just closes). |
+| `homepage` | string | "" |  | general | config | What an empty New tab opens. Empty = nothing (the dialog just closes). |
 | `restore_tabs_on_start` | bool | false |  | tabs | config | Launch into the last active tab instead of the tab grid. |
 | `desktop_mode` | bool | false |  | appearance | config | Desktop user agent + wide viewport for every page. |
 | `text_zoom` | int | 100 | 50..200 | appearance | config | WebSettings.textZoom, in percent. |
-| `javascript` | bool | true |  | privacy | config | Run page scripts. Off breaks most sites; per-site shields come later. |
-| `load_images` | bool | true |  | privacy | config | Off saves data on metered networks. |
+| `javascript` | bool | true |  | site | config | Run page scripts. Off breaks most sites; per-site shields come later. |
+| `load_images` | bool | true |  | site | config | Off saves data on metered networks. |
 | `block_third_party_cookies` | bool | false |  | privacy | config | CookieManager.setAcceptThirdPartyCookies(false) on every page. |
-| `download_dir` | string | "" |  | data | device | Sub-folder of the phone's Downloads that downloads land in. Empty = Downloads itself. Device-class: a path on this phone. |
+| `download_dir` | string | "" |  | downloads | device | Sub-folder of the phone's Downloads that downloads land in. Empty = Downloads itself. Device-class: a path on this phone. |
 | `private_by_default` | bool | false |  | privacy | config | A new tab opens private: no history, no preview, no HTTP cache. Cookies are shared with normal tabs (Android WebView keeps them per process). |
-| `autofill_enabled` | bool | true |  | privacy | config | Pages expose their fields to Android's Autofill Framework (Cloud Vault fills logins and cards there), and Fill from profile is offered. |
-| `profile_fill` | bool | true |  | privacy | config | Tier 2 DOM autofill (a0_docs/eng-specs/autofill-3-tier.md): focusing a name, email, phone or address field offers a chip that fills the form from your Cloud Account profiles. Never passwords, codes or cards (Cloud Vault fills those), never a login form's email. Private tabs show a chip that names no profile and fill only on an explicit pick. |
-| `offer_save_address` | bool | true |  | privacy | config | After you submit an address form with an address Cloud Account does not have yet, ask whether to save it there. Nothing is saved without your tap, and never from a private tab. |
-| `summarize_route` | enum | "model" | model, on_device | translate | config | #823 Where Summarize the page runs: model = the fleet's AI model (needs the network and the fleet Account's OpenRouter token; falls back on device when it cannot answer); on_device = on the phone, offline (ML Kit's summarizer where the phone has it, else the page's key sentences). |
+| `autofill_enabled` | bool | true |  | autocomplete | config | Pages expose their fields to Android's Autofill Framework (Cloud Vault fills logins and cards there), and Fill from profile is offered. |
+| `profile_fill` | bool | true |  | autocomplete | config | Tier 2 DOM autofill (a0_docs/eng-specs/autofill-3-tier.md): focusing a name, email, phone or address field offers a chip that fills the form from your Cloud Account profiles. Never passwords, codes or cards (Cloud Vault fills those), never a login form's email. Private tabs show a chip that names no profile and fill only on an explicit pick. |
+| `offer_save_address` | bool | true |  | autocomplete | config | After you submit an address form with an address Cloud Account does not have yet, ask whether to save it there. Nothing is saved without your tap, and never from a private tab. |
+| `summarize_route` | enum | "model" | model, on_device | general | config | #823 Where Summarize the page runs: model = the fleet's AI model (needs the network and the fleet Account's OpenRouter token; falls back on device when it cannot answer); on_device = on the phone, offline (ML Kit's summarizer where the phone has it, else the page's key sentences). |
 | `addons_enabled` | set | scraper, search, ai, vault | scraper, search, ai, vault | advanced | config | The add-ons that are on (Settings ▸ Add-ons). Default: each add-on's default_enabled. |
 | `search_suggestions` | bool | true |  | search | config | While you type in the address bar, ask the default search engine for query suggestions (what you type is sent to it). Off = only the search row and your own history. |
 | `tab_strip` | bool | true |  | tabs | config | A row of small tab icons under the address bar: the tabs of the current group, and a + that opens a new tab in the same group. |
-| `translate_engine` | enum | "on_device" | on_device, openrouter | translate | config | Which engine Translate page uses, in place on the page. On-device ML = the fleet's translation library in Cloud Writer / Cloud Keyboard (offline, private). OpenRouter = the model chosen in that app's AI routing (needs the network; the key stays in that app). Summarise by topics needs OpenRouter. |
-| `translate_target` | enum | "device" | device, en, es, pt, fr, de, it, nl, pl, ru, ja, zh | translate | config | The language Translate page and Summarise by topics write in. |
-| `offline_depth` | int | 1 | 0..3 | data | config | Save site offline follows same-site links this many levels from the page you are on (0 = only that page). |
-| `offline_max_pages` | int | 25 | 1..200 | data | config | Save site offline stops after this many pages. |
-| `offline_max_mb` | int | 50 | 5..500 | data | config | Save site offline stops when the copy reaches this size. |
+| `translate_engine` | enum | "on_device" | on_device, openrouter | general | config | Which engine Translate page uses, in place on the page. On-device ML = the fleet's translation library in Cloud Writer / Cloud Keyboard (offline, private). OpenRouter = the model chosen in that app's AI routing (needs the network; the key stays in that app). Summarise by topics needs OpenRouter. |
+| `translate_target` | enum | "device" | device, en, es, pt, fr, de, it, nl, pl, ru, ja, zh | general | config | The language Translate page and Summarise by topics write in. |
+| `offline_depth` | int | 1 | 0..3 | downloads | config | Save site offline follows same-site links this many levels from the page you are on (0 = only that page). |
+| `offline_max_pages` | int | 25 | 1..200 | downloads | config | Save site offline stops after this many pages. |
+| `offline_max_mb` | int | 50 | 5..500 | downloads | config | Save site offline stops when the copy reaches this size. |
+| `block_trackers` | bool | true |  | privacy | config | Subresource requests to the declared tracker hosts are answered empty on every site. A site can allow them (page menu > This site > Block trackers here). |
+| `site_memory` | bool | true |  | autocomplete | config | After you submit a form, offer to remember a value you typed that is not generic personal data (a customer number, a member ID) for that site and form only. Never from a private tab, never a password, card, code or search box. |
+| `offer_save_profile_data` | bool | true |  | autocomplete | config | After you submit a form with a name, address, phone, email, birth date or document that none of your profiles holds, ask which profile to add it to. Nothing is saved without your tap, and never from a private tab. |
+| `offer_save_password` | bool | true |  | passwords | config | After a sign-in or sign-up form is submitted with a new or changed password, ask whether to save it on this phone (encrypted). |
+| `secrets_require_unlock` | bool | true |  | passwords | device | Before a saved password or card is revealed or filled, ask for the fingerprint, face or screen lock. Off means anyone holding the unlocked phone can fill them. |
+| `offer_save_card` | bool | true |  | payment | config | After a checkout form with a card is submitted, ask whether to save the card on this phone (encrypted). |
+| `autofill_use_vault` | bool | false |  | sync | config | The browser fills from its own store first, then asks Cloud Vault (through Android's autofill); what Cloud Vault fills wins over the local copy, and a new password or card is also handed to Cloud Vault's save. Off = local only. Cloud Vault not installed or locked = local only, with the reason shown. |
