@@ -233,7 +233,7 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
-      "unit_test_sources": 6,
+      "unit_test_sources": 9,
       "workflow": "ship-cloud-nav.yml"
     },
     "ac_cloud-news": {
