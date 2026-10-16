@@ -76,6 +76,17 @@ and for the vault to be asked, so:
 - ID documents are the vault's Identity items by contract (rule 8). Here they are profile data in the browser's encrypted
   store, never sent to Cloud Account or Cloud Vault.
 
+## Known limits
+
+- The page bridge (`CloudAc`) is a WebView JavaScript interface, which every frame of the page can call; like the Tier 2
+  bridge it cannot tell the main frame from a third-party iframe. What a hostile frame can do is bounded: a save prompt
+  (nothing is saved without the user's tap, and the prompt names the real site) and a read-back of fields of the main page.
+- Web notifications have no WebView API, so there is no per-site notification permission to offer; camera, microphone and
+  location per site are in page dropdown > This site > Permissions.
+- The fill suggestions are a bar above the keyboard, not a dropdown under the focused field.
+- Passwords are matched by registrable domain with a short built-in list of two-label public suffixes; Cloud Vault holds the
+  real public suffix list.
+
 ## Never log secrets
 
 No autocomplete source calls `Log`, `println` or prints a model: every class holding a secret or personal data prints a

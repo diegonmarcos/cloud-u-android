@@ -72,7 +72,7 @@ fun AcProfilesSection(
 }
 
 @Composable
-private fun AcText(label: String, value: String, tag: String, onChange: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun AcText(label: String, value: String, tag: String, modifier: Modifier = Modifier, onChange: (String) -> Unit) {
     OutlinedTextField(value, onChange, modifier.fillMaxWidth().testTag(tag), singleLine = true, label = { Text(label) },
         textStyle = MaterialTheme.typography.bodyMedium)
 }
@@ -177,7 +177,7 @@ fun AcProfileEditor(profile: AcProfile, onSave: (AcProfile) -> Unit, onCancel: (
         TextButton({ pr = pr.copy(dates = pr.dates + AcDate(isDefault = pr.dates.isEmpty())) }, modifier = Modifier.testTag("browser:ac:add:dates")) { Text("＋ Add birth date") }
         pr.organisations.forEachIndexed { i, o ->
             Row(verticalAlignment = Alignment.CenterVertically) {
-                AcText("Organisation ${i + 1}", o, "browser:ac:organisations:$i", { v -> pr = pr.copy(organisations = pr.organisations.mapIndexed { j, x -> if (j == i) v else x }) }, Modifier.weight(1f))
+                AcText("Organisation ${i + 1}", o, "browser:ac:organisations:$i", Modifier.weight(1f)) { v -> pr = pr.copy(organisations = pr.organisations.mapIndexed { j, x -> if (j == i) v else x }) }
                 TextButton({ pr = pr.copy(organisations = pr.organisations.filterIndexed { j, _ -> j != i }) }, modifier = Modifier.testTag("browser:ac:organisations:$i:remove")) { Text("✕") }
             }
         }
