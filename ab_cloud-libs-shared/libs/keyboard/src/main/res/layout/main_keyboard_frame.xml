@@ -32,9 +32,14 @@
         <include
             android:id="@+id/emoji_palettes_view"
             layout="@layout/emoji_palettes_view" />
-        <include
+        <helium314.keyboard.keyboard.clipboard.ClipboardHistoryView
             android:id="@+id/clipboard_history_view"
-            layout="@layout/clipboard_history_view" />
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:visibility="gone"
+            android:background="@android:color/transparent"
+            style="?attr/clipboardHistoryViewStyle" />
 
         <ImageButton
             android:id="@+id/btn_stop_one_handed_mode"

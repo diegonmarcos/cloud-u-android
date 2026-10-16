@@ -2,20 +2,17 @@
 
 package helium314.keyboard.latin
 
-import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
-import android.os.IBinder
 import android.provider.OpenableColumns
 import android.text.InputType
 import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import androidx.core.view.inputmethod.InputContentInfoCompat
 import androidx.core.view.isGone
@@ -35,7 +32,6 @@ import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.InputTypeUtils
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.ToolbarKey
-import helium314.keyboard.latin.utils.getPlatformDialogThemeContext
 import helium314.keyboard.latin.utils.prefs
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -159,29 +155,13 @@ class ClipboardHistoryManager(
     fun getListNames(): List<String> = clipboardDao?.getListNames() ?: emptyList()
 
     /**
-     * Long-press on an unpinned clip: ask which list to copy it into (existing, or a
-     * freshly-numbered new one). The clip stays in the history — the default page is the
-     * full record of what was copied, a pin list is a durable copy of part of it.
+     * The "new list" entry of the pin picker (long-press on an unpinned clip; the picker itself is
+     * drawn by the clipboard panel): copies [id] into the next freshly-numbered list. The clip stays
+     * in the history — the default page is the full record of what was copied, a pin list is a
+     * durable copy of part of it.
      */
-    fun showPinListPicker(id: Long, windowToken: IBinder) {
-        val existingLists = getListNames()
-        val items = (existingLists + latinIME.getString(R.string.clipboard_pin_new_list)).toTypedArray()
-        val dialog = AlertDialog.Builder(getPlatformDialogThemeContext(latinIME))
-            .setTitle(R.string.clipboard_pin_choose_list)
-            .setItems(items) { di, i ->
-                di.dismiss()
-                val listName = existingLists.getOrNull(i) ?: clipboardDao?.nextListName() ?: return@setItems
-                pinToList(id, listName)
-            }
-            .create()
-        dialog.window?.apply {
-            attributes = attributes.apply {
-                token = windowToken
-                type = WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
-            }
-            addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
-        }
-        dialog.show()
+    fun pinToNewList(id: Long) {
+        pinToList(id, clipboardDao?.nextListName() ?: return)
     }
 
     fun pinToList(id: Long, listName: String) {

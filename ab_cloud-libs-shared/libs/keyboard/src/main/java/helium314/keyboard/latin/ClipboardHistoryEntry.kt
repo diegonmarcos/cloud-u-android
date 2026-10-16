@@ -2,13 +2,13 @@
 
 package helium314.keyboard.latin
 
-import android.annotation.SuppressLint
 import android.content.ClipDescription
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.os.Build
-import android.widget.ImageView
-import android.widget.TextView
+import android.graphics.Bitmap
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.core.content.FileProvider
 import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.settings.Settings
@@ -40,39 +40,38 @@ class ClipboardHistoryEntry(
         File(ClipboardDao.clipFilesDir, it)
     ) }
 
+    /** What a file clip shows in the panel: its decoded image, or a type icon plus a description. */
+    class Preview(val image: Bitmap?, val icon: Bitmap?, val text: String?)
+
     // todo: if slow we could decode images it in a coroutine, or use cached preview images
-    @SuppressLint("SetTextI18n")
-    fun setImageAndDescription(imageView: ImageView, textView: TextView) {
-        if (mimeTypes == null || filename == null) return // should never happen
+    fun loadPreview(context: Context): Preview? {
+        if (mimeTypes == null || filename == null) return null // should never happen
         try {
             val path = File(ClipboardDao.clipFilesDir, filename).absolutePath
             val opt = BitmapFactory.Options()
             opt.inJustDecodeBounds = true
             BitmapFactory.decodeFile(path, opt)
             // reduce size of images larger than the screen, only needs to fit half screen width
-            val scale = opt.outWidth / (imageView.resources.displayMetrics.widthPixels * 2)
+            val scale = opt.outWidth / (context.resources.displayMetrics.widthPixels * 2)
             opt.inSampleSize = scale
             opt.inJustDecodeBounds = false
             val bitmap = BitmapFactory.decodeFile(path, opt)
-            if (bitmap != null) {
-                imageView.setImageBitmap(bitmap)
-                textView.text = null
-                return
-            }
+            if (bitmap != null) return Preview(bitmap, null, null)
         } catch (e: Exception) {
             Log.w("ClipboardHistoryEntry", "could not load image for clip $id", e)
         }
         val description = if (text.isNullOrBlank()) ""
-            else "\n" + textView.context.getString(R.string.item_description, text)
+            else "\n" + context.getString(R.string.item_description, text)
+        val tint = Settings.getValues().mColors.get(ColorType.EMOJI_CATEGORY)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val info = imageView.context.contentResolver.getTypeInfo(mimeTypes[0])
-            info.icon.setTint(Settings.getValues().mColors.get(ColorType.EMOJI_CATEGORY))
-            imageView.setImageIcon(info.icon)
-            textView.text = textView.context.getString(R.string.item_type, info.label.toString()) + description
-            return
+            val info = context.contentResolver.getTypeInfo(mimeTypes[0])
+            val drawable = info.icon.loadDrawable(context)?.mutate()
+            drawable?.setTint(tint)
+            return Preview(null, drawable?.toBitmap(),
+                context.getString(R.string.item_type, info.label.toString()) + description)
         }
-        imageView.setImageResource(R.drawable.ic_dictionary)
-        Settings.getValues().mColors.setColor(imageView, ColorType.EMOJI_CATEGORY)
-        textView.text = textView.context.getString(R.string.item_type, mimeTypes.first()) + description
+        val drawable = ContextCompat.getDrawable(context, R.drawable.ic_dictionary)?.mutate()
+        drawable?.setTint(tint)
+        return Preview(null, drawable?.toBitmap(), context.getString(R.string.item_type, mimeTypes.first()) + description)
     }
 }
