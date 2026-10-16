@@ -51,7 +51,7 @@ class EngineSettingsScreenTest {
         show(EngineUi(EngineConfig(useGps = true, useCell = false)))
         tap(EngineTags.SRC_GPS)
         assertNull(last)
-        rule.onNodeWithTag(EngineTags.HINT).assertIsDisplayed()
+        rule.onNodeWithTag(EngineTags.HINT).performScrollTo().assertIsDisplayed()
     }
 
     @Test fun gpsOffMovesTheAccurateFixToCellTowers() {
