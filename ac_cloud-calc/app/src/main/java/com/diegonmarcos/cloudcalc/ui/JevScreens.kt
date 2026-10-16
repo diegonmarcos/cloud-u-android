@@ -114,6 +114,7 @@ fun JevMode(mode: Declarations.Mode) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var text by rememberSaveable(mode.id) { mutableStateOf("") }
+    val attachments = remember { androidx.compose.runtime.mutableStateListOf<com.diegonmarcos.cloudcalc.decide.Attachment>() }
     var busy by remember { mutableStateOf(false) }
     var answer by remember { mutableStateOf<JevFlow.Answer?>(null) }
     var picked by remember { mutableStateOf<JevFlow.Run?>(null) }
@@ -137,14 +138,16 @@ fun JevMode(mode: Declarations.Mode) {
             modifier = Modifier.fillMaxWidth().testTag(CalcTags.JEV_INPUT),
             label = { Text(stringResource(R.string.jev_hint)) },
         )
+        AttachBar(attachments) { heard -> text = if (text.isBlank()) heard else text.trimEnd() + " " + heard }
         Button(
-            enabled = text.isNotBlank() && !busy,
+            enabled = (text.isNotBlank() || attachments.isNotEmpty()) && !busy,
             modifier = Modifier.padding(vertical = CalcMetrics.gap).testTag(CalcTags.JEV_ASK),
             onClick = {
-                val asked = text
+                val asked = text.ifBlank { ctx.getString(R.string.attach_default_request) }
+                val sent = attachments.toList()
                 scope.launch {
                     busy = true; picked = null
-                    answer = io { JevFlow.ask(ctx, api, asked, startTimer = true) }
+                    answer = io { JevFlow.ask(ctx, api, asked, startTimer = true, attachments = sent) }
                     keep(asked, answer?.run)
                     busy = false
                 }

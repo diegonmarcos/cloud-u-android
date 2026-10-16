@@ -10,6 +10,7 @@ import com.diegonmarcos.superapp.decisions.Decision
 import com.diegonmarcos.superapp.decisions.Decisions
 import com.diegonmarcos.cloudcalc.jev.JevConfig
 import com.diegonmarcos.cloudcalc.jev.JevRouter
+import com.diegonmarcos.cloudcalc.jev.call
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -41,11 +42,13 @@ object JevFlow {
     }
 
     /** Route [request]; run the confident pick, or the offline fallback when routing failed. */
-    fun ask(ctx: Context, api: CalcApi, request: String, startTimer: Boolean): Answer {
+    fun ask(ctx: Context, api: CalcApi, request: String, startTimer: Boolean, attachments: List<Attachment> = emptyList()): Answer {
         val cfg = JevStore.config(ctx)
         val token = JevStore.token(ctx)
         val model = JevStore.model(ctx, ROUTE_USE)
-        val o = JevRouter.route(cfg, JevStore.http, token.value, model, request)
+        // Attachments ride along as content parts of the routing question; with none it is the unchanged route().
+        val o = if (attachments.isEmpty()) JevRouter.route(cfg, JevStore.http, token.value, model, request)
+        else JevRouter.interpret(cfg, request, Decisions.call(cfg, JevStore.http, token.value, model, Attachments.state(request, attachments), JevRouter.questions(cfg)))
         val run = when {
             o.tool != null -> pick(ctx, api, cfg, token.value, o.tool!!, request, startTimer)
             o.fallback != null -> execute(ctx, api, o.fallback!!, startTimer)

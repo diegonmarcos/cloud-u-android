@@ -13,6 +13,9 @@
          a photo-taking camera mode opens. A phone without a camera still installs the app. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Jev attachments, Camera and Listen: the camera and the microphone are asked for at use, through CameraGate and
+         MicGate, after the screen says why. Files and Images use the system document and photo pickers, which need no
+         storage or media permission. -->
 
     <!-- #768 the Clock tab. Alarms are AlarmManager alarm CLOCKS and every other wakeup is exact:
          SCHEDULE_EXACT_ALARM is the user-granted path on API 31/32, USE_EXACT_ALARM the
@@ -35,6 +38,10 @@
         <!-- The calc ENGINE (build.json::engines.calc): without this line it is invisible on
              API 30+ and Calc would say "install it" with it installed. -->
         <package android:name="${calcEnginePackage}" />
+        <!-- Jev's Listen (speech-to-text): without this line the system recognizer is invisible on API 30+. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
     </queries>
 
     <application

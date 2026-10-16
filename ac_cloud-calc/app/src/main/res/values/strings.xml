@@ -279,4 +279,15 @@
     <string name="sheet_no_files">No saved workbooks yet. The open workbook is saved automatically.</string>
     <string name="sheet_opened">Workbook opened</string>
     <string name="sheet_not_workbook">That file is not a Cloud Calc workbook</string>
+    <string name="attach_files">Files</string>
+    <string name="attach_images">Images</string>
+    <string name="attach_listen">Listen</string>
+    <string name="attach_camera">Camera</string>
+    <string name="attach_start">Start listening</string>
+    <string name="attach_listening">Listening…</string>
+    <string name="attach_listen_error">The recognizer stopped (error %1$d)</string>
+    <string name="attach_listen_none">No speech recognizer is available on this phone.</string>
+    <string name="attach_listen_why">Listen uses the microphone to turn your voice into text in the box above. Nothing is recorded or kept by this app.</string>
+    <string name="attach_camera_why">Camera takes a photo that is attached to your request and sent to the decision model with it. Photos you do not attach stay on the phone.</string>
+    <string name="attach_default_request">Describe what is attached and what to calculate from it</string>
 </resources>

@@ -117,7 +117,7 @@ fun CameraGate(content: @Composable () -> Unit) {
  * at the declared size, and handed on as a bitmap.
  */
 @Composable
-private fun PhotoSource(onPhoto: (Bitmap) -> Unit) {
+internal fun PhotoSource(onPhoto: (Bitmap) -> Unit) {
     val ctx = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
