@@ -130,7 +130,7 @@ class FirewallDialog : DialogFragment() {
                 modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
 
             // Master enable row.
-            KitSwitchRow("Firewall enabled", "", s?.enabled ?: false) { onMasterToggle(it) }
+            KitSwitchRow("Firewall enabled", "", s?.enabled ?: false, onCheckedChange = { onMasterToggle(it) })
 
             Text(
                 "Per-app rules apply while the firewall is on. Enabling takes " +
@@ -224,9 +224,9 @@ class FirewallDialog : DialogFragment() {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     Text("Data axes — turn OFF to block that path", color = p.textSecondary, fontSize = 11.sp,
                         modifier = Modifier.padding(bottom = 4.dp))
-                    KitSwitchRow("Wi-Fi data", "", wifi) { wifi = it }
-                    KitSwitchRow("Cellular data", "", cell) { cell = it }
-                    KitSwitchRow("Background data", "", bg) { bg = it }
+                    KitSwitchRow("Wi-Fi data", "", wifi, onCheckedChange = { wifi = it })
+                    KitSwitchRow("Cellular data", "", cell, onCheckedChange = { cell = it })
+                    KitSwitchRow("Background data", "", bg, onCheckedChange = { bg = it })
 
                     Text("Cloud VPN — a strong override: forces the app VPN-only " +
                         "(ignores Wi-Fi/Cellular; app talks ONLY through the tunnel)",
