@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Container ids of the fragments the Compose pages host (ChildFragmentHost): stable across a
+     recreate, which a generated id is not, so a restored child finds its container again. -->
+<resources>
+    <item name="maps_host_key" type="id"/>
+    <item name="maps_host_timeline" type="id"/>
+    <item name="maps_host_day_map" type="id"/>
+    <item name="maps_host_explored_map" type="id"/>
+    <item name="maps_host_export" type="id"/>
+</resources>

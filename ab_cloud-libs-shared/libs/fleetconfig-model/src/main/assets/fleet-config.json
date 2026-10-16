@@ -2331,6 +2331,7 @@
       "module": "ac_cloud-calc",
       "schema_version": 1,
       "libs": [
+        "lib-ai",
         "lib-bottomnav",
         "lib-core",
         "lib-databackend",
@@ -2339,6 +2340,7 @@
         "lib-fleetconfig-model",
         "lib-ml-l-image",
         "lib-ml-l-sound",
+        "lib-model-catalogue",
         "lib-text-tools"
       ],
       "items": [
@@ -2844,6 +2846,7 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-maps",
+        "lib-ui-kit",
         "lib-updater"
       ],
       "items": [
@@ -2972,6 +2975,7 @@
       "module": "ac_cloud-notes",
       "schema_version": 1,
       "libs": [
+        "lib-bottomnav",
         "lib-core",
         "lib-devtools",
         "lib-fleetconfig-model"

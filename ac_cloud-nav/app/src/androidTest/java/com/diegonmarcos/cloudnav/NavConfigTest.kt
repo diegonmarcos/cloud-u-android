@@ -253,51 +253,39 @@ class NavConfigTest {
         }
     }
 
-    @Test fun daily_adapter_recycles_and_binds_correctly() {
-        // Daily/Stops moved from LinearLayout-in-ScrollView (inflates every row
-        // up front) to RecyclerView (only the visible rows) — the full
-        // 1987-1992 demo trip is ~2192/several-thousand rows. This proves the
-        // adapter itself (item count + bound content) is wired correctly.
-        val ctx = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
-        val entries = listOf(
-            com.diegonmarcos.cloudnav.maps.DailyEntry(0L, "Home — Copacabana", "Copacabana", "Rio de Janeiro", "Brazil", -22.97, -43.18),
-            com.diegonmarcos.cloudnav.maps.DailyEntry(86_400_000L, null, null, null, null, 0.0, 0.0),
-        )
-        var tapped: Long? = null
-        val adapter = com.diegonmarcos.cloudnav.maps.DailyAdapter(entries) { tapped = it }
-        assertEquals(2, adapter.itemCount)
+    @Test fun daily_row_text_binds_correctly() {
+        // Daily/Stops are Compose LazyColumns now (only the visible rows are composed — the full
+        // 1987-1992 demo trip is ~2192/several-thousand rows). The text a row says is a pure
+        // function of its entry, which is what the old adapter's bind step proved.
+        val resolved = com.diegonmarcos.cloudnav.maps.DailyEntry(0L, "Home — Copacabana", "Copacabana", "Rio de Janeiro", "Brazil", -22.97, -43.18)
+        val unresolved = com.diegonmarcos.cloudnav.maps.DailyEntry(86_400_000L, null, null, null, null, 0.0, 0.0)
 
-        val parent = android.widget.FrameLayout(ctx)
-        val holder = adapter.onCreateViewHolder(parent, 0)
-        adapter.onBindViewHolder(holder, 0)
-        assertEquals("Home — Copacabana", holder.place.text)
-        assertTrue(holder.sub.text.toString().contains("Rio de Janeiro"))
+        val r = com.diegonmarcos.cloudnav.maps.dailyRowText(resolved)
+        assertEquals("Home — Copacabana", r.place)
+        assertTrue(r.sub.contains("Rio de Janeiro"))
 
-        adapter.onBindViewHolder(holder, 1)
-        assertEquals("Resolving…", holder.place.text)  // unresolved entry — no crash, clear placeholder
-
-        holder.tile.performClick()
-        assertEquals(86_400_000L, tapped)  // last-bound row (index 1) is what the click fires for
+        val u = com.diegonmarcos.cloudnav.maps.dailyRowText(unresolved)
+        assertEquals("Resolving…", u.place)  // unresolved entry — no crash, clear placeholder
+        assertEquals("tap for this day's stops ▸", u.sub)
     }
 
-    @Test fun stops_adapter_recycles_and_binds_correctly() {
-        val ctx = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
-        val stops = listOf(
-            com.diegonmarcos.cloudnav.maps.MapsDb.RichStop(1L, 0L, 3_600_000L, -22.9711, -43.1822, "Home — Copacabana", "Copacabana", "Rio de Janeiro", "Brazil"),
-        )
-        var tappedDay: Long? = null
-        val adapter = com.diegonmarcos.cloudnav.maps.StopsAdapter(stops) { tappedDay = it }
-        assertEquals(1, adapter.itemCount)
+    @Test fun stops_row_text_binds_correctly() {
+        val stop = com.diegonmarcos.cloudnav.maps.MapsDb.RichStop(1L, 0L, 3_600_000L, -22.9711, -43.1822, "Home — Copacabana", "Copacabana", "Rio de Janeiro", "Brazil")
+        val t = com.diegonmarcos.cloudnav.maps.stopRowText(stop)
+        assertTrue(t.place.startsWith("Home — Copacabana"))
+        assertEquals("-22.97110, -43.18220", t.coords)
+    }
 
-        val parent = android.widget.FrameLayout(ctx)
-        val holder = adapter.onCreateViewHolder(parent, 0)
-        adapter.onBindViewHolder(holder, 0)
-        assertTrue(holder.place.text.toString().startsWith("Home — Copacabana"))
-        assertEquals("-22.97110, -43.18220", holder.coords.text)
-
-        holder.tile.performClick()
-        // Tap resolves to that stop's LOCAL calendar-day midnight (see MapsDailyFragment.localMidnight).
-        assertEquals(com.diegonmarcos.cloudnav.maps.MapsDailyFragment.localMidnight(0L), tappedDay)
+    @Test fun daily_jump_lands_on_the_nearest_day_and_converts_the_pickers_clock() {
+        val day = com.diegonmarcos.cloudnav.maps.MapsDailyFragment
+        val d1 = day.localMidnight(1_000_000_000_000L)
+        val daily = listOf(0L, 86_400_000L * 3, d1).sortedDescending().map {
+            com.diegonmarcos.cloudnav.maps.DailyEntry(it, null, null, null, null, 0.0, 0.0)
+        }
+        assertEquals("nearest day wins", 0, day.nearestIndex(daily, d1 + 3_600_000L))
+        assertEquals("empty list never crashes", 0, day.nearestIndex(emptyList(), 5L))
+        // The Material picker speaks UTC midnights; the list speaks local ones — same calendar day both ways.
+        assertEquals(d1, day.localMidnightOfUtcDay(day.utcOfLocalDay(d1)))
     }
 
     @Test fun explored_groups_by_city_from_daily_entries_not_raw_stops() {
@@ -700,7 +688,7 @@ class NavConfigTest {
     // fits its max width, and labels it in m/km. Pure — the view's only real
     // logic — so it tests without a Context.
     @Test fun map_scale_bar_picks_round_distance_and_labels_it() {
-        val sb = com.diegonmarcos.cloudnav.maps.MapsScaleBarView
+        val sb = com.diegonmarcos.cloudnav.maps.MapsScaleBar
         // 1 m/px, 100px cap → exactly 100 m.
         var (m, px) = sb.niceScale(1.0, 100.0)
         assertEquals(100.0, m, 1e-9); assertTrue(px <= 100.0); assertEquals("100 m", sb.label(m))

@@ -14,6 +14,9 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
+    // 2026-10-15 owner decision: all apps must be Compose. Every page of this lib is a
+    // KitComposeFragment; the MapLibre MapView is the one drawn View left, hosted by AndroidView.
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 // Same gradle-time bake pattern as app/build.gradle — read build.json
@@ -82,6 +85,7 @@ android {
     }
     buildFeatures {
         buildConfig = true
+        compose = true
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -94,6 +98,9 @@ dependencies {
     implementation project(':libs:core')
     // #868 the page-tab strip (PageTabsView): the Timeline host's Explored | Daily | Stops row.
     implementation project(':libs:bottomnav')
+    // The fleet's Compose kit: CloudKitTheme + KitPalette + KitComposeFragment, the base of every page here.
+    // api: the pages ARE KitComposeFragments, so a host that names one needs the kit's class.
+    api project(':libs:ui-kit')
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.fragment:fragment-ktx:1.8.5'
@@ -110,11 +117,8 @@ dependencies {
     implementation 'androidx.compose.foundation:foundation'
     implementation 'androidx.compose.material3:material3'
 
-    // RecyclerView — Daily/Stops render up to ~2200/~7000 rows (full 1987-1992
-    // demo coverage); a LinearLayout-in-ScrollView inflates every row up front
-    // (janky scroll, slow to open). RecyclerView only inflates what's on
-    // screen (view recycling).
-    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    // Daily/Stops render up to ~2200/~7000 rows (full 1987-1992 demo coverage) in a Compose
+    // LazyColumn, which composes only what is on screen.
 
     // Fused Location Provider — battery-efficient GPS via Play Services
     // sensor-fusion + activity-recognition.

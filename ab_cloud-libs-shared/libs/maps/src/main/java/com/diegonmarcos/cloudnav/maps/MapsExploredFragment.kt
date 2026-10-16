@@ -1,18 +1,35 @@
 package com.diegonmarcos.cloudnav.maps
 
-import android.os.Bundle
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.fragment.app.Fragment
-import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.card.MaterialCardView
-import com.google.android.material.floatingactionbutton.FloatingActionButton
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -30,29 +47,36 @@ import java.util.Locale
  * is sourced from [computeDailyLocations] (Daily's one-place-per-day picks),
  * NOT raw per-Stop rows, so revisited spots collapse to one clean pin.
  */
-class MapsExploredFragment : Fragment() {
+class MapsExploredFragment : KitComposeFragment() {
 
     enum class Mode { COUNTRY, CITY, PLACES }
 
-    private var mode = Mode.CITY
+    /** The sheet that is open over the map, if any. */
+    private sealed class Sheet {
+        object Items : Sheet()
+        object Layers : Sheet()
+        class Detail(val title: String, val subtitle: String, val rows: List<String>) : Sheet()
+    }
+
+    private var mode by mutableStateOf(Mode.CITY)
     private var daily: List<DailyEntry> = emptyList()
+    private var sheet by mutableStateOf<Sheet?>(null)
 
     // The live child map fragment. Pins are now NATIVE MapLibre CircleLayer
     // features (typed FeatureCollection — proven to render on this stack once the
     // string-geojson bug was fixed), NOT a Canvas overlay. Native pins are part
     // of the GL frame, so they never trail/shake during pan/zoom.
     private var mapFrag: MapsMapFragment? = null
-    private var chip: TextView? = null
 
     // Pins are a toggleable layer alongside the choropleth fills.
-    private var pinsVisible = true
+    private var pinsVisible by mutableStateOf(true)
 
     // Choropleth fill layers (visited continents/countries/regions/nomad).
     private var geo: MapsGeoLayers? = null
     // Default: paint visited COUNTRIES light gray (the original ask).
-    private var geoLayers: Set<MapsGeoLayers.Layer> = setOf(MapsGeoLayers.Layer.COUNTRIES)
+    private var geoLayers by mutableStateOf(setOf(MapsGeoLayers.Layer.COUNTRIES))
     // PIN = paint only visited areas; DEFAULT = colour the whole world by continent.
-    private var paintMode: MapsGeoLayers.PaintMode = MapsGeoLayers.PaintMode.PIN
+    private var paintMode by mutableStateOf(MapsGeoLayers.PaintMode.PIN)
 
     // Current mode's pin-backing objects, index-aligned with the pins' ids, so
     // a pin tap resolves straight back to its country/city/place.
@@ -62,30 +86,77 @@ class MapsExploredFragment : Fragment() {
     // country name → [lat, lon] of its capital (COUNTRY-mode pin sits here).
     private var capitals: Map<String, DoubleArray> = emptyMap()
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        val root = FrameLayout(ctx)
-        val mapHost = FrameLayout(ctx).apply { id = View.generateViewId() }
-        root.addView(mapHost, FrameLayout.LayoutParams(MATCH, MATCH))
+    override fun palette(): KitPalette = MapsInk.palette()
 
-        val stops = MapsDb.get(ctx).stopsBetween(0L, System.currentTimeMillis())
-        daily = computeDailyLocations(stops)
-        cities = groupByCity(daily)
-        countries = groupByCountry(cities)
-        // PLACES groups ALL raw stops (not the one-per-day `daily`), so a city
-        // with several distinct places shows several pins → PLACES renders many
-        // more pins than CITY.
-        places = groupByPlaceFromStops(stops)
-        capitals = runCatching {
-            val o = org.json.JSONObject(ctx.assets.open("geo/capitals.json").bufferedReader().use { it.readText() })
-            o.keys().asSequence().associateWith { k -> val a = o.getJSONArray(k); doubleArrayOf(a.getDouble(0), a.getDouble(1)) }
-        }.getOrDefault(emptyMap())
+    @Composable
+    override fun Content() {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        remember {
+            val stops = MapsDb.get(ctx).stopsBetween(0L, System.currentTimeMillis())
+            daily = computeDailyLocations(stops)
+            cities = groupByCity(daily)
+            countries = groupByCountry(cities)
+            // PLACES groups ALL raw stops (not the one-per-day `daily`), so a city
+            // with several distinct places shows several pins → PLACES renders many
+            // more pins than CITY.
+            places = groupByPlaceFromStops(stops)
+            capitals = runCatching {
+                val o = org.json.JSONObject(ctx.assets.open("geo/capitals.json").bufferedReader().use { it.readText() })
+                o.keys().asSequence().associateWith { k -> val a = o.getJSONArray(k); doubleArrayOf(a.getDouble(0), a.getDouble(1)) }
+            }.getOrDefault(emptyMap())
+            true
+        }
 
-        // worldView: global overview — start showing the whole world, not the
-        // user's last GPS fix. style "light" → vector_light (Timeline's default).
+        Box(Modifier.fillMaxSize()) {
+            // worldView: global overview — start showing the whole world, not the
+            // user's last GPS fix. style "light" → vector_light (Timeline's default).
+            ChildFragmentHost(
+                fm = childFragmentManager,
+                containerId = R.id.maps_host_explored_map,
+                key = "map",
+                modifier = Modifier.fillMaxSize(),
+            ) { newMap(ctx) }
+
+            // Summary "island" chip (top-center) — TAP it to open the full
+            // scrollable list of the current mode's countries / cities / places.
+            Surface(
+                modifier = Modifier.align(Alignment.TopCenter).padding(start = 8.dp, top = 10.dp, end = 8.dp)
+                    .testTag("maps:explored:chip").clickable { sheet = Sheet.Items },
+                shape = RoundedCornerShape(22.dp),
+                color = p.surfaceSelected,
+                border = BorderStroke(1.dp, p.accent),
+                shadowElevation = 8.dp,
+            ) {
+                Text(chipText(), color = p.textPrimary, style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp))
+            }
+
+            // Single Layers FAB — small BLACK circle (matches the island), TOP-RIGHT.
+            // One sheet controls the pins layer + the painted fills.
+            FloatingActionButton(
+                onClick = { sheet = Sheet.Layers },
+                shape = CircleShape,
+                containerColor = p.surfaceSelected,
+                contentColor = p.textPrimary,
+                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp).testTag("maps:explored:layers"),
+            ) {
+                Icon(painterResource(android.R.drawable.ic_menu_mapmode), contentDescription = "Layers")
+            }
+        }
+
+        when (val open = sheet) {
+            null -> {}
+            Sheet.Items -> ItemsSheet()
+            Sheet.Layers -> LayersSheet()
+            is Sheet.Detail -> DetailSheet(open)
+        }
+    }
+
+    /** The child map, configured BEFORE it is committed: pins and layers install when its style loads. */
+    private fun newMap(ctx: android.content.Context): MapsMapFragment {
         val frag = MapsMapFragment.newInstance(fab = true, worldView = true, style = "light")
         mapFrag = frag
-        childFragmentManager.beginTransaction().replace(mapHost.id, frag).commit()
 
         // Native pins: a tap resolves the pin id back to its country/city/place.
         frag.onPinClick = { id -> onPinTapped(id) }
@@ -102,98 +173,157 @@ class MapsExploredFragment : Fragment() {
             geoLayers, paintMode,
         )
         frag.onStyleReady = { geoMgr.reinstall() }
+        return frag
+    }
 
-        // Summary "island" chip (top-center) — TAP it to open the full
-        // scrollable list of the current mode's countries / cities / places.
-        val card = MaterialCardView(ctx).apply {
-            radius = dp(22f); cardElevation = dp(8f); useCompatPadding = true
-            setCardBackgroundColor(0xF2141A25.toInt())
-            strokeColor = MapsStopsFragment.COL_ACCENT; strokeWidth = dp(1f).toInt()
-            isClickable = true; isFocusable = true
-            setOnClickListener { showListSheet() }
+    private fun chipText(): String {
+        if (cities.isEmpty()) return "No places yet — load demo data or start the tracker (Configs → Tracker)."
+        val countryCount = cities.mapNotNull { it.country }.toSet().size
+        return when (mode) {
+            Mode.COUNTRY -> "🌐  ${countries.size} countries · ${cities.size} cities — tap a pin"
+            Mode.CITY -> "🏙️  ${cities.size} cities · $countryCount countries — tap a pin"
+            Mode.PLACES -> "📍  ${places.size} places · ${cities.size} cities — tap a pin"
         }
-        chip = TextView(ctx).apply {
-            textSize = 13f
-            setTextColor(MapsStopsFragment.COL_PRIMARY)
-            setPadding(dp(16f).toInt(), dp(9f).toInt(), dp(16f).toInt(), dp(9f).toInt())
-        }
-        card.addView(chip)
-        root.addView(card, FrameLayout.LayoutParams(WRAP, WRAP).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            setMargins(dp(8f).toInt(), dp(10f).toInt(), dp(8f).toInt(), 0)
-        })
-        updateChip()
+    }
 
-        // Single Layers FAB — small BLACK circle (matches the island), TOP-RIGHT.
-        // One sheet controls the pins layer + the painted fills.
-        root.addView(FloatingActionButton(ctx).apply {
-            setImageResource(android.R.drawable.ic_menu_mapmode)
-            contentDescription = "Layers"
-            size = FloatingActionButton.SIZE_MINI
-            backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF141A25.toInt())
-            imageTintList = android.content.res.ColorStateList.valueOf(MapsStopsFragment.COL_PRIMARY)
-            setOnClickListener { showLayersSheet() }
-            layoutParams = FrameLayout.LayoutParams(WRAP, WRAP, Gravity.TOP or Gravity.END)
-                .apply { val m = dp(12f).toInt(); setMargins(m, m, m, m) }
-        })
-        return root
+    /** One tappable line of a sheet. */
+    @Composable
+    private fun SheetLine(text: String, color: androidx.compose.ui.graphics.Color, size: Int, tag: String, onTap: () -> Unit) {
+        Text(text, color = color, fontSize = size.sp,
+            modifier = Modifier.fillMaxWidth().testTag(tag).clickable { onTap() }.padding(horizontal = 8.dp, vertical = 12.dp))
     }
 
     /** Full scrollable list of the current mode's items. Tap a row → recenter
      *  the map on it and open its detail sheet. */
-    private fun showListSheet() {
-        val ctx = context ?: return
-        val d = resources.displayMetrics.density
-        fun dp(v: Int) = (v * d).toInt()
-        val dialog = BottomSheetDialog(ctx)
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xFF141A25.toInt())
-            setPadding(dp(16), dp(14), dp(16), dp(20))
-        }
+    @Composable
+    private fun ItemsSheet() {
+        val p = LocalKitPalette.current
         val header = when (mode) {
             Mode.COUNTRY -> "🌐  ${countries.size} countries"
             Mode.CITY -> "🏙️  ${cities.size} cities"
             Mode.PLACES -> "📍  ${places.size} places"
         }
-        col.addView(TextView(ctx).apply {
-            text = header; textSize = 17f
-            setTextColor(MapsStopsFragment.COL_PRIMARY)
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setPadding(0, 0, 0, dp(8))
-        })
-        // rows: (label, lat, lon, onOpen)
-        data class Row(val label: String, val lat: Double, val lon: Double, val open: () -> Unit)
-        val rows: List<Row> = when (mode) {
+        // rows: (label, lat, lon, detail)
+        class Line(val label: String, val lat: Double, val lon: Double, val detail: Sheet.Detail)
+        val rows: List<Line> = when (mode) {
             Mode.COUNTRY -> countries.map { c ->
                 val days = c.cities.sumOf { it.visits.size }
-                Row("${c.country}   ·   ${c.cities.size} cities · $days days", c.lat, c.lon) { showCountrySheet(c) }
+                Line("${c.country}   ·   ${c.cities.size} cities · $days days", c.lat, c.lon, countrySheet(c))
             }
             Mode.CITY -> cities.map { c ->
                 val blocks = visitBlocks(c.visits.map { it.dayMs })
-                Row("${c.city}${c.country?.let { ", $it" } ?: ""}   ·   $blocks visits · ${c.visits.size} days", c.lat, c.lon) { showCitySheet(c) }
+                Line("${c.city}${c.country?.let { ", $it" } ?: ""}   ·   $blocks visits · ${c.visits.size} days", c.lat, c.lon, citySheet(c))
             }
-            Mode.PLACES -> places.map { p ->
-                Row("${p.name}${p.city?.let { ", $it" } ?: ""}   ·   ${p.days.size} days", p.lat, p.lon) { showPlaceSheet(p) }
+            Mode.PLACES -> places.map { pl ->
+                Line("${pl.name}${pl.city?.let { ", $it" } ?: ""}   ·   ${pl.days.size} days", pl.lat, pl.lon, placeSheet(pl))
             }
         }
-        val body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        rows.forEach { r ->
-            body.addView(TextView(ctx).apply {
-                text = r.label; textSize = 15f
-                setTextColor(MapsStopsFragment.COL_PRIMARY)
-                setPadding(dp(8), dp(12), dp(8), dp(12))
-                isClickable = true
-                setOnClickListener {
-                    dialog.dismiss()
+        MapsSheet(onDismiss = { sheet = null }) {
+            Text(header, color = p.textPrimary, style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+            rows.forEachIndexed { i, r ->
+                SheetLine(r.label, p.textPrimary, 15, "maps:explored:item:$i") {
                     mapFrag?.recenter(r.lat, r.lon, 6.0)
-                    r.open()
+                    sheet = r.detail
                 }
-            })
+            }
         }
-        col.addView(ScrollView(ctx).apply { addView(body) })
-        dialog.setContentView(col)
-        dialog.show()
+    }
+
+    /** ONE sheet for every layer — styled like the black "island" chip: the PINS layer (off /
+     *  Countries / Cities / Places), the PAINT mode (Pin vs Default), and the painted choropleth fills. */
+    @Composable
+    private fun LayersSheet() {
+        val p = LocalKitPalette.current
+        @Composable
+        fun header(t: String) = Text(t, color = p.textSecondary, fontSize = 15.sp,
+            modifier = Modifier.padding(start = 8.dp, top = 12.dp, end = 8.dp, bottom = 6.dp))
+        @Composable
+        fun row(label: String, selected: Boolean, mark: String, tag: String, onTap: () -> Unit) =
+            SheetLine("$mark  $label", if (selected) p.accent else p.textPrimary, 17, tag, onTap)
+
+        MapsSheet(onDismiss = { sheet = null }) {
+            // ── PINS layer (single-select aggregation, or off) ──
+            header("Pins")
+            listOf(
+                null to "Off",
+                Mode.COUNTRY to "🌐  Countries  (${countries.size})",
+                Mode.CITY to "🏙️  Cities  (${cities.size})",
+                Mode.PLACES to "📍  Places  (${places.size})",
+            ).forEach { (m, label) ->
+                val sel = if (m == null) !pinsVisible else (pinsVisible && mode == m)
+                row(label, sel, if (sel) "◉" else "○", "maps:explored:pins:${m ?: "off"}") {
+                    if (m == null) pinsVisible = false else { pinsVisible = true; mode = m }
+                    recomputePins(frame = false)
+                }
+            }
+
+            // ── PAINT mode: Pin (visited only) vs Default (whole world by continent) ──
+            header("Paint mode")
+            listOf(
+                MapsGeoLayers.PaintMode.PIN to "Pin — only where I've been",
+                MapsGeoLayers.PaintMode.DEFAULT to "Default — every country by continent",
+            ).forEach { (pm, label) ->
+                val sel = paintMode == pm
+                row(label, sel, if (sel) "◉" else "○", "maps:explored:paint:${pm.name}") {
+                    if (paintMode != pm) { paintMode = pm; geo?.setPaintMode(pm) }
+                }
+            }
+
+            // ── PAINTED fills (multi-select) ──
+            header(if (paintMode == MapsGeoLayers.PaintMode.DEFAULT) "Painted layers" else "Painted layers (visited)")
+            MapsGeoLayers.Layer.values().forEach { layer ->
+                val on = layer in geoLayers
+                row(layer.label, on, if (on) "☑" else "☐", "maps:explored:layer:${layer.id}") {
+                    geoLayers = if (on) geoLayers - layer else geoLayers + layer
+                    geo?.setEnabled(geoLayers)
+                }
+            }
+        }
+    }
+
+    // ── detail sheets ──────────────────────────────────────────────────
+    @Composable
+    private fun DetailSheet(d: Sheet.Detail) {
+        val p = LocalKitPalette.current
+        MapsSheet(onDismiss = { sheet = null }) {
+            Text(d.title, color = p.textPrimary, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(d.subtitle, color = p.accent, style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 3.dp, bottom = 12.dp))
+            d.rows.forEach { r ->
+                Text(r, color = p.textPrimary, style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp))
+            }
+        }
+    }
+
+    private fun countrySheet(c: ExploredCountry) = Sheet.Detail(
+        "🌐  ${c.country}",
+        "${c.cities.size} cit${if (c.cities.size == 1) "y" else "ies"} · ${c.cities.sumOf { it.visits.size }} days total",
+        c.cities.sortedByDescending { it.visits.size }.map {
+            val blocks = visitBlocks(it.visits.map { v -> v.dayMs }); val days = it.visits.size
+            "${it.city}  ·  $blocks visit${if (blocks == 1) "" else "s"} · $days day${if (days == 1) "" else "s"}"
+        },
+    )
+
+    private fun citySheet(city: ExploredCity): Sheet.Detail {
+        val fmt = SimpleDateFormat("EEE, dd MMM yyyy", Locale.US)
+        val blocks = visitBlocks(city.visits.map { it.dayMs }); val days = city.visits.size
+        return Sheet.Detail(
+            "🏙️  ${city.city}" + (city.country?.let { ", $it" } ?: ""),
+            "$blocks visit${if (blocks == 1) "" else "s"} · $days day${if (days == 1) "" else "s"} total",
+            city.visits.sortedByDescending { it.dayMs }
+                .map { fmt.format(Date(it.dayMs)) + (it.placeName?.let { p -> "  ·  $p" } ?: "") },
+        )
+    }
+
+    private fun placeSheet(p: ExploredPlace): Sheet.Detail {
+        val fmt = SimpleDateFormat("EEE, dd MMM yyyy", Locale.US)
+        return Sheet.Detail(
+            "📍  ${p.name}",
+            listOfNotNull(p.city, p.country).joinToString(", ") + " · ${p.days.size} day${if (p.days.size == 1) "" else "s"}",
+            p.days.sortedDescending().map { fmt.format(Date(it)) },
+        )
     }
 
     /** Rebuild the NATIVE pins for the current [mode] (one CircleLayer feature
@@ -221,162 +351,16 @@ class MapsExploredFragment : Fragment() {
     private fun onPinTapped(id: String) {
         val i = id.substringAfter(':').toIntOrNull() ?: return
         when (id.firstOrNull()) {
-            'C' -> countries.getOrNull(i)?.let(::showCountrySheet)
-            'T' -> cities.getOrNull(i)?.let(::showCitySheet)
-            'P' -> places.getOrNull(i)?.let(::showPlaceSheet)
+            'C' -> countries.getOrNull(i)?.let { sheet = countrySheet(it) }
+            'T' -> cities.getOrNull(i)?.let { sheet = citySheet(it) }
+            'P' -> places.getOrNull(i)?.let { sheet = placeSheet(it) }
         }
     }
 
-    /** ONE sheet for every layer — styled like the black "island" chip (rounded
-     *  dark card, accent stroke): the PINS layer (off / Countries / Cities /
-     *  Places), the PAINT mode (Pin vs Default), and the painted choropleth fills. */
-    private fun showLayersSheet() {
-        val ctx = context ?: return
-        val dialog = BottomSheetDialog(ctx)
-        val d = resources.displayMetrics.density
-        fun dp(v: Int) = (v * d).toInt()
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), dp(14), dp(14), dp(20))
-        }
-        fun header(t: String) = col.addView(TextView(ctx).apply {
-            text = t; textSize = 15f
-            setTextColor(MapsStopsFragment.COL_SECONDARY)
-            setPadding(dp(8), dp(12), dp(8), dp(6))
-        })
-        fun row(label: String, selected: Boolean, mark: String, onTap: () -> Unit) =
-            col.addView(TextView(ctx).apply {
-                text = "$mark  $label"; textSize = 17f
-                setTextColor(if (selected) MapsStopsFragment.COL_ACCENT else MapsStopsFragment.COL_PRIMARY)
-                setPadding(dp(12), dp(13), dp(12), dp(13))
-                isClickable = true
-                setOnClickListener { onTap(); dialog.dismiss(); showLayersSheet() }
-            })
-
-        // ── PINS layer (single-select aggregation, or off) ──
-        header("Pins")
-        listOf(
-            null to "Off",
-            Mode.COUNTRY to "🌐  Countries  (${countries.size})",
-            Mode.CITY to "🏙️  Cities  (${cities.size})",
-            Mode.PLACES to "📍  Places  (${places.size})",
-        ).forEach { (m, label) ->
-            val sel = if (m == null) !pinsVisible else (pinsVisible && mode == m)
-            row(label, sel, if (sel) "◉" else "○") {
-                if (m == null) pinsVisible = false else { pinsVisible = true; mode = m }
-                updateChip(); recomputePins(frame = false)
-            }
-        }
-
-        // ── PAINT mode: Pin (visited only) vs Default (whole world by continent) ──
-        header("Paint mode")
-        listOf(
-            MapsGeoLayers.PaintMode.PIN to "Pin — only where I've been",
-            MapsGeoLayers.PaintMode.DEFAULT to "Default — every country by continent",
-        ).forEach { (pm, label) ->
-            val sel = paintMode == pm
-            row(label, sel, if (sel) "◉" else "○") {
-                if (paintMode != pm) { paintMode = pm; geo?.setPaintMode(pm) }
-            }
-        }
-
-        // ── PAINTED fills (multi-select) ──
-        header(if (paintMode == MapsGeoLayers.PaintMode.DEFAULT) "Painted layers" else "Painted layers (visited)")
-        MapsGeoLayers.Layer.values().forEach { layer ->
-            val on = layer in geoLayers
-            row(layer.label, on, if (on) "☑" else "☐") {
-                geoLayers = if (on) geoLayers - layer else geoLayers + layer
-                geo?.setEnabled(geoLayers)
-            }
-        }
-
-        // Island-styled container: rounded dark card + accent stroke.
-        val card = MaterialCardView(ctx).apply {
-            radius = dp(22).toFloat()
-            setCardBackgroundColor(0xF2141A25.toInt())
-            strokeColor = MapsStopsFragment.COL_ACCENT; strokeWidth = dp(1)
-            addView(ScrollView(ctx).apply { addView(col) })
-        }
-        dialog.setContentView(card)
-        dialog.show()
+    override fun onDestroyView() {
+        mapFrag = null; geo = null
+        super.onDestroyView()
     }
-
-    private fun updateChip() {
-        val c = chip ?: return
-        if (cities.isEmpty()) {
-            c.text = "No places yet — load demo data or start the tracker (Configs → Tracker)."
-            return
-        }
-        val countryCount = cities.mapNotNull { it.country }.toSet().size
-        c.text = when (mode) {
-            Mode.COUNTRY -> "🌐  ${countries.size} countries · ${cities.size} cities — tap a pin"
-            Mode.CITY -> "🏙️  ${cities.size} cities · $countryCount countries — tap a pin"
-            Mode.PLACES -> "📍  ${places.size} places · ${cities.size} cities — tap a pin"
-        }
-    }
-
-    // ── detail sheets ──────────────────────────────────────────────────
-    private fun sheet(title: String, subtitle: String, rows: List<String>) {
-        val ctx = context ?: return
-        val dialog = BottomSheetDialog(ctx)
-        val d = resources.displayMetrics.density
-        fun dp(v: Int) = (v * d).toInt()
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xFF141A25.toInt())
-            setPadding(dp(20), dp(18), dp(20), dp(24))
-        }
-        col.addView(TextView(ctx).apply {
-            text = title; textSize = 21f
-            setTextColor(MapsStopsFragment.COL_PRIMARY)
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-        })
-        col.addView(TextView(ctx).apply {
-            text = subtitle; textSize = 13f
-            setTextColor(MapsStopsFragment.COL_ACCENT); setPadding(0, dp(3), 0, dp(12))
-        })
-        val body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        rows.forEach { r ->
-            body.addView(TextView(ctx).apply {
-                text = r; textSize = 14f
-                setTextColor(MapsStopsFragment.COL_PRIMARY); setPadding(0, dp(7), 0, dp(7))
-            })
-        }
-        col.addView(ScrollView(ctx).apply { addView(body) })
-        dialog.setContentView(col)
-        dialog.show()
-    }
-
-    private fun showCountrySheet(c: ExploredCountry) = sheet(
-        "🌐  ${c.country}",
-        "${c.cities.size} cit${if (c.cities.size == 1) "y" else "ies"} · ${c.cities.sumOf { it.visits.size }} days total",
-        c.cities.sortedByDescending { it.visits.size }.map {
-            val blocks = visitBlocks(it.visits.map { v -> v.dayMs }); val days = it.visits.size
-            "${it.city}  ·  $blocks visit${if (blocks == 1) "" else "s"} · $days day${if (days == 1) "" else "s"}"
-        },
-    )
-
-    private fun showCitySheet(city: ExploredCity) {
-        val fmt = SimpleDateFormat("EEE, dd MMM yyyy", Locale.US)
-        val blocks = visitBlocks(city.visits.map { it.dayMs }); val days = city.visits.size
-        sheet(
-            "🏙️  ${city.city}" + (city.country?.let { ", $it" } ?: ""),
-            "$blocks visit${if (blocks == 1) "" else "s"} · $days day${if (days == 1) "" else "s"} total",
-            city.visits.sortedByDescending { it.dayMs }
-                .map { fmt.format(Date(it.dayMs)) + (it.placeName?.let { p -> "  ·  $p" } ?: "") },
-        )
-    }
-
-    private fun showPlaceSheet(p: ExploredPlace) {
-        val fmt = SimpleDateFormat("EEE, dd MMM yyyy", Locale.US)
-        sheet(
-            "📍  ${p.name}",
-            listOfNotNull(p.city, p.country).joinToString(", ") + " · ${p.days.size} day${if (p.days.size == 1) "" else "s"}",
-            p.days.sortedDescending().map { fmt.format(Date(it)) },
-        )
-    }
-
-    private fun dp(v: Float): Float = v * resources.displayMetrics.density
 
     // ── test hooks ──────────────────────────────────────────────────────
     /** How many native pins the current mode built (Places must be > Cities). */
@@ -386,7 +370,7 @@ class MapsExploredFragment : Fragment() {
     /** Feature count the LIVE MapLibre pin SOURCE reports — proves the native
      *  CircleLayer actually renders the typed FeatureCollection on this stack. */
     fun debugPinSourceCount(): Int = mapFrag?.debugPinFeatureCount() ?: -1
-    fun debugSetMode(m: Mode) { mode = m; updateChip(); recomputePins(frame = false) }
+    fun debugSetMode(m: Mode) { mode = m; recomputePins(frame = false) }
     /** Visited-only feature count the manager built for [layer] (needs assets). */
     fun debugGeoVisitedCount(layer: MapsGeoLayers.Layer): Int = geo?.visitedCount(layer) ?: -1
     /** Feature count the LIVE MapLibre fill SOURCE reports — proves the typed
@@ -409,9 +393,6 @@ class MapsExploredFragment : Fragment() {
     )
 
     companion object {
-        private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
-        private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
-
         /** One [ExploredCity] per distinct, non-blank city. Pure/tested. */
         fun groupByCity(daily: List<DailyEntry>): List<ExploredCity> =
             daily.filter { !it.city.isNullOrBlank() }

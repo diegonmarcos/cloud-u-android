@@ -587,33 +587,21 @@
       "id": "libs:maps",
       "scope": "in",
       "wave": 3,
-      "ui": "views",
+      "ui": "compose",
       "size": "L",
-      "screens_left": [
-        "MapsMapFragment",
-        "MapsDayMapFragment",
-        "MapsDailyFragment",
-        "MapsExploredFragment",
-        "MapsExportFragment",
-        "MapsStopsFragment",
-        "MapsTimelineTabsFragment",
-        "MapsConfigFragment",
-        "MytripsDashboardFragment",
-        "MytripsStatsFragment",
-        "MapsScaleBarView (custom)"
-      ],
+      "screens_left": [],
       "consumers": [
         "nav"
       ],
-      "notes": "MapLibre MapView stays an AndroidView; the ten pages around it migrate with cloud-nav.",
+      "notes": "Done 2026-10-16: the ten pages are KitComposeFragments under CloudKitTheme; the MapLibre MapView stays an AndroidView, its lifecycle forwarded from the view lifecycle; the scale bar is a Compose canvas.",
       "risks": [
         "MapView lifecycle (onStart/onStop/onLowMemory) must be forwarded from the composable host"
       ],
       "baseline": {
-        "view_screens": 10,
+        "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 10,
-        "custom_views": 1
+        "view_ui_files": 0,
+        "custom_views": 0
       }
     },
     {

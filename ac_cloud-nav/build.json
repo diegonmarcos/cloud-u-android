@@ -55,7 +55,8 @@
         "libs:core",
         "libs:maps",
         "libs:updater",
-        "libs:bottomnav"
+        "libs:bottomnav",
+        "libs:ui-kit"
       ]
     },
     "libs:core": {
@@ -84,6 +85,11 @@
     },
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
+    },
+    "libs:ui-kit": {
+      "type": "library",
+      "_doc": "2026-10-15 owner decision: all apps must be Compose. Shared BY REFERENCE: the fleet's Compose kit (CloudKitTheme + KitPalette + KitComposeFragment) that libs:maps' pages, and then the app's own, are built on. libs:maps `api`s it.",
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit"
     },
     "libs:bottomnav": {
       "_doc_dir": "#868 the fleet's bottom island + page-tab strips + NavDecl, shared BY REFERENCE. MainActivity draws the bar with BottomNavIslandView; libs:maps' Timeline host and Configs draw their strips with PageTabsView.",

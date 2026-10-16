@@ -5,23 +5,46 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
-import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -58,7 +81,7 @@ import org.maplibre.geojson.Point
  *   • ARG_STYLE  initial style key (defaults dark for nav3d, else light).
  *   • ARG_FAB    show the locate-me + switcher FABs (default true).
  */
-class MapsMapFragment : Fragment() {
+class MapsMapFragment : KitComposeFragment() {
 
     /** One coloured dot to render. [color] is a CSS hex string. [title] is the
      *  always-on map label; [id] is echoed back by [onPinClick] on tap. */
@@ -160,7 +183,10 @@ class MapsMapFragment : Fragment() {
     private var pins: List<Pin> = emptyList()
     private var me: LatLng? = null
     private var routeGeometry: List<DoubleArray> = emptyList()  // [lat,lon] points
-    private lateinit var styleKey: String
+    // Compose reads these (the style sheet's tick, the 3D button's dimming); the map code writes them.
+    private var styleKey by mutableStateOf("dark")
+    private var styleMenu by mutableStateOf(false)
+    private var savedState: Bundle? = null
 
     private val nav3d: Boolean get() = arguments?.getBoolean(ARG_NAV3D, false) ?: false
     private val showFab: Boolean get() = arguments?.getBoolean(ARG_FAB, true) ?: true
@@ -179,7 +205,7 @@ class MapsMapFragment : Fragment() {
     private var autoLocateDone = false
 
     // Fading scale bar (bottom-right): shows while the zoom changes, fades on idle.
-    private var scaleBar: MapsScaleBarView? = null
+    private val scaleBar = MapsScaleBarState()
     private var lastScaleZoom = Double.NaN
 
     // Cockpit-mode camera overrides (null → fall back to nav3d defaults). Set via [applyNavMode].
@@ -192,7 +218,7 @@ class MapsMapFragment : Fragment() {
     // User-toggled 3D buildings tilt (independent of nav3d cockpit mode).
     // Persisted so it survives style switches / process death. Applied lazily
     // — the pref read needs a Context, unavailable until onCreateView.
-    private var manual3d: Boolean = false
+    private var manual3d by mutableStateOf(false)
 
     private val locPermLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -200,8 +226,45 @@ class MapsMapFragment : Fragment() {
             else toast("Location permission denied")
         }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
+    override fun palette(): KitPalette = MapsInk.palette()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        savedState = savedInstanceState
+    }
+
+    @Composable
+    override fun Content() {
+        val ctx = LocalContext.current
+        val mv = remember { createMapView(ctx) }
+        // The MapView is a drawn View with its own lifecycle: forward the view's (the observer is
+        // caught up to the current state when added, so a late composition still gets start/resume).
+        // onDestroy stays in onDestroyView, which runs whether or not the composition is still up.
+        val lifecycle = viewLifecycleOwner.lifecycle
+        DisposableEffect(lifecycle, mv) {
+            val observer = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_START -> mv.onStart()
+                    Lifecycle.Event.ON_RESUME -> mv.onResume()
+                    Lifecycle.Event.ON_PAUSE -> mv.onPause()
+                    Lifecycle.Event.ON_STOP -> mv.onStop()
+                    else -> {}
+                }
+            }
+            lifecycle.addObserver(observer)
+            onDispose { lifecycle.removeObserver(observer) }
+        }
+        Box(Modifier.fillMaxSize()) {
+            AndroidView(factory = { mv }, modifier = Modifier.fillMaxSize())
+            // Fading scale bar — bottom-right, below the FAB column; on every map.
+            MapsScaleBar.Bar(scaleBar, Modifier.align(Alignment.BottomEnd).padding(16.dp))
+            if (showFab) Fabs(Modifier.align(Alignment.BottomEnd))
+            if (styleMenu) StyleSheet()
+        }
+    }
+
+    /** Creates the MapLibre view and wires its listeners; runs once per view creation. */
+    private fun createMapView(ctx: android.content.Context): MapView {
         MapLibre.getInstance(ctx)   // idempotent one-shot init.
 
         // Every screen's raw style request (an explicit ARG_STYLE, else DARK —
@@ -214,18 +277,16 @@ class MapsMapFragment : Fragment() {
         styleKey = basemapPrefs.resolve(rawStyle)
         manual3d = basemapPrefs.is3d
 
-        val root = FrameLayout(ctx).apply { layoutParams = ViewGroup.LayoutParams(MATCH, MATCH) }
-
         val prefs = MapsTrackerPrefs(ctx)
         val initialLat = if (worldView) 15.0 else if (prefs.hasLastFix()) prefs.lastFixLat else 20.0
         val initialLon = if (worldView) 0.0 else if (prefs.hasLastFix()) prefs.lastFixLon else 0.0
         val initialZoom = if (worldView) 0.8 else if (prefs.hasLastFix()) 14.0 else 2.0
 
-        val mv = (if (textureMode)
+        val mv = if (textureMode)
             MapView(ctx, MapLibreMapOptions.createFromAttributes(ctx).textureMode(true))
-        else MapView(ctx)).apply { layoutParams = FrameLayout.LayoutParams(MATCH, MATCH) }
+        else MapView(ctx)
         mapView = mv
-        mv.onCreate(s)
+        mv.onCreate(savedState)
 
         mv.getMapAsync { m ->
             map = m
@@ -269,53 +330,26 @@ class MapsMapFragment : Fragment() {
                 cb(latLng.latitude, latLng.longitude); true
             }
         }
-        root.addView(mv)
+        return mv
+    }
 
-        // Fading scale bar — bottom-right, below the FAB column; on every map.
-        scaleBar = MapsScaleBarView(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END)
-                .apply { val m = dp(16); setMargins(m, m, m, m) }
-        }
-        root.addView(scaleBar)
-
-        if (showFab) {
-            // Map-style switcher (top of the stack).
-            val switchFab = FloatingActionButton(ctx).apply {
-                setImageResource(R.drawable.ic_map_layers)
-                contentDescription = "Switch map style"
-                size = FloatingActionButton.SIZE_MINI
-                layoutParams = FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END)
-                    .apply { val m = dp(16); setMargins(m, m, m, m + dp(200)) }
-                setOnClickListener { showStyleMenu() }
-            }
-            // 3D buildings toggle (top of the stack, above the style switcher).
-            val threeDFab = FloatingActionButton(ctx).apply {
-                setImageResource(R.drawable.ic_3d_cube)
-                contentDescription = "Toggle 3D buildings"
-                size = FloatingActionButton.SIZE_MINI
-                alpha = if (styleHasBuildings()) 1f else 0.4f
-                layoutParams = FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END)
-                    .apply { val m = dp(16); setMargins(m, m, m, m + dp(260)) }
-                setOnClickListener {
-                    if (!styleHasBuildings()) {
-                        Toast.makeText(ctx, "Switch to a vector style to see 3D buildings", Toast.LENGTH_SHORT).show()
-                    }
-                    toggle3d()
-                    alpha = if (is3dOn()) 1f else 0.5f
-                }
-            }
+    /** The FAB column over the map: Space View, 3D buildings, map style, face north, locate-me. */
+    @Composable
+    private fun Fabs(modifier: Modifier) {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        Column(
+            modifier.padding(end = 16.dp, bottom = 88.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
             // Space View: Solar System (planets/moons/orbits) + star dust +
             // constellations, stacked above the 3D FAB. Renamed from
             // "Constellations" -- see SpaceViewActivity/space_view.html.
             // (Terrain is NOT a separate FAB — it's an entry in the existing map-style
-            // switcher sheet, showStyleMenu(), same as any other basemap.)
-            val skyFab = FloatingActionButton(ctx).apply {
-                setImageResource(R.drawable.ic_constellation)
-                contentDescription = "Space View"
-                size = FloatingActionButton.SIZE_MINI
-                layoutParams = FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END)
-                    .apply { val m = dp(16); setMargins(m, m, m, m + dp(330)) }
-                setOnClickListener {
+            // switcher sheet, same as any other basemap.)
+            SmallFloatingActionButton(
+                onClick = {
                     // The native AR "point phone at sky" view
                     // (com.diegonmarcos.cloudnav.sky.ConstellationsActivity)
                     // is still in the codebase, just not wired to this button.
@@ -327,33 +361,44 @@ class MapsMapFragment : Fragment() {
                     } catch (e: android.content.ActivityNotFoundException) {
                         Toast.makeText(ctx, "Space View unavailable", Toast.LENGTH_SHORT).show()
                     }
-                }
-            }
+                },
+                containerColor = p.surfaceSelected, contentColor = p.textPrimary,
+                modifier = Modifier.testTag("maps:fab:space"),
+            ) { Icon(painterResource(R.drawable.ic_constellation), contentDescription = "Space View") }
+
+            // 3D buildings toggle (above the style switcher): dimmed when this style has none to extrude.
+            SmallFloatingActionButton(
+                onClick = {
+                    if (!styleHasBuildings()) {
+                        Toast.makeText(ctx, "Switch to a vector style to see 3D buildings", Toast.LENGTH_SHORT).show()
+                    }
+                    toggle3d()
+                },
+                containerColor = p.surfaceSelected, contentColor = p.textPrimary,
+                modifier = Modifier.alpha(if (manual3d) 1f else if (styleHasBuildings()) 0.7f else 0.4f).testTag("maps:fab:3d"),
+            ) { Icon(painterResource(R.drawable.ic_3d_cube), contentDescription = "Toggle 3D buildings") }
+
+            // Map-style switcher.
+            SmallFloatingActionButton(
+                onClick = { styleMenu = true },
+                containerColor = p.surfaceSelected, contentColor = p.textPrimary,
+                modifier = Modifier.testTag("maps:fab:style"),
+            ) { Icon(painterResource(R.drawable.ic_map_layers), contentDescription = "Switch map style") }
+
             // Reset-to-north (between switcher and locate-me).
-            val northFab = FloatingActionButton(ctx).apply {
-                setImageResource(R.drawable.ic_compass_north)
-                contentDescription = "Face north"
-                size = FloatingActionButton.SIZE_MINI
-                layoutParams = FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END)
-                    .apply { val m = dp(16); setMargins(m, m, m, m + dp(140)) }
-                setOnClickListener { resetNorth() }
-            }
+            SmallFloatingActionButton(
+                onClick = { resetNorth() },
+                containerColor = p.surfaceSelected, contentColor = p.textPrimary,
+                modifier = Modifier.testTag("maps:fab:north"),
+            ) { Icon(painterResource(R.drawable.ic_compass_north), contentDescription = "Face north") }
+
             // Locate-me (bottom of the stack).
-            val locFab = FloatingActionButton(ctx).apply {
-                setImageResource(R.drawable.ic_my_location)
-                contentDescription = "Find my location"
-                size = FloatingActionButton.SIZE_NORMAL
-                layoutParams = FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END)
-                    .apply { val m = dp(16); setMargins(m, m, m, m + dp(72)) }
-                setOnClickListener { recenterOnUser() }
-            }
-            root.addView(locFab)
-            root.addView(northFab)
-            root.addView(switchFab)
-            root.addView(threeDFab)
-            root.addView(skyFab)
+            FloatingActionButton(
+                onClick = { recenterOnUser() },
+                containerColor = p.accent, contentColor = p.tileInk,
+                modifier = Modifier.testTag("maps:fab:locate"),
+            ) { Icon(painterResource(R.drawable.ic_my_location), contentDescription = "Find my location") }
         }
-        return root
     }
 
     // ── public API ───────────────────────────────────────────────────
@@ -426,10 +471,10 @@ class MapsMapFragment : Fragment() {
 
     /** Keep the scale bar current; reveal it on a zoom change, fade it on idle. */
     private fun onScaleCameraChange(m: MapLibreMap, moving: Boolean) {
-        val sb = scaleBar ?: return
+        val sb = scaleBar
         val cam = m.cameraPosition
         val lat = cam.target?.latitude ?: return
-        sb.update(m.projection.getMetersPerPixelAtLatitude(lat))
+        sb.update(m.projection.getMetersPerPixelAtLatitude(lat), MapsScaleBar.maxWidthPx(resources.displayMetrics.density))
         if (moving) {
             val zoomChanged = lastScaleZoom.isNaN() || kotlin.math.abs(cam.zoom - lastScaleZoom) > 0.01
             if (zoomChanged) { sb.showNow(); lastScaleZoom = cam.zoom }
@@ -533,121 +578,81 @@ class MapsMapFragment : Fragment() {
     }
 
     // ── style switching ──────────────────────────────────────────────
-    /** Tap the map-style FAB → a picker of every [MapStyles.order] entry
-     *  (label shown, current one pre-selected) — jump straight to one instead
-     *  of blindly cycling through them one at a time. */
     /** Tap the map-style FAB → a dark bottom sheet with a rich row per style
-     *  (kind glyph + label + one-line description + a ✓ on the current one). */
-    private fun showStyleMenu() {
-        val ctx = context ?: return
-        fun dpi(v: Int) = (v * resources.displayMetrics.density).toInt()
-        val dialog = BottomSheetDialog(ctx)
-
-        val col = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xFF141A25.toInt())
-            setPadding(dpi(8), dpi(14), dpi(8), dpi(18))
-        }
-        // Grab handle + title.
-        col.addView(View(ctx).apply {
-            setBackgroundColor(0xFF3A4557.toInt())
-            layoutParams = LinearLayout.LayoutParams(dpi(36), dpi(4)).apply {
-                gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dpi(12)
-            }
-        })
-        col.addView(TextView(ctx).apply {
-            text = "Map style"; textSize = 17f
-            setTextColor(0xFFECEFF4.toInt())
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setPadding(dpi(12), 0, dpi(12), dpi(8))
-        })
-
-        val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        MapStyles.order.forEach { key ->
-            val s = MapStyles.get(key)
-            val (glyph, kind) = when {
-                s.hybrid -> "🛰️" to "Imagery + English labels"
-                s.vectorStyleUrl != null -> "✨" to "Vector · English labels · sharp"
-                else -> "🗺️" to "Raster tiles"
-            }
-            val selected = key == styleKey
-            val row = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dpi(14), dpi(12), dpi(14), dpi(12))
-                setBackgroundColor(if (selected) 0xFF1F2A1F.toInt() else 0x00000000)
-                isClickable = true
-                setOnClickListener {
-                    dialog.dismiss()
-                    if (key != styleKey) {
-                        styleKey = key
-                        applyStyle(key, firstLoad = false)
-                        toast("Map: ${s.label}")
+     *  (kind glyph + label + one-line description + a ✓ on the current one) — jump
+     *  straight to one instead of blindly cycling through them. */
+    @Composable
+    private fun StyleSheet() {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
+        MapsSheet(onDismiss = { styleMenu = false }) {
+            Text("Map style", color = p.textPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp))
+            MapStyles.order.forEach { key ->
+                val s = MapStyles.get(key)
+                val (glyph, kind) = when {
+                    s.hybrid -> "🛰️" to "Imagery + English labels"
+                    s.vectorStyleUrl != null -> "✨" to "Vector · English labels · sharp"
+                    else -> "🗺️" to "Raster tiles"
+                }
+                val selected = key == styleKey
+                Row(
+                    Modifier.fillMaxWidth().testTag("maps:style:$key")
+                        .background(if (selected) p.accent.copy(alpha = 0.12f) else p.surfaceSelected)
+                        .clickable {
+                            styleMenu = false
+                            if (key != styleKey) {
+                                styleKey = key
+                                applyStyle(key, firstLoad = false)
+                                toast("Map: ${s.label}")
+                            }
+                        }
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(glyph, fontSize = 22.sp, modifier = Modifier.padding(end = 14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(s.label, color = if (selected) p.accent else p.textPrimary, fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium)
+                        Text(kind, color = p.textSecondary, fontSize = 12.sp)
                     }
+                    if (selected) Text("✓", color = p.accent, fontSize = 18.sp)
                 }
             }
-            row.addView(TextView(ctx).apply { text = glyph; textSize = 22f; setPadding(0, 0, dpi(14), 0) })
-            val texts = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, WRAP, 1f)
-            }
-            texts.addView(TextView(ctx).apply {
-                text = s.label; textSize = 16f
-                setTextColor(if (selected) 0xFF4ADE80.toInt() else 0xFFECEFF4.toInt())
-                typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
-            })
-            texts.addView(TextView(ctx).apply {
-                text = kind; textSize = 12f; setTextColor(0xFF9AA3B2.toInt())
-            })
-            row.addView(texts)
-            if (selected) row.addView(TextView(ctx).apply { text = "✓"; textSize = 18f; setTextColor(0xFF4ADE80.toInt()) })
-            list.addView(row)
-        }
-        // Real 3D terrain (mountains that rise on tilt) + forest tint — MapLibre Native
-        // (everything above) has no terrain support at all, so this is a separate
-        // MapLibre GL JS WebView screen, listed here as a style-menu entry rather than
-        // its own FAB. EXPERIMENTAL: loads gl-js from a CDN (no offline support yet).
-        list.addView(LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dpi(14), dpi(12), dpi(14), dpi(12))
-            isClickable = true
-            setOnClickListener {
-                dialog.dismiss()
-                val cam = map?.cameraPosition
-                val target = cam?.target
-                val intent = android.content.Intent().apply {
-                    setClassName(ctx.packageName, "com.diegonmarcos.cloudnav.TerrainActivity")
-                    if (target != null) {
-                        putExtra("lat", target.latitude)
-                        putExtra("lon", target.longitude)
-                        putExtra("zoom", cam.zoom)
+            // Real 3D terrain (mountains that rise on tilt) + forest tint — MapLibre Native
+            // (everything above) has no terrain support at all, so this is a separate
+            // MapLibre GL JS WebView screen, listed here as a style-menu entry rather than
+            // its own FAB. EXPERIMENTAL: loads gl-js from a CDN (no offline support yet).
+            Row(
+                Modifier.fillMaxWidth().testTag("maps:style:terrain")
+                    .clickable {
+                        styleMenu = false
+                        val cam = map?.cameraPosition
+                        val target = cam?.target
+                        val intent = android.content.Intent().apply {
+                            setClassName(ctx.packageName, "com.diegonmarcos.cloudnav.TerrainActivity")
+                            if (target != null) {
+                                putExtra("lat", target.latitude)
+                                putExtra("lon", target.longitude)
+                                putExtra("zoom", cam.zoom)
+                            }
+                        }
+                        try {
+                            ctx.startActivity(intent)
+                        } catch (e: android.content.ActivityNotFoundException) {
+                            Toast.makeText(ctx, "Terrain view unavailable", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                }
-                try {
-                    ctx.startActivity(intent)
-                } catch (e: android.content.ActivityNotFoundException) {
-                    Toast.makeText(ctx, "Terrain view unavailable", Toast.LENGTH_SHORT).show()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("🏔️", fontSize = 22.sp, modifier = Modifier.padding(end = 14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Terrain (experimental)", color = p.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Text("Real 3D mountains + forest · separate screen, online only", color = p.textSecondary, fontSize = 12.sp)
                 }
             }
-            addView(TextView(ctx).apply { text = "🏔️"; textSize = 22f; setPadding(0, 0, dpi(14), 0) })
-            addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, WRAP, 1f)
-                addView(TextView(ctx).apply {
-                    text = "Terrain (experimental)"; textSize = 16f
-                    setTextColor(0xFFECEFF4.toInt())
-                    typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
-                })
-                addView(TextView(ctx).apply {
-                    text = "Real 3D mountains + forest · separate screen, online only"
-                    textSize = 12f; setTextColor(0xFF9AA3B2.toInt())
-                })
-            })
-        })
-        col.addView(ScrollView(ctx).apply { addView(list) })
-        dialog.setContentView(col)
-        dialog.show()
+        }
     }
 
     /**
@@ -856,13 +861,9 @@ class MapsMapFragment : Fragment() {
     private fun ui(block: () -> Unit) { if (!isAdded) return; activity?.runOnUiThread { if (isAdded) block() } }
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
-    override fun onStart()   { super.onStart();   mapView?.onStart() }
-    override fun onResume()  { super.onResume();  mapView?.onResume() }
-    override fun onPause()   { mapView?.onPause();  super.onPause() }
-    override fun onStop()    { mapView?.onStop();   super.onStop() }
     override fun onLowMemory(){ super.onLowMemory(); mapView?.onLowMemory() }
     override fun onDestroyView() {
-        mapView?.onDestroy(); mapView = null; map = null; styleReady = false; scaleBar = null
+        mapView?.onDestroy(); mapView = null; map = null; styleReady = false; styleMenu = false
         super.onDestroyView()
     }
     override fun onSaveInstanceState(outState: Bundle) {
@@ -870,9 +871,6 @@ class MapsMapFragment : Fragment() {
     }
 
     companion object {
-        private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
-        private const val WRAP  = ViewGroup.LayoutParams.WRAP_CONTENT
-
         const val ARG_NAV3D = "nav3d"
         const val ARG_FAB   = "fab"
         const val ARG_STYLE = "style"

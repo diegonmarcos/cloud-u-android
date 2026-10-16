@@ -1,17 +1,14 @@
 package com.diegonmarcos.cloudnav.maps
 
-import android.app.Activity
-import android.content.Intent
 import android.net.Uri
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.fragment.app.Fragment
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
 
 /**
  * Maps → Export page. Two buttons that hand the user a Storage-Access-
@@ -31,7 +28,7 @@ import androidx.fragment.app.Fragment
  * No external storage permission needed — SAF returns a write-grant
  * Uri scoped to the picked location.
  */
-class MapsExportFragment : Fragment() {
+class MapsExportFragment : KitComposeFragment() {
 
     private var pendingFormat: String = "geojson"
 
@@ -43,50 +40,21 @@ class MapsExportFragment : Fragment() {
         )
     ) { uri: Uri? -> if (uri != null) writeTo(uri, pendingFormat) }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
-        val scroll = ScrollView(ctx).apply { isFillViewport = true }
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(ctx, 16); setPadding(p, p, p, p)
-        }
-        scroll.addView(root)
+    override fun palette(): KitPalette = MapsInk.palette()
 
-        root.addView(TextView(ctx).apply {
-            text = "Export"
-            setTextColor(0xFFFFFFFFL.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-            setPadding(0, 0, 0, dp(ctx, 8))
-        })
-        root.addView(TextView(ctx).apply {
-            text = "Save your tracker DB as a portable file. GeoJSON for maps + GIS tools, CSV for spreadsheets. Stops only — raw GPS points stay in the local DB."
-            setTextColor(0xAAFFFFFFL.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-            setPadding(0, 0, 0, dp(ctx, 16))
-        })
-
-        root.addView(Button(ctx).apply {
-            text = "Export GeoJSON"
-            setOnClickListener {
-                MapsHaptics.tap(it)
+    @Composable
+    override fun Content() {
+        Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            MapsCaption("Save your tracker DB as a portable file. GeoJSON for maps + GIS tools, CSV for spreadsheets. Stops only — raw GPS points stay in the local DB.")
+            MapsButton("Export GeoJSON", onClick = {
                 pendingFormat = "geojson"
                 picker.launch("cloud-superapp-stops-${nowStamp()}.geojson")
-            }
-        })
-        root.addView(Button(ctx).apply {
-            text = "Export CSV"
-            setOnClickListener {
-                MapsHaptics.tap(it)
+            })
+            MapsButton("Export CSV", modifier = Modifier.padding(top = 8.dp), onClick = {
                 pendingFormat = "csv"
                 picker.launch("cloud-superapp-stops-${nowStamp()}.csv")
-            }
-            val mt = dp(ctx, 8)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = mt }
-        })
-        return scroll
+            })
+        }
     }
 
     /** Stream the chosen dump into the SAF-granted Uri. Runs on the
@@ -164,8 +132,6 @@ class MapsExportFragment : Fragment() {
     private fun nowStamp(): String = java.text.SimpleDateFormat(
         "yyyy-MM-dd-HHmm", java.util.Locale.US
     ).format(java.util.Date())
-
-    private fun dp(ctx: android.content.Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
 
     companion object { fun newInstance() = MapsExportFragment() }
 }

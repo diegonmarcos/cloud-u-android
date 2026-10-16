@@ -1,20 +1,45 @@
 package com.diegonmarcos.cloudnav.maps
 
-import android.app.DatePickerDialog
-import android.content.Context
-import android.os.Bundle
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.floatingactionbutton.FloatingActionButton
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.superapp.uikit.KitComposeFragment
+import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -89,83 +114,91 @@ fun computeDailyLocations(stops: List<MapsDb.RichStop>): List<DailyEntry> {
  * ([MapsExploredFragment]) — Explored groups these same per-day city picks
  * by city, so it never shows raw per-stop noise.
  *
- * RecyclerView-backed — the full 1987-1992 demo trip is ~2192 rows; a
- * LinearLayout-in-ScrollView would inflate every row up front (slow to open,
- * janky scroll). RecyclerView only inflates what's on screen.
- *
- * Light theme: dark text on a light surface (palette shared with
- * [MapsStopsFragment]); `setTextColor` applied AFTER `setTextAppearance`
- * so the appearance can't override the colour.
+ * LazyColumn-backed — the full 1987-1992 demo trip is ~2192 rows; only the rows on screen are
+ * composed (slow to open, janky scroll otherwise).
  */
-class MapsDailyFragment : Fragment() {
+class MapsDailyFragment : KitComposeFragment() {
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
-        val ctx = inflater.context
+    override fun palette(): KitPalette = MapsInk.palette()
 
-        val now = System.currentTimeMillis()
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    override fun Content() {
+        val ctx = LocalContext.current
+        val p = LocalKitPalette.current
         // All-time — not a rolling "last N years" window. The demo dataset is a
         // deliberately historical (1987-1992) block precisely so it never
         // collides with real tracked data; a bounded "recent" window would hide
         // it (the bug this avoids — see MapsDemo's doc comment).
-        val stops = MapsDb.get(ctx).stopsBetween(0L, now)
-        val daily = computeDailyLocations(stops)
+        val daily = remember { computeDailyLocations(MapsDb.get(ctx).stopsBetween(0L, System.currentTimeMillis())) }
 
         if (daily.isEmpty()) {
-            return TextView(ctx).apply {
-                text = "No daily locations yet. Daily picks the LONGEST-dwell Stop per day — needs at least one Stop in the DB. Start the tracker on the Configs page, dwell ≥ 5 min in one spot, and refresh."
-                setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-                setTextColor(MapsStopsFragment.COL_SECONDARY)
-                setBackgroundColor(MapsStopsFragment.COL_SURFACE)
-                val p = dp(ctx, 16); setPadding(p, p, p, p)
-            }
+            Text(
+                "No daily locations yet. Daily picks the LONGEST-dwell Stop per day — needs at least one Stop in the DB. Start the tracker on the Configs page, dwell ≥ 5 min in one spot, and refresh.",
+                color = p.textSecondary, style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxSize().background(p.surface).padding(16.dp),
+            )
+            return
         }
 
-        val root = FrameLayout(ctx).apply { setBackgroundColor(MapsStopsFragment.COL_SURFACE) }
-        val recycler = RecyclerView(ctx).apply {
-            val p = dp(ctx, 16); setPadding(p, p, p, p); clipToPadding = false
-            layoutManager = LinearLayoutManager(ctx)
-            adapter = DailyAdapter(daily) { dayMs ->
-                (parentFragment as? MapsTimelineTabsFragment)?.openStopsForDay(dayMs)
+        val listState = rememberLazyListState()
+        val scope = rememberCoroutineScope()
+        var picking by remember { mutableStateOf(false) }
+        Box(Modifier.fillMaxSize().background(p.surface)) {
+            LazyColumn(
+                state = listState,
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxSize().testTag("maps:daily:list"),
+            ) {
+                items(daily, key = { it.dayMs }) { entry ->
+                    DailyRow(entry) { dayMs -> (parentFragment as? MapsTimelineTabsFragment)?.openStopsForDay(dayMs) }
+                }
+            }
+            // Calendar jump — pick a date, scroll to the nearest day in the list
+            // (2192 days of demo history is a lot to scroll by hand).
+            FloatingActionButton(
+                onClick = { picking = true },
+                containerColor = p.accent,
+                contentColor = p.tileInk,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).testTag("maps:daily:jump"),
+            ) {
+                Icon(painterResource(android.R.drawable.ic_menu_my_calendar), contentDescription = "Jump to date")
             }
         }
-        root.addView(recycler, FrameLayout.LayoutParams(MATCH, MATCH))
-
-        // Calendar jump — pick a date, scroll to the nearest day in the list
-        // (2192 days of demo history is a lot to scroll by hand).
-        root.addView(FloatingActionButton(ctx).apply {
-            setImageResource(android.R.drawable.ic_menu_my_calendar)
-            contentDescription = "Jump to date"
-            layoutParams = FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END)
-                .apply { val m = dp(ctx, 16); setMargins(m, m, m, m) }
-            setOnClickListener { showDatePicker(ctx, daily, recycler) }
-        })
-        return root
+        if (picking) {
+            JumpDialog(daily, onDismiss = { picking = false }) { target ->
+                scope.launch { listState.scrollToItem(nearestIndex(daily, target)) }
+            }
+        }
     }
 
-    /** Date picker → smooth-scroll the [recycler] to the entry whose day is
-     *  nearest the chosen date (the list is descending by day). */
-    private fun showDatePicker(ctx: Context, daily: List<DailyEntry>, recycler: RecyclerView) {
-        val cal = Calendar.getInstance().apply { timeInMillis = daily.first().dayMs }
-        DatePickerDialog(ctx, { _, y, mo, d ->
-            val target = Calendar.getInstance().apply {
-                set(Calendar.YEAR, y); set(Calendar.MONTH, mo); set(Calendar.DAY_OF_MONTH, d)
-                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-            }.timeInMillis
-            val idx = daily.indices.minByOrNull { abs(daily[it].dayMs - target) } ?: 0
-            (recycler.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(idx, 0)
-        }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).apply {
-            // Clamp the picker to the actual data range (oldest..newest).
-            datePicker.minDate = daily.minOf { it.dayMs }
-            datePicker.maxDate = daily.maxOf { it.dayMs }
-        }.show()
+    /** Date picker → scroll to the entry whose day is nearest the chosen date (the list is descending by day). */
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun JumpDialog(daily: List<DailyEntry>, onDismiss: () -> Unit, onPick: (Long) -> Unit) {
+        // Clamp the picker to the actual data range (oldest..newest).
+        val minUtc = utcOfLocalDay(daily.minOf { it.dayMs })
+        val maxUtc = utcOfLocalDay(daily.maxOf { it.dayMs })
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = utcOfLocalDay(daily.first().dayMs),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis in minUtc..maxUtc
+            },
+        )
+        DatePickerDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { onPick(localMidnightOfUtcDay(it)) }
+                    onDismiss()
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        ) { DatePicker(state = state) }
     }
-
-    private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
 
     companion object {
-        private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
-        private const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
-
         fun newInstance() = MapsDailyFragment()
 
         /** Device-local midnight (epoch ms) of the calendar day [ts] falls in —
@@ -178,65 +211,55 @@ class MapsDailyFragment : Fragment() {
             cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
             return cal.timeInMillis
         }
+
+        /** The index of the entry whose day is nearest [targetMs] (0 for an empty list). */
+        fun nearestIndex(daily: List<DailyEntry>, targetMs: Long): Int =
+            daily.indices.minByOrNull { abs(daily[it].dayMs - targetMs) } ?: 0
+
+        /** The Material date picker speaks UTC midnights; the list speaks local ones. Same calendar day, other clock. */
+        fun utcOfLocalDay(localMs: Long): Long {
+            val cal = Calendar.getInstance().apply { timeInMillis = localMs }
+            return LocalDate.of(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH))
+                .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        }
+
+        /** The inverse of [utcOfLocalDay]: the local midnight of the calendar day a UTC-midnight stamp names. */
+        fun localMidnightOfUtcDay(utcMs: Long): Long {
+            val d = Instant.ofEpochMilli(utcMs).atZone(ZoneOffset.UTC).toLocalDate()
+            return Calendar.getInstance().apply {
+                set(d.year, d.monthValue - 1, d.dayOfMonth, 0, 0, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+        }
     }
 }
 
-/** Row view holder for [DailyAdapter] — top-level (not nested) so it stays
- *  visible for testing, avoiding the cross-file companion-nested-member
- *  resolution quirk this codebase already hit once (see git history). */
-class DailyViewHolder(val tile: LinearLayout, val title: TextView, val place: TextView, val sub: TextView) :
-    RecyclerView.ViewHolder(tile)
+/** What one Daily row says: the day, its longest-dwell place, and the line under it. */
+data class DailyRowText(val title: String, val place: String, val sub: String)
 
-/** Feeds [DailyEntry] rows into a [RecyclerView] — view recycling instead of
- *  inflating all ~2192 rows up front (the full 1987-1992 demo trip). */
-class DailyAdapter(private val items: List<DailyEntry>, private val onTap: (Long) -> Unit) :
-    RecyclerView.Adapter<DailyViewHolder>() {
+private val dailyDayFmt = SimpleDateFormat("EEE  ·  dd MMM yyyy", Locale.US)
 
-    private val dayFmt = SimpleDateFormat("EEE  ·  dd MMM yyyy", Locale.US)
+/** Pure: the three lines of a Daily row for [entry] (an unresolved place reads "Resolving…"). */
+fun dailyRowText(entry: DailyEntry): DailyRowText {
+    val parts = listOfNotNull(entry.neighborhood, entry.city, entry.country)
+    return DailyRowText(
+        title = synchronized(dailyDayFmt) { dailyDayFmt.format(Date(entry.dayMs)) },
+        place = entry.placeName ?: "Resolving…",
+        sub = if (parts.isNotEmpty()) parts.joinToString("  ·  ") + "    ·  tap for this day's stops ▸"
+              else "tap for this day's stops ▸",
+    )
+}
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DailyViewHolder {
-        val ctx = parent.context
-        fun dp(v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
-        val tile = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(12); setPadding(pad, pad, pad, pad)
-            setBackgroundColor(MapsStopsFragment.COL_TILE)
-            isClickable = true
-            val m = dp(4)
-            layoutParams = RecyclerView.LayoutParams(
-                RecyclerView.LayoutParams.MATCH_PARENT,
-                RecyclerView.LayoutParams.WRAP_CONTENT,
-            ).apply { setMargins(0, m, 0, m) }
-        }
-        val title = TextView(ctx).apply {
-            setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-            setTextColor(MapsStopsFragment.COL_ACCENT)
-        }
-        val place = TextView(ctx).apply {
-            setTextAppearance(android.R.style.TextAppearance_Material_Body1)
-            setTextColor(MapsStopsFragment.COL_PRIMARY)
-            maxLines = 2
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(0, dp(4), 0, 0)
-        }
-        val sub = TextView(ctx).apply {
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setTextColor(MapsStopsFragment.COL_SECONDARY)
-            setPadding(0, dp(2), 0, 0)
-        }
-        tile.addView(title); tile.addView(place); tile.addView(sub)
-        return DailyViewHolder(tile, title, place, sub)
+/** One row of the Daily list — a tap opens that day's stops. */
+@Composable
+private fun DailyRow(entry: DailyEntry, onTap: (Long) -> Unit) {
+    val p = LocalKitPalette.current
+    val text = dailyRowText(entry)
+    MapsTile(Modifier.testTag("maps:daily:row:${entry.dayMs}"), onClick = { onTap(entry.dayMs) }) {
+        Text(text.title, color = p.accent, style = MaterialTheme.typography.titleMedium)
+        Text(text.place, color = p.textPrimary, style = MaterialTheme.typography.bodyLarge, maxLines = 2,
+            overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+        Text(text.sub, color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(top = 2.dp))
     }
-
-    override fun onBindViewHolder(holder: DailyViewHolder, position: Int) {
-        val entry = items[position]
-        holder.title.text = dayFmt.format(Date(entry.dayMs))
-        holder.place.text = entry.placeName ?: "Resolving…"
-        val parts = listOfNotNull(entry.neighborhood, entry.city, entry.country)
-        holder.sub.text = if (parts.isNotEmpty()) parts.joinToString("  ·  ") + "    ·  tap for this day's stops ▸"
-                          else "tap for this day's stops ▸"
-        holder.tile.setOnClickListener { onTap(entry.dayMs) }
-    }
-
-    override fun getItemCount() = items.size
 }

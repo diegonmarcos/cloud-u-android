@@ -178,8 +178,8 @@ def check(repo, cfg, manifest, roster):
                        % (name, sorted(decl.get("used_by", [])), sorted(mods)))
     for name in sorted(set(stores) - set(resolved)):
         decl = stores[name]
-        if decl.get("kind") == "file":
-            continue  # files are declared by hand; the scanner does not see them
+        if decl.get("kind") in ("file", "provider"):
+            continue  # files and registered providers are declared by hand; the scanner does not see them
         helper = decl.get("helper")
         if helper:
             # Opened through an app helper that takes the name as an argument: the declaration

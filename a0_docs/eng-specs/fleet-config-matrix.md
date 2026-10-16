@@ -334,7 +334,7 @@ Coverage: 6 covered, 0 gaps.
 
 ## cloud-calc — `com.diegonmarcos.cloudcalc`
 
-Module `ac_cloud-calc`; libs: lib-bottomnav, lib-core, lib-databackend, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-ml-l-sound, lib-text-tools.
+Module `ac_cloud-calc`; libs: lib-ai, lib-bottomnav, lib-core, lib-databackend, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-ml-l-sound, lib-model-catalogue, lib-text-tools.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -682,7 +682,7 @@ Coverage: 6 covered, 0 gaps.
 
 ## cloud-nav — `com.diegonmarcos.cloudnav`
 
-Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-maps, lib-updater.
+Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-maps, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -768,7 +768,7 @@ Coverage: 9 covered, 7 gaps — file:$HOME/.config/nix-on-droid/nix-on-droid.nix
 
 ## cloud-notes — `com.diegonmarcos.cloudnotes`
 
-Module `ac_cloud-notes`; libs: lib-core, lib-devtools, lib-fleetconfig-model.
+Module `ac_cloud-notes`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

@@ -1,3 +1,4 @@
+# ─── GENERATED: do not edit — edit 1_cicd/src/scripts/cloud-android-nav-shape-guard.py ───
 #!/usr/bin/env python3
 """
 cloud-android-nav-shape-guard — #868: every app's navigation is ONE declaration
