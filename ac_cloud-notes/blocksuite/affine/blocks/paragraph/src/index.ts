@@ -6,3 +6,4 @@ export * from './turbo/paragraph-layout-handler';
 export * from './turbo/paragraph-painter.worker';
 export * from './synced/bind-ytexts';
 export * from './synced/synced-blocks';
+export * from './synced/synced-actions';

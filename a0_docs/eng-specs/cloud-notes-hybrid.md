@@ -178,7 +178,7 @@ Acceptance tests:
 | **Gallery view** | DONE (device: UI) | new view preset beside table/kanban/calendar (cover = first image property) |
 | **Relations** (row ↔ row across databases, two-way) | DONE | new property type |
 | **Rollups** (count/sum/min/max/percent over a relation) | DONE | depends on relations |
-| **Synced blocks** (one block, many pages) | PARTIAL | two-way text binding `SyncedBlocksExtension` done and tested (A5.6 model); the creation UI ("copy as synced block") is still missing |
+| **Synced blocks** (one block, many pages) | PARTIAL | two-way text binding `SyncedBlocksExtension` done and tested (A5.6 model); creation: `/synced` slash item, block toolbar "Copy as synced block" / "Paste as synced block" / "Sync to <doc>" (`synced-block-ui.ts`, spec `synced-actions.unit.spec.ts`); intercepting a plain system paste is not done |
 | Templates, favourites | EXISTS | `template-doc`, `favorite` |
 
 Acceptance tests:

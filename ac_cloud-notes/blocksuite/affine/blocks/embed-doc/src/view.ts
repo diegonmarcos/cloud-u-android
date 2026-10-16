@@ -13,6 +13,7 @@ import {
   EdgelessClipboardEmbedSyncedDocConfig,
   EmbedSyncedDocViewExtensions,
 } from './embed-synced-doc-block';
+import { SyncedBlockUIExtensions } from './synced-block-ui';
 import { EmbedSyncedDocInteraction } from './embed-synced-doc-block/configs/edgeless-interaction';
 
 export class EmbedDocViewExtension extends ViewExtensionProvider {
@@ -27,6 +28,7 @@ export class EmbedDocViewExtension extends ViewExtensionProvider {
     super.setup(context);
     context.register(EmbedLinkedDocViewExtensions);
     context.register(EmbedSyncedDocViewExtensions);
+    context.register(SyncedBlockUIExtensions);
     const isEdgeless = this.isEdgeless(context.scope);
     if (isEdgeless) {
       context.register([

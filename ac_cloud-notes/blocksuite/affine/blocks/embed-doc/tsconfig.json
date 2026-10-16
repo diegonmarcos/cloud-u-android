@@ -8,6 +8,7 @@
   "include": ["./src"],
   "references": [
     { "path": "../embed" },
+    { "path": "../paragraph" },
     { "path": "../surface" },
     { "path": "../../components" },
     { "path": "../../ext-loader" },
