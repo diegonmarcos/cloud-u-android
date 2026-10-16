@@ -173,7 +173,7 @@ echo "== T5: every app the central list puts in an Inboxes section reaches the I
 # surface reading that classification could not run the metadata pass, so the
 # apps resolved on paper and arrived nowhere. These assertions are the rest of
 # the route, from the central list to the tab.
-FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
+FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorNotify.kt"
 TAXO="$APP/../ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/apps/PhoneTaxonomy.kt"
 
 # T5a — a folder with NO match rule at all can never claim an app, so a section
@@ -299,7 +299,7 @@ grep -q 'PhoneTaxonomy.folders.map { it.id }' "$FRAG" \
   || bad "BY KIND no longer derives its kinds from PhoneTaxonomy.folders — check for a second kind list"
 
 grep -q 'if (granted) (counted\[id\] ?: 0).toString() else NO_SOURCE' "$FRAG" \
-  && ok "BY KIND prints a count only when the listener was queried, '$(grep -o 'private val NO_SOURCE = "[^"]*"' "$FRAG" | sed 's/.*"\(.*\)"/\1/')' otherwise" \
+  && ok "BY KIND prints a count only when the listener was queried, '$(grep -o 'internal const val NO_SOURCE = "[^"]*"' "$FRAG" | sed 's/.*"\(.*\)"/\1/')' otherwise" \
   || bad "BY KIND can print a number for a kind it never queried — a zero indistinguishable from a real empty inbox"
 
 grep -q 'NO_SOURCE · classification unavailable' "$FRAG" \

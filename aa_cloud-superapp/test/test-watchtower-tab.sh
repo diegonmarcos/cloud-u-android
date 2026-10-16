@@ -44,7 +44,8 @@ ROOT="$(cd "$APP/.." && pwd)"                    # → cloud-u-android
 BJ="$APP/build.json"
 FLEET="$APP/data/constellation-fleet.json"
 WT="$ROOT/ac_c3-watchtower"
-AGG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
+AGG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorFeeds.kt"   # the feed arms (#773: split out of the fragment)
+AGGMODEL="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorModel.kt"
 NAV="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherNavController.kt"
 TABS="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
 
@@ -54,7 +55,7 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 eq()  { [ "$2" = "$3" ] && ok "$1 ($2)" || bad "$1: expected '$3', got '$2'"; }
 
 command -v jq >/dev/null 2>&1 || { echo "ERROR: jq required" >&2; exit 2; }
-for f in "$BJ" "$AGG" "$NAV" "$TABS"; do
+for f in "$BJ" "$AGG" "$AGGMODEL" "$NAV" "$TABS"; do
     [ -f "$f" ] || { echo "ERROR: missing $f" >&2; exit 2; }
 done
 
@@ -178,7 +179,7 @@ SRC="$(jq -r "$CARD | .source" "$BJ")"
 eq "its source is the run-stats fetcher" "$SRC" "github_run_stats"
 NR="$(jq -r "[$CARD | .repos[]?] | length" "$BJ")"
 [ "$NR" -gt 0 ] 2>/dev/null && ok "the card declares its repo set ($NR)" \
-  || bad "the Analytics card declares no repos — renderRunStatsFeed would draw 'No repos declared'"
+  || bad "the Analytics card declares no repos — RunStatsFeed would draw 'No repos declared'"
 
 # #78: the Index row is the first card and must jump to EVERY card below it.
 IDXROW="$OBS | select(.kind == \"tile_row\" and .title == \"Index\")"
@@ -204,23 +205,26 @@ eq "the More row was not given an analytics tile" \
 eq "the More row still carries its seven tiles" "$(jq -r "[$MOREROW | .tiles[]] | length" "$BJ")" "7"
 
 echo "== T7: the renderer HANDLES that source, rather than drawing its fallback =="
-CODE="$(mktemp)"; trap 'rm -f "$NAVCODE" "$CODE"' EXIT
+CODE="$(mktemp)"; MCODE="$(mktemp)"; trap 'rm -f "$NAVCODE" "$CODE" "$MCODE"' EXIT
 sed -e 's://[^"]*$::' "$AGG" | grep -vE '^[[:space:]]*(//|/\*|\*)' > "$CODE"
-codehas() { grep -qF "$1" "$CODE" && ok "$2" || bad "$2 (not in AggregatorStackFragment.kt, comments stripped)"; }
-codehas "\"$SRC\" -> renderRunStatsFeed" "renderFeed dispatches $SRC to a real arm"
-codehas 'private fun renderRunStatsFeed' "that arm exists"
+sed -e 's://[^"]*$::' "$AGGMODEL" | grep -vE '^[[:space:]]*(//|/\*|\*)' > "$MCODE"
+codehas() { grep -qF "$1" "$CODE" && ok "$2" || bad "$2 (not in AggregatorFeeds.kt, comments stripped)"; }
+mcodehas() { grep -qF "$1" "$MCODE" && ok "$2" || bad "$2 (not in AggregatorModel.kt, comments stripped)"; }
+codehas "\"$SRC\" -> RunStatsFeed(" "FeedBody dispatches $SRC to a real arm"
+codehas 'private fun RunStatsFeed' "that arm exists"
 # The denominator, again — asserted on the card as well as in the app, because
-# these are two independent implementations of the same number.
-codehas 'val finished = runs.filter { it.conclusion.isNotBlank() }' \
+# these are two independent implementations of the same number. The arithmetic
+# is AggregatorModel.runVerdict (pure; AggregatorModelTest pins it as well).
+mcodehas 'val finished = runs.filter { it.conclusion.isNotBlank() }' \
         "in-progress runs are excluded from the card's denominator"
 # The handoff must go through the ONE dispatcher (#156: no seventh ad-hoc
-# ACTION_VIEW site; #195: onTileClicked fires once). githubRow already routes
-# its url through onTileClicked, so the card must reuse githubRow and must NOT
-# start an activity itself.
-codehas 'return githubRow(' "the summary row reuses githubRow, so the tap goes through onTileClicked"
-STATS_FN="$(sed -n '/private fun renderRunStatsFeed/,/^    private fun renderDaguRunsFeed/p' "$CODE")"
+# ACTION_VIEW site; #195: onTileClicked fires once). FeedRow already routes its
+# url through the page's onOpen (→ onTileClicked), so the card must reuse FeedRow
+# and must NOT start an activity itself.
+codehas 'FeedRow(label, verdict, url, severity, onOpen)' "the summary row reuses FeedRow, so the tap goes through the one dispatcher"
+STATS_FN="$(sed -n '/private fun RunStatsFeed/,/^private fun DaguRunsFeedBody/p' "$CODE")"
 case "$STATS_FN" in
-  *startActivity*) bad "renderRunStatsFeed/runStatsRow calls startActivity directly — a seventh ad-hoc launch site (#156)" ;;
+  *startActivity*) bad "RunStatsFeed/StatsRow calls startActivity directly — a seventh ad-hoc launch site (#156)" ;;
   *)               ok "no startActivity in the new render path" ;;
 esac
 # And the card's declared handoff target must be the app, resolved through the

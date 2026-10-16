@@ -67,7 +67,7 @@ check "$(python3 - "$SRC" <<'PY'
 import os, sys
 root = sys.argv[1]
 sites = [
-    "com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt",
+    "com/diegonmarcos/superapp/launcher/AggregatorNotify.kt",   # the shade (group avatars) moved out of the fragment
     "com/diegonmarcos/superapp/media/MusicIslandController.kt",
     "com/diegonmarcos/superapp/media/MusicControlsPopup.kt",
     "com/diegonmarcos/superapp/apps/PhoneSmartFolders.kt",

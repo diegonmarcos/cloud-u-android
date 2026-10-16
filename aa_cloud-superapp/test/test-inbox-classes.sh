@@ -364,12 +364,13 @@ echo "== T9: an aggregated card still says which app each entry came from =="
 # regression no data assertion above could see — ui.inbox_classes would be
 # perfectly valid while every card rendered one anonymous heap.
 #
-# Asserted on the RENDERER, which is where provenance is either kept or lost,
-# and scoped to renderClassInbox's own braces so a groupBy in a neighbouring
+# Asserted on the class card's GROUP BUILDER (AggregatorState.classGroups since
+# #773 - the renderer draws what it returns), which is where provenance is either
+# kept or lost, and scoped to classGroups's own braces so a groupBy in a neighbouring
 # function cannot answer for it. Comments are stripped first: this KDoc talks
 # about packages and labels at length, and a guard that cannot tell prose from
 # code passes on its own explanation.
-FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
+FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorState.kt"
 [ -f "$FRAG" ] || { echo "  FAIL: missing $FRAG"; exit 1; }
 python3 - "$FRAG" <<'PY'
 import io, re, sys
@@ -382,10 +383,10 @@ src = re.sub(r"[ \t]//.*$", "", src, flags=re.M)
 # Fail CLOSED. A renamed function must break this tester loudly, because the
 # alternative — grepping a body we never found and reporting "no problem" — is
 # the false green this repository has actually shipped.
-start = src.find("private fun renderClassInbox(")
+start = src.find("fun classGroups(")
 if start < 0:
-    print("  FAIL: renderClassInbox not found in AggregatorStackFragment.kt — if the class "
-          "card renderer was renamed, rename it here; this tester cannot check a body it "
+    print("  FAIL: classGroups not found in AggregatorState.kt — if the class "
+          "card group builder was renamed, rename it here; this tester cannot check a body it "
           "cannot find")
     sys.exit(1)
 
@@ -401,7 +402,7 @@ for i in range(open_at, len(src)):
             end = i
             break
 if end < 0:
-    print("  FAIL: renderClassInbox's braces do not balance — cannot scope the check")
+    print("  FAIL: classGroups's braces do not balance — cannot scope the check")
     sys.exit(1)
 body = src[open_at:end]
 
@@ -412,16 +413,16 @@ def check(cond, msg):
 
 # One card's notifications are split PER APPLICATION before they are drawn.
 check(re.search(r"groupBy\s*\{\s*it\.packageName\s*\}", body) is not None,
-      "renderClassInbox does not group the class feed by packageName — the card would "
+      "classGroups does not group the class feed by packageName — the card would "
       "render one anonymous heap and the owner could not tell Cloud Mail from Gmail")
 # Each group is NAMED by the app it came from, and carries the package id under
 # it. Both, because the label alone is ambiguous between two forks of one app
 # and the package alone is not something the owner should have to decode.
 check(re.search(r"label\s*=\s*[^\n]*appLabel", body) is not None,
-      "renderClassInbox builds a group with no appLabel — the entries would not name "
+      "classGroups builds a group with no appLabel — the entries would not name "
       "the application they arrived from")
 check(re.search(r"sub\s*=\s*pkg\b", body) is not None,
-      "renderClassInbox builds a group whose sub-line is not the package id — two apps "
+      "classGroups builds a group whose sub-line is not the package id — two apps "
       "sharing a label would be indistinguishable inside the card")
 
 for m in fails:

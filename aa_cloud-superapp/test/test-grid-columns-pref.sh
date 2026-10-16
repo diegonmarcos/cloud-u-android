@@ -27,10 +27,13 @@ hits=$(grep -rln "UI_PHONE_GRID_COLUMNS\|UI_TILE_COLUMNS" --include=*.kt "$KT" |
 [ -z "$hits" ] && ok "T2 no grid reads BuildConfig columns directly" || bad "T2 direct BuildConfig reads: $hits"
 
 # T3 each grid family uses the pref
-for f in launcher/TileGridFragment.kt launcher/HomeGroupedFragment.kt launcher/AggregatorStackFragment.kt; do
+for f in launcher/TileGridFragment.kt launcher/HomeGroupedFragment.kt; do
   grep -q "GridColumns.cloud(" "$KT/$f" && grep -q "redrawOnGridColumns(GridColumns.Kind.CLOUD)" "$KT/$f" \
     && ok "T3 $f reads cloud pref and redraws live" || bad "T3 $f"
 done
+# The aggregator page reads the pref in its panel bodies (AggregatorPanels.kt) and redraws live from the fragment.
+grep -q "GridColumns.cloud(" "$KT/launcher/AggregatorPanels.kt" && grep -q "redrawOnGridColumns(GridColumns.Kind.CLOUD)" "$KT/launcher/AggregatorStackFragment.kt" \
+  && ok "T3 launcher/AggregatorStackFragment.kt (+ AggregatorPanels.kt) reads cloud pref and redraws live" || bad "T3 launcher/AggregatorStackFragment.kt"
 for f in apps/PhoneAppsFragment.kt apps/SuitePhoneAppsFragment.kt; do
   grep -q "GridColumns.phone(" "$KT/$f" && grep -q "redrawOnGridColumns(GridColumns.Kind.PHONE)" "$KT/$f" \
     && ok "T3 $f reads phone pref and redraws live" || bad "T3 $f"

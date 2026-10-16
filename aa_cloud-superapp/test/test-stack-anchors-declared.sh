@@ -234,11 +234,19 @@ warns="$(printf '%s\n' "$REPORT" | grep '^W	' | cut -f2- || true)"
 
 echo "== ids are never derived from a label =="
 ANCH="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/StackAnchors.kt"
-AGG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
-if grep -qE 'fun slug|registerChild' "$ANCH" "$AGG" 2>/dev/null; then
+LDIR="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher"
+# (#773: the Compose page registers its anchor targets in AggregatorPanels.kt's PageAnchors; StackAnchors stays for the
+# View pages that still use it - DevControl, and the cross-page pending request.)
+if grep -qE 'fun slug|registerChild' "$ANCH" "$LDIR"/Aggregator*.kt 2>/dev/null; then
   bad "T4: a label-slugging path is back — anchor ids must come from build.json"
 else
   ok "T4: no slug()/registerChild — headers register only declared ids"
+fi
+if grep -qF 'fun target(id: String, coords: LayoutCoordinates) { if (id.isNotBlank() && declares(id)) targets[id] = coords }' "$LDIR/AggregatorPanels.kt" \
+   && grep -qF 'val idx = owner[id] ?: return false' "$LDIR/AggregatorPanels.kt"; then
+  ok "T4: the page registers a target only for an id its panels declared, and an undeclared id is inert"
+else
+  bad "T4: the Compose page registers undeclared ids, or an undeclared id is no longer inert"
 fi
 
 echo "== C3 stack anchors are still declared =="

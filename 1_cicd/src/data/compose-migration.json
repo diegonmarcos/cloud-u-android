@@ -623,12 +623,13 @@
         "Robolectric tests BottomNavSelectedPillTest / ShellBottomNavCollapseTest inflate activity_main"
       ],
       "baseline": {
-        "view_screens": 8,
+        "view_screens": 7,
         "layout_xml": 5,
-        "view_ui_files": 25,
+        "view_ui_files": 24,
         "custom_views": 8
       },
       "done": [
+        "launcher/AggregatorStackFragment (the Notify / Inboxes / C3 stacks): KitComposeFragment over launcher/AggregatorModel (the rules: unread, chip, Sort/Show, taxonomy, ntfy poll, run arithmetic — pure), AggregatorState (the page's memory as Compose state: toggles, read set, archive, ntfy cache, pull-down refresh), AggregatorNotify (groups, swipe-to-read rows via detectHorizontalDragGestures, the derived Archive, inbox / class summaries), AggregatorFeeds (GHA / analytics / commits / Dagu, produceState), AggregatorPanels (cards, Filters row, in-page anchors, embedded child fragments over FragmentContainerView) and IndexTileGrid; PullToRefreshBox replaces SwipeRefreshLayout (dependency dropped); the cloud dashboard pings run in a Semaphore-gated LaunchedEffect instead of an executor; 14 testers read the new shape; AggregatorModelTest, AggregatorComposeTest, #773",
         "launcher/WebPageFragment (the embedded browser: AndroidView(WebView) + a composable Back control) and launcher/SectionTabsFragment (a section's / page's tab strip: libs:bottomnav PageTabs over FragmentContainerView panes hosted in AndroidView, because the pages are still Fragments built by the nav controller); the saved selection and the initial_page order are unchanged; WebAndTabsComposeTest, #773",
         "apps/PhoneAppsFragment (Phone tab), apps/SuitePhoneAppsFragment (Suite ▸ Phone / Quickmarks), launcher/GroupedTilesFragment (Cloud ▸ Apps), launcher/AppDrawerSheetFragment (Home swipe-up sheet), launcher/TileFolderDialog (folder popup) — KitComposeFragments / Compose Dialogs over the shared apps/PhoneAppsUi (folder card, folder grid, FolderSheetFrame, ExpandedAppTile) and launcher/LauncherTile; every Quickmarks line is one LazyRow (#260); Smart Folders load through PhoneAppsFragment.loadSmartFolders (off-main, cancellable, generation-checked) into a section collapsed at birth (#261); the search is search/SearchSession + SearchFrame; apps/FolderDialog.kt deleted; test-phone-apps-strip-and-lazy-smart-folders, test-phone-quickmark-placeholders, test-configs-grid-eight, test-store-identity and test-tab-strip-spacing read the new shape; PhoneAppsComposeTest, #773",
         "launcher/LauncherTiles (the one Compose tile: glass card, glyph fitted by the GridColumns arithmetic, press scale, haptic, extInstallRing) + TileGridFragment (every section's page grid and Configs) + HomeGroupedFragment (the grouped Home tab) — KitComposeFragments; the grid layout is the pure TileGridFragment.plan and HomeGroupedFragment.buckets; item_tile / fragment_tile_grid / fragment_home_grouped / item_home_group_header layouts deleted; the install ring is the extInstallRing modifier (Compose hosts registered with ExtTileRing.showing); the grid-eight / two-sections / ExtInstallReuse checks read the new shape; TileGridComposeTest, #773",

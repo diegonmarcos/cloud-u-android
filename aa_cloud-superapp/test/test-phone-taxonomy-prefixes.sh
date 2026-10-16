@@ -328,7 +328,7 @@ fi
 echo "== T12: every section prefix is selectable on the Notify filter rows =="
 # Adding a section to ui.phone_sections is only half of adding a section. The
 # Notify tabs narrow by taxonomy through `filters_*` option ids, and an option
-# id is a SET of prefixes (AggregatorStackFragment.taxonomyKeeps does
+# id is a SET of prefixes (AggregatorModel.taxonomyKeeps does
 # `want.contains(prefix)`), so a prefix no option contains is a section whose
 # apps reach no tab -- installable, classified, and unreachable. Checked over
 # EVERY filters_* row, not just the first: the six rows are six copies of the
