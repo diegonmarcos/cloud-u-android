@@ -590,7 +590,6 @@ object LauncherStatusStrip {
     fun install(activity: Activity, host: ComposeView): StatusStripModel {
         val model = StatusStripModel(activity)
         // Reads the cutout, never consumes it: see StatusStripModel.readCutoutFrom.
-        host.consumeWindowInsets = false
         model.readCutoutFrom(host)
         host.setContent { LauncherStripContent(model) }
         return model

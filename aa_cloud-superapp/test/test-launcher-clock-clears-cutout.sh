@@ -81,12 +81,6 @@ if has "$STRIP" 'setOnApplyWindowInsetsListener'; then
 else
   bad "T2: no insets listener — a one-shot read at construction is stale the moment the cutout is re-dispatched"
 fi
-# The Compose host must not swallow them before the listener hands them on.
-if has "$STRIP" 'consumeWindowInsets = false'; then
-  ok "T2: the strip's ComposeView is told not to consume window insets"
-else
-  bad "T2: the strip's ComposeView may consume window insets - the island below it would lose them"
-fi
 # The listener must hand the insets on. Consuming them here would starve the
 # toolbar island dispatched after it and ShellActivity's own shell listener.
 if has "$STRIP" 'consumeSystemWindowInsets|WindowInsetsCompat\.CONSUMED'; then

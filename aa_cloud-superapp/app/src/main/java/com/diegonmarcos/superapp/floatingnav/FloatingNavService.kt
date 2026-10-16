@@ -12,8 +12,6 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -23,10 +21,9 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.ui.OverlayCompose
 
 /**
  * Floating Top Nav Bar — a SYSTEM_ALERT_WINDOW overlay shown whenever the
@@ -61,8 +58,8 @@ class FloatingNavService : Service() {
     private lateinit var wm: WindowManager
     private val main = Handler(Looper.getMainLooper())
 
-    private var bubble: View? = null      // collapsed circle
-    private var bar: View? = null         // expanded nav bar
+    private var bubble: OverlayCompose? = null      // collapsed circle
+    private var bar: OverlayCompose? = null         // expanded nav bar
     private var expanded = false
     private var torchOn = false
     // When the menu was opened explicitly (Sirius Star on the home screen),
@@ -198,16 +195,9 @@ class FloatingNavService : Service() {
         if (bubble != null || !overlayAllowed(this)) return
         val size = dp(34)
         val params = bubbleParams(size)
-        val v = View(this).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.argb(0x70, 0x7C, 0x3A, 0xED)) // semi-transparent violet
-                setStroke(dp(1), Color.argb(0x55, 0xFF, 0xFF, 0xFF))
-            }
-            alpha = 0.55f
-            setOnTouchListener(bubbleTouch(params))
-        }
-        runCatching { wm.addView(v, params) }
+        val v = OverlayCompose(this) { NavBubble() }
+        v.view.setOnTouchListener(bubbleTouch(params))
+        if (runCatching { wm.addView(v.view, params) }.isFailure) v.destroy()
         bubble = v
         bubbleDrawn = true
     }
@@ -267,7 +257,7 @@ class FloatingNavService : Service() {
     private fun maxBubbleY(h: Int) = (resources.displayMetrics.heightPixels - h).coerceAtLeast(0)
 
     private fun removeBubble() {
-        bubble?.let { runCatching { wm.removeView(it) } }; bubble = null; bubbleDrawn = false
+        bubble?.let { runCatching { wm.removeView(it.view) }; it.destroy() }; bubble = null; bubbleDrawn = false
     }
 
     /** Window params for the draggable bubble — gravity TOP|START so x/y are
@@ -323,52 +313,22 @@ class FloatingNavService : Service() {
         // a switched-off button draws nothing from any door.
         if (!overlayAllowed(this)) { expanded = false; forced = false; return }
         expanded = true
-        val col = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            background = GradientDrawable().apply {
-                cornerRadius = dp(18).toFloat()
-                setColor(Color.argb(0xEE, 0x16, 0x16, 0x1C))
-                setStroke(dp(1), Color.argb(0x55, 0x7C, 0x3A, 0xED))
-            }
-            val p = dp(12); setPadding(p, dp(10), p, dp(10))
+        // Line 1 - the constellation apex (Cloud SuperApp), BIGGEST; line 2 - the sibling hubs, medium; line 3 - the current
+        // context's children, SMALLEST (omitted when it has none, e.g. the forkless Cloud-Nav). The apex / hub matching the
+        // current foreground app is bold.
+        val col = OverlayCompose(this) {
+            NavBar(
+                root = cfg.root, parents = cfg.parents, children = ctx.children,
+                boldOf = { parentMatchesContext(it.target, ctx) },
+                onPick = { item -> handleTarget(item); main.post { collapse() } },
+            )
         }
-        // Line 1 — the constellation apex (Cloud SuperApp), BIGGEST; bold when
-        // SuperApp itself is foreground (the default context).
-        cfg.root?.let { col.addView(itemRow(listOf(it), boldCtx = ctx, size = 16f)) }
-        // Line 2 — the sibling hubs (cloud-myterminal · Comms · Nav), medium; bold the
-        // hub matching the current foreground app.
-        col.addView(itemRow(cfg.parents, boldCtx = ctx, topGap = true, size = 13f))
-        // Line 3 — the current context's children, SMALLEST. Omitted when the
-        // context has none (e.g. the forkless Cloud-Nav). Font decreases per line.
-        if (ctx.children.isNotEmpty())
-            col.addView(itemRow(ctx.children, boldCtx = null, topGap = true, size = 11f))
-
-        runCatching { wm.addView(col, barParams(outsideTouch = true)) }
-        col.setOnTouchListener { _, ev ->
+        if (runCatching { wm.addView(col.view, barParams(outsideTouch = true)) }.isFailure) col.destroy()
+        col.view.setOnTouchListener { _, ev ->
             if (ev.action == MotionEvent.ACTION_OUTSIDE) { collapse(); true } else false
         }
         bar = col
         barDrawn = true
-    }
-
-    /** One horizontal row of pipe-separated chips. When [boldCtx] is non-null,
-     *  the item whose target maps to that context is bold (self→default hub,
-     *  app:<pkg> → the matching context by its match_prefixes). */
-    private fun itemRow(items: List<NavItem>, boldCtx: NavContext?, topGap: Boolean = false, size: Float = 13f): LinearLayout {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER   // centre the chips within the full-width box
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            if (topGap) setPadding(0, dp(6), 0, 0)
-        }
-        for ((i, item) in items.withIndex()) {
-            if (i > 0) row.addView(divider())
-            val bold = boldCtx != null && parentMatchesContext(item.target, boldCtx)
-            row.addView(chip(item.label, bold = bold, size = size) { handleTarget(item); collapse() })
-        }
-        return row
     }
 
     /** Data-driven hub→context match (no hardcoded package list): a `self`
@@ -384,7 +344,7 @@ class FloatingNavService : Service() {
         else -> false
     }
 
-    private fun removeBar() { bar?.let { runCatching { wm.removeView(it) } }; bar = null; barDrawn = false }
+    private fun removeBar() { bar?.let { runCatching { wm.removeView(it.view) }; it.destroy() }; bar = null; barDrawn = false }
 
     private fun collapse() {
         expanded = false
@@ -498,23 +458,6 @@ class FloatingNavService : Service() {
         val intent = packageManager.getLaunchIntentForPackage(pkg) ?: return false
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return runCatching { startActivity(intent); true }.getOrDefault(false)
-    }
-
-    // ── View helpers ───────────────────────────────────────────────
-    private fun chip(text: String, bold: Boolean = false, size: Float = 13f, onClick: () -> Unit): TextView =
-        TextView(this).apply {
-            this.text = text
-            setTextColor(if (bold) 0xFFE9D8FD.toInt() else 0xFFFFFFFF.toInt())
-            textSize = size
-            if (bold) setTypeface(typeface, android.graphics.Typeface.BOLD)
-            setPadding(dp(8), dp(4), dp(8), dp(4))
-            isClickable = true
-            setOnClickListener { onClick() }
-        }
-
-    private fun divider(): View = TextView(this).apply {
-        text = "|"; setTextColor(0x55FFFFFF.toInt()); textSize = 13f
-        setPadding(dp(2), 0, dp(2), 0)
     }
 
     private fun barParams(outsideTouch: Boolean = false): WindowManager.LayoutParams {
