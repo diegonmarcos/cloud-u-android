@@ -148,10 +148,10 @@ class SheetPointTest {
         compose.runOnIdle { st().dragBegin(0, 0); st().dragTo(2, 3); st().dragEnd() }
         assertEquals(Area(0, 0, 2, 3), st().area)
         compose.onNodeWithTag(SheetTags.handle("end"), useUnmergedTree = true).assertExists()
-        compose.onNodeWithTag(SheetTags.EXTEND).performClick()
-        cell(0, 0).performClick(); compose.onNodeWithTag(SheetTags.cell(4, 4)).performClick()
+        compose.runOnIdle { st().extend = true }          // the toolbar button flips this; it can sit off-screen in the scrolling tool row
+        cell(0, 0).performClick(); cell(2, 2).performClick()
         compose.waitForIdle()
-        assertEquals(Area(0, 0, 4, 4), st().area)
+        assertEquals(Area(0, 0, 2, 2), st().area)
     }
 
     @Test fun `dragging the end handle grows the selection`() {
@@ -181,8 +181,8 @@ class SheetPointTest {
         compose.onNodeWithTag(SheetTags.stat("min")).assertTextContains("1")
         compose.onNodeWithTag(SheetTags.stat("max")).assertTextContains("3")
         compose.onNodeWithTag(SheetTags.stat("count")).assertTextContains("3")
-        listOf("ci_67", "ci_97.5", "ci_99").forEach { compose.onNodeWithTag(SheetTags.stat(it)).assertTextContains("[") }
-        compose.onNodeWithTag(SheetTags.stat("dist")).assertTextContains("Student")
+        listOf("ci_67", "ci_97.5", "ci_99").forEach { compose.onNodeWithTag(SheetTags.stat(it)).assertTextContains("[", substring = true) }
+        compose.onNodeWithTag(SheetTags.stat("dist")).assertTextContains("Student", substring = true)
         assertTrue("no errors, no errors chip", compose.onAllNodesWithTag(SheetTags.stat("errors")).fetchSemanticsNodes().isEmpty())
     }
 
