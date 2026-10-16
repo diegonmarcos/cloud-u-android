@@ -189,6 +189,24 @@ internal object SignatureEditing {
         return Edit(text.substring(0, s) + html + text.substring(e), at, at)
     }
 
+    // -- import ------------------------------------------------------------------
+
+    /**
+     * The fragment worth keeping from a file the owner imported: a whole page (a corporate template, an
+     * "Export as HTML" from another client) is reduced to the inside of its `<body>`, and a bare
+     * fragment is only trimmed. Nothing is sanitised here - that happens, once, on the way out.
+     */
+    fun importFragment(raw: String): String {
+        val text = raw.trim().removePrefix("\uFEFF").trim()
+        val open = Regex("<body\\b[^>]*>", RegexOption.IGNORE_CASE).find(text)
+        if (open != null) {
+            val from = open.range.last + 1
+            val close = text.lastIndexOf("</body", ignoreCase = true)
+            return text.substring(from, if (close >= from) close else text.length).trim()
+        }
+        return text.replace(Regex("<!doctype[^>]*>|</?html\\b[^>]*>", RegexOption.IGNORE_CASE), "").trim()
+    }
+
     // -- find / replace --------------------------------------------------------
 
     /** Every start offset of [query] in [text]; empty for a blank query. Matches do not overlap. */

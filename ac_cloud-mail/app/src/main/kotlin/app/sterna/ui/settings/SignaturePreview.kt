@@ -1,6 +1,8 @@
 package app.sterna.ui.settings
 
 import app.sterna.core.data.account.signatureWireHtml
+import app.sterna.core.data.text.htmlEscapeMultiline
+import app.sterna.core.data.text.looksLikeHtml
 import app.sterna.ui.compose.signatureBlockHtml
 
 /**
@@ -39,7 +41,7 @@ internal object SignaturePreview {
         val page = if (options.dark) "#101010" else "#e9e9e9"
         val rule = if (options.dark) "#555555" else "#bbbbbb"
         val width = if (options.mobile) MOBILE_WIDTH_PX else DESKTOP_WIDTH_PX
-        val signature = signatureBlockHtml(source, options.delimiter)
+        val signature = block(source, options.delimiter)
         val body = if (options.visual) editable(signature, options.delimiter) else signature
         val message = SAMPLE_BODY + body
         val framed = if (options.inReply) {
@@ -62,6 +64,20 @@ internal object SignaturePreview {
             "#$EDIT_ID{outline:1px dashed #1a73e8;outline-offset:3px;min-height:1em}</style>" +
             "</head><body><div class=\"mail\">$framed</div>$script</body></html>"
     }
+
+    /**
+     * The signature as the message carries it. HTML goes through [signatureBlockHtml], the send path's
+     * own function. A PLAIN signature is not HTML on the wire at all: it is body text, which the HTML
+     * alternative gets as escaped lines, exactly as the composer's body does.
+     */
+    fun block(source: String, delimiter: Boolean): String =
+        if (looksLikeHtml(source)) {
+            signatureBlockHtml(source, delimiter)
+        } else {
+            val text = source.trim()
+            if (text.isEmpty()) "<br><br>" else
+                (if (delimiter) "<br><br>-- <br>" else "<br><br>") + htmlEscapeMultiline(text)
+        }
 
     private const val SAMPLE_BODY =
         "<p>Hi Sam,</p><p>Thanks for sending the draft over. I will go through it tonight and " +

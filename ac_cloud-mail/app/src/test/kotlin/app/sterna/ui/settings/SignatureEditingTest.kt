@@ -4,7 +4,6 @@ import app.sterna.ui.settings.SignatureHtmlTools.Edit
 import app.sterna.ui.settings.SignatureHtmlTools.Kind
 import app.sterna.ui.settings.SignatureHtmlTools.Span
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,11 +21,11 @@ class SignatureEditingTest {
 
     // -- highlighting (the editor paints exactly these spans) ----------------------
 
-    @Test fun commentsTagsAttributesValuesAndEntitiesAreTold_Apart() {
+    @Test fun commentsTagsAttributesValuesAndEntitiesAreToldApart() {
         val src = "<!-- c --><a href=\"u\">x&amp;y</a>"
         val kinds = SignatureHtmlTools.highlight(src).map { it.kind }
         assertEquals(
-            listOf(Kind.COMMENT, Kind.TAG, Kind.ATTRIBUTE, Kind.VALUE, Kind.TAG, Kind.ENTITY, Kind.TAG),
+            listOf(Kind.COMMENT, Kind.TAG, Kind.ATTRIBUTE, Kind.VALUE, Kind.TAG, Kind.ENTITY, Kind.TAG, Kind.TAG),
             kinds,
         )
         assertEquals(Span(0, 10, Kind.COMMENT), SignatureHtmlTools.highlight(src).first())
@@ -72,9 +71,8 @@ class SignatureEditingTest {
         assertNull(after("<br", 3, ">"))
         assertNull(after("</div", 5, ">"))
         assertNull(after("<img src=\"x\" /", 14, ">"))
-        assertNull(after("<b", 2, ">").let { if (it == null) null else if (it.text == "<b></b>") null else it })
-        assertNull(after("<b</b>", 2, ">").takeIf { false })
-        assertNull(after("a > b", 2, ">")?.takeIf { false })
+        assertNull(after("a ", 2, ">"))
+        // already closed right after the caret: nothing is added twice
     }
 
     @Test fun aQuoteInsideATagIsPairedAndTypedOver() {
@@ -154,14 +152,23 @@ class SignatureEditingTest {
 
     @Test fun findIsCaseInsensitiveByDefaultAndStepsWithWrap() {
         val m = SignatureEditing.find("<B>b</b> b", "b")
-        assertEquals(listOf(1, 3, 7, 9), m)
-        assertEquals(listOf(3, 9), SignatureEditing.find("<B>b</b> b", "b", matchCase = true).let { it.filter { i -> i != 7 } })
+        assertEquals(listOf(1, 3, 6, 9), m)
+        assertEquals(listOf(3, 6, 9), SignatureEditing.find("<B>b</b> b", "b", matchCase = true))
         assertEquals(3, SignatureEditing.step(m, 2, forward = true))
         assertEquals(1, SignatureEditing.step(m, 10, forward = true))
         assertEquals(9, SignatureEditing.step(m, 1, forward = false))
         assertNull(SignatureEditing.step(emptyList(), 0, true))
         assertEquals(emptyList<Int>(), SignatureEditing.find("abc", ""))
         assertEquals("xbc", SignatureEditing.replaceAll("abc", "a", "x"))
-        assertNotNull(SignatureEditing.find("aaa", "aa"))
+    }
+
+    // -- import ----------------------------------------------------------------------
+
+    @Test fun aWholePageIsReducedToItsBodyAndAFragmentIsOnlyTrimmed() {
+        val page = "<!DOCTYPE html><html><head><title>t</title></head><BODY class=\"x\">\n<b>Hi</b>\n</body></html>"
+        assertEquals("<b>Hi</b>", SignatureEditing.importFragment(page))
+        assertEquals("<b>Hi</b>", SignatureEditing.importFragment("\uFEFF  <b>Hi</b>\n"))
+        assertEquals("<b>Hi</b>", SignatureEditing.importFragment("<html><b>Hi</b></html>"))
+        assertEquals("plain", SignatureEditing.importFragment("plain"))
     }
 }
