@@ -25,6 +25,7 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.diegonmarcos.superapp.extinstall.ComposeAsk
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import kotlinx.coroutines.launch
 
 /**
  * Compose popups anchored under a tapped View — what the status-strip bubbles (system, network, battery, calendar, music)
@@ -85,5 +86,36 @@ fun KitBubble(modifier: Modifier = Modifier, scroll: ScrollState? = null, conten
     Surface(shape = shape, color = Color(0xEE111111), shadowElevation = 8.dp,
         modifier = modifier.border(1.dp, Color(0x44FFFFFF), shape).background(Color.Transparent, shape)) {
         Column(Modifier.let { if (scroll != null) it.verticalScroll(scroll) else it }.padding(12.dp), content = content)
+    }
+}
+
+/**
+ * A Compose bottom sheet on the activity's window - what BottomSheetDialog was. Hosted like [KitPopup]: a zero-size
+ * ComposeView on the activity, the sheet in Compose's own window. [content] gets a [close] that slides it away.
+ */
+object KitSheet {
+    @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+    fun show(act: android.app.Activity, background: Color = Color(0xFF140E1F), content: @Composable (close: () -> Unit) -> Unit): Boolean {
+        if (act.isFinishing) return false
+        val host = ComposeView(act)
+        var closed = false
+        fun remove() {
+            if (closed) return
+            closed = true
+            (host.parent as? ViewGroup)?.removeView(host)
+        }
+        host.setContent {
+            CloudKitTheme(LauncherPalette.kit(act)) {
+                val state = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                val close: () -> Unit = {
+                    scope.launch { state.hide() }.invokeOnCompletion { remove() }
+                }
+                androidx.compose.material3.ModalBottomSheet(onDismissRequest = ::remove, sheetState = state, containerColor = background) {
+                    content(close)
+                }
+            }
+        }
+        return runCatching { act.addContentView(host, ViewGroup.LayoutParams(0, 0)); true }.getOrElse { false }
     }
 }
