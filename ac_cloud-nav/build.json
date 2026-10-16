@@ -92,13 +92,13 @@
       "dir": "../ab_cloud-libs-shared/libs/ui-kit"
     },
     "libs:bottomnav": {
-      "_doc_dir": "#868 the fleet's bottom island + page-tab strips + NavDecl, shared BY REFERENCE. MainActivity draws the bar with BottomNavIslandView; libs:maps' Timeline host and Configs draw their strips with PageTabsView.",
+      "_doc_dir": "#868 the fleet's bottom island + page-tab strips + NavDecl, shared BY REFERENCE. MainActivity draws the bar with BottomNavIslandView; the app's TimelineFragment (Explored/Daily/Stops from libs:maps, Steps from the app) and Configs draw their strips with PageTabsView.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
     }
   },
   "ui": {
-    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. A section's `pages` are its tab strip (PageTabsView): Timeline = Explored/Daily/Stops, Configs = Tracker/APIs/Update/Cache/Layers/About. A section id maps to a Fragment in MainActivity.fragmentForSection(); a section icon maps to R.drawable.ic_nav_<icon>; a page id maps to the child fragment its host fragment shows.",
+    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. A section's `pages` are its tab strip (PageTabsView): Timeline = Explored/Daily/Stops/Steps, Configs = Tracker/APIs/Update/Cache/Layers/About. A section id maps to a Fragment in MainActivity.fragmentForSection(); a section icon maps to R.drawable.ic_nav_<icon>; a page id maps to the child fragment its host fragment shows.",
     "bottom_nav": [
       "routes",
       "navigation",
@@ -141,6 +141,10 @@
           {
             "id": "stops",
             "label": "Stops"
+          },
+          {
+            "id": "steps",
+            "label": "Steps"
           }
         ]
       },
@@ -2274,6 +2278,14 @@
         {
           "label": "Location (coarse)",
           "perm": "android.permission.ACCESS_COARSE_LOCATION"
+        },
+        {
+          "label": "Location (background)",
+          "perm": "android.permission.ACCESS_BACKGROUND_LOCATION"
+        },
+        {
+          "label": "Physical activity (steps)",
+          "perm": "android.permission.ACTIVITY_RECOGNITION"
         },
         {
           "label": "Nearby Devices",

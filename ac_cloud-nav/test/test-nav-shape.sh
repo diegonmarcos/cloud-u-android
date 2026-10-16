@@ -5,12 +5,12 @@
 #
 # What this certifies, statically (the nav is data, the bar and the strips are libs:bottomnav's):
 #   S1 build.json::ui is ONE declaration: bottom_nav = the five sections, default_section routes,
-#      Timeline carries Explored|Daily|Stops and Configs Tracker|APIs|Update|Cache|Layers|About as
+#      Timeline carries Explored|Daily|Stops|Steps and Configs Tracker|APIs|Update|Cache|Layers|About as
 #      its pages; the old nav_tabs / default_tab keys are gone.
 #   S2 the app compiles libs:bottomnav and bakes UI_BOTTOM_NAV + UI_SECTIONS_B64 + UI_DEFAULT_SECTION.
 #   S3 MainActivity draws the bar with BottomNavIslandView fed by NavConfig.decl (NavDecl) and
 #      activity_main.xml hosts that view, not a BottomNavigationView.
-#   S4 the Timeline host (libs:maps) and Configs draw their strips with PageTabsView, not a TabLayout.
+#   S4 the Timeline host (the app's TimelineFragment, which hosts the Steps page) and Configs draw their strips with PageTabsView, not a TabLayout.
 #   S5 no hand-rolled nav widget anywhere in the app or libs:maps (nav-shape-guard N3).
 # Each check is then run against planted mutations of the real sources; a mutation that leaves
 # every check green fails this tester.
@@ -35,7 +35,8 @@ CFG = json.loads(r'''{
   "timeline": [
    "explored",
    "daily",
-   "stops"
+   "stops",
+   "steps"
   ],
   "configs": [
    "tracker",
@@ -62,7 +63,8 @@ CFG = json.loads(r'''{
   "app/src/main/java/com/diegonmarcos/cloudnav/MainActivity.kt": [
    "BottomNavIslandView",
    "NavConfig.decl",
-   "viewItems"
+   "viewItems",
+   "TimelineFragment()"
   ],
   "app/src/main/res/layout/activity_main.xml": [
    "com.diegonmarcos.superapp.bottomnav.BottomNavIslandView"
@@ -73,6 +75,11 @@ CFG = json.loads(r'''{
   "app/src/main/java/com/diegonmarcos/cloudnav/configs/ConfigsFragment.kt": [
    "MapsPageStrip.create",
    "PageTabsView"
+  ],
+  "app/src/main/java/com/diegonmarcos/cloudnav/TimelineFragment.kt": [
+   "MapsPageStrip.create",
+   "StepsFragment()",
+   "NavConfig.decl"
   ],
   "../ab_cloud-libs-shared/libs/maps/src/main/java/com/diegonmarcos/cloudnav/maps/MapsTimelineTabsFragment.kt": [
    "MapsPageStrip.create"
@@ -108,6 +115,10 @@ CFG = json.loads(r'''{
   [
    "app/src/main/java/com/diegonmarcos/cloudnav/NavConfig.kt",
    "NavDecl.fromBuildConfig"
+  ],
+  [
+   "app/src/main/java/com/diegonmarcos/cloudnav/TimelineFragment.kt",
+   "StepsFragment()"
   ]
  ]
 }''')

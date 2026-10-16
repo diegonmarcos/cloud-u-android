@@ -10,7 +10,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.cloudnav.configs.ConfigsFragment
-import com.diegonmarcos.cloudnav.maps.MapsTimelineTabsFragment
 import com.diegonmarcos.superapp.updater.Updater
 import com.diegonmarcos.cloudnav.places.PlacesFragment
 import com.diegonmarcos.cloudnav.routes.NavigationFragment
@@ -51,6 +50,8 @@ class MainActivity : AppCompatActivity() {
         // Schedule the periodic GHCR self-update check (data-driven cadence).
         // The Update tab in Configs offers a manual check-now button.
         Updater.start(this)
+        // Tracking engine: re-assert the periodic job (a no-op when the engine is off).
+        com.diegonmarcos.cloudnav.tracker.EngineScheduler.apply(this)
 
         if (savedInstanceState == null) {
             // A geo: launch (Cloud Nav declared as a maps app) opens straight on
@@ -117,7 +118,7 @@ class MainActivity : AppCompatActivity() {
         // Consume a pending geo: location once, so a hand-off from another app
         // lands on the map at that point / runs that search.
         "places"     -> pendingGeo?.let { g -> pendingGeo = null; PlacesFragment.forGeo(g) } ?: PlacesFragment()
-        "timeline"   -> MapsTimelineTabsFragment.newInstance(NavConfig.decl.section("timeline")?.pages.orEmpty())
+        "timeline"   -> TimelineFragment()
         "configs"    -> ConfigsFragment()
         else         -> RoutesFragment()
     }
