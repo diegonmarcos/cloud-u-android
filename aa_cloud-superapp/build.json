@@ -371,7 +371,8 @@
       "dir": "../ab_cloud-libs-shared/libs/launcher-apptabs",
       "type": "library",
       "depends_on": [
-        "libs:core"
+        "libs:core",
+        "libs:ui-kit"
       ],
       "comment": "App Tabs — last-6 opened SuperApp entries (sections, pages, external apps) rendered as a 2-col GRID. Sister module to libs:browser; same card-grid UX, different content (sealed Entry: SectionEntry | PageEntry | ExternalAppEntry). AppTabPrefs is SharedPreferences-backed ('app_tabs' file, strict LRU cap=6). Producers call AppTabPrefs.recordSection / recordPage / recordExternalApp on every successful navigation; the GRID re-renders on onResume so flipping back to Tabs always shows the freshest LRU. AppTabsHost is the callback interface MainActivity implements to handle card-tap re-navigation without libs:launcher-apptabs reaching back into app/."
     },

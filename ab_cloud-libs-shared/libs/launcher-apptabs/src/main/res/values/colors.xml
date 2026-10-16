@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The App Tabs shelf's palette as KitPalette roles (AppTabsFragment builds its CloudKitTheme from these),
+     so no colour is spelled in Kotlin. Prefixed apptabs_: this library is merged into the app's resources
+     and must not collide with its names. -->
+<resources>
+    <color name="apptabs_bg">#FF0B0414</color>
+    <color name="apptabs_card">#FF1A0033</color>
+    <color name="apptabs_title">#FFE9D8FD</color>
+    <color name="apptabs_label">#FFEDE7FF</color>
+    <color name="apptabs_text_dim">#CCFFFFFF</color>
+    <color name="apptabs_stroke">#55B794F4</color>
+</resources>
