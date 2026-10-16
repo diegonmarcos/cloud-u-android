@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -90,7 +91,7 @@ fun MailAuthChip(status: MailAuthStatus, modifier: Modifier = Modifier) {
     val bad = status == MailAuthStatus.NEEDS_SIGN_IN || status == MailAuthStatus.ERROR
     val ink = if (bad) MaterialTheme.colorScheme.error else p.accent
     Surface(
-        modifier = modifier.testTag(MailAuthTags.CHIP),
+        modifier = modifier.testTag(MailAuthTags.CHIP).semantics(mergeDescendants = true) {},
         shape = RoundedCornerShape(50), color = p.surfaceSelected, contentColor = ink,
         border = BorderStroke(1.dp, ink),
     ) {
