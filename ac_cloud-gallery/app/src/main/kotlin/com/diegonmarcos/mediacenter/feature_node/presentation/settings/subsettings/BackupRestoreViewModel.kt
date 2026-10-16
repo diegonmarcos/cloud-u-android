@@ -75,6 +75,32 @@ class BackupRestoreViewModel @Inject constructor(
         }
     }
 
+    /** The vault file in Cloud Drive's shared store; Cloud Drive's Sync carries it to cloud storage. */
+    fun cloudDriveVaultFile(): java.io.File = java.io.File(
+        android.os.Environment.getExternalStorageDirectory(),
+        "${com.diegonmarcos.mediacenter.BuildConfig.DRIVE_SHARED_ROOT}/$CLOUD_DRIVE_VAULT_PATH",
+    )
+
+    /** Export the selected vaults, decrypted and re-encrypted with [password], to [cloudDriveVaultFile]. */
+    fun syncToCloudDrive(password: String) {
+        val f = cloudDriveVaultFile()
+        if (!f.parentFile!!.isDirectory && !f.parentFile!!.mkdirs()) {
+            _exportPhase.value = ExportPhase.Failed("cannot create ${f.parent}: allow all-files access")
+            return
+        }
+        startExport(Uri.fromFile(f), password)
+    }
+
+    /** A new phone: read the vault file Cloud Drive's Sync brought back, through the normal import. */
+    fun restoreFromCloudDrive() {
+        val f = cloudDriveVaultFile()
+        if (!f.isFile) {
+            _importPhase.value = ImportPhase.Failed("no vault file at ${f.path} yet: let Cloud Drive's Sync bring it, then retry")
+            return
+        }
+        onImportFilePicked(Uri.fromFile(f))
+    }
+
     fun resetExport() {
         _exportPhase.value = ExportPhase.Configuring
         _progress.value = emptyMap()
@@ -175,5 +201,10 @@ class BackupRestoreViewModel @Inject constructor(
     fun resetImport() {
         _importPhase.value = ImportPhase.PickingFile
         _progress.value = emptyMap()
+    }
+
+    companion object {
+        /** Under Cloud Drive's shared store: one password-encrypted archive of the vaults. */
+        const val CLOUD_DRIVE_VAULT_PATH = "gallery/vaults.rfbk"
     }
 }

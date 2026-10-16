@@ -140,6 +140,11 @@ android {
         versionCode = wallClockVersionCode
         versionName = "$galleryVersion (sha-$gitShortSha)"
         buildConfigField("String", "GIT_SHORT_SHA", "\"$gitShortSha\"")
+        // Cloud Drive's one shared store (its build.json::storage.shared_root): vault sync writes there.
+        @Suppress("UNCHECKED_CAST")
+        val driveSharedRoot = ((groovy.json.JsonSlurper().parse(file("../../ac_cloud-drive/build.json")) as Map<String, Any?>)
+            ["storage"] as Map<String, Any?>)["shared_root"].toString()
+        buildConfigField("String", "DRIVE_SHARED_ROOT", "\"$driveSharedRoot\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

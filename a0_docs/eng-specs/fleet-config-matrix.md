@@ -660,7 +660,7 @@ Module `ac_cloud-gallery`; libs: lib-analytics, lib-core, lib-cropper, lib-devto
 
 | file | class | doc |
 |---|---|---|
-| `filesDir/<vault uuid>/{info file,<mediaId>.enc}` | content | Encrypted media vaults, Keystore-bound. |
+| `filesDir/<vault uuid>/{info file,<mediaId>.enc}` | content | Encrypted media vaults, Keystore-bound. They migrate through Cloud Drive: Backup & restore ▸ Sync to Cloud Drive writes them password-encrypted to <Cloud Drive shared store>/gallery/vaults.rfbk, Cloud Drive's Sync carries it, and Restore vaults from Cloud Drive re-encrypts them under the new phone's keystore. |
 | `filesDir/<modelsDir>/<group>/ {visual_quant,textual_quant,mobile_sam,version-RFB-320,arcface}.onnx, vocab.json, merges.txt` | device | Downloaded on-device ML models; re-downloadable, selection is implicit by feature. |
 
 Coverage: 4 covered, 1 gaps — datastore:settings.

@@ -164,7 +164,11 @@ fun SettingsBackupExportScreen(navigateUp: () -> Unit) {
         contract = ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri: Uri? -> uri?.let { viewModel.startExport(it, pendingPassword) } }
 
+    // true: the verified export goes to Cloud Drive's shared store instead of a picked file.
+    var toCloudDrive by remember { mutableStateOf(false) }
+
     fun launchSaf() {
+        if (toCloudDrive) { viewModel.syncToCloudDrive(pendingPassword ?: return); return }
         val ext = if (pendingPassword != null) "rfbk" else "zip"
         val name = "cloud-gallery-backup-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())}.$ext"
         exportLauncher.launch(name)
@@ -438,6 +442,11 @@ fun SettingsBackupExportScreen(navigateUp: () -> Unit) {
                             enabled = passwordsValid,
                             onClick = { beginExport() }
                         )
+                        // Password-protected only: the file leaves the phone through Cloud Drive's Sync.
+                        BackupSecondaryButton(
+                            text = stringResource(R.string.backup_sync_cloud_drive),
+                            onClick = { if (protect && passwordsValid && password.isNotBlank()) { toCloudDrive = true; beginExport() } }
+                        )
                         BackupSecondaryButton(
                             text = stringResource(R.string.backup_back),
                             onClick = { step = ExportStep.SELECT }
@@ -573,6 +582,11 @@ fun SettingsBackupImportScreen(navigateUp: () -> Unit) {
                     BackupPrimaryButton(
                         text = stringResource(R.string.backup_choose_file),
                         onClick = { pickFile() }
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    BackupSecondaryButton(
+                        text = stringResource(R.string.backup_restore_cloud_drive),
+                        onClick = { viewModel.restoreFromCloudDrive() }
                     )
                 }
 

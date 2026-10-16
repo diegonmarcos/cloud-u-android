@@ -1128,6 +1128,8 @@
     <string name="backup_next">Next</string>
     <string name="backup_back">Back</string>
     <string name="backup_save_file">Save backup file</string>
+    <string name="backup_sync_cloud_drive">Sync to Cloud Drive (needs a password)</string>
+    <string name="backup_restore_cloud_drive">Restore vaults from Cloud Drive</string>
     <string name="backup_encrypt_header">Encryption</string>
     <string name="backup_restore_header">Choose what to restore</string>
     <string name="backup_restore">Restore</string>

@@ -2874,7 +2874,7 @@
           "id": "vault-folders",
           "path": "filesDir/<vault uuid>/{info file,<mediaId>.enc}",
           "class": "content",
-          "doc": "Encrypted media vaults, Keystore-bound."
+          "doc": "Encrypted media vaults, Keystore-bound. They migrate through Cloud Drive: Backup & restore ▸ Sync to Cloud Drive writes them password-encrypted to <Cloud Drive shared store>/gallery/vaults.rfbk, Cloud Drive's Sync carries it, and Restore vaults from Cloud Drive re-encrypts them under the new phone's keystore."
         },
         {
           "id": "ml-models",
