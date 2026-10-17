@@ -368,7 +368,7 @@ else:
 PY
 )" "the proven endpoint, the in-app browser, and a declared non-aggressive cadence"
 
-# Weather taps through the same BadgeClick helper: the target is the Open-Meteo page for the badge's OWN position
+# Weather taps through the same BadgeClick helper: the target is the yr.no (MET Norway) page for the badge's OWN position
 # (lat/lon of the fix it fetched), never an ACTION_VIEW and never a hardcoded place.
 check "$(python3 - "$NC/WeatherBadgeService.kt" "$NC/BadgeClick.kt" <<'PY'
 import re, sys
@@ -380,14 +380,14 @@ if 'ACTION_VIEW' in w:
     print('the weather badge leaves the app via ACTION_VIEW')
 elif not re.search(r'BadgeClick\.pi\(\s*this\s*,\s*BadgeClick\.weatherUrl\(\s*\w+\??\.lat\s*,\s*\w+\??\.lon\s*\)\s*\)', w):
     print('the weather tap does not open BadgeClick.weatherUrl(lat, lon) through BadgeClick.pi')
-elif 'open-meteo.com' not in c or 'latitude=%.4f&longitude=%.4f' not in c:
-    print('weatherUrl does not point at open-meteo.com with the latitude/longitude query')
+elif 'yr.no' not in c or '%.4f,%.4f' not in c:
+    print('weatherUrl does not point at yr.no with the lat,lon path')
 elif not re.search(r'fun weatherUrl\(lat: Double\?, lon: Double\?\)', c):
     print('weatherUrl no longer takes the position')
 else:
     print('OK')
 PY
-)" "the weather tap opens the Open-Meteo page for the badge's own lat/lon through the shared BadgeClick"
+)" "the weather tap opens the yr.no (MET Norway) page for the badge's own lat/lon through the shared BadgeClick"
 
 # ── #535 — the badge the pane renders is the badge the producer POSTED ──
 # The pane now finds each badge's live notification by its declared channel
