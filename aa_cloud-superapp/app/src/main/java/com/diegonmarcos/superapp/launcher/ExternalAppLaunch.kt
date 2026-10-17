@@ -35,7 +35,7 @@ object ExternalAppLaunch {
 /** What the second toolbar pill (the Dynamic Island) does, from ui.dynamic_island_action (BuildConfig): `app:<pkg>`, `extapp:<id>[/fork]`, `shortcut:<id>`. */
 object DynamicIslandAction {
 
-    fun run(
+    fun dispatch(
         ctx: Context, launchExternalApp: (String) -> Unit, shortcut: (String) -> Unit,
         action: String = com.diegonmarcos.superapp.BuildConfig.UI_DYNAMIC_ISLAND_ACTION,
     ) {

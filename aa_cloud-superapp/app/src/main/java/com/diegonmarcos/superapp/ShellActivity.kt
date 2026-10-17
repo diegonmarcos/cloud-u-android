@@ -1152,7 +1152,7 @@ open class ShellActivity : AppCompatActivity(),
      *  time this reads BuildConfig the value is already one of the
      *  branches below. */
     private fun dispatchDynamicIslandAction() {
-        com.diegonmarcos.superapp.launcher.DynamicIslandAction.run(
+        com.diegonmarcos.superapp.launcher.DynamicIslandAction.dispatch(
             this, launchExternalApp = { launchExternalApp(it) }, shortcut = { handleShortcutById(it) },
         )
     }

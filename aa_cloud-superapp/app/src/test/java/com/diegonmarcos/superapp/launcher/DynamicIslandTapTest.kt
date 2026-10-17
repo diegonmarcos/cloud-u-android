@@ -72,7 +72,7 @@ class DynamicIslandTapTest : KitPageHarness() {
         showKit {
             Box(Modifier.size(120.dp, 22.dp)) {
                 DynamicIsland(onTap = {
-                    DynamicIslandAction.run(
+                    DynamicIslandAction.dispatch(
                         app,
                         launchExternalApp = { id -> ExternalAppLaunch.launchInstalled(app, Sections.externalApp(id)!!, null, null) },
                         shortcut = {},
