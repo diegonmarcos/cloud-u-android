@@ -625,10 +625,11 @@
       "baseline": {
         "view_screens": 1,
         "layout_xml": 4,
-        "view_ui_files": 7,
-        "custom_views": 1
+        "view_ui_files": 5,
+        "custom_views": 0
       },
       "done": [
+        "Overlay services in Compose (ui/OverlayCompose.kt hosts a ComposeView in a service window with its own lifecycle/saved-state owners; floatingnav/FloatingNavUi.kt NavBubble+NavBar; floatingnav/ScreensaverUi.kt ScreensaverScene+NeonBackdrop; NeonBackdropView deleted; OverlayComposeTest)",
         "Launcher status strip in Compose (launcher/LauncherStatusStrip.kt: StatusStripModel owns the receivers and readings as state, the composable draws the three clusters; rect-anchored popups; LauncherStatusStripView and its SignalDots View helper deleted; StatusStripComposeTest)",
         "Shell decorative layers in Compose (ui/ShellFx.kt: GalaxyBackdrop, IslandWave, PrismaticShimmer, WaveLine on a frame clock; the Configs stars/island/pets switches are ShellFxState; the four custom Views deleted; ShellFxComposeTest)",
         "Dead custom views deleted: ShaderBackgroundView and ShimmerBorderView had no caller (not in any layout, no Kotlin reference)",
