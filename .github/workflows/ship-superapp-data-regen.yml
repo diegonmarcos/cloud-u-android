@@ -82,7 +82,7 @@ jobs:
           bash regen.sh \
             "$GITHUB_WORKSPACE/.inputs/cloud-infra/1_cloud-configs/dist/_cloud-data-consolidated.json" \
             "$GITHUB_WORKSPACE/.inputs/cloud-infra/1_cloud-configs/dist/mesh-snapshot.json" \
-            "$GITHUB_WORKSPACE/.inputs/front/a-Portals/linktree/src/data/projects.json"
+            "$GITHUB_WORKSPACE/.inputs/front/1_front-configs/src/data-links/projects.json"
 
       - name: Commit refreshed snapshots
         run: |
