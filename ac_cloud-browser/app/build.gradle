@@ -346,6 +346,13 @@ dependencies {
     implementation 'androidx.activity:activity-compose:1.9.3'
     implementation 'com.google.android.material:material:1.12.0'
 
+    // BitTorrent (torrent/LtTorrentBridge): libtorrent via libtorrent4j, MIT. The Java API plus the
+    // prebuilt native library for each ABI the ship workflow builds (arm64 for the phone, x86_64 for
+    // the emulator); abiFilters keeps only the matrix ABI's copy in each APK.
+    implementation 'org.libtorrent4j:libtorrent4j:2.1.0-39'
+    implementation 'org.libtorrent4j:libtorrent4j-android-arm64:2.1.0-39'
+    implementation 'org.libtorrent4j:libtorrent4j-android-x86_64:2.1.0-39'
+
     testImplementation 'junit:junit:4.13.2'
 
     // org.json is an EMPTY STUB in the android.jar the JVM test source set
@@ -361,6 +368,8 @@ dependencies {
     // (DownloadEngineTest: pause -> resume, no range support, ETag changed, dropped connection).
     // 4.12.0 = the last okhttp3.mockwebserver API (5.x moved it to mockwebserver3). Test-only.
     testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
+    // The host (linux x86_64) libtorrent, so TorrentSessionTest starts and stops a real session on the JVM. Test-only.
+    testImplementation 'org.libtorrent4j:libtorrent4j-linux:2.1.0-39'
 
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

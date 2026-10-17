@@ -432,7 +432,7 @@
           "label": "Download speed limit (KB/s)",
           "section": "downloads",
           "class": "config",
-          "doc": "Shared by every download and torrent; 0 = no limit."
+          "doc": "Shared by every HTTP download; torrents get the same cap for their downloads. 0 = no limit."
         },
         {
           "key": "dl_segments",
@@ -453,6 +453,48 @@
           "section": "downloads",
           "class": "config",
           "doc": "When cloud-shared-store is installed, finished downloads go there instead of the phone's Download folder. Without it, this does nothing."
+        },
+        {
+          "key": "torrent_seed",
+          "type": "bool",
+          "default": false,
+          "label": "Seed torrents after downloading",
+          "section": "downloads",
+          "class": "config",
+          "doc": "A finished torrent keeps uploading to other peers until a limit below is reached (or you turn seeding off on its row); its files are published to Download/ when seeding stops."
+        },
+        {
+          "key": "torrent_seed_ratio",
+          "type": "int",
+          "default": 100,
+          "min": 0,
+          "max": 1000,
+          "label": "Seed until ratio (%)",
+          "section": "downloads",
+          "class": "config",
+          "doc": "Stop seeding once this share of the torrent's size has been uploaded (100 = 1.0); 0 = no ratio limit."
+        },
+        {
+          "key": "torrent_seed_minutes",
+          "type": "int",
+          "default": 60,
+          "min": 0,
+          "max": 10080,
+          "label": "Seed for at most (minutes)",
+          "section": "downloads",
+          "class": "config",
+          "doc": "Stop seeding after this long; 0 = no time limit."
+        },
+        {
+          "key": "torrent_upload_kbps",
+          "type": "int",
+          "default": 0,
+          "min": 0,
+          "max": 1000000,
+          "label": "Torrent upload limit (KB/s)",
+          "section": "downloads",
+          "class": "config",
+          "doc": "Upload speed cap for every torrent together; 0 = no limit. Downloads use the download speed limit above."
         },
         {
           "key": "block_trackers",

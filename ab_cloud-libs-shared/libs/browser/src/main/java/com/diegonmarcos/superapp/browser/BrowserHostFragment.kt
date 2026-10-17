@@ -301,8 +301,10 @@ class BrowserHostFragment : Fragment() {
                 speedLimitKbps = s.int("dl_speed_limit_kbps") ?: 0,
                 segments = s.int("dl_segments") ?: 4,
                 sharedStore = s.bool("dl_shared_store") ?: false,
+                seed = s.bool("torrent_seed") ?: false,
                 seedRatio = s.int("torrent_seed_ratio") ?: 0,
                 seedMinutes = s.int("torrent_seed_minutes") ?: 0,
+                uploadKbps = s.int("torrent_upload_kbps") ?: 0,
             ))
     }
 
@@ -902,6 +904,8 @@ class BrowserHostFragment : Fragment() {
                 /** #887 inside a saved copy, a link to a page the copy holds opens the saved page, not the network. */
                 override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                     val target = request?.url?.toString() ?: return false
+                    // A magnet link goes to the torrent engine when this app ships one (cloud-browser does).
+                    if (com.diegonmarcos.superapp.browser.download.DlMagnet.isMagnet(target) && addMagnet(target)) return true
                     // #893 web pages (accounts.google.com included) load as they are; an app link (intent:, market:)
                     // never leaves the browser: its fallback url loads, else nothing happens.
                     when (val d = BrowserNavPolicy.decide(target)) {
@@ -944,8 +948,11 @@ class BrowserHostFragment : Fragment() {
             // Long-press on a link or image: a dense sheet; text and fields keep the system actions.
             setOnLongClickListener { v -> onPageLongPress(v as WebView) }
             setDownloadListener { dlUrl, ua, disposition, mime, _ ->
-                val d = download(dlUrl, ua, disposition, mime)
-                toast("Downloading ${d.file}")
+                // A .torrent (by name or application/x-bittorrent) becomes a torrent; anything else downloads.
+                if (!downloadTorrent(dlUrl, ua, disposition, mime)) {
+                    val d = download(dlUrl, ua, disposition, mime)
+                    toast("Downloading ${d.file}")
+                }
             }
             webChromeClient = object : WebChromeClient() {
                 /** #893 window.open / target=_blank: a child window the opener can post back to (sign-in popups). */
@@ -1190,6 +1197,29 @@ class BrowserHostFragment : Fragment() {
         return downloads.start(url, ua, webView?.url, disposition, mime, browserSettings.string("download_dir").orEmpty()) { u ->
             cookiesOf(webView).getCookie(u)   // the requesting tab's jar: a private tab's cookies are in its profile
         }
+    }
+
+    /** A magnet link into the torrent engine; false when this host has none (the link is then left alone). */
+    private fun addMagnet(uri: String): Boolean {
+        if (!downloads.managed) return false
+        val q = com.diegonmarcos.superapp.browser.download.DlQueue.get(requireContext())
+        if (q.torrent == null) return false
+        askNotificationsOnce()
+        val j = q.addTorrent(uri, null, browserSettings.string("download_dir").orEmpty()) ?: return false
+        toast("Torrent added: ${j.fileName}")
+        return true
+    }
+
+    /** A .torrent the page offers: fetched with the tab's cookies, then added as a torrent. */
+    private fun downloadTorrent(url: String, ua: String?, disposition: String?, mime: String?): Boolean {
+        if (!downloads.managed || !com.diegonmarcos.superapp.browser.download.DlMagnet.isTorrentFile(url, mime, disposition)) return false
+        val q = com.diegonmarcos.superapp.browser.download.DlQueue.get(requireContext())
+        if (q.torrent == null) return false
+        askNotificationsOnce()
+        q.addTorrentUrl(url, ua, webView?.url, cookiesOf(webView).getCookie(url), browserSettings.string("download_dir").orEmpty()) { j ->
+            if (isAdded) toast(if (j != null) "Torrent added: ${j.fileName}" else "Could not read that .torrent")
+        }
+        return true
     }
 
     private fun askNotificationsOnce() {

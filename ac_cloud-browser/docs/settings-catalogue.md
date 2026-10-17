@@ -30,9 +30,13 @@ catalogue, never this file. test-browser-settings-catalogue.sh fails when it is 
 | `dl_parallel` | int | 3 | 1..8 | downloads | config | How many downloads (and torrents) transfer at once; the rest wait in the queue. |
 | `dl_wifi_only` | bool | false |  | downloads | config | Downloads wait (and resume by themselves) until the phone is on Wi-Fi or Ethernet. |
 | `dl_allow_metered` | bool | true |  | downloads | config | Off = downloads wait for an unmetered network (no mobile data, no metered hotspot). |
-| `dl_speed_limit_kbps` | int | 0 | 0..1000000 | downloads | config | Shared by every download and torrent; 0 = no limit. |
+| `dl_speed_limit_kbps` | int | 0 | 0..1000000 | downloads | config | Shared by every HTTP download; torrents get the same cap for their downloads. 0 = no limit. |
 | `dl_segments` | int | 4 | 1..8 | downloads | config | A large file on a server that accepts byte ranges downloads over this many connections at once; 1 = always one connection. |
 | `dl_shared_store` | bool | false |  | downloads | config | When cloud-shared-store is installed, finished downloads go there instead of the phone's Download folder. Without it, this does nothing. |
+| `torrent_seed` | bool | false |  | downloads | config | A finished torrent keeps uploading to other peers until a limit below is reached (or you turn seeding off on its row); its files are published to Download/ when seeding stops. |
+| `torrent_seed_ratio` | int | 100 | 0..1000 | downloads | config | Stop seeding once this share of the torrent's size has been uploaded (100 = 1.0); 0 = no ratio limit. |
+| `torrent_seed_minutes` | int | 60 | 0..10080 | downloads | config | Stop seeding after this long; 0 = no time limit. |
+| `torrent_upload_kbps` | int | 0 | 0..1000000 | downloads | config | Upload speed cap for every torrent together; 0 = no limit. Downloads use the download speed limit above. |
 | `block_trackers` | bool | true |  | privacy | config | Subresource requests to the declared tracker hosts are answered empty on every site. A site can allow them (page menu > This site > Block trackers here). |
 | `site_memory` | bool | true |  | autocomplete | config | After you submit a form, offer to remember a value you typed that is not generic personal data (a customer number, a member ID) for that site and form only. Never from a private tab, never a password, card, code or search box. |
 | `offer_save_profile_data` | bool | true |  | autocomplete | config | After you submit a form with a name, address, phone, email, birth date or document that none of your profiles holds, ask which profile to add it to. Nothing is saved without your tap, and never from a private tab. |

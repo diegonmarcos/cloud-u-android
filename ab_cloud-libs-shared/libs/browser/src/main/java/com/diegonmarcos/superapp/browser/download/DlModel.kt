@@ -84,12 +84,15 @@ data class DlPolicy(
     val speedLimitKbps: Int = 0,
     val segments: Int = 4,
     val sharedStore: Boolean = false,
+    /** Torrents: keep seeding after the download; ratio in percent (100 = 1.0) and minutes cap it, 0 = no cap. */
+    val seed: Boolean = false,
     val seedRatio: Int = 0,
     val seedMinutes: Int = 0,
+    val uploadKbps: Int = 0,
 ) {
     fun toJson(): JSONObject = JSONObject().put("parallel", parallel).put("wifiOnly", wifiOnly).put("allowMetered", allowMetered)
         .put("speedLimitKbps", speedLimitKbps).put("segments", segments).put("sharedStore", sharedStore)
-        .put("seedRatio", seedRatio).put("seedMinutes", seedMinutes)
+        .put("seed", seed).put("seedRatio", seedRatio).put("seedMinutes", seedMinutes).put("uploadKbps", uploadKbps)
 
     companion object {
         fun fromJson(raw: String?): DlPolicy {
@@ -99,7 +102,8 @@ data class DlPolicy(
                 o.optInt("parallel", d.parallel).coerceIn(1, 8), o.optBoolean("wifiOnly", d.wifiOnly),
                 o.optBoolean("allowMetered", d.allowMetered), o.optInt("speedLimitKbps", 0).coerceAtLeast(0),
                 o.optInt("segments", d.segments).coerceIn(1, 8), o.optBoolean("sharedStore", false),
-                o.optInt("seedRatio", 0).coerceAtLeast(0), o.optInt("seedMinutes", 0).coerceAtLeast(0))
+                o.optBoolean("seed", false), o.optInt("seedRatio", 0).coerceAtLeast(0), o.optInt("seedMinutes", 0).coerceAtLeast(0),
+                o.optInt("uploadKbps", 0).coerceAtLeast(0))
         }
     }
 }
@@ -213,4 +217,11 @@ object DlFormat {
         while (taken("$stem ($i)$ext")) i++
         return "$stem ($i)$ext"
     }
+}
+
+/** When a seeding torrent has given back enough: the ratio (percent of its size uploaded) or the time cap. */
+object DlSeedRule {
+    fun reached(p: DlPolicy, uploaded: Long, size: Long, seedingSec: Long): Boolean =
+        (p.seedRatio > 0 && size > 0 && uploaded * 100 >= p.seedRatio.toLong() * size) ||
+            (p.seedMinutes > 0 && seedingSec >= p.seedMinutes * 60L)
 }

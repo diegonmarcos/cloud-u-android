@@ -83,7 +83,9 @@ class MainActivity : AppCompatActivity() {
         }
         selectedId = decl.default()?.id
         // A link that started this activity opens once; a recreation brings the browser back on its own tabs.
-        val openUrl = if (savedInstanceState == null) intent?.dataString?.takeIf { it.isNotBlank() } else null
+        // A magnet: link or a .torrent handed to the app is queued (and the Downloads page opens), never loaded as a page.
+        val torrent = savedInstanceState == null && com.diegonmarcos.cloudbrowser.torrent.TorrentIntents.consume(this, intent)
+        val openUrl = if (savedInstanceState == null && !torrent) intent?.dataString?.takeIf { it.isNotBlank() } else null
         setContent {
             val palette = KitPalette(
                 surface = colorResource(R.color.browser_surface),
@@ -177,6 +179,7 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         // VIEW intent from another app: replace fragment with the new URL.
         // BrowserHostFragment takes its URL via newInstance args only.
+        if (com.diegonmarcos.cloudbrowser.torrent.TorrentIntents.consume(this, intent)) { setIntent(intent); return }
         val url = intent.dataString?.takeIf { it.isNotBlank() } ?: return
         supportFragmentManager.commit {
             replace(

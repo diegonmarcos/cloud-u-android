@@ -23,7 +23,7 @@
   "maven": {
    "Apache-2.0": 233,
    "NOASSERTION": 36,
-   "MIT": 23,
+   "MIT": 27,
    "LicenseRef-Google-MLKit-Terms": 7,
    "BSD-3-Clause": 4,
    "EPL-2.0": 4,
@@ -7181,6 +7181,50 @@
    "licence_source": "POM 6.1.0",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
    "within_upstream_module": "vault"
+  },
+  "maven:org.libtorrent4j:libtorrent4j": {
+   "kind": "maven",
+   "declared_in": [
+    "ac_cloud-browser/app/build.gradle"
+   ],
+   "version": "2.1.0-39",
+   "scope": "shipped",
+   "licence": "MIT",
+   "licence_source": "POM 2.1.0-39",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)"
+  },
+  "maven:org.libtorrent4j:libtorrent4j-android-arm64": {
+   "kind": "maven",
+   "declared_in": [
+    "ac_cloud-browser/app/build.gradle"
+   ],
+   "version": "2.1.0-39",
+   "scope": "shipped",
+   "licence": "MIT",
+   "licence_source": "POM 2.1.0-39",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)"
+  },
+  "maven:org.libtorrent4j:libtorrent4j-android-x86_64": {
+   "kind": "maven",
+   "declared_in": [
+    "ac_cloud-browser/app/build.gradle"
+   ],
+   "version": "2.1.0-39",
+   "scope": "shipped",
+   "licence": "MIT",
+   "licence_source": "POM 2.1.0-39",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)"
+  },
+  "maven:org.libtorrent4j:libtorrent4j-linux": {
+   "kind": "maven",
+   "declared_in": [
+    "ac_cloud-browser/app/build.gradle"
+   ],
+   "version": "2.1.0-39",
+   "scope": "test",
+   "licence": "MIT",
+   "licence_source": "POM 2.1.0-39",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)"
   },
   "maven:org.lsposed.hiddenapibypass:hiddenapibypass": {
    "kind": "maven",

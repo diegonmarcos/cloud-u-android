@@ -63,7 +63,8 @@ class DlQueue private constructor(context: Context) {
     fun all(): List<DlJob> = synchronized(jobs) { jobs.values.sortedByDescending { it.createdAt } }
     fun byId(id: String): DlJob? = synchronized(jobs) { jobs[id] }
     fun live(id: String): DlLive = live[id] ?: DlLive()
-    fun hasWork(): Boolean = all().any { it.state.active } || (torrent?.seeding() ?: false)
+    fun hasWork(): Boolean = all().any { it.state.active }   // a seeding torrent is RUNNING, so it counts
+    private fun hasTorrents() = all().any { it.kind == DlJob.KIND_TORRENT }
     fun running(): List<DlJob> = all().filter { it.state == DlState.RUNNING || it.state == DlState.RETRYING }
 
     fun addListener(l: () -> Unit) { listeners.add(l) }
@@ -76,7 +77,7 @@ class DlQueue private constructor(context: Context) {
         policy = p
         sp.edit().putString(KEY_POLICY, p.toJson().toString()).apply()
         limiter.bytesPerSec = p.speedLimitKbps * 1024L
-        torrent?.applyPolicy(p)
+        if (hasTorrents()) torrent?.applyPolicy(p)
         enforceNetwork(); pump()
     }
 
@@ -105,11 +106,44 @@ class DlQueue private constructor(context: Context) {
         val id = UUID.randomUUID().toString()
         val save = File(File(root(), id), "torrent").apply { mkdirs() }
         val j = DlJob(id = id, url = magnetOrNull ?: "torrent:$id", fileName = DlTorrentBridge.displayName(magnetOrNull) ?: "Torrent",
-            kind = DlJob.KIND_TORRENT, dir = dir, file = save.path, createdAt = System.currentTimeMillis(), seed = policy.seedRatio > 0 || policy.seedMinutes > 0)
+            kind = DlJob.KIND_TORRENT, dir = dir, file = save.path, createdAt = System.currentTimeMillis(), seed = policy.seed)
         put(j, save = true)
         t.add(j, torrentBytes)
         pump()
         return byId(id)
+    }
+
+    /**
+     * A .torrent link the page offered (DownloadListener): fetch the small file with the page's cookie,
+     * agent and referer, then add it as a torrent. [done] gets the row, or null when it failed.
+     */
+    fun addTorrentUrl(url: String, userAgent: String?, referer: String?, cookie: String?, dir: String, done: (DlJob?) -> Unit) {
+        exec.execute {
+            val bytes = runCatching {
+                val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                c.connectTimeout = 20_000; c.readTimeout = 30_000
+                userAgent?.let { c.setRequestProperty("User-Agent", it) }
+                cookie?.let { c.setRequestProperty("Cookie", it) }
+                referer?.let { c.setRequestProperty("Referer", it) }
+                try {
+                    if (c.responseCode !in 200..299) null
+                    else c.inputStream.use { s -> s.readNBytesCompat(MAX_TORRENT_FILE) }
+                } finally { c.disconnect() }
+            }.getOrNull()
+            val j = bytes?.let { addTorrent(null, it, dir) }
+            main.post { done(j) }
+        }
+    }
+
+    private fun java.io.InputStream.readNBytesCompat(max: Int): ByteArray? {
+        val out = java.io.ByteArrayOutputStream()
+        val buf = ByteArray(16 * 1024)
+        while (true) {
+            val n = read(buf); if (n < 0) break
+            out.write(buf, 0, n)
+            if (out.size() > max) return null
+        }
+        return out.toByteArray()
     }
 
     fun pause(id: String) {
@@ -123,8 +157,7 @@ class DlQueue private constructor(context: Context) {
         val j = byId(id) ?: return
         if (j.state == DlState.COMPLETED && j.kind != DlJob.KIND_TORRENT) return
         put(j.copy(state = DlState.QUEUED, error = null, attempts = 0), true)
-        if (j.kind == DlJob.KIND_TORRENT) torrent?.resume(id)
-        pump()
+        pump()   // a torrent restarts there too (start -> bridge.resume), within the parallel limit
     }
 
     fun retry(id: String) = resume(id)
@@ -156,8 +189,10 @@ class DlQueue private constructor(context: Context) {
 
     /** Android stopped the service (dataSync time limit, or the job's window ended): park, resume later. */
     fun suspendAll() {
-        all().filter { it.state == DlState.RUNNING || it.state == DlState.RETRYING }.forEach { controls[it.id]?.request(DlStop.TIMEOUT) }
-        torrent?.suspend()
+        all().filter { it.state == DlState.RUNNING || it.state == DlState.RETRYING }.forEach {
+            if (it.kind == DlJob.KIND_TORRENT) put(it.copy(state = DlState.QUEUED), true) else controls[it.id]?.request(DlStop.TIMEOUT)
+        }
+        if (hasTorrents()) torrent?.suspend()
     }
 
     /** Forget everything (the files stay where they were published). */
@@ -174,7 +209,8 @@ class DlQueue private constructor(context: Context) {
         if (Looper.myLooper() != Looper.getMainLooper()) { main.post { pump() }; return }
         val ok = networkAllowed()
         val all = all().sortedBy { it.createdAt }
-        var running = all.count { it.state == DlState.RUNNING || it.state == DlState.RETRYING }
+        // A torrent that only seeds does not hold a download slot.
+        var running = all.count { (it.state == DlState.RUNNING || it.state == DlState.RETRYING) && !seedingOnly(it) }
         for (j in all) {
             if (j.state != DlState.QUEUED && j.state != DlState.WAITING_NETWORK) continue
             if (!ok) { if (j.state != DlState.WAITING_NETWORK) put(j.copy(state = DlState.WAITING_NETWORK), true); continue }
@@ -186,10 +222,14 @@ class DlQueue private constructor(context: Context) {
         if (hasWork()) DlResumeJob.schedule(app, policy, DlResumeJob.WATCHDOG_MS)
     }
 
+    private fun seedingOnly(j: DlJob) = j.kind == DlJob.KIND_TORRENT && j.total > 0 && j.downloaded >= j.total
+
     private fun enforceNetwork() {
         if (networkAllowed()) { pump(); return }
-        running().filter { it.kind == DlJob.KIND_HTTP }.forEach { controls[it.id]?.request(DlStop.NETWORK_POLICY) }
-        torrent?.suspend()
+        running().forEach {
+            if (it.kind == DlJob.KIND_TORRENT) put(it.copy(state = DlState.WAITING_NETWORK), true) else controls[it.id]?.request(DlStop.NETWORK_POLICY)
+        }
+        if (hasTorrents()) torrent?.suspend()
     }
 
     private fun start(j0: DlJob) {
@@ -303,6 +343,7 @@ class DlQueue private constructor(context: Context) {
     companion object {
         const val KEY_JOBS = "jobs_v2"
         const val KEY_POLICY = "policy_v2"
+        const val MAX_TORRENT_FILE = 16 * 1024 * 1024
         @Volatile private var instance: DlQueue? = null
         fun get(ctx: Context): DlQueue = instance ?: synchronized(this) { instance ?: DlQueue(ctx).also { instance = it } }
     }
