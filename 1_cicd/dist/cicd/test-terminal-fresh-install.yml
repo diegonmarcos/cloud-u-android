@@ -1,0 +1,171 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║ Test → terminal fresh install (emulator, offline, reusable)            ║
+# ║                                                                        ║
+# ║ The test-launch-smoke pattern, for the two terminals. On a CLEAN       ║
+# ║ emulator with the network OFF: install the rootfs library APK first    ║
+# ║ when the app has one (as the Store does: the lib, then the app), then  ║
+# ║ the app, launch it, type a command line into the first session and     ║
+# ║ require it to run `ls`, `uname` and `fish`. The line reports through   ║
+# ║ /system/bin/log, so the verdict is read from logcat: only a session    ║
+# ║ that reached a prompt can execute what was typed.                      ║
+# ║                                                                        ║
+# ║ Called as the LAST job of ship-cloud-termux.yml and                   ║
+# ║ ship-cloud-nix-on-droid.yml. A run whose gate skipped the build has no ║
+# ║ APK and the test is skipped. The lib APK comes from this run's         ║
+# ║ artifact when it was rebuilt, otherwise from the rolling release.      ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+name: "Test → terminal fresh install (emulator, offline, reusable)"
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        type: string
+        required: true
+      artifact_prefix:
+        description: "Name prefix of the x86_64 APK artifact the calling Ship run uploaded"
+        type: string
+        required: true
+      lib_package:
+        description: "Package of the rootfs library APK to install first ('' = none)"
+        type: string
+        default: ""
+      lib_release_asset:
+        description: "Release asset of that lib (x86_64) when this run did not rebuild it"
+        type: string
+        default: ""
+      release_tag:
+        type: string
+        default: "latest"
+      api_level:
+        type: string
+        default: "34"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  fresh-install:
+    name: "Fresh install offline (${{ inputs.app }} · API ${{ inputs.api_level }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Fetch this run's APKs
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.artifact_prefix }}*
+          path: apk
+
+      - name: Pick the app APK (and the lib APK)
+        id: apk
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          LIB_PKG: ${{ inputs.lib_package }}
+          LIB_ASSET: ${{ inputs.lib_release_asset }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          set -eu
+          aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          app=""; lib=""
+          for f in $(find apk -name '*.apk' 2>/dev/null | sort); do
+            p=$("$aapt2" dump packagename "$f")
+            echo "$f -> $p"
+            if [ -n "$LIB_PKG" ] && [ "$p" = "$LIB_PKG" ]; then lib="$f"; elif [ -z "$app" ]; then app="$f"; fi
+          done
+          if [ -z "$app" ]; then
+            echo "No APK in this run (the publish gate skipped the build): nothing new to test."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          cp "$app" app.apk
+          pkg=$("$aapt2" dump packagename app.apk)
+          if [ -n "$LIB_PKG" ]; then
+            if [ -n "$lib" ]; then cp "$lib" lib.apk
+            else gh release download "$TAG" -R "$REPO" -p "$LIB_ASSET" -O lib.apk; fi
+            [ "$("$aapt2" dump packagename lib.apk)" = "$LIB_PKG" ] || { echo "::error::lib.apk is not $LIB_PKG"; exit 1; }
+          fi
+          { echo "skip=false"; echo "pkg=$pkg"; } >> "$GITHUB_OUTPUT"
+
+      - name: Enable KVM
+        if: steps.apk.outputs.skip != 'true'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Write the probe
+        if: steps.apk.outputs.skip != 'true'
+        env:
+          PKG: ${{ steps.apk.outputs.pkg }}
+          APP: ${{ inputs.app }}
+        run: |
+          printf "#!/bin/bash\nPKG='%s'; APP='%s'\n" "$PKG" "$APP" > probe.sh
+          cat >> probe.sh <<'EOF'
+          set -u
+          mkdir -p out
+          # Network OFF before anything is installed: the first start must not need it.
+          adb shell svc wifi disable || true
+          adb shell svc data disable || true
+          adb shell cmd connectivity airplane-mode enable || true
+          sleep 3
+          adb shell ping -c1 -W2 8.8.8.8 >/dev/null 2>&1 && { echo "::error::the emulator is still online"; exit 2; }
+          if [ -f lib.apk ]; then
+            adb install -r lib.apk || { echo "::error::lib APK install failed"; exit 2; }
+          fi
+          adb install -r -g app.apk || { echo "::error::app APK install failed"; exit 2; }
+          adb logcat -c || true
+          act=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)
+          case "$act" in */*) ;; *) echo "::error::$PKG has no launcher activity ($act)"; exit 2;; esac
+          adb shell am start -W -n "$act"
+          # Type: /system/bin/log -t CLOUDSMOKE L$(ls /|wc -l)U$(uname -s)F$(fish -c uname)
+          type_line() {
+            for tok in '/system/bin/log' '-t' 'CLOUDSMOKE' 'L$(ls' '/|wc' '-l)U$(uname' '-s)F$(fish' '-c' 'uname)'; do
+              adb shell "input text '$tok'"; adb shell input keyevent 62
+            done
+            adb shell input keyevent 66
+          }
+          verdict=""
+          for i in $(seq 1 30); do   # up to ~15 min: the first start unpacks the rootfs
+            sleep 30
+            adb shell pidof "$PKG" >/dev/null 2>&1 || { echo "::error::$PKG died during first start"; break; }
+            type_line
+            sleep 5
+            verdict=$(adb logcat -d -s CLOUDSMOKE:I | grep -o 'L[0-9]*ULinuxF[A-Za-z]*' | tail -1 || true)
+            [ -n "$verdict" ] && break
+            echo "no prompt yet (${i})"
+          done
+          adb logcat -d -v threadtime > out/logcat.txt
+          adb exec-out screencap -p > out/screen.png || true
+          echo "verdict: ${verdict:-none}"
+          case "$verdict" in
+            L0U*|"") echo "::error title=$APP fresh install::no session ran ls/uname/fish offline (verdict '${verdict:-none}')"
+                     grep -E "$PKG|AndroidRuntime|CLOUDSMOKE" out/logcat.txt | tail -80; exit 1 ;;
+            *ULinuxFLinux) echo "$APP: a fresh offline install reached a prompt; ls, uname and fish work." ;;
+            *) echo "::error title=$APP fresh install::fish did not run (verdict '$verdict')"; exit 1 ;;
+          esac
+          EOF
+          chmod +x probe.sh
+
+      - name: Boot a clean emulator + probe
+        if: steps.apk.outputs.skip != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ inputs.api_level }}
+          arch: x86_64
+          target: google_apis
+          disk-size: 8G
+          ram-size: 4096M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -wipe-data -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./probe.sh
+
+      - name: Upload evidence
+        if: always() && steps.apk.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.app }}-fresh-install
+          path: out/
+          if-no-files-found: warn
