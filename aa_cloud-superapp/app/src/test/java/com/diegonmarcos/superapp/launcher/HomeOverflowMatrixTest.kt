@@ -99,10 +99,13 @@ class HomeOverflowMatrixTest(private val dpi: Int, private val fontScale: Float)
             col.addView(pane, LinearLayout.LayoutParams(-1, 0, 1f))
             a.setContentView(col)
             LauncherStatusStrip.install(a, strip)
-            ViewCompat.dispatchApplyWindowInsets(strip, insets())
             a.supportFragmentManager.beginTransaction().add(pane.id, HomeGroupedFragment.newInstance()).commitNow()
             root = col
         }
+        compose.waitForIdle()
+        // After the fragment's own layout pass (which re-dispatches Robolectric's cutout-less window insets), dispatch the
+        // A37's cutout the way the platform does, so the strip holds the camera's height.
+        compose.runOnUiThread { ViewCompat.dispatchApplyWindowInsets(root.let { (it as LinearLayout).getChildAt(0) }, insets()) }
         compose.waitForIdle()
 
         val name = "${dpi}dpi-${wDp}dp@$fontScale"
