@@ -54,7 +54,7 @@ DataStore / Room stores and declared files it cannot move yet.
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
-Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-auth, lib-battery, lib-bottomnav, lib-chat, lib-core, lib-databackend, lib-datamanager, lib-devtools, lib-firewall, lib-fleetconfig-model, lib-health, lib-kde-connect, lib-launcher-apptabs, lib-launcher-onehand, lib-launcher-zoomies, lib-mail, lib-net, lib-ops, lib-search, lib-shizuku-adb-debug-tools, lib-sysdns, lib-text-tools, lib-ui-kit, lib-updater, lib-webserver.
+Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-auth, lib-battery, lib-bottomnav, lib-chat, lib-core, lib-databackend, lib-datamanager, lib-devtools, lib-firewall, lib-fleetconfig-model, lib-health, lib-kde-connect, lib-launcher-apptabs, lib-launcher-onehand, lib-launcher-zoomies, lib-mail, lib-net, lib-ops, lib-search, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-text-tools, lib-ui-kit, lib-updater, lib-webserver.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -121,6 +121,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
 | `store_integrity_marks` | prefs | config | yes | Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory). |
 | `store_lib_groups` | prefs | device | no | #895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs. |
+| `store_migration` | prefs | device | no | Cloud Store's one-time shared-uid migration records (SharedUidMigration): per package, why the update was refused (cause), the version and build it was refused over, when, whether the backup started and whether it is done. Progress of an uninstall/reinstall on THIS phone; a new phone installs the new uid directly and needs none. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `store_phone_view` | prefs | device | no | Store > Phone: how the app list is sorted (shelf, or size largest / smallest first); a view preference of this phone, not state a new phone needs. |
 | `store_play_anon` | prefs | device | no | Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again. |
@@ -198,7 +199,7 @@ Coverage: 2 covered, 0 gaps.
 
 ## cloud-account — `com.diegonmarcos.cloudaccount`
 
-Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofill, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-mail, lib-net, lib-shizuku-adb-debug-tools, lib-text-tools, lib-ui-kit, lib-updater.
+Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofill, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-mail, lib-net, lib-shared-store, lib-shizuku-adb-debug-tools, lib-text-tools, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -223,6 +224,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofi
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
 | `store_integrity_marks` | prefs | config | yes | Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory). |
 | `store_lib_groups` | prefs | device | no | #895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs. |
+| `store_migration` | prefs | device | no | Cloud Store's one-time shared-uid migration records (SharedUidMigration): per package, why the update was refused (cause), the version and build it was refused over, when, whether the backup started and whether it is done. Progress of an uninstall/reinstall on THIS phone; a new phone installs the new uid directly and needs none. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `store_phone_view` | prefs | device | no | Store > Phone: how the app list is sorted (shelf, or size largest / smallest first); a view preference of this phone, not state a new phone needs. |
 | `store_play_anon` | prefs | device | no | Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again. |
@@ -871,7 +873,7 @@ Coverage: 3 covered, 2 gaps — search_chat_sessions, file:filesDir/chat-session
 
 ## cloud-store — `com.diegonmarcos.cloudstore`
 
-Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-shizuku-adb-debug-tools, lib-sysdns, lib-ui-kit, lib-updater.
+Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -889,6 +891,7 @@ Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, li
 | `store_fleet_bearer_fallback` | prefs | secret | yes | Plain-prefs fallback of store_fleet_bearer (same key). |
 | `store_integrity_marks` | prefs | config | yes | Cloud Store: packages declared integrity unknown that the user reported 'did not run' after a play-anon install, marked as needing Play Integrity on this phone. A finding about the apps, so it moves with the phone (also exported in the app inventory). |
 | `store_lib_groups` | prefs | device | no | #895 which groups of the Store's Libs tab (Shared libs, Machine-learning libs) the user collapsed; a view preference, not state a new phone needs. |
+| `store_migration` | prefs | device | no | Cloud Store's one-time shared-uid migration records (SharedUidMigration): per package, why the update was refused (cause), the version and build it was refused over, when, whether the backup started and whether it is done. Progress of an uninstall/reinstall on THIS phone; a new phone installs the new uid directly and needs none. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `store_phone_view` | prefs | device | no | Store > Phone: how the app list is sorted (shelf, or size largest / smallest first); a view preference of this phone, not state a new phone needs. |
 | `store_play_anon` | prefs | device | no | Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again. |
