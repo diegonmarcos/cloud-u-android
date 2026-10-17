@@ -90,6 +90,7 @@ class HomeOverflowMatrixTest(private val dpi: Int, private val fontScale: Float)
 
     @Test fun `home screen fits the A37 at this density and font scale`() {
         lateinit var root: View
+        lateinit var model: StatusStripModel
         compose.runOnUiThread {
             val a = compose.activity
             val col = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(android.graphics.Color.BLACK) }
@@ -98,7 +99,7 @@ class HomeOverflowMatrixTest(private val dpi: Int, private val fontScale: Float)
             val pane = FrameLayout(a).apply { id = View.generateViewId() }
             col.addView(pane, LinearLayout.LayoutParams(-1, 0, 1f))
             a.setContentView(col)
-            LauncherStatusStrip.install(a, strip)
+            model = LauncherStatusStrip.install(a, strip)
             a.supportFragmentManager.beginTransaction().add(pane.id, HomeGroupedFragment.newInstance()).commitNow()
             root = col
         }
@@ -130,7 +131,7 @@ class HomeOverflowMatrixTest(private val dpi: Int, private val fontScale: Float)
             File(OUT, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
         File(OUT, "$name.tsv").writeText(buildString {
-            append("screen\t$name\tscreenW=$screenW\tdensity=$d\tfontScale=${compose.activity.resources.configuration.fontScale}\n")
+            append("screen\t$name\tscreenW=$screenW\tdensity=$d\tfontScale=${compose.activity.resources.configuration.fontScale}\tcutoutTopPx=${model.cutoutTopPx}\treservePx=${model.clockReservePx()}\n")
             for (b in all) append("${b.tag}\t${b.l}\t${b.t}\t${b.r}\t${b.b}\n")
         })
 
@@ -144,7 +145,7 @@ class HomeOverflowMatrixTest(private val dpi: Int, private val fontScale: Float)
         for (b in strip) {
             assertTrue("$name: ${b.tag} spans ${b.l}..${b.r}, outside the safe ${gutter}..${screenW - gutter}",
                 b.l >= gutter - 1f && b.r <= screenW - gutter + 1f)
-            assertTrue("$name: ${b.tag} touches the camera", !androidx.compose.ui.geometry.Rect(b.l, b.t, b.r, b.b).overlaps(cam))
+            assertTrue("$name: ${b.tag} ${b.l},${b.t}..${b.r},${b.b} touches the camera (cutoutTopPx=${model.cutoutTopPx} reserve=${model.clockReservePx()})", !androidx.compose.ui.geometry.Rect(b.l, b.t, b.r, b.b).overlaps(cam))
         }
         // G3
         val clock = strip.first { it.tag == "strip:clock" }
