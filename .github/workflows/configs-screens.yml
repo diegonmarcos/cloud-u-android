@@ -1,0 +1,95 @@
+name: "Configs screens — render every SuperApp Configs page at Galaxy A37 density and measure its controls"
+
+# ConfigsScreensTest (aa_cloud-superapp/app/src/test/.../configs) draws the Configs grid and every page/tab under it at
+# 384x832dp / 450dpi (Samsung Galaxy A37, SM-A376B) and fontScale 1.0 + 1.3, writes a PNG and a TSV of every
+# clickable's dp size per screen, and fails when a button renders over 32dp or a row over 44dp (fontScale 1.0).
+# The PNGs + TSVs are uploaded as the `configs-screens` artifact, red or green.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "1_cicd/src/cicd/configs-screens.yml"
+      - "aa_cloud-superapp/app/src/**"
+      - "aa_cloud-superapp/build.json"
+      - "ab_cloud-libs-shared/libs/ui-kit/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: configs-screens-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-36 platforms;android-35 platforms;android-34 platforms;android-26 build-tools;36.0.0 build-tools;35.0.0 build-tools;34.0.0 platform-tools cmake;3.22.1 ndk;28.0.13004108 ndk;26.1.10909125"
+
+      - name: Set up Gradle 8.14 (cached)
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.14"
+
+      - name: Cache firestack Go modules + checksum-db tiles
+        uses: actions/cache@v4
+        with:
+          path: ab_cloud-libs-shared/.cache/gomodcache
+          key: firestack-gomodcache-${{ runner.os }}-${{ hashFiles('ab_cloud-libs-shared/libs/firewall/firestack/go.sum') }}
+          restore-keys: firestack-gomodcache-${{ runner.os }}-
+
+      - name: Checkout vault (shared Android signing key)
+        uses: actions/checkout@v4
+        with:
+          repository: diegonmarcos/cloud-me_vault
+          token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
+          path: .vault
+
+      - name: Install sops (pinned, sha256-checked, fails at the download)
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: sops
+
+      - name: Render + measure every Configs screen
+        working-directory: aa_cloud-superapp
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.configs.ConfigsScreensTest"
+        run: ./build.sh test
+
+      - name: Summary (dp per control, every screen)
+        if: always()
+        run: |
+          d=aa_cloud-superapp/app/build/configs-screens
+          [ -d "$d" ] || exit 0
+          { echo '```'; for f in "$d"/*.tsv; do cat "$f"; echo; done; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload PNGs + TSVs + test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: configs-screens
+          path: |
+            aa_cloud-superapp/app/build/configs-screens/
+            aa_cloud-superapp/app/build/reports/tests/
+          if-no-files-found: warn

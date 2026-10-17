@@ -325,7 +325,8 @@ step_test() {
   log "Test: JVM unit tests (gradle $task)"
   _resolve_signing
   _resolve_media_keys
-  run_gradle "$task"
+  # UNIT_TEST_FILTER=<class pattern> narrows the run (CI: the Configs screenshot workflow).
+  if [ -n "${UNIT_TEST_FILTER:-}" ]; then run_gradle "$task" --tests "$UNIT_TEST_FILTER"; else run_gradle "$task"; fi
 }
 # Same prerequisites as step_build (this project cannot even CONFIGURE without the shared signing key or compile
 # without the firestack aar) - the old bare `gradle connectedAndroidTest` could do neither. INSTRUMENT_CLASS=<fqcn>
