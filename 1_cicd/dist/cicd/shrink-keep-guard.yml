@@ -1,0 +1,34 @@
+name: "Shrink-keep guard — a resource looked up by name survives shrinkResources"
+
+# WHY THIS EXISTS.
+# Cloud Notes crashed at launch (fixed in 1b01309f): it resolved its bottom-nav icons with
+# getIdentifier("ic_nav_$name", "drawable", ...), the release build's shrinkResources cannot see
+# a name built at run time, it stripped every ic_nav_* drawable, getIdentifier returned 0 and
+# painterResource(0) threw. This holds every module that shrinks resources (and the :libs it
+# compiles in) to a tools:keep rule in res/raw/*.xml for each by-name lookup it makes; a lookup
+# whose name is a variable must say what it resolves in a `// shrink-keep:` comment.
+#
+# NO PATH FILTER: the inputs are any gradle script, any Kotlin/Java source and any res/raw file
+# in the tree; it needs no gradle, no device, no network and costs seconds.
+#
+# BOTH STEPS MATTER. The first proves the fleet holds; the second removes Cloud Notes' keep file
+# from a copy and proves the guard then fails, naming @drawable/ic_nav_*.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shrink-keep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every by-name resource lookup in a shrinking module has a keep rule
+        run: python3 1_cicd/src/scripts/cloud-android-shrink-keep-guard.py
+      - name: The guard still fails with Cloud Notes' keep file removed
+        run: sh 1_cicd/src/scripts/test/shrink-keep-guard.test.sh
