@@ -41,7 +41,7 @@ class FleetIdentityPageTest : KitPageHarness() {
     fun `I1 the Identity tab renders a row per fleet app`() {
         val reg = FleetIdentity.baked()
         assertEquals(declaredPkgs(), reg.members.map { it.pkg }.toSet())
-        compose.setContent { FleetIdentityPage(registry = reg, live = emptyMap()) }
+        showKit { FleetIdentityPage(registry = reg, live = emptyMap()) }
         compose.waitForIdle()
         for (r in FleetIdentity.rows(reg, emptyMap())) compose.onNodeWithTag("kit:listrow:" + r.tag, useUnmergedTree = true).assertExists()
         compose.onNodeWithTag(FleetIdentity.TAG_SUMMARY, useUnmergedTree = true).assertExists()
@@ -65,7 +65,7 @@ class FleetIdentityPageTest : KitPageHarness() {
             val m = reg.members.first { it.pkg == "cld.termux" }
             assertNull(FleetIdentity.problem(m, null, FleetIdentity.Seen(10200, "cld.termux", null), emptyMap()))
         }
-        compose.setContent { FleetIdentityPage(registry = reg, live = emptyMap()) }
+        showKit { FleetIdentityPage(registry = reg, live = emptyMap()) }
         compose.waitForIdle()
         compose.onNodeWithTag(FleetIdentity.TAG_GROUP + "terminal", useUnmergedTree = true).assertExists()
     }
@@ -84,7 +84,7 @@ class FleetIdentityPageTest : KitPageHarness() {
         val stray = good + ("a.three" to FleetIdentity.Seen(10100, "cld.shared", null))
         assertNotNull(FleetIdentity.rows(reg, stray).first { it.member.pkg == "a.three" }.problem)
         assertNull(FleetIdentity.rows(reg, emptyMap()).first().problem)
-        compose.setContent { FleetIdentityPage(registry = reg, live = stray) }
+        showKit { FleetIdentityPage(registry = reg, live = stray) }
         compose.waitForIdle()
         compose.onNodeWithTag("kit:listrow:" + FleetIdentity.TAG_ROW + "three", useUnmergedTree = true).assertExists()
     }
