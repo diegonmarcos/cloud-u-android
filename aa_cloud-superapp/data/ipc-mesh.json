@@ -1932,6 +1932,7 @@
      "name": "AgentMailProvider",
      "authority": "<pkg>.agentmail",
      "callers": [
+      "aa_cloud-superapp",
       "tasks"
      ]
     },
@@ -2053,7 +2054,32 @@
     "devtools",
     "fleetconfig-model"
    ],
-   "endpoints": []
+   "endpoints": [
+    {
+     "id": "op:tracker/places",
+     "kind": "op",
+     "name": "tracker/places",
+     "method": "fleet.ipc.v1",
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/tracker/TrackerDebugApiProvider.kt",
+     "callers": [
+      "aa_cloud-superapp"
+     ]
+    },
+    {
+     "id": "op:tracker/steps",
+     "kind": "op",
+     "name": "tracker/steps",
+     "method": "fleet.ipc.v1",
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/tracker/TrackerDebugApiProvider.kt",
+     "callers": [
+      "aa_cloud-superapp"
+     ]
+    }
+   ]
   },
   {
    "id": "news",
@@ -2354,7 +2380,20 @@
     "devtools",
     "fleetconfig-model"
    ],
-   "endpoints": []
+   "endpoints": [
+    {
+     "id": "op:projects/list",
+     "kind": "op",
+     "name": "projects/list",
+     "method": "fleet.ipc.v1",
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "ac_cloud-tasks/app/src/main/java/com/diegonmarcos/cloudagenda/ipc/ProjectsDebugApiProvider.kt",
+     "callers": [
+      "aa_cloud-superapp"
+     ]
+    }
+   ]
   },
   {
    "id": "termux",

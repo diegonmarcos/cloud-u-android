@@ -101,5 +101,10 @@
         <receiver
             android:name="com.diegonmarcos.superapp.updater.PackageInstallerReceiver"
             android:exported="false" />
+        <!-- tracker/steps + tracker/places on the fleet IPC door, for the SuperApp's Boards ▸ My-PM (registers before Application.onCreate). -->
+        <provider
+            android:name=".tracker.TrackerDebugApiProvider"
+            android:authorities="${applicationId}.trackerapi"
+            android:exported="false" />
     </application>
 </manifest>

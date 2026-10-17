@@ -209,6 +209,11 @@ private fun PanelBody(state: AggregatorState, index: Int, panel: Sections.StackP
         "feed" -> FeedBody(panel, onOpen)
         "stats" -> { StatsBody(panel); InboxNotifications(state, panel, onOpen) }
         "class_inbox" -> ClassInboxBody(state, panel, onOpen)
+        // Boards (BoardsPanels.kt): each reads its owner app live, never a number of its own.
+        "board_inbox" -> BoardInboxBody(state.epoch, onOpen)
+        "board_steps" -> BoardStepsBody(state.epoch, onOpen)
+        "board_places" -> BoardPlacesBody(state.epoch, onOpen)
+        "board_task_projects" -> BoardTaskProjectsBody(state.epoch, onOpen)
         "cloud_dashboard" -> CloudDashboard(state, panel, actions)
         else -> AggCaption(panel.subtitle.ifBlank { "Coming soon" })
     }

@@ -1794,7 +1794,7 @@ open class ShellActivity : AppCompatActivity(),
     override fun routeTarget(tileId: String) {
         when {
             tileId.startsWith("section:") -> {
-                val id = tileId.removePrefix("section:")
+                val id = Sections.canonicalId(tileId.removePrefix("section:"))
                 if (id == "home") goHome() else goSection(id, Sections.byId(id)?.label ?: id)
             }
             tileId.startsWith("page:") -> {
@@ -1809,8 +1809,11 @@ open class ShellActivity : AppCompatActivity(),
                 // Two forms: "<sectionId>/<pageId>" (deep-link from Home
                 // grouped tiles) or just "<pageId>" (within current section).
                 val parts = payload.split("/", limit = 2)
-                val section = if (parts.size == 2) parts[0] else currentSection
-                val page = if (parts.size == 2) parts[1] else parts[0]
+                // Old ids (Boards was `infos`; Work-PM / C3-PM became Tasks) resolve here, so a deep link from another
+                // app or an older build still lands on the page that replaced it.
+                val (section, page) = Sections.canonicalPage(
+                    if (parts.size == 2) parts[0] else currentSection,
+                    if (parts.size == 2) parts[1] else parts[0])
                 // Requested BEFORE navigating: the destination stack consumes
                 // it as it builds, and on a tabbed section that build can
                 // happen synchronously inside openSectionPage.

@@ -50,5 +50,10 @@
         <receiver
             android:name="com.diegonmarcos.superapp.updater.PackageInstallerReceiver"
             android:exported="false" />
+        <!-- projects/list on the fleet IPC door, for the SuperApp's Boards ▸ Tasks (registers before any Activity). -->
+        <provider
+            android:name=".ipc.ProjectsDebugApiProvider"
+            android:authorities="${applicationId}.projectsapi"
+            android:exported="false" />
     </application>
 </manifest>

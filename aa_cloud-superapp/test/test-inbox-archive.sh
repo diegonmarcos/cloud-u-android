@@ -202,7 +202,8 @@ for sec in b["ui"]["sections"]:
             if not isinstance(url, str) or not url.startswith("extapp:"):
                 continue
             seen += 1
-            if url[len("extapp:"):].split("/")[0] not in ids:
+            # extapp:<id>[/<fork>][#<deep target>] — the id is what must resolve.
+            if url[len("extapp:"):].split("#")[0].split("/")[0] not in ids:
                 bad.append("%s/%s points at unknown app %r" % (key, panel.get("title"), url))
 if seen == 0:
     bad.append("no panel declares an extapp: target at all — the page moved and this test went blind")

@@ -121,7 +121,7 @@ class StepsRepository(private val ctx: Context) {
     }
 
     /** The engine's fixes plus the foreground tracker's GPS points (read-only), oldest first. */
-    private fun fixes(from: Long, to: Long): List<PlaceFix> {
+    internal fun fixes(from: Long, to: Long): List<PlaceFix> {
         val out = EngineDb.get(ctx).fixes(from, to).toMutableList()
         runCatching {
             MapsDb.get(ctx).readableDatabase.rawQuery(
@@ -134,7 +134,7 @@ class StepsRepository(private val ctx: Context) {
 
     /** Geocoder place name when the platform has one, else the coordinates. Cached on a ~100 m grid. */
     @Suppress("DEPRECATION")
-    private fun name(f: PlaceFix): String {
+    internal fun name(f: PlaceFix): String {
         val key = "%.3f,%.3f".format(Locale.US, f.lat, f.lon)
         return names.getOrPut(key) {
             val coords = "%.4f, %.4f".format(Locale.US, f.lat, f.lon)

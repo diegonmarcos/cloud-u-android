@@ -105,6 +105,11 @@ object Sections {
         /** EVERY `filters_<page>` toggle row, keyed by the suffix. Same
          *  page-id-is-the-data-key contract as [stackByPage]. */
         val filtersByPage: Map<String, List<StackFilter>> = emptyMap(),
+        /** Old ids this section still answers to (build.json::sections[*].aliases): Boards was `infos`, and other apps
+         *  deep-link `section:infos` / `page:infos/<p>`. [byId] and [canonicalPage] resolve them; nothing else does. */
+        val aliases: List<String> = emptyList(),
+        /** Removed page id -> the page that replaced it (build.json::sections[*].page_aliases). */
+        val pageAliases: Map<String, String> = emptyMap(),
         // long_press is gone: the fan menu now renders [pages] directly, so a
         // section declares its children ONCE. See LauncherToolbarFx.
     ) {
@@ -972,6 +977,8 @@ object Sections {
                     stackAdmin      = parseStack("stack_admin"),
                     stackByPage     = parseByPage("stack_") { parseStack(it) },
                     filtersByPage   = parseByPage("filters_") { parseFilters(it) },
+                    aliases         = o.optJSONArray("aliases")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }.orEmpty(),
+                    pageAliases     = o.optJSONObject("page_aliases")?.let { m -> m.keys().asSequence().associateWith { m.getString(it) } }.orEmpty(),
                 )
             )
         }
@@ -1020,7 +1027,16 @@ object Sections {
         return out
     }
 
-    fun byId(id: String): Section? = all().firstOrNull { it.id == id }
+    fun byId(id: String): Section? = all().firstOrNull { it.id == id } ?: all().firstOrNull { id in it.aliases }
+
+    /** [id] or, when it is an old id a section declares in `aliases`, that section's current id. */
+    fun canonicalId(id: String): String = byId(id)?.id ?: id
+
+    /** (section, page) with both old ids resolved: `infos/work-pm` -> `boards/tasks`. Unknown ids pass through. */
+    fun canonicalPage(sectionId: String, pageId: String): Pair<String, String> {
+        val sec = byId(sectionId) ?: return sectionId to pageId
+        return sec.id to (sec.pageAliases[pageId] ?: pageId)
+    }
 
     /** build.json::ui.bottom_nav — the section ids the bottom-nav island shows, left to right. */
     fun bottomNavIds(): List<String> = nav.bottomNav

@@ -502,7 +502,7 @@
         {
           "label": "Inboxes Msgs",
           "icon": "ic_chat",
-          "target": "page:infos/msgs"
+          "target": "page:boards/msgs"
         },
         {
           "label": "Inboxes Apps RSS",
@@ -510,19 +510,14 @@
           "target": "page:communication/my-rss"
         },
         {
-          "label": "Projects My-PM",
+          "label": "Boards My-PM",
           "icon": "ic_p_sol_personal",
-          "target": "page:infos/my-pm"
+          "target": "page:boards/my-pm"
         },
         {
-          "label": "Projects Work-PM",
+          "label": "Boards Tasks",
           "icon": "ic_pm_boards",
-          "target": "page:infos/work-pm"
-        },
-        {
-          "label": "Projects C3-PM",
-          "icon": "ic_pm_boards",
-          "target": "page:infos/cloud"
+          "target": "page:boards/tasks"
         },
         {
           "label": "Cloud",
@@ -1378,7 +1373,7 @@
     },
     "_doc": "Navigation taxonomy - data-driven source for MainActivity's BottomNavigationView (bottom buttons), DrawerLayout (left-side collapsable 2-level menu), and per-section Toolbar menus. Every section child is a PAGE: one `pages` list per section feeds the section grid, the bottom-nav long-press fan, the Sirius ring and the tablet detail pane. The retired `tab:` and `mode:` target prefixes and the per-section `long_press` list were all just 'open child X of section Y' - write `page:<section>/<page>`. Adding a new section = one entry here + one drawable + one fragment placeholder.",
     "_doc_bottom_nav": "The bottom-nav island (libs:bottomnav, #531): the sections it shows, left to right. THE one declaration of which sections are in the bar and in what order - Home in the centre. It replaced res/menu/bottom_nav.xml (the order and ids) AND the per-section bottom_nav booleans (membership), which were two declarations of one list. Each entry is a ui.sections id; its label and per-mode icon come from that section. A section not listed here is reached from the drawer or a tile. ShellBottomNav reads it through BuildConfig.UI_BOTTOM_NAV; five fit the island's even cells at phone width.",
-    "bottom_nav": ["communication", "infos", "home", "cloud", "phone"],
+    "bottom_nav": ["communication", "boards", "home", "cloud", "phone"],
     "_doc_home_index": "The `home` section is the master index — its content is a TileGrid of every other section. Lives at the center of the bottom nav (replacing Chat, which moves to drawer-only). Tapping any drawer tab or bottom-nav button always lands the right-pane on that section's TileGrid (sub-pages as squared tiles).",
     "_doc_aggregator_sections": "Aggregator sections are pure NAV — their tiles deep-link into real content sections via target ids ('section:X' | 'page:X/Y' | 'action:X' | 'extapp:X' | a URI). Each declares tiles_shared (section-wide) and/or a tiles_<page-id> / stack_<page-id> pair per child. Children marked \"facet\": true render THIS section's lists (LauncherNavController.aggregatorPage, which prefers stack_<id>, then tiles_<id>, then the section-wide tile_groups); non-facet children are ordinary pages served by a SectionPages factory — or, when they declare a `url`, by WebPageFragment. The bottom nav hosts exactly these 5 aggregators: Inboxes · Projects · HOME · Cloud · Phone.",
     "sections": [
@@ -2311,8 +2306,11 @@
       },
       {
         "_doc_icons": "Per-mode icons: in Apps mode shows the everyday logs glyph; in Admin mode swaps to the C3-workflows glyph so the ops view reads as the workflows dashboard. Both the bottom-nav item AND the home_groups tile resolve via Section.iconForMode(mode) — single source of truth.",
-        "id": "infos",
-        "label": "Projects",
+        "_doc_rename": "Boards (2026-10-17, owner): was `infos`, labelled Projects. `aliases` keeps the old section id resolvable so `section:infos` / `page:infos/<p>` deep links from other apps and older builds still land here; `page_aliases` sends the two removed pages (work-pm, cloud = C3-PM) to Tasks, which replaced them.",
+        "aliases": ["infos"],
+        "page_aliases": {"work-pm": "tasks", "cloud": "tasks"},
+        "id": "boards",
+        "label": "Boards",
         "icon": "ic_pm_boards",
         "module": null,
         "is_aggregator": true,
@@ -2330,21 +2328,14 @@
             "facet": true
           },
           {
-            "id": "work-pm",
-            "label": "Work-PM",
+            "id": "tasks",
+            "label": "Tasks",
             "icon": "ic_pm_boards",
             "facet": true
-          },
-          {
-            "_doc": "Projects ▸ C3 is the PM BOARD and NOTHING else. Paca — the `paca` container (oci-apps, port 8095, https://paca.diegonmarcos.com) — IS the board, so this page declares its `url` and WebPageFragment renders it inline; Paca has no anonymous board API (every route sits behind Authelia forward_auth and answers 302 to auth.diegonmarcos.com), so embedding the app is the board, not a wrapper around one. NOT a facet: a page that declares a `url` IS that page, and the facet branch would swallow it. The id stays `cloud` on purpose — it is the data key `page:infos/cloud` resolves against (drawer, home_groups, radial menu, swipe walk), exactly the rule the Apps-RSS rename follows: relabel, never rename. The cloud's build/run activity that used to live here moved to Cloud ▸ C3 ▸ Observability, which is where the rest of C3 already lives.",
-            "id": "cloud",
-            "label": "C3-PM",
-            "icon": "ic_pm_boards",
-            "url": "https://paca.diegonmarcos.com"
           }
         ],
         "tabs": true,
-        "_doc_pages": "Projects = what you WORK ON, the counterpart to Inboxes' what ARRIVES. My-PM is personal planning, Work-PM the work boards, C3-PM the cloud's PM board (Paca) — suffixed because C3 now names three distinct surfaces (Projects/C3-PM, Cloud/C3, Inboxes/C3 Obsv) and the label is what tells them apart. Same rule as Inboxes: one stack_<page id> per page — except C3, which is a `url` page and therefore declares no stack of its own.",
+        "_doc_pages": "Boards = what you WORK ON and what ARRIVES, each read live from the app that owns it. Inboxes = unread/recent messages: fleet mail through cloud-mail's signature-guarded agentmail provider, every other app (fleet chat/matrix/ntfy and third-party WhatsApp, Gmail, Telegram…) through the SuperApp's own notification listener, grouped by app. My-PM = calendar, tasks, steps and places, the last two from cloud-nav's tracker over the fleet IPC door (tracker/steps, tracker/places). Tasks = one card per project declared in cloud-tasks (projects/list over the fleet IPC door) plus the same calendar My-PM shows. Work-PM and C3-PM were removed by the owner (2026-10-17); their ids alias to Tasks. No board carries sample numbers: an unreachable source says so.",
         "stack_my-pm": [
           {
             "kind": "calendar_month",
@@ -2358,73 +2349,24 @@
             "subtitle": "Agenda · Day · ToDo"
           },
           {
-            "kind": "stats",
-            "title": "Myfin",
-            "subtitle": "Personal finance",
-            "rows": [
-              {
-                "label": "Net worth",
-                "value": "€42,310"
-              },
-              {
-                "label": "This month",
-                "value": "+€1,240"
-              },
-              {
-                "label": "Spending",
-                "value": "€2,180"
-              },
-              {
-                "label": "Holdings",
-                "value": "12"
-              }
-            ]
+            "_doc": "Myfin lives in Cloud-Me (Buro ▸ Fin). The card used to print sample numbers here; it now only opens the real page.",
+            "kind": "open_link",
+            "title": "Myfin · Cloud-Me Buro ▸ Fin",
+            "url": "extapp:cloud-me#page:buro/fin"
           },
           {
-            "kind": "stats",
-            "title": "Myhealth",
-            "subtitle": "Health & fitness",
-            "rows": [
-              {
-                "label": "Steps today",
-                "value": "8,432"
-              },
-              {
-                "label": "Sleep",
-                "value": "7h 12m"
-              },
-              {
-                "label": "Resting HR",
-                "value": "58 bpm"
-              },
-              {
-                "label": "Workouts (wk)",
-                "value": "3"
-              }
-            ]
+            "_doc": "My-health: cloud-nav's tracker step counts (today + 7 days) over the fleet IPC door, op tracker/steps.",
+            "kind": "board_steps",
+            "title": "My-health",
+            "subtitle": "Steps · cloud-nav tracker",
+            "url": "extapp:cloud-nav"
           },
           {
-            "kind": "stats",
-            "title": "Nav Maps Tracker",
-            "subtitle": "Cloud-Nav location tracker",
-            "rows": [
-              {
-                "label": "Last location",
-                "value": "Madrid, ES"
-              },
-              {
-                "label": "Trips this week",
-                "value": "5"
-              },
-              {
-                "label": "Distance (wk)",
-                "value": "142 km"
-              },
-              {
-                "label": "Places logged",
-                "value": "27"
-              }
-            ]
+            "_doc": "Nav tracker: the places cloud-nav recorded, per day, op tracker/places.",
+            "kind": "board_places",
+            "title": "Nav tracker",
+            "subtitle": "Places · cloud-nav tracker",
+            "url": "extapp:cloud-nav"
           }
         ],
         "tiles_my-pm": [
@@ -2435,24 +2377,30 @@
             "target": "section:cal"
           }
         ],
-        "tiles_work-pm": [
+        "stack_tasks": [
           {
-            "id": "pmboards",
-            "label": "Product Management Boards",
-            "icon": "ic_pm_boards",
-            "target": "https://paca.diegonmarcos.com"
-          }
-        ],
-        "stack_work-pm": [
+            "_doc": "One card per project declared in cloud-tasks, read from its own database over the fleet IPC door (op projects/list): name, open/done counts, next due item. Tap opens that project in cloud-tasks.",
+            "kind": "board_task_projects",
+            "title": "Projects",
+            "subtitle": "cloud-tasks",
+            "url": "extapp:cloud-tasks"
+          },
           {
-            "kind": "stats",
-            "title": "Product Management Boards",
-            "subtitle": "paca.diegonmarcos.com"
+            "_doc": "The same calendar component My-PM shows (CalendarMonthFragment).",
+            "kind": "calendar_month",
+            "title": "Calendar",
+            "subtitle": "Month view"
           }
         ],
         "_doc_moved_cloud": "stack_cloud / tiles_cloud USED to hang here — GHA runs, repo commits and the Dagu deeplink. They are now sections[c3].stack_observability, under Cloud ▸ C3 ▸ Observability — which IS the c3 section's own Observability tab, not a copy of it beside the pages it points at. Nothing else keyed off them: `page:infos/cloud` addresses the PAGE, not these lists.",
         "_doc_stack_msgs": "Projects ▸ Inboxes. A card here is a CHANNEL CLASS — Mail, Chat, Messenger, RSS — and never one app. The owner asked for this on 2026-09-10: the page used to carry one card per app (Mail · accounts, Chat · Matrix, Chat · Mattermost, Messenger (Element), Dialer (Fossy)), which meant the question \"is there anything for me in my messages\" had to be asked five times and re-asked every time an app was installed. A panel names its class with `class: <id>`, an id from ui.inbox_classes, and draws that class's slice of the SAME phone notification feed Notify ▸ Inboxes reads, with a counted summary above it. WHY THE MEMBERSHIP IS NOT WRITTEN HERE: it lives in ui.inbox_classes beside ui.phone_folders, because a package roster is a CLASSIFICATION and every classification in this file lives under ui.* keyed on package — phone_folders, ntfy.taxon, external_apps. A roster inside a stack would be the only one that no other surface and no tester could read. WHY A FIFTH CARD: four curated classes are not a catch-all, and the card this page replaced was. An app that no class claims lands in the class marked `catch_all: true` (Other) rather than vanishing — the owner installing a messaging app nobody classified must still see its notifications on the screen they check, and a screen that silently drops notifications is worse than the per-app screen it replaced. WHAT THE SUMMARY IS: counts, measured from the notification listener — how many apps or channels the class holds, how many notifications, and how long ago the newest one arrived. It is deliberately not a written digest: kind=stats on this page prints numbers declared in this file under the caption 'Mock data — live fetch pending', and replacing five mock dashboards with a sixth, or with a paid model call the owner did not ask to pay for, would be a worse card than an honest count. WHAT MAIL REACHES: mail NOTIFICATIONS, not mail content. The message bodies live in the mail app's own store; ui.mail_accounts on this page is connection config (server, user, ports) and carries no messages, which is why renderMailAccounts has always captioned its own list 'Unread / total counts pending JMAP slice C2 + IMAP slice'. The Mail card says so on the card rather than presenting the lesser thing under the greater name. RSS is the one class that is not phone packages: it declares `source: c3ntfy` and reuses the stream=channels renderer the C3 Ntfy panel already had, so it is a retitle plus a summary and not new plumbing.",
         "stack_msgs": [
+          {
+            "_doc": "The unified inbox: fleet mail (cloud-mail agentmail provider, unread first) plus every app's notifications from the SuperApp's listener, grouped by app — icon, sender, preview, time; a tap opens the thread when the app left one, else the app. The class cards below stay as the per-class view.",
+            "kind": "board_inbox",
+            "title": "All inboxes",
+            "subtitle": "Fleet + phone apps"
+          },
           {
             "kind": "class_inbox",
             "class": "mail",
@@ -5305,16 +5253,16 @@
         "label": "Inboxes"
       },
       {
-        "id": "infos-my-pm",
-        "section": "infos",
+        "id": "boards-my-pm",
+        "section": "boards",
         "page": "my-pm",
-        "label": "Projects · My-PM"
+        "label": "Boards · My-PM"
       },
       {
-        "id": "infos-work-pm",
-        "section": "infos",
-        "page": "work-pm",
-        "label": "Projects · Work-PM"
+        "id": "boards-tasks",
+        "section": "boards",
+        "page": "tasks",
+        "label": "Boards · Tasks"
       },
       {
         "id": "home-apps-cloud",
@@ -9735,8 +9683,8 @@
               "target": "section:communication"
             },
             {
-              "label": "Projects",
-              "target": "section:infos"
+              "label": "Boards",
+              "target": "section:boards"
             },
             {
               "label": "Home-Apps",

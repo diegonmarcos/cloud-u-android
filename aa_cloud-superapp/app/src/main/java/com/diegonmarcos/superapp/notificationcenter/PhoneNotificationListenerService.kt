@@ -57,5 +57,7 @@ class PhoneNotificationListenerService : NotificationListenerService() {
             title       = title,
             text        = text,
         ))
+        // Boards ▸ Inboxes opens the thread itself when the app left one.
+        com.diegonmarcos.superapp.boards.ThreadIntents.put(sbn.key, n.contentIntent)
     }
 }
