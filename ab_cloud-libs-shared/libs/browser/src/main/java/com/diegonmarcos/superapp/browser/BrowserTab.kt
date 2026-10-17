@@ -35,7 +35,12 @@ data class BrowserTab(
     val id: String = "",
     /** #886 the favicon's file under cacheDir/favicons (the tab strip draws it); "" = none yet. */
     val iconPath: String = "",
+    /** A name the app gave this (pinned) tab; shown instead of the page title. "" = none. */
+    val customTitle: String = "",
 ) {
+    /** What the tab shows: its custom name, else the page title, else the url. */
+    val displayTitle: String get() = customTitle.ifBlank { title.ifBlank { url } }
+
     /** What identifies this tab: its [id], or a derived one for a tab that predates ids. */
     val key: String get() = id.ifBlank { BrowserTabStore.legacyId(url, ts) }
 
@@ -137,12 +142,14 @@ object BrowserSeed {
         openUrls: Set<String>,
         configUrls: List<String>,
         now: Long,
+        titles: Map<String, String> = emptyMap(),
     ): List<BrowserTab> {
         if (alreadySeeded) return emptyList()
         return configUrls
             .mapIndexed { i, url -> i to url.trim() }
             .filter { (_, url) -> url.isNotEmpty() && url !in openUrls }
-            .map { (i, url) -> BrowserTab(url, url, now + i, pinned = true, order = i, id = BrowserTabStore.newId()) }
+            .map { (i, url) -> BrowserTab(url, url, now + i, pinned = true, order = i, id = BrowserTabStore.newId(),
+                customTitle = titles[url].orEmpty()) }
     }
 }
 

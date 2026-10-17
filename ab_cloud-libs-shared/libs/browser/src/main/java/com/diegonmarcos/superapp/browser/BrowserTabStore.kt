@@ -44,6 +44,7 @@ object BrowserTabStore {
                     isPrivate   = o.optBoolean("private", false),
                     id          = o.optString("id", "").ifBlank { legacyId(u, ts) },
                     iconPath    = o.optString("icon", ""),
+                    customTitle = o.optString("custom_title", ""),
                 )
             )
         }
@@ -64,6 +65,7 @@ object BrowserTabStore {
                 put("private", t.isPrivate)
                 put("id",      t.key)
                 put("icon",    t.iconPath)
+                if (t.customTitle.isNotBlank()) put("custom_title", t.customTitle)
             })
         }
         return arr.toString()

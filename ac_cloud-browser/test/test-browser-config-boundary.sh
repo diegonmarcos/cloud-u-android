@@ -98,9 +98,12 @@ browser = bj.get("ui", {}).get("browser")
 check(browser is not None, "build.json::ui.browser exists")
 browser = browser or {}
 
-check(browser.get("default_pinned_tabs") == EXPECTED,
+def _pin_url(p): return p.get("url") if isinstance(p, dict) else p
+PIN_URLS = [_pin_url(p) for p in (browser.get("default_pinned_tabs") or [])]
+PIN_TITLES = {p.get("url"): p.get("title") for p in (browser.get("default_pinned_tabs") or []) if isinstance(p, dict)}
+check(PIN_URLS == EXPECTED,
       "build.json pins exactly his six URLs, in his order",
-      "got: %r" % (browser.get("default_pinned_tabs"),))
+      "got: %r" % (PIN_URLS,))
 # Termux / Nix / Local pins follow each app's single port declaration.
 def _port(rel, *keys):
     d = json.loads(must_read(os.path.join(ROOT, rel)) or "{}")
@@ -114,8 +117,8 @@ LOCAL = {
 for name, port in LOCAL.items():
     want = "http://localhost:%s" % port
     check(port is not None and (browser.get("local_pinned_tabs") or {}).get(name) == want
-          and want in (browser.get("default_pinned_tabs") or []),
-          "%s pin matches its declared port (%s)" % (name, want),
+          and want in PIN_URLS and PIN_TITLES.get(want) == name,
+          "%s pin matches its declared port (%s) and carries its name" % (name, want),
           "got: %r" % ((browser.get("local_pinned_tabs") or {}).get(name),))
 check(browser.get("default_engine") == "duckduckgo",
       "build.json ships DuckDuckGo as the default engine",
@@ -178,7 +181,7 @@ if frag is not None:
     code = strip_kotlin_comments(frag)
     check("BrowserConfig.parseBase64" in code,
           "the fragment reads its content from the config, not from itself")
-    check("seedOnce(config.defaultPinnedTabs)" in code,
+    check("seedOnce(config.defaultPinnedTabs" in code,
           "first-run seeding uses the CONFIG's list, not a list of its own")
 
 print()

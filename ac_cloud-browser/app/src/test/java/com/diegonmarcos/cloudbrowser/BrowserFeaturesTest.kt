@@ -9,6 +9,7 @@ import com.diegonmarcos.superapp.browser.BrowserSuggest
 import com.diegonmarcos.superapp.browser.BrowserTab
 import com.diegonmarcos.superapp.browser.BrowserTabOps
 import com.diegonmarcos.superapp.browser.BrowserTabOrder
+import com.diegonmarcos.superapp.browser.BrowserTabStore
 import com.diegonmarcos.superapp.browser.BrowserVisit
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -112,6 +113,52 @@ class BrowserFeaturesTest {
         )
         assertEquals(5, plan.size)
         assertFalse(plan.any { it.url == cfg[0] })
+    }
+
+    // ── pinned-tab names: a URL string or {url, title} ───────────────
+
+    @Test
+    fun `a pin parses from a plain url and from an object with a title`() {
+        val cfg = BrowserConfig.parse(
+            """{"default_pinned_tabs": ["https://a.example", {"url": "https://b.example", "title": "Bee"},
+               {"url": "https://c.example"}, {"title": "no url"}, ""]}"""
+        )
+        assertEquals(listOf("https://a.example", "https://b.example", "https://c.example"), cfg.defaultPinnedTabs)
+        assertEquals(mapOf("https://b.example" to "Bee"), cfg.defaultPinnedTitles)
+    }
+
+    @Test
+    fun `a titled pin shows its title, not the page title`() {
+        val tab = BrowserSeed.plan(false, emptySet(), listOf("http://x.example"), 1L,
+            titles = mapOf("http://x.example" to "Mine")).single()
+        assertEquals("Mine", tab.displayTitle)
+        // The page loads and reports its own title: the name still wins.
+        val loaded = BrowserTabStore.commit(listOf(tab), tab.key, "http://x.example/", "Page Title").single()
+        assertEquals("Page Title", loaded.title)
+        assertEquals("Mine", loaded.displayTitle)
+        // …and it survives being stored and read back.
+        assertEquals("Mine", BrowserTabStore.parse(BrowserTabStore.serialize(listOf(loaded))).single().displayTitle)
+    }
+
+    @Test
+    fun `an untitled pin still shows the page title`() {
+        val tab = BrowserSeed.plan(false, emptySet(), listOf("http://y.example"), 1L).single()
+        assertEquals("", tab.customTitle)
+        val loaded = BrowserTabStore.commit(listOf(tab), tab.key, "http://y.example/", "Page Title").single()
+        assertEquals("Page Title", loaded.displayTitle)
+    }
+
+    @Test
+    fun `the browser's three local tabs carry their names`() {
+        val cfg = shippedConfig()
+        val want = mapOf(
+            "http://localhost:8000" to "Termux",
+            "http://localhost:8001" to "Nix",
+            "http://localhost:8002" to "Local",
+        )
+        assertEquals(want, cfg.defaultPinnedTitles)
+        val plan = BrowserSeed.plan(false, emptySet(), cfg.defaultPinnedTabs, 1L, cfg.defaultPinnedTitles)
+        assertEquals(want.values.toList(), plan.filter { it.url in want }.map { it.displayTitle })
     }
 
     // ── THE NEGATIVE: the library ships nobody's tabs ────────────────

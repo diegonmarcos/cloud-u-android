@@ -248,7 +248,7 @@ class BrowserHostFragment : Fragment() {
         // FIRST RUN ONLY, and only with what the app configured. A library
         // default of zero tabs means an app that supplies nothing gets
         // nothing — never another app's homepage set.
-        val seeded = prefs.seedOnce(config.defaultPinnedTabs)
+        val seeded = prefs.seedOnce(config.defaultPinnedTabs, config.defaultPinnedTitles)
         if (seeded > 0) {
             android.util.Log.i(TAG, "seeded $seeded default pinned tab(s) on first run")
         }
@@ -353,7 +353,7 @@ class BrowserHostFragment : Fragment() {
     private fun closeTab(tab: BrowserTab) {
         commitSwipe()   // a swipe still waiting for Undo must not make this look like the last private tab
         if (!prefs.removeById(tab.key)) {
-            toast("“${tab.title.ifBlank { tab.url }}” is pinned — unpin it first")
+            toast("“${tab.displayTitle}” is pinned — unpin it first")
             return
         }
         BrowserWebState.delete(requireContext(), tab.key)
@@ -382,7 +382,7 @@ class BrowserHostFragment : Fragment() {
                 AlertDialog(
                     onDismissRequest = close,
                     title = { Text("Close pinned tab?") },
-                    text = { Text("“${tab.title.ifBlank { tab.url }}” is pinned. Unpin it and close it?") },
+                    text = { Text("“${tab.displayTitle}” is pinned. Unpin it and close it?") },
                     dismissButton = { TextButton(onClick = close) { Text("Keep") } },
                     confirmButton = {
                         TextButton(onClick = {
@@ -405,7 +405,7 @@ class BrowserHostFragment : Fragment() {
         showGrid()
         val bar = runCatching {
             com.google.android.material.snackbar.Snackbar
-                .make(requireView(), "Closed “${tab.title.ifBlank { tab.url }}”", 5000)
+                .make(requireView(), "Closed “${tab.displayTitle}”", 5000)
                 .setAction("Undo") {
                     prefs.restore(swipeClose.pending ?: return@setAction)
                     swipeClose.undo(prefs.all())
@@ -1886,7 +1886,7 @@ class BrowserHostFragment : Fragment() {
             if (tab.pinned) null else SheetRow("close", "Close tab"),
         )
         overlay { close ->
-            BrowserSheet(emptyList(), listOf(tab.title.ifBlank { tab.url } to rows), onPick = { id ->
+            BrowserSheet(emptyList(), listOf(tab.displayTitle to rows), onPick = { id ->
                 close()
                 when (id) {
                     "pin" -> { prefs.setPinnedById(tab.key, !tab.pinned); showGrid() }

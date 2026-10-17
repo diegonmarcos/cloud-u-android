@@ -9,7 +9,7 @@ import org.json.JSONObject
  * state, drag order and group — so all of it survives a restart.
  * Stored as a JSON array in SharedPreferences: small, plain, no dep.
  *
- * Schema: [{"url","title","ts","preview","pinned","order","group","private","id","icon"}] — see
+ * Schema: [{"url","title","ts","preview","pinned","order","group","private","id","icon","custom_title"?}] — see
  * [BrowserTabStore]; `url` is the tab's last COMMITTED page, `id` its stable identity (#886).
  *
  * The three fields after "preview" are new. They are read with optional
@@ -212,7 +212,7 @@ class BrowserTabPrefs(context: Context) {
      *
      * @return the number of tabs actually seeded (0 on every later run).
      */
-    fun seedOnce(urls: List<String>): Int {
+    fun seedOnce(urls: List<String>, titles: Map<String, String> = emptyMap()): Int {
         val alreadySeeded = sp.getBoolean(KEY_SEEDED, false)
         sp.edit().putBoolean(KEY_SEEDED, true).apply()
 
@@ -222,6 +222,7 @@ class BrowserTabPrefs(context: Context) {
             openUrls = existing.map { it.url }.toHashSet(),
             configUrls = urls,
             now = System.currentTimeMillis(),
+            titles = titles,
         )
         if (fresh.isEmpty()) return 0
         existing.addAll(fresh)

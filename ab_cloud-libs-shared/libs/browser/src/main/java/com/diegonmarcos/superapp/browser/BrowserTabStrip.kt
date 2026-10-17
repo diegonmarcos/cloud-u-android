@@ -45,7 +45,7 @@ object BrowserStripRules {
 
     /** The one letter drawn when a tab has no favicon (yet): the site's first letter, else the title's. */
     fun letter(tab: BrowserTab): String {
-        val s = BrowserTabGroups.siteLabel(tab.url).ifEmpty { tab.title }.trim()
+        val s = BrowserTabGroups.siteLabel(tab.url).ifEmpty { tab.displayTitle }.trim()
         return s.firstOrNull { it.isLetterOrDigit() }?.uppercase() ?: "•"
     }
 }

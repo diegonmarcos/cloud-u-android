@@ -379,7 +379,7 @@ class BrowserTabGrid(
             contentDescription = if (tab.pinned) "Unpin tab" else "Pin tab"
             setOnClickListener { onPin(tab) }
         }
-        v.findViewById<TextView>(ID_TITLE).text = tab.title.ifBlank { tab.url }
+        v.findViewById<TextView>(ID_TITLE).text = tab.displayTitle
         v.findViewById<View>(ID_GROUP_BAR).apply {
             visibility = if (tab.group.isBlank()) View.GONE else View.VISIBLE
             setBackgroundColor(BrowserTabGroups.colorOf(groupColors(), tab.group))

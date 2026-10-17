@@ -106,7 +106,10 @@ if (favDecl != null) {
     def want = "http://localhost:${port}".toString()
     def got  = (buildJson.ui.browser?.local_pinned_tabs ?: [:])[name]
     if (got != want) throw new GradleException("ui.browser.local_pinned_tabs.${name} is '${got}', but ${decl[0]} declares port ${port}")
-    if (!(buildJson.ui.browser.default_pinned_tabs ?: []).contains(want)) throw new GradleException("ui.browser.default_pinned_tabs is missing ${want} (${name})")
+    // A pin is a plain URL string or {url, title}; libs:browser accepts both.
+    def pin = (buildJson.ui.browser.default_pinned_tabs ?: []).find { (it instanceof Map ? it.url : it)?.toString() == want }
+    if (pin == null) throw new GradleException("ui.browser.default_pinned_tabs is missing ${want} (${name})")
+    if (!(pin instanceof Map) || pin.title?.toString() != name) throw new GradleException("ui.browser.default_pinned_tabs entry ${want} must carry title '${name}'")
 }
 def uiBrowserConfigB64 = b64(buildJson.ui.browser ?: [:])
 // #868 the nav declaration: ui.bottom_nav (the island), ui.sections (what each item opens), ui.default_section.

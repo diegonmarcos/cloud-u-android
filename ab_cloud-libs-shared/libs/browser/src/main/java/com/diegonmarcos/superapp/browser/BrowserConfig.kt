@@ -29,6 +29,11 @@ import java.util.Base64
 data class BrowserConfig(
     /** Pinned on FIRST RUN ONLY. Never re-seeded — see [BrowserTabPrefs.seedOnce]. */
     val defaultPinnedTabs: List<String>,
+    /**
+     * Custom names for pinned tabs, url → title. A `default_pinned_tabs` entry is either a plain
+     * URL string (no name: the tab shows the page's own title) or `{"url": ..., "title": ...}`.
+     */
+    val defaultPinnedTitles: Map<String, String> = emptyMap(),
     val engines: List<BrowserSearchEngine>,
     val defaultEngineId: String,
     /** #802 the user settings this app offers; empty = WebView defaults, nothing offered. */
@@ -103,10 +108,12 @@ data class BrowserConfig(
             val o = runCatching { JSONObject(json) }.getOrNull() ?: return DEFAULT
 
             val pins = ArrayList<String>()
+            val pinTitles = LinkedHashMap<String, String>()
             (o.optJSONArray("default_pinned_tabs") ?: JSONArray()).let { arr ->
                 for (i in 0 until arr.length()) {
-                    val u = arr.optString(i).trim()
-                    if (u.isNotEmpty()) pins.add(u)
+                    val p = parsePin(arr.opt(i)) ?: continue
+                    pins.add(p.first)
+                    p.second?.let { pinTitles[p.first] = it }
                 }
             }
 
@@ -136,6 +143,7 @@ data class BrowserConfig(
             }
             return BrowserConfig(
                 defaultPinnedTabs = pins,
+                defaultPinnedTitles = pinTitles,
                 engines = finalEngines,
                 defaultEngineId = defaultId,
                 settings = BrowserSettingsCatalogue.parse(
@@ -162,6 +170,17 @@ data class BrowserConfig(
                     }
                 },
             )
+        }
+
+        /** One pin: a URL string, or `{url, title}`. Returns (url, title-or-null); null when there is no URL. */
+        internal fun parsePin(v: Any?): Pair<String, String?>? {
+            val (url, title) = when (v) {
+                is JSONObject -> v.optString("url").trim() to v.optString("title").trim()
+                is String -> v.trim() to ""
+                else -> return null
+            }
+            if (url.isEmpty()) return null
+            return url to title.ifEmpty { null }
         }
 
         private fun JSONObject?.strings(): Map<String, String> =
