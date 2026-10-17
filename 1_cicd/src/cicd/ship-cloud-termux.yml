@@ -379,3 +379,18 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/abi"
           sh 1_cicd/dist/scripts/cloud-android-abi-parity.sh "$RUNNER_TEMP/abi"
+
+  # A clean emulator, network off: install (the rootfs lib first, as the Store does), launch, and
+  # require a session to run ls, uname and fish (1_cicd/src/cicd/test-terminal-fresh-install.yml).
+  fresh_install:
+    needs: build_and_publish
+    if: ${{ !cancelled() && needs.build_and_publish.result == 'success' }}
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/test-terminal-fresh-install.yml
+    with:
+      app: cloud-terminal-termux
+      artifact_prefix: cloud-terminal-x86_64-
+      lib_package: "com.diegonmarcos.cloudlib.rootfstermux"
+      lib_release_asset: "Cloud-Lib-Rootfs-Termux-x86_64.apk"
