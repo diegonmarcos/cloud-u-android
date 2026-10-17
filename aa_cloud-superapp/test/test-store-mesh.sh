@@ -32,12 +32,26 @@ fleet = json.load(open(fleet_path))
 rows = {a.get("package"): a for a in fleet["apps"]}
 ids = {a["id"] for a in fleet["apps"]}
 declared = {}
+unjoined = 0
 for bj in sorted(glob.glob(os.path.join(root, "*/build.json")) + glob.glob(os.path.join(root, "*/*/build.json"))):
     try: d = json.load(open(bj))
     except Exception: continue
     eng = {k: v for k, v in (d.get("engines") or {}).items() if k != "_doc" and isinstance(v, dict)}
     pkg = (d.get("android") or {}).get("application_id")
-    if eng and pkg: declared[pkg] = (os.path.relpath(bj, root), eng)
+    rel = os.path.relpath(bj, root)
+    # M0: M1 joins a fleet row to its build.json BY PACKAGE. An app with engines but
+    # no android.application_id used to drop out of that join silently and surface as
+    # "fleet row X carries engines its build.json does not declare" -- a false report
+    # about engines when the real defect is the missing package (ac_cloud-mail, 2026-10-17).
+    if eng and not pkg:
+        print("M0 %s declares engines but has no android.application_id -- add the app's installed package there" % rel)
+        unjoined += 1
+        continue
+    for fk, fv in (d.get("forks") or {}).items():
+        fid = fv.get("app_id") if isinstance(fv, dict) else None
+        if eng and fid and fk == d.get("name", "").split("-")[-1] and fid != pkg:
+            print("M0 %s android.application_id %s differs from forks.%s.app_id %s" % (rel, pkg, fk, fid))
+    if eng and pkg: declared[pkg] = (rel, eng)
 print("DECLARING %d" % len(declared))
 for pkg, (bj, eng) in declared.items():
     row = rows.get(pkg)
@@ -46,7 +60,7 @@ for pkg, (bj, eng) in declared.items():
     got = sorted((e.get("binding"), e.get("fleet"), e.get("action"), e.get("min_contract")) for e in row.get("engines", []))
     if want != got: print("M1 fleet row %s carries %s, %s declares %s" % (row["id"], got, bj, want))
 for a in fleet["apps"]:
-    if a.get("engines") and a.get("package") not in declared:
+    if a.get("engines") and a.get("package") not in declared and not unjoined:
         print("M1 fleet row %s carries engines its build.json does not declare" % a["id"])
     for e in a.get("engines", []):
         if e.get("fleet") not in ids: print("M2 %s -> %s: no fleet member has that id" % (a["id"], e.get("fleet")))
@@ -55,6 +69,7 @@ EOF
 echo "$out" | sed 's/^/    /'
 n="$(printf '%s\n' "$out" | sed -n 's/^DECLARING //p')"
 [ "${n:-0}" -gt 0 ] && ok "$n apps declare engines" || bad "no build.json declares an engine — M1 would verify nothing"
+printf '%s\n' "$out" | grep -q '^M0 ' && bad "an app that declares engines has no (or a mismatched) android.application_id in its build.json -- see the M0 lines above"
 printf '%s\n' "$out" | grep -q '^M1 ' && bad "a fleet row's links differ from its app's build.json::engines" \
   || ok "every fleet row carries exactly its app's declared engines"
 printf '%s\n' "$out" | grep -q '^M2 ' && bad "a link points at no fleet member" \

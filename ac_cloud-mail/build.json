@@ -200,6 +200,10 @@
       "dir": "../ab_cloud-libs-shared/libs/databackend"
     }
   },
+  "android": {
+    "application_id": "com.diegonmarcos.comms.mail",
+    "_doc_application_id": "The installed package, as every fleet app declares it here. The build itself takes it from forks.mail.app_id (app/build.gradle.kts commsApplicationId); this copy is what fleet-wide testers key on (aa_cloud-superapp/test/test-store-mesh.sh M1 maps a fleet row to its build.json by it), and that tester fails when the two differ."
+  },
   "forks": {
     "mail": {
       "app_id": "com.diegonmarcos.comms.mail",
