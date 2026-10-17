@@ -23,6 +23,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -147,6 +150,11 @@ class StatusStripModel(private val context: Context) {
      *  inset dispatch, and on any phone whose screen has no cutout at all. */
     var cutoutTopPx by mutableIntStateOf(0)
         private set
+    /** The cutout's side safe insets in raw pixels (a cutout at a screen edge, landscape): the row keeps clear of them. */
+    var insetLeftPx by mutableIntStateOf(0)
+        private set
+    var insetRightPx by mutableIntStateOf(0)
+        private set
 
     // ── What the Compose side reads ──
     internal var chips by mutableStateOf<Map<String, StripChip>>(emptyMap())
@@ -225,9 +233,30 @@ class StatusStripModel(private val context: Context) {
      */
     internal fun readCutoutFrom(host: View) {
         ViewCompat.setOnApplyWindowInsetsListener(host) { _, insets ->
-            noteCutout(insets.getInsets(WindowInsetsCompat.Type.displayCutout()).top)
+            noteInsets(insets)
             insets
         }
+        // The listener only fires if an ancestor's dispatch reaches this host with the cutout still in it, and the shell's
+        // ancestors (the drawer, the padded shell frame) are free to consume or rewrite what they pass down. So ALSO ask the
+        // window what the cutout is, when the strip attaches and whenever it is laid out: the window's own root insets are the
+        // truth the camera is measured against, whatever the dispatch did on the way here.
+        fun fromRoot() { ViewCompat.getRootWindowInsets(host)?.let { noteInsets(it) } }
+        host.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) { fromRoot(); v.requestApplyInsets() }
+            override fun onViewDetachedFromWindow(v: View) = Unit
+        })
+        host.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fromRoot() }
+        if (host.isAttachedToWindow) fromRoot()
+    }
+
+    /** Take the cutout's top height and side insets from [insets]: Type.displayCutout() first, the DisplayCutout's own safe insets as the fallback. */
+    internal fun noteInsets(insets: WindowInsetsCompat) {
+        val c = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+        val dc = insets.displayCutout
+        noteCutout(maxOf(c.top, dc?.safeInsetTop ?: 0))
+        val l = maxOf(c.left, dc?.safeInsetLeft ?: 0); val r = maxOf(c.right, dc?.safeInsetRight ?: 0)
+        if (l != insetLeftPx) insetLeftPx = l
+        if (r != insetRightPx) insetRightPx = r
     }
 
     /** The camera cutout's height in raw pixels, as the window dispatched it. */
@@ -686,9 +715,20 @@ internal fun StatusStripBody(model: StatusStripModel, ctx: Context) {
     )
     Column(Modifier.fillMaxWidth()) {
         // FrameLayout semantics: the clock sits at TRUE screen centre, aligned with the island below, whatever the clusters' widths.
-        Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = with(density) { model.innerRowTopPadPx.toDp() })) {
+        // Inside the safe area: 10 dp, and clear of a cutout at the screen's side. BoxWithConstraints so no cluster can be wider
+        // than the room there is - a Row with more children than width draws them PAST the screen edge, unclipped.
+        val padStart = 10.dp + with(density) { model.insetLeftPx.toDp() }
+        val padEnd = 10.dp + with(density) { model.insetRightPx.toDp() }
+        androidx.compose.foundation.layout.BoxWithConstraints(
+            Modifier.fillMaxWidth().padding(start = padStart, end = padEnd, top = with(density) { model.innerRowTopPadPx.toDp() },
+                bottom = with(density) { model.innerRowTopPadPx.toDp() }).testTag("strip:row"),
+        ) {
+            val room = maxWidth
             // ── LEFT: mobile . WiFi . BT . WG . KDE . ADB . Data . HS . GPS (in NetworkSections.ORDER) ──
-            Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.align(Alignment.CenterStart).widthIn(max = room).horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 for (key in NetworkSections.inOrder(NetworkSections.ORDER.associateWith { it })) {
                     val chip = model.chips[key] ?: continue
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -704,7 +744,7 @@ internal fun StatusStripBody(model: StatusStripModel, ctx: Context) {
             }
             // ── CENTRE: date + time. The spacer reserves the camera punch-hole / pet row above it. ──
             Column(
-                Modifier.align(Alignment.Center).padding(bottom = DOTS_ROW),
+                Modifier.align(Alignment.Center).widthIn(max = room).padding(bottom = DOTS_ROW),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Spacer(Modifier.testTag("strip:reserve").height(with(density) { model.clockReservePx().toDp() }))
@@ -718,7 +758,7 @@ internal fun StatusStripBody(model: StatusStripModel, ctx: Context) {
             }
             // ── RIGHT: RAM% . Storage% . CPU . Battery ──
             Row(
-                Modifier.align(Alignment.CenterEnd).padding(bottom = DOTS_ROW),
+                Modifier.align(Alignment.CenterEnd).widthIn(max = room).padding(bottom = DOTS_ROW).horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 for ((tool, text) in listOf("ram" to model.ram, "storage" to model.storage, "cpu" to model.cpu)) {
