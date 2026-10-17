@@ -62,7 +62,7 @@ class NotifyScreenTest : KitPageHarness() {
         compose.waitForIdle()
         compose.onNodeWithTag(AggTags.PAGE).assertExists()
         // The persistent-badge panel fills the first screen; scroll the notification cards into view.
-        compose.onNodeWithTag(AggTags.LIST_ACTIONS).performScrollTo()
+        compose.onNodeWithTag(AggTags.group("Backups")).performScrollTo()
         compose.waitForIdle()
         val root = compose.activity.findViewById<View>(android.R.id.content)
         val bmp = compose.runOnUiThread {
