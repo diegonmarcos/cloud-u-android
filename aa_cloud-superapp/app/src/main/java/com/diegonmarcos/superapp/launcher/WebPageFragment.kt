@@ -82,15 +82,29 @@ class WebPageFragment : KitComposeFragment() {
     /** The page that failed, so a pull or a re-entry reloads IT and not the error page that replaced it. */
     private var failed: String? = null
 
+    /** How the last entry loaded the page: "load" (loadUrl, document revalidated) or "reload" (reload()). Read by tests. */
+    internal var lastEntry: String = ""
+
     /**
-     * Load [target] from the network, past the HTTP cache. Every ENTRY into the page does this (first show, tab re-selected, back
-     * to it, the app coming back to it), so it never shows a stale or blank cached view. Only the HTTP cache is bypassed: the site's
-     * own service worker is separate and keeps working. The cache mode goes back to normal when the page finishes.
+     * Load [target] fresh on every ENTRY into the page (first show, tab re-selected, back to it, the app coming back to it), so it
+     * never shows a stale view, but revalidate ONLY THE MAIN DOCUMENT. Subresources (the linktree's ~80 icons and images) come from
+     * the HTTP cache as usual.
+     *
+     * Never LOAD_NO_CACHE: that applies to every subresource too, so each entry refetched every icon. Together with the edge's per-IP
+     * rate limit that 429'd random icons, which showed as broken "?" images (2026-10-17). Now:
+     *  • the page already showing [target] → reload(), which revalidates the document (a 304 when unchanged) under LOAD_DEFAULT;
+     *  • anything else → loadUrl with `Cache-Control: no-cache`, a header Chromium sends on the main-frame request only.
      */
     private fun loadFresh(w: WebView, target: String) {
         lastLoadAt = android.os.SystemClock.elapsedRealtime()
-        w.settings.cacheMode = WebSettings.LOAD_NO_CACHE
-        w.loadUrl(target)
+        w.settings.cacheMode = WebSettings.LOAD_DEFAULT
+        if (w.url == target) {
+            lastEntry = "reload"
+            w.reload()
+        } else {
+            lastEntry = "load"
+            w.loadUrl(target, REVALIDATE_DOCUMENT)
+        }
     }
 
     override fun onResume() {
@@ -142,6 +156,7 @@ class WebPageFragment : KitComposeFragment() {
                         settings.loadWithOverviewMode = true
                         settings.builtInZoomControls = true
                         settings.displayZoomControls = false
+                        settings.cacheMode = WebSettings.LOAD_DEFAULT
                         // Every console line of the page reaches logcat (tag WebPage) and [probe]: a page that renders blank on a
                         // phone is a JS error nobody can see without this.
                         webChromeClient = object : android.webkit.WebChromeClient() {
@@ -152,7 +167,6 @@ class WebPageFragment : KitComposeFragment() {
                         }
                         webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView?, url: String?) {
-                                view?.settings?.cacheMode = WebSettings.LOAD_DEFAULT
                                 backToPreviousPage.isEnabled = view?.canGoBack() == true
                                 refreshing = false
                             }
@@ -267,6 +281,9 @@ class WebPageFragment : KitComposeFragment() {
         internal const val REENTRY_DEBOUNCE_MS = 1_500L
 
         const val UA_MARKER = " CloudSuperApp-Embed/1"
+
+        /** Extra headers for an entry load: main-frame request only, so only the document is revalidated, never its icons. */
+        internal val REVALIDATE_DOCUMENT = mapOf("Cache-Control" to "no-cache")
 
         fun isEmbed(url: String): Boolean = Regex("[?&]embed=1(&|#|$)").containsMatchIn(url)
 

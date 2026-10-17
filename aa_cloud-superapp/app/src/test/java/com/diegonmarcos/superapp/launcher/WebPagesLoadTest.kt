@@ -23,7 +23,8 @@ import org.robolectric.annotation.Config
  *   W1 both declared pages route to a WebPageFragment on their declared https url
  *   W2 each page's WebView has a real size and loads exactly that url, over https, from the network (no asset or file)
  *   W3 only the embed page tells the site it is embedded (query + user-agent marker); the linktree site, which has no embed mode, is left alone
- *   W4 re-entering the page loads it again, past the HTTP cache, and a resume right behind the first load does not
+ *   W4 re-entering the page revalidates its document (LOAD_DEFAULT, never LOAD_NO_CACHE, so icons come from the cache), and a
+ *      resume right behind the first load does not load again
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -76,29 +77,33 @@ class WebPagesLoadTest : KitPageHarness() {
         assertTrue(!declared("lnktree").contains("embed"))
     }
 
-    @Test fun `W4 re-entering loads again past the HTTP cache`() {
+    @Test fun `W4 re-entering revalidates the document only, never bypasses the cache for subresources`() {
         for (id in listOf("webapps", "lnktree")) {
             val (page, web) = shown(id)
-            assertEquals("the first show must load fresh", WebSettings.LOAD_NO_CACHE, web.settings.cacheMode)
-            // Pretend the page finished loading and some time passed, then leave and come back.
+            // LOAD_NO_CACHE refetched every icon on every entry and tripped the edge rate limit (broken "?" icons, 2026-10-17).
+            assertEquals("the first show must keep the HTTP cache for subresources", WebSettings.LOAD_DEFAULT, web.settings.cacheMode)
+            assertEquals("the first show must revalidate its document", "load", page.lastEntry)
+            assertEquals("no-cache", WebPageFragment.REVALIDATE_DOCUMENT["Cache-Control"])
+            // Pretend some time passed, then leave and come back.
             compose.runOnUiThread {
-                web.settings.cacheMode = WebSettings.LOAD_DEFAULT
+                page.lastEntry = ""
                 page.lastLoadAt = -2 * WebPageFragment.REENTRY_DEBOUNCE_MS
                 val fm = compose.activity.supportFragmentManager
                 fm.beginTransaction().setMaxLifecycle(page, Lifecycle.State.STARTED).commitNow()
                 fm.beginTransaction().setMaxLifecycle(page, Lifecycle.State.RESUMED).commitNow()
             }
             compose.waitForIdle()
-            assertEquals("$id was not reloaded on re-entry, or went through the HTTP cache", WebSettings.LOAD_NO_CACHE, web.settings.cacheMode)
+            assertTrue("$id was not reloaded on re-entry", page.lastEntry.isNotEmpty())
+            assertEquals("$id re-entry bypassed the HTTP cache", WebSettings.LOAD_DEFAULT, web.settings.cacheMode)
             assertEquals(declared(id), shadowOf(web).lastLoadedUrl)
             // A resume straight behind a load is the same entry: it must not load again.
             compose.runOnUiThread {
-                web.settings.cacheMode = WebSettings.LOAD_DEFAULT
+                page.lastEntry = ""
                 val fm = compose.activity.supportFragmentManager
                 fm.beginTransaction().setMaxLifecycle(page, Lifecycle.State.STARTED).commitNow()
                 fm.beginTransaction().setMaxLifecycle(page, Lifecycle.State.RESUMED).commitNow()
             }
-            assertEquals("a resume right behind a load loaded twice", WebSettings.LOAD_DEFAULT, web.settings.cacheMode)
+            assertEquals("a resume right behind a load loaded twice", "", page.lastEntry)
             compose.runOnUiThread { compose.activity.supportFragmentManager.beginTransaction().remove(page).commitNow() }
         }
     }
