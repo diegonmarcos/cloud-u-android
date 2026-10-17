@@ -120,46 +120,6 @@
     "db_engine": null
   },
   {
-    "name": "sqlite-npm",
-    "service": "postlite",
-    "vm": "gcp-E2-f_0",
-    "private_dns": "sqlite-npm",
-    "port": null,
-    "protocol": "tcp",
-    "category": "data",
-    "db_engine": null
-  },
-  {
-    "name": "sqlite-vaultwarden",
-    "service": "postlite",
-    "vm": "gcp-E2-f_0",
-    "private_dns": "sqlite-vaultwarden",
-    "port": null,
-    "protocol": "tcp",
-    "category": "data",
-    "db_engine": null
-  },
-  {
-    "name": "sqlite-ntfy",
-    "service": "postlite",
-    "vm": "gcp-E2-f_0",
-    "private_dns": "sqlite-ntfy",
-    "port": null,
-    "protocol": "tcp",
-    "category": "data",
-    "db_engine": null
-  },
-  {
-    "name": "sqlite-authelia",
-    "service": "postlite",
-    "vm": "gcp-E2-f_0",
-    "private_dns": "sqlite-authelia",
-    "port": null,
-    "protocol": "tcp",
-    "category": "data",
-    "db_engine": null
-  },
-  {
     "name": "redis",
     "service": "redis",
     "vm": "gcp-E2-f_0",
@@ -168,6 +128,16 @@
     "protocol": "tcp",
     "category": "data",
     "db_engine": "redis"
+  },
+  {
+    "name": "cloudflared",
+    "service": "cloudflared",
+    "vm": "oci-A1-f_0",
+    "private_dns": "cloudflared",
+    "port": null,
+    "protocol": "none",
+    "category": "infra-net",
+    "db_engine": null
   },
   {
     "name": "hickory-dns",
@@ -193,8 +163,8 @@
     "name": "wireguard-mesh",
     "service": "wireguard-mesh",
     "vm": "oci-A1-f_0",
-    "private_dns": "wireguard-mesh:8080",
-    "port": 8080,
+    "private_dns": "wireguard-mesh:8084",
+    "port": 8084,
     "protocol": "http",
     "category": "tools",
     "db_engine": null

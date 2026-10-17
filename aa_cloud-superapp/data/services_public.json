@@ -350,6 +350,26 @@
     "category": "app"
   },
   {
+    "name": "cloud-notes-sync",
+    "service": "cloud-notes-sync",
+    "vm": "oci-A1-f_0",
+    "public_url": "notes-sync.diegonmarcos.com",
+    "auth": "two_factor",
+    "private_dns": "cloud-notes-sync.app:8098",
+    "port": 8098,
+    "category": "app"
+  },
+  {
+    "name": "cloud-notes-web",
+    "service": "cloud-notes-web",
+    "vm": "oci-A1-f_0",
+    "public_url": "notes.diegonmarcos.com",
+    "auth": "two_factor",
+    "private_dns": "cloud-notes-web.app:8097",
+    "port": 8097,
+    "category": "app"
+  },
+  {
     "name": "code-server",
     "service": "code-server",
     "vm": "oci-A1-f_0",

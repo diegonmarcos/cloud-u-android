@@ -683,8 +683,8 @@
               "item": 7
             },
             {
-              "label": "Gallery",
-              "url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-gallery",
+              "label": "Media Center",
+              "url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/aa_cloud-media-center",
               "icon": "headphones.svg",
               "item": 8
             },
@@ -1353,7 +1353,7 @@
         },
         "profile_icons": [
           {
-            "url": "https://github.com/diegonmarcos/diegonmarcos.github.io/tree/main/c-Circus",
+            "url": "https://github.com/diegonmarcos/diegonmarcos.github.io/tree/main/c_Circus",
             "title": "Circus",
             "icon": "brand-github.svg"
           }
@@ -1759,19 +1759,19 @@
           "links": [
             {
               "label": "Games 2D",
-              "url": "https://github.com/diegonmarcos/diegonmarcos.github.io/tree/main/c-Circus/games",
+              "url": "https://github.com/diegonmarcos/diegonmarcos.github.io/tree/main/c_Circus/games",
               "icon": "device-gamepad.svg",
               "item": 0
             },
             {
               "label": "Scenes 3D",
-              "url": "https://github.com/diegonmarcos/diegonmarcos.github.io/tree/main/b-Projects/galaxy-gaia",
+              "url": "https://github.com/diegonmarcos/diegonmarcos.github.io/tree/main/b_Projects/galaxy-gaia",
               "icon": "world.svg",
               "item": 1
             },
             {
               "label": "Games 3D",
-              "url": "https://github.com/diegonmarcos/diegonmarcos.github.io/tree/main/b-Projects/galaxy-earth",
+              "url": "https://github.com/diegonmarcos/diegonmarcos.github.io/tree/main/b_Projects/galaxy-earth",
               "icon": "device-gamepad.svg",
               "item": 2
             }
@@ -1864,13 +1864,13 @@
           "links": [
             {
               "label": "Central Bank",
-              "url": "https://github.com/diegonmarcos/diegonmarcos.github.io/tree/main/c-LabTools/central_bank",
+              "url": "https://github.com/diegonmarcos/diegonmarcos.github.io/tree/main/c_LabTools/central_bank",
               "icon": "database.svg",
               "item": 0
             },
             {
               "label": "Quant Terminal",
-              "url": "https://github.com/diegonmarcos/diegonmarcos.github.io/tree/main/c-LabTools/fin-terminal",
+              "url": "https://github.com/diegonmarcos/diegonmarcos.github.io/tree/main/c_LabTools/fin-terminal",
               "icon": "rocket.svg",
               "item": 1
             }
