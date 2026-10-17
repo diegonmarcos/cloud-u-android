@@ -103,9 +103,17 @@ class HomeOverflowMatrixTest(private val dpi: Int, private val fontScale: Float)
             root = col
         }
         compose.waitForIdle()
-        // After the fragment's own layout pass (which re-dispatches Robolectric's cutout-less window insets), dispatch the
-        // A37's cutout the way the platform does, so the strip holds the camera's height.
-        compose.runOnUiThread { ViewCompat.dispatchApplyWindowInsets(root.let { (it as LinearLayout).getChildAt(0) }, insets()) }
+        // Every window-insets pass Robolectric makes (it re-dispatches its own, cutout-less ones on each layout) is replaced
+        // at the root by the A37's, the way the platform dispatches them, so the strip always holds the camera's height.
+        compose.runOnUiThread {
+            val col = root as LinearLayout
+            ViewCompat.setOnApplyWindowInsetsListener(col) { _, _ ->
+                for (i in 0 until col.childCount) ViewCompat.dispatchApplyWindowInsets(col.getChildAt(i), insets())
+                WindowInsetsCompat.CONSUMED
+            }
+            ViewCompat.requestApplyInsets(col)
+            ViewCompat.dispatchApplyWindowInsets(col.getChildAt(0), insets())
+        }
         compose.waitForIdle()
 
         val name = "${dpi}dpi-${wDp}dp@$fontScale"
