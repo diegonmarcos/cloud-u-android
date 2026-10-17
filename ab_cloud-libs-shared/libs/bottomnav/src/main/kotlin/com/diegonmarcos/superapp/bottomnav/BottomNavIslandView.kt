@@ -14,7 +14,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.AbstractComposeView
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.addPathNodes
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 
 /**
@@ -221,8 +228,8 @@ public class BottomNavIslandView @JvmOverloads constructor(
         // A host resolves icons by name (getIdentifier), which returns 0 when the name is wrong or
         // the release shrinker stripped the drawable. painterResource(0) throws
         // Resources.NotFoundException on the first frame (Cloud Notes crashed at launch this way),
-        // so a missing icon draws the lib's neutral dot instead of taking the app down.
-        val entries = items.map { BottomNavEntry(it.id, it.label, painterResource(safeIcon(it.icon))) }
+        // so a missing icon draws a neutral dot instead of taking the app down.
+        val entries = items.map { BottomNavEntry(it.id, it.label, navIcon(it.icon)) }
         val tap: (BottomNavEntry) -> Unit = { if (it.id == selectedId) onReselect(it.id) else onSelect(it.id) }
         val modify = itemModifier
         val clearance = insetsOverride ?: WindowInsets(0, 0, 0, (dispatchedBottom - roomBelow).coerceAtLeast(0))
@@ -255,5 +262,15 @@ public object BottomNavTags {
     public fun label(id: String): String = labelTag(id)
 }
 
-/** [id], or the lib's neutral placeholder when a by-name lookup returned 0 (never a crash). */
-internal fun safeIcon(id: Int): Int = if (id != 0) id else R.drawable.bottomnav_ic_fallback
+/**
+ * [id]'s drawable, or a neutral dot when a by-name lookup returned 0 (never a crash). The dot is
+ * built in code: the lib ships no drawables (BottomNavIslandTest).
+ */
+@Composable
+internal fun navIcon(id: Int): Painter =
+    if (id != 0) painterResource(id) else rememberVectorPainter(MissingNavIcon)
+
+private val MissingNavIcon: ImageVector =
+    ImageVector.Builder("bottomnav_missing_icon", 24.dp, 24.dp, 24f, 24f)
+        .addPath(addPathNodes("M12,7a5,5 0,1 1,0 10a5,5 0,1 1,0 -10z"), fill = SolidColor(Color.White))
+        .build()
