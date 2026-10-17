@@ -1,0 +1,27 @@
+#!/bin/sh
+# Run an Android host binary (bionic) from inside the nix-on-droid session.
+# Installed once and linked or copied under each tool's name: the name it is
+# called by picks the host binary. `android-host-exec <tool> [args]` works too.
+name="${0##*/}"
+if [ "$name" = android-host-exec ]; then
+    [ $# -gt 0 ] || { echo "usage: android-host-exec <tool> [args...]" >&2; exit 2; }
+    name="$1"; shift
+fi
+case "$name" in
+    android-ls) name=toybox; set -- ls "$@" ;;
+    android-ps) name=toybox; set -- ps "$@" ;;
+esac
+bin=""
+for root in /system /android/system; do
+    if [ -x "$root/bin/$name" ]; then bin="$root/bin/$name"; break; fi
+done
+if [ -z "$bin" ]; then
+    echo "android-host-exec: no $name in /system/bin or /android/system/bin" >&2
+    exit 127
+fi
+# glibc's loader variables mean nothing to bionic's linker, and a nix
+# LD_LIBRARY_PATH makes it load the wrong libc.
+unset LD_LIBRARY_PATH LD_PRELOAD LD_AUDIT
+export PATH="/system/bin:/system/xbin:$PATH"
+export ANDROID_ROOT="${ANDROID_ROOT:-/system}" ANDROID_DATA="${ANDROID_DATA:-/data}"
+exec "$bin" "$@"

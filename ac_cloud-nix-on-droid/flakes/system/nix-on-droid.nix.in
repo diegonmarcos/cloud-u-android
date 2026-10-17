@@ -1,0 +1,22 @@
+{ pkgs, ... }:
+
+{
+  # The packages the app bakes by default (build.json default_packages.attrs).
+  # goose, hermes and the noexec shebang shim are built by the app's
+  # rootfs-extras.nix, which is not part of this flake; add them here if you
+  # package them yourself.
+  environment.packages = [
+@PACKAGES@
+    (pkgs.callPackage ./android-host-tools.nix { })
+  ];
+
+  user.shell = "${pkgs.@LOGIN_SHELL@}/bin/@LOGIN_SHELL@";
+
+  environment.etcBackupExtension = ".bak";
+
+  nix.extraOptions = ''
+    experimental-features = nix-command flakes
+  '';
+
+  system.stateVersion = "24.05";
+}

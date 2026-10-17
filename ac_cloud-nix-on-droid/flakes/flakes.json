@@ -1,0 +1,21 @@
+{
+  "_doc": "The ~/flakes/{system,hm} layout and the Android host tools. bake_default_packages.py renders the templates in this directory (placeholders @NAME@, filled from build.json::forks.nixdroid.bootstrap.default_packages and bootstrap-src/bootstrap-src.json, never restated here) into the zip at install_dir, and seed.sh copies them into $HOME/<home_dir>/ on login, once per file: a file that already exists is never overwritten, so the user's edits survive every login and every app update.",
+  "install_dir": "usr/lib/cloud-flakes",
+  "home_dir": "flakes",
+  "user_name": "nix-on-droid",
+  "templates": {
+    "system/flake.nix": "system/flake.nix.in",
+    "system/nix-on-droid.nix": "system/nix-on-droid.nix.in",
+    "system/android-host-tools.nix": "system/android-host-tools.nix.in",
+    "system/android-host-exec": "android-host-exec",
+    "system/README.md": "system/README.md",
+    "hm/flake.nix": "hm/flake.nix.in",
+    "hm/home.nix": "hm/home.nix",
+    "hm/README.md": "hm/README.md"
+  },
+  "android_host": {
+    "_doc": "The proot in bin/login runs WITHOUT -r: the guest root is the host root, so /system is the real one already, and upstream's own `-b /:/android` exposes it a second time at /android/system. What was missing on the phone is the tools on PATH and an environment bionic binaries tolerate. android-host-exec runs /system/bin/<tool> (or /android/system/bin/<tool>) with the glibc loader variables removed. android-ls and android-ps run toybox's ls and ps without shadowing coreutils. The same wrapper ships in the baked zip (bin_dir, on PATH through the fallback init script) and in the system flake's environment.packages (android-host-tools), so a switched generation keeps them.",
+    "bin_dir": "usr/lib/android-host/bin",
+    "tools": ["getprop", "pm", "cmd", "settings", "dumpsys", "am", "logcat", "toybox", "android-ls", "android-ps"]
+  }
+}

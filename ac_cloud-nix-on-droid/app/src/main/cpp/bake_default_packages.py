@@ -156,8 +156,80 @@ def env_target_unreachable(env_rel, existing, new_files, new_executables):
     return None
 
 
+# ── ~/flakes/{system,hm} and the Android host tools (flakes/flakes.json) ──────
+FLAKES_SRC = Path(__file__).resolve().parents[4] / "flakes"
+BOOTSTRAP_SRC_JSON = Path(__file__).resolve().parents[4] / "bootstrap-src" / "bootstrap-src.json"
+ETC_ZSHENV_ENTRY = "etc/static/zshenv"
+_PLACEHOLDER = re.compile(r"@[A-Z_]+@")
+
+
+def load_flakes_decl(src: Path = FLAKES_SRC) -> dict:
+    path = src / "flakes.json"
+    if not path.is_file():
+        raise ValueError(f"the flakes declaration is missing: {path}")
+    return json.loads(path.read_text())
+
+
+def flake_home(app_id: str) -> str:
+    """$HOME inside the session (upstream nix-on-droid's user.home, after the id rewrite)."""
+    return f"/data/data/{app_id}/files/home"
+
+
+def render_flakes(decl: dict, app_id: str, pin: str, nod_rev: str, attrs, login_shell: str,
+                  nix_system: str, src: Path = FLAKES_SRC) -> dict:
+    """zip path -> (bytes, executable) for the seed script and the ~/flakes templates.
+
+    Pure apart from reading src, so the tester renders the REAL templates. Raises on a
+    placeholder left unfilled: a flake.nix naming @NIXPKGS_PIN@ would only fail on the
+    phone, at the user's first switch.
+    """
+    install = decl["install_dir"].strip("/")
+    tools = decl["android_host"]["tools"]
+    values = {
+        "NIXPKGS_PIN": pin,
+        "NOD_REV": nod_rev,
+        "HOME": flake_home(app_id),
+        "HOME_DIR": decl["home_dir"],
+        "USER_NAME": decl["user_name"],
+        "NIX_SYSTEM": nix_system,
+        "LOGIN_SHELL": login_shell,
+        "PACKAGES": "\n".join(f'    pkgs."{a}"' for a in attrs),
+        "HOST_TOOLS": " ".join(tools),
+    }
+    out = {f"{install}/seed.sh": ((src / "seed.sh").read_bytes(), True)}
+    for dest, tmpl in decl["templates"].items():
+        text = (src / tmpl).read_text()
+        if tmpl.endswith(".in"):
+            text = _PLACEHOLDER.sub(lambda m: values.get(m.group(0).strip("@"), m.group(0)), text)
+            left = _PLACEHOLDER.findall(text)
+            if left:
+                raise ValueError(f"flakes/{tmpl}: unfilled placeholders {sorted(set(left))}")
+        out[f"{install}/{dest}"] = (text.encode(), dest.endswith("android-host-exec"))
+    return out
+
+
+def android_host_files(decl: dict, src: Path = FLAKES_SRC) -> dict:
+    """zip path -> (bytes, executable): one copy of android-host-exec per tool name
+    under android_host.bin_dir (copies, not links: the wrapper reads its own $0)."""
+    host = decl["android_host"]
+    data = (src / "android-host-exec").read_bytes()
+    out = {f"{host['bin_dir'].strip('/')}/android-host-exec": (data, True)}
+    for t in host["tools"]:
+        out[f"{host['bin_dir'].strip('/')}/{t}"] = (data, True)
+    return out
+
+
+def flakes_seed_line(install_dir: str, home_dir: str) -> str:
+    """The login-inner line that seeds ~/<home_dir>; guarded and never fatal."""
+    install_dir = install_dir.strip("/")
+    return (f'if [ -r "/{install_dir}/seed.sh" ]; then\n'
+            f'  sh "/{install_dir}/seed.sh" "{home_dir}" || true\n'
+            'fi')
+
+
 def patch_login_inner(login_inner: str, app_id: str, fallback_script: str,
-                      profile_link: str, login_shell: str, store_install_dir: str = "") -> str:
+                      profile_link: str, login_shell: str, store_install_dir: str = "",
+                      flakes_line: str = "") -> str:
     """The text edits #595/#638/#641 make to the generated usr/lib/login-inner.
 
     Pure str -> str so test/test-bootstrap-baked.sh can run the REAL patch
@@ -180,6 +252,8 @@ def patch_login_inner(login_inner: str, app_id: str, fallback_script: str,
     if store_install_dir:
         fallback_line = (fallback_line + '\ncloud_trace "store init: start"\n'
                          + store_init_line(store_install_dir) + '\ncloud_trace "store init: done"')
+    if flakes_line:
+        fallback_line += '\n' + flakes_line + '\ncloud_trace "flakes seed: done"'
     login_inner = head + fallback_line + tail
     login_inner = add_login_trace(login_inner)
 
@@ -956,9 +1030,19 @@ def main() -> int:
 
             # ── patch login-inner's session-init line and its env execs ────
             try:
-                login_inner = patch_login_inner(login_inner, app_id, fallback_script,
-                                                profile_link, login_shell, store_dir)
+                flakes_decl = load_flakes_decl()
+                nod_rev = json.loads(BOOTSTRAP_SRC_JSON.read_text())["upstream_rev"]
+                flake_files = render_flakes(flakes_decl, app_id, pin, nod_rev, attrs,
+                                            login_shell, nix_system)
+                flake_files.update(android_host_files(flakes_decl))
+                login_inner = patch_login_inner(
+                    login_inner, app_id, fallback_script, profile_link, login_shell, store_dir,
+                    flakes_seed_line(flakes_decl["install_dir"], flakes_decl["home_dir"]))
                 etc_profile = patch_etc_profile(etc_profile, fallback_script)
+                # zsh's /etc/zshenv is upstream's same one-line source of the session-init
+                # store path the zip never ships; guarded exactly like etc/profile.
+                etc_zshenv = (patch_etc_profile(zin.read(ETC_ZSHENV_ENTRY).decode(), fallback_script)
+                              if ETC_ZSHENV_ENTRY in existing else None)
             except ValueError as e:
                 print(f"FAIL: {e}", file=sys.stderr)
                 return 1
@@ -1080,8 +1164,20 @@ def main() -> int:
                 "# $HOME/.nix-profile does not exist (the wizard that would normally\n"
                 "# create it never ran, because the packages are already installed).\n"
                 f'export PATH="/{profile_link}/bin:$PATH"\n'
+                "# Android host tools (getprop, pm, cmd, ...), last so they never shadow nix ones.\n"
+                f'export PATH="$PATH:/{flakes_decl["android_host"]["bin_dir"].strip("/")}"\n'
             )
             new_files[fallback_script] = fallback_body.encode()
+
+            # ── ~/flakes/{system,hm} templates, seed.sh and the android-host wrappers
+            for rel, (data, executable) in flake_files.items():
+                if rel in existing or rel in new_files:
+                    print(f"FAIL: the input zip already carries {rel}", file=sys.stderr)
+                    return 1
+                new_files[rel] = data
+                if executable:
+                    new_executables.append(rel)
+            print(f"flakes: {len(flake_files)} files baked", file=sys.stderr)
 
             # ── #771: the shared system gitconfig, and the noexec #! shim preloaded into every
             # glibc process of the session, by the profile path (never a /nix/store hash).
@@ -1130,6 +1226,8 @@ def main() -> int:
                         zout.writestr(info, executables_txt)
                     elif name == ETC_PROFILE_ENTRY:
                         zout.writestr(info, etc_profile)
+                    elif name == ETC_ZSHENV_ENTRY and etc_zshenv is not None:
+                        zout.writestr(info, etc_zshenv)
                     elif name == PROOT_ENTRY:
                         zout.writestr(info, proot_bytes)
                     else:

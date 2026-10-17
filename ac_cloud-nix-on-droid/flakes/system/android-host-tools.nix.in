@@ -1,0 +1,11 @@
+# android-host-tools: one shell wrapper per Android host tool, each running
+# /system/bin/<tool> with the glibc loader variables removed (see android-host-exec).
+{ runCommand }:
+
+runCommand "android-host-tools" { } ''
+  mkdir -p $out/bin
+  install -m755 ${./android-host-exec} $out/bin/android-host-exec
+  for t in @HOST_TOOLS@; do
+    ln -s android-host-exec "$out/bin/$t"
+  done
+''

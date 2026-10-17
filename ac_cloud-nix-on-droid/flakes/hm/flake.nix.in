@@ -1,0 +1,30 @@
+{
+  description = "home-manager configuration for this user, seeded by cloud-nix-on-droid";
+
+  # home-manager follows the revision nix-on-droid itself locks, so the module the
+  # system flake imports and this flake's standalone configuration agree.
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/@NIXPKGS_PIN@";
+    nix-on-droid = {
+      url = "github:nix-community/nix-on-droid/@NOD_REV@";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    home-manager.follows = "nix-on-droid/home-manager";
+  };
+
+  outputs = { self, nixpkgs, nix-on-droid, home-manager }: {
+    # Imported by ../system as the nix-on-droid home-manager module.
+    homeModules.default = import ./home.nix;
+
+    homeConfigurations."@USER_NAME@" = home-manager.lib.homeManagerConfiguration {
+      pkgs = import nixpkgs { system = "@NIX_SYSTEM@"; };
+      modules = [
+        ./home.nix
+        {
+          home.username = "@USER_NAME@";
+          home.homeDirectory = "@HOME@";
+        }
+      ];
+    };
+  };
+}
