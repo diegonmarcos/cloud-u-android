@@ -706,7 +706,7 @@ internal fun StatusStripBody(model: StatusStripModel, ctx: Context) {
                 Modifier.align(Alignment.Center).padding(bottom = DOTS_ROW),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Spacer(Modifier.height(with(density) { model.clockReservePx().toDp() }))
+                Spacer(Modifier.testTag("strip:reserve").height(with(density) { model.clockReservePx().toDp() }))
                 Tappable("strip:clock", onTap = { r -> CalendarAgendaPopup.show(host, r) }) {
                     Text(
                         model.clock, color = Color.White, fontSize = 12.sp, fontFamily = MONO_BOLD, fontWeight = FontWeight.Bold,

@@ -71,15 +71,14 @@ class StatusStripComposeTest : KitPageHarness() {
     @Test
     fun `S3 the clock clears the cutout by its own pixels`() {
         val model = showStrip()
-        val flat = compose.onNodeWithTag("strip:clock").fetchSemanticsNode().boundsInRoot.top
+        fun reserve() = compose.onNodeWithTag("strip:reserve", useUnmergedTree = true).fetchSemanticsNode().size.height
+        assertEquals("no cutout, no reserve (pets off)", 0, reserve())
         compose.runOnUiThread { model.noteCutout(160) }
         compose.waitForIdle()
-        val low = compose.onNodeWithTag("strip:clock").fetchSemanticsNode().boundsInRoot.top
-        assertTrue("clock moved from $flat to $low, must drop by the 160px cutout less the row pad", low - flat >= 150f)
+        assertEquals("reserve is the cutout less Line 1's own top pad", 160 - model.innerRowTopPadPx, reserve())
         compose.runOnUiThread { model.noteCutout(0) }
         compose.waitForIdle()
-        val back = compose.onNodeWithTag("strip:clock").fetchSemanticsNode().boundsInRoot.top
-        assertEquals("with no cutout the clock returns to where it was", flat, back, 1f)
+        assertEquals("back to none", 0, reserve())
     }
 
     @Test
