@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    android:sharedUserId="cld.termux.shared">
+
+    <!-- cloud-shared-store, step 2 (owner answer 41, "1+2"): cloud-drive runs as cld.termux's
+         Linux uid (same literal as the terminals: ac_cloud-termux/build.json::shared_store
+         .shared_user_id; aa_cloud-superapp/data/fleet-identity.json lists the member), so every
+         sync and clone path is a plain File in ~/cloud-shared-store. Every build of this app is
+         signed with the one constellation key (app/build.gradle signingConfigs), as the shared uid
+         requires. Installing this over an older cloud-drive is refused (uid change): backup
+         (automatic on launch of the step-1 build) -> uninstall -> install -> restore. Never add the
+         max-sdk exit-hatch attribute here silently: it is documented in
+         fleet-identity.json. If the uid is not in effect at runtime, libs:shared-store detects it
+         and git runs inside cld.termux through CLOUD_EXEC. -->
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

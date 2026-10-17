@@ -116,7 +116,7 @@ while IFS='|' read -r file expr; do
 done <<MUT
 $OTHER_M|s.replace('<manifest ', '<manifest android:sharedUserId="cld.rogue" ', 1)
 $NIX_M|__import__('re').sub(r'android:sharedUserId="[^"]*"', 'android:sharedUserId="cld.other"', s, 1)
-aa_cloud-superapp/data/fleet-identity.json|s.replace('"members": ["cld.termux", "cld.termux.nix"]', '"members": ["cld.termux"]')
+aa_cloud-superapp/data/fleet-identity.json|s.replace('"members": ["cld.termux", "cld.termux.nix", "com.diegonmarcos.clouddrive"]', '"members": ["cld.termux"]')
 aa_cloud-superapp/data/fleet-identity.json|s.replace('"key": "shared_store.shared_user_id"', '"key": "shared_store.nope"').replace('"pending": true,', '')
 aa_cloud-superapp/build.json|s.replace('"tabs": ["apps-mesh-members", "ipc", "identity"]', '"tabs": ["apps-mesh-members", "ipc"]')
 aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt|s.replace('appstore.FleetIdentityFragment()', 'appstore.IpcMeshFragment()')
