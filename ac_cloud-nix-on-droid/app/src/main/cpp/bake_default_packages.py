@@ -398,8 +398,20 @@ cloud_trace "bin/login: start, $(cloud_jobctl $$)"
 """
 
 
+# The ordered candidates for the shared store's root: the raw volume, the pass-through FUSE, the
+# androidwritable view, then the ordinary (slow) /storage/emulated/0 as the fallback. MIRRORS the
+# `for cand in ...` list in ac_cloud-termux/rootfs/enter.sh; test/test-shared-store-probe.sh fails
+# if the two drift.
+SHARED_STORE_PROBE_ROOTS = (
+    "/data/media/0",
+    "/mnt/pass_through/0/emulated/0",
+    "/mnt/androidwritable/0/emulated/0",
+    "/storage/emulated/0",
+)
+
+
 # startup-step: storage_links
-def storage_setup(shared_root_name: str) -> str:
+def storage_setup(shared_root_name: str, roots=SHARED_STORE_PROBE_ROOTS) -> str:
     """#612/#736: bin/login's shared-storage block. ~/emulated and ~/cloud-drive-shared-store are
     SYMLINKS to /storage/emulated/0 and its <shared_root_name> store. bin/login runs proot with no
     -r (it binds individual dirs onto the real Android root, it does not chroot), so $HOME and
@@ -418,8 +430,16 @@ def storage_setup(shared_root_name: str) -> str:
     proot-static and an sh symlink into /nix/store that does not resolve outside proot. A bare `rm`
     is "inaccessible or not found", exit 127, and under set -e that ends every login: the phone
     showed `usr/bin/login[62]: rm: inaccessible or not found` for every command once an older
-    install's ~/storage tree gave the cleanup loop a link to remove."""
-    store = f"/storage/emulated/0/{shared_root_name}"
+    install's ~/storage tree gave the cleanup loop a link to remove.
+
+    Fast path (mirrors ac_cloud-termux/rootfs/enter.sh): /storage/emulated/0 is the sdcardfs/FUSE
+    view, and git on it stalled sessions for minutes. SHARED_STORE_PROBE_ROOTS are the same volume
+    through cheaper paths; the first whose store is readable and passes an rw probe (mkdir -p, touch,
+    rm of a temp file) gets both links. /storage/emulated/0 is last, so it is the fallback, and the
+    "not mounted" message stays for when it is not even readable. test/test-shared-store-probe.sh
+    runs this text over stub dirs and guards that the list matches termux's."""
+    fallback = roots[-1]
+    cands = " ".join(roots)
     return (
         'cloud_storage_link() {\n'
         '  [ -L "$1" ] || /system/bin/rmdir "$1" 2>/dev/null || true\n'
@@ -436,23 +456,36 @@ def storage_setup(shared_root_name: str) -> str:
         '  for l in "$HOME/storage"/*; do [ ! -L "$l" ] || /system/bin/rm -f "$l"; done\n'
         '  /system/bin/rmdir "$HOME/storage" 2>/dev/null || true\n'
         'fi\n'
-        'if CLOUD_LS_ERR="$(/system/bin/ls /storage/emulated/0 2>&1 >/dev/null)"; then\n'
-        '  cloud_trace "storage: /storage/emulated/0 is readable, linking ~/emulated"\n'
-        '  cloud_storage_link "$HOME/emulated" /storage/emulated/0\n'
-        f'  /system/bin/mkdir -p "{store}" 2>/dev/null || true\n'
-        f'  if [ -d "{store}" ]; then\n'
-        f'    cloud_storage_link "$HOME/cloud-drive-shared-store" "{store}"\n'
+        'CLOUD_SDCARD=""\n'
+        f'for cand in {cands}; do\n'
+        f'  t="$cand/{shared_root_name}/.cloud-rw-probe.$$"\n'
+        f'  if [ -d "$cand" ] && /system/bin/mkdir -p "$cand/{shared_root_name}" 2>/dev/null \\\n'
+        f'     && [ -r "$cand/{shared_root_name}" ] \\\n'
+        '     && /system/bin/touch "$t" 2>/dev/null; then\n'
+        '    /system/bin/rm -f "$t" 2>/dev/null || true\n'
+        '    CLOUD_SDCARD="$cand"; break\n'
+        '  fi\n'
+        'done\n'
+        'if [ -n "$CLOUD_SDCARD" ]; then\n'
+        f'  if [ "$CLOUD_SDCARD" = "{fallback}" ]; then CLOUD_SPEED=fallback; else CLOUD_SPEED=fast; fi\n'
+        '  cloud_trace "cloud-drive shared store: $CLOUD_SDCARD ($CLOUD_SPEED)"\n'
+        '  cloud_storage_link "$HOME/emulated" "$CLOUD_SDCARD"\n'
+        f'  cloud_storage_link "$HOME/cloud-drive-shared-store" "$CLOUD_SDCARD/{shared_root_name}"\n'
+        f'elif CLOUD_LS_ERR="$(/system/bin/ls {fallback} 2>&1 >/dev/null)"; then\n'
+        f'  cloud_trace "cloud-drive shared store: {fallback} (fallback, store not writable)"\n'
+        f'  cloud_storage_link "$HOME/emulated" {fallback}\n'
+        f'  if [ -d "{fallback}/{shared_root_name}" ]; then\n'
+        f'    cloud_storage_link "$HOME/cloud-drive-shared-store" "{fallback}/{shared_root_name}"\n'
         '  else\n'
-        f'    cloud_trace "storage: could not create {store}"\n'
+        f'    cloud_trace "storage: could not create {fallback}/{shared_root_name}"\n'
         '  fi\n'
         'else\n'
-        '  cloud_trace "storage: ls /storage/emulated/0 failed: $CLOUD_LS_ERR"\n'
+        f'  cloud_trace "storage: ls {fallback} failed: $CLOUD_LS_ERR"\n'
         '  cloud_storage_unlink "$HOME/emulated"\n'
         '  cloud_storage_unlink "$HOME/cloud-drive-shared-store"\n'
         '  echo "⚠ cloud-drive shared store not mounted: storage access is not granted. Allow it on the Cloud Terminal prompt, then open a new session." >&2\n'
         'fi\n'
     )
-
 
 def add_login_trace(login_inner: str) -> str:
     """#715 -- define the trace and the bounded shell start, and log the start.

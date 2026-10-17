@@ -271,13 +271,13 @@ import importlib.util, sys
 spec = importlib.util.spec_from_file_location("bake", sys.argv[1])
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 t = sys.argv[2]
-body = m.BIN_LOGIN_TRACE + m.storage_setup(sys.argv[3]).replace("/storage/emulated/0", t + "/storage/emulated/0")
+body = m.BIN_LOGIN_TRACE + m.storage_setup(sys.argv[3], tuple(t + r for r in m.SHARED_STORE_PROBE_ROOTS))
 open(t + "/login.sh", "w").write("set -eu\n" + body.replace("/system/bin/", t + "/system/bin/"))
 PY2
     S="$T736/storage/emulated/0"; H="$T736/home"
     mkdir -p "$S/$SHARED_ROOT/git/cloud-probe-repo" "$S/Download" "$H/emulated" "$H/cloud-drive-shared-store" "$H/storage" \
         "$T736/prefix-bin" "$T736/system/bin"
-    for c in date ls ln rm rmdir mkdir; do ln -s "$(command -v $c)" "$T736/system/bin/$c"; done
+    for c in date ls ln rm rmdir mkdir touch; do ln -s "$(command -v $c)" "$T736/system/bin/$c"; done
     ln -s "$S/DCIM" "$H/storage/dcim"
     SH="$(command -v sh)"
     r=0
@@ -488,7 +488,7 @@ else
     bad "MUTATION SURVIVED: the ungated trace still kept a caller's stderr clean"
 fi
 rm -rf "$T715"
-if grep -q 'cloud_trace "storage: ls /storage/emulated/0 failed: \$CLOUD_LS_ERR"' "$BAKE_PY"; then
+if grep -q 'cloud_trace "storage: ls {fallback} failed: \$CLOUD_LS_ERR"' "$BAKE_PY"; then
     ok "a failed storage probe traces ls's own error, not only a verdict"
 else
     bad "bin/login's storage probe discards ls's error — the device log could not say WHY storage is unreadable"
