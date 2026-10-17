@@ -32,10 +32,13 @@ import java.util.Locale
  *
  * FAILURE IS NEVER A NUMBER. [parse] and [row] are pure and total: every path
  * that did not end in a price Yahoo actually sent ends in [Status.UNAVAILABLE]
- * and renders as [DASH]. There is deliberately NO cache in here — a cache is
- * the mechanism by which the last good price gets redrawn as though it were
- * live, and that is the one defect this badge must not have. A price the badge
- * cannot refresh disappears; it does not quietly persist.
+ * and renders as [DASH] — unless a previous fetch produced a real price, in
+ * which case [merge] keeps that LAST GOOD price, flagged [Quote.cached], and
+ * [row] always prints it WITH the time it was saved ("5.1421 · 14:32", or
+ * "· 2h ago" once stale), so it can never read as live. Owner ask: the rates
+ * used to vanish because every cycle cleared the map and a single failed or
+ * zero response wiped the price; and the map was in-memory only, so a killed
+ * process restarted to all dashes. [MarketsLastGood] persists it.
  *
  * No new dependency: `HttpURLConnection` + `org.json`, the same pair every
  * other feed in this app uses.
@@ -57,7 +60,39 @@ object MarketsQuotes {
         val asOfMillis: Long,
         val status: Status,
         val reason: String = "",
+        /** True when this is a persisted last-good price standing in for a
+         *  fetch that failed or returned zero. */
+        val cached: Boolean = false,
+        /** When the price was fetched (device clock). 0 = unknown. */
+        val savedAtMillis: Long = 0L,
     )
+
+    /** A price worth keeping: finite and strictly positive. FX/crude/gold are
+     *  never 0, so a 0 is a broken response, not a quote. */
+    fun isGood(q: Quote?): Boolean =
+        q != null && q.status == Status.OK && q.price != null && q.price.isFinite() && q.price > 0.0
+
+    /**
+     * PURE. Combines this cycle's fetch with the previous last-good quotes.
+     * A good fetch replaces (and is stamped with [nowMillis]); a failed, null
+     * or zero fetch NEVER overwrites — the previous good price is kept, marked
+     * [Quote.cached], carrying the failure reason.
+     */
+    fun merge(previous: Map<String, Quote>, fetched: List<Quote>, nowMillis: Long): Map<String, Quote> {
+        val out = previous.toMutableMap()
+        for (f in fetched) {
+            val prev = previous[f.symbol]
+            out[f.symbol] = when {
+                isGood(f) -> f.copy(cached = false, savedAtMillis = nowMillis)
+                isGood(prev) -> prev!!.copy(
+                    cached = true,
+                    reason = f.reason.ifBlank { "Yahoo returned no usable price for ${f.symbol}." },
+                )
+                else -> f
+            }
+        }
+        return out
+    }
 
     const val CHART_ENDPOINT = "https://query1.finance.yahoo.com/v8/finance/chart/"
 
@@ -95,7 +130,7 @@ object MarketsQuotes {
 
         val price = meta.opt("regularMarketPrice") as? Number
         val value = price?.toDouble()
-        if (value == null || !value.isFinite())
+        if (value == null || !value.isFinite() || value <= 0.0)
             return unavailable(symbol, "Yahoo answered without a price for $symbol.")
 
         // Seconds in the payload; the rest of the app works in millis.
@@ -156,11 +191,26 @@ object MarketsQuotes {
      * something went wrong is [DASH], and [DASH] is reachable only from a fetch
      * that actually failed.
      */
-    fun row(instrument: Instrument, quote: Quote?, nowMillis: Long, staleAfterMillis: Long): String {
+    fun row(
+        instrument: Instrument,
+        quote: Quote?,
+        nowMillis: Long,
+        staleAfterMillis: Long,
+        zone: java.util.TimeZone = java.util.TimeZone.getDefault(),
+    ): String {
         val price = quote?.price
-        if (quote == null || quote.status != Status.OK || price == null || !price.isFinite())
+        if (quote == null || quote.status != Status.OK || price == null || !price.isFinite() || price <= 0.0)
             return "${instrument.label} $DASH"
         val text = "${instrument.label} ${format(price, instrument.decimals)}"
+        if (quote.cached) {
+            // Last good price standing in for a failed/zero fetch: ALWAYS dated.
+            val at = quote.savedAtMillis.takeIf { it > 0L } ?: quote.asOfMillis
+            if (at <= 0L) return "$text · age unknown"
+            val since = nowMillis - at
+            return if (since > staleAfterMillis) "$text · ${ageText(since)} ago"
+            else "$text · " + java.text.SimpleDateFormat("HH:mm", Locale.US)
+                .apply { timeZone = zone }.format(java.util.Date(at))
+        }
         val age = nowMillis - quote.asOfMillis
         // asOfMillis == 0 means Yahoo sent a price with no timestamp: it cannot
         // be shown as fresh, because nothing here knows that it is.
@@ -174,8 +224,9 @@ object MarketsQuotes {
         quotes: Map<String, Quote>,
         nowMillis: Long,
         staleAfterMillis: Long,
+        zone: java.util.TimeZone = java.util.TimeZone.getDefault(),
     ): String = instruments
-        .joinToString("  ·  ") { row(it, quotes[it.symbol], nowMillis, staleAfterMillis) }
+        .joinToString("  ·  ") { row(it, quotes[it.symbol], nowMillis, staleAfterMillis, zone) }
 
     private fun format(price: Double, decimals: Int) =
         String.format(Locale.US, "%.${decimals}f", price)

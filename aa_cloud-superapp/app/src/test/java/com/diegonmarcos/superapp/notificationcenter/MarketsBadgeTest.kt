@@ -232,6 +232,58 @@ class MarketsBadgeTest {
         assertTrue("the one good price is missing: $line", line.contains("4424.90"))
     }
 
+    // ── Last good rate: never lost to a zero, an error or a restart ───────
+
+    private val utc = java.util.TimeZone.getTimeZone("UTC")
+
+    @Test
+    fun `a zero response keeps the previous value`() {
+        val zeroBody = """{"chart":{"result":[{"meta":{"regularMarketPrice":0,"regularMarketTime":1789769403}}]}}"""
+        val zero = MarketsQuotes.parse("BRL=X", zeroBody)
+        assertNull("a zero price must not parse as a price", zero.price)
+
+        val prev = mapOf("BRL=X" to okQuote(5.1421, NOW - 60_000L).copy(savedAtMillis = NOW - 60_000L))
+        val merged = MarketsQuotes.merge(prev, listOf(zero), NOW)
+        assertEquals(5.1421, merged["BRL=X"]!!.price!!, 0.00001)
+        assertTrue(merged["BRL=X"]!!.cached)
+        // An OK quote carrying 0.0 is also rejected.
+        val okZero = MarketsQuotes.Quote("BRL=X", 0.0, NOW, MarketsQuotes.Status.OK)
+        assertEquals(5.1421, MarketsQuotes.merge(prev, listOf(okZero), NOW)["BRL=X"]!!.price!!, 0.00001)
+    }
+
+    @Test
+    fun `an error shows the cached value with its time`() {
+        val savedAt = NOW - 10 * 60_000L
+        val prev = mapOf("BRL=X" to okQuote(5.1421, savedAt).copy(savedAtMillis = savedAt))
+        val failed = MarketsQuotes.unavailable("BRL=X", "Could not reach Yahoo: UnknownHostException.")
+        val merged = MarketsQuotes.merge(prev, listOf(failed), NOW)
+
+        val hhmm = java.text.SimpleDateFormat("HH:mm", java.util.Locale.US)
+            .apply { timeZone = utc }.format(java.util.Date(savedAt))
+        assertEquals("USD/BRL 5.1421 · $hhmm", MarketsQuotes.row(brl, merged["BRL=X"], NOW, STALE_AFTER, utc))
+
+        val old = mapOf("BRL=X" to okQuote(5.1421, NOW - 2 * 3_600_000L).copy(savedAtMillis = NOW - 2 * 3_600_000L))
+        val staleRow = MarketsQuotes.row(brl, MarketsQuotes.merge(old, listOf(failed), NOW)["BRL=X"], NOW, STALE_AFTER, utc)
+        assertEquals("USD/BRL 5.1421 · 2h ago", staleRow)
+    }
+
+    @Test
+    fun `the last good value survives a restart`() {
+        val ctx = org.robolectric.RuntimeEnvironment.getApplication()
+        val good = okQuote(5.1421, NOW - 60_000L)
+        MarketsLastGood(ctx).save(MarketsQuotes.merge(emptyMap(), listOf(good), NOW))
+        // A later failure must not overwrite it.
+        val afterFail = MarketsQuotes.merge(MarketsLastGood(ctx).load(),
+            listOf(MarketsQuotes.unavailable("BRL=X", "x")), NOW + 1)
+        MarketsLastGood(ctx).save(afterFail)
+
+        val reloaded = MarketsLastGood(ctx).load()["BRL=X"]!!
+        assertEquals(5.1421, reloaded.price!!, 0.00001)
+        assertEquals(NOW, reloaded.savedAtMillis)
+        assertTrue(reloaded.cached)
+        assertTrue(MarketsQuotes.row(brl, reloaded, NOW + 60_000L, STALE_AFTER, utc).startsWith("USD/BRL 5.1421 · "))
+    }
+
     private companion object {
         /** Fixed clock: a test whose verdict depends on the wall clock is a
          *  test that fails on a Sunday. */

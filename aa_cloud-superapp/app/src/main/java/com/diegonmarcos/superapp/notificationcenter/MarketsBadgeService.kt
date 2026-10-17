@@ -54,15 +54,17 @@ class MarketsBadgeService : Service() {
     private val main = Handler(Looper.getMainLooper())
     private var tick: Runnable? = null
 
-    /** Last answer per symbol, kept only so a power-save tick has something to
-     *  re-date. Never rendered without its age: see [MarketsQuotes.row]. */
+    /** Last answer per symbol. Seeded from [MarketsLastGood] so a restarted
+     *  process shows the last saved rate + time instead of dashes. */
     private val quotes = mutableMapOf<String, MarketsQuotes.Quote>()
+    private val lastGood by lazy { MarketsLastGood(this) }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         ensureChannel()
+        quotes.putAll(lastGood.load())
         // Foreground within the first few seconds or the platform kills us, so
         // post the all-dashes face immediately and fill it in when the first
         // fetch returns. Dashes are the honest thing to show before any quote
@@ -136,10 +138,13 @@ class MarketsBadgeService : Service() {
         scope.launch {
             val fetched = list.map { MarketsQuotes.fetch(it) }
             main.post {
-                // Replaced wholesale, never merged: a symbol that failed this
-                // cycle must lose its old price rather than keep it.
+                // Merged, never cleared: a failed/zero fetch keeps the last
+                // good price (rendered with its saved time), and good prices
+                // are persisted so a process restart does not lose them.
+                val merged = MarketsQuotes.merge(quotes.toMap(), fetched, System.currentTimeMillis())
                 quotes.clear()
-                fetched.forEach { quotes[it.symbol] = it }
+                quotes.putAll(merged)
+                lastGood.save(merged)
                 renotify()
             }
         }
