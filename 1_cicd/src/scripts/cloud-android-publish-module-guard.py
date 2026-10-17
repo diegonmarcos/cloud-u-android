@@ -38,7 +38,8 @@ SKIP = {"1_cicd/src/scripts/cloud-android-publish-module-guard.py"}
 # (GHCR_TOKEN) because GITHUB_TOKEN cannot delete or list user packages. They may
 # mention GHCR_TOKEN only as `GH_TOKEN: ${{ secrets.GHCR_TOKEN }}` and may contain
 # no push/login/release verb at all.
-EXEMPT = {"1_cicd/src/cicd/ghcr-delete-package.yml", "1_cicd/src/cicd/ghcr-visibility-audit.yml"}
+EXEMPT = {"1_cicd/src/cicd/ghcr-delete-package.yml", "1_cicd/src/cicd/ghcr-visibility-audit.yml",
+          "1_cicd/src/cicd/ghcr-secret-scan.yml"}
 DELETE_ALLOW = {"cloud-notes-web", "cloud-notes-sync"}
 PUSH = re.compile(
     r"(\boras\s+(push|login)\b|\bdocker\s+(push|login)\b|\bbuildx\s+build\b.*--push\b|"
