@@ -100,6 +100,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `launcher_theme_prefs` | prefs | config | yes | Selected launcher theme (cloud / cloud_minimalist_black). |
 | `mail_auth_prefs` | encrypted | secret | yes | Cloud Mail's per-account gateway credentials (Authelia in front of the JMAP server): one encrypted JSON blob per account, key auth:<email>, holding the auth mode (none / bearer / authelia), the pasted bearer token and the captured authelia_session cookie. Credentials: shown masked, never logged, replayed only to the account's own domain. |
 | `mail_jmap_prefs` | encrypted | config (keys: password→secret) | yes | JMAP server and email are account links; password is a credential. |
+| `markets_last_good` | prefs | device | no | Last good Yahoo price per symbol (price\|asOf\|savedAt) for the Markets badge, so a killed process still shows the last rate; refetched on the next poll. |
 | `mattermost_prefs` | encrypted | config (keys: token→secret) | yes | Mattermost server_url/user_id are account links; token is a credential. |
 | `mattermost_prefs_fallback` | prefs | config (keys: token→secret) | yes | Plain-prefs fallback of mattermost_prefs. |
 | `mode_prefs` | prefs | config | yes | Admin/apps mode toggle of the shell. |
