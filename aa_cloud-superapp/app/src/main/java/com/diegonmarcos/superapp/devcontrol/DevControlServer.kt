@@ -1209,7 +1209,7 @@ object DevControlServer {
     private fun navGeometryJson(host: DevControlBridge.ActivityHost): String = runCatching {
         val act = host as? android.app.Activity
             ?: return """{"error":"host is not an Activity"}"""
-        val nav = act.findViewById<com.diegonmarcos.superapp.bottomnav.BottomNavIslandView>(R.id.bottom_nav_island)
+        val nav = (host as? NavIslandSource)?.navIsland()
             ?: return """{"error":"no bottom_nav_island in the foreground activity"}"""
         org.json.JSONObject().apply {
             put("density", act.resources.displayMetrics.density.toDouble())
@@ -1270,4 +1270,9 @@ object DevControlServer {
         sb.append(']').toString()
         }.getOrElse { """{"error":"${jsonEscape(it.toString())}"}""" }
     }
+}
+
+/** The foreground activity's bottom-nav island, for the debug API's geometry route (the activity owns it; the server must not look it up by id). */
+interface NavIslandSource {
+    fun navIsland(): com.diegonmarcos.superapp.bottomnav.BottomNavIslandView?
 }

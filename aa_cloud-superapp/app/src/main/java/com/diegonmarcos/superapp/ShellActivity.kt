@@ -103,6 +103,7 @@ open class ShellActivity : AppCompatActivity(),
     HomeDrawerFragment.NavigationListener,
     TileGridFragment.TileClickListener,
     com.diegonmarcos.superapp.devtools.DevControlBridge.ActivityHost,
+    com.diegonmarcos.superapp.devcontrol.NavIslandSource,
     MailHost,
     SearchOpener,
     com.diegonmarcos.superapp.apptabs.AppTabsHost,
@@ -2249,6 +2250,8 @@ open class ShellActivity : AppCompatActivity(),
     }.getOrDefault(emptyList())
 
     // ── DevControlBridge.ActivityHost ────────────────────────────────────
+
+    override fun navIsland() = if (::bottomNav.isInitialized) bottomNav else null
 
     /** Music-playing mini-island controller (lazy: allocated on first resume). */
     private val musicIsland by lazy { MusicIslandController(this, findViewById(R.id.music_playing_island)) }

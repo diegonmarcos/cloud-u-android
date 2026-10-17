@@ -468,7 +468,7 @@
       "baseline": {
         "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 2,
+        "view_ui_files": 1,
         "custom_views": 0
       }
     },
@@ -625,10 +625,11 @@
       "baseline": {
         "view_screens": 1,
         "layout_xml": 4,
-        "view_ui_files": 2,
+        "view_ui_files": 1,
         "custom_views": 0
       },
       "done": [
+        "DevControlServer no longer looks the bottom nav up by id: ShellActivity hands it over through devcontrol.NavIslandSource",
         "Shell top row in Compose (ui/ShellToolbar.kt: ShellToolbarRow hamburger+Back, OrbGlyph, ShellToolbarState; the MaterialToolbar/support ActionBar, options menus, ActionBarDrawerToggle and LauncherToolbarFx's tooltip hook + hamburger jitter are gone, the tic is a RESUMED-scoped coroutine; ShellToolbarComposeTest)",
         "Music mini-island in Compose (media/MusicIslandUi.kt MusicIsland + MusicIslandState; MusicIslandController keeps only the monitor/popup wiring; the island's FrameLayout/ImageView/TextView/wave left activity_main.xml; MusicIslandComposeTest)",
         "Overlay services in Compose (ui/OverlayCompose.kt hosts a ComposeView in a service window with its own lifecycle/saved-state owners; floatingnav/FloatingNavUi.kt NavBubble+NavBar; floatingnav/ScreensaverUi.kt ScreensaverScene+NeonBackdrop; NeonBackdropView deleted; OverlayComposeTest)",
