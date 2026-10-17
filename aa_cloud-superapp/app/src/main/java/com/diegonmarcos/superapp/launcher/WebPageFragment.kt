@@ -129,6 +129,12 @@ class WebPageFragment : KitComposeFragment() {
                 modifier = Modifier.fillMaxSize().testTag(TAG_WEB),
                 factory = { ctx ->
                     WebView(ctx).apply {
+                        // MATCH_PARENT, not the WRAP_CONTENT AndroidView hands its child: a WebView whose height is WRAP_CONTENT
+                        // forces a ZERO layout height in the renderer (so content can size the view). The page then sees
+                        // 100%/100vh/100dvh = 0 px; cloud-mobile's shell is height:100dvh;overflow:hidden, so Cloud ▸ WebApps
+                        // painted nothing at all (Android 16 emulator: innerHeight 362, <html> 0 px). WebPagesRenderTest guards it.
+                        layoutParams = android.view.ViewGroup.LayoutParams(
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
                         if (embed) settings.userAgentString = settings.userAgentString + UA_MARKER
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
