@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -252,9 +253,16 @@ fun PrismaticShimmer(modifier: Modifier = Modifier.fillMaxSize(), cornerRadiusDp
         val rectSize = Size(size.width - 2 * sw, size.height - 2 * sw)
         val centre = Offset(topLeft.x + rectSize.width / 2f, topLeft.y + rectSize.height / 2f)
         val r = if (cornerRadiusDp < 0f) rectSize.height / 2f else cornerRadiusDp * density
-        rotate(progress * 360f, centre) {
-            drawRoundRect(Brush.sweepGradient(RAINBOW, centre), topLeft, rectSize, CornerRadius(r), style = Stroke(sw))
+        // Rotate the GRADIENT, never the canvas: the ring stays exactly where the pill is and only its colours chase round
+        // it, as the View's SweepGradient + setLocalMatrix did. The first port rotated the whole canvas, which spun the pill's
+        // outline itself - a coloured bar sweeping through (and clipped at the edges of) the island.
+        val sweep = object : androidx.compose.ui.graphics.ShaderBrush() {
+            override fun createShader(size: Size): android.graphics.Shader =
+                android.graphics.SweepGradient(centre.x, centre.y, RAINBOW.map { it.toArgb() }.toIntArray(), null).apply {
+                    setLocalMatrix(android.graphics.Matrix().apply { postRotate(progress * 360f, centre.x, centre.y) })
+                }
         }
+        drawRoundRect(sweep, topLeft, rectSize, CornerRadius(r), style = Stroke(sw))
     }
 }
 
