@@ -89,6 +89,15 @@
     "default_on": true,
     "wifi_lock": true
   },
+  "runtime": {
+    "_doc": "Option 37.1 -- this terminal exposes its own disk through my-webserver (cloud-u-linux da_my-webserver, the per-arch Node SEA baked into the root). THE ONE declaration of its port: rendered by ab_cloud-terminal-store/render-local-webserver.py into the login (rootfs/enter.sh, via cloud-store/local-webserver.sh staged by rootfs/build-rootfs.sh), which starts it once per boot -- only when nothing already LISTENs on the port. bind is a statement, not a knob: my-webserver hard-binds 127.0.0.1 and refuses non-loopback peers, and the renderer refuses any other value. root is the terminal's own $HOME (bound as /root inside the rootfs). Writes stay token-gated and OFF: the login unsets HTTPD_WRITE, HTTPD_WRITE_ROOTS and HTTPD_WRITE_TOKEN_FILE. Every app's localhost ports live under runtime; ac_cloud-c3-webserver/test/test-localhost-ports.sh fails when two apps declare the same one.",
+    "webserver": {
+      "port": 8000,
+      "bind": "127.0.0.1",
+      "root": "$HOME",
+      "binary": "my-webserver"
+    }
+  },
   "shizuku_client": {
     "_doc": "ONE declarative block that makes this terminal a Shizuku client and puts `rish` inside its proot rootfs. Read at BUILD time by libs/shizuku-adb-debug-tools/build.gradle (consumer-wins-with-fallback, base64 -> BuildConfig.SHIZUKU_CLIENT_B64, the same way that lib bakes shizuku_diagnostics) and at ENTER time by rootfs/enter.sh, which renders the binds and the rish env from the SAME data. Adding a third terminal = one copy of this block in its build.json; no Kotlin edit, no hardcoded package name or path anywhere else (Pillar: DATA-DRIVEN). The runtime shell ladder (ShellChannels) and rish both try `providers` IN THIS ORDER, first that answers wins.",
     "providers": [

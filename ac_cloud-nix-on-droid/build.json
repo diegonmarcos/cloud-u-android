@@ -245,7 +245,10 @@
             "hermes": [
               "hermes"
             ],
-            "noexec-shebang": []
+            "noexec-shebang": [],
+            "my-webserver": [
+              "my-webserver"
+            ]
           },
           "extras": {
             "_doc": "#771 -- profile entries no nixpkgs attr can supply, built by `expr` (a function of the pinned nixpkgs for the target system) and installed into the SAME profile as `attrs`, one `nix profile install --expr` per entry of `attrs` here. goose and hermes are the termux terminal's own (ac_cloud-termux/rootfs/rootfs.json is their one declaration: version, url, arch names); at this nixpkgs pin goose-cli is another release and hermes-agent is not packaged. `pins` is the one thing that file does not carry and a fixed-output fetch needs: the content hash, keyed by the version it was taken for, so a rootfs.json bump without a re-pin fails evaluation by name. goose's per-arch hashes are GitHub's own release-asset digests (re-measured by download); hermes' is PyPI's sha256 of the py3-none-any wheel. noexec-shebang is ab_cloud-terminal-store/noexec-shebang.c, preloaded through etc/ld-nix.so.preload from `preload` under profile_link; their names are provided[] like any attr's, and B2 counts them.",
@@ -253,7 +256,8 @@
             "attrs": [
               "goose",
               "hermes",
-              "noexec-shebang"
+              "noexec-shebang",
+              "my-webserver"
             ],
             "preload": "lib/libcloud-noexec-shebang.so",
             "pins": {
@@ -267,6 +271,14 @@
               "hermes-agent": {
                 "version": "0.19.0",
                 "hash": "sha256-vQusASruOKYIlHgfRZfcKe577bNEhUAkmSHxDTvvMn8="
+              },
+              "my-webserver": {
+                "_doc": "Option 37.1 -- cloud-u-linux da_my-webserver/nix/hashes.json for the immutable per-commit tag my-webserver-<version> (ac_cloud-termux/rootfs/rootfs.json tarballs.my-webserver is the version/url declaration). These are GitHub's own release-asset sha256 digests for that tag, base64'd.",
+                "version": "f795a4e4",
+                "hash": {
+                  "amd64": "sha256-tfs8lbKGDNNAkqwt3bALEvMcj8mcsN3lMCK4aqoejVY=",
+                  "arm64": "sha256-Ont61TwUIGP4VrBGOAaLZ12E3Pno5XB31eradYNNmF8="
+                }
               }
             }
           },
@@ -285,7 +297,8 @@
             "awk",
             "less",
             "goose",
-            "hermes"
+            "hermes",
+            "my-webserver"
           ]
         }
       }
@@ -299,6 +312,15 @@
     "_doc": "#787 Termux's 'Acquire wakelock', ON by default: TermuxService takes a partial wake lock (plus the Wi-Fi lock when wifi_lock) whenever a session is open and drops it when the last one ends (com.termux.cloud.CloudWakeLock decides; test/test-wake-lock.sh runs it). The notification action still turns it off, and that choice persists. Read by app/build.gradle into BuildConfig; the build fails if either key is missing. State: GET /api/terminal/wakelock (also /api/terminal).",
     "default_on": true,
     "wifi_lock": true
+  },
+  "runtime": {
+    "_doc": "Option 37.1 -- this terminal exposes its own disk through my-webserver (cloud-u-linux da_my-webserver, the per-arch Node SEA baked into the root). THE ONE declaration of its port: rendered by ab_cloud-terminal-store/render-local-webserver.py into the login (bin/login, inlined by app/src/main/cpp/bake_default_packages.py), which starts it once per boot -- only when nothing already LISTENs on the port. bind is a statement, not a knob: my-webserver hard-binds 127.0.0.1 and refuses non-loopback peers, and the renderer refuses any other value. root is the terminal's own $HOME (the same path inside the proot). Writes stay token-gated and OFF: the login unsets HTTPD_WRITE, HTTPD_WRITE_ROOTS and HTTPD_WRITE_TOKEN_FILE. Every app's localhost ports live under runtime; ac_cloud-c3-webserver/test/test-localhost-ports.sh fails when two apps declare the same one.",
+    "webserver": {
+      "port": 8001,
+      "bind": "127.0.0.1",
+      "root": "$HOME",
+      "binary": "my-webserver"
+    }
   },
   "shizuku_client": {
     "_doc": "ONE declarative block that makes this terminal a Shizuku client and puts `rish` inside its proot rootfs. Read at BUILD time by libs/shizuku-adb-debug-tools/build.gradle (consumer-wins-with-fallback, base64 -> BuildConfig.SHIZUKU_CLIENT_B64, the same way that lib bakes shizuku_diagnostics) and at ENTER time by rootfs/enter.sh, which renders the binds and the rish env from the SAME data. Adding a third terminal = one copy of this block in its build.json; no Kotlin edit, no hardcoded package name or path anywhere else (Pillar: DATA-DRIVEN). The runtime shell ladder (ShellChannels) and rish both try `providers` IN THIS ORDER, first that answers wins.",

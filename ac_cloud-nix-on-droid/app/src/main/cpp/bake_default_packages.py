@@ -716,6 +716,67 @@ def patch_bin_login_rish(bin_login: str, app_id: str) -> str:
     return bin_login.replace(etc_bind, etc_bind + rish, 1)
 
 
+def webserver_build_json() -> Path:
+    """THIS app's build.json, whose runtime.webserver declares the port (the same file
+    shizuku_client_binds reads)."""
+    return Path(__file__).resolve().parents[4] / "build.json"
+
+
+def render_local_webserver(build_json: Path) -> str:
+    """ab_cloud-terminal-store/render-local-webserver.py's render(), imported by path."""
+    path = STORE_SRC / "render-local-webserver.py"
+    if not path.is_file():
+        raise ValueError(f"the shared local-webserver renderer is missing: {path}")
+    spec = importlib.util.spec_from_file_location("render_local_webserver", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.render(str(build_json))
+
+
+# startup-step: local_webserver
+def patch_bin_login_webserver(bin_login: str, app_id: str, profile_link: str, rendered: str) -> str:
+    """Option 37.1 -- this terminal serves its own $HOME through my-webserver on 127.0.0.1, port
+    from build.json::runtime.webserver. `rendered` is ab_cloud-terminal-store/local-webserver.sh
+    with that port (render_local_webserver: the same text the termux terminal stages beside
+    enter.sh); it is inlined before bin/login's proot exec, followed by ONE call that starts the
+    server only when nothing LISTENs on the port yet.
+
+    The launcher is DERIVED from bin/login's own proot exec, never restated: the same proot with
+    the same binds (so the dns and rish binds patched in before this are there too), minus `exec`
+    and --kill-on-exit (the server outlives the session that started it), with login-inner swapped
+    for the binary's guest path under the baked profile. A bin/login whose exec has another
+    shape is refused rather than guessed at. Call this AFTER every bind patch."""
+    exec_line = f"exec /data/data/{app_id}/files/usr/bin/proot-static \\"
+    lines = bin_login.split("\n")
+    starts = [i for i, line in enumerate(lines) if line.strip() == exec_line]
+    if len(starts) != 1:
+        raise ValueError(f"expected exactly one proot-static exec line in bin/login:\n  {exec_line}")
+    end = starts[0]
+    while lines[end].rstrip().endswith("\\"):
+        end += 1
+        if end >= len(lines):
+            raise ValueError("bin/login's proot exec never ends (a trailing \\ on its last line)")
+    block = lines[starts[0]:end + 1]
+    if "login-inner" not in block[-1]:
+        raise ValueError(f"bin/login's proot exec does not end in login-inner:\n  {block[-1]}")
+    launcher = []
+    for line in block[:-1]:
+        line = re.sub(r"\s--kill-on-exit\b", "", line)
+        if line.strip() != "\\":
+            launcher.append(line)
+    launcher[0] = launcher[0].replace("exec ", 'cloud_webserver_autostart "$HOME" ', 1)
+    m = re.search(r"^CLOUD_WEBSERVER_BIN=([A-Za-z0-9._-]+)$", rendered, re.M)
+    if not m:
+        raise ValueError("the rendered local-webserver.sh sets no CLOUD_WEBSERVER_BIN")
+    launcher.append(f"  /{profile_link}/bin/{m.group(1)}")
+    call = ("# startup-step: local_webserver -- my-webserver on its declared loopback port, once\n"
+            + rendered.rstrip("\n") + "\n"
+            + "\n".join(launcher) + "\n"
+            + 'cloud_trace "local webserver: port $CLOUD_WEBSERVER_PORT checked"\n\n')
+    out = lines[:starts[0]] + call.split("\n")[:-1] + lines[starts[0]:]
+    return "\n".join(out)
+
+
 # claude-code carries an unfree license in nixpkgs (Anthropic's own terms,
 # not a nixpkgs restriction) -- nix's eval refuses it unless this is set, the
 # same override `nixos-rebuild`/`nix-env` users are told to add for it.
@@ -1021,6 +1082,15 @@ def main() -> int:
             #    inside proot reaches adb-shell privilege through the fleet provider.
             try:
                 bin_login = patch_bin_login_rish(bin_login, app_id)
+            except ValueError as e:
+                print(f"FAIL: {e}", file=sys.stderr)
+                return 1
+
+            # ── option 37.1: my-webserver on build.json::runtime.webserver's port, once per
+            #    boot. LAST of the bin/login patches: its launcher copies the exec's binds.
+            try:
+                bin_login = patch_bin_login_webserver(
+                    bin_login, app_id, profile_link, render_local_webserver(webserver_build_json()))
             except ValueError as e:
                 print(f"FAIL: {e}", file=sys.stderr)
                 return 1

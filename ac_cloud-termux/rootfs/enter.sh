@@ -183,6 +183,29 @@ else
     echo "⚠ cloud-drive shared store not mounted: storage access is not granted. Allow it on the Cloud Terminal prompt, then open a new session." >&2
 fi
 
+# startup-step: local_webserver
+# local_webserver begin
+# Option 37.1 -- this terminal serves its own disk: my-webserver on 127.0.0.1, port from
+# build.json::runtime.webserver, root = this terminal's $HOME (bound as /root). The logic is
+# ab_cloud-terminal-store/local-webserver.sh, rendered with the port by build-rootfs.sh into
+# cloud-store/ beside this file; it starts the server only when nothing LISTENs on the port yet,
+# so every later session is a no-op. The binary is glibc, so it runs in a proot of its own over
+# the same root and binds as the session (no --kill-on-exit: it outlives the session that
+# started it). Guarded on presence like cloud-store: an older tree without the binary, or a
+# staging without the snippet, logs in exactly as before.
+if [ -f "$HERE/cloud-store/local-webserver.sh" ]; then
+    . "$HERE/cloud-store/local-webserver.sh"
+    if [ -x "$ROOTFS/usr/local/bin/$CLOUD_WEBSERVER_BIN" ]; then
+        # shellcheck disable=SC2086 # $binds is a list of flags
+        cloud_webserver_autostart /root "$HERE/proot" --link2symlink --sysvipc -0 -r "$ROOTFS" \
+            -b /dev -b /proc -b /sys -b /proc/self/fd:/dev/fd -b "$HOME:/root" $binds -w /root \
+            /usr/bin/env -i HOME=/root USER=root LOGNAME=root LANG=C.UTF-8 TMPDIR=/tmp \
+                PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            "/usr/local/bin/$CLOUD_WEBSERVER_BIN"
+    fi
+fi
+# local_webserver end
+
 # $HOME is bound as /root, so credentials, git config and work survive a
 # rootfs update (which replaces the tree above) and stay visible to Termux.
 #

@@ -128,4 +128,44 @@ in
       [ -z "$newer" ] || { echo "the shim needs $newer, newer than the bootstrap's glibc 2.37"; exit 1; }
     '';
   };
+
+  # Option 37.1 -- my-webserver, the terminal's own-disk server (build.json::runtime.webserver,
+  # started by bin/login). The same immutable release asset the termux rootfs installs
+  # (rootfs.json tarballs.my-webserver: version, url, arch names), given nix's loader exactly the
+  # way cloud-u-linux's own flake does it (da__shared/lib/prebuilt.nix, patchelf = true): set the
+  # interpreter and rpath, and NEVER strip or re-patch -- the Node SEA carries its app as an
+  # injected blob that a strip would destroy. No version check: running it starts a server.
+  my-webserver =
+    let
+      ws = rootfs.tarballs."my-webserver";
+      wsFill = s: builtins.replaceStrings [ "{version}" "{arch}" ] [ ws.version ws.arch_names.${arch} ] s;
+      libs = lib.makeLibraryPath [ pkgs.stdenv.cc.libc pkgs.gcc-unwrapped.lib pkgs.libgcc ];
+    in
+    pkgs.stdenv.mkDerivation {
+      pname = "my-webserver";
+      inherit (ws) version;
+      src = pkgs.fetchurl {
+        url = wsFill ws.url;
+        hash = (pinned "my-webserver" ws.version).hash.${arch};
+      };
+      dontUnpack = true;
+      dontBuild = true;
+      dontStrip = true;
+      dontPatchELF = true;
+      nativeBuildInputs = [ pkgs.patchelf ];
+      installPhase = ''
+        runHook preInstall
+        install -Dm755 $src $out/bin/my-webserver
+        patchelf \
+          --set-interpreter "$(cat "$NIX_BINTOOLS/nix-support/dynamic-linker")" \
+          --set-rpath "${libs}" \
+          $out/bin/my-webserver
+        runHook postInstall
+      '';
+      doInstallCheck = true;
+      installCheckPhase = ''
+        [ "$(patchelf --print-interpreter $out/bin/my-webserver)" = "$(cat "$NIX_BINTOOLS/nix-support/dynamic-linker")" ]
+      '';
+      meta.mainProgram = "my-webserver";
+    };
 }

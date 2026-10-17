@@ -80,6 +80,15 @@
       "_doc": "#737 -- sops for the shared toolset; not packaged in bookworm. The release asset IS the binary (a static Go build).",
       "version": "3.13.3",
       "url": "https://github.com/getsops/sops/releases/download/v{version}/sops-v{version}.linux.{arch}"
+    },
+    "my-webserver": {
+      "_doc": "Option 37.1 -- the terminal serves its own $HOME on 127.0.0.1 (build.json::runtime.webserver, started by enter.sh). cloud-u-linux da_my-webserver's per-arch Node SEA: the release asset IS the binary, glibc-linked, which is why it lives in this glibc root and never on the Android side. {version} is the publishing commit of the IMMUTABLE tag my-webserver-<sha> (da_my-webserver/nix/hashes.json::tag), never a rolling tag. ac_cloud-nix-on-droid bakes the same asset from this entry (rootfs-extras.nix) with the hashes pinned in its build.json.",
+      "version": "f795a4e4",
+      "url": "https://github.com/diegonmarcos/cloud-u-linux/releases/download/my-webserver-{version}/my-webserver-{arch}",
+      "arch_names": {
+        "amd64": "x86_64",
+        "arm64": "aarch64"
+      }
     }
   },
   "npm_globals": {
@@ -105,7 +114,8 @@
     "goose",
     "hermes",
     "agy",
-    "python3"
+    "python3",
+    "my-webserver"
   ],
   "_doc_binaries": "This terminal's tools BEYOND ab_cloud-terminal-store/store.json::toolset (#737: fish, zsh, node, claude, gh, ... -- the set both terminals ship) and beyond the fleet tool belt's `binaries`. resolve.py merges all three into the roster install-in-rootfs.sh installs and command -v's and verify-rootfs.sh proves present, loadable (PT_INTERP inside the root) and executable under the shipped proot. A name repeated from either other list is refused.",
   "default_shell": "/usr/bin/fish",
