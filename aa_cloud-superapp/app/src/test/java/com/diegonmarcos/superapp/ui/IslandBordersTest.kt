@@ -7,6 +7,7 @@ import android.view.View
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.media.MusicIsland
 import com.diegonmarcos.superapp.media.MusicIslandState
@@ -66,14 +67,19 @@ class IslandBordersTest : KitPageHarness() {
     @Test fun `B2 the music island's border is static`() {
         val state = MusicIslandState().also { it.playing = NowPlayingLine("com.example.none", "Artist — Song") }
         val (a, b) = twice { Box(Modifier.size(90.dp, 16.dp)) { MusicIsland(state, onTap = {}) } }
-        val w = minOf(a.width, b.width); val h = minOf(a.height, b.height)
-        // The outline band: 2 dp at xxhdpi would be 6 px; use a generous 3 px ring all round, where only the border lives.
+        // Where the pill actually is in the window, then a 3 px ring just inside its outline: only the border lives there.
+        val r = compose.onNodeWithTag("musicisland").fetchSemanticsNode().boundsInRoot
+        val x0 = r.left.toInt(); val y0 = r.top.toInt(); val x1 = r.right.toInt(); val y1 = r.bottom.toInt()
         val band = 3
-        for (y in 0 until h) for (x in 0 until w) {
-            val edge = x < band || y < band || x >= w - band || y >= h - band
-            if (edge) assertEquals("border pixel ($x,$y) changed between two moments: the music island has an animated border",
+        var checked = 0
+        for (y in y0 until y1) for (x in x0 until x1) {
+            val edge = x < x0 + band || y < y0 + band || x >= x1 - band || y >= y1 - band
+            if (!edge) continue
+            checked++
+            assertEquals("border pixel ($x,$y) changed between two moments: the music island has an animated border",
                 a.getPixel(x, y), b.getPixel(x, y))
         }
+        assertTrue("no outline pixels were compared", checked > 20)
     }
 
     @Test fun `B3 the music island does not host the neon ring`() {
