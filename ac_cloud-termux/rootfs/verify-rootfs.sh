@@ -140,7 +140,8 @@ echo "── #612/#730 + cloud-shared-store: no shared storage here ──"
 # directory in the app's home, and the one-release compat link points at it.
 # Pre-create both old entries empty, the state an earlier enter.sh left on
 # upgraded phones, so this also proves they are replaced.
-rm -rf "$W/home/cloud-shared-store"
+rm -rf "$W/home/cloud-shared-store" "$W/home/emulated"
+rm -f "$W/home/cloud-drive-shared-store"  # compat_link: an earlier login's link would dangle
 mkdir -p "$W/home/emulated" "$W/home/cloud-drive-shared-store"  # compat_link: the old empty mount point
 notice="$(enter -c true 2>&1 >/dev/null || true)"
 if [ -e "$W/home/emulated" ]; then
