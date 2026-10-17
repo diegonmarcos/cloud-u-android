@@ -2543,7 +2543,7 @@
             "label": "Linktree",
             "icon": "ic_p_sol_tools",
             "mode": "apps",
-            "_doc": "Renders the live site in a WebView (WebPageFragment) instead of a Kotlin port of it — one maintained list, not two copies to keep in step. The PAGE is Lnktree; the `url` host keeps its i because linktree.diegonmarcos.com is what actually serves the site (lnktree.diegonmarcos.com answers 404). `mode` still selects Apps mode on open — declared, not inferred from the id.",
+            "_doc": "Renders the live site in a WebView (WebPageFragment) instead of a Kotlin port of it — one maintained list, not two copies to keep in step. The PAGE is Linktree; the `url` host keeps its i because linktree.diegonmarcos.com is what actually serves the site (lnktree.diegonmarcos.com answers 404). `mode` still selects Apps mode on open — declared, not inferred from the id.",
             "url": "https://linktree.diegonmarcos.com"
           },
           {
@@ -5326,7 +5326,7 @@
         "id": "lnktree",
         "section": "cloud",
         "page": "lnktree",
-        "label": "Lnktree"
+        "label": "Linktree"
       },
       {
         "id": "c3",
@@ -7322,29 +7322,29 @@
         "tiles": []
       },
       {
-        "_doc": "Lnktree · Suite slide — all links from data/linktree.json slide id=suite rendered as URL-target tiles in a horizontal-scroll strip. tiles_from_linktree is handled by Sections.homeGroups().",
-        "title": "Lnktree · Suite",
+        "_doc": "Linktree · Suite slide — all links from data/linktree.json slide id=suite rendered as URL-target tiles in a horizontal-scroll strip. tiles_from_linktree is handled by Sections.homeGroups().",
+        "title": "Linktree · Suite",
         "scroll": "horizontal",
         "tiles_from_linktree": "suite",
         "tiles": []
       },
       {
-        "_doc": "Lnktree · Cloud slide — all links from data/linktree.json slide id=cloud.",
-        "title": "Lnktree · Cloud",
+        "_doc": "Linktree · Cloud slide — all links from data/linktree.json slide id=cloud.",
+        "title": "Linktree · Cloud",
         "scroll": "horizontal",
         "tiles_from_linktree": "cloud",
         "tiles": []
       },
       {
-        "_doc": "Lnktree · Lab Tools slide — all links from data/linktree.json slide id=lab-tools.",
-        "title": "Lnktree · Lab Tools",
+        "_doc": "Linktree · Lab Tools slide — all links from data/linktree.json slide id=lab-tools.",
+        "title": "Linktree · Lab Tools",
         "scroll": "horizontal",
         "tiles_from_linktree": "lab-tools",
         "tiles": []
       },
       {
-        "_doc": "Lnktree · Circus slide — all links from data/linktree.json slide id=circus.",
-        "title": "Lnktree · Circus",
+        "_doc": "Linktree · Circus slide — all links from data/linktree.json slide id=circus.",
+        "title": "Linktree · Circus",
         "scroll": "horizontal",
         "tiles_from_linktree": "circus",
         "tiles": []
