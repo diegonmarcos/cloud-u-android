@@ -133,7 +133,9 @@ class WebPagesRenderTest {
             report.appendLine("bodyText=${js(w, "(document.body ? document.body.innerText.slice(0,400) : '')")}")
             report.appendLine("bodyStyle=${js(w, "(()=>{const s=getComputedStyle(document.body);return [s.color,s.backgroundColor,s.display,s.visibility,s.opacity,document.documentElement.scrollHeight,innerWidth+'x'+innerHeight].join(' | ')})()")}")
             report.appendLine("prefersDark=${js(w, "String(matchMedia('(prefers-color-scheme: dark)').matches)")} htmlClass=${js(w, "document.documentElement.className")}")
-            report.appendLine("darkening=${if (android.os.Build.VERSION.SDK_INT >= 33) w.settings.isAlgorithmicDarkeningAllowed.toString() else "pre-33"} sdk=${android.os.Build.VERSION.SDK_INT}")
+            var dark = ""
+            inst.runOnMainSync { dark = if (android.os.Build.VERSION.SDK_INT >= 33) w.settings.isAlgorithmicDarkeningAllowed.toString() else "pre-33" }
+            report.appendLine("darkening=$dark sdk=${android.os.Build.VERSION.SDK_INT}")
             report.appendLine("sw=${js(w, "String(!!navigator.serviceWorker && !!navigator.serviceWorker.controller)")}")
             val shot = ua.takeScreenshot()
             if (shot != null) {
