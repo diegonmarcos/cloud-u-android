@@ -224,7 +224,9 @@ def plan(cfg):
                     stem = f.split(".")[0]
                     if rel in mine:
                         continue
-                    if d.startswith("mipmap") or (d.startswith("drawable") and FOREIGN_ART.match(stem)):
+                    raster = f.endswith((".png", ".webp", ".jpg"))
+                    if (d.startswith("mipmap") and (raster or FOREIGN_ART.match(stem))) or \
+                            (d.startswith("drawable") and FOREIGN_ART.match(stem)):
                         delete.append(rel)
     return write, delete, errors
 
