@@ -76,10 +76,11 @@ check('ETC_ZSHENV_ENTRY = "etc/static/zshenv"' in bake_src and "name == ETC_ZSHE
 
 # ── 2. the flakes render ──────────────────────────────────────────────────
 decl = bake.load_flakes_decl()
+ex = dp["extras"]
 files = bake.render_flakes(decl, app_id, dp["nixpkgs_pin"], nod_rev, dp["attrs"],
-                           dp["login_shell_attr"], "aarch64-linux")
+                           dp["login_shell_attr"], "aarch64-linux", ex["attrs"], ex)
 inst = decl["install_dir"]
-for want in ["seed.sh", "system/flake.nix", "system/nix-on-droid.nix", "system/android-host-tools.nix",
+for want in ["system/rootfs-extras.nix", "system/extras.json", "system/rootfs.json", "system/noexec-shebang.c", "seed.sh", "system/flake.nix", "system/nix-on-droid.nix", "system/android-host-tools.nix",
              "system/android-host-exec", "system/README.md", "hm/flake.nix", "hm/home.nix", "hm/README.md"]:
     check(f"{inst}/{want}" in files, f"rendered {inst}/{want}")
 text = {k: v[0].decode() for k, v in files.items()}
@@ -97,6 +98,25 @@ check("homeModules.default" in hmf and 'home-manager.follows = "nix-on-droid/hom
 mod = text[f"{inst}/system/nix-on-droid.nix"]
 check(all(f'pkgs."{a}"' in mod for a in dp["attrs"]) and f'pkgs.{dp["login_shell_attr"]}' in mod
       and "android-host-tools.nix" in mod, "the system module installs every baked attr, the login shell and android-host-tools")
+# The switch must reproduce the bake: the flake's package set is a superset of
+# default_packages.attrs + extras.attrs (parsed from the rendered module, not trusted).
+pk = mod.split("environment.packages = [", 1)[1].split("];", 1)[0]
+flake_set = set(re.findall(r'pkgs\."([^"]+)"', pk)) | {"extras." + a for a in re.findall(r'extras\."([^"]+)"', pk)}
+baked_set = set(dp["attrs"]) | {"extras." + a for a in ex["attrs"]}
+check(baked_set <= flake_set, f"the flake's packages are a superset of the baked set (missing: {sorted(baked_set - flake_set)})")
+mut_pk = pk.replace('extras."goose"', "")
+mut_set = set(re.findall(r'pkgs\."([^"]+)"', mut_pk)) | {"extras." + a for a in re.findall(r'extras\."([^"]+)"', mut_pk)}
+check(not baked_set <= mut_set, "mutation proved: a module without goose fails the superset check")
+xn = text[f"{inst}/system/rootfs-extras.nix"]
+check(all(f"{inst}/system/{n}" in files for n in ("rootfs-extras.nix", "extras.json", "rootfs.json", "noexec-shebang.c"))
+      and "import ./rootfs-extras.nix { inherit pkgs; }" in mod,
+      "rootfs-extras.nix ships beside its inputs and the module imports it")
+check(not any("../" in l for l in xn.splitlines() if not l.lstrip().startswith("#"))
+      and "./rootfs.json" in xn and "./extras.json" in xn and "./noexec-shebang.c" in xn,
+      "the copied rootfs-extras.nix reads only files beside it")
+xd = json.loads(text[f"{inst}/system/extras.json"])
+check(xd == ex and all(a in re.findall(r"^  ([a-z][a-z0-9-]*) =", xn, re.M) for a in ex["attrs"]),
+      "extras.json carries the bake's pins and rootfs-extras.nix defines every extras attr")
 aht = text[f"{inst}/system/android-host-tools.nix"]
 check(all(t in aht.split("for t in", 1)[1].split(";", 1)[0].split() for t in decl["android_host"]["tools"]),
       "android-host-tools links every declared tool")

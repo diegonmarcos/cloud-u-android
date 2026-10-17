@@ -1,12 +1,16 @@
 { pkgs, ... }:
 
+let
+  # The app's rootfs-extras.nix (goose, hermes, the noexec shebang shim, my-webserver),
+  # copied here beside the inputs it reads (rootfs.json, extras.json, noexec-shebang.c),
+  # with the same pins the bake uses.
+  extras = import ./rootfs-extras.nix { inherit pkgs; };
+in
 {
-  # The packages the app bakes by default (build.json default_packages.attrs).
-  # goose, hermes and the noexec shebang shim are built by the app's
-  # rootfs-extras.nix, which is not part of this flake; add them here if you
-  # package them yourself.
+  # Exactly what the app bakes: build.json default_packages.attrs, then extras.attrs.
   environment.packages = [
 @PACKAGES@
+@EXTRAS@
     (pkgs.callPackage ./android-host-tools.nix { })
   ];
 

@@ -175,8 +175,41 @@ def flake_home(app_id: str) -> str:
     return f"/data/data/{app_id}/files/home"
 
 
+EXTRAS_NIX = Path(__file__).resolve().parent / "rootfs-extras.nix"
+ROOTFS_JSON = Path(__file__).resolve().parents[5] / "ac_cloud-termux" / "rootfs" / "rootfs.json"
+# rootfs-extras.nix reaches its three inputs by repo-relative paths; in ~/flakes/system they
+# sit beside it. Each rewrite must match exactly once, or the copy would read a path the
+# phone does not have.
+EXTRAS_REWRITES = (
+    ("../../../../../ac_cloud-termux/rootfs/rootfs.json", "./rootfs.json"),
+    ("(builtins.fromJSON (builtins.readFile ../../../../build.json))"
+     ".forks.nixdroid.bootstrap.default_packages.extras",
+     "builtins.fromJSON (builtins.readFile ./extras.json)"),
+    ("../../../../../ab_cloud-terminal-store/noexec-shebang.c", "./noexec-shebang.c"),
+)
+
+
+def extras_files(extras_decl: dict) -> dict:
+    """name -> bytes: a self-contained rootfs-extras.nix for ~/flakes/system and its inputs,
+    so `nix-on-droid switch` builds goose, hermes, the noexec shim (and every other
+    default_packages.extras attr) from the SAME expression and pins the bake uses."""
+    text = EXTRAS_NIX.read_text()
+    for old, new in EXTRAS_REWRITES:
+        if text.count(old) != 1:
+            raise ValueError(f"rootfs-extras.nix: expected exactly one {old!r} to rewrite for ~/flakes/system")
+        text = text.replace(old, new)
+    if any("../" in l for l in text.splitlines() if not l.lstrip().startswith("#")):
+        raise ValueError("rootfs-extras.nix still reads a repo-relative ../ path after the rewrite")
+    return {
+        "rootfs-extras.nix": text.encode(),
+        "extras.json": (json.dumps(extras_decl, indent=2, sort_keys=True) + "\n").encode(),
+        "rootfs.json": ROOTFS_JSON.read_bytes(),
+        "noexec-shebang.c": (STORE_SRC / "noexec-shebang.c").read_bytes(),
+    }
+
+
 def render_flakes(decl: dict, app_id: str, pin: str, nod_rev: str, attrs, login_shell: str,
-                  nix_system: str, src: Path = FLAKES_SRC) -> dict:
+                  nix_system: str, extras_attrs, extras_decl: dict, src: Path = FLAKES_SRC) -> dict:
     """zip path -> (bytes, executable) for the seed script and the ~/flakes templates.
 
     Pure apart from reading src, so the tester renders the REAL templates. Raises on a
@@ -195,8 +228,11 @@ def render_flakes(decl: dict, app_id: str, pin: str, nod_rev: str, attrs, login_
         "LOGIN_SHELL": login_shell,
         "PACKAGES": "\n".join(f'    pkgs."{a}"' for a in attrs),
         "HOST_TOOLS": " ".join(tools),
+        "EXTRAS": "\n".join(f'    extras."{a}"' for a in extras_attrs),
     }
     out = {f"{install}/seed.sh": ((src / "seed.sh").read_bytes(), True)}
+    for name, data in extras_files(extras_decl).items():
+        out[f"{install}/system/{name}"] = (data, False)
     for dest, tmpl in decl["templates"].items():
         text = (src / tmpl).read_text()
         if tmpl.endswith(".in"):
@@ -1102,8 +1138,10 @@ def main() -> int:
             try:
                 flakes_decl = load_flakes_decl()
                 nod_rev = json.loads(BOOTSTRAP_SRC_JSON.read_text())["upstream_rev"]
+                extras_decl = json.loads((Path(__file__).resolve().parents[4] / "build.json").read_text()
+                                         )["forks"]["nixdroid"]["bootstrap"]["default_packages"]["extras"]
                 flake_files = render_flakes(flakes_decl, app_id, pin, nod_rev, attrs,
-                                            login_shell, nix_system)
+                                            login_shell, nix_system, extras, extras_decl)
                 flake_files.update(android_host_files(flakes_decl))
                 login_inner = patch_login_inner(
                     login_inner, app_id, fallback_script, profile_link, login_shell, store_dir,
