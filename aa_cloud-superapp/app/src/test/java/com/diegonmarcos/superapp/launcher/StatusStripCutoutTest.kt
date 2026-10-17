@@ -5,7 +5,7 @@ import android.graphics.Rect
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.onAllNodes
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.core.graphics.Insets
 import androidx.core.view.DisplayCutoutCompat
@@ -70,7 +70,7 @@ class StatusStripCutoutTest : KitPageHarness() {
     @Test fun `C2 no first-row child leaves the screen`() {
         showStrip()
         val tagged = compose.onAllNodes(SemanticsMatcher("a strip child") { n ->
-            val t = n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.TestTag)
+            val t = n.config.getOrNull(SemanticsProperties.TestTag)
             t != null && t.startsWith("strip:") && t != "strip:reserve" && t != "strip:row"
         }, useUnmergedTree = true).fetchSemanticsNodes()
         assertTrue("no strip children found", tagged.size >= 10)
