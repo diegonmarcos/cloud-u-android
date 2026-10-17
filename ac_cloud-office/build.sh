@@ -123,6 +123,17 @@ step_materialize() {
         ln -sfn "$SCRIPT_DIR/debug-api.json" "$ONLINE_DIR/$(dirname "$target")/debug-api.json"
         log "materialize: linked debug-api.json → $(dirname "$target")/debug-api.json"
     fi
+
+    # The fleet launcher icon. The Android res dir only exists in this fetched
+    # tree, so the ONE generator overlays its files here (build.json::
+    # launcher_icon.overlay) and removes upstream's hand-made launcher art.
+    overlay="$(_json '.launcher_icon.overlay')"
+    if [ -n "$overlay" ]; then
+        python3 "$SCRIPT_DIR/../1_cicd/src/scripts/cloud-android-launcher-icons.py" \
+            --overlay "$(basename "$SCRIPT_DIR")" "$ONLINE_DIR/$overlay" \
+            || die "launcher icon overlay failed"
+        log "materialize: launcher icon generated into $overlay"
+    fi
 }
 
 # ── payload ───────────────────────────────────────────────────────────

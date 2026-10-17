@@ -9,12 +9,14 @@ Every fleet app's Android launcher icon is generated from
     its res dir is (`res`), and optionally `aliases` (activity-alias icons that
     get the same generated icon), `legacy` (also a pre-API-26 layer-list) and
     `tile` (the SuperApp drawable that carries the plain glyph for the
-    Cloud page tile).
+    Cloud page tile), or `overlay` (res dir inside a project the app's
+    build.sh fetches; build.sh runs `--overlay APP DIR` after the fetch).
 
 Usage:
   cloud-android-launcher-icons.py            write every generated file, delete
                                              hand-made launcher art it replaces
   cloud-android-launcher-icons.py --check    fail (exit 1) on any drift: the guard
+  cloud-android-launcher-icons.py --overlay APP DIR  write APP's icon into a fetched res dir
   cloud-android-launcher-icons.py --sheet P  render a contact sheet PNG (needs cairosvg)
 """
 import json
@@ -181,6 +183,16 @@ def plan(cfg):
             errors.append("glyphs %r and %r draw the same path" % (seen_path[pd], li["glyph"]))
         seen_path[pd] = li["glyph"]
 
+        if li.get("overlay"):
+            # Res dir lives in a project fetched at build time: the app's build
+            # runs `--overlay` after the fetch. Prove that call is wired.
+            if li.get("res") is not None:
+                errors.append("%s: launcher_icon declares both res and overlay" % app)
+            eng = os.path.join(ROOT, app, "build.sh")
+            if not (os.path.isfile(eng) and "cloud-android-launcher-icons.py" in open(eng, encoding="utf-8").read()
+                    and "--overlay" in open(eng, encoding="utf-8").read()):
+                errors.append("%s: launcher_icon.overlay is set but %s/build.sh never runs the generator with --overlay" % (app, app))
+            continue
         if li.get("res") is None:
             if app not in cfg.get("res_pending", {}):
                 errors.append("%s: launcher_icon.res is null and %s::res_pending gives no reason" % (app, DATA))
@@ -302,8 +314,40 @@ def sheet(cfg, out):
     print("contact sheet: %s" % out)
 
 
+def overlay(cfg, app, res_dir):
+    """Write APP's generated icon into RES_DIR (a fetched project's res/) and
+    delete the hand-made launcher art there."""
+    li = load(app + "/build.json")["launcher_icon"]
+    files = {
+        "drawable/ic_launcher_foreground.xml": fg_xml(app, li, cfg),
+        "drawable/ic_launcher_background.xml": bg_xml(app, li, cfg),
+        "drawable/ic_launcher_monochrome.xml": mono_xml(app, li, cfg),
+    }
+    for name in ["ic_launcher", "ic_launcher_round"] + list(li.get("aliases", [])):
+        files["mipmap-anydpi-v26/%s.xml" % name] = adaptive_xml(app, li)
+        files["mipmap-anydpi/%s.xml" % name] = legacy_xml(app, li)
+    if os.path.isdir(res_dir):
+        for d in sorted(os.listdir(res_dir)):
+            full = os.path.join(res_dir, d)
+            if os.path.isdir(full) and (d.startswith("mipmap") or d.startswith("drawable")):
+                for f in sorted(os.listdir(full)):
+                    stem = f.split(".")[0]
+                    if "%s/%s" % (d, f) not in files and (stem in ("ic_launcher", "ic_launcher_round") or FOREIGN_ART.match(stem)):
+                        os.remove(os.path.join(full, f))
+    for rel, text in files.items():
+        full = os.path.join(res_dir, rel)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, "w", encoding="utf-8") as f:
+            f.write(text)
+    print("overlay: %d launcher icon files for %s in %s" % (len(files), app, res_dir))
+    return 0
+
+
 def main(argv):
     cfg = load(DATA)
+    if "--overlay" in argv:
+        i = argv.index("--overlay")
+        return overlay(cfg, argv[i + 1], argv[i + 2])
     if "--sheet" in argv:
         sheet(cfg, argv[argv.index("--sheet") + 1])
         return 0

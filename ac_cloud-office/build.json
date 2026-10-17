@@ -1,5 +1,5 @@
 {
-  "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "grid_on", "category": "data", "res": null},
+  "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "grid_on", "category": "data", "res": null, "overlay": "android/app/src/main/res", "_doc_overlay": "The res dir of upstream android/app, which exists only after materialize; build.sh materialize runs the generator with --overlay there."},
   "id": "ac_cloud-office",
   "name": "cloud-office",
   "vendored_engine": "cloud-office-source-engine.sh",
