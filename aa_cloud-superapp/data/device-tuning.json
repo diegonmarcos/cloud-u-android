@@ -92,6 +92,18 @@
         "cmd": "settings get global private_dns_mode",
         "expect": "off"
       }
+    },
+    {
+      "id": "ram_plus_off",
+      "title": "RAM Plus off (next boot)",
+      "why": "Samsung RAM Plus adds swap on flash storage (4 GB on samsung-a37). With RAM short, every new terminal or Claude session paged its memory back from flash: load 17 with the CPU 84% idle, 13 processes stuck on I/O, the whole terminal frozen for 243 s while a session started (2026-10-17). Takes effect at the next reboot.",
+      "apply": [
+        "settings put global ram_expand_size 0"
+      ],
+      "verify": {
+        "cmd": "settings get global ram_expand_size",
+        "expect": "0"
+      }
     }
   ]
 }
