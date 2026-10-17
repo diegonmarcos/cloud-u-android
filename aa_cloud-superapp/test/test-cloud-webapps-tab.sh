@@ -33,7 +33,7 @@ grep -qF 'const val UA_MARKER = " CloudSuperApp-Embed/1"' "$WP" && grep -qF 'if 
   && ok "T3 the UA marker is appended on embed pages only" || bad "T3 the user-agent marker is missing or unconditional"
 grep -qF 'if (!embed) Icon(painterResource(R.drawable.ic_back)' "$WP" \
   && ok "T4 an embed page has no floating Back" || bad "T4 an embed page still floats a Back control over the site"
-grep -qF 'PullToRefreshBox(' "$WP" && ok "T4 pull-to-refresh" || bad "T4 no pull-to-refresh"
+grep -qF 'PullDownToRefresh(modifier' "$WP" && grep -qF 'internal fun PullDownToRefresh(' "$WP" && ok "T4 pull-to-refresh" || bad "T4 no pull-to-refresh"
 grep -qF 'You look to be offline' "$WP" && ok "T4 an offline page says so" || bad "T4 the error page still blames the mesh for a public site"
 grep -qF 'sameSite(url, target.toString())' "$WP" && grep -qF '.launchUri(target.toString())' "$WP" \
   && ok "T4 other sites leave through the app's link rules" || bad "T4 a link to another site loads inside the pane"

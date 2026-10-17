@@ -22,9 +22,16 @@ import androidx.fragment.app.Fragment
  */
 abstract class KitComposeFragment : Fragment() {
 
-    /** The page body, under the shell's scroll sink when the host installed one. */
+    /**
+     * Whether this page's Compose scrolling is reported to the host's [KitScroll] sink. A page that hosts a View which scrolls by
+     * itself (a WebView) says false: the host's View driver already sees that scroll, and a wrapper around a WebView is a layer it
+     * does not need.
+     */
+    protected open val reportsScroll: Boolean get() = true
+
+    /** The page body, under the shell's scroll sink when the host installed one and the page wants it. */
     @Composable
-    private fun Page() = KitPage { Content() }
+    private fun Page() { if (reportsScroll) KitPage { Content() } else Content() }
 
 
     /** The palette to draw with, read once per view creation (a theme switch recreates the view). */

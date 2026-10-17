@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.launcher
 
 import android.os.Bundle
 import android.view.View
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
@@ -12,9 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -73,12 +73,40 @@ class WebPageFragment : KitComposeFragment() {
 
     override fun palette() = LauncherPalette.kit(requireContext())
 
+    /** A WebView scrolls as a View and the shell's View driver already sees it; no Compose scroll wrapper around it. */
+    override val reportsScroll: Boolean get() = false
+
+    /** The page this fragment is for, and the last time a load was started (so a resume right after the first load is no second load). */
+    private val declaredUrl: String get() = arguments?.getString(ARG_URL).orEmpty()
+    internal var lastLoadAt = 0L
+    /** The page that failed, so a pull or a re-entry reloads IT and not the error page that replaced it. */
+    private var failed: String? = null
+
+    /**
+     * Load [target] from the network, past the HTTP cache. Every ENTRY into the page does this (first show, tab re-selected, back
+     * to it, the app coming back to it), so it never shows a stale or blank cached view. Only the HTTP cache is bypassed: the site's
+     * own service worker is separate and keeps working. The cache mode goes back to normal when the page finishes.
+     */
+    private fun loadFresh(w: WebView, target: String) {
+        lastLoadAt = android.os.SystemClock.elapsedRealtime()
+        w.settings.cacheMode = WebSettings.LOAD_NO_CACHE
+        w.loadUrl(target)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Re-entry: the WebView is already there (the page was left and is back). The first show loads from the factory below, and
+        // a resume that lands right behind it must not load twice.
+        val w = web ?: return
+        if (android.os.SystemClock.elapsedRealtime() - lastLoadAt < REENTRY_DEBOUNCE_MS) return
+        loadFresh(w, failed ?: declaredUrl.ifBlank { return })
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backToPreviousPage)
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val url = arguments?.getString(ARG_URL).orEmpty()
@@ -88,16 +116,14 @@ class WebPageFragment : KitComposeFragment() {
         // (the system Back steps through its history) and fills exactly the pane it is given.
         val embed = isEmbed(url)
         var refreshing by remember { mutableStateOf(false) }
-        // The page that failed, so a pull reloads IT and not the error page that replaced it.
-        var failedUrl by remember { mutableStateOf<String?>(null) }
         Box(Modifier.fillMaxSize()) {
-            PullToRefreshBox(isRefreshing = refreshing, modifier = Modifier.fillMaxSize(), onRefresh = {
+            PullDownToRefresh(modifier = Modifier.fillMaxSize(), refreshing = refreshing, onRefresh = {
                 refreshing = true
                 val w = web
-                val retry = failedUrl
-                failedUrl = null
+                val retry = failed
+                failed = null
                 if (w == null) refreshing = false
-                else if (retry != null) w.loadUrl(retry) else w.reload()
+                else loadFresh(w, retry ?: w.url?.takeIf { it.startsWith("http") } ?: declaredUrl)
             }) {
             AndroidView(
                 modifier = Modifier.fillMaxSize().testTag(TAG_WEB),
@@ -112,6 +138,7 @@ class WebPageFragment : KitComposeFragment() {
                         settings.displayZoomControls = false
                         webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView?, url: String?) {
+                                view?.settings?.cacheMode = WebSettings.LOAD_DEFAULT
                                 backToPreviousPage.isEnabled = view?.canGoBack() == true
                                 refreshing = false
                             }
@@ -152,14 +179,14 @@ class WebPageFragment : KitComposeFragment() {
                             ) {
                                 if (!request.isForMainFrame) return
                                 refreshing = false
-                                failedUrl = request.url.toString()
+                                failed = request.url.toString()
                                 val host = runCatching { java.net.URI(url).host }.getOrNull() ?: url
                                 view.loadDataWithBaseURL(null, errorHtml(host, error.description?.toString()),
                                     "text/html", "utf-8", null)
                             }
                         }
-                        if (url.isNotBlank()) loadUrl(url)
                         web = this
+                        if (url.isNotBlank()) loadFresh(this, url)
                     }
                 },
                 onRelease = { it.stopLoading(); it.destroy(); if (web === it) web = null },
@@ -214,6 +241,9 @@ class WebPageFragment : KitComposeFragment() {
         const val TAG_BACK = "webpage:back"
 
         /** Appended to the WebView's user agent on an `embed=1` page, so the site can tell the SuperApp is hosting it. */
+        /** A resume this soon after a load started is the same entry, not a new one. */
+        internal const val REENTRY_DEBOUNCE_MS = 1_500L
+
         const val UA_MARKER = " CloudSuperApp-Embed/1"
 
         fun isEmbed(url: String): Boolean = Regex("[?&]embed=1(&|#|$)").containsMatchIn(url)
@@ -232,3 +262,46 @@ class WebPageFragment : KitComposeFragment() {
         }
     }
 }
+
+/**
+ * Pull down at the top of the content to refresh. Written here, not M3's PullToRefreshBox: this page hosts a WebView, which has no
+ * business under a layer-wrapping container, and all it needs is "the content is at its top and the finger keeps pulling".
+ * The content's own nested scrolling (the WebView's) reports the pull it could not use; once it adds up to [PULL_DP] the refresh fires
+ * and a spinner shows until the caller clears [refreshing].
+ */
+@Composable
+internal fun PullDownToRefresh(
+    modifier: Modifier, refreshing: Boolean, onRefresh: () -> Unit, content: @Composable () -> Unit,
+) {
+    val threshold = with(androidx.compose.ui.platform.LocalDensity.current) { PULL_DP.dp.toPx() }
+    val onRefreshNow by androidx.compose.runtime.rememberUpdatedState(onRefresh)
+    val busy by androidx.compose.runtime.rememberUpdatedState(refreshing)
+    val connection = remember(threshold) {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            var pulled = 0f
+            override fun onPostScroll(
+                consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
+            ): androidx.compose.ui.geometry.Offset {
+                if (available.y > 0f) {
+                    pulled += available.y
+                    if (pulled >= threshold && !busy) { pulled = 0f; onRefreshNow() }
+                } else if (available.y < 0f || consumed.y != 0f) pulled = 0f
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+            override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                pulled = 0f
+                return androidx.compose.ui.unit.Velocity.Zero
+            }
+        }
+    }
+    Box(modifier.nestedScroll(connection)) {
+        content()
+        if (refreshing) androidx.compose.material3.CircularProgressIndicator(
+            Modifier.align(Alignment.TopCenter).padding(top = 12.dp).size(28.dp).testTag(TAG_REFRESHING), strokeWidth = 3.dp,
+        )
+    }
+}
+
+private const val PULL_DP = 72
+internal const val TAG_REFRESHING = "webpage:refreshing"
