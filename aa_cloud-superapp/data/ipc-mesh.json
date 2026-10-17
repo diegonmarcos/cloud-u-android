@@ -1258,6 +1258,25 @@
      ],
      "uris": [],
      "callers": []
+    },
+    {
+     "permission": null,
+     "level": "none",
+     "source": "ac_cloud-browser/app/src/main/AndroidManifest.xml",
+     "component": ".MainActivity",
+     "id": "deep_link:.MainActivity",
+     "kind": "deep_link",
+     "name": "MainActivity",
+     "actions": [],
+     "uris": [
+      "magnet://"
+     ],
+     "callers": [
+      "lib-rootfs-nixdroid",
+      "lib-rootfs-termux",
+      "nix-on-droid",
+      "termux"
+     ]
     }
    ]
   },
