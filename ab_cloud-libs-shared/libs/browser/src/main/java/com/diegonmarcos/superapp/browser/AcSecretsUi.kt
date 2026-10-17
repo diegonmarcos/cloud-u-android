@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.uikit.KitConfirmDialog
 import com.diegonmarcos.superapp.uikit.KitListRow
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
+import com.diegonmarcos.superapp.uikit.KitSwitchRow
 import com.diegonmarcos.superapp.uikit.KitState
 import com.diegonmarcos.superapp.uikit.KitStatusBanner
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
@@ -176,10 +177,20 @@ fun AcCardsSection(
 
 /** Sync & Vault: the order (local first, then Cloud Vault, vault wins), the live state and what each side holds. */
 @Composable
-fun AcVaultSection(state: AcVaultState, localCount: Int, vaultCount: Int) {
+fun AcVaultSection(
+    state: AcVaultState,
+    localCount: Int,
+    vaultCount: Int,
+    onUseVault: ((Boolean) -> Unit)? = null,
+    onMakeService: (() -> Unit)? = null,
+) {
     val p = LocalKitPalette.current
     Column(Modifier.fillMaxWidth().testTag("browser:ac:vault")) {
         KitSectionHeader("Cloud Vault", "")
+        if (onUseVault != null) KitSwitchRow("Use Cloud Vault for passwords and cards", "Fill from this phone first, then let Cloud Vault overwrite it",
+            checked = state != AcVaultState.OFF, onCheckedChange = onUseVault, modifier = Modifier.testTag("browser:ac:vault:use"))
+        if (onMakeService != null && state == AcVaultState.NOT_SERVICE)
+            TextButton(onMakeService, modifier = Modifier.testTag("browser:ac:vault:service")) { Text("Make Cloud Vault the autofill service") }
         KitStatusBanner(state.reason, if (state.usable) KitState.OK else if (state == AcVaultState.OFF) KitState.IDLE else KitState.WARN, tag = "ac-vault-state")
         Text("Fill order: this phone's own store first, then Cloud Vault through Android's autofill. When Cloud Vault fills an entry, its value " +
             "replaces the local copy (the vault wins) and the entry is marked vault. A new password or card is saved here and Cloud Vault's own save flow is opened for it. " +

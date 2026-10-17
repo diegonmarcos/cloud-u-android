@@ -130,9 +130,9 @@ object AcVaultMerge {
 
 /** Why Cloud Vault cannot be asked right now, or that it can. */
 enum class AcVaultState(val usable: Boolean, val reason: String) {
-    OFF(false, "Cloud Vault is switched off in Configs > Sync & Vault"),
+    OFF(false, "Cloud Vault is switched off in Configs > Autocomplete > Use Cloud Vault"),
     NOT_INSTALLED(false, "Cloud Vault is not installed"),
-    NOT_SERVICE(false, "Cloud Vault is not the autofill service: Configs > Sync & Vault > Use Cloud Vault for autofill"),
+    NOT_SERVICE(false, "Cloud Vault is not the autofill service: Configs > Autocomplete > Cloud Vault > Make it the autofill service"),
     NO_FRAMEWORK(false, "Android autofill is off on this phone"),
     READY(true, "Cloud Vault will be asked after the local store");
 
@@ -266,4 +266,23 @@ class AcUnlockWindow(private val graceMs: Long = 60_000L) {
     fun open(nowMs: Long) { at = nowMs }
     fun isOpen(nowMs: Long): Boolean = at != Long.MIN_VALUE && nowMs - at in 0 until graceMs
     fun lock() { at = Long.MIN_VALUE }
+}
+
+/** One step of a login or card fill. */
+enum class AcFillStep { LOCAL, VAULT }
+
+/**
+ * "Try fill, then let Cloud Vault overwrite it." Pure plan of what a fill does, in order:
+ * the local store's entry (when the user picked one) first, then, when Cloud Vault is usable, its
+ * autofill request, whose dataset overwrites what the local step put in the fields. Private tabs
+ * never ask the vault. Nothing here sees a secret value.
+ */
+object AcFillOrder {
+    fun steps(localPicked: Boolean, vault: AcVaultState, incognito: Boolean = false): List<AcFillStep> = buildList {
+        if (localPicked) add(AcFillStep.LOCAL)
+        if (vault.usable && !incognito) add(AcFillStep.VAULT)
+    }
+
+    /** The value a field ends with: the vault's when it gave one, else the local one. */
+    fun finalValue(local: String?, vault: String?): String? = vault?.takeIf { it.isNotEmpty() } ?: local
 }

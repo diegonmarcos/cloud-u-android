@@ -132,7 +132,7 @@ class AcAutocomplete(
             h.store.loginsFor(host).take(4).forEach { l ->
                 val id = "login:${l.id}"
                 chips += AcChip(id, l.username.ifBlank { l.site }, source(l.source))
-                acts[id] = { unlocked("Fill saved password") { fillLogin(f, l) } }
+                acts[id] = { unlocked("Fill saved password") { fillLogin(f, l); thenVault(cur.id) } }
             }
         }
         val vs = vaultState()
@@ -153,7 +153,7 @@ class AcAutocomplete(
         if (h.store.secretsAvailable) h.store.cards().first.take(4).forEach { c ->
             val id = "card:${c.id}"
             chips += AcChip(id, c.title(), source(c.source))
-            acts[id] = { unlocked("Fill saved card") { fillCard(f, c) } }
+            acts[id] = { unlocked("Fill saved card") { fillCard(f, c); thenVault(cur.id) } }
         }
         val vs = vaultState()
         var note: String? = null
@@ -284,6 +284,11 @@ class AcAutocomplete(
     fun chooserDismiss() { chooser.value = null }
 
     // ── Cloud Vault ─────────────────────────────────────────────────────────────────────────
+
+    /** After a local fill: Cloud Vault, when usable, is asked too and its dataset overwrites the local values (AcFillOrder). */
+    private fun thenVault(fieldId: Int) {
+        if (AcFillStep.VAULT in AcFillOrder.steps(localPicked = true, vault = vaultState(), incognito = incognito)) askVault(fieldId)
+    }
 
     /** Focus the field, then ask Android's autofill framework (Cloud Vault's service) to fill it. */
     private fun askVault(fieldId: Int) {

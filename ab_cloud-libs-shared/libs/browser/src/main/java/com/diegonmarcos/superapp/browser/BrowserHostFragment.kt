@@ -1923,7 +1923,9 @@ class BrowserHostFragment : Fragment() {
                 val isService = !pkg.isNullOrBlank() && VaultAutofill.isVault(st.optString("autofill_service"), pkg)
                 val state = AcVaultState.of(browserSettings.bool("autofill_use_vault") == true, st.optBoolean("installed"), st.optBoolean("framework_enabled"), isService)
                 val all = remember(tick) { store.logins().first.map { it.source } + store.cards().first.map { it.source } }
-                AcVaultSection(state, all.count { it == AcSource.LOCAL }, all.count { it == AcSource.VAULT })
+                AcVaultSection(state, all.count { it == AcSource.LOCAL }, all.count { it == AcSource.VAULT },
+                    onUseVault = { on -> browserSettings.set("autofill_use_vault", on.toString()); changed() },
+                    onMakeService = { VaultAutofill.setAsService(requireContext(), pkg); changed() })
             }
         }
     }
