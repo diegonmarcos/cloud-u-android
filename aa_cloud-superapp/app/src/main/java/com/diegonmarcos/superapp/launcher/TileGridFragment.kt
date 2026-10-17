@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -92,6 +94,47 @@ class TileGridFragment : KitComposeFragment() {
         val breaks = args.getBooleanArray(ARG_TILE_BREAKS) ?: BooleanArray(0)
         val p = LocalKitPalette.current
 
+        // Configs (ARG_FIT): the whole grid must fit the viewport with no scroll (owner's Samsung A37,
+        // 384 x 672 dp between the top bar and the bottom nav). Rows share the height the headings leave,
+        // capped at FIT_ROW_MAX_DP, and the column only scrolls when the height is unbounded.
+        if (args.getBoolean(ARG_FIT, false)) {
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+                val bounded = constraints.hasBoundedHeight
+                val declared = args.getInt(ARG_COLS, 0).takeIf { it > 0 } ?: GridColumns.cloud(requireContext())
+                val cols = fitColumns(maxWidth.value, declared)
+                val click = { id: String -> (activity as? TileClickListener)?.onTileClicked(id); Unit }
+                val outer = if (bounded) Modifier.fillMaxSize() else Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                Column(outer.padding(horizontal = 4.dp)) {
+                    Text(title.uppercase(), color = p.accent, style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(start = 10.dp, top = 4.dp, end = 10.dp, bottom = 0.dp).testTag(TAG_TITLE))
+                    for (item in plan(ids, groups, subs, breaks, cols)) {
+                        when (item) {
+                            is GridItem.Header -> TileGroupHeader(item.text, Modifier.testTag(headerTag(item.text)), compact = true)
+                            is GridItem.SubHeader -> TileSubgroupHeader(item.text, Modifier.testTag(subHeaderTag(item.text)), compact = true)
+                            is GridItem.TileRow -> {
+                                val rowMod = if (bounded) Modifier.fillMaxWidth().weight(1f).heightIn(max = FIT_ROW_MAX_DP.dp)
+                                             else Modifier.fillMaxWidth().height(FIT_ROW_MAX_DP.dp)
+                                Row(rowMod) {
+                                    for (k in 0 until item.span) {
+                                        val at = item.first + k
+                                        if (ids[at].startsWith(SEPARATOR_PREFIX)) { TileSeparator(labels[at]); continue }
+                                        CompactTile(
+                                            tileId = ids[at], label = labels[at],
+                                            iconRes = icons.getOrNull(at)?.takeIf { it != 0 } ?: R.drawable.ic_settings,
+                                            onClick = { click(ids[at]) },
+                                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                                        )
+                                    }
+                                    for (k in item.slots until cols) Spacer(Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return
+        }
+
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(6.dp)) {
             Text(title.uppercase(), color = p.accent, style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.padding(start = 10.dp, top = 12.dp, end = 10.dp, bottom = 4.dp).testTag(TAG_TITLE))
@@ -143,6 +186,16 @@ class TileGridFragment : KitComposeFragment() {
         const val SEPARATOR_PREFIX = "separator:"
         private const val ARG_COLS        = "tile_columns"
         private const val ARG_TILE_BREAKS = "tile_breaks"
+        private const val ARG_FIT         = "tile_fit"
+
+        /** Tallest a fitted (Configs) tile row may be: a 26 dp glyph and a label, hugged. */
+        const val FIT_ROW_MAX_DP = 68
+        /** Narrowest a fitted tile may be before the grid drops a column. */
+        const val FIT_MIN_CELL_DP = 72f
+
+        /** Columns for the fitted grid: as many [FIT_MIN_CELL_DP] cells as the width holds, 4 at least, never over [declared]. */
+        internal fun fitColumns(widthDp: Float, declared: Int): Int =
+            ((widthDp - 8f) / FIT_MIN_CELL_DP).toInt().coerceIn(4, maxOf(4, declared))
 
         const val TAG_TITLE = "tilegrid:title"
         const val TAG_EMPTY = "tilegrid:empty"
@@ -198,8 +251,9 @@ class TileGridFragment : KitComposeFragment() {
             return items
         }
 
-        fun newInstance(title: String, tiles: List<Tile>, columns: Int = 0) = TileGridFragment().apply {
+        fun newInstance(title: String, tiles: List<Tile>, columns: Int = 0, fit: Boolean = false) = TileGridFragment().apply {
             arguments = bundleOf(
+                ARG_FIT         to fit,
                 ARG_COLS        to columns,
                 ARG_TITLE       to title,
                 ARG_TILE_IDS    to tiles.map { it.id }.toTypedArray(),

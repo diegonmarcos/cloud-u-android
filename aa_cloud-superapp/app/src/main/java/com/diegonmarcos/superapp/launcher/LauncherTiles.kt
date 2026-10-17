@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -156,19 +157,58 @@ internal fun TileSeparator(text: String, modifier: Modifier = Modifier) {
 
 /** Group heading between tile rows: the declared words, upper-cased. */
 @Composable
-internal fun TileGroupHeader(text: String, modifier: Modifier = Modifier) {
+internal fun TileGroupHeader(text: String, modifier: Modifier = Modifier, compact: Boolean = false) {
     Text(text.uppercase(), color = LocalKitPalette.current.textSecondary, fontSize = 11.sp,
         letterSpacing = 0.12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-        modifier = modifier.fillMaxWidth().padding(start = 14.dp, top = 14.dp, end = 14.dp, bottom = 6.dp))
+        modifier = modifier.fillMaxWidth().padding(start = 14.dp, top = if (compact) 6.dp else 14.dp, end = 14.dp,
+            bottom = if (compact) 1.dp else 6.dp))
 }
 
 /** The heading one level BELOW [TileGroupHeader]: indented and a shade quieter. */
 @Composable
-internal fun TileSubgroupHeader(text: String, modifier: Modifier = Modifier) {
+internal fun TileSubgroupHeader(text: String, modifier: Modifier = Modifier, compact: Boolean = false) {
     Text(text.uppercase(), color = LocalKitPalette.current.textSecondary, fontSize = 10.sp,
         letterSpacing = 0.10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-        modifier = modifier.fillMaxWidth().padding(start = 26.dp, top = 6.dp, end = 14.dp, bottom = 4.dp))
+        modifier = modifier.fillMaxWidth().padding(start = 26.dp, top = if (compact) 1.dp else 6.dp, end = 14.dp,
+            bottom = if (compact) 0.dp else 4.dp))
 }
 
 internal fun tileTag(id: String) = "tile:$id"
 internal fun tileIconTag(id: String) = "tileicon:$id"
+
+/**
+ * The fitted (Configs) tile: a 26 dp glyph with a small label under it, hugged by a faint plate - no 128 dp card.
+ * It takes the height its row was given; when that is short (big font, display zoom) the glyph drops to 22 dp and
+ * the label to one line at 9 sp, so the grid shrinks its labels before it would ever scroll.
+ */
+@Composable
+internal fun CompactTile(tileId: String, label: String, @DrawableRes iconRes: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val p = LocalKitPalette.current
+    val view = LocalView.current
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    val src = remember { MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.94f else 1f, label = "tile-press")
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.padding(2.dp)) {
+        val roomy = maxHeight >= 60.dp
+        val iconDp = if (maxHeight >= 52.dp) 26.dp else 22.dp
+        Column(
+            Modifier.fillMaxSize()
+                .onSizeChanged { TileMetrics.tile(tileId, it.width, it.height, density) }
+                .scale(scale)
+                .clip(RoundedCornerShape(10.dp)).background(p.surface.copy(alpha = 0.45f))
+                .clickable(interactionSource = src, indication = LocalIndication.current) { Haptics.tap(view); onClick() }
+                .extInstallRing(tileId, iconDp, iconTop = 4.dp)
+                .padding(horizontal = 2.dp, vertical = 2.dp).testTag(tileTag(tileId)),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(painterResource(iconRes), contentDescription = null, tint = p.textPrimary,
+                modifier = Modifier.size(iconDp).testTag(tileIconTag(tileId))
+                    .onSizeChanged { TileMetrics.icon(tileId, it.width, it.height, density) })
+            Text(label, color = p.textPrimary, fontSize = if (roomy) 10.sp else 9.sp, lineHeight = if (roomy) 11.sp else 10.sp,
+                maxLines = if (roomy) 2 else 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 1.dp).testTag("tilelabel:$tileId"))
+        }
+    }
+}

@@ -409,7 +409,8 @@ class LauncherNavController(private val host: NavHost) {
             tiles = if (actions.isEmpty() && pages.all { it.group == GROUP_PAGES && it.subgroup.isEmpty() })
                         pages.map { it.copy(group = "") }
                     else pages + actions,
-            columns = section.gridColumns)
+            columns = section.gridColumns,
+            fit = section.id == "config")
     }
 
     /** The extras declared on a section's radial node (KDE Connect,
