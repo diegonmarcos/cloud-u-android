@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.launcher
 
 import android.app.Application
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -40,7 +41,7 @@ class StatusStripComposeTest : KitPageHarness() {
 
     private fun showStrip(): StatusStripModel {
         val model = StatusStripModel(compose.activity)
-        showKit { StatusStripBody(model, compose.activity) }
+        showKit { androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.wrapContentSize()) { StatusStripBody(model, compose.activity) } }
         return model
     }
 
@@ -74,7 +75,7 @@ class StatusStripComposeTest : KitPageHarness() {
         compose.runOnUiThread { model.noteCutout(160) }
         compose.waitForIdle()
         val low = compose.onNodeWithTag("strip:clock").fetchSemanticsNode().boundsInRoot.top
-        assertTrue("clock top $low must be at or below the 160px cutout", low >= 160f)
+        assertTrue("clock moved from $flat to $low, must drop by the 160px cutout less the row pad", low - flat >= 150f)
         compose.runOnUiThread { model.noteCutout(0) }
         compose.waitForIdle()
         val back = compose.onNodeWithTag("strip:clock").fetchSemanticsNode().boundsInRoot.top

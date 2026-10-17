@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performClick
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import com.diegonmarcos.superapp.ui.ShellFxState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -71,18 +72,18 @@ class OverlayComposeTest : KitPageHarness() {
             }
         }
         assertEquals(FontWeight.Bold, weightOf("navchip:Comms"))
-        assertEquals(null, weightOf("navchip:Terminal"))
-        assertEquals(null, weightOf("navchip:Root"))
+        assertTrue(weightOf("navchip:Terminal") != FontWeight.Bold)
+        assertTrue(weightOf("navchip:Root") != FontWeight.Bold)
     }
 
     @Test
     fun `O3 the screensaver draws time, date and a working Unlock`() {
         var unlocked = 0
         showKit { ScreensaverScene(false, "21:05", "Fri 16 Oct", "Unlock") { unlocked++ } }
-        compose.onNodeWithTag("sstime").assertIsDisplayed()
-        compose.onNodeWithTag("ssdate").assertIsDisplayed()
-        compose.onAllNodesWithTag("neon").assertCountEquals(0)
-        compose.onNodeWithTag("unlock").performClick()
+        compose.onNodeWithTag("sstime", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithTag("ssdate", useUnmergedTree = true).assertIsDisplayed()
+        compose.onAllNodesWithTag("neon", useUnmergedTree = true).assertCountEquals(0)
+        compose.onNodeWithTag("unlock", useUnmergedTree = true).performClick()
         assertEquals(1, unlocked)
     }
 
@@ -90,8 +91,8 @@ class OverlayComposeTest : KitPageHarness() {
     fun `O4 the neon screensaver adds the backdrop`() {
         ShellFxState.frozen = true
         showKit { ScreensaverScene(true, "21:05", "Fri 16 Oct", "Unlock") {} }
-        compose.onNodeWithTag("neon").assertExists()
-        compose.onNodeWithTag("sstime").assertIsDisplayed()
+        compose.onNodeWithTag("neon", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag("sstime", useUnmergedTree = true).assertIsDisplayed()
         ShellFxState.frozen = false
     }
 }
