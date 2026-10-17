@@ -29,6 +29,8 @@ import java.io.File
  * "The Configs buttons are STILL huge" (4th report). ConfigsIconSizeTest measured the grid's ICONS; this draws EVERY
  * Configs screen (the grid, each page and each tab it opens) on the owner's phone - Samsung Galaxy A37 (SM-A376B):
  * 1080 x 2340 px at Samsung's default 450 dpi = 384 x 832 dp, density 2.8125 - at fontScale 1.0 and 1.3, and
+ * The window is 2600dp TALL (width and density stay the A37's) so a long page lays out and is measured whole: at 832dp
+ * everything below the fold had zero visible bounds and One-Hand / Battery / Identity measured nothing.
  * measures every clickable thing it RENDERED (button, chip, tile, row, tab, FAB; Compose semantics and View clickables
  * both), in dp, from the layout.
  *
@@ -37,7 +39,7 @@ import java.io.File
  * than the icon + 8dp [MAX_ICON_BOX_DP].
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class, qualifiers = "w384dp-h832dp-450dpi")
+@Config(sdk = [34], application = Application::class, qualifiers = "w384dp-h2600dp-450dpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ConfigsScreensTest(private val screen: String, private val fontScale: Float) : KitPageHarness() {
 
@@ -46,7 +48,10 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
         const val MAX_ROW_DP = 44f
         const val EXTRA_LINE_DP = 18f
         /** Screens that are read-only by design (no control to measure). Empty unless proven by a render. */
-        val NO_CONTROLS = setOf<String>()
+        // The four tab STRIPS: under Robolectric the strip's pane (a FragmentContainerView inside an AndroidView pager)
+        // stays empty, so only its tab pills are measured here. Every tab they hold is rendered and guarded as its own
+        // screen above (presets, panels, panels-ui, panels-tools, agents-*, apps-mesh-members, ipc, identity).
+        val NO_CONTROLS = setOf("controls", "panels", "agents", "apps-mesh")
         /** An icon's plate (Control's round badge): at most the icon + 8dp ("white box too big"). */
         const val ICON_DP = 22f
         const val MAX_ICON_BOX_DP = ICON_DP + 8f
