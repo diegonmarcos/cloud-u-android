@@ -120,7 +120,7 @@ jobs:
           BYPASS_NIX: "1"
           SUPERAPP_VARIANT: "x86_64"
           INSTRUMENT_PREGRANT: "1"
-          INSTRUMENT_CLASS: "com.diegonmarcos.superapp.EdgeOverlayGestureTest,com.diegonmarcos.superapp.WebPagesRenderTest"
+          INSTRUMENT_CLASS: "com.diegonmarcos.superapp.EdgeOverlayGestureTest"
           VAULT_DIR: ${{ github.workspace }}/.vault
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -133,7 +133,7 @@ jobs:
           working-directory: aa_cloud-superapp
           # ONE line: the runner executes each script line in its own `sh -c`, so a variable (the exit
           # status) does not survive a line break. bash, because build.sh is bash (and not executable in git).
-          script: bash -c 'rc=0; bash ./build.sh instrument || rc=$?; mkdir -p test-out; T="timeout 90"; $T adb pull /sdcard/Android/data/com.diegonmarcos.superapp/files/webpage test-out/; $T adb pull /data/local/tmp/edge-menu-left.png test-out/; $T adb pull /data/local/tmp/edge-menu-right.png test-out/; $T adb pull /data/local/tmp/ test-out/tmp/; $T adb logcat -d > test-out/logcat.txt; $T adb logcat -d -s EdgeOverlayTest:* OneHand:* > test-out/probe.txt; $T adb logcat -d -s WebPage:* WebPagesRenderTest:* chromium:* > test-out/webpage.txt; $T adb shell dumpsys window windows > test-out/windows.txt; exit $rc'
+          script: bash -c 'rc=0; T="timeout 90"; R=app/build/outputs/androidTest-results/connected/debug; mkdir -p test-out/run1 test-out/run2; INSTRUMENT_CLASS=com.diegonmarcos.superapp.EdgeOverlayGestureTest,com.diegonmarcos.superapp.WebPagesRenderTest#a_webAppsRenders bash ./build.sh instrument || rc=$?; for f in $R/*.xml; do cp "$f" "${f%.xml}-run1.xml.keep"; done; $T adb pull /sdcard/Android/data/com.diegonmarcos.superapp/files/webpage test-out/run1/; $T adb pull /data/local/tmp/edge-menu-left.png test-out/; $T adb pull /data/local/tmp/edge-menu-right.png test-out/; $T adb logcat -d > test-out/run1/logcat.txt; $T adb shell dumpsys window windows > test-out/windows.txt; INSTRUMENT_CLASS=com.diegonmarcos.superapp.WebPagesRenderTest#b_linktreeRenders bash ./build.sh instrument || rc=$?; for f in $R/*.keep; do mv "$f" "${f%.keep}"; done; $T adb pull /sdcard/Android/data/com.diegonmarcos.superapp/files/webpage test-out/run2/; $T adb logcat -d > test-out/run2/logcat.txt; exit $rc'
 
       - name: Upload evidence (screenshots + logcat + reports)
         if: always()
