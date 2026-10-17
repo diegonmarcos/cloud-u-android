@@ -18,6 +18,7 @@ import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -29,35 +30,47 @@ import java.util.concurrent.TimeUnit
  * every load / HTTP error and the final URL. Fails when the body has no text or the WebView's pixels are one colour.
  */
 @RunWith(AndroidJUnit4::class)
+@org.junit.FixMethodOrder(org.junit.runners.MethodSorters.NAME_ASCENDING)
 class WebPagesRenderTest {
     private val inst = InstrumentationRegistry.getInstrumentation()
     private val ua = inst.uiAutomation
-    // /data/local/tmp belongs to the shell (uid 2000): this test runs in the app's process, so a File write there
-    // fails with EACCES (CI run 39047411605). The evidence is handed to the shell instead, which writes it.
-    private val out = "/data/local/tmp"
+    /** Readable by `adb pull` without root: /sdcard/Android/data/<pkg>/files/webpage. */
+    private val out by lazy { File(inst.targetContext.getExternalFilesDir(null), "webpage").apply { mkdirs() } }
 
     private fun sh(cmd: String): String =
         android.os.ParcelFileDescriptor.AutoCloseInputStream(ua.executeShellCommand(cmd)).bufferedReader().readText()
 
-    /** Writes [bytes] to [out]/[name] AS THE SHELL (dd reads stdin), then waits for dd to finish. */
-    private fun save(name: String, bytes: ByteArray) {
-        val (stdout, stdin) = ua.executeShellCommandRw("dd of=$out/$name")
-        android.os.ParcelFileDescriptor.AutoCloseOutputStream(stdin).use { it.write(bytes) }
-        android.os.ParcelFileDescriptor.AutoCloseInputStream(stdout).use { it.readBytes() }
-    }
-
-    private fun png(b: Bitmap): ByteArray =
-        java.io.ByteArrayOutputStream().also { b.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
-
     @After fun tearDown() { WebPageFragment.probe = null }
 
-    @Test fun webAppsRenders() = check("webapps", "page:cloud/webapps")
-    @Test fun linktreeRenders() = check("linktree", "page:cloud/lnktree")
+    @Test fun a_webAppsRenders() = check("webapps", "page:cloud/webapps", night = false)
+    @Test fun b_webAppsRendersAtNight() = check("webapps-night", "page:cloud/webapps", night = true)
+    @Test fun c_linktreeRenders() = check("linktree", "page:cloud/lnktree", night = false)
+
+    /** The app is uninstalled after the run (taking its files dir with it), so the shell copies the evidence out. */
+    private fun export(name: String) {
+        sh("mkdir -p /data/local/tmp/webpage")
+        out.listFiles()?.filter { it.name.contains("-$name.") || it.name.contains("-$name-screen.") || it.name.contains("-$name-red-screen.") }
+            ?.forEach { sh("cp ${it.absolutePath} /data/local/tmp/webpage/${it.name}") }
+    }
 
     private fun resumed(): Activity? {
         var a: Activity? = null
-        inst.runOnMainSync { a = ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).firstOrNull() }
+        inst.runOnMainSync {
+            val m = ActivityLifecycleMonitorRegistry.getInstance()
+            a = listOf(Stage.RESUMED, Stage.PAUSED, Stage.STARTED).firstNotNullOfOrNull { m.getActivitiesInStage(it).firstOrNull() }
+        }
         return a
+    }
+
+    /** The app's wireless-debugging bootstrap raises SystemUI's "Allow wireless debugging?" dialog on a fresh emulator; it
+     *  pauses the page under test (same workaround as EdgeOverlayGestureTest). */
+    private fun clearPrompt() {
+        sh("settings put global adb_wifi_enabled 0")
+        repeat(6) {
+            // Only when the dialog HOLDS focus: a BACK that lands on the shell instead pops the page under test.
+            if (!sh("dumpsys window").lineSequence().filter { "mCurrentFocus" in it }.any { "WifiDebugging" in it }) return
+            sh("input keyevent KEYCODE_BACK"); SystemClock.sleep(600)
+        }
     }
 
     private fun findWeb(v: View): WebView? = when (v) {
@@ -69,14 +82,20 @@ class WebPagesRenderTest {
     private fun js(w: WebView, expr: String): String {
         val latch = CountDownLatch(1); var r = "<timeout>"
         inst.runOnMainSync { w.evaluateJavascript(expr) { r = it; latch.countDown() } }
-        latch.await(5, TimeUnit.SECONDS)
+        latch.await(3, TimeUnit.SECONDS)
         return r
     }
 
-    private fun check(name: String, target: String) {
+    private fun check(name: String, target: String, night: Boolean) {
+        sh("settings put global adb_wifi_enabled 0")
+        // FirstRunPerms asks for these two on launch with a dialog over the page; grant them so the pane is unobstructed.
+        val pkg = inst.targetContext.packageName
+        sh("appops set $pkg REQUEST_INSTALL_PACKAGES allow")
+        sh("cmd role add-role-holder android.app.role.HOME $pkg 0")
+        sh("cmd uimode night ${if (night) "yes" else "no"}"); SystemClock.sleep(1500)
         val log = Collections.synchronizedList(mutableListOf<String>())
         WebPageFragment.probe = { log += it }
-        sh("input keyevent KEYCODE_WAKEUP"); sh("wm dismiss-keyguard")
+        sh("input keyevent KEYCODE_WAKEUP"); sh("wm dismiss-keyguard"); sh("logcat -c")
         val ctx = inst.targetContext
         ctx.startActivity(Intent().setClassName(ctx.packageName, "${ctx.packageName}.MainActivity")
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -87,15 +106,18 @@ class WebPagesRenderTest {
         var ready = ""; var textLen = -1
         while (SystemClock.elapsedRealtime() - t0 < 20_000) {
             SystemClock.sleep(1000)
+            clearPrompt()
             val a = resumed() ?: continue
             inst.runOnMainSync { web = findWeb(a.window.decorView) }
             val w = web ?: continue
             ready = js(w, "document.readyState")
             textLen = js(w, "(document.body ? document.body.innerText.length : -1)").trim('"').toIntOrNull() ?: -1
+            log += "t=${SystemClock.elapsedRealtime() - t0} ready=$ready len=$textLen"
             if (ready.contains("complete") && textLen > 0 && SystemClock.elapsedRealtime() - t0 > 8_000) break
         }
-        SystemClock.sleep(1500)
+        clearPrompt(); SystemClock.sleep(1500)
 
+        var htmlH = -1
         val report = StringBuilder()
         val w = web
         var crop: Bitmap? = null
@@ -108,33 +130,50 @@ class WebPagesRenderTest {
             }
             ready = js(w, "document.readyState")
             textLen = js(w, "(document.body ? document.body.innerText.length : -1)").trim('"').toIntOrNull() ?: -1
+            report.appendLine("night=$night uimode=${sh("cmd uimode night").trim()}")
             report.appendLine("size=$size at=${loc[0]},${loc[1]} $vis")
             report.appendLine("finalUrl=$url")
-            report.appendLine("readyState=$ready bodyTextLen=$textLen")
+            htmlH = js(w, "Math.round(document.documentElement.getBoundingClientRect().height)").trim('"').toIntOrNull() ?: -1
+            report.appendLine("readyState=$ready bodyTextLen=$textLen htmlHeight=$htmlH")
             report.appendLine("ua=${js(w, "navigator.userAgent")}")
             report.appendLine("bodyText=${js(w, "(document.body ? document.body.innerText.slice(0,400) : '')")}")
             report.appendLine("bodyStyle=${js(w, "(()=>{const s=getComputedStyle(document.body);return [s.color,s.backgroundColor,s.display,s.visibility,s.opacity,document.documentElement.scrollHeight,innerWidth+'x'+innerHeight].join(' | ')})()")}")
+            report.appendLine("prefersDark=${js(w, "String(matchMedia('(prefers-color-scheme: dark)').matches)")} htmlClass=${js(w, "document.documentElement.className")}")
+            var dark = ""
+            inst.runOnMainSync { dark = if (android.os.Build.VERSION.SDK_INT >= 33) w.settings.isAlgorithmicDarkeningAllowed.toString() else "pre-33" }
+            report.appendLine("darkening=$dark sdk=${android.os.Build.VERSION.SDK_INT}")
+            report.appendLine("dom=${js(w, "(()=>{const r=e=>{if(!e)return 'none';const b=e.getBoundingClientRect(),c=getComputedStyle(e);return e.tagName+'.'+e.className+' '+[b.x,b.y,b.width,b.height].map(Math.round).join(',')+' op='+c.opacity+' vis='+c.visibility+' bg='+c.backgroundImage.slice(0,40)+'/'+c.backgroundColor+' fg='+c.color+' tf='+c.transform+' filt='+c.filter};return ['shell:'+r(document.querySelector('.shell')),'content:'+r(document.querySelector('.content')),'at(160,40):'+r(document.elementFromPoint(160,40)),'at(160,200):'+r(document.elementFromPoint(160,200)),'dpr='+devicePixelRatio,'vv='+(visualViewport?visualViewport.width+'x'+visualViewport.height+'@'+visualViewport.scale:'')].join(' || ')})()")}")
             report.appendLine("sw=${js(w, "String(!!navigator.serviceWorker && !!navigator.serviceWorker.controller)")}")
             val shot = ua.takeScreenshot()
             if (shot != null) {
-                save("webpage-$name-screen.png", png(shot))
+                shot.compress(Bitmap.CompressFormat.PNG, 100, File(out, "webpage-$name-screen.png").outputStream())
                 val r = Rect(loc[0], loc[1], loc[0] + w.width, loc[1] + w.height)
                 if (r.intersect(0, 0, shot.width, shot.height) && r.width() > 0 && r.height() > 0) {
                     crop = Bitmap.createBitmap(shot, r.left, r.top, r.width(), r.height())
-                    save("webpage-$name.png", png(crop!!))
+                    crop.compress(Bitmap.CompressFormat.PNG, 100, File(out, "webpage-$name.png").outputStream())
                 }
             }
+        }
+        // Discriminator: paint the page red. A pane that turns red is a page drawing black; one that stays black is a WebView
+        // that is not compositing at all.
+        if (w != null) {
+            js(w, "document.documentElement.style.background='red';document.body.style.background='red';'ok'")
+            SystemClock.sleep(1500)
+            ua.takeScreenshot()?.let { File(out, "webpage-$name-red-screen.png").outputStream().use { o -> it.compress(Bitmap.CompressFormat.PNG, 100, o) } }
         }
         val colours = crop?.let { b ->
             val px = IntArray(b.width * b.height); b.getPixels(px, 0, b.width, 0, 0, b.width, b.height); px.toSet().size
         } ?: 0
         report.appendLine("distinctColours=$colours")
         report.appendLine("--- events (${log.size}) ---"); synchronized(log) { log.forEach { report.appendLine(it) } }
-        save("webpage-$name.txt", report.toString().toByteArray())
+        File(out, "webpage-$name.txt").writeText(report.toString())
+        runCatching { File(out, "logcat-$name.txt").writeText(sh("logcat -d -v time -t 3000")) }
+        export(name)
         Log.i("WebPagesRenderTest", "[$name]\n$report")
 
         assertTrue("[$name] no WebView\n$report", w != null)
         assertTrue("[$name] body text is empty (len=$textLen)\n$report", textLen > 0)
+        assertTrue("[$name] page laid out with zero height (<html> $htmlH px)\n$report", htmlH > 0)
         assertTrue("[$name] WebView renders blank (one colour)\n$report", colours > 1)
     }
 }
