@@ -40,6 +40,11 @@ on:
         description: "JSON list of emulator API levels"
         type: string
         default: "[34]"
+      called:
+        # Set only on workflow_call. github.event_name is the CALLER's event (a Ship run
+        # dispatched by hand reads workflow_dispatch), so it cannot tell the two paths apart.
+        type: boolean
+        default: true
   workflow_dispatch:
     inputs:
       app:
@@ -84,7 +89,7 @@ jobs:
         api-level: ${{ fromJSON(inputs.api_levels) }}
     steps:
       - name: Fetch the APK under test (this run's artifact)
-        if: github.event_name != 'workflow_dispatch'
+        if: inputs.called
         # A Ship run whose gate skipped the build has no APK: the next step reports and skips.
         continue-on-error: true
         uses: actions/download-artifact@v4
@@ -93,7 +98,7 @@ jobs:
           path: apk
 
       - name: Fetch the APK under test (manual run)
-        if: github.event_name == 'workflow_dispatch'
+        if: ${{ !inputs.called }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
