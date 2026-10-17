@@ -218,7 +218,11 @@ public class BottomNavIslandView @JvmOverloads constructor(
 
     @Composable
     override fun Content() {
-        val entries = items.map { BottomNavEntry(it.id, it.label, painterResource(it.icon)) }
+        // A host resolves icons by name (getIdentifier), which returns 0 when the name is wrong or
+        // the release shrinker stripped the drawable. painterResource(0) throws
+        // Resources.NotFoundException on the first frame (Cloud Notes crashed at launch this way),
+        // so a missing icon draws the lib's neutral dot instead of taking the app down.
+        val entries = items.map { BottomNavEntry(it.id, it.label, painterResource(safeIcon(it.icon))) }
         val tap: (BottomNavEntry) -> Unit = { if (it.id == selectedId) onReselect(it.id) else onSelect(it.id) }
         val modify = itemModifier
         val clearance = insetsOverride ?: WindowInsets(0, 0, 0, (dispatchedBottom - roomBelow).coerceAtLeast(0))
@@ -250,3 +254,6 @@ public object BottomNavTags {
     public fun icon(id: String): String = iconTag(id)
     public fun label(id: String): String = labelTag(id)
 }
+
+/** [id], or the lib's neutral placeholder when a by-name lookup returned 0 (never a crash). */
+internal fun safeIcon(id: Int): Int = if (id != 0) id else R.drawable.bottomnav_ic_fallback

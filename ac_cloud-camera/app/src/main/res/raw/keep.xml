@@ -1,3 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- strict shrink mode: a resource reached only by name is stripped. ui/ModeNav.kt resolves the
+     mode-switcher icons with getIdentifier("ic_mode_${s.icon}", "drawable"), so they are kept
+     here by name (guarded by 1_cicd/src/scripts/cloud-android-shrink-keep-guard.py). -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-        tools:shrinkMode="strict"/>
+        tools:shrinkMode="strict"
+        tools:keep="@drawable/ic_mode_*"/>

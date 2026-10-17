@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resources the terminal plugin looks up BY NAME (getIdentifier), which shrinkResources cannot
+     see: TerminalService.resolveDrawableId(...) for the notification icon and
+     AlpineDocumentProvider's @mipmap/ic_launcher. Copied to app/src/main/res/raw by config.xml.
+     Guarded by 1_cicd/src/scripts/cloud-android-shrink-keep-guard.py. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_notification,@drawable/ic_launcher_foreground,@drawable/ic_launcher,@mipmap/ic_launcher" />

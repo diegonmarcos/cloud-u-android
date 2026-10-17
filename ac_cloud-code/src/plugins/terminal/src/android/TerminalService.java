@@ -437,6 +437,7 @@ public class TerminalService extends Service {
         threadPool.shutdown();
     }
 
+    // shrink-keep: @drawable/ic_notification @drawable/ic_launcher_foreground @drawable/ic_launcher
     private int resolveDrawableId(String... names) {
         for (String name : names) {
             int id = getResources().getIdentifier(name, "drawable", getPackageName());
