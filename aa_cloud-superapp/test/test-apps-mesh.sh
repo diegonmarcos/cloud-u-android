@@ -78,8 +78,8 @@ echo "$out" | grep -qx 'WG Cloud Mesh section:wg' && ok "the wg page reads Cloud
   || bad "the wg page is not 'Cloud Mesh' opening section:wg"
 echo "$out" | grep -qx 'APPS Apps Mesh | Apps Mesh' && ok "Configs apps-mesh and Store's mesh entry both read Apps Mesh" \
   || bad "the two entry points to the Apps Mesh page do not both read 'Apps Mesh'"
-echo "$out" | grep -qx 'ORDER firewall,dns,wg,apps-mesh,ipc,adb-shell' && ok "Setup ▸ Network = Firewall · DNS (#740) · Cloud Mesh · Apps Mesh · IPC (#ipc) · ADB Shell" \
-  || bad "Setup ▸ Network is not firewall, dns, wg, apps-mesh, ipc, adb-shell in that order"
+echo "$out" | grep -qx 'ORDER firewall,dns,wg,apps-mesh,adb-shell' && ok "Setup ▸ Network = Firewall · DNS (#740) · Cloud Mesh · Apps Mesh (tabs Apps · IPC · Identity) · ADB Shell" \
+  || bad "Setup ▸ Network is not firewall, dns, wg, apps-mesh, adb-shell in that order"
 
 echo "== C2: one page, two entry points =="
 code "$FRAG" | grep -qF 'AppsMesh.Page(this@AppsMeshFragment)' && ok "AppsMeshFragment hosts AppsMesh.Page" \
@@ -92,8 +92,10 @@ grep -qF 'AndroidFragment<AppsMeshFragment>' "$ACCESS" && ok "Store's Access pag
   || ok "the Cloud page draws no mesh (it moved to Access)"
 # #865 directly, or through the Cloud Store hand-off that embeds it until Cloud Store is installed.
 HANDOFF="$(dirname "$PAGES")/../apps/CloudStoreHandoff.kt"
+# Apps Mesh is a strip (apps-mesh.tabs); its first tab apps-mesh-members is the handoff page for "apps-mesh".
 { grep -qE 'sectionId == "config" && pageId == "apps-mesh" +-> .*AppsMeshFragment\(\)' "$PAGES" ||
-  { grep -qE 'sectionId == "config" && pageId == "apps-mesh" +-> .*CloudStoreHandoff\.page\(pageId\)' "$PAGES" &&
+  { grep -qE 'sectionId == "config" && pageId == "apps-mesh-members" +-> .*CloudStoreHandoff\.page\("apps-mesh"\)' "$PAGES" &&
+    python3 -c "import json,sys; ps=next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['id']=='config')['pages']; sys.exit(0 if next(p for p in ps if p['id']=='apps-mesh').get('tabs',[''])[0]=='apps-mesh-members' else 1)" "$BJ" &&
     grep -qE '"apps-mesh" +to +[A-Za-z.]*AppsMeshFragment::class\.java' "$HANDOFF"; }; } \
   && ok "config/apps-mesh routes to AppsMeshFragment" || bad "config/apps-mesh does not route to AppsMeshFragment"
 callers="$(grep -rlF 'StoreMesh.Mesh(' "$LIBS" "$APP/app/src/main" --include=*.kt | xargs -r -n1 sh -c 'python3 - "$0" <<EOF

@@ -4799,19 +4799,35 @@
           },
           {
             "_doc": "#733 APPS MESH — the second way into the ONE page Store ▸ Apps Mesh draws (libs:appstore AppsMesh.page; SectionPages routes this id to AppsMeshFragment, which only hosts it). Every fleet member, the engines each binds, the per-member actions (API · Start · Stop · Open · Details), the missing-membership report and Export. Its label must equal libs:appstore assets/appstore-controls.json pages.mesh.label, the Store entry's caption — test-apps-mesh.sh holds them equal, because one page under two names is two pages to the person reading them.",
+            "_doc_tabs": "Apps Mesh is a strip over three tabs: Apps (apps-mesh-members, the Store's mesh page above), IPC (ipc, the fleet's IPC Mesh, which left the Network grid as its own tile and lives here) and Identity (identity, each fleet app's Linux uid: own, or the shared group data/fleet-identity.json declares).",
             "id": "apps-mesh",
             "label": "Apps Mesh",
             "icon": "ic_mode_apps",
+            "tabs": ["apps-mesh-members", "ipc", "identity"],
             "group": "Setup",
             "subgroup": "Network"
           },
           {
             "_doc": "#ipc IPC — the fleet's IPC Mesh: every IPC endpoint each fleet member exposes to the others on this phone (the fleet IPC layer's ops on content://<pkg>.fleet, signature-guarded providers, bound services and their AIDL, intent actions, deep links), the permission guarding each, who calls it, and whether it resolves and answers here. ONE shared composable, libs:appstore IpcMeshPage, the same page Cloud Store > Access > IPC draws (SectionPages hosts it with IpcMeshFragment); data: the generated registry data/ipc-mesh.json (1_cicd/src/scripts/cloud-android-ipc-mesh.py). a0_docs/eng-specs/fleet-ipc.md.",
+            "_doc_tab": "No longer a Network tile: the second tab of Apps Mesh (apps-mesh.tabs), hidden from the grid. The id stays `ipc`, so page:config/ipc still opens it.",
             "id": "ipc",
             "label": "IPC",
             "icon": "ic_mode_apps",
-            "group": "Setup",
-            "subgroup": "Network"
+            "hidden": true
+          },
+          {
+            "_doc": "Apps Mesh > Apps: the first tab of the Apps Mesh strip, the same Store mesh page (CloudStoreHandoff.page(\"apps-mesh\") -> libs:appstore AppsMeshFragment) the tile opened before it became a strip.",
+            "id": "apps-mesh-members",
+            "label": "Apps",
+            "icon": "ic_mode_apps",
+            "hidden": true
+          },
+          {
+            "_doc": "Apps Mesh > Identity: every fleet app's Linux identity — package, its sharedUserId or own uid, who shares it, the live uid from PackageManager and its signing key's short fingerprint, flagged when the device disagrees with the declaration. ONE declaration: data/fleet-identity.json (a group's value is read from the app that owns it, ac_cloud-termux/build.json::shared_store.shared_user_id); test/test-fleet-shared-uid.sh holds every manifest to it. libs:appstore FleetIdentityPage, hosted by FleetIdentityFragment.",
+            "id": "identity",
+            "label": "Identity",
+            "icon": "ic_lock",
+            "hidden": true
           },
           {
             "_doc": "ADB SHELL - THE page for the privileged channel (libs:shizuku-adb-debug-tools AdbShellPage), the same one Cloud Store (Settings), Cloud Account (Setup), the terminals (Settings) and every status chip draw. Six sections: the status table (Developer options, Wireless debugging, embedded adb, the local server on 38099, Shizuku, the active route and mode, each with a colour dot and when it was probed), Connect (the method that applies to the chosen mode, run step by step with the step that failed named), Active connection (Disconnect / Reconnect / Restart server / Stop server / Test round-trip, each disabled when it does not apply), Logs (an in-memory ring, tokens redacted, Copy and Clear), Declared needs (this app's privileged_channel above) and Setup (the checklist, each item opening its exact settings screen). The label is this one string: rename it here and nowhere else. Sits right after Apps Mesh.",

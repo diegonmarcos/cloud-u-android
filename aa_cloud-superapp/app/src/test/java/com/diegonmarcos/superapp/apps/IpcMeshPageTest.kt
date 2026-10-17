@@ -23,7 +23,7 @@ import org.robolectric.annotation.Config
  *   P1 the baked registry is the committed data/ipc-mesh.json, every declared endpoint of
  *      every member present (its own and its shared libs', <pkg> resolved)
  *   P2 the page LISTS every declared endpoint: unfolded, a node per endpoint of every member
- *   P3 SuperApp: Configs > Network > IPC sits after Apps Mesh and builds the shared page's host
+ *   P3 SuperApp: Configs > Network > Apps Mesh > IPC is the tab after Apps and builds the shared page's host
  *   P4 the filters partition what is drawn: All draws every member
  */
 @RunWith(RobolectricTestRunner::class)
@@ -69,10 +69,12 @@ class IpcMeshPageTest : KitPageHarness() {
     }
 
     @Test
-    fun `P3 Configs Network IPC is reachable and hosts the shared page`() {
-        val net = Sections.byId("config")!!.pages.filter { it.group == "Setup" && it.subgroup == "Network" }.map { it.id }
-        assertTrue("ipc is not a Network page: $net", "ipc" in net)
-        assertEquals("IPC sits right after Apps Mesh", net.indexOf("apps-mesh") + 1, net.indexOf("ipc"))
+    fun `P3 Configs Network Apps Mesh IPC is reachable and hosts the shared page`() {
+        val pages = Sections.byId("config")!!.pages
+        val net = pages.filter { it.group == "Setup" && it.subgroup == "Network" && !it.hidden }.map { it.id }
+        assertTrue("ipc is no longer a Network tile: $net", "ipc" !in net)
+        val tabs = pages.first { it.id == "apps-mesh" }.tabs
+        assertEquals("IPC is the Apps Mesh tab after Apps", listOf("apps-mesh-members", "ipc"), tabs.take(2))
         assertTrue("Network keeps the 2-8 rule: $net", net.size in 2..8)
         val page = SectionPages.pagesFor("config").first { it.id == "ipc" }
         assertEquals("IPC", page.label)

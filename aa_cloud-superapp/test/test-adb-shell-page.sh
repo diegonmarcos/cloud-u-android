@@ -19,7 +19,7 @@ b = json.load(open(sys.argv[1]))
 pages = next(s for s in b['ui']['sections'] if s['id'] == 'config')['pages']
 net = [p['id'] for p in pages if p.get('subgroup') == 'Network' and not p.get('hidden')]
 by = {p['id']: p for p in pages}
-# #ipc the mesh pages sit together (Apps Mesh, then its IPC sibling); ADB Shell follows them
+# #ipc the mesh pages sit together (Apps Mesh; IPC is now its tab, not a tile); ADB Shell follows them
 mesh = [i for i in ('apps-mesh', 'ipc') if i in net]
 print('AFTER', net[net.index(mesh[-1]) + 1] if mesh and net.index(mesh[-1]) + 1 < len(net) else 'none')
 print('LABEL', by.get('adb-shell', {}).get('label'))
