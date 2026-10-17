@@ -79,6 +79,23 @@ t('torrents: magnet / .torrent only; Internet Archive torrent URL', () => {
   assert.ok(L.parseTorrentInput('https://example.org/page').error);
   assert.equal(L.archiveTorrentUrl(decl.sources.find((s) => s.id === 'archive-torrent'), 'x'), 'https://archive.org/download/x/x_archive.torrent');
 });
+t('user sources: add / edit / remove, {query} template, Torznab and RSS parsing, badges', () => {
+  let r = L.addUserSource([], { name: 'J', type: 'torznab', url: 'http://j/api', apikey: 'K' }, () => 'a');
+  r = L.addUserSource(r.list, { name: 'T', type: 'template', url: 'https://s/?q={query}' }, () => 'b');
+  assert.equal(r.list.length, 2);
+  assert.ok(L.addUserSource(r.list, { name: 'x', type: 'template', url: 'https://s/' }).error);
+  r = L.updateUserSource(r.list, 'a', { enabled: false }); assert.equal(r.list[0].enabled, false);
+  r = L.removeUserSource(r.list, 'b'); assert.deepEqual(r.list.map((s) => s.id), ['a']);
+  assert.equal(L.userSearchUrl({ type: 'template', url: 'https://s/?q={query}' }, 'a b'), 'https://s/?q=a%20b');
+  assert.equal(L.userSearchUrl({ type: 'torznab', url: 'http://j/api', apikey: 'K' }, 'x'), 'http://j/api?t=search&apikey=K&q=x');
+  const tz = L.parseTorrentFeed('<rss><channel><item><title>A</title><enclosure url="http://j/1.torrent" length="5"/><torznab:attr name="seeders" value="3"/></item></channel></rss>');
+  assert.deepEqual([tz[0].title, tz[0].torrent, tz[0].seeders, tz[0].size], ['A', 'http://j/1.torrent', 3, 5]);
+  const rs = L.parseTorrentFeed('<rss><item><title>B</title><link>magnet:?xt=urn:btih:1111111111111111111111111111111111111111</link></item></rss>');
+  assert.match(rs[0].magnet, /^magnet:/);
+  assert.equal(raw.user_sources, undefined, 'no user-source presets shipped');
+});
+const pl = fs.readFileSync(path.join(app, 'web/assets/player.js'), 'utf8');
+ok(/searchUserSources/.test(pl) && /localStorage\.setItem\(UKEY/.test(pl) && /data-udel/.test(pl) && /data-uon/.test(pl), 'player: user sources searched, stored on the device, enable/disable/delete');
 const core = fs.readFileSync(path.join(app, 'web/assets/sources-core.js'), 'utf8');
 ok(core.includes(sh.repo + '@' + sh.commit), 'sources-core.js is the copy at build.json::data.shared.commit');
 for (const pg of ['movies', 'documentaries']) {
@@ -115,6 +132,7 @@ mutate() {
 mutate unknown-kind "python3 -c \"import json;p='web/data/sources.json';d=json.load(open(p));d['sources'][0]['kind']='stream';json.dump(d,open(p,'w'))\""
 mutate denied-source "python3 -c \"import json;p='web/data/sources.json';d=json.load(open(p));d['sources'][0]['search']='https://'+'vid'+'src.cc/{query}';json.dump(d,open(p,'w'))\""
 mutate player-unloaded "sed -i 's#<script src=\"../assets/player.js\"></script>##' web/movies/index.html"
+mutate user-sources-unwired "sed -i 's/searchUserSources/searchNothing/' web/assets/player.js"
 mutate pin-moved "python3 -c \"import json;p='build.json';d=json.load(open(p));d['data']['shared']['commit']='0000000';json.dump(d,open(p,'w'))\""
 [ "$fails" -eq 0 ] || { echo "$fails mutation(s) stayed green"; exit 1; }
 echo "all checks green, all mutations red"

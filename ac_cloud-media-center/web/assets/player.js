@@ -12,6 +12,20 @@
   'use strict';
   var L = root.LegalSources, doc = root.document, KEY = 'cmc_sources_v1';
   var decl = null, settings = load(), run = 0, cleanup = function () {};
+  // User-defined torrent sources: added here, kept in this app's storage only, none shipped.
+  var UKEY = 'cmc_user_sources_v1', users = L.parseUserSources((function () { try { return root.localStorage.getItem(UKEY) || '[]'; } catch (e) { return '[]'; } })()), found = [];
+  function storeUsers(r) {
+    var m = el && el.querySelector('.player__umsg'); if (m) m.textContent = r.error || '';
+    if (r.error) return false;
+    users = r.list; try { root.localStorage.setItem(UKEY, JSON.stringify(users)); } catch (e) {}
+    if (el) { el.querySelector('.player__ulist').innerHTML = userList(); el.querySelector('.player__usearch').hidden = !users.length; }
+    return true;
+  }
+  function userList() {
+    return users.map(function (u) {
+      return '<div class="player__urow"><input type="checkbox" data-uon="' + esc(u.id) + '"' + (u.enabled ? ' checked' : '') + '><input data-uname="' + esc(u.id) + '" value="' + esc(u.name) + '"><small class="muted">' + esc(u.type) + '</small><button type="button" class="icon" data-udel="' + esc(u.id) + '">🗑</button></div>';
+    }).join('');
+  }
   var ICON = { library: '🗄', local: '📁', providers: '📺', trailer: '🎞', catalogue: '🏛', torrent: '🧲' };
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -41,6 +55,7 @@
       '<div class="player__picker"><div class="player__list"></div>' +
       '<label class="player__row">📁 Files on this phone <input type="file" accept="video/*" multiple data-act="files"></label>' +
       '<form class="player__row" data-act="paste"><input name="t" placeholder="magnet:… or https://….torrent"><button class="btn">▶</button></form>' +
+      '<form class="player__usearch" data-act="usearch"' + (users.length ? '' : ' hidden') + '><div class="muted">Your sources</div><div class="player__row"><input name="q" placeholder="Search: ' + esc(m.title) + '"><button class="btn">⌕</button></div><div class="player__ures"></div></form>' +
       '<label class="player__row">Buffer <select data-act="buffer">' + L.BUFFER_MODES.map(function (b) { return '<option value="' + b.id + '"' + (b.id === settings.buffer ? ' selected' : '') + '>' + esc(b.label) + '</option>'; }).join('') + '</select></label></div>' +
       '<form class="player__settings" hidden>' + settingsForm() + '</form>';
     doc.body.appendChild(el);
@@ -49,7 +64,12 @@
     var f = function (lab, path, pw) { var v = path.split('.').reduce(function (o, k) { return o[k]; }, settings); return '<label>' + lab + '<input name="' + path + '" value="' + esc(v) + '"' + (pw ? ' type="password" autocomplete="off"' : '') + '></label>'; };
     return '<p class="muted">Kept only in this app. Nothing is sent except to the servers you enter.</p>' + f('TMDB API key', 'tmdb_key', true) + f('Region', 'region') +
       ['jellyfin', 'emby', 'plex'].map(function (k) { return f(k + ' URL', k + '.url') + f(k + ' token', k + '.token', true); }).join('') +
-      f('Drive media folder URL (serves index.json)', 'drive.url') + '<button class="btn btn--accent">Save &amp; re-check</button>';
+      f('Drive media folder URL (serves index.json)', 'drive.url') + '<button class="btn btn--accent">Save &amp; re-check</button>' +
+      '<h4>Your torrent sources</h4><p class="muted">Added by you, kept on this phone only. Nothing is preset. Only use sources you have the right to download from.</p>' +
+      '<div class="player__ulist">' + userList() + '</div>' +
+      '<label>Name<input data-unew="name"></label><label>Type<select data-unew="type"><option value="torznab">Torznab / Jackett</option><option value="rss">RSS feed</option><option value="template">Search URL with {query}</option></select></label>' +
+      '<label>URL<input data-unew="url" placeholder="https://…"></label><label>API key (Torznab)<input data-unew="apikey" type="password" autocomplete="off"></label>' +
+      '<button type="button" class="btn" data-act="uadd">Add source</button><div class="player__umsg muted"></div>';
   }
   function err(msg) { var e = el.querySelector('.player__err'); e.hidden = !msg; e.textContent = msg ? '⚠ ' + msg : ''; }
 
@@ -163,6 +183,20 @@
     el.addEventListener('click', function (e) {
       var a = e.target.closest('[data-act]'), s = e.target.closest('[data-src]');
       if (s) return choose(el.querySelector('.player__list').__have[+s.getAttribute('data-src')]);
+      var ur = e.target.closest('[data-ures]');
+      if (ur) {
+        var r = found[+ur.getAttribute('data-ures')];
+        if (r.open) { var link = doc.createElement('a'); link.href = r.open; link.setAttribute('data-ext', ''); doc.body.appendChild(link); link.click(); link.remove(); return; }
+        if (!(r.magnet || r.torrent)) return err('That result has no magnet or .torrent link.');
+        return choose({ source: { id: 'user', name: r.title, kind: 'torrent', order: 999 }, ok: true, torrent: r.magnet || r.torrent, badge: r.badge });
+      }
+      var ud = e.target.closest('[data-udel]');
+      if (ud) return storeUsers(L.removeUserSource(users, ud.getAttribute('data-udel')));
+      if (a && a.getAttribute('data-act') === 'uadd') {
+        var nw = {}; [].forEach.call(el.querySelectorAll('[data-unew]'), function (i) { nw[i.getAttribute('data-unew')] = i.value.trim(); });
+        if (storeUsers(L.addUserSource(users, nw))) [].forEach.call(el.querySelectorAll('input[data-unew]'), function (i) { i.value = ''; });
+        return;
+      }
       if (!a) return;
       if (a.getAttribute('data-act') === 'close') close();
       if (a.getAttribute('data-act') === 'settings') { var f = el.querySelector('.player__settings'); f.hidden = !f.hidden; }
@@ -171,15 +205,26 @@
       var a = e.target.getAttribute('data-act');
       if (a === 'files') { files = [].slice.call(e.target.files || []); probe(m); }
       if (a === 'buffer') { settings.buffer = e.target.value; save(); }
+      if (e.target.hasAttribute('data-uon')) storeUsers(L.updateUserSource(users, e.target.getAttribute('data-uon'), { enabled: e.target.checked }));
+      if (e.target.hasAttribute('data-uname')) storeUsers(L.updateUserSource(users, e.target.getAttribute('data-uname'), { name: e.target.value }));
     });
     el.addEventListener('submit', function (e) {
       e.preventDefault();
+      if (e.target.getAttribute('data-act') === 'usearch') {
+        var box = e.target.querySelector('.player__ures'); box.innerHTML = '<div class="muted">searching…</div>';
+        var getText = function (u) { return fetch(u).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); }); };
+        return L.searchUserSources(users, e.target.q.value || m.title, getText).then(function (out) {
+          found = out.results;
+          box.innerHTML = found.map(function (r, i) { return '<button type="button" class="src" data-ures="' + i + '">🧲 ' + esc(r.title) + ' <small class="badge">' + esc(r.badge) + (r.seeders != null ? ' · ' + r.seeders + ' seeders' : '') + '</small></button>'; }).join('') +
+            (found.length ? '' : '<div class="muted">No results.</div>') + out.errors.map(function (x) { return '<div class="muted">' + esc(x.name) + ': ' + esc(x.error) + '</div>'; }).join('');
+        });
+      }
       if (e.target.getAttribute('data-act') === 'paste') {
         var p = L.parseTorrentInput(e.target.t.value);
         if (p.error) return err(p.error);
         return choose({ source: { id: 'pasted', name: 'Your torrent', kind: 'torrent', order: 999 }, ok: true, torrent: p.uri });
       }
-      [].forEach.call(e.target.querySelectorAll('input'), function (i) {
+      [].forEach.call(e.target.querySelectorAll('input[name]'), function (i) {
         var ks = i.name.split('.'), o = settings; while (ks.length > 1) o = o[ks.shift()]; o[ks[0]] = i.value.trim();
       });
       settings.region = (settings.region || 'US').toUpperCase(); save(); e.target.hidden = true; probe(m);
