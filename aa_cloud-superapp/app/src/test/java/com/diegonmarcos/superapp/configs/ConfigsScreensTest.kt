@@ -51,7 +51,9 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
         // The four tab STRIPS: under Robolectric the strip's pane (a FragmentContainerView inside an AndroidView pager)
         // stays empty, so only its tab pills are measured here. Every tab they hold is rendered and guarded as its own
         // screen above (presets, panels, panels-ui, panels-tools, agents-*, apps-mesh-members, ipc, identity).
-        val NO_CONTROLS = setOf("controls", "panels", "agents", "apps-mesh")
+        // Battery: read-only stats that load from the system battery service, which Robolectric never answers
+        // ("Reading the battery..." is all it draws), so it has no control to measure here.
+        val NO_CONTROLS = setOf("controls", "panels", "agents", "apps-mesh", "battery")
         /** An icon's plate (Control's round badge): at most the icon + 8dp ("white box too big"). */
         const val ICON_DP = 22f
         const val MAX_ICON_BOX_DP = ICON_DP + 8f
@@ -98,7 +100,8 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
         val tag = c.getOrNull(SemanticsProperties.TestTag).orEmpty()
         val clickable = c.contains(SemanticsActions.OnClick) || c.contains(SemanticsProperties.ToggleableState) ||
             c.contains(SemanticsProperties.Selected)
-        if (!clickable) return null
+        // A kit list row is a row whether or not it is tappable (Identity is a read-only list of them).
+        if (!clickable) return if (tag.startsWith("kit:listrow:")) "row" else null
         return when {
             c.contains(SemanticsProperties.EditableText) -> "field"
             tag.startsWith("cfg:button") || tag.contains("fab", true) -> "button"
