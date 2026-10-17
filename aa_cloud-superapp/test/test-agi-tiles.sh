@@ -125,6 +125,12 @@ for label, directory in (("Search", "ac_cloud-search"), ("Tools", "ac_cloud-tool
           and e.get("install_apk_url") == entry["release_url"],
           "%s installs %s from the fleet's release_url %s" % (label, entry["package"], entry["release_url"]))
 
+def glyph_in(tile, fg):
+    # The tile is the plain glyph of the app's generated launcher icon: every
+    # path it draws appears verbatim in the launcher foreground.
+    tp = re.findall(r'pathData="([^"]+)"', read(tile))
+    return bool(tp) and all(('pathData="%s"' % p) in read(fg) for p in tp)
+
 print("== T3: the Code, Search and Tools glyphs exist and are their apps' own launcher foregrounds ==")
 for label in ("Search", "Code", "Tools"):
     icon = (by.get(label) or {}).get("icon", "")
@@ -133,13 +139,13 @@ for label in ("Search", "Code", "Tools"):
 tools_icon = (by.get("Tools") or {}).get("icon", "")
 mine = os.path.join(app, "app/src/main/res/drawable", tools_icon + ".xml")
 theirs = os.path.join(root, "ac_cloud-tools-small-llms/app/src/main/res/drawable/ic_launcher_foreground.xml")
-check(bool(tools_icon) and os.path.isfile(mine) and os.path.isfile(theirs) and read(mine) == read(theirs),
-      "drawable/%s.xml is byte-identical to ac_cloud-tools-small-llms's ic_launcher_foreground.xml" % tools_icon)
+check(bool(tools_icon) and os.path.isfile(mine) and os.path.isfile(theirs) and glyph_in(mine, theirs),
+      "drawable/%s.xml draws ac_cloud-tools-small-llms's launcher glyph (generated: cloud-android-launcher-icons.py)" % tools_icon)
 ide_icon = (by.get("Code") or {}).get("icon", "")
 mine = os.path.join(app, "app/src/main/res/drawable", ide_icon + ".xml")
 theirs = os.path.join(root, "ac_cloud-code/res/android/drawable/ic_launcher_foreground.xml")
-check(bool(ide_icon) and os.path.isfile(mine) and os.path.isfile(theirs) and read(mine) == read(theirs),
-      "drawable/%s.xml is byte-identical to ac_cloud-code's ic_launcher_foreground.xml" % ide_icon)
+check(bool(ide_icon) and os.path.isfile(mine) and os.path.isfile(theirs) and glyph_in(mine, theirs),
+      "drawable/%s.xml draws ac_cloud-code's launcher glyph (generated: cloud-android-launcher-icons.py)" % ide_icon)
 search_icon = (by.get("Search") or {}).get("icon", "")
 mine = os.path.join(app, "app/src/main/res/drawable", search_icon + ".xml")
 theirs = os.path.join(root, "ac_cloud-search/app/src/main/res/drawable/ic_launcher_foreground.xml")
