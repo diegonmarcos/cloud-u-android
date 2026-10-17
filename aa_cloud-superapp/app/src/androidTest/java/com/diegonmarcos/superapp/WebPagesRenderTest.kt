@@ -30,18 +30,20 @@ import java.util.concurrent.TimeUnit
  * every load / HTTP error and the final URL. Fails when the body has no text or the WebView's pixels are one colour.
  */
 @RunWith(AndroidJUnit4::class)
+@org.junit.FixMethodOrder(org.junit.runners.MethodSorters.NAME_ASCENDING)
 class WebPagesRenderTest {
     private val inst = InstrumentationRegistry.getInstrumentation()
     private val ua = inst.uiAutomation
-    private val out = File("/data/local/tmp")
+    /** Readable by `adb pull` without root: /sdcard/Android/data/<pkg>/files/webpage. */
+    private val out by lazy { File(inst.targetContext.getExternalFilesDir(null), "webpage").apply { mkdirs() } }
 
     private fun sh(cmd: String): String =
         android.os.ParcelFileDescriptor.AutoCloseInputStream(ua.executeShellCommand(cmd)).bufferedReader().readText()
 
     @After fun tearDown() { WebPageFragment.probe = null }
 
-    @Test fun webAppsRenders() = check("webapps", "page:cloud/webapps")
-    @Test fun linktreeRenders() = check("linktree", "page:cloud/lnktree")
+    @Test fun a_webAppsRenders() = check("webapps", "page:cloud/webapps")
+    @Test fun b_linktreeRenders() = check("linktree", "page:cloud/lnktree")
 
     private fun resumed(): Activity? {
         var a: Activity? = null
@@ -58,14 +60,14 @@ class WebPagesRenderTest {
     private fun js(w: WebView, expr: String): String {
         val latch = CountDownLatch(1); var r = "<timeout>"
         inst.runOnMainSync { w.evaluateJavascript(expr) { r = it; latch.countDown() } }
-        latch.await(5, TimeUnit.SECONDS)
+        latch.await(3, TimeUnit.SECONDS)
         return r
     }
 
     private fun check(name: String, target: String) {
         val log = Collections.synchronizedList(mutableListOf<String>())
         WebPageFragment.probe = { log += it }
-        sh("input keyevent KEYCODE_WAKEUP"); sh("wm dismiss-keyguard")
+        sh("input keyevent KEYCODE_WAKEUP"); sh("wm dismiss-keyguard"); sh("logcat -c")
         val ctx = inst.targetContext
         ctx.startActivity(Intent().setClassName(ctx.packageName, "${ctx.packageName}.MainActivity")
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -81,6 +83,7 @@ class WebPagesRenderTest {
             val w = web ?: continue
             ready = js(w, "document.readyState")
             textLen = js(w, "(document.body ? document.body.innerText.length : -1)").trim('"').toIntOrNull() ?: -1
+            log += "t=${SystemClock.elapsedRealtime() - t0} ready=$ready len=$textLen"
             if (ready.contains("complete") && textLen > 0 && SystemClock.elapsedRealtime() - t0 > 8_000) break
         }
         SystemClock.sleep(1500)
@@ -110,7 +113,7 @@ class WebPagesRenderTest {
                 val r = Rect(loc[0], loc[1], loc[0] + w.width, loc[1] + w.height)
                 if (r.intersect(0, 0, shot.width, shot.height) && r.width() > 0 && r.height() > 0) {
                     crop = Bitmap.createBitmap(shot, r.left, r.top, r.width(), r.height())
-                    crop!!.compress(Bitmap.CompressFormat.PNG, 100, File(out, "webpage-$name.png").outputStream())
+                    crop.compress(Bitmap.CompressFormat.PNG, 100, File(out, "webpage-$name.png").outputStream())
                 }
             }
         }
@@ -120,6 +123,7 @@ class WebPagesRenderTest {
         report.appendLine("distinctColours=$colours")
         report.appendLine("--- events (${log.size}) ---"); synchronized(log) { log.forEach { report.appendLine(it) } }
         File(out, "webpage-$name.txt").writeText(report.toString())
+        runCatching { File(out, "logcat-$name.txt").writeText(sh("logcat -d -v time -t 3000")) }
         Log.i("WebPagesRenderTest", "[$name]\n$report")
 
         assertTrue("[$name] no WebView\n$report", w != null)

@@ -133,7 +133,7 @@ jobs:
           working-directory: aa_cloud-superapp
           # ONE line: the runner executes each script line in its own `sh -c`, so a variable (the exit
           # status) does not survive a line break. bash, because build.sh is bash (and not executable in git).
-          script: bash -c 'rc=0; bash ./build.sh instrument || rc=$?; mkdir -p test-out; adb pull /data/local/tmp/edge-menu-left.png test-out/; adb pull /data/local/tmp/edge-menu-right.png test-out/; adb pull /data/local/tmp/ test-out/tmp/; adb logcat -d > test-out/logcat.txt; adb logcat -d -s EdgeOverlayTest:* OneHand:* > test-out/probe.txt; adb logcat -d -s WebPage:* WebPagesRenderTest:* chromium:* > test-out/webpage.txt; adb shell dumpsys window windows > test-out/windows.txt; exit $rc'
+          script: bash -c 'rc=0; bash ./build.sh instrument || rc=$?; mkdir -p test-out; T="timeout 90"; $T adb pull /sdcard/Android/data/com.diegonmarcos.superapp/files/webpage test-out/; $T adb pull /data/local/tmp/edge-menu-left.png test-out/; $T adb pull /data/local/tmp/edge-menu-right.png test-out/; $T adb pull /data/local/tmp/ test-out/tmp/; $T adb logcat -d > test-out/logcat.txt; $T adb logcat -d -s EdgeOverlayTest:* OneHand:* > test-out/probe.txt; $T adb logcat -d -s WebPage:* WebPagesRenderTest:* chromium:* > test-out/webpage.txt; $T adb shell dumpsys window windows > test-out/windows.txt; exit $rc'
 
       - name: Upload evidence (screenshots + logcat + reports)
         if: always()
@@ -143,6 +143,7 @@ jobs:
           path: |
             aa_cloud-superapp/test-out/
             aa_cloud-superapp/app/build/reports/androidTests/
+            aa_cloud-superapp/app/build/outputs/androidTest-results/
           if-no-files-found: warn
 
       # emulator-runner masked a failing connectedAndroidTest as exit 0 before (see test-cloud-nav.yml):
