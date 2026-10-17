@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -101,7 +100,7 @@ object AccountHandoff {
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(24.dp))
-            Button(onClick = {
+            com.diegonmarcos.superapp.uikit.KitButton(onClick = {
                 message = com.diegonmarcos.superapp.launcher.AppInstall.start(ctx, PKG, LABEL).message
             }) { Text("Install Cloud Account") }
             message?.let { Text(it, Modifier.padding(top = 12.dp), textAlign = TextAlign.Center) }
@@ -122,7 +121,7 @@ object AccountHandoff {
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(24.dp))
-            Button(onClick = { failed = !open(ctx) }) { Text("Open Cloud Account") }
+            com.diegonmarcos.superapp.uikit.KitButton(onClick = { failed = !open(ctx) }) { Text("Open Cloud Account") }
             if (failed) Text("Cloud Account did not open - is it still installed?", Modifier.padding(top = 12.dp))
         }
     }

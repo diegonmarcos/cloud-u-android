@@ -53,10 +53,10 @@ internal fun GenericTileUi(label: String, subtitle: String, isSelected: Boolean,
     val p = LocalKitPalette.current
     val view = LocalView.current
     Column(Modifier.fillMaxWidth().background(if (isSelected) p.surfaceSelected else p.surface)
-        .clickable { Haptics.tap(view); onClick() }.padding(14.dp).testTag("generic-tile:$label")) {
-        Text((if (isSelected) "● " else "○ ") + label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+        .clickable { Haptics.tap(view); onClick() }.padding(horizontal = 10.dp, vertical = 6.dp).testTag("generic-tile:$label")) {
+        Text((if (isSelected) "● " else "○ ") + label, color = p.textPrimary, style = MaterialTheme.typography.bodyMedium)
         if (subtitle.isNotBlank()) Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(top = 4.dp))
+            modifier = Modifier.padding(top = 1.dp))
     }
 }
 

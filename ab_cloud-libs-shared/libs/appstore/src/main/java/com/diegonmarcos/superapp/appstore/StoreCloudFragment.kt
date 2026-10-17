@@ -15,7 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -364,8 +363,8 @@ class StoreCloudFragment : KitComposeFragment() {
                         "installs it anyway. Refusing is the safe choice and is what happens by " +
                         "default — only continue if you mean to roll back.")
                 },
-                dismissButton = { TextButton(onClick = { d.answer(false) }) { Text("Cancel (recommended)") } },
-                confirmButton = { TextButton(onClick = { d.answer(true) }) { Text("Install anyway") } },
+                dismissButton = { com.diegonmarcos.superapp.uikit.KitTextButton(onClick = { d.answer(false) }) { Text("Cancel (recommended)") } },
+                confirmButton = { com.diegonmarcos.superapp.uikit.KitTextButton(onClick = { d.answer(true) }) { Text("Install anyway") } },
             )
         }
         stopNoChannel?.let { app ->
@@ -374,7 +373,7 @@ class StoreCloudFragment : KitComposeFragment() {
                 title = { Text(FleetActions.label(ctx, "stop") + " — " + app.label) },
                 text = { Text(ctx.getString(R.string.store_fleet_stop_no_channel)) },
                 confirmButton = {
-                    TextButton(onClick = {
+                    com.diegonmarcos.superapp.uikit.KitTextButton(onClick = {
                         stopNoChannel = null
                         Fleet.installedId(ctx, app)?.let { pkg ->
                             runCatching { startActivity(PhoneAppActions.appInfo(pkg)) }

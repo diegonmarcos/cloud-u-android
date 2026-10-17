@@ -18,7 +18,7 @@ fixture() {  # $1 = dir
   cat > "$1/$OWNER" <<'KT'
 fun kitTypography() = Typography()
 private fun TextStyle.dense() = copy(lineHeight = TextUnit.Unspecified)
-fun KitDenseMaterial() { LocalMinimumInteractiveComponentSize provides 36.dp }
+fun KitDenseMaterial() { LocalMinimumInteractiveComponentSize provides KitDensity.interactiveFloor }
 KT
   cat > "$1/$APP/Main.kt" <<'KT'
 fun Shell() {
@@ -54,6 +54,12 @@ for app in ac_cloud-tasks ac_cloud-calc ac_cloud-tools-small-llms ac_cloud-write
   d="$WORK/root-$app"; fixture "$d"; mkdir -p "$d/$app/app/src/main/java"
   echo 'fun X() { MaterialTheme(colorScheme = c) { } }' > "$d/$app/app/src/main/java/T.kt"; expect "$app is scanned" 1 "$d"
 done
+# a bare Material button on a Configs page fails; the kit button passes; outside the scope it is not this rule's business
+CFG="aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs"
+d="$WORK/cfg-button"; fixture "$d"; mkdir -p "$d/$CFG"; echo 'fun B() { Button(onClick = {}) { Text("x") } }' > "$d/$CFG/B.kt"; expect "a bare Material Button on a Configs page fails" 1 "$d"
+d="$WORK/cfg-textbutton"; fixture "$d"; mkdir -p "$d/$CFG"; echo 'fun B() { TextButton(onClick = {}) { Text("x") } }' > "$d/$CFG/B.kt"; expect "a bare TextButton on a Configs page fails" 1 "$d"
+d="$WORK/cfg-kitbutton"; fixture "$d"; mkdir -p "$d/$CFG"; echo 'fun B() { KitButton(onClick = {}) { Text("x") } }' > "$d/$CFG/B.kt"; expect "KitButton on a Configs page passes" 0 "$d"
+d="$WORK/owner-floor"; fixture "$d"; sed -i 's/KitDensity.interactiveFloor/36.dp/' "$d/$OWNER"; expect "the owner losing the interactive-floor switch fails" 1 "$d"
 # a comment naming the defect is not a defect
 d="$WORK/comment"; fixture "$d"; echo '// MaterialTheme(colorScheme = x) and Scaffold( are banned' >> "$d/$APP/Main.kt"; expect "comments are ignored" 0 "$d"
 # a test may name them

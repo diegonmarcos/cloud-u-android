@@ -18,12 +18,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -70,6 +67,18 @@ object KitDensity {
      * Material3 defaults to 48dp. The fleet's own controls (island, top bar) keep their 48dp targets.
      */
     val touch: Dp = 36.dp
+    /**
+     * What [KitDenseMaterial] hands LocalMinimumInteractiveComponentSize: 0.dp = OFF. Material's 48dp (or the old
+     * 36dp [touch]) floor padded every Checkbox/Radio/IconButton row out; touch comes from the full-width row instead.
+     */
+    val interactiveFloor: Dp = 0.dp
+    /** THE dense button: 30dp tall (28..32 with the font), 10dp x 4dp content padding, labelMedium text. */
+    val buttonHeight: Dp = 30.dp
+    val buttonPadH: Dp = 10.dp
+    val buttonPadV: Dp = 4.dp
+    /** A dense row / tile: 8dp sides, 6dp top and bottom. */
+    val rowPadH: Dp = 8.dp
+    val rowPadV: Dp = 6.dp
     /** Corner radius of a card, a tile and a chip. */
     val corner: Dp = 12.dp
 
@@ -216,7 +225,7 @@ fun KitDeviceCard(
             }
             if (pill != null) KitStatePill(pill.first, pill.second)
             if (menu.isNotEmpty()) Box {
-                TextButton(onClick = { open = true }, modifier = Modifier.testTag(KitPartTags.deviceMenu(id))) {
+                KitTextButton(onClick = { open = true }, modifier = Modifier.testTag(KitPartTags.deviceMenu(id))) {
                     Text("⋮", color = p.textPrimary, fontSize = KitDensity.head)
                 }
                 DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -271,10 +280,10 @@ fun KitActionBar(actions: List<KitAction>, modifier: Modifier = Modifier, filled
         verticalArrangement = Arrangement.spacedBy(KitDensity.small),
     ) {
         actions.forEachIndexed { i, a ->
-            if (i == 0 && filledFirst) Button(onClick = a.onClick, enabled = a.enabled, modifier = Modifier.testTag(a.tag)) {
-                Text(a.label, fontSize = KitDensity.title)
-            } else OutlinedButton(onClick = a.onClick, enabled = a.enabled, modifier = Modifier.testTag(a.tag)) {
-                Text(a.label, fontSize = KitDensity.title)
+            if (i == 0 && filledFirst) KitButton(onClick = a.onClick, enabled = a.enabled, modifier = Modifier.testTag(a.tag)) {
+                Text(a.label)
+            } else KitOutlinedButton(onClick = a.onClick, enabled = a.enabled, modifier = Modifier.testTag(a.tag)) {
+                Text(a.label)
             }
         }
     }
@@ -293,7 +302,7 @@ fun KitStatusBanner(text: String, state: KitState, modifier: Modifier = Modifier
     ) {
         Box(Modifier.size(KitDensity.dot).clip(CircleShape).background(kitStateColor(state)))
         Text(text, color = p.textPrimary, fontSize = KitDensity.body, modifier = Modifier.weight(1f).padding(start = KitDensity.medium))
-        if (action != null) TextButton(onClick = action.onClick, enabled = action.enabled, modifier = Modifier.testTag(action.tag)) {
+        if (action != null) KitTextButton(onClick = action.onClick, enabled = action.enabled, modifier = Modifier.testTag(action.tag)) {
             Text(action.label, color = p.accent, fontSize = KitDensity.title)
         }
     }
@@ -344,7 +353,7 @@ fun KitSegmented(
                 Modifier.weight(1f).testTag(KitPartTags.segment(tag, id))
                     .background(if (on) p.surfaceSelected else p.surface)
                     .selectable(selected = on, enabled = enabled(id), role = Role.RadioButton, onClick = { onSelect(id) })
-                    .padding(vertical = KitDensity.medium),
+                    .padding(vertical = KitDensity.rowPadV),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(label, color = if (on) p.textPrimary else p.textSecondary, fontSize = KitDensity.title,
@@ -390,7 +399,7 @@ fun KitStepper(steps: List<KitStep>, modifier: Modifier = Modifier) {
                     }
                 }
                 s.action?.let { a ->
-                    TextButton(onClick = a.onClick, enabled = a.enabled, modifier = Modifier.testTag(a.tag).align(Alignment.CenterVertically)) {
+                    KitTextButton(onClick = a.onClick, enabled = a.enabled, modifier = Modifier.testTag(a.tag).align(Alignment.CenterVertically)) {
                         Text(a.label, color = p.accent, fontSize = KitDensity.title)
                     }
                 }
@@ -464,11 +473,11 @@ fun KitSaveBar(summary: String, onSave: () -> Unit, onDiscard: () -> Unit, modif
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(summary, color = p.textPrimary, fontSize = KitDensity.body, modifier = Modifier.weight(1f))
-        TextButton(onClick = onDiscard, enabled = !saving, modifier = Modifier.testTag(KitPartTags.DISCARD)) {
+        KitTextButton(onClick = onDiscard, enabled = !saving, modifier = Modifier.testTag(KitPartTags.DISCARD)) {
             Text("Discard", color = p.textSecondary, fontSize = KitDensity.title)
         }
-        Button(onClick = onSave, enabled = !saving, modifier = Modifier.testTag(KitPartTags.SAVE)) {
-            Text(if (saving) "Saving…" else "Save", fontSize = KitDensity.title)
+        KitButton(onClick = onSave, enabled = !saving, modifier = Modifier.testTag(KitPartTags.SAVE)) {
+            Text(if (saving) "Saving…" else "Save")
         }
     }
 }

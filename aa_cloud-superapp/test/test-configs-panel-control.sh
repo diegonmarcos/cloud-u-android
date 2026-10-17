@@ -1075,11 +1075,13 @@ code = open(sys.argv[1], encoding='utf-8').read()
 def const(name):
     m = re.search(r'private const val %s = (\d+)' % name, code)
     return int(m.group(1)) if m else 0
-ok = (const('TOUCH_TARGET_DP') >= 48 and const('BADGE_DP') >= 48
-      and 0 < const('ICON_DP') < const('BADGE_DP'))
+# The TILE (badge + label column) is the 48dp touch target; the badge is only the icon's
+# plate, at most 8dp wider than the icon (the owner's "white box too big", 2026-10-17).
+ok = (const('TOUCH_TARGET_DP') >= 48
+      and 0 < const('ICON_DP') < const('BADGE_DP') <= const('ICON_DP') + 8)
 columns = json.load(open(sys.argv[2]))['ui']['control_panel'].get('columns', 0)
 # 360dp is the narrowest phone this app targets; below ~64dp a column stops
-# leaving room for a 56dp badge plus its gutters.
+# leaving room for a tile's 48dp touch floor plus its gutters.
 sys.exit(0 if ok and 2 <= columns <= 5 and 360 / columns >= 64 else 1)
 PY
 grep -q 'heightIn(min = TOUCH_TARGET_DP.dp)' "$FRAGMENT" \
@@ -1087,7 +1089,7 @@ grep -q 'heightIn(min = TOUCH_TARGET_DP.dp)' "$FRAGMENT" \
 grep -q 'widthIn(min = TOUCH_TARGET_DP.dp)' "$FRAGMENT" \
   || size_fail="$size_fail no-minimum-width-on-the-tile"
 [ -z "$size_fail" ] \
-  && ok "badge, tile floor and column count all clear the 48dp target" \
+  && ok "tile floor and column count clear the 48dp target; badge hugs the icon" \
   || bad "the grid is denser than it is tappable:$size_fail"
 
 echo "== T27: Battery Hungers hands off to a MEASURED per-app list, and says its unit =="

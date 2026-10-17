@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -434,10 +433,10 @@ class OneHandFragment : KitComposeFragment() {
             title = { Text(stringResource(R.string.onehand_edge_reset_title)) },
             text = { Text(stringResource(R.string.onehand_edge_reset_message, stored)) },
             dismissButton = {
-                TextButton(onClick = { showResetConfirm = false }) { Text(stringResource(android.R.string.cancel)) }
+                com.diegonmarcos.superapp.uikit.KitTextButton(onClick = { showResetConfirm = false }) { Text(stringResource(android.R.string.cancel)) }
             },
             confirmButton = {
-                TextButton(onClick = {
+                com.diegonmarcos.superapp.uikit.KitTextButton(onClick = {
                     showResetConfirm = false
                     resetEdgeMenu(ctx)
                 }, modifier = Modifier.testTag("onehand:reset-confirm")) { Text(stringResource(R.string.onehand_edge_reset_confirm)) }

@@ -23,10 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -127,7 +125,7 @@ class ImportConfigsFragment : KitComposeFragment() {
                 textStyle = mono,
                 modifier = Modifier.fillMaxWidth().height(220.dp).padding(top = 12.dp).testTag(TAG_INPUT),
             )
-            OutlinedButton(
+            com.diegonmarcos.superapp.uikit.KitOutlinedButton(
                 // Accept anything; ACTION_OPEN_DOCUMENT respects the device file
                 // picker (Files / Storage / 3rd-party). JSON or plain-text fine.
                 onClick = { pickFile.launch(arrayOf("application/json", "text/*", "*/*")) },
@@ -138,9 +136,9 @@ class ImportConfigsFragment : KitComposeFragment() {
                 Text(stringResource(R.string.import_from_file))
             }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { describe(classify(input), store = true) },
+                com.diegonmarcos.superapp.uikit.KitButton(onClick = { describe(classify(input), store = true) },
                     modifier = Modifier.weight(1f).testTag(TAG_SAVE)) { Text(stringResource(R.string.import_save)) }
-                OutlinedButton(
+                com.diegonmarcos.superapp.uikit.KitOutlinedButton(
                     onClick = {
                         clearBlob(requireContext())
                         input = ""

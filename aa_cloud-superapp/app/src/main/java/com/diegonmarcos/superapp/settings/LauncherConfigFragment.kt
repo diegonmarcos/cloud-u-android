@@ -311,7 +311,7 @@ class LauncherConfigFragment : KitComposeFragment() {
         var cur by remember { mutableIntStateOf(GridColumns.clamp(value)) }
         @Composable
         fun btn(glyph: String, desc: String, delta: Int) {
-            Box(Modifier.size(44.dp).background(p.surfaceSelected).semantics { contentDescription = desc }
+            Box(Modifier.size(28.dp).background(p.surfaceSelected).semantics { contentDescription = desc }
                 .clickable {
                     val next = GridColumns.clamp(cur + delta)
                     if (next == cur) return@clickable
@@ -319,10 +319,10 @@ class LauncherConfigFragment : KitComposeFragment() {
                     cur = next
                     onChange(next)
                 }.testTag("stepper:$label:$desc"), contentAlignment = Alignment.Center) {
-                Text(glyph, color = p.textPrimary, style = MaterialTheme.typography.headlineSmall)
+                Text(glyph, color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
             }
         }
-        Row(Modifier.fillMaxWidth().background(p.surface).padding(horizontal = 14.dp, vertical = 8.dp),
+        Row(Modifier.fillMaxWidth().background(p.surface).padding(horizontal = 10.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
@@ -351,7 +351,7 @@ class LauncherConfigFragment : KitComposeFragment() {
         // The Switch reports a user flip only: following the children is a new `checked`, never a callback, so a sync can
         // not re-enter onChange and write the master's new position over every child.
         val on = epoch.let { checked() }
-        Row(Modifier.fillMaxWidth().background(p.surface).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().background(p.surface).padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
                 if (subtitle.isNotBlank()) Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
@@ -493,7 +493,7 @@ class LauncherConfigFragment : KitComposeFragment() {
         // The live step. It follows the FINGER, not the release — a number that only catches up when you let go is the
         // same "which level am I on" question with an extra second of delay.
         var progress by remember { mutableIntStateOf(value.coerceIn(min, max)) }
-        Column(Modifier.fillMaxWidth().background(p.surface).padding(14.dp)) {
+        Column(Modifier.fillMaxWidth().background(p.surface).padding(horizontal = 10.dp, vertical = 6.dp)) {
             Row(Modifier.fillMaxWidth()) {
                 Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 if (ticks) Text(progress.toString(), color = p.accent, style = MaterialTheme.typography.titleMedium,

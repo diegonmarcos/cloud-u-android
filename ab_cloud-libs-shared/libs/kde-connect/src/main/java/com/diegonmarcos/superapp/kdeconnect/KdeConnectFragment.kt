@@ -33,10 +33,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -237,11 +235,10 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
         onClick: () -> Unit,
         weight: Float = 1f,
         enabled: Boolean = true,
-        size: TextUnit = 13.sp,
+        size: TextUnit = 12.sp,
     ) {
-        Button(
+        com.diegonmarcos.superapp.uikit.KitButton(
             onClick = onClick, enabled = enabled, modifier = Modifier.weight(weight),
-            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
         ) { Text(label, fontSize = size, maxLines = 1) }
     }
 
@@ -255,8 +252,8 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
 
     /** A full-width button. */
     @Composable
-    private fun WideBtn(label: String, size: TextUnit = 13.sp, onClick: () -> Unit) {
-        Button(onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(label, fontSize = size) }
+    private fun WideBtn(label: String, size: TextUnit = 12.sp, onClick: () -> Unit) {
+        com.diegonmarcos.superapp.uikit.KitButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(label, fontSize = size) }
     }
 
     /** A small round status light + its text. */
@@ -354,11 +351,11 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
         }
         var open by remember { mutableStateOf(false) }
         val cur = peer
-        Button(
+        com.diegonmarcos.superapp.uikit.KitButton(
             onClick = { open = true },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp).testTag(PEER_SELECTOR_TAG),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag(PEER_SELECTOR_TAG),
         ) {
-            Text(cur?.let { "Peer: ${it.device.label} · ${it.device.wgIp}  ▾" } ?: "Peer: none", fontSize = 14.sp)
+            Text(cur?.let { "Peer: ${it.device.label} · ${it.device.wgIp}  ▾" } ?: "Peer: none", fontSize = 12.sp)
         }
         if (open) {
             AlertDialog(
@@ -367,7 +364,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
                         for (d in peers) {
-                            TextButton(
+                            com.diegonmarcos.superapp.uikit.KitTextButton(
                                 onClick = { KdePeers.select(ctx, d.id); selectPeer(ctx, d); open = false },
                                 modifier = Modifier.fillMaxWidth(),
                             ) { Text("${d.label} · ${d.wgIp}", modifier = Modifier.fillMaxWidth()) }
@@ -375,7 +372,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
                     }
                 },
                 confirmButton = {},
-                dismissButton = { TextButton(onClick = { open = false }) { Text("Cancel") } },
+                dismissButton = { com.diegonmarcos.superapp.uikit.KitTextButton(onClick = { open = false }) { Text("Cancel") } },
             )
         }
     }
@@ -470,7 +467,7 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
+                com.diegonmarcos.superapp.uikit.KitTextButton(onClick = {
                     r.label = name.ifBlank { r.label }
                     r.host = ip.ifBlank { r.host }
                     r.port = port.toIntOrNull() ?: r.port
@@ -480,14 +477,14 @@ class KdeConnectFragment : Fragment(), KdeConnectManager.Listener {
             },
             dismissButton = {
                 Row {
-                    TextButton(onClick = {
+                    com.diegonmarcos.superapp.uikit.KitTextButton(onClick = {
                         dprefs.save(r.device.id, r.device.label, r.device.wgIp,
                             KdeConnectConfig.get().discoveryPort)
                         r.label = r.device.label; r.host = r.device.wgIp
                         r.port = KdeConnectConfig.get().discoveryPort
                         onClose()
                     }) { Text("Reset to default") }
-                    TextButton(onClick = onClose) { Text("Cancel") }
+                    com.diegonmarcos.superapp.uikit.KitTextButton(onClick = onClose) { Text("Cancel") }
                 }
             },
         )

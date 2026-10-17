@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -246,7 +245,7 @@ private fun RerunControl(ref: Sections.RepoRef, workflowFile: String) {
     var ok by remember { mutableStateOf(true) }
     Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        TextButton(enabled = !busy, modifier = Modifier.testTag(TAG_RERUN), onClick = {
+        com.diegonmarcos.superapp.uikit.KitTextButton(enabled = !busy, modifier = Modifier.testTag(TAG_RERUN), onClick = {
             busy = true
             status = "Dispatching $workflowFile…"
             ok = true

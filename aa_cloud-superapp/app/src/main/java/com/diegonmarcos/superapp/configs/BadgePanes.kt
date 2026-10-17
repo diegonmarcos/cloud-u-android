@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.clickable
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -347,7 +346,7 @@ object BadgePanes {
 
     @Composable
     private fun PaneButton(label: String, description: String? = null, onClick: () -> Unit) {
-        Button(onClick = onClick, modifier = Modifier.padding(end = 6.dp).let { m ->
+        com.diegonmarcos.superapp.uikit.KitButton(onClick = onClick, modifier = Modifier.padding(end = 6.dp).let { m ->
             if (description != null) m.semantics { contentDescription = description } else m
         }.testTag("pane-button:$label")) { Text(label) }
     }

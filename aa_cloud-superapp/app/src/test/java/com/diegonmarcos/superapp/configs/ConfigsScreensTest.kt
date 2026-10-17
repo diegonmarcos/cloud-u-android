@@ -33,7 +33,8 @@ import java.io.File
  * both), in dp, from the layout.
  *
  * Evidence: app/build/configs-screens/<screen>@<fontScale>.png and .tsv (CI uploads the folder).
- * Guard (fontScale 1.0): no button taller than [MAX_BUTTON_DP], no row taller than [MAX_ROW_DP].
+ * Guard (fontScale 1.0): no button taller than [MAX_BUTTON_DP], no row taller than [MAX_ROW_DP], no icon plate wider
+ * than the icon + 8dp [MAX_ICON_BOX_DP].
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class, qualifiers = "w384dp-h832dp-450dpi")
@@ -43,6 +44,10 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
     companion object {
         const val MAX_BUTTON_DP = 32f
         const val MAX_ROW_DP = 44f
+        /** An icon's plate (Control's round badge): at most the icon + 8dp ("white box too big"). */
+        const val ICON_DP = 22f
+        const val MAX_ICON_BOX_DP = ICON_DP + 8f
+        val ICON_BOX = Regex(":badge:")
 
         /** The Configs grid and every page/tab under build.json::ui.sections[config] that opens IN this app. */
         val SCREENS = listOf(
@@ -116,7 +121,8 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
             compose.onAllNodes(SemanticsMatcher("any") { true }, useUnmergedTree = false).fetchSemanticsNodes(false)
         }.getOrDefault(emptyList())
         return nodes.mapNotNull { n ->
-            val k = kindOf(n) ?: return@mapNotNull null
+            val tag = n.config.getOrNull(SemanticsProperties.TestTag).orEmpty()
+            val k = (if (ICON_BOX.containsMatchIn(tag)) "icon-box" else null) ?: kindOf(n) ?: return@mapNotNull null
             val b = n.boundsInRoot
             if (b.width <= 0f || b.height <= 0f) null else Hit(k, label(n), b.width / d, b.height / d)
         }
@@ -167,7 +173,8 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
         if (fontScale == 1.0f) {
             val tooTall = hits.filter {
                 (it.kind == "button" || it.kind == "view-button" || it.kind == "chip") && it.hDp > MAX_BUTTON_DP + 0.5f ||
-                    (it.kind == "row" || it.kind == "view-row" || it.kind == "tab") && it.hDp > MAX_ROW_DP + 0.5f
+                    (it.kind == "row" || it.kind == "view-row" || it.kind == "tab") && it.hDp > MAX_ROW_DP + 0.5f ||
+                    it.kind == "icon-box" && maxOf(it.wDp, it.hDp) > MAX_ICON_BOX_DP + 0.5f
             }
             assertTrue("$name: ${tooTall.size} control(s) over ${MAX_BUTTON_DP}dp (button) / ${MAX_ROW_DP}dp (row):\n" +
                 tooTall.joinToString("\n") { "  ${it.kind} ${"%.1f".format(it.hDp)}dp tall: ${it.name}" },
@@ -175,5 +182,5 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
         }
     }
 
-    private val ENFORCE: Boolean get() = false
+    private val ENFORCE: Boolean get() = true
 }

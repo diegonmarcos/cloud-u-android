@@ -494,10 +494,10 @@ class ControlFragment : KitComposeFragment() {
          *  class it resolves to cannot be, so the mapping lives here. */
         private const val DETAILS_ENERGY_USAGE = "energy_usage"
 
-        /** The filled round badge, and the icon centred in it. Samsung's own quick-settings proportions: a badge
-         *  comfortably past the 48dp minimum touch target on its own, with the icon about half of it. */
-        private const val BADGE_DP = 56
-        private const val ICON_DP = 26
+        /** The filled round plate behind the icon: at most 4dp wider than the icon (was a 56dp circle, white when lit -
+         *  the owner's "white box too big"). The 48dp touch target is the whole tile, [TOUCH_TARGET_DP]. */
+        private const val BADGE_DP = 26
+        private const val ICON_DP = 22
 
         /** The floor for a whole tile, badge and label together. Android's accessibility minimum is 48dp in both
          *  directions and a grid of tiles below it is a grid that gets mis-tapped. */

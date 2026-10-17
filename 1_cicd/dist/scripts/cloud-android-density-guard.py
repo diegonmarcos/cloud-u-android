@@ -67,6 +67,9 @@ def main(argv):
                     continue
                 if any(rel.startswith(p) for p in cfg["rule_allow"].get(name, [])):
                     continue
+                scope = cfg.get("rule_scope", {}).get(name)
+                if scope is not None and not any(rel.startswith(p) for p in scope):
+                    continue
                 for m in rx.finditer(src):
                     line = src.count("\n", 0, m.start()) + 1
                     bad.append("%s:%d [%s] %s" % (rel, line, name, cfg["rules"][name]["why"]))

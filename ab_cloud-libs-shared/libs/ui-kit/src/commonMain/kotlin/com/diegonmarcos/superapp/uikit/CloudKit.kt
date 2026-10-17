@@ -18,7 +18,6 @@ import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -136,7 +135,10 @@ private fun TextStyle.dense(): TextStyle =
 @Composable
 fun KitDenseMaterial(colorScheme: androidx.compose.material3.ColorScheme, content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = colorScheme, typography = kitTypography()) {
-        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides KitDensity.touch, content = content)
+        // 0.dp switches Material's minimumInteractiveComponentSize OFF: a Checkbox, RadioButton, IconButton or Switch
+        // draws at its own visual size instead of being padded out to a 36/48dp box. The touch target is the ROW
+        // (every kit/config row is full-width clickable) or the kit button's own [KitDensity.buttonHeight] box.
+        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides KitDensity.interactiveFloor, content = content)
     }
 }
 
@@ -190,13 +192,13 @@ fun KitSelectableTile(
             .fillMaxWidth()
             .background(if (selected) p.surfaceSelected else p.surface)
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .padding(14.dp),
+            .padding(horizontal = KitDensity.rowPadH, vertical = KitDensity.rowPadV),
     ) {
         Text((if (selected) "● " else "○ ") + label, color = p.textPrimary,
-            style = MaterialTheme.typography.bodyLarge)
+            style = MaterialTheme.typography.bodyMedium)
         if (subtitle.isNotBlank()) {
             Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 4.dp))
+                modifier = Modifier.padding(top = 2.dp))
         }
     }
 }
@@ -244,11 +246,11 @@ fun KitSettingsRow(
         modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .padding(vertical = 10.dp),
+            .padding(vertical = KitDensity.rowPadV),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = p.textPrimary, style = MaterialTheme.typography.bodyLarge)
+            Text(title, color = p.textPrimary, style = MaterialTheme.typography.bodyMedium)
             if (subtitle.isNotBlank()) {
                 Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
             }
@@ -290,10 +292,10 @@ fun KitConfirmDialog(
         title = { Text(title) },
         text = { Text(text) },
         confirmButton = {
-            TextButton(onClick = onConfirm, modifier = Modifier.testTag(KitTags.DIALOG_CONFIRM)) { Text(confirmLabel) }
+            KitTextButton(onClick = onConfirm, modifier = Modifier.testTag(KitTags.DIALOG_CONFIRM)) { Text(confirmLabel) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.testTag(KitTags.DIALOG_DISMISS)) { Text(dismissLabel) }
+            KitTextButton(onClick = onDismiss, modifier = Modifier.testTag(KitTags.DIALOG_DISMISS)) { Text(dismissLabel) }
         },
     )
 }

@@ -18,10 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -152,7 +150,7 @@ internal fun AboutLogcatViewer(onExport: (text: String, fileName: String) -> Uni
 
     @Composable
     fun Btn(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) =
-        Button(onClick = onClick, modifier = modifier.testTag("about:log:$label")) { Text(label, fontSize = 12.sp, maxLines = 1) }
+        com.diegonmarcos.superapp.uikit.KitButton(onClick = onClick, modifier = modifier.testTag("about:log:$label")) { Text(label, fontSize = 12.sp, maxLines = 1) }
 
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -201,7 +199,7 @@ internal fun AboutLogcatViewer(onExport: (text: String, fileName: String) -> Uni
             Text("✓ READ_LOGS granted — All Apps and Select a App read every app, in this process, with Shizuku stopped.",
                 color = p.ok, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
         } else {
-            Button(enabled = !granting, modifier = Modifier.fillMaxWidth().testTag("about:log:grant"), onClick = {
+            com.diegonmarcos.superapp.uikit.KitButton(enabled = !granting, modifier = Modifier.fillMaxWidth().testTag("about:log:grant"), onClick = {
                 granting = true
                 scope.launch {
                     // Binds a shell channel — never on the main thread.
@@ -248,7 +246,7 @@ internal fun AboutLogcatViewer(onExport: (text: String, fileName: String) -> Uni
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { picker = null }) { Text("Cancel") } },
+            dismissButton = { com.diegonmarcos.superapp.uikit.KitTextButton(onClick = { picker = null }) { Text("Cancel") } },
         )
     }
 }

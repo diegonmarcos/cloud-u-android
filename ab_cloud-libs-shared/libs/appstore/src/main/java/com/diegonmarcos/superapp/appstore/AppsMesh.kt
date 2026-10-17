@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -596,7 +595,7 @@ object AppsMesh {
                     onDismissRequest = { noChannelApp = null },
                     title = { Text(app.label) },
                     text = { Text(ctx.getString(R.string.store_fleet_stop_no_channel)) },
-                    confirmButton = { TextButton(onClick = { noChannelApp = null }) { Text(decl.word("close")) } },
+                    confirmButton = { com.diegonmarcos.superapp.uikit.KitTextButton(onClick = { noChannelApp = null }) { Text(decl.word("close")) } },
                 )
             }
         }

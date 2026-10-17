@@ -5,7 +5,8 @@
     "fun kitTypography",
     "fun KitDenseMaterial",
     "LocalMinimumInteractiveComponentSize",
-    "lineHeight = TextUnit.Unspecified"
+    "lineHeight = TextUnit.Unspecified",
+    "KitDensity.interactiveFloor"
   ],
   "scan_glob_ext": ".kt",
   "skip_dirs": [
@@ -37,6 +38,10 @@
     "nested_safe_drawing": {
       "why": "safeDrawing / systemBars padding is the window host's job exactly once (AppTopBarScaffold's host takes statusBarsPadding; BottomNavHost clears the bottom). A page that takes it again stacks both.",
       "pattern": "\\.(safeDrawingPadding|systemBarsPadding|safeContentPadding)\\(\\)|windowInsetsPadding\\(\\s*WindowInsets\\.(safeDrawing|systemBars|safeContent)\\b"
+    },
+    "bare_material_button": {
+      "why": "Material3's Button/OutlinedButton/TextButton/FilledTonalButton carry a fixed defaultMinSize(58dp x 40dp) and 24dp x 8dp padding that NO theme can shrink: the owner's 'Configs buttons are STILL huge' (4th report, 2026-10-17). Use libs:ui-kit KitButton / KitOutlinedButton / KitTextButton / KitTonalButton (30dp, 10x4dp, labelMedium). Scoped to the Configs pages and the libs they draw (rule_scope); widen the scope as other apps convert.",
+      "pattern": "(?<![\\w.])(?<!class )(?<!fun )(Button|OutlinedButton|TextButton|FilledTonalButton|ElevatedButton)\\("
     }
   },
   "rule_allow": {
@@ -62,6 +67,9 @@
     "stock_typography": [
       "ab_cloud-libs-shared/libs/keyboard/",
       "ab_cloud-libs-shared/libs/ui-kit/"
+    ],
+    "bare_material_button": [
+      "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/KitButtons.kt"
     ]
   },
   "scan_roots": [
@@ -92,5 +100,18 @@
       "KitComposeFragment"
     ],
     "why": "A ComposeView / setContent root in the SuperApp that is not under CloudKitTheme (kitComposeView, KitComposeFragment) or KitDenseMaterial gets a bare Material theme: every Text a fixed 24.sp line and every control a 48dp floor, the 'buttons are huge' regression. Host it with kitComposeView(palette) { .. } or wrap its content in CloudKitTheme."
+  },
+  "rule_scope": {
+    "_doc": "A rule named here applies ONLY under these path prefixes (every other rule applies to all scan_roots).",
+    "bare_material_button": [
+      "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs/",
+      "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/settings/",
+      "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/devcontrol/",
+      "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/apps/",
+      "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/agents/",
+      "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/",
+      "ab_cloud-libs-shared/libs/kde-connect/",
+      "ab_cloud-libs-shared/libs/ui-kit/"
+    ]
   }
 }

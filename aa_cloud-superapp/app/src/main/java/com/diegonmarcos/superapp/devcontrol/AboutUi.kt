@@ -18,7 +18,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -133,9 +132,10 @@ internal fun AboutButton(b: AboutItem.Button) {
     val p = LocalKitPalette.current
     Text(
         b.label, color = p.textPrimary, textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+        style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+        modifier = Modifier.padding(top = 6.dp)
             .background(if (b.gray) p.surfaceSelected else p.accent.copy(alpha = 0.85f))
-            .clickable { b.onClick() }.padding(horizontal = 12.dp, vertical = 10.dp).testTag(AboutTags.button(b.label)),
+            .clickable { b.onClick() }.padding(horizontal = 10.dp, vertical = 6.dp).testTag(AboutTags.button(b.label)),
     )
 }
 
@@ -251,11 +251,11 @@ internal fun AboutPromptDialog(prompt: AboutPrompt, onDismiss: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("about:prompt:field"))
             }
         },
-        confirmButton = { TextButton(onClick = { prompt.onSave(text); onDismiss() }, modifier = Modifier.testTag("about:prompt:save")) { Text("Save") } },
+        confirmButton = { com.diegonmarcos.superapp.uikit.KitTextButton(onClick = { prompt.onSave(text); onDismiss() }, modifier = Modifier.testTag("about:prompt:save")) { Text("Save") } },
         dismissButton = {
             Row {
-                if (prompt.neutralLabel != null) TextButton(onClick = { prompt.onNeutral?.invoke(); onDismiss() }) { Text(prompt.neutralLabel) }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                if (prompt.neutralLabel != null) com.diegonmarcos.superapp.uikit.KitTextButton(onClick = { prompt.onNeutral?.invoke(); onDismiss() }) { Text(prompt.neutralLabel) }
+                com.diegonmarcos.superapp.uikit.KitTextButton(onClick = onDismiss) { Text("Cancel") }
             }
         },
     )

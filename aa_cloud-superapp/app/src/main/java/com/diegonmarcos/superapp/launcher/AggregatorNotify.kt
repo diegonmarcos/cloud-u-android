@@ -24,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -117,7 +116,7 @@ private fun NotificationAccessOff(extra: String? = null) {
     val ctx = LocalContext.current
     AggStateLine("unavailable · permission not granted", Tone.UNKNOWN)
     if (extra != null) AggCaption(extra)
-    else TextButton(modifier = Modifier.testTag(TAG_GRANT), onClick = {
+    else com.diegonmarcos.superapp.uikit.KitTextButton(modifier = Modifier.testTag(TAG_GRANT), onClick = {
         runCatching {
             ctx.startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

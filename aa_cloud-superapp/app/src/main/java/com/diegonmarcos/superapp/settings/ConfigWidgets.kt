@@ -31,7 +31,7 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /*
  * The form pieces the Configs pages share (DNS, Permissions, One-hand, ...): a heading, a caption, a monospace read-out, a
- * full-width button, a radio row and a check row. Same proportions as the hand-built TextViews they replace (a headline with
+ * dense kit button, a radio row and a check row. Same proportions as the hand-built TextViews they replace (a headline with
  * 16/4 dp padding, a caption at 70% alpha, a 33%-black read-out, a button with 6 dp above and below), under the dense
  * theme (no 24 sp lines, 36 dp touch floor), painted from the palette roles.
  */
@@ -59,17 +59,22 @@ internal fun ConfigReadout(text: String, modifier: Modifier = Modifier, ink: Col
     }
 }
 
-/** The page's full-width action: accent-filled, 6 dp above and below. [plate] overrides the fill (the red consent button). */
+/**
+ * The page's action: THE kit button (libs:ui-kit KitButton, 30dp tall, 10x4dp padding, labelMedium), accent-filled,
+ * wrapping its label - no longer a full-width 47dp bar. [plate] overrides the fill (the red consent button).
+ */
 @Composable
 internal fun ConfigButton(
     label: String, modifier: Modifier = Modifier, enabled: Boolean = true, plate: Color? = null, onClick: () -> Unit,
 ) {
     val p = LocalKitPalette.current
-    Text(label, color = p.textPrimary, textAlign = TextAlign.Center,
-        modifier = modifier.fillMaxWidth().padding(vertical = 6.dp)
-            .background((plate ?: p.accent.copy(alpha = 0.85f)).copy(alpha = if (enabled) 1f else 0.4f))
-            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 10.dp, vertical = 8.dp)
-            .testTag("cfg:button:$label"))
+    com.diegonmarcos.superapp.uikit.KitButton(
+        onClick = onClick, enabled = enabled,
+        modifier = modifier.padding(vertical = 3.dp).testTag("cfg:button:$label"),
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+            containerColor = plate ?: p.accent.copy(alpha = 0.85f), contentColor = p.textPrimary,
+            disabledContainerColor = (plate ?: p.accent).copy(alpha = 0.34f), disabledContentColor = p.textPrimary.copy(alpha = 0.6f)),
+    ) { Text(label, textAlign = TextAlign.Center) }
 }
 
 /** A radio choice: the whole row selects. [label] may carry a second line ("label\nsubtitle"). */
@@ -98,7 +103,7 @@ internal fun ConfigCheckRow(label: String, checked: Boolean, enabled: Boolean = 
 /** A column with the page gutter the hand-built Configs pages used (18 dp). */
 @Composable
 internal fun ConfigColumn(modifier: Modifier = Modifier, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().padding(18.dp), content = content)
+    Column(modifier.fillMaxWidth().padding(12.dp), content = content)
 }
 
 /** One entry of a [ConfigDropdown]: the row text and, optionally, the app/page icon drawn before it. */
@@ -131,9 +136,9 @@ internal fun ConfigDropdown(options: List<DropdownOption>, selected: Int, tag: S
 @Composable
 private fun DropdownRow(o: DropdownOption?, trailing: String, modifier: Modifier = Modifier) {
     val p = LocalKitPalette.current
-    Row(modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         o?.icon?.let {
-            com.diegonmarcos.superapp.apps.AppIcon(it, 28.dp, Modifier.padding(end = 10.dp))
+            com.diegonmarcos.superapp.apps.AppIcon(it, 24.dp, Modifier.padding(end = 8.dp))
         }
         Text(o?.label.orEmpty(), color = p.textPrimary, style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f))
@@ -146,7 +151,7 @@ private fun DropdownRow(o: DropdownOption?, trailing: String, modifier: Modifier
 internal fun ConfigSwitchRow(label: String, checked: Boolean, tag: String = label, onChange: (Boolean) -> Unit) {
     val p = LocalKitPalette.current
     Row(Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
-        .padding(vertical = 8.dp).testTag("cfg:switch:$tag"), verticalAlignment = Alignment.CenterVertically) {
+        .padding(vertical = 2.dp).testTag("cfg:switch:$tag"), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = p.textPrimary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         androidx.compose.material3.Switch(checked = checked, onCheckedChange = null)
     }

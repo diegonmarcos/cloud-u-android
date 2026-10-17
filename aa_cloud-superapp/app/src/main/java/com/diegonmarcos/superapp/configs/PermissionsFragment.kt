@@ -627,8 +627,8 @@ class PermissionsFragment : KitComposeFragment() {
     @Composable
     private fun ActionButton(label: String, bg: Int = 0xFF7C3AED.toInt(), onClick: () -> Unit) {
         Text(label, fontSize = 11.5.sp, color = Color.White, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp).background(Color(bg)).clickable(onClick = onClick)
-                .padding(horizontal = 8.dp, vertical = 5.dp).testTag("perm:action:$label"))
+            modifier = Modifier.padding(top = 4.dp).background(Color(bg)).clickable(onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 4.dp).testTag("perm:action:$label"))
     }
 
     /**
@@ -644,7 +644,7 @@ class PermissionsFragment : KitComposeFragment() {
             color = if (done) Color(0xFF9CA3AF) else Color.White,
             modifier = (if (fill) Modifier.weight(1f) else Modifier)
                 .padding(horizontal = 1.5.dp)
-                .heightIn(min = 30.dp).background(if (done) Color(0xFF2A2A33) else Color(0xFF7C3AED))
+                .heightIn(min = 26.dp).background(if (done) Color(0xFF2A2A33) else Color(0xFF7C3AED))
                 .clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 3.dp)
                 .wrapContentHeight(Alignment.CenterVertically).testTag("perm:button:$label"))
     }
