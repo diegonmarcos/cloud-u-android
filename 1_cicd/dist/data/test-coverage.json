@@ -17,7 +17,7 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
-      "unit_test_sources": 150,
+      "unit_test_sources": 152,
       "workflow": "ship-cloud-superapp.yml"
     },
     "ab_cloud-libs-shared/keyboard-engines": {
@@ -211,7 +211,7 @@
     },
     "ac_cloud-media-center": {
       "first_test": "Born Tauri 2 (Rust + static web/), shaped like ac_cloud-c3-webserver. Three shell testers. test/test-media-center-pages.sh: node runs web/assets/pages.js's pure render half against the committed web/data \u2014 the page table is build.json::data.pages, each of the seven pages has its index.html and renders content, every data file is stamped with the pinned diegonmarcos.github.io commit, music carries every TIDAL track and links a TIDAL search for 'artist title', video ids are 11-character YouTube ids parsed from thumbnails, Pinterest board URLs follow main.ts's slug rule, books open Open Library, the feed is newest first, movie shelves name only existing titles and the detail sheet links IMDb, documentaries are the whole 'Docs' playlist plus every Documentary-genre title, links out go through tauri-plugin-opener; the Tauri wiring (identifier and productName = build.json, frontendDist = tauri.web_dir, the opener plugin registered and granted opener:default, NOT the gallery's applicationId). 7 mutations red. test/test-media-center-no-kotlin.sh: the only Kotlin is the three Tauri template glue files pinned by sha256 in build.json::tauri.glue. test/test-fleet-setup.sh: the shared fleet-setup contract.",
-      "shell_testers": 3,
+      "shell_testers": 4,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
@@ -233,7 +233,7 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
-      "unit_test_sources": 11,
+      "unit_test_sources": 12,
       "workflow": "ship-cloud-nav.yml"
     },
     "ac_cloud-news": {
@@ -247,7 +247,7 @@
     },
     "ac_cloud-nix-on-droid": {
       "first_test": "Now has 1 shell tester (test-bootstrap-baked.sh, #348): the proot+glibc runtime is baked in, pinned by sha256, and rewritten for THIS app id \u2014 the three ways this APK could install, launch and still have no shell. 21 JVM unit test classes still have never executed; declare tests.unit.task.",
-      "shell_testers": 17,
+      "shell_testers": 18,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
@@ -305,12 +305,12 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
-      "unit_test_sources": 7,
+      "unit_test_sources": 8,
       "workflow": "ship-cloud-tasks.yml"
     },
     "ac_cloud-termux": {
       "first_test": "Now has 1 shell tester (test-rootfs-declared.sh, #470): the baked agent-coding rootfs is one declaration that consumes the fleet tool belt and is wired into build, gradle and Java; its runtime half (rootfs/verify-rootfs.sh) runs in the ship workflow's rootfs job and proves every declared binary loads and executes under the shipped proot. 21 JVM unit test classes still have never executed; declare tests.unit.task.",
-      "shell_testers": 17,
+      "shell_testers": 18,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
