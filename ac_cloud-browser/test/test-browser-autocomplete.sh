@@ -100,6 +100,7 @@ def check(root, ok):
     ok(nat.get("autocomplete") == ["profiles", "sites", "passwords", "cards", "vault"], "A7 Configs > Autocomplete has the sub-sections profiles, sites, passwords, cards, vault")
     ok(nat.get("passwords") == ["passwords"] and nat.get("payment") == ["cards"] and nat.get("sync") == ["vault"], "A7 Passwords, Payment and Sync & Vault draw the same blocks")
     ok('"site_autocomplete" ->' in frag and "AcSitePage(" in frag and "AcSiteMemory.originKey(host)" in frag, "A7 the page dropdown opens this site's remembered values")
+    ok("fillLogin(f, l); thenVault(cur.id)" in ac and "fillCard(f, c); thenVault(cur.id)" in ac, "A7 a local fill then Cloud Vault overwrites it (local fills first, then Cloud Vault overwrites)")
     ok(os.path.exists(os.path.join(root, "ac_cloud-browser/docs/autocomplete.md")), "A7 docs/autocomplete.md states the model, the flows and the vault contract")
 
 LIBP = LIB + "/"
@@ -109,7 +110,8 @@ main("autocomplete wiring", check, [
     ("a second place sends a value", ASSETS + "/ac_engine.js", "function onSubmit(ev) {", "function onSubmit(ev) { bridge('submitted', {v:1});", "only place a value leaves"),
     ("the fill skips the native setter", ASSETS + "/ac_engine.js", "Object.getOwnPropertyDescriptor(proto, 'value')", "null", "native setter"),
     ("a private tab is asked to save", LIBP + "AcAutocomplete.kt", "if (incognito || flag(\"autofill_enabled\") == false) return\n        val fields", "if (flag(\"autofill_enabled\") == false) return\n        val fields", "never asked to save"),
-    ("a saved password fills without the unlock", LIBP + "AcAutocomplete.kt", "acts[id] = { unlocked(\"Fill saved password\") { fillLogin(f, l) } }", "acts[id] = { fillLogin(f, l) }", "only behind the unlock"),
+    ("a saved password fills without the unlock", LIBP + "AcAutocomplete.kt", "acts[id] = { unlocked(\"Fill saved password\") { fillLogin(f, l); thenVault(cur.id) } }", "acts[id] = { fillLogin(f, l); thenVault(cur.id) }", "only behind the unlock"),
+    ("Cloud Vault no longer overwrites a local fill", LIBP + "AcAutocomplete.kt", "fillLogin(f, l); thenVault(cur.id)", "fillLogin(f, l)", "then Cloud Vault overwrites"),
     ("revealing skips the unlock", LIBP + "BrowserHostFragment.kt", "reveal = { l, show -> unlock(\"Show saved password\") { show(l.password) } }", "reveal = { l, show -> show(l.password) }", "asks for the unlock"),
     ("Cloud Vault is asked before the local store", LIBP + "AcAutocomplete.kt", "        } else if (h.store.secretsAvailable) {\n            h.store.loginsFor(host)", "        } else if (h.store.secretsAvailable) {\n            chips += AcChip(\"vault\", \"Cloud Vault\", \"vault\")\n            h.store.loginsFor(host)", "come before Cloud Vault"),
     ("the vault stops winning", LIBP + "AcSecrets.kt", "val merged = hit.copy(username = v.username.ifBlank { hit.username }, password = v.password, source = AcSource.VAULT,", "val merged = hit.copy(username = v.username.ifBlank { hit.username }, password = hit.password, source = AcSource.VAULT,", "vault's value the stored one"),
