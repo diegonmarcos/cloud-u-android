@@ -1,0 +1,208 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║ Test → launch smoke (emulator: the app must not crash when it starts)  ║
+# ║                                                                        ║
+# ║ Cloud Notes shipped an APK that crashed on startup (shrinkResources    ║
+# ║ stripped drawables it looked up by name) and nothing in CI ever        ║
+# ║ launched it. This installs an APK, starts its launcher activity on a   ║
+# ║ REAL emulator, waits 45 s, and fails if the process died or logcat     ║
+# ║ holds a FATAL EXCEPTION / native crash for the package.                ║
+# ║                                                                        ║
+# ║ HOW IT RUNS. Every Ship workflow that opts in calls it as its LAST job ║
+# ║ (`uses: ./.github/workflows/test-launch-smoke.yml`), with the prefix   ║
+# ║ of the APK artifact its build job uploaded. A called job is part of   ║
+# ║ the Ship run itself, so it cannot fail to trigger: the earlier         ║
+# ║ test-cloud-notes.yml listened for `workflow_run` on the Ship name and  ║
+# ║ never fired (Ship run 39043302450 completed on main, no Test run; this ║
+# ║ repo has never had a workflow_run-triggered run at all). A Ship run    ║
+# ║ whose publish gate skipped the build uploads no APK and the smoke is   ║
+# ║ skipped.                                                               ║
+# ║                                                                        ║
+# ║ Manual: dispatch with an artifact prefix and a Ship run id, or with no ║
+# ║ run id to test the APK published on the release (release_tag/asset).   ║
+# ║ The package and launcher activity are read from the APK itself. An     ║
+# ║ arm64-v8a APK runs on the x86_64 API 30+ images through the built-in   ║
+# ║ ARM translation. logcat, crash excerpt and a screenshot are uploaded.  ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+name: "Test → launch smoke (emulator, reusable)"
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: "Display name, used in titles and artifact names (e.g. cloud-notes)"
+        type: string
+        required: true
+      artifact_prefix:
+        description: "Name prefix of the APK artifact(s) the calling Ship run uploaded"
+        type: string
+        required: true
+      api_levels:
+        description: "JSON list of emulator API levels"
+        type: string
+        default: "[34]"
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Display name (e.g. cloud-notes)"
+        required: true
+      artifact_prefix:
+        description: "APK artifact name prefix in the Ship run (e.g. cloud-notes-arm64-v8a-)"
+        required: false
+        default: ""
+      run_id:
+        description: "Ship run id whose APK artifact to test (empty = the release asset below)"
+        required: false
+        default: ""
+      release_tag:
+        description: "Release to download from when run_id is empty"
+        required: false
+        default: "latest"
+      release_asset:
+        description: "Asset name on that release when run_id is empty (e.g. Cloud-Notes.apk)"
+        required: false
+        default: ""
+      api_levels:
+        description: "JSON list of emulator API levels"
+        required: false
+        default: "[34, 36]"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  launch-smoke:
+    name: "Launch smoke (${{ inputs.app }} · API ${{ matrix.api-level }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: ${{ fromJSON(inputs.api_levels) }}
+    steps:
+      - name: Fetch the APK under test (this run's artifact)
+        if: github.event_name != 'workflow_dispatch'
+        # A Ship run whose gate skipped the build has no APK: the next step reports and skips.
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.artifact_prefix }}*
+          path: apk
+
+      - name: Fetch the APK under test (manual run)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+          PREFIX: ${{ inputs.artifact_prefix }}
+          TAG: ${{ inputs.release_tag }}
+          ASSET: ${{ inputs.release_asset }}
+        run: |
+          set -eu
+          mkdir -p apk
+          if [ -n "$RUN_ID" ]; then
+            gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --paginate \
+              --jq ".artifacts[] | select(.name|startswith(\"$PREFIX\")) | .name" |
+            while read -r name; do gh run download "$RUN_ID" -R "$REPO" -n "$name" -D "apk/$name"; done
+          else
+            gh release download "$TAG" -R "$REPO" -p "$ASSET" -D apk
+          fi
+
+      - name: Pick the APK, read its package
+        id: apk
+        run: |
+          set -eu
+          find apk -name '*.apk' 2>/dev/null | sort > apks.txt || true
+          cat apks.txt
+          pick=""
+          for want in x86_64 universal arm64 ''; do
+            pick=$(grep -i -- "$want" apks.txt | head -1 || true)
+            [ -n "$pick" ] && break
+          done
+          if [ -z "$pick" ]; then
+            echo "No APK in this run (the publish gate skipped the build): nothing new to launch."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          pkg=$("$aapt2" dump packagename "$pick")
+          echo "APK under test: $pick ($pkg)"
+          cp "$pick" app-under-test.apk
+          { echo "skip=false"; echo "pkg=$pkg"; } >> "$GITHUB_OUTPUT"
+
+      - name: Enable KVM
+        if: steps.apk.outputs.skip != 'true'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Write the launch probe
+        if: steps.apk.outputs.skip != 'true'
+        env:
+          PKG: ${{ steps.apk.outputs.pkg }}
+          APP: ${{ inputs.app }}
+        run: |
+          cat > launch.sh <<EOF
+          #!/bin/bash
+          PKG='$PKG'; APP='$APP'
+          EOF
+          cat >> launch.sh <<'EOF'
+          # Install, launch the launcher activity, watch 45 s, fail on any crash of $PKG.
+          set -u
+          mkdir -p out
+          adb logcat -c || true
+          adb install -r -g app-under-test.apk || { echo "::error::adb install failed"; exit 2; }
+          act=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)
+          case "$act" in */*) ;; *) echo "::error::$PKG has no launcher activity ($act)"; exit 2;; esac
+          echo "launching $act"
+          adb shell am start -W -n "$act" | tee out/am-start.txt
+          ok=1
+          for i in $(seq 1 45); do
+            sleep 1
+            if ! adb shell pidof "$PKG" >/dev/null 2>&1; then echo "process $PKG is gone after ${i}s"; ok=0; break; fi
+          done
+          adb logcat -d -v threadtime > out/logcat.txt
+          adb logcat -d -b crash -v threadtime > out/logcat-crash.txt || true
+          adb shell dumpsys activity activities | grep -iE 'mResumedActivity|topResumedActivity' > out/resumed.txt || true
+          adb exec-out screencap -p > out/screen.png || true
+          # Java crash: AndroidRuntime FATAL EXCEPTION block for our process
+          awk '/FATAL EXCEPTION/{p=1} p&&/AndroidRuntime/{print} p&&!/AndroidRuntime/{p=0}' out/logcat.txt > out/fatal.txt
+          # Native crash: tombstone / DEBUG lines
+          grep -E ' (DEBUG|libc) .*(Fatal signal|backtrace|#[0-9]+ pc|Abort message|>>> )' out/logcat.txt > out/native.txt || true
+          crashed=0
+          grep -q "Process: $PKG" out/fatal.txt && crashed=1
+          grep -q "$PKG" out/native.txt && crashed=1
+          grep -q "$PKG" out/logcat-crash.txt && crashed=1
+          if [ $crashed = 1 ] || [ $ok = 0 ]; then
+            echo "::group::FATAL EXCEPTION"; cat out/fatal.txt out/native.txt; echo "::endgroup::"
+            head -40 out/fatal.txt | while IFS= read -r l; do echo "::error title=$APP crashed on launch::$l"; done
+            [ -s out/fatal.txt ] || grep -E "$PKG|AndroidRuntime|ActivityManager" out/logcat.txt | tail -60
+            exit 1
+          fi
+          echo "$APP survived 45 s after launch."; cat out/resumed.txt
+          EOF
+          chmod +x launch.sh
+
+      - name: Boot emulator + launch
+        if: steps.apk.outputs.skip != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./launch.sh
+
+      - name: Upload evidence (logcat, crash excerpt, screenshot)
+        if: always() && steps.apk.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.app }}-launch-api${{ matrix.api-level }}
+          path: out/
+          if-no-files-found: warn

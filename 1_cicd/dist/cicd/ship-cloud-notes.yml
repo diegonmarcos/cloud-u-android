@@ -274,6 +274,9 @@ jobs:
           grep -q "deck-pdf.unit.spec" /tmp/surface.plain || { echo "::error::the deck spec did not run"; exit 1; }
 
   build_and_publish:
+    outputs:
+      # read by launch_smoke: false when the publish gate skipped the build
+      built: ${{ steps.gate.outputs.skip != 'true' }}
     needs: storage_tests
     name: "Build + publish (notes · arm64-v8a)"
     runs-on: ubuntu-latest
@@ -430,3 +433,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$WORK_DIR" "arm64-v8a"
+
+  # Install the APK this run just built on an emulator and launch it: a crash at startup fails
+  # Ship (1_cicd/src/cicd/test-launch-smoke.yml). A job of this run, not a workflow_run listener,
+  # so it cannot fail to trigger.
+  launch_smoke:
+    needs: build_and_publish
+    if: needs.build_and_publish.outputs.built == 'true'
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/test-launch-smoke.yml
+    with:
+      app: cloud-notes
+      artifact_prefix: cloud-notes-arm64-v8a-
+      api_levels: "[34, 36]"
