@@ -94,6 +94,20 @@ if (favDecl != null) {
     favDecl.items = favItems.unique { it.url }
     favDecl.remove('sources'); favDecl.remove('extra')
 }
+// Owner decision: the Termux / Nix / Local pins must match the ports their own
+// apps declare (one declaration each); drift fails the build instead of shipping
+// a dead tab.
+[
+    Termux: ['../../ac_cloud-termux/build.json',        { it.runtime.webserver.port }],
+    Nix:    ['../../ac_cloud-nix-on-droid/build.json',  { it.runtime.webserver.port }],
+    Local:  ['../../ac_cloud-c3-webserver/build.json',  { it.runtime.port }],
+].each { name, decl ->
+    def port = decl[1](new groovy.json.JsonSlurper().parse(file(decl[0])))
+    def want = "http://localhost:${port}".toString()
+    def got  = (buildJson.ui.browser?.local_pinned_tabs ?: [:])[name]
+    if (got != want) throw new GradleException("ui.browser.local_pinned_tabs.${name} is '${got}', but ${decl[0]} declares port ${port}")
+    if (!(buildJson.ui.browser.default_pinned_tabs ?: []).contains(want)) throw new GradleException("ui.browser.default_pinned_tabs is missing ${want} (${name})")
+}
 def uiBrowserConfigB64 = b64(buildJson.ui.browser ?: [:])
 // #868 the nav declaration: ui.bottom_nav (the island), ui.sections (what each item opens), ui.default_section.
 def uiBottomNav      = (buildJson.ui.bottom_nav ?: []).join(',')

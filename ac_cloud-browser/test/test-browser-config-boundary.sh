@@ -85,6 +85,8 @@ EXPECTED = [
     "https://diegonmarcos.github.io/linktree_icon-view",
     "https://qwant.com",
     "http://localhost:8000",
+    "http://localhost:8001",
+    "http://localhost:8002",
 ]
 
 # ── A. the app's own config carries them, in his order ───────────────
@@ -97,8 +99,24 @@ check(browser is not None, "build.json::ui.browser exists")
 browser = browser or {}
 
 check(browser.get("default_pinned_tabs") == EXPECTED,
-      "build.json pins exactly his four URLs, in his order",
+      "build.json pins exactly his six URLs, in his order",
       "got: %r" % (browser.get("default_pinned_tabs"),))
+# Termux / Nix / Local pins follow each app's single port declaration.
+def _port(rel, *keys):
+    d = json.loads(must_read(os.path.join(ROOT, rel)) or "{}")
+    for k in keys: d = (d or {}).get(k)
+    return d
+LOCAL = {
+    "Termux": _port("ac_cloud-termux/build.json", "runtime", "webserver", "port"),
+    "Nix":    _port("ac_cloud-nix-on-droid/build.json", "runtime", "webserver", "port"),
+    "Local":  _port("ac_cloud-c3-webserver/build.json", "runtime", "port"),
+}
+for name, port in LOCAL.items():
+    want = "http://localhost:%s" % port
+    check(port is not None and (browser.get("local_pinned_tabs") or {}).get(name) == want
+          and want in (browser.get("default_pinned_tabs") or []),
+          "%s pin matches its declared port (%s)" % (name, want),
+          "got: %r" % ((browser.get("local_pinned_tabs") or {}).get(name),))
 check(browser.get("default_engine") == "duckduckgo",
       "build.json ships DuckDuckGo as the default engine",
       "got: %r" % (browser.get("default_engine"),))

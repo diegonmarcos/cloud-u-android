@@ -114,13 +114,17 @@
   "ui": {
     "browser": {
       "_doc": "PER-APP browser content. libs:browser is shared BY REFERENCE (ac_cloud-vault/build.json names the same directory), so anything hardcoded in that module reaches every app that ever links it. The MECHANISM for pinning, grouping, history, suggestion and searching lives there; the CONTENT lives here. BrowserConfig.DEFAULT in the library pins NOTHING, so an app that supplies no block gets a browser with no pinned tabs rather than somebody else's homepage set. That boundary is the rule from #209: shared code is fine, one app's configuration turning up in another is not. Baked by app/build.gradle into BuildConfig.UI_BROWSER_CONFIG_B64 and handed to BrowserHostFragment.newInstance by MainActivity.",
-      "_doc_default_pinned_tabs": "Pinned on FIRST RUN ONLY, in this order. BrowserTabPrefs.seedOnce sets a flag that is never cleared, so closing or unpinning one of these keeps it gone — a default that reappears every launch is an irritation, not a feature. The owner wrote the fourth as 'localhost:800!'; the '!' is emphasis, not a digit, and :8000 is the port that actually answers on his phone.",
+      "_doc_default_pinned_tabs": "Pinned on FIRST RUN ONLY, in this order. BrowserTabPrefs.seedOnce sets a flag that is never cleared, so closing or unpinning one of these keeps it gone — a default that reappears every launch is an irritation, not a feature. The owner wrote the old fourth as 'localhost:800!'; the '!' is emphasis, not a digit, and :8000 is the port that actually answers on his phone.",
       "default_pinned_tabs": [
         "https://diegonmarcos.github.io/cloud-mobile",
         "https://diegonmarcos.github.io/linktree_icon-view",
         "https://qwant.com",
-        "http://localhost:8000"
+        "http://localhost:8000",
+        "http://localhost:8001",
+        "http://localhost:8002"
       ],
+      "_doc_local_pinned_tabs": "The last three pins are the phone's own localhost servers, in this order: Termux = :8000 (cloud-terminal-termux's $HOME via my-webserver, ac_cloud-termux/build.json::runtime.webserver.port), Nix = :8001 (cloud-terminal-nix's $HOME, ac_cloud-nix-on-droid/build.json::runtime.webserver.port), Local = :8002 (c3-webserver, phone storage /storage/emulated/0, ac_cloud-c3-webserver/build.json::runtime.port). Those declarations are the source of truth: app/build.gradle fails the build and test/test-browser-config-boundary.sh fails when any of these URLs drifts from them. libs:browser pins plain URLs, so the names are documentation; the tab shows the page's own title.",
+      "local_pinned_tabs": { "Termux": "http://localhost:8000", "Nix": "http://localhost:8001", "Local": "http://localhost:8002" },
       "_doc_search_engines": "Address-bar engines. {q} is where the URL-encoded query goes, so an engine whose query parameter is not last still works. default_engine is the SHIPPED default; BrowserSettings persists the user's own pick and BrowserConfig.engine() resolves an unknown or unset id back to this one. suggest (optional) is the engine's query-suggestion feed (https, {q}, OpenSearch JSON), asked only while the search_suggestions setting is on (BrowserRemoteSuggest); an engine without one simply offers its search row.",
       "default_engine": "duckduckgo",
       "search_engines": [

@@ -53,43 +53,45 @@ class BrowserFeaturesTest {
     }
 
     @Test
-    fun `shipped config pins exactly the owner's four tabs, in his order`() {
+    fun `shipped config pins exactly the owner's six tabs, in his order`() {
         assertEquals(
             listOf(
                 "https://diegonmarcos.github.io/cloud-mobile",
                 "https://diegonmarcos.github.io/linktree_icon-view",
                 "https://qwant.com",
                 "http://localhost:8000",
+                "http://localhost:8001",
+                "http://localhost:8002",
             ),
             shippedConfig().defaultPinnedTabs,
         )
     }
 
     @Test
-    fun `first run pins all four, pinned and in order`() {
+    fun `first run pins all six, pinned and in order`() {
         val plan = BrowserSeed.plan(
             alreadySeeded = false,
             openUrls = emptySet(),
             configUrls = shippedConfig().defaultPinnedTabs,
             now = 1_000L,
         )
-        assertEquals(4, plan.size)
+        assertEquals(6, plan.size)
         assertTrue("a seeded default must be pinned", plan.all { it.pinned })
-        assertEquals(listOf(0, 1, 2, 3), plan.map { it.order })
+        assertEquals(listOf(0, 1, 2, 3, 4, 5), plan.map { it.order })
         assertEquals(shippedConfig().defaultPinnedTabs, plan.map { it.url })
         // …and they really do sort to the front of a grid that already
         // has an unpinned tab in it.
         val existing = BrowserTab("https://example.com", "e", 9_999L)
         assertEquals(
             shippedConfig().defaultPinnedTabs,
-            BrowserTabOrder.sort(plan + existing).take(4).map { it.url },
+            BrowserTabOrder.sort(plan + existing).take(6).map { it.url },
         )
     }
 
     @Test
     fun `a closed default does not come back on the next launch`() {
         val cfg = shippedConfig().defaultPinnedTabs
-        // Second launch: the flag is set. He has since closed all four.
+        // Second launch: the flag is set. He has since closed all six.
         val plan = BrowserSeed.plan(
             alreadySeeded = true,
             openUrls = emptySet(),
@@ -108,7 +110,7 @@ class BrowserFeaturesTest {
             configUrls = cfg,
             now = 3_000L,
         )
-        assertEquals(3, plan.size)
+        assertEquals(5, plan.size)
         assertFalse(plan.any { it.url == cfg[0] })
     }
 
