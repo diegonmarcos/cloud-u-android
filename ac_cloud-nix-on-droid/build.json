@@ -311,7 +311,11 @@
             "less",
             "goose",
             "hermes",
-            "my-webserver"
+            "my-webserver",
+            "hostname",
+            "free",
+            "ip",
+            "ss"
           ]
         }
       }
