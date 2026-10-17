@@ -42,8 +42,16 @@ class WebPagesRenderTest {
 
     @After fun tearDown() { WebPageFragment.probe = null }
 
-    @Test fun a_webAppsRenders() = check("webapps", "page:cloud/webapps")
-    @Test fun b_linktreeRenders() = check("linktree", "page:cloud/lnktree")
+    @Test fun a_webAppsRenders() = check("webapps", "page:cloud/webapps", night = false)
+    @Test fun b_webAppsRendersAtNight() = check("webapps-night", "page:cloud/webapps", night = true)
+    @Test fun c_linktreeRenders() = check("linktree", "page:cloud/lnktree", night = false)
+
+    /** The app is uninstalled after the run (taking its files dir with it), so the shell copies the evidence out. */
+    private fun export(name: String) {
+        sh("mkdir -p /data/local/tmp/webpage")
+        out.listFiles()?.filter { it.name.contains("-$name.") || it.name.contains("-$name-screen.") }
+            ?.forEach { sh("cp ${it.absolutePath} /data/local/tmp/webpage/${it.name}") }
+    }
 
     private fun resumed(): Activity? {
         var a: Activity? = null
@@ -64,7 +72,8 @@ class WebPagesRenderTest {
         return r
     }
 
-    private fun check(name: String, target: String) {
+    private fun check(name: String, target: String, night: Boolean) {
+        sh("cmd uimode night ${if (night) "yes" else "no"}"); SystemClock.sleep(1500)
         val log = Collections.synchronizedList(mutableListOf<String>())
         WebPageFragment.probe = { log += it }
         sh("input keyevent KEYCODE_WAKEUP"); sh("wm dismiss-keyguard"); sh("logcat -c")
@@ -100,12 +109,15 @@ class WebPagesRenderTest {
             }
             ready = js(w, "document.readyState")
             textLen = js(w, "(document.body ? document.body.innerText.length : -1)").trim('"').toIntOrNull() ?: -1
+            report.appendLine("night=$night uimode=${sh("cmd uimode night").trim()}")
             report.appendLine("size=$size at=${loc[0]},${loc[1]} $vis")
             report.appendLine("finalUrl=$url")
             report.appendLine("readyState=$ready bodyTextLen=$textLen")
             report.appendLine("ua=${js(w, "navigator.userAgent")}")
             report.appendLine("bodyText=${js(w, "(document.body ? document.body.innerText.slice(0,400) : '')")}")
             report.appendLine("bodyStyle=${js(w, "(()=>{const s=getComputedStyle(document.body);return [s.color,s.backgroundColor,s.display,s.visibility,s.opacity,document.documentElement.scrollHeight,innerWidth+'x'+innerHeight].join(' | ')})()")}")
+            report.appendLine("prefersDark=${js(w, "String(matchMedia('(prefers-color-scheme: dark)').matches)")} htmlClass=${js(w, "document.documentElement.className")}")
+            report.appendLine("darkening=${if (android.os.Build.VERSION.SDK_INT >= 33) w.settings.isAlgorithmicDarkeningAllowed.toString() else "pre-33"} sdk=${android.os.Build.VERSION.SDK_INT}")
             report.appendLine("sw=${js(w, "String(!!navigator.serviceWorker && !!navigator.serviceWorker.controller)")}")
             val shot = ua.takeScreenshot()
             if (shot != null) {
@@ -124,6 +136,7 @@ class WebPagesRenderTest {
         report.appendLine("--- events (${log.size}) ---"); synchronized(log) { log.forEach { report.appendLine(it) } }
         File(out, "webpage-$name.txt").writeText(report.toString())
         runCatching { File(out, "logcat-$name.txt").writeText(sh("logcat -d -v time -t 3000")) }
+        export(name)
         Log.i("WebPagesRenderTest", "[$name]\n$report")
 
         assertTrue("[$name] no WebView\n$report", w != null)
