@@ -7,7 +7,9 @@ name: "ghcr delete package (one-off, allowlisted)"
 # visibility did not follow their source repo were added, each deleted once and
 # rebuilt by Ship.
 # 2026-10-17 (owner decision): 20 orphan packages (no build, no running
-# container, no compose/dist reference) added for a one-time delete. Only the allowlisted names can be deleted. Delete-only: the publish-module guard
+# container, no compose/dist reference) added for a one-time delete.
+# 2026-10-17: crawlee-cloud-binaries (service archived 2026-07-12) and
+# ollama-hai-binaries (vast-ollama no longer declared in cloud-data) added. Only the allowlisted names can be deleted. Delete-only: the publish-module guard
 # exempts this file narrowly (no push verbs, GHCR_TOKEN only as GH_TOKEN env).
 
 on:
@@ -17,7 +19,7 @@ on:
         description: "an allowlisted package being re-linked to its source repo"
         required: true
         type: choice
-        options: [cloud-notes-web, cloud-notes-sync, kg-store, kg-store-binaries, redis-binaries, hickory-dns-binaries, gha-runner, gha-runner-binaries, cloud-builder-x, cloud-builder-x-binaries, alerts-api, umami, cloud-data-reports, matrix-mautrix-whatsapp, matrix-mautrix-whatsapp-binaries, session-memory, session-memory-binaries, dozzle, fluent-bit, sauron-forwarder, crawlee-cloud, rig-agentic-sonn-14bq8, rig-agentic-sonn-14bq8-binaries, umami-setup, umami-db, matomo-hybrid, fincept-server, radicale-binaries, kg-graph-binaries, caddy-l4-binaries, claude-openai-bridge, claude-openai-bridge-binaries, kg-bridge, kg-bridge-binaries, kg-mcp, kg-mcp-binaries, cloud-cgc-mcp-octocode-db]
+        options: [cloud-notes-web, cloud-notes-sync, kg-store, kg-store-binaries, redis-binaries, hickory-dns-binaries, gha-runner, gha-runner-binaries, cloud-builder-x, cloud-builder-x-binaries, alerts-api, umami, cloud-data-reports, matrix-mautrix-whatsapp, matrix-mautrix-whatsapp-binaries, session-memory, session-memory-binaries, dozzle, fluent-bit, sauron-forwarder, crawlee-cloud, rig-agentic-sonn-14bq8, rig-agentic-sonn-14bq8-binaries, umami-setup, umami-db, matomo-hybrid, fincept-server, radicale-binaries, kg-graph-binaries, caddy-l4-binaries, claude-openai-bridge, claude-openai-bridge-binaries, kg-bridge, kg-bridge-binaries, kg-mcp, kg-mcp-binaries, cloud-cgc-mcp-octocode-db, crawlee-cloud-binaries, ollama-hai-binaries]
 
 permissions:
   contents: read
@@ -32,6 +34,6 @@ jobs:
           PKG: ${{ inputs.package }}
         run: |
           set -euo pipefail
-          case "$PKG" in cloud-notes-web|cloud-notes-sync|kg-store|kg-store-binaries|redis-binaries|hickory-dns-binaries|gha-runner|gha-runner-binaries|cloud-builder-x|cloud-builder-x-binaries|alerts-api|umami|cloud-data-reports|matrix-mautrix-whatsapp|matrix-mautrix-whatsapp-binaries|session-memory|session-memory-binaries|dozzle|fluent-bit|sauron-forwarder|crawlee-cloud|rig-agentic-sonn-14bq8|rig-agentic-sonn-14bq8-binaries|umami-setup|umami-db|matomo-hybrid|fincept-server|radicale-binaries|kg-graph-binaries|caddy-l4-binaries|claude-openai-bridge|claude-openai-bridge-binaries|kg-bridge|kg-bridge-binaries|kg-mcp|kg-mcp-binaries|cloud-cgc-mcp-octocode-db) ;; *) echo "::error::$PKG is not allowlisted"; exit 1;; esac
+          case "$PKG" in cloud-notes-web|cloud-notes-sync|kg-store|kg-store-binaries|redis-binaries|hickory-dns-binaries|gha-runner|gha-runner-binaries|cloud-builder-x|cloud-builder-x-binaries|alerts-api|umami|cloud-data-reports|matrix-mautrix-whatsapp|matrix-mautrix-whatsapp-binaries|session-memory|session-memory-binaries|dozzle|fluent-bit|sauron-forwarder|crawlee-cloud|rig-agentic-sonn-14bq8|rig-agentic-sonn-14bq8-binaries|umami-setup|umami-db|matomo-hybrid|fincept-server|radicale-binaries|kg-graph-binaries|caddy-l4-binaries|claude-openai-bridge|claude-openai-bridge-binaries|kg-bridge|kg-bridge-binaries|kg-mcp|kg-mcp-binaries|cloud-cgc-mcp-octocode-db|crawlee-cloud-binaries|ollama-hai-binaries) ;; *) echo "::error::$PKG is not allowlisted"; exit 1;; esac
           if gh api -X DELETE "/user/packages/container/$PKG"; then echo "deleted $PKG"
           else echo "::error::DELETE failed: the PAT secret lacks delete:packages (or the package is gone)"; exit 1; fi
