@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
@@ -21,6 +22,11 @@ import androidx.fragment.app.Fragment
  */
 abstract class KitComposeFragment : Fragment() {
 
+    /** The page body, under the shell's scroll sink when the host installed one. */
+    @Composable
+    private fun Page() = KitPage { Content() }
+
+
     /** The palette to draw with, read once per view creation (a theme switch recreates the view). */
     abstract fun palette(): KitPalette
 
@@ -28,7 +34,7 @@ abstract class KitComposeFragment : Fragment() {
     abstract fun Content()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
-        requireContext().kitComposeView(palette()) { Content() }
+        requireContext().kitComposeView(palette()) { Page() }
 }
 
 /**
@@ -40,3 +46,23 @@ fun Context.kitComposeView(palette: KitPalette, content: @Composable () -> Unit)
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         setContent { CloudKitTheme(palette, content) }
     }
+
+/**
+ * A host (the SuperApp shell) that wants to know when a page scrolls - to collapse its bottom nav - sets [connection] once;
+ * every [KitComposeFragment] page then reports its nested scrolls to it. Null (the default, and every other app) = no sink.
+ * Compose pages move no View's scrollY, so a host that only watches View scroll offsets never sees them.
+ */
+object KitScroll {
+    @Volatile
+    var connection: androidx.compose.ui.input.nestedscroll.NestedScrollConnection? = null
+}
+
+/** [content] with the host's scroll sink around it, if there is one. */
+@Composable
+fun KitPage(content: @Composable () -> Unit) {
+    val sink = KitScroll.connection
+    if (sink == null) content()
+    else androidx.compose.foundation.layout.Box(
+        androidx.compose.ui.Modifier.nestedScroll(sink),
+    ) { content() }
+}

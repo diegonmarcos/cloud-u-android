@@ -100,6 +100,22 @@ public class BottomNavIslandView @JvmOverloads constructor(
         attachCollapse()
     }
 
+    /**
+     * The same collapse, fed by Compose scrolling instead of View scroll offsets: attach it with
+     * Modifier.nestedScroll around a Compose page (ui-kit's KitScroll hands it to every KitComposeFragment page).
+     * A Compose list moves no View's scrollY, so [collapseOnScrollIn] alone cannot see it. Observes only - consumes nothing.
+     */
+    public val composeScroll: androidx.compose.ui.input.nestedscroll.NestedScrollConnection =
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
+            ): androidx.compose.ui.geometry.Offset {
+                collapsed = collapseFor(collapsed, -available.y)   // y goes negative as the content travels down
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+        }
+
     /** One scroll event, from either channel: re-measure the offset and apply the rule once. */
     private fun onContentScrolled() {
         val content = collapseContent ?: return

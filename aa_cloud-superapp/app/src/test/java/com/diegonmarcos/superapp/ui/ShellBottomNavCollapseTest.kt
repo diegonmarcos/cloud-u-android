@@ -3,7 +3,16 @@ package com.diegonmarcos.superapp.ui
 import android.app.Application
 import android.widget.FrameLayout
 import android.widget.ScrollView
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
 import com.diegonmarcos.superapp.launcher.Sections
 import org.junit.Assert.assertEquals
@@ -109,6 +118,47 @@ class ShellBottomNavCollapseTest : ShellIslandHarness() {
         )
         assertEquals("labels were dropped by an unrelated scroll", nav.items.size, labelCount())
     }
+
+    /**
+     * The pages are Compose now (KitComposeFragment), and a Compose list moves no View's scrollY: the View driver alone left
+     * the bar inert for every migrated page. This swipes a REAL Compose list inside the content host - wrapped by KitPage
+     * exactly as KitComposeFragment wraps its body - and asserts the rendered bar changed, then restored on the way back.
+     */
+    @Test
+    fun `swiping a Compose page collapses the bar and swiping back restores it`() {
+        showShellNav(firstId())
+        val expanded = islandHeight()
+        compose.runOnUiThread {
+            val list = androidx.compose.ui.platform.ComposeView(themed).apply {
+                setContent {
+                    com.diegonmarcos.superapp.uikit.KitPage {
+                        androidx.compose.foundation.lazy.LazyColumn(
+                            androidx.compose.ui.Modifier.fillMaxSize().testTag("page:list"),
+                        ) {
+                            items(200) { androidx.compose.material3.Text("row $it", androidx.compose.ui.Modifier.padding(24.dp)) }
+                        }
+                    }
+                }
+            }
+            content.addView(list, FrameLayout.LayoutParams(VIEWPORT_PX, VIEWPORT_PX))
+        }
+        compose.waitForIdle()
+        assertFalse(nav.collapsed)
+
+        compose.onNodeWithTag("page:list").performTouchInput { swipeUp() }
+        compose.waitForIdle()
+        assertTrue("swiping a Compose page did not collapse the bar: KitScroll is not reaching the island", nav.collapsed)
+        assertEquals("labels survived the collapse", 0, labelCount())
+        assertTrue("the island did not shrink", islandHeight() < expanded - 1f)
+
+        compose.onNodeWithTag("page:list").performTouchInput { swipeDown() }
+        compose.waitForIdle()
+        assertFalse("swiping back left the bar collapsed", nav.collapsed)
+        assertEquals(nav.items.size, labelCount())
+    }
+
+    @org.junit.After
+    fun dropSink() { com.diegonmarcos.superapp.uikit.KitScroll.connection = null }
 
     private object Scroll { const val PX = 400 }
 }

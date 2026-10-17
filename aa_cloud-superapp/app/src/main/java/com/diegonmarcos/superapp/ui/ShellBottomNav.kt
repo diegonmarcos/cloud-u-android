@@ -31,5 +31,8 @@ object ShellBottomNav {
         // the same defect waiting to happen again. Re-configuring replaces the driver, never
         // stacks another one.
         nav.collapseOnScrollIn(content)
+        // The same collapse for Compose pages (every KitComposeFragment): a Compose list moves no View's scrollY, so the
+        // View driver above never sees it. KitScroll hands each page's nested scrolls to the bar.
+        com.diegonmarcos.superapp.uikit.KitScroll.connection = nav.composeScroll
     }
 }
