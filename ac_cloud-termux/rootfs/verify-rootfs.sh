@@ -326,8 +326,10 @@ home_mutant 's|^    wipe_rootfs$|    wipe_rootfs; rm -rf "$HOME/.claude"|' "an u
 
 echo "── #771: the app's own selftest, every check, against a noexec, foreign-owned shared store ──"
 # The phone's measured store: FUSE-mounted noexec, owned by a media uid that is not the
-# terminal's, so git refused it as dubious and ./script was Permission denied. Staged the same
-# way here: a noexec tmpfs at /storage/emulated/0/CloudDrive/git holding a repo owned by another
+# terminal's, so git refused it as dubious and ./script was Permission denied. cloud-shared-store
+# moved the store onto ext4 in $HOME, but a tree with that shape is still what a session meets on
+# the legacy CloudDrive mirror (the nix fallback), so the selftest keeps proving it: a noexec
+# tmpfs mounted at the STORE's git folder ($HOME/cloud-shared-store/git) holding a repo owned by another
 # uid (proot -0 shows the runner's own files as root's, so a foreign uid stays foreign). Then
 # app/src/main/assets/terminal-selftest.json runs check by check through enter.sh, exactly as
 # /api/terminal/selftest hands each one to the login shell, and every check must exit 0. Two
@@ -335,7 +337,7 @@ echo "── #771: the app's own selftest, every check, against a noexec, foreig
 # without /etc/ld.so.preload the ./script check does.
 SELFTEST="$HERE/../app/src/main/assets/terminal-selftest.json"
 S0=/storage/emulated/0
-G="$S0/CloudDrive/git"
+G="$W/home/cloud-shared-store/git"
 if [ -e /storage ]; then
     echo "FAIL /storage already exists on this runner; the #771 store cannot be staged without clobbering it"; fail=1
 elif ! sudo -n mkdir -p "$G" "$S0/Download" 2>/dev/null \
