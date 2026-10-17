@@ -95,4 +95,23 @@ class LogicTest {
         assertEquals("", Logic.decode("""[{"mode":"m","expr":"e","result":"r"}]""").single().decision)
         assertEquals(emptyList<Logic.Entry>(), Logic.decode("not json"))
     }
+
+    @Test fun `results show thousands separators via the Sheets formatter and copy stays plain`() {
+        assertEquals("10,000.5", Logic.shown("10000.5"))
+        assertEquals("100,000.42", Logic.shown("100000.42"))
+        assertEquals("1,234,567", Logic.shown("1234567"))
+        assertEquals("-1,234.5", Logic.shown("-1234.5"))
+        assertEquals("0.001", Logic.shown("0.001"))
+        assertEquals("1E20", Logic.shown("1E20"))
+        assertEquals("1e+20", Logic.shown("1e+20"))
+        assertEquals("1.5E-1234", Logic.shown("1.5E-1234"))
+        assertEquals("Error", Logic.shown("Error"))
+        assertEquals("∞", Logic.shown("∞"))
+        assertEquals("-∞", Logic.shown("-∞"))
+        assertEquals("12,345.678901234", Logic.shown("12345.678901234"))   // precision kept
+        assertEquals("10000110", Logic.shown("10000110", outBase = 2))      // non-decimal output untouched
+        val r = Logic.Result(true, "10000.5", emptyList(), "")
+        assertEquals("10000.5", Logic.copied(r))
+        assertFalse(Logic.copied(r).contains(","))
+    }
 }

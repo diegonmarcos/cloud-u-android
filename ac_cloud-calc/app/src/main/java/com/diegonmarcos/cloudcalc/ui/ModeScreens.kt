@@ -46,6 +46,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -177,7 +181,7 @@ private fun ExpressionMode(mode: Declarations.Mode) {
                     }
                 }
             }
-            ResultBlock(result)
+            ResultBlock(result, Logic.optionValue(options, "out_base", 10))
             bases.forEach { (label, value) ->
                 Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.small), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(label, style = MaterialTheme.typography.labelLarge)
@@ -224,17 +228,21 @@ private fun ChoiceRow(choices: List<Declarations.Choice>, options: String, onPic
 }
 
 @Composable
-internal fun ResultBlock(result: Logic.Result?) {
+internal fun ResultBlock(result: Logic.Result?, outBase: Int = 10) {
     if (result == null) return
+    val clipboard = LocalClipboardManager.current
     Column(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.gap)) {
         if (result.error.isNotBlank()) {
             Text(result.error, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag(CalcTags.RESULT))
         } else {
             Text(
-                "= " + result.text,
+                "= " + Logic.shown(result.text, outBase),
                 style = MaterialTheme.typography.headlineMedium,
                 color = if (result.ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                modifier = Modifier.testTag(CalcTags.RESULT),
+                // Long-press copies the plain number (no separators) so it pastes cleanly elsewhere.
+                modifier = Modifier.testTag(CalcTags.RESULT).pointerInput(result) {
+                    detectTapGestures(onLongPress = { if (result.ok) clipboard.setText(AnnotatedString(Logic.copied(result))) })
+                },
             )
         }
         result.messages.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -575,7 +583,7 @@ private fun HistoryMode(mode: Declarations.Mode) {
                     // Tap the expression to reuse it, the result to reuse that.
                     Text(e.expr, Modifier.fillMaxWidth().clickable { state.send(e.mode, e.expr) }.testTag(CalcTags.historyExpr(i)),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("= " + e.result, Modifier.fillMaxWidth().clickable { state.send(e.mode, e.result) }.testTag(CalcTags.historyResult(i)),
+                    Text("= " + Logic.shown(e.result), Modifier.fillMaxWidth().clickable { state.send(e.mode, e.result) }.testTag(CalcTags.historyResult(i)),
                         style = MaterialTheme.typography.titleMedium)
                     if (e.ts != 0L) Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM).format(Date(e.ts)),
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

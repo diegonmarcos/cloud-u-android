@@ -56,6 +56,16 @@ object Logic {
         )
     }
 
+    /**
+     * How an engine answer is shown: thousands grouped with "," and "." for decimals, via the Sheets formatter
+     * (one source). Only base-10 output is grouped; precision, sci notation, Error and ∞ are untouched.
+     */
+    fun shown(text: String, outBase: Int = 10): String =
+        if (outBase == 10) com.diegonmarcos.cloudcalc.sheet.Fmt.groupNumbers(text) else text
+
+    /** What a copy puts on the clipboard: the engine's plain answer, no separators, so it pastes anywhere. */
+    fun copied(r: Result): String = r.text
+
     /** The current value of eval option [key]: an override, else the mode's own, else [def]. */
     fun optionValue(options: String, key: String, def: Int): Int =
         runCatching { JSONObject(options.ifBlank { "{}" }).optInt(key, def) }.getOrDefault(def)

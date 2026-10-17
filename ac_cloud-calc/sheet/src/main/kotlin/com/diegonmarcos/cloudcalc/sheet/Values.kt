@@ -111,9 +111,22 @@ object Fmt {
         val s = bd.abs().toPlainString()
         val intPart = s.substringBefore('.')
         val frac = if (s.contains('.')) "." + s.substringAfter('.') else ""
-        val g = intPart.reversed().chunked(3).joinToString(",").reversed()
-        return (if (neg) "-" else "") + g + frac
+        return (if (neg) "-" else "") + group(intPart) + frac
     }
+
+    /** A run of integer digits with "," every three from the right ("1234567" -> "1,234,567"): the one grouping rule. */
+    fun group(digits: String): String = digits.reversed().chunked(3).joinToString(",").reversed()
+
+    // A plain decimal numeral: not part of a word, a hex literal, an exponent or an already-grouped number,
+    // and not followed by an exponent/letter (so 1E20, 1e+20, 0x1F, x2 stay untouched).
+    private val NUMERAL = Regex("""(?<![\w.,]|[eE][+-])(\d+)(\.\d+)?(?![\w.])""")
+
+    /**
+     * Every plain decimal numeral in [text] with its integer digits grouped ("10000.5" -> "10,000.5",
+     * "-1234.5 m" -> "-1,234.5 m"). Display only: decimals, scientific notation and any non-number text
+     * (Error, ∞, units) are left exactly as they are.
+     */
+    fun groupNumbers(text: String): String = NUMERAL.replace(text) { m -> group(m.groupValues[1]) + m.groupValues[2] }
 
     fun text(v: Value): String = when (v) {
         is Value.Num -> general(v.v)
@@ -155,7 +168,7 @@ object Fmt {
         val intPart = plain.substringBefore('.')
         val frac = if (plain.contains('.')) "." + plain.substringAfter('.') else ""
         val body = when (f.kind) {
-            Format.Kind.NUMBER, Format.Kind.CURRENCY -> intPart.reversed().chunked(3).joinToString(",").reversed() + frac
+            Format.Kind.NUMBER, Format.Kind.CURRENCY -> group(intPart) + frac
             else -> intPart + frac
         }
         return when (f.kind) {
