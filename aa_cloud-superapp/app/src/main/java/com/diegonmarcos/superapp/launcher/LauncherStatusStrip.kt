@@ -240,7 +240,8 @@ class StatusStripModel(private val context: Context) {
         // ancestors (the drawer, the padded shell frame) are free to consume or rewrite what they pass down. So ALSO ask the
         // window what the cutout is, when the strip attaches and whenever it is laid out: the window's own root insets are the
         // truth the camera is measured against, whatever the dispatch did on the way here.
-        fun fromRoot() { ViewCompat.getRootWindowInsets(host)?.let { noteInsets(it) } }
+        // The root insets only FILL IN what no dispatch has said (cutout still unknown); a dispatched value is never overwritten by them.
+        fun fromRoot() { if (cutoutTopPx == 0) ViewCompat.getRootWindowInsets(host)?.let { noteInsets(it) } }
         host.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) { fromRoot(); v.requestApplyInsets() }
             override fun onViewDetachedFromWindow(v: View) = Unit
