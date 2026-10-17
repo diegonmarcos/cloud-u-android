@@ -468,7 +468,7 @@
       "baseline": {
         "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 1,
+        "view_ui_files": 0,
         "custom_views": 0
       }
     },
@@ -629,6 +629,7 @@
         "custom_views": 0
       },
       "done": [
+        "Home stars in Compose (launcher-onehand StarGlyph: the five TextViews in activity_main.xml are ComposeViews with the same ids/gravity/elevation; Sirius/Canopus/Centauri/Polaris keep their placement, twinkle and press-drag forwarding as View properties; findViewById gone from the lib; StarsComposeTest). Swipe-to-open and the 26dp strip floor (604ba7b68) untouched",
         "DevControlServer no longer looks the bottom nav up by id: ShellActivity hands it over through devcontrol.NavIslandSource",
         "Shell top row in Compose (ui/ShellToolbar.kt: ShellToolbarRow hamburger+Back, OrbGlyph, ShellToolbarState; the MaterialToolbar/support ActionBar, options menus, ActionBarDrawerToggle and LauncherToolbarFx's tooltip hook + hamburger jitter are gone, the tic is a RESUMED-scoped coroutine; ShellToolbarComposeTest)",
         "Music mini-island in Compose (media/MusicIslandUi.kt MusicIsland + MusicIslandState; MusicIslandController keeps only the monitor/popup wiring; the island's FrameLayout/ImageView/TextView/wave left activity_main.xml; MusicIslandComposeTest)",

@@ -5,7 +5,8 @@ import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import androidx.compose.ui.platform.ComposeView
+import androidx.core.view.ViewCompat
 
 /**
  * Home-screen Canopus star — triggers [ArcMenu] (the bottom half-moon menu)
@@ -40,7 +41,7 @@ import android.widget.TextView
  */
 class CanopusStar(
     private val activity: Activity,
-    private val star: TextView,
+    private val star: ComposeView,
     private val island: View?,
     private val host: ArcMenu.Host,
     private val anchorFraction: Float = 1f,
@@ -48,6 +49,7 @@ class CanopusStar(
     private val offsetXDp: Int = 0,
 ) {
 
+    private val glyph = StarGlyphState().apply { glowRadius = 8f }
     private val cfg get() = CircularMenu.config()   // size/glyph same as Sirius
     private var session: ArcMenu.Session? = null
     private var islandLayoutListener: View.OnLayoutChangeListener? = null
@@ -83,11 +85,10 @@ class CanopusStar(
     fun setup() {
         val c = cfg
         if (!c.enabled) { star.visibility = View.GONE; return }
-        star.text = c.starGlyph
-        star.setTextSize(TypedValue.COMPLEX_UNIT_SP, c.starSizeSp.toFloat() + sizeBumpSp)
-        val pad = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, c.starTapPadDp.toFloat(), activity.resources.displayMetrics).toInt()
-        star.setPadding(pad, pad, pad, pad)
+        glyph.text = c.starGlyph
+        glyph.sizeSp = c.starSizeSp.toFloat() + sizeBumpSp
+        glyph.padDp = c.starTapPadDp.toFloat()
+        star.bindStar(glyph)
         // Horizontal place on its row. translationX (not a layout margin) for
         // the same reason translationY carries the vertical anchor: the star is
         // a layout_gravity="center" child, so shifting it is a post-layout
@@ -124,7 +125,7 @@ class CanopusStar(
         }
         // Forward press→drag→release to the arc-menu.
         star.setOnTouchListener { _, e ->
-            val decor = activity.findViewById<ViewGroup>(android.R.id.content)
+            val decor = runCatching { ViewCompat.requireViewById<ViewGroup>(star.rootView, android.R.id.content) }.getOrNull()
                 ?: return@setOnTouchListener false
             val s = IntArray(2); star.getLocationInWindow(s)
             val d = IntArray(2); decor.getLocationInWindow(d)

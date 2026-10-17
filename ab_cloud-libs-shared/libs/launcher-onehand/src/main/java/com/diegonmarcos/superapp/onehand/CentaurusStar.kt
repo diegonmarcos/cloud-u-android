@@ -10,7 +10,8 @@ import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import androidx.compose.ui.platform.ComposeView
+import androidx.core.view.ViewCompat
 import com.diegonmarcos.superapp.datamanager.AppUsageProvider
 
 /**
@@ -39,10 +40,11 @@ import com.diegonmarcos.superapp.datamanager.AppUsageProvider
  */
 class CentaurusStar(
     private val activity: Activity,
-    private val star: TextView,
+    private val star: ComposeView,
     private val island: View?,
 ) {
 
+    private val glyph = StarGlyphState()
     private val cfg get() = CircularMenu.config()   // same glyph/size source as Sirius+Canopus
     private var session: ArcMenu.Session? = null
     private var islandLayoutListener: View.OnLayoutChangeListener? = null
@@ -153,12 +155,11 @@ class CentaurusStar(
     fun setup() {
         val c = cfg
         if (!c.enabled) { star.visibility = View.GONE; return }
-        star.text = c.starGlyph
+        glyph.text = c.starGlyph
         // Between Canopus (starSizeSp) and Sirius (starSizeSp + 4).
-        star.setTextSize(TypedValue.COMPLEX_UNIT_SP, c.starSizeSp.toFloat() + 2f)
-        val pad = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, c.starTapPadDp.toFloat(), activity.resources.displayMetrics).toInt()
-        star.setPadding(pad, pad, pad, pad)
+        glyph.sizeSp = c.starSizeSp.toFloat() + 2f
+        glyph.padDp = c.starTapPadDp.toFloat()
+        star.bindStar(glyph)
         // Left half of the midway row. translationX (not a layout margin) for
         // the same reason translationY carries the vertical anchor: the star is
         // a layout_gravity="center" child, so shifting it is a post-layout
@@ -198,7 +199,7 @@ class CentaurusStar(
         }
         // Forward press→drag→release to the SAME ArcMenu as Canopus.
         star.setOnTouchListener { _, e ->
-            val decor = activity.findViewById<ViewGroup>(android.R.id.content)
+            val decor = runCatching { ViewCompat.requireViewById<ViewGroup>(star.rootView, android.R.id.content) }.getOrNull()
                 ?: return@setOnTouchListener false
             val s = IntArray(2); star.getLocationInWindow(s)
             val d = IntArray(2); decor.getLocationInWindow(d)

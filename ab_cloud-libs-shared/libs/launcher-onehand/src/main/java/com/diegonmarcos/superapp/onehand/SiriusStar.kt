@@ -6,7 +6,8 @@ import android.app.Activity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import androidx.compose.ui.platform.ComposeView
+import androidx.core.view.ViewCompat
 
 /**
  * Home-screen Sirius star — triggers [CircularMenu] on touch.
@@ -24,11 +25,12 @@ import android.widget.TextView
  */
 class SiriusStar(
     private val activity: Activity,
-    private val star: TextView,
+    private val star: ComposeView,
     private val host: CircularMenu.Host,
     private val twinkleEnabled: () -> Boolean,
 ) {
 
+    private val glyph = StarGlyphState()
     private var pulse: AnimatorSet? = null
     private var session: CircularMenu.Session? = null
     private val cfg get() = CircularMenu.config()
@@ -37,17 +39,17 @@ class SiriusStar(
     fun setup() {
         val c = cfg
         if (!c.enabled) { star.visibility = View.GONE; return }
-        star.text = c.starGlyph
+        glyph.text = c.starGlyph
         // Sirius is slightly bigger than Canopus (which uses starSizeSp directly)
-        star.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, c.starSizeSp.toFloat() + 4f)
-        val pad = android.util.TypedValue.applyDimension(
-            android.util.TypedValue.COMPLEX_UNIT_DIP, c.starTapPadDp.toFloat(), activity.resources.displayMetrics).toInt()
-        star.setPadding(pad, pad, pad, pad)
+        glyph.sizeSp = c.starSizeSp.toFloat() + 4f
+        glyph.padDp = c.starTapPadDp.toFloat()
         // Golden glow to distinguish Sirius from Canopus/Centauri
-        star.setShadowLayer(18f, 0f, 0f, android.graphics.Color.argb(200, 255, 220, 80))
+        glyph.glow = android.graphics.Color.argb(200, 255, 220, 80)
+        glyph.glowRadius = 18f
+        star.bindStar(glyph)
         // Forward press→drag→release as one continuous gesture to the circular-menu.
         star.setOnTouchListener { _, e ->
-            val decor = activity.findViewById<ViewGroup>(android.R.id.content)
+            val decor = runCatching { ViewCompat.requireViewById<ViewGroup>(star.rootView, android.R.id.content) }.getOrNull()
                 ?: return@setOnTouchListener false
             val s = IntArray(2); star.getLocationInWindow(s)
             val d = IntArray(2); decor.getLocationInWindow(d)

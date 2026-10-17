@@ -3,7 +3,8 @@ package com.diegonmarcos.superapp.onehand
 import android.app.Activity
 import android.util.TypedValue
 import android.view.View
-import android.widget.TextView
+import androidx.compose.ui.platform.ComposeView
+import androidx.core.view.ViewCompat
 
 /**
  * Polaris — the home screen's TOP star, and the fifth of the set.
@@ -30,12 +31,13 @@ import android.widget.TextView
  */
 class PolarisStar(
     private val activity: Activity,
-    private val star: TextView,
+    private val star: ComposeView,
     /** Where a tap goes. The app supplies its own tile dispatcher, so this
      *  library never has to know what a target string means. */
     private val navigate: (String) -> Unit,
 ) {
 
+    private val glyph = StarGlyphState()
     private val shared get() = CircularMenu.config()
     private val own get() = CircularMenu.searchStar()
 
@@ -44,12 +46,10 @@ class PolarisStar(
         val cfg = shared
         val search = own
         if (!cfg.enabled || !search.enabled) { star.visibility = View.GONE; return }
-        star.text = cfg.starGlyph
-        star.setTextSize(TypedValue.COMPLEX_UNIT_SP, cfg.starSizeSp.toFloat())
-        val pad = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, cfg.starTapPadDp.toFloat(),
-            activity.resources.displayMetrics).toInt()
-        star.setPadding(pad, pad, pad, pad)
+        glyph.text = cfg.starGlyph
+        glyph.sizeSp = cfg.starSizeSp.toFloat()
+        glyph.padDp = cfg.starTapPadDp.toFloat()
+        star.bindStar(glyph)
         // The view is laid out at the top of the frame, so the declared offset
         // is applied as a translation exactly the way the other stars apply
         // theirs — a post-layout nudge that re-measures nothing. Unlike them
