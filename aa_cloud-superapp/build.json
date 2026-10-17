@@ -319,6 +319,7 @@
       "dir": "../ab_cloud-libs-shared/libs/appstore",
       "_doc": "The Store (#563; formerly the Constellation store): fleet list, install/update actions, background pass. Split from the app so store, launcher and updater are separable - libs:updater is the engine, this is the storefront. UI, so it cannot go out-of-process like libs:net; the win is the boundary."
     },
+    "libs:shared-store": {"_doc_dir": "cloud-shared-store's store-access layer (contract). libs:appstore compiles it for the generated ICloudExec client: SharedUidMigration asks the OLD terminal build to back its home up over CLOUD_EXEC. Shared BY REFERENCE; reads ac_cloud-termux/build.json::shared_store.", "dir": "../ab_cloud-libs-shared/libs/shared-store", "type": "library"},
     "libs:account": {
       "dir": "../ab_cloud-libs-shared/libs/account",
       "_doc": "#867 Account (the Profile page: Connect, Fleet cockpit, Infos, Drift, business card) as a library, so SuperApp and the Cloud Account app host one code path. The host supplies its palette, tab chrome, icons, router, haptics and mesh tunnel through AccountHost."

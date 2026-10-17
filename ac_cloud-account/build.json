@@ -69,8 +69,14 @@
         "libs:core",
         "libs:updater",
         "libs:shizuku-adb-debug-tools",
-        "libs:ui-kit"
+        "libs:ui-kit",
+        "libs:shared-store"
       ]
+    },
+    "libs:shared-store": {
+      "_doc_dir": "cloud-shared-store's store-access layer (contract). libs:appstore compiles it for the generated ICloudExec client: SharedUidMigration asks the OLD terminal build to back its home up over CLOUD_EXEC. Shared BY REFERENCE; reads ac_cloud-termux/build.json::shared_store.",
+      "dir": "../ab_cloud-libs-shared/libs/shared-store",
+      "type": "library"
     },
     "libs:databackend": {
       "dir": "../ab_cloud-libs-shared/libs/databackend",

@@ -5,10 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.net.Uri
-import android.os.Binder
 import android.os.Environment
 import android.os.IBinder
-import android.os.Parcel
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +25,7 @@ import com.diegonmarcos.superapp.uikit.KitStepper
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.cache.ApkCache
+import com.termux.cloud.ICloudExec
 import java.io.File
 import org.json.JSONObject
 
@@ -107,9 +106,30 @@ object SharedUidMigration {
         (reg.groups.firstOrNull { pkg in it.members && it.migration == KIND }?.plan
             ?: reg.groups.firstNotNullOfOrNull { g -> g.plan.takeIf { g.migration == KIND } })
 
+    /** [pkg] is a member of a group fleet-identity.json declares `migration: shared_uid` for. */
+    fun inMigrationGroup(reg: FleetIdentity.Registry, pkg: String): Boolean =
+        reg.groups.any { pkg in it.members && it.migration == KIND }
+
+    /**
+     * Pure: does [cause] start the migration for [pkg]? UID_CHANGED and SHARED_USER_INCOMPATIBLE
+     * always do (only a uid change raises them). UPDATE_INCOMPATIBLE (-7) is ALSO a plain signing-key
+     * mismatch, so it migrates only a package in a declared migration group; anywhere else it is the
+     * row's ordinary "signature mismatch" error.
+     */
+    fun migrates(cause: Cause?, inGroup: Boolean): Boolean = when (cause) {
+        null -> false
+        Cause.UPDATE_INCOMPATIBLE -> inGroup
+        else -> true
+    }
+
+    fun migrates(cause: Cause?, pkg: String): Boolean =
+        migrates(cause, baked()?.let { inMigrationGroup(it, pkg) } == true)
+
+    private fun baked(): FleetIdentity.Registry? =
+        bakedPlans ?: runCatching { FleetIdentity.baked() }.getOrNull()?.also { bakedPlans = it }
+
     @Volatile private var bakedPlans: FleetIdentity.Registry? = null
-    fun plan(pkg: String): Plan? = planFor(
-        bakedPlans ?: runCatching { FleetIdentity.baked() }.getOrNull()?.also { bakedPlans = it } ?: return null, pkg)
+    fun plan(pkg: String): Plan? = planFor(baked() ?: return null, pkg)
 
     fun defaultStorageRoot(): String =
         runCatching { Environment.getExternalStorageDirectory().path }.getOrNull() ?: "/storage/emulated/0"
@@ -173,7 +193,7 @@ object SharedUidMigration {
         val installed = StoreStages.installedKey(ctx, app)
         var r = record(ctx, app.pkg)
         val note = ApkCache.noteOf(ctx, app.pkg)?.takeIf { it.stage == ApkCache.STAGE_INSTALL }
-        val c = cause(note?.message)
+        val c = cause(note?.message)?.takeIf { migrates(it, app.pkg) }
         if (c != null && installed.isNotEmpty() && (r == null || r.before != installed)) {
             val ver = StoreStages.cachedFor(ctx, app)?.record?.versionCode?.let { "v$it" } ?: ""
             r = Record(app.pkg, c, ver, installed, System.currentTimeMillis())
@@ -271,31 +291,20 @@ object SharedUidMigration {
         return "could not reach $pkg — run in it: " + backupScript(path)
     }
 
-    /** ICloudExec.exec by raw transaction (descriptor + TRANSACTION 1): no second copy of the AIDL in this lib. */
+    /** ICloudExec.exec through libs:shared-store's generated interface (the terminal's own AIDL). */
     private fun cloudExec(ctx: Context, call: ExecCall): Boolean {
         val latch = java.util.concurrent.CountDownLatch(1)
-        var binder: IBinder? = null
+        var svc: ICloudExec? = null
         val conn = object : ServiceConnection {
-            override fun onServiceConnected(n: ComponentName?, b: IBinder?) { binder = b; latch.countDown() }
-            override fun onServiceDisconnected(n: ComponentName?) { binder = null }
+            override fun onServiceConnected(n: ComponentName?, b: IBinder?) { svc = ICloudExec.Stub.asInterface(b); latch.countDown() }
+            override fun onServiceDisconnected(n: ComponentName?) { svc = null }
         }
         val pkg = call.action.removeSuffix(".CLOUD_EXEC")
         if (!ctx.bindService(Intent(call.action).setPackage(pkg), conn, Context.BIND_AUTO_CREATE)) return false
         try {
             if (!latch.await(10, java.util.concurrent.TimeUnit.SECONDS)) return false
-            val b = binder ?: return false
-            val data = Parcel.obtain(); val reply = Parcel.obtain()
-            try {
-                data.writeInterfaceToken("com.termux.cloud.ICloudExec")
-                data.writeString(call.executable)
-                data.writeStringArray(call.args.toTypedArray())
-                data.writeString(null)
-                data.writeString(call.workdir)
-                data.writeInt(call.timeoutMs)
-                b.transact(Binder.FIRST_CALL_TRANSACTION, data, reply, 0)
-                reply.readException()
-                return true
-            } finally { data.recycle(); reply.recycle() }
+            val res = (svc ?: return false).exec(call.executable, call.args.toTypedArray(), null, call.workdir, call.timeoutMs)
+            return res?.getString("error") == null
         } finally { runCatching { ctx.unbindService(conn) } }
     }
 

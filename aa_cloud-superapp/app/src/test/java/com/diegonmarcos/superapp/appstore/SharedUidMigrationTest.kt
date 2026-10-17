@@ -36,6 +36,8 @@ import org.robolectric.annotation.Config
  *      Update all and the auto chain never call the installer again while the old build is installed;
  *      once it is uninstalled, Install is live again (step 3)
  *   M3 the card renders its four steps, with only the current one's action live
+ *   M5 -7 (UPDATE_INCOMPATIBLE) migrates only a package in a declared migration group; for any other
+ *      package it is the ordinary "signature mismatch" error
  *   M4 the backup lands at /storage/emulated/0/<storage.shared_root>/<backup_dir>/<pkg>/<archive>
  *      (declared in fleet-identity.json, read from ac_cloud-termux/build.json), and the command the
  *      terminal runs writes exactly there
@@ -50,16 +52,16 @@ class SharedUidMigrationTest : KitPageHarness() {
 
     private val ctx get() = RuntimeEnvironment.getApplication()
 
-    private fun app(): Fleet.App {
+    private fun app(p: String = pkg): Fleet.App {
         val o = JSONObject().put("apps", JSONArray().put(JSONObject().put("id", "nix-on-droid").put("label", "Cloud Nix")
-            .put("package", pkg).put("registry", "ghcr.io").put("namespace", "x").put("image", "x")))
+            .put("package", p).put("registry", "ghcr.io").put("namespace", "x").put("image", "x")))
         return Fleet.parse(Base64.encodeToString(o.toString().toByteArray(), Base64.NO_WRAP)).single()
     }
 
-    private fun installOld(code: Long = 7L) {
+    private fun installOld(code: Long = 7L, p: String = pkg) {
         val pi = PackageInfo().apply {
-            packageName = pkg; longVersionCode = code; lastUpdateTime = 1_000L
-            applicationInfo = ApplicationInfo().apply { packageName = pkg }
+            packageName = p; longVersionCode = code; lastUpdateTime = 1_000L
+            applicationInfo = ApplicationInfo().apply { packageName = p }
         }
         shadowOf(ctx.packageManager).installPackage(pi)
     }
@@ -193,5 +195,33 @@ class SharedUidMigrationTest : KitPageHarness() {
         assertFalse(done.inProgress)
         assertEquals(f.length(), done.bytes)
         f.delete(); dir.delete()
+    }
+
+    @Test
+    fun `M5 -7 migrates only a declared group member, elsewhere it is a signature mismatch`() {
+        val reg = FleetIdentity.baked()
+        assertTrue(SharedUidMigration.inMigrationGroup(reg, "cld.termux"))
+        assertTrue(SharedUidMigration.inMigrationGroup(reg, pkg))
+        assertFalse(SharedUidMigration.inMigrationGroup(reg, "com.diegonmarcos.cloudnotes"))
+        val c7 = SharedUidMigration.Cause.UPDATE_INCOMPATIBLE
+        assertTrue(SharedUidMigration.migrates(c7, inGroup = true))
+        assertFalse(SharedUidMigration.migrates(c7, inGroup = false))
+        assertTrue("-24 needs no group", SharedUidMigration.migrates(SharedUidMigration.Cause.UID_CHANGED, inGroup = false))
+
+        val other = "com.example.signed.elsewhere"
+        installOld(p = other)
+        ApkCache.note(ctx, other, ApkCache.STAGE_INSTALL,
+            "install failed · code: INSTALL_FAILED_UPDATE_INCOMPATIBLE (signature differs from the installed copy)")
+        val s = StoreStages.stage(ctx, app(other))
+        assertTrue(s.id != SharedUidMigration.STAGE)
+        assertNull("no migration recorded outside a group", SharedUidMigration.record(ctx, other))
+        assertFalse(SharedUidMigration.blocks(ctx, app(other)))
+        // with a cached build the row's error says signature mismatch; without one the note is history
+        if (s.id == "error") assertTrue(s.text, s.text.contains("signature mismatch"))
+
+        // the same -7 on a group member IS the migration
+        installOld(p = "cld.termux")
+        ApkCache.note(ctx, "cld.termux", ApkCache.STAGE_INSTALL, "x · code: INSTALL_FAILED_UPDATE_INCOMPATIBLE (signature differs from the installed copy)")
+        assertEquals(SharedUidMigration.STAGE, StoreStages.stage(ctx, app("cld.termux")).id)
     }
 }

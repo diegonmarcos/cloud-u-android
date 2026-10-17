@@ -152,7 +152,13 @@ object StoreStages {
         if (act == null && note?.stage == ApkCache.STAGE_INSTALL) { ApkCache.clearNote(ctx, app.pkg); note = null }
         if (act != null) {
             val ver = act.record?.versionCode?.let { " v$it" } ?: ""
-            val why = note?.takeIf { it.stage == ApkCache.STAGE_INSTALL }?.message
+            val why = note?.takeIf { it.stage == ApkCache.STAGE_INSTALL }?.message?.let { m ->
+                // -7 outside a declared migration group: the installed copy is signed with another key.
+                if (SharedUidMigration.cause(m) == SharedUidMigration.Cause.UPDATE_INCOMPATIBLE &&
+                    !SharedUidMigration.migrates(SharedUidMigration.Cause.UPDATE_INCOMPATIBLE, app.pkg))
+                    "signature mismatch — the installed copy is signed with a different key; uninstall it to install this build ($m)"
+                else m
+            }
             // Download stays live beside Install: a new download replaces the
             // cached APK, so it never has to wait for a Clear (owner rule).
             return if (why != null)
