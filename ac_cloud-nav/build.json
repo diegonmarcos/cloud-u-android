@@ -1,4 +1,5 @@
 {
+  "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "place", "category": "tools", "res": "app/src/main/res"},
   "name": "cloud-nav",
   "description": "Diego's Cloud Nav — dedicated maps/navigation/tracker Android app. Single APK, gradle multi-module (app/ Google-Maps-style shell + libs/{core,maps}). MapLibre Native renderer, GPS tracker + Stop detection, multi-stop routing, driving navigation view, place-category browsing, and a timeline of visited places. Lifted out of Cloud SuperApp's libs:maps into its own focused app. Build via Nix devShell, one APK out.",
   "category": "android",
