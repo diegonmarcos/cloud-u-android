@@ -67,7 +67,8 @@ class WebPagesRenderTest {
     private fun clearPrompt() {
         sh("settings put global adb_wifi_enabled 0")
         repeat(6) {
-            if (!sh("dumpsys window windows").contains("WifiDebuggingActivity")) return
+            // Only when the dialog HOLDS focus: a BACK that lands on the shell instead pops the page under test.
+            if (!sh("dumpsys window").lineSequence().filter { "mCurrentFocus" in it }.any { "WifiDebugging" in it }) return
             sh("input keyevent KEYCODE_BACK"); SystemClock.sleep(600)
         }
     }
@@ -86,6 +87,7 @@ class WebPagesRenderTest {
     }
 
     private fun check(name: String, target: String, night: Boolean) {
+        sh("settings put global adb_wifi_enabled 0")
         sh("cmd uimode night ${if (night) "yes" else "no"}"); SystemClock.sleep(1500)
         val log = Collections.synchronizedList(mutableListOf<String>())
         WebPageFragment.probe = { log += it }
