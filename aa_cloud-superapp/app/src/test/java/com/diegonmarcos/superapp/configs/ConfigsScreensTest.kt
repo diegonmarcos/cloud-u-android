@@ -45,6 +45,8 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
         const val MAX_BUTTON_DP = 32f
         const val MAX_ROW_DP = 44f
         const val EXTRA_LINE_DP = 18f
+        /** Screens that are read-only by design (no control to measure). Empty unless proven by a render. */
+        val NO_CONTROLS = setOf<String>()
         /** An icon's plate (Control's round badge): at most the icon + 8dp ("white box too big"). */
         const val ICON_DP = 22f
         const val MAX_ICON_BOX_DP = ICON_DP + 8f
@@ -167,7 +169,12 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
         val tsv = File(OUT, "$name.tsv")
         val hits = try {
             show(fragmentFor(screen))
-            compose.waitForIdle()
+            // A tab strip commits its page from a posted runnable, and pages load their state on the main looper:
+            // run the looper (and its short delays) until the tree stops changing, or the body renders empty.
+            repeat(4) {
+                compose.runOnUiThread { org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(300)) }
+                compose.waitForIdle()
+            }
             val root = compose.activity.findViewById<View>(android.R.id.content)
             val bmp = compose.runOnUiThread {
                 Bitmap.createBitmap(root.width.coerceAtLeast(1), root.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
@@ -177,6 +184,7 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
             composeHits() + compose.runOnUiThread { viewHits(root) }
         } catch (t: Throwable) {
             tsv.writeText("screen\t$name\nERROR\t${t.javaClass.simpleName}: ${t.message?.replace('\n', ' ')?.take(300)}\n")
+            assertTrue("$name did not render: ${t.javaClass.simpleName}: ${t.message?.take(300)}", !ENFORCE)
             return
         }
         tsv.writeText(buildString {
@@ -186,6 +194,11 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
                 append("${h.kind}\t${"%.1f".format(h.wDp)}\t${"%.1f".format(h.hDp)}\t${h.name}\n")
             }
         })
+        if (fontScale == 1.0f && ENFORCE) {
+            // An empty render proves nothing: every screen must draw at least one control the guard measured.
+            assertTrue("$name rendered no measurable control (empty body?): the size guard checked nothing",
+                hits.any { it.kind != "tab" } || screen in NO_CONTROLS)
+        }
         if (fontScale == 1.0f) {
             val tooTall = hits.filter {
                 (it.kind == "button" || it.kind == "view-button" || it.kind == "chip") && it.hDp > MAX_BUTTON_DP + 0.5f ||

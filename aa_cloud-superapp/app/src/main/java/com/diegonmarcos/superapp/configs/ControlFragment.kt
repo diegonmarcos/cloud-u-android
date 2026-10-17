@@ -261,7 +261,7 @@ class ControlFragment : KitComposeFragment() {
         // vertical drag.
         val scroll = if (embedded) Modifier else Modifier.verticalScroll(rememberScrollState())
         Column(Modifier.fillMaxWidth().then(scroll).padding(16.dp)) {
-            Text(stringResource(R.string.control_title), color = p.textPrimary, fontSize = 22.sp,
+            Text(stringResource(R.string.control_title), color = p.textPrimary, fontSize = 15.sp,
                 modifier = Modifier.padding(bottom = 4.dp).testTag(TAG_TITLE))
             // The paragraph is a resource, but the four words it quotes are asked of StatusLight at render time — so a
             // page that stopped drawing one of them could not go on describing it.

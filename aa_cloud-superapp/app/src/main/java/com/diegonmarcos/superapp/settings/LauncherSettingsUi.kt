@@ -41,8 +41,8 @@ internal fun GapDp(h: Int) { Spacer(Modifier.height(h.dp)) }
 internal fun SectionHeaderUi(title: String, subtitle: String) {
     val p = LocalKitPalette.current
     Column(Modifier.fillMaxWidth()) {
-        Text(title, color = p.textPrimary, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
-        Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 16.dp))
+        Text(title, color = p.textPrimary, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 8.dp))
+        Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 16.dp))
     }
 }
 
@@ -54,7 +54,7 @@ internal fun GenericTileUi(label: String, subtitle: String, isSelected: Boolean,
     val view = LocalView.current
     Column(Modifier.fillMaxWidth().background(if (isSelected) p.surfaceSelected else p.surface)
         .clickable { Haptics.tap(view); onClick() }.padding(horizontal = 10.dp, vertical = 6.dp).testTag("generic-tile:$label")) {
-        Text((if (isSelected) "● " else "○ ") + label, color = p.textPrimary, style = MaterialTheme.typography.bodyMedium)
+        Text((if (isSelected) "● " else "○ ") + label, color = p.textPrimary, style = MaterialTheme.typography.bodySmall)
         if (subtitle.isNotBlank()) Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(top = 1.dp))
     }

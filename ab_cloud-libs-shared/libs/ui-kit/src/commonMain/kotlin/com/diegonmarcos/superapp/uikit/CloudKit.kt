@@ -107,7 +107,7 @@ fun CloudKitTheme(palette: KitPalette, content: @Composable () -> Unit) {
 /**
  * Material3's typography with the two things that made every converted screen swell removed.
  *
- * MaterialTheme wraps its content in ProvideTextStyle(typography.bodyLarge), whose lineHeight is a FIXED 24.sp
+ * MaterialTheme wraps its content in ProvideTextStyle(typography.bodySmall), whose lineHeight is a FIXED 24.sp
  * and letterSpacing 0.5.sp. A fleet screen sets only `fontSize = 9.sp` (the dense ramp: KitDensity, StoreDensity)
  * and the Text still inherits the 24.sp line, so every line of 9sp text is 24sp tall and every row, tab and
  * button label grows ~2.5x (the owner's "huge padding" after the Compose conversions). A View TextView takes
@@ -138,7 +138,12 @@ fun KitDenseMaterial(colorScheme: androidx.compose.material3.ColorScheme, conten
         // 0.dp switches Material's minimumInteractiveComponentSize OFF: a Checkbox, RadioButton, IconButton or Switch
         // draws at its own visual size instead of being padded out to a 36/48dp box. The touch target is the ROW
         // (every kit/config row is full-width clickable) or the kit button's own [KitDensity.buttonHeight] box.
-        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides KitDensity.interactiveFloor, content = content)
+        // Unstyled Text inherits bodySmall (12sp), not Material's bodyLarge (16sp): the dense body size.
+        CompositionLocalProvider(
+            LocalMinimumInteractiveComponentSize provides KitDensity.interactiveFloor,
+            androidx.compose.material3.LocalTextStyle provides MaterialTheme.typography.bodySmall,
+            content = content,
+        )
     }
 }
 
@@ -165,10 +170,10 @@ fun KitSectionHeader(title: String, subtitle: String, modifier: Modifier = Modif
         return
     }
     Column(modifier.fillMaxWidth()) {
-        Text(title, color = p.textPrimary, style = MaterialTheme.typography.headlineSmall,
+        Text(title, color = p.textPrimary, style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(bottom = 8.dp))
         if (subtitle.isNotBlank()) {
-            Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.bodyMedium,
+            Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(bottom = 16.dp))
         }
     }
@@ -195,7 +200,7 @@ fun KitSelectableTile(
             .padding(horizontal = KitDensity.rowPadH, vertical = KitDensity.rowPadV),
     ) {
         Text((if (selected) "● " else "○ ") + label, color = p.textPrimary,
-            style = MaterialTheme.typography.bodyMedium)
+            style = MaterialTheme.typography.bodySmall)
         if (subtitle.isNotBlank()) {
             Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 2.dp))
@@ -213,10 +218,10 @@ fun KitEmptyState(title: String?, caption: String, modifier: Modifier = Modifier
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (!title.isNullOrBlank()) {
-            Text(title, color = p.textPrimary, style = MaterialTheme.typography.headlineMedium,
+            Text(title, color = p.textPrimary, style = MaterialTheme.typography.titleSmall,
                 textAlign = TextAlign.Center)
         }
-        Text(caption, color = p.textSecondary, style = MaterialTheme.typography.bodyMedium,
+        Text(caption, color = p.textSecondary, style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = if (title.isNullOrBlank()) 0.dp else 8.dp))
     }
 }
@@ -250,7 +255,7 @@ fun KitSettingsRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = p.textPrimary, style = MaterialTheme.typography.bodyMedium)
+            Text(title, color = p.textPrimary, style = MaterialTheme.typography.bodySmall)
             if (subtitle.isNotBlank()) {
                 Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
             }

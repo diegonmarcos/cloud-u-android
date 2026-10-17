@@ -93,7 +93,7 @@ class OneHandFragment : KitComposeFragment() {
     override fun Content() {
         val ctx = requireContext()
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-            Text("One-Hand", color = LocalKitPalette.current.textPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+            Text("One-Hand", color = LocalKitPalette.current.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 4.dp).testTag(TAG_TITLE))
             caption(
                 "Everything reachable with the thumb alone: the three Home-screen " +
@@ -518,7 +518,7 @@ class OneHandFragment : KitComposeFragment() {
     private fun infoSection(t: String) {
         Column(Modifier.fillMaxWidth().padding(top = 20.dp)) {
             Column(Modifier.fillMaxWidth().height(1.dp).background(Color(0x33FFFFFF))) {}
-            Text(t, color = LocalKitPalette.current.textPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold,
+            Text(t, color = LocalKitPalette.current.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 12.dp, bottom = 6.dp).testTag("onehand:section:$t"))
         }
     }
@@ -615,7 +615,7 @@ class OneHandFragment : KitComposeFragment() {
     @Composable
     private fun addHandleEditor(ctx: Context, h: OneHandConfig.Handle, options: List<Option>) {
         Text("${h.edge.name.lowercase().replaceFirstChar { it.uppercase() }} handle",
-            color = LocalKitPalette.current.textPrimary, fontSize = 16.sp, textAlign = TextAlign.Center,
+            color = LocalKitPalette.current.textPrimary, fontSize = 13.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp))
         for (slot in OneHandConfig.slotsFor(h.edge)) {
             Text(slot.label, color = LocalKitPalette.current.textPrimary, textAlign = TextAlign.Center,

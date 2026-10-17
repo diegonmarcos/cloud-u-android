@@ -259,9 +259,9 @@ class LauncherConfigFragment : KitComposeFragment() {
                     "✓ SuperApp is the active default launcher."
                 else
                     "SuperApp is NOT the default launcher yet.",
-                    color = p.textPrimary, style = MaterialTheme.typography.bodyMedium,
+                    color = p.textPrimary, style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(bottom = 8.dp))
-                Text("Set as default launcher →", color = p.accent, style = MaterialTheme.typography.titleMedium,
+                Text("Set as default launcher →", color = p.accent, style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.fillMaxWidth().background(p.surfaceSelected).clickable {
                         Haptics.tap(view)
                         runCatching {
@@ -319,17 +319,17 @@ class LauncherConfigFragment : KitComposeFragment() {
                     cur = next
                     onChange(next)
                 }.testTag("stepper:$label:$desc"), contentAlignment = Alignment.Center) {
-                Text(glyph, color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+                Text(glyph, color = p.textPrimary, style = MaterialTheme.typography.titleSmall)
             }
         }
         Row(Modifier.fillMaxWidth().background(p.surface).padding(horizontal = 10.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+                Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleSmall)
                 Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
             }
             btn("−", "Fewer icons per row", -1)
-            Text(cur.toString(), color = p.accent, style = MaterialTheme.typography.titleMedium,
+            Text(cur.toString(), color = p.accent, style = MaterialTheme.typography.titleSmall,
                 textAlign = TextAlign.Center, modifier = Modifier.width(36.dp).testTag("stepper:readout:$label"))
             btn("+", "More icons per row", 1)
         }
@@ -353,7 +353,7 @@ class LauncherConfigFragment : KitComposeFragment() {
         val on = epoch.let { checked() }
         Row(Modifier.fillMaxWidth().background(p.surface).padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium)
+                Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleSmall)
                 if (subtitle.isNotBlank()) Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
             }
             // Persist FIRST, then buzz — otherwise Haptics.tap reads the
@@ -497,8 +497,8 @@ class LauncherConfigFragment : KitComposeFragment() {
         var progress by remember { mutableIntStateOf(value.coerceIn(min, max)) }
         Column(Modifier.fillMaxWidth().background(p.surface).padding(horizontal = 10.dp, vertical = 6.dp)) {
             Row(Modifier.fillMaxWidth()) {
-                Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                if (ticks) Text(progress.toString(), color = p.accent, style = MaterialTheme.typography.titleMedium,
+                Text(label, color = p.textPrimary, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                if (ticks) Text(progress.toString(), color = p.accent, style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.testTag("slider:readout:$label"))
             }
             if (subtitle.isNotBlank()) Text(subtitle, color = p.textSecondary, style = MaterialTheme.typography.labelSmall,

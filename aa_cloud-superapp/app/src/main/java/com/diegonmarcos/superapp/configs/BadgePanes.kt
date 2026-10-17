@@ -223,7 +223,7 @@ object BadgePanes {
             if (rendered != null) {
                 AndroidView(modifier = Modifier.fillMaxWidth(), factory = { rendered })
             } else {
-                Text(b.label, fontSize = 16.sp, color = p.textPrimary)
+                Text(b.label, fontSize = 13.sp, color = p.textPrimary)
             }
 
             val stateColour = when (st.state) {
