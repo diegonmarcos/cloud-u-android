@@ -23,9 +23,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,7 +56,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -715,80 +711,126 @@ internal fun StatusStripBody(model: StatusStripModel, ctx: Context) {
         NetworkSections.HOTSPOT to "hotspot", NetworkSections.GPS to "gps",
     )
     Column(Modifier.fillMaxWidth()) {
-        // FrameLayout semantics: the clock sits at TRUE screen centre, aligned with the island below, whatever the clusters' widths.
-        // Inside the safe area: 10 dp, and clear of a cutout at the screen's side. BoxWithConstraints so no cluster can be wider
-        // than the room there is - a Row with more children than width draws them PAST the screen edge, unclipped.
+        // The clock sits at TRUE screen centre, aligned with the island below. Inside the safe area: 10 dp, and clear of a
+        // cutout at the screen's side. The three clusters SHARE that width (StripRow): they never overlap and never leave it.
         val padStart = 10.dp + with(density) { model.insetLeftPx.toDp() }
         val padEnd = 10.dp + with(density) { model.insetRightPx.toDp() }
-        androidx.compose.foundation.layout.BoxWithConstraints(
-            Modifier.fillMaxWidth().padding(start = padStart, end = padEnd, top = with(density) { model.innerRowTopPadPx.toDp() },
+        val gapPx = with(density) { 4.dp.roundToPx() }
+        StripRow(
+            reservePx = model.clockReservePx(),
+            dotsPx = with(density) { DOTS_ROW.roundToPx() },
+            gapPx = gapPx,
+            modifier = Modifier.fillMaxWidth().padding(start = padStart, end = padEnd, top = with(density) { model.innerRowTopPadPx.toDp() },
                 bottom = with(density) { model.innerRowTopPadPx.toDp() }).testTag("strip:row"),
-        ) {
-            val room = maxWidth
-            // ── LEFT: mobile . WiFi . BT . WG . KDE . ADB . Data . HS . GPS (in NetworkSections.ORDER) ──
-            Row(
-                Modifier.align(Alignment.CenterStart).widthIn(max = room).horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                for (key in NetworkSections.inOrder(NetworkSections.ORDER.associateWith { it })) {
-                    val chip = model.chips[key] ?: continue
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        PetAbove(model, toolOf.getValue(key))
-                        Tappable("strip:$key", onTap = { r -> NetworkInfoPopup.show(ctx, host, r, key) }) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                IconLabel(chip.label, chip.tint)
-                                SignalDots(chip.dots, chip.dotsTint)
+            left = {
+                // ── LEFT: mobile . WiFi . BT . WG . KDE . ADB . Data . HS . GPS (in NetworkSections.ORDER) ──
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    for (key in NetworkSections.inOrder(NetworkSections.ORDER.associateWith { it })) {
+                        val chip = model.chips[key] ?: continue
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            PetAbove(model, toolOf.getValue(key))
+                            Tappable("strip:$key", onTap = { r -> NetworkInfoPopup.show(ctx, host, r, key) }) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    IconLabel(chip.label, chip.tint)
+                                    SignalDots(chip.dots, chip.dotsTint)
+                                }
                             }
                         }
                     }
                 }
-            }
-            // ── CENTRE: date + time. The spacer reserves the camera punch-hole / pet row above it. ──
-            Column(
-                Modifier.align(Alignment.Center).widthIn(max = room).padding(bottom = DOTS_ROW),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Spacer(Modifier.testTag("strip:reserve").height(with(density) { model.clockReservePx().toDp() }))
+            },
+            reserve = { h -> Spacer(Modifier.testTag("strip:reserve").height(with(density) { h.toDp() })) },
+            clock = {
+                // ── CENTRE: date + time, below the camera punch-hole / pet row. ──
                 Tappable("strip:clock", onTap = { r -> CalendarAgendaPopup.show(host, r) }) {
                     Text(
                         model.clock, color = Color.White, fontSize = 12.sp, fontFamily = MONO_BOLD, fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center, maxLines = 1, softWrap = false,
                         style = androidx.compose.ui.text.TextStyle(shadow = Shadow(Color(0xCC000000), Offset(0f, 1f), 4f)),
                     )
                 }
-            }
-            // ── RIGHT: RAM% . Storage% . CPU . Battery ──
-            Row(
-                Modifier.align(Alignment.CenterEnd).widthIn(max = room).padding(bottom = DOTS_ROW).horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                for ((tool, text) in listOf("ram" to model.ram, "storage" to model.storage, "cpu" to model.cpu)) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        PetAbove(model, tool)
-                        Tappable("strip:$tool", onTap = { r -> SystemInfoPopup.show(ctx, host, r) }) {
-                            IconLabel(text, 0xFFFFFFFF.toInt())
+            },
+            right = {
+                // ── RIGHT: RAM% . Storage% . CPU . Battery ──
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    for ((tool, text) in listOf("ram" to model.ram, "storage" to model.storage, "cpu" to model.cpu)) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            PetAbove(model, tool)
+                            Tappable("strip:$tool", onTap = { r -> SystemInfoPopup.show(ctx, host, r) }) {
+                                IconLabel(text, 0xFFFFFFFF.toInt())
+                            }
                         }
                     }
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    PetAbove(model, "battery")
-                    AndroidView(
-                        factory = { c ->
-                            BatteryIconView(c).apply {
-                                // Tap -> the "Estimated battery last" popup + session metrics, one glance from the strip.
-                                isClickable = true
-                                setOnClickListener {
-                                    BatteryEstimatePopup.show(c, this) { com.diegonmarcos.superapp.batterystats.BatteryStatsPage.open(c) }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        PetAbove(model, "battery")
+                        AndroidView(
+                            factory = { c ->
+                                BatteryIconView(c).apply {
+                                    // Tap -> the "Estimated battery last" popup + session metrics, one glance from the strip.
+                                    isClickable = true
+                                    setOnClickListener {
+                                        BatteryEstimatePopup.show(c, this) { com.diegonmarcos.superapp.batterystats.BatteryStatsPage.open(c) }
+                                    }
                                 }
-                            }
-                        },
-                        update = { it.setBattery(model.batteryPct, model.batteryCharging) },
-                        modifier = Modifier.padding(start = 4.dp),
-                    )
+                            },
+                            update = { it.setBattery(model.batteryPct, model.batteryCharging) },
+                            modifier = Modifier.padding(start = 4.dp).testTag("strip:battery"),
+                        )
+                    }
                 }
-            }
-        }
+            },
+        )
         // ── Bottom hairline: faint white separator. ShellActivity nudges the toolbar island 6 dp below it. ──
         Spacer(Modifier.fillMaxWidth().height(with(density) { maxOf(1, (density.density * 0.75f).toInt()).toDp() }).background(Color(0x33FFFFFF)))
     }
 }
+
+/**
+ * The strip's one row: LEFT cluster | clock (under the reserve) | RIGHT cluster, inside the incoming width.
+ *
+ * Until this, the three were Box siblings each allowed the WHOLE width: at the Samsung A37's 411 dp the left cluster
+ * (~210 dp) + clock (~144 dp) + right cluster (~130 dp) already need ~490 dp, so they drew over one another, and at a
+ * larger font scale or a larger Screen zoom (340-360 dp) the clusters ran over the clock and the screen border.
+ *
+ * Now the clock stays centred, so each side gets the SAME room: needed = clock + 2 x max(left, right) + 2 gaps. When
+ * that is more than the width, all three are scaled down by one factor (text, dots, pets, battery alike; the camera
+ * reserve above the clock is NOT scaled - it is the camera's own pixels). Nothing scrolls, nothing is cut, and the
+ * laid-out bounds (graphics-layer scaled) stay inside the row.
+ */
+@Composable
+internal fun StripRow(
+    reservePx: Int, dotsPx: Int, gapPx: Int, modifier: Modifier,
+    left: @Composable () -> Unit, reserve: @Composable (Int) -> Unit, clock: @Composable () -> Unit, right: @Composable () -> Unit,
+) {
+    androidx.compose.ui.layout.Layout(
+        contents = listOf(left, { reserve(reservePx) }, clock, right), modifier = modifier,
+    ) { (lm, resm, cm, rm), c ->
+        val free = androidx.compose.ui.unit.Constraints()
+        val l = lm.map { it.measure(free) }; val res = resm.map { it.measure(free) }
+        val ck = cm.map { it.measure(free) }; val r = rm.map { it.measure(free) }
+        fun w(ps: List<androidx.compose.ui.layout.Placeable>) = ps.maxOfOrNull { it.width } ?: 0
+        fun h(ps: List<androidx.compose.ui.layout.Placeable>) = ps.maxOfOrNull { it.height } ?: 0
+        val room = if (c.hasBoundedWidth) c.maxWidth else w(ck) + 2 * maxOf(w(l), w(r)) + 2 * gapPx
+        val needed = w(ck) + 2 * maxOf(w(l), w(r))
+        val s = stripScale(room - 2 * gapPx, needed)
+        val reserveH = h(res)
+        val clockBlock = reserveH + (h(ck) * s).roundToInt() + dotsPx
+        val lh = (h(l) * s).roundToInt(); val rh = (h(r) * s).roundToInt() + dotsPx
+        val height = maxOf(clockBlock, lh, rh).coerceIn(c.minHeight, c.maxHeight)
+        val width = room.coerceIn(c.minWidth, c.maxWidth)
+        layout(width, height) {
+            val origin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+            fun place(p: androidx.compose.ui.layout.Placeable, x: Int, y: Int) =
+                p.placeWithLayer(x, y) { scaleX = s; scaleY = s; transformOrigin = origin }
+            l.forEach { place(it, 0, (height - lh) / 2) }
+            val top = (height - clockBlock) / 2
+            res.forEach { it.place((width - it.width) / 2, top) }
+            ck.forEach { place(it, ((width - it.width * s) / 2f).roundToInt(), top + reserveH) }
+            r.forEach { place(it, (width - it.width * s).roundToInt(), (height - rh) / 2) }
+        }
+    }
+}
+
+/** The one factor the strip's clusters and clock are drawn at: 1 when [needed] fits [room], else room / needed. */
+internal fun stripScale(room: Int, needed: Int): Float =
+    if (needed <= 0 || needed <= room) 1f else (room.coerceAtLeast(0).toFloat() / needed).coerceAtMost(1f)

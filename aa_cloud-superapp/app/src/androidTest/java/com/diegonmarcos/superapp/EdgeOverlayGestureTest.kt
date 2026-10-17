@@ -50,7 +50,9 @@ class EdgeOverlayGestureTest {
     private val ua: UiAutomation = inst.uiAutomation
     private val dens get() = ctx.resources.displayMetrics.density
     private fun dp(v: Int) = v * dens
-    private val out = File("/data/local/tmp")
+    /** The app process cannot write /data/local/tmp (shell-owned): a write there threw inside runCatching and every
+     *  screenshot was silently lost. Write where the app can, then hand the copy to the shell (as WebPagesRenderTest does). */
+    private val out by lazy { File(ctx.getExternalFilesDir(null), "edge").apply { mkdirs() } }
 
     private fun sh(cmd: String): String {
         val pfd = ua.executeShellCommand(cmd)
@@ -140,7 +142,11 @@ class EdgeOverlayGestureTest {
     private fun up(x: Float, y: Float) = inject(MotionEvent.ACTION_UP, x, y)
     private fun tap(x: Float, y: Float) { down(x, y); SystemClock.sleep(60); up(x, y); SystemClock.sleep(400) }
     private fun shot(name: String) = runCatching {
-        ua.takeScreenshot()?.let { b -> File(out, "$name.png").outputStream().use { b.compress(Bitmap.CompressFormat.PNG, 90, it) } }
+        ua.takeScreenshot()?.let { b ->
+            val f = File(out, "$name.png")
+            f.outputStream().use { b.compress(Bitmap.CompressFormat.PNG, 90, it) }
+            sh("cp ${f.absolutePath} /data/local/tmp/${f.name}")
+        }
     }
 
     private fun svc() = OneHandOverlayService.instance!!
