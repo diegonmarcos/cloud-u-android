@@ -43,7 +43,8 @@ class KitDensityTest : KitPageHarness() {
         assertEquals("the dense theme must switch the 48dp padding off", 0f, floor.value, 0.01f)
     }
 
-    @Test fun `a kit button is 28 to 32dp tall, not Material's 40`() {
+    // At the owner's A37 density: this class's mdpi qualifier has no real font metrics (see the class doc).
+    @Test @Config(qualifiers = "w384dp-h832dp-450dpi") fun `a kit button is 28 to 32dp tall, not Material's 40`() {
         showKit { androidx.compose.foundation.layout.Box { com.diegonmarcos.superapp.uikit.KitButton(onClick = {}, modifier = androidx.compose.ui.Modifier.testTag("b")) { Text("Save") } } }
         val h = compose.onNodeWithTag("b").fetchSemanticsNode().boundsInRoot.height / compose.density.density
         assertTrue("KitButton is $h dp tall", h in 27.5f..32.5f)
