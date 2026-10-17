@@ -26,12 +26,14 @@ class MusicIslandController(private val activity: AppCompatActivity, private val
         island.visibility = android.view.View.VISIBLE
         if (monitor == null) {
             island.setContent {
-                MusicIsland(state, onTap = {
-                    val pkg = monitor?.currentPackage
-                    val ctrl = monitor?.currentController
-                    if (popup == null) popup = MusicControlsPopup(activity)
-                    popup?.show(island, ctrl, pkg)
-                })
+                com.diegonmarcos.superapp.uikit.CloudKitTheme(com.diegonmarcos.superapp.ui.LauncherPalette.kit(activity)) {
+                    MusicIsland(state, onTap = {
+                        val pkg = monitor?.currentPackage
+                        val ctrl = monitor?.currentController
+                        if (popup == null) popup = MusicControlsPopup(activity)
+                        popup?.show(island, ctrl, pkg)
+                    })
+                }
             }
             monitor = NowPlayingMonitor(activity) { playingPackage, songTitle, artist ->
                 state.playing = if (playingPackage != null) {
