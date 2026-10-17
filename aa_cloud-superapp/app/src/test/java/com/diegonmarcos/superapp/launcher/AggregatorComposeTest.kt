@@ -32,7 +32,11 @@ import org.robolectric.annotation.Config
  *   G1 a group draws its header (label, chip), its rows, and folds shut on a header tap
  *   G2 the double tick marks the group read and the read set is persisted under the page id
  *   G3 the Archive pill files the box away and says Restore for a box that is in the Archive
- *   G4 a swipe flips a row's read state both ways, and under Show=Unread a row that became read leaves
+ *   G4 a right swipe flips a row's read state both ways, and under Show=Unread a row that became read leaves
+ *   C1 a One UI card draws the app header, a bold title, the body and its bottom Clear controls
+ *   S1 a left swipe (One UI's dismiss) files the row into the Archive
+ *   M1 Mark all read / M2 Archive all at the top-right of the list
+ *   T1 the top filter row (page tabs + toggle row) is unchanged
  *   F1 the Filters row draws the declared toggles, persists a pick, and a Tools pick returns Services to All
  *   P1 the page draws one card per declared panel, folds on a header tap and on the bottom-nav re-tap
  *   P2 a phone-stream card without Notification Access says so instead of drawing an empty list
@@ -69,19 +73,43 @@ class AggregatorComposeTest : KitPageHarness() {
     private fun state(page: String = "test-page") = AggregatorState(ctx, page, emptyList(), emptyList())
 
     @Test
-    fun `G1 a group draws header and rows and folds on a header tap`() {
+    fun `G1 a stacked group shows its newest card and expands and collapses on tap`() {
         val st = state()
         showKit { GroupBlock(st, view(row("phone:1", 100), row("phone:2", 200)), archived = false) { } }
         compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).assertTextContains("App A", substring = true)
         compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).assertTextContains("2 new · 2", substring = true)
-        compose.onNodeWithText("title phone:1").assertExists()
+        // One UI's default: the newest on top of the stack, "+N more" for the rest.
         compose.onNodeWithText("title phone:2").assertExists()
+        compose.onNodeWithText("title phone:1").assertDoesNotExist()
+        compose.onNodeWithTag(AggTags.groupMore("pkg.a")).assertTextContains("+1 more")
+        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performClick()
+        compose.onNodeWithText("title phone:1").assertExists()
+        compose.onNodeWithTag(AggTags.groupMore("pkg.a")).assertDoesNotExist()
+        assertEquals(false, st.collapsedGroups["pkg.a"])
         compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performClick()
         compose.onNodeWithText("title phone:1").assertDoesNotExist()
         // The fold lives on the state, so it survives a re-render (a toggle tap rebuilds every body).
         assertEquals(true, st.collapsedGroups["pkg.a"])
-        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performClick()
+        // "+N more" expands too.
+        compose.onNodeWithTag(AggTags.groupMore("pkg.a")).performClick()
         compose.onNodeWithText("title phone:1").assertExists()
+    }
+
+    @Test
+    fun `C1 a card renders the app header, a bold title and the body`() {
+        val st = state("c1-page")
+        showKit { GroupBlock(st, view(row("phone:1", System.currentTimeMillis() - 120_000L)), archived = false) { } }
+        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).assertTextContains("App A", substring = true)
+        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).assertTextContains("2m", substring = true)
+        compose.onNodeWithTag(AggTags.row("phone:1")).assertTextContains("title phone:1", substring = true)
+        compose.onNodeWithTag(AggTags.row("phone:1")).assertTextContains("body phone:1", substring = true)
+        compose.onNodeWithTag(AggTags.rowUnread("phone:1")).assertExists()
+        // A single notification is not a stack: no chevron, no "+N more".
+        compose.onNodeWithTag(AggTags.groupMore("pkg.a")).assertDoesNotExist()
+        compose.onNodeWithTag(AggTags.groupChevron("pkg.a")).assertDoesNotExist()
+        // The group's Clear controls sit at the bottom of the card.
+        compose.onNodeWithTag(AggTags.groupCheck("pkg.a")).assertTextContains(AggregatorModel.MARK_READ_LABEL)
+        compose.onNodeWithTag(AggTags.groupArchive("pkg.a")).assertTextContains(AggregatorModel.ARCHIVE_LABEL)
     }
 
     @Test
@@ -111,7 +139,7 @@ class AggregatorComposeTest : KitPageHarness() {
     }
 
     @Test
-    fun `G4 a swipe flips read both ways and Show unread drops a row that became read`() {
+    fun `G4 a right swipe flips read both ways and Show unread drops a row that became read`() {
         val st = state("g4-page")
         val r = row("phone:1", 100)
         showKit { GroupBlock(st, view(r, row("phone:2", 200)), archived = false) { } }
@@ -119,8 +147,8 @@ class AggregatorComposeTest : KitPageHarness() {
         compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { swipeRight() }
         compose.waitUntil(5_000) { !st.isUnread(r) }
         compose.waitForIdle()   // the row is still sliding back in from the other edge
-        // And back: swiping a read row marks it unread again — the gesture is reversible.
-        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { swipeLeft() }
+        // And back: swiping a read row right again marks it unread — the gesture is reversible.
+        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { swipeRight() }
         compose.waitUntil(5_000) { st.isUnread(r) }
         assertEquals(setOf<String>(), StackFilters.readKeys(ctx, "g4-page"))
     }
@@ -135,6 +163,90 @@ class AggregatorComposeTest : KitPageHarness() {
         }
         compose.waitForIdle()
         assertTrue(st.isUnread(r))
+    }
+
+    @Test
+    fun `S1 a left swipe archives the row and the Archive swipe restores it`() {
+        val st = state("s1-page")
+        val r = row("phone:1", 100)
+        val v = view(r)
+        showKit { androidx.compose.foundation.layout.Column { GroupList(st, listOf(v)) { } } }
+        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { swipeLeft() }
+        compose.waitUntil(5_000) { st.isRowArchived(r) }
+        compose.waitForIdle()
+        assertEquals(setOf("phone:1"), StackFilters.archivedKeys(ctx, "s1-page"))
+        // A box whose every row was swiped away leaves the list.
+        compose.onNodeWithTag(AggTags.group("pkg.a")).assertDoesNotExist()
+        // Read state is untouched by an archive.
+        assertTrue(st.isUnread(r))
+        st.archiveRow("phone:1", false)
+        compose.waitForIdle()
+        compose.onNodeWithTag(AggTags.row("phone:1")).assertExists()
+    }
+
+    private fun seededCloudState(page: String): AggregatorState {
+        com.diegonmarcos.superapp.core.NotificationStore.clear(ctx)
+        for ((src, t) in listOf("Mail" to "Invoice", "Mail" to "Standup", "Chat" to "Ping")) {
+            com.diegonmarcos.superapp.core.NotificationStore.push(ctx, src, t, "body of $t")
+        }
+        val panel = Sections.StackPanel(kind = "notification_center", title = "Cloud", stream = "cloud")
+        return AggregatorState(ctx, page, listOf(panel), emptyList())
+    }
+
+    @Test
+    fun `M1 Mark all read marks every row on the page read`() {
+        val st = seededCloudState("m1-page")
+        showKit {
+            androidx.compose.foundation.layout.Column {
+                NotifyListActions(st)
+                GroupList(st, st.localFeedViews()) { }
+            }
+        }
+        val rows = st.localFeedViews().flatMap { it.group.rows }
+        assertEquals(3, rows.size)
+        assertTrue(rows.all { st.isUnread(it) })
+        compose.onNodeWithTag(AggTags.MARK_ALL_READ).assertTextContains(AggregatorModel.MARK_ALL_READ_LABEL)
+            .performClick()
+        assertTrue(rows.none { st.isUnread(it) })
+        assertEquals(rows.map { it.id }.toSet(), StackFilters.readKeys(ctx, "m1-page"))
+    }
+
+    @Test
+    fun `M2 Archive all files every box away and each can be restored`() {
+        val st = seededCloudState("m2-page")
+        showKit {
+            androidx.compose.foundation.layout.Column {
+                NotifyListActions(st)
+                GroupList(st, st.localFeedViews()) { }
+            }
+        }
+        compose.onNodeWithTag(AggTags.group("Mail")).assertExists()
+        compose.onNodeWithTag(AggTags.ARCHIVE_ALL).assertTextContains(AggregatorModel.ARCHIVE_ALL_LABEL).performClick()
+        assertTrue(st.isArchived("Mail") && st.isArchived("Chat"))
+        compose.onNodeWithTag(AggTags.group("Mail")).assertDoesNotExist()
+        compose.onNodeWithTag(AggTags.group("Chat")).assertDoesNotExist()
+        st.setArchived("Chat", false)
+        compose.waitForIdle()
+        compose.onNodeWithTag(AggTags.group("Chat")).assertExists()
+    }
+
+    @Test
+    fun `T1 the top filter row is unchanged - same tabs, same toggle row, actions sit below it`() {
+        val sec = Sections.byId("communication")!!
+        // The page tabs across the top of Notify.
+        assertEquals(listOf("All", "Inboxes"), sec.pages.take(2).map { it.label })
+        val filters = filtersOf("communication", "my-rss")
+        assumeTrue("the All tab declares no filter row in this build", filters.isNotEmpty())
+        val st = AggregatorState(ctx, "t1-filters", emptyList(), filters)
+        showKit { FilterRow(st) }
+        compose.onNodeWithTag(AggTags.FILTERS_TOGGLE).assertExists()
+        if (compose.onAllNodesWithTag(AggTags.filter(filters[0].id, filters[0].options[0].id)).fetchSemanticsNodes().isEmpty()) {
+            compose.onNodeWithTag(AggTags.FILTERS_TOGGLE).performClick()
+        }
+        for (f in filters) for (o in f.options) compose.onNodeWithTag(AggTags.filter(f.id, o.id)).assertExists()
+        // The One UI page actions are NOT part of the filter row.
+        compose.onNodeWithTag(AggTags.MARK_ALL_READ).assertDoesNotExist()
+        compose.onNodeWithTag(AggTags.ARCHIVE_ALL).assertDoesNotExist()
     }
 
     private fun filtersOf(sectionId: String, page: String): List<Sections.StackFilter> =

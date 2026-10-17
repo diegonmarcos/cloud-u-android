@@ -87,8 +87,8 @@ has "$PANELS" 'filterNot { it.id.startsWith(AggregatorModel.SETTING_PREFIX) }' \
   || bad "T2: the Filters row would draw the __ settings as toggles"
 
 echo "== every app box gets the control, and it moves the box =="
-has "$NOTIFY" 'ArchivePill(state, g.key, archived)' \
-  && ok "T3: the control sits on the group header, beside the clear-all tick" \
+has "$NOTIFY" 'ArchivePill(state, g, archived, rowArchive)' \
+  && ok "T3: the control sits at the bottom of the app card, beside Mark read (One UI's Clear)" \
   || bad "T3: app boxes no longer get an Archive control"
 # GroupBlock is the ONE place an app box is built (phone, cloud, in-app, ntfy),
 # so one call site here is every box on every page.
@@ -100,7 +100,7 @@ b=$(grep -c 'internal fun GroupBlock' "$CODE")
 # preference written with nothing re-drawn would read as a dead button.
 has "$NOTIFY" 'state.setArchived(key, !state.isArchived(key))' \
   && has "$NOTIFY" 'if (state.isArchived(v.group.key)) continue' \
-  && has "$NOTIFY" 'filter { state.isArchived(it.group.key) }' \
+  && has "$NOTIFY" 'state.isArchived(v.group.key) -> Triple(i, v, false)' \
   && ok "T3: the click moves the box (stored, skipped in its card, drawn in the Archive)" \
   || bad "T3: the Archive click no longer relocates the box — it would look dead"
 

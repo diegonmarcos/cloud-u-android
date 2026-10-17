@@ -127,6 +127,34 @@ internal class AggregatorState(
         for (r in g.rows) readIds = StackFilters.markRead(ctx, page, r.id, true)
     }
 
+    /** "Mark all read": every row this page draws right now, in one write. */
+    fun markAllRead() {
+        readIds = StackFilters.markAllRead(ctx, page, displayedRowIds())
+    }
+
+    // ── per-row archive (swipe left, One UI's dismiss) ───────────────
+
+    var archivedRowIds: Set<String> by mutableStateOf<Set<String>>(StackFilters.archivedKeys(ctx, page))
+        private set
+
+    fun isRowArchived(r: NotifRow): Boolean = r.id.isNotBlank() && r.id in archivedRowIds
+
+    fun archiveRow(id: String, archived: Boolean) {
+        archivedRowIds = StackFilters.archiveRows(ctx, page, listOf(id), archived)
+    }
+
+    fun restoreRows(g: NotifGroup) {
+        archivedRowIds = StackFilters.archiveRows(ctx, page, g.rows.map { it.id }, false)
+    }
+
+    /** "Archive all": every box still on the page moves into the Archive (each one restorable on its own). */
+    fun archiveAll() {
+        for (p in panels) for (v in allViews(p)) {
+            StackFilters.select(ctx, page, AggregatorModel.ARCHIVED_PREFIX + v.group.key, "yes")
+        }
+        archiveVersion++
+    }
+
     // ── archive ──────────────────────────────────────────────────────
 
     fun isArchived(key: String): Boolean {

@@ -61,6 +61,12 @@ internal object AggregatorModel {
     const val FILTER_ARCHIVE_OPEN = "__archive_open"
     const val ARCHIVE_LABEL = "Archive"
     const val ARCHIVE_RESTORE_LABEL = "Restore"
+    const val MARK_READ_LABEL = "Mark read"
+    const val MARK_ALL_READ_LABEL = "Mark all read"
+    const val ARCHIVE_ALL_LABEL = "Archive all"
+
+    /** The line under a stacked One UI card: how many notifications sit behind the one on top. */
+    fun moreLabel(hidden: Int): String = "+$hidden more"
     const val REFRESH_TIMEOUT_MS = 20_000L
     const val EXTAPP_PREFIX = "extapp:"
     const val C3NTFY_SOURCE = "c3ntfy"

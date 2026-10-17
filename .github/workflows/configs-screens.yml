@@ -96,6 +96,17 @@ jobs:
           UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.HomeOverflowMatrixTest"
         run: bash ./build.sh test
 
+      - name: Render the Notify page (One UI cards) at A37 size
+        if: always()
+        working-directory: aa_cloud-superapp
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.NotifyScreenTest"
+        run: bash ./build.sh test
+
       - name: Summary (dp per control, every screen)
         if: always()
         run: |

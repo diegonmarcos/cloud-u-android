@@ -71,6 +71,28 @@ object StackFilters {
         return next
     }
 
+    /** Mark many entries read in ONE commit ("Mark all read" on a page of dozens of rows). */
+    fun markAllRead(ctx: Context, page: String, ids: Collection<String>): MutableSet<String> {
+        val next = readKeys(ctx, page)
+        if (next.addAll(ids.filter { it.isNotBlank() })) prefs(ctx).edit().putStringSet(readsKey(page), next).commit()
+        return next
+    }
+
+    // ── per-entry archive (a row swiped away, One UI's dismiss) ─────────
+    private fun archivedKey(page: String) = "$page/archived_keys"
+
+    /** The entry ids filed into the Archive on [page]; a COPY, like [readKeys]. */
+    fun archivedKeys(ctx: Context, page: String): MutableSet<String> =
+        HashSet(prefs(ctx).getStringSet(archivedKey(page), emptySet()) ?: emptySet())
+
+    fun archiveRows(ctx: Context, page: String, ids: Collection<String>, archived: Boolean): MutableSet<String> {
+        val next = archivedKeys(ctx, page)
+        val clean = ids.filter { it.isNotBlank() }
+        if (archived) next.addAll(clean) else next.removeAll(clean.toSet())
+        prefs(ctx).edit().putStringSet(archivedKey(page), next).commit()
+        return next
+    }
+
     /** Forget read ids under [prefix] that are no longer among [present].
      *
      *  Bounded by construction: every id carries a namespace prefix

@@ -39,6 +39,12 @@ internal object AggTags {
     fun groupArchive(key: String) = "agg:group-archive:$key"
     fun groupChip(key: String) = "agg:group-chip:$key"
     fun row(id: String) = "agg:row:$id"
+    fun rowUnread(id: String) = "agg:row-unread:$id"
+    fun groupMore(key: String) = "agg:group-more:$key"
+    fun groupChevron(key: String) = "agg:group-chevron:$key"
+    const val LIST_ACTIONS = "agg:list-actions"
+    const val MARK_ALL_READ = "agg:mark-all-read"
+    const val ARCHIVE_ALL = "agg:archive-all"
 }
 
 /** The state chip / verdict line colour of a [Tone]: grey means "we did not measure", never red. */

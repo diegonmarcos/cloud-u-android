@@ -11,9 +11,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -49,17 +47,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.apps.AppIcon
 import com.diegonmarcos.superapp.apps.InboxClasses
 import com.diegonmarcos.superapp.apps.PhoneTaxonomy
-import com.diegonmarcos.superapp.core.NotificationStore
-import com.diegonmarcos.superapp.notificationcenter.PhoneNotificationStore
 import com.diegonmarcos.superapp.ui.AppIconCache
 import com.diegonmarcos.superapp.ui.Haptics
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
@@ -68,12 +62,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 /*
- * The notification half of the aggregator page, in Compose. The shade is edge-to-edge: group headers and rows supply
- * their own structure. A collapsible group is a header whose chevron flips its rows (the fold lives on
- * AggregatorState.collapsedGroups so a toggle tap does not spring it open again), a row's read state is a swipe, and
+ * The notification half of the aggregator page, in Compose, styled after Samsung One UI 8's notification centre: one
+ * rounded translucent card per app, stacked when it holds several ("+N more", the fold lives on
+ * AggregatorState.collapsedGroups so a toggle tap does not spring it open again), a swipe right flips read state, a
+ * swipe left files the row away, and
  * the Archive is ONE collapsed section at the bottom of the page collecting every box the user filed away, whichever
  * card it came from.
  */
@@ -182,84 +176,142 @@ internal fun NtfyGroups(state: AggregatorState, panel: Sections.StackPanel, onOp
 
 // ── groups ───────────────────────────────────────────────────────────
 
-/** Draw [views] as a per-app list. Archived boxes are not drawn here: they live in the page's Archive. */
+/**
+ * Draw [views] as One UI notification cards, one per app. Archived boxes are not drawn here (they live in the page's
+ * Archive), and neither is a box whose every row was swiped into it.
+ */
 @Composable
 internal fun GroupList(state: AggregatorState, views: List<GroupView>, onOpen: (String) -> Unit) {
     for (v in views) {
         if (state.isArchived(v.group.key)) continue
-        androidx.compose.runtime.key(v.group.key) { GroupBlock(state, v, archived = false, onOpen) }
+        val rows = v.group.rows
+        if (rows.isNotEmpty() && rows.all { state.isRowArchived(it) }) continue
+        androidx.compose.runtime.key(v.group.key) { GroupBlock(state, v, archived = false, onOpen = onOpen) }
     }
 }
 
 /**
- * One app / publisher drawn as a notification-shade GROUP: a header bar — icon, name, count chip — with its
- * notifications folded under it. Tapping the header COLLAPSES the group (launching moved onto the icon: a header that
- * both folded and launched could only do one of the two).
+ * One UI 8 notification-centre colours. The card is a TRANSLUCENT DARK surface in either theme (that is what the
+ * Samsung shade is), so its ink is fixed light ink rather than the page palette's, which is dark on a light theme.
+ */
+internal object NotifCard {
+    val surface = Color(0xE0242428)
+    val stack = Color(0xA0242428)
+    val title = Color(0xFFF4F4F6)
+    val body = Color(0xB8F4F4F6)
+    val meta = Color(0x8CF4F4F6)
+    val pill = Color(0x26FFFFFF)
+    val shape = RoundedCornerShape(20.dp)
+}
+
+/**
+ * One app / publisher as a One UI notification CARD: a header line (small app icon, app name · time, count chip,
+ * expand chevron), then its notifications — bold title, one or two lines of body. A group of several is STACKED by
+ * default (the newest on top, "+N more", two slivers of the cards behind it) and expands on a tap of the header or of
+ * "+N more". The group's own "Clear" controls sit where One UI puts them, at the bottom of the card: Mark read and
+ * Archive (Restore inside the Archive). Launching moved onto the icon: a header that both folded and launched could
+ * only do one of the two.
+ *
+ * [rowArchive]: this box is the Archive's view of rows swiped away from a box that is still on the page, so Restore
+ * puts those rows back rather than un-archiving the box.
  */
 @Composable
-internal fun GroupBlock(state: AggregatorState, view: GroupView, archived: Boolean, onOpen: (String) -> Unit) {
+internal fun GroupBlock(
+    state: AggregatorState,
+    view: GroupView,
+    archived: Boolean,
+    rowArchive: Boolean = false,
+    onOpen: (String) -> Unit,
+) {
     val p = LocalKitPalette.current
     val g = view.group
     val hostView = LocalView.current
-    val open = state.collapsedGroups[g.key] != true
-    val turn by animateFloatAsState(if (open) 90f else 0f, tween(140), label = "chevron")
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp).testTag(AggTags.group(g.key))) {
-        Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(p.textPrimary.copy(alpha = 0.12f))
-                .clickable { if (open) state.collapsedGroups[g.key] = true else state.collapsedGroups.remove(g.key) }
-                .padding(horizontal = 10.dp, vertical = 8.dp).testTag(AggTags.groupHeader(g.key)),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            GroupAvatar(g, onOpen)
-            Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                Text(g.label, color = p.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis)
-                if (g.sub.isNotBlank() && !g.sub.equals(g.label, ignoreCase = true)) {
-                    Text(g.sub, color = p.textSecondary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
-                }
+    val rows = if (archived) g.rows else g.rows.filterNot { state.isRowArchived(it) }
+    val stacked = rows.size > 1
+    // Absent = One UI's default, the stack; false = the user opened it; true = the user folded it again.
+    val open = !stacked || state.collapsedGroups[g.key] == false
+    val turn by animateFloatAsState(if (open) 270f else 90f, tween(140), label = "chevron")
+    val toggle: () -> Unit = { state.collapsedGroups[g.key] = open }
+    Column(Modifier.fillMaxWidth().padding(top = 6.dp).testTag(AggTags.group(g.key))) {
+        Column(Modifier.fillMaxWidth().clip(NotifCard.shape).background(NotifCard.surface)) {
+            Row(
+                Modifier.fillMaxWidth().clickable(enabled = stacked) { Haptics.tap(hostView); toggle() }
+                    .padding(start = 12.dp, end = 10.dp, top = 9.dp, bottom = 2.dp).testTag(AggTags.groupHeader(g.key)),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GroupAvatar(g, onOpen)
+                Text(g.label, color = NotifCard.title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 7.dp).weight(1f, fill = false))
+                if (g.newest > 0L) Text(" · " + AggregatorModel.ago(System.currentTimeMillis() - g.newest),
+                    color = NotifCard.meta, fontSize = 11.sp, maxLines = 1)
+                Box(Modifier.weight(1f))
+                // The count chip: ONE text holding the whole verdict, because an async ntfy group repaints it with a
+                // failure sentence that has no count in it at all.
+                Text(view.chip.text, color = toneColor(p, view.chip.tone), fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                    maxLines = 1, modifier = Modifier.clip(RoundedCornerShape(9.dp)).background(NotifCard.pill)
+                        .padding(horizontal = 7.dp, vertical = 2.dp).testTag(AggTags.groupChip(g.key)))
+                if (stacked) Icon(painterResource(R.drawable.ic_chevron_right), null, tint = NotifCard.meta,
+                    modifier = Modifier.padding(start = 6.dp).size(16.dp).rotate(turn).testTag(AggTags.groupChevron(g.key)))
             }
-            // The count chip: ONE text holding the whole verdict, because an async ntfy group repaints it with a
-            // failure sentence that has no count in it at all.
-            Text(view.chip.text, color = toneColor(p, view.chip.tone), fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.clip(RoundedCornerShape(9.dp)).background(p.textPrimary.copy(alpha = 0.13f))
-                    .padding(horizontal = 8.dp, vertical = 3.dp).testTag(AggTags.groupChip(g.key)))
-            // Clear all — the group-level twin of a swipe, one decision about the app rather than about any one row.
-            Icon(
-                painterResource(R.drawable.ic_check_all), stringResource(R.string.notif_mark_group_read),
-                tint = p.textPrimary,
-                modifier = Modifier.padding(start = 8.dp).size(18.dp).alpha(0.55f)
-                    .clickable { Haptics.tap(hostView); state.markGroupRead(g) }.testTag(AggTags.groupCheck(g.key)),
-            )
-            ArchivePill(state, g.key, archived)
-            Icon(painterResource(R.drawable.ic_chevron_right), null, tint = p.textPrimary,
-                modifier = Modifier.padding(start = 6.dp).size(16.dp).alpha(0.5f).rotate(turn))
-        }
-        if (open) Column(Modifier.fillMaxWidth()) {
-            for (r in g.rows) androidx.compose.runtime.key(r.id.ifBlank { "${r.ts}/${r.title}" }) {
-                NotifRowItem(state, r, g.launchPackage)
+            val shown = if (open) rows else listOfNotNull(rows.maxByOrNull { it.ts })
+            for (r in shown) androidx.compose.runtime.key(r.id.ifBlank { "${r.ts}/${r.title}" }) {
+                NotifRowItem(state, r, g.launchPackage, inArchive = archived)
             }
+            if (!open) Text(AggregatorModel.moreLabel(rows.size - 1), color = NotifCard.meta, fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clickable { Haptics.tap(hostView); toggle() }
+                    .padding(start = 14.dp, top = 1.dp, end = 14.dp, bottom = 2.dp).testTag(AggTags.groupMore(g.key)))
+            GroupFooter(state, g, archived, rowArchive)
         }
+        // The stack: two slivers of the cards underneath, narrower each step, as One UI draws a folded group.
+        if (!open) for (inset in intArrayOf(10, 22)) Box(
+            Modifier.padding(horizontal = inset.dp).fillMaxWidth().height(4.dp)
+                .clip(RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 10.dp)).background(NotifCard.stack),
+        )
     }
 }
 
+/** The bottom of a card, where One UI keeps its Clear: Mark read (the whole group) and Archive / Restore. */
+@Composable
+private fun GroupFooter(state: AggregatorState, g: NotifGroup, archived: Boolean, rowArchive: Boolean) {
+    val hostView = LocalView.current
+    Row(
+        Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 1.dp, bottom = 7.dp),
+        horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (!archived && g.rows.isNotEmpty()) FooterPill(
+            AggregatorModel.MARK_READ_LABEL, stringResource(R.string.notif_mark_group_read), AggTags.groupCheck(g.key),
+        ) { Haptics.tap(hostView); state.markGroupRead(g) }
+        ArchivePill(state, g, archived, rowArchive)
+    }
+}
+
+@Composable
+private fun FooterPill(label: String, description: String, tag: String, onClick: () -> Unit) {
+    Text(
+        label, color = NotifCard.title, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(start = 6.dp).clip(RoundedCornerShape(10.dp)).background(NotifCard.pill)
+            .clickable(onClick = onClick).padding(horizontal = 9.dp, vertical = 3.dp)
+            .semantics { contentDescription = description }.testTag(tag),
+    )
+}
+
 /**
- * The Archive control on an app box's header. A WORD, not a glyph ("file this away" has no icon in this app's set, and
- * a borrowed folder would be one more symbol next to a tick that already means something else), and "Restore" once
- * the box is in the Archive. It MOVES THE BOX immediately — writing the preference alone would read as a dead button.
+ * The Archive control on an app card. A WORD, not a glyph, and "Restore" once the box is in the Archive. It MOVES THE
+ * BOX immediately — writing the preference alone would read as a dead button.
  */
 @Composable
-private fun ArchivePill(state: AggregatorState, key: String, archived: Boolean) {
-    val p = LocalKitPalette.current
+private fun ArchivePill(state: AggregatorState, g: NotifGroup, archived: Boolean, rowArchive: Boolean) {
     val hostView = LocalView.current
-    Text(
+    val key = g.key
+    FooterPill(
         if (archived) AggregatorModel.ARCHIVE_RESTORE_LABEL else AggregatorModel.ARCHIVE_LABEL,
-        color = p.textPrimary.copy(alpha = 0.8f), fontSize = 10.sp, fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(start = 8.dp).clip(RoundedCornerShape(9.dp)).background(p.textPrimary.copy(alpha = 0.13f))
-            .clickable { Haptics.tap(hostView); state.setArchived(key, !state.isArchived(key)) }
-            .padding(horizontal = 7.dp, vertical = 3.dp)
-            .semantics { contentDescription = if (archived) "Restore this app out of the Archive" else "Archive this app" }
-            .testTag(AggTags.groupArchive(key)),
-    )
+        if (archived) "Restore this app out of the Archive" else "Archive this app",
+        AggTags.groupArchive(key),
+    ) {
+        Haptics.tap(hostView)
+        if (rowArchive) state.restoreRows(g) else state.setArchived(key, !state.isArchived(key))
+    }
 }
 
 private val MONOGRAM_HUES = longArrayOf(0xFF6D5AE6, 0xFF1F8A70, 0xFFB5556D, 0xFF2C6FB5, 0xFF9A6A2F, 0xFF4E7A2A)
@@ -287,27 +339,27 @@ private fun GroupAvatar(g: NotifGroup, onOpen: (String) -> Unit) {
         } else onOpen(g.url)
     } else Modifier
     val shown = icon
-    if (shown != null) AppIcon(shown, 30.dp, tap)
+    if (shown != null) AppIcon(shown, 20.dp, tap)
     else Box(
-        Modifier.size(30.dp).clip(CircleShape)
+        Modifier.size(20.dp).clip(CircleShape)
             .background(Color(MONOGRAM_HUES[AggregatorModel.monogramHue(g.key, MONOGRAM_HUES.size)])).then(tap),
         contentAlignment = Alignment.Center,
-    ) { Text(g.label.trim().take(1).uppercase(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+    ) { Text(g.label.trim().take(1).uppercase(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
 }
 
 // ── rows ─────────────────────────────────────────────────────────────
 
 /**
- * One notification as a shade ROW: a status stripe, then title and relative time on one line with the snippet under it.
- * Dense on purpose — no card, no margin, neighbours parted by a hairline. Unread is said three times over: the stripe
- * lights up, the title goes bold, and the row takes a faint tint.
+ * One notification inside its app card: bold title and time on one line, one or two lines of body under it. Unread is
+ * said twice: an accent dot before the title, and the title in bold at full ink.
  *
- * READ IS A SWIPE. Dragging the row sideways past a threshold flips it, either way: the row slides out and comes back
- * wearing the other state so the gesture is visibly answered. Vertical scrolling is preserved because
- * detectHorizontalDragGestures claims a drag only once it is clearly sideways past the touch slop.
+ * TWO SWIPES, one detector. Dragging RIGHT past a threshold flips read state, either way: the row slides out and comes
+ * back wearing the other state so the gesture is visibly answered. Dragging LEFT is One UI's dismiss — the row slides
+ * off and is filed into the Archive (inside the Archive the same swipe restores it). Vertical scrolling is preserved
+ * because detectHorizontalDragGestures claims a drag only once it is clearly sideways past the touch slop.
  */
 @Composable
-private fun NotifRowItem(state: AggregatorState, r: NotifRow, launchPackage: String) {
+private fun NotifRowItem(state: AggregatorState, r: NotifRow, launchPackage: String, inArchive: Boolean = false) {
     val p = LocalKitPalette.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -319,7 +371,7 @@ private fun NotifRowItem(state: AggregatorState, r: NotifRow, launchPackage: Str
         runCatching { ctx.packageManager.getLaunchIntentForPackage(launchPackage)?.let { ctx.startActivity(it) } }
         Unit
     })
-    val swipe = if (r.id.isBlank()) Modifier else Modifier.pointerInput(r.id, state.showMode) {
+    val swipe = if (r.id.isBlank()) Modifier else Modifier.pointerInput(r.id, state.showMode, inArchive) {
         var total = 0f
         detectHorizontalDragGestures(
             onDragStart = { total = 0f },
@@ -327,11 +379,17 @@ private fun NotifRowItem(state: AggregatorState, r: NotifRow, launchPackage: Str
                 val far = abs(total) > max(64.dp.toPx(), width * 0.22f)
                 scope.launch {
                     if (!far) { settle(offset, fade); return@launch }
+                    val out = (if (total > 0) 1f else -1f) * width.coerceAtLeast(1)
+                    if (total < 0) {
+                        // Dismiss: off to the left and into the Archive (or back out of it).
+                        offset.animateTo(out, tween(150)); fade.snapTo(0f)
+                        state.archiveRow(r.id, !inArchive)
+                        return@launch
+                    }
                     // Slide out towards where it was thrown, persist the flipped state, then bring it back from the
                     // opposite edge already repainted. Under Show=Unread a row that just became read has nowhere to
                     // return TO, so it stays gone rather than reappearing in a list that excludes it.
                     val makeRead = state.isUnread(r)
-                    val out = (if (total > 0) 1f else -1f) * width.coerceAtLeast(1)
                     offset.animateTo(out, tween(150)); fade.snapTo(0f)
                     state.markRead(r.id, makeRead)
                     if (state.showMode == "unread" && makeRead) return@launch
@@ -351,39 +409,30 @@ private fun NotifRowItem(state: AggregatorState, r: NotifRow, launchPackage: Str
         )
     }
     val tap = if (openApp != null) Modifier.clickable { openApp() } else Modifier
-    val titleColor = if (unread) p.textPrimary else p.textPrimary.copy(alpha = 0.73f)
+    val titleColor = when {
+        r.severity == "error" -> p.bad
+        r.severity == "warn" -> p.warn
+        unread -> NotifCard.title
+        else -> NotifCard.title.copy(alpha = 0.75f)
+    }
     Column(
         Modifier.fillMaxWidth().onSizeChanged { width = it.width }
             .graphicsLayer { translationX = offset.value; alpha = fade.value }
-            .then(swipe).then(tap).testTag(AggTags.row(r.id.ifBlank { r.title })),
+            .then(swipe).then(tap).padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 4.dp)
+            .testTag(AggTags.row(r.id.ifBlank { r.title })),
     ) {
-        Row(
-            Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(when {
-                r.severity == "error" -> p.bad.copy(alpha = 0.2f)
-                r.severity == "warn" -> p.warn.copy(alpha = 0.2f)
-                unread -> p.textPrimary.copy(alpha = 0.08f)
-                else -> Color.Transparent
-            }).padding(top = 7.dp, end = 10.dp, bottom = 7.dp),
-        ) {
-            Box(Modifier.width(3.dp).fillMaxHeight().background(when {
-                r.severity == "error" -> p.bad
-                r.severity == "warn" -> p.warn
-                unread -> p.accent
-                else -> Color.Transparent
-            }))
-            Column(Modifier.weight(1f).padding(start = 9.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(r.title, color = titleColor, fontSize = 13.sp,
-                        fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    Text(AggregatorModel.ago(System.currentTimeMillis() - r.ts), color = p.textSecondary, fontSize = 10.sp,
-                        modifier = Modifier.padding(start = 8.dp))
-                }
-                if (r.text.isNotBlank()) Text(r.text, color = p.textPrimary.copy(alpha = if (unread) 0.67f else 0.47f),
-                    fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 1.dp))
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (unread) Box(Modifier.padding(end = 6.dp).size(6.dp).clip(CircleShape).background(p.accent)
+                .testTag(AggTags.rowUnread(r.id.ifBlank { r.title })))
+            Text(r.title, color = titleColor, fontSize = 14.sp,
+                fontWeight = if (unread) FontWeight.Bold else FontWeight.SemiBold, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(AggregatorModel.ago(System.currentTimeMillis() - r.ts), color = NotifCard.meta, fontSize = 10.sp,
+                modifier = Modifier.padding(start = 8.dp))
         }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(p.textPrimary.copy(alpha = 0.07f)))
+        if (r.text.isNotBlank()) Text(r.text, color = if (unread) NotifCard.body else NotifCard.meta,
+            fontSize = 13.sp, lineHeight = 17.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 1.dp))
     }
 }
 
@@ -392,12 +441,35 @@ private suspend fun settle(offset: Animatable<Float, AnimationVector1D>, fade: A
     offset.animateTo(0f, tween(140))
 }
 
+// ── page-level Clear ─────────────────────────────────────────────────
+
+/**
+ * "Mark all read" and "Archive all" at the top-right of the notification list, where One UI keeps its Clear. Below the
+ * Filters row and never inside it: the row itself is untouched. Drawn only on a page that has a notification to act on.
+ */
+@Composable
+internal fun NotifyListActions(state: AggregatorState) {
+    val hostView = LocalView.current
+    val p = LocalKitPalette.current
+    val any = remember(state.epoch, state.pollEpoch, state.ntfyCache.size) {
+        state.panels.any { state.allViews(it).any { v -> v.group.rows.isNotEmpty() } }
+    }
+    if (!any) return
+    Row(Modifier.fillMaxWidth().testTag(AggTags.LIST_ACTIONS), horizontalArrangement = Arrangement.End) {
+        com.diegonmarcos.superapp.uikit.KitTextButton(
+            onClick = { Haptics.tap(hostView); state.markAllRead() }, modifier = Modifier.testTag(AggTags.MARK_ALL_READ),
+        ) { Text(AggregatorModel.MARK_ALL_READ_LABEL, color = p.accent, fontWeight = FontWeight.SemiBold) }
+        com.diegonmarcos.superapp.uikit.KitTextButton(
+            onClick = { Haptics.tap(hostView); state.archiveAll() }, modifier = Modifier.testTag(AggTags.ARCHIVE_ALL),
+        ) { Text(AggregatorModel.ARCHIVE_ALL_LABEL, color = p.accent, fontWeight = FontWeight.SemiBold) }
+    }
+}
+
 // ── Archive ──────────────────────────────────────────────────────────
 
 /**
- * The page's Archive section: one collapsed line over the boxes the user filed away, remembered per page like every
- * other choice on it. Hidden entirely while it holds nothing — a permanent "Archive 0" line on a page nobody has ever
- * archived from is chrome, and a control that opens an empty list teaches the user to stop reading that part.
+ * The page's Archive section: one collapsed line over the boxes the user filed away and the rows swiped off a box that
+ * is still on the page, remembered per page like every other choice on it. Hidden entirely while it holds nothing.
  */
 @Composable
 internal fun ArchiveSection(state: AggregatorState, onOpen: (String) -> Unit) {
@@ -406,7 +478,14 @@ internal fun ArchiveSection(state: AggregatorState, onOpen: (String) -> Unit) {
     val archived by remember {
         derivedStateOf {
             state.panels.withIndex().flatMap { (i, panel) ->
-                state.allViews(panel).filter { state.isArchived(it.group.key) }.map { i to it }
+                state.allViews(panel).mapNotNull { v ->
+                    when {
+                        state.isArchived(v.group.key) -> Triple(i, v, false)
+                        v.group.rows.any { state.isRowArchived(it) } -> Triple(i,
+                            v.copy(group = v.group.copy(rows = v.group.rows.filter { state.isRowArchived(it) })), true)
+                        else -> null
+                    }
+                }
             }
         }
     }
@@ -418,8 +497,8 @@ internal fun ArchiveSection(state: AggregatorState, onOpen: (String) -> Unit) {
                 .clickable { Haptics.tap(hostView); state.toggleArchiveOpen() }
                 .padding(start = 14.dp, top = 4.dp, end = 14.dp, bottom = 6.dp).testTag(AggTags.ARCHIVE_HEADER))
         if (state.archiveOpen) Column(Modifier.fillMaxWidth().testTag(AggTags.ARCHIVE_BODY)) {
-            for ((i, v) in archived) androidx.compose.runtime.key("$i/${v.group.key}") {
-                GroupBlock(state, v, archived = true, onOpen)
+            for ((i, v, rowsOnly) in archived) androidx.compose.runtime.key("$i/${v.group.key}/$rowsOnly") {
+                GroupBlock(state, v, archived = true, rowArchive = rowsOnly, onOpen = onOpen)
             }
         }
     }

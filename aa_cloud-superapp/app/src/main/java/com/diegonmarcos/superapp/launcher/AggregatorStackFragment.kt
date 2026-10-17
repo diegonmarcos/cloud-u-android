@@ -153,6 +153,7 @@ class AggregatorStackFragment : KitComposeFragment(),
                     val (above, below) = panels.withIndex().partition { it.value.aboveFilters }
                     for ((i, panel) in above) if (st.visible(panel)) PagePanel(st, i, panel, anchors, actions)
                     if (filters.isNotEmpty()) FilterRow(st)
+                    NotifyListActions(st)
                     for ((i, panel) in below) if (st.visible(panel)) PagePanel(st, i, panel, anchors, actions)
                     ArchiveSection(st, actions.open)
                     // Every classified card hidden means the toggle did it, not a dead page — say so, because an empty
