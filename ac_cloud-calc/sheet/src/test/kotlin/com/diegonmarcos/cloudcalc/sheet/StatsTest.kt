@@ -98,4 +98,43 @@ class StatsTest {
         assertNull(Stat.ofArea(w, "Sheet1", Area(5, 5, 6, 6)))
         assertNotNull(Stat.ofArea(w, "Sheet1", Area(0, 0, A1.MAX_COLS - 1, A1.MAX_ROWS - 1)))   // a whole-sheet selection is cheap
     }
+
+    // ── status bar: Count, order, 2-decimal display ──────────────────────────────────────────
+
+    @Test fun countIsNumericCellsOnlyIgnoringTextAndEmpties() {
+        val s = Stat.of(listOf(Value.Num(1.0), Value.Str("abc"), Value.Blank, Value.Str(""), Value.Num(-2.5), Value.Bool(false), Value.Err(Value.DIV0), Value.Num(0.0)))!!
+        assertEquals(3, s.n)
+        val w = Workbook { 45000.0 }
+        w.set("Sheet1", 0, 0, "5"); w.set("Sheet1", 0, 1, "hello"); w.set("Sheet1", 0, 3, "7")   // A3 left empty
+        assertEquals(2, Stat.ofArea(w, "Sheet1", Area(0, 0, 0, 3))!!.n)
+    }
+
+    @Test fun countComesImmediatelyBeforeStdev() {
+        val ids = Stat.barIds(Stat.of(nums(1.0, 2.0, 3.0))!!)
+        val i = ids.indexOf("count")
+        assertTrue(i >= 0)
+        assertEquals("stdev", ids[i + 1])
+        assertEquals(listOf("sum", "avg", "median", "count", "stdev", "min", "max"), ids.take(7))
+        assertTrue("count" in Stat.barIds(Stat.of(nums(9.0))!!))   // one value: no StDev, Count still shown
+    }
+
+    @Test fun statsDisplayRoundsToTwoDecimals() {
+        assertEquals("3.14", Fmt.stat(3.14159))
+        assertEquals("2.01", Fmt.stat(2.005))          // HALF_UP on the decimal form
+        assertEquals("1.5", Fmt.stat(1.50))
+        assertEquals("4", Fmt.stat(4.0))
+        assertEquals("0", Fmt.stat(-0.001))
+        assertEquals("1.5", Fmt.stat(1.5, Format.number(2)))
+        assertEquals("$1,234.5", Fmt.stat(1234.5, Format.currency("$", 2)))
+        assertEquals("12.35%", Fmt.stat(0.123456, Format.percent(4)))
+    }
+
+    @Test fun statsDisplayHandlesLargeAndNegativeNumbers() {
+        assertEquals("-2.67", Fmt.stat(-2.6666))
+        assertEquals("-1,234,567.89", Fmt.stat(-1234567.891, Format.number(2)))
+        assertEquals("123456789012.35", Fmt.stat(123456789012.345))
+        assertEquals("1000000000000000", Fmt.stat(1e15))
+        val s = Stat.of(nums(-1.0, -2.0, -4.0))!!
+        assertEquals("-2.33", Fmt.stat(s.avg)); assertEquals(-7.0 / 3, s.avg, 1e-12)   // the value itself is not rounded
+    }
 }

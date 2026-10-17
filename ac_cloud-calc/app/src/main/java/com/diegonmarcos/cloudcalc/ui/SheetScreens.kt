@@ -82,6 +82,7 @@ import com.diegonmarcos.cloudcalc.sheet.Format
 import com.diegonmarcos.cloudcalc.sheet.Refs
 import com.diegonmarcos.cloudcalc.sheet.Value
 import com.diegonmarcos.cloudcalc.sheetui.SheetHub
+import com.diegonmarcos.cloudcalc.sheet.Stat
 import com.diegonmarcos.cloudcalc.sheetui.SheetState
 import kotlin.math.roundToInt
 
@@ -98,6 +99,11 @@ object SheetTags {
     const val REDO = "sheet_redo"
     const val EXTEND = "sheet_extend"
     const val STATUS_BAR = "sheet_status_bar"
+    const val CELL_MENU = "sheet_cell_menu"
+    fun colHeader(c: Int) = "sheet_col_header_$c"
+    fun rowHeader(r: Int) = "sheet_row_header_$r"
+    fun headerMenu(id: String) = "sheet_header_menu_$id"
+    fun cellMenu(id: String) = "sheet_cell_menu_$id"
     fun stat(id: String) = "sheet_stat_$id"
     fun handle(kind: String) = "sheet_handle_$kind"
     fun tab(name: String) = "sheet_tab_$name"
@@ -382,10 +388,22 @@ private fun ColumnHeader(st: SheetState, c: Int, w: androidx.compose.ui.unit.Dp,
         modifier.width(w).height(CalcMetrics.cellHeight)
             .background(if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
             .border(CalcMetrics.hairline, MaterialTheme.colorScheme.outline)
-            .clickable { if (!st.formulaEditing) st.selectCol(c) },
+            .combinedClickable(onClick = { if (!st.formulaEditing) st.selectCol(c) }, onLongClick = { st.longPressCol(c) })
+            .testTag(SheetTags.colHeader(c)),
         contentAlignment = Alignment.Center,
     ) {
         Text(A1.colName(c), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        // Long press: insert / delete for ALL the selected cols (one undo step each); references shift, deleted ones become #REF!.
+        if (st.headerMenu == "col" && c == st.area.c1) {
+            DropdownMenu(expanded = true, onDismissRequest = { st.headerMenu = "" }, modifier = Modifier.testTag(SheetTags.headerMenu("col"))) {
+                listOf("left" to R.string.sheet_col_insert_left, "right" to R.string.sheet_col_insert_right, "delete" to R.string.sheet_col_delete).forEach { (id, label) ->
+                    DropdownMenuItem(text = { Text(stringResource(label)) }, modifier = Modifier.testTag(SheetTags.headerMenu("col_$id")), onClick = {
+                        st.headerMenu = ""
+                        when (id) { "left" -> st.insertColsLeft(); "right" -> st.insertColsRight(); else -> st.deleteCol() }
+                    })
+                }
+            }
+        }
         Box(
             Modifier.align(Alignment.CenterEnd).width(CalcMetrics.resizeHandle).fillMaxHeight().pointerInput(c) {
                 var cur = w.value
@@ -407,10 +425,22 @@ private fun RowHeader(st: SheetState, r: Int, h: androidx.compose.ui.unit.Dp, mo
         modifier.width(CalcMetrics.headerWidth).height(h)
             .background(if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
             .border(CalcMetrics.hairline, MaterialTheme.colorScheme.outline)
-            .clickable { if (!st.formulaEditing) st.selectRow(r) },
+            .combinedClickable(onClick = { if (!st.formulaEditing) st.selectRow(r) }, onLongClick = { st.longPressRow(r) })
+            .testTag(SheetTags.rowHeader(r)),
         contentAlignment = Alignment.Center,
     ) {
         Text((r + 1).toString(), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        // Long press: insert / delete for ALL the selected rows (one undo step each); references shift, deleted ones become #REF!.
+        if (st.headerMenu == "row" && r == st.area.r1) {
+            DropdownMenu(expanded = true, onDismissRequest = { st.headerMenu = "" }, modifier = Modifier.testTag(SheetTags.headerMenu("row"))) {
+                listOf("above" to R.string.sheet_row_insert_above, "below" to R.string.sheet_row_insert_below, "delete" to R.string.sheet_row_delete).forEach { (id, label) ->
+                    DropdownMenuItem(text = { Text(stringResource(label)) }, modifier = Modifier.testTag(SheetTags.headerMenu("row_$id")), onClick = {
+                        st.headerMenu = ""
+                        when (id) { "above" -> st.insertRowsAbove(); "below" -> st.insertRowsBelow(); else -> st.deleteRow() }
+                    })
+                }
+            }
+        }
         Box(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(CalcMetrics.resizeHandle / 2).pointerInput(r) {
                 var cur = h.value
@@ -461,6 +491,20 @@ private fun GridCell(
             color = if (v is Value.Err) scheme.error else scheme.onSurface,
             textAlign = if (v is Value.Num) TextAlign.End else TextAlign.Start,
         )
+        // The long-press menu on the selection: acts on the WHOLE range; each action is one undo step.
+        if (active && st.cellMenu) {
+            val ctx = LocalContext.current
+            DropdownMenu(expanded = true, onDismissRequest = { st.cellMenu = false }, modifier = Modifier.testTag(SheetTags.CELL_MENU)) {
+                listOf(
+                    "copy" to R.string.sheet_copy, "cut" to R.string.sheet_cut, "paste" to R.string.sheet_paste, "clear" to R.string.sheet_clear,
+                ).forEach { (id, label) ->
+                    DropdownMenuItem(text = { Text(stringResource(label)) }, modifier = Modifier.testTag(SheetTags.cellMenu(id)), onClick = {
+                        st.cellMenu = false
+                        when (id) { "copy" -> st.copy(ctx); "cut" -> st.cut(ctx); "paste" -> st.paste(ctx); else -> st.clearSelection() }
+                    })
+                }
+            }
+        }
         // Selection handles (not while a formula is edited): drag one to grow or shrink the range. The cell a drag began in keeps its handle until release.
         if (!editingFormula) {
             if (active || startDrag) SelectionHandle(st, false, c, r, w, h, locate, Modifier.align(Alignment.TopStart)) { startDrag = it }
@@ -498,8 +542,8 @@ private fun SelectionHandle(
 
 /**
  * The status bar: for the selected NUMBERS (text, empty cells and booleans are ignored; errors are counted, not
- * summed) Sum, Avg, Median, StDev (sample), Min, Max, the confidence intervals of the mean at 67%, 97.5% and 99%
- * as [low, high] and the count. The intervals use Student's t below 30 values and the normal z from 30 up, and the
+ * summed) Sum, Avg, Median, Count (numeric cells, like COUNT), StDev (sample), Min, Max, the confidence intervals of the
+ * mean at 67%, 97.5% and 99% as [low, high]. Every figure is rounded for display to at most 2 decimals. The intervals use Student's t below 30 values and the normal z from 30 up, and the
  * bar says which. Numbers are shown in the number format of the first selected number. A tap copies a figure.
  */
 @Composable
@@ -507,21 +551,21 @@ private fun SheetStatusBar(st: SheetState) {
     val s = st.selectionStats() ?: return
     val ctx = LocalContext.current
     val spread = if (s.format.kind == Format.Kind.DATE) Format.GENERAL else s.format   // a sum or deviation of dates is a count of days
-    fun fmt(x: Double, f: Format = s.format) = Fmt.display(Value.Num(x), f)
+    fun fmt(x: Double, f: Format = s.format) = Fmt.stat(x, f)   // at most 2 decimals, trailing zeros dropped
     val pct = { level: Double -> Fmt.general(level * 100) }
     val items = buildList {
         add(Triple("sum", ctx.getString(R.string.sheet_stat_sum), fmt(s.sum, spread)))
         add(Triple("avg", ctx.getString(R.string.sheet_stat_avg), fmt(s.avg)))
         add(Triple("median", ctx.getString(R.string.sheet_stat_median), fmt(s.median)))
+        add(Triple("count", ctx.getString(R.string.sheet_stat_count), s.n.toString()))   // numeric cells only, right before StDev
         s.stdev?.let { add(Triple("stdev", ctx.getString(R.string.sheet_stat_stdev), fmt(it, spread))) }
         add(Triple("min", ctx.getString(R.string.sheet_stat_min), fmt(s.min)))
         add(Triple("max", ctx.getString(R.string.sheet_stat_max), fmt(s.max)))
         s.ci.forEach { add(Triple("ci_${pct(it.level)}", ctx.getString(R.string.sheet_stat_ci, pct(it.level)), "[" + fmt(it.low) + ", " + fmt(it.high) + "]")) }
         if (s.ci.isNotEmpty()) add(Triple("dist", ctx.getString(R.string.sheet_stat_dist),
             ctx.getString(if (s.dist == "t") R.string.sheet_stat_dist_t else R.string.sheet_stat_dist_z, s.n)))
-        add(Triple("count", ctx.getString(R.string.sheet_stat_count), s.n.toString()))
         if (s.errors > 0) add(Triple("errors", ctx.getString(R.string.sheet_stat_errors), s.errors.toString()))
-    }
+    }.let { all -> Stat.barIds(s).mapNotNull { id -> all.firstOrNull { it.first == id } } }   // the order Stat.barIds defines
     Row(
         Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).horizontalScroll(rememberScrollState())
             .padding(horizontal = CalcMetrics.small).testTag(SheetTags.STATUS_BAR),

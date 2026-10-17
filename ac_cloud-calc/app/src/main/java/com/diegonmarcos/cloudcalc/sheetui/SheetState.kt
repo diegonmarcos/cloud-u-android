@@ -59,6 +59,10 @@ class SheetState(val files: SheetFiles) {
     var extend by mutableStateOf(false)
     var message by mutableStateOf("")
     private var clip: Clip? = null
+    /** The long-press menu on the selection (Copy, Cut, Paste, Clear) is open. */
+    var cellMenu by mutableStateOf(false)
+    private var pressOnSel: Pair<Int, Int>? = null
+    private var pressMoved = false
     private var clipTsv: String = ""
 
     init {
@@ -157,6 +161,10 @@ class SheetState(val files: SheetFiles) {
         } else {
             if (editing) cancelEdit()
             pointStart = null
+            pressMoved = false
+            // A long press INSIDE the selection keeps it: released without moving, it opens the selection menu.
+            if (area.contains(c, r)) { pressOnSel = c to r; return }
+            pressOnSel = null
             anchorC = c; anchorR = r; endC = c; endR = r
         }
     }
@@ -164,10 +172,20 @@ class SheetState(val files: SheetFiles) {
     fun dragTo(c: Int, r: Int) {
         val p = pointStart
         if (formulaEditing && p != null) pointInsert(Area(minOf(p.first, c), minOf(p.second, r), maxOf(p.first, c), maxOf(p.second, r)))
-        else if (!formulaEditing) { endC = c; endR = r }
+        else if (!formulaEditing) {
+            val s = pressOnSel
+            if (s != null && !pressMoved) {
+                if (s == (c to r)) return
+                pressMoved = true; anchorC = s.first; anchorR = s.second   // it moved: a new range drag from the pressed cell
+            }
+            endC = c; endR = r
+        }
     }
 
-    fun dragEnd() { pointStart = null; bump() }
+    fun dragEnd() {
+        if (pressOnSel != null && !pressMoved && !formulaEditing) cellMenu = true
+        pressOnSel = null; pressMoved = false; pointStart = null; bump()
+    }
 
     /** A selection handle moved to (c, r): the start handle moves the anchor, the end handle the other corner. */
     fun handleTo(end: Boolean, c: Int, r: Int) {
@@ -215,6 +233,27 @@ class SheetState(val files: SheetFiles) {
     fun insertCol() { wb.insertCols(sheet, area.c1, area.cols); bump() }
     fun deleteCol() { wb.deleteCols(sheet, area.c1, area.cols); bump() }
 
+    /** The header long-press menu: "row" or "col" while open, "" closed. */
+    var headerMenu by mutableStateOf("")
+    /** A long press on row header [r]: keeps a multi-row selection that holds it, else selects the row; opens the row menu. */
+    fun longPressRow(r: Int) {
+        if (formulaEditing) return
+        val a = area
+        if (!(r in a.r1..a.r2 && a.c1 == 0 && a.c2 == A1.MAX_COLS - 1)) selectArea(Area(0, r, A1.MAX_COLS - 1, r))
+        headerMenu = "row"
+    }
+    fun longPressCol(c: Int) {
+        if (formulaEditing) return
+        val a = area
+        if (!(c in a.c1..a.c2 && a.r1 == 0 && a.r2 == A1.MAX_ROWS - 1)) selectArea(Area(c, 0, c, A1.MAX_ROWS - 1))
+        headerMenu = "col"
+    }
+    /** Insert as many rows as are selected, above or below them; the selection follows the original rows. */
+    fun insertRowsAbove() { val a = area; wb.insertRows(sheet, a.r1, a.rows); selectArea(Area(a.c1, a.r1 + a.rows, a.c2, a.r2 + a.rows)) }
+    fun insertRowsBelow() { val a = area; wb.insertRows(sheet, a.r2 + 1, a.rows); bump() }
+    fun insertColsLeft() { val a = area; wb.insertCols(sheet, a.c1, a.cols); selectArea(Area(a.c1 + a.cols, a.r1, a.c2 + a.cols, a.r2)) }
+    fun insertColsRight() { val a = area; wb.insertCols(sheet, a.c2 + 1, a.cols); bump() }
+
     fun resizeCol(c: Int, dp: Int) { wb.setColWidth(sheet, c, dp); bump() }
     fun resizeRow(r: Int, dp: Int) { wb.setRowHeight(sheet, r, dp); bump() }
 
@@ -233,15 +272,20 @@ class SheetState(val files: SheetFiles) {
         val a = area.let { Area(it.c1, it.r1, minOf(it.c2, usedCols()), minOf(it.r2, usedRows())) }
         clip = wb.copy(sheet, a)
         clipTsv = wb.toTsv(sheet, a)
-        runCatching { sys(ctx).setPrimaryClip(ClipData.newPlainText("sheet", clipTsv)) }
+        // Item 0: the values as TSV, for other spreadsheets. Item 1: the raw cells (formulas kept), for this app.
+        val formulas = wb.toTsv(sheet, a, formulas = true)
+        runCatching { sys(ctx).setPrimaryClip(ClipData.newPlainText(CLIP_LABEL, clipTsv).apply { addItem(ClipData.Item(formulas)) }) }
     }
 
+    /** Copy, then clear the range at once (one undo step brings the cells back). */
     fun cut(ctx: Context) { copy(ctx); clearSelection() }
 
     fun paste(ctx: Context) {
         val text = runCatching { sys(ctx).primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(ctx)?.toString() }.getOrNull()
         val c = clip
+        val ours = runCatching { sys(ctx).primaryClip?.takeIf { it.description?.label == CLIP_LABEL && it.itemCount > 1 }?.getItemAt(1)?.text?.toString() }.getOrNull()
         val a = if (c != null && (text == null || text == clipTsv)) wb.paste(sheet, area.c1, area.r1, c)
+        else if (ours != null && text == clipTsv) wb.pasteText(sheet, area.c1, area.r1, ours)
         else if (!text.isNullOrEmpty()) wb.pasteText(sheet, area.c1, area.r1, text) else return
         selectArea(a)
     }
@@ -299,4 +343,6 @@ object SheetHub {
 
     /** For tests: forget the process-wide state. */
     fun reset() { state = null }
+
+    companion object { const val CLIP_LABEL = "cloudcalc-sheet" }
 }

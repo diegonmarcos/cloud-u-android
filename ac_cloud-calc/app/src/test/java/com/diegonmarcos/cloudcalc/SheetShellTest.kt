@@ -8,6 +8,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.longClick
+import com.diegonmarcos.cloudcalc.sheet.Area
 import androidx.compose.ui.test.performTextReplacement
 import com.diegonmarcos.cloudcalc.engine.CalcApi
 import com.diegonmarcos.cloudcalc.sheetui.SheetHub
@@ -195,5 +198,59 @@ class SheetShellTest {
         compose.onNodeWithTag(SheetTags.UNDO).performClick()
         compose.waitForIdle()
         assertEquals("", SheetHub.get(RuntimeEnvironment.getApplication()).wb.raw("Sheet1", 0, 1))
+    }
+
+    private fun sheetPage(): com.diegonmarcos.cloudcalc.sheetui.SheetState {
+        launch()
+        compose.onNodeWithTag(BottomNavTags.item("sheet")).performClick()
+        compose.waitForIdle()
+        return SheetHub.get(RuntimeEnvironment.getApplication())
+    }
+
+    @Test fun `a long press on the selection opens Copy Cut Paste Clear, which act on the whole range`() {
+        val st = sheetPage()
+        val ctx = RuntimeEnvironment.getApplication()
+        compose.runOnIdle {
+            st.wb.set("Sheet1", 0, 0, "1"); st.wb.set("Sheet1", 1, 0, "=A1*2"); st.wb.set("Sheet1", 0, 1, "x")
+            st.selectArea(Area(0, 0, 1, 1))
+        }
+        compose.onNodeWithTag(SheetTags.cell(1, 1)).performTouchInput { longClick() }
+        compose.waitForIdle()
+        compose.onNodeWithTag(SheetTags.CELL_MENU).assertExists()
+        assertEquals(Area(0, 0, 1, 1), st.area)                       // the selection is kept
+        compose.onNodeWithTag(SheetTags.cellMenu("cut")).performClick()
+        compose.waitForIdle()
+        val cm = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        assertEquals("1\t2\nx\t", cm.primaryClip!!.getItemAt(0).text.toString().trimEnd('\n', '\r'))
+        assertEquals("", st.wb.raw("Sheet1", 0, 0)); assertEquals("", st.wb.raw("Sheet1", 1, 0))   // cut clears the range
+        compose.runOnIdle { st.select(3, 4); st.paste(ctx) }
+        assertEquals("1", st.wb.raw("Sheet1", 3, 4)); assertEquals("=D5*2", st.wb.raw("Sheet1", 4, 4))
+        assertEquals("x", st.wb.raw("Sheet1", 3, 5))
+        compose.runOnIdle { st.undo() }
+        assertEquals("", st.wb.raw("Sheet1", 3, 4))
+    }
+
+    @Test fun `a long press on a row header opens the row menu and inserts above every selected row`() {
+        val st = sheetPage()
+        compose.runOnIdle { st.wb.set("Sheet1", 0, 0, "1"); st.wb.set("Sheet1", 0, 1, "2"); st.wb.set("Sheet1", 1, 0, "=A2+1") }
+        compose.onNodeWithTag(SheetTags.rowHeader(1)).performTouchInput { longClick() }
+        compose.waitForIdle()
+        compose.onNodeWithTag(SheetTags.headerMenu("row")).assertExists()
+        compose.onNodeWithTag(SheetTags.headerMenu("row_above")).performClick()
+        compose.waitForIdle()
+        assertEquals("2", st.wb.raw("Sheet1", 0, 2)); assertEquals("=A3+1", st.wb.raw("Sheet1", 1, 0))
+        compose.runOnIdle { st.selectArea(Area(0, 1, com.diegonmarcos.cloudcalc.sheet.A1.MAX_COLS - 1, 2)); st.deleteRow() }
+        assertEquals("=#REF!+1", st.wb.raw("Sheet1", 1, 0))
+    }
+
+    @Test fun `a long press on a column header opens the column menu`() {
+        val st = sheetPage()
+        compose.runOnIdle { st.wb.set("Sheet1", 0, 0, "1"); st.wb.set("Sheet1", 1, 0, "=A1") }
+        compose.onNodeWithTag(SheetTags.colHeader(0)).performTouchInput { longClick() }
+        compose.waitForIdle()
+        compose.onNodeWithTag(SheetTags.headerMenu("col")).assertExists()
+        compose.onNodeWithTag(SheetTags.headerMenu("col_left")).performClick()
+        compose.waitForIdle()
+        assertEquals("1", st.wb.raw("Sheet1", 1, 0)); assertEquals("=B1", st.wb.raw("Sheet1", 2, 0))
     }
 }

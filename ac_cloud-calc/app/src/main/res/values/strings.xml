@@ -272,6 +272,12 @@
     <string name="sheet_copy">Copy</string>
     <string name="sheet_paste">Paste</string>
     <string name="sheet_clear">Clear</string>
+    <string name="sheet_row_insert_above">Insert row above</string>
+    <string name="sheet_row_insert_below">Insert row below</string>
+    <string name="sheet_row_delete">Delete row</string>
+    <string name="sheet_col_insert_left">Insert column left</string>
+    <string name="sheet_col_insert_right">Insert column right</string>
+    <string name="sheet_col_delete">Delete column</string>
     <string name="sheet_ins_row">+Row</string>
     <string name="sheet_del_row">−Row</string>
     <string name="sheet_ins_col">+Col</string>

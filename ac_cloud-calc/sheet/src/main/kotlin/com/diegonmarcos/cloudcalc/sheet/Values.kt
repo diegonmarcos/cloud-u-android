@@ -137,6 +137,36 @@ object Fmt {
         }
     }
 
+    /**
+     * A status-bar statistic: [v] rounded HALF_UP to at most [STAT_DECIMALS] decimals (fewer when [f] asks for fewer),
+     * trailing zeros dropped (1.5, not 1.50; 4, not 4.00), in the same separators/grouping/symbols [display] uses for
+     * [f]. Display only: the value itself is never changed. Rounds the shortest decimal form (2.005 -> 2.01).
+     */
+    fun stat(v: Double, f: Format = Format.GENERAL): String {
+        if (v.isNaN() || v.isInfinite()) return Value.VALUE
+        if (f.kind == Format.Kind.DATE) return display(Value.Num(v), f)
+        val x = if (f.kind == Format.Kind.PERCENT) BigDecimal.valueOf(v).movePointRight(2) else BigDecimal.valueOf(v)
+        val places = if (f.kind == Format.Kind.GENERAL) STAT_DECIMALS else f.decimals.coerceIn(0, STAT_DECIMALS)
+        var bd = x.setScale(places, RoundingMode.HALF_UP).stripTrailingZeros()
+        if (bd.scale() < 0) bd = bd.setScale(0)
+        if (bd.signum() == 0) bd = BigDecimal.ZERO                      // no "-0"
+        val neg = bd.signum() < 0
+        val plain = bd.abs().toPlainString()
+        val intPart = plain.substringBefore('.')
+        val frac = if (plain.contains('.')) "." + plain.substringAfter('.') else ""
+        val body = when (f.kind) {
+            Format.Kind.NUMBER, Format.Kind.CURRENCY -> intPart.reversed().chunked(3).joinToString(",").reversed() + frac
+            else -> intPart + frac
+        }
+        return when (f.kind) {
+            Format.Kind.PERCENT -> (if (neg) "-" else "") + body + "%"
+            Format.Kind.CURRENCY -> (if (neg) "-" else "") + f.currency + body
+            else -> (if (neg) "-" else "") + body
+        }
+    }
+
+    const val STAT_DECIMALS = 2
+
     /** The cell input [text] as a value, plus the format it implies ("50%" is 0.5 as a percent, an ISO date a date). */
     fun entry(text: String): Pair<Value, Format?> {
         if (text.startsWith("'")) return Value.Str(text.substring(1)) to null

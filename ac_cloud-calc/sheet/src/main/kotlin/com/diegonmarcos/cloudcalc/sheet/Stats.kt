@@ -27,6 +27,19 @@ object Stat {
     const val T_BELOW = 30
     val LEVELS = listOf(0.67, 0.975, 0.99)
 
+    /**
+     * The status bar's figures, in display order: Count (the numeric cells, like COUNT) comes right before StDev.
+     * Ids match the bar's test tags (sheet_stat_<id>).
+     */
+    fun barIds(s: Stats): List<String> = buildList {
+        add("sum"); add("avg"); add("median"); add("count")
+        if (s.stdev != null) add("stdev")
+        add("min"); add("max")
+        s.ci.forEach { add("ci_" + Fmt.general(it.level * 100)) }
+        if (s.ci.isNotEmpty()) add("dist")
+        if (s.errors > 0) add("errors")
+    }
+
     /** Stats of [values] (only [Value.Num] counts), or null when there is no number. */
     fun of(values: List<Value>, format: Format = Format.GENERAL): Stats? {
         val xs = values.mapNotNull { (it as? Value.Num)?.v?.takeIf { v -> !v.isNaN() && !v.isInfinite() } }

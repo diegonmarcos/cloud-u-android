@@ -333,4 +333,35 @@ class WorkbookTest {
         assertNull(A1.parseArea("A0"))
         assertNull(A1.parseArea("hello"))
     }
+
+    @Test fun structureEditsShiftAbsoluteAndMixedReferences() {
+        val w = Workbook { 45000.0 }
+        w.set(s1, 0, 0, "5"); w.set(s1, 0, 1, "7")
+        w.set(s1, 2, 0, "=A$1+$A$2+$A2")       // C1
+        w.insertRows(s1, 0, 2)                 // two rows above everything
+        assertEquals("=A$3+$A$4+$A4", w.raw(s1, 2, 2))
+        assertEquals("19", w.display(s1, 2, 2))
+        w.insertCols(s1, 0)                    // a column left of A
+        assertEquals("=B$3+$B$4+$B4", w.raw(s1, 3, 2))
+        w.deleteRows(s1, 3)                    // the row of the 7 (B4) is gone
+        assertEquals("=B$3+#REF!+#REF!", w.raw(s1, 3, 2))
+        assertEquals("#REF!", w.display(s1, 3, 2))
+        assertTrue(w.undo())
+        assertEquals("=B$3+$B$4+$B4", w.raw(s1, 3, 2))
+    }
+
+    @Test fun clipboardTsvCutAndPasteAtAnchor() {
+        val w = small()
+        assertEquals("1\t6\n2\t20", w.toTsv(s1, Area(0, 0, 1, 1)).trimEnd())
+        assertEquals("1\t=SUM(A1:A3)\n2\t=A2*10", w.toTsv(s1, Area(0, 0, 1, 1), formulas = true).trimEnd())
+        val clip = w.copy(s1, Area(0, 0, 0, 1))
+        w.clear(s1, Area(0, 0, 0, 1))
+        assertEquals("", w.raw(s1, 0, 0)); assertEquals("", w.raw(s1, 0, 1))
+        val a = w.paste(s1, 4, 5, clip)
+        assertEquals(Area(4, 5, 4, 6), a)
+        assertEquals("1", w.raw(s1, 4, 5)); assertEquals("2", w.raw(s1, 4, 6))
+        val t = w.pasteText(s1, 2, 2, "a\tb\nc\td")
+        assertEquals(Area(2, 2, 3, 3), t)
+        assertEquals("d", w.raw(s1, 3, 3))
+    }
 }
