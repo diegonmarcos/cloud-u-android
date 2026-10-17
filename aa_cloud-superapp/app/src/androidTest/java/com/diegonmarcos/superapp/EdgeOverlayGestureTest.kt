@@ -152,7 +152,7 @@ class EdgeOverlayGestureTest {
         Log.i(TAG, "left=$l right=$r screenW=$screenW dens=$dens")
         assertEquals(2, svc.handleCount)
         for (s in listOf(l, r)) {
-            assertTrue("strip ${s.width()}px wide", s.width() <= dp(24).toInt() + 1 && s.width() >= dp(20).toInt())
+            assertTrue("strip ${s.width()}px wide", s.width() <= dp(com.diegonmarcos.superapp.onehand.EdgeHandleWindow.USER_MAX_THICKNESS_DP).toInt() + 1 && s.width() >= dp(com.diegonmarcos.superapp.onehand.EdgeHandleWindow.MIN_HIT_DP).toInt() - 1)
             assertTrue("strip ${s.height()}px tall", s.height() <= dp(160).toInt() + 1)
         }
         assertTrue("left strip hugs the left edge", l.left <= dp(2).toInt())
@@ -184,14 +184,24 @@ class EdgeOverlayGestureTest {
         assertFalse("app below must still be in front", (victimCount("stop") > 0))
     }
 
-    @Test fun sweepWithoutHoldOpensNothing() {
+    /** 2026-10-17: a plain inward swipe (no hold) OPENS the menu - the hold-only contract left it dead on Samsung. */
+    @Test fun inwardSwipeWithoutHoldOpensTheMenu() {
         val l = leftStrip(); val x = l.exactCenterX(); val y = l.exactCenterY()
         down(x, y)
         for (i in 1..8) { move(x + dp(10) * i, y); SystemClock.sleep(12) }
-        assertFalse("a sweep with no hold must not open the menu", svc().menuShown)
+        waitFor("menu window after a plain inward swipe", 2_000) { svc().menuShown }
         up(x + dp(80), y); SystemClock.sleep(300)
+        assertFalse("menu closes on release", svc().menuShown)
+        assertEquals("swipe must not click the app below", 0, victimCount("click"))
+    }
+
+    @Test fun sweepAlongTheEdgeOpensNothing() {
+        val l = leftStrip(); val x = l.exactCenterX(); val y = l.exactCenterY()
+        down(x, y)
+        for (i in 1..8) { move(x, y + dp(10) * i); SystemClock.sleep(12) }
+        assertFalse("a sweep along the edge must not open the menu", svc().menuShown)
+        up(x, y + dp(80)); SystemClock.sleep(300)
         assertFalse(svc().menuShown)
-        assertEquals("sweep must not click the app below", 0, victimCount("click"))
     }
 
     private fun holdThenPush(edgeLeft: Boolean) {
