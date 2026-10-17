@@ -47,7 +47,7 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
         /** The Configs grid and every page/tab under build.json::ui.sections[config] that opens IN this app. */
         val SCREENS = listOf(
             "grid", "perms", "controls", "presets", "panels", "panels-ui", "panels-tools", "onehand",
-            "firewall", "dns", "apps-mesh", "ipc", "adb-shell", "kde", "agents", "agents-superapp", "agents-fleet",
+            "firewall", "dns", "apps-mesh", "apps-mesh-members", "ipc", "identity", "adb-shell", "kde", "agents", "agents-superapp", "agents-fleet",
             "diagnostics", "about", "battery", "profile", "store-cloud", "store-phone",
         )
 

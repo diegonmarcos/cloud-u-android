@@ -78,14 +78,14 @@ want = {
     ('Fleet', ''):                     ['C3', 'Peer Control', 'Agents'],
     ('Setup', 'Connect'):          ['Account'],
     ('Setup', 'Apps'):             ['Store', 'Permissions'],
-    ('Setup', 'Network'):              ['Firewall', 'DNS', 'Cloud Mesh', 'Apps Mesh', 'IPC', 'ADB Shell'],
+    ('Setup', 'Network'):              ['Firewall', 'DNS', 'Cloud Mesh', 'Apps Mesh', 'ADB Shell'],  # IPC is a tab of Apps Mesh, not a tile
     ('Observability', ''):          ['Diagnostics', 'About'],
 }
 problems = ['%s%s = %r' % (g, ' ▸ ' + s if s else '', members(g, s))
             for (g, s), exp in want.items() if members(g, s) != exp]
 print('; '.join(problems) or 'OK')
 PY
-)" "Setup ▸ Connect = Account; Setup ▸ Launcher = Controls/One-Hand/Notify; Fleet = C3/Peer Control/Agents; Setup ▸ Apps = Store/Permissions; Network = Firewall/DNS/Cloud Mesh/Apps Mesh/IPC/ADB Shell (#733, #740, #ipc); Observability = Diagnostics/About (Diagnostics: the device's own numbers, remotely readable)"
+)" "Setup ▸ Connect = Account; Setup ▸ Launcher = Controls/One-Hand/Notify; Fleet = C3/Peer Control/Agents; Setup ▸ Apps = Store/Permissions; Network = Firewall/DNS/Cloud Mesh/Apps Mesh/ADB Shell (#733, #740; IPC and Identity are Apps Mesh tabs); Observability = Diagnostics/About (Diagnostics: the device's own numbers, remotely readable)"
 
 echo "== T3: Store is the former Constellation, and Cloud Constellation is INSIDE it =="
 # #563 renamed the Constellation page Store; the word survives as the label of
@@ -172,9 +172,9 @@ w = {p[k] for p in pages for k in ('group', 'subgroup') if p.get(k)}
 w |= {p['label'] for p in pages if not p.get('hidden') and not p.get('is_action')}
 print(len(w))
 ")
-[ "$WORDS" = 24 ] \
-  && ok "T4 derived 24 words from the declaration (Setup, Apps, Launcher, Network, Fleet, Observability + 18 page labels, Diagnostics the last: the Agents regroup added Agents and dropped the | separator; #ipc added IPC)" \
-  || bad "T4 derived $WORDS words, expected 24 — it is checking a different set than it claims"
+[ "$WORDS" = 23 ] \
+  && ok "T4 derived 23 words from the declaration (Setup, Apps, Launcher, Network, Fleet, Observability + 17 page labels, Diagnostics the last: the Agents regroup added Agents and dropped the | separator; #ipc added IPC; IPC became an Apps Mesh tab and left the labels)" \
+  || bad "T4 derived $WORDS words, expected 23 — it is checking a different set than it claims"
 
 # The ONE heading Kotlin may still name is the fallback for a section that
 # declares none, which is every section but this one. Pinned so it stays the only
@@ -227,9 +227,9 @@ import json
 print(len(next(s for s in json.load(open('$BJ'))['ui']['sections']
                if s['id'] == 'config')['pages']))
 ")
-[ "$COUNT" = 29 ] \
-  && ok "29 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs; #ipc: plus ipc; Controls merge: plus panels, panels-ui and panels-tools)" \
-  || bad "$COUNT config pages, expected 29 — a page was added or DELETED, and T5 cannot report a page that is gone"
+[ "$COUNT" = 31 ] \
+  && ok "31 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs; #ipc: plus ipc; Controls merge: plus panels, panels-ui and panels-tools; Apps Mesh strip: plus apps-mesh-members and identity)" \
+  || bad "$COUNT config pages, expected 31 — a page was added or DELETED, and T5 cannot report a page that is gone"
 
 echo "== T6: ACTIONS IS UNTOUCHED =="
 # The owner said to keep it as it is. Three things make that true: the same three
@@ -310,7 +310,8 @@ BEFORE = {'presets', 'controls', 'onehand', 'notify', 'launcher',
           'panels', 'panels-ui', 'panels-tools',  # added on purpose: Configs ▸ Setup ▸ Launcher ▸ Controls ▸ Panels (UI | Tools), hidden tabs of the merged Controls
           'update', 'kde_connect', 'animations',
           'apps-mesh',  # #733 added on purpose: Configs ▸ Mesh ▸ Apps Mesh (the Store's mesh page)
-          'ipc',        # #ipc added on purpose: Configs ▸ Network ▸ IPC (the fleet's IPC Mesh, libs:appstore IpcMeshPage)
+          'ipc',        # #ipc added on purpose: Configs ▸ Network ▸ IPC (the fleet's IPC Mesh, libs:appstore IpcMeshPage); now the Apps Mesh tab
+          'apps-mesh-members', 'identity',  # added on purpose: Apps Mesh became a strip, Apps | IPC | Identity (fleet Linux uids)
           'adb-shell',  # added on purpose: Configs ▸ Network ▸ ADB Shell (the privileged channel's page)
           'c3', 'network-sep-1',   # added on purpose: Network's C3 entry and its separator
           'firewall',   # added on purpose: Configs ▸ Network ▸ Firewall hosts the firewall engine's controls (About keeps a summary)
@@ -411,7 +412,7 @@ want = ['H:SETUP',
         'S:CONNECT',      'Account[ic_settings]',
         'S:APPS',         'Store[ic_refresh]', 'Permissions[ic_settings]',
         'S:LAUNCHER',     'Controls[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
-        'S:NETWORK',          'Firewall[ic_lock]', 'DNS[ic_world]', 'Cloud Mesh[ic_wg]', 'Apps Mesh[ic_mode_apps]', 'IPC[ic_mode_apps]', 'ADB Shell[ic_settings]',
+        'S:NETWORK',          'Firewall[ic_lock]', 'DNS[ic_world]', 'Cloud Mesh[ic_wg]', 'Apps Mesh[ic_mode_apps]', 'ADB Shell[ic_settings]',
         'H:FLEET',        'C3[ic_p_watchdog]', 'Peer Control[ic_kde]', 'Agents[ic_robot]',
         'H:OBSERVABILITY', 'Diagnostics[ic_settings]', 'About[ic_settings]',
         'H:ACTIONS',
@@ -422,7 +423,7 @@ else:
     print('rendered != spec: ' + ' | '.join(l for l in difflib.unified_diff(want, out, lineterm='', n=0)
                                            if l[:1] in '+-' and l[:3] not in ('+++', '---')))
 PY
-)" "grid = SETUP ▸ CONNECT[Account] ▸ APPS[Store,Permissions] ▸ LAUNCHER[Controls,One-Hand,Notify] ▸ NETWORK[Firewall,DNS,Cloud Mesh,Apps Mesh,IPC,ADB Shell] FLEET[C3,Peer Control,Agents] OBSERVABILITY[Diagnostics,About] ACTIONS[Update All,KDE Connect,Animations]"
+)" "grid = SETUP ▸ CONNECT[Account] ▸ APPS[Store,Permissions] ▸ LAUNCHER[Controls,One-Hand,Notify] ▸ NETWORK[Firewall,DNS,Cloud Mesh,Apps Mesh,ADB Shell] FLEET[C3,Peer Control,Agents] OBSERVABILITY[Diagnostics,About] ACTIONS[Update All,KDE Connect,Animations]"
 
 echo "== T12: THE AI PAGE IS GONE, not hidden — no route, target or tile names it (#723) =="
 # Deleting a declaration and leaving its door behind is the dead-tile failure:

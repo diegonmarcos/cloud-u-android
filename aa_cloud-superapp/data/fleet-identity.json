@@ -1,0 +1,14 @@
+{
+  "_doc": "THE declaration of each fleet app's Linux identity (Configs > Network > Apps Mesh > Identity; libs:appstore FleetIdentity). An app is in its OWN uid unless a group below names its package: a group is the set of apps that share ONE Linux uid through android:sharedUserId (same signing key required). The member list is the fleet IPC registry's (data/ipc-mesh.json members: id, pkg, dir), so a new app needs no entry here to appear with 'own uid'. A manifest whose sharedUserId resolves to its own package (the terminals' ${TERMUX_PACKAGE_NAME}) is in its own uid too. A group's shared_user_id is not repeated here when the app that owns it already declares it: `from` + `key` name that declaration (a file relative to the repo root and a dotted key in it), and the bake (libs:appstore build.gradle) and the guard (test/test-fleet-shared-uid.sh) both resolve it there. The manifests carry the literal (their own build.gradle fails when it drifts from the same key); test-fleet-shared-uid.sh fails when any manifest's android:sharedUserId differs from this declaration, or when a manifest outside a declared group sets one.",
+  "groups": [
+    {
+      "_doc": "cloud-shared-store: the two terminals run as ONE uid so the nix session reads, writes and executes the store in cld.termux's private home. The value is ac_cloud-termux/build.json::shared_store.shared_user_id (the cloud-shared-store change owns it and the manifests).",
+      "_doc_pending": "pending: true = not in force yet. Today each terminal is on its OWN uid (their manifests' sharedUserId=\"${TERMUX_PACKAGE_NAME}\" resolves to each app's own package, which shares nothing). While the value below does not resolve, the group is not applied: its members read 'own uid' and the guard accepts the own-package form. Once the cloud-shared-store change declares the value, the group is in force and the guard requires it in both manifests.",
+      "id": "terminal",
+      "pending": true,
+      "label": "Terminals",
+      "shared_user_id": { "from": "ac_cloud-termux/build.json", "key": "shared_store.shared_user_id" },
+      "members": ["cld.termux", "cld.termux.nix"]
+    }
+  ]
+}
