@@ -4,10 +4,17 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.time.Instant
 import java.time.ZoneId
+import android.app.Application
 
-/** MET Norway locationforecast/complete parsing and the dense badge head. */
+/** MET Norway locationforecast/complete parsing and the dense badge head.
+ *  Robolectric: the plain JVM classpath only has android.jar's org.json stubs. */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
 class WeatherModelTest {
     private val utc = ZoneId.of("UTC")
 
