@@ -9,7 +9,7 @@
   "linux_tools": {
     "_doc": "THE declaration of what both terminals ship from cloud-u-linux: the `linux-store` and `linux-account` CLIs and the fish greeting. ONE pin, declared like rootfs.json::shared_toolbelt: the two repositories are separate git histories, so a file cannot be shared by path; both are public, so the bakes read each file at this exact commit from raw.githubusercontent.com. `ref` is the content address: bumping it (and the per-file sha256 beside it) is an edit to THIS file, which is an identity file of both rootfs artifacts, so a CLI or greeting change republishes both terminals instead of hiding outside the gate. fetch-linux-tools.py is the only fetcher; it refuses any byte that differs from `sha256` (the same discipline as fetch-proot.py), and both bakes install exactly what it plans: ac_cloud-termux/rootfs/build-rootfs.sh into the tree, ac_cloud-nix-on-droid bake_default_packages.py into the bootstrap zip. The install paths are the same absolute paths in both images, and login-init.sh makes sure /usr/local/bin is on PATH and /usr/share is a fish data dir, so neither terminal needs a different wiring. terminal-parity-guard.py fails when one terminal stops installing or verifying any entry below.",
     "repo": "diegonmarcos/cloud-u-linux",
-    "ref": "92e02c639966048c428e55cea1a204ef495115b3",
+    "ref": "980627cdd3da2eef17ea73e717dc34702cf8395d",
     "licence": {
       "_doc": "Checked at the pin: the repository root carries LICENSE (PolyForm Noncommercial 1.0.0, `Required Notice: Copyright 2026 Diego Nepomuceno Marcos`) and LICENSING.md says all original code in it is the licensor's own with no third-party carve-outs; da_dtk/ repeats the same LICENSE. These files are therefore the owner's own work, not a third party's, and are redistributed here by the copyright holder; they travel as separate files inside the rootfs artifacts (aggregation), never compiled into the GPL-3.0-only terminal apps. licenses/inventory.json lists each as a `fetched:` subject.",
       "spdx": "PolyForm-Noncommercial-1.0.0",
@@ -19,21 +19,21 @@
     "files": {
       "linux-store": {
         "path": "da_linux-store/linux-store",
-        "sha256": "9d71e595b8655dbb958fdf0b1682c111e0047141b3a13640a9ce62a295638772",
+        "sha256": "485533a41b6bb4f00cecc55df4ff0cca68ef6a97c90c78b68df23c7004cc6e67",
         "install": "usr/local/bin/linux-store",
         "mode": "0755",
         "role": "cli"
       },
       "linux-account": {
         "path": "da_linux-account/linux-account",
-        "sha256": "8d30c800c4ffc7c80edd2d10d698f134056c59b4462fda3a2a5cdcfb9d5aa313",
+        "sha256": "757a3731a2f3dfc822f4b1c018537c6eafd6cecd57884cc475903c0117c838eb",
         "install": "usr/local/bin/linux-account",
         "mode": "0755",
         "role": "cli"
       },
       "fish_greeting": {
         "path": "da_dtk/commands/provision/fish/fish-functions/fish_greeting.fish",
-        "sha256": "9317d608d595b77c3f43cbf8d96fc5dc73cb6c2e91738c0c44c3f9764336ec14",
+        "sha256": "c237414f6217f30f5dadc1e0e7dd7dfb384080016cd5d529679cb35a66c4780e",
         "install": "usr/share/fish/vendor_functions.d/fish_greeting.fish",
         "mode": "0644",
         "role": "fish_function"

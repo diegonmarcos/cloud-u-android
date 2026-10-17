@@ -23,7 +23,14 @@
 # started anyway and a taken port ends it at once with EADDRINUSE in the log -- never a second
 # listener.
 cloud_webserver_listening() {
-    _cw_hex="$(printf '%04X' "$1")"
+    # The port as 4 upper-case hex digits, by shell arithmetic only: mksh on Android has no
+    # printf builtin and bin/login's PATH has no printf ("login[186]: printf: inaccessible").
+    _cw_n=$(( $1 + 0 )); _cw_hex=""
+    for _cw_i in 1 2 3 4; do
+        _cw_d=$(( _cw_n % 16 )); _cw_n=$(( _cw_n / 16 ))
+        case "$_cw_d" in 10) _cw_d=A ;; 11) _cw_d=B ;; 12) _cw_d=C ;; 13) _cw_d=D ;; 14) _cw_d=E ;; 15) _cw_d=F ;; esac
+        _cw_hex="$_cw_d$_cw_hex"
+    done
     for _cw_f in ${CLOUD_WEBSERVER_PROC_NET:-/proc/net/tcp /proc/net/tcp6}; do
         [ -r "$_cw_f" ] || continue
         /system/bin/grep -qiE "^ *[0-9]+: [0-9A-F]+:$_cw_hex [0-9A-F]+:[0-9A-F]+ 0A " "$_cw_f" && return 0

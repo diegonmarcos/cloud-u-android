@@ -116,18 +116,18 @@ cloud_linux_first_start() {
     fi
     _lbase="${GIT_BASE:-$_lh/cloud-shared-store/git}"
     _lmiss=""
-    [ -d "$_lbase" ] || _lmiss="$_lmiss the git base ($_lbase),"
+    [ -d "$_lbase" ] || _lmiss="$_lmiss git base,"
     _ldecl="${LINUX_STORE_DECLARATION:-}"
     if [ -z "$_ldecl" ] && [ -f "$_lbase/cloud-me_configs/configs.json" ] && command -v jq >/dev/null 2>&1; then
         _lup="$(jq -r --arg u "${LINUX_STORE_USER:-diego-admin}" '.configs_users[]? | select(.id == $u) | .path // empty' \
             "$_lbase/cloud-me_configs/configs.json" 2>/dev/null)" || _lup=""
         [ -z "$_lup" ] || _ldecl="$_lbase/cloud-me_configs/$_lup/deb-user-configs/linux-store.json"
     fi
-    [ -n "$_ldecl" ] && [ -f "$_ldecl" ] || _lmiss="$_lmiss the cloud-me_configs declaration (deb-user-configs/linux-store.json under $_lbase/cloud-me_configs),"
+    [ -n "$_ldecl" ] && [ -f "$_ldecl" ] || _lmiss="$_lmiss cloud-me_configs,"
     _lkey="${SOPS_AGE_KEY_FILE:-${XDG_CONFIG_HOME:-$_lh/.config}/sops/age/keys.txt}"
-    [ -s "$_lkey" ] || [ -n "${SOPS_AGE_KEY:-}" ] || _lmiss="$_lmiss the age key ($_lkey),"
+    [ -s "$_lkey" ] || [ -n "${SOPS_AGE_KEY:-}" ] || _lmiss="$_lmiss age key,"
     if [ -n "$_lmiss" ]; then
-        [ "$_ltty" = 0 ] || echo "linux-store: not switched yet, missing${_lmiss%,}; place it, then run: linux-store switch" >&2
+        [ "$_ltty" = 0 ] || echo "linux-store: not switched yet (missing:${_lmiss%,}); hint: linux-store status, then linux-store switch" >&2
         return 0
     fi
     mkdir -p "$_lh/.linux-store" 2>/dev/null && chmod 700 "$_lh/.linux-store" 2>/dev/null

@@ -579,7 +579,7 @@ def storage_setup(shared_root_name: str, roots=SHARED_STORE_PROBE_ROOTS,
         '  else\n'
         f'    cloud_storage_unlink "$HOME/{store_dir}"\n'
         '  fi\n'
-        f'  echo "⚠ {store_dir}: the shared uid with {owner} is not in effect, so ~/{store_dir} is the legacy {shared_root_name} mirror (fallback). The live store: sftp -P {STORE_SFTP_PORT} 127.0.0.1:{store_dir}/" >&2\n'
+        f'  echo "⚠ ~/{store_dir} is the {shared_root_name} mirror (no shared uid yet: reinstall {owner} with it); live store: sftp -P {STORE_SFTP_PORT} 127.0.0.1:{store_dir}/" >&2\n'
         'fi\n'
         'cloud_trace "cloud-shared-store: $CLOUD_SHARED_STORE_MODE ($CLOUD_STORE_OWNER)"\n'
         f'export CLOUD_SHARED_STORE_MODE CLOUD_SHARED_STORE_SFTP="sftp://127.0.0.1:{STORE_SFTP_PORT}/~/{store_dir}"\n'
@@ -626,6 +626,34 @@ def storage_setup(shared_root_name: str, roots=SHARED_STORE_PROBE_ROOTS,
         'fi\n'
         + store
     )
+
+# (part of startup-step storage_links: runs in the same pre-proot block)
+def passwd_setup(app_id: str, shell: str, name: str = "nix-on-droid") -> str:
+    """bin/login's /etc/passwd + /etc/group entry for the app's REAL uid/gid (Android assigns it at
+    install, e.g. 10597, so nothing baked can match it): without it whoami says "cannot find name
+    for user ID". /etc in the guest is files/usr/etc. Any older <name> line or line for the same id
+    is replaced; an up-to-date file is left alone. mksh builtins + /system/bin tools only, never
+    fails the login."""
+    etc = f"/data/data/{app_id}/files/usr/etc"
+    return (
+        'cloud_ids_entry() {\n'
+        '  [ -f "$1" ] && /system/bin/grep -qxF "$3" "$1" 2>/dev/null && return 0\n'
+        '  { if [ -f "$1" ]; then while IFS= read -r l; do\n'
+        f'      case "$l" in {name}:*) continue ;; esac\n'
+        '      r="${l#*:*:}"; [ "${r%%:*}" = "$2" ] && continue\n'
+        '      echo "$l"\n'
+        '    done < "$1"; fi; echo "$3"; } > "$1.cloud.$$" && /system/bin/mv -f "$1.cloud.$$" "$1"\n'
+        '}\n'
+        f'CLOUD_ETC={etc}\n'
+        'CLOUD_UID="$(/system/bin/id -u 2>/dev/null)" || CLOUD_UID=""\n'
+        'CLOUD_GID="$(/system/bin/id -g 2>/dev/null)" || CLOUD_GID=""\n'
+        'if [ -n "$CLOUD_UID" ] && [ -n "$CLOUD_GID" ]; then\n'
+        f'  cloud_ids_entry "$CLOUD_ETC/passwd" "$CLOUD_UID" "{name}:x:$CLOUD_UID:$CLOUD_GID:{name}:$HOME:{shell}" 2>/dev/null || true\n'
+        f'  cloud_ids_entry "$CLOUD_ETC/group" "$CLOUD_GID" "{name}:x:$CLOUD_GID:" 2>/dev/null || true\n'
+        f'  cloud_trace "passwd: {name} = $CLOUD_UID:$CLOUD_GID"\n'
+        'fi\n'
+    )
+
 
 def add_login_trace(login_inner: str) -> str:
     """#715 -- define the trace and the bounded shell start, and log the start.
@@ -773,13 +801,20 @@ def patch_bin_login_rish(bin_login: str, app_id: str) -> str:
     etc_bind = ETC_BIND_FMT.format(app_id=app_id)
     if bin_login.count(etc_bind) != 1:
         raise ValueError(f"expected exactly one /etc bind in bin/login's proot exec:\n  {etc_bind}")
-    rish = ""
+    exec_line = f"exec /data/data/{app_id}/files/usr/bin/proot-static \\"
+    if bin_login.count(exec_line) != 1:
+        raise ValueError(f"expected exactly one proot-static exec line in bin/login:\n  {exec_line}")
+    # Each bind only when RishBridge has staged its source: proot warns "can't sanitize binding"
+    # on every login for a missing one (the app writes them on launch, not before the first login).
+    setup = 'CLOUD_RISH_BINDS=""\n'
     for b in binds:
         stage, guest = b.get("stage"), b.get("guest")
         if not stage or not guest:
             raise ValueError(f"shizuku_client.binds entry needs stage+guest: {b!r}")
-        rish += f"  -b /data/data/{app_id}/files/usr/{stage}:{guest} \\\n"
-    return bin_login.replace(etc_bind, etc_bind + rish, 1)
+        src = f"/data/data/{app_id}/files/usr/{stage}"
+        setup += f'[ ! -e {src} ] || CLOUD_RISH_BINDS="$CLOUD_RISH_BINDS -b {src}:{guest}"\n'
+    bin_login = bin_login.replace(exec_line, setup + exec_line, 1)
+    return bin_login.replace(etc_bind, etc_bind + "  $CLOUD_RISH_BINDS \\\n", 1)
 
 
 def webserver_build_json() -> Path:
@@ -1133,7 +1168,8 @@ def main() -> int:
                 print(f"FAIL: expected exactly one proot-static exec line in bin/login:\n  {exec_line}",
                       file=sys.stderr)
                 return 1
-            mount_setup = BIN_LOGIN_TRACE + storage_setup(shared_root_name) + 'cloud_trace "exec proot-static"\n\n'
+            mount_setup = (BIN_LOGIN_TRACE + storage_setup(shared_root_name)
+                           + passwd_setup(app_id, f"/{profile_link}/bin/{login_shell}")) + 'cloud_trace "exec proot-static"\n\n'
             bin_login = bin_login.replace(exec_line, mount_setup + exec_line, 1)
 
             # ── #758: lookups go to the app's bridge, never to a server of the zip's own

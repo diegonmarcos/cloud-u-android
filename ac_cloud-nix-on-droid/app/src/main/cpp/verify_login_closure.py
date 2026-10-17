@@ -104,7 +104,10 @@ class Namespace:
         exec_at = login.rfind(f"exec {self.prefix}/bin/proot-static")
         # Only the exec statement's own binds: the conditional BIND_PROC_* ones
         # above it are variables by the time proot sees them.
-        for src, dst in BIND.findall(login[exec_at:] if exec_at >= 0 else ""):
+        # Plus the rish binds, which bin/login adds through $CLOUD_RISH_BINDS only when the app
+        # has staged their sources (bake_default_packages.patch_bin_login_rish).
+        rish = "\n".join(l for l in login.splitlines() if 'CLOUD_RISH_BINDS="' in l)
+        for src, dst in BIND.findall((login[exec_at:] if exec_at >= 0 else "") + "\n" + rish):
             rel = self.rel_of_prefix(src)
             if rel is not None:
                 self.binds.append((dst.rstrip("/") or "/", rel))

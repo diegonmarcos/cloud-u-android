@@ -326,10 +326,10 @@ def mutate(label, rel, old, new, expect):
 FETCHER = "ab_cloud-terminal-store/fetch-linux-tools.py"
 LI = "ab_cloud-terminal-store/login-init.sh"
 mutate("the fetcher stops comparing hashes", FETCHER, "if got != f[\"sha256\"]:", "if False:", "F")
-mutate("switch runs without an age key", LI, '[ -s "$_lkey" ] || [ -n "${SOPS_AGE_KEY:-}" ] || _lmiss="$_lmiss the age key ($_lkey),"', ":", "L4")
+mutate("switch runs without an age key", LI, '[ -s "$_lkey" ] || [ -n "${SOPS_AGE_KEY:-}" ] || _lmiss="$_lmiss age key,"', ":", "L4")
 mutate("the switch runs on every start", LI, '    if [ -e "$_lh/.linux-store/.first-switch-started" ]; then', "    if false; then", "L6")
 mutate("the notices print on every session, terminal or not", LI, "_ltty=0; [ -t 2 ] && _ltty=1", "_ltty=1", "L9")
-mutate("the missing line forgets the command to run", LI, "place it, then run: linux-store switch", "place it", "L1")
+mutate("the missing line forgets the command to run", LI, "hint: linux-store status, then linux-store switch", "hint: linux-store status", "L1")
 mutate("the step is fatal under set -e", LI, "cloud_linux_first_start || true", "cloud_linux_first_start; false", "L10")
 mutate("a switched home is switched again", LI, '    [ -L "$_lh/.linux-store/current" ] && return 0\n', "", "L8")
 mutate("/usr/local/bin is never put on PATH", LI, '*) PATH="${PATH:+$PATH:}/usr/local/bin"; export PATH ;;', "*) ;;", "L3")
