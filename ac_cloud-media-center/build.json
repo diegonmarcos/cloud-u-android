@@ -206,6 +206,25 @@
       "feed",
       "movies",
       "documentaries"
-    ]
+    ],
+    "shared": {
+      "_doc": "The legal multi-source player's declarations, shared with My Movies (diegonmarcos.github.io c_Circus/movies) and pinned separately from data.source: regen.py fetches these at THIS commit and writes them verbatim (sources -> web/data/sources.json, denylist -> test/legal-denylist.json, core -> web/assets/sources-core.js wrapped as a plain script). Change the list in that repo, then move this pin and re-run regen.",
+      "repo": "diegonmarcos/diegonmarcos.github.io",
+      "commit": "a7e12db",
+      "files": {
+        "sources": [
+          "c_Circus/movies/src/data/sources.json",
+          "web/data/sources.json"
+        ],
+        "denylist": [
+          "c_Circus/movies/src/data/legal-denylist.json",
+          "test/legal-denylist.json"
+        ],
+        "core": [
+          "c_Circus/movies/src/lib/sources-core.mjs",
+          "web/assets/sources-core.js"
+        ]
+      }
+    }
   }
 }

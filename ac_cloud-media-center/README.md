@@ -47,6 +47,21 @@ glue, pinned by sha256 in `build.json::tauri.glue`;
 `test/test-media-center-no-kotlin.sh` fails CI and `build.sh` fails the build
 on anything else.
 
-Testers: `test/test-media-center-pages.sh` (every page renders its data, the
+**Movies player (legal sources only).** The detail sheet's "Watch · sources"
+opens `web/assets/player.js`: a per-title picker over the list in
+`web/data/sources.json` — Jellyfin/Emby/Plex by IMDb id, a cloud-drive folder
+(`index.json`) or files picked on the phone, TMDB where-to-watch (logos + deep
+links into each service's app), the official YouTube trailer, Internet Archive
+public-domain films and Blender open movies, and Internet Archive / pasted
+torrents (WebTorrent, sequential). Buffer modes 30 s / 2 min / 10 min / full /
+offline. Only sources that have the title are listed. The list, the logic
+(`web/assets/sources-core.js`) and the denylist (`test/legal-denylist.json`)
+are copies from diegonmarcos.github.io `c_Circus/movies` at
+`build.json::data.shared.commit` (regen.py). Keys and tokens are entered in the
+player's ⚙ and stay in the webview's storage. DLNA/UPnP discovery and
+ExoPlayer/libtorrent would need Kotlin or new Rust plugins, which this app's
+Rust-and-web rule does not allow yet.
+
+Testers: `test/test-media-center-legal.sh` (repo-wide denylist guard, the shared core, the player wiring), `test/test-media-center-pages.sh` (every page renders its data, the
 data's pins, the link rules, the Tauri wiring), `test/test-media-center-no-kotlin.sh`,
 `test/test-fleet-setup.sh`.

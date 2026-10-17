@@ -1,0 +1,192 @@
+{
+  "_doc": "THE one declaration of where My Movies (web, c_Circus/movies) and cloud-media-center (Android, cloud-u-android/ac_cloud-media-center, copied in by data/regen.py at a pinned commit) may look for a title. LEGAL SOURCES ONLY: the user's own servers and files, official stores via TMDB watch/providers, official trailers, and public-domain / Creative-Commons catalogues. Unlicensed streaming embeds and public torrent indexes are forbidden; legal-denylist.json (beside this file, never bundled into an app) is grepped over both repos by the legal guard (tests/legal-guard.sh here, test/test-media-center-legal.sh in Android), which skips only that file and the guard itself. Credentials (TMDB key, Jellyfin/Plex/Emby tokens) are never committed: each app reads them from its settings (browser localStorage / the app's own storage) at runtime. To add a source: append an entry with a known `kind`; the picker orders by `order`.",
+  "version": 1,
+  "kinds": [
+    "library",
+    "local",
+    "providers",
+    "trailer",
+    "catalogue",
+    "torrent"
+  ],
+  "sources": [
+    {
+      "id": "jellyfin",
+      "kind": "library",
+      "name": "Jellyfin",
+      "order": 10,
+      "enabled": true,
+      "api": "jellyfin",
+      "settings": [
+        "url",
+        "token"
+      ],
+      "_doc": "GET {url}/Items?Recursive=true&AnyProviderIdEquals=imdb.<tt>&IncludeItemTypes=Movie,Series&Fields=ProviderIds&api_key=<token>; plays {url}/Videos/<id>/stream?static=true&api_key=<token>."
+    },
+    {
+      "id": "emby",
+      "kind": "library",
+      "name": "Emby",
+      "order": 11,
+      "enabled": true,
+      "api": "jellyfin",
+      "prefix": "/emby",
+      "settings": [
+        "url",
+        "token"
+      ],
+      "_doc": "Emby speaks the same Items API as Jellyfin under /emby."
+    },
+    {
+      "id": "plex",
+      "kind": "library",
+      "name": "Plex",
+      "order": 12,
+      "enabled": true,
+      "api": "plex",
+      "settings": [
+        "url",
+        "token"
+      ],
+      "_doc": "GET {url}/library/all?guid=imdb://<tt>&X-Plex-Token=<token> (Accept: application/json); plays {url}<Media[0].Part[0].key>?X-Plex-Token=<token>."
+    },
+    {
+      "id": "drive",
+      "kind": "local",
+      "name": "Cloud drive",
+      "order": 20,
+      "enabled": true,
+      "settings": [
+        "url"
+      ],
+      "_doc": "The cloud-shared-store / cloud-drive media folder served over HTTP: {url}/index.json lists [{name, path}] (or a plain array of paths). A file matches when its name holds the IMDb id, or the title and year."
+    },
+    {
+      "id": "device",
+      "kind": "local",
+      "name": "Files on this device",
+      "order": 21,
+      "enabled": true,
+      "settings": [],
+      "_doc": "Files the user picks (file input / folder). Matched like drive; played from a blob URL, nothing uploaded."
+    },
+    {
+      "id": "trailer",
+      "kind": "trailer",
+      "name": "Official trailer",
+      "order": 30,
+      "enabled": true,
+      "settings": [
+        "tmdb_key"
+      ],
+      "_doc": "TMDB /{movie|tv}/{id}/videos: an official YouTube Trailer, embedded from youtube-nocookie.com."
+    },
+    {
+      "id": "watch",
+      "kind": "providers",
+      "name": "Where to watch",
+      "order": 40,
+      "enabled": true,
+      "settings": [
+        "tmdb_key",
+        "region"
+      ],
+      "_doc": "TMDB /{movie|tv}/{id}/watch/providers for the region: flatrate / free / ads / rent / buy, each a logo and a deep link (provider_links below, else TMDB's region page)."
+    },
+    {
+      "id": "archive",
+      "kind": "catalogue",
+      "name": "Internet Archive",
+      "order": 50,
+      "enabled": true,
+      "settings": [],
+      "search": "https://archive.org/advancedsearch.php?q={query}&fl[]=identifier&fl[]=title&fl[]=year&rows=25&output=json",
+      "query": "title:({title}) AND mediatype:movies AND collection:feature_films",
+      "_doc": "Public-domain feature films, matched by title and year; plays the item's MP4 from archive.org/download, or its official per-item torrent."
+    },
+    {
+      "id": "blender",
+      "kind": "catalogue",
+      "name": "Blender open movies",
+      "order": 51,
+      "enabled": true,
+      "settings": [],
+      "items": [
+        {
+          "title": "Sintel",
+          "year": "2010",
+          "url": "https://download.blender.org/durian/movies/Sintel.2010.1080p.mkv"
+        }
+      ],
+      "_doc": "Official direct downloads from download.blender.org (CC-BY). Blender publishes no live official torrents (checked 2026-10-17), so this is HTTP only."
+    },
+    {
+      "id": "archive-torrent",
+      "kind": "torrent",
+      "name": "Internet Archive torrents",
+      "order": 60,
+      "enabled": true,
+      "settings": [],
+      "torrent": "https://archive.org/download/{identifier}/{identifier}_archive.torrent",
+      "_doc": "The Archive's own per-item .torrent (it webseeds from archive.org, so the browser can stream it). The only searchable torrent source."
+    }
+  ],
+  "dropped": [
+    {
+      "name": "Public Domain Torrents",
+      "url": "publicdomaintorrents.info",
+      "checked": "2026-10-17",
+      "why": "does not answer (connection fails on http and https)"
+    },
+    {
+      "name": "VODO",
+      "url": "vodo.net",
+      "checked": "2026-10-17",
+      "why": "does not answer (connection fails on http and https)"
+    },
+    {
+      "name": "Legit Torrents",
+      "url": "legittorrents.info",
+      "checked": "2026-10-17",
+      "why": "only a static memorial page; every catalogue/search/RSS path is 404"
+    },
+    {
+      "name": "Academic Torrents",
+      "url": "academictorrents.com",
+      "checked": "2026-10-17",
+      "why": "live, but browse is anti-scrape and rss.xml/database.xml send no CORS header, so neither app (both run in a browser engine) can read it"
+    },
+    {
+      "name": "Blender official torrents",
+      "url": "download.blender.org",
+      "checked": "2026-10-17",
+      "why": "no .torrent files are published; the films are kept as direct downloads (source 'blender')"
+    }
+  ],
+  "provider_links": {
+    "_doc": "TMDB provider_id -> a search deep link on the service ({title} is URL-encoded). Android opens these in the service's own app via the system (app links); anything not listed opens TMDB's region page.",
+    "8": "https://www.netflix.com/search?q={title}",
+    "9": "https://www.primevideo.com/search?phrase={title}",
+    "119": "https://www.primevideo.com/search?phrase={title}",
+    "337": "https://www.disneyplus.com/search?q={title}",
+    "350": "https://tv.apple.com/search?term={title}",
+    "2": "https://tv.apple.com/search?term={title}",
+    "1899": "https://play.max.com/search?q={title}",
+    "384": "https://play.max.com/search?q={title}",
+    "15": "https://www.hulu.com/search?q={title}",
+    "531": "https://www.paramountplus.com/search/?q={title}",
+    "386": "https://www.peacocktv.com/search?q={title}",
+    "73": "https://tubitv.com/search/{title}",
+    "300": "https://pluto.tv/search/details?query={title}",
+    "538": "https://watch.plex.tv/search?q={title}",
+    "613": "https://www.amazon.com/s?k={title}&i=instant-video",
+    "207": "https://therokuchannel.roku.com/search/{title}",
+    "283": "https://www.crunchyroll.com/search?q={title}",
+    "192": "https://www.youtube.com/results?search_query={title}",
+    "3": "https://play.google.com/store/search?q={title}&c=movies",
+    "10": "https://www.amazon.com/s?k={title}&i=instant-video",
+    "68": "https://www.microsoft.com/en-us/search/shop/movies?q={title}",
+    "257": "https://www.fubo.tv/welcome/search?q={title}",
+    "1796": "https://www.netflix.com/search?q={title}"
+  }
+}

@@ -180,7 +180,7 @@
     return '<div class="sheet__grab"></div><div class="detail">' + (m.poster ? '<img alt="" src="' + esc(m.poster) + '">' : '') +
       '<div><h2>' + esc(m.title) + '</h2><div class="post__meta">' + esc([m.year, m.runtime, m.type === 'series' ? 'Series' : '', m.rating && m.rating !== 'N/A' ? '★ ' + m.rating : ''].filter(Boolean).join(' · ')) +
       '</div><div class="post__meta">' + esc(m.genre) + '</div>' + (m.director && m.director !== 'N/A' ? '<div class="post__meta">' + esc(m.director) + '</div>' : '') + '</div></div>' +
-      '<p>' + esc(m.plot) + '</p>' + ext((d.imdb || 'https://www.imdb.com/title/') + m.id + '/', 'IMDb ↗', 'btn btn--accent') +
+      '<p>' + esc(m.plot) + '</p>' + '<button class="btn btn--accent" data-play="' + esc(m.id) + '">▶ Watch · sources</button> ' + ext((d.imdb || 'https://www.imdb.com/title/') + m.id + '/', 'IMDb ↗', 'btn') +
       ext('https://www.youtube.com/results?search_query=' + encodeURIComponent(m.title + ' ' + m.year + ' trailer'), 'Trailer ↗', 'btn');
   }
 
@@ -260,11 +260,15 @@
       var mv = e.target.closest('[data-movie]');
       if (mv && sheet) {
         var m = (data.movies && data.movies[mv.getAttribute('data-movie')]) || (data.films || []).filter(function (f) { return f.id === mv.getAttribute('data-movie'); })[0];
-        if (m) { sheet.querySelector('.sheet__panel').innerHTML = renderMovieDetail(data, m); sheet.hidden = false; }
+        if (m) { sheet.__movie = m; sheet.querySelector('.sheet__panel').innerHTML = renderMovieDetail(data, m); sheet.hidden = false; }
       }
     });
     main.addEventListener('error', function (e) { if (e.target.classList && e.target.classList.contains('cover')) e.target.remove(); }, true);
-    if (sheet) sheet.addEventListener('click', function (e) { if (e.target === sheet) sheet.hidden = true; });
+    if (sheet) sheet.addEventListener('click', function (e) {
+      if (e.target === sheet) { sheet.hidden = true; return; }
+      // The legal multi-source player (assets/player.js + the shared sources-core.js).
+      if (e.target.closest('[data-play]') && root.MoviePlayer && sheet.__movie) { sheet.hidden = true; root.MoviePlayer.open(sheet.__movie); }
+    });
   }
 
   var api = { PAGES: PAGES, RENDER: RENDER, esc: esc, md: md, tabsHtml: tabsHtml, renderMovieDetail: renderMovieDetail };
