@@ -25,12 +25,32 @@ class EdgeGestureMachineTest {
         assertEquals(Outcome.NONE, g.up(900))
     }
 
-    @Test fun pushBeforeHoldIsPassThroughNeverMenu() {
+    /** REGRESSION GUARD (Samsung, 2026-10-17): a natural inward swipe with NO hold must open the menu. */
+    @Test fun directInwardSwipeOpensMenuWithoutHold() {
         val g = m(); g.down(1000f, 500f, 0)
-        assertEquals(State.PASS, g.move(900f, 500f, 100)) // inward 100px, but only 100ms in
-        assertEquals(State.PASS, g.move(800f, 500f, 900)) // staying down later does not revive it
+        assertEquals(State.PENDING, g.move(990f, 500f, 30))  // 10px: still deciding
+        assertEquals(State.MENU, g.move(900f, 500f, 100))    // inward 100px, only 100ms in
+        assertTrue(g.claimed)
+        assertEquals(Outcome.FIRE, g.up(150))
+    }
+
+    @Test fun directSwipeThroughASectorGapStillOpens() {
+        val g = m(); g.down(1000f, 500f, 0)
+        // 12 degrees sits in the gap between center and top_middle: still "inward"
+        assertEquals(State.MENU, g.move(1000f - 60f, 500f - 60f * Math.tan(Math.toRadians(12.0)).toFloat(), 80))
+    }
+
+    @Test fun verticalSweepAlongTheEdgeIsPassThroughNeverMenu() {
+        val g = m(); g.down(1000f, 500f, 0)
+        assertEquals(State.PASS, g.move(998f, 600f, 100))   // along the edge = a scroll, not ours
+        assertEquals(State.PASS, g.move(900f, 600f, 900))   // a later inward drag does not revive it
         assertFalse(g.claimed)
         assertEquals(Outcome.TAP, g.up(950))
+    }
+
+    @Test fun outwardSwipeIsPassThrough() {
+        val g = m(); g.down(1000f, 500f, 0)
+        assertEquals(State.PASS, g.move(1040f, 500f, 50))
     }
 
     @Test fun holdThenInwardPushOpensMenuAndReleaseFires() {

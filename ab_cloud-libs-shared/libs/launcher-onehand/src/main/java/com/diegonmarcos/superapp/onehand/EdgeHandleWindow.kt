@@ -10,11 +10,14 @@ import android.view.WindowManager.LayoutParams as LP
  */
 object EdgeHandleWindow {
     /**
-     * 24dp, not 12: a 12dp strip at the border sits wholly inside the system back-gesture band (~24dp) and
-     * the curved-edge touch-reject zone, so a thumb never lands on it and the menu "doesn't work at all".
-     * 24dp spans that band; the strip's [systemGestureExclusionRects] keep the back gesture off it.
+     * 28dp: the strip must stick out past the system back-gesture band (~24dp) AND Samsung's curved-edge
+     * touch-reject zone, or a thumb never lands on it and the menu "doesn't work at all" (12dp and 24dp
+     * both failed on the owner's phone). Never below [MIN_HIT_DP].
      */
-    const val MAX_THICKNESS_DP = 24
+    const val MAX_THICKNESS_DP = 28
+
+    /** The narrowest hit area a strip may ever have, whatever a pref or build.json says. */
+    const val MIN_HIT_DP = 26
     const val MAX_LENGTH_DP = 160
 
     /** The widest strip the owner may ask for in Configs (Samsung's gesture zone can be wider than the default strip clears). */
@@ -33,7 +36,7 @@ object EdgeHandleWindow {
     /** [lengthPx]/[thicknessPx] are what the config asked for; the result is clamped to the caps. */
     fun size(edge: OneHandConfig.Edge, lengthPx: Int, thicknessPx: Int, density: Float, maxThicknessDp: Int = MAX_THICKNESS_DP): Size {
         val len = lengthPx.coerceIn(1, (MAX_LENGTH_DP * density).toInt())
-        val thick = thicknessPx.coerceIn(1, (maxThicknessDp * density).toInt())
+        val thick = thicknessPx.coerceIn((MIN_HIT_DP * density).toInt(), (maxOf(maxThicknessDp, MIN_HIT_DP) * density).toInt())
         return if (edge == OneHandConfig.Edge.BOTTOM) Size(len, thick) else Size(thick, len)
     }
 }

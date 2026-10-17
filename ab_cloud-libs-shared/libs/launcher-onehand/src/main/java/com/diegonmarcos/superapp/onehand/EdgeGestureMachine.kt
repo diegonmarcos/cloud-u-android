@@ -12,7 +12,8 @@ import kotlin.math.hypot
  * very thin - see [EdgeHandleWindow]; this machine guarantees we never ACT on a tap.)
  *
  *   IDLE --down--> PENDING --hold elapsed--> ARMED --inward push past threshold--> MENU
- *   PENDING --moved past slop before hold--> PASS (not ours until the finger lifts)
+ *   PENDING --inward swipe past the push threshold--> MENU   (a plain edge swipe opens it too)
+ *   PENDING --moved past slop, NOT inward, before hold--> PASS (a scroll/sweep: not ours until the finger lifts)
  *   MENU --up--> [Outcome.FIRE]; ARMED --up--> [Outcome.NONE]; PENDING/PASS --up--> [Outcome.TAP]
  */
 class EdgeGestureMachine(
@@ -45,8 +46,16 @@ class EdgeGestureMachine(
         tick(t)
         val dx = x - downX; val dy = y - downY
         when (state) {
-            State.PENDING -> if (hypot(dx, dy) > slopPx) state = State.PASS
-            State.ARMED -> if (SwipeClassifier.sector(edge, dx, dy) != null && hypot(dx, dy) > pushPx) state = State.MENU
+            // A direct inward swipe opens the menu WITHOUT the hold. Requiring a still hold first was the
+            // 2026-10-16 regression (ddf8e01a2): on Samsung a thumb held still on the curved edge is
+            // grip-rejected by the touch firmware, and a natural swipe moved past slop inside the hold time,
+            // went to PASS and was ignored for the rest of the stream, so the menu never opened on a phone.
+            State.PENDING -> {
+                val d = hypot(dx, dy)
+                if (inward(edge, dx, dy) && d > pushPx) state = State.MENU
+                else if (d > slopPx && !inward(edge, dx, dy)) state = State.PASS
+            }
+            State.ARMED -> if (inward(edge, dx, dy) && hypot(dx, dy) > pushPx) state = State.MENU
             else -> {}
         }
         return state
@@ -66,6 +75,20 @@ class EdgeGestureMachine(
     fun cancel() { state = State.IDLE }
 
     companion object {
+        /** Widest tilt from straight-inward that still counts as "into the screen" (the outermost sector edge). */
+        const val MAX_INWARD_TILT_DEG = 72.0
+
+        /** True when the drag points into the screen from [edge] (any sector, including the gaps between them). */
+        fun inward(edge: OneHandConfig.Edge, dx: Float, dy: Float): Boolean {
+            val (inw, lat) = when (edge) {
+                OneHandConfig.Edge.RIGHT -> -dx to dy
+                OneHandConfig.Edge.LEFT -> dx to dy
+                OneHandConfig.Edge.BOTTOM -> -dy to dx
+            }
+            if (inw <= 0f) return false
+            return Math.toDegrees(kotlin.math.atan2(kotlin.math.abs(lat).toDouble(), inw.toDouble())) <= MAX_INWARD_TILT_DEG
+        }
+
         /** A tap lasts well under this; a hold shorter than it would claim taps. */
         const val MIN_HOLD_MS = 150L
 

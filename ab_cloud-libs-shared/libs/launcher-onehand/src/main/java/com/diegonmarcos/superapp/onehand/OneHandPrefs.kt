@@ -135,11 +135,11 @@ object OneHandPrefs {
     }
 
     // ── Strip geometry the owner can tune on a phone whose gesture zone differs (Samsung sensitivity) ──
-    const val STRIP_DEFAULT_DP = 24
-    const val STRIP_MIN_DP = 12
+    const val STRIP_DEFAULT_DP = 28
+    const val STRIP_MIN_DP = EdgeHandleWindow.MIN_HIT_DP
     const val INSET_MAX_DP = 48
 
-    /** Strip thickness; 24dp unless the owner changed it. Clamped so a hand-edited value cannot make a dead band. */
+    /** Strip thickness; 28dp unless the owner changed it. Clamped so a hand-edited value cannot make a dead band. */
     fun stripWidthDp(ctx: Context): Int =
         prefs(ctx).getInt("strip_width_dp", STRIP_DEFAULT_DP).coerceIn(STRIP_MIN_DP, EdgeHandleWindow.USER_MAX_THICKNESS_DP)
 

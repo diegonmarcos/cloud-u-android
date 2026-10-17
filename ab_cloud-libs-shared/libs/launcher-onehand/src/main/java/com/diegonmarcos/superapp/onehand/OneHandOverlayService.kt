@@ -271,8 +271,8 @@ class OneHandOverlayService : Service() {
                 m.move(e.rawX, e.rawY, e.eventTime)
                 if (before == EdgeGestureMachine.State.PENDING && m.state == EdgeGestureMachine.State.PASS)
                     EdgeEventLog.record("pass", h.id, "moved past slop before the hold elapsed", e.rawX, e.rawY)
-                if (before == EdgeGestureMachine.State.ARMED && m.state == EdgeGestureMachine.State.MENU)
-                    EdgeEventLog.record("push", h.id, "menu opened", e.rawX, e.rawY)
+                if (before != EdgeGestureMachine.State.MENU && m.state == EdgeGestureMachine.State.MENU)
+                    EdgeEventLog.record("push", h.id, if (before == EdgeGestureMachine.State.ARMED) "menu opened (hold+push)" else "menu opened (swipe)", e.rawX, e.rawY)
                 if (m.state == EdgeGestureMachine.State.MENU) {
                     if (!activated) {
                         activate(h)
