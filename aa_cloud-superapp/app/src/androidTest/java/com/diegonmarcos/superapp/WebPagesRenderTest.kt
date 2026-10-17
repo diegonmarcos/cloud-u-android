@@ -49,7 +49,7 @@ class WebPagesRenderTest {
     /** The app is uninstalled after the run (taking its files dir with it), so the shell copies the evidence out. */
     private fun export(name: String) {
         sh("mkdir -p /data/local/tmp/webpage")
-        out.listFiles()?.filter { it.name.contains("-$name.") || it.name.contains("-$name-screen.") }
+        out.listFiles()?.filter { it.name.contains("-$name.") || it.name.contains("-$name-screen.") || it.name.contains("-$name-red-screen.") }
             ?.forEach { sh("cp ${it.absolutePath} /data/local/tmp/webpage/${it.name}") }
     }
 
@@ -88,6 +88,10 @@ class WebPagesRenderTest {
 
     private fun check(name: String, target: String, night: Boolean) {
         sh("settings put global adb_wifi_enabled 0")
+        // FirstRunPerms asks for these two on launch with a dialog over the page; grant them so the pane is unobstructed.
+        val pkg = inst.targetContext.packageName
+        sh("appops set $pkg REQUEST_INSTALL_PACKAGES allow")
+        sh("cmd role add-role-holder android.app.role.HOME $pkg 0")
         sh("cmd uimode night ${if (night) "yes" else "no"}"); SystemClock.sleep(1500)
         val log = Collections.synchronizedList(mutableListOf<String>())
         WebPageFragment.probe = { log += it }
@@ -136,6 +140,7 @@ class WebPagesRenderTest {
             var dark = ""
             inst.runOnMainSync { dark = if (android.os.Build.VERSION.SDK_INT >= 33) w.settings.isAlgorithmicDarkeningAllowed.toString() else "pre-33" }
             report.appendLine("darkening=$dark sdk=${android.os.Build.VERSION.SDK_INT}")
+            report.appendLine("dom=${js(w, "(()=>{const r=e=>{if(!e)return 'none';const b=e.getBoundingClientRect(),c=getComputedStyle(e);return e.tagName+'.'+e.className+' '+[b.x,b.y,b.width,b.height].map(Math.round).join(',')+' op='+c.opacity+' vis='+c.visibility+' bg='+c.backgroundImage.slice(0,40)+'/'+c.backgroundColor+' fg='+c.color+' tf='+c.transform+' filt='+c.filter};return ['shell:'+r(document.querySelector('.shell')),'content:'+r(document.querySelector('.content')),'at(160,40):'+r(document.elementFromPoint(160,40)),'at(160,200):'+r(document.elementFromPoint(160,200)),'dpr='+devicePixelRatio,'vv='+(visualViewport?visualViewport.width+'x'+visualViewport.height+'@'+visualViewport.scale:'')].join(' || ')})()")}")
             report.appendLine("sw=${js(w, "String(!!navigator.serviceWorker && !!navigator.serviceWorker.controller)")}")
             val shot = ua.takeScreenshot()
             if (shot != null) {
@@ -146,6 +151,13 @@ class WebPagesRenderTest {
                     crop.compress(Bitmap.CompressFormat.PNG, 100, File(out, "webpage-$name.png").outputStream())
                 }
             }
+        }
+        // Discriminator: paint the page red. A pane that turns red is a page drawing black; one that stays black is a WebView
+        // that is not compositing at all.
+        if (w != null) {
+            js(w, "document.documentElement.style.background='red';document.body.style.background='red';'ok'")
+            SystemClock.sleep(1500)
+            ua.takeScreenshot()?.let { File(out, "webpage-$name-red-screen.png").outputStream().use { o -> it.compress(Bitmap.CompressFormat.PNG, 100, o) } }
         }
         val colours = crop?.let { b ->
             val px = IntArray(b.width * b.height); b.getPixels(px, 0, b.width, 0, 0, b.width, b.height); px.toSet().size
