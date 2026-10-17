@@ -135,6 +135,11 @@ jobs:
         # cache and the build cache were all discarded every run — org.gradle.caching
         # was on and had nowhere to persist, and every build ran fully cold.
         uses: gradle/actions/setup-gradle@v6
+        # Fresh cache namespace: the arm64 job kept restoring a dependency-cache entry
+        # that records org.json:json:20240303 without holding the jar, so :clock failed
+        # to resolve it on every attempt while x86_64 (a different entry) passed.
+        env:
+          GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: "calc-v3-"
         with:
           gradle-version: "8.10.2"
 
