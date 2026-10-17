@@ -168,7 +168,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "z-ai/glm-5.3-flash",
-        "pricing_as_of": "2026-10-16",
+        "pricing_as_of": "2026-10-17",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -213,8 +213,8 @@
               "roleplay",
               "translation"
             ],
-            "prompt": 0.09,
-            "completion": 0.3,
+            "prompt": 0.0675,
+            "completion": 0.225,
             "note": "Sparse 26B (4B active): translation, academia and legal at a small-model price."
           },
           {
@@ -289,8 +289,8 @@
               "health",
               "roleplay"
             ],
-            "prompt": 0.259,
-            "completion": 0.8,
+            "prompt": 0.28,
+            "completion": 0.42,
             "note": "Translation and roleplay ranked; mid-price open weights."
           },
           {
@@ -317,8 +317,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.0068,
-            "completion": 1.28,
+            "prompt": 0.0075,
+            "completion": 0.2829,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
           {
@@ -337,8 +337,8 @@
               "science",
               "technology"
             ],
-            "prompt": 0.037,
-            "completion": 9,
+            "prompt": 0.62,
+            "completion": 2.42,
             "note": "Ranked in ten categories including translation; the formal-register GLM."
           },
           {
@@ -364,8 +364,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.0121,
-            "completion": 0.9,
+            "prompt": 0.0226,
+            "completion": 0.3966,
             "note": "The provider default: ranked in all twelve categories, and the cheapest all-rounder after DeepSeek."
           },
           {
