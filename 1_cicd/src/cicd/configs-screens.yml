@@ -107,6 +107,17 @@ jobs:
           UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.NotifyScreenTest"
         run: bash ./build.sh test
 
+      - name: Render + guard the Configs grid fits one A37 screen (grid-fit@*.png)
+        if: always()
+        working-directory: aa_cloud-superapp
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.ConfigsIconSizeTest"
+        run: bash ./build.sh test
+
       - name: Summary (dp per control, every screen)
         if: always()
         run: |
