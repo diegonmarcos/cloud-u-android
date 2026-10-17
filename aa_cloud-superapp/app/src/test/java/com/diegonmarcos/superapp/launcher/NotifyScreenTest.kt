@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.View
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.core.NotificationStore
 import com.diegonmarcos.superapp.ui.KitPageHarness
@@ -60,6 +61,9 @@ class NotifyScreenTest : KitPageHarness() {
         show(AggregatorStackFragment.newInstance("communication", "", "my-rss"))
         compose.waitForIdle()
         compose.onNodeWithTag(AggTags.PAGE).assertExists()
+        // The persistent-badge panel fills the first screen; scroll the notification cards into view.
+        compose.onNodeWithTag(AggTags.LIST_ACTIONS).performScrollTo()
+        compose.waitForIdle()
         val root = compose.activity.findViewById<View>(android.R.id.content)
         val bmp = compose.runOnUiThread {
             Bitmap.createBitmap(root.width.coerceAtLeast(1), root.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
