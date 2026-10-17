@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.view.View
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
@@ -56,7 +57,7 @@ class IslandBordersTest : KitPageHarness() {
     private fun mask(b: Bitmap, w: Int, h: Int) = (0 until h).map { y -> (0 until w).map { x -> (b.getPixel(x, y) ushr 24) != 0 } }
 
     @Test fun `B1 the neon ring stays on the pill and only its colours move`() {
-        val (a, b) = twice { Box(Modifier.size(120.dp, 22.dp)) { PrismaticShimmer() } }
+        val (a, b) = twice { Box(Modifier.wrapContentSize()) { Box(Modifier.size(120.dp, 22.dp)) { PrismaticShimmer() } } }
         val w = minOf(a.width, b.width); val h = minOf(a.height, b.height)
         assertEquals("the ring's footprint moved: the pill's outline is spinning, not just its colours", mask(a, w, h), mask(b, w, h))
         var changed = 0
@@ -66,7 +67,7 @@ class IslandBordersTest : KitPageHarness() {
 
     @Test fun `B2 the music island's border is static`() {
         val state = MusicIslandState().also { it.playing = NowPlayingLine("com.example.none", "Artist — Song") }
-        val (a, b) = twice { Box(Modifier.size(90.dp, 16.dp)) { MusicIsland(state, onTap = {}) } }
+        val (a, b) = twice { Box(Modifier.wrapContentSize()) { Box(Modifier.size(90.dp, 16.dp)) { MusicIsland(state, onTap = {}) } } }
         // Where the pill actually is in the window, then a 3 px ring just inside its outline: only the border lives there.
         val r = compose.onNodeWithTag("musicisland").fetchSemanticsNode().boundsInRoot
         val x0 = r.left.toInt(); val y0 = r.top.toInt(); val x1 = r.right.toInt(); val y1 = r.bottom.toInt()

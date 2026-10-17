@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebSettings
 import android.webkit.WebView
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import com.diegonmarcos.superapp.ui.KitPageHarness
@@ -56,7 +57,9 @@ class WebPagesLoadTest : KitPageHarness() {
             assertTrue("$id is not https: $url", url.startsWith("https://"))
             val (_, web) = shown(id)
             assertEquals("$id loaded something other than its declared url", url, shadowOf(web).lastLoadedUrl)
-            assertTrue("$id's WebView is ${web.width}x${web.height}", web.width > 0 && web.height > 0)
+            // The pane the WebView is given (Robolectric's WebView has no renderer, so its own measured size is meaningless).
+            val pane = compose.onNodeWithTag(WebPageFragment.TAG_WEB, useUnmergedTree = true).fetchSemanticsNode().size
+            assertTrue("$id's WebView pane is ${pane.width}x${pane.height}", pane.width > 0 && pane.height > 0)
             compose.runOnUiThread { compose.activity.supportFragmentManager.beginTransaction().remove(
                 compose.activity.supportFragmentManager.fragments.last()).commitNow() }
         }
@@ -80,7 +83,7 @@ class WebPagesLoadTest : KitPageHarness() {
             // Pretend the page finished loading and some time passed, then leave and come back.
             compose.runOnUiThread {
                 web.settings.cacheMode = WebSettings.LOAD_DEFAULT
-                page.lastLoadAt = 0L
+                page.lastLoadAt = -2 * WebPageFragment.REENTRY_DEBOUNCE_MS
                 val fm = compose.activity.supportFragmentManager
                 fm.beginTransaction().setMaxLifecycle(page, Lifecycle.State.STARTED).commitNow()
                 fm.beginTransaction().setMaxLifecycle(page, Lifecycle.State.RESUMED).commitNow()
