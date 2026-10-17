@@ -1,0 +1,106 @@
+name: "Store Phone Apps stress — StorePhoneAppsTest 20 times in a row, each in a fresh test JVM"
+
+# StorePhoneAppsTest compares the Cloud and Phone Apps tabs' Store bars. The Wireless Dbg chip is filled by a probe on
+# its own thread, and the test once read one tab while that probe was still running ("Wireless Dbg: checking..." vs
+# "not paired - Pair"), then passed on a re-run. The test now idles the main looper until the chip settles; this job
+# proves it stays green by running the class 20 times, each in a new test JVM (so StoreStatus starts cold every time),
+# with the build cache off and the previous results deleted so no iteration is answered from a cache.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "1_cicd/src/cicd/store-phone-apps-stress.yml"
+      - "aa_cloud-superapp/app/src/test/java/com/diegonmarcos/superapp/apps/StorePhoneAppsTest.kt"
+      - "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreBar.kt"
+      - "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreStatus.kt"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: store-phone-apps-stress-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-36 platforms;android-35 platforms;android-34 platforms;android-26 build-tools;36.0.0 build-tools;35.0.0 build-tools;34.0.0 platform-tools cmake;3.22.1 ndk;28.0.13004108 ndk;26.1.10909125"
+
+      - name: Set up Gradle 8.14 (cached)
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.14"
+
+      - name: Cache firestack Go modules + checksum-db tiles
+        uses: actions/cache@v4
+        with:
+          path: ab_cloud-libs-shared/.cache/gomodcache
+          key: firestack-gomodcache-${{ runner.os }}-${{ hashFiles('ab_cloud-libs-shared/libs/firewall/firestack/go.sum') }}
+          restore-keys: firestack-gomodcache-${{ runner.os }}-
+
+      - name: Checkout vault (shared Android signing key)
+        uses: actions/checkout@v4
+        with:
+          repository: diegonmarcos/cloud-me_vault
+          token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
+          path: .vault
+
+      - name: Install sops (pinned, sha256-checked, fails at the download)
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: sops
+
+      - name: StorePhoneAppsTest x20 (fatal on the first red iteration)
+        working-directory: aa_cloud-superapp
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.apps.StorePhoneAppsTest"
+        run: |
+          # every iteration must really execute: no build-cache hit, no up-to-date skip
+          mkdir -p "$HOME/.gradle"; echo "org.gradle.caching=false" >> "$HOME/.gradle/gradle.properties"
+          res=app/build/test-results/testDebugUnitTest
+          for i in $(seq 1 20); do
+            rm -rf "$res" app/build/reports/tests/testDebugUnitTest
+            echo "::group::iteration $i/20"
+            bash ./build.sh test || { echo "::endgroup::"; echo "::error::StorePhoneAppsTest red on iteration $i/20"; exit 1; }
+            echo "::endgroup::"
+            x=$(ls "$res"/*StorePhoneAppsTest*.xml 2>/dev/null | head -1)
+            [ -n "$x" ] || { echo "::error::iteration $i/20 wrote no StorePhoneAppsTest result (task skipped?)"; exit 1; }
+            t=$(grep -oE 'tests="[0-9]+"' "$x" | head -1 | grep -oE '[0-9]+')
+            f=$(grep -oE '(failures|errors)="[0-9]+"' "$x" | grep -oE '[0-9]+' | awk '{s+=$1} END{print s+0}')
+            echo "iteration $i/20: tests=$t failures+errors=$f"
+            echo "iteration $i/20: tests=$t failures+errors=$f" >> "$GITHUB_STEP_SUMMARY"
+            [ "${t:-0}" -ge 3 ] && [ "$f" = "0" ] || { echo "::error::iteration $i/20 bad result (tests=$t fails=$f)"; exit 1; }
+          done
+          echo "20/20 green" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload last test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: store-phone-apps-stress
+          path: |
+            aa_cloud-superapp/app/build/reports/tests/
+            aa_cloud-superapp/app/build/test-results/
+          if-no-files-found: warn

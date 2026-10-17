@@ -59,6 +59,24 @@ class StorePhoneAppsTest : KitPageHarness() {
 
     private fun idle() { shadowOf(Looper.getMainLooper()).idle(); compose.waitForIdle() }
 
+    /**
+     * The Wireless Dbg chip is filled by StoreStatus.refresh, a probe on its OWN thread that posts the
+     * result to the main looper. idle() alone does not wait for that thread, so the first tab drawn could
+     * still read "checking..." while the second read the cached answer (seen in CI: "Wireless Dbg:
+     * checking..." vs "not paired - Pair"). Keep idling the main looper until the chip has left the
+     * loading state, so both tabs are compared on the settled status.
+     */
+    private fun settleChannel(timeoutMs: Long = 15_000) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        fun label() = compose.onAllNodes(hasTestTag(StoreBar.itemTag(StoreBar.Item.WIRELESS_DEBUG)))
+            .fetchSemanticsNodes().firstOrNull()?.text()
+        while (label()?.endsWith("checking...") != false) {
+            assertTrue("the Wireless Dbg status never settled (still '${label()}')",
+                System.currentTimeMillis() < deadline)
+            Thread.sleep(10); idle()
+        }
+    }
+
     /** The bar as the semantics tree shows it: its controls by item, and the captions under them. */
     /** What one bar control said when it was read (nodes go stale when their page is replaced). */
     private class Seen(val text: String, val disabled: Boolean, val clickable: Boolean)
@@ -71,6 +89,7 @@ class StorePhoneAppsTest : KitPageHarness() {
             }
         }
         show(f); idle()
+        settleChannel()
         val root = compose.onAllNodes(hasTestTag(StoreBar.TAG), useUnmergedTree = true).fetchSemanticsNodes()
         assertTrue("${f::class.simpleName} draws no Store bar", root.isNotEmpty())
         val controls = StoreBar.Item.values().mapNotNull { item ->

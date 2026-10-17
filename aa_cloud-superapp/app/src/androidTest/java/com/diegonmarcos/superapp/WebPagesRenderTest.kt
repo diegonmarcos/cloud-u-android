@@ -18,7 +18,6 @@ import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -33,10 +32,22 @@ import java.util.concurrent.TimeUnit
 class WebPagesRenderTest {
     private val inst = InstrumentationRegistry.getInstrumentation()
     private val ua = inst.uiAutomation
-    private val out = File("/data/local/tmp")
+    // /data/local/tmp belongs to the shell (uid 2000): this test runs in the app's process, so a File write there
+    // fails with EACCES (CI run 39047411605). The evidence is handed to the shell instead, which writes it.
+    private val out = "/data/local/tmp"
 
     private fun sh(cmd: String): String =
         android.os.ParcelFileDescriptor.AutoCloseInputStream(ua.executeShellCommand(cmd)).bufferedReader().readText()
+
+    /** Writes [bytes] to [out]/[name] AS THE SHELL (dd reads stdin), then waits for dd to finish. */
+    private fun save(name: String, bytes: ByteArray) {
+        val (stdout, stdin) = ua.executeShellCommandRw("dd of=$out/$name")
+        android.os.ParcelFileDescriptor.AutoCloseOutputStream(stdin).use { it.write(bytes) }
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(stdout).use { it.readBytes() }
+    }
+
+    private fun png(b: Bitmap): ByteArray =
+        java.io.ByteArrayOutputStream().also { b.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
 
     @After fun tearDown() { WebPageFragment.probe = null }
 
@@ -106,11 +117,11 @@ class WebPagesRenderTest {
             report.appendLine("sw=${js(w, "String(!!navigator.serviceWorker && !!navigator.serviceWorker.controller)")}")
             val shot = ua.takeScreenshot()
             if (shot != null) {
-                shot.compress(Bitmap.CompressFormat.PNG, 100, File(out, "webpage-$name-screen.png").outputStream())
+                save("webpage-$name-screen.png", png(shot))
                 val r = Rect(loc[0], loc[1], loc[0] + w.width, loc[1] + w.height)
                 if (r.intersect(0, 0, shot.width, shot.height) && r.width() > 0 && r.height() > 0) {
                     crop = Bitmap.createBitmap(shot, r.left, r.top, r.width(), r.height())
-                    crop!!.compress(Bitmap.CompressFormat.PNG, 100, File(out, "webpage-$name.png").outputStream())
+                    save("webpage-$name.png", png(crop!!))
                 }
             }
         }
@@ -119,7 +130,7 @@ class WebPagesRenderTest {
         } ?: 0
         report.appendLine("distinctColours=$colours")
         report.appendLine("--- events (${log.size}) ---"); synchronized(log) { log.forEach { report.appendLine(it) } }
-        File(out, "webpage-$name.txt").writeText(report.toString())
+        save("webpage-$name.txt", report.toString().toByteArray())
         Log.i("WebPagesRenderTest", "[$name]\n$report")
 
         assertTrue("[$name] no WebView\n$report", w != null)
