@@ -163,9 +163,6 @@
     <string name="drawer_solutions_other">Otros</string>
 
     <!-- Per-page top toolbar -->
-    <string name="action_search">Buscar</string>
-    <string name="action_refresh">Actualizar</string>
-    <string name="action_settings">Ajustes</string>
     <string name="action_back">Atrás</string>
     <string name="action_wallet">Wallet</string>
 
