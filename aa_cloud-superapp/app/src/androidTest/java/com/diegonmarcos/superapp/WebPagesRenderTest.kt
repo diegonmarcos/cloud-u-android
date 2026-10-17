@@ -55,8 +55,21 @@ class WebPagesRenderTest {
 
     private fun resumed(): Activity? {
         var a: Activity? = null
-        inst.runOnMainSync { a = ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).firstOrNull() }
+        inst.runOnMainSync {
+            val m = ActivityLifecycleMonitorRegistry.getInstance()
+            a = listOf(Stage.RESUMED, Stage.PAUSED, Stage.STARTED).firstNotNullOfOrNull { m.getActivitiesInStage(it).firstOrNull() }
+        }
         return a
+    }
+
+    /** The app's wireless-debugging bootstrap raises SystemUI's "Allow wireless debugging?" dialog on a fresh emulator; it
+     *  pauses the page under test (same workaround as EdgeOverlayGestureTest). */
+    private fun clearPrompt() {
+        sh("settings put global adb_wifi_enabled 0")
+        repeat(6) {
+            if (!sh("dumpsys window windows").contains("WifiDebuggingActivity")) return
+            sh("input keyevent KEYCODE_BACK"); SystemClock.sleep(600)
+        }
     }
 
     private fun findWeb(v: View): WebView? = when (v) {
@@ -87,6 +100,7 @@ class WebPagesRenderTest {
         var ready = ""; var textLen = -1
         while (SystemClock.elapsedRealtime() - t0 < 20_000) {
             SystemClock.sleep(1000)
+            clearPrompt()
             val a = resumed() ?: continue
             inst.runOnMainSync { web = findWeb(a.window.decorView) }
             val w = web ?: continue
@@ -95,7 +109,7 @@ class WebPagesRenderTest {
             log += "t=${SystemClock.elapsedRealtime() - t0} ready=$ready len=$textLen"
             if (ready.contains("complete") && textLen > 0 && SystemClock.elapsedRealtime() - t0 > 8_000) break
         }
-        SystemClock.sleep(1500)
+        clearPrompt(); SystemClock.sleep(1500)
 
         val report = StringBuilder()
         val w = web
