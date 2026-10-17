@@ -5,6 +5,8 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.webkit.URLUtil
+import com.diegonmarcos.superapp.browser.download.DlQueue
+import com.diegonmarcos.superapp.browser.download.DlService
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -37,7 +39,14 @@ object BrowserDownloadIndex {
     }
 }
 
+/** What [BrowserDownloads.start] queued: the row's id and the file name it will have. */
+data class BrowserDownloadStarted(val id: String, val file: String)
+
 /**
+ * The browser's downloads. A host that declares [DlService] (cloud-browser) gets the full download
+ * manager (download/DlQueue: foreground service, pause / resume with Range, retries, queue
+ * policy, segmented transfers, torrents). Any other host of libs:browser keeps the original path below.
+ *
  * #802 downloads through Android's DownloadManager (it owns the progress
  * notification, and tapping that notification opens the file), with the page's
  * cookies and user agent so a signed-in download works. The index of what we
@@ -50,6 +59,30 @@ class BrowserDownloads(context: Context) {
     private val dm get() = app.getSystemService(DownloadManager::class.java)
 
     fun all(): List<BrowserDownload> = BrowserDownloadIndex.fromJson(sp.getString(KEY, "[]"))
+
+    /** True the first time only: the browser asks for the notification permission once. */
+    fun firstNotificationAsk(): Boolean {
+        if (sp.getBoolean("asked_notifications", false)) return false
+        sp.edit().putBoolean("asked_notifications", true).apply()
+        return true
+    }
+
+    /** Does this host run the full download manager? */
+    val managed: Boolean get() = DlService.available(app)
+
+    /**
+     * Start a download with the page's cookies, agent and referer: through the download manager when
+     * [managed], else DownloadManager ([enqueue]).
+     */
+    fun start(url: String, userAgent: String?, referer: String?, contentDisposition: String?, mime: String?, dir: String,
+              cookieHeader: (String) -> String?): BrowserDownloadStarted {
+        if (managed) {
+            val j = DlQueue.get(app).add(url, userAgent, referer, cookieHeader(url), contentDisposition, mime, dir)
+            return BrowserDownloadStarted(j.id, j.fileName)
+        }
+        val d = enqueue(url, userAgent, contentDisposition, mime, dir, cookieHeader)
+        return BrowserDownloadStarted(d.id.toString(), d.file)
+    }
 
     /** Queue [url]; [dir] is a sub-folder of the public Downloads ("" = Downloads itself). */
     fun enqueue(url: String, userAgent: String?, contentDisposition: String?, mime: String?, dir: String,
@@ -78,10 +111,13 @@ class BrowserDownloads(context: Context) {
     }.getOrDefault("unknown")
 
     /** Forget the index (the files stay in Downloads). */
-    fun clear() = sp.edit().putString(KEY, "[]").apply()
+    fun clear() {
+        sp.edit().putString(KEY, "[]").apply()
+        if (managed) DlQueue.get(app).clear()
+    }
 
     /** #887 bytes of the finished downloads this browser started (DownloadManager's own sizes). */
-    fun bytes(): Long = all().sumOf { d ->
+    fun bytes(): Long = (if (managed) DlQueue.get(app).all().sumOf { it.downloaded } else 0L) + all().sumOf { d ->
         runCatching {
             dm.query(DownloadManager.Query().setFilterById(d.id)).use { c ->
                 if (c.moveToFirst() && c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)) == DownloadManager.STATUS_SUCCESSFUL)
@@ -94,8 +130,9 @@ class BrowserDownloads(context: Context) {
     fun removeAllFiles(): Int {
         val list = all()
         list.forEach { runCatching { dm.remove(it.id) } }
+        val managedRows = if (managed) DlQueue.get(app).all().onEach { DlQueue.get(app).remove(it.id, deleteFile = true) }.size else 0
         clear()
-        return list.size
+        return list.size + managedRows
     }
 
     private companion object { const val KEY = "downloads_json" }

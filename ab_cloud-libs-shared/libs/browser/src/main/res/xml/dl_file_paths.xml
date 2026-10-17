@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DlFileProvider: the download manager's private folders (app-specific storage), shared read-only
+     with the app the user opens or shares a file with. -->
+<paths>
+    <external-files-path name="downloads" path="Download/" />
+    <files-path name="downloads_internal" path="downloads/" />
+</paths>

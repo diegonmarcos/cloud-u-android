@@ -16,6 +16,16 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- The download manager (libs:browser download/): its transfers run in ONE dataSync foreground
+         service with an ongoing progress notification (Android 14+ needs the typed FGS permission),
+         hold a partial WakeLock + WifiLock only while a transfer is running, and come back after a
+         reboot (the persisted resume job + boot receiver). Android 8-9 publishes a finished file to
+         the public Download/ folder with WRITE_EXTERNAL_STORAGE; 10+ uses MediaStore, no permission. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <!-- Self-update: download + install new APK from GHCR silently.
          UPDATE_PACKAGES_WITHOUT_USER_ACTION is THE permission that makes
          USER_ACTION_NOT_REQUIRED actually silent on Android 12+ (API 31). -->
@@ -121,5 +131,35 @@
         <receiver
             android:name="com.diegonmarcos.superapp.updater.PackageInstallerReceiver"
             android:exported="false" />
+
+        <!-- The download manager (libs:browser download/). DlService is the one foreground service every
+             HTTP(S) download and torrent runs in (type dataSync); DlResumeJob brings unfinished downloads
+             back after process death, a reboot or a network change; DlBootReceiver re-arms it after a boot
+             or an update; DlFileProvider lets the app a file is opened or shared with read it. -->
+        <service
+            android:name="com.diegonmarcos.superapp.browser.download.DlService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <service
+            android:name="com.diegonmarcos.superapp.browser.download.DlResumeJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <receiver
+            android:name="com.diegonmarcos.superapp.browser.download.DlBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <provider
+            android:name="com.diegonmarcos.superapp.browser.download.DlFileProvider"
+            android:authorities="${applicationId}.dlfiles"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/dl_file_paths" />
+        </provider>
     </application>
 </manifest>

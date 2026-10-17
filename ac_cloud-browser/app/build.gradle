@@ -357,6 +357,10 @@ dependencies {
     testImplementation 'org.robolectric:robolectric:4.16.1'
     testImplementation platform('androidx.compose:compose-bom:2025.11.01')
     testImplementation 'androidx.compose.ui:ui-test-junit4'
+    // The download manager's range / resume rules run against a real local HTTP server
+    // (DownloadEngineTest: pause -> resume, no range support, ETag changed, dropped connection).
+    // 4.12.0 = the last okhttp3.mockwebserver API (5.x moved it to mockwebserver3). Test-only.
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
 
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

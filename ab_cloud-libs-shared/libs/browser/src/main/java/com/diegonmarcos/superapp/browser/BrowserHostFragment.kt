@@ -281,6 +281,29 @@ class BrowserHostFragment : Fragment() {
         super.onResume()
         BrowserBus.listener = { change -> if (isAdded) onBusChange(change) }
         BrowserBus.page = pageHost
+        syncDownloadPolicy()
+        // The download notification's tap opens the Downloads page.
+        activity?.intent?.takeIf { it.getBooleanExtra(com.diegonmarcos.superapp.browser.download.DlService.EXTRA_OPEN_DOWNLOADS, false) }?.let {
+            it.removeExtra(com.diegonmarcos.superapp.browser.download.DlService.EXTRA_OPEN_DOWNLOADS)
+            showDownloads()
+        }
+    }
+
+    /** The Downloads settings (Configs ▸ Downloads) become the download manager's queue policy. */
+    private fun syncDownloadPolicy() {
+        if (!downloads.managed) return
+        val s = browserSettings
+        com.diegonmarcos.superapp.browser.download.DlQueue.get(requireContext()).setPolicy(
+            com.diegonmarcos.superapp.browser.download.DlPolicy(
+                parallel = s.int("dl_parallel") ?: 3,
+                wifiOnly = s.bool("dl_wifi_only") ?: false,
+                allowMetered = s.bool("dl_allow_metered") ?: true,
+                speedLimitKbps = s.int("dl_speed_limit_kbps") ?: 0,
+                segments = s.int("dl_segments") ?: 4,
+                sharedStore = s.bool("dl_shared_store") ?: false,
+                seedRatio = s.int("torrent_seed_ratio") ?: 0,
+                seedMinutes = s.int("torrent_seed_minutes") ?: 0,
+            ))
     }
 
     override fun onStop() {
@@ -298,7 +321,7 @@ class BrowserHostFragment : Fragment() {
 
     private fun onBusChange(change: String) {
         when {
-            change == BrowserBus.SETTINGS -> webView?.let { applySettings(it); if (!BrowserNavPolicy.isFormPostResult(it.url)) it.reload() }
+            change == BrowserBus.SETTINGS -> webView.also { syncDownloadPolicy() }?.let { applySettings(it); if (!BrowserNavPolicy.isFormPostResult(it.url)) it.reload() }
             change == BrowserBus.TABS -> if (mode is Mode.GRID) showGrid()
             change.startsWith(BrowserBus.OPEN) -> navigateTo(change.removePrefix(BrowserBus.OPEN))
         }
@@ -1064,6 +1087,19 @@ class BrowserHostFragment : Fragment() {
     }
 
     private fun showDownloads() {
+        if (downloads.managed) {
+            val ctx = requireContext()
+            overlay { close ->
+                com.diegonmarcos.superapp.browser.download.DownloadsScreen(
+                    com.diegonmarcos.superapp.browser.download.DlQueue.get(ctx),
+                    onOpen = { j -> com.diegonmarcos.superapp.browser.download.DlPublisher.openIntent(ctx, j)
+                        ?.let { runCatching { startActivity(it) }.onFailure { toast("No app opens this file") } } ?: toast("The file is gone") },
+                    onShare = { j -> com.diegonmarcos.superapp.browser.download.DlPublisher.shareIntent(ctx, j)
+                        ?.let { startActivity(it) } ?: toast("The file is gone") },
+                    onClose = close)
+            }
+            return
+        }
         val rows = downloads.all().map { ListRow(it.id.toString(), it.file, "${downloads.status(it.id)} · ${it.url}") }
         overlay { close ->
             BrowserListScreen("Downloads", rows, empty = "Nothing downloaded yet.",
@@ -1144,11 +1180,26 @@ class BrowserHostFragment : Fragment() {
             type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, text)
         }, "Share"))
 
-    /** A page download, with the page's cookies and agent, into the `download_dir` setting. */
-    private fun download(url: String, ua: String?, disposition: String?, mime: String?): BrowserDownload =
-        downloads.enqueue(url, ua, disposition, mime, browserSettings.string("download_dir").orEmpty()) { u ->
+    /**
+     * A page download, with the page's cookies, agent and referer (so a signed-in download works),
+     * into the `download_dir` setting. The first one asks for the notification permission the
+     * download service's progress notification needs (Android 13+).
+     */
+    private fun download(url: String, ua: String?, disposition: String?, mime: String?): BrowserDownloadStarted {
+        askNotificationsOnce()
+        return downloads.start(url, ua, webView?.url, disposition, mime, browserSettings.string("download_dir").orEmpty()) { u ->
             cookiesOf(webView).getCookie(u)   // the requesting tab's jar: a private tab's cookies are in its profile
         }
+    }
+
+    private fun askNotificationsOnce() {
+        if (android.os.Build.VERSION.SDK_INT < 33 || !downloads.managed) return
+        val perm = android.Manifest.permission.POST_NOTIFICATIONS
+        if (androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), perm) == android.content.pm.PackageManager.PERMISSION_GRANTED) return
+        if (!downloads.firstNotificationAsk()) return
+        permDone = null
+        runCatching { permRequest.launch(arrayOf(perm)) }
+    }
 
     /** Pin [url] to the launcher; it opens here (MainActivity takes VIEW intents). */
     private fun addToHome(url: String, title: String): Boolean {

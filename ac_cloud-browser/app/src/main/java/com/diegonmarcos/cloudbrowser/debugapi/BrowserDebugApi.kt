@@ -60,7 +60,7 @@ object BrowserDebugApi {
         Op("bookmarks/folders", "", "every folder in use, parents included"),
         Op("bookmarks/folder/rename", "from=<a/b>&to=<c>", "move a folder and everything under it"),
         Op("bookmarks/folder/delete", "folder=<a/b>&confirm=1", "delete a folder and every bookmark under it"),
-        Op("downloads", "", "downloads this browser started, with DownloadManager's live status"),
+        Op("downloads", "", "downloads this browser started, with their live state (download manager rows, then DownloadManager's)"),
         Op("downloads/enqueue", "url=<url>", "download a URL into the download_dir setting (a test hook)"),
         Op("downloads/clear", "", "forget the download list (the files stay in Downloads)"),
         Op("sites", "host=<host, optional>", "per-site rules; with host=, every declared permission's effective value there"),
@@ -176,13 +176,17 @@ object BrowserDebugApi {
             "downloads" -> {
                 val dl = BrowserDownloads(app)
                 JSONArray().also { arr ->
+                    if (dl.managed) com.diegonmarcos.superapp.browser.download.DlQueue.get(app).all().forEach {
+                        arr.put(com.diegonmarcos.superapp.browser.download.DlCodec.job(it.copy(cookie = null))
+                            .put("status", it.state.name.lowercase()).put("ts", it.createdAt))
+                    }
                     dl.all().forEach {
                         arr.put(JSONObject().put("id", it.id).put("url", it.url).put("file", it.file).put("ts", it.ts).put("status", dl.status(it.id)))
                     }
                 }
             }
             "downloads/enqueue" -> need(url, "url") ?: run {
-                val d = BrowserDownloads(app).enqueue(url, config.userAgents["mobile"], null, null, settings.string("download_dir").orEmpty()) { u ->
+                val d = BrowserDownloads(app).start(url, config.userAgents["mobile"], null, null, null, settings.string("download_dir").orEmpty()) { u ->
                     com.diegonmarcos.superapp.browser.TabProfile.cookies(null).getCookie(u)   // not a tab: the default jar
                 }
                 JSONObject().put("ok", true).put("id", d.id).put("file", d.file)

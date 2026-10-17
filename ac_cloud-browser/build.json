@@ -395,6 +395,66 @@
           "doc": "Save site offline stops when the copy reaches this size."
         },
         {
+          "key": "dl_parallel",
+          "type": "int",
+          "default": 3,
+          "min": 1,
+          "max": 8,
+          "label": "Downloads at a time",
+          "section": "downloads",
+          "class": "config",
+          "doc": "How many downloads (and torrents) transfer at once; the rest wait in the queue."
+        },
+        {
+          "key": "dl_wifi_only",
+          "type": "bool",
+          "default": false,
+          "label": "Download on Wi-Fi only",
+          "section": "downloads",
+          "class": "config",
+          "doc": "Downloads wait (and resume by themselves) until the phone is on Wi-Fi or Ethernet."
+        },
+        {
+          "key": "dl_allow_metered",
+          "type": "bool",
+          "default": true,
+          "label": "Download on metered networks",
+          "section": "downloads",
+          "class": "config",
+          "doc": "Off = downloads wait for an unmetered network (no mobile data, no metered hotspot)."
+        },
+        {
+          "key": "dl_speed_limit_kbps",
+          "type": "int",
+          "default": 0,
+          "min": 0,
+          "max": 1000000,
+          "label": "Download speed limit (KB/s)",
+          "section": "downloads",
+          "class": "config",
+          "doc": "Shared by every download and torrent; 0 = no limit."
+        },
+        {
+          "key": "dl_segments",
+          "type": "int",
+          "default": 4,
+          "min": 1,
+          "max": 8,
+          "label": "Connections per large file",
+          "section": "downloads",
+          "class": "config",
+          "doc": "A large file on a server that accepts byte ranges downloads over this many connections at once; 1 = always one connection."
+        },
+        {
+          "key": "dl_shared_store",
+          "type": "bool",
+          "default": false,
+          "label": "Save to cloud-shared-store",
+          "section": "downloads",
+          "class": "config",
+          "doc": "When cloud-shared-store is installed, finished downloads go there instead of the phone's Download folder. Without it, this does nothing."
+        },
+        {
           "key": "block_trackers",
           "type": "bool",
           "default": true,
