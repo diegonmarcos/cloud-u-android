@@ -1239,6 +1239,14 @@
         "lib-maps"
       ]
     },
+    "markets_last_good": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "Last good Yahoo price per symbol (price|asOf|savedAt) for the Markets badge, so a killed process still shows the last rate; refetched on the next poll.",
+      "used_by": [
+        "aa_cloud-superapp"
+      ]
+    },
     "mattermost_prefs": {
       "kind": "encrypted",
       "class": "config",
