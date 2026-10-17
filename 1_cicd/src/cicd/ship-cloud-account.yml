@@ -55,6 +55,7 @@ on:
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/mail/**"
       - "ab_cloud-libs-shared/libs/net/**"
+      - "ab_cloud-libs-shared/libs/shared-store/**"
       - "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
