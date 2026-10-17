@@ -8,14 +8,8 @@
       "_doc_exit_hatch": "EXIT HATCH (documented, never set silently): to leave this uid later without breaking installed phones, a member adds android:sharedUserMaxSdkVersion=\"32\". On API 33+ a NEW install then gets its own uid, while an existing install keeps the shared one until it is uninstalled. The store access then falls back by itself: nix to the legacy mirror + SFTP 8023 (bin/login storage_setup), cloud-drive to CLOUD_EXEC (libs:shared-store StoreAccess.mode).",
       "id": "terminal",
       "label": "Terminals",
-      "shared_user_id": {
-        "from": "ac_cloud-termux/build.json",
-        "key": "shared_store.shared_user_id"
-      },
-      "members": [
-        "cld.termux",
-        "cld.termux.nix"
-      ],
+      "shared_user_id": { "from": "ac_cloud-termux/build.json", "key": "shared_store.shared_user_id" },
+      "members": ["cld.termux", "cld.termux.nix"],
       "_doc_migration": "migration: shared_uid = an INSTALLED member cannot be updated onto this uid in place: Android answers INSTALL_FAILED_UID_CHANGED (legacy -24; also SHARED_USER_INCOMPATIBLE -8 / UPDATE_INCOMPATIBLE -7). libs:appstore SharedUidMigration then stops the install retries for that package and shows a one-time card: 1 back up the home (the old build tars its own $HOME through CLOUD_EXEC, else RUN_COMMAND, to <storage>/<shared_root>/<backup_dir>/<pkg>/<archive>), 2 uninstall the old version, 3 install the new one, 4 open it -> Restore (SharedStoreMigration). migration_plan's paths are read from ac_cloud-termux/build.json (from+key, resolved by the libs:appstore bake), never restated. order = who goes first: cld.termux owns the store. cloud-drive's step 2 (joining this group) reuses this plan unchanged.",
       "migration": "shared_uid",
       "migration_plan": {
