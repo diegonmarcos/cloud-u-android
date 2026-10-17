@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit
 class GitSyncWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
 
     override fun doWork(): Result {
+        runCatching { JobPathMigration.run(applicationContext) }
         val registry = RepoRegistry(File(applicationContext.filesDir, REGISTRY_FILE))
         val credentials = GitCredentialStore(applicationContext)
         val history = SyncHistory(File(applicationContext.filesDir, SyncHistory.FILE))
@@ -51,7 +52,15 @@ class GitSyncWorker(context: Context, params: WorkerParameters) : Worker(context
                 requireUnmetered = repo.syncRequireUnmetered, networkUnmetered = unmetered,
             )
             if (!due) return@forEach
-            val result = runCatching {
+            val viaExec = com.diegonmarcos.clouddrive.sync.StoreGit.useExec(applicationContext)
+            val result = if (viaExec) runCatching {
+                // cloud-shared-store: not in cld.termux's uid -> the sync runs inside it (CLOUD_EXEC).
+                com.diegonmarcos.clouddrive.sync.StoreGit.sync(
+                    applicationContext, File(repo.path), repo.syncMessage,
+                    repo.authorName.ifBlank { DEFAULT_AUTHOR }, repo.authorEmail.ifBlank { DEFAULT_EMAIL }, repo.pullRebase,
+                    (credentials.authFor(repo) as? com.diegonmarcos.cloudlib.gitsync.GitAuth.Https)?.secret.orEmpty(),
+                )
+            }.getOrElse { GitOpResult(false, it.message ?: it.toString()) } else runCatching {
                 GitEngine(File(repo.path)).use { engine ->
                     engine.sync(
                         repo.syncMessage,

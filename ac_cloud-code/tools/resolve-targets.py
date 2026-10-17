@@ -91,7 +91,7 @@ def app_by_fleet_id(app_root, fleet_id):
 def shared_root(app_root, fleet_id):
     """#575: the ONE shared repo store, read from the store app's own declaration.
 
-    nav.json::shared_store.app names cloud-drive by fleet id; that app's
+    nav.json::shared_store.app names the store owner (cloud-terminal-termux, cloud-shared-store) by fleet id; that app's
     build.json::storage.shared_root is the folder under shared storage. It is
     copied here RELATIVE, exactly as declared: index.js prefixes the device's
     externalRootDirectory at runtime. An absolute value, or none, fails the build."""

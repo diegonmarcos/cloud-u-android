@@ -125,7 +125,9 @@ object DriveDebugApi {
 
     private fun healthJson(ctx: Context): String {
         val root = runCatching { SharedStore.root().absolutePath }.getOrElse { "unavailable: ${it.message}" }
-        return """{"ok":true,"app":"${esc(ctx.packageName)}","version_code":${BuildConfig.VERSION_CODE},"version_name":"${esc(BuildConfig.VERSION_NAME)}","store_root":"${esc(root)}"}"""
+        // cloud-shared-store: direct (same uid as cld.termux) | exec (git runs in cld.termux) | none.
+        val mode = runCatching { com.diegonmarcos.cloudlib.sharedstore.StoreAccess.mode(ctx).name.lowercase() }.getOrElse { "unknown" }
+        return """{"ok":true,"app":"${esc(ctx.packageName)}","version_code":${BuildConfig.VERSION_CODE},"version_name":"${esc(BuildConfig.VERSION_NAME)}","store_root":"${esc(root)}","store_mode":"${esc(mode)}","legacy_root":"${esc(SharedStore.legacyRoot().absolutePath)}"}"""
     }
 
     // ── /api/git/* ──────────────────────────────────────────────────────────

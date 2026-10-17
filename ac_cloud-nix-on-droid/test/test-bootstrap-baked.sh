@@ -235,19 +235,20 @@ else
 fi
 
 # ── #612 — shared storage and the cloud-drive shared store auto-mount into $HOME ──
-DRIVE_BUILD_JSON="$(cd "$DIR/.." && pwd)/ac_cloud-drive/build.json"
+# cloud-shared-store: the declaration moved to the store's owner, ac_cloud-termux/build.json.
+STORE_BUILD_JSON="$(cd "$DIR/.." && pwd)/ac_cloud-termux/build.json"
 SHARED_ROOT="$(python3 -c "
 import json
-print(json.load(open('$DRIVE_BUILD_JSON'))['storage']['shared_root'])
+print(json.load(open('$STORE_BUILD_JSON'))['storage']['shared_root'])
 " 2>/dev/null)"
 if [ -n "$SHARED_ROOT" ]; then
-    ok "ac_cloud-drive/build.json declares storage.shared_root ($SHARED_ROOT), the value #612 mounts"
+    ok "ac_cloud-termux/build.json declares storage.shared_root ($SHARED_ROOT), the legacy mirror the fallback links"
 else
-    bad "ac_cloud-drive/build.json has no storage.shared_root — #612's shared-store mount has nothing to read"
+    bad "ac_cloud-termux/build.json has no storage.shared_root — the legacy-mirror fallback has nothing to read"
 fi
 
 if grep -q 'sharedRootName()' "$GRADLE" && grep -q 'bake_default_packages.py failed' "$GRADLE"; then
-    ok "app/build.gradle reads storage.shared_root from ac_cloud-drive/build.json and passes it to bake_default_packages.py"
+    ok "app/build.gradle reads storage.shared_root from ac_cloud-termux/build.json and passes it to bake_default_packages.py"
 else
     bad "app/build.gradle does not wire sharedRootName() into the bake_default_packages.py call"
 fi
@@ -256,7 +257,7 @@ BAKE_PY="$DIR/app/src/main/cpp/bake_default_packages.py"
 # #736 — executed, not grepped: bin/login's storage block runs under POSIX sh against a
 # staged /storage/emulated/0 (the path rewritten into a temp dir), from the state an
 # older login and termux-setup-storage left on a phone (empty mount-point dirs, a
-# ~/storage tree). ~/emulated and ~/cloud-drive-shared-store must become links that
+# ~/storage tree). ~/emulated and ~/cloud-shared-store must become links that
 # list the real content, ~/storage must go; without access both must go and the
 # notice must print. A mutant whose store link is dropped must turn this red.
 # #748 — and it runs with the PATH bin/login really has: the session's $PREFIX/bin,
@@ -275,32 +276,32 @@ body = m.BIN_LOGIN_TRACE + m.storage_setup(sys.argv[3], tuple(t + r for r in m.S
 open(t + "/login.sh", "w").write("set -eu\n" + body.replace("/system/bin/", t + "/system/bin/"))
 PY2
     S="$T736/storage/emulated/0"; H="$T736/home"
-    mkdir -p "$S/$SHARED_ROOT/git/cloud-probe-repo" "$S/Download" "$H/emulated" "$H/cloud-drive-shared-store" "$H/storage" \
+    mkdir -p "$S/$SHARED_ROOT/git/cloud-probe-repo" "$S/Download" "$H/emulated" "$H/cloud-shared-store" "$H/storage" \
         "$T736/prefix-bin" "$T736/system/bin"
     for c in date ls ln rm rmdir mkdir touch; do ln -s "$(command -v $c)" "$T736/system/bin/$c"; done
     ln -s "$S/DCIM" "$H/storage/dcim"
     SH="$(command -v sh)"
     r=0
     HOME="$H" PATH="$T736/prefix-bin" "$SH" "$T736/login.sh" x 2>/dev/null || r=1
-    [ -L "$H/emulated" ] && [ -L "$H/cloud-drive-shared-store" ] || r=1
+    [ -L "$H/emulated" ] && [ -L "$H/cloud-shared-store" ] || r=1
     ls "$H/emulated" 2>/dev/null | grep -qx Download || r=1
-    ls "$H/cloud-drive-shared-store/git" 2>/dev/null | grep -qx cloud-probe-repo || r=1
+    ls "$H/cloud-shared-store/git" 2>/dev/null | grep -qx cloud-probe-repo || r=1
     [ ! -e "$H/storage" ] || r=1
     chmod 000 "$S"
     notice="$(HOME="$H" PATH="$T736/prefix-bin" "$SH" "$T736/login.sh" x 2>&1 >/dev/null)" || r=1
     chmod 755 "$S"
-    [ ! -e "$H/emulated" ] && [ ! -L "$H/emulated" ] && [ ! -L "$H/cloud-drive-shared-store" ] || r=1
+    [ ! -e "$H/emulated" ] && [ ! -L "$H/emulated" ] && [ ! -L "$H/cloud-shared-store" ] || r=1
     case "$notice" in *"storage access is not granted"*) ;; *) r=1 ;; esac
     rm -rf "$T736"
     return $r
 }
 if storage_block_ok "$BAKE_PY" && grep -qF 'storage_setup(shared_root_name)' "$BAKE_PY"; then
-    ok "bin/login links ~/emulated and ~/cloud-drive-shared-store to the real storage, drops ~/storage, and unlinks + explains without the grant (executed)"
+    ok "bin/login links ~/emulated and ~/cloud-shared-store to the real storage, drops ~/storage, and unlinks + explains without the grant (executed)"
 else
-    bad "bin/login's storage block does not give the session the real storage at ~/emulated and ~/cloud-drive-shared-store (#612/#736)"
+    bad "bin/login's storage block does not give the session the real storage at ~/emulated and ~/cloud-shared-store (#612/#736)"
 fi
 MUT736="$(mktemp)"
-grep -v 'cloud_storage_link "$HOME/cloud-drive-shared-store"' "$BAKE_PY" > "$MUT736"
+grep -v 'cloud_storage_link "$HOME/{store_dir}" "$CLOUD_SDCARD/{shared_root_name}"' "$BAKE_PY" > "$MUT736"
 if cmp -s "$BAKE_PY" "$MUT736"; then
     bad "MUTATION DID NOT APPLY: the store link line could not be removed"
 elif storage_block_ok "$MUT736"; then
@@ -423,7 +424,7 @@ fi
 rm -f "$MUT_PU"
 
 # ── #736 — storage is re-checked at EVERY session start, and only there ────
-# bin/login decides whether to bind ~/emulated and ~/cloud-drive-shared-store
+# bin/login decides whether to bind ~/emulated and ~/cloud-shared-store
 # when a session STARTS, and its notice tells the user to allow the prompt and
 # open a new session. Asked once per onCreate, a declined prompt never came back
 # until the activity was recreated, so that advice led nowhere. The request must

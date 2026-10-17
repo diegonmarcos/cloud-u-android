@@ -2,8 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:installLocation="internalOnly"
-    android:sharedUserId="${TERMUX_PACKAGE_NAME}"
+    android:sharedUserId="cld.termux.shared"
     android:sharedUserLabel="@string/shared_user_label">
+
+    <!-- cloud-shared-store: android:sharedUserId is the SAME literal in ac_cloud-termux and
+         ac_cloud-nix-on-droid (build.json::shared_store.shared_user_id; app/build.gradle and
+         test/test-shared-store.sh fail on drift). Both are release-signed with the one
+         constellation key, so Android puts both in ONE Linux uid and the nix session reads,
+         writes and EXECUTES the store in cld.termux's private home directly. Changing this
+         value on an installed app is refused by the installer (uid change): it needs the
+         backup -> uninstall -> install -> restore flow (shared_store.migration). Never add
+         android:sharedUserMaxSdkVersion: on API 33+ a fresh install would then get its own uid. -->
 
     <uses-feature
         android:name="android.hardware.touchscreen"

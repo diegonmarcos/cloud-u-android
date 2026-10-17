@@ -37,6 +37,7 @@ on:
       # fleet-refresh.yml (schedule only) ships the app for a moved cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-nix-on-droid.yml"
       #   input: "ab_cloud-terminal-store/**"
+      #   input: "ac_cloud-termux/build.json"
       #   input: "ac_cloud-termux/rootfs/rootfs.json"
       # ── end MANAGED-PATHS-HEADER ──
       # #644 — the shared declarative link store is BAKED INTO this app's bootstrap

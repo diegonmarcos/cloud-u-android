@@ -79,6 +79,9 @@ class MainActivity : ComponentActivity(), DriveActions {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
+        // cloud-shared-store: saved sync/clone paths move off the old location, once (idempotent).
+        runCatching { JobPathMigration.run(this) }
+        DataMigration.onLaunch(this)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             // Dark page top and bottom (Theme.CloudDrive, #336/#337) → light system-bar glyphs.
             isAppearanceLightStatusBars = false
@@ -93,7 +96,7 @@ class MainActivity : ComponentActivity(), DriveActions {
         hadStorageAccess = Places.hasAllFilesAccess(this)
         if (!hadStorageAccess) requestStorageAccess()
         EngineActivity.declareFromBuild(this)
-        setContent { DriveTheme { Root() } }
+        setContent { DriveTheme { Root(); DataMigration.Dialog() } }
         Updater.start(this)
         // #575 the GitSync scheduler: repositories that opted in sync in the background.
         GitSyncWorker.schedule(this)

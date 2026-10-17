@@ -137,7 +137,7 @@ def world(init_path, key=True, base=True, decl=True, switched=False):
     fake = os.path.join(w, "bin", "linux-store")
     open(fake, "w").write('#!/bin/sh\necho "switch $* key=${SOPS_AGE_KEY_FILE:-}" >> "$HOME/ran.log"\n')
     os.chmod(fake, 0o755)
-    gitbase = os.path.join(home, "cloud-drive-shared-store", "git")
+    gitbase = os.path.join(home, "cloud-shared-store", "git")
     if base:
         os.makedirs(gitbase)
     if decl and base:

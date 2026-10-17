@@ -434,7 +434,12 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 val managed = ManagedRepo(id = id, name = name, path = dir.absolutePath, remoteUrl = url, authKind = authKind, authUsername = username, sshKeyPath = sshKeyPath)
                 if (token.isNotBlank()) credentials.setSecret(id, token)
                 runCatching {
-                    if (GitEngine.isRepository(dir)) GitOpResult(true, "already cloned")
+                    // cloud-shared-store: not in cld.termux's uid -> clone inside it (CLOUD_EXEC).
+                    if (StoreGit.useExec(ctx)) {
+                        if (StoreGit.isRepository(ctx, dir)) GitOpResult(true, "already cloned")
+                        else StoreGit.clone(ctx, url, dir, token).also { if (!it.ok) error(it.summary + " " + it.details) }
+                    }
+                    else if (GitEngine.isRepository(dir)) GitOpResult(true, "already cloned")
                     else { GitEngine.clone(url, dir, auth = authFor(managed)).close(); GitOpResult(true, "cloned into ${dir.name}") }
                 }.getOrElse {
                     val why = it.message ?: it.toString()

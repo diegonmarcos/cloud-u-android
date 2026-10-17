@@ -84,6 +84,51 @@
     "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
     "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
   },
+  "storage": {
+    "_doc": "MOVED here from ac_cloud-drive/build.json (owner decision, cloud-shared-store). shared_root is the folder under SHARED storage (/storage/emulated/0/<shared_root>) that USED to be the fleet's one store. It is now the LEGACY MIRROR: (1) the optional export mirror's target (shared_store.export_mirror), so Gallery/Files see what the user exports; (2) the backup/restore drop for the one-time sharedUserId migration (shared_store.migration); (3) cloud-drive's git manager working tree and cloud-code's Backlog/Repos root until they move onto the provider; (4) the nix terminal's fallback when it cannot reach the store directly. RELATIVE on purpose (the absolute path is one device's fact). THE ONE declaration: ac_cloud-drive/app/build.gradle, ac_cloud-nix-on-droid/app/build.gradle and ac_cloud-code/tools/resolve-targets.py READ it from here; test/test-shared-store.sh fails on a second copy.",
+    "shared_root": "CloudDrive",
+    "_doc_git_subdir": "#606/#608 THE ONE folder of the store that holds clones: <store>/<git_subdir>/<name> (moved here from ac_cloud-drive/build.json with shared_root). Since cloud-shared-store it lives under the store ($HOME/cloud-shared-store/git), not under shared storage. Read by libs:shared-store (BuildConfig.GIT_SUBDIR), ac_cloud-drive/app/build.gradle and ac_cloud-code/tools/resolve-targets.py.",
+    "git_subdir": "git"
+  },
+  "shared_store": {
+    "_doc": "THE fleet's one shared store (owner decision 2026-10-17, replacing cloud-drive-shared-store). It lives in THIS app's private data dir at $HOME/<dir> on real ext4/f2fs: exec allowed, fast stats, real symlinks, no MediaProvider FUSE. Three ways in, one store: (a) cloud-terminal-termux owns it (enter.sh mkdirs it; the guest sees it as /root/<dir>); (b) cloud-terminal-nix runs as the SAME Linux uid (shared_user_id, identical literal in both manifests, both release-signed with the one constellation key, both targetSdk 28 -> SELinux domain untrusted_app_27 with the same per-uid MLS categories, which may execute app_data_file) and links ~/<dir> to the owner's home directly; (c) every other fleet app goes through provider (a ContentProvider guarded by a signature-level permission; openFile hands back a ParcelFileDescriptor, so I/O after the one binder call is native). A DocumentsProvider is NOT usable here: DocumentsProvider.attachInfo throws unless the provider is guarded by MANAGE_DOCUMENTS, which would let any SAF client in. Read by app/build.gradle (BuildConfig + manifest placeholders), rootfs/enter.sh mirrors dir as a literal (test/test-shared-store.sh pins it).",
+    "dir": "cloud-shared-store",
+    "owner_package": "cld.termux",
+    "_doc_owner_package": "The store is <owner_package's data dir>/files/home/<dir>. Never written as an absolute path: a second Android user has /data/user/<n>/..., so the nix login derives it from its OWN $HOME by swapping the package segment (bake_default_packages.py storage_setup).",
+    "shared_user_id": "cld.termux.shared",
+    "compat_link": {
+      "_doc": "One release only: ~/cloud-drive-shared-store -> <dir> (relative link, resolves on the host, in the guest and in the nix session). The ONLY place the old name may appear outside the migration notes; test/test-shared-store.sh fails on any other. Remove in the release after remove_after.",
+      "name": "cloud-drive-shared-store",
+      "remove_after": "2026-11"
+    },
+    "provider": {
+      "_doc": "content://<authority>/tree/<relative path>. query = stat or directory listing (name, path, is_dir, size, last_modified, can_exec); openFile(mode r|w|wt|wa|rw|rwt) = ParcelFileDescriptor on the real file; delete = file or empty dir; call(mkdir|rename|export_mirror). Every path is canonicalised and refused if it leaves the store.",
+      "authority": "cld.termux.sharedstore",
+      "permission": "com.diegonmarcos.cloud.permission.SHARED_STORE",
+      "protection_level": "signature"
+    },
+    "web": {
+      "_doc": "my-webserver (option 37.1, ea687d9bf: started at termux login on build.json::runtime.webserver's loopback port, root $HOME) already serves the store read-only at http://<bind>:<port><mount>; nothing here starts a second server. enter.sh adds ONLY the write half: HTTPD_WRITE_ROOTS=/root/<dir> (my-webserver's allowlist: writes land in the store and nowhere else in $HOME) and HTTPD_WRITE_TOKEN_FILE=/root/<token_file> (0600, made once at login; every write must present it). No token file, no writes. test/test-shared-store.sh T7 pins it.",
+      "bind": "127.0.0.1",
+      "port": 8000,
+      "mount": "/cloud-shared-store/",
+      "token_file": ".config/cloud-shared-store/web-token"
+    },
+    "export_mirror": {
+      "_doc": "OFF by default. When on, enter.sh copies <dir>/<source>/ one way into /storage/emulated/0/<storage.shared_root>/<target>/ at each login (cp -ru, never deletes), so Gallery/Files see exported media. Toggle: the flag file below (on|off), written by the provider's call('export_mirror', 'on'|'off') or by `echo on > ~/<flag>` in a session.",
+      "default": "off",
+      "flag_file": ".config/cloud-shared-store/export-mirror",
+      "source": "export",
+      "target": "export"
+    },
+    "migration": {
+      "_doc": "Adding sharedUserId to an installed app needs uninstall + reinstall, which wipes its data. Before: each terminal tars its $HOME to /storage/emulated/0/<storage.shared_root>/<backup_dir>/<package>/home.tar.gz. After: SharedStoreMigration shows a one-time notice and offers the restore when that archive exists (marker file below).",
+      "backup_dir": ".cloud-migrate",
+      "archive": "home.tar.gz",
+      "marker": ".config/cloud-shared-store/migrated-v1"
+    },
+    "_doc_members": "WHO shares shared_user_id is declared ONCE, in aa_cloud-superapp/data/fleet-identity.json (group 'terminal'; its exit-hatch and cloud-drive two-step notes live there). This file owns only the value."
+  },
   "wake_lock": {
     "_doc": "#787 Termux's 'Acquire wakelock', ON by default: TermuxService takes a partial wake lock (plus the Wi-Fi lock when wifi_lock) whenever a session is open and drops it when the last one ends (com.termux.cloud.CloudWakeLock decides; test/test-wake-lock.sh runs it). The notification action still turns it off, and that choice persists. Read by app/build.gradle into BuildConfig; the build fails if either key is missing. State: GET /api/terminal/wakelock (also /api/terminal).",
     "default_on": true,

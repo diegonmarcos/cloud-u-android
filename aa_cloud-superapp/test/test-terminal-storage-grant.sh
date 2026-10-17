@@ -3,7 +3,7 @@
 # terminals the shared-storage pair, and that grant can neither miss nor overreach.
 #
 # THE FAILURE THIS EXISTS FOR. The terminals bind ~/emulated and
-# ~/cloud-drive-shared-store only when /storage/emulated/0 is readable, and a
+# ~/cloud-shared-store only when /storage/emulated/0 is readable, and a
 # fresh install has no storage grant. On the owner's phone neither terminal saw
 # anything in either directory until it was granted by hand over a shell. The
 # plane that already pm-grants the fleet (PrivilegedGrants) now carries the

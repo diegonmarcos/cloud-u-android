@@ -29,6 +29,7 @@ import kotlinx.coroutines.withContext
 class RcloneCoordinator(private val ctx: Context, private val scope: CoroutineScope, private val prefs: DrivePrefs) {
 
     val runner = RcloneRunner(ctx)
+    init { runCatching { com.diegonmarcos.clouddrive.JobPathMigration.run(ctx) } }
     private val jobStore = RcloneJobStore(File(ctx.filesDir, "rclone/jobs.json"))
     private val mountStore = MountStore(File(ctx.filesDir, "mounts/mounts.json"))
     private val mountCredentials = MountCredentialStore(ctx)

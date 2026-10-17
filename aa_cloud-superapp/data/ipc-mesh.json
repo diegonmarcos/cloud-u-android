@@ -2393,6 +2393,17 @@
      "callers": []
     },
     {
+     "permission": "com.diegonmarcos.cloud.permission.SHARED_STORE",
+     "level": "signature",
+     "source": "ac_cloud-termux/app/src/main/AndroidManifest.xml",
+     "component": "com.termux.cloud.SharedStoreProvider",
+     "id": "provider:<pkg>.sharedstore",
+     "kind": "provider",
+     "name": "SharedStoreProvider",
+     "authority": "<pkg>.sharedstore",
+     "callers": []
+    },
+    {
      "permission": "com.diegonmarcos.cloud.permission.TERMINAL_SESSION",
      "level": "signature",
      "source": "ac_cloud-termux/app/src/main/AndroidManifest.xml",
@@ -2982,6 +2993,17 @@
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
      "level": "signature",
      "source": "ac_cloud-termux/app/src/main/java/com/termux/app/TerminalDebugApi.java",
+     "callers": []
+    },
+    {
+     "permission": "com.diegonmarcos.cloud.permission.SHARED_STORE",
+     "level": "signature",
+     "source": "ac_cloud-termux/app/src/main/AndroidManifest.xml",
+     "component": "com.termux.cloud.SharedStoreProvider",
+     "id": "provider:cld.termux.sharedstore",
+     "kind": "provider",
+     "name": "SharedStoreProvider",
+     "authority": "cld.termux.sharedstore",
      "callers": []
     },
     {

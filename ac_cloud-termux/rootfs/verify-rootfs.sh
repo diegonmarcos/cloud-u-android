@@ -132,36 +132,57 @@ case "$where" in
     *) echo "FAIL fish resolves fish_greeting from '$where', not the baked /usr/share/fish/vendor_functions.d/fish_greeting.fish"; fail=1 ;;
 esac
 
-echo "── #612/#730: no shared storage here, so no mount point may be left that reads as an empty store ──"
+echo "── #612/#730 + cloud-shared-store: no shared storage here ──"
 # The runner has no readable /storage/emulated/0 — exactly a fresh phone before
-# the storage grant. enter.sh must say so and must NOT leave an empty
-# ~/cloud-drive-shared-store (an empty mount point is how a fresh phone's
-# missing grant was misread as an empty store). Pre-create both empty, the
-# state an earlier enter.sh left on upgraded phones, so this also proves they
-# are removed. The readable branch (bind at the guest's ~) is pinned by
-# ac_cloud-drive/test/test-drive-fresh-phone.sh.
-mkdir -p "$W/home/emulated" "$W/home/cloud-drive-shared-store"
+# the storage grant. enter.sh must say so and must NOT leave an empty ~/emulated
+# (an empty mount point is how a fresh phone's missing grant was misread as empty
+# storage). The STORE does not depend on the grant: ~/cloud-shared-store is a real
+# directory in the app's home, and the one-release compat link points at it.
+# Pre-create both old entries empty, the state an earlier enter.sh left on
+# upgraded phones, so this also proves they are replaced.
+rm -rf "$W/home/cloud-shared-store"
+mkdir -p "$W/home/emulated" "$W/home/cloud-drive-shared-store"  # compat_link: the old empty mount point
 notice="$(enter -c true 2>&1 >/dev/null || true)"
-for d in emulated cloud-drive-shared-store; do
-    if [ -e "$W/home/$d" ]; then
-        echo "FAIL \$HOME/$d is left behind with storage unreadable — it reads as an empty store"; fail=1
-    else
-        echo "ok   \$HOME/$d is not left behind while storage is unreadable"
-    fi
-done
+if [ -e "$W/home/emulated" ]; then
+    echo "FAIL \$HOME/emulated is left behind with storage unreadable — it reads as empty storage"; fail=1
+else
+    echo "ok   \$HOME/emulated is not left behind while storage is unreadable"
+fi
+if [ -d "$W/home/cloud-shared-store" ] && [ ! -L "$W/home/cloud-shared-store" ]; then
+    echo "ok   ~/cloud-shared-store is a real directory without any storage grant"
+else
+    echo "FAIL ~/cloud-shared-store is not a real directory in \$HOME"; fail=1
+fi
+if [ "$(readlink "$W/home/cloud-drive-shared-store")" = "cloud-shared-store" ]; then  # compat_link
+    echo "ok   the compat link (old name) points at cloud-shared-store"
+else
+    echo "FAIL the compat link is '$(readlink "$W/home/cloud-drive-shared-store" 2>&1)', not cloud-shared-store"; fail=1  # compat_link
+fi
+[ -s "$W/home/.config/cloud-shared-store/web-token" ] && [ "$(stat -c %a "$W/home/.config/cloud-shared-store/web-token")" = 600 ] \
+    && echo "ok   the store's web write token exists, mode 600" \
+    || { echo "FAIL no 0600 web token at ~/.config/cloud-shared-store/web-token"; fail=1; }
 case "$notice" in
-    *"storage access is not granted"*) echo "ok   enter.sh says the store is not mounted and why" ;;
+    *"storage access is not granted"*) echo "ok   enter.sh says shared storage is not mounted and why" ;;
     *) echo "FAIL enter.sh printed no storage notice: '$(echo "$notice" | head -2)'"; fail=1 ;;
 esac
+# The guest reads, writes and EXECUTES the store (ext4, not FUSE), and the env names it.
+mkdir -p "$W/home/cloud-shared-store/git/cloud-probe-repo"
+printf '#!/bin/sh\necho store-exec-ok\n' > "$W/home/cloud-shared-store/probe.sh"; chmod 755 "$W/home/cloud-shared-store/probe.sh"
+got="$(enter -c "sh -c 'ls ~/cloud-shared-store/git; ls ~/cloud-drive-shared-store/git; ~/cloud-shared-store/probe.sh; echo \$CLOUD_SHARED_STORE'" 2>/dev/null </dev/null || true)"  # compat_link
+case "$got" in
+    *cloud-probe-repo*cloud-probe-repo*store-exec-ok*/root/cloud-shared-store*) echo "ok   the guest lists the store (both names), executes from it, and sees CLOUD_SHARED_STORE" ;;
+    *) echo "FAIL the guest's view of the store: '$(echo "$got" | tr '\n' ' ')'"; fail=1 ;;
+esac
+rm -rf "$W/home/cloud-shared-store/git" "$W/home/cloud-shared-store/probe.sh"
 
-echo "── #736: with shared storage readable, the GUEST shell lists the real storage and store ──"
-# The phone's report: ~/emulated and ~/cloud-drive-shared-store listed empty while
-# the file manager showed both full. Stage /storage/emulated/0 on the runner (the
-# probe path is the phone's own), leave the state an older enter.sh left behind
-# (empty mount-point dirs, termux-setup-storage's ~/storage tree), log in through
-# the shipped proot and list from INSIDE the root. A mutant without the guest bind
-# runs the same check and must go red: that is what proves an absolute symlink only
-# resolves in the guest because of that bind, and that this check can fail at all.
+echo "── #736: with shared storage readable, the GUEST shell lists the real storage ──"
+# The phone's report: ~/emulated listed empty while the file manager showed it
+# full. Stage /storage/emulated/0 on the runner (the probe path is the phone's
+# own), leave the state an older enter.sh left behind (an empty mount-point dir,
+# termux-setup-storage's ~/storage tree), log in through the shipped proot and list
+# from INSIDE the root. A mutant without the guest bind runs the same check and
+# must go red: that is what proves an absolute symlink only resolves in the guest
+# because of that bind, and that this check can fail at all.
 S0=/storage/emulated/0
 if [ -e /storage ]; then
     echo "FAIL /storage already exists on this runner; the readable branch cannot be staged without clobbering it"; fail=1
@@ -170,26 +191,37 @@ elif ! sudo -n mkdir -p "$S0/CloudDrive/git/cloud-probe-repo" "$S0/Download" 2>/
     echo "FAIL cannot stage $S0 on this runner (no passwordless sudo): the readable branch is unproven"; fail=1
 else
     readable_listing() {  # $1 = enter.sh to log in through; prints what the guest lists
-        rm -rf "$W/home/emulated" "$W/home/cloud-drive-shared-store" "$W/home/storage"
-        mkdir -p "$W/home/emulated" "$W/home/cloud-drive-shared-store" "$W/home/storage"
+        rm -rf "$W/home/emulated" "$W/home/storage"
+        mkdir -p "$W/home/emulated" "$W/home/storage"
         ln -s "$S0/DCIM" "$W/home/storage/dcim"
         # sh -c inside the login shell, as above: the listing must not depend on fish syntax.
         HOME="$W/home" CLOUD_ROOTFS_FALLBACK=false sh "$1" -c \
-            "sh -c 'ls ~/emulated; echo SEP; ls ~/cloud-drive-shared-store/git'" 2>/dev/null </dev/null || true
+            "sh -c 'ls ~/emulated; echo SEP; ls ~/emulated/CloudDrive/git'" 2>/dev/null </dev/null || true
     }
     readable_ok() {  # $1 = the listing
         case "$1" in *CloudDrive*Download*SEP*cloud-probe-repo*) return 0 ;; esac
         return 1
     }
     got="$(readable_listing "$STAGE/enter.sh")"
-    if readable_ok "$got"; then echo "ok   the guest lists ~/emulated and ~/cloud-drive-shared-store/git with real content"
+    if readable_ok "$got"; then echo "ok   the guest lists ~/emulated (and the legacy CloudDrive mirror in it) with real content"
     else echo "FAIL the guest listing is not the real storage: '$(echo "$got" | tr '\n' ' ')'"; fail=1; fi
-    for d in emulated cloud-drive-shared-store; do
-        [ -L "$W/home/$d" ] && echo "ok   ~/$d is a symlink -> $(readlink "$W/home/$d")" \
-            || { echo "FAIL ~/$d is not a symlink (an empty directory left in place reads as empty storage)"; fail=1; }
-    done
+    [ -L "$W/home/emulated" ] && echo "ok   ~/emulated is a symlink -> $(readlink "$W/home/emulated")" \
+        || { echo "FAIL ~/emulated is not a symlink (an empty directory left in place reads as empty storage)"; fail=1; }
     [ ! -e "$W/home/storage" ] && echo "ok   the upstream ~/storage tree is gone: ~/emulated is the one shared-storage entry" \
         || { echo "FAIL ~/storage is still there: a second entry for shared storage"; fail=1; }
+    # Export mirror: OFF by default (nothing copied), ON copies <store>/export one way.
+    mkdir -p "$W/home/cloud-shared-store/export"; echo pic > "$W/home/cloud-shared-store/export/probe.txt"
+    rm -f "$W/home/.config/cloud-shared-store/export-mirror"
+    HOME="$W/home" CLOUD_ROOTFS_FALLBACK=false sh "$STAGE/enter.sh" -c true >/dev/null 2>&1 </dev/null || true
+    sleep 1
+    [ ! -e "$S0/CloudDrive/export/probe.txt" ] && echo "ok   the export mirror is off by default" \
+        || { echo "FAIL the export mirror copied with no flag set"; fail=1; }
+    echo on > "$W/home/.config/cloud-shared-store/export-mirror"
+    HOME="$W/home" CLOUD_ROOTFS_FALLBACK=false sh "$STAGE/enter.sh" -c true >/dev/null 2>&1 </dev/null || true
+    n=0; while [ ! -e "$S0/CloudDrive/export/probe.txt" ] && [ "$n" -lt 20 ]; do sleep 0.5; n=$((n+1)); done
+    [ -e "$S0/CloudDrive/export/probe.txt" ] && echo "ok   the export mirror copies <store>/export once its flag is on" \
+        || { echo "FAIL the export mirror did not copy with the flag on"; fail=1; }
+    rm -rf "$W/home/cloud-shared-store/export" "$W/home/.config/cloud-shared-store/export-mirror"
     sed 's|^\(\[ -z "$sdcard" \] \|\| binds="$binds -b $sdcard:/sdcard\) -b $sdcard:/storage/emulated/0"$|\1"|' "$STAGE/enter.sh" > "$STAGE/enter-mutant.sh"
     if cmp -s "$STAGE/enter.sh" "$STAGE/enter-mutant.sh"; then
         echo "FAIL MUTATION DID NOT APPLY: enter.sh has no guest bind line to remove"; fail=1

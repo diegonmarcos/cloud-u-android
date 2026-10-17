@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- cloud-shared-store: the provider door and the CLOUD_EXEC fallback door. Both are
+         signature-level, so declaring them here grants nothing outside the fleet key. -->
+    <uses-permission android:name="com.diegonmarcos.cloud.permission.SHARED_STORE" />
+    <uses-permission android:name="cld.termux.permission.CLOUD_EXEC" />
+    <queries>
+        <package android:name="cld.termux" />
+    </queries>
+</manifest>

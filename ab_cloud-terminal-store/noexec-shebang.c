@@ -2,7 +2,7 @@
  * #771 -- run `#!` scripts that live on a noexec mount, in both terminals.
  *
  * THE PROBLEM. Android mounts shared storage (/storage/emulated/0, so ~/emulated and
- * ~/cloud-drive-shared-store) noexec, through a FUSE daemon that also reports no x bits.
+ * ~/cloud-shared-store) noexec, through a FUSE daemon that also reports no x bits.
  * That is a kernel mount option of a mount the app does not own: no app can lift it, and
  * proot does not help -- it checks access(X_OK) on the host path before it rewrites an
  * execve, so `./build.sh` in a shared-store repo is "Permission denied" in a shell and in

@@ -453,7 +453,7 @@ final class TermuxInstaller {
     /**
      * #736: the upstream ~/storage tree (shared, downloads, dcim, ...) is no longer made. This
      * terminal's ONE entry for shared storage is ~/emulated, linked by the login at every session
-     * start together with ~/cloud-drive-shared-store; a second tree beside it was a duplicate view
+     * start together with ~/cloud-shared-store; a second tree beside it was a duplicate view
      * of the same storage, and the login removes the one an earlier version left.
      */
     static void setupStorageSymlinks(final Context context) {

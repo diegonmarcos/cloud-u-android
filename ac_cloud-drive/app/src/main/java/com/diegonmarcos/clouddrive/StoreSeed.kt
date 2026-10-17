@@ -105,18 +105,22 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
         // as the terminal needs-credential outcome instead of an unwinnable retry.
         val token = DriveAuthApply.vaultGitToken(applicationContext)
             .ifBlank { runCatching { DriveGitChain.resolve(applicationContext).token.orEmpty() }.getOrDefault("") }
+        val viaExec = com.diegonmarcos.clouddrive.sync.StoreGit.useExec(applicationContext)
         val outcomes = declared.map { decl ->
             val dir = SharedStore.repoDir(decl.name)
             val url = family.cloneUrl(decl).orEmpty()
             when {
-                GitEngine.isRepository(dir) -> SeedOutcome(decl.name, SeedOutcome.PRESENT, dir.absolutePath)
+                (if (viaExec) com.diegonmarcos.clouddrive.sync.StoreGit.isRepository(applicationContext, dir) else GitEngine.isRepository(dir)) -> SeedOutcome(decl.name, SeedOutcome.PRESENT, dir.absolutePath)
                 url.isBlank() -> SeedOutcome(decl.name, SeedOutcome.UNDECLARED, "no upstream instance declares a clone URL")
                 // Stopped: recorded, not thrown away. The remaining repositories are DEFERRED rather
                 // than attempted against a torn-down thread and logged as if they were broken.
                 isStopped -> SeedOutcome(decl.name, SeedOutcome.DEFERRED, "the worker was stopped before this repository was reached")
                 else -> {
                     val auth = if (token.isBlank()) GitAuth.None else GitAuth.Https(decl.githubOwner, token)
-                    val cloned = runCatching { GitEngine.clone(url, dir, auth = auth, depth = BuildConfig.SEED_DEPTH).close() }
+                    // cloud-shared-store: not in cld.termux's uid -> the clone runs inside it (CLOUD_EXEC).
+                    val cloned = if (viaExec) com.diegonmarcos.clouddrive.sync.StoreGit.clone(applicationContext, url, dir, token, BuildConfig.SEED_DEPTH)
+                        .let { if (it.ok) kotlin.Result.success(Unit) else kotlin.Result.failure(IllegalStateException(it.summary + " " + it.details)) }
+                    else runCatching { GitEngine.clone(url, dir, auth = auth, depth = BuildConfig.SEED_DEPTH).close() }
                     if (cloned.isFailure) {
                         val why = cloned.exceptionOrNull()?.message ?: cloned.exceptionOrNull()?.javaClass?.simpleName ?: "clone failed"
                         // #683 STRUCTURAL, NOT TRANSIENT: the provider demanded a credential and

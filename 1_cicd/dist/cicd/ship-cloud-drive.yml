@@ -43,6 +43,7 @@ on:
       # app compiles is watched above: any change in it ships every consumer.
       # fleet-refresh.yml (schedule only) ships the app for a moved cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-drive.yml"
+      #   input: "ac_cloud-termux/build.json"
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/ai/**"
       - "ab_cloud-libs-shared/libs/analytics/**"
@@ -60,6 +61,7 @@ on:
       - "ab_cloud-libs-shared/libs/model-catalogue/**"
       - "ab_cloud-libs-shared/libs/mounts/**"
       - "ab_cloud-libs-shared/libs/rclone/**"
+      - "ab_cloud-libs-shared/libs/shared-store/**"
       - "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       - "ab_cloud-libs-shared/libs/sysdns/**"
       - "ab_cloud-libs-shared/libs/updater/**"

@@ -85,9 +85,9 @@ for t, f in (("goose", "~/.config/goose/"), ("hermes", "~/.hermes/")):
 problems += [f"a check could print an agent key: {c}" for c in script
              for v in ("$OPENROUTER_API_KEY", "$CLAUDE_CODE_OAUTH_TOKEN") if v in c.replace(f'test -n "{v}"', "")]
 has(lambda s: s == "ls ~/emulated | head", "lists ~/emulated (#736)")
-has(lambda s: s == "ls ~/cloud-drive-shared-store/git | head", "lists the shared store (#736)")
+has(lambda s: s == "ls ~/cloud-shared-store/git | head", "lists the shared store (#736)")
 has(lambda s: s == "test ! -e ~/storage", "proves no upstream ~/storage (#736)")
-store = [s for s in script if "~/cloud-drive-shared-store/git/*/.git" in s]
+store = [s for s in script if "~/cloud-shared-store/git/*/.git" in s]
 has(lambda s: s in store and "git status" in s and "|" not in s.split("git status")[1], "runs git status in a shared-store repo, unpiped")
 has(lambda s: s in store and "echo one > $f" in s and "sed -i" in s and "rm $f" in s, "creates, edits and deletes a file in a shared-store repo")
 has(lambda s: s in store and "#!/usr/bin/env sh" in s and "./$f" in s and "rm -f $f" in s, "runs a #! script as ./script in a shared-store repo")

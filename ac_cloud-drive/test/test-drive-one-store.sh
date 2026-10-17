@@ -60,11 +60,11 @@ else
 fi
 
 echo "── the one root is DECLARED, and cloud-code consumes the declaration ──"
-GIT_SUBDIR="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1])).get("storage") or {}).get("git_subdir") or "")' "$ROOT/ac_cloud-drive/build.json")"
+GIT_SUBDIR="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1])).get("storage") or {}).get("git_subdir") or "")' "$ROOT/ac_cloud-termux/build.json")"
 if [ -n "$GIT_SUBDIR" ]; then
-    pass "ac_cloud-drive/build.json::storage.git_subdir = '$GIT_SUBDIR' (the one clone folder)"
+    pass "ac_cloud-termux/build.json::storage.git_subdir (cloud-shared-store) = '$GIT_SUBDIR' (the one clone folder)"
 else
-    fail "ac_cloud-drive/build.json declares no storage.git_subdir — there is no canonical root to hold anyone to"
+    fail "ac_cloud-termux/build.json declares no storage.git_subdir — there is no canonical root to hold anyone to"
 fi
 RESOLVER="$ROOT/ac_cloud-code/tools/resolve-targets.py"
 if grep -q 'get("git_subdir")' "$RESOLVER" && grep -q '"git_subdir": git_subdir(' "$RESOLVER"; then
