@@ -270,6 +270,9 @@ object StoreAuto {
 
     // ── the four phases ──────────────────────────────────────────────────────
 
+    /** SharedUidMigration: an update that changes the app's uid is held, never retried unattended. */
+    private const val MIGRATE = "the update changes its Linux user (INSTALL_FAILED_UID_CHANGED) — migrate it from its row; no automatic retry"
+
     private fun refresh(ctx: Context, s: State, apps: List<Fleet.App>) {
         save(ctx, s)
         val todo = apps.filter { !it.blocked }
@@ -284,6 +287,12 @@ object StoreAuto {
                 continue
             }
             val held = Fleet.heldAtInstall(ctx, app)
+            if (SharedUidMigration.blocks(ctx, app)) {
+                s.queue += itemOf(app, app.kind, r).also {
+                    it.status = HELD; it.failedAt = INSTALL; it.error = MIGRATE
+                }
+                continue
+            }
             val wanted = r is Fleet.State.UpdateAvailable || (r is Fleet.State.Missing && app.kind == "lib") ||
                 StoreStages.actionableFor(ctx, app, r) != null
             when {
@@ -359,6 +368,10 @@ object StoreAuto {
             if (item.status == INSTALLING) {
                 val now = code(ctx, app)
                 if (now != null && now != item.before) { landed(item); save(ctx, s); continue }
+            }
+            if (SharedUidMigration.blocks(ctx, app)) {
+                item.status = HELD; item.failedAt = INSTALL; item.error = MIGRATE
+                save(ctx, s); continue
             }
             val held = Fleet.heldAtInstall(ctx, app)
             if (held != null) {

@@ -607,7 +607,39 @@ class StoreCloudFragment : KitComposeFragment() {
                 quick = ui.quick?.let { (label, fill) -> StoreQuick(label, fill) { next(ctx, app) } },
                 headTag = "store-head:${app.id}", metaTag = "store-meta:${app.id}", dotTag = "store-dot:${app.id}")
             ui.error?.let { ErrorArea(ctx, app, it) }
+            MigrationArea(ctx, app, stg)
             if (open) FleetDetail(ctx, app, ui, stg)
+        }
+    }
+
+    /**
+     * SharedUidMigration: the one-time card for an app whose update changes its Linux uid.
+     * Read again whenever the row's stage is (every check / verb repaints it), so each
+     * step lights up as the device moves: backup on disk, old build gone, new one in.
+     */
+    @Composable
+    private fun MigrationArea(ctx: Context, app: Fleet.App, stg: StoreStages.Stage?) {
+        val rec = remember(stg) { SharedUidMigration.record(ctx, app.pkg)?.takeIf { !it.done } } ?: return
+        val plan = SharedUidMigration.plan(app.pkg) ?: return
+        val path = plan.backupPath(app.pkg)
+        val installed = remember(stg) { StoreStages.installedKey(ctx, app) }
+        val backup = remember(stg) { SharedUidMigration.backupOf(path, rec.backupStartedAt) }
+        val waits = remember(stg) {
+            SharedUidMigration.waitsFor(plan.order, app.pkg) { p -> SharedUidMigration.stillOld(ctx, p) }
+        }
+        fun repaint() { val s2 = StoreStages.stage(ctx, app, states[app.id]); main.post { stages[app.id] = s2 } }
+        androidx.compose.foundation.layout.Box(Modifier.padding(start = sdp(StoreDensity.S12), end = sdp(StoreDensity.S12), bottom = sdp(StoreDensity.S8))) {
+            SharedUidMigrationCard(app.pkg, app.label, rec, path, installed, backup, waits,
+                onBackup = { thread(name = "migrate-backup-${app.id}") {
+                    SharedUidMigration.backupStarted(ctx, app.pkg)
+                    val m = SharedUidMigration.startBackup(ctx, app.pkg, path)
+                    main.post { Toast.makeText(ctx, "${app.label}: $m", Toast.LENGTH_LONG).show() }
+                    Thread.sleep(3_000); repaint()
+                } },
+                onUninstall = { runCatching { startActivity(SharedUidMigration.uninstallIntent(app.pkg)) } },
+                onInstall = { runStage(ctx, app, StoreStages.INSTALL) },
+                onOpen = { openApp(ctx, app.pkg) },
+                onDone = { SharedUidMigration.dismiss(ctx, app.pkg); thread { repaint() } })
         }
     }
 

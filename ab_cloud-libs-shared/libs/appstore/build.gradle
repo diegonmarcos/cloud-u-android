@@ -74,7 +74,18 @@ def fleetIdentityB64 = {
                 value = cur instanceof String ? cur : null
             }
         }
-        [id: g.id, label: g.label ?: g.id, shared_user_id: value, members: g.members ?: []]
+        // SharedUidMigration: `migration_plan` values may be {from, key} refs too (the backup paths
+        // live in ac_cloud-termux/build.json::storage / ::shared_store.migration); baked resolved.
+        def resolve = { v ->
+            if (!(v instanceof Map) || !v.from) return v
+            def src = new File(repoRoot, v.from as String)
+            if (!src.exists()) return null
+            def cur = slurp.parse(src)
+            for (k in (v.key as String).split('\\.')) cur = (cur instanceof Map) ? cur[k] : null
+            cur
+        }
+        def plan = (g.migration_plan instanceof Map) ? g.migration_plan.findAll { k, v -> !k.startsWith('_') }.collectEntries { k, v -> [(k): resolve(v)] } : null
+        [id: g.id, label: g.label ?: g.id, shared_user_id: value, members: g.members ?: [], migration: g.migration, migration_plan: plan]
     }
     def members = (slurp.parse(ipcMeshFile).members ?: []).collect { m -> [id: m.id, pkg: m.pkg, label: m.label ?: m.id, dir: m.dir ?: ""] }
     groovy.json.JsonOutput.toJson([groups: groups, members: members]).bytes.encodeBase64().toString()

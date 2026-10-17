@@ -55,7 +55,9 @@ object FleetIdentity {
     const val TAG_SUMMARY = "fleet-identity-summary"
     const val OWN = "own uid"
 
-    class Group(val id: String, val label: String, val sharedUserId: String?, val members: List<String>)
+    /** [migration] = how an installed member reaches this uid ("shared_uid"), [plan] its declared backup paths (SharedUidMigration). */
+    class Group(val id: String, val label: String, val sharedUserId: String?, val members: List<String>,
+                val migration: String? = null, val plan: SharedUidMigration.Plan? = null)
     class Member(val id: String, val pkg: String, val label: String)
     class Registry(val groups: List<Group>, val members: List<Member>) {
         /** The group in force for [pkg]: a pending group whose value has not been declared yet is not. */
@@ -79,7 +81,8 @@ object FleetIdentity {
         val o = JSONObject(json)
         val groups = o.optJSONArray("groups").objs().map { g ->
             Group(g.getString("id"), g.optString("label", g.getString("id")),
-                g.optString("shared_user_id").takeIf { it.isNotEmpty() && it != "null" }, g.optJSONArray("members").strs())
+                g.optString("shared_user_id").takeIf { it.isNotEmpty() && it != "null" }, g.optJSONArray("members").strs(),
+                g.optString("migration").takeIf { it.isNotEmpty() && it != "null" }, SharedUidMigration.parsePlan(g.optJSONObject("migration_plan")))
         }
         val members = o.optJSONArray("members").objs().map { Member(it.getString("id"), it.getString("pkg"), it.optString("label", it.getString("id"))) }
         return Registry(groups, members)

@@ -358,11 +358,15 @@ class PackageInstallerReceiver : BroadcastReceiver() {
         -4 -> "INSTALL_FAILED_INSUFFICIENT_STORAGE"
         -5 -> "INSTALL_FAILED_DUPLICATE_PACKAGE"
         -7 -> "INSTALL_FAILED_UPDATE_INCOMPATIBLE (signature differs from the installed copy)"
+        // SharedUidMigration (libs:appstore): the new build's android:sharedUserId differs from
+        // the installed one's. Not retryable — the Store turns the row into the one-time migration.
+        -8 -> "INSTALL_FAILED_SHARED_USER_INCOMPATIBLE"
         -9 -> "INSTALL_FAILED_MISSING_SHARED_LIBRARY"
         -12 -> "INSTALL_FAILED_OLDER_SDK"
         -15 -> "INSTALL_FAILED_TEST_ONLY"
         -20 -> "INSTALL_FAILED_MEDIA_UNAVAILABLE"
         -23 -> "INSTALL_FAILED_PACKAGE_CHANGED"
+        -24 -> "INSTALL_FAILED_UID_CHANGED"
         -25 -> "INSTALL_FAILED_VERSION_DOWNGRADE"
         -29 -> "INSTALL_FAILED_DEPRECATED_SDK_VERSION"
         -100 -> "INSTALL_PARSE_FAILED_NOT_APK"

@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- No components: the store is Fragments the host inflates, and its
      background pass is a WorkManager worker the host schedules. -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- SharedUidMigration step 1: the store asks the OLD terminal build to tar its own home.
+         CLOUD_EXEC is signature-level (granted with no prompt, fleet key); RUN_COMMAND is the
+         fallback for a terminal that has no CLOUD_EXEC (granted by the user, if at all). -->
+    <uses-permission android:name="cld.termux.permission.CLOUD_EXEC" />
+    <uses-permission android:name="cld.termux.nix.permission.CLOUD_EXEC" />
+    <uses-permission android:name="cld.termux.permission.RUN_COMMAND" />
+    <uses-permission android:name="cld.termux.nix.permission.RUN_COMMAND" />
+</manifest>

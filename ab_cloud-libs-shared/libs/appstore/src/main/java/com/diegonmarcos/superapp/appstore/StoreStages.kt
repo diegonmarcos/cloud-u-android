@@ -130,6 +130,13 @@ object StoreStages {
         // #858 a handover that was aborted, abandoned or never answered turns
         // into the Install-stage note read below: the row offers Retry.
         runCatching { StoreInstallWatch.sweep(ctx, app) }
+        // A uid change (INSTALL_FAILED_UID_CHANGED, -24) is not retryable: while the old
+        // build is installed the row is the one-time migration, with no Install/Download.
+        val mig = runCatching { SharedUidMigration.observe(ctx, app) }.getOrNull()
+        if (mig != null && SharedUidMigration.blocks(mig, installedKey(ctx, app)))
+            return Stage(SharedUidMigration.STAGE, "${mig.cause.constant}: ${app.label} ${mig.version} changes its Linux " +
+                "user — migrate once (back up, uninstall, install, restore); install retries are stopped",
+                emptyList(), cachedFor(ctx, app))
         // #780 PRECEDENCE: busy → ACTIONABLE cache → remote → installed. A
         // cache whose build is already on the device (landed) or that the
         // remote has moved past is NOT actionable, and it must never stand in
@@ -263,6 +270,8 @@ object StoreStages {
      * Blocking — call off the main thread.
      */
     fun install(ctx: Context, app: Fleet.App, remote: Fleet.State? = null): Stage {
+        // SharedUidMigration: the old build refuses this one in place; no path retries it.
+        if (SharedUidMigration.blocks(ctx, app)) return stage(ctx, app, remote)
         val cached = actionableFor(ctx, app, remote)
         return named(ctx, app, if (cached != null) UpdateProgress.STAGE_VERIFYING else UpdateProgress.STAGE_DOWNLOADING,
             versionOf(remote, cached)) {
@@ -523,6 +532,9 @@ object StoreStages {
         for (app in todo) {
             if (app.pkg == ctx.packageName) { out += Outcome(app, SKIPPED, HOST); continue }
             if (!dryRun) reapLanded(ctx, app)
+            if (SharedUidMigration.blocks(ctx, app)) {
+                out += Outcome(app, SKIPPED, "needs the one-time uid migration — see its row"); continue
+            }
             val remote = if (online) Fleet.status(ctx, app) else null
             val act = actionableFor(ctx, app, remote)
             val wanted = act != null || remote is Fleet.State.UpdateAvailable ||
