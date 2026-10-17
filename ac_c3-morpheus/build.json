@@ -1,4 +1,5 @@
 {
+  "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "smart_toy", "category": "agi", "res": "app/src/main/res"},
   "name": "c3-morpheus",
   "description": "c3-morpheus on a phone: the cloud's workflow orchestrator. Four panels — the Dagu workflow list, the probe registry that declares what 'healthy' means, the fleet control panel, and the PM board (Paca). c3-watchdog keeps what is running alive; c3-morpheus decides what runs.",
   "category": "android",

@@ -198,7 +198,7 @@ for dirpath, _d, files_ in os.walk(sys.argv[3]):
         declared.update(re.findall(r'"(ic_[a-z0-9_]+)"', code))
 declared = {d for d in declared if d}
 files = {f[:-4] for f in os.listdir(sys.argv[2]) if f.endswith(".xml")}
-launcher = {"ic_launcher_background", "ic_launcher_foreground"}
+launcher = {"ic_launcher_background", "ic_launcher_foreground", "ic_launcher_monochrome"}
 bad = []
 for name in sorted(declared - files):
     bad.append("declared icon %r has no res/drawable/%s.xml — the shell resolves icons by "
