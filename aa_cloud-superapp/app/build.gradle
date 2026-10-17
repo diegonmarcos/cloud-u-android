@@ -389,10 +389,18 @@ def deviceTuningB64  = deviceTuningJson.bytes.encodeBase64().toString()
 // problem, not a missing-optional-file case — degrade to the last committed
 // snapshot and warn rather than break the build outright.
 try {
-    providers.exec {
+    // ignoreExitValue: a non-zero exit must come back as a VALUE to warn about. Thrown out of providers.exec it is recorded by the
+    // configuration cache as a problem of the build file - and a build that stores the cache with a problem FAILS, try/catch or
+    // not (Ship went red on exactly this with the snapshot still perfectly usable).
+    def regen = providers.exec {
         workingDir file("../data")
         commandLine "bash", "regen.sh", "--constellation-only"
-    }.result.get()
+        ignoreExitValue = true
+    }
+    def regenRc = regen.result.get().exitValue
+    if (regenRc != 0) {
+        logger.warn("constellation-fleet.json regen exited ${regenRc} (${regen.standardError.asText.get().take(600).trim()}) — using last committed snapshot")
+    }
 } catch (Throwable t) {
     logger.warn("constellation-fleet.json regen failed (${t.message}) — using last committed snapshot")
 }
