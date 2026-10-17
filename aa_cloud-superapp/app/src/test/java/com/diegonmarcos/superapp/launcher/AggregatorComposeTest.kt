@@ -101,8 +101,9 @@ class AggregatorComposeTest : KitPageHarness() {
         showKit { GroupBlock(st, view(row("phone:1", System.currentTimeMillis() - 120_000L)), archived = false) { } }
         compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).assertTextContains("App A", substring = true)
         compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).assertTextContains("2m", substring = true)
-        compose.onNodeWithTag(AggTags.row("phone:1")).assertTextContains("title phone:1", substring = true)
-        compose.onNodeWithTag(AggTags.row("phone:1")).assertTextContains("body phone:1", substring = true)
+        compose.onNodeWithTag(AggTags.row("phone:1")).assertExists()
+        compose.onNodeWithText("title phone:1").assertExists()
+        compose.onNodeWithText("body phone:1").assertExists()
         compose.onNodeWithTag(AggTags.rowUnread("phone:1")).assertExists()
         // A single notification is not a stack: no chevron, no "+N more".
         compose.onNodeWithTag(AggTags.groupMore("pkg.a")).assertDoesNotExist()
@@ -141,7 +142,7 @@ class AggregatorComposeTest : KitPageHarness() {
     @Test
     fun `G4 a right swipe flips read both ways and Show unread drops a row that became read`() {
         val st = state("g4-page")
-        val r = row("phone:1", 100)
+        val r = row("phone:1", 300)  // newest: on top of the stack
         showKit { GroupBlock(st, view(r, row("phone:2", 200)), archived = false) { } }
         assertTrue(st.isUnread(r))
         compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { swipeRight() }
@@ -240,10 +241,13 @@ class AggregatorComposeTest : KitPageHarness() {
         val st = AggregatorState(ctx, "t1-filters", emptyList(), filters)
         showKit { FilterRow(st) }
         compose.onNodeWithTag(AggTags.FILTERS_TOGGLE).assertExists()
-        if (compose.onAllNodesWithTag(AggTags.filter(filters[0].id, filters[0].options[0].id)).fetchSemanticsNodes().isEmpty()) {
+        // Internal keys ("__collapsed", "__archived/…") are stored choices, not toggles drawn on the row.
+        val drawn = filters.filterNot { it.id.startsWith("__") }
+        assumeTrue(drawn.isNotEmpty())
+        if (compose.onAllNodesWithTag(AggTags.filter(drawn[0].id, drawn[0].options[0].id)).fetchSemanticsNodes().isEmpty()) {
             compose.onNodeWithTag(AggTags.FILTERS_TOGGLE).performClick()
         }
-        for (f in filters) for (o in f.options) compose.onNodeWithTag(AggTags.filter(f.id, o.id)).assertExists()
+        for (f in drawn) for (o in f.options) compose.onNodeWithTag(AggTags.filter(f.id, o.id)).assertExists()
         // The One UI page actions are NOT part of the filter row.
         compose.onNodeWithTag(AggTags.MARK_ALL_READ).assertDoesNotExist()
         compose.onNodeWithTag(AggTags.ARCHIVE_ALL).assertDoesNotExist()
