@@ -251,6 +251,7 @@
     "authority": "<pkg>.fleetconfig",
     "callers": [
      "aa_cloud-superapp",
+     "c3-webserver",
      "keyboard-engines",
      "lib-analytics-sink",
      "lib-cal",
@@ -435,6 +436,7 @@
     "authority": "<pkg>.fleet",
     "callers": [
      "aa_cloud-superapp",
+     "c3-webserver",
      "keyboard-engines",
      "lib-analytics-sink",
      "lib-cal",
@@ -519,6 +521,7 @@
     "authority": "<pkg>.fleetsetup",
     "callers": [
      "aa_cloud-superapp",
+     "c3-webserver",
      "keyboard-engines",
      "lib-analytics-sink",
      "lib-cal",
@@ -818,6 +821,7 @@
      "name": "FleetAlertsProvider",
      "authority": "<pkg>.fleetalerts",
      "callers": [
+      "c3-webserver",
       "keyboard-engines",
       "lib-analytics-sink",
       "lib-cal",
@@ -993,8 +997,12 @@
    "label": "cloud-c3-webserver",
    "kind": "app",
    "dir": "ac_cloud-c3-webserver",
-   "door": false,
-   "libs": [],
+   "door": true,
+   "libs": [
+    "core",
+    "devtools",
+    "fleetconfig-model"
+   ],
    "endpoints": []
   },
   {
