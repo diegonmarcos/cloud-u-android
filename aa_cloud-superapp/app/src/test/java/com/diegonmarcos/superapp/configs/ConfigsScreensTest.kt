@@ -44,6 +44,7 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
     companion object {
         const val MAX_BUTTON_DP = 32f
         const val MAX_ROW_DP = 44f
+        const val EXTRA_LINE_DP = 18f
         /** An icon's plate (Control's round badge): at most the icon + 8dp ("white box too big"). */
         const val ICON_DP = 22f
         const val MAX_ICON_BOX_DP = ICON_DP + 8f
@@ -63,7 +64,7 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
         val OUT = File(System.getProperty("user.dir"), "build/configs-screens").apply { mkdirs() }
     }
 
-    data class Hit(val kind: String, val name: String, val wDp: Float, val hDp: Float)
+    data class Hit(val kind: String, val name: String, val wDp: Float, val hDp: Float, val lines: Int = 1)
 
     private fun fragmentFor(id: String): Fragment {
         if (id == "grid") {
@@ -93,7 +94,7 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
         if (!clickable) return null
         return when {
             tag.startsWith("cfg:button") || tag.contains("fab", true) -> "button"
-            tag.contains("tile", true) -> "tile"
+            tag.contains("tile", true) || tag.startsWith("toggle:") || tag.startsWith("index:") -> "tile"
             tag.contains("chip", true) -> "chip"
             role == Role.Tab -> "tab"
             role == Role.Button && n.children.none { kindOfChildIsText(it) } -> "button"
@@ -124,8 +125,22 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
             val tag = n.config.getOrNull(SemanticsProperties.TestTag).orEmpty()
             val k = (if (ICON_BOX.containsMatchIn(tag)) "icon-box" else null) ?: kindOf(n) ?: return@mapNotNull null
             val b = n.boundsInRoot
-            if (b.width <= 0f || b.height <= 0f) null else Hit(k, label(n), b.width / d, b.height / d)
+            if (b.width <= 0f || b.height <= 0f) null else Hit(k, label(n), b.width / d, b.height / d, lines(n))
+        } + runCatching {
+            // An icon plate sits inside a merged tile, so it is only visible in the unmerged tree.
+            compose.onAllNodes(SemanticsMatcher("icon-box") {
+                ICON_BOX.containsMatchIn(it.config.getOrNull(SemanticsProperties.TestTag).orEmpty())
+            }, useUnmergedTree = true).fetchSemanticsNodes(false)
+        }.getOrDefault(emptyList()).map { n ->
+            Hit("icon-box", n.config.getOrNull(SemanticsProperties.TestTag).orEmpty(), n.boundsInRoot.width / d, n.boundsInRoot.height / d)
         }
+    }
+
+    /** Text lines a row carries (title + subtitle = 2): a row may grow [EXTRA_LINE_DP] per line past the first. */
+    private fun lines(n: SemanticsNode): Int {
+        val own = n.config.getOrNull(SemanticsProperties.Text).orEmpty()
+        val kids = n.children.flatMap { it.config.getOrNull(SemanticsProperties.Text).orEmpty() }
+        return (own + kids).sumOf { it.text.count { c -> c == '\n' } + 1 + it.text.length / 60 }.coerceAtLeast(1)
     }
 
     private fun viewHits(root: View): List<Hit> {
@@ -173,7 +188,8 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
         if (fontScale == 1.0f) {
             val tooTall = hits.filter {
                 (it.kind == "button" || it.kind == "view-button" || it.kind == "chip") && it.hDp > MAX_BUTTON_DP + 0.5f ||
-                    (it.kind == "row" || it.kind == "view-row" || it.kind == "tab") && it.hDp > MAX_ROW_DP + 0.5f ||
+                    (it.kind == "row" || it.kind == "view-row" || it.kind == "tab") &&
+                        it.hDp > MAX_ROW_DP + EXTRA_LINE_DP * (it.lines - 1) + 0.5f ||
                     it.kind == "icon-box" && maxOf(it.wDp, it.hDp) > MAX_ICON_BOX_DP + 0.5f
             }
             assertTrue("$name: ${tooTall.size} control(s) over ${MAX_BUTTON_DP}dp (button) / ${MAX_ROW_DP}dp (row):\n" +

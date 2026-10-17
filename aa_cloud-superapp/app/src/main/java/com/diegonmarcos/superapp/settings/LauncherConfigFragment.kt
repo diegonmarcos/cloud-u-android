@@ -446,13 +446,15 @@ class LauncherConfigFragment : KitComposeFragment() {
                 }.testTag("toggle:${item.id}"),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(Modifier.size(TILE_BADGE_DP.dp).clip(CircleShape).background(if (on) p.accent else p.surfaceSelected),
+            // The icon's plate hugs the icon (was a 56dp disc: the owner's "box too big"); the tile is the target.
+            Box(Modifier.size(TILE_BADGE_DP.dp).clip(CircleShape).background(if (on) p.accent else p.surfaceSelected)
+                .testTag("toggle:badge:${item.id}"),
                 contentAlignment = Alignment.Center) {
                 Icon(painterResource(Sections.iconResFor(ctx, item.icon)), contentDescription = null,
                     tint = if (on) p.surface else p.textSecondary, modifier = Modifier.size(TILE_ICON_DP.dp))
             }
             Text(item.label, color = p.textPrimary, fontSize = 11.sp, textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 6.dp))
+                modifier = Modifier.padding(top = 3.dp))
             Text(StatusLight.text(ctx, state), color = Color(StatusLight.colour(ctx, state)), fontSize = 9.sp,
                 textAlign = TextAlign.Center)
         }
@@ -615,8 +617,8 @@ class LauncherConfigFragment : KitComposeFragment() {
         // The same two numbers Configs ▸ Panel ▸ Control uses for its badges, so
         // the two grids read as one screen. #338 is why they are stated once:
         // that regression was a size bumped in one place and not the other.
-        private const val TILE_BADGE_DP = 56
-        private const val TILE_ICON_DP = 26
+        private const val TILE_BADGE_DP = 26
+        private const val TILE_ICON_DP = 22
     }
 }
 
