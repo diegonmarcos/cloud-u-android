@@ -108,7 +108,7 @@ class LtTorrentBridge(context: Context) : DlTorrentBridge {
     }
 
     private fun addToSession(job: DlJob, torrentBytes: ByteArray?, paused: Boolean) {
-        if (job.id in handles || !pending.add(job.id)) return
+        if (handles.containsKey(job.id) || !pending.add(job.id)) return
         val dir = jobDir(job.id)
         val p: AddTorrentParams = TorrentFiles.params(dir, torrentBytes, job.url) ?: run {
             pending.remove(job.id)
@@ -198,7 +198,7 @@ class LtTorrentBridge(context: Context) : DlTorrentBridge {
         val id = File(a.params().savePath ?: return).parentFile?.name ?: return
         pending.remove(id)
         if (a.error().isError) {
-            if (id !in handles) q.torrentUpdate(id, { it.copy(state = DlState.FAILED, error = "Could not add the torrent") }, null)
+            if (!handles.containsKey(id)) q.torrentUpdate(id, { it.copy(state = DlState.FAILED, error = "Could not add the torrent") }, null)
             return
         }
         val h = a.handle()
