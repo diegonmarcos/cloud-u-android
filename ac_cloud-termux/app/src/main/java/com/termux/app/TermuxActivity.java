@@ -199,10 +199,6 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
         super.onCreate(savedInstanceState);
 
-        // cloud-shared-store: the one-time notice (+ restore offer) after the sharedUserId reinstall.
-        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-            if (!isFinishing()) com.termux.cloud.SharedStoreMigration.maybeShow(this);
-        });
 
         setContentView(R.layout.activity_termux);
 
@@ -407,6 +403,10 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
             if (mIsVisible) {
                 TermuxInstaller.setupBootstrapIfNeeded(TermuxActivity.this, () -> {
                     if (mTermuxService == null) return; // Activity might have been destroyed.
+                    // Optional restore offer, only AFTER the bootstrap and rootfs are provisioned: a fresh
+                    // install is complete without it (the fleet is declarative), and nothing it restores
+                    // can race the first install.
+                    if (!isFinishing()) com.termux.cloud.SharedStoreMigration.maybeShow(TermuxActivity.this);
                     try {
                         Bundle bundle = getIntent().getExtras();
                         boolean launchFailsafe = false;

@@ -18,10 +18,19 @@ HERE="$(dirname "$(realpath "$0")")"
 ROOTFS="$HERE/rootfs"
 STAMP="$ROOTFS/.cloud-rootfs.sha256"
 
-fallback() {
+# The session's own arguments, quoted, so a fallback shell runs the same command (-c ...) or login.
+CLOUD_ARGS_Q=""
+for a in "$@"; do CLOUD_ARGS_Q="$CLOUD_ARGS_Q '$(printf '%s' "$a" | sed "s/'/'\\\\''/g")'"; done
+[ -n "$CLOUD_ARGS_Q" ] || CLOUD_ARGS_Q=-l
+
+fallback() {  # $* = why
     echo "cloud-rootfs: $*" >&2
     echo "cloud-rootfs: starting the plain Termux shell instead" >&2
-    exec "${CLOUD_ROOTFS_FALLBACK:-bash}" -l
+    echo "cloud-rootfs: repair: rm -f '$HERE/rootfs.sha256' '$HERE/rootfs/.cloud-rootfs.sha256' and reopen the app (it re-extracts the rootfs from the installed cloud-lib-rootfs-termux, no network)" >&2
+    export PATH="${PATH:-}:/system/bin:/system/xbin"
+    sh_bin="${CLOUD_ROOTFS_FALLBACK:-bash}"
+    command -v "$sh_bin" >/dev/null 2>&1 || sh_bin=/system/bin/sh
+    eval "exec \"\$sh_bin\" $CLOUD_ARGS_Q"
 }
 
 # Termux's login probes $SHELL with exactly this to decide whether termux-exec's

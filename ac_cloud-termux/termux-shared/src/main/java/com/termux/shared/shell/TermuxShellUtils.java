@@ -114,7 +114,7 @@ public class TermuxShellUtils {
 
         if (isFailSafe) {
             // Keep the default path so that system binaries can be used in the failsafe session.
-            environment.add("PATH= " + System.getenv("PATH"));
+            environment.add("PATH=" + System.getenv("PATH"));
         } else {
             environment.add("LANG=en_US.UTF-8");
             environment.add("PATH=" + TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH);

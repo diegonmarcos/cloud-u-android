@@ -99,6 +99,21 @@ public class TermuxSession {
                 // https://cs.android.com/android/platform/superproject/+/android-11.0.0_r3:external/mksh/src/main.c;l=41
                 // https://cs.android.com/android/platform/superproject/+/android-11.0.0_r3:external/mksh/Android.bp;l=114
                 executionCommand.executable = "/system/bin/sh";
+                if (!executionCommand.isFailsafe && executionCommand.arguments == null) {
+                    // Not the failsafe session the user asked for: the bootstrap is missing. Say WHY and
+                    // how to repair, and keep /system/bin on PATH so ls/cat/rm work in the meantime.
+                    for (int i = 0; i < environment.length; i++)
+                        if (environment[i].startsWith("PATH="))
+                            environment[i] = environment[i] + ":/system/bin:/system/xbin";
+                    String why = defaultBinPath + "/login is missing: the Termux bootstrap is not installed";
+                    String repair = "rm -rf " + new File(defaultBinPath).getParent() + " && am force-stop " + context.getPackageName();
+                    executionCommand.arguments = new String[]{"-c",
+                        "echo \"cloud-termux: " + why + ", so this is the bare system shell.\";"
+                        + " echo \"repair: run 'repair' (or: " + repair + "), then reopen the app; it reinstalls the bootstrap and the rootfs.\";"
+                        + " rc=\"$HOME/.cloud-repair-shrc\"; mkdir -p \"$HOME\" 2>/dev/null;"
+                        + " echo \"alias repair='" + repair + "'\" > \"$rc\" 2>/dev/null || rc=/dev/null;"
+                        + " ENV=\"$rc\" exec /system/bin/sh -i"};
+                }
             } else {
                 isLoginShell = true;
             }

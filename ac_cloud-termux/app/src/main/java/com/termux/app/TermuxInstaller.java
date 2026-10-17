@@ -161,6 +161,16 @@ final class TermuxInstaller {
 
     /** True when $PREFIX holds an installed bootstrap: a directory (or a link to one) with more in it than tmp/. */
     private static boolean isPrefixInstalled() {
+        // A $PREFIX with no executable bin/login is NOT an installed bootstrap, whatever else is in it.
+        // TermuxApplication.onCreate exports rish into $PREFIX/var/lib/<rootfs>/rish on EVERY launch,
+        // the first one included, so on a fresh install $PREFIX held var/ before the bootstrap ran:
+        // the old "more than tmp/" test said installed, the bootstrap was skipped, and every session
+        // fell back to /system/bin/sh with PATH=$PREFIX/bin, where nothing (not even ls) is found.
+        if (!new File(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH, "login").canExecute()) {
+            if (FileUtils.fileExists(TERMUX_PREFIX_DIR_PATH, false))
+                Logger.logInfo(LOG_TAG, "The termux prefix \"" + TERMUX_PREFIX_DIR_PATH + "\" has no executable bin/login: (re)installing the bootstrap.");
+            return false;
+        }
         // If prefix directory exists, even if its a symlink to a valid directory and symlink is not broken/dangling
         if (FileUtils.directoryFileExists(TERMUX_PREFIX_DIR_PATH, true)) {
             File[] PREFIX_FILE_LIST =  TERMUX_PREFIX_DIR.listFiles();
@@ -299,6 +309,12 @@ final class TermuxInstaller {
         }
 
         Logger.logInfo(LOG_TAG, "Bootstrap packages installed successfully.");
+        // Installing replaced $PREFIX, and with it the rish export TermuxApplication made at launch.
+        try {
+            com.diegonmarcos.superapp.adbdebug.RishBridge.INSTANCE.export(context, CloudRootfs.loginDir());
+        } catch (RuntimeException e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Re-exporting rish after the bootstrap failed", e);
+        }
     }
 
     /**
