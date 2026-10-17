@@ -75,7 +75,7 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UNIT_TEST_FILTER: "com.diegonmarcos.superapp.configs.ConfigsScreensTest"
-        run: ./build.sh test
+        run: bash ./build.sh test
 
       - name: Summary (dp per control, every screen)
         if: always()
