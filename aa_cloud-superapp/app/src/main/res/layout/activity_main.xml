@@ -259,42 +259,11 @@
                  sat — pure decoration for now, but with a stable id so
                  future status surfaces (sync state, notifications, etc.)
                  can swap into it. -->
-            <FrameLayout
+            <androidx.compose.ui.platform.ComposeView
                 android:id="@+id/dynamic_island"
                 android:layout_width="120dp"
                 android:layout_height="22dp"
-                android:layout_gravity="center"
-                android:background="@drawable/bg_dynamic_island"
-                android:clickable="false"
-                android:focusable="false">
-
-                <!-- IslandWaveView replaces the old "DCM · Apps"
-                     identity text — a Samsung-music-island-style
-                     animated triple-sine wave in violet→lilac gradient.
-                     The id stays `dynamic_island_label` so the existing
-                     refreshDynamicIsland's findViewById<TextView>
-                     short-circuits gracefully (returns null → early
-                     return) without any code change. -->
-                <androidx.compose.ui.platform.ComposeView
-                    android:id="@+id/dynamic_island_wave"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_gravity="center"
-                    android:clickable="false"
-                    android:focusable="false" />
-
-                <!-- Prismatic neon halo around the island perimeter —
-                     full rainbow sweep chasing around the pill. Sized
-                     match_parent so it covers the island exactly.
-                     clickable=false so taps pass through to the parent
-                     island FrameLayout's notification-center handler. -->
-                <androidx.compose.ui.platform.ComposeView
-                    android:id="@+id/dynamic_island_prism"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:clickable="false"
-                    android:focusable="false" />
-            </FrameLayout>
+                android:layout_gravity="center" />
 
         </FrameLayout>
 

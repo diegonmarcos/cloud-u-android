@@ -4,6 +4,11 @@ import com.diegonmarcos.superapp.uikit.KitDenseMaterial
 import android.app.Activity
 import android.content.Context
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,28 +73,29 @@ object ShellFxState {
         allAnim = runCatching { p?.anim() }.getOrNull() ?: true
     }
 
-    /** Hook the decorative ComposeViews declared in activity_main.xml (found by ShellActivity) up to their composables. */
-    fun install(ctx: Context, galaxy: ComposeView?, wave: ComposeView?, prism: ComposeView?) {
+    /** Hook the galaxy ComposeView declared in activity_main.xml (found by ShellActivity) up to its composable. */
+    fun install(ctx: Context, galaxy: ComposeView?) {
         refresh(ctx)
         galaxy?.setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { GalaxyBackdrop() } }
-        wave?.setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { IslandWave() } }
-        prism?.setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { PrismaticShimmer() } }
     }
 }
 
 /** A looping 0..1 phase on the frame clock, [periodMs] per lap; frozen (keeping its place) while [running] is false. */
 @Composable
-private fun rememberPhase(periodMs: Long, running: Boolean): Float {
-    var phase by remember { mutableFloatStateOf(0f) }
+private fun rememberPhase(periodMs: Long, running: Boolean): androidx.compose.runtime.FloatState {
+    val phase = remember { mutableFloatStateOf(0f) }
     LaunchedEffect(running, periodMs, ShellFxState.frozen) {
         if (!running || ShellFxState.frozen) return@LaunchedEffect
         val start = withFrameNanos { it }
-        val base = phase
+        val base = phase.floatValue
         while (true) {
             val now = withFrameNanos { it }
-            phase = (base + (now - start) / (periodMs * 1_000_000f)) % 1f
+            phase.floatValue = (base + (now - start) / (periodMs * 1_000_000f)) % 1f
         }
     }
+    // Returned as the STATE, not its value: each layer reads it inside its draw lambda, so a frame redraws the Canvas and
+    // recomposes nothing. Reading it in composition (as the first port did) re-ran every layer's composition on every frame,
+    // four infinite animations deep - the judder the owner called fuzzy.
     return phase
 }
 
@@ -118,8 +124,9 @@ private val COMETS = listOf(
  */
 @Composable
 fun GalaxyBackdrop(modifier: Modifier = Modifier.fillMaxSize()) {
-    val time = rememberPhase(18_000L, ShellFxState.stars)
+    val phase = rememberPhase(18_000L, ShellFxState.stars)
     Canvas(modifier) {
+        val time = phase.floatValue
         EnergyLedger.track("ui.galaxy") {
             val w = size.width; val h = size.height
             val starInk = Color(0xFFE9D8FD)
@@ -185,14 +192,18 @@ fun IslandWave(modifier: Modifier = Modifier.fillMaxSize()) {
         )
     }
     // 358.8 s for 1000 time units: the harmonic and modulator rates all scale off the same `time`.
-    val time = rememberPhase(358_800L, ShellFxState.island) * 1000f
+    val phase = rememberPhase(358_800L, ShellFxState.island)
     val density = LocalDensity.current.density
+    // One Path of each, reset per frame: the View version reused its own, and a fresh pair per frame is garbage at 60 Hz.
+    val path = remember { Path() }
+    val clip = remember { Path() }
     Canvas(modifier) {
+        val time = phase.floatValue * 1000f
         val w = size.width; val h = size.height
         if (w == 0f || h == 0f) return@Canvas
         val inset = 2f * density
         val radius = min(w - 2 * inset, h - 2 * inset) * 0.5f
-        val clip = Path().apply { addRoundRect(RoundRect(inset, inset, w - inset, h - inset, CornerRadius(radius))) }
+        clip.reset(); clip.addRoundRect(RoundRect(inset, inset, w - inset, h - inset, CornerRadius(radius)))
         clipPath(clip) {
             val step = (w / 90f).coerceAtLeast(1f)
             val twoPi = (2f * PI).toFloat()
@@ -201,7 +212,7 @@ fun IslandWave(modifier: Modifier = Modifier.fillMaxSize()) {
                 // Slow amplitude modulator - the music-channel "bounce", 0.35 to 1.0 so the wave never fully disappears.
                 val ampMod = 0.35f + 0.65f * (0.5f + 0.5f * sin(time * wave.ampModFreq + wave.ampModPhase))
                 val amp = wave.baseAmp * ampMod * (h * 0.45f)
-                val path = Path()
+                path.reset()
                 var x = 0f
                 var first = true
                 while (x <= w) {
@@ -232,9 +243,10 @@ private val RAINBOW = listOf(
 /** Full-spectrum rainbow chasing around a pill perimeter (3.6 s a lap); radius = height / 2. */
 @Composable
 fun PrismaticShimmer(modifier: Modifier = Modifier.fillMaxSize(), cornerRadiusDp: Float = -1f) {
-    val progress = rememberPhase(3_600L, true)
+    val phase = rememberPhase(3_600L, true)
     val density = LocalDensity.current.density
     Canvas(modifier) {
+        val progress = phase.floatValue
         val sw = 3f
         val topLeft = Offset(sw, sw)
         val rectSize = Size(size.width - 2 * sw, size.height - 2 * sw)
@@ -254,16 +266,18 @@ fun PrismaticShimmer(modifier: Modifier = Modifier.fillMaxSize(), cornerRadiusDp
  */
 @Composable
 fun WaveLine(modifier: Modifier = Modifier.fillMaxSize()) {
-    val phase = rememberPhase(3_200L, true) * (2.0 * PI).toFloat()
+    val turn = rememberPhase(3_200L, true)
     val density = LocalDensity.current.density
+    val path = remember { Path() }
     Canvas(modifier) {
+        val phase = turn.floatValue * (2.0 * PI).toFloat()
         val w = size.width; val h = size.height
         if (w <= 0f || h <= 0f) return@Canvas
         val cy = h / 2f
         val amp = h * 0.22f
         val freqBody = (2.0 * PI / w).toFloat() * 2.4f
         val freqCarrier = (2.0 * PI / w).toFloat() * 7.0f
-        val path = Path().apply { moveTo(0f, cy) }
+        path.reset(); path.moveTo(0f, cy)
         val step = (2f * density).coerceAtLeast(1f)
         var x = 0f
         while (x <= w) {
@@ -273,5 +287,28 @@ fun WaveLine(modifier: Modifier = Modifier.fillMaxSize()) {
             x += step
         }
         drawPath(path, Color(0xB0C4B5FD), style = Stroke(1f * density, cap = StrokeCap.Round))
+    }
+}
+
+// ── Dynamic Island (the second toolbar pill) ───────────────────────────────────
+
+/**
+ * The centre pill of the toolbar: black with a faint violet hairline, the island wave inside it and the prismatic neon
+ * frame around it. TAPPING IT runs [onTap] (build.json::ui.dynamic_island_action - today `extapp:cloud-myterminal`).
+ *
+ * It is ONE composable with its own click, not a FrameLayout with a click listener over two non-clickable ComposeViews as
+ * the first port had it: that arrangement relied on the layers letting touches fall through to the parent, and on top of
+ * that the pill was pushed under the (taller, higher-elevation) Compose status strip, which then ate the tap.
+ */
+@Composable
+fun DynamicIsland(onTap: () -> Unit, modifier: Modifier = Modifier.fillMaxSize()) {
+    val pill = androidx.compose.foundation.shape.RoundedCornerShape(50)
+    androidx.compose.foundation.layout.Box(
+        modifier.testTag("dynamicisland")
+            .background(Color.Black, pill).border(1.dp, Color(0x55B794F4), pill)
+            .clickable(onClick = onTap),
+    ) {
+        IslandWave(Modifier.fillMaxSize())
+        PrismaticShimmer(Modifier.fillMaxSize())
     }
 }

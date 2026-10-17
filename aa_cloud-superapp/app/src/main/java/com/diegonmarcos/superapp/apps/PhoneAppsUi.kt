@@ -222,12 +222,20 @@ internal fun expandedIconDp(ctx: Context, cols: Int): Dp {
     return (px / d).dp
 }
 
+/**
+ * The folder card's fill: near-black at 95%, exactly the GradientDrawable the View dialog gave it (0xF21A1A24, 28 dp corners).
+ * NOT the theme's `surface`: under the Cloud theme that is 13%-alpha white, and the Compose port painted the card with it, so an
+ * opened folder showed its apps straight over the page behind (owner, Phone > Apps). A card that floats over a dimmed page
+ * has to hide it, so this is its own constant, shared with the launcher's tile folders.
+ */
+internal val FolderSheetFill = androidx.compose.ui.graphics.Color(0xF21A1A24)
+
 /** The folder look: a rounded card floating over the dimmed page, dismissed from the scrim. */
 @Composable
 internal fun FolderSheetFrame(label: String, onDismiss: () -> Unit, content: @Composable () -> Unit) {
     val p = LocalKitPalette.current
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(Modifier.padding(20.dp).clip(RoundedCornerShape(28.dp)).background(p.surface).padding(16.dp)
+        Column(Modifier.padding(20.dp).clip(RoundedCornerShape(28.dp)).background(FolderSheetFill).padding(16.dp)
             .testTag(TAG_FOLDER_SHEET)) {
             Text(label, color = p.textPrimary, style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(vertical = 16.dp))

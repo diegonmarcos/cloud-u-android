@@ -491,10 +491,7 @@ open class ShellActivity : AppCompatActivity(),
 
             setContentView(R.layout.activity_main)
             // The galaxy, the island's wave and neon frame and the music line are Compose layers now.
-            ShellFxState.install(
-                this, findViewById(R.id.galaxy_backdrop), findViewById(R.id.dynamic_island_wave),
-                findViewById(R.id.dynamic_island_prism),
-            )
+            ShellFxState.install(this, findViewById(R.id.galaxy_backdrop))
             findViewById<androidx.compose.ui.platform.ComposeView>(R.id.launcher_status_strip)?.let { LauncherStatusStrip.install(this, it) }
             // App Tabs LRU window size — data-driven from build.json::ui.app_tabs.cap.
             com.diegonmarcos.superapp.apptabs.AppTabPrefs.cap = BuildConfig.UI_APP_TABS_CAP
@@ -572,12 +569,11 @@ open class ShellActivity : AppCompatActivity(),
             // build.json::ui._vocab_dynamic_island_action and the build
             // fails on anything else. Parsed at runtime so editing
             // build.json + rebuilding is the only edit needed.
-            findViewById<View>(R.id.dynamic_island)?.apply {
-                isClickable = true
-                isFocusable = true
-                setOnClickListener {
-                    Haptics.tap(it)
-                    dispatchDynamicIslandAction()
+            findViewById<androidx.compose.ui.platform.ComposeView>(R.id.dynamic_island)?.let { island ->
+                island.setContent {
+                    com.diegonmarcos.superapp.uikit.KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) {
+                        com.diegonmarcos.superapp.ui.DynamicIsland(onTap = { Haptics.tap(island); dispatchDynamicIslandAction() })
+                    }
                 }
             }
 
@@ -1043,11 +1039,11 @@ open class ShellActivity : AppCompatActivity(),
                 // pass, then correct to the real measured height post-layout.
                 val barH = if (topSystemInset > 0) topSystemInset else statusBarHeightPx()
                 setToolbarIslandTopMargin(toolbarIsland, barH + dp(6))
-                strip?.let { s ->
-                    s.post {
-                        val h = s.height
-                        if (h > 0) setToolbarIslandTopMargin(toolbarIsland, h + dp(6))
-                    }
+                // The strip is Compose now, and it GROWS after its first layout (its readings arrive after composition: the
+                // dots rows, the pets, the clock). A one-shot correction measured it too small and left the toolbar island
+                // under the strip - the taller, higher-elevation layer - which then ate the island's taps. Follow its height.
+                if (strip != null && toolbarIsland != null) {
+                    com.diegonmarcos.superapp.launcher.StripIslandGap.follow(strip, toolbarIsland, dp(6))
                 }
                 toolbarIsland?.visibility = View.VISIBLE
                 bottomNavIsland?.visibility = View.VISIBLE
@@ -1132,7 +1128,7 @@ open class ShellActivity : AppCompatActivity(),
     /** dp → px convenience for chrome math. */
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
-    /** Parse [BuildConfig.UI_DYNAMIC_ISLAND_ACTION] and dispatch. Formats:
+    /** Parse the island action (launcher/DynamicIslandAction reads it) and dispatch. Formats:
      *   • `app:<packageName>`  → launch that app's main activity. For a
      *     THIRD-PARTY package, whose id is the only handle we have on it.
      *   • `extapp:<id>`        → resolve `id` in build.json::ui.external_apps
@@ -1156,23 +1152,9 @@ open class ShellActivity : AppCompatActivity(),
      *  time this reads BuildConfig the value is already one of the
      *  branches below. */
     private fun dispatchDynamicIslandAction() {
-        val action = BuildConfig.UI_DYNAMIC_ISLAND_ACTION
-        val parts = action.split(":", limit = 2)
-        when (parts.getOrNull(0)) {
-            "app" -> {
-                val pkg = parts.getOrNull(1)?.takeIf { it.isNotBlank() } ?: return
-                val intent = packageManager.getLaunchIntentForPackage(pkg)
-                if (intent != null) {
-                    startActivity(intent)
-                } else {
-                    android.widget.Toast.makeText(this, "$pkg not installed", android.widget.Toast.LENGTH_SHORT).show()
-                }
-            }
-            "extapp"        -> parts.getOrNull(1)?.takeIf { it.isNotBlank() }
-                                    ?.let { launchExternalApp(it) }
-            "shortcut"      -> parts.getOrNull(1)?.let { handleShortcutById(it) }
-            else            -> {}
-        }
+        com.diegonmarcos.superapp.launcher.DynamicIslandAction.run(
+            this, launchExternalApp = { launchExternalApp(it) }, shortcut = { handleShortcutById(it) },
+        )
     }
 
     /** Best-effort shortcut dispatch — re-uses [handleShortcutIntent]'s
@@ -1706,29 +1688,8 @@ open class ShellActivity : AppCompatActivity(),
             return
         }
         val forkKey = parts.getOrNull(1)?.takeIf { it.isNotBlank() }
-        // Candidate packages, most-specific first: the fork, the hub, then the
-        // stock-resigned alt id (what the store actually installed for
-        // matrix/chat until those forks repackage — see ExternalApp.altPackage).
-        val candidates = listOfNotNull(forkKey?.let { app.forks[it] }, app.hubPackage, app.altPackage)
-            .filter { it.isNotBlank() }
-        for (pkg in candidates) {
-            val launch = packageManager.getLaunchIntentForPackage(pkg) ?: continue
-            launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            if (deepTarget != null) {
-                launch.putExtra("shortcut_action", deepTarget)
-                launch.addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                                android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            }
-            val ok = runCatching {
-                val lbl = runCatching {
-                    packageManager.getApplicationLabel(
-                        packageManager.getApplicationInfo(pkg, 0)).toString()
-                }.getOrDefault(app.label)
-                com.diegonmarcos.superapp.apptabs.AppTabPrefs(this).recordExternalApp(pkg, lbl)
-                startActivity(launch); true
-            }.getOrDefault(false)
-            if (ok) return
-        }
+        // Most-specific installed package first: the fork, the hub, then the stock-resigned alt id.
+        if (com.diegonmarcos.superapp.launcher.ExternalAppLaunch.launchInstalled(this, app, forkKey, deepTarget)) return
         // Nothing installed → install the companion APK (user-confirmed).
         // Already downloading/installing it: the tap opens Cancel / Restart / Details instead.
         if (app.installPackage.isNotBlank() &&

@@ -62,7 +62,7 @@ internal fun TileFolderSheet(folder: Sections.AggTile, onDismiss: () -> Unit, on
     val ctx = LocalContext.current
     val children = folder.children.filterNot { it.separator }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(Modifier.padding(20.dp).clip(RoundedCornerShape(28.dp)).background(p.surface).padding(16.dp)
+        Column(Modifier.padding(20.dp).clip(RoundedCornerShape(28.dp)).background(com.diegonmarcos.superapp.apps.FolderSheetFill).padding(16.dp)
             .testTag(TileFolderDialog.TAG_SHEET)) {
             Text(folder.label, color = p.textPrimary, style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(start = 4.dp, bottom = 12.dp))
