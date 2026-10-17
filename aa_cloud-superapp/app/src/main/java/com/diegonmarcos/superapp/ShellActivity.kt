@@ -496,7 +496,7 @@ open class ShellActivity : AppCompatActivity(),
             // The galaxy, the island's wave and neon frame and the music line are Compose layers now.
             ShellFxState.install(
                 this, findViewById(R.id.galaxy_backdrop), findViewById(R.id.dynamic_island_wave),
-                findViewById(R.id.dynamic_island_prism), findViewById(R.id.music_playing_wave),
+                findViewById(R.id.dynamic_island_prism),
             )
             findViewById<androidx.compose.ui.platform.ComposeView>(R.id.launcher_status_strip)?.let { LauncherStatusStrip.install(this, it) }
             // App Tabs LRU window size — data-driven from build.json::ui.app_tabs.cap.
@@ -2295,7 +2295,7 @@ open class ShellActivity : AppCompatActivity(),
     // ── DevControlBridge.ActivityHost ────────────────────────────────────
 
     /** Music-playing mini-island controller (lazy: allocated on first resume). */
-    private val musicIsland by lazy { MusicIslandController(this) }
+    private val musicIsland by lazy { MusicIslandController(this, findViewById(R.id.music_playing_island)) }
 
     // Foreground energy sampler — fine-resolution watchdog samples while
     // the screen is on / the app is resumed. Background coarse samples

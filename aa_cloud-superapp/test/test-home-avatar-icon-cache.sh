@@ -68,7 +68,7 @@ import os, sys
 root = sys.argv[1]
 sites = [
     "com/diegonmarcos/superapp/launcher/AggregatorNotify.kt",   # the shade (group avatars) moved out of the fragment
-    "com/diegonmarcos/superapp/media/MusicIslandController.kt",
+    "com/diegonmarcos/superapp/media/MusicIslandUi.kt",
     "com/diegonmarcos/superapp/media/MusicControlsPopup.kt",
     "com/diegonmarcos/superapp/apps/PhoneSmartFolders.kt",
     "com/diegonmarcos/superapp/apps/SuitePhoneAppsFragment.kt",

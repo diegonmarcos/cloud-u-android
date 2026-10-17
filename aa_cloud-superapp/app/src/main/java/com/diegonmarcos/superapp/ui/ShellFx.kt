@@ -65,12 +65,11 @@ object ShellFxState {
     }
 
     /** Hook the decorative ComposeViews declared in activity_main.xml (found by ShellActivity) up to their composables. */
-    fun install(ctx: Context, galaxy: ComposeView?, wave: ComposeView?, prism: ComposeView?, line: ComposeView?) {
+    fun install(ctx: Context, galaxy: ComposeView?, wave: ComposeView?, prism: ComposeView?) {
         refresh(ctx)
         galaxy?.setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { GalaxyBackdrop() } }
         wave?.setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { IslandWave() } }
         prism?.setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { PrismaticShimmer() } }
-        line?.setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { WaveLine() } }
     }
 }
 
