@@ -78,7 +78,7 @@ if not m or 'onTileClicked(' not in m.group(1):
     p.append("the orb's click does not go through onTileClicked, the tile dispatcher")
 if m and 'launchExternalApp(' in m.group(1):
     p.append("the orb's click launches an app directly instead of the declared target")
-if 'Sections.byId(' not in t or 'top_wallet_orb_icon' not in t or 'section.iconName' not in t:
+if 'Sections.byId(' not in t or 'top_wallet_orb_icon' not in t or 'walletIcon = Sections.iconResFor(this, section.iconName)' not in t:
     p.append("the orb does not wear its section's declared icon")
 if 'contentDescription = section.label' not in t:
     p.append("the orb's content description is not the section label")
@@ -133,7 +133,7 @@ sed 's/\.optString("right")/.optString("right_extapp")/' "$SHELL_KT" > "$SCRATCH
 r="$(shell_check "$SCRATCH/m2.kt")"; [ "$r" != "OK" ] && ok "M2 reading the old right_extapp key is caught" || bad "M2 old key NOT caught"
 sed 's/contentDescription = section.label/contentDescription = "Wallet"/' "$SHELL_KT" > "$SCRATCH/m3.kt"
 r="$(shell_check "$SCRATCH/m3.kt")"; [ "$r" != "OK" ] && ok "M3 a literal content description is caught" || bad "M3 literal description NOT caught"
-sed 's/setImageResource(Sections.iconResFor(this, section.iconName))/setImageResource(0)/' "$SHELL_KT" > "$SCRATCH/m4.kt"
+sed 's/walletIcon = Sections.iconResFor(this, section.iconName)/walletIcon = 0/' "$SHELL_KT" > "$SCRATCH/m4.kt"
 r="$(shell_check "$SCRATCH/m4.kt")"; [ "$r" != "OK" ] && ok "M4 an orb that stops wearing the section icon is caught" || bad "M4 icon revert NOT caught"
 python3 - <<'PY' > "$SCRATCH/bj.json"
 import json

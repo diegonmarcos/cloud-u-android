@@ -212,7 +212,7 @@
              draw around the entire viewport. FrameLayout with a
              rounded drawable bg avoids all that — wrap_content
              collapses to its single intrinsic-sized child
-             (MaterialToolbar at ?attr/actionBarSize). -->
+             (the toolbar ComposeView at ?attr/actionBarSize). -->
         <FrameLayout
             android:id="@+id/toolbar_island"
             android:layout_width="match_parent"
@@ -222,13 +222,12 @@
             android:layout_marginEnd="12dp"
             android:layout_marginTop="26dp">
 
-            <com.google.android.material.appbar.MaterialToolbar
+            <!-- The top row: hamburger (left) and Back (right) off the Home root, drawn in Compose (ui/ShellToolbar.kt).
+                 A transparent ComposeView at the old action-bar height; it carries no title. -->
+            <androidx.compose.ui.platform.ComposeView
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
-                android:background="@android:color/transparent"
-                app:titleCentered="false"
-                app:title="" />
+                android:layout_height="?attr/actionBarSize" />
 
             <!-- Revolut-style corner orbs — Home root ONLY. At the root the
                  full-width glass bar dissolves (ShellActivity nulls the
@@ -252,12 +251,11 @@
                 android:focusable="true"
                 android:contentDescription="@string/main_menu_open"
                 android:visibility="gone">
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_hamburger_asymmetric" />
+                <androidx.compose.ui.platform.ComposeView
+                    android:id="@+id/main_menu_orb_glyph"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no" />
             </FrameLayout>
             <FrameLayout
                 android:id="@+id/top_wallet_orb"
@@ -270,13 +268,11 @@
                 android:focusable="true"
                 android:contentDescription="@string/action_wallet"
                 android:visibility="gone">
-                <ImageView
+                <androidx.compose.ui.platform.ComposeView
                     android:id="@+id/top_wallet_orb_icon"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_wallet" />
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no" />
             </FrameLayout>
 
             <!-- Music-playing mini-island: a ComposeView (media/MusicIslandUi.kt), the small black pill above the main

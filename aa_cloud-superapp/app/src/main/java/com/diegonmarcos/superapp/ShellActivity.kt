@@ -53,13 +53,10 @@ import com.diegonmarcos.superapp.shell.SuppressHorizontalSwipe
 import com.diegonmarcos.superapp.shell.Collapsible
 
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
@@ -71,7 +68,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import com.google.android.material.appbar.AppBarLayout
-import com.google.android.material.appbar.MaterialToolbar
 import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.ui.ShellBottomNav
@@ -508,18 +504,30 @@ open class ShellActivity : AppCompatActivity(),
             starsReady = true
             refreshStars()
 
-            val toolbar: MaterialToolbar = findViewById(R.id.toolbar)
-            setSupportActionBar(toolbar)
-            // Kill the title surface entirely. supportActionBar?.title
-            // is set throughout the codebase (goHome, goSection, …),
-            // so the only reliable way to hide it is at the action-bar
-            // level. The Dynamic Island carries identity instead.
-            supportActionBar?.setDisplayShowTitleEnabled(false)
-            toolbar.title = ""
-            // Search trigger has moved INTO AppDrawerSheetFragment (the
-            // Home Apps page). The toolbar is now hamburger | island
-            // | back only, NOT a global search affordance — no
-            // setOnClickListener here.
+            // The top row is Compose (ui/ShellToolbar.kt): hamburger | island | Back, no ActionBar. The Dynamic Island carries
+            // identity instead of a title. Search lives in the Home Apps page, not here.
+            findViewById<androidx.compose.ui.platform.ComposeView>(R.id.toolbar)?.setContent {
+                com.diegonmarcos.superapp.uikit.CloudKitTheme(com.diegonmarcos.superapp.ui.LauncherPalette.kit(this)) {
+                    com.diegonmarcos.superapp.ui.ShellToolbarRow(
+                        onMenu = { Haptics.tap(bottomNav); drawerLayout.openDrawer(androidx.core.view.GravityCompat.START) },
+                        onBack = { goBack() },
+                        tic = com.diegonmarcos.superapp.ui.ShellFxState.allAnim,
+                    )
+                }
+            }
+            findViewById<androidx.compose.ui.platform.ComposeView>(R.id.main_menu_orb_glyph)?.setContent {
+                com.diegonmarcos.superapp.uikit.CloudKitTheme(com.diegonmarcos.superapp.ui.LauncherPalette.kit(this)) {
+                    com.diegonmarcos.superapp.ui.OrbGlyph(R.drawable.ic_hamburger_asymmetric)
+                }
+            }
+            findViewById<androidx.compose.ui.platform.ComposeView>(R.id.top_wallet_orb_icon)?.setContent {
+                com.diegonmarcos.superapp.uikit.CloudKitTheme(com.diegonmarcos.superapp.ui.LauncherPalette.kit(this)) {
+                    com.diegonmarcos.superapp.ui.OrbGlyph(
+                        com.diegonmarcos.superapp.ui.ShellToolbarState.walletIcon.takeIf { it != 0 } ?: R.drawable.ic_wallet)
+                }
+            }
+
+            refreshToolbar()
 
             drawerLayout = findViewById(R.id.drawer_layout)
             // DrawerLayout with fitsSystemWindows="true" otherwise paints
@@ -531,22 +539,6 @@ open class ShellActivity : AppCompatActivity(),
 
             applyEdgeToEdgeInsets()
 
-            val toggle = ActionBarDrawerToggle(
-                this, drawerLayout, toolbar,
-                R.string.main_menu_open, R.string.main_menu_close,
-            )
-            drawerLayout.addDrawerListener(toggle)
-            toggle.syncState()
-            // Use our asymmetric 3-dash hamburger glyph instead of the
-            // default animated DrawerArrowDrawable. We still want the
-            // toggle's open/close-drawer behaviour, so we attach a
-            // navigation click that opens the drawer manually.
-            toggle.isDrawerIndicatorEnabled = false
-            toolbar.setNavigationIcon(R.drawable.ic_hamburger_asymmetric)
-            toolbar.setNavigationOnClickListener {
-                Haptics.tap(it)
-                drawerLayout.openDrawer(androidx.core.view.GravityCompat.START)
-            }
             // Revolut-style Home-root corner orbs: the same two actions the
             // toolbar carried, in detached liquid-glass circles. Left IS the
             // hamburger; right launches the wallet's home app — target
@@ -681,7 +673,6 @@ open class ShellActivity : AppCompatActivity(),
                 if (!inSectionSwap && supportFragmentManager.backStackEntryCount == 0 && frag is Home3DFragment) {
                     currentSection = "home"
                     currentLabel = getString(R.string.section_home)
-                    supportActionBar?.title = currentLabel
                 }
                 // A page or sheet appearing is the ground truth for "is the home
                 // screen actually in front", and neither goes through the section
@@ -700,7 +691,7 @@ open class ShellActivity : AppCompatActivity(),
                 }
                 // Toolbar's right-side Back action toggles visibility with
                 // the back-stack depth; invalidate to redraw.
-                invalidateOptionsMenu()
+                refreshToolbar()
             }
 
             installNavSwipeGesture()
@@ -1299,8 +1290,8 @@ open class ShellActivity : AppCompatActivity(),
 
     // ── NavHost view-mechanism (orchestrated by LauncherNavController) ───
     override fun navContext(): android.content.Context = this
-    override fun setSectionTitle(label: String) { supportActionBar?.title = label }
-    override fun invalidateMenu() = invalidateOptionsMenu()
+    override fun setSectionTitle(label: String) = Unit   // the bar carries no title; the Dynamic Island carries identity
+    override fun invalidateMenu() = refreshToolbar()
     override fun dispatchTarget(target: String) = onTileClicked(target)
     override fun tabHaptic() = Haptics.tap(bottomNav)
     override fun closeDrawerIfOpen() {
@@ -1309,7 +1300,7 @@ open class ShellActivity : AppCompatActivity(),
     override fun applyMode(mode: String) {
         modePrefs.mode = mode
         refreshBottomNavIconsForMode()
-        invalidateOptionsMenu()
+        refreshToolbar()
     }
     /** sw600dp tablet → master-detail split (see view_content_panes.xml).
      *  Declarative breakpoint via the bool resource qualifier — no dp math. */
@@ -1701,8 +1692,7 @@ open class ShellActivity : AppCompatActivity(),
         val section = topOrbTarget().takeIf { it.startsWith("section:") }
             ?.let { Sections.byId(it.removePrefix("section:")) } ?: return
         findViewById<android.view.View>(R.id.top_wallet_orb)?.contentDescription = section.label
-        findViewById<android.widget.ImageView>(R.id.top_wallet_orb_icon)
-            ?.setImageResource(Sections.iconResFor(this, section.iconName))
+        com.diegonmarcos.superapp.ui.ShellToolbarState.walletIcon = Sections.iconResFor(this, section.iconName)
     }
 
     private fun launchExternalApp(rawPayload: String) {
@@ -2084,70 +2074,36 @@ open class ShellActivity : AppCompatActivity(),
 
     // ── toolbar (right-side Back action) ─────────────────────────────────
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.main_top, menu)
-        return true
-    }
-
-    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        // action_back: anywhere except a clean Home (Home with no
-        // back-stack entries is the "root" — back is meaningless there).
-        val atHomeRoot = currentSection == "home" &&
-            supportFragmentManager.backStackEntryCount == 0
-        menu.findItem(R.id.action_back)?.isVisible = !atHomeRoot
-        // Revolut top: at the Home root the full-width bar DISSOLVES — no
-        // glass slab, no toolbar hamburger — and the two corner orbs carry
-        // menu + wallet as detached circles (the centre islands keep their
-        // own pills). Off the root the classic toolbar returns:
-        // hamburger | island | back.
+    /** Redraw the top row for the current section and back-stack depth. Called wherever the old options menu was invalidated. */
+    private fun refreshToolbar() {
+        // anywhere except a clean Home (Home with no back-stack entries is the "root" - back is meaningless there)
+        val atHomeRoot = currentSection == "home" && supportFragmentManager.backStackEntryCount == 0
+        // Revolut top: at the Home root the full-width bar DISSOLVES - no glass slab, no hamburger in the bar - and the two corner
+        // orbs carry menu + wallet as detached circles (the centre islands keep their own pills). Off the root the classic row
+        // returns: hamburger | island | back.
+        com.diegonmarcos.superapp.ui.ShellToolbarState.atHomeRoot = atHomeRoot
         val orbVis = if (atHomeRoot) android.view.View.VISIBLE else android.view.View.GONE
         findViewById<android.view.View>(R.id.main_menu_orb)?.visibility = orbVis
         findViewById<android.view.View>(R.id.top_wallet_orb)?.visibility = orbVis
-        findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
-            ?.navigationIcon = if (atHomeRoot) null
-            else androidx.core.content.ContextCompat.getDrawable(this, R.drawable.ic_hamburger_asymmetric)
-        // NO toolbar_island background, EVER. The first orbs commit
-        // "restored" bg_liquid_glass here off the Home root — but the layout
-        // declares no background on that island at all, so this code was not
-        // restoring anything: it was INVENTING a full-width slab that
-        // appeared the moment a section was selected. The owner never asked
-        // for it and reported it the same day. Icons and the centre islands
-        // float over the wallpaper on every screen.
-        return super.onPrepareOptionsMenu(menu)
+        // NO toolbar_island background, EVER. The first orbs commit "restored" bg_liquid_glass here off the Home root - but the
+        // layout declares no background on that island at all, so this code was not restoring anything: it was INVENTING a
+        // full-width slab that appeared the moment a section was selected. Icons and the centre islands float over the
+        // wallpaper on every screen.
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.action_back -> {
-                // First, give the visible fragment a chance to handle
-                // it internally — Wallet's Compose state machine (cards
-                // Selected/Full/Config) wants Back to unwind one
-                // Compose step at a time before popping the activity
-                // back-stack. Only fragments implementing BackHandler
-                // participate; everything else falls through.
-                val top = supportFragmentManager.findFragmentById(R.id.fragment_container)
-                if ((top as? BackHandler)?.tryHandleBack() == true) {
-                    return true
-                }
-                // ONE LEVEL up — matches system Back. Previously this
-                // popped the entire back stack (jump to section root),
-                // but that aggressive behaviour skipped past parents
-                // for cross-section pushes (e.g. Wallet → vCard →
-                // toolbar Back used to jump all the way to Home,
-                // bypassing Wallet). Single-pop is predictable and
-                // composes — tap twice to skip two levels.
-                if (supportFragmentManager.backStackEntryCount > 0) {
-                    supportFragmentManager.popBackStack()
-                } else if (!navigateUpToParent() && currentSection != "home") {
-                    goHome()
-                }
-                return true
-            }
-            // action_wallet is GONE from the menu: the Home-root wallet
-            // affordance is the top_wallet_orb (Revolut corner circle), whose
-            // target is declared in build.json::ui.top_orbs.
+    /** The Back control: one level up. */
+    private fun goBack() {
+        // First, give the visible fragment a chance to handle it internally - Wallet's Compose state machine (cards
+        // Selected/Full/Config) wants Back to unwind one Compose step at a time before popping the activity back-stack. Only
+        // fragments implementing BackHandler participate; everything else falls through.
+        val top = supportFragmentManager.findFragmentById(R.id.fragment_container)
+        if ((top as? BackHandler)?.tryHandleBack() == true) return
+        // ONE LEVEL up - matches system Back. Single-pop is predictable and composes: tap twice to skip two levels.
+        if (supportFragmentManager.backStackEntryCount > 0) {
+            supportFragmentManager.popBackStack()
+        } else if (!navigateUpToParent() && currentSection != "home") {
+            goHome()
         }
-        return super.onOptionsItemSelected(item)
     }
 
     /** Back at a section ROOT (empty back stack): if the current section
@@ -2334,7 +2290,6 @@ open class ShellActivity : AppCompatActivity(),
         com.diegonmarcos.superapp.updater.UpdateProgress.setListener { state ->
             runOnUiThread { handleUpdateState(state) }
         }
-        if (::toolbarFx.isInitialized) toolbarFx.resume()
         // Re-apply launcher chrome — user may have toggled us as the
         // default Home handler from system Settings while we were
         // backgrounded, and the system status bar / our strip need to
@@ -2370,7 +2325,6 @@ open class ShellActivity : AppCompatActivity(),
         com.diegonmarcos.superapp.devtools.DevControlBridge.unregister(this)
         com.diegonmarcos.superapp.updater.UpdateProgress.setListener(null)
         com.diegonmarcos.superapp.recovery.RecoveryBanner.detach()
-        if (::toolbarFx.isInitialized) toolbarFx.pause()
         musicIsland.pause()
         energySamplerHandler.removeCallbacks(energySamplerRunnable)
         idleHandler.removeCallbacks(idleRunnable)

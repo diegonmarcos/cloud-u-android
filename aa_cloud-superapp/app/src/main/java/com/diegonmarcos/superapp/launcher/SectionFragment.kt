@@ -5,10 +5,6 @@ import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.uikit.KitComposeFragment
 import com.diegonmarcos.superapp.uikit.KitEmptyState
 
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.core.os.bundleOf
 
@@ -21,11 +17,9 @@ import androidx.core.os.bundleOf
  * Real per-section Fragments will eventually live in libs:<x>/ (e.g.
  * MailFragment in libs:mail) — this stub stays around as the default
  * for any section not yet backed by a real module. Compose since #773 (was
- * fragment_section_placeholder.xml); the options menu is unchanged.
+ * fragment_section_placeholder.xml). The placeholder's search/refresh/settings toast menu left with the ActionBar.
  */
 class SectionFragment : KitComposeFragment() {
-
-    init { setHasOptionsMenu(true) }
 
     private val sectionId: String get() = requireArguments().getString(ARG_SECTION_ID) ?: ""
     private val sectionLabel: String get() = requireArguments().getString(ARG_SECTION_LABEL) ?: ""
@@ -36,21 +30,6 @@ class SectionFragment : KitComposeFragment() {
     override fun Content() {
         Trace.d("SectionFragment", "compose section=$sectionId label=$sectionLabel")
         KitEmptyState(sectionLabel, "Placeholder for libs:$sectionId — real UI lands when the module grows code.")
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.section_top, menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val name = when (item.itemId) {
-            R.id.action_search   -> "Search"
-            R.id.action_refresh  -> "Refresh"
-            R.id.action_settings -> "Settings"
-            else -> return super.onOptionsItemSelected(item)
-        }
-        Toast.makeText(requireContext(), "$sectionLabel → $name", Toast.LENGTH_SHORT).show()
-        return true
     }
 
     companion object {

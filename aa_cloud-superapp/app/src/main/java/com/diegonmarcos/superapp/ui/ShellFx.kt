@@ -52,6 +52,9 @@ object ShellFxState {
         private set
     var pets by mutableStateOf(true)
         private set
+    /** Configs > "All animations": the master switch the hamburger's tic obeys. */
+    var allAnim by mutableStateOf(true)
+        private set
 
     /** Tests set this so the layers draw one still frame; a looping frame clock never lets Compose's idle wait return. */
     internal var frozen by mutableStateOf(false)
@@ -62,6 +65,7 @@ object ShellFxState {
         stars = runCatching { p?.anim("stars_anim") }.getOrNull() ?: true
         island = runCatching { p?.anim("island_anim") }.getOrNull() ?: true
         pets = runCatching { p?.anim("pets_anim") }.getOrNull() ?: true
+        allAnim = runCatching { p?.anim() }.getOrNull() ?: true
     }
 
     /** Hook the decorative ComposeViews declared in activity_main.xml (found by ShellActivity) up to their composables. */
