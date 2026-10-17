@@ -65,6 +65,7 @@ class EdgeOverlayGestureTest {
         // The app's own wireless-debugging bootstrap raises SystemUI's "Allow wireless debugging?" dialog on a fresh
         // emulator: it sits above everything, hides non-system overlays (HIDE_NON_SYSTEM_OVERLAY_WINDOWS) and eats
         // touches - the CI run that showed it had every edge gesture fail behind it. Switch it off and dismiss it.
+        silenceWirelessDebugKeeper()
         clearPrompt()
         // The owner's setup: gesture navigation (back swipe from the screen edge).
         sh("cmd overlay enable com.android.internal.systemui.navbar.gestural")
@@ -137,6 +138,21 @@ class EdgeOverlayGestureTest {
      * victim is brought back to front (and its stop baselined) whenever the prompt dance disturbed it.
      */
     private var stopBase = 0
+
+    /**
+     * Run 39068681107 (94a8f68d2): the keeper is a PERIODIC worker in the app under test; it re-raised the prompt
+     * mid-test, the prompt sat above the victim WITHOUT focus (so the focused-only BACK never fired) and its
+     * HIDE_NON_SYSTEM_OVERLAY_WINDOWS hid both strips (isReadyForDisplay=false): 5 swipe/tap tests saw nothing.
+     * Stop the source for the duration of the test instead of racing it.
+     */
+    private fun silenceWirelessDebugKeeper() {
+        runCatching { com.diegonmarcos.superapp.system.WirelessDebugKeeper.Prefs.setEnabled(ctx, false) }
+        runCatching {
+            val wm = androidx.work.WorkManager.getInstance(ctx)
+            wm.cancelUniqueWork(com.diegonmarcos.superapp.system.WirelessDebugKeeper.UNIQUE_NAME)
+            wm.cancelAllWorkByTag(com.diegonmarcos.superapp.system.WirelessDebugKeeper::class.java.name)
+        }
+    }
     private fun focus(): String = sh("dumpsys window | grep -m1 mCurrentFocus")
     private fun clearPrompt() {
         sh("settings put global adb_wifi_enabled 0")
@@ -145,9 +161,12 @@ class EdgeOverlayGestureTest {
         while (SystemClock.uptimeMillis() < end) {
             if (!sh("dumpsys window windows").contains("WifiDebuggingActivity")) break
             touched = true
-            if (focus().contains("WifiDebuggingActivity")) sh("input keyevent KEYCODE_BACK")
+            // BACK whenever the victim does NOT hold focus (prompt focused, or focus in transit): never into the victim.
+            if (!focus().contains("VictimActivity")) sh("input keyevent KEYCODE_BACK")
             SystemClock.sleep(300)
         }
+        if (sh("dumpsys window windows").contains("WifiDebuggingActivity"))
+            throw AssertionError("wireless-debugging prompt would not go away (it hides the overlay strips)" + diag())
         if (!sh("dumpsys activity activities | grep -m1 topResumedActivity").contains("VictimActivity")) {
             touched = true
             inst.context.startActivity(Intent(inst.context, VictimActivity::class.java)
