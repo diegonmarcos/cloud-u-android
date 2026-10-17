@@ -93,6 +93,7 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
             c.contains(SemanticsProperties.Selected)
         if (!clickable) return null
         return when {
+            c.contains(SemanticsProperties.EditableText) -> "field"
             tag.startsWith("cfg:button") || tag.contains("fab", true) -> "button"
             tag.contains("tile", true) || tag.startsWith("toggle:") || tag.startsWith("index:") -> "tile"
             tag.contains("chip", true) -> "chip"
