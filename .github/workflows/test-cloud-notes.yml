@@ -1,0 +1,132 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║ Test → Cloud Notes (emulator launch smoke: the app must not crash)     ║
+# ║                                                                        ║
+# ║ Cloud Notes shipped an APK that crashed on startup and nothing in CI   ║
+# ║ ever launched it. This installs the APK the Ship run just built (or,   ║
+# ║ on a manual run, the published rolling 'latest' one), starts           ║
+# ║ MainActivity on a REAL emulator, waits, and fails if the process died  ║
+# ║ or logcat holds a FATAL EXCEPTION / native crash for the package.      ║
+# ║ The APK is arm64-v8a only: the x86_64 API 30+ images run it through    ║
+# ║ the built-in ARM translation. logcat + crash excerpt are uploaded.     ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+name: "Test → Cloud Notes (emulator launch smoke)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Ship run id whose APK artifact to test (empty = published rolling 'latest' Cloud-Notes.apk)"
+        required: false
+        default: ""
+  workflow_run:
+    workflows: ["Ship → Cloud Notes APK (build + publish to GHCR)"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: test-cloud-notes-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  launch-smoke:
+    # workflow_run: only when the Ship run actually built something on main
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [34, 36]
+    env:
+      PKG: com.diegonmarcos.cloudnotes
+    steps:
+      - name: Fetch the APK under test
+        id: apk
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -eu
+          mkdir -p apk out
+          if [ -n "$RUN_ID" ]; then
+            name=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[] | select(.name|startswith("cloud-notes-arm64-v8a-")) | .name' | head -1)
+            if [ -z "$name" ]; then
+              echo "Ship run $RUN_ID uploaded no APK (publish gate skipped the build): nothing new to launch."
+              echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+            gh run download "$RUN_ID" -R "$REPO" -n "$name" -D apk
+          else
+            gh release download latest -R "$REPO" -p Cloud-Notes.apk -D apk
+          fi
+          ls -la apk
+          test -s apk/Cloud-Notes.apk
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Enable KVM
+        if: steps.apk.outputs.skip != 'true'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Write the launch probe
+        if: steps.apk.outputs.skip != 'true'
+        run: |
+          cat > launch.sh <<'EOF'
+          #!/bin/bash
+          # Install, launch MainActivity, watch 45 s, fail on any crash of $PKG.
+          set -u
+          adb logcat -c || true
+          adb install -r -g apk/Cloud-Notes.apk || { echo "::error::adb install failed"; exit 2; }
+          adb shell am start -W -n "$PKG/app.affine.pro.MainActivity" | tee out/am-start.txt
+          ok=1
+          for i in $(seq 1 45); do
+            sleep 1
+            if ! adb shell pidof "$PKG" >/dev/null 2>&1; then echo "process $PKG is gone after ${i}s"; ok=0; break; fi
+          done
+          adb logcat -d -v threadtime > out/logcat.txt
+          adb logcat -d -b crash -v threadtime > out/logcat-crash.txt || true
+          adb shell dumpsys activity activities | grep -iE 'mResumedActivity|topResumedActivity' > out/resumed.txt || true
+          adb exec-out screencap -p > out/screen.png || true
+          # Java crash: AndroidRuntime FATAL EXCEPTION block for our process
+          awk '/FATAL EXCEPTION/{p=1} p&&/AndroidRuntime/{print} p&&!/AndroidRuntime/{p=0}' out/logcat.txt > out/fatal.txt
+          # Native crash: tombstone / DEBUG lines
+          grep -E ' (DEBUG|libc) .*(Fatal signal|backtrace|#[0-9]+ pc|Abort message|>>> )' out/logcat.txt > out/native.txt || true
+          crashed=0
+          grep -q "Process: $PKG" out/fatal.txt && crashed=1
+          grep -q "$PKG" out/native.txt && crashed=1
+          grep -q "$PKG" out/logcat-crash.txt && crashed=1
+          if [ $crashed = 1 ] || [ $ok = 0 ]; then
+            echo "::group::FATAL EXCEPTION"; cat out/fatal.txt out/native.txt; echo "::endgroup::"
+            head -40 out/fatal.txt | while IFS= read -r l; do echo "::error title=Cloud Notes crashed on launch::$l"; done
+            [ -s out/fatal.txt ] || grep -E "$PKG|AndroidRuntime|ActivityManager" out/logcat.txt | tail -60
+            exit 1
+          fi
+          echo "Cloud Notes survived 45 s after launch."; cat out/resumed.txt
+          EOF
+          chmod +x launch.sh
+
+      - name: Boot emulator + launch Cloud Notes
+        if: steps.apk.outputs.skip != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./launch.sh
+
+      - name: Upload evidence (logcat, crash excerpt, screenshot)
+        if: always() && steps.apk.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-notes-launch-api${{ matrix.api-level }}
+          path: out/
+          if-no-files-found: warn
