@@ -27,8 +27,8 @@ PY
 [ "$(grep '^LABELS' <<<"$out" | cut -d' ' -f2)" = "App,WebApps,Linktree,Configs" ] \
   && ok "T1 and they read App | WebApps | Linktree | Configs" || bad "T1 the tab labels moved ($(grep '^LABELS' <<<"$out"))"
 URL="$(grep '^URL' <<<"$out" | cut -d' ' -f2-)"
-[ "$URL" = "https://diegonmarcos.github.io/cloud-mobile/?embed=1" ] \
-  && ok "T2 WebApps loads the published cloud-mobile site with ?embed=1" || bad "T2 WebApps url is '$URL'"
+[ "$URL" = "https://diegonmarcos.github.io/cloud-mobile/cloud/apps/?embed=1" ] \
+  && ok "T2 WebApps loads the published cloud-mobile Cloud > App page with ?embed=1" || bad "T2 WebApps url is '$URL'"
 grep -qF 'const val UA_MARKER = " CloudSuperApp-Embed/1"' "$WP" && grep -qF 'if (embed) settings.userAgentString = settings.userAgentString + UA_MARKER' "$WP" \
   && ok "T3 the UA marker is appended on embed pages only" || bad "T3 the user-agent marker is missing or unconditional"
 grep -qF 'if (!embed) Icon(painterResource(R.drawable.ic_back)' "$WP" \
