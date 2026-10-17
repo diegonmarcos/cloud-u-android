@@ -42,6 +42,9 @@ class SheetFiles(private val dir: File, private val prefs: android.content.Share
     }
 }
 
+/** The ClipData label of this app's copies: item 1 then holds the raw cells (formulas). */
+const val CLIP_LABEL = "cloudcalc-sheet"
+
 /** What the Sheet page and the AI tools share: the workbook, the selection, the clipboard and the files. */
 class SheetState(val files: SheetFiles) {
     var wb = Workbook()
@@ -344,5 +347,4 @@ object SheetHub {
     /** For tests: forget the process-wide state. */
     fun reset() { state = null }
 
-    companion object { const val CLIP_LABEL = "cloudcalc-sheet" }
 }

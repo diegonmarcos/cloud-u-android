@@ -337,17 +337,17 @@ class WorkbookTest {
     @Test fun structureEditsShiftAbsoluteAndMixedReferences() {
         val w = Workbook { 45000.0 }
         w.set(s1, 0, 0, "5"); w.set(s1, 0, 1, "7")
-        w.set(s1, 2, 0, "=A$1+$A$2+$A2")       // C1
+        w.set(s1, 2, 0, "=A\$1+\$A\$2+\$A2")       // C1
         w.insertRows(s1, 0, 2)                 // two rows above everything
-        assertEquals("=A$3+$A$4+$A4", w.raw(s1, 2, 2))
+        assertEquals("=A\$3+\$A\$4+\$A4", w.raw(s1, 2, 2))
         assertEquals("19", w.display(s1, 2, 2))
         w.insertCols(s1, 0)                    // a column left of A
-        assertEquals("=B$3+$B$4+$B4", w.raw(s1, 3, 2))
+        assertEquals("=B\$3+\$B\$4+\$B4", w.raw(s1, 3, 2))
         w.deleteRows(s1, 3)                    // the row of the 7 (B4) is gone
-        assertEquals("=B$3+#REF!+#REF!", w.raw(s1, 3, 2))
+        assertEquals("=B\$3+#REF!+#REF!", w.raw(s1, 3, 2))
         assertEquals("#REF!", w.display(s1, 3, 2))
         assertTrue(w.undo())
-        assertEquals("=B$3+$B$4+$B4", w.raw(s1, 3, 2))
+        assertEquals("=B\$3+\$B\$4+\$B4", w.raw(s1, 3, 2))
     }
 
     @Test fun clipboardTsvCutAndPasteAtAnchor() {
