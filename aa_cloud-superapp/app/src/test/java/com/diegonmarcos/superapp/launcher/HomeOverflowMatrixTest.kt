@@ -116,6 +116,10 @@ class HomeOverflowMatrixTest(private val dpi: Int, private val fontScale: Float)
             ViewCompat.dispatchApplyWindowInsets(col.getChildAt(0), insets())
         }
         compose.waitForIdle()
+        // Robolectric's own later passes can still hand the strip cutout-less insets: give the model the A37's reading
+        // directly (StatusStripCutoutTest owns the dispatch plumbing; this test owns the geometry).
+        compose.runOnUiThread { model.noteInsets(insets()) }
+        compose.waitForIdle()
 
         val name = "${dpi}dpi-${wDp}dp@$fontScale"
         val screenW = compose.activity.resources.displayMetrics.widthPixels.toFloat()
