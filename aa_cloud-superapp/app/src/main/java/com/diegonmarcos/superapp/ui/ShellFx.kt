@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.ui
 
+import com.diegonmarcos.superapp.uikit.KitDenseMaterial
 import android.app.Activity
 import android.content.Context
 import androidx.compose.foundation.Canvas
@@ -66,10 +67,10 @@ object ShellFxState {
     /** Hook the decorative ComposeViews declared in activity_main.xml (found by ShellActivity) up to their composables. */
     fun install(ctx: Context, galaxy: ComposeView?, wave: ComposeView?, prism: ComposeView?, line: ComposeView?) {
         refresh(ctx)
-        galaxy?.setContent { GalaxyBackdrop() }
-        wave?.setContent { IslandWave() }
-        prism?.setContent { PrismaticShimmer() }
-        line?.setContent { WaveLine() }
+        galaxy?.setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { GalaxyBackdrop() } }
+        wave?.setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { IslandWave() } }
+        prism?.setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { PrismaticShimmer() } }
+        line?.setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { WaveLine() } }
     }
 }
 

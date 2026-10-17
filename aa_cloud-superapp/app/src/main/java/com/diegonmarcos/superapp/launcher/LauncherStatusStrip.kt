@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.launcher
 
+import com.diegonmarcos.superapp.uikit.KitDenseMaterial
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.BroadcastReceiver
@@ -591,7 +592,7 @@ object LauncherStatusStrip {
         val model = StatusStripModel(activity)
         // Reads the cutout, never consumes it: see StatusStripModel.readCutoutFrom.
         model.readCutoutFrom(host)
-        host.setContent { LauncherStripContent(model) }
+        host.setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { LauncherStripContent(model) } }
         return model
     }
 }

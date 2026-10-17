@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.ui
 
+import com.diegonmarcos.superapp.uikit.KitDenseMaterial
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
@@ -30,7 +31,7 @@ class OverlayCompose(ctx: Context, content: @Composable () -> Unit) {
         setViewTreeLifecycleOwner(owner)
         setViewTreeSavedStateRegistryOwner(owner)
         setViewTreeViewModelStoreOwner(owner)
-        setContent(content)
+        setContent { KitDenseMaterial(androidx.compose.material3.MaterialTheme.colorScheme) { content() } }
     }
 
     /** Call after the window is removed. */
