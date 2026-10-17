@@ -1,0 +1,39 @@
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+// cloud-shared-store's store-access layer: ONE answer to "how does this app reach the
+// store" (direct path when the shared uid is in effect, else CLOUD_EXEC in cld.termux).
+// The values are read from THE ONE declaration, ac_cloud-termux/build.json::shared_store
+// (+ ::storage), resolved from the shared libs root so every consumer reads the same file.
+def termuxBuildJson = file("${projectDir}/../../../ac_cloud-termux/build.json")
+if (!termuxBuildJson.isFile()) throw new GradleException("libs:shared-store needs ${termuxBuildJson} (build.json::shared_store)")
+def decl = new groovy.json.JsonSlurper().parseText(termuxBuildJson.getText("UTF-8"))
+def store = decl.shared_store
+def storage = decl.storage
+
+android {
+    namespace 'com.diegonmarcos.cloudlib.sharedstore'
+    compileSdk 36
+    defaultConfig {
+        minSdk 26
+        buildConfigField "String", "STORE_DIR", "\"${store.dir}\""
+        buildConfigField "String", "OWNER_PACKAGE", "\"${store.owner_package}\""
+        buildConfigField "String", "COMPAT_LINK", "\"${store.compat_link.name}\""
+        buildConfigField "String", "PROVIDER_AUTHORITY", "\"${store.provider.authority}\""
+        buildConfigField "String", "LEGACY_SHARED_ROOT", "\"${storage.shared_root}\""
+        buildConfigField "String", "GIT_SUBDIR", "\"${storage.git_subdir}\""
+        buildConfigField "String", "EXEC_ACTION", "\"${store.owner_package}.CLOUD_EXEC\""
+        buildConfigField "String", "MIGRATION_DIR", "\"${store.migration.backup_dir}\""
+    }
+    // AGP 8 defaults aidl to false; ICloudExec would silently not be generated.
+    buildFeatures { buildConfig = true; aidl = true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}

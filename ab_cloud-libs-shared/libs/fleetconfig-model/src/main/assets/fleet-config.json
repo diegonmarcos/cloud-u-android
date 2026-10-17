@@ -429,6 +429,14 @@
         "sync.test.*": "device"
       }
     },
+    "cloud-shared-store-migration": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "cloud-shared-store: whether this install already showed the one-time shared-uid notice (DataMigration). A fact about this install, never carried to a new phone.",
+      "used_by": [
+        "ac_cloud-drive"
+      ]
+    },
     "cloud-drive-storage-grants": {
       "kind": "prefs",
       "class": "device",
@@ -2765,6 +2773,7 @@
         "lib-model-catalogue",
         "lib-mounts",
         "lib-rclone",
+        "lib-shared-store",
         "lib-shizuku-adb-debug-tools",
         "lib-sysdns",
         "lib-updater"
@@ -3324,9 +3333,9 @@
         },
         {
           "id": "shared-store-link",
-          "path": "$HOME/cloud-drive-shared-store",
+          "path": "$HOME/cloud-shared-store",
           "class": "device",
-          "doc": "Link to shared storage CloudDrive; recreated by the app."
+          "doc": "The fleet store (cloud-shared-store): a directory in cld.termux's home (a link to it in cld.termux.nix through the shared uid); recreated at login."
         }
       ]
     },

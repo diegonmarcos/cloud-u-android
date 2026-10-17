@@ -510,7 +510,7 @@ Coverage: 6 covered, 2 gaps — call_history, file:system CallLog and BlockedNum
 
 ## cloud-drive — `com.diegonmarcos.clouddrive`
 
-Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-disk, lib-disk-scan, lib-file-editor, lib-fleetconfig-model, lib-git-sync, lib-ml-l-image, lib-model-catalogue, lib-mounts, lib-rclone, lib-shizuku-adb-debug-tools, lib-sysdns, lib-updater.
+Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-disk, lib-disk-scan, lib-file-editor, lib-fleetconfig-model, lib-git-sync, lib-ml-l-image, lib-model-catalogue, lib-mounts, lib-rclone, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -520,6 +520,7 @@ Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, l
 | `cloud-drive-pdf-reader` | prefs | config (keys: last:*→device) | yes | PDF reader night-mode and paged-mode toggles are viewing preferences; per-document last page ('last:<source>') is device. |
 | `cloud-drive-prefs` | prefs | config (keys: mirror.result.*→device, sync.test.*→device) | yes | cloud-drive file sort, hidden, dual-pane, thumbnails, bookmarks and sync rule enables are settings; mirror.result.* and sync.test.* are last-run results. |
 | `cloud-drive-storage-grants` | prefs | device | no | SAF tree URI grant and name for this device's storage; persisted URI permissions do not exist on a new phone. |
+| `cloud-shared-store-migration` | prefs | device | no | cloud-shared-store: whether this install already showed the one-time shared-uid notice (DataMigration). A fact about this install, never carried to a new phone. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `cloud_image_recognition` | prefs | config | yes | Chosen image recognition route (on-device vs openrouter) and decision model. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
@@ -926,7 +927,7 @@ Module `ac_cloud-termux`; libs: lib-core, lib-devtools, lib-fleetconfig-model, l
 | `$HOME/.hermes/ (config.yaml, skills, memory)` | config | Hermes agent config in venv /opt/hermes; binary declared (rootfs.json pip_venvs.hermes-agent), config not declared; user-edited state. Its .env API keys are secret. |
 | `$HOME/.hermes/.env, goose keyring/env, exported API keys in rc` | secret | Provider keys for goose and hermes. #790: Account imports OPENROUTER_API_KEY into the agent-auth store and every login exports it; keys typed into the tools' own files stay the phone's own. |
 | `$HOME/.ssh/ (authorized_keys, config; id_* private keys)` | config | authorized_keys must contain the cloud-myterminal hub public key; private keys id_* are secret, known_hosts is device. |
-| `$HOME/cloud-drive-shared-store` | device | Link to shared storage CloudDrive; recreated by the app. |
+| `$HOME/cloud-shared-store` | device | The fleet store (cloud-shared-store): a directory in cld.termux's home (a link to it in cld.termux.nix through the shared uid); recreated at login. |
 
 Coverage: 10 covered, 7 gaps — file:$HOME/.termux/termux.properties, file:$HOME/.termux/ (colors.properties, font.ttf, style), file:$HOME/.config/fish/, .bashrc, .zshrc, .profile, .gitconfig, file:$HOME/.claude/ (settings.json, CLAUDE.md, mcp config, agents), file:$HOME/.config/goose/config.yaml, file:$HOME/.hermes/ (config.yaml, skills, memory), file:$HOME/.ssh/ (authorized_keys, config; id_* private keys).
 

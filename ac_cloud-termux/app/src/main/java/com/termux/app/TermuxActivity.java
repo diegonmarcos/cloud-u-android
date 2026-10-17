@@ -199,6 +199,11 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
         super.onCreate(savedInstanceState);
 
+        // cloud-shared-store: the one-time notice (+ restore offer) after the sharedUserId reinstall.
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            if (!isFinishing()) com.termux.cloud.SharedStoreMigration.maybeShow(this);
+        });
+
         setContentView(R.layout.activity_termux);
 
         // Load termux shared preferences

@@ -16,6 +16,11 @@
 #     root (logged "fallback"), and print the "not mounted" notice when even
 #     that is unreadable.
 #  2. GUARD: SHARED_STORE_PROBE_ROOTS must equal termux's `for cand in` list.
+#  3. cloud-shared-store, BOTH paths EXECUTED: direct (the owner's store under the
+#     same Android data dir answers -> ~/cloud-shared-store links to it, needs no
+#     storage grant, and a script in it executes) and fallback (it does not answer
+#     -> the legacy CloudDrive mirror the probe found, plus the SFTP 8023 line).
+#     ~/cloud-drive-shared-store is the compat link in both.
 #
 # Offline, no Android SDK: python3 and source only. Root-independent: an
 # unwritable store is a regular FILE where the store dir would be.
@@ -46,38 +51,72 @@ mkdir -p "$T/system/bin" "$T/prefix-bin"
 for c in date ls ln rm rmdir mkdir touch; do ln -s "$(command -v $c)" "$T/system/bin/$c"; done
 SH="$(command -v sh)"
 
-# run <expected emulated target or -> <expected log fragment>
+# The nix app's $HOME and the store's owner home, laid out as Android does (/data/user/0/<pkg>/files/home).
+DATA="$T/data"; H="$DATA/cld.termux.nix/files/home"; OWNER="$DATA/cld.termux/files/home/cloud-shared-store"
+
+# run <expected emulated target or -> <expected store target or -> <expected log fragment>
 run() {
-    H="$T/home"; rm -rf "$H"; mkdir -p "$H"
+    rm -rf "$H"; mkdir -p "$H"
     out="$(HOME="$H" PATH="$T/prefix-bin" "$SH" "$T/login.sh" 2>&1)" || { echo "$out"; return 1; }
     if [ "$1" = - ]; then
-        [ ! -L "$H/emulated" ] && [ ! -L "$H/cloud-drive-shared-store" ] || return 1
+        [ ! -L "$H/emulated" ] || return 1
     else
         [ "$(readlink "$H/emulated")" = "$1" ] || return 1
-        [ "$(readlink "$H/cloud-drive-shared-store")" = "$1/$NAME" ] || return 1
-        [ -z "$(ls -A "$1/$NAME")" ] || return 1   # the rw probe file is removed
     fi
-    case "$out" in *"$2"*) return 0 ;; esac
+    if [ "$2" = - ]; then
+        [ ! -L "$H/cloud-shared-store" ] || return 1
+    else
+        [ "$(readlink "$H/cloud-shared-store")" = "$2" ] || return 1
+    fi
+    [ "$(readlink "$H/cloud-drive-shared-store")" = cloud-shared-store ] || return 1   # compat_link
+    case "$out" in *"$3"*) return 0 ;; esac
     echo "$out"; return 1
 }
+probe_clean() { [ -z "$(ls -A "$1/$NAME")" ]; }   # the rw probe file is removed
 
-# All four roots usable: the first wins, logged fast.
+echo "── fallback path (shared uid NOT in effect: the owner's store does not answer) ──"
+# All four roots usable: the first wins, logged fast; the store link is the legacy mirror + SFTP hint.
 mkdir -p "$T/r0" "$T/r1" "$T/r2" "$T/r3"
-if run "$T/r0" "cloud-drive shared store: $T/r0 (fast)"; then ok "first usable root wins (fast)"; else bad "first usable root not chosen"; fi
+if run "$T/r0" "$T/r0/$NAME" "legacy $NAME mirror: $T/r0 (fast)" && probe_clean "$T/r0" && case "$out" in *"sftp -P 8023"*) true ;; *) false ;; esac
+then ok "first usable root wins (fast); store falls back to the legacy mirror and names SFTP 8023"; else bad "first usable root not chosen / no fallback"; fi
 
 # r0 missing, r1's store is a file (unwritable): r2 wins.
 rm -rf "$T/r0" "$T/r1"; mkdir -p "$T/r1"; : > "$T/r1/$NAME"
-if run "$T/r2" "cloud-drive shared store: $T/r2 (fast)"; then ok "missing and unwritable roots are skipped in order"; else bad "probe order/skip wrong"; fi
+if run "$T/r2" "$T/r2/$NAME" "legacy $NAME mirror: $T/r2 (fast)"; then ok "missing and unwritable roots are skipped in order"; else bad "probe order/skip wrong"; fi
 [ ! -e "$T/r0" ] && ok "a missing root is not created" || bad "the probe created a missing root"
 
 # Only the last root: fallback.
 rm -rf "$T/r2"; mkdir -p "$T/r2"; : > "$T/r2/$NAME"
-if run "$T/r3" "cloud-drive shared store: $T/r3 (fallback)"; then ok "falls back to the last root (/storage/emulated/0)"; else bad "fallback not taken"; fi
+if run "$T/r3" "$T/r3/$NAME" "legacy $NAME mirror: $T/r3 (fallback)"; then ok "falls back to the last root (/storage/emulated/0)"; else bad "fallback not taken"; fi
 
-# Nothing usable: the existing notice.
+# Nothing usable: the existing notice, no store link at all.
 rm -rf "$T/r3"
-if run - "storage access is not granted"; then ok "no root: links removed and the not-mounted notice prints"; else bad "no-root case wrong"; fi
+if run - - "storage access is not granted"; then ok "no root and no shared uid: links removed and the not-mounted notice prints"; else bad "no-root case wrong"; fi
+
+echo "── direct path (shared uid in effect: the owner's store answers) ──"
+mkdir -p "$OWNER" "$T/r3"
+if run "$T/r3" "$OWNER" "cloud-shared-store: direct"; then ok "~/cloud-shared-store links to cld.termux's home store, derived from \$HOME"; else bad "direct path not taken with the owner's store readable"; fi
+case "$out" in *"sftp -P"*) bad "the SFTP fallback line printed although the store is direct" ;; *) ok "no fallback line when direct" ;; esac
+rm -rf "$T/r3"
+if run - "$OWNER" "cloud-shared-store: direct"; then ok "the direct store needs no storage grant"; else bad "the direct store depended on the storage grant"; fi
+# Executable from the nix side (ext4 exec, the reason for the shared uid): a script in the store runs.
+printf '#!/bin/sh\necho nix-exec-ok\n' > "$OWNER/probe.sh"; chmod 755 "$OWNER/probe.sh"
+[ "$("$H/cloud-shared-store/probe.sh" 2>/dev/null)" = nix-exec-ok ] && ok "a script in the store executes through ~/cloud-shared-store" || bad "the store is not executable through the link"
+# Unreadable owner store (the uid differs on a real phone): falls back.
+if [ "$(id -u)" != 0 ]; then
+    chmod 000 "$OWNER"
+    if run - - "sftp -P 8023"; then ok "an unreadable owner store falls back (SFTP hint)"; else bad "an unreadable owner store was linked"; fi
+    chmod 755 "$OWNER"
+fi
 rm -rf "$T"
+
+# Guard: the nix bake mirrors build.json::shared_store (owner package, dir).
+python3 - "$BAKE_PY" "$DIR/../ac_cloud-termux/build.json" <<'PY' && ok "STORE_OWNER_PACKAGE / STORE_DIR mirror ac_cloud-termux/build.json::shared_store" || bad "the nix bake's store constants drifted from ac_cloud-termux/build.json::shared_store"
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("bake", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+d = json.load(open(sys.argv[2]))["shared_store"]
+sys.exit(0 if (m.STORE_OWNER_PACKAGE, m.STORE_DIR) == (d["owner_package"], d["dir"]) else 1)
+PY
 
 # Guard: the nix list equals termux's.
 termux="$(sed -n 's/^for cand in \(.*\); do$/\1/p' "$ENTER_SH" | head -n1)"

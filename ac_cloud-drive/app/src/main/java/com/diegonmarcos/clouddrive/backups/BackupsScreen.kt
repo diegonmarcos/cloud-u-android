@@ -55,8 +55,17 @@ class MirrorRunner(private val scope: CoroutineScope, private val prefs: DrivePr
 
     val runs = MutableStateFlow<Map<String, Run>>(emptyMap())
 
-    /** Declared paths are RELATIVE to shared storage (drive-mirror-jobs.json _doc_paths); resolved here, once. */
-    fun resolve(path: String): File = if (path.startsWith("/")) File(path) else File(Environment.getExternalStorageDirectory(), path)
+    /**
+     * Declared paths (drive-mirror-jobs.json _doc_paths): `store:<rel>` is a folder of THE store
+     * (cloud-shared-store); any other relative path is relative to shared storage. Resolved here, once.
+     */
+    fun resolve(path: String): File = when {
+        path.startsWith(STORE_PREFIX) -> File(com.diegonmarcos.clouddrive.SharedStore.root(), path.removePrefix(STORE_PREFIX))
+        path.startsWith("/") -> File(com.diegonmarcos.clouddrive.SharedStore.resolve(path))
+        else -> File(Environment.getExternalStorageDirectory(), path)
+    }
+
+    companion object { const val STORE_PREFIX = "store:" }
 
     fun run(job: Declarations.MirrorJobDecl) {
         if (runs.value[job.name]?.done == false) return

@@ -520,9 +520,17 @@ SHARED_STORE_PROBE_ROOTS = (
 )
 
 
+# cloud-shared-store (ac_cloud-termux/build.json::shared_store): the store's owner package and its
+# folder in the owner's $HOME. MIRRORS that declaration; test/test-shared-store-probe.sh fails on drift.
+STORE_OWNER_PACKAGE = "cld.termux"
+STORE_DIR = "cloud-shared-store"
+STORE_SFTP_PORT = 8023  # the owner's sshd (the watchdog's declared termux backend), the EXEC-less fallback
+
+
 # startup-step: storage_links
-def storage_setup(shared_root_name: str, roots=SHARED_STORE_PROBE_ROOTS) -> str:
-    """#612/#736: bin/login's shared-storage block. ~/emulated and ~/cloud-drive-shared-store are
+def storage_setup(shared_root_name: str, roots=SHARED_STORE_PROBE_ROOTS,
+                  owner: str = STORE_OWNER_PACKAGE, store_dir: str = STORE_DIR) -> str:
+    """#612/#736: bin/login's shared-storage block. ~/emulated and ~/cloud-shared-store are
     SYMLINKS to /storage/emulated/0 and its <shared_root_name> store. bin/login runs proot with no
     -r (it binds individual dirs onto the real Android root, it does not chroot), so $HOME and
     /storage are the same paths inside the session as outside it and a plain link needs no bind;
@@ -547,9 +555,36 @@ def storage_setup(shared_root_name: str, roots=SHARED_STORE_PROBE_ROOTS) -> str:
     through cheaper paths; the first whose store is readable and passes an rw probe (mkdir -p, touch,
     rm of a temp file) gets both links. /storage/emulated/0 is last, so it is the fallback, and the
     "not mounted" message stays for when it is not even readable. test/test-shared-store-probe.sh
-    runs this text over stub dirs and guards that the list matches termux's."""
+    runs this text over stub dirs and guards that the list matches termux's.
+
+    cloud-shared-store: ~/cloud-shared-store is THE store in cld.termux's private home, reached
+    DIRECTLY because this app runs as the same uid (android:sharedUserId cld.termux.shared). The
+    owner's home is derived from OUR $HOME by swapping the package segment (a second Android user
+    has /data/user/<n>/...), so no absolute path is baked. When the shared uid is NOT in effect the
+    directory does not answer: the link then falls back to the LEGACY CloudDrive mirror found by the
+    probe above (fallback only) and one line names the live store over the owner's sshd (SFTP 8023).
+    ~/cloud-drive-shared-store is the one-release compat link to it."""
     fallback = roots[-1]
     cands = " ".join(roots)
+    # startup-step: shared_store
+    store = (
+        f'CLOUD_STORE_OWNER="${{HOME%/*/files/home}}/{owner}/files/home/{store_dir}"\n'
+        'if [ -d "$CLOUD_STORE_OWNER" ] && [ -r "$CLOUD_STORE_OWNER" ] && [ -w "$CLOUD_STORE_OWNER" ] && [ -x "$CLOUD_STORE_OWNER" ]; then\n'
+        '  CLOUD_SHARED_STORE_MODE=direct\n'
+        f'  cloud_storage_link "$HOME/{store_dir}" "$CLOUD_STORE_OWNER"\n'
+        'else\n'
+        '  CLOUD_SHARED_STORE_MODE=sftp\n'
+        f'  if [ -n "$CLOUD_SDCARD" ] && [ -d "$CLOUD_SDCARD/{shared_root_name}" ]; then\n'
+        f'    cloud_storage_link "$HOME/{store_dir}" "$CLOUD_SDCARD/{shared_root_name}"\n'
+        '  else\n'
+        f'    cloud_storage_unlink "$HOME/{store_dir}"\n'
+        '  fi\n'
+        f'  echo "⚠ {store_dir}: the shared uid with {owner} is not in effect, so ~/{store_dir} is the legacy {shared_root_name} mirror (fallback). The live store: sftp -P {STORE_SFTP_PORT} 127.0.0.1:{store_dir}/" >&2\n'
+        'fi\n'
+        'cloud_trace "cloud-shared-store: $CLOUD_SHARED_STORE_MODE ($CLOUD_STORE_OWNER)"\n'
+        f'export CLOUD_SHARED_STORE_MODE CLOUD_SHARED_STORE_SFTP="sftp://127.0.0.1:{STORE_SFTP_PORT}/~/{store_dir}"\n'
+        f'cloud_storage_link "$HOME/cloud-drive-shared-store" {store_dir}  # compat_link\n'
+    )
     return (
         'cloud_storage_link() {\n'
         '  [ -L "$1" ] || /system/bin/rmdir "$1" 2>/dev/null || true\n'
@@ -578,23 +613,18 @@ def storage_setup(shared_root_name: str, roots=SHARED_STORE_PROBE_ROOTS) -> str:
         'done\n'
         'if [ -n "$CLOUD_SDCARD" ]; then\n'
         f'  if [ "$CLOUD_SDCARD" = "{fallback}" ]; then CLOUD_SPEED=fallback; else CLOUD_SPEED=fast; fi\n'
-        '  cloud_trace "cloud-drive shared store: $CLOUD_SDCARD ($CLOUD_SPEED)"\n'
+        f'  cloud_trace "legacy {shared_root_name} mirror: $CLOUD_SDCARD ($CLOUD_SPEED)"\n'
         '  cloud_storage_link "$HOME/emulated" "$CLOUD_SDCARD"\n'
-        f'  cloud_storage_link "$HOME/cloud-drive-shared-store" "$CLOUD_SDCARD/{shared_root_name}"\n'
         f'elif CLOUD_LS_ERR="$(/system/bin/ls {fallback} 2>&1 >/dev/null)"; then\n'
-        f'  cloud_trace "cloud-drive shared store: {fallback} (fallback, store not writable)"\n'
+        f'  cloud_trace "legacy {shared_root_name} mirror: {fallback} (fallback, not writable)"\n'
         f'  cloud_storage_link "$HOME/emulated" {fallback}\n'
-        f'  if [ -d "{fallback}/{shared_root_name}" ]; then\n'
-        f'    cloud_storage_link "$HOME/cloud-drive-shared-store" "{fallback}/{shared_root_name}"\n'
-        '  else\n'
-        f'    cloud_trace "storage: could not create {fallback}/{shared_root_name}"\n'
-        '  fi\n'
+        f'  [ ! -d "{fallback}/{shared_root_name}" ] || CLOUD_SDCARD={fallback}\n'
         'else\n'
         f'  cloud_trace "storage: ls {fallback} failed: $CLOUD_LS_ERR"\n'
         '  cloud_storage_unlink "$HOME/emulated"\n'
-        '  cloud_storage_unlink "$HOME/cloud-drive-shared-store"\n'
-        '  echo "⚠ cloud-drive shared store not mounted: storage access is not granted. Allow it on the Cloud Terminal prompt, then open a new session." >&2\n'
+        '  echo "⚠ ~/emulated: shared store not mounted, storage access is not granted. Allow it on the Cloud Terminal prompt, then open a new session." >&2\n'
         'fi\n'
+        + store
     )
 
 def add_login_trace(login_inner: str) -> str:

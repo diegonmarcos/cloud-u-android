@@ -114,7 +114,7 @@ cloud_linux_first_start() {
         [ "$_ltty" = 0 ] || echo "linux-store: first switch not complete (log: ~/.linux-store/first-switch.log); if it is not still running, run: linux-store switch" >&2
         return 0
     fi
-    _lbase="${GIT_BASE:-$_lh/cloud-drive-shared-store/git}"
+    _lbase="${GIT_BASE:-$_lh/cloud-shared-store/git}"
     _lmiss=""
     [ -d "$_lbase" ] || _lmiss="$_lmiss the git base ($_lbase),"
     _ldecl="${LINUX_STORE_DECLARATION:-}"

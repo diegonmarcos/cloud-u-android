@@ -45,6 +45,8 @@ set -uo pipefail
 ROOT="${CLOUD_ANDROID_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && while [ "$PWD" != "/" ] && [ ! -e "$PWD/.git" ]; do cd ..; done; printf '%s' "$PWD")}"
 APP="$ROOT/ac_cloud-drive"
 BUILD_JSON="$APP/build.json"
+# cloud-shared-store: the store (storage.shared_root, storage.git_subdir) is declared ONCE, by its owner.
+STORE_JSON="$ROOT/ac_cloud-termux/build.json"
 GRADLE="$APP/app/build.gradle"
 SRC="$APP/app/src/main/java/com/diegonmarcos/clouddrive"
 STORE="$SRC/SharedStore.kt"
@@ -73,21 +75,22 @@ for required in "$BUILD_JSON" "$GRADLE" "$STORE" "$MIGRATION" "$SEED" "$CARDS" "
 done
 
 echo "── S1 the ONE declaration ──"
-SHARED_ROOT="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1])).get("storage") or {}).get("shared_root") or "")' "$BUILD_JSON")"
-if [ -n "$SHARED_ROOT" ]; then pass "build.json::storage.shared_root = '$SHARED_ROOT'"; else fail "build.json has no storage.shared_root"; fi
+SHARED_ROOT="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1])).get("storage") or {}).get("shared_root") or "")' "$STORE_JSON")"
+if [ -n "$SHARED_ROOT" ]; then pass "ac_cloud-termux/build.json::storage.shared_root = '$SHARED_ROOT'"; else fail "ac_cloud-termux/build.json has no storage.shared_root"; fi
+if python3 -c 'import json,sys; s=json.load(open(sys.argv[1])).get("storage") or {}; sys.exit(1 if ("shared_root" in s or "git_subdir" in s) else 0)' "$BUILD_JSON"; then pass "this app's build.json keeps no second copy of the store declaration"; else fail "ac_cloud-drive/build.json::storage still declares shared_root/git_subdir (the store is declared once, in ac_cloud-termux/build.json)"; fi
 case "$SHARED_ROOT" in
     /*|*storage/emulated*|*..*) fail "shared_root must be a relative folder under shared storage, not '$SHARED_ROOT'" ;;
     *) pass "shared_root is relative" ;;
 esac
-if grep -qE "buildJson\.storage" "$GRADLE" && grep -qE 'buildConfigField "String",\s*"SHARED_ROOT",\s*"\\"\$\{sharedRoot\}\\""' "$GRADLE"; then pass "app/build.gradle bakes SHARED_ROOT from build.json::storage"; else fail "SHARED_ROOT is not baked from build.json::storage"; fi
-if grep -qE "sharedRoot\.startsWith\('/'\)" "$GRADLE" && grep -qE "throw new GradleException\(\"build\.json::storage\.shared_root" "$GRADLE"; then pass "an absolute or missing shared_root fails the build"; else fail "build.gradle does not refuse an absolute/missing shared_root"; fi
+if grep -qF 'ac_cloud-termux/build.json' "$GRADLE" && grep -qE "storeOwnerStorage\.shared_root" "$GRADLE" && grep -qE 'buildConfigField "String",\s*"SHARED_ROOT",\s*"\\"\$\{sharedRoot\}\\""' "$GRADLE"; then pass "app/build.gradle bakes SHARED_ROOT from ac_cloud-termux/build.json::storage"; else fail "SHARED_ROOT is not baked from ac_cloud-termux/build.json::storage"; fi
+if grep -qE "sharedRoot\.startsWith\('/'\)" "$GRADLE" && grep -qE "throw new GradleException\(\"ac_cloud-termux/build\.json::storage\.shared_root" "$GRADLE"; then pass "an absolute or missing shared_root fails the build"; else fail "build.gradle does not refuse an absolute/missing shared_root"; fi
 INTERVAL="$(python3 -c 'import json,sys; print(((json.load(open(sys.argv[1])).get("storage") or {}).get("git_sync") or {}).get("interval_minutes") or "")' "$BUILD_JSON")"
 if [ -n "$INTERVAL" ] && [ "$INTERVAL" -ge 15 ] 2>/dev/null; then pass "storage.git_sync.interval_minutes = $INTERVAL (WorkManager floor is 15)"; else fail "storage.git_sync.interval_minutes missing or below WorkManager's 15-minute floor ('$INTERVAL')"; fi
 if grep -qE 'buildConfigField "long",\s*"GIT_SYNC_INTERVAL_MINUTES"' "$GRADLE" && grep -qE 'buildConfigField "boolean", "GIT_SYNC_REQUIRE_UNMETERED"' "$GRADLE"; then pass "the schedule is baked, not literal"; else fail "GIT_SYNC_INTERVAL_MINUTES / GIT_SYNC_REQUIRE_UNMETERED not baked"; fi
 
 echo "── S2 the store resolves at runtime; no absolute /storage path anywhere ──"
-if grep -qE "Environment\.getExternalStorageDirectory\(\), BuildConfig\.SHARED_ROOT" "$STORE"; then pass "SharedStore.root() = shared storage + BuildConfig.SHARED_ROOT"; else fail "SharedStore does not derive the root from BuildConfig.SHARED_ROOT under shared storage"; fi
-if grep -qE "fun resolve\(path: String\): String" "$STORE" && grep -qE "path\.startsWith\(\"/\"\) \|\| path\.contains\(':'\)" "$STORE"; then pass "SharedStore.resolve passes remote:path and absolute paths through, roots the rest"; else fail "SharedStore.resolve missing or does not implement the relative-leg rule"; fi
+if grep -qE "fun root\(\): File = StoreAccess\.root\(\)" "$STORE" && grep -qE "Environment\.getExternalStorageDirectory\(\), BuildConfig\.SHARED_ROOT" "$STORE"; then pass "SharedStore.root() = the store (libs:shared-store); the CloudDrive folder is only legacyRoot()"; else fail "SharedStore does not root at StoreAccess.root() (or lost legacyRoot)"; fi
+if grep -qE "fun resolve\(path: String\): String" "$STORE" && grep -qE "path\.contains\(':'\) -> path" "$STORE" && grep -qE "migrateLegacy\(path" "$STORE"; then pass "SharedStore.resolve passes remote:path through, rewrites an old-location path, roots the rest"; else fail "SharedStore.resolve missing or does not implement the relative-leg + legacy rule"; fi
 ABS="$(grep -rnE "/storage/emulated/0" "$APP/app/src" "$APP/data" "$GIT_MOD/src/main" "$RCLONE_MOD/src/main" \
       "$(python3 -c 'import json,os,sys; b=json.load(open(sys.argv[1])); print(os.path.normpath(os.path.join(sys.argv[2], b["modules"]["libs:mounts"]["dir"])))' "$BUILD_JSON" "$APP")/src/main" \
       "$(python3 -c 'import json,os,sys; b=json.load(open(sys.argv[1])); print(os.path.normpath(os.path.join(sys.argv[2], b["modules"]["libs:file-editor"]["dir"])))' "$BUILD_JSON" "$APP")/src/main" 2>/dev/null \
@@ -100,13 +103,13 @@ if grep -qE 'val root = remember \{ SharedStore\.gitRoot\(\)\.absolutePath \}' "
 # #606/#608 the git folder of the store is DECLARED (storage.git_subdir), baked, and the ONE
 # place a clone lands: SharedStore.repoDir goes through it, so the first-run seed and the
 # page's own Clone cannot disagree about where a repository is.
-GIT_SUBDIR="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1])).get("storage") or {}).get("git_subdir") or "")' "$BUILD_JSON")"
+GIT_SUBDIR="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1])).get("storage") or {}).get("git_subdir") or "")' "$STORE_JSON")"
 case "$GIT_SUBDIR" in
     "") fail "build.json::storage.git_subdir is missing — the page would clone into the store's root" ;;
     /*|*/*|*..*) fail "storage.git_subdir must be ONE relative folder name, not '$GIT_SUBDIR'" ;;
     *) pass "build.json::storage.git_subdir = '$GIT_SUBDIR' (one relative segment)" ;;
 esac
-if grep -qE 'buildConfigField "String", +"GIT_SUBDIR"' "$GRADLE" && grep -qE "gitSubdir\.startsWith\('/'\)" "$GRADLE" && grep -qE 'throw new GradleException\("build\.json::storage\.git_subdir' "$GRADLE"; then pass "GIT_SUBDIR is baked from the declaration and an absolute/nested value fails the build"; else fail "GIT_SUBDIR is not baked (or build.gradle does not refuse a bad git_subdir)"; fi
+if grep -qE 'buildConfigField "String", +"GIT_SUBDIR"' "$GRADLE" && grep -qE "gitSubdir\.startsWith\('/'\)" "$GRADLE" && grep -qE 'throw new GradleException\("ac_cloud-termux/build\.json::storage\.git_subdir' "$GRADLE"; then pass "GIT_SUBDIR is baked from the declaration and an absolute/nested value fails the build"; else fail "GIT_SUBDIR is not baked (or build.gradle does not refuse a bad git_subdir)"; fi
 if grep -qE 'fun gitRoot\(\): File = File\(root\(\), BuildConfig\.GIT_SUBDIR\)' "$STORE" && grep -qE 'fun repoDir\(name: String\): File = File\(gitRoot\(\), name\)' "$STORE"; then pass "SharedStore.gitRoot() = root()/GIT_SUBDIR and every repoDir goes through it"; else fail "SharedStore does not resolve the git folder from BuildConfig.GIT_SUBDIR (or repoDir bypasses it)"; fi
 if grep -qE '"shared_root" -> SharedStore\.root\(\)' "$PLACES" && grep -qE 'hero = p\.hero' "$PLACES"; then pass "the store is a Files place (the hero of the Places sheet)"; else fail "Places does not offer the store"; fi
 if grep -qE 'fun openEngine\(engine: String, target: String, url: String = ""\)' "$SRC/DriveActions.kt" && grep -qE 'const val EXTRA_URL' "$HOST" && grep -qE 'GitSyncScreen\(target, onOpenFile, onClose, cloneUrl = cloneUrl\)' "$HOST"; then pass "the clone URL travels DriveActions → activity → GitSyncScreen(cloneUrl)"; else fail "the clone-url seam is broken somewhere between openEngine(engine, target, url), EXTRA_URL and GitSyncScreen(cloneUrl)"; fi

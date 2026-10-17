@@ -138,17 +138,12 @@ if [ -f "$HERE/rish/rish" ] && [ -f "$ROOTFS/usr/local/bin/rish" ]; then
 fi
 
 # startup-step: storage_links
-# #612/#736: ~/emulated and ~/cloud-drive-shared-store are SYMLINKS in $HOME to
-# /storage/emulated/0 and its CloudDrive store, and /storage/emulated/0 is bound
-# at the SAME path inside the root so one absolute target resolves for the guest
-# shell, the Termux failsafe shell and the documents provider alike. The binds
-# this replaces were invisible on a phone: an older enter.sh bound at host paths
-# the guest never visits, so the shell listed only the empty mkdir'd mount points.
-# CloudDrive is ac_cloud-drive/build.json::storage.shared_root, THE ONE
-# declaration (SharedStore.kt resolves it under
-# Environment.getExternalStorageDirectory()) -- keep this literal in sync with
-# that value, not a copy of it.
-storage_link() {  # $1 = link in $HOME, $2 = its absolute target
+# #612/#736: ~/emulated is a SYMLINK in $HOME to /storage/emulated/0, and
+# /storage/emulated/0 is bound at the SAME path inside the root so one absolute
+# target resolves for the guest shell, the Termux failsafe shell and the documents
+# provider alike. The fleet's store is NOT here any more: it is ~/cloud-shared-store
+# below, in this app's own data dir.
+storage_link() {  # $1 = link in $HOME, $2 = its target
     # An empty directory an older enter.sh left is replaced; rmdir never removes content.
     [ -L "$1" ] || rmdir "$1" 2>/dev/null || true
     if [ -e "$1" ] && [ ! -L "$1" ]; then
@@ -173,14 +168,40 @@ fi
 if ls /storage/emulated/0 >/dev/null 2>&1; then
     # The guest's /storage/emulated/0 is the sdcard bind above (same files, the fastest readable path).
     storage_link "$HOME/emulated" /storage/emulated/0
-    mkdir -p /storage/emulated/0/CloudDrive 2>/dev/null || true
-    [ ! -d /storage/emulated/0/CloudDrive ] || storage_link "$HOME/cloud-drive-shared-store" /storage/emulated/0/CloudDrive
 else
-    # #730 nothing is left behind that reads as an empty STORE, which is the
-    # fresh-phone report this replaces.
     storage_unlink "$HOME/emulated"
-    storage_unlink "$HOME/cloud-drive-shared-store"
-    echo "⚠ cloud-drive shared store not mounted: storage access is not granted. Allow it on the Cloud Terminal prompt, then open a new session." >&2
+    echo "⚠ ~/emulated: shared store not mounted, storage access is not granted. Allow it on the Cloud Terminal prompt, then open a new session." >&2
+fi
+
+# startup-step: shared_store
+# THE fleet's one store (build.json::shared_store): a REAL directory in this app's
+# private home, on ext4/f2fs -- exec allowed, fast stats, real symlinks, no FUSE.
+# The guest sees it as /root/cloud-shared-store ($HOME is bound as /root);
+# cloud-terminal-nix runs as the same uid (android:sharedUserId) and links to it;
+# every other fleet app reaches it through SharedStoreProvider. It never depends
+# on the storage grant. Keep the literal equal to build.json::shared_store.dir
+# (test/test-shared-store.sh).
+CLOUD_STORE="$HOME/cloud-shared-store"
+CLOUD_STORE_CFG="$HOME/.config/cloud-shared-store"
+mkdir -p "$CLOUD_STORE" "$CLOUD_STORE_CFG" 2>/dev/null || true
+# compat link, ONE release (shared_store.compat_link): the old name points at the new store.
+storage_link "$HOME/cloud-drive-shared-store" cloud-shared-store  # compat_link
+# The web token my-webserver's write path checks (shared_store.web.token_file); reads are
+# loopback-only and need none. Made once, 0600, never printed.
+if [ ! -s "$CLOUD_STORE_CFG/web-token" ]; then
+    ( umask 077; od -An -tx1 -N24 /dev/urandom 2>/dev/null | tr -d ' \n' > "$CLOUD_STORE_CFG/web-token" ) || true
+fi
+# Optional export mirror (shared_store.export_mirror), OFF unless the flag says "on":
+# one way, <store>/export -> <shared storage>/CloudDrive/export, never deletes, in the
+# background so a login never waits for it.
+if [ "$(cat "$CLOUD_STORE_CFG/export-mirror" 2>/dev/null)" = "on" ] && [ -n "$sdcard" ] && [ -d "$CLOUD_STORE/export" ]; then
+    ( mkdir -p "$sdcard/CloudDrive/export" && cp -ru "$CLOUD_STORE/export/." "$sdcard/CloudDrive/export/" ) \
+        >"$CLOUD_STORE_CFG/export-mirror.log" 2>&1 </dev/null &
+fi
+# One-time hint: repositories cloud-drive cloned into the legacy CloudDrive folder are not
+# copied automatically (gigabytes, and the FUSE copy has no exec bits to keep).
+if [ ! -d "$CLOUD_STORE/git" ] && [ -n "$sdcard" ] && [ -d "$sdcard/CloudDrive/git" ]; then
+    echo "ℹ ~/cloud-shared-store/git is empty; to import the legacy CloudDrive clones once: cp -a /storage/emulated/0/CloudDrive/git ~/cloud-shared-store/" >&2
 fi
 
 # startup-step: local_webserver
@@ -193,6 +214,14 @@ fi
 # the same root and binds as the session (no --kill-on-exit: it outlives the session that
 # started it). Guarded on presence like cloud-store: an older tree without the binary, or a
 # staging without the snippet, logs in exactly as before.
+# cloud-shared-store (build.json::shared_store.web): the server stays read-only over $HOME; writes
+# are opened for the STORE ONLY (my-webserver's HTTPD_WRITE_ROOTS allowlist) and only with the 0600
+# token made above (HTTPD_WRITE_TOKEN_FILE: every write must present it). No token file, no writes.
+# Passed as explicit `env -i` words because the launcher starts from an empty environment.
+store_web_env=""
+if [ -s "${CLOUD_STORE_CFG:-$HOME/.config/cloud-shared-store}/web-token" ]; then
+    store_web_env="HTTPD_WRITE=1 HTTPD_WRITE_ROOTS=/root/cloud-shared-store HTTPD_WRITE_TOKEN_FILE=/root/.config/cloud-shared-store/web-token"
+fi
 if [ -f "$HERE/cloud-store/local-webserver.sh" ]; then
     . "$HERE/cloud-store/local-webserver.sh"
     if [ -x "$ROOTFS/usr/local/bin/$CLOUD_WEBSERVER_BIN" ]; then
@@ -200,7 +229,7 @@ if [ -f "$HERE/cloud-store/local-webserver.sh" ]; then
         cloud_webserver_autostart /root "$HERE/proot" --link2symlink --sysvipc -0 -r "$ROOTFS" \
             -b /dev -b /proc -b /sys -b /proc/self/fd:/dev/fd -b "$HOME:/root" $binds -w /root \
             /usr/bin/env -i HOME=/root USER=root LOGNAME=root LANG=C.UTF-8 TMPDIR=/tmp \
-                PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+                PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin $store_web_env \
             "/usr/local/bin/$CLOUD_WEBSERVER_BIN"
     fi
 fi
@@ -222,4 +251,6 @@ exec "$HERE/proot" --kill-on-exit --link2symlink --sysvipc -p -0 -r "$ROOTFS" \
     /usr/bin/env -i HOME=/root USER=root LOGNAME=root SHELL="$login_shell" \
         TERM="${TERM:-xterm-256color}" COLORTERM="${COLORTERM:-truecolor}" LANG=C.UTF-8 TMPDIR=/tmp \
         PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+        CLOUD_SHARED_STORE=/root/cloud-shared-store \
+        CLOUD_SHARED_STORE_WEB_TOKEN_FILE=/root/.config/cloud-shared-store/web-token \
     $store_entry "$login_shell" $login "$@"

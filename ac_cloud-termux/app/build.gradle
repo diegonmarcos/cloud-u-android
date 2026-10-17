@@ -132,6 +132,17 @@ android {
         buildConfigField "boolean", "CLOUD_WAKE_LOCK_DEFAULT_ON", "${cloudWakeLock().default_on}"
         buildConfigField "boolean", "CLOUD_WIFI_LOCK", "${cloudWakeLock().wifi_lock}"
 
+        // cloud-shared-store (build.json::shared_store): where the store lives in $HOME and the
+        // provider other fleet apps reach it through.
+        buildConfigField "String", "CLOUD_SHARED_STORE_DIR", "\"${cloudSharedStore().dir}\""
+        buildConfigField "String", "CLOUD_SHARED_STORE_AUTHORITY", "\"${cloudSharedStore().provider.authority}\""
+        buildConfigField "String", "CLOUD_SHARED_STORE_COMPAT_LINK", "\"${cloudSharedStore().compat_link.name}\""
+        buildConfigField "String", "CLOUD_SHARED_STORE_EXPORT_FLAG", "\"${cloudSharedStore().export_mirror.flag_file}\""
+        buildConfigField "String", "CLOUD_SHARED_STORE_MIGRATION_DIR", "\"${cloudSharedStore().migration.backup_dir}\""
+        buildConfigField "String", "CLOUD_SHARED_STORE_MIGRATION_ARCHIVE", "\"${cloudSharedStore().migration.archive}\""
+        buildConfigField "String", "CLOUD_SHARED_STORE_MIGRATION_MARKER", "\"${cloudSharedStore().migration.marker}\""
+        buildConfigField "String", "CLOUD_LEGACY_SHARED_ROOT", "\"${new groovy.json.JsonSlurper().parseText(file("$projectDir/../build.json").getText("UTF-8")).storage.shared_root}\""
+
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "cld.termux"
         manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal (Termux)"
         manifestPlaceholders.TERMUX_API_APP_NAME = "Termux:API"
@@ -562,6 +573,34 @@ preBuild.dependsOn tasks.named('verifyCloudRootfs')
 // #787 build.json::wake_lock -- whether a session takes the wake lock without being asked, and
 // whether the Wi-Fi lock comes with it. Both must be declared booleans: a missing key must not
 // quietly become "off".
+// cloud-shared-store: build.json::shared_store, THE ONE declaration of the store
+// (dir, provider authority + signature permission, the shared uid, the export
+// mirror flag and the migration drop). The manifest's android:sharedUserId is a
+// LITERAL (a placeholder there is resolved after the merger checks it), so this
+// only asserts the literal equals the declaration instead of feeding it.
+def cloudSharedStore() {
+    def declaration = new File(projectDir.parentFile, "build.json")
+    def decl = new groovy.json.JsonSlurper().parseText(declaration.getText("UTF-8")).shared_store
+    ['dir', 'owner_package', 'shared_user_id'].each { k ->
+        if (!(decl?."${k}" instanceof String) || !decl."${k}")
+            throw new GradleException(declaration.toString() + " shared_store." + k + " is required")
+    }
+    if (decl.dir.contains('/') || decl.dir.contains('..'))
+        throw new GradleException(declaration.toString() + " shared_store.dir must be one relative segment under \$HOME")
+    if (decl.provider?.protection_level != 'signature')
+        throw new GradleException(declaration.toString() + " shared_store.provider.protection_level must be 'signature'")
+    def manifest = file("$projectDir/src/main/AndroidManifest.xml").getText("UTF-8")
+    if (!manifest.contains('android:sharedUserId="' + decl.shared_user_id + '"'))
+        throw new GradleException("AndroidManifest.xml android:sharedUserId must be the literal build.json::shared_store.shared_user_id (" + decl.shared_user_id + ")")
+    // Literals in the manifest for the same reason (and so the ipc-mesh scanner reads them):
+    // the provider's authority and its signature permission must be the declared ones.
+    [decl.provider.authority, decl.provider.permission].each { v ->
+        if (!manifest.contains('"' + v + '"'))
+            throw new GradleException("AndroidManifest.xml must name build.json::shared_store.provider value '" + v + "' literally")
+    }
+    return decl
+}
+
 def cloudWakeLock() {
     def declaration = new File(projectDir.parentFile, "build.json")
     def decl = new groovy.json.JsonSlurper().parseText(declaration.getText("UTF-8")).wake_lock

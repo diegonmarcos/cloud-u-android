@@ -27,6 +27,13 @@ class GitCredentialStore(context: Context) {
     fun clear(repoId: String) = prefs.edit().remove(repoId).apply()
     fun hasSecret(repoId: String): Boolean = prefs.contains(repoId)
 
+    /** Move [from]'s secret to [to] (a repository whose path, hence id, changed). No-op when [from] holds none. */
+    fun rekey(from: String, to: String) {
+        if (from == to) return
+        val secret = prefs.getString(from, null) ?: return
+        prefs.edit().putString(to, secret).remove(from).apply()
+    }
+
     /** The [GitAuth] the engine needs for [repo], assembled from its public fields plus the stored secret. */
     fun authFor(repo: ManagedRepo): GitAuth = when (repo.authKind) {
         "https" -> GitAuth.Https(repo.authUsername, prefs.getString(repo.id, "") ?: "")

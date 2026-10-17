@@ -34,10 +34,7 @@
     ]
   },
   "storage": {
-    "_doc": "#575 THE ONE DECLARATION of the on-phone repo store. cloud-drive is THE store: every clone the git manager makes and every phone-side leg of an rclone job lives under <shared storage>/<shared_root>/<name>, in plain shared storage, so every fleet app that holds all-files access reads AND writes it the way it reads /storage/emulated/0 — no per-app clone, no Android/data sandbox. RELATIVE TO SHARED STORAGE on purpose: the absolute form (/storage/emulated/0/...) is a fact about one device — the user id in it changes under a second profile (drive-mirror-jobs.json _doc_paths states the same rule). Consumers: app/build.gradle bakes it into BuildConfig.SHARED_ROOT (SharedStore.kt resolves it at runtime); ac_cloud-code/tools/resolve-targets.py READS it from this file at build time so cloud-code's Backlog and Repos tabs point at the same folder without restating it. test/test-drive-shared-store.sh fails the build on a second copy of the value or an absolute path anywhere.",
-    "shared_root": "CloudDrive",
-    "_doc_git_subdir": "#606/#608 THE ONE folder of the store that holds clones: <shared storage>/<shared_root>/<git_subdir>/<name>. Declared, relative, and a single path segment — baked as BuildConfig.GIT_SUBDIR and resolved ONCE by SharedStore.gitRoot(), which SharedStore.repoDir() and therefore BOTH clone paths (the first-run seed and the Sync ▸ Git page's own Clone) go through. It exists because the store is plain shared storage shared with every fleet app: repositories mixed in at the root of it are indistinguishable from the user's own folders, and #608's page addresses `<root>/git` explicitly. NOT a separate exec volume and not an app-private dir — the whole point of the store is that any fleet app holding all-files access reads it.",
-    "git_subdir": "git",
+    "_doc": "#575 → cloud-shared-store: the store's root and its git folder (shared_root, git_subdir) are declared ONCE in ac_cloud-termux/build.json::storage + ::shared_store (owner decision 2026-10-17); this block keeps only what is cloud-drive's own: when git sync runs and how the first run seeds. app/build.gradle reads the store from there; test/test-drive-shared-store.sh fails on a second copy here.",
     "git_sync": {
       "_doc": "Scheduled background sync of the repositories the user opted in (ManagedRepo.autoSync), the GitSync app's scheduler realised over WorkManager (GitSyncWorker.kt). interval_minutes is the period (WorkManager's floor is 15); require_unmetered_network keeps a push off mobile data. Same shape and same reason as release.auto_update: a build.json edit reaches installed phones through ExistingPeriodicWorkPolicy.UPDATE on the next launch.",
       "interval_minutes": 60,
@@ -736,6 +733,7 @@
       "depends_on": [
         "libs:core",
         "libs:updater",
+        "libs:shared-store",
         "libs:git-sync",
         "libs:file-editor",
         "libs:rclone",
@@ -800,6 +798,11 @@
       "_doc_dir": "Engine library #567 push 3: the full text editor that replaces the in-page textarea editor of #302 for anything beyond a quick edit.",
       "engine": true,
       "dir": "../ab_cloud-libs-shared/libs/file-editor",
+      "type": "library"
+    },
+    "libs:shared-store": {
+      "_doc_dir": "cloud-shared-store's store-access layer (contract): where the store is, whether the shared uid is in effect (DIRECT) or git/rclone must run inside cld.termux through CLOUD_EXEC (EXEC), and the legacy-path migration rule. Shared BY REFERENCE; reads ac_cloud-termux/build.json::shared_store.",
+      "dir": "../ab_cloud-libs-shared/libs/shared-store",
       "type": "library"
     },
     "libs:rclone": {

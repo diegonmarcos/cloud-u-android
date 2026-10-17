@@ -144,7 +144,7 @@
     <string name="volumes_owner_only">Owner-only: Android %1$d+ lets only %2$s read its own %3$s. Nothing here can open it.</string>
     <string name="volumes_open_in_app">Open in %1$s</string>
     <string name="volumes_open_in_app_missing">%1$s is not installed, so nothing can open its owner-only folder</string>
-    <string name="volumes_store_folder">In the shared store — every fleet app with all-files access reads this</string>
+    <string name="volumes_store_folder">In the shared store (cloud-shared-store) — the terminals and Cloud Drive share it directly; other fleet apps reach it through the store provider</string>
     <string name="volumes_machines_hint">No host of this kind is declared yet</string>
     <string name="volumes_machines_other">Other hosts</string>
     <string name="volumes_personal_auth">Sign in</string>
@@ -576,4 +576,13 @@
     <string name="pdf_goto_hint">1 – %1$d</string>
     <string name="pdf_convert_title">Convert to</string>
     <string name="pdf_convert_no_folder">A document handed in from another app has no folder to save next to — copy it into Files first.</string>
+    <!-- cloud-shared-store: the one-time notice after the shared-uid reinstall (DataMigration). -->
+    <string name="shared_store_migration_title">Cloud shared store</string>
+    <string name="shared_store_migration_body">Cloud Drive now runs as the same Linux user as Cloud Terminal, so every sync and clone uses ~/cloud-shared-store directly. That change needed a reinstall, which cleared this app\'s data.</string>
+    <string name="shared_store_migration_restore">\n\nA backup of Cloud Drive\'s settings was found:\n%1$s\n\nRestore it now? Saved jobs and repositories are moved to the new store; the git token comes back from your vault import.</string>
+    <string name="shared_store_migration_restore_action">Restore</string>
+    <string name="shared_store_migration_skip_action">Not now</string>
+    <string name="shared_store_migration_ok_action">OK</string>
+    <string name="shared_store_migration_done">Restored %1$d files.</string>
+    <string name="shared_store_migration_failed">Restore failed: %1$s</string>
 </resources>

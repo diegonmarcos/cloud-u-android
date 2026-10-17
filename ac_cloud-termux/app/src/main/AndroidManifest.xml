@@ -2,8 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:installLocation="internalOnly"
-    android:sharedUserId="${TERMUX_PACKAGE_NAME}"
+    android:sharedUserId="cld.termux.shared"
     android:sharedUserLabel="@string/shared_user_label">
+
+    <!-- cloud-shared-store: android:sharedUserId is the SAME literal in ac_cloud-termux and
+         ac_cloud-nix-on-droid (build.json::shared_store.shared_user_id; app/build.gradle and
+         test/test-shared-store.sh fail on drift). Both are release-signed with the one
+         constellation key, so Android puts both in ONE Linux uid and the nix session reads,
+         writes and EXECUTES the store in cld.termux's private home directly. Changing this
+         value on an installed app is refused by the installer (uid change): it needs the
+         backup -> uninstall -> install -> restore flow (shared_store.migration). Never add
+         android:sharedUserMaxSdkVersion: on API 33+ a fresh install would then get its own uid. -->
 
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -45,6 +54,16 @@
         android:name="com.diegonmarcos.cloud.permission.TERMINAL_SESSION"
         android:label="Cloud terminal sessions"
         android:description="@string/permission_terminal_session_description"
+        android:protectionLevel="signature" />
+
+    <!-- cloud-shared-store: the door other fleet apps use (SharedStoreProvider). Signature
+         level: granted at install, with no prompt, only to APKs signed with the fleet key.
+         Declared ALSO by ac_cloud-drive (same key, so the definitions agree): whichever is
+         installed first defines it, and the grant never depends on install order. -->
+    <permission
+        android:name="com.diegonmarcos.cloud.permission.SHARED_STORE"
+        android:label="Cloud shared store"
+        android:description="@string/permission_shared_store_description"
         android:protectionLevel="signature" />
 
     <!-- #628 - the two packages this app resolves by name at runtime.
@@ -183,6 +202,18 @@
             </intent-filter>
         </activity>
 
+
+        <!-- cloud-shared-store: the store ($HOME/cloud-shared-store) for every other fleet app.
+             A plain ContentProvider, NOT a DocumentsProvider: DocumentsProvider.attachInfo
+             refuses any guard but MANAGE_DOCUMENTS, which every SAF client holds. openFile
+             returns a ParcelFileDescriptor on the real file, so after one binder call per
+             open the caller reads and writes at native speed. -->
+        <provider
+            android:name="com.termux.cloud.SharedStoreProvider"
+            android:authorities="cld.termux.sharedstore"
+            android:exported="true"
+            android:grantUriPermissions="false"
+            android:permission="com.diegonmarcos.cloud.permission.SHARED_STORE" />
 
         <provider
             android:name=".filepicker.TermuxDocumentsProvider"

@@ -346,7 +346,7 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
             }
 
             // #736: re-check shared storage at every session start, before enter.sh decides
-            // whether to bind ~/emulated and ~/cloud-drive-shared-store.
+            // whether to bind ~/emulated and ~/cloud-shared-store.
             mActivity.requestManageStorageIfNeeded();
 
             TermuxSession newTermuxSession = service.createTermuxSession(null, null, null, workingDirectory, isFailSafe, sessionName);

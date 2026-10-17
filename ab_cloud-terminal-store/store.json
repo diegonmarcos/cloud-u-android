@@ -46,7 +46,8 @@
     "_doc": "The steps a terminal runs when it starts or is baked, declared once so the two cannot drift. Every `startup-step: <id>` marker comment in the files listed under terminals.<t>.startup_files is one step; terminal-parity-guard.py requires the SAME set in both terminals and every id below to be implemented in each (shared ids live in login-init.sh, which both terminals source). A step added to one terminal without the other, or lost from one, is red.",
     "steps": {
       "wipe_stale_root": "clear the previous root / staging read-only-safely before a re-extract; quiet, one summary line, never fatal (termux enter.sh wipe_rootfs; nix BootstrapStaging.wipeQuiet)",
-      "storage_links": "~/emulated and ~/cloud-drive-shared-store links to shared storage",
+      "storage_links": "~/emulated links to shared storage (and, nix fallback only, the legacy CloudDrive mirror probe)",
+      "shared_store": "~/cloud-shared-store: termux makes the real dir in its home (+ compat link, web token, opt-in export mirror); nix links it in the owner's home via the shared uid, else falls back to the legacy mirror + the SFTP 8023 hint",
       "rish_bridge": "bind the rish launcher into the root",
       "dns_resolver": "lookups go to the app's DNS bridge",
       "linux_tools_install": "bake the pinned linux-store, linux-account and fish_greeting into the image (fetch-linux-tools.py)",

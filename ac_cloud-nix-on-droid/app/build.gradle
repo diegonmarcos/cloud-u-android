@@ -144,6 +144,13 @@ android {
         buildConfigField "boolean", "CLOUD_WAKE_LOCK_DEFAULT_ON", "${cloudWakeLock().default_on}"
         buildConfigField "boolean", "CLOUD_WIFI_LOCK", "${cloudWakeLock().wifi_lock}"
 
+        // cloud-shared-store (ac_cloud-termux/build.json::shared_store + ::storage, the owner's ONE
+        // declaration): the migration notice's backup drop and marker. The store itself is linked by
+        // bin/login (bake_default_packages.py storage_setup) through the shared uid.
+        buildConfigField "String", "CLOUD_LEGACY_SHARED_ROOT", "\"${sharedRootName()}\""
+        buildConfigField "String", "CLOUD_SHARED_STORE_MIGRATION_DIR", "\"${cloudSharedStoreDecl().migration.backup_dir}\""
+        buildConfigField "String", "CLOUD_SHARED_STORE_MIGRATION_ARCHIVE", "\"${cloudSharedStoreDecl().migration.archive}\""
+        buildConfigField "String", "CLOUD_SHARED_STORE_MIGRATION_MARKER", "\"${cloudSharedStoreDecl().migration.marker}\""
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "cld.termux.nix"
         manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal (Nix)"
         manifestPlaceholders.TERMUX_API_APP_NAME = "Termux:API"
@@ -440,9 +447,23 @@ def bootstrapAbi() {
 
 // #612 -- the ONE declaration of the cloud-drive shared store, read from the
 // sibling app so this app never keeps its own copy of the value to drift out
-// of sync with. ac_cloud-drive/build.json::storage.shared_root.
+// of sync with. ac_cloud-termux/build.json::storage.shared_root (cloud-shared-store: the store's
+// owner declares it; here it is the LEGACY mirror the bin/login fallback links to).
+// cloud-shared-store: the owner's declaration, and the guard that this manifest's
+// android:sharedUserId is the SAME literal (the shared uid is what lets bin/login link the store).
+def cloudSharedStoreDecl() {
+    def declaration = new File(projectDir.parentFile.parentFile, "ac_cloud-termux/build.json")
+    def decl = new groovy.json.JsonSlurper().parseText(declaration.getText("UTF-8")).shared_store
+    if (!decl?.shared_user_id || !decl?.migration)
+        throw new GradleException(declaration.toString() + " has no shared_store.shared_user_id / migration")
+    def manifest = file("$projectDir/src/main/AndroidManifest.xml").getText("UTF-8")
+    if (!manifest.contains('android:sharedUserId="' + decl.shared_user_id + '"'))
+        throw new GradleException("AndroidManifest.xml android:sharedUserId must be the literal shared_store.shared_user_id (" + decl.shared_user_id + ")")
+    return decl
+}
+
 def sharedRootName() {
-    def declaration = new File(projectDir.parentFile.parentFile, "ac_cloud-drive/build.json")
+    def declaration = new File(projectDir.parentFile.parentFile, "ac_cloud-termux/build.json")
     if (!declaration.exists())
         throw new GradleException("missing " + declaration + " -- #612's shared-store mount needs storage.shared_root from there")
     def sharedRoot = new groovy.json.JsonSlurper().parseText(declaration.getText("UTF-8"))?.storage?.shared_root

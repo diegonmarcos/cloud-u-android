@@ -25,6 +25,16 @@
     <string name="permission_run_command_label">Run commands in &TERMUX_APP_NAME; environment</string>
     <string name="permission_run_command_description">execute arbitrary commands within &TERMUX_APP_NAME;
         environment and access files</string>
+    <string name="permission_shared_store_description">Allows an app signed with the fleet key to read and write the Cloud shared store (the terminal\'s ~/cloud-shared-store). Granted automatically to those apps and to no others.</string>
+    <string name="shared_store_migration_title">Cloud shared store</string>
+    <string name="shared_store_migration_body">This terminal now shares one Linux user with Cloud Terminal Nix, so both see ~/cloud-shared-store directly (compat link: the old ~/cloud-drive-shared-store name points to it for one release).\n\nThat change needed a reinstall, which cleared this app\'s data.</string>
+    <string name="shared_store_migration_restore">\n\nA backup of your home was found:\n%1$s\n\nRestore it now? Files already in your home are kept unless the backup has a newer copy.</string>
+    <string name="shared_store_migration_no_backup">\n\nNo backup was found at %1$s. If you made one, grant storage access and reopen the app.</string>
+    <string name="shared_store_migration_restore_action">Restore</string>
+    <string name="shared_store_migration_skip_action">Not now</string>
+    <string name="shared_store_migration_ok_action">OK</string>
+    <string name="shared_store_migration_done">Restored %1$d files from the backup.</string>
+    <string name="shared_store_migration_failed">Restore failed: %1$s</string>
     <string name="permission_terminal_session_description">Allows an app signed with the fleet key to open a login shell in this terminal (Cloud MyTerminal). Granted automatically to those apps and to no others.</string>
     <string name="permission_cloud_exec_label">Run fleet commands</string>
     <string name="permission_cloud_exec_description">Allows an app signed with the same key to run a command in Termux and read its output. Granted automatically to those apps and to no others; there is no way for an unrelated app to request it.</string>
