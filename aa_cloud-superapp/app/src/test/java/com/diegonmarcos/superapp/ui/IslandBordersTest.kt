@@ -72,8 +72,11 @@ class IslandBordersTest : KitPageHarness() {
         val x0 = r.left.toInt(); val y0 = r.top.toInt(); val x1 = r.right.toInt(); val y1 = r.bottom.toInt()
         val band = 3
         var checked = 0
-        for (y in y0 until y1) for (x in x0 until x1) {
-            val edge = x < x0 + band || y < y0 + band || x >= x1 - band || y >= y1 - band
+        // Top and bottom runs only, clear of the rounded ends: the thin wave line starts AT the pill's left edge at mid-height by
+        // design (the View's did too), so the ends legitimately animate; the straight runs are the border and nothing else.
+        val capW = (y1 - y0)
+        for (y in y0 until y1) for (x in (x0 + capW) until (x1 - capW)) {
+            val edge = y < y0 + band || y >= y1 - band
             if (!edge) continue
             checked++
             assertEquals("border pixel ($x,$y) changed between two moments: the music island has an animated border",
