@@ -1,5 +1,6 @@
 {
   "_doc": "#876 THE guard and THE ratchet of the fleet's move to Kotlin/Wasm, as data. Read by 1_cicd/src/scripts/cloud-android-wasm-purity-guard.py (wasm-purity-guard.yml, on every change to a commonMain or web source). `forbidden` is what code in a lib's src/commonMain/kotlin or a web root may not name (regexes, matched against code only: comments and string literals are not code). `baseline.libs` is the number of non-blank Kotlin lines under each lib's src/commonMain; the ratchet only goes UP: fewer fails (code left the wasm-pure surface), more fails until the baseline is raised in the same commit (progress is written down and cannot slide back). `baseline.total` is their sum. A lib with commonMain and no entry has an implicit baseline of 0, and must be in ab_cloud-libs-shared/web/web.json::libs. Pilot (#876): libs:ui-kit's CloudKit.kt and libs:bottomnav (the island, the page tabs, the nav declaration; part 2), then the other ~10 libs that hold @Composable.",
+  "_baseline_note": "2026-10-17: ui-kit 872 -> 953 and total 2214 -> 2295 (+81 commonMain lines). The growth is real ui-kit fixes moved into the wasm-pure surface (KitButton and the dense theme), not new platform code; raised per the ratchet rule (progress written down in the commit that makes it).",
   "forbidden": {
     "android.*": "\\bandroid\\.",
     "androidx.(activity|fragment|core|lifecycle|navigation|appcompat)": "\\bandroidx\\.(activity|fragment|core|lifecycle|navigation|appcompat)\\b",
@@ -10,9 +11,9 @@
   },
   "baseline": {
     "libs": {
-      "ui-kit": 872,
+      "ui-kit": 953,
       "bottomnav": 1342
     },
-    "total": 2214
+    "total": 2295
   }
 }
