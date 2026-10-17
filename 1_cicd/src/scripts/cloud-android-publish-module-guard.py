@@ -41,7 +41,8 @@ SKIP = {"1_cicd/src/scripts/cloud-android-publish-module-guard.py"}
 EXEMPT = {"1_cicd/src/cicd/ghcr-delete-package.yml", "1_cicd/src/cicd/ghcr-visibility-audit.yml",
           "1_cicd/src/cicd/ghcr-secret-scan.yml"}
 DELETE_ALLOW = {"cloud-notes-web", "cloud-notes-sync", "kg-store", "kg-store-binaries", "redis-binaries", "hickory-dns-binaries", "gha-runner", "gha-runner-binaries", "cloud-builder-x", "cloud-builder-x-binaries",
-                "alerts-api", "umami", "cloud-data-reports", "matrix-mautrix-whatsapp", "matrix-mautrix-whatsapp-binaries", "session-memory", "session-memory-binaries"}
+                "alerts-api", "umami", "cloud-data-reports", "matrix-mautrix-whatsapp", "matrix-mautrix-whatsapp-binaries", "session-memory", "session-memory-binaries",
+                "dozzle", "fluent-bit", "sauron-forwarder", "crawlee-cloud", "rig-agentic-sonn-14bq8", "rig-agentic-sonn-14bq8-binaries", "umami-setup", "umami-db", "matomo-hybrid", "fincept-server", "radicale-binaries", "kg-graph-binaries", "caddy-l4-binaries", "claude-openai-bridge", "claude-openai-bridge-binaries", "kg-bridge", "kg-bridge-binaries", "kg-mcp", "kg-mcp-binaries", "cloud-cgc-mcp-octocode-db"}
 PUSH = re.compile(
     r"(\boras\s+(push|login)\b|\bdocker\s+(push|login)\b|\bbuildx\s+build\b.*--push\b|"
     r"docker/(login|build-push)-action|\bgh\s+release\s+(create|upload)\b|GHCR_TOKEN)")
