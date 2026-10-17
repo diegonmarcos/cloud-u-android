@@ -16,15 +16,13 @@ object BadgeClick {
     /** Health badge: Cloud Navigation > Timeline > Steps (ac_cloud-nav build.json::ui.deep_links "timeline-steps"). */
     const val HEALTH_STEPS = "extapp:cloud-nav#page:timeline/steps"
 
-    /** Weather has no position yet: the provider's forecast docs page, unparameterised. */
-    const val WEATHER_NO_FIX = "https://open-meteo.com/en/docs"
+    /** Weather has no position yet: yr.no, the public face of the MET Norway source. */
+    const val WEATHER_NO_FIX = "https://www.yr.no/en"
 
-    /** The page of the weather SOURCE (Open-Meteo) for this position, prefilled with the same query the badge fetched. */
+    /** The yr.no forecast page (same MET Norway data the badge fetched) for this position. */
     fun weatherUrl(lat: Double?, lon: Double?): String =
         if (lat == null || lon == null) WEATHER_NO_FIX
-        else String.format(Locale.US,
-            "$WEATHER_NO_FIX#latitude=%.4f&longitude=%.4f&current=temperature_2m&hourly=temperature_2m" +
-                "&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1", lat, lon)
+        else String.format(Locale.US, "$WEATHER_NO_FIX/forecast/hourly-table/%.4f,%.4f", lat, lon)
 
     fun pi(ctx: Context, target: String): PendingIntent = PendingIntent.getActivity(
         ctx, target.hashCode(),

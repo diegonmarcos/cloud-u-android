@@ -15,17 +15,15 @@ class BadgeClickTest {
     private val SDK_UNAVAILABLE = 1; private val SDK_UPDATE_REQUIRED = 2; private val SDK_AVAILABLE = 3
 
     @Test fun weatherOpensTheProvidersPageForThePosition() {
-        val u = BadgeClick.weatherUrl(48.8566, 2.3522)
-        assertTrue(u, u.startsWith("https://open-meteo.com/en/docs#latitude=48.8566&longitude=2.3522"))
-        assertTrue(u.contains("timezone=auto"))
+        assertEquals("https://www.yr.no/en/forecast/hourly-table/48.8566,2.3522", BadgeClick.weatherUrl(48.8566, 2.3522))
     }
-    @Test fun weatherWithoutAFixOpensTheProvidersDocs() {
-        assertEquals("https://open-meteo.com/en/docs", BadgeClick.weatherUrl(null, 2.0))
-        assertEquals("https://open-meteo.com/en/docs", BadgeClick.weatherUrl(null, null))
+    @Test fun weatherWithoutAFixOpensTheProvidersHome() {
+        assertEquals("https://www.yr.no/en", BadgeClick.weatherUrl(null, 2.0))
+        assertEquals("https://www.yr.no/en", BadgeClick.weatherUrl(null, null))
     }
     @Test fun weatherUrlUsesDotDecimalsInAnyLocale() {
         val old = java.util.Locale.getDefault()
-        try { java.util.Locale.setDefault(java.util.Locale.GERMANY); assertTrue(BadgeClick.weatherUrl(1.5, 2.5).contains("latitude=1.5000")) }
+        try { java.util.Locale.setDefault(java.util.Locale.GERMANY); assertTrue(BadgeClick.weatherUrl(1.5, 2.5).endsWith("1.5000,2.5000")) }
         finally { java.util.Locale.setDefault(old) }
     }
     @Test fun healthOpensNavTimelineSteps() {

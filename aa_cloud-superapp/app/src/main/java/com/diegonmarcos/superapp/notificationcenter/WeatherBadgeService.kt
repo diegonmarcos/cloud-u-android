@@ -18,9 +18,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.Instant
+import java.time.ZoneId
 import java.util.Locale
 
 /**
@@ -32,11 +33,13 @@ import java.util.Locale
  * droppable. Started ONLY by [BadgeServices.ensureAll] from the declaration —
  * no bespoke start call anywhere, which is the whole point of #515.
  *
- * DATA ROUTE, and why. Open-Meteo: no API key, no account, plain JSON, and
- * ONE request answers everything the owner asked for (current temp, daily
- * max/min, hourly temps). The alternatives all fail a constraint: OpenWeather
- * needs a key this app has nowhere declarative to keep, Google's weather has
- * no public API, and scraping a widget is a moving target. The position is
+ * DATA ROUTE, and why. MET Norway (api.met.no, the model behind yr.no): no
+ * API key, only an identifying User-Agent, and ONE `locationforecast/complete`
+ * request answers everything — current temp, the day's hourly temps (max/min
+ * derived from them) and the probability of precipitation the badge shows as
+ * "💧40%". It replaced Open-Meteo, whose free tier is rate-shared and whose
+ * page was a developer docs form rather than a forecast. Parsing lives in the
+ * pure [WeatherModel]. The position is
  * the device's LAST KNOWN location — passive, no fix is ever requested, so
  * this badge costs zero battery for location. The place name comes from
  * Android's own [Geocoder]; when it has no backend the coordinates are shown
@@ -76,7 +79,7 @@ class WeatherBadgeService : Service() {
     }
 
     /** Re-fetch on the declared cadence — `refresh_minutes` is a
-     *  customization option, so the owner sets how often Open-Meteo is hit. */
+     *  customization option, so the owner sets how often api.met.no is hit. */
     private fun schedule() {
         tick?.let(main::removeCallbacks)
         val r = object : Runnable {
@@ -114,11 +117,7 @@ class WeatherBadgeService : Service() {
         val place: String,
         val lat: Double,
         val lon: Double,
-        val currentC: Double,
-        val maxC: Double,
-        val minC: Double,
-        /** hour-of-day → temperature, all 24 entries for today. */
-        val hours: List<Pair<Int, Double>>,
+        val forecast: WeatherModel.Forecast,
     )
 
     /** The badge's declaration gates on the location grant, so by the time
@@ -136,16 +135,12 @@ class WeatherBadgeService : Service() {
 
     private fun fetchToday(): WeatherToday? {
         val loc = lastKnownLocation() ?: return null
-        val url = String.format(Locale.US,
-            "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f" +
-                "&current=temperature_2m&hourly=temperature_2m" +
-                "&daily=temperature_2m_max,temperature_2m_min" +
-                "&timezone=auto&forecast_days=1",
-            loc.latitude, loc.longitude)
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+        val conn = (URL(WeatherModel.apiUrl(loc.latitude, loc.longitude)).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 5_000
             readTimeout = 5_000
+            setRequestProperty("User-Agent", WeatherModel.USER_AGENT)
+            setRequestProperty("Accept", "application/json")
         }
         val body = try {
             if (conn.responseCode !in 200..299) return null
@@ -153,25 +148,8 @@ class WeatherBadgeService : Service() {
         } finally {
             conn.disconnect()
         }
-        val j = JSONObject(body)
-        val hourly = j.getJSONObject("hourly")
-        val times = hourly.getJSONArray("time")
-        val temps = hourly.getJSONArray("temperature_2m")
-        val hours = (0 until minOf(times.length(), temps.length())).mapNotNull { i ->
-            // "2026-09-19T14:00" → 14; a malformed entry is dropped, not guessed.
-            times.getString(i).substringAfter('T').substringBefore(':')
-                .toIntOrNull()?.let { h -> h to temps.getDouble(i) }
-        }
-        val daily = j.getJSONObject("daily")
-        return WeatherToday(
-            place = placeName(loc),
-            lat = loc.latitude,
-            lon = loc.longitude,
-            currentC = j.getJSONObject("current").getDouble("temperature_2m"),
-            maxC = daily.getJSONArray("temperature_2m_max").getDouble(0),
-            minC = daily.getJSONArray("temperature_2m_min").getDouble(0),
-            hours = hours,
-        )
+        val f = WeatherModel.parse(body, Instant.now(), ZoneId.systemDefault()) ?: return null
+        return WeatherToday(placeName(loc), loc.latitude, loc.longitude, f)
     }
 
     /** City-ish name via the platform geocoder; honest coordinates when the
@@ -189,11 +167,11 @@ class WeatherBadgeService : Service() {
 
         val title = if (today == null) getString(R.string.badge_weather_title)
         else getString(R.string.badge_weather_title_fmt,
-            String.format(Locale.US, "%.1f", today.currentC), today.place)
+            WeatherModel.headline(today.forecast), today.place)
         val text = if (today == null) getString(R.string.badge_weather_no_data)
         else getString(R.string.badge_weather_range_fmt,
-            String.format(Locale.US, "%.0f", today.maxC),
-            String.format(Locale.US, "%.0f", today.minC))
+            String.format(Locale.US, "%.0f", today.forecast.maxC),
+            String.format(Locale.US, "%.0f", today.forecast.minC))
 
         val pinned = BadgeServices.pinned(this, BADGE_ID)
         return NotificationCompat.Builder(this, CHANNEL_ID)
@@ -209,9 +187,9 @@ class WeatherBadgeService : Service() {
             // sit on the lockscreen, which is exactly where a forecast helps.
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .apply {
-                if (today != null && showHourly && today.hours.isNotEmpty()) {
+                if (today != null && showHourly && today.forecast.hours.isNotEmpty()) {
                     // Every 3rd hour: 8 readings span the day and still fit.
-                    val rows = today.hours.filter { it.first % 3 == 0 }
+                    val rows = today.forecast.hours.filter { it.first % 3 == 0 }
                         .joinToString("   ") { (h, t) ->
                             String.format(Locale.US, "%02dh %.0f°", h, t)
                         }
