@@ -15,7 +15,7 @@ on:
         description: "an allowlisted package being re-linked to its source repo"
         required: true
         type: choice
-        options: [cloud-notes-web, cloud-notes-sync, kg-store, kg-store-binaries, redis-binaries, hickory-dns-binaries, gha-runner, gha-runner-binaries, cloud-builder-x, cloud-builder-x-binaries]
+        options: [cloud-notes-web, cloud-notes-sync, kg-store, kg-store-binaries, redis-binaries, hickory-dns-binaries, gha-runner, gha-runner-binaries, cloud-builder-x, cloud-builder-x-binaries, alerts-api, umami, cloud-data-reports, matrix-mautrix-whatsapp, matrix-mautrix-whatsapp-binaries, session-memory, session-memory-binaries]
 
 permissions:
   contents: read
@@ -30,6 +30,6 @@ jobs:
           PKG: ${{ inputs.package }}
         run: |
           set -euo pipefail
-          case "$PKG" in cloud-notes-web|cloud-notes-sync|kg-store|kg-store-binaries|redis-binaries|hickory-dns-binaries|gha-runner|gha-runner-binaries|cloud-builder-x|cloud-builder-x-binaries) ;; *) echo "::error::$PKG is not allowlisted"; exit 1;; esac
+          case "$PKG" in cloud-notes-web|cloud-notes-sync|kg-store|kg-store-binaries|redis-binaries|hickory-dns-binaries|gha-runner|gha-runner-binaries|cloud-builder-x|cloud-builder-x-binaries|alerts-api|umami|cloud-data-reports|matrix-mautrix-whatsapp|matrix-mautrix-whatsapp-binaries|session-memory|session-memory-binaries) ;; *) echo "::error::$PKG is not allowlisted"; exit 1;; esac
           if gh api -X DELETE "/user/packages/container/$PKG"; then echo "deleted $PKG"
           else echo "::error::DELETE failed: the PAT secret lacks delete:packages (or the package is gone)"; exit 1; fi

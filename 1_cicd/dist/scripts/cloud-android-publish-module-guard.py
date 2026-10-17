@@ -41,7 +41,8 @@ SKIP = {"1_cicd/src/scripts/cloud-android-publish-module-guard.py"}
 # no push/login/release verb at all.
 EXEMPT = {"1_cicd/src/cicd/ghcr-delete-package.yml", "1_cicd/src/cicd/ghcr-visibility-audit.yml",
           "1_cicd/src/cicd/ghcr-secret-scan.yml"}
-DELETE_ALLOW = {"cloud-notes-web", "cloud-notes-sync", "kg-store", "kg-store-binaries", "redis-binaries", "hickory-dns-binaries", "gha-runner", "gha-runner-binaries", "cloud-builder-x", "cloud-builder-x-binaries"}
+DELETE_ALLOW = {"cloud-notes-web", "cloud-notes-sync", "kg-store", "kg-store-binaries", "redis-binaries", "hickory-dns-binaries", "gha-runner", "gha-runner-binaries", "cloud-builder-x", "cloud-builder-x-binaries",
+                "alerts-api", "umami", "cloud-data-reports", "matrix-mautrix-whatsapp", "matrix-mautrix-whatsapp-binaries", "session-memory", "session-memory-binaries"}
 PUSH = re.compile(
     r"(\boras\s+(push|login)\b|\bdocker\s+(push|login)\b|\bbuildx\s+build\b.*--push\b|"
     r"docker/(login|build-push)-action|\bgh\s+release\s+(create|upload)\b|GHCR_TOKEN)")
