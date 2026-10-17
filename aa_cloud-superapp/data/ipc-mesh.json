@@ -303,6 +303,7 @@
      "news",
      "nix-on-droid",
      "notes",
+     "office",
      "search",
      "store",
      "tasks",
@@ -530,6 +531,7 @@
      "news",
      "nix-on-droid",
      "notes",
+     "office",
      "search",
      "store",
      "tasks",
@@ -649,6 +651,7 @@
      "news",
      "nix-on-droid",
      "notes",
+     "office",
      "search",
      "store",
      "tasks",
@@ -1061,6 +1064,7 @@
       "news",
       "nix-on-droid",
       "notes",
+      "office",
       "search",
       "store",
       "tasks",
@@ -2154,8 +2158,12 @@
    "label": "cloud-office",
    "kind": "app",
    "dir": "ac_cloud-office",
-   "door": false,
-   "libs": [],
+   "door": true,
+   "libs": [
+    "core",
+    "devtools",
+    "fleetconfig-model"
+   ],
    "endpoints": []
   },
   {
@@ -2575,6 +2583,16 @@
      "callers": []
     }
    ]
+  },
+  {
+   "id": "ae-tool_termux-boot",
+   "pkg": "cld.termux.nix.boot",
+   "label": "termux-boot",
+   "kind": "lib",
+   "dir": "a_solutions/ae-tool_termux-boot",
+   "door": false,
+   "libs": [],
+   "endpoints": []
   },
   {
    "id": "keyboard-engines",
