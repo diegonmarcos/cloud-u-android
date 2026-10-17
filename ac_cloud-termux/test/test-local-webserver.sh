@@ -80,7 +80,7 @@ python3 "$RENDER" "$DIR/build.json" | sed "s#/system/bin/#$T/system/bin/#g" > "$
 # The stub proot: what a real launch would exec, written down. With LISTEN=1 it also "binds".
 cat > "$T/here/proot" <<EOF
 #!/bin/sh
-{ printf '%s\n' "\$@"; echo "--env HTTPD_WRITE=\${HTTPD_WRITE-unset} HTTPD_WRITE_ROOTS=\${HTTPD_WRITE_ROOTS-unset} HTTPD_WRITE_TOKEN_FILE=\${HTTPD_WRITE_TOKEN_FILE-unset}"; } > "$T/launch.\$\$"
+{ echo "--ppid \$PPID"; printf '%s\n' "\$@"; echo "--env HTTPD_WRITE=\${HTTPD_WRITE-unset} HTTPD_WRITE_ROOTS=\${HTTPD_WRITE_ROOTS-unset} HTTPD_WRITE_TOKEN_FILE=\${HTTPD_WRITE_TOKEN_FILE-unset}"; } > "$T/launch.\$\$"
 mv "$T/launch.\$\$" "$T/launch"
 [ -z "\${LISTEN:-}" ] || echo '   1: 0100007F:1F40 00000000:0000 0A 00000000:00000000 00:00000000 00000000 10001 0 1 1 0000000000000000 100 0 0 10 0' >> "$T/net/tcp"
 EOF
@@ -97,7 +97,7 @@ login() {
     rm -f "$T/launch"
     HOME="$T/home" HERE="$T/here" ROOTFS="$T/rootfs" binds=" -b /x:/sdcard" \
     CLOUD_WEBSERVER_PROC_NET="$T/net/tcp $T/net/tcp6" HTTPD_WRITE=1 HTTPD_WRITE_ROOTS=/ HTTPD_WRITE_TOKEN_FILE=/t \
-        "$SH" -euc ". '$T/block.sh'; echo login-continues" > "$T/out" 2>&1 || return 1
+        "$SH" -euc "echo \$\$ > '$T/loginpid'; . '$T/block.sh'; i=0; while [ ! -f '$T/launch' ] && [ \$i -lt 20 ]; do sleep 0.1; i=\$((i + 1)); done; echo login-continues" > "$T/out" 2>&1 || return 1
     grep -q login-continues "$T/out" || return 1
     i=0; while [ ! -f "$T/launch" ] && [ $i -lt 30 ]; do sleep 0.1; i=$((i + 1)); done
     return 0
@@ -111,6 +111,11 @@ if login && launched; then
         *"-r $T/rootfs "*"-b $T/home:/root "*"-b /x:/sdcard -w /root "*"/usr/local/bin/my-webserver 8000 /root --env HTTPD_WRITE=unset HTTPD_WRITE_ROOTS=unset HTTPD_WRITE_TOKEN_FILE=unset"*)
             ok "port free: one my-webserver 8000 /root inside the root, the session's binds, HTTPD_WRITE* scrubbed" ;;
         *) bad "port free: the launch is wrong: $args" ;;
+    esac
+    case "$args" in
+        "--ppid $(cat "$T/loginpid") "*) bad "the server is a direct child of the login shell: enter.sh execs the session proot in place, which would wait on it forever (double fork lost)" ;;
+        "--ppid "*) ok "the server is not a child of the login shell (double fork): the session proot does not wait on it" ;;
+        *) bad "the stub recorded no parent pid" ;;
     esac
     case "$args" in *--kill-on-exit*) bad "the server proot has --kill-on-exit: it would die with the session" ;; *) ok "the server proot outlives the session (no --kill-on-exit)" ;; esac
 else

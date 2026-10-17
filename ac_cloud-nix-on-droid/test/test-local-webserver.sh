@@ -95,6 +95,7 @@ for bad_login, why in ((login + login.split("\n", 2)[2], "two execs"),
 # Runnable copy: the app's paths into the temp dir, /system/bin into the stubs.
 run = out.replace(f"{pre}/usr/bin/proot-static", t + "/proot").replace("/system/bin/", t + "/system/bin/")
 run = run.replace(f'export HOME="{pre}/home"', f'export HOME="{t}/home"')
+run = run.replace("set -e\n", f"set -e\necho $$ > {t}/loginpid\n", 1)
 open(t + "/login.sh", "w").write(run)
 PY
 [ -f "$T/login.sh" ] && ok "bin/login: one block before the one exec, every bind copied, no --kill-on-exit, no login-inner; an unparseable exec is refused"
@@ -103,9 +104,10 @@ PY
 cat > "$T/proot" <<EOF
 #!/bin/sh
 case "\$*" in
-  *login-inner*) echo session-exec > "$T/session"; exit 0 ;;
+  *login-inner*) i=0; while [ ! -f "$T/launch" ] && [ \$i -lt 20 ]; do sleep 0.1; i=\$((i + 1)); done
+                 echo session-exec > "$T/session"; exit 0 ;;
 esac
-{ printf '%s\n' "\$@"; echo "--env HTTPD_WRITE=\${HTTPD_WRITE-unset} HTTPD_WRITE_ROOTS=\${HTTPD_WRITE_ROOTS-unset}"; } > "$T/launch.\$\$"
+{ echo "--ppid \$PPID"; printf '%s\n' "\$@"; echo "--env HTTPD_WRITE=\${HTTPD_WRITE-unset} HTTPD_WRITE_ROOTS=\${HTTPD_WRITE_ROOTS-unset}"; } > "$T/launch.\$\$"
 mv "$T/launch.\$\$" "$T/launch"
 [ -z "\${LISTEN:-}" ] || echo '   1: 0100007F:1F41 00000000:0000 0A 00000000:00000000 00:00000000 00000000 10001 0 1 1 0000000000000000 100 0 0 10 0' >> "$T/net/tcp"
 EOF
@@ -131,6 +133,11 @@ if [ -f "$T/login.sh" ]; then
             *"/usr/nix:/nix "*"/usr/etc:/etc "*"--link2symlink --sysvipc /$PROFILE/bin/my-webserver 8001 $T/home --env HTTPD_WRITE=unset HTTPD_WRITE_ROOTS=unset"*)
                 ok "port free: one my-webserver 8001 \$HOME under the profile, the exec's binds, HTTPD_WRITE* scrubbed; the session still execs" ;;
             *) bad "port free: the launch is wrong: $args" ;;
+        esac
+        case "$args" in
+            "--ppid $(cat "$T/loginpid") "*) bad "the server is a direct child of bin/login, which execs the session proot in place: that proot would wait on it forever (double fork lost)" ;;
+            "--ppid "*) ok "the server is not a child of bin/login (double fork): the session proot does not wait on it" ;;
+            *) bad "the stub recorded no parent pid" ;;
         esac
     else
         bad "port free: no launch, or the session exec did not happen ($(cat "$T/out"))"

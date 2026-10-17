@@ -39,17 +39,23 @@ cloud_webserver_autostart() {
     if cloud_webserver_listening "$CLOUD_WEBSERVER_PORT"; then
         return 0
     fi
+    # DOUBLE fork: the caller is about to exec the session's proot IN PLACE, and a direct child
+    # of this shell would become a child of that proot, which waits for every child before it
+    # exits -- the session would never end (CI's verify-rootfs.sh hung on its first login). The
+    # outer subshell exits at once, so the server is re-parented away from the session.
     (
-        unset HTTPD_WRITE HTTPD_WRITE_ROOTS HTTPD_WRITE_TOKEN_FILE LD_PRELOAD
-        HTTPD_VERBOSE=0
-        export HTTPD_VERBOSE
-        exec </dev/null >"$CLOUD_WEBSERVER_LOG" 2>&1
-        # Its own session, so closing the terminal session that started it does not hang it up.
-        if [ -x /system/bin/setsid ]; then
-            exec /system/bin/setsid "$@" "$CLOUD_WEBSERVER_PORT" "$_cw_root"
-        fi
-        trap '' HUP
-        exec "$@" "$CLOUD_WEBSERVER_PORT" "$_cw_root"
-    ) &
+        (
+            unset HTTPD_WRITE HTTPD_WRITE_ROOTS HTTPD_WRITE_TOKEN_FILE LD_PRELOAD
+            HTTPD_VERBOSE=0
+            export HTTPD_VERBOSE
+            exec </dev/null >"$CLOUD_WEBSERVER_LOG" 2>&1
+            # Its own session, so closing the terminal session that started it does not hang it up.
+            if [ -x /system/bin/setsid ]; then
+                exec /system/bin/setsid "$@" "$CLOUD_WEBSERVER_PORT" "$_cw_root"
+            fi
+            trap '' HUP
+            exec "$@" "$CLOUD_WEBSERVER_PORT" "$_cw_root"
+        ) &
+    )
     return 0
 }
