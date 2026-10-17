@@ -40,6 +40,9 @@ expect_fail "a brand-new script that logs in to ghcr" "cloud-brand-new.sh"
 fresh; printf '      - run: echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | x\n' >> "$WORK/c/1_cicd/src/cicd/ship-cloud-notes.yml"
 expect_fail "the PAT fallback pattern comes back" "ship-cloud-notes.yml"
 
+fresh; sed -i '0,/secrets\.GITHUB_TOKEN }}" | oras login/s//secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | oras login/' "$WORK/c/1_cicd/src/cicd/ship-cloud-c3.yml"
+expect_fail "a GHCR_TOKEN || fallback in an existing push login" "GHCR_TOKEN ||. fallback"
+
 fresh; sed -i 's/default: \${{ github.token }}/default: ${{ secrets.GHCR_TOKEN }}/' "$WORK/c/1_cicd/src/actions/publish-ghcr/action.yml"
 expect_fail "the module defaults to a PAT" "module"
 

@@ -222,7 +222,7 @@ jobs:
           GHCR_CREATE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" \
+          echo "${{ secrets.GITHUB_TOKEN }}" \
             | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
           BJ="$WORK_DIR/build.json"
           REF="$(jq -r '.release.ghcr.registry + "/" + .release.ghcr.namespace + "/" + .release.ghcr.image' "$BJ")"

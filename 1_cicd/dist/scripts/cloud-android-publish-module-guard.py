@@ -23,6 +23,9 @@ WHAT FAILS
   * the module losing GITHUB_TOKEN-only auth, the source label, or its visibility check.
   * a `uses: ./.github/actions/publish-ghcr` step handing it a secret other than
     GITHUB_TOKEN.
+  * any `GHCR_TOKEN ||` fallback (2026-10-17): push logins use GITHUB_TOKEN with
+    `permissions: packages: write`. A step that truly needs the PAT (cross-repo
+    package, delete, private pull) names `secrets.GHCR_TOKEN` alone, on purpose.
 
 Plain python3 + stdlib.
 """
@@ -153,6 +156,18 @@ for d, exts in SCAN[:2]:
             blk = m.group(0)
             if re.search(r"token:\s*.*secrets\.", blk) and not re.search(r"token:\s*\$\{\{\s*secrets\.GITHUB_TOKEN\s*\}\}", blk):
                 fail("%s/%s: publish-ghcr called with a non-GITHUB_TOKEN secret" % (d, f))
+
+# no PAT fallback in any push login: GITHUB_TOKEN, or GHCR_TOKEN explicitly
+FALLBACK = re.compile(r"GHCR_TOKEN\s*\|\|")
+for d, exts in SCAN[:2]:
+    full = os.path.join(ROOT, d)
+    for f in sorted(os.listdir(full)) if os.path.isdir(full) else []:
+        if not f.endswith(exts):
+            continue
+        for i, line in enumerate(read(os.path.join(d, f)).splitlines(), 1):
+            if not line.lstrip().startswith("#") and FALLBACK.search(line):
+                fail("%s/%s:%d: `GHCR_TOKEN ||` fallback -- log in with secrets.GITHUB_TOKEN "
+                     "(permissions: packages: write)" % (d, f, i))
 
 if problems:
     print("publish-module-guard FAILED:")
