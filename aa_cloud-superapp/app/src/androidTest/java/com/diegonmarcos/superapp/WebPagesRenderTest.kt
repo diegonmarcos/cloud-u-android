@@ -117,6 +117,7 @@ class WebPagesRenderTest {
         }
         clearPrompt(); SystemClock.sleep(1500)
 
+        var htmlH = -1
         val report = StringBuilder()
         val w = web
         var crop: Bitmap? = null
@@ -132,7 +133,8 @@ class WebPagesRenderTest {
             report.appendLine("night=$night uimode=${sh("cmd uimode night").trim()}")
             report.appendLine("size=$size at=${loc[0]},${loc[1]} $vis")
             report.appendLine("finalUrl=$url")
-            report.appendLine("readyState=$ready bodyTextLen=$textLen")
+            htmlH = js(w, "Math.round(document.documentElement.getBoundingClientRect().height)").trim('"').toIntOrNull() ?: -1
+            report.appendLine("readyState=$ready bodyTextLen=$textLen htmlHeight=$htmlH")
             report.appendLine("ua=${js(w, "navigator.userAgent")}")
             report.appendLine("bodyText=${js(w, "(document.body ? document.body.innerText.slice(0,400) : '')")}")
             report.appendLine("bodyStyle=${js(w, "(()=>{const s=getComputedStyle(document.body);return [s.color,s.backgroundColor,s.display,s.visibility,s.opacity,document.documentElement.scrollHeight,innerWidth+'x'+innerHeight].join(' | ')})()")}")
@@ -171,6 +173,7 @@ class WebPagesRenderTest {
 
         assertTrue("[$name] no WebView\n$report", w != null)
         assertTrue("[$name] body text is empty (len=$textLen)\n$report", textLen > 0)
+        assertTrue("[$name] page laid out with zero height (<html> $htmlH px)\n$report", htmlH > 0)
         assertTrue("[$name] WebView renders blank (one colour)\n$report", colours > 1)
     }
 }
