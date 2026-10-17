@@ -8,6 +8,7 @@ import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
+import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import org.junit.Assert.assertTrue
 import org.junit.Test
