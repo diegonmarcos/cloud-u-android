@@ -49,6 +49,12 @@
       "why": "#960 the extapp install's own progress notification (silent LOW channel, setOnlyAlertOnce, throttled): Downloading x% / Verifying / Installing, then its terminal Done / Failed line with Retry / Restart on the same id, drawn from the one install store the tile ring reads. A per-job progress indicator, not an alert about the fleet."
     },
     {
+      "path": "ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/download/DlService.kt",
+      "kind": "progress",
+      "notify_calls": 2,
+      "why": "The browser download manager's own progress notification: the dataSync foreground service's ongoing line (file, bytes, speed, ETA, Pause/Resume/Cancel; silent LOW channel, setOnlyAlertOnce, throttled to 1/s), then each download's terminal Download complete / Download failed line whose tap opens the file. A per-job progress indicator the user started, not an alert about the fleet - the ExtInstallNotifier pattern."
+    },
+    {
       "path": "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/AdbPairingService.kt",
       "kind": "user_action",
       "notify_calls": 2,
