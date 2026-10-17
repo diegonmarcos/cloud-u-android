@@ -93,26 +93,13 @@ class WebPageFragment : KitComposeFragment() {
         w.loadUrl(target)
     }
 
-    /** [loadFresh] as soon as [w] is laid out with a non-zero size (now, if it already is). */
-    private fun loadWhenSized(w: WebView, target: String) {
-        if (w.width > 0 && w.height > 0) { loadFresh(w, target); return }
-        w.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
-            override fun onLayoutChange(v: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
-                if (r - l <= 0 || b - t <= 0) return
-                v.removeOnLayoutChangeListener(this)
-                // Posted: the renderer takes the new size on this frame; the load starts on the next.
-                v.post { if (web === w) loadFresh(w, target) }
-            }
-        })
-    }
-
     override fun onResume() {
         super.onResume()
         // Re-entry: the WebView is already there (the page was left and is back). The first show loads from the factory below, and
         // a resume that lands right behind it must not load twice.
         val w = web ?: return
         if (android.os.SystemClock.elapsedRealtime() - lastLoadAt < REENTRY_DEBOUNCE_MS) return
-        loadWhenSized(w, failed ?: declaredUrl.ifBlank { return })
+        loadFresh(w, failed ?: declaredUrl.ifBlank { return })
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -215,11 +202,7 @@ class WebPageFragment : KitComposeFragment() {
                             }
                         }
                         web = this
-                        // Load only once the WebView has a real size. Loaded from this factory it starts with a 0x0 view, and in
-                        // this host (Compose pane > FragmentContainerView > ComposeView > AndroidView) the renderer kept that
-                        // zero-height viewport: on Android 16 the CI emulator showed innerHeight=362 but <html>/.shell 0 px tall
-                        // and a black, never-painted pane (the owner's "WebApps fully blank"). WebPagesRenderTest guards it.
-                        if (url.isNotBlank()) loadWhenSized(this, url)
+                        if (url.isNotBlank()) loadFresh(this, url)
                     }
                 },
                 onRelease = { it.stopLoading(); it.destroy(); if (web === it) web = null },
