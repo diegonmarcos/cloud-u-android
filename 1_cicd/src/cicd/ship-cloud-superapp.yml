@@ -232,6 +232,12 @@ jobs:
           # HeliBoard toolchain (AGP 8.13.2 needs Gradle 8.13+; Kotlin 2.3.20
           # Compose-compiler plugin). Mirrors HeliBoard main's wrapper.
           gradle-version: "8.14"
+      # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
+      # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
+      - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
+        if: steps.gate.outputs.skip != 'true'
+        uses: ./.github/actions/gradle-cache-hygiene
+      # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
 
       # ── firestack Go module cache ───────────────────────────────────────
       # RECOVERED FROM THE GENERATED COPY. This step existed only in

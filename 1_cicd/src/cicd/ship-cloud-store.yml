@@ -137,8 +137,20 @@ jobs:
         # cache and the build cache were all discarded every run — org.gradle.caching
         # was on and had nowhere to persist, and every build ran fully cold.
         uses: gradle/actions/setup-gradle@v6
+        # Fresh cache namespace (2026-10-17): the x86_64 entry held a failed lookup of
+        # dev.rikka.shizuku:provider:13.1.5 (aar) saved during Maven Central 429s and
+        # failed three runs on it while arm64 passed. gradle-cache-hygiene below now
+        # keeps a failed lookup from being saved again.
+        env:
+          GRADLE_BUILD_ACTION_CACHE_KEY_PREFIX: "store-v2-"
         with:
           gradle-version: "8.10.2"
+      # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
+      # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
+      - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
+        if: steps.gate.outputs.skip != 'true'
+        uses: ./.github/actions/gradle-cache-hygiene
+      # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
 
       - name: Checkout vault (shared Android signing key)
         if: steps.gate.outputs.skip != 'true'

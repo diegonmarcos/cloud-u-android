@@ -155,6 +155,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "8.14"
+      # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
+      # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
+      - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
+        if: steps.gate.outputs.skip != 'true'
+        uses: ./.github/actions/gradle-cache-hygiene
+      # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
 
       - name: Checkout vault (shared Android signing key)
         if: steps.gate.outputs.skip != 'true'

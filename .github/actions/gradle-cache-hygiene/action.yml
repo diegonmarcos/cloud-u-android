@@ -1,0 +1,47 @@
+name: gradle-cache-hygiene
+description: >-
+  Keep a failed dependency lookup out of the saved Gradle cache, and retry a build
+  whose dependency resolution failed once with --refresh-dependencies.
+
+# WHY (2026-10-17). Maven Central rate-limits CI (HTTP 429). A lookup that fails
+# then is recorded by Gradle in ~/.gradle/caches/modules-2/metadata-* as "missing",
+# and that negative result is trusted for the dynamic/changing TTL (24h by default)
+# without asking the repository again. setup-gradle's post step saves the Gradle
+# User Home whatever the job's outcome, so the poisoned entry went into the GitHub
+# Actions cache and every later run restoring it failed the same way:
+# cloud-calc :clock (org.json:json:20240303, fixed by hand with calc-v3- in dad9d06)
+# and cloud-store x86_64 (dev.rikka.shizuku:provider:13.1.5 aar, three times in a
+# row while arm64, a different cache entry, passed).
+#
+# What this does, for every later `gradle` call in the job (every build.sh in the
+# fleet calls `gradle` from PATH; none uses ./gradlew):
+#   1. a `gradle` shim goes first on PATH. When a run fails and its stderr shows a
+#      dependency-resolution failure, it waits and retries ONCE with
+#      --refresh-dependencies, which ignores the cached negative lookups.
+#   2. if that retry fails on resolution too, it stops the daemon and deletes the
+#      resolution metadata (modules-2/metadata-*, NOT the downloaded files), so the
+#      setup-gradle post step of this failing job has no negative lookup to save.
+# Injected after every setup-gradle step by cloud-android-gradle-cache-hygiene.py
+# (run by the workflow engine); never add or edit it by hand in a workflow.
+runs:
+  using: composite
+  steps:
+    - name: Install the gradle retry shim
+      shell: bash
+      run: |
+        set -eu
+        shim_dir="$RUNNER_TEMP/gradle-cache-hygiene"
+        real=""
+        IFS=: ; for d in $PATH; do
+          [ "$d" = "$shim_dir" ] && continue
+          if [ -x "$d/gradle" ]; then real="$d/gradle"; break; fi
+        done; unset IFS
+        if [ -z "$real" ]; then
+          echo "gradle-cache-hygiene: no gradle on PATH; nothing to wrap"
+          exit 0
+        fi
+        mkdir -p "$shim_dir"
+        sed "s|@REAL_GRADLE@|$real|" "$GITHUB_ACTION_PATH/gradle-shim.sh" > "$shim_dir/gradle"
+        chmod +x "$shim_dir/gradle"
+        echo "$shim_dir" >> "$GITHUB_PATH"
+        echo "gradle-cache-hygiene: gradle -> $shim_dir/gradle (wraps $real)"

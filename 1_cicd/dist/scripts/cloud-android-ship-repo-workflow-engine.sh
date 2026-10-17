@@ -704,6 +704,15 @@ for b in bad:
 sys.exit(1 if bad else 0)
 PYGUARD
 
+# ── gradle cache hygiene ──────────────────────────────────────────
+# After every setup-gradle step: a gradle shim that retries a failed dependency
+# resolution once with --refresh-dependencies and, if it fails again, deletes the
+# resolution metadata so setup-gradle's post step cannot save a failed lookup
+# into the CI cache (Maven Central 429 poisoned calc, then store x86_64). Every
+# workflow gets it on generation; generated-up-to-date runs the `check` mode.
+log_step "inject gradle cache hygiene"
+PYTHONDONTWRITEBYTECODE=1 python3 "$CICD_SRC/scripts/cloud-android-gradle-cache-hygiene.py" inject "$CLOUD_ANDROID_ROOT" || exit 1
+
 # ── the test-coverage inventory, as data ──────────────────────────
 #
 # DERIVED from the whole tree by 1_cicd/src/scripts/cloud-android-test-coverage-gen.py,

@@ -56,6 +56,14 @@ jobs:
       # such checkout, but relying on that is relying on an accident: point the
       # override at a path that cannot exist so this job's inputs are exactly
       # the contents of this repository and nothing else.
+      # Before regenerating, so it judges the COMMITTED workflows: every
+      # setup-gradle step must be followed by the gradle-cache-hygiene block
+      # (a cached failed dependency lookup broke ship-cloud-calc and then
+      # ship-cloud-store x86_64 on every run). A workflow added straight into
+      # .github/workflows without the generator fails here by name.
+      - name: Every setup-gradle step carries gradle cache hygiene
+        run: python3 1_cicd/src/scripts/cloud-android-gradle-cache-hygiene.py check .
+
       - name: Regenerate everything from source
         env:
           CLAUDE_SOT_DIR: /nonexistent/claude-source-of-truth

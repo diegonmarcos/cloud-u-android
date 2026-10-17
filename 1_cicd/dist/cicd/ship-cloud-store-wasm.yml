@@ -82,6 +82,12 @@ jobs:
       - name: Set up Gradle (cached)
         if: steps.gate.outputs.skip != 'true'
         uses: gradle/actions/setup-gradle@v6
+      # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
+      # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
+      - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
+        if: steps.gate.outputs.skip != 'true'
+        uses: ./.github/actions/gradle-cache-hygiene
+      # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
 
       - name: Build (wasmJsBrowserDistribution)
         if: steps.gate.outputs.skip != 'true'

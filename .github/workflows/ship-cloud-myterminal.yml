@@ -169,6 +169,12 @@ jobs:
           # satisfies AGP 8.7.3's 8.9+ floor; Kotlin 1.9.24 is incompatible
           # with Gradle 9.x's strict configuration cache.
           gradle-version: "8.10.2"
+      # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
+      # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
+      - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
+        if: steps.gate.outputs.skip != 'true'
+        uses: ./.github/actions/gradle-cache-hygiene
+      # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
 
       - name: Set up Node 20 (my-konsole frontend vendor step)
         if: steps.gate.outputs.skip != 'true'
