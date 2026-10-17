@@ -148,13 +148,13 @@ check(not has("BrowserHostFragment", "AutoCompleteTextView") and not has("Browse
       "6: no PopupWindow dropdown is left to overlap the bar or the keyboard")
 check(has("BrowserHostFragment", "BrowserSuggest.sections(", "prefs.all(), history.all()"),
       "6: it is fed from open tabs and local history")
-check(has("BrowserHostFragment", "addressValue = v", "refreshSuggestions(suggestState"),
+check(has("BrowserHostFragment", "BrowserAddressOverlay(", "refreshSuggestions(suggestState"),
       "6: the DETAIL-mode address bar drives that panel")
 check(has("BrowserSuggest", "Source.TAB", "Source.HISTORY", "Source.SEARCH"),
       "6: those are the only three sources there are")
 
 # ── 7. the address bar searches ──────────────────────────────────────
-check(has("BrowserHostFragment", "BrowserSearch.resolve(addressValue.text, engine())"),
+check(has("BrowserHostFragment", "BrowserSearch.resolve(q, engine())"),
       "7: the address bar resolves through the engine, not straight to a URL")
 # #802 the engine picker became a catalogue setting: an enum whose values ARE the app's
 # engine list (values_from), drawn by the generic settings page.

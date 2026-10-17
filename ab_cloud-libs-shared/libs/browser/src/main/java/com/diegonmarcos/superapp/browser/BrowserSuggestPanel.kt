@@ -79,7 +79,7 @@ sealed class SuggestRow {
  */
 /** The rows of [sections] under their titles; used by the overlay and by the New tab screen. */
 @Composable
-private fun SuggestRows(rows: List<SuggestRow>, onPick: (BrowserSuggest.Suggestion) -> Unit, modifier: Modifier) {
+internal fun SuggestRows(rows: List<SuggestRow>, onPick: (BrowserSuggest.Suggestion) -> Unit, modifier: Modifier) {
     val p = LocalKitPalette.current
     LazyColumn(modifier) {
         items(rows) { r ->

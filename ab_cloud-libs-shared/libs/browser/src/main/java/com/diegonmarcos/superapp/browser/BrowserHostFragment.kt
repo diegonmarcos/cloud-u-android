@@ -751,6 +751,8 @@ class BrowserHostFragment : Fragment() {
     /** The address bar's text, caret and selection; written by the page's own navigation while the field is not focused. */
     private var addressValue by mutableStateOf(TextFieldValue(""))
     private var addressFocused = false
+    /** Brave-style: the address overlay (search box + current-address card) is open. */
+    private var addressOpen by mutableStateOf(false)
     /** Set by the detail screen once composed: gives up the field's focus and closes the keyboard. */
     private var clearAddressFocus: () -> Unit = {}
 
@@ -821,6 +823,7 @@ class BrowserHostFragment : Fragment() {
         suggestState.visible = false
         addressValue = TextFieldValue(url)
         addressFocused = false
+        addressOpen = false
 
         webView = WebView(ctx).apply {
             bindProfile(this, tab)   // before anything loads
@@ -1016,6 +1019,7 @@ class BrowserHostFragment : Fragment() {
     /** Hide the dropdown, give the field up, close the keyboard. */
     private fun dismissSuggestions() {
         suggestState.visible = false
+        addressOpen = false
         pendingRemote?.let { ui.removeCallbacks(it) }
         clearAddressFocus()
     }
@@ -1671,55 +1675,49 @@ class BrowserHostFragment : Fragment() {
         val focus = LocalFocusManager.current
         val keyboard = LocalSoftwareKeyboardController.current
         SideEffect { clearAddressFocus = { focus.clearFocus(); keyboard?.hide() } }
+        Box(Modifier.fillMaxSize()) {
+        DetailBody(sc)
+        if (addressOpen) {
+            val tab = currentTab()
+            val url = webView?.url ?: tab?.url.orEmpty()
+            BrowserAddressOverlay(
+                title = webView?.title ?: tab?.title.orEmpty(),
+                url = url,
+                hint = "Search ${engine().label}, or type a URL",
+                state = suggestState,
+                onQuery = { q ->
+                    suggestState.visible = q.isNotBlank()
+                    refreshSuggestions(suggestState, q, tab?.isPrivate == true)
+                },
+                onSubmit = { q ->
+                    val next = BrowserSearch.resolve(q, engine())
+                    dismissSuggestions()
+                    // in place: the tab keeps its pin, group, order and back stack (#886)
+                    if (next.isNotEmpty()) webView?.loadUrl(next)
+                },
+                onPick = { s -> pickSuggestion(s) },
+                onCopied = { toast("Address copied") },
+                onDismiss = { dismissSuggestions() },
+            )
+        }
+        }
+    }
+
+    @Composable
+    private fun DetailBody(sc: Screen.Detail) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().background(Color(0xCC1A0033)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 BarButton("‹") { runAction("back") }
                 BarButton("›") { runAction("forward") }
                 // Address bar: a plain field. Its suggestions are the Compose panel over the page (below), so
                 // there is no PopupWindow to land on top of the bar or the keyboard.
-                BasicTextField(
-                    value = addressValue,
-                    onValueChange = { v ->
-                        val changed = v.text != addressValue.text
-                        addressValue = v
-                        if (changed && addressFocused) {
-                            val q = v.text
-                            suggestState.visible = q.isNotBlank()
-                            refreshSuggestions(suggestState, q, currentTab()?.isPrivate == true)
-                        }
-                    },
-                    singleLine = true,
-                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
-                    cursorBrush = SolidColor(Color.White),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
-                    keyboardActions = KeyboardActions(onGo = {
-                        val next = BrowserSearch.resolve(addressValue.text, engine())
-                        dismissSuggestions()
-                        // #886 the tab being typed in navigates IN PLACE (it keeps its pin, group, order and
-                        // back stack); it used to be closed and re-added, which dropped all four.
-                        if (next.isNotEmpty()) webView?.loadUrl(next)
-                    }),
-                    // Losing focus does NOT hide the panel: touching a row of it moves focus to the Compose view
-                    // on the press, and hiding it then would eat the tap. It leaves by the dismiss paths
-                    // (dimmed page, back, Go, a pick, a tab change).
-                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp).onFocusChanged { f ->
-                        val had = addressFocused
-                        addressFocused = f.isFocused
-                        if (f.isFocused && !had) {
-                            addressValue = addressValue.copy(selection = TextRange(0, addressValue.text.length))
-                            addressValue.text.takeIf { it.isNotBlank() && it != currentTab()?.url }?.let {
-                                suggestState.visible = true; refreshSuggestions(suggestState, it, currentTab()?.isPrivate == true)
-                            }
-                        }
-                    },
-                    decorationBox = { inner ->
-                        Box {
-                            if (addressValue.text.isEmpty()) {
-                                Text("Search ${engine().label}, or type a URL", color = Color.White.copy(alpha = 0.5f), fontSize = 16.sp, maxLines = 1)
-                            }
-                            inner()
-                        }
-                    },
+                // Brave-style: the bar shows the address; a tap opens the overlay (search box + current-address card).
+                Text(
+                    addressValue.text.ifEmpty { "Search ${engine().label}, or type a URL" },
+                    color = if (addressValue.text.isEmpty()) Color.White.copy(alpha = 0.5f) else Color.White,
+                    fontSize = 16.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp).testTag("browser:address")
+                        .clickable { suggestState.visible = false; addressOpen = true },
                 )
                 BarButton("⋮") { showMenuSheet() }
             }
@@ -2227,7 +2225,7 @@ class BrowserHostFragment : Fragment() {
         override fun handleOnBackPressed() {
             val wv = webView
             when {
-                suggestState.visible -> dismissSuggestions()
+                addressOpen || suggestState.visible -> dismissSuggestions()
                 overlays.isNotEmpty() -> {
                     overlays.removeAt(overlays.lastIndex)
                     if (overlays.isEmpty()) onOverlaysClosed?.invoke()
