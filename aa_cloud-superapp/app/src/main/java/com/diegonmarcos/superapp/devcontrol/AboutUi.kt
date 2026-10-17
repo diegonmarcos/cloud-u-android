@@ -64,7 +64,7 @@ internal val LocalAboutActions = staticCompositionLocalOf<AboutActions> {
 
 @Composable
 internal fun AboutTitle(text: String) {
-    Text(text, color = LocalKitPalette.current.textPrimary, style = MaterialTheme.typography.headlineSmall,
+    Text(text, color = LocalKitPalette.current.textPrimary, style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp).testTag(AboutTags.TITLE))
 }
 
@@ -73,7 +73,7 @@ internal fun AboutTitle(text: String) {
 internal fun AboutMacroHeader(macro: AboutBlock.Macro) {
     val p = LocalKitPalette.current
     Text(
-        (macro.glyph + "  " + macro.label).trim(), color = p.textPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold,
+        (macro.glyph + "  " + macro.label).trim(), color = p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold,
         modifier = Modifier.fillMaxWidth().padding(top = 20.dp).background(p.accent.copy(alpha = 0.13f))
             .padding(start = 8.dp, top = 12.dp, end = 8.dp, bottom = 10.dp).testTag(AboutTags.macro(macro.label)),
     )
@@ -83,7 +83,7 @@ internal fun AboutMacroHeader(macro: AboutBlock.Macro) {
 internal fun AboutSectionView(section: AboutSection) {
     val p = LocalKitPalette.current
     Column(Modifier.fillMaxWidth().testTag(AboutTags.infoSection(section.head))) {
-        Text(section.head, color = p.accent, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+        Text(section.head, color = p.accent, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
         Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
             // An unloaded block says so: it is not empty and it is not broken, it has simply not been reached.
@@ -203,7 +203,7 @@ internal fun AboutTreeAccordion(trees: List<AboutTree>) {
 internal fun AboutIndex(macros: List<AboutBlock.Macro>, onGo: (String) -> Unit) {
     val p = LocalKitPalette.current
     Column(Modifier.fillMaxWidth().padding(bottom = 4.dp).testTag(AboutTags.INDEX)) {
-        Text("Index", color = p.textPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold,
+        Text("Index", color = p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
         // Same card grid C3 ▸ Topology's Index draws, from the same builder — three across, because these labels are
         // words rather than the short nouns a six-wide stack row carries. The row SHAPE is a layout decision; the

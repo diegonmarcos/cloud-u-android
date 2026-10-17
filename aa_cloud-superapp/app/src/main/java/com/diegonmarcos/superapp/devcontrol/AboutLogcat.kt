@@ -238,7 +238,7 @@ internal fun AboutLogcatViewer(onExport: (text: String, fileName: String) -> Uni
             text = {
                 LazyColumn(Modifier.height(360.dp)) {
                     items(apps) { (label, uid) ->
-                        Text(label, style = MaterialTheme.typography.bodyLarge,
+                        Text(label, style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.fillMaxWidth().selectable(selected = false, onClick = {
                                 scopeUid = uid; scopePkg = label; picker = null; refresh(uid = uid)
                             }).padding(vertical = 10.dp))

@@ -105,12 +105,12 @@ class ImportConfigsFragment : KitComposeFragment() {
     @Composable
     override fun Content() {
         val p = LocalKitPalette.current
-        val mono = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
+        val mono = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(12.dp)) {
             Text(stringResource(R.string.import_title), color = p.textPrimary,
-                style = MaterialTheme.typography.headlineSmall)
+                style = MaterialTheme.typography.titleSmall)
             Text(stringResource(R.string.import_subtitle), color = p.textSecondary,
-                style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 2.dp))
+                style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp))
             Spacer(Modifier.height(12.dp))
             KitCard {
                 SelectionContainer {

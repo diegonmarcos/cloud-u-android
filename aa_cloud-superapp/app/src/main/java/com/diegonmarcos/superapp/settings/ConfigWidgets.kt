@@ -39,7 +39,7 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
 /** Section heading: the old `TextAppearance_Material_Headline` TextView with 16 dp above and 4 below. */
 @Composable
 internal fun ConfigHeader(text: String, modifier: Modifier = Modifier) {
-    Text(text, color = LocalKitPalette.current.textPrimary, style = MaterialTheme.typography.headlineSmall,
+    Text(text, color = LocalKitPalette.current.textPrimary, style = MaterialTheme.typography.titleSmall,
         modifier = modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp).testTag("cfg:header:$text"))
 }
 
@@ -85,7 +85,7 @@ internal fun ConfigRadioRow(label: String, selected: Boolean, enabled: Boolean =
         .padding(vertical = 4.dp).testTag("cfg:radio:$tag"), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         RadioButton(selected = selected, onClick = null, enabled = enabled)
-        Text(label, color = p.textPrimary.copy(alpha = if (enabled) 1f else 0.5f), style = MaterialTheme.typography.bodyMedium)
+        Text(label, color = p.textPrimary.copy(alpha = if (enabled) 1f else 0.5f), style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -96,7 +96,7 @@ internal fun ConfigCheckRow(label: String, checked: Boolean, enabled: Boolean = 
         .padding(vertical = 4.dp).testTag("cfg:check:$tag"), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Checkbox(checked = checked, onCheckedChange = null, enabled = enabled)
-        Text(label, color = p.textPrimary.copy(alpha = if (enabled) 1f else 0.5f), style = MaterialTheme.typography.bodyMedium)
+        Text(label, color = p.textPrimary.copy(alpha = if (enabled) 1f else 0.5f), style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -140,7 +140,7 @@ private fun DropdownRow(o: DropdownOption?, trailing: String, modifier: Modifier
         o?.icon?.let {
             com.diegonmarcos.superapp.apps.AppIcon(it, 24.dp, Modifier.padding(end = 8.dp))
         }
-        Text(o?.label.orEmpty(), color = p.textPrimary, style = MaterialTheme.typography.bodyMedium,
+        Text(o?.label.orEmpty(), color = p.textPrimary, style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.weight(1f))
         if (trailing.isNotEmpty()) Text(trailing, color = p.textSecondary)
     }
@@ -152,7 +152,7 @@ internal fun ConfigSwitchRow(label: String, checked: Boolean, tag: String = labe
     val p = LocalKitPalette.current
     Row(Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
         .padding(vertical = 2.dp).testTag("cfg:switch:$tag"), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = p.textPrimary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Text(label, color = p.textPrimary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
         androidx.compose.material3.Switch(checked = checked, onCheckedChange = null)
     }
 }
