@@ -438,13 +438,13 @@ PY
 }
 m_rust_port() { python3 - "$1" <<'PY'
 import sys; p=sys.argv[1]+"/src-tauri/src/lib.rs"; s=open(p).read()
-new=s.replace('env!("C3_WEBSERVER_PORT").parse()?', '"8000".parse()?')
+new=s.replace('env!("C3_WEBSERVER_PORT").parse()?', '"8002".parse()?')
 assert new!=s; open(p,"w").write(new)
 PY
 }
 m_window_before_bind() { python3 - "$1" <<'PY'
 import sys,json; p=sys.argv[1]+"/src-tauri/tauri.conf.json"; d=json.load(open(p))
-d["app"]["windows"]=[{"url":"http://127.0.0.1:8000/"}]; json.dump(d,open(p,"w"),indent=2)
+d["app"]["windows"]=[{"url":"http://127.0.0.1:8002/"}]; json.dump(d,open(p,"w"),indent=2)
 PY
 }
 m_identifier_drift() { python3 - "$1" <<'PY'

@@ -54,8 +54,8 @@
     ]
   },
   "runtime": {
-    "_doc": "Baked into BuildConfig by app/build.gradle and passed to the server positionally as <port> <root>. The server binds 127.0.0.1 only and refuses every other peer.",
-    "port": 8000,
+    "_doc": "Baked into BuildConfig by app/build.gradle and passed to the server positionally as <port> <root>. The server binds 127.0.0.1 only and refuses every other peer. Option 37.1: 8002, because 127.0.0.1:8000 and :8001 are the two Cloud Terminals' own my-webserver (ac_cloud-termux, ac_cloud-nix-on-droid build.json::runtime.webserver). Every app's localhost ports live under runtime; test/test-localhost-ports.sh fails when two apps declare the same one.",
+    "port": 8002,
     "serve_root": "/storage/emulated/0"
   },
   "android": {
