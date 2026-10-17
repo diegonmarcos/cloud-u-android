@@ -111,6 +111,8 @@ class Namespace:
             rel = self.rel_of_prefix(src)
             if rel is not None:
                 self.binds.append((dst.rstrip("/") or "/", rel))
+        # A file bind (rish) shadows the directory bind it sits under (/usr): most specific first.
+        self.binds.sort(key=lambda b: -len(b[0]))
 
     def rel_of_prefix(self, path):
         if path == self.prefix:
