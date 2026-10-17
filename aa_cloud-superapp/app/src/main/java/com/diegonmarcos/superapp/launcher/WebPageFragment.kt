@@ -136,6 +136,14 @@ class WebPageFragment : KitComposeFragment() {
                         settings.loadWithOverviewMode = true
                         settings.builtInZoomControls = true
                         settings.displayZoomControls = false
+                        // Every console line of the page reaches logcat (tag WebPage) and [probe]: a page that renders blank on a
+                        // phone is a JS error nobody can see without this.
+                        webChromeClient = object : android.webkit.WebChromeClient() {
+                            override fun onConsoleMessage(m: android.webkit.ConsoleMessage): Boolean {
+                                report("console ${m.messageLevel()} ${m.sourceId()}:${m.lineNumber()} ${m.message()}")
+                                return super.onConsoleMessage(m)
+                            }
+                        }
                         webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 view?.settings?.cacheMode = WebSettings.LOAD_DEFAULT
@@ -172,11 +180,19 @@ class WebPageFragment : KitComposeFragment() {
                              * Main frame only: a failed favicon or analytics sub-request
                              * must not blank a page that rendered.
                              */
+                            override fun onReceivedHttpError(
+                                view: WebView, request: android.webkit.WebResourceRequest,
+                                response: android.webkit.WebResourceResponse,
+                            ) {
+                                report("httpError ${response.statusCode} main=${request.isForMainFrame} ${request.url}")
+                            }
+
                             override fun onReceivedError(
                                 view: WebView,
                                 request: android.webkit.WebResourceRequest,
                                 error: android.webkit.WebResourceError,
                             ) {
+                                report("error ${error.errorCode} ${error.description} main=${request.isForMainFrame} ${request.url}")
                                 if (!request.isForMainFrame) return
                                 refreshing = false
                                 failed = request.url.toString()
@@ -256,6 +272,13 @@ class WebPageFragment : KitComposeFragment() {
             val a = java.net.URI(declared); val b = java.net.URI(target)
             a.scheme == b.scheme && a.host == b.host && a.port == b.port
         }.getOrDefault(false)
+
+        /** Diagnostics sink (console lines, load errors): logcat always, plus an instrumented test when one listens. */
+        @Volatile var probe: ((String) -> Unit)? = null
+        internal fun report(line: String) {
+            android.util.Log.i("WebPage", line)
+            probe?.invoke(line)
+        }
 
         fun newInstance(url: String) = WebPageFragment().apply {
             arguments = Bundle().apply { putString(ARG_URL, url) }

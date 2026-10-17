@@ -120,7 +120,7 @@ jobs:
           BYPASS_NIX: "1"
           SUPERAPP_VARIANT: "x86_64"
           INSTRUMENT_PREGRANT: "1"
-          INSTRUMENT_CLASS: "com.diegonmarcos.superapp.EdgeOverlayGestureTest"
+          INSTRUMENT_CLASS: "com.diegonmarcos.superapp.EdgeOverlayGestureTest,com.diegonmarcos.superapp.WebPagesRenderTest"
           VAULT_DIR: ${{ github.workspace }}/.vault
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -133,7 +133,7 @@ jobs:
           working-directory: aa_cloud-superapp
           # ONE line: the runner executes each script line in its own `sh -c`, so a variable (the exit
           # status) does not survive a line break. bash, because build.sh is bash (and not executable in git).
-          script: bash -c 'rc=0; bash ./build.sh instrument || rc=$?; mkdir -p test-out; adb pull /data/local/tmp/edge-menu-left.png test-out/; adb pull /data/local/tmp/edge-menu-right.png test-out/; adb pull /data/local/tmp/ test-out/tmp/; adb logcat -d > test-out/logcat.txt; adb logcat -d -s EdgeOverlayTest:* OneHand:* > test-out/probe.txt; adb shell dumpsys window windows > test-out/windows.txt; exit $rc'
+          script: bash -c 'rc=0; bash ./build.sh instrument || rc=$?; mkdir -p test-out; adb pull /data/local/tmp/edge-menu-left.png test-out/; adb pull /data/local/tmp/edge-menu-right.png test-out/; adb pull /data/local/tmp/ test-out/tmp/; adb logcat -d > test-out/logcat.txt; adb logcat -d -s EdgeOverlayTest:* OneHand:* > test-out/probe.txt; adb logcat -d -s WebPage:* WebPagesRenderTest:* chromium:* > test-out/webpage.txt; adb shell dumpsys window windows > test-out/windows.txt; exit $rc'
 
       - name: Upload evidence (screenshots + logcat + reports)
         if: always()
