@@ -65,7 +65,7 @@ expect_fail "a caller hands the module a PAT" "non-GITHUB_TOKEN"
 fresh; printf '      - run: oras push ghcr.io/o/x:latest f\n' >> "$WORK/c/1_cicd/src/cicd/ghcr-delete-package.yml"
 expect_fail "the delete workflow may not push" "exempt workflow may not push"
 
-fresh; sed -i 's/cloud-notes-sync) ;;/cloud-notes-sync|cloud-other) ;;/' "$WORK/c/1_cicd/src/cicd/ghcr-delete-package.yml"
+fresh; sed -i 's/in cloud-notes-web|/in cloud-notes-web|cloud-other|/' "$WORK/c/1_cicd/src/cicd/ghcr-delete-package.yml"
 expect_fail "the delete allowlist cannot grow" "allowlist grew"
 
 fresh; printf '          X: ${{ secrets.GHCR_TOKEN }}\n' >> "$WORK/c/1_cicd/src/cicd/ghcr-visibility-audit.yml"

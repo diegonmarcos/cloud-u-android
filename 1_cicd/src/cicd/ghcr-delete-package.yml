@@ -3,17 +3,19 @@ name: "ghcr delete package (one-off, allowlisted)"
 # A GHCR package's visibility is fixed at creation. The Cloud Notes images were
 # created private by a PAT push; the owner ordered them deleted so the next CI run
 # (publish-ghcr: GITHUB_TOKEN + source label) recreates them linked to the repo.
-# Only the allowlisted names can be deleted. Delete-only: the publish-module guard
+# 2026-10-17 (owner decision 27.1): the secret-scan-clean packages whose
+# visibility did not follow their source repo were added, each deleted once and
+# rebuilt by Ship. Only the allowlisted names can be deleted. Delete-only: the publish-module guard
 # exempts this file narrowly (no push verbs, GHCR_TOKEN only as GH_TOKEN env).
 
 on:
   workflow_dispatch:
     inputs:
       package:
-        description: "cloud-notes-web or cloud-notes-sync"
+        description: "an allowlisted package being re-linked to its source repo"
         required: true
         type: choice
-        options: [cloud-notes-web, cloud-notes-sync]
+        options: [cloud-notes-web, cloud-notes-sync, kg-store, kg-store-binaries, redis-binaries, hickory-dns-binaries, gha-runner, gha-runner-binaries, cloud-builder-x, cloud-builder-x-binaries]
 
 permissions:
   contents: read
@@ -28,6 +30,6 @@ jobs:
           PKG: ${{ inputs.package }}
         run: |
           set -euo pipefail
-          case "$PKG" in cloud-notes-web|cloud-notes-sync) ;; *) echo "::error::$PKG is not allowlisted"; exit 1;; esac
+          case "$PKG" in cloud-notes-web|cloud-notes-sync|kg-store|kg-store-binaries|redis-binaries|hickory-dns-binaries|gha-runner|gha-runner-binaries|cloud-builder-x|cloud-builder-x-binaries) ;; *) echo "::error::$PKG is not allowlisted"; exit 1;; esac
           if gh api -X DELETE "/user/packages/container/$PKG"; then echo "deleted $PKG"
           else echo "::error::DELETE failed: the PAT secret lacks delete:packages (or the package is gone)"; exit 1; fi

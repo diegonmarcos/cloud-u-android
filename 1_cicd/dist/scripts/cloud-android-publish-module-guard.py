@@ -41,7 +41,7 @@ SKIP = {"1_cicd/src/scripts/cloud-android-publish-module-guard.py"}
 # no push/login/release verb at all.
 EXEMPT = {"1_cicd/src/cicd/ghcr-delete-package.yml", "1_cicd/src/cicd/ghcr-visibility-audit.yml",
           "1_cicd/src/cicd/ghcr-secret-scan.yml"}
-DELETE_ALLOW = {"cloud-notes-web", "cloud-notes-sync"}
+DELETE_ALLOW = {"cloud-notes-web", "cloud-notes-sync", "kg-store", "kg-store-binaries", "redis-binaries", "hickory-dns-binaries", "gha-runner", "gha-runner-binaries", "cloud-builder-x", "cloud-builder-x-binaries"}
 PUSH = re.compile(
     r"(\boras\s+(push|login)\b|\bdocker\s+(push|login)\b|\bbuildx\s+build\b.*--push\b|"
     r"docker/(login|build-push)-action|\bgh\s+release\s+(create|upload)\b|GHCR_TOKEN)")
@@ -118,7 +118,9 @@ for rel in sorted(EXEMPT):
     if rel.endswith("delete-package.yml"):
         if "-X DELETE" not in t:
             fail("%s: lost its DELETE call" % rel)
-        names = set(re.findall(r"cloud-[a-z0-9-]+", " ".join(l for l in t.splitlines() if "case " in l or "options:" in l)))
+        names = set(re.findall(r"[a-z0-9][a-z0-9-]*[a-z0-9]", " ".join(
+            re.sub(r'^.*?(options:\s*\[|case\s+"\$PKG"\s+in)', "", l).split(")")[0].split("]")[0]
+            for l in t.splitlines() if "case " in l or "options:" in l)))
         if names - DELETE_ALLOW:
             fail("%s: allowlist grew beyond %s: %s" % (rel, sorted(DELETE_ALLOW), sorted(names - DELETE_ALLOW)))
 
