@@ -225,8 +225,12 @@ jobs:
 
       - name: Login to GHCR
         if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_oras) }}
+        # Cross-repo exception (2026-10-17): some cloud-lib-* packages (e.g.
+        # cloud-lib-cal) are not linked to this repo, so GITHUB_TOKEN gets
+        # permission_denied: write_package. Explicit PAT, no fallback, until those
+        # packages are re-linked (delete + recreate via ghcr-delete-package.yml).
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" \
+          echo "${{ secrets.GHCR_TOKEN }}" \
             | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Push APKs to GHCR via ORAS
