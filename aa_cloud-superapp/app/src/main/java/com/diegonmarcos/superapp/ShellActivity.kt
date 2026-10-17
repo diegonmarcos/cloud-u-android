@@ -2349,7 +2349,7 @@ open class ShellActivity : AppCompatActivity(),
         // warning most of the fleet never sees is not a warning. It renders
         // nothing at all unless the device has something wrong with its own
         // update chain, so the steady-state cost is one findViewById.
-        com.diegonmarcos.superapp.recovery.RecoveryBanner.attach(this)
+        com.diegonmarcos.superapp.recovery.RecoveryBanner.attach(this, findViewById(R.id.overlay_container))
         // The advisory feed is the only channel that can deliver words NEWER
         // than this build to a device that can no longer update — see
         // AdvisoryFeed. Self-throttled to once an hour; off the main thread.

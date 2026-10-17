@@ -27,7 +27,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import com.diegonmarcos.superapp.uikit.kitComposeView
 import com.diegonmarcos.superapp.updater.Advisory
@@ -53,7 +52,7 @@ import com.diegonmarcos.superapp.updater.Fleet
  * most of the fleet never sees. `ShellActivity` is the single ancestor of
  * both `HomeActivity` and `MainActivity`, and `R.id.overlay_container` is the
  * full-bleed host that already spans every one of those fragments — so hosting
- * it here is one anchor instead of five that can drift.
+ * it here (the activity hands over `overlay_container`) is one anchor instead of five that can drift.
  *
  * It is added as a plain VIEW (a ComposeView, since #773), never a Fragment: `ShellActivity`
  * decides whether the home screen is showing by asking whether `overlay_container` holds a
@@ -73,8 +72,8 @@ object RecoveryBanner {
      * removes whatever it added last time and adds nothing when there is
      * nothing to say, so the steady state costs one view lookup.
      */
-    fun refresh(activity: Activity) {
-        val host = activity.findViewById<FrameLayout>(R.id.overlay_container) ?: return
+    fun refresh(activity: Activity, host: FrameLayout?) {
+        if (host == null) return
         host.findViewWithTag<View>(TAG_VIEW)?.let { host.removeView(it) }
         val fleet = runCatching { Fleet.parse(UpdaterBuildConfig.CONSTELLATION_FLEET_B64) }
             .getOrDefault(emptyList())
@@ -86,9 +85,9 @@ object RecoveryBanner {
      *  arrive from a background pass or the feed while the user is looking at
      *  the home screen, and a warning that only appears on the NEXT launch is
      *  a warning delayed by however long the phone stays unlocked. */
-    fun attach(activity: Activity) {
-        Advisory.setListener { activity.runOnUiThread { refresh(activity) } }
-        refresh(activity)
+    fun attach(activity: Activity, host: FrameLayout?) {
+        Advisory.setListener { activity.runOnUiThread { refresh(activity, host) } }
+        refresh(activity, host)
     }
 
     fun detach() = Advisory.setListener(null)
