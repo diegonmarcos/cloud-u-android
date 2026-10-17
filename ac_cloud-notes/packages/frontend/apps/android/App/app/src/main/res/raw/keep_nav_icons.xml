@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The bottom-nav icons are looked up BY NAME (MainActivity: getIdentifier("ic_nav_$name")),
+     which the release resource shrinker (shrinkResources true) cannot see. It stripped every
+     ic_nav_* drawable, getIdentifier returned 0, and libs:bottomnav's painterResource(0) threw
+     Resources$NotFoundException: Resource ID #0x0 in onAttachedToWindow: Cloud Notes crashed on
+     launch. Guarded by test-cloud-notes.yml (emulator launch smoke). -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_nav_*" />
