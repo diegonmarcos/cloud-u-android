@@ -118,6 +118,7 @@ class WebPagesRenderTest {
         clearPrompt(); SystemClock.sleep(1500)
 
         var htmlH = -1
+        var pageTitle = ""; var groups = -1
         val report = StringBuilder()
         val w = web
         var crop: Bitmap? = null
@@ -135,6 +136,9 @@ class WebPagesRenderTest {
             report.appendLine("finalUrl=$url")
             htmlH = js(w, "Math.round(document.documentElement.getBoundingClientRect().height)").trim('"').toIntOrNull() ?: -1
             report.appendLine("readyState=$ready bodyTextLen=$textLen htmlHeight=$htmlH")
+            pageTitle = js(w, "document.title").trim('"')
+            groups = js(w, "document.querySelectorAll('.tile-group__title').length").trim('"').toIntOrNull() ?: -1
+            report.appendLine("title=$pageTitle tileGroups=$groups")
             report.appendLine("ua=${js(w, "navigator.userAgent")}")
             report.appendLine("bodyText=${js(w, "(document.body ? document.body.innerText.slice(0,400) : '')")}")
             report.appendLine("bodyStyle=${js(w, "(()=>{const s=getComputedStyle(document.body);return [s.color,s.backgroundColor,s.display,s.visibility,s.opacity,document.documentElement.scrollHeight,innerWidth+'x'+innerHeight].join(' | ')})()")}")
@@ -175,5 +179,11 @@ class WebPagesRenderTest {
         assertTrue("[$name] body text is empty (len=$textLen)\n$report", textLen > 0)
         assertTrue("[$name] page laid out with zero height (<html> $htmlH px)\n$report", htmlH > 0)
         assertTrue("[$name] WebView renders blank (one colour)\n$report", colours > 1)
+        // WebApps must open ON the Cloud ▸ App page (path route /cloud-mobile/cloud/apps/), not the site's Home: its title is
+        // "Cloud · App · …" and it draws the tile groups (h2.tile-group__title).
+        if (target == "page:cloud/webapps") {
+            assertTrue("[$name] WebApps is not on the Cloud ▸ App page (title=$pageTitle)\n$report", pageTitle.contains("Cloud · App"))
+            assertTrue("[$name] WebApps shows no app tile groups (groups=$groups)\n$report", groups > 0)
+        }
     }
 }

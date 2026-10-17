@@ -2536,8 +2536,8 @@
             "id": "webapps",
             "label": "WebApps",
             "icon": "ic_world",
-            "_doc": "The cloud-mobile site — the HTML replica of this SuperApp's UI, published from the diegonmarcos front repo (a_Portals/cloud-mobile) on GitHub Pages (public) — in the app's embedded browser (WebPageFragment). `?embed=1` tells the site it is drawn inside the SuperApp, and WebPageFragment appends the user-agent marker ' CloudSuperApp-Embed/1' for the same reason; both are keyed off that query, so a second embedded replica is one more entry like this one. It fills its pane exactly (no floating Back, the system Back walks the page history), pulls to refresh, and says so when it is offline.",
-            "url": "https://diegonmarcos.github.io/cloud-mobile/?embed=1"
+            "_doc": "The cloud-mobile site — the HTML replica of this SuperApp's UI, published from the diegonmarcos front repo (a_Portals/cloud-mobile) on GitHub Pages (public) — in the app's embedded browser (WebPageFragment), opened DIRECTLY on its Cloud ▸ App page: the site routes by path (/cloud-mobile/<section>/<page>/), and the bare root is its Home, which is what the owner saw instead of the apps (2026-10-17). `?embed=1` tells the site it is drawn inside the SuperApp, and WebPageFragment appends the user-agent marker ' CloudSuperApp-Embed/1' for the same reason; both are keyed off that query, so a second embedded replica is one more entry like this one. It fills its pane exactly (no floating Back, the system Back walks the page history), pulls to refresh, and says so when it is offline.",
+            "url": "https://diegonmarcos.github.io/cloud-mobile/cloud/apps/?embed=1"
           },
           {
             "id": "lnktree",
