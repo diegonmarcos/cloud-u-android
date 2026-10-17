@@ -1,4 +1,5 @@
 {
+  "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "description", "category": "data", "res": "packages/frontend/apps/android/App/app/src/main/res"},
   "name": "cloud-notes",
   "description": "Cloud Notes \u2014 our own signed build of AFFiNE (the local-first notes/whiteboard app), vendored at ac_cloud-notes/ as owned code. AFFiNE is the UPSTREAM PROJECT, never the product name: the product is cloud-notes and always was (#522).  DE-CLOUDED (#469): no AFFiNE server, no Firebase/telemetry, no AI chat, no EE-licensed code. The one feature added over upstream is opening files from emulated storage (/storage/emulated/0/...) reached via the fleet rule about EAR discipline \u2014 see the ship workflow and testers.",
   "category": "android",

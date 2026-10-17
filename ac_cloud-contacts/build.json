@@ -1,4 +1,5 @@
 {
+  "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "contacts", "category": "data", "res": "app/src/main/res"},
   "name": "cloud-contacts",
   "description": "Diego's Cloud Contacts — standalone Android multi-channel people hub. NOT a dialer-first address book: each person is a set of reachable CHANNELS (WhatsApp, Telegram, SMS, Cloud Mail, Cloud Dialer, Matrix, Cloud Chat, LinkedIn, Instagram) and the person screen is a channel switchboard — tapping a channel opens that conversation in its app; there is no default call action. Sources merged into one identity: device contacts (local phone + synced accounts such as Gmail) read from ContactsContract, plus LinkedIn Connections.csv and Instagram followers/following JSON imports parsed natively. WebView UI over HTML/Tailwind (cloud-news pattern). Build via Nix devShell, one APK out.",
   "category": "android",

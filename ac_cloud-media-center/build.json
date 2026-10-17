@@ -1,4 +1,5 @@
 {
+  "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "movie", "category": "data", "res": "src-tauri/gen/android/app/src/main/res"},
   "name": "cloud-media-center",
   "description": "The fleet's media hub, as an APK, in Rust and static web only: a Tauri 2 app whose one webview shows seven mobile-first pages — music, videos, gallery, books, feed, movies, documentaries — built from the media data of diegonmarcos.github.io pinned at one commit. Every link out goes to the phone's own apps through tauri-plugin-opener.",
   "category": "android",
