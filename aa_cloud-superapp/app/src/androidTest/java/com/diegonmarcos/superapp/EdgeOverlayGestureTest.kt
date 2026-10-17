@@ -129,13 +129,33 @@ class EdgeOverlayGestureTest {
     private fun inject(action: Int, x: Float, y: Float) {
         val e = ev(action, x, y); ua.injectInputEvent(e, true); e.recycle()
     }
-    /** The app re-raises SystemUI's wireless-debugging prompt on its own schedule: clear it before every gesture. */
+    /**
+     * The app's WirelessDebugKeeper re-raises SystemUI's wireless-debugging prompt on its own schedule: clear it
+     * before every gesture. 2026-10-17 (run 39065726306): the old blind KEYCODE_BACK fired while the prompt was
+     * still starting (its window listed, focus still on the victim), so BACK FINISHED THE VICTIM; the launcher came
+     * to front and every later tap "did not reach the app below". BACK now goes only to a FOCUSED prompt, and the
+     * victim is brought back to front (and its stop baselined) whenever the prompt dance disturbed it.
+     */
+    private var stopBase = 0
+    private fun focus(): String = sh("dumpsys window | grep -m1 mCurrentFocus")
     private fun clearPrompt() {
         sh("settings put global adb_wifi_enabled 0")
-        repeat(6) {
-            if (!sh("dumpsys window windows").contains("WifiDebuggingActivity")) return
-            sh("input keyevent KEYCODE_BACK"); SystemClock.sleep(600)
+        var touched = false
+        val end = SystemClock.uptimeMillis() + 6_000
+        while (SystemClock.uptimeMillis() < end) {
+            if (!sh("dumpsys window windows").contains("WifiDebuggingActivity")) break
+            touched = true
+            if (focus().contains("WifiDebuggingActivity")) sh("input keyevent KEYCODE_BACK")
+            SystemClock.sleep(300)
         }
+        if (!sh("dumpsys activity activities | grep -m1 topResumedActivity").contains("VictimActivity")) {
+            touched = true
+            inst.context.startActivity(Intent(inst.context, VictimActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+            waitFor("victim back in front") { sh("dumpsys activity activities | grep -m1 topResumedActivity").contains("VictimActivity") }
+            SystemClock.sleep(400)
+        }
+        if (touched) stopBase = victimCount("stop")
     }
     private fun down(x: Float, y: Float) { clearPrompt(); downT = SystemClock.uptimeMillis(); inject(MotionEvent.ACTION_DOWN, x, y) }
     private fun move(x: Float, y: Float) = inject(MotionEvent.ACTION_MOVE, x, y)
@@ -187,7 +207,7 @@ class EdgeOverlayGestureTest {
         val l = leftStrip()
         tap(l.exactCenterX(), l.exactCenterY())
         assertFalse(svc().menuShown)
-        assertFalse("app below must still be in front", (victimCount("stop") > 0))
+        assertFalse("app below must still be in front" + diag(), (victimCount("stop") > stopBase))
     }
 
     /** 2026-10-17: a plain inward swipe (no hold) OPENS the menu - the hold-only contract left it dead on Samsung. */
