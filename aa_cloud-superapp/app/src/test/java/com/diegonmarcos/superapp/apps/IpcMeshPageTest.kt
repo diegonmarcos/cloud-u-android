@@ -76,7 +76,7 @@ class IpcMeshPageTest : KitPageHarness() {
         val tabs = pages.first { it.id == "apps-mesh" }.tabs
         assertEquals("IPC is the Apps Mesh tab after Apps", listOf("apps-mesh-members", "ipc"), tabs.take(2))
         assertTrue("Network keeps the 2-8 rule: $net", net.size in 2..8)
-        val page = SectionPages.pagesFor("config").first { it.id == "ipc" }
+        val page = SectionPages.pagesFor("config", includeHidden = true).first { it.id == "ipc" }
         assertEquals("IPC", page.label)
         val f = page.factory()
         assertTrue("Configs > Network > IPC builds ${f::class.java}", f is IpcMeshFragment)

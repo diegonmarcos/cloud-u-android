@@ -86,7 +86,7 @@ class FleetIdentityPageTest : KitPageHarness() {
     fun `I4 Identity is the Apps Mesh tab beside IPC and builds its host`() {
         val tabs = Sections.byId("config")!!.pages.first { it.id == "apps-mesh" }.tabs
         assertEquals(tabs.indexOf("ipc") + 1, tabs.indexOf("identity"))
-        val page = SectionPages.pagesFor("config").first { it.id == "identity" }
+        val page = SectionPages.pagesFor("config", includeHidden = true).first { it.id == "identity" }
         assertEquals("Identity", page.label)
         val f = page.factory()
         assertTrue("Apps Mesh > Identity builds ${f::class.java}", f is FleetIdentityFragment)
