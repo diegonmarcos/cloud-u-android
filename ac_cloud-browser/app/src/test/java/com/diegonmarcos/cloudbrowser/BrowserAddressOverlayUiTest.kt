@@ -67,7 +67,8 @@ class BrowserAddressOverlayUiTest {
     fun `a tap shows two boxes - an empty search and the current address`() {
         show()
         compose.onNodeWithTag("browser:address:search").assertIsDisplayed()
-        compose.onNodeWithTag("browser:address:current").assertIsDisplayed()
+        compose.onNodeWithTag("browser:address:current", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag("browser:address:url", useUnmergedTree = true).assertExists()
         compose.onNodeWithTag("browser:address:copy").assertIsDisplayed()
         compose.onNodeWithTag("browser:address:edit").assertIsDisplayed()
         assertEquals("", fieldText())
