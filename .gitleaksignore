@@ -1,0 +1,3 @@
+# gitleaks false positives, by fingerprint (commit:path:rule:line).
+# 17a87f3: prose in the copied sources.json::_doc ("...tokens) are never committed"), not a secret; reworded upstream (diegonmarcos.github.io c1a704d).
+17a87f3252dcdff159aee69d1bb7689daaa203cf:ac_cloud-media-center/web/data/sources.json:generic-api-key:2
