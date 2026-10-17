@@ -1,10 +1,6 @@
 package com.diegonmarcos.superapp.apps
 
 import android.app.Application
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
@@ -38,18 +34,22 @@ class FolderSheetOpaqueTest : KitPageHarness() {
 
     @Test fun `F1 the folder card is opaque under a see-through theme`() {
         assertTrue("the fill constant is see-through", FolderSheetFill.alpha >= 0.9f)
+        lateinit var host: androidx.compose.ui.platform.ComposeView
         compose.runOnUiThread {
-            compose.activity.setContentView(
-                androidx.compose.ui.platform.ComposeView(compose.activity).apply {
-                    setContent { CloudKitTheme(seeThrough) { FolderSheetFrame("Folder", {}) { Box(Modifier.size(200.dp, 100.dp)) } } }
-                },
-            )
+            host = androidx.compose.ui.platform.ComposeView(compose.activity).apply {
+                setContent { CloudKitTheme(seeThrough) { FolderSheetCard("Folder") { Box(Modifier.size(200.dp, 100.dp)) } } }
+            }
+            compose.activity.setContentView(host)
         }
         compose.waitForIdle()
-        val img = compose.onNodeWithTag(TAG_FOLDER_SHEET).captureToImage().toPixelMap()
-        // A pixel inside the card, clear of its rounded corners and of any text.
-        val px: Color = img[img.width / 2, img.height - 8]
-        assertTrue("folder card pixel is ${px.alpha} alpha: the apps would show the page through it", px.alpha >= 0.9f)
+        // Paint the host the way the shell tests do, then read a pixel inside the card (clear of corners and text).
+        val bmp = compose.runOnUiThread {
+            android.graphics.Bitmap.createBitmap(host.width, host.height, android.graphics.Bitmap.Config.ARGB_8888)
+                .also { host.draw(android.graphics.Canvas(it)) }
+        }
+        val c = bmp.getPixel(bmp.width / 2, bmp.height - 40)
+        val alpha = (c ushr 24) / 255f
+        assertTrue("folder card pixel is $alpha alpha: the apps would show the page through it", alpha >= 0.9f)
     }
 
     @Test fun `F2 the tile folder card uses the same opaque fill`() {

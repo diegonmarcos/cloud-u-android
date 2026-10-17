@@ -233,14 +233,20 @@ internal val FolderSheetFill = androidx.compose.ui.graphics.Color(0xF21A1A24)
 /** The folder look: a rounded card floating over the dimmed page, dismissed from the scrim. */
 @Composable
 internal fun FolderSheetFrame(label: String, onDismiss: () -> Unit, content: @Composable () -> Unit) {
-    val p = LocalKitPalette.current
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(Modifier.padding(20.dp).clip(RoundedCornerShape(28.dp)).background(FolderSheetFill).padding(16.dp)
-            .testTag(TAG_FOLDER_SHEET)) {
-            Text(label, color = p.textPrimary, style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(vertical = 16.dp))
-            Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState())) { content() }
-        }
+        FolderSheetCard(label, content)
+    }
+}
+
+/** The card itself, split from the dialog window so it can be drawn (and tested) without one. */
+@Composable
+internal fun FolderSheetCard(label: String, content: @Composable () -> Unit) {
+    val p = LocalKitPalette.current
+    Column(Modifier.padding(20.dp).clip(RoundedCornerShape(28.dp)).background(FolderSheetFill).padding(16.dp)
+        .testTag(TAG_FOLDER_SHEET)) {
+        Text(label, color = p.textPrimary, style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(vertical = 16.dp))
+        Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState())) { content() }
     }
 }
 
