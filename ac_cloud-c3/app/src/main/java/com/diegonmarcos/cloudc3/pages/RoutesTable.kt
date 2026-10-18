@@ -1,7 +1,11 @@
 package com.diegonmarcos.cloudc3.pages
 
 import android.content.ClipData
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -41,7 +45,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -86,6 +89,10 @@ object RoutesTags {
     const val SHEET = "routes_sheet"
     const val RETEST = "routes_retest"
     const val REFRESH = "routes_refresh"
+    const val EXPORT = "routes_export"
+    const val EXPORT_COPY = "routes_export_copy"
+    const val EXPORT_CSV = "routes_export_csv"
+    const val EXPORT_MD = "routes_export_md"
     const val DECL_PAGE = "routes_decl_page"
     const val DECL_RAW = "routes_decl_raw"
     const val DECL_COPY = "routes_decl_copy"
@@ -160,6 +167,10 @@ fun RoutesTableScreen(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     var sheetRow by remember { mutableStateOf<RoutesTableModel.Row?>(null) }
+    var exportMenu by remember { mutableStateOf(false) }
+    val csvSaver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri != null) saveAndShareCsv(ctx, uri, RoutesExport.csv(RoutesExport.grid(shown, lightOf)))
+    }
     var detailRow by remember { mutableStateOf<RoutesTableModel.Row?>(null) }
     LaunchedEffect(rows, prober) { if (prober != null) store.run(rows, prober, force = false) }
 
@@ -169,61 +180,84 @@ fun RoutesTableScreen(
         return
     }
     Column(Modifier.fillMaxSize().testTag(RoutesTags.SCREEN)) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
-            ChipRow("Light") {
-                ProbeModel.Light.entries.forEach { l ->
-                    Chip(l.label, l.id in state.lights, RoutesTags.lightChip(l.id)) { update(RoutesTableModel.toggleLight(state, l.id)) }
-                }
-            }
-            ChipRow("Auth") {
-                RoutesTableModel.authOptions(rows).forEach { a ->
-                    Chip(a.label, a.id in state.auth, RoutesTags.authChip(a.id)) { update(RoutesTableModel.toggleAuth(state, a.id)) }
-                }
-            }
-            ChipRow("VM") {
-                RoutesTableModel.vmOptions(rows).forEach { vm ->
-                    Chip(vm, vm in state.vms, RoutesTags.vmChip(vm)) { update(RoutesTableModel.toggleVm(state, vm)) }
-                }
-            }
-            if (state.category.isNotEmpty()) ChipRow("Cat") {
-                Chip("${state.category}  \u00D7", true, RoutesTags.CATEGORY_CHIP) { update(state.copy(category = "")) }
-            }
-            SearchBox(state.query) { update(state.copy(query = it)) }
-            Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    RoutesTableModel.countLine(shown.size, rows.size),
-                    Modifier.weight(1f).testTag(RoutesTags.COUNT),
-                    color = c.onSurfaceVariant, style = MaterialTheme.typography.labelMedium,
-                )
-                if (prober != null) Text(
-                    if (store.running.value) "Checking\u2026" else "\u21BB Refresh",
-                    Modifier.clickable(enabled = !store.running.value, role = Role.Button) {
-                        scope.launch { store.run(rows, prober, force = true) }
-                    }.padding(horizontal = 8.dp, vertical = 2.dp).testTag(RoutesTags.REFRESH),
-                    color = c.primary, style = MaterialTheme.typography.labelLarge,
-                )
-            }
-        }
-        Row(Modifier.fillMaxWidth().background(c.surfaceVariant).horizontalScroll(scroll)) {
-            Col.entries.forEach { col ->
-                val active = state.sort == col
-                val mark = if (!active) "" else if (state.ascending) " \u25B2" else " \u25BC"
-                Text(
-                    headers.getValue(col) + mark,
-                    Modifier.width(widths.getValue(col)).height(30.dp)
-                        .clickable(role = Role.Button) { update(RoutesTableModel.toggleSort(state, col)) }
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                        .testTag(RoutesTags.header(col))
-                        .semantics { selected = active },
-                    color = if (active) c.primary else c.onSurface,
-                    fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Text("More", Modifier.width(MORE_WIDTH).height(30.dp).padding(horizontal = 8.dp, vertical = 6.dp),
-                color = c.onSurface, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-        }
+        // One vertical scroller: the filters, the sticky header and every row share the LazyColumn, so a short screen never starves the list.
         LazyColumn(Modifier.fillMaxSize().testTag(RoutesTags.LIST)) {
+            item {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+                ChipRow("Light") {
+                    ProbeModel.Light.entries.forEach { l ->
+                        Chip(l.label, l.id in state.lights, RoutesTags.lightChip(l.id)) { update(RoutesTableModel.toggleLight(state, l.id)) }
+                    }
+                }
+                ChipRow("Auth") {
+                    RoutesTableModel.authOptions(rows).forEach { a ->
+                        Chip(a.label, a.id in state.auth, RoutesTags.authChip(a.id)) { update(RoutesTableModel.toggleAuth(state, a.id)) }
+                    }
+                }
+                ChipRow("VM") {
+                    RoutesTableModel.vmOptions(rows).forEach { vm ->
+                        Chip(vm, vm in state.vms, RoutesTags.vmChip(vm)) { update(RoutesTableModel.toggleVm(state, vm)) }
+                    }
+                }
+                if (state.category.isNotEmpty()) ChipRow("Cat") {
+                    Chip("${state.category}  \u00D7", true, RoutesTags.CATEGORY_CHIP) { update(state.copy(category = "")) }
+                }
+                SearchBox(state.query) { update(state.copy(query = it)) }
+                Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        RoutesTableModel.countLine(shown.size, rows.size),
+                        Modifier.weight(1f).testTag(RoutesTags.COUNT),
+                        color = c.onSurfaceVariant, style = MaterialTheme.typography.labelMedium,
+                    )
+                    if (prober != null) Text(
+                        if (store.running.value) "Checking\u2026" else "\u21BB Refresh",
+                        Modifier.clickable(enabled = !store.running.value, role = Role.Button) {
+                            scope.launch { store.run(rows, prober, force = true) }
+                        }.padding(horizontal = 8.dp, vertical = 2.dp).testTag(RoutesTags.REFRESH),
+                        color = c.primary, style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+            }
+            stickyHeader {
+                Box(Modifier.fillMaxWidth().background(c.surfaceVariant)) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(scroll)) {
+                Col.entries.forEach { col ->
+                    val active = state.sort == col
+                    val mark = if (!active) "" else if (state.ascending) " \u25B2" else " \u25BC"
+                    Text(
+                        headers.getValue(col) + mark,
+                        Modifier.width(widths.getValue(col)).height(30.dp)
+                            .clickable(role = Role.Button) { update(RoutesTableModel.toggleSort(state, col)) }
+                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                            .testTag(RoutesTags.header(col))
+                            .semantics { selected = active },
+                        color = if (active) c.primary else c.onSurface,
+                        fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text("More", Modifier.width(MORE_WIDTH + 28.dp).height(30.dp).padding(horizontal = 8.dp, vertical = 6.dp),
+                    color = c.onSurface, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+            }
+                Box(Modifier.align(Alignment.CenterEnd).background(c.surfaceVariant)) {
+                    Text(
+                        "\u22EE",
+                        Modifier.clickable(role = Role.Button) { exportMenu = true }.padding(horizontal = 10.dp, vertical = 2.dp)
+                            .testTag(RoutesTags.EXPORT).semantics { contentDescription = "Export table" },
+                        color = c.primary, style = MaterialTheme.typography.titleMedium,
+                    )
+                    DropdownMenu(expanded = exportMenu, onDismissRequest = { exportMenu = false }) {
+                        DropdownMenuItem(text = { Text("Copy table") }, modifier = Modifier.testTag(RoutesTags.EXPORT_COPY),
+                            onClick = { exportMenu = false; copyToClipboard(ctx, RoutesExport.tsv(RoutesExport.grid(shown, lightOf)), "Table copied") })
+                        DropdownMenuItem(text = { Text("Export CSV\u2026") }, modifier = Modifier.testTag(RoutesTags.EXPORT_CSV),
+                            onClick = { exportMenu = false; runCatching { csvSaver.launch("containers.csv") } })
+                        DropdownMenuItem(text = { Text("Export Markdown") }, modifier = Modifier.testTag(RoutesTags.EXPORT_MD),
+                            onClick = { exportMenu = false; shareText(ctx, RoutesExport.markdown(RoutesExport.grid(shown, lightOf)), "text/markdown") })
+                    }
+                }
+                }
+            }
             itemsIndexed(shown, key = { i, r -> "$i/${r.container}/${r.publicUrl}/${r.privateUrl}" }) { index, r ->
                 Row(Modifier.fillMaxWidth().horizontalScroll(scroll).border(BorderStroke(0.5.dp, c.outline.copy(alpha = 0.25f))),
                     verticalAlignment = Alignment.CenterVertically) {
@@ -376,10 +410,29 @@ fun DeclarationPage(row: RoutesTableModel.Row, decl: JsonObject?, onBack: () -> 
 }
 
 /** Copy [text] to the system clipboard and say so. */
-private fun copyToClipboard(ctx: Context, text: String) {
+private fun copyToClipboard(ctx: Context, text: String, toast: String = "Copied") {
     runCatching {
         (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("c3", text))
-        Toast.makeText(ctx, "Copied", Toast.LENGTH_SHORT).show()
+        Toast.makeText(ctx, toast, Toast.LENGTH_SHORT).show()
+    }
+}
+
+/** Share [text] through the system share sheet. */
+private fun shareText(ctx: Context, text: String, mime: String) {
+    runCatching {
+        val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_TEXT, text).putExtra(Intent.EXTRA_SUBJECT, "Containers table")
+        ctx.startActivity(Intent.createChooser(send, "Share table").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+}
+
+/** Write [csv] to the document the user picked, say so, and offer the share sheet for it. */
+private fun saveAndShareCsv(ctx: Context, uri: Uri, csv: String) {
+    val ok = runCatching { ctx.contentResolver.openOutputStream(uri)!!.use { it.write(csv.toByteArray(Charsets.UTF_8)) } }.isSuccess
+    Toast.makeText(ctx, if (ok) "CSV saved" else "Could not save CSV", Toast.LENGTH_SHORT).show()
+    if (!ok) return
+    runCatching {
+        val send = Intent(Intent.ACTION_SEND).setType("text/csv").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        ctx.startActivity(Intent.createChooser(send, "Share CSV").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }
 

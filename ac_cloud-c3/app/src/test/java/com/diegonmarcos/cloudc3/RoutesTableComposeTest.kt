@@ -14,6 +14,8 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
@@ -383,5 +385,16 @@ class RoutesTableComposeTest {
         compose.onNodeWithTag(RoutesTags.COUNT).assertTextEquals("${Declarations.routes.size} rows")
         for (id in listOf("bearer", "woauth", "mesh")) tap(RoutesTags.authChip(id))
         compose.onNodeWithTag(RoutesTags.COUNT).assertTextContains("of ${Declarations.routes.size} rows", substring = true)
+    }
+
+    @Test
+    fun `the list scrolls down to the last row and the header stays`() {
+        val many = (1..80).map { r("svc%03d".format(it), "woauth", "vm-a") }
+        show(data = many)
+        // index 0 = filters, 1 = sticky header, rows follow
+        compose.onNodeWithTag(RoutesTags.LIST).performScrollToIndex(many.size + 1)
+        compose.waitForIdle()
+        compose.onNodeWithText("svc080").assertIsDisplayed()
+        compose.onNodeWithTag(RoutesTags.header(Column.CONTAINER)).assertIsDisplayed()
     }
 }
