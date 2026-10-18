@@ -72,6 +72,7 @@ object DataFactory {
                 pgpEngine = pgpEngine,
                 settings = settings,
                 syncStateStore = SyncStateStore(appContext),
+                offlineAttachmentsDir = java.io.File(appContext.filesDir, "offline-attachments"),
             ),
             storageRepository = StorageRepository(
                 appContext, database.emailDao(), database.emailFtsDao(), database.emailBodyDao(),

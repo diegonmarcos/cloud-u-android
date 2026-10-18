@@ -939,6 +939,8 @@ class MailRepository(
     private val settings: SettingsRepository? = null,
     /** Persisted sync cursors (null in tests): deltas survive process death (issue #17). */
     private val syncStateStore: SyncStateStore? = null,
+    /** Where the offline-window sync keeps downloaded attachments (null in tests: none kept). */
+    private val offlineAttachmentsDir: java.io.File? = null,
 ) {
     /**
      * Schedules the WorkManager job that delivers an outbox item. Set by the app layer at startup: the data
@@ -5719,21 +5721,19 @@ class MailRepository(
                 context = null
                 auth = jmapAuth(accountStore.credentials(credentials.id) ?: credentials, force = true)
             },
-        ) { connectOnce(credentials, auth) }
+        ) {
+            val session = client.fetchSession(Jmap.sessionUrlFor(credentials.server), auth)
+            val accountId = jmapAccountIdFor(credentials, session)
+            reconcileLinkedAccounts(credentials, session, auth)
+            refreshServerIdentities(session, accountId, credentials.id, auth)
+            val mailboxes = client.getMailboxes(session, accountId, auth)
+            val roles = mailboxes.mapNotNull { mb -> mb.role?.let { it to mb.id } }.toMap()
+            Context(credentials, session, accountId, auth, roles, mailboxes).also { context = it }
+        }
     }
 
     /** Drop the cached session so the next call reconnects (used after a 401 on a method call). */
     private fun invalidateSession() { context = null }
-
-    private suspend fun connectOnce(credentials: AccountCredentials, auth: JmapAuth): Context {
-        val session = client.fetchSession(Jmap.sessionUrlFor(credentials.server), auth)
-        val accountId = jmapAccountIdFor(credentials, session)
-        reconcileLinkedAccounts(credentials, session, auth)
-        refreshServerIdentities(session, accountId, credentials.id, auth)
-        val mailboxes = client.getMailboxes(session, accountId, auth)
-        val roles = mailboxes.mapNotNull { mb -> mb.role?.let { it to mb.id } }.toMap()
-        return Context(credentials, session, accountId, auth, roles, mailboxes).also { context = it }
-    }
 
     /** Best-effort (#32). [accountId] is the JMAP account, [localAccountId] the record. */
     private suspend fun refreshServerIdentities(
@@ -5750,18 +5750,17 @@ class MailRepository(
 
     // ---- Offline window sync ----------------------------------------------------------------
 
-    private val offlineAttachmentsDir = java.io.File(outboxFilesDir.parentFile ?: outboxFilesDir, "offline-attachments")
-
     private fun offlineAttachmentFile(accountId: String, emailId: String, part: EmailBodyPart): java.io.File? {
+        val root = offlineAttachmentsDir ?: return null
         val key = part.blobId ?: part.partId ?: return null
         fun safe(v: String) = v.replace(Regex("[^A-Za-z0-9._-]"), "_")
-        return java.io.File(java.io.File(java.io.File(offlineAttachmentsDir, safe(accountId)), safe(emailId)), safe(key))
+        return java.io.File(java.io.File(java.io.File(root, safe(accountId)), safe(emailId)), safe(key))
     }
 
     /** Bytes held for offline reading: stored bodies plus downloaded attachments, all accounts. */
     suspend fun offlineCacheBytes(): Long {
         val bodies = runCatching { emailBodyDao.totalBytes() }.getOrDefault(0L)
-        val files = offlineAttachmentsDir.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
+        val files = (offlineAttachmentsDir ?: return bodies).walkBottomUp().filter { it.isFile }.sumOf { it.length() }
         return bodies + files
     }
 
