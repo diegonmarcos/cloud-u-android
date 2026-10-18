@@ -5,6 +5,10 @@
       "max": 1,
       "why": "the gateway's own address in /api/fleet/apps, for external callers; a label"
     },
+    "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/WebserverLaunch.kt": {
+      "max": 1,
+      "why": "Configs > Network > Webserver: the fallback URL (localhost:8002) handed to Cloud Browser as an ACTION_VIEW intent when Cloud C3 Webserver is not installed; the app itself is opened by its explicit launch intent, and SuperApp opens no socket to it"
+    },
     "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/AppsMesh.kt": {
       "max": 5,
       "why": "addresses PRINTED for external callers: the gateway's (catalogue, markdown) and a pre-gateway build's own port (catalogue base, markdown); labels, not clients"
