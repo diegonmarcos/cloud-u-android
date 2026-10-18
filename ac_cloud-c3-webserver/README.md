@@ -43,3 +43,24 @@ and the server crate's own `cargo test` (the real server end to end).
 What changed against the Kotlin shell: the server is no longer a separate
 process kept up by a foreground service, it lives as long as the app's
 process does.
+
+## Ports, names, engines (0.3)
+
+| What | Where |
+|---|---|
+| The name -> port map, ONE declaration | `build.json::serving` (+ `runtime.port`, `runtime.diag.port`) |
+| 8002 `emulated.app`: the emulated drive and nothing else | `server/src/files.rs`, routes with `on: Side::Drive` |
+| 8003 `cloud.app`: the SuperApp's About, Logcat, Diagnose | `server/src/diag.rs` + `ui/diag.html`, read through the SuperApp's `<pkg>.fleetdiag` provider (`src-tauri/src/bridge.rs`, JNI) |
+| 8000 `termux.app`, 8001 `nix.app` | served by the terminals; only named and linked here |
+| Private DNS, udp 127.0.0.1:5353, four exact names, refuses the rest | `server/src/dns.rs`; asked by cloud-browser (`libs:browser PrivateNames`) only |
+| Every render and feature engine, with its switch | `server/src/engines.rs` (Configs > Engines) |
+| Ported renderers, all bundled (marked, js-yaml, Eruda) | `server/ui/lib`, `server/src/render.rs` |
+
+Ported from my-webserver: Markdown, JSON / YAML / secrets tables, HTML + Eruda, index.html with `<base>`, `/route` to
+`route.html`, SPA fallback (200.html), the file browser with folder / filename / content search and hidden files,
+`?raw`, preview, MIME sniffing. Not portable (listed in Engines with the reason): the write API, the git push API,
+the watchdog snapshot and the app panels.
+
+Testers: `test-c3-webserver-ports.sh` (map, owners, readers, loopback-only DNS client), `test-c3-webserver-pages.sh`
+(Pages links, Configs About and Engines), `test-c3-webserver-screenshot.sh` (the real server in headless Chrome at
+Galaxy A37 density, 1080 x 2340 px), plus `cargo test` (the registry, DNS and port guards).

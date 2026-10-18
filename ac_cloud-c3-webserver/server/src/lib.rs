@@ -677,7 +677,7 @@ mod tests {
 
         let page = get(port, "/");
         assert_eq!(page.status, 200);
-        assert!(page.body.contains("fleet diagnostics") && page.body.contains("/__api__/diag/logcat"));
+        assert!(page.body.contains("Fleet diagnostics") && page.body.contains("/__api__/diag/logcat"));
         assert!(get(port, "/__api__/diag/about").body.contains("\"versionName\":\"9.9\""));
         assert!(get(port, "/__api__/diag/diagnose").body.contains("stub"));
         let lc = get(port, "/__api__/diag/logcat?n=50&scope=all&errors=1");

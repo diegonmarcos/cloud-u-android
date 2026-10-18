@@ -70,13 +70,13 @@ pub const ENGINES: &[Engine] = &[
     e("search", "Search", Group::Feature, true, "/__api__/search", "Folder, filename and content search. Breadth-first, bounded by 3 s, 50 000 entries and 200 results, and says when it stopped early."),
     e("dotfiles", "Hidden files", Group::Feature, true, "dot=1", "Lists and searches dot entries when asked (the Dot files switch). Off: hidden entries stay hidden whatever the request says."),
     e("preview", "Preview", Group::Feature, true, "/__api__/read", "Returns a text file (at most 5 MB) as JSON for the Files tab's preview pane."),
-    e("diag", "Fleet diagnostics bridge", Group::Feature, true, "cloud.app :8003", "About, Logcat and Diagnose of the SuperApp, read through its signature-permission provider. Off: :8003 answers 503."),
+    e("diag", "Fleet diagnostics bridge", Group::Feature, true, "the diagnostics listener", "About, Logcat and Diagnose of the SuperApp, read through its signature-permission provider. Off: the diagnostics page answers 503."),
     // ── core ────────────────────────────────────────────────────────────
     e("listing", "Directory listing", Group::Core, false, "/__api__/ls", "Folders first, then files by name, dangling symlinks shown as broken links instead of vanishing."),
     e("static", "Static files", Group::Core, false, "everything else", "MIME table with text sniffing for unknown types, ?raw plain-text passthrough, HEAD."),
     e("confine", "Root confinement", Group::Core, false, "every path", "Each path is canonicalised and must stay inside the served root; .. and symlinks that leave it are 404."),
     e("loopback", "Loopback only", Group::Core, false, "all listeners", "Binds 127.0.0.1 and refuses any other peer. GET and HEAD only; the single POST is this page's own switch."),
-    e("dns", "Private DNS", Group::Core, false, "udp 127.0.0.1:5353", "Answers termux.app, nix.app, emulated.app and cloud.app with 127.0.0.1 and refuses every other name. Only our own apps ask it."),
+    e("dns", "Private DNS", Group::Core, false, "the DNS socket", "Answers the four private .app names declared in build.json with 127.0.0.1 and refuses every other name. Only our own apps ask it; the system never does."),
     e("opener", "Open in cloud-browser", Group::Core, false, "/__api__/open", "The Pages tab's links hand the URL to cloud-browser, which resolves the names through the private DNS."),
     // ── in my-webserver, not portable ───────────────────────────────────
     np("write", "Write API", "the write endpoint", "Writes a file under an allow-listed directory with a shared-secret token.", "Needs a token file provisioned by home-manager and is a write path into shared storage; this app is read-only by design."),
