@@ -7,7 +7,8 @@ name: "PROBE PhoneAppsComposeTest flake (temporary, scratch branch only)"
 # with the build cache off and the previous results deleted so no iteration is answered from a cache.
 
 on:
-  workflow_dispatch: {}
+  push:
+    branches: [claude/probe-phoneapps]
 
 permissions:
   contents: read
