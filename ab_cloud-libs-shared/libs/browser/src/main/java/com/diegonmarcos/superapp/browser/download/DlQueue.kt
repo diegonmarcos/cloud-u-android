@@ -8,6 +8,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.webkit.URLUtil
+import com.diegonmarcos.superapp.browser.MhtmlIntent
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -92,7 +93,7 @@ class DlQueue private constructor(context: Context) {
         val name = DlFormat.dispositionName(disposition) ?: DlFormat.safeName(URLUtil.guessFileName(url, disposition, mime))
         val id = UUID.randomUUID().toString()
         val file = File(File(root(), id), name)
-        val j = DlJob(id = id, url = url, fileName = name, mime = mime.orEmpty(), dir = dir, userAgent = userAgent,
+        val j = DlJob(id = id, url = url, fileName = name, mime = MhtmlIntent.downloadMime(name, mime).orEmpty(), dir = dir, userAgent = userAgent,
             referer = referer, cookie = cookie, checksum = checksum, file = file.path, saveToSharedStore = policy.sharedStore,
             createdAt = System.currentTimeMillis())
         put(j, save = true)

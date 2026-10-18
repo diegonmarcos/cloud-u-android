@@ -681,6 +681,7 @@ class BrowserHostFragment : Fragment() {
     // ── #887 site data: offline copies, storage, cookies ─────────────────────────────────────
 
     private val offlineSites by lazy { OfflineSites(requireContext()) }
+    private val mhtml by lazy { MhtmlOpener(requireContext()) }
     private val saveState = SaveState()
 
     /** Save the current page (one MHTML) or the whole site (same origin, within the Configs limits). */
@@ -936,7 +937,7 @@ class BrowserHostFragment : Fragment() {
                     onCommitted(tabKey, view, u)
                     postDelayed({ if (webView === this@apply) saveTabState() }, 400)
                     // #887 an offline copy is not a visit.
-                    if (offlineSites.isOffline(u)) return
+                    if (offlineSites.isOffline(u) || mhtml.allowsFile(u)) return
                     // #802 a private tab is never recorded: no history, no preview.
                     val origin = runCatching { java.net.URI(u) }.getOrNull()?.let { "${it.scheme}://${it.authority}" }
                     if (!privateSession.visit(prefs.byId(tabKey), origin)) return
@@ -1099,7 +1100,11 @@ class BrowserHostFragment : Fragment() {
             overlay { close ->
                 com.diegonmarcos.superapp.browser.download.DownloadsScreen(
                     com.diegonmarcos.superapp.browser.download.DlQueue.get(ctx),
-                    onOpen = { j -> com.diegonmarcos.superapp.browser.download.DlPublisher.openIntent(ctx, j)
+                    onOpen = { j ->
+                        // A saved page (.mhtml) opens here as a tab; the file is read through the same uri another app would get.
+                        val page = if (MhtmlIntent.isMhtmlName(j.fileName)) com.diegonmarcos.superapp.browser.download.DlPublisher.shareUri(ctx, j) else null
+                        if (page != null) { close(); mhtml.openUri(page) { url -> if (url != null && isAdded) openUrlInTab(url) else toast("Could not open ${j.fileName}") } }
+                        else com.diegonmarcos.superapp.browser.download.DlPublisher.openIntent(ctx, j)
                         ?.let { runCatching { startActivity(it) }.onFailure { toast("No app opens this file") } } ?: toast("The file is gone") },
                     onShare = { j -> com.diegonmarcos.superapp.browser.download.DlPublisher.shareIntent(ctx, j)
                         ?.let { startActivity(it) } ?: toast("The file is gone") },
@@ -1110,10 +1115,17 @@ class BrowserHostFragment : Fragment() {
         val rows = downloads.all().map { ListRow(it.id.toString(), it.file, "${downloads.status(it.id)} · ${it.url}") }
         overlay { close ->
             BrowserListScreen("Downloads", rows, empty = "Nothing downloaded yet.",
-                onOpen = { startActivity(android.content.Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS)) },
+                onOpen = { r -> close(); openDownload(r) },
                 onRemove = null, headerAction = "Clear list" to { downloads.clear(); close(); showDownloads() },
                 onClose = close)
         }
+    }
+
+    /** A saved page (.mhtml) opens here as a tab; any other download opens in the system's Downloads. */
+    private fun openDownload(r: ListRow) {
+        val uri = if (MhtmlIntent.isMhtmlName(r.title)) r.id.toLongOrNull()?.let { downloads.uriOf(it) } else null
+        if (uri == null) { startActivity(android.content.Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS)); return }
+        mhtml.openUri(uri) { url -> if (url != null && isAdded) openUrlInTab(url) else toast("Could not open ${r.title}") }
     }
 
     // ── long-press on page content (BrowserContextMenu holds the rules) ──
@@ -1277,7 +1289,8 @@ class BrowserHostFragment : Fragment() {
         applyViewMode(wv)
         applyShields(wv, url)
         // #887 file access only for a page of an offline copy (targetSdk 30+ has it off by default).
-        s.allowFileAccess = offlineSites.isOffline(url)
+        // An .mhtml archive opened from outside (or copied to the cache from a content:// uri) is read the same way.
+        s.allowFileAccess = offlineSites.isOffline(url) || mhtml.allowsFile(url)
     }
 
     /** #802 per-site shields: a `deny` rule for javascript / images on this host turns it off here. */

@@ -88,6 +88,7 @@ class BrowserDownloads(context: Context) {
     fun enqueue(url: String, userAgent: String?, contentDisposition: String?, mime: String?, dir: String,
                 cookieHeader: (String) -> String?): BrowserDownload {
         val name = URLUtil.guessFileName(url, contentDisposition, mime)
+        val kind = MhtmlIntent.downloadMime(name, mime)   // a saved page keeps a type the browser opens
         val rel = BrowserBookmarkOps.normFolder(dir).let { if (it.isEmpty()) name else "$it/$name" }
         val req = DownloadManager.Request(Uri.parse(url))
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
@@ -95,9 +96,9 @@ class BrowserDownloads(context: Context) {
             .setTitle(name)
         cookieHeader(url)?.let { req.addRequestHeader("Cookie", it) }
         userAgent?.let { req.addRequestHeader("User-Agent", it) }
-        mime?.takeIf { it.isNotBlank() }?.let { req.setMimeType(it) }
+        kind?.takeIf { it.isNotBlank() }?.let { req.setMimeType(it) }
         val id = dm.enqueue(req)
-        val d = BrowserDownload(id, url, rel, mime.orEmpty(), System.currentTimeMillis())
+        val d = BrowserDownload(id, url, rel, kind.orEmpty(), System.currentTimeMillis())
         sp.edit().putString(KEY, BrowserDownloadIndex.toJson(BrowserDownloadIndex.add(all(), d)).toString()).apply()
         return d
     }
@@ -109,6 +110,9 @@ class BrowserDownloads(context: Context) {
             else BrowserDownloadIndex.status(c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)))
         }
     }.getOrDefault("unknown")
+
+    /** The content:// uri of a finished download, or null while it is not one. */
+    fun uriOf(id: Long): Uri? = runCatching { dm.getUriForDownloadedFile(id) }.getOrNull()
 
     /** Forget the index (the files stay in Downloads). */
     fun clear() {
