@@ -41,68 +41,6 @@ import com.diegonmarcos.superapp.settings.GridColumns
 import com.diegonmarcos.superapp.ui.Haptics
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
-/**
- * The launcher tile (was R.layout.item_tile + the three binders in TileGridFragment,
- * HomeGroupedFragment and GroupedTilesFragment): a glass card, a glyph fitted to its column and a
- * label under it. One composable for every Cloud grid, so the icon arithmetic (the same
- * [GridColumns] helpers the 360 dp test asserts), the press feel, the haptic and the install ring
- * cannot drift between them.
- *
- * [cols] / [pageDp] / [chromeDp] are the grid's column count, its page padding and the tile's own
- * margin+padding (what [GridColumns.iconPx] subtracts from the cell). [height] is the CELL's height, margin
- * included: a flat grid's card is item_tile.xml's 128 dp inside its 3 dp margin (134), HomeGrouped's rows are 76
- * (a 70 dp card). TileSizeTest pins both.
- */
-@Composable
-internal fun LauncherTile(
-    tileId: String,
-    label: String,
-    @DrawableRes iconRes: Int,
-    cols: Int,
-    pageDp: Int,
-    chromeDp: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    height: Dp = TILE_CELL_HEIGHT,
-) {
-    val p = LocalKitPalette.current
-    val ctx = LocalContext.current
-    val view = LocalView.current
-    // The density Compose itself lays out with (LocalDensity), not the Activity resources': an in-process scale
-    // (SystemDisplay.wrap) or a hosting window with another Configuration must not make the glyph disagree with its tile.
-    val density = androidx.compose.ui.platform.LocalDensity.current.density
-    val widthPx = ctx.resources.displayMetrics.widthPixels
-    val iconDp = remember(cols, pageDp, chromeDp, density, widthPx) { tileIconDp(widthPx, density, cols, pageDp, chromeDp) }
-    val src = remember { MutableInteractionSource() }
-    val pressed by src.collectIsPressedAsState()
-    // The old tile_press animation: a quick shrink while the finger is down.
-    val scale by animateFloatAsState(if (pressed) 0.94f else 1f, label = "tile-press")
-    Column(
-        modifier.height(height).padding(3.dp)
-            .onSizeChanged { TileMetrics.tile(tileId, it.width, it.height, density) } // the CARD: inside the 3 dp margin
-            .scale(scale)
-            .clip(RoundedCornerShape(16.dp)).background(p.surface)
-            .clickable(interactionSource = src, indication = LocalIndication.current) {
-                Haptics.tap(view)
-                onClick()
-            }
-            .extInstallRing(tileId, iconDp, iconTop = 8.dp)
-            .padding(4.dp).testTag(tileTag(tileId)),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(painterResource(iconRes), contentDescription = null, tint = p.textPrimary,
-            modifier = Modifier.padding(top = 4.dp).size(iconDp).testTag(tileIconTag(tileId))
-                .onSizeChanged { TileMetrics.icon(tileId, it.width, it.height, density) })
-        Text(label, color = p.textPrimary, fontSize = GridColumns.labelSp(cols).sp, maxLines = 2,
-            overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
-    }
-}
-
-/** A flat grid cell: the old item_tile.xml card (128 dp) plus its 3 dp margin a side. */
-internal val TILE_CELL_HEIGHT: Dp = 134.dp
-
 /** The icon edge in dp: [GridColumns.iconPx] over the screen minus [pageDp], split [cols] ways, minus [chromeDp]. */
 internal fun tileIconDp(widthPx: Int, density: Float, cols: Int, pageDp: Int, chromeDp: Int): Dp {
     val cell = GridColumns.cellPx(widthPx - (pageDp * density).toInt(), cols)
@@ -176,10 +114,18 @@ internal fun TileSubgroupHeader(text: String, modifier: Modifier = Modifier, com
 internal fun tileTag(id: String) = "tile:$id"
 internal fun tileIconTag(id: String) = "tileicon:$id"
 
+/** The live build's tile measured 70 dp tall on the A37 (grid-fit@a37-1.0.png, 195 px at 2.8125); the owner asked for half,
+ *  same column width. The plate hugs the glyph: a 24 dp rounded square around a 20 dp icon. The ONLY launcher tile. */
+internal val TILE_PLATE: Dp = 24.dp
+internal val TILE_ICON: Dp = 20.dp
+/** Whole tile: half the old 70 dp. Plate 24 + 1 + a 10 sp line. */
+internal val CHIP_TILE_HEIGHT: Dp = 35.dp
+/** Gap between tile rows. */
+internal val CHIP_GAP: Dp = 4.dp
+
 /**
- * The fitted (Configs) tile: a 26 dp glyph with a small label under it, hugged by a faint plate - no 128 dp card.
- * It takes the height its row was given; when that is short (big font, display zoom) the glyph drops to 22 dp and
- * the label to one line at 9 sp, so the grid shrinks its labels before it would ever scroll.
+ * The launcher tile: a 20 dp glyph on a faint 24 dp plate that hugs it (never stretched across the column), and a
+ * one-line 9 sp label UNDER the plate. Every tile grid draws this; there is no other tile.
  */
 @Composable
 internal fun CompactTile(tileId: String, label: String, @DrawableRes iconRes: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -189,26 +135,23 @@ internal fun CompactTile(tileId: String, label: String, @DrawableRes iconRes: In
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.94f else 1f, label = "tile-press")
-    androidx.compose.foundation.layout.BoxWithConstraints(modifier.padding(2.dp)) {
-        val roomy = maxHeight >= 60.dp
-        val iconDp = if (maxHeight >= 52.dp) 26.dp else 22.dp
-        Column(
-            Modifier.fillMaxSize()
-                .onSizeChanged { TileMetrics.tile(tileId, it.width, it.height, density) }
-                .scale(scale)
-                .clip(RoundedCornerShape(10.dp)).background(p.surface.copy(alpha = 0.45f))
-                .clickable(interactionSource = src, indication = LocalIndication.current) { Haptics.tap(view); onClick() }
-                .extInstallRing(tileId, iconDp, iconTop = 4.dp)
-                .padding(horizontal = 2.dp, vertical = 2.dp).testTag(tileTag(tileId)),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
+    Column(
+        modifier.height(CHIP_TILE_HEIGHT)
+            .onSizeChanged { TileMetrics.tile(tileId, it.width, it.height, density) }
+            .scale(scale)
+            .clickable(interactionSource = src, indication = LocalIndication.current) { Haptics.tap(view); onClick() }
+            .testTag(tileTag(tileId)),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(Modifier.size(TILE_PLATE).clip(RoundedCornerShape(7.dp)).background(p.textPrimary.copy(alpha = 0.08f))
+            .extInstallRing(tileId, TILE_ICON, iconTop = 2.dp).testTag("tileplate:$tileId"),
+            contentAlignment = Alignment.Center) {
             Icon(painterResource(iconRes), contentDescription = null, tint = p.textPrimary,
-                modifier = Modifier.size(iconDp).testTag(tileIconTag(tileId))
+                modifier = Modifier.size(TILE_ICON).testTag(tileIconTag(tileId))
                     .onSizeChanged { TileMetrics.icon(tileId, it.width, it.height, density) })
-            Text(label, color = p.textPrimary, fontSize = if (roomy) 10.sp else 9.sp, lineHeight = if (roomy) 11.sp else 10.sp,
-                maxLines = if (roomy) 2 else 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 1.dp).testTag("tilelabel:$tileId"))
         }
+        Text(label, color = p.textPrimary, fontSize = 9.sp, lineHeight = 10.sp, maxLines = 1,
+            overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 1.dp, start = 1.dp, end = 1.dp).testTag("tilelabel:$tileId"))
     }
 }

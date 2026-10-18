@@ -19,8 +19,8 @@ import org.robolectric.annotation.Config
 /**
  * #773 — the converted tiles are exactly as big as the View tiles they replaced ("the buttons are huge").
  *
- *   Z1 a flat-grid tile cell is item_tile.xml's 128 dp card inside its 3 dp margin: 134 dp
- *   Z2 a HomeGrouped row is 76 dp, as before
+ *   Z1 the one tile (CompactTile) is 35 dp: a 24 dp plate hugging a 20 dp glyph, a 9 sp line under it
+ *   Z2 grep: the old big LauncherTile / TILE_CELL_HEIGHT never comes back
  *   Z3 a group heading is its 11 sp caption plus its 20 dp of padding - NOT a 24 sp Material line (the dense theme is on)
  *   Z4 the icon is the fitted size the 360 dp test asserts, never more than the old 32 dp
  */
@@ -34,18 +34,20 @@ class TileSizeTest : KitPageHarness() {
         androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.wrapContentSize(androidx.compose.ui.Alignment.TopStart)) { content() }
 
     @Test
-    fun `Z1 a flat tile cell is 134 dp`() {
-        showKit { Loose { LauncherTile("t", "Label", R.drawable.ic_settings, cols = 8, pageDp = 0, chromeDp = 18, onClick = {}) } }
-        // The tag sits inside the cell's 3 dp margin: the CARD is item_tile.xml's 128 dp, the cell around it 128 + 2 x 3.
-        compose.onNodeWithTag(tileTag("t")).assertHeightIsEqualTo(128.dp)
-        assertEquals(134.dp, TILE_CELL_HEIGHT)
+    fun `Z1 a tile is half the old 70 dp - 35 dp - with a 24 dp plate hugging a 20 dp glyph`() {
+        showKit { Loose { CompactTile("t", "Label", R.drawable.ic_settings, onClick = {}) } }
+        compose.onNodeWithTag(tileTag("t")).assertHeightIsEqualTo(35.dp)
+        compose.onNodeWithTag("tileplate:t").assertHeightIsEqualTo(24.dp)
+        compose.onNodeWithTag(tileIconTag("t")).assertHeightIsEqualTo(20.dp)
     }
 
     @Test
-    fun `Z2 a HomeGrouped row is 76 dp`() {
-        showKit { Loose { LauncherTile("t", "Label", R.drawable.ic_settings, cols = 5, pageDp = 0, chromeDp = 18, onClick = {}, height = 76.dp) } }
-        // 76 dp cell = 70 dp card + the same 3 dp margin a side.
-        compose.onNodeWithTag(tileTag("t")).assertHeightIsEqualTo(70.dp)
+    fun `Z2 the old big tile is gone from the source tree`() {
+        val root = java.io.File(System.getProperty("user.dir"), "src/main/java")
+        val hits = root.walkTopDown().filter { it.isFile && it.extension == "kt" }
+            .filter { f -> f.readText().let { Regex("\\bLauncherTile\\(|TILE_CELL_HEIGHT").containsMatchIn(it) } }
+            .map { it.name }.toList()
+        assertTrue("the old 128 dp LauncherTile is used again in $hits", hits.isEmpty())
     }
 
     @Test

@@ -60,7 +60,7 @@ class HomeGroupedFragment : KitComposeFragment() {
     override fun Content() {
         val ctx = LocalContext.current
         // build.json::ui.tile_columns is the default; the Controls stepper overrides it.
-        val cols = GridColumns.cloud(ctx)
+        val cols = TileGridFragment.CHIP_COLUMNS
         val groups = remember { buckets(ctx) }
         val click = { id: String -> (activity as? TileGridFragment.TileClickListener)?.onTileClicked(id); Unit }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(6.dp)) {
@@ -73,15 +73,11 @@ class HomeGroupedFragment : KitComposeFragment() {
                 for (row in bucket.tiles.chunked(cols)) {
                     Row(Modifier.fillMaxWidth()) {
                         for ((id, label, iconName) in row) {
-                            LauncherTile(
+                            CompactTile(
                                 tileId = id, label = label,
                                 iconRes = Sections.iconResFor(ctx, iconName).takeIf { it != 0 } ?: R.drawable.ic_settings,
-                                cols = cols, pageDp = 8, chromeDp = 16,
                                 onClick = { click(id) },
-                                // Tightened from 96dp to 76dp to match GroupedTilesFragment's compact density
-                                // now that tile_columns is 6 (more tiles per line → each is narrower).
-                                height = 76.dp,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).padding(2.dp),
                             )
                         }
                         for (k in row.size until cols) Spacer(Modifier.weight(1f))

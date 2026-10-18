@@ -38,7 +38,7 @@ import java.io.File
 @Config(sdk = [34], application = Application::class)
 class ConfigsIconSizeTest : KitPageHarness() {
 
-    private fun configsGrid(): TileGridFragment {
+    private fun configsGrid(title: String = "Configs"): TileGridFragment {
         val section = Sections.byId("config")!!
         val ctx = compose.activity
         val tiles = section.pages.filterNot { it.hidden }.map { p ->
@@ -52,13 +52,13 @@ class ConfigsIconSizeTest : KitPageHarness() {
             )
         }
         assertTrue("the Configs section declares tiles", tiles.isNotEmpty())
-        return TileGridFragment.newInstance("Configs", tiles, columns = section.gridColumns, fit = true)
+        return TileGridFragment.newInstance(title, tiles, columns = section.gridColumns, fit = true)
     }
 
-    private fun guard(name: String, fontScale: Float) {
+    private fun guard(name: String, fontScale: Float, title: String = "Configs") {
         RuntimeEnvironment.setFontScale(fontScale)
         TileMetrics.clear()
-        val page = show(configsGrid())
+        val page = show(configsGrid(title))
         compose.waitForIdle()
         val root = compose.activity.findViewById<View>(android.R.id.content)
         val out = File(System.getProperty("user.dir"), "build/configs-screens").apply { mkdirs() }
@@ -74,8 +74,11 @@ class ConfigsIconSizeTest : KitPageHarness() {
             val t = compose.onNodeWithTag(tileTag(id), useUnmergedTree = true).getBoundsInRoot()
             assertTrue("$name: tile $id bottom ${t.bottom} dp is below the viewport $viewportDp dp (grid scrolls)", t.bottom.value <= viewportDp + 0.5f)
             assertTrue("$name: tile $id is ${t.height} tall, max 80 dp", t.height.value <= 80.5f)
+            assertTrue("$name: tile $id is ${t.height} tall, the owner asked for half the old 70 dp (35)", t.height.value <= 35.5f)
+            val pl = compose.onNodeWithTag("tileplate:$id", useUnmergedTree = true).getBoundsInRoot()
+            assertTrue("$name: plate of $id is ${pl.width} wide, it must hug the glyph (<= 28 dp)", pl.width.value <= 28.5f)
             val i = compose.onNodeWithTag(tileIconTag(id), useUnmergedTree = true).getBoundsInRoot()
-            assertTrue("$name: icon of $id is ${i.width} x ${i.height}, min 22 dp", i.width.value >= 21.9f && i.height.value >= 21.9f)
+            assertTrue("$name: icon of $id is ${i.width} x ${i.height}, min 20 dp", i.width.value >= 19.9f && i.height.value >= 19.9f)
             labels += id to compose.onNodeWithTag("tilelabel:$id", useUnmergedTree = true).getBoundsInRoot()
         }
         for (a in labels.indices) for (b in a + 1 until labels.size) {
@@ -93,4 +96,11 @@ class ConfigsIconSizeTest : KitPageHarness() {
 
     @Test @Config(qualifiers = "w360dp-h600dp-480dpi")
     fun `F3 display zoom and fontScale 1_3 shrink the labels instead of scrolling`() = guard("zoom-1.3", 1.3f)
+
+    // Cloud ▸ CONFIGS mirrors the config section through sectionGrid with the page label as the title: the same grid.
+    @Test @Config(qualifiers = "w384dp-h672dp-450dpi")
+    fun `F4 Cloud CONFIGS tab fits one A37 screen at fontScale 1_0`() = guard("cloud-configs-a37-1.0", 1.0f, "Configs")
+
+    @Test @Config(qualifiers = "w384dp-h672dp-450dpi")
+    fun `F5 Cloud CONFIGS tab fits one A37 screen at fontScale 1_15`() = guard("cloud-configs-a37-1.15", 1.15f, "Configs")
 }

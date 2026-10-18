@@ -94,50 +94,13 @@ class TileGridFragment : KitComposeFragment() {
         val breaks = args.getBooleanArray(ARG_TILE_BREAKS) ?: BooleanArray(0)
         val p = LocalKitPalette.current
 
-        // Configs (ARG_FIT): the whole grid must fit the viewport with no scroll (owner's Samsung A37,
-        // 384 x 672 dp between the top bar and the bottom nav). Rows share the height the headings leave,
-        // capped at FIT_ROW_MAX_DP, and the column only scrolls when the height is unbounded.
-        if (args.getBoolean(ARG_FIT, false)) {
-            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
-                val bounded = constraints.hasBoundedHeight
-                val declared = args.getInt(ARG_COLS, 0).takeIf { it > 0 } ?: GridColumns.cloud(requireContext())
-                val cols = fitColumns(maxWidth.value, declared)
-                val click = { id: String -> (activity as? TileClickListener)?.onTileClicked(id); Unit }
-                val outer = if (bounded) Modifier.fillMaxSize() else Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-                Column(outer.padding(horizontal = 4.dp)) {
-                    Text(title.uppercase(), color = p.accent, style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(start = 10.dp, top = 4.dp, end = 10.dp, bottom = 0.dp).testTag(TAG_TITLE))
-                    for (item in plan(ids, groups, subs, breaks, cols)) {
-                        when (item) {
-                            is GridItem.Header -> TileGroupHeader(item.text, Modifier.testTag(headerTag(item.text)), compact = true)
-                            is GridItem.SubHeader -> TileSubgroupHeader(item.text, Modifier.testTag(subHeaderTag(item.text)), compact = true)
-                            is GridItem.TileRow -> {
-                                val rowMod = if (bounded) Modifier.fillMaxWidth().weight(1f).heightIn(max = FIT_ROW_MAX_DP.dp)
-                                             else Modifier.fillMaxWidth().height(FIT_ROW_MAX_DP.dp)
-                                Row(rowMod) {
-                                    for (k in 0 until item.span) {
-                                        val at = item.first + k
-                                        if (ids[at].startsWith(SEPARATOR_PREFIX)) { TileSeparator(labels[at]); continue }
-                                        CompactTile(
-                                            tileId = ids[at], label = labels[at],
-                                            iconRes = icons.getOrNull(at)?.takeIf { it != 0 } ?: R.drawable.ic_settings,
-                                            onClick = { click(ids[at]) },
-                                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                                        )
-                                    }
-                                    for (k in item.slots until cols) Spacer(Modifier.weight(1f))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            return
-        }
-
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(6.dp)) {
+        // Every grid (Configs fit or not) is the same chip grid: CHIP_COLUMNS columns of 32 dp chips, 4 dp gaps,
+        // small headings. The column scrolls only if a section is ever too long for the viewport.
+        val cols = CHIP_COLUMNS
+        val click = { id: String -> (activity as? TileClickListener)?.onTileClicked(id); Unit }
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 6.dp)) {
             Text(title.uppercase(), color = p.accent, style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(start = 10.dp, top = 12.dp, end = 10.dp, bottom = 4.dp).testTag(TAG_TITLE))
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp, end = 4.dp, bottom = 0.dp).testTag(TAG_TITLE))
             if (ids.isEmpty()) {
                 Text(stringResource(R.string.tile_grid_empty), color = p.textPrimary,
                     style = MaterialTheme.typography.labelMedium,
@@ -145,29 +108,22 @@ class TileGridFragment : KitComposeFragment() {
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 return@Column
             }
-            // build.json::ui.tile_columns is the default; the Controls stepper overrides it.
-            // A section may declare its own count (Configs: 8); else the Cloud grid's.
-            val cols = args.getInt(ARG_COLS, 0).takeIf { it > 0 } ?: GridColumns.cloud(requireContext())
-            val click = { id: String -> (activity as? TileClickListener)?.onTileClicked(id); Unit }
             for (item in plan(ids, groups, subs, breaks, cols)) {
                 when (item) {
-                    is GridItem.Header -> TileGroupHeader(item.text, Modifier.testTag(headerTag(item.text)))
-                    is GridItem.SubHeader -> TileSubgroupHeader(item.text, Modifier.testTag(subHeaderTag(item.text)))
-                    // wrap_content row → tile keeps its fixed height, the column scrolls. Auto-fit blew up
-                    // single-row sections into giant tiles.
-                    is GridItem.TileRow -> Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+                    is GridItem.Header -> TileGroupHeader(item.text, Modifier.testTag(headerTag(item.text)), compact = true)
+                    is GridItem.SubHeader -> TileSubgroupHeader(item.text, Modifier.testTag(subHeaderTag(item.text)), compact = true)
+                    is GridItem.TileRow -> Row(Modifier.fillMaxWidth().padding(vertical = CHIP_GAP / 2),
+                        horizontalArrangement = Arrangement.spacedBy(CHIP_GAP)) {
                         for (k in 0 until item.span) {
                             val at = item.first + k
                             if (ids[at].startsWith(SEPARATOR_PREFIX)) { TileSeparator(labels[at]); continue }
-                            LauncherTile(
+                            CompactTile(
                                 tileId = ids[at], label = labels[at],
                                 iconRes = icons.getOrNull(at)?.takeIf { it != 0 } ?: R.drawable.ic_settings,
-                                cols = cols, pageDp = 0, chromeDp = 18,
                                 onClick = { click(ids[at]) },
                                 modifier = Modifier.weight(1f),
                             )
                         }
-                        // A short last row of a group gets spacers so the next group starts on its own row.
                         for (k in item.slots until cols) Spacer(Modifier.weight(1f))
                     }
                 }
@@ -188,8 +144,10 @@ class TileGridFragment : KitComposeFragment() {
         private const val ARG_TILE_BREAKS = "tile_breaks"
         private const val ARG_FIT         = "tile_fit"
 
-        /** Tallest a fitted (Configs) tile row may be: a 26 dp glyph and a label, hugged. */
-        const val FIT_ROW_MAX_DP = 68
+        /** Columns of every tile grid. */
+        const val CHIP_COLUMNS = 5
+        /** Tallest a tile may be: plate + one label line. */
+        const val FIT_ROW_MAX_DP = 35
         /** Narrowest a fitted tile may be before the grid drops a column. */
         const val FIT_MIN_CELL_DP = 72f
 

@@ -41,10 +41,10 @@ class ExtInstallReuseTest {
     }
 
     @Test fun tilesWearTheRing() {
-        // The Compose tile (LauncherTile) wears the ring once for every grid built on it...
+        // The Compose tile (CompactTile) wears the ring once for every grid built on it...
         assertTrue(src("launcher/LauncherTiles.kt").contains(".extInstallRing("))
         for (f in listOf("launcher/TileGridFragment.kt", "launcher/HomeGroupedFragment.kt"))
-            assertTrue("$f draws its tiles with LauncherTile", src(f).contains("LauncherTile("))
+            assertTrue("$f draws its tiles with CompactTile", src(f).contains("CompactTile("))
         // ...and Cloud ▸ Apps' strip cell wears it through the same modifier.
         assertTrue(src("launcher/GroupedTilesFragment.kt").contains(".extInstallRing("))
     }
