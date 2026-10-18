@@ -156,7 +156,7 @@ PY
   grep -q 'StoreDensity\.' "$S/app/src/main/java/com/diegonmarcos/cloudstore/ConfigsPage.kt" && ok "Cloud Store's screens read StoreDensity" || bad "Cloud Store's Configs page does not read StoreDensity"
   grep -q 'StoreDensity\.T_' "$L/StoreCloudFragment.kt" && grep -q 'StoreDensity\.T_' "$L/StorePhoneFragment.kt" && ok "the Cloud and Phone shelves draw their type from the ramp" || bad "a shelf page does not use the StoreDensity type ramp"
   # 7. #868 the fleet nav pattern: the island's five pages (#896) are build.json::ui.sections, the bar is the shared island
-  python3 - "$S/build.json" "$L/../../../../../assets/appstore-feeds.json" <<'PY' && ok "ui.bottom_nav is cloud, phone, feed, access (four, each a ui.sections id; settings is the section the top bar's Configs opens), Phone's pages are installed|search|declared, Feed's the declared feeds, Access's mesh|ipc|android|cloud, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, feed, access (+ the settings section)"
+  python3 - "$S/build.json" "$L/../../../../../assets/appstore-feeds.json" <<'PY' && ok "ui.bottom_nav is cloud, phone, feed, access (four, each a ui.sections id; settings is the section the top bar's Configs opens), Phone's pages are installed|search|declared, Feed's the declared feeds, Access's mesh|ipc|identity|android|cloud, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, feed, access (+ the settings section)"
 import json, os, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
 secs = {s.get('id'): s for s in ui.get('sections') or []}
@@ -164,7 +164,7 @@ feeds = json.load(open(sys.argv[2]))['feeds'] if os.path.exists(sys.argv[2]) els
 pg = lambda i: [p.get('id') for p in secs.get(i, {}).get('pages') or []]
 ok = (ui.get('bottom_nav') == ['cloud', 'phone', 'feed', 'access']
       and set(ui['bottom_nav']) <= set(secs) and 'settings' in secs and 'mesh' not in secs and 'perms' not in secs
-      and pg('access') == ['mesh', 'ipc', 'android', 'cloud']
+      and pg('access') == ['mesh', 'ipc', 'identity', 'android', 'cloud']
       and pg('phone') == ['installed', 'search', 'declared']
       and (pg('feed') == [f['id'] for f in feeds] if feeds else len(pg('feed')) >= 2)
       and ui.get('default_section') == 'cloud')

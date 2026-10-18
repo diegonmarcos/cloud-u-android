@@ -44,13 +44,14 @@ import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.appstore.BuildConfig as StoreBuild
 import com.diegonmarcos.superapp.appstore.StoreDensity
 import com.diegonmarcos.superapp.appstore.AppsMeshFragment
+import com.diegonmarcos.superapp.appstore.FleetIdentityPage
 import com.diegonmarcos.superapp.appstore.IpcMeshPage
 import androidx.fragment.compose.AndroidFragment
 import com.diegonmarcos.superapp.updater.Fleet
 
 /**
- * Store > Access: Apps Mesh, IPC, Android Perms and Cloud Perms, one bottom-nav destination whose
- * top tabs (build.json::ui access.pages: mesh, ipc, android, cloud) MainActivity draws with PageTabs.
+ * Store > Access: Apps Mesh, IPC, Identity, Android Perms and Cloud Perms, one bottom-nav destination whose
+ * top tabs (build.json::ui access.pages: mesh, ipc, identity, android, cloud) MainActivity draws with PageTabs.
  * #ipc IPC is the fleet's IPC Mesh (libs:appstore IpcMeshPage): every IPC endpoint each member exposes.
  * Apps Mesh left the Cloud page; the permissions page that was here split in two - the OS's own
  * runtime grants, and the constellation permission - one page each instead of two panes per app.
@@ -67,6 +68,8 @@ fun AccessPage(page: String) {
         PAGE_MESH -> AndroidFragment<AppsMeshFragment>(Modifier.fillMaxSize())
         // #ipc IPC Mesh: the same shared composable SuperApp > Configs > Network > IPC draws (libs:appstore).
         PAGE_IPC -> IpcMeshPage()
+        // Identity: the same shared composable SuperApp > Configs > Apps Mesh > Identity draws (libs:appstore).
+        PAGE_IDENTITY -> FleetIdentityPage()
         PAGE_ANDROID -> AndroidPermsPage()
         else -> PermsList(cloud = true)
     }
@@ -74,6 +77,7 @@ fun AccessPage(page: String) {
 
 const val PAGE_MESH = "mesh"
 const val PAGE_IPC = "ipc"
+const val PAGE_IDENTITY = "identity"
 const val PAGE_ANDROID = "android"
 const val PAGE_CLOUD = "cloud"
 

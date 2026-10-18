@@ -284,7 +284,7 @@
     "shortcut_action": "page:config/dns"
   },
   "ui": {
-    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. The island holds five (libs:bottomnav MAX_BOTTOM, nav-shape N1): Cloud, Phone, Feed, Access, Settings. #896/#896.3 child pages: Phone = Installed | Declared, Feed = Commits | CI-CD (ids = appstore-feeds.json feed ids), Access = Apps Mesh | IPC | Android Perms | Cloud Perms (#ipc: IPC is the fleet's IPC Mesh, libs:appstore IpcMeshPage, the same page SuperApp > Configs > Network > IPC draws). MainActivity draws them with PageTabs and StorePages tells the pages below which is open; a host with no strip (SuperApp's embedded Store) gets Phone's drawn by the fragment. Cloud keeps its data-driven group tabs (one per constellation group, so not declared here) and nothing else: Apps Mesh and Perms moved to Access, Commits and CI-CD to Feed.",
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. The island holds five (libs:bottomnav MAX_BOTTOM, nav-shape N1): Cloud, Phone, Feed, Access, Settings. #896/#896.3 child pages: Phone = Installed | Declared, Feed = Commits | CI-CD (ids = appstore-feeds.json feed ids), Access = Apps Mesh | IPC | Identity | Android Perms | Cloud Perms (#ipc: IPC is the fleet's IPC Mesh, libs:appstore IpcMeshPage, the same page SuperApp > Configs > Network > IPC draws; Identity is libs:appstore FleetIdentityPage, the same page SuperApp > Configs > Apps Mesh > Identity draws: each fleet app's Linux uid, its sharedUserId group from data/fleet-identity.json, the live uid and signer, and any mismatch). MainActivity draws them with PageTabs and StorePages tells the pages below which is open; a host with no strip (SuperApp's embedded Store) gets Phone's drawn by the fragment. Cloud keeps its data-driven group tabs (one per constellation group, so not declared here) and nothing else: Apps Mesh and Perms moved to Access, Commits and CI-CD to Feed.",
     "bottom_nav": [
       "cloud",
       "phone",
@@ -353,6 +353,10 @@
           {
             "id": "ipc",
             "label": "IPC"
+          },
+          {
+            "id": "identity",
+            "label": "Identity"
           },
           {
             "id": "android",
