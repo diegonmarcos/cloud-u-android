@@ -27,7 +27,7 @@
 #   T6  an unavailable ntfy poll prunes nothing
 #   T7  prefs are committed, and the page key is set even without a filter row
 #   T8  still zero RecyclerView / ItemTouchHelper / child fragments on this path
-#   T9  the gesture is visibly answered and reversible
+#   T9  the swipe is visibly answered (dismiss), read state stays reversible
 #   T10 the page does not narrate itself — no section subtitle describing what
 #       a section is, no empty state written as a paragraph
 set -uo pipefail
@@ -157,15 +157,17 @@ else
 fi
 
 echo "== the gesture is answered, and reversible =="
-has "$NOTIFY" 'val makeRead = state.isUnread(r)' \
-  && ok "T9: the swipe TOGGLES — swiping a read row marks it unread again" \
-  || bad "T9: the swipe no longer toggles, so there is no way back"
-has "$NOTIFY" 'state.markRead(r.id, makeRead)' && has "$NOTIFY" 'val unread = state.isUnread(r)' \
+# One UI 8: a swipe EITHER way dismisses (archives); read state moved to the
+# long-press sheet, which offers Mark read / Mark unread so it stays reversible.
+has "$NOTIFY" 'state.markRead(r.id, unread)' && has "$NOTIFY" '"Mark unread"' \
+  && ok "T9: the long-press sheet TOGGLES read — a read row can be marked unread again" \
+  || bad "T9: read state can no longer be flipped back"
+has "$NOTIFY" 'val unread = state.isUnread(r)' \
   && ok "T9: the row is repainted into its new state (the cues are derived from the read set)" \
-  || bad "T9: nothing repaints the row — the swipe would look like it did nothing"
-has "$NOTIFY" 'offset.animateTo(out, tween(150))' && has "$NOTIFY" 'offset.snapTo(-out)' \
-  && ok "T9: the row visibly leaves in the direction it was thrown and returns from the other side" \
-  || bad "T9: the commit animation is gone"
+  || bad "T9: nothing repaints the row"
+has "$NOTIFY" 'offset.animateTo(out, tween(160))' && has "$NOTIFY" 'state.archiveRow(r.id, !inArchive)' \
+  && ok "T9: the row visibly slides out in the direction it was thrown and is archived" \
+  || bad "T9: the dismiss animation is gone"
 
 echo "== the page does not narrate itself =="
 # A notification page STATES; it does not explain itself. The section subtitles

@@ -67,6 +67,9 @@ internal object AggregatorModel {
 
     /** The line under a stacked One UI card: how many notifications sit behind the one on top. */
     fun moreLabel(hidden: Int): String = "+$hidden more"
+
+    /** The count pill on a folded One UI notification group: "+N" behind the newest. */
+    fun countPill(hidden: Int): String = "+$hidden"
     const val REFRESH_TIMEOUT_MS = 20_000L
     const val EXTAPP_PREFIX = "extapp:"
     const val C3NTFY_SOURCE = "c3ntfy"
@@ -82,6 +85,14 @@ internal object AggregatorModel {
         ms < 3_600_000  -> "${ms / 60_000}m ago"
         ms < 86_400_000 -> "${ms / 3_600_000}h ago"
         else            -> "${ms / 86_400_000}d ago"
+    }
+
+    /** One UI's notification clock: "now", "5m", "3h", "2d". */
+    fun shortAgo(ms: Long): String = when {
+        ms < 60_000     -> "now"
+        ms < 3_600_000  -> "${ms / 60_000}m"
+        ms < 86_400_000 -> "${ms / 3_600_000}h"
+        else            -> "${ms / 86_400_000}d"
     }
 
     fun filteredAwayNote(total: Int): String = "Nothing new · $total older"

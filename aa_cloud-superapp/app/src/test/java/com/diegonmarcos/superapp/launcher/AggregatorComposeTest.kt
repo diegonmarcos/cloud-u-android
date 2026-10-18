@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.launcher
 import android.app.Application
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -29,13 +30,13 @@ import org.robolectric.annotation.Config
  * #773 — the aggregator page in Compose (was ScrollView + SwipeRefreshLayout + hand-built Views), tested where the
  * View version could only be grepped.
  *
- *   G1 a group draws its header (label, chip), its rows, and folds shut on a header tap
- *   G2 the double tick marks the group read and the read set is persisted under the page id
- *   G3 the Archive pill files the box away and says Restore for a box that is in the Archive
- *   G4 a right swipe flips a row's read state both ways, and under Show=Unread a row that became read leaves
- *   C1 a One UI card draws the app header, a bold title, the body and its bottom Clear controls
+ *   G1 a One UI 8 container is folded (newest + "+N" pill) and opens/folds on a header or pill tap
+ *   G2 the long-press sheet's Mark read marks the group read and the read set is persisted under the page id
+ *   G3 the sheet's Archive files the box away; the Archive card says Restore
+ *   G4 a right swipe dismisses into the Archive; the row sheet flips read both ways
+ *   C1 a container draws the One UI header (name • 2m), the title and the body, no footer buttons
  *   S1 a left swipe (One UI's dismiss) files the row into the Archive
- *   M1 Mark all read / M2 Archive all at the top-right of the list
+ *   M1 Mark all read / M2 Archive all as the centred pill row under the list
  *   T1 the top filter row (page tabs + toggle row) is unchanged
  *   F1 the Filters row draws the declared toggles, persists a pick, and a Tools pick returns Services to All
  *   P1 the page draws one card per declared panel, folds on a header tap and on the bottom-nav re-tap
@@ -73,15 +74,18 @@ class AggregatorComposeTest : KitPageHarness() {
     private fun state(page: String = "test-page") = AggregatorState(ctx, page, emptyList(), emptyList())
 
     @Test
-    fun `G1 a stacked group shows its newest card and expands and collapses on tap`() {
+    fun `G1 a folded group shows its newest item and a +N pill, and opens and folds on tap`() {
         val st = state()
         showKit { GroupBlock(st, view(row("phone:1", 100), row("phone:2", 200)), archived = false) { } }
-        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).assertTextContains("App A", substring = true)
-        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).assertTextContains("2 new · 2", substring = true)
-        // One UI's default: the newest on top of the stack, "+N more" for the rest.
+        compose.onNodeWithTag(AggTags.groupHeader("pkg.a"), useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("App A").assertExists()
+        // One UI's default: the newest on top, "+N" for the rest, chevron in a circle.
         compose.onNodeWithText("title phone:2").assertExists()
         compose.onNodeWithText("title phone:1").assertDoesNotExist()
-        compose.onNodeWithTag(AggTags.groupMore("pkg.a")).assertTextContains("+1 more")
+        compose.onNodeWithTag(AggTags.groupMore("pkg.a")).assertTextContains("+1")
+        compose.onNodeWithTag(AggTags.groupChevron("pkg.a")).assertExists()
+        // A plain count is the pill's job, so the OK chip is not drawn.
+        compose.onNodeWithTag(AggTags.groupChip("pkg.a")).assertDoesNotExist()
         compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performClick()
         compose.onNodeWithText("title phone:1").assertExists()
         compose.onNodeWithTag(AggTags.groupMore("pkg.a")).assertDoesNotExist()
@@ -90,35 +94,39 @@ class AggregatorComposeTest : KitPageHarness() {
         compose.onNodeWithText("title phone:1").assertDoesNotExist()
         // The fold lives on the state, so it survives a re-render (a toggle tap rebuilds every body).
         assertEquals(true, st.collapsedGroups["pkg.a"])
-        // "+N more" expands too.
+        // The "+N" pill opens it too.
         compose.onNodeWithTag(AggTags.groupMore("pkg.a")).performClick()
         compose.onNodeWithText("title phone:1").assertExists()
     }
 
     @Test
-    fun `C1 a card renders the app header, a bold title and the body`() {
+    fun `C1 a container renders the One UI header, the title and the body, with no footer`() {
         val st = state("c1-page")
         showKit { GroupBlock(st, view(row("phone:1", System.currentTimeMillis() - 120_000L)), archived = false) { } }
-        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).assertTextContains("App A", substring = true)
-        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).assertTextContains("2m", substring = true)
+        compose.onNodeWithText("App A").assertExists()
+        // " • 2m": One UI's short clock.
+        compose.onNodeWithText(" • 2m").assertExists()
         compose.onNodeWithTag(AggTags.row("phone:1")).assertExists()
         compose.onNodeWithText("title phone:1").assertExists()
         compose.onNodeWithText("body phone:1").assertExists()
-        compose.onNodeWithTag(AggTags.rowUnread("phone:1")).assertExists()
-        // A single notification is not a stack: no chevron, no "+N more".
+        compose.onNodeWithTag(AggTags.rowUnread("phone:1"), useUnmergedTree = true).assertExists()
+        // A single notification is not a stack: no "+N".
         compose.onNodeWithTag(AggTags.groupMore("pkg.a")).assertDoesNotExist()
-        compose.onNodeWithTag(AggTags.groupChevron("pkg.a")).assertDoesNotExist()
-        // The group's Clear controls sit at the bottom of the card.
+        // No footer buttons: the actions live in the long-press sheet.
+        compose.onNodeWithTag(AggTags.groupCheck("pkg.a")).assertDoesNotExist()
+        compose.onNodeWithTag(AggTags.groupArchive("pkg.a")).assertDoesNotExist()
+        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performTouchInput { longClick() }
         compose.onNodeWithTag(AggTags.groupCheck("pkg.a")).assertTextContains(AggregatorModel.MARK_READ_LABEL)
         compose.onNodeWithTag(AggTags.groupArchive("pkg.a")).assertTextContains(AggregatorModel.ARCHIVE_LABEL)
     }
 
     @Test
-    fun `G2 the double tick marks every row of the group read and persists it`() {
+    fun `G2 the long-press sheet marks every row of the group read and persists it`() {
         val st = state("g2-page")
         val v = view(row("phone:1", 100), row("phone:2", 200))
         showKit { GroupBlock(st, v, archived = false) { } }
         assertTrue(st.isUnread(v.group.rows[0]))
+        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performTouchInput { longClick() }
         compose.onNodeWithTag(AggTags.groupCheck("pkg.a")).performClick()
         assertFalse(st.isUnread(v.group.rows[0]))
         assertFalse(st.isUnread(v.group.rows[1]))
@@ -127,31 +135,40 @@ class AggregatorComposeTest : KitPageHarness() {
     }
 
     @Test
-    fun `G3 the archive pill files a box away and offers Restore once it is there`() {
+    fun `G3 the sheet's Archive files a box away and the Archive card offers Restore`() {
         val st = state("g3-page")
         val v = view(row("phone:1", 100))
         showKit { GroupBlock(st, v, archived = st.isArchived("pkg.a")) { } }
+        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performTouchInput { longClick() }
         compose.onNodeWithTag(AggTags.groupArchive("pkg.a")).assertTextContains(AggregatorModel.ARCHIVE_LABEL)
-        compose.onNodeWithTag(AggTags.groupArchive("pkg.a")).performClick()
+            .performClick()
         assertTrue(st.isArchived("pkg.a"))
         // Remembered per page, like every other choice on it.
         assertEquals("yes", StackFilters.selected(ctx, "g3-page", st.yesNo(AggregatorModel.ARCHIVED_PREFIX + "pkg.a")))
+        compose.waitForIdle()
         compose.onNodeWithTag(AggTags.groupArchive("pkg.a")).assertTextContains(AggregatorModel.ARCHIVE_RESTORE_LABEL)
+            .performClick()
+        assertFalse(st.isArchived("pkg.a"))
     }
 
     @Test
-    fun `G4 a right swipe flips read both ways and Show unread drops a row that became read`() {
+    fun `G4 a right swipe dismisses into the Archive, and the row sheet flips read both ways`() {
         val st = state("g4-page")
         val r = row("phone:1", 300)  // newest: on top of the stack
-        showKit { GroupBlock(st, view(r, row("phone:2", 200)), archived = false) { } }
+        val r2 = row("phone:2", 200)
+        showKit { GroupBlock(st, view(r, r2), archived = false) { } }
         assertTrue(st.isUnread(r))
-        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { swipeRight() }
-        compose.waitUntil(5_000) { !st.isUnread(r) }
-        compose.waitForIdle()   // the row is still sliding back in from the other edge
-        // And back: swiping a read row right again marks it unread — the gesture is reversible.
-        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { swipeRight() }
-        compose.waitUntil(5_000) { st.isUnread(r) }
+        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { longClick() }
+        compose.onNodeWithTag(AggTags.rowRead("phone:1")).assertTextContains(AggregatorModel.MARK_READ_LABEL).performClick()
+        assertFalse(st.isUnread(r))
+        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { longClick() }
+        compose.onNodeWithTag(AggTags.rowRead("phone:1")).assertTextContains("Mark unread").performClick()
+        assertTrue(st.isUnread(r))
         assertEquals(setOf<String>(), StackFilters.readKeys(ctx, "g4-page"))
+        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { swipeRight() }
+        compose.waitUntil(5_000) { st.isRowArchived(r) }
+        // Dismissing is not reading.
+        assertTrue(st.isUnread(r))
     }
 
     @Test

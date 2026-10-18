@@ -149,7 +149,7 @@ echo "== the layout is still per-app boxes, so the box controls survive =="
 b=$(grep -c 'internal fun GroupBlock' "$CODE")
 [ "$b" -eq 1 ] && ok "T9: one box builder, so every stream's boxes are the same boxes" \
   || bad "T9: $b GroupBlock builders"
-has "$NOTIFY" 'ArchivePill(state, g, archived, rowArchive)' \
+has "$NOTIFY" 'state.setArchived(g.key, true)' \
   && ok "T9: the per-app Archive control still rides on the app card" \
   || bad "T9: the Archive control is gone — the boxes were flattened away"
 
