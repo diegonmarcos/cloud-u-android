@@ -8,7 +8,7 @@ name: "PROBE PhoneAppsComposeTest flake (temporary, scratch branch only)"
 
 on:
   push:
-    branches: [claude/probe-phoneapps]
+    branches: [claude/probe-phoneapps-v1]
 
 permissions:
   contents: read
