@@ -9,7 +9,7 @@
 //! is this table serialised, so a row added here appears in the tabs and a
 //! row removed here disappears from them with no other edit.
 
-use crate::{Ctx, Req, Resp};
+use crate::{diag, files, render, serving, Ctx, Req, Resp};
 use std::collections::HashSet;
 use std::fs;
 use std::os::unix::fs::MetadataExt;
@@ -20,6 +20,16 @@ use std::time::{Duration, Instant};
 pub enum Kind {
     Page,
     Api,
+    /// A bundled script or stylesheet served under /__lib__/.
+    Asset,
+}
+
+/// Which listener answers a row: the emulated drive (:8002), the diagnostics page (:8003), or both.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Side {
+    Drive,
+    Diag,
+    Both,
 }
 
 pub struct Route {
@@ -27,6 +37,9 @@ pub struct Route {
     pub path: &'static str,
     /// Bottom-nav caption when this page is one of the tabs; None otherwise.
     pub tab: Option<&'static str>,
+    pub on: Side,
+    /// The one method besides GET and HEAD this row answers is POST (the Engines switch, the browser opener).
+    pub post: bool,
     pub summary: &'static str,
     pub handler: fn(&Ctx, &Req) -> Resp,
 }
@@ -35,33 +48,52 @@ pub struct Route {
 pub const CATCH_ALL: &str = "/*";
 
 pub const ROUTES: &[Route] = &[
-    Route { kind: Kind::Page, path: "/", tab: None, summary: "The app shell, opened on the Home tab", handler: page_shell },
-    Route { kind: Kind::Page, path: "/__tab__/pages", tab: Some("Pages"), summary: "Every page this server serves, read from its own route table", handler: page_shell },
-    Route { kind: Kind::Page, path: "/__tab__/api", tab: Some("API"), summary: "Every API route this server serves, read from its own route table", handler: page_shell },
-    Route { kind: Kind::Page, path: "/__tab__/home", tab: Some("Home"), summary: "About this phone: device, kernel, CPU, memory, storage, battery, network", handler: page_shell },
-    Route { kind: Kind::Page, path: "/__tab__/files", tab: Some("Files"), summary: "Browse, open and search the served root", handler: page_shell },
-    Route { kind: Kind::Page, path: "/__tab__/configs", tab: Some("Configs"), summary: "The server's effective configuration", handler: page_shell },
-    Route { kind: Kind::Api, path: "/__api__/routes", tab: None, summary: "This route table as JSON: kind, path, tab, summary", handler: api_routes },
-    Route { kind: Kind::Api, path: "/__api__/health", tab: None, summary: "Liveness: pid, uptime, port, root", handler: api_health },
-    Route { kind: Kind::Api, path: "/__api__/config", tab: None, summary: "Effective configuration: bind, port, root, limits, route counts", handler: api_config },
-    Route { kind: Kind::Api, path: "/__api__/about", tab: None, summary: "About this phone: macro groups of sections of rows, the Configs ▸ About shape (what the Home tab renders)", handler: api_about },
-    Route { kind: Kind::Api, path: "/__api__/ls", tab: None, summary: "Directory listing JSON: ?path=<dir>&dot=1", handler: api_ls },
-    Route { kind: Kind::Api, path: "/__api__/read", tab: None, summary: "File content JSON, at most 5 MB: ?path=<file>", handler: api_read },
-    Route { kind: Kind::Api, path: "/__api__/search", tab: None, summary: "Bounded breadth-first search: ?q=<text>&mode=filename|folder|content&path=<dir>&dot=1", handler: api_search },
-    Route { kind: Kind::Page, path: CATCH_ALL, tab: None, summary: "Files under the served root: a directory lists itself, a file is sent with its MIME type", handler: page_files },
+    Route { kind: Kind::Page, path: "/", tab: None, on: Side::Drive, post: false, summary: "The app shell, opened on the Home tab", handler: page_shell },
+    Route { kind: Kind::Page, path: "/__tab__/pages", tab: Some("Pages"), on: Side::Drive, post: false, summary: "Every served page of the phone by port and by private DNS name, and every page this server serves, read from its own route table", handler: page_shell },
+    Route { kind: Kind::Page, path: "/__tab__/api", tab: Some("API"), on: Side::Drive, post: false, summary: "Every API route this server serves, read from its own route table", handler: page_shell },
+    Route { kind: Kind::Page, path: "/__tab__/home", tab: Some("Home"), on: Side::Drive, post: false, summary: "About this phone: device, kernel, CPU, memory, storage, battery, network", handler: page_shell },
+    Route { kind: Kind::Page, path: "/__tab__/files", tab: Some("Files"), on: Side::Drive, post: false, summary: "Browse, open and search the served root", handler: page_shell },
+    Route { kind: Kind::Page, path: "/__tab__/configs", tab: Some("Configs"), on: Side::Drive, post: false, summary: "About (ports, DNS names, versions) and Engines (every renderer and feature, with its switch)", handler: page_shell },
+    Route { kind: Kind::Page, path: "/__browse__", tab: None, on: Side::Drive, post: false, summary: "The file browser: sidebar tree, search, a viewer with raw and rendered views", handler: files::page_browse },
+    Route { kind: Kind::Page, path: "/__diag__", tab: None, on: Side::Diag, post: false, summary: "Fleet diagnostics: the SuperApp's About, Logcat and Diagnose (also served as / on this port)", handler: diag::page },
+    Route { kind: Kind::Api, path: "/__api__/routes", tab: None, on: Side::Drive, post: false, summary: "This route table as JSON: kind, path, tab, summary", handler: api_routes },
+    Route { kind: Kind::Api, path: "/__api__/health", tab: None, on: Side::Both, post: false, summary: "Liveness: pid, uptime, port, root", handler: api_health },
+    Route { kind: Kind::Api, path: "/__api__/config", tab: None, on: Side::Drive, post: false, summary: "Effective configuration: bind, port, root, limits, route counts", handler: api_config },
+    Route { kind: Kind::Api, path: "/__api__/serving", tab: None, on: Side::Both, post: false, summary: "The served ports and their private DNS names, whether each answers now, the DNS server and the versions", handler: api_serving },
+    Route { kind: Kind::Api, path: "/__api__/engines", tab: None, on: Side::Drive, post: true, summary: "Every render and feature engine with its switch; POST {id,on} flips one", handler: api_engines },
+    Route { kind: Kind::Api, path: "/__api__/open", tab: None, on: Side::Drive, post: true, summary: "POST {id,via:name|ip}: open a served page in cloud-browser", handler: api_open },
+    Route { kind: Kind::Api, path: "/__api__/about", tab: None, on: Side::Drive, post: false, summary: "About this phone: macro groups of sections of rows, the Configs ▸ About shape (what the Home tab renders)", handler: api_about },
+    Route { kind: Kind::Api, path: "/__api__/ls", tab: None, on: Side::Drive, post: false, summary: "Directory listing JSON: ?path=<dir>&dot=1", handler: api_ls },
+    Route { kind: Kind::Api, path: "/__api__/read", tab: None, on: Side::Drive, post: false, summary: "File content JSON, at most 5 MB: ?path=<file>", handler: api_read },
+    Route { kind: Kind::Api, path: "/__api__/search", tab: None, on: Side::Drive, post: false, summary: "Bounded breadth-first search: ?q=<text>&mode=filename|folder|content&path=<dir>&dot=1", handler: api_search },
+    Route { kind: Kind::Api, path: "/__api__/diag/about", tab: None, on: Side::Diag, post: false, summary: "The SuperApp's About as JSON, through its fleetdiag provider", handler: diag::api_about },
+    Route { kind: Kind::Api, path: "/__api__/diag/logcat", tab: None, on: Side::Diag, post: false, summary: "The SuperApp's logcat as text: ?n=<lines>&scope=app|all&errors=1", handler: diag::api_logcat },
+    Route { kind: Kind::Api, path: "/__api__/diag/diagnose", tab: None, on: Side::Diag, post: false, summary: "The SuperApp's Diagnostics as JSON, through its fleetdiag provider", handler: diag::api_diagnose },
+    Route { kind: Kind::Asset, path: "/__lib__/marked.min.js", tab: None, on: Side::Drive, post: false, summary: "marked.js 15.0.12, the Markdown parser", handler: asset_marked },
+    Route { kind: Kind::Asset, path: "/__lib__/github-markdown-dark.css", tab: None, on: Side::Drive, post: false, summary: "The GitHub dark stylesheet of rendered Markdown", handler: asset_markdown_css },
+    Route { kind: Kind::Asset, path: "/__lib__/js-yaml.min.js", tab: None, on: Side::Drive, post: false, summary: "js-yaml 4.1.0, the YAML parser", handler: asset_yaml },
+    Route { kind: Kind::Asset, path: "/__lib__/eruda.min.js", tab: None, on: Side::Drive, post: false, summary: "Eruda 3.4.3, the in-page DevTools injected into HTML", handler: asset_eruda },
+    Route { kind: Kind::Page, path: CATCH_ALL, tab: None, on: Side::Drive, post: false, summary: "Files under the served root: a directory lists itself, a file is sent with its MIME type or rendered by its engine", handler: files::page_files },
 ];
 
-/// Exact match over the table; the catch-all row otherwise.
-pub fn find(path: &str) -> &'static Route {
+/// Exact match over the table for the listener `side`; the catch-all row (drive only) otherwise.
+/// The diagnostics listener has no root to serve: its "/" is its page, and an unknown path is None.
+pub fn find(side: Side, path: &str) -> Option<&'static Route> {
     // Trailing slashes are noise; an all-slash path is the root, not the catch-all.
     let trimmed = path.trim_end_matches('/');
-    let p = if trimmed.is_empty() { "/" } else { trimmed };
+    let mut p = if trimmed.is_empty() { "/" } else { trimmed };
+    if side == Side::Diag && p == "/" {
+        p = "/__diag__";
+    }
     for r in ROUTES {
-        if r.path != CATCH_ALL && r.path == p {
-            return r;
+        if r.path != CATCH_ALL && r.path == p && (r.on == side || r.on == Side::Both) {
+            return Some(r);
         }
     }
-    ROUTES.last().expect("check_table guarantees a catch-all row")
+    if side == Side::Drive {
+        return ROUTES.last();
+    }
+    None
 }
 
 /// Refuse a table that cannot be dispatched unambiguously.
@@ -82,6 +114,22 @@ pub fn check_table() -> Result<(), String> {
         }
         if r.tab.is_some() && (r.kind != Kind::Page || !r.path.starts_with("/__tab__/")) {
             return Err(format!("route {} carries a tab caption but is not a /__tab__/ page", r.path));
+        }
+        if r.tab.is_some() && r.on != Side::Drive {
+            return Err(format!("tab {} must live on the drive listener: the diagnostics port serves no shell", r.path));
+        }
+        if r.kind == Kind::Asset && !r.path.starts_with("/__lib__/") {
+            return Err(format!("asset {} is not under /__lib__/", r.path));
+        }
+        if r.post && r.kind != Kind::Api {
+            return Err(format!("route {} answers POST but is not an API route", r.path));
+        }
+        // :8003 serves diagnostics and nothing else: its rows are the page, the bridge reads, and the two shared probes.
+        if r.on == Side::Diag && !(r.path == "/__diag__" || r.path.starts_with("/__api__/diag/")) {
+            return Err(format!("route {} is on the diagnostics listener but is not a diagnostics route", r.path));
+        }
+        if r.on != Side::Diag && r.path.starts_with("/__api__/diag/") {
+            return Err(format!("diagnostics route {} must be on the diagnostics listener only", r.path));
         }
     }
     match ROUTES.last() {
@@ -128,10 +176,11 @@ pub fn routes_json_of<'a, I: Iterator<Item = &'a Route>>(rows: I) -> String {
     let rows: Vec<String> = rows
         .map(|r| {
             format!(
-                "{{\"kind\":{},\"path\":{},\"tab\":{},\"summary\":{}}}",
-                jstr(if r.kind == Kind::Page { "page" } else { "api" }),
+                "{{\"kind\":{},\"path\":{},\"tab\":{},\"on\":{},\"summary\":{}}}",
+                jstr(match r.kind { Kind::Page => "page", Kind::Api => "api", Kind::Asset => "asset" }),
                 jstr(r.path),
                 match r.tab { Some(t) => jstr(t), None => "null".to_string() },
+                jstr(match r.on { Side::Drive => "drive", Side::Diag => "diag", Side::Both => "both" }),
                 jstr(r.summary)
             )
         })
@@ -159,9 +208,68 @@ fn api_health(ctx: &Ctx, _req: &Req) -> Resp {
             std::process::id(),
             ctx.started.elapsed().as_secs(),
             ctx.port,
-            jstr(&ctx.root.to_string_lossy())
+            // the diagnostics listener serves no files and does not say where the drive is mounted
+            if ctx.side == Side::Diag { "null".to_string() } else { jstr(&ctx.root.to_string_lossy()) }
         ),
     )
+}
+
+fn api_serving(_ctx: &Ctx, _req: &Req) -> Resp {
+    Resp::json(200, serving::json(true))
+}
+
+fn api_engines(ctx: &Ctx, req: &Req) -> Resp {
+    if req.method == "POST" {
+        let body: serde_json::Value = match serde_json::from_slice(&req.body) {
+            Ok(v) => v,
+            Err(_) => return jerr(400, "body must be JSON {id, on}"),
+        };
+        let (id, on) = match (body["id"].as_str(), body["on"].as_bool()) {
+            (Some(id), Some(on)) => (id, on),
+            _ => return jerr(400, "body must be JSON {id: string, on: boolean}"),
+        };
+        if let Err(e) = ctx.engines.set(id, on) {
+            return jerr(400, &e);
+        }
+    }
+    Resp::json(200, ctx.engines.json())
+}
+
+/// POST {id, via}: hand a served page to cloud-browser. The URL is built here from the declaration, never
+/// taken from the request, so this cannot be used to open anything else.
+fn api_open(_ctx: &Ctx, req: &Req) -> Resp {
+    let body: serde_json::Value = match serde_json::from_slice(&req.body) {
+        Ok(v) => v,
+        Err(_) => return jerr(400, "body must be JSON {id, via}"),
+    };
+    let ep = match body["id"].as_str().and_then(serving::by_id) {
+        Some(e) => e,
+        None => return jerr(404, "no such served page"),
+    };
+    let url = if body["via"].as_str() == Some("ip") { ep.url_ip() } else { ep.url_name() };
+    match diag::open(&url) {
+        Ok(()) => Resp::json(200, format!("{{\"ok\":true,\"url\":{}}}", jstr(&url))),
+        Err(e) => jerr(502, &e),
+    }
+}
+
+fn lib_asset(ctype: &'static str, body: &str) -> Resp {
+    let mut r = Resp::bytes(200, ctype, body.as_bytes().to_vec());
+    r.headers.push(("cache-control".to_string(), "public, max-age=86400".to_string()));
+    r
+}
+
+fn asset_marked(_c: &Ctx, _r: &Req) -> Resp {
+    lib_asset("text/javascript; charset=utf-8", render::MARKED_JS)
+}
+fn asset_markdown_css(_c: &Ctx, _r: &Req) -> Resp {
+    lib_asset("text/css; charset=utf-8", render::MARKDOWN_CSS)
+}
+fn asset_yaml(_c: &Ctx, _r: &Req) -> Resp {
+    lib_asset("text/javascript; charset=utf-8", render::YAML_JS)
+}
+fn asset_eruda(_c: &Ctx, _r: &Req) -> Resp {
+    lib_asset("text/javascript; charset=utf-8", render::ERUDA_JS)
 }
 
 pub const READ_MAX_BYTES: u64 = 5 * 1024 * 1024;
@@ -237,7 +345,7 @@ pub fn resolve_in_root(root: &Path, url_path: &str) -> Option<PathBuf> {
 
 fn api_ls(ctx: &Ctx, req: &Req) -> Resp {
     let dir = req.q("path").unwrap_or("/");
-    let show_dot = req.q("dot") == Some("1");
+    let show_dot = req.q("dot") == Some("1") && ctx.engines.on("dotfiles");
     let fs_dir = match resolve_in_root(&ctx.root, dir) {
         Some(p) if p.is_dir() => p,
         _ => return jerr(404, "Not a directory"),
@@ -283,6 +391,9 @@ fn api_ls(ctx: &Ctx, req: &Req) -> Resp {
 }
 
 fn api_read(ctx: &Ctx, req: &Req) -> Resp {
+    if !ctx.engines.on("preview") {
+        return jerr(404, "The Preview engine is switched off (Configs > Engines)");
+    }
     let path = req.q("path").unwrap_or("/");
     let fs_file = match resolve_in_root(&ctx.root, path) {
         Some(p) if p.is_file() => p,
@@ -308,10 +419,13 @@ fn api_read(ctx: &Ctx, req: &Req) -> Resp {
 }
 
 fn api_search(ctx: &Ctx, req: &Req) -> Resp {
+    if !ctx.engines.on("search") {
+        return jerr(404, "The Search engine is switched off (Configs > Engines)");
+    }
     let q = req.q("q").unwrap_or("").to_lowercase();
     let mode = req.q("mode").unwrap_or("filename");
     let base = req.q("path").unwrap_or("/");
-    let show_dot = req.q("dot") == Some("1");
+    let show_dot = req.q("dot") == Some("1") && ctx.engines.on("dotfiles");
     if q.is_empty() {
         return Resp::json(200, "[]".to_string());
     }
@@ -403,82 +517,6 @@ pub fn esc_html(s: &str) -> String {
     o
 }
 
-pub fn mime_for(path: &Path) -> &'static str {
-    let ext = path.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
-    match ext.as_str() {
-        "html" | "htm" => "text/html; charset=utf-8",
-        "css" => "text/css; charset=utf-8",
-        "js" | "mjs" | "cjs" => "text/javascript; charset=utf-8",
-        "json" => "application/json; charset=utf-8",
-        "md" | "txt" | "log" | "yaml" | "yml" | "toml" | "csv" | "sh" | "kt" | "rs" | "py" | "xml" | "ini" | "conf" | "cfg" => {
-            "text/plain; charset=utf-8"
-        }
-        "svg" => "image/svg+xml",
-        "png" => "image/png",
-        "jpg" | "jpeg" => "image/jpeg",
-        "gif" => "image/gif",
-        "webp" => "image/webp",
-        "ico" => "image/x-icon",
-        "pdf" => "application/pdf",
-        "mp4" => "video/mp4",
-        "mp3" => "audio/mpeg",
-        "ogg" => "audio/ogg",
-        "wasm" => "application/wasm",
-        "zip" => "application/zip",
-        "apk" => "application/vnd.android.package-archive",
-        _ => "application/octet-stream",
-    }
-}
-
-fn page_files(ctx: &Ctx, req: &Req) -> Resp {
-    let fs_path = match resolve_in_root(&ctx.root, &req.path) {
-        Some(p) => p,
-        None => return Resp::text(404, "Not found"),
-    };
-    let meta = match fs::metadata(&fs_path) {
-        Ok(m) => m,
-        Err(_) => return Resp::text(404, "Not found"),
-    };
-    if meta.is_dir() {
-        let index = fs_path.join("index.html");
-        if index.is_file() {
-            return match fs::read(&index) {
-                Ok(b) => Resp::bytes(200, "text/html; charset=utf-8", b),
-                Err(_) => Resp::text(500, "Cannot read index.html"),
-            };
-        }
-        let mut names: Vec<(bool, String)> = Vec::new();
-        if let Ok(rd) = fs::read_dir(&fs_path) {
-            for e in rd.flatten() {
-                let is_dir = e.path().is_dir();
-                names.push((is_dir, e.file_name().to_string_lossy().to_string()));
-            }
-        }
-        names.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.to_lowercase().cmp(&b.1.to_lowercase())));
-        let dir_url = if req.path.ends_with('/') { req.path.clone() } else { format!("{}/", req.path) };
-        let mut html = String::new();
-        html.push_str("<!doctype html><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\">");
-        html.push_str("<title>");
-        html.push_str(&esc_html(&dir_url));
-        html.push_str("</title><style>body{font:15px system-ui;background:#0b0e14;color:#e6e6e6;margin:0;padding:12px}a{color:#7cc4ff;text-decoration:none;display:block;padding:8px 4px;border-bottom:1px solid #1e2430}</style>");
-        html.push_str("<h3>");
-        html.push_str(&esc_html(&dir_url));
-        html.push_str("</h3>");
-        if dir_url != "/" {
-            html.push_str("<a href=\"../\">../</a>");
-        }
-        for (is_dir, name) in names {
-            let suffix = if is_dir { "/" } else { "" };
-            html.push_str(&format!("<a href=\"{}{}\">{}{}</a>", esc_html(&pct_encode(&name)), suffix, esc_html(&name), suffix));
-        }
-        return Resp::html(html);
-    }
-    match fs::read(&fs_path) {
-        Ok(b) => Resp::bytes(200, mime_for(&fs_path), b),
-        Err(_) => Resp::text(500, "Cannot read file"),
-    }
-}
-
 /// Percent-encode one path segment for an href.
 pub fn pct_encode(seg: &str) -> String {
     let mut o = String::new();
@@ -506,12 +544,31 @@ mod tests {
             if r.path == CATCH_ALL {
                 continue;
             }
-            assert_eq!(find(r.path).path, r.path, "{} must resolve to its own row", r.path);
-            let with_slash = format!("{}/", r.path);
-            assert_eq!(find(&with_slash).path, r.path, "{} must tolerate a trailing slash", r.path);
+            let sides: &[Side] = match r.on {
+                Side::Both => &[Side::Drive, Side::Diag],
+                Side::Drive => &[Side::Drive],
+                Side::Diag => &[Side::Diag],
+            };
+            for side in sides {
+                assert_eq!(find(*side, r.path).map(|x| x.path), Some(r.path), "{} must resolve to its own row", r.path);
+                let with_slash = format!("{}/", r.path);
+                assert_eq!(find(*side, &with_slash).map(|x| x.path), Some(r.path), "{} must tolerate a trailing slash", r.path);
+            }
         }
-        assert_eq!(find("/some/file.txt").path, CATCH_ALL);
-        assert_eq!(find("/__api__/nothing").path, CATCH_ALL, "an undeclared API path is a file lookup, never a handler");
+        assert_eq!(find(Side::Drive, "/some/file.txt").map(|x| x.path), Some(CATCH_ALL));
+        assert_eq!(find(Side::Drive, "/__api__/nothing").map(|x| x.path), Some(CATCH_ALL), "an undeclared API path is a file lookup, never a handler");
+    }
+
+    #[test]
+    fn the_diagnostics_listener_serves_diagnostics_only() {
+        assert_eq!(find(Side::Diag, "/").map(|x| x.path), Some("/__diag__"), "/ on :8003 is the diagnostics page");
+        assert!(find(Side::Diag, "/some/file.txt").is_none(), "no file lookup on :8003");
+        for p in ["/__api__/ls", "/__api__/read", "/__api__/search", "/__api__/engines", "/__api__/open", "/__browse__", "/__tab__/files", "/__lib__/eruda.min.js", "/__api__/routes", "/__api__/config", "/__api__/about"] {
+            assert!(find(Side::Diag, p).is_none(), "{} must not be served on the diagnostics port", p);
+        }
+        for p in ["/__api__/diag/about", "/__api__/diag/logcat", "/__api__/diag/diagnose"] {
+            assert!(find(Side::Drive, p).map(|x| x.path) == Some(CATCH_ALL), "{} is not served by the drive listener", p);
+        }
     }
 
     #[test]

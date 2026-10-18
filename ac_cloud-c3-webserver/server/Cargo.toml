@@ -1,9 +1,11 @@
 [package]
 name = "c3-webserver"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-description = "The phone's local web server: an HTTP/1.1 server library whose route table is the ONE declaration the app's Pages and API tabs are derived from. Linked by ../src-tauri and started in the app's own process."
+description = "The phone's local web server: an HTTP/1.1 server library whose route table is the ONE declaration the app's Pages and API tabs are derived from, with the ported my-webserver render engines, the :8003 diagnostics page and the private DNS for the four .app names. Linked by ../src-tauri and started in the app's own process."
 
 [dependencies]
 # std does everything here except statvfs (free space on the served root).
 libc = "0.2"
+# build.json::serving is compiled in and parsed here; the same crate the Tauri build script already uses.
+serde_json = "1"

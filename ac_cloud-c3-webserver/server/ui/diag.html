@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>cloud.app · fleet diagnostics</title>
+<style>
+  :root { --bg:#0b0e14; --panel:#131824; --line:#1e2634; --fg:#e6e9ef; --dim:#8b95a7; --acc:#7cc4ff; --bad:#ff8a8a; --nav:46px; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.35 system-ui, sans-serif; }
+  header { position:sticky; top:0; z-index:2; background:var(--bg); border-bottom:1px solid var(--line); padding:8px 12px; display:flex; align-items:baseline; gap:8px; }
+  header h1 { font-size:15px; margin:0; font-weight:600; }
+  header .sub { color:var(--dim); font-size:12px; flex:1; }
+  nav { position:fixed; left:0; right:0; bottom:0; height:var(--nav); display:flex; background:var(--panel); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); }
+  nav button { flex:1; background:none; border:0; color:var(--dim); font:12px system-ui; padding:6px 0; }
+  nav button.on { color:var(--acc); font-weight:600; }
+  main { padding:10px 10px calc(var(--nav) + 14px); }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:8px; margin-bottom:10px; overflow:hidden; }
+  section > h2 { font-size:12px; margin:0; padding:6px 10px; color:var(--dim); text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
+  .row { display:flex; gap:10px; padding:5px 10px; border-bottom:1px solid var(--line); word-break:break-word; }
+  .row:last-child { border-bottom:0; }
+  .row .k { flex:0 0 38%; color:var(--dim); }
+  .row .v { flex:1; }
+  pre { margin:0; padding:8px 10px; overflow:auto; font:11px/1.35 ui-monospace, monospace; white-space:pre-wrap; word-break:break-word; }
+  pre.log { white-space:pre; word-break:normal; max-height:calc(100vh - 150px); }
+  .tool { display:flex; gap:6px; align-items:center; padding:6px 10px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .tool select, .tool button, .tool input { background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:5px 8px; font:13px system-ui; }
+  .tool input[type=search] { flex:1; min-width:100px; }
+  .err { color:var(--bad); padding:10px; }
+  .dim { color:var(--dim); }
+  .yes { color:#7ee2a8; } .no { color:var(--bad); }
+</style>
+</head>
+<body>
+<header><h1>cloud.app</h1><span class="sub" id="sub">fleet diagnostics · SuperApp</span></header>
+<main id="main"><div class="dim" style="padding:10px">Connecting to the bridge…</div></main>
+<nav id="nav" aria-label="diagnostics tabs"></nav>
+
+<script id="pure">
+// PURE: JSON in, HTML out; no browser object is touched, so a test can run it under node.
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function label(k) { return String(k).replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2'); }
+function scalar(v) {
+  if (v === null || v === undefined) return '<span class="dim">—</span>';
+  if (v === true) return '<span class="yes">true</span>';
+  if (v === false) return '<span class="no">false</span>';
+  return esc(v);
+}
+// One section per object, rows for scalars, nested objects as their own sections, arrays inline or as a block.
+function renderObject(title, obj, depth) {
+  var rows = ''; var nested = '';
+  Object.keys(obj).forEach(function (k) {
+    var v = obj[k];
+    if (Array.isArray(v)) {
+      if (v.every(function (x) { return x === null || typeof x !== 'object'; })) {
+        rows += '<div class="row"><div class="k">' + esc(label(k)) + '</div><div class="v">' + (v.length ? esc(v.join(', ')) : '<span class="dim">—</span>') + '</div></div>';
+      } else {
+        nested += '<section><h2>' + esc(title + ' · ' + label(k)) + ' (' + v.length + ')</h2><pre>' + esc(JSON.stringify(v, null, 1)) + '</pre></section>';
+      }
+    } else if (v !== null && typeof v === 'object') {
+      nested += depth < 3 ? renderObject(title + ' · ' + label(k), v, depth + 1)
+                          : '<section><h2>' + esc(title + ' · ' + label(k)) + '</h2><pre>' + esc(JSON.stringify(v, null, 1)) + '</pre></section>';
+    } else if (typeof v === 'string' && v.indexOf('\n') >= 0) {
+      nested += '<section><h2>' + esc(title + ' · ' + label(k)) + '</h2><pre>' + esc(v) + '</pre></section>';
+    } else {
+      rows += '<div class="row"><div class="k">' + esc(label(k)) + '</div><div class="v">' + scalar(v) + '</div></div>';
+    }
+  });
+  return '<section><h2>' + esc(title) + '</h2>' + rows + '</section>' + nested;
+}
+function renderDoc(title, doc) {
+  if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) return '<section><h2>' + esc(title) + '</h2><pre>' + esc(JSON.stringify(doc, null, 1)) + '</pre></section>';
+  return renderObject(title, doc, 0);
+}
+function renderLog(text, filter) {
+  var lines = String(text).split('\n');
+  var q = (filter || '').toLowerCase();
+  if (q) lines = lines.filter(function (l) { return l.toLowerCase().indexOf(q) >= 0; });
+  return lines.map(function (l) {
+    var cls = / E /.test(l) ? ' class="no"' : (/ W /.test(l) ? ' style="color:#e6c07b"' : '');
+    return '<span' + cls + '>' + esc(l) + '</span>';
+  }).join('\n');
+}
+function renderNav(tabs, cur) {
+  return tabs.map(function (t) { return '<button data-tab="' + esc(t.id) + '"' + (t.id === cur ? ' class="on"' : '') + '>' + esc(t.label) + '</button>'; }).join('');
+}
+if (typeof module !== 'undefined') module.exports = { esc: esc, renderDoc: renderDoc, renderLog: renderLog, renderNav: renderNav };
+</script>
+
+<script>
+(function () {
+  var TABS = [{ id: 'about', label: 'About' }, { id: 'logcat', label: 'Logcat' }, { id: 'diagnose', label: 'Diagnose' }];
+  var $main = document.getElementById('main'); var $nav = document.getElementById('nav');
+  var log = { text: '', scope: 'app', errors: false, n: 500, q: '' };
+  function get(url, asText) {
+    return fetch(url, { cache: 'no-store' }).then(function (r) {
+      return (asText ? r.text() : r.json()).then(function (b) {
+        if (!r.ok) throw new Error((b && b.error) || (r.status + ' ' + url));
+        return b;
+      });
+    });
+  }
+  function fail(e) { $main.innerHTML = '<div class="err">' + esc(e && e.message ? e.message : e) + '</div>'; }
+  function paintLog() {
+    var pre = document.getElementById('logpre'); if (pre) pre.innerHTML = renderLog(log.text, log.q);
+  }
+  var views = {
+    about: function () { return get('/__api__/diag/about').then(function (d) { return renderDoc('SuperApp · About', d); }); },
+    diagnose: function () { return get('/__api__/diag/diagnose').then(function (d) { return renderDoc('SuperApp · Diagnose', d); }); },
+    logcat: function () {
+      var u = '/__api__/diag/logcat?n=' + log.n + '&scope=' + log.scope + (log.errors ? '&errors=1' : '');
+      return get(u, true).then(function (t) {
+        log.text = t;
+        return '<section><h2>SuperApp · Logcat</h2><div class="tool">' +
+          '<select id="scope"><option value="app">this app</option><option value="all">all apps</option></select>' +
+          '<select id="n"><option>200</option><option>500</option><option>1000</option><option>2000</option></select>' +
+          '<label><input type="checkbox" id="errs"> errors only</label>' +
+          '<button id="refresh">Refresh</button><input type="search" id="lf" placeholder="filter" value="' + esc(log.q) + '"></div>' +
+          '<pre class="log" id="logpre"></pre></section>';
+      });
+    }
+  };
+  function show(id) {
+    $nav.innerHTML = renderNav(TABS, id);
+    $main.innerHTML = '<div class="dim" style="padding:10px">Reading from the SuperApp…</div>';
+    views[id]().then(function (html) {
+      $main.innerHTML = html;
+      if (id === 'logcat') {
+        var s = document.getElementById('scope'), n = document.getElementById('n'), e = document.getElementById('errs');
+        s.value = log.scope; n.value = String(log.n); e.checked = log.errors;
+        s.onchange = function () { log.scope = s.value; show('logcat'); };
+        n.onchange = function () { log.n = Number(n.value); show('logcat'); };
+        e.onchange = function () { log.errors = e.checked; show('logcat'); };
+        document.getElementById('refresh').onclick = function () { show('logcat'); };
+        document.getElementById('lf').oninput = function (ev) { log.q = ev.target.value; paintLog(); };
+        paintLog();
+      }
+    }).catch(fail);
+    try { history.replaceState(null, '', '#' + id); } catch (x) {}
+  }
+  $nav.addEventListener('click', function (ev) { var b = ev.target.closest('button[data-tab]'); if (b) show(b.getAttribute('data-tab')); });
+  var start = (location.hash || '').replace('#', '');
+  show(TABS.some(function (t) { return t.id === start; }) ? start : 'about');
+})();
+</script>
+</body>
+</html>

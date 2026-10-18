@@ -384,6 +384,8 @@ mod tests {
             port: 1,
             started: std::time::Instant::now(),
             binary: "t".to_string(),
+            side: routes::Side::Drive,
+            engines: std::sync::Arc::new(crate::engines::Engines::new(None)),
         };
         let g = groups(&ctx);
         let labels: Vec<&str> = g.iter().map(|(m, _)| *m).collect();
