@@ -134,14 +134,15 @@ jobs:
           act=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)
           case "$act" in */*) ;; *) echo "::error::$PKG has no launcher activity ($act)"; exit 2;; esac
           adb shell am start -W -n "$act"
-          # Type: echo L$(ls /|wc -l)U$(uname -s)F$(fish -c uname) >/sdcard/cloudsmoke.txt
-          # (/sdcard is bound into the rootfs; /system is not.) Works in bash and fish.
+          # The line typed is `sh /sdcard/cloudsmoke.sh`: plain words, the same in bash and in
+          # every fish version (older fish has no $(...)); /sdcard is bound into the rootfs and
+          # /system is not. The script writes the verdict back to /sdcard for adb to read.
+          printf '%s\n' 'echo "L$(ls / | wc -l)U$(uname -s)F$(fish -c uname)" > /sdcard/cloudsmoke.txt' > cloudsmoke.sh
+          adb push cloudsmoke.sh /sdcard/cloudsmoke.sh
           adb shell rm -f /sdcard/cloudsmoke.txt
           type_line() {
-            for tok in 'echo' 'L$(ls' '/|wc' '-l)U$(uname' '-s)F$(fish' '-c' 'uname)' '>/sdcard/cloudsmoke.txt'; do
-              adb shell "input text '$tok'"; adb shell input keyevent 62
-            done
-            adb shell input keyevent 66
+            adb shell input text sh; adb shell input keyevent 62
+            adb shell input text /sdcard/cloudsmoke.sh; adb shell input keyevent 66
           }
           verdict=""
           # Up to ~45 min: the first start unpacks the ~400 MB rootfs under proot, which on a
@@ -154,6 +155,7 @@ jobs:
             [ -n "$verdict" ] && break
             echo "no prompt yet (${i})"
           done
+          adb shell ps -A -o PID,PPID,USER,STAT,WCHAN,TIME,ARGS > out/ps.txt || true
           adb logcat -d -v threadtime > out/logcat.txt
           adb exec-out screencap -p > out/screen.png || true
           echo "verdict: ${verdict:-none}"
