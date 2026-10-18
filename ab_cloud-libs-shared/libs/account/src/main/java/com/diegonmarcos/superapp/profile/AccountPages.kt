@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +34,7 @@ import com.diegonmarcos.superapp.uikit.KitChip
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -77,6 +79,7 @@ object AccountPageTags {
     const val SETTINGS = "account:settings"
     const val BACKUP = "profile:backup"
     const val FETCH = "connect:fetch"
+    const val LINK_ORPHAN = "connect:link-orphan"
     fun way(kind: String) = "connect:way:$kind"
     fun placeholder(section: String, page: String) = "placeholder:$section/$page"
 }
@@ -482,6 +485,10 @@ fun AccountConnectPage() {
                 action = KitAction("Retry", "connect:banner:fetch") { launchWay { ConnectWays.fetchNow(ctx) } })
         }
         if (status.text.isNotBlank()) KitStatusBanner(status.text, status.state, tag = "connect:status")
+        // A bearer filed before the address pairing existed is unusable until it has one: say so, and link it on a tap.
+        val orphan = remember(tick) { ConnectWays.orphanAddress(ctx) }
+        if (orphan != null) KitStatusBanner("A stored sign-in token has no account address", KitState.WARN, tag = "connect:orphan",
+            action = KitAction("Link it to $orphan", AccountPageTags.LINK_ORPHAN) { status = said(ConnectWays.linkOrphan(ctx, orphan).line); tick++ })
 
         for ((forge, group) in ways.groupBy { it.forge }) {
             val readOnly = group.all { ConnectWays.handler(it.kind) == ConnectWays.Handler.Ssh }
@@ -553,12 +560,14 @@ private fun WayForm(kind: String, label: String, onCancel: () -> Unit, submit: (
         Text(if (ssh) "Read only: a shallow bare clone, the one file read, then deleted. Backups need a token."
              else "Filed in this phone's encrypted vault once it works; never shown back.",
             color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+        // A credential box is kept out of the keyboard's learned words and corrections (libs:auth's bearer box does the same).
+        val keep = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false)
         OutlinedTextField(secret, { secret = it }, label = { Text(if (ssh) "private key" else "token") },
-            visualTransformation = PasswordVisualTransformation(), singleLine = !ssh, modifier = Modifier.fillMaxWidth())
+            visualTransformation = PasswordVisualTransformation(), keyboardOptions = keep, singleLine = !ssh, modifier = Modifier.fillMaxWidth())
         if (ssh) {
             TextButton(onClick = { keyPicker.launch("*/*") }) { Text("Import key from file…") }
             OutlinedTextField(pass, { pass = it }, label = { Text("passphrase (blank if none)") },
-                visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+                visualTransformation = PasswordVisualTransformation(), keyboardOptions = keep, singleLine = true, modifier = Modifier.fillMaxWidth())
         }
         KitActionBar(listOf(
             KitAction(if (ssh) "Clone & read" else "Read", "connect:form:go:$kind") {

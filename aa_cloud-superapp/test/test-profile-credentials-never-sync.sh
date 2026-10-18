@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-# Tester: the Configs → Profile credential fields, and the guarantee that
+# Tester: the Account credential fields (Account ▸ connect), and the guarantee that
 # neither credential can reach the profile sync payload.
+#
+# The View-based page this first pinned (ProfileFragment) was deleted by the Cloud Account redesign
+# (a0_docs/eng-specs/cloud-account-redesign.md section 7). Its credential rules moved with the sign-in logic:
+# ConnectWays (a plain object) and AccountConnectPage / AccountProfilePage in libs:account, hosted by Cloud Account.
+# Every check below that named the fragment names those now; a "must not" over a file that is gone would pass on
+# nothing, so each one reads the live Account sources (ACCOUNT_SRC).
 #
 # WHY THIS FILE EXISTS. ProfileSync.document() POSTs the profile to
 # /c3-infra-api/fleet/profile, where it is stored as a plain JSON file on
@@ -31,10 +37,26 @@ hasnt() { grep -qF "$2" "$ROOT/$1" 2>/dev/null && bad "$3 ($1)" || ok "$3"; }
 # about behaviour instead of forbidding the words that explain it.
 codeof()     { awk '{ l=$0; sub(/^[[:space:]]+/,"",l); if (l ~ /^\/\// || l ~ /^\*/ || l ~ /^\/\*/) next; print }' "$ROOT/$1"; }
 hasnt_code() { codeof "$1" | grep -qF "$2" && bad "$3 ($1)" || ok "$3"; }
+# Over the whole Account page surface (ACCOUNT_SRC), and loudly absent: a file that is missing is a failure, not a pass.
+hasnt_acct() {   # <needle> <what it asserts>
+    local f hit=""
+    for f in $ACCOUNT_SRC; do
+        [ -f "$ROOT/$f" ] || { bad "$2 (missing $f)"; return; }
+        [ -z "$(codeof "$f" | grep -F -- "$1")" ] || hit="$hit $f"
+    done
+    [ -z "$hit" ] && ok "$2" || bad "$2 ($hit)"
+}
 
 PROFILE_DIR="../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile"
-FRAGMENT="$PROFILE_DIR/ProfileFragment.kt"
 SYNC="$PROFILE_DIR/ProfileSync.kt"
+# The Account page surface that replaced the fragment: the sign-in logic, the pages, the Profiles pages, the host's shell.
+CW="$PROFILE_DIR/ConnectWays.kt"
+ACCT_PAGES="$PROFILE_DIR/AccountPages.kt"
+PROF_PAGES="$PROFILE_DIR/ProfilesPages.kt"
+ACCT_MAIN="../ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt"
+DEVICE_VAULT="$PROFILE_DIR/DeviceVault.kt"
+ACCOUNT_SRC="$CW $ACCT_PAGES $PROF_PAGES $ACCT_MAIN"
+for f in $ACCOUNT_SRC; do [ -f "$ROOT/$f" ] || { echo "FAIL: $f missing - this tester is unrun, not passing"; exit 1; }; done
 # The Mesh capabilities MOVED here rather than being deleted; the test
 # follows them, which is the only way "merged, not dropped" is provable.
 WGFRAG="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardFragment.kt"
@@ -58,19 +80,20 @@ echo "== T1: the credential entry points exist, and are one-shot boxes (#573: th
 # stores it paired with the address it proved.
 has "$AUTH_UI"  'private fun BearerDialog'              "Authelia bearer entry (the shared dialog)"
 has "$AUTH_UI"  'auth_way_bearer'                       "the bearer route is a step-1 pill"
-has "$FRAGMENT" 'SignInWays(host = signInHost'          "step 1 hosts the shared surface"
+has "$ACCT_PAGES" 'SignInWays(host = signInHost'       "the Authelia way hosts the shared sign-in surface"
 has "$AUTH_UI"  'autoCorrectEnabled = false'            "the token box is kept out of the keyboard's learned words"
 has "$MESH_CTRL" '"secret" ->' "WireGuard private key field (Controls tab, kind secret)"
 has "$MESH_WIDGETS" "PasswordVisualTransformation"      "the private-key box is password-masked"
-has "$FRAGMENT" "IME_FLAG_NO_PERSONALIZED_LEARNING"    "kept out of the keyboard's learned words"
-has "$FRAGMENT" "IMPORTANT_FOR_AUTOFILL_NO"            "kept out of autofill"
+has "$ACCT_PAGES" 'KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false)' "the Connect token and key boxes are kept out of the keyboard's learned words"
+has "$ACCT_PAGES" 'visualTransformation = PasswordVisualTransformation(), keyboardOptions = keep' "and masked"
+hasnt_acct "ContentType." "no autofill content type is put on a credential box (Compose autofill is opt-in; none is)"
 
 echo "== T2: each credential reuses its EXISTING store, no parallel copy =="
 # The bearer goes to the encrypted blob the config importers already read at
 # auth.authelia_token; the WG key goes to the tunnel's own field. A second
 # store would mean two values that can disagree, and a private key duplicated
 # into a second place is strictly worse than one held in one place.
-has "$FRAGMENT" "setAutheliaCredential(who, storeBearer)"   "bearer writes ConfigsPrefs, paired with the address it proved"
+has "$CW" "setAutheliaCredential(who, result.bearer)"      "bearer writes ConfigsPrefs, paired with the address it proved"
 has "$MESH_PORT" "prefs.interfacePrivateKey = t"    "WG key writes WireGuardPrefs"
 has "$CONFIGS_PREFS" "EncryptedSharedPreferences.create"     "ConfigsPrefs is encrypted at rest"
 has "$CONFIGS_PREFS" 'K_AUTHELIA_TOKEN = "authelia_token"'   "bearer at the existing auth.authelia_token path"
@@ -104,9 +127,9 @@ hasnt "$SYNC" "getAll()"         "document() does not sweep the preference map (
 echo "== T4: the removed fields are gone everywhere, not just from the form =="
 # A field dropped from the UI but still uploaded is personal data the user can
 # no longer see or edit — worse than either keeping it or removing it.
-hasnt "$FRAGMENT" "City of origin"      "no City of origin label"
-hasnt "$FRAGMENT" "Social profiles"     "no Social profiles section"
-hasnt "$FRAGMENT" "socialEditor"        "social editor removed"
+hasnt_acct "City of origin"      "no City of origin label"
+hasnt_acct "Social profiles"     "no Social profiles section"
+hasnt_acct "socialEditor"        "social editor removed"
 hasnt "$PREFS"    "cityFrom"            "cityFrom removed from ProfilePrefs"
 hasnt "$PREFS"    "socialLinks"         "socialLinks removed from ProfilePrefs"
 hasnt_code "$SYNC" "city_from"          "city_from not in the sync document"
@@ -120,8 +143,8 @@ hasnt "build.json" '"city_from"'        "build.json profile_default drops city_f
 hasnt "app/build.gradle" "UI_PROFILE_CITY_FROM" "no orphan BuildConfig field"
 
 echo "== T5: 'Titles …' is renamed to 'About' (label only, wire key unchanged) =="
-hasnt "$FRAGMENT" "Titles"              "no Titles label"
-hasnt "$FRAGMENT" 'label(ctx, "About")' "the contact-card form and its About label are gone (#781)"
+hasnt_acct '"Titles'             "no Titles label (a string starting Titles; isTitles() is a function name, not a label)"
+hasnt_acct 'label(ctx, "About")' "the contact-card form and its About label are gone (#781)"
 # The stored key and the wire key stay `titles` — renaming those would break
 # the server contract and every previously synced record for no user benefit.
 has "$SYNC"  'put("titles"' "wire key is still titles"
@@ -189,13 +212,13 @@ fi
 # An existing token must not be silently adopted or destroyed by the new rule.
 has "$CONFIGS_PREFS" "fun hasOrphanToken"        "a pre-pairing token is detected, not deleted"
 has "$CONFIGS_PREFS" "fun adoptOrphanToken"      "linking it is explicit and user-driven"
-has "$FRAGMENT"      'journey_bearer_stored'     "the identity the bearer belongs to is shown on the Profile screen"
+has "$CW"            '" as $who"'                "the identity the bearer belongs to is named in the sign-in's result line on Account ▸ connect"
 has "build.json"     '"authelia_email"'          "the import contract declares the pairing"
 # NO email box at all since #573: the address is the one the sign-in proved
 # (or the registry's primary), never typed — a box would invite disagreement.
-hasnt_code "$FRAGMENT" "autheliaEmailEditor"     "no typed account-email editor"
-if [ "$(codeof "$FRAGMENT" | grep -c 'setAutheliaCredential(')" = "1" ]; then
-    ok "exactly one bearer store, after the fetch that proved it"
+hasnt_acct "autheliaEmailEditor"     "no typed account-email editor"
+if [ "$(codeof "$CW" | grep -c 'setAutheliaCredential(')" = "1" ]; then
+    ok "exactly one bearer store, after the sign-in that proved it (ConnectWays.signedIn)"
 else
     bad "there must be exactly one bearer store"
 fi
@@ -214,124 +237,83 @@ fi
 hasnt_code "$SYNC" "autheliaEmail" "ProfileSync never reads the paired address"
 hasnt_code "$SYNC" "credential"    "ProfileSync never reads the credential pair"
 
-echo "== T10: the Connect | Info split, and the mailed 2FA code is never stored =="
-# The screen is two tabs now. What must survive the split is WHERE each field
-# is stored, not where it is drawn — so these assert the placement AND that
-# nothing gained a store on the way across.
-# Tab identity is asserted in T11, which owns the four-tab shape (#778).
-# The existing pill idiom, not a second tab mechanism.
-has "$FRAGMENT" "PageTabsView"                 "reuses the fleet's pill strip (libs:bottomnav PageTabsView, #868; the host styling hook is gone)"
-# ...but NOT the child-fragment machinery behind it. SectionTabsFragment swaps
-# fragments into a fixed pool of pane host ids, and this screen rebuilds itself
-# with detach/attach after every pick, link, clear, erase and import — the
-# exact sequence that leaves such a pane blank. Both tabs are inline views.
-hasnt_code "$FRAGMENT" "childFragmentManager"      "the tabs use no child fragments"
-hasnt_code "$FRAGMENT" "SectionTabsFragment"       "no second tab mechanism"
-hasnt_code "$FRAGMENT" "R.id.section_pane"         "no pane host ids are borrowed"
-# A redraw must not throw the user back to tab 1.
-has "$FRAGMENT" "private var selectedTab"          "the selected tab survives a redraw"
+echo "== T10: the Account page strip, and the mailed 2FA code is never stored =="
+# What must survive the move is WHERE each field is stored, not where it is drawn. The strip is the fleet's shared
+# libs:bottomnav PageTabs (Cloud Account's MainActivity), and the pages are plain composables: no child-fragment
+# machinery, which swaps panes into fixed host ids and leaves one blank after a redraw.
+has "$ACCT_MAIN" "PageTabs("                    "the page strip is the fleet's shared libs:bottomnav PageTabs"
+hasnt_acct "childFragmentManager"               "the pages use no child fragments"
+hasnt_acct "SectionTabsFragment"                "no second tab mechanism"
+hasnt_acct "R.id.section_pane"                  "no pane host ids are borrowed"
+# A redraw must not throw the user back to the first page.
+has "$ACCT_MAIN" 'var selectedPage by remember { mutableStateOf<String?>(null) }' "the selected page survives a recomposition"
 
-# Connect IS the journey (#573); Mesh Data carries the tunnel key.
-has "$FRAGMENT" 'renderJourney(ctx, connect)'                           "the journey is the top of Connect (#695)"
-has "$FRAGMENT" 'journey_use_stored_bearer'                             "the stored bearer is a step-1 pill on Connect"
+# Connect IS the declared ways (ConnectWays.ways()); Mesh Data carries the tunnel key.
+has "$ACCT_PAGES" 'val ways = remember { ConnectWays.ways() }'          "the declared ways are the Connect page"
+has "$DEVICE_VAULT" '(vault.connection("forge.${f.id}.token") as? String)' "Fetch now reuses a token the owner already filed: no second sign-in"
+has "$ACCT_PAGES" 'KitAction("Fetch now", AccountPageTags.FETCH)'       "Fetch now is a button on Connect"
 has "$MESH_PROFILES" 'ChoiceLine('   "Provider is on the WireGuard screen"
-hasnt_code "$FRAGMENT" "WireGuardPrefs"  "Profile no longer touches tunnel settings at all"
-# #626 the section HEADER is the declaration's label now, not a Kotlin literal:
-# #781 the contact card FORM is deleted from Runtime: its fields are Profiles' `about` topic.
-hasnt_code "$FRAGMENT" 'private fun renderPerson('                      "the contact card form is gone (#781)"
-hasnt_code "$FRAGMENT" 'sectionHeader(ctx, "Personal Data")'            "its header is the declared label, not a literal"
-hasnt "$FRAGMENT" 'sectionHeader(ctx, "Imports")'                       "Infos has no Imports row any more — step 4 is the way in"
-has "$FRAGMENT" 'if (way.kind == KIND_VAULT_FILE) {'                   "the manual file route survives as Connect's Import File line"
-# The orphan-token affordance must stay reachable after the move.
-has "$FRAGMENT" 'pickButton(ctx, "Link the stored token to ${prefs.email.trim()}")' \
-    "the orphan-token link affordance survived the redesign"
+hasnt_acct "WireGuardPrefs"          "Account no longer touches tunnel settings at all"
+# #781 the contact card FORM is deleted: its fields are the About topic's rows.
+hasnt_acct 'private fun renderPerson('                      "the contact card form is gone (#781)"
+hasnt_acct 'sectionHeader(ctx, "Personal Data")'            "its header is the declared label, not a literal"
+hasnt_acct 'sectionHeader(ctx, "Imports")'                  "there is no Imports row: Import file is a way on Connect"
+has "$ACCT_PAGES" 'ConnectWays.Handler.File -> KitSelectableTile('  "the manual file route survives as Connect's Import file way"
+# The orphan-token affordance must stay reachable after the move: a stored bearer with no address is reported, and
+# linking it is the owner's explicit tap (ConfigsPrefs never deletes it for lacking one).
+has "$ACCT_PAGES" 'KitAction("Link it to $orphan", AccountPageTags.LINK_ORPHAN)' "the orphan-token link affordance survived the redesign"
+has "$CW" 'ConfigsPrefs(ctx.applicationContext).adoptOrphanToken(address.trim())' "linking goes through the store's own address check"
+has "$CW" 'if (!ConfigsPrefs(app).hasOrphanToken()) return null'        "it is offered only when a token is stranded"
 
-# WHAT THE NEW FIELD IS. This fleet's Authelia enables webauthn + totp and no
-# duo_api, so there is no email second FACTOR; notifier.smtp exists only to
-# deliver the identity-validation one-time code for enrolling a factor or
-# resetting a password. The box therefore takes a TRANSIENT CODE, not a seed —
-# and a transient code that gets persisted is a stored value that expired
-# minutes ago, while a seed that gets persisted is a permanent second factor
-# sitting next to the bearer. Neither may happen.
-has "$FRAGMENT" 'private fun showMailCodeDialog'         "the mail 2FA code has its dialog (#573: no permanent box)"
-has "$FRAGMENT" 'body.addView(mailConfirmationField(ctx))' "the dialog holds the one-shot field"
-# No seed anywhere: the code is not a secret to keep, and nothing may start
-# keeping one.
+# WHAT THE MAILED CODE IS. This fleet's Authelia enables webauthn + totp and no duo_api, so there is no email second
+# FACTOR; notifier.smtp exists only to deliver the identity-validation one-time code for enrolling a factor or
+# resetting a password. The box takes a TRANSIENT CODE, not a seed - and a transient code that gets persisted is a
+# stored value that expired minutes ago, while a seed that gets persisted is a permanent second factor sitting
+# next to the bearer. Neither may happen. The Account pages carry no such box any more (the leg is libs:auth's
+# VaultConnect, which holds a code in memory for one call: test-profile-vault-connect.sh T5).
+hasnt_acct "mailConfirmationField"        "the Account pages hold no mailed-code field"
+hasnt_acct "showMailCodeDialog"           "nor a dialog for one"
+hasnt_acct "confirmMailCode"              "nor a handler that could keep one"
+# No seed anywhere: the code is not a secret to keep, and nothing may start keeping one.
 hasnt_code "$CONFIGS_PREFS" "totp"        "ConfigsPrefs stores no TOTP seed"
 hasnt_code "$CONFIGS_PREFS" "K_2FA"       "ConfigsPrefs has no 2FA key"
 hasnt_code "$PREFS"         "2fa"         "ProfilePrefs holds no 2FA value"
 hasnt "build.json" '"totp_secret"'        "build.json seeds no TOTP secret"
-# The field has NO save lambda and NO watcher — that is the whole mechanism by
-# which it is not persisted, so assert it directly rather than trusting prose.
-if awk '/private fun mailConfirmationField/,/^        }$/' "$ROOT/$FRAGMENT" \
-     | grep -qE 'addTextChangedListener|Prefs\('; then
-    bad "mailConfirmationField() must not save what is typed into it"
-else
-    ok "the mailed code has no watcher and no store"
-fi
-# ...and the one place it IS read must only reach the clipboard.
-if awk '/private fun confirmMailCode/,/^    }$/' "$ROOT/$FRAGMENT" | grep -qE 'ConfigsPrefs|ProfilePrefs|WireGuardPrefs'; then
-    bad "confirmMailCode() must not write the code to any store"
-else
-    ok "the mailed code reaches no preference store"
-fi
-if awk '/private fun confirmMailCode/,/^    }$/' "$ROOT/$FRAGMENT" | grep -qF 'field.setText("")'; then
-    ok "a used code is cleared from the box"
-else
-    bad "confirmMailCode() must clear the box after use"
-fi
-if awk '/fun onDestroyView/,/^    }$/' "$ROOT/$FRAGMENT" | grep -qF "mailCodeField = null"; then
-    ok "the mailed code dies with the view"
-else
-    bad "onDestroyView() must drop the mailed code"
-fi
 # And it must not have opened a new route into the payload.
 hasnt_code "$SYNC" "mailCode"     "ProfileSync never reads the mailed code"
 hasnt_code "$SYNC" "confirmation" "ProfileSync carries no confirmation field"
 
-echo "== T11: FOUR tabs (#778 — Connect | Profiles | Runtime | Drift), declared {id, label} in build.json; the export carries no private key =="
+echo "== T11: the Account pages are declared {id, label} in build.json and mounted by id; the export carries no private key =="
 WG_PROFILES="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardProfiles.kt"
-# The id → column map is the ONLY tab knowledge in Kotlin; every LABEL is the
-# declaration's (build.json::ui.profile.tabs[].label).
-has "$FRAGMENT" 'val columns = mapOf("connect" to connect, "profiles" to profiles, "runtime" to runtime, "drift" to drift)' "the id → column map names the four columns"
-has "$FRAGMENT" 'Tab(t.label, it)' "each tab's title is its declared label"
-# No tab label is a Kotlin literal, and none of the tabs the strip lost comes back.
+# The id -> page map is the ONLY page knowledge in Kotlin; every LABEL is the declaration's
+# (ac_cloud-account/build.json::ui.sections, read through NavDecl).
+has "$ACCT_MAIN" 'NavDecl.fromBuildConfig(' "the island and the strips are built from the declaration"
+for page in '"connect" -> AccountConnectPage()' '"working" -> ProfilesWorkingPage()' '"diff" -> ProfilesDiffPage(model)' '"devices" -> ProfilesDevicesPage()' '"apps" -> AppsPage()' 'else -> AccountProfilePage(go)'; do
+    has "$ACCT_MAIN" "$page" "the page is mounted: $page"
+done
+# No page label is a Kotlin literal, and none of the tabs the strip lost comes back.
 for gone in 'Tab("Setup"' 'Tab("Infos"' 'Tab("Connect"' 'Tab("Profiles"' 'Tab("Runtime"' 'Tab("Drift"' 'Tab("Vault"' 'Tab("Repos"' 'Tab("Store"' 'Tab("WireGuard"' 'Tab(getString(R.string.vault_tab_imported)'; do
-    hasnt_code "$FRAGMENT" "$gone" "no tab label literal $gone"
+    hasnt_acct "$gone" "no tab label literal $gone"
 done
-# Every surface renders on one of the four (#778: Setup's index, wizard, cockpit and repos were deleted by design).
-has "$FRAGMENT" 'renderJourney(ctx, connect)' "the sign-in journey renders on Connect"
-has "$FRAGMENT" 'showVaultFetchDialog(line.label)'   "the vault fetch is the Authelia line's own leg on Connect (#766)"
-# #713 Connect ends at the vault export: the credentials read-out (it repeated
-# what each sign-in line says it holds) is gone, and the device pick is Setup's.
-hasnt_code "$FRAGMENT" 'renderTokens(' "the duplicated credentials read-out is gone from Connect"
-hasnt_code "$FRAGMENT" 'renderDevicePick(' "the device pick no longer renders on Connect"
-has "$FRAGMENT" 'ProfilesTab(model, tabLabel(connectTab), { n, t -> export(n, t) }, { openRoute(it) })' "the declared copy renders on Profiles"
-has "$FRAGMENT" 'renderRuntime(ctx, runtime)'  "the per-app runtime renders on Runtime"
-has "$FRAGMENT" 'DriftTab(model, VaultCockpit.selectedDevice(ctx)) { n, t -> export(n, t) }' "S / R / L and the sync render on Drift"
-RUNTIME_FN=$(awk '/private fun renderRuntime\(/{f=1} f{print} f&&/^    }$/{exit}' "$ROOT/$FRAGMENT")
-grep -qF 'RuntimeTab(AccountModel.get(ctx))' <<<"$RUNTIME_FN" && ok "Runtime renders the per-app runtime" || bad "Runtime does not render RuntimeTab"
-# #781 nothing below it: no "Your config (per peer)", no contact card.
-for gone in 'renderConfigApply(' 'renderPerson(' 'sectionHeader(' 'into.addView(caption('; do
-    grep -qF "$gone" <<<"$RUNTIME_FN" && bad "Runtime still renders $gone (#781)" || ok "Runtime renders no $gone (#781)"
+# Every surface renders on a page (#778: Setup's index, wizard, cockpit and repos were deleted by design).
+for gone in 'renderTokens(' 'renderDevicePick(' 'renderVault(' 'renderRepos(' 'renderConfigApply(' 'renderRuntime('; do
+    hasnt_acct "$gone" "T11: the old Connect/Runtime renderer is gone ($gone)"
 done
-# And every tab HAS a column: #614's null-column launch tabs are gone.
-hasnt_code "$FRAGMENT" 'val column: View?' "no null-column launch tab survives"
-# The strip is DATA: ids, order and labels come from the baked build.json array.
-has "$FRAGMENT" "AccountModel.tabs()"              "the strip is built from the declared tabs"
-has "../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountModel.kt" "UI_PROFILE_TABS_B64" "the tabs come from the baked build.json blob"
+# And every page HAS a body: #614's null-column launch tabs are gone.
+hasnt_acct 'val column: View?' "no null-column launch tab survives"
+# The declaration is DATA: ids, order and labels come from the baked build.json arrays.
+has "../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountModel.kt" "UI_PROFILE_TABS_B64" "the legacy strip still comes from the baked build.json blob"
 has "../ab_cloud-libs-shared/libs/account/build.gradle" "UI_PROFILE_TABS_B64"       "the blob is baked"
-# AI is not a tab; and #723 deleted the Configs AI page, so the cockpit card no
-# longer links anywhere — Account applies the AI tokens itself.
-hasnt_code "$FRAGMENT" 'Tab("AI"'               "AI is not a top-level Account tab"
-hasnt_code "$FRAGMENT" 'page:config/ai'         "no link to the deleted AI page survives"
-hasnt_code "$FRAGMENT" "AiFragment"             "the AI page is not re-hosted here"
+# AI is not a page of Account; and #723 deleted the Configs AI page, so no link to it survives.
+hasnt_acct 'Tab("AI"'               "AI is not a top-level Account tab"
+hasnt_acct 'page:config/ai'         "no link to the deleted AI page survives"
+hasnt_acct "AiFragment"             "the AI page is not re-hosted here"
 # #778 the cockpit's WireGuard link went with the cockpit page; no wrong target may come back.
-hasnt_code "$FRAGMENT" "page:config/wg"            "not the page target, which only rewrites to section:wg"
-hasnt_code "$FRAGMENT" "page:wg/config"            "not the double-push target"
-# Still no child fragments and no borrowed launcher machinery, at four tabs.
-hasnt_code "$FRAGMENT" "childFragmentManager"   "four tabs still use no child fragments"
-hasnt_code "$FRAGMENT" "SectionTabsFragment"    "four tabs still avoid the section mechanism"
+hasnt_acct "page:config/wg"            "not the page target, which only rewrites to section:wg"
+hasnt_acct "page:wg/config"            "not the double-push target"
+# Still no child fragments and no borrowed launcher machinery.
+hasnt_acct "childFragmentManager"   "the pages still use no child fragments"
+hasnt_acct "SectionTabsFragment"    "the pages still avoid the section mechanism"
 # #626 the page is called ACCOUNT, and the words live in ONE declaration.
 name_is_account() {   # $1 = build.json; 0 iff the Configs identity page reads "Account"
     python3 - "$1" <<'PYNAME'
@@ -413,7 +395,7 @@ grep -qE '"(person|tokens|repos|fleet|vault|wireguard|store)"' <<<"$(codeof "$AT
 jq -e '.ui.profile.infos.sections' "$ROOT/build.json" >/dev/null 2>&1 \
     && bad "T11-infos: build.json still hand-lists ui.profile.infos.sections" || ok "T11-infos: no hand-listed section list is declared"
 for gone in 'UI_PROFILE_INFOS_B64, android.util.Base64.NO_WRAP))' 'profileInfoSections()' 'MODE_LINK' 'INFOS_NO_RENDERER' 'private fun renderInfos('; do
-    hasnt_code "$FRAGMENT" "$gone" "T11-infos: the old read-out is gone ($gone)"
+    hasnt_acct "$gone" "T11-infos: the old read-out is gone ($gone)"
 done
 echo "-- T11-infos-mutation: a hand-listed read-out goes red --"
 SCRATCH2="$(mktemp -d)"; trap 'rm -rf "$SCRATCH2"' EXIT
@@ -578,10 +560,10 @@ has "$PAGETABS" "val divider = pages.indexOfFirst" "the strip derives the divide
 echo "-- T12a: Profile no longer duplicates the WireGuard screen --"
 # The whole point of the merge: capability moved, so Profile must not still
 # carry a second, partial copy of it.
-hasnt_code "$FRAGMENT" "WireGuardProfiles" "Profile no longer exports profiles"
-hasnt_code "$FRAGMENT" "providerSelector"  "Profile no longer has a Provider dropdown"
-hasnt_code "$FRAGMENT" "meshStatusView"    "Profile no longer renders tunnel status"
-hasnt_code "$FRAGMENT" "generateInterfaceKeyPair" "Profile no longer mints tunnel keys"
+hasnt_acct "WireGuardProfiles" "Account no longer exports profiles"
+hasnt_acct "providerSelector"  "Account no longer has a Provider dropdown"
+hasnt_acct "meshStatusView"    "Account no longer renders tunnel status"
+hasnt_acct "generateInterfaceKeyPair" "Account no longer mints tunnel keys"
 # ...and the WireGuard screen must have gained every one of them.
 has "$MESH_PROFILES" "ChoiceLine"     "WireGuard gained the Provider choice"
 has "$WGFRAG" "profileFolderPicker"  "WireGuard gained the 4-profile export"

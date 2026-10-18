@@ -305,7 +305,9 @@ fun ProfilesDiffPage(model: AccountModel) {
         val device = w.optString("device")
         val pr = w.optJSONObject("profile") ?: return Said(KitState.BAD, "malformed working profile")
         val settings = pr.optJSONObject("settings") ?: JSONObject().also { pr.put("settings", it) }
-        val written = AccountDrift.runtimeToDeclared(settings, phoneLeaves, phoneLeaves.keys, emptySet(), paths)
+        // The same guard as AccountModel.pullRuntimeToLocal: only what the runtime observed, and never what its app cannot be written back to.
+        val rt = model.runtime()
+        val written = AccountDrift.runtimeToDeclared(settings, phoneLeaves, AccountRuntime.observed(rt?.apps), AccountRuntime.readOnly(rt?.apps), paths)
         pr.put("settings", written.body)
         val target = vault.decl.devicePath(device)
         val c = vault.client() ?: return Said(KitState.BAD, "no usable forge declared")

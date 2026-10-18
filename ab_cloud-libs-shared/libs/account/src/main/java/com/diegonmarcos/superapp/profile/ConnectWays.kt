@@ -213,6 +213,22 @@ object ConnectWays {
         return record(ctx, if (stored != null) fail(stored) else Outcome(true, "✓ signed in through ${result.provider.label}${if (who.isNotBlank()) " as $who" else ""}"))
     }
 
+    /**
+     * The address a stored Authelia token without one can be linked to: the registry's primary identity, else the
+     * contact card's email; null when no token is stranded or no address is known. A token is never deleted for
+     * lacking an address (ConfigsPrefs.hasOrphanToken); linking it is the owner's explicit tap.
+     */
+    fun orphanAddress(ctx: Context): String? {
+        val app = ctx.applicationContext
+        if (!ConfigsPrefs(app).hasOrphanToken()) return null
+        return UserRegistry.Current.registry?.primaryIdentity?.email.orEmpty().ifBlank { ProfilePrefs(app).email.trim() }.ifBlank { null }
+    }
+
+    /** Link the stranded token to [address]; the store's own check of the address answers (null = linked). */
+    fun linkOrphan(ctx: Context, address: String): Outcome =
+        ConfigsPrefs(ctx.applicationContext).adoptOrphanToken(address.trim())?.let { fail(it) }
+            ?: Outcome(true, "✓ the stored token is linked to ${address.trim()}")
+
     /** A raw PEM, or `ssh.vault_repo_key` out of an exported config JSON. */
     fun extractSshKey(text: String): String {
         val trimmed = text.trim()
