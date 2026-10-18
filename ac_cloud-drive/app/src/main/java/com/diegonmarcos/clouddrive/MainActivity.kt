@@ -197,7 +197,9 @@ class MainActivity : ComponentActivity(), DriveActions {
         val file = File(path)
         runCatching {
             val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
-            startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, mimeOf(file)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+            // The system chooser, with the type the file really is (MimeTypes fills in what MimeTypeMap lacks: md, mht, 7z…).
+            val view = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mimeOf(file)).setClipData(ClipData.newRawUri(file.name, uri)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            startActivity(Intent.createChooser(view, file.name).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
         }
     }
 
@@ -240,5 +242,5 @@ class MainActivity : ComponentActivity(), DriveActions {
         return runCatching { startActivity(launch) }.isSuccess
     }
 
-    private fun mimeOf(file: File): String = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase()) ?: "application/octet-stream"
+    private fun mimeOf(file: File): String = com.diegonmarcos.clouddrive.files.MimeTypes.forName(file.name) { MimeTypeMap.getSingleton().getMimeTypeFromExtension(it) }
 }

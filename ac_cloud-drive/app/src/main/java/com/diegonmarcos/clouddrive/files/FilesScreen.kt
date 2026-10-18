@@ -103,6 +103,7 @@ import com.diegonmarcos.clouddrive.ui.IconCatalog
 import com.diegonmarcos.clouddrive.ui.IslandAction
 import com.diegonmarcos.clouddrive.ui.LoadingState
 import com.diegonmarcos.clouddrive.ui.Pill
+import com.diegonmarcos.clouddrive.files.convert.ConverterRegistry
 import com.diegonmarcos.clouddrive.ui.ProgressCard
 import com.diegonmarcos.clouddrive.ui.SectionHeader
 import com.diegonmarcos.clouddrive.ui.ToolbarIsland
@@ -132,6 +133,9 @@ private sealed class FilesDialog {
     object Duplicates : FilesDialog()
     /** #458/#577 PDF → txt/md/html/csv beside the file, through the ONE PdfConversion path. */
     data class ConvertPdf(val entry: FileOps.Entry) : FilesDialog()
+    /** Row menu ▸ Unzip… (destination picker) and Convert… (registry converters). */
+    data class Unzip(val entry: FileOps.Entry) : FilesDialog()
+    data class Convert(val entry: FileOps.Entry) : FilesDialog()
     /** The Places sheet: open in [pane], or pick a destination for the active selection. */
     data class Places(val pane: PaneId, val pickDestination: Boolean, val move: Boolean) : FilesDialog()
 }
@@ -233,6 +237,8 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
                                 EntryAction.OPEN_WITH -> { (e.location as? Location.Local)?.let { actions.openWith(it.path) }; null }
                                 EntryAction.EDIT -> { (e.location as? Location.Local)?.let { actions.openEngine("editor", it.path) }; null }
                                 EntryAction.EXTRACT_HERE -> { controller.extractHere(e); null }
+                                EntryAction.UNZIP -> FilesDialog.Unzip(e)
+                                EntryAction.CONVERT -> FilesDialog.Convert(e)
                                 EntryAction.OPEN_OTHER_PANE -> { controller.open(ui.otherId, e.location); controller.activate(ui.otherId); null }
                                 EntryAction.BOOKMARK -> { (e.location as? Location.Local)?.let { controller.prefs.toggleBookmark(it.path) }; null }
                                 EntryAction.CONVERT_PDF -> FilesDialog.ConvertPdf(e)
@@ -279,6 +285,8 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
         is FilesDialog.DeleteConfirm -> ConfirmDialog(stringResource(R.string.files_delete_title, d.count), stringResource(R.string.files_delete_body), stringResource(R.string.chrome_delete), { dialog = null }) { controller.deleteSelection(d.pane); dialog = null }
         is FilesDialog.ZipName -> TextFieldDialog(stringResource(R.string.files_zip), stringResource(R.string.files_zip_name), "archive.zip", stringResource(R.string.files_zip), { dialog = null }) { controller.zipSelection(d.pane, it); dialog = null }
         is FilesDialog.BulkRename -> BulkRenameDialog(d.files, { dialog = null }) { plan -> controller.applyRenamePlan(plan, d.location); dialog = null }
+        is FilesDialog.Unzip -> UnzipDialog(d.entry, remember(d.entry.key) { d.entry.localFile?.let { f -> File(f.parentFile, ArchiveExtractor.defaultFolderName(f.name)).path } ?: "" }, { dialog = null }) { dest -> controller.unzip(d.entry, dest); dialog = null }
+        is FilesDialog.Convert -> ConvertDialog(d.entry, ConverterRegistry.default.forName(d.entry.name), { dialog = null }) { c -> controller.convert(d.entry, c); dialog = null }
         is FilesDialog.ConvertPdf -> ConvertPdfDialog(d.entry, { dialog = null }) { target -> controller.convertPdf(d.entry, target); dialog = null }
         is FilesDialog.Duplicates -> DuplicatesDialog(dups, onReveal = { p -> controller.closeDuplicates(); dialog = null; controller.reveal(p) }) { controller.closeDuplicates(); dialog = null }
         is FilesDialog.Places -> PlacesSheet(d, ui, controller, prefs, actions, onDismiss = { dialog = null })
@@ -288,7 +296,7 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
 
 // ── one pane ─────────────────────────────────────────────────────────────
 
-private enum class EntryAction { RENAME, PROPERTIES, DELETE, SHARE, OPEN_WITH, EDIT, EXTRACT_HERE, OPEN_OTHER_PANE, BOOKMARK, CONVERT_PDF, COPY_PATH }
+private enum class EntryAction { RENAME, PROPERTIES, DELETE, SHARE, OPEN_WITH, EDIT, EXTRACT_HERE, UNZIP, CONVERT, OPEN_OTHER_PANE, BOOKMARK, CONVERT_PDF, COPY_PATH }
 
 private const val COPY_PATH = "copy_path"
 
@@ -565,9 +573,12 @@ private fun EntryRow(
             IconButton(onClick = { menu = true }, Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.chrome_more), Modifier.size(DriveMetrics.icon)) }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 @Composable fun item(label: Int, action: EntryAction) = DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = { menu = false; onMenu(action) })
-                if (local != null && !entry.isDirectory) item(R.string.files_open_with, EntryAction.OPEN_WITH)
+                // Open with… / Unzip… / Convert… come from RowMenu: the archive types and the converter registry decide, not this screen.
+                val rowItems = RowMenu.itemsFor(entry.name, entry.isDirectory, local != null, ConverterRegistry.default)
+                if (RowMenu.Item.OPEN_WITH in rowItems) item(R.string.files_open_with, EntryAction.OPEN_WITH)
                 if (local != null && !entry.isDirectory && (entry.mime.startsWith("text/") || entry.extension in Declarations.files.textExtensions)) item(R.string.files_edit, EntryAction.EDIT)
-                if (local != null && isArchive) item(R.string.files_unzip_here, EntryAction.EXTRACT_HERE)
+                if (RowMenu.Item.UNZIP in rowItems) item(R.string.files_unzip, EntryAction.UNZIP)
+                if (RowMenu.Item.CONVERT in rowItems) item(R.string.files_convert, EntryAction.CONVERT)
                 if (local != null && entry.mime == com.diegonmarcos.clouddrive.PdfConversion.PDF_MIME) item(R.string.files_convert_pdf, EntryAction.CONVERT_PDF)
                 if (entry.isDirectory) item(R.string.files_copy_to_other, EntryAction.OPEN_OTHER_PANE)
                 if (local != null && entry.isDirectory) item(R.string.files_bookmark_add, EntryAction.BOOKMARK)

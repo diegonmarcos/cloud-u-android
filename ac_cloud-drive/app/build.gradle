@@ -677,6 +677,11 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+    // Row menu > Unzip...: tar, tar.gz, tar.xz and 7z (commons-compress + xz) and rar (junrar). All pure JVM and
+    // bundled in the APK: nothing is downloaded at runtime. zip/jar/apk use java.util.zip.
+    implementation 'org.apache.commons:commons-compress:1.27.1'
+    implementation 'org.tukaani:xz:1.10'
+    implementation 'com.github.junrar:junrar:7.5.5'
     // #575 the scheduled git sync (GitSyncWorker) — the same WorkManager libs:updater
     // already schedules its own periodic check with, same version.
     implementation 'androidx.work:work-runtime-ktx:2.9.1'

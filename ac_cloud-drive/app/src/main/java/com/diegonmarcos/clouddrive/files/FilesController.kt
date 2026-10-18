@@ -238,6 +238,36 @@ class FilesController(
         }
     }
 
+    /** Row menu ▸ Unzip…: any archive type [ArchiveExtractor] reads, into [destPath], as a cancellable job with byte progress. */
+    fun unzip(entry: FileOps.Entry, destPath: String) {
+        val src = entry.localFile ?: return
+        val dest = File(destPath)
+        val title = ctx.getString(R.string.files_job_extract, src.name)
+        startJob(title) { job, set ->
+            val free = generateSequence(dest) { it.parentFile }.firstOrNull { it.exists() }?.let { runCatching { StatFs(it.absolutePath).availableBytes }.getOrNull() } ?: Long.MAX_VALUE
+            val r = try {
+                ArchiveExtractor.extract(src, dest, progressOf(job, set), { job.cancelRequested.get() }, free)
+            } catch (e: FileOps.NotEnoughSpace) {
+                return@startJob false to ctx.getString(R.string.files_job_not_enough_space, FileOps.humanBytes(e.needed), FileOps.humanBytes(e.free))
+            }
+            refreshShowing(Location.Local(dest.absolutePath))
+            src.parentFile?.let { refreshShowing(Location.Local(it.absolutePath)) }
+            true to ctx.getString(R.string.files_job_done, "$title · ${r.files}")
+        }
+    }
+
+    /** Row menu ▸ Convert…: run [converter] from the registry beside the file, as a cancellable job. */
+    fun convert(entry: FileOps.Entry, converter: com.diegonmarcos.clouddrive.files.convert.Converter) {
+        val src = entry.localFile ?: return
+        val dir = src.parentFile ?: return
+        val title = ctx.getString(R.string.files_job_convert, src.name, converter.label)
+        startJob(title) { job, set ->
+            val written = converter.convert(src, dir, progressOf(job, set)) { job.cancelRequested.get() }
+            refreshShowing(Location.Local(dir.absolutePath))
+            true to ctx.getString(R.string.files_convert_saved, written.joinToString { it.name })
+        }
+    }
+
     /** #458/#577 PDF → txt/md/html/csv beside the file, through the ONE PdfConversion path the reader also uses. */
     fun convertPdf(entry: FileOps.Entry, target: String) {
         val f = entry.localFile ?: return

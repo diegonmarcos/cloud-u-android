@@ -1,0 +1,71 @@
+From: <Saved by Blink>
+Snapshot-Content-Location: https://example.com/index.html
+Subject: Sample page
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----MultipartBoundary--abc123----"
+
+------MultipartBoundary--abc123----
+Content-Type: text/html; charset="utf-8"
+Content-ID: <frame-1@mhtml.blink>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://example.com/index.html
+
+<!DOCTYPE html><html><head><meta charset=3D"windows-1252"><title>Sample</title>
+<base href=3D"https://example.com/">
+<link rel=3D"stylesheet" href=3D"https://example.com/css/site.css">
+<style>.hero{background:url(https://example.com/img/hero.jpg)}</style></head>
+<body><img src=3D"cid:logo@mhtml.blink" alt=3D"logo">
+<img src=3D"img/photo.png?v=3D2" alt=3D"photo">
+<img src=3D"https://other.example/img/photo.png" alt=3D"same file name, other host">
+<a href=3D"https://example.com/other.html">not saved, stays absolute</a>
+<script src=3D"/js/app.js"></script>
+<p>caf=C3=A9 soft=
+break</p>
+</body></html>
+------MultipartBoundary--abc123----
+Content-Type: image/png
+Content-ID: <logo@mhtml.blink>
+Content-Transfer-Encoding: base64
+Content-Location: cid:logo@mhtml.blink
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==
+------MultipartBoundary--abc123----
+Content-Type: text/css
+Content-Transfer-Encoding: 7bit
+Content-Location: https://example.com/css/site.css
+
+body{background:url(../img/bg.png)}
+.x{color:red}
+------MultipartBoundary--abc123----
+Content-Type: image/jpeg
+Content-Transfer-Encoding: base64
+Content-Location: https://example.com/img/hero.jpg
+
+SlBFR0RBVEE=
+------MultipartBoundary--abc123----
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: https://example.com/img/photo.png?v=2
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==
+------MultipartBoundary--abc123----
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: https://other.example/img/photo.png
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==
+------MultipartBoundary--abc123----
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: https://example.com/img/bg.png
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==
+------MultipartBoundary--abc123----
+Content-Type: application/javascript
+Content-Transfer-Encoding: 7bit
+Content-Location: https://example.com/js/app.js
+
+console.log(1)
+------MultipartBoundary--abc123------

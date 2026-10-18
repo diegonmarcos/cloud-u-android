@@ -90,6 +90,15 @@
     <string name="files_convert_pdf">Convert PDF to…</string>
     <string name="files_convert_pdf_not_offered">docx, xlsx and odt need the fleet converter service and are not produced on the phone</string>
     <string name="files_convert_saved">Saved %1$s next to the original</string>
+    <string name="files_unzip">Unzip…</string>
+    <string name="files_unzip_dest">Destination folder</string>
+    <string name="files_unzip_browse">Browse…</string>
+    <string name="files_unzip_default">Default</string>
+    <string name="files_unzip_up">Up one level</string>
+    <string name="files_unzip_here_folder">Use this folder</string>
+    <string name="files_convert">Convert…</string>
+    <string name="files_convert_to">Convert %1$s to</string>
+    <string name="files_job_convert">Converting %1$s to %2$s</string>
     <string name="files_share">Share</string>
     <string name="files_open_with">Open with…</string>
     <string name="files_edit">Edit in the editor</string>

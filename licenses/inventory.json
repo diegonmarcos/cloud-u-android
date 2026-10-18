@@ -21,7 +21,7 @@
    "PolyForm-Noncommercial-1.0.0": 3
   },
   "maven": {
-   "Apache-2.0": 233,
+   "Apache-2.0": 234,
    "NOASSERTION": 36,
    "MIT": 27,
    "LicenseRef-Google-MLKit-Terms": 7,
@@ -44,7 +44,9 @@
    "EPL-1.0": 1,
    "LGPL-2.1-or-later AND Apache-2.0": 1,
    "BSD style AND LicenseRef-PublicDomain": 1,
-   "LicenseRef-PublicDomain": 1
+   "LicenseRef-PublicDomain": 1,
+   "0BSD": 1,
+   "LicenseRef-UnRAR": 1
   },
   "npm": {
    "MIT": 525,
@@ -5032,6 +5034,17 @@
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
    "within_upstream_module": "gallery"
   },
+  "maven:com.github.junrar:junrar": {
+   "kind": "maven",
+   "declared_in": [
+    "ac_cloud-drive/app/build.gradle"
+   ],
+   "version": "7.5.5",
+   "scope": "shipped",
+   "licence": "LicenseRef-UnRAR",
+   "licence_source": "POM of the pinned release (Row menu Unzip...; pure-JVM archive readers, bundled)",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)"
+  },
   "maven:com.github.matrix-org:matrix-analytics-events": {
    "kind": "maven",
    "declared_in": [
@@ -6710,6 +6723,17 @@
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
    "within_upstream_module": "gallery"
   },
+  "maven:org.apache.commons:commons-compress": {
+   "kind": "maven",
+   "declared_in": [
+    "ac_cloud-drive/app/build.gradle"
+   ],
+   "version": "1.27.1",
+   "scope": "shipped",
+   "licence": "Apache-2.0",
+   "licence_source": "POM of the pinned release (Row menu Unzip...; pure-JVM archive readers, bundled)",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)"
+  },
   "maven:org.apache.cordova:framework": {
    "kind": "maven",
    "declared_in": [
@@ -7363,6 +7387,17 @@
    "licence_source": "POM 7.12.0",
    "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)",
    "within_upstream_module": "vault"
+  },
+  "maven:org.tukaani:xz": {
+   "kind": "maven",
+   "declared_in": [
+    "ac_cloud-drive/app/build.gradle"
+   ],
+   "version": "1.10",
+   "scope": "shipped",
+   "licence": "0BSD",
+   "licence_source": "POM of the pinned release (Row menu Unzip...; pure-JVM archive readers, bundled)",
+   "transitive": "not resolved (needs a Gradle/npm resolution; see script docstring)"
   },
   "maven:org.unifiedpush.android:connector": {
    "kind": "maven",
