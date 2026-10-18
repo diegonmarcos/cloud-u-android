@@ -78,10 +78,10 @@ bad = []
 if len(declared) != len(set(declared)):
     bad.append("a path is declared twice: %s" % sorted({d for d in declared if declared.count(d) > 1}))
 # find() must be a walk over ROUTES and the only place a path is compared.
-find = re.search(r"pub fn find\(path: &str\) -> &'static Route \{(.*?)\n\}", routes, re.S)
+find = re.search(r"pub fn find\(side: Side, path: &str\) -> Option<&'static Route> \{(.*?)\n\}", routes, re.S)
 if not find or "for r in ROUTES" not in find.group(1):
     bad.append("routes.rs::find does not iterate ROUTES — dispatch must be a walk over the table")
-prefixes = ("/__tab__/",)
+prefixes = ("/__tab__/", "/__lib__/")
 for src in sorted(glob.glob(os.path.join(app, "server/src/*.rs"))):
     text = open(src).read()
     # strip the test modules and comments: tests may plant literals on purpose
@@ -221,7 +221,8 @@ PY
 # ── t4 <app> : no placeholder in a shipped tab ─────────────────────────────
 t4() {
   local hits
-  hits="$(grep -rniE "not built( yet)?|coming soon|placeholder|TODO_PAGE|under construction|lorem ipsum" "$1/server/ui" "$1/server/src" 2>/dev/null | grep -v "^.*://" || true)"
+  # ui/lib is vendored third-party code (marked, js-yaml, Eruda), not a shipped tab; `placeholder=` is the HTML attribute.
+  hits="$(grep -rniE "not built( yet)?|coming soon|placeholder|TODO_PAGE|under construction|lorem ipsum" --exclude-dir=lib "$1/server/ui" "$1/server/src" 2>/dev/null | grep -v "^.*://" | grep -viE "placeholder=" || true)"
   if [ -n "$hits" ]; then printf '    %s\n' "$hits"; return 1; fi
   return 0
 }
@@ -344,17 +345,17 @@ t7() {
   T7_TARGET="$WORK7/target"
   nav="$(nav_of "$1" | tr '\n' ',')"
   [ "$nav" = "Pages,API,Home,Files,Configs," ] || { echo "    real table: nav is '$nav', want Pages,API,Home,Files,Configs"; rc=1; }
-  copy="$WORK7/plant"; rm -rf "$copy"; mkdir -p "$copy"; cp -R "$1/server" "$copy/"; rm -rf "$copy/server/target"
+  copy="$WORK7/plant"; rm -rf "$copy"; mkdir -p "$copy"; cp -R "$1/server" "$1/build.json" "$copy/"; rm -rf "$copy/server/target"
   python3 - "$copy/server/src/routes.rs" <<'PY' || { echo "    plant did not apply"; return 1; }
 import sys; p = sys.argv[1]; s = open(p).read()
 anchor = '    Route { kind: Kind::Api, path: "/__api__/routes"'
 assert anchor in s
-s = s.replace(anchor, '    Route { kind: Kind::Page, path: "/__tab__/planted", tab: Some("Planted"), summary: "planted", handler: page_shell },\n' + anchor, 1)
+s = s.replace(anchor, '    Route { kind: Kind::Page, path: "/__tab__/planted", tab: Some("Planted"), on: Side::Drive, post: false, summary: "planted", handler: page_shell },\n' + anchor, 1)
 open(p, "w").write(s)
 PY
   nav="$(nav_of "$copy" | tr '\n' ',')"
   [ "$nav" = "Pages,API,Home,Files,Configs,Planted," ] || { echo "    tab row planted: nav is '$nav', want ...,Configs,Planted"; rc=1; }
-  copy="$WORK7/remove"; rm -rf "$copy"; mkdir -p "$copy"; cp -R "$1/server" "$copy/"; rm -rf "$copy/server/target"
+  copy="$WORK7/remove"; rm -rf "$copy"; mkdir -p "$copy"; cp -R "$1/server" "$1/build.json" "$copy/"; rm -rf "$copy/server/target"
   python3 - "$copy/server/src/routes.rs" <<'PY' || { echo "    remove did not apply"; return 1; }
 import re, sys; p = sys.argv[1]; s = open(p).read()
 n = re.sub(r'\n    Route \{ kind: Kind::Page, path: "/__tab__/configs".*?\},', "", s, count=1)
@@ -391,7 +392,7 @@ mutate() {
 }
 m_route_outside() { python3 - "$1" <<'PY'
 import sys,re; p=sys.argv[1]+"/server/src/lib.rs"; s=open(p).read()
-new=s.replace("    let route = routes::find(&req.path);", "    if req.path == \"/__planted__/x\" { return Resp::text(200, \"planted\"); }\n    let route = routes::find(&req.path);")
+new=s.replace("    let route = match routes::find(ctx.side, &req.path) {", "    if req.path == \"/__planted__/x\" { return Resp::text(200, \"planted\"); }\n    let route = match routes::find(ctx.side, &req.path) {")
 assert new!=s; open(p,"w").write(new)
 PY
 }

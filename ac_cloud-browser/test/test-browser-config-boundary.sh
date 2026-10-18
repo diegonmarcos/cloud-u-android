@@ -84,9 +84,10 @@ EXPECTED = [
     "https://diegonmarcos.github.io/cloud-mobile",
     "https://diegonmarcos.github.io/linktree_icon-view",
     "https://qwant.com",
-    "http://localhost:8000",
-    "http://localhost:8001",
-    "http://localhost:8002",
+    "http://termux.app",
+    "http://nix.app",
+    "http://emulated.app",
+    "http://cloud.app",
 ]
 
 # ── A. the app's own config carries them, in his order ───────────────
@@ -102,24 +103,31 @@ def _pin_url(p): return p.get("url") if isinstance(p, dict) else p
 PIN_URLS = [_pin_url(p) for p in (browser.get("default_pinned_tabs") or [])]
 PIN_TITLES = {p.get("url"): p.get("title") for p in (browser.get("default_pinned_tabs") or []) if isinstance(p, dict)}
 check(PIN_URLS == EXPECTED,
-      "build.json pins exactly his six URLs, in his order",
+      "build.json pins exactly his seven URLs (three sites, then the four private names), in his order",
       "got: %r" % (PIN_URLS,))
-# Termux / Nix / Local pins follow each app's single port declaration.
+# The four local pins are the private names of cloud-c3-webserver's build.json::serving (THE name -> port map),
+# each with its owner's port, titled, and the browser bakes that same map (no second copy of a name or a port).
+SERVING = json.loads(must_read(os.path.join(ROOT, "ac_cloud-c3-webserver/build.json")) or "{}").get("serving") or {}
 def _port(rel, *keys):
     d = json.loads(must_read(os.path.join(ROOT, rel)) or "{}")
     for k in keys: d = (d or {}).get(k)
     return d
-LOCAL = {
-    "Termux": _port("ac_cloud-termux/build.json", "runtime", "webserver", "port"),
-    "Nix":    _port("ac_cloud-nix-on-droid/build.json", "runtime", "webserver", "port"),
-    "Local":  _port("ac_cloud-c3-webserver/build.json", "runtime", "port"),
-}
-for name, port in LOCAL.items():
-    want = "http://localhost:%s" % port
-    check(port is not None and (browser.get("local_pinned_tabs") or {}).get(name) == want
-          and want in PIN_URLS and PIN_TITLES.get(want) == name,
-          "%s pin matches its declared port (%s) and carries its name" % (name, want),
-          "got: %r" % ((browser.get("local_pinned_tabs") or {}).get(name),))
+OWNER_PORT = {"external": lambda e: _port(e["owner"] + "/build.json", "runtime", "webserver", "port"),
+              "drive":    lambda e: _port(e["owner"] + "/build.json", "runtime", "port"),
+              "diag":     lambda e: _port(e["owner"] + "/build.json", "runtime", "diag", "port")}
+check(len(SERVING.get("endpoints") or []) == 4, "cloud-c3-webserver declares four served endpoints",
+      "got: %r" % (len(SERVING.get("endpoints") or []),))
+for e in SERVING.get("endpoints") or []:
+    want = "http://%s" % e["name"]
+    check(OWNER_PORT[e["role"]](e) == e["port"],
+          "%s: serving says :%s and its owner %s declares the same" % (e["name"], e["port"], e["owner"]),
+          "owner declares %r" % (OWNER_PORT[e["role"]](e),))
+    check((browser.get("local_pinned_tabs") or {}).get(e["title"]) == want
+          and want in PIN_URLS and PIN_TITLES.get(want) == e["title"],
+          "%s pin is the private name %s and carries its title" % (e["title"], want),
+          "got: %r" % ((browser.get("local_pinned_tabs") or {}).get(e["title"]),))
+check(not any("localhost" in (u or "") or "127.0.0.1" in (u or "") for u in PIN_URLS),
+      "no pin spells a loopback address any more: the names are the pins")
 check(browser.get("default_engine") == "duckduckgo",
       "build.json ships DuckDuckGo as the default engine",
       "got: %r" % (browser.get("default_engine"),))

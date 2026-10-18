@@ -1091,6 +1091,17 @@
       "search",
       "store"
      ]
+    },
+    {
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "aa_cloud-superapp/app/src/main/AndroidManifest.xml",
+     "component": ".cloud.FleetDiagnosticsProvider",
+     "id": "provider:<pkg>.fleetdiag",
+     "kind": "provider",
+     "name": "FleetDiagnosticsProvider",
+     "authority": "<pkg>.fleetdiag",
+     "callers": []
     }
    ]
   },

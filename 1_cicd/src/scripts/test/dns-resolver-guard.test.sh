@@ -146,6 +146,10 @@ probe_red "/api/net/resolve stops asking Android's resolver" "$SRV" 'InetAddress
 probe_red "the probe stops reporting whether the app is behind the VPN" "$SRV" 'NetworkCapabilities.TRANSPORT_VPN'
 probe_red "the permission the probe reads the network with is dropped" \
     "ab_cloud-libs-shared/libs/devtools/src/main/AndroidManifest.xml" 'android.permission.ACCESS_NETWORK_STATE'
+# The one deliberate exception (four private .app names, c3-webserver's DNS on loopback): its pins must hold.
+PN="ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/PrivateNames.kt"
+probe_red "the private-name client stops requiring a loopback DNS server" "$PN" 'if (!isLoopbackLiteral(host)) return null'
+probe_red "the private-name client accepts an answer that is not loopback" "$PN" 'if (!isLoopbackAddress(ip))'
 rm -f "$FX/$SRV"
 if judge; then bad "probe file deleted: MUTATION SURVIVED"
 elif grep -q '\[probe\]' "$W/out"; then ok "the debug server itself deleted: red"

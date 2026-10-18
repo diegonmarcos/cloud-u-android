@@ -9,15 +9,17 @@
 # first that day.
 #
 # THE RULE. An app's localhost listening ports are declared in its build.json under `runtime`:
-#   runtime.port           this app's one server     (ac_cloud-c3-webserver -> 8002)
+#   runtime.port           this app's one server     (ac_cloud-c3-webserver -> 8002; its second, runtime.diag.port -> 8003)
 #   runtime.<name>.port    one per named server      (the terminals' runtime.webserver: 8000, 8001)
 # This guard reads every <app>/build.json at the repo root and fails when
 #   P1  two declarations name the same port,
 #   P2  a declared port is not an integer in 1024..65535,
 #   P3  a declared port lands on the fleet's reserved debug ports
 #       (1_cicd/src/data/debug-ports.json: the gateway, every assigned port, the whole range),
-#   P4  the option-37.1 assignment moved: c3-webserver 8002, termux 8000, nix-on-droid 8001.
-#       These three numbers are the owner's decision, so a change to them must be a change here.
+#   P4  the option-37.1 assignment moved: c3-webserver 8002 (the drive) and 8003 (the fleet-diagnostics
+#       page, runtime.diag.port), termux 8000, nix-on-droid 8001. These numbers are the owner's decision,
+#       so a change to them must be a change here. (The names that stand for them are
+#       test-c3-webserver-ports.sh's business.)
 #
 #   sh test-localhost-ports.sh          the guard on the real tree, then the mutations below
 #   sh test-localhost-ports.sh check    the guard alone
@@ -80,6 +82,7 @@ if os.path.isfile(dbg_path):
             problems.append("P3 %s = %d collides with %s (1_cicd/src/data/debug-ports.json)" % (names[0], port, why))
 
 want = {8002: "ac_cloud-c3-webserver runtime.port",
+        8003: "ac_cloud-c3-webserver runtime.diag.port",
         8000: "ac_cloud-termux runtime.webserver.port",
         8001: "ac_cloud-nix-on-droid runtime.webserver.port"}
 for port, name in sorted(want.items()):
@@ -145,8 +148,12 @@ fresh; set_port ac_cloud-c3-webserver runtime.port 80
 must_fail "a privileged port" "P2"
 fresh; set_port ac_cloud-calc runtime.port 38080
 must_fail "an app on the SuperApp gateway port" "P3"
-fresh; set_port ac_cloud-c3-webserver runtime.port 8003
+fresh; set_port ac_cloud-c3-webserver runtime.port 8004
 must_fail "c3-webserver moved off 8002" "P4"
+fresh; set_port ac_cloud-c3-webserver runtime.diag.port 8001
+must_fail "the diagnostics page takes the nix terminal's 8001" "P1 127.0.0.1:8001"
+fresh; set_port ac_cloud-c3-webserver runtime.diag.port 8004
+must_fail "the diagnostics page moved off 8003" "P4"
 
 if [ "$fails" -ne 0 ]; then
     echo "::error::FAIL -- $fails mutation(s) not caught"

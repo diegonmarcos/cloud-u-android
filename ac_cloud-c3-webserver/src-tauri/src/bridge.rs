@@ -1,0 +1,141 @@
+//! The two Android calls the server crate cannot make itself, installed into it
+//! at startup: (1) read the SuperApp's About / Logcat / Diagnose through its
+//! exported, CONSTELLATION_DATA signature-permission ContentProvider, and
+//! (2) hand a served page to cloud-browser. Both are JNI on the activity Tauri
+//! gives us; the server threads that call them attach themselves per call.
+//!
+//! Nothing here names a package, an authority or a port: they come from
+//! build.json::serving through c3_webserver::serving.
+
+use jni::objects::{GlobalRef, JObject, JString, JValue};
+use jni::{JNIEnv, JavaVM};
+use std::sync::OnceLock;
+
+struct Handle {
+    vm: JavaVM,
+    activity: GlobalRef,
+}
+
+static HANDLE: OnceLock<Handle> = OnceLock::new();
+
+/// Keep the VM and the activity, and wire the server crate's two hooks to them.
+pub fn install(window: &tauri::WebviewWindow) {
+    let _ = window.with_webview(|webview| {
+        webview.jni_handle().exec(|env, activity, _webview| {
+            let made = (|| -> jni::errors::Result<()> {
+                let vm = env.get_java_vm()?;
+                let activity = env.new_global_ref(activity)?;
+                let _ = HANDLE.set(Handle { vm, activity });
+                Ok(())
+            })();
+            match made {
+                Ok(()) => {
+                    c3_webserver::diag::set_source(Box::new(read_bridge));
+                    c3_webserver::diag::set_opener(Box::new(open_in_browser));
+                }
+                Err(e) => {
+                    let _ = env.exception_clear();
+                    eprintln!("cloud-c3-webserver: bridge not installed: {}", e);
+                }
+            }
+        });
+    });
+}
+
+/// Run `f` on this thread attached to the VM; a pending Java exception becomes the Err text.
+fn with_env<T>(f: impl FnOnce(&mut JNIEnv, &JObject) -> jni::errors::Result<T>) -> Result<T, String> {
+    let h = HANDLE.get().ok_or_else(|| "the Android bridge is not installed yet (the window is still opening)".to_string())?;
+    let mut env = h.vm.attach_current_thread().map_err(|e| e.to_string())?;
+    let out = f(&mut env, h.activity.as_obj());
+    if let Some(msg) = take_exception(&mut env) {
+        return Err(msg);
+    }
+    out.map_err(|e| e.to_string())
+}
+
+fn take_exception(env: &mut JNIEnv) -> Option<String> {
+    if !env.exception_check().unwrap_or(false) {
+        return None;
+    }
+    let ex = env.exception_occurred().ok()?;
+    let _ = env.exception_clear();
+    let text = env
+        .call_method(&ex, "toString", "()Ljava/lang/String;", &[])
+        .ok()
+        .and_then(|v| v.l().ok())
+        .and_then(|o| env.get_string(&JString::from(o)).ok().map(String::from));
+    Some(text.unwrap_or_else(|| "a Java exception".to_string()))
+}
+
+fn uri<'a>(env: &mut JNIEnv<'a>, s: &str) -> jni::errors::Result<JObject<'a>> {
+    let js = env.new_string(s)?;
+    env.call_static_method("android/net/Uri", "parse", "(Ljava/lang/String;)Landroid/net/Uri;", &[JValue::Object(&js)])?.l()
+}
+
+fn bundle_string(env: &mut JNIEnv, bundle: &JObject, key: &str) -> jni::errors::Result<String> {
+    let k = env.new_string(key)?;
+    let v = env.call_method(bundle, "getString", "(Ljava/lang/String;)Ljava/lang/String;", &[JValue::Object(&k)])?.l()?;
+    if v.is_null() {
+        return Ok(String::new());
+    }
+    Ok(String::from(env.get_string(&JString::from(v))?))
+}
+
+/// ContentResolver.call(content://<authority>, method, arg) -> Bundle {ok, mime, payload, error}.
+fn read_bridge(method: &str, arg: &str) -> Result<(String, String), String> {
+    let authority = c3_webserver::serving::get().bridge_authority.clone();
+    let reply = with_env(|env, activity| {
+        let cr = env.call_method(activity, "getContentResolver", "()Landroid/content/ContentResolver;", &[])?.l()?;
+        let u = uri(env, &format!("content://{}", authority))?;
+        let m = env.new_string(method)?;
+        let a = env.new_string(arg)?;
+        let null = JObject::null();
+        let bundle = env
+            .call_method(
+                &cr,
+                "call",
+                "(Landroid/net/Uri;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;",
+                &[JValue::Object(&u), JValue::Object(&m), JValue::Object(&a), JValue::Object(&null)],
+            )?
+            .l()?;
+        if bundle.is_null() {
+            return Ok(None);
+        }
+        let ok_key = env.new_string("ok")?;
+        let ok = env.call_method(&bundle, "getBoolean", "(Ljava/lang/String;)Z", &[JValue::Object(&ok_key)])?.z()?;
+        Ok(Some((ok, bundle_string(env, &bundle, "mime")?, bundle_string(env, &bundle, "payload")?, bundle_string(env, &bundle, "error")?)))
+    })
+    .map_err(|e| friendly(&e, &authority))?;
+    match reply {
+        None => Err(format!("{} answered nothing: is the SuperApp installed and up to date?", authority)),
+        Some((true, mime, payload, _)) => Ok((mime, payload)),
+        Some((false, _, _, error)) => Err(if error.is_empty() { "the SuperApp refused the call".to_string() } else { error }),
+    }
+}
+
+fn friendly(e: &str, authority: &str) -> String {
+    if e.contains("SecurityException") {
+        format!("not allowed to read {}: this app and the SuperApp must be signed with the same key", authority)
+    } else if e.contains("Unknown URI") || e.contains("IllegalArgumentException") {
+        format!("{} is not installed (the SuperApp with the diagnostics bridge)", authority)
+    } else {
+        e.to_string()
+    }
+}
+
+/// VIEW <url> aimed at cloud-browser's package and nobody else's: a private name handed to the system would be
+/// resolved on the public internet by whichever browser took it.
+fn open_in_browser(url: &str) -> Result<(), String> {
+    let package = c3_webserver::serving::get().browser_package.clone();
+    with_env(|env, activity| {
+        let action = env.new_string("android.intent.action.VIEW")?;
+        let u = uri(env, url)?;
+        let intent = env.new_object("android/content/Intent", "(Ljava/lang/String;Landroid/net/Uri;)V", &[JValue::Object(&action), JValue::Object(&u)])?;
+        let pkg = env.new_string(&package)?;
+        env.call_method(&intent, "setPackage", "(Ljava/lang/String;)Landroid/content/Intent;", &[JValue::Object(&pkg)])?;
+        env.call_method(&intent, "addFlags", "(I)Landroid/content/Intent;", &[JValue::Int(0x1000_0000)])?; // FLAG_ACTIVITY_NEW_TASK
+        env.call_method(activity, "startActivity", "(Landroid/content/Intent;)V", &[JValue::Object(&intent)])?;
+        Ok(())
+    })
+    .map_err(|e| if e.contains("ActivityNotFoundException") { format!("{} is not installed", package) } else { e })
+}

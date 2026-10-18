@@ -1,6 +1,6 @@
 [package]
 name = "cloud-c3-webserver"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "The cloud-c3-webserver app: the c3-webserver library started in-process, and a Tauri webview opened on it. Rust plus the server's own web UI; the only Kotlin is the glue Tauri generates."
 

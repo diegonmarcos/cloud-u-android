@@ -41,10 +41,37 @@
   .index .tool button, .back a { color:var(--acc); background:none; border:1px solid var(--line); border-radius:6px; padding:6px 10px; font:13px system-ui; }
   .back { margin:-4px 0 12px; text-align:right; }
   .badge { font-size:11px; color:var(--dim); border:1px solid var(--line); border-radius:4px; padding:1px 6px; margin-left:6px; }
+  header { align-items:center; }
+  header .sub { flex:1; }
+  #gear { background:none; border:1px solid var(--line); color:var(--dim); border-radius:8px; width:34px; height:34px; font:18px system-ui; padding:0; }
+  #gear.on { color:var(--acc); border-color:var(--acc); }
+  .seg { display:flex; gap:6px; padding:8px 12px; border-bottom:1px solid var(--line); }
+  .seg button { flex:1; background:var(--bg); color:var(--dim); border:1px solid var(--line); border-radius:8px; padding:8px 0; font:600 13px system-ui; }
+  .seg button.on { color:var(--acc); border-color:var(--acc); }
+  .served { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; align-items:center; }
+  .served .dot { width:9px; height:9px; border-radius:50%; background:var(--dim); display:inline-block; }
+  .served .dot.up { background:#7ee2a8; } .served .dot.down { background:#ff8a8a; }
+  .served .links { display:flex; flex-wrap:wrap; gap:6px 14px; }
+  .served .links a { padding:7px 0; min-height:32px; display:inline-flex; align-items:center; }
+  .served .head { font-weight:600; }
+  .note { color:var(--dim); font-size:12px; padding:8px 12px; }
+  .eng { display:flex; gap:10px; padding:8px 12px; border-bottom:1px solid var(--line); align-items:flex-start; }
+  .eng:last-child { border-bottom:0; }
+  .eng .t { flex:1; min-width:0; }
+  .eng .nm { font-weight:600; }
+  .eng .cv { color:var(--acc); font:12px ui-monospace, monospace; word-break:break-word; }
+  .eng .why { color:#e6c07b; font-size:12px; margin-top:2px; }
+  .sw { flex:0 0 auto; width:46px; height:28px; border-radius:14px; border:1px solid var(--line); background:var(--bg); position:relative; padding:0; }
+  .sw::after { content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--dim); transition:transform .12s; }
+  .sw[aria-checked=true] { border-color:var(--acc); background:#10304a; }
+  .sw[aria-checked=true]::after { transform:translateX(18px); background:var(--acc); }
+  .sw[disabled] { opacity:.35; }
+  .toast { position:fixed; left:12px; right:12px; bottom:calc(var(--nav) + 10px); background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:9px 12px; font-size:13px; z-index:5; }
+  .toast.bad { border-color:#ff8a8a; color:#ff8a8a; }
 </style>
 </head>
 <body>
-<header><h1 id="title">cloud-c3-webserver</h1><span class="sub" id="sub"></span></header>
+<header><h1 id="title">cloud-c3-webserver</h1><span class="sub" id="sub"></span><button id="gear" aria-label="Settings" title="Settings: Configs">⚙</button></header>
 <main id="main"><div class="err" id="boot">Connecting to the server…</div></main>
 <nav id="nav" aria-label="tabs"></nav>
 
@@ -169,8 +196,79 @@ function renderFile(file) {
   return '<section><h2>' + esc(file.path) + ' <span class="badge">' + esc(fmtBytes(file.size)) + '</span> <a href="' +
     esc(file.path) + '" target="_blank">open</a></h2><pre>' + esc(file.content) + '</pre></section>';
 }
+// Pages: every served page of the phone, by port and by its private DNS name. The data is /__api__/serving
+// (build.json::serving); a link here hands the URL to cloud-browser (data-open), it never navigates this view.
+function renderServed(sv) {
+  var rows = sv.endpoints.map(function (e) {
+    var state = e.up === true ? 'up' : (e.up === false ? 'down' : '');
+    var label = e.up === true ? 'answering' : (e.up === false ? 'not answering' : '');
+    return '<div class="row"><div class="v served">' +
+      '<span class="dot ' + state + '" title="' + esc(label) + '"></span>' +
+      '<span class="head">' + esc(e.title) + '<span class="badge">:' + esc(e.port) + '</span><span class="badge">' + esc(e.role) + '</span></span>' +
+      '<span></span><span class="links">' +
+        '<a data-open="' + esc(e.id) + '" data-via="name" href="' + esc(e.url_name) + '">' + esc(e.name) + '</a>' +
+        '<a data-open="' + esc(e.id) + '" data-via="ip" href="' + esc(e.url_ip) + '">127.0.0.1:' + esc(e.port) + '</a></span>' +
+      '<span></span><span class="sum">' + esc(e.summary) + '</span></div></div>';
+  }).join('');
+  return '<section><h2>Served pages · tap to open in cloud-browser</h2>' + rows +
+    '<div class="note">Names resolve through this app\'s private DNS (udp ' + esc(sv.dns.host) + ':' + esc(sv.dns.port) + '), only inside our apps.</div></section>';
+}
+function renderCfgTabs(current) {
+  return '<div class="seg" role="tablist">' + [['about', 'About'], ['engines', 'Engines']].map(function (t) {
+    return '<button role="tab" data-cfg="' + t[0] + '"' + (t[0] === current ? ' class="on" aria-selected="true"' : '') + '>' + t[1] + '</button>';
+  }).join('') + '</div>';
+}
+// Configs > About: what the app serves, its ports, DNS names and versions.
+function renderServing(sv, cfg) {
+  var drive = sv.endpoints.filter(function (e) { return e.role === 'drive'; })[0];
+  var diag = sv.endpoints.filter(function (e) { return e.role === 'diag'; })[0];
+  var serves = [
+    ['Emulated drive', drive ? drive.name + '  →  127.0.0.1:' + drive.port + '  ·  ' + (cfg.root || '') + ' and nothing else' : '—'],
+    ['Fleet diagnostics', diag ? diag.name + '  →  127.0.0.1:' + diag.port + '  ·  the SuperApp\'s About, Logcat and Diagnose' : '—'],
+    ['Reads', 'loopback only; any other peer is refused'],
+    ['Methods', (cfg.methods || []).join(', ') + ' (+ the Engines switch and the browser opener, guarded)']
+  ];
+  var ports = sv.endpoints.map(function (e) {
+    return [e.name, '127.0.0.1:' + e.port + '  ·  ' + e.role + (e.up === true ? '  ·  answering' : (e.up === false ? '  ·  not answering' : '')) + '  ·  ' + e.owner];
+  });
+  var dns = [
+    ['Server', 'udp ' + sv.dns.host + ':' + sv.dns.port],
+    ['Answers', sv.dns.answer + ' (TTL ' + sv.dns.ttl_s + ' s) for the four names above, nothing else'],
+    ['Scope', sv.dns.scope],
+    ['Browser', sv.opener]
+  ];
+  var versions = [
+    ['App', sv.app + ' ' + sv.version_name + ' (code ' + sv.version_code + ')'],
+    ['Server crate', sv.crate_version],
+    ['Bridge', sv.bridge.authority]
+  ].concat((sv.bundled || []).map(function (b) { return [b.name, b.version]; }))
+   .concat([['Platform', (cfg.os || '') + ' / ' + (cfg.arch || '')]]);
+  return renderSections([
+    { title: 'What this app serves', rows: serves },
+    { title: 'Ports and DNS names', rows: ports },
+    { title: 'Private DNS', rows: dns },
+    { title: 'Versions', rows: versions }
+  ]);
+}
+// Configs > Engines: the registry, grouped, each row with its description and a switch where one makes sense.
+function renderEngines(list) {
+  var groups = [['render', 'Render engines'], ['feature', 'Feature engines'], ['core', 'Core (always on)'], ['not-portable', 'Not portable to the phone']];
+  return groups.map(function (g) {
+    var rows = list.filter(function (e) { return e.group === g[0]; });
+    if (!rows.length) return '';
+    var body = rows.map(function (e) {
+      var sw = e.toggle
+        ? '<button class="sw" role="switch" data-engine="' + esc(e.id) + '" aria-checked="' + (e.on ? 'true' : 'false') + '" aria-label="' + esc(e.name) + '"></button>'
+        : '';
+      return '<div class="eng"><div class="t"><div class="nm">' + esc(e.name) + '<span class="badge">' + esc(e.id) + '</span></div>' +
+        '<div class="cv">' + esc(e.covers) + '</div><div class="sum">' + esc(e.summary) + '</div>' +
+        (e.reason ? '<div class="why">Not portable: ' + esc(e.reason) + '</div>' : '') + '</div>' + sw + '</div>';
+    }).join('');
+    return '<section><h2>' + esc(g[1]) + ' (' + rows.length + ')</h2>' + body + '</section>';
+  }).join('');
+}
 if (typeof module !== 'undefined') {
-  module.exports = { esc: esc, tabsFrom: tabsFrom, tabFromPath: tabFromPath, defaultTab: defaultTab, renderNav: renderNav,
+  module.exports = { renderServed: renderServed, renderCfgTabs: renderCfgTabs, renderServing: renderServing, renderEngines: renderEngines, esc: esc, tabsFrom: tabsFrom, tabFromPath: tabFromPath, defaultTab: defaultTab, renderNav: renderNav,
     renderRoutes: renderRoutes, renderSections: renderSections, renderAbout: renderAbout, aboutText: aboutText, renderConfig: renderConfig, renderListing: renderListing,
     renderResults: renderResults, renderFile: renderFile, fmtBytes: fmtBytes };
 }
@@ -187,6 +285,8 @@ if (typeof module !== 'undefined') {
   var TABS = [];
   var files = { dir: '/', dot: false, q: '', mode: 'filename' };
   var ABOUT = [];
+  var SERVING = null;
+  var cfgPage = 'about';
 
   function j(url) {
     return fetch(url, { cache: 'no-store' }).then(function (r) {
@@ -197,12 +297,34 @@ if (typeof module !== 'undefined') {
   function fail(e) { $main.innerHTML = '<div class="err">' + esc(e && e.message ? e.message : e) + '</div>'; }
 
   var views = {
-    pages: function () { return Promise.resolve(renderRoutes(ROUTES, 'page')); },
+    pages: function () {
+      return j('/__api__/serving').then(function (r) { SERVING = r.body; return renderServed(r.body) + renderRoutes(ROUTES, 'page'); });
+    },
     api: function () { return Promise.resolve(renderRoutes(ROUTES, 'api')); },
     home: function () { return j('/__api__/about').then(function (r) { ABOUT = r.body; return renderAbout(ABOUT); }); },
     files: function () { return renderFiles(); },
-    configs: function () { return j('/__api__/config').then(function (r) { return renderConfig(r.body); }); }
+    configs: function () { return renderConfigs(); }
   };
+
+  function renderConfigs() {
+    var head = renderCfgTabs(cfgPage);
+    if (cfgPage === 'engines') {
+      return j('/__api__/engines').then(function (r) { return head + renderEngines(r.body); });
+    }
+    return Promise.all([j('/__api__/serving'), j('/__api__/config')]).then(function (rs) {
+      SERVING = rs[0].body;
+      return head + renderServing(rs[0].body, rs[1].body) + renderConfig(rs[1].body);
+    });
+  }
+
+  function toast(text, bad) {
+    var t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = text;
+    document.body.appendChild(t); setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 2600);
+  }
+  function post(url, body) {
+    return fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-c3-write': '1' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error((b && b.error) || (r.status + ' ' + url)); return b; }); });
+  }
 
   function renderFiles() {
     var qs = '?path=' + encodeURIComponent(files.dir) + (files.dot ? '&dot=1' : '');
@@ -225,6 +347,7 @@ if (typeof module !== 'undefined') {
     if (!view) { fail('tab ' + tab.id + ' is declared by the server but this shell has no view for it'); return; }
     $nav.innerHTML = renderNav(TABS, tab.id);
     $sub.textContent = tab.label;
+    $gear.className = tab.id === 'configs' ? 'on' : '';
     if (push) history.pushState(null, '', tab.path);
     view().then(function (html) { $main.innerHTML = html; wireFiles(); }).catch(fail);
   }
@@ -248,6 +371,24 @@ if (typeof module !== 'undefined') {
   }
 
   $main.addEventListener('click', function (ev) {
+    var open = ev.target.closest('[data-open]');
+    if (open) {
+      ev.preventDefault();
+      post('/__api__/open', { id: open.getAttribute('data-open'), via: open.getAttribute('data-via') })
+        .then(function (b) { toast('Opening ' + b.url + ' in cloud-browser'); })
+        .catch(function (e) { toast(e.message, true); });
+      return;
+    }
+    var sw = ev.target.closest('[data-engine]');
+    if (sw) {
+      var want = sw.getAttribute('aria-checked') !== 'true';
+      post('/__api__/engines', { id: sw.getAttribute('data-engine'), on: want })
+        .then(function () { show('configs', false); })
+        .catch(function (e) { toast(e.message, true); });
+      return;
+    }
+    var cfg = ev.target.closest('[data-cfg]');
+    if (cfg) { cfgPage = cfg.getAttribute('data-cfg'); try { history.replaceState(null, '', '#' + cfgPage); } catch (x) {} show('configs', false); return; }
     var jump = ev.target.closest('[data-jump]'); var copy = ev.target.closest('[data-copy-about]');
     if (jump) { var to = document.getElementById(jump.getAttribute('data-jump')); if (to) to.scrollIntoView(); ev.preventDefault(); return; }
     if (copy) { copyText(aboutText(ABOUT), copy); return; }
@@ -263,6 +404,9 @@ if (typeof module !== 'undefined') {
     var b = ev.target.closest('button[data-tab]');
     if (b) show(b.getAttribute('data-tab'), true);
   });
+  var $gear = document.getElementById('gear');
+  $gear.addEventListener('click', function () { show('configs', true); });
+  if (location.hash === '#engines') cfgPage = 'engines';
   window.addEventListener('popstate', function () { show(tabFromPath(location.pathname) || defaultTab(TABS), false); });
 
   j('/__api__/routes').then(function (r) {

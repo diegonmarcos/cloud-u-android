@@ -79,10 +79,10 @@ pub const ENGINES: &[Engine] = &[
     e("dns", "Private DNS", Group::Core, false, "udp 127.0.0.1:5353", "Answers termux.app, nix.app, emulated.app and cloud.app with 127.0.0.1 and refuses every other name. Only our own apps ask it."),
     e("opener", "Open in cloud-browser", Group::Core, false, "/__api__/open", "The Pages tab's links hand the URL to cloud-browser, which resolves the names through the private DNS."),
     // ── in my-webserver, not portable ───────────────────────────────────
-    np("write", "Write API", "/__api__/write", "Writes a file under an allow-listed directory with a shared-secret token.", "Needs a token file provisioned by home-manager and is a write path into shared storage; this app is read-only by design."),
-    np("git", "Git push API", "/__api__/git", "add, commit and push a scoped set of paths.", "Needs a git binary and credentials the app does not have, and an exec surface a Tauri app does not carry."),
-    np("watchdog", "Watchdog snapshot", "/__api__/watchdog", "Hands over my-watchdog's two-second metrics file.", "The snapshot lives in /run or XDG_RUNTIME_DIR of a Linux session; Android has neither, and the phone's metrics are the Home tab."),
-    np("apps", "App panels", "/app.<name>", "Serves another project's dist/ directory as a panel.", "Resolves a checkout under $HOME/git; there is no such tree on the phone."),
+    np("write", "Write API", "the write endpoint", "Writes a file under an allow-listed directory with a shared-secret token.", "Needs a token file provisioned by home-manager and is a write path into shared storage; this app is read-only by design."),
+    np("git", "Git push API", "the git endpoint", "add, commit and push a scoped set of paths.", "Needs a git binary and credentials the app does not have, and an exec surface a Tauri app does not carry."),
+    np("watchdog", "Watchdog snapshot", "the watchdog snapshot endpoint", "Hands over my-watchdog's two-second metrics file.", "The snapshot lives in /run or XDG_RUNTIME_DIR of a Linux session; Android has neither, and the phone's metrics are the Home tab."),
+    np("apps", "App panels", "the app panel prefix", "Serves another project's dist/ directory as a panel.", "Resolves a checkout under $HOME/git; there is no such tree on the phone."),
 ];
 
 pub fn find(id: &str) -> Option<&'static Engine> {

@@ -771,6 +771,25 @@ class BrowserHostFragment : Fragment() {
         openUrlInTab(url)
     }
 
+    /**
+     * Load [url]; one of the app's private names (exact host, from the baked config) is resolved first through the
+     * app's loopback DNS and its port mapped from the same declaration. A failed resolution shows a page saying so:
+     * the name is never passed on to the system resolver, where a `.app` name is somebody else's website.
+     */
+    private fun WebView.loadResolved(url: String) {
+        val names = config.privateNames
+        if (!names.matches(url)) { loadUrl(url); return }
+        val view = this
+        names.resolveAsync(url) { r ->
+            view.post {
+                when (r) {
+                    is PrivateNames.Result.Ok -> view.loadUrl(r.url)
+                    is PrivateNames.Result.Fail -> view.loadData(android.util.Base64.encodeToString(PrivateNames.errorPage(r).toByteArray(), android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP), "text/html; charset=utf-8", "base64")
+                }
+            }
+        }
+    }
+
     /** #886 what the strip draws, as Compose state the host refreshes when a tab's page, title, icon or group changes. */
     private class StripModel(val tabs: List<BrowserTab>, val activeKey: String, val group: String, val color: Int)
     private val strip = androidx.compose.runtime.mutableStateOf(StripModel(emptyList(), "", "", 0))
@@ -907,6 +926,8 @@ class BrowserHostFragment : Fragment() {
                     val target = request?.url?.toString() ?: return false
                     // A magnet link goes to the torrent engine when this app ships one (cloud-browser does).
                     if (com.diegonmarcos.superapp.browser.download.DlMagnet.isMagnet(target) && addMagnet(target)) return true
+                    // The app's private names (build.json ui.browser.private_names) go through its own loopback DNS, never the system's.
+                    if (request.isForMainFrame && config.privateNames.matches(target)) { view?.loadResolved(target); return true }
                     // #893 web pages (accounts.google.com included) load as they are; an app link (intent:, market:)
                     // never leaves the browser: its fallback url loads, else nothing happens.
                     when (val d = BrowserNavPolicy.decide(target)) {
@@ -995,7 +1016,7 @@ class BrowserHostFragment : Fragment() {
             setOnScrollChangeListener { _, _, _, _, _ ->
                 if (translator.active) { ui.removeCallbacks(translateMore); ui.postDelayed(translateMore, 700) }
             }
-            if (tab.isPrivate || !BrowserWebState.restore(ctx, this, tabKey)) loadUrl(url)
+            if (tab.isPrivate || !BrowserWebState.restore(ctx, this, tabKey)) loadResolved(url)
         }
         overlays.clear()
         onOverlaysClosed?.invoke()
@@ -1064,7 +1085,7 @@ class BrowserHostFragment : Fragment() {
                 if (t.key != currentTab()?.key) { prefs.setActiveId(t.key); showDetail(t); return }
             }
         }
-        webView?.loadUrl(s.url)
+        webView?.loadResolved(s.url)
     }
 
     // ── Library: history, bookmarks, downloads (#802: Compose, over the page) ──
@@ -1788,7 +1809,7 @@ class BrowserHostFragment : Fragment() {
                     val next = BrowserSearch.resolve(q, engine())
                     dismissSuggestions()
                     // in place: the tab keeps its pin, group, order and back stack (#886)
-                    if (next.isNotEmpty()) webView?.loadUrl(next)
+                    if (next.isNotEmpty()) webView?.loadResolved(next)
                 },
                 onPick = { s -> pickSuggestion(s) },
                 onCopied = { toast("Address copied") },

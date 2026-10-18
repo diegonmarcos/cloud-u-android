@@ -60,6 +60,8 @@ data class BrowserConfig(
     val configs: BrowserConfigPages = BrowserConfigPages.EMPTY,
     /** #900 hosts whose subresources "Block trackers" answers empty (this app's content, not the library's). */
     val trackerHosts: List<String> = emptyList(),
+    /** The app's private names (exact hosts that stand for loopback servers, answered by the app's own DNS); NONE = no such names. */
+    val privateNames: PrivateNames = PrivateNames.NONE,
 ) {
 
     /** The configured default, or the first engine, or Qwant. Never null. */
@@ -161,6 +163,7 @@ data class BrowserConfig(
                 sitePerms = BrowserSitePolicy.parsePerms(o.optJSONArray("site_permissions")),
                 settingsSections = sections,
                 configs = BrowserConfigPages.parse(o.optJSONObject("configs"), sections, addons),
+                privateNames = PrivateNames.parse(o.optJSONObject("private_names")),
                 trackerHosts = o.optJSONArray("tracker_hosts").let { a ->
                     if (a == null) emptyList() else (0 until a.length()).map { i -> a.optString(i).trim().lowercase() }.filter { it.isNotEmpty() }
                 },

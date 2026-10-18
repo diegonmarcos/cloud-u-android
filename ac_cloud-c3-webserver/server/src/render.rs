@@ -69,8 +69,8 @@ fn eruda_for(eruda: bool) -> &'static str {
     }
 }
 
-/// Fill `__KEY__` placeholders in ONE pass over the template: a value (a file name, the document
-/// itself) is never re-scanned, so text that happens to spell `__RAWJS__` cannot be substituted.
+/// Fill `__KEY__` slots in ONE pass over the template: a value (a file name, the document
+/// itself) is never re-scanned, so text that happens to spell a slot name cannot be substituted.
 fn fill(tpl: &str, vals: &[(&str, String)]) -> String {
     let mut out = String::with_capacity(tpl.len() + 256);
     let mut rest = tpl;
@@ -238,6 +238,13 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_versions_we_print_are_the_versions_we_ship() {
+        assert!(MARKED_JS.contains(&format!("marked v{}", MARKED_VERSION)));
+        assert!(YAML_JS.contains(&format!("js-yaml {}", YAML_VERSION)));
+        assert!(ERUDA_JS.contains(&format!("eruda v{}", ERUDA_VERSION)));
+    }
+
+    #[test]
     fn script_embedding_cannot_break_out() {
         let s = safe_json_for_script("a</script><script>alert(1)</script><!-- \u{2028}");
         assert!(!s.to_lowercase().contains("</script"), "{}", s);
@@ -267,14 +274,14 @@ mod tests {
         let s = structured_page("/d/x.secrets", "{}", Structured::Secrets, true);
         assert!(s.contains("const isSecret = true") && s.contains("#ff6b6b"));
         for k in ["__TITLE__", "__BADGE_", "__HREF__", "__CRUMBS__", "__FILENAME__", "__ISSECRET__", "__FMT__", "__YAMLSCRIPT__", "__ERUDA__", "__RAWJS__"] {
-            assert!(!s.contains(k) && !j.contains(k) && !y.contains(k), "placeholder {} left in a page", k);
+            assert!(!s.contains(k) && !j.contains(k) && !y.contains(k), "slot {} left unfilled in a page", k);
         }
     }
 
     #[test]
-    fn a_value_is_never_rescanned_for_placeholders() {
+    fn a_value_is_never_rescanned_for_slots() {
         let p = markdown_page("/__RAWJS__.md", "doc", false);
-        assert!(p.contains("<title>/__RAWJS__.md</title>"), "a file named like a placeholder keeps its name");
+        assert!(p.contains("<title>/__RAWJS__.md</title>"), "a file named like a slot keeps its name");
         assert!(p.contains("const rawMarkdown = \"doc\""));
     }
 

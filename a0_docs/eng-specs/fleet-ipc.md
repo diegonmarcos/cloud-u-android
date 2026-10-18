@@ -35,7 +35,7 @@ Each one is listed in `1_cicd/src/data/ipc-http-allow.json` with its reason.
 - every member's `<pkg>.fleet` FleetTokenProvider, which is now also the IPC door
 - the `MESH_MEMBER` receiver and its `<queries>` entry
 - `<pkg>.fleetconfig` and `<pkg>.fleetsetup`
-- SuperApp's `fleetalerts` and `fleetbearer` providers
+- SuperApp's `fleetalerts`, `fleetbearer` and `fleetdiag` (About, Logcat, Diagnose for cloud.app) providers
 - Cloud Account's `accountdata` provider
 - the engine AIDL services (lib-cal `CalBackendService`, news, gh, feed, …)
 - Drive's `agents.screenshots` provider (its own signature permission)

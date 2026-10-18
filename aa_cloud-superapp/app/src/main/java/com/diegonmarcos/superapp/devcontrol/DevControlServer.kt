@@ -1109,7 +1109,7 @@ object DevControlServer {
      *  Served by GET /api/system/about (auth-free, same nature as
      *  system/info). All sourced from BuildConfig + Build → no UI needed,
      *  reproducible per build. */
-    private fun aboutJson(): String {
+    internal fun aboutJson(): String {
         fun dec(s: String) = runCatching {
             String(android.util.Base64.decode(s, android.util.Base64.DEFAULT))
         }.getOrDefault("")

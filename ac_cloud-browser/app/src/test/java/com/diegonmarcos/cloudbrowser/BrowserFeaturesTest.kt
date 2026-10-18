@@ -54,45 +54,46 @@ class BrowserFeaturesTest {
     }
 
     @Test
-    fun `shipped config pins exactly the owner's six tabs, in his order`() {
+    fun `shipped config pins exactly the owner's seven tabs, in his order`() {
         assertEquals(
             listOf(
                 "https://diegonmarcos.github.io/cloud-mobile",
                 "https://diegonmarcos.github.io/linktree_icon-view",
                 "https://qwant.com",
-                "http://localhost:8000",
-                "http://localhost:8001",
-                "http://localhost:8002",
+                "http://termux.app",
+                "http://nix.app",
+                "http://emulated.app",
+                "http://cloud.app",
             ),
             shippedConfig().defaultPinnedTabs,
         )
     }
 
     @Test
-    fun `first run pins all six, pinned and in order`() {
+    fun `first run pins all seven, pinned and in order`() {
         val plan = BrowserSeed.plan(
             alreadySeeded = false,
             openUrls = emptySet(),
             configUrls = shippedConfig().defaultPinnedTabs,
             now = 1_000L,
         )
-        assertEquals(6, plan.size)
+        assertEquals(7, plan.size)
         assertTrue("a seeded default must be pinned", plan.all { it.pinned })
-        assertEquals(listOf(0, 1, 2, 3, 4, 5), plan.map { it.order })
+        assertEquals(listOf(0, 1, 2, 3, 4, 5, 6), plan.map { it.order })
         assertEquals(shippedConfig().defaultPinnedTabs, plan.map { it.url })
         // …and they really do sort to the front of a grid that already
         // has an unpinned tab in it.
         val existing = BrowserTab("https://example.com", "e", 9_999L)
         assertEquals(
             shippedConfig().defaultPinnedTabs,
-            BrowserTabOrder.sort(plan + existing).take(6).map { it.url },
+            BrowserTabOrder.sort(plan + existing).take(7).map { it.url },
         )
     }
 
     @Test
     fun `a closed default does not come back on the next launch`() {
         val cfg = shippedConfig().defaultPinnedTabs
-        // Second launch: the flag is set. He has since closed all six.
+        // Second launch: the flag is set. He has since closed all seven.
         val plan = BrowserSeed.plan(
             alreadySeeded = true,
             openUrls = emptySet(),
@@ -149,12 +150,13 @@ class BrowserFeaturesTest {
     }
 
     @Test
-    fun `the browser's three local tabs carry their names`() {
+    fun `the browser's four local tabs are the private names and carry their titles`() {
         val cfg = shippedConfig()
         val want = mapOf(
-            "http://localhost:8000" to "Termux",
-            "http://localhost:8001" to "Nix",
-            "http://localhost:8002" to "Local",
+            "http://termux.app" to "Termux",
+            "http://nix.app" to "Nix",
+            "http://emulated.app" to "Local",
+            "http://cloud.app" to "Cloud",
         )
         assertEquals(want, cfg.defaultPinnedTitles)
         val plan = BrowserSeed.plan(false, emptySet(), cfg.defaultPinnedTabs, 1L, cfg.defaultPinnedTitles)

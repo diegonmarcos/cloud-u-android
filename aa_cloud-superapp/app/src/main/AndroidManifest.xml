@@ -244,6 +244,13 @@
             android:authorities="${applicationId}.fleetbearer"
             android:exported="true"
             android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+        <!-- The fleet-diagnostics bridge: this app's About, Logcat and Diagnose for cloud-c3-webserver's cloud.app
+             page (:8003). Read-only, signature permission, re-checked in call(); see FleetDiagnosticsProvider. -->
+        <provider
+            android:name=".cloud.FleetDiagnosticsProvider"
+            android:authorities="${applicationId}.fleetdiag"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
         <!-- #777 swipe on one alert = that alert is done. Our own PendingIntent only. -->
         <receiver
             android:name=".notificationcenter.AlertsNotifier$DismissReceiver"

@@ -3,6 +3,9 @@
 //! tauri.conf.json because Tauri creates declared windows BEFORE `setup`
 //! runs, which would point the webview at a socket that is not listening yet.
 
+#[cfg(target_os = "android")]
+mod bridge;
+
 use tauri::{WebviewUrl, WebviewWindowBuilder};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -13,13 +16,24 @@ pub fn run() {
             // A failed bind is logged, not fatal: the window still opens and
             // says "not available", which names the problem on the screen
             // instead of closing the app with no word.
-            if let Err(e) = c3_webserver::start(port, env!("C3_WEBSERVER_SERVE_ROOT")) {
+            // The Engines switches persist in the app's private files dir (id from build.json via build.rs).
+            let state_dir = Some(std::path::PathBuf::from(concat!("/data/data/", env!("C3_WEBSERVER_APP_ID"), "/files/c3-webserver")));
+            let cfg = c3_webserver::Config {
+                drive_port: port,
+                diag_port: env!("C3_WEBSERVER_DIAG_PORT").parse()?,
+                root: env!("C3_WEBSERVER_SERVE_ROOT").to_string(),
+                state_dir,
+            };
+            if let Err(e) = c3_webserver::start(cfg) {
                 eprintln!("c3-webserver did not start: {}", e);
             }
             let url: tauri::Url = format!("http://127.0.0.1:{}/", port).parse()?;
             let _window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url)).build()?;
             #[cfg(target_os = "android")]
-            request_storage(&_window);
+            {
+                request_storage(&_window);
+                bridge::install(&_window);
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

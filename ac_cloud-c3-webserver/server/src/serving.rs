@@ -208,6 +208,16 @@ pub fn is_up(port: u16) -> bool {
     TcpStream::connect_timeout(&addr, Duration::from_millis(120)).is_ok()
 }
 
+/// The renderers shipped inside the binary, with their versions.
+fn bundled_json() -> String {
+    use crate::render::{ERUDA_VERSION, MARKED_VERSION, YAML_VERSION};
+    let rows: Vec<String> = [("marked (Markdown)", MARKED_VERSION), ("js-yaml (YAML)", YAML_VERSION), ("Eruda (DevTools)", ERUDA_VERSION)]
+        .iter()
+        .map(|(n, v)| format!("{{\"name\":{},\"version\":{}}}", jstr(n), jstr(v)))
+        .collect();
+    format!("[{}]", rows.join(","))
+}
+
 /// `/__api__/serving`: the declaration plus whether each port answers right now.
 pub fn json(live: bool) -> String {
     let sv = get();
@@ -237,7 +247,7 @@ pub fn json(live: bool) -> String {
         concat!(
             "{{\"app\":{},\"version_name\":{},\"version_code\":{},\"crate_version\":{},",
             "\"dns\":{{\"host\":{},\"port\":{},\"answer\":{},\"ttl_s\":{},\"scope\":{}}},",
-            "\"opener\":{},\"bridge\":{{\"package\":{},\"authority\":{}}},\"endpoints\":[{}]}}"
+            "\"opener\":{},\"bridge\":{{\"package\":{},\"authority\":{}}},\"bundled\":{},\"endpoints\":[{}]}}"
         ),
         jstr(&sv.app_name),
         jstr(&sv.version_name),
@@ -251,6 +261,7 @@ pub fn json(live: bool) -> String {
         jstr(&sv.browser_package),
         jstr(&sv.bridge_package),
         jstr(&sv.bridge_authority),
+        bundled_json(),
         rows.join(",")
     )
 }
