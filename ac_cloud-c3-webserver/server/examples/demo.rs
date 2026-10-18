@@ -1,12 +1,11 @@
 //! A host build of the app's server for the testers (screenshot at A37 density): the real `start`, the real
 //! ports from build.json, a stub of the two Android hooks (the SuperApp bridge and the cloud-browser opener),
-//! and a directory to serve. `cargo run --example demo -- <root> <state-dir>`; prints READY when listening.
+//! and a directory to serve. `cargo run --example demo -- <root>`; prints READY when listening.
 use std::io::Write;
 
 fn main() {
     let mut a = std::env::args().skip(1);
-    let root = a.next().expect("usage: demo <root> <state-dir>");
-    let state = a.next().expect("usage: demo <root> <state-dir>");
+    let root = a.next().expect("usage: demo <root>");
     let sv = c3_webserver::serving::get();
 
     c3_webserver::diag::set_source(Box::new(|method, arg| match method {
@@ -35,7 +34,7 @@ fn main() {
         Ok(())
     }));
 
-    c3_webserver::start(c3_webserver::Config { drive_port: sv.drive_port, diag_port: sv.diag_port, root, state_dir: Some(state.into()) })
+    c3_webserver::start(c3_webserver::Config { drive_port: sv.drive_port, diag_port: sv.diag_port, root })
         .expect("start");
     println!("READY {} {}", sv.drive_port, sv.diag_port);
     let _ = std::io::stdout().flush();

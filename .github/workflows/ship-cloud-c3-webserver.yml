@@ -65,6 +65,9 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
+      # The ONE web server of the fleet (:8002 is its `start`) and the verbatim Linux UI it bundles.
+      # A STATIC Rust lib this app compiles, so it is watched and hashed like a module dir.
+      - "ab_cloud-libs-shared/libs/fleet-webserver/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ac_cloud-c3-webserver/**"
 permissions:
@@ -99,6 +102,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0   # full history so build.sh can `git rev-parse`
+
+      # The Linux web UI is ONE copy: cloud-u-linux/da_my-webserver/src. The shared server's vendor/ is a
+      # byte-identical mirror of it, and the tests below compare the two, so the source of truth must be on
+      # the runner. Public repo: no token. Not part of any gate input: it is read by tests only.
+      - name: Checkout cloud-u-linux (the source of the web UI the phone serves)
+        uses: actions/checkout@v4
+        with:
+          repository: diegonmarcos/cloud-u-linux
+          path: .cloud-u-linux
+          fetch-depth: 1
+
+      - name: Point the web-UI tests at it
+        run: echo "LINUX_REPO=$GITHUB_WORKSPACE/.cloud-u-linux" >> "$GITHUB_ENV"
 
       # Every application's testers, and — for those that have none — the
       # COVERAGE-GAP line naming exactly what this run did NOT check. Needs no
@@ -135,6 +151,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ steps.tc.outputs.rust_target }}
+
+      # The SHARED web server's suite: the vendored UI is byte-identical to cloud-u-linux's (hash and
+      # bytes), every endpoint of the API contract, and parity with the real Linux server run under node.
+      - name: "Test → the shared web server (UI mirror, contract, parity with the Linux server)"
+        working-directory: ab_cloud-libs-shared/libs/fleet-webserver
+        run: |
+          ./sync.sh --check --from "$LINUX_REPO"
+          cargo test
 
       # The server crate's own suite — the route table, the About groups, the
       # real server end to end over a socket — on the host, before anything is

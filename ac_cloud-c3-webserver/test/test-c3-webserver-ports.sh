@@ -33,14 +33,11 @@
 #       server compiles the same file in; the SuperApp provider's authority is
 #       the declared bridge authority.
 #   Q4  NOTHING ELSE TYPES IT. Outside tests and comments, no Rust source of
-#       the app, no shell page and no Tauri glue spells a name or a port.
+#       the app, no page and no Tauri glue spells a name or a port.
 #   Q5  A PRIVATE DNS, NOT A RESOLVER. The browser client asks only a loopback
 #       server, accepts only a loopback answer and never falls back to the
 #       system (the pins the DNS resolver guard also holds); the server crate
 #       refuses names it does not own.
-#   Q6  THE ENGINE REGISTRY IS ONE DECLARATION. build.json::render_engines.list holds every
-#       engine's name, description and switch; no source of the app (Rust, the
-#       shell, the pages, the Tauri glue) repeats a description or a name.
 #   M   each defect above is planted in a copy and shown red.
 #
 # python3, jq. Reads the sibling apps' build.json (termux, nix-on-droid, browser)
@@ -113,7 +110,7 @@ if "q1" in which:
     if not isinstance(dp, int) or dp == 53 or not 1024 <= dp <= 65535: bad.append("Q1 serving.dns.port %r must be 1024..65535 and never 53 (Android cannot bind it without root)" % (dp,))
     if dp in PORTS.values(): bad.append("Q1 the DNS port %r is also an endpoint's port" % (dp,))
     if not (sv.get("bridge") or {}).get("authority", "").endswith(".fleetdiag"): bad.append("Q1 serving.bridge.authority is not <package>.fleetdiag")
-    if not (sv.get("opener") or {}).get("package"): bad.append("Q1 serving.opener.package is missing: the Pages tab would not know which browser to open")
+    if not (sv.get("opener") or {}).get("package"): bad.append("Q1 serving.opener.package is missing: the bridge opener would not know which browser to open")
 
 if "q2" in which:
     for e in eps:
@@ -167,7 +164,7 @@ if "q4" in which:
     names = [e.get("name") for e in eps] + ["termux.app", "nix.app", "emulated.app", "cloud.app"]
     nums = [str(PORTS[e.get("id")]) for e in eps] + [str(dns.get("port"))]
     files = sorted(glob.glob(os.path.join(app, "server/src/*.rs")) + glob.glob(os.path.join(app, "src-tauri/src/*.rs")))
-    files += [os.path.join(app, "server/ui/shell.html"), os.path.join(app, "server/ui/diag.html")]
+    files += [os.path.join(app, "server/ui/diag.html")]
     for f in files:
         text = read(f)
         if f.endswith(".rs"): text = re.split(r"#\[cfg\(test\)\]", text)[0]
@@ -194,16 +191,6 @@ if "q5" in which:
     dnsrs = read(os.path.join(app, "server/src/dns.rs"))
     if "RCODE_REFUSED" not in dnsrs or "is_loopback()" not in dnsrs: bad.append("Q5 dns.rs no longer refuses names it does not own or non-loopback peers")
     if re.search(r"\.send_to\([^)]*\)\s*;[^}]*forward|UdpSocket::bind\(\(\"0\.0\.0\.0\"", dnsrs): bad.append("Q5 dns.rs forwards or binds a wildcard address")
-if "q6" in which:
-    engines = (bj.get("render_engines") or {}).get("list") or []
-    if len(engines) < 15: bad.append("Q6 build.json::render_engines.list has %d entries, want the whole registry" % len(engines))
-    srcs = glob.glob(os.path.join(app, "server/src/*.rs")) + glob.glob(os.path.join(app, "src-tauri/src/*.rs")) + glob.glob(os.path.join(app, "server/ui/*.html"))
-    for f in srcs:
-        text = re.split(r"#\[cfg\(test\)\]", read(f))[0] if f.endswith(".rs") else read(f)
-        for e in engines:
-            for key in ("summary",):
-                v = e.get(key, "")
-                if len(v) > 12 and v in text: bad.append("Q6 %s repeats engine %s's %s: it is declared only in build.json::render_engines" % (os.path.relpath(f, app), e.get("id"), key))
 for b in bad: print("    " + b)
 sys.exit(1 if bad else 0)
 PY
@@ -214,7 +201,6 @@ check "$APP" "$REPO" q1 && pass "Q1 the declaration: four unique lowercase .app 
 check "$APP" "$REPO" q2 && pass "Q2 no second literal: serving writes no port, each endpoint resolves it from its owner's build.json (port_from) and the readers refuse a literal" || fail "Q2 a port is written twice, or an owner does not declare it"
 check "$APP" "$REPO" q3 && pass "Q3 the browser pins the names with their titles and bakes the one declaration; the server compiles it in; the provider authority matches" || fail "Q3 a reader of the map drifted"
 check "$APP" "$REPO" q4 && pass "Q4 no Rust source, shell page or Tauri glue of the app spells a name or a port" || fail "Q4 a name or a port is typed outside build.json"
-check "$APP" "$REPO" q6 && pass "Q6 the engine registry is declared once, in build.json::render_engines; no source repeats a description" || fail "Q6 a second copy of the engine registry"
 check "$APP" "$REPO" q5 && pass "Q5 the browser client is loopback-only and never falls back to the system; the server refuses names it does not own" || fail "Q5 the private DNS grew into a resolver"
 
 # ── M: mutation-proof ──────────────────────────────────────────────────────
@@ -296,13 +282,13 @@ PY
 }
 m_typed_name()    { python3 - "$1/ac_cloud-c3-webserver/src-tauri/src/lib.rs" <<'PY'
 import sys; p = sys.argv[1]; s = open(p).read()
-n = s.replace("let state_dir", 'let _opens = "http://emulated.app/";\n            let state_dir', 1)
+n = s.replace("let port: u16", 'let _opens = "http://emulated.app/";\n            let port: u16', 1)
 assert n != s; open(p, "w").write(n)
 PY
 }
-m_typed_port()    { python3 - "$1/ac_cloud-c3-webserver/server/src/files.rs" <<'PY'
+m_typed_port()    { python3 - "$1/ac_cloud-c3-webserver/server/src/lib.rs" <<'PY'
 import sys; p = sys.argv[1]; s = open(p).read()
-n = s.replace("fn not_found() -> Resp {\n    Resp::text(404", "fn not_found() -> Resp {\n    let _p = 8003;\n    Resp::text(404", 1)
+n = s.replace("pub fn handle_diag(ctx: &Ctx, req: &Req) -> Resp {", "pub fn handle_diag(ctx: &Ctx, req: &Req) -> Resp {\n    let _p = 8003;", 1)
 assert n != s; open(p, "w").write(n)
 PY
 }
@@ -335,12 +321,6 @@ import sys; p = sys.argv[1]; s = open(p).read()
 n = s.replace("config.privateNames.matches(target)", "false")
 assert n != s; open(p, "w").write(n)
 PY
-}
-m_engine_copy()  { python3 - "$1/ac_cloud-c3-webserver/server/ui/shell.html" "$1/ac_cloud-c3-webserver/build.json" <<'PY2'
-import json, sys
-p, b = sys.argv[1:3]; e = json.load(open(b))["render_engines"]["list"][0]["summary"]
-s = open(p).read(); n = s.replace("<main", "<!-- " + e + " --><main", 1); assert n != s; open(p, "w").write(n)
-PY2
 }
 m_dns_answers_all() { python3 - "$1/ac_cloud-c3-webserver/server/src/dns.rs" <<'PY'
 import sys; p = sys.argv[1]; s = open(p).read()
@@ -381,7 +361,6 @@ mutate "the browser client accepts a non-loopback server"  q5 m_client_not_loopb
 mutate "the browser client accepts any answer"             q5 m_client_any_answer
 mutate "the browser client resolves through the system"    q5 m_client_system
 mutate "the browser stops routing private names"           q5 m_host_unrouted
-mutate "an engine description copied into the shell"        q6 m_engine_copy
 mutate "the DNS server answers every name"                 q5 m_dns_answers_all
 
 echo

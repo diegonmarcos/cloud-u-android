@@ -37,6 +37,11 @@ if [ "$mode" = sync ]; then
   exit 0
 fi
 ( cd "$V" && sha256sum --check --strict VENDOR.sha256 )
+# a hash list that forgot a file would pass the line above: every mirrored file must be listed
+for e in "${FILES[@]}"; do
+  set -- $e
+  grep -q "  $1\$" "$V/VENDOR.sha256" || { echo "VENDOR.sha256 does not list $1" >&2; exit 1; }
+done
 if [ -n "$from" ]; then
   for e in "${FILES[@]}"; do
     set -- $e

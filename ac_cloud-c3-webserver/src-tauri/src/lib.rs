@@ -16,13 +16,10 @@ pub fn run() {
             // A failed bind is logged, not fatal: the window still opens and
             // says "not available", which names the problem on the screen
             // instead of closing the app with no word.
-            // The Engines switches persist in the app's private files dir (id from build.json via build.rs).
-            let state_dir = Some(std::path::PathBuf::from(concat!("/data/data/", env!("C3_WEBSERVER_APP_ID"), "/files/c3-webserver")));
             let cfg = c3_webserver::Config {
                 drive_port: port,
                 diag_port: env!("C3_WEBSERVER_DIAG_PORT").parse()?,
                 root: env!("C3_WEBSERVER_SERVE_ROOT").to_string(),
-                state_dir,
             };
             if let Err(e) = c3_webserver::start(cfg) {
                 eprintln!("c3-webserver did not start: {}", e);

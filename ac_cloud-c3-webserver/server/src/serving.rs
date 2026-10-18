@@ -13,7 +13,7 @@
 //! names are answered by this app's own DNS server (dns.rs) on loopback and are
 //! resolved only by our own apps; nothing is changed system-wide.
 
-use crate::routes::jstr;
+use fleet_webserver::render::jstr;
 use serde_json::Value;
 use std::net::{IpAddr, SocketAddr, TcpStream};
 use std::sync::OnceLock;
@@ -213,7 +213,7 @@ pub fn is_up(port: u16) -> bool {
 
 /// The renderers shipped inside the binary, with their versions.
 fn bundled_json() -> String {
-    use crate::render::{ERUDA_VERSION, MARKED_VERSION, YAML_VERSION};
+    use fleet_webserver::render::{ERUDA_VERSION, MARKED_VERSION, YAML_VERSION};
     let rows: Vec<String> = [("marked (Markdown)", MARKED_VERSION), ("js-yaml (YAML)", YAML_VERSION), ("Eruda (DevTools)", ERUDA_VERSION)]
         .iter()
         .map(|(n, v)| format!("{{\"name\":{},\"version\":{}}}", jstr(n), jstr(v)))

@@ -7,13 +7,13 @@
   },
   "name": "cloud-c3-webserver",
   "display_name": "Cloud C3 Webserver",
-  "description": "The phone's local web server, as an APK, in Rust and web only: a Tauri 2 app whose Rust library starts the c3-webserver HTTP server in-process and opens its one webview on it, behind a five-tab shell — Pages, API, Home, Files, Configs — whose Pages and API tabs are derived from the server's own route table. It serves the emulated drive on 8002 with every my-webserver render engine bundled, the SuperApp's About, Logcat and Diagnose on 8003, and a private DNS (udp 5353) for termux.app, nix.app, emulated.app and cloud.app.",
+  "description": "The phone's local web server, as an APK, in Rust and web only: a Tauri 2 app whose Rust library starts the shared fleet web server (ab_cloud-libs-shared/libs/fleet-webserver, the Linux my-webserver UI bundled verbatim) in-process on 8002, rooted at /storage/emulated/0 and nothing else, and opens its one webview on it. The SuperApp's About, Logcat and Diagnose are served on 8003, and a private DNS (udp 5353) answers termux.app, nix.app, emulated.app and cloud.app.",
   "category": "android",
   "build": {
     "type": "gradle",
     "entry": "build.sh"
   },
-  "_doc": "WHY TAURI, AND WHAT IS LEFT OF KOTLIN. The app used to be a hand-written Kotlin shell (an Activity holding a WebView, a foreground Service, a class that exec'd the server binary from nativeLibraryDir). It is now a Tauri 2 Android app: src-tauri/ is a Rust library that calls server/'s start() on a thread of its own process and then opens the window on http://127.0.0.1:<runtime.port>/. The only Kotlin in the tree is the glue Tauri's Android template generates (tauri.glue below, every file pinned by sha256), plus the classes Tauri and wry write into the build at compile time (tauri.generated_kotlin, never committed); test/test-c3-webserver-no-kotlin.sh fails the CI run and build.sh fails the build on anything else. The route table the Pages and API tabs render is still the server's own (server/src/routes.rs), so a route added there appears in the tabs and a route removed disappears, with no second list anywhere.",
+  "_doc": "WHY TAURI, AND WHAT IS LEFT OF KOTLIN. The app used to be a hand-written Kotlin shell (an Activity holding a WebView, a foreground Service, a class that exec'd the server binary from nativeLibraryDir). It is now a Tauri 2 Android app: src-tauri/ is a Rust library that calls server/'s start() on a thread of its own process and then opens the window on http://127.0.0.1:<runtime.port>/. The only Kotlin in the tree is the glue Tauri's Android template generates (tauri.glue below, every file pinned by sha256), plus the classes Tauri and wry write into the build at compile time (tauri.generated_kotlin, never committed); test/test-c3-webserver-no-kotlin.sh fails the CI run and build.sh fails the build on anything else. The :8002 UI is NOT written here: it is the Linux my-webserver frontend, bundled at build time by ab_cloud-libs-shared/libs/fleet-webserver from a hash-checked mirror of cloud-u-linux/da_my-webserver/src (one source of truth, no copy in this app).",
   "tauri": {
     "_doc": "THE ONE declaration of how the APK is built. crate_dir is the Tauri app crate (its [lib] is lib_name, the .so Tauri's generated activity loads); server_crate is the library it links and starts; android_project is the Tauri-generated gradle project, committed as Tauri recommends; targets maps each Android ABI a release variant names to the key `cargo tauri android build --target` takes (tauri) and the Rust triple the workflow installs for it (rust). The APK is always built in Tauri's release profile (R8 + an optimised, stripped Rust library): the debug profile carries an unoptimised library with symbols that is two orders of magnitude larger, and build.sh re-signs every APK with the shared key either way.",
     "crate_dir": "src-tauri",
@@ -117,220 +117,13 @@
     ],
     "opener": {
       "package": "com.diegonmarcos.cloudbrowser",
-      "_doc": "The Pages tab hands a served page to this app as an explicit-package VIEW intent; it is never offered to any other browser, because a private name sent to the system would resolve on the public internet."
+      "_doc": "A served page is handed to this app as an explicit-package VIEW intent by the diagnostics bridge's opener; it is never offered to any other browser, because a private name sent to the system would resolve on the public internet."
     },
     "bridge": {
       "package": "com.diegonmarcos.superapp",
       "authority": "com.diegonmarcos.superapp.fleetdiag",
       "_doc": "The SuperApp's exported, CONSTELLATION_DATA signature-permission ContentProvider (aa_cloud-superapp FleetDiagnosticsProvider). call(about|logcat|diagnose) -> {ok, mime, payload}; read-only."
     }
-  },
-  "render_engines": {
-    "_doc": "THE ENGINE REGISTRY, declared once: every render and feature engine of the server. server/src/engines.rs compiles this block in (the handlers ask `ctx.engines.on(<id>)`; a test fails when a handler asks for an id declared nowhere or a switch has no handler), /__api__/engines serves it and Configs > Engines draws exactly it. group render|feature get a switch (toggle), core is always on, not-portable is an engine of my-webserver that cannot run on a phone and says why (reason). default_on is the state before the owner flips it; flips persist in the app's private files dir.",
-    "list": [
-      {
-        "id": "markdown",
-        "name": "Markdown",
-        "group": "render",
-        "toggle": true,
-        "default_on": true,
-        "covers": ".md",
-        "summary": "marked.js 15 draws the file as a GitHub-dark page with a breadcrumb and a view-raw link; ?raw sends the source."
-      },
-      {
-        "id": "json",
-        "name": "JSON viewer",
-        "group": "render",
-        "toggle": true,
-        "default_on": true,
-        "covers": ".json",
-        "summary": "Objects become key/value tables, arrays of objects sortable tables, nested values cards; row filter, collapsible sections, copy buttons."
-      },
-      {
-        "id": "yaml",
-        "name": "YAML viewer",
-        "group": "render",
-        "toggle": true,
-        "default_on": true,
-        "covers": ".yaml .yml",
-        "summary": "js-yaml 4.1 parses the file and the same tables draw it; a parse error falls back to the raw text."
-      },
-      {
-        "id": "secrets",
-        "name": "Secrets table",
-        "group": "render",
-        "toggle": true,
-        "default_on": true,
-        "covers": ".secrets .secrets.json",
-        "summary": "Key/value rows with a copy button per row and a red badge. Nothing is decrypted here: the file is shown as stored."
-      },
-      {
-        "id": "eruda",
-        "name": "Eruda DevTools",
-        "group": "render",
-        "toggle": true,
-        "default_on": true,
-        "covers": "every HTML page",
-        "summary": "Injects the bundled Eruda 3.4.3 console, elements and network panels into HTML, index pages and rendered pages. No CDN."
-      },
-      {
-        "id": "html",
-        "name": "HTML pages",
-        "group": "render",
-        "toggle": true,
-        "default_on": true,
-        "covers": ".html, dir/index.html, /route",
-        "summary": "Serves .html natively, opens a directory's index.html with a <base>, and /route falls back to route.html."
-      },
-      {
-        "id": "spa-fallback",
-        "name": "SPA fallback",
-        "group": "render",
-        "toggle": true,
-        "default_on": true,
-        "covers": "unknown paths under a project",
-        "summary": "An unknown path inside a prerendered SvelteKit project serves its nearest ancestor 200.html with root-absolute assets rewritten."
-      },
-      {
-        "id": "browse",
-        "name": "File browser",
-        "group": "feature",
-        "toggle": true,
-        "default_on": true,
-        "covers": "/__browse__, directory pages",
-        "summary": "Sidebar tree, breadcrumb path bar, a viewer pane with a raw/rendered switch and a copy-raw button. Off: a plain index."
-      },
-      {
-        "id": "search",
-        "name": "Search",
-        "group": "feature",
-        "toggle": true,
-        "default_on": true,
-        "covers": "/__api__/search",
-        "summary": "Folder, filename and content search. Breadth-first, bounded by 3 s, 50 000 entries and 200 results, and says when it stopped early."
-      },
-      {
-        "id": "dotfiles",
-        "name": "Hidden files",
-        "group": "feature",
-        "toggle": true,
-        "default_on": true,
-        "covers": "dot=1",
-        "summary": "Lists and searches dot entries when asked (the Dot files switch). Off: hidden entries stay hidden whatever the request says."
-      },
-      {
-        "id": "preview",
-        "name": "Preview",
-        "group": "feature",
-        "toggle": true,
-        "default_on": true,
-        "covers": "/__api__/read",
-        "summary": "Returns a text file (at most 5 MB) as JSON for the Files tab's preview pane."
-      },
-      {
-        "id": "diag",
-        "name": "Fleet diagnostics bridge",
-        "group": "feature",
-        "toggle": true,
-        "default_on": true,
-        "covers": "the diagnostics listener",
-        "summary": "About, Logcat and Diagnose of the SuperApp, read through its signature-permission provider. Off: the diagnostics page answers 503."
-      },
-      {
-        "id": "listing",
-        "name": "Directory listing",
-        "group": "core",
-        "toggle": false,
-        "default_on": true,
-        "covers": "/__api__/ls",
-        "summary": "Folders first, then files by name, dangling symlinks shown as broken links instead of vanishing."
-      },
-      {
-        "id": "static",
-        "name": "Static files",
-        "group": "core",
-        "toggle": false,
-        "default_on": true,
-        "covers": "everything else",
-        "summary": "MIME table with text sniffing for unknown types, ?raw plain-text passthrough, HEAD."
-      },
-      {
-        "id": "confine",
-        "name": "Root confinement",
-        "group": "core",
-        "toggle": false,
-        "default_on": true,
-        "covers": "every path",
-        "summary": "Each path is canonicalised and must stay inside the served root; .. and symlinks that leave it are 404."
-      },
-      {
-        "id": "loopback",
-        "name": "Loopback only",
-        "group": "core",
-        "toggle": false,
-        "default_on": true,
-        "covers": "all listeners",
-        "summary": "Binds 127.0.0.1 and refuses any other peer. GET and HEAD only; the single POST is this page's own switch."
-      },
-      {
-        "id": "dns",
-        "name": "Private DNS",
-        "group": "core",
-        "toggle": false,
-        "default_on": true,
-        "covers": "the DNS socket",
-        "summary": "Answers the four private .app names declared in build.json with 127.0.0.1 and refuses every other name. Only our own apps ask it; the system never does."
-      },
-      {
-        "id": "opener",
-        "name": "Open in cloud-browser",
-        "group": "core",
-        "toggle": false,
-        "default_on": true,
-        "covers": "/__api__/open",
-        "summary": "The Pages tab's links hand the URL to cloud-browser, which resolves the names through the private DNS."
-      },
-      {
-        "id": "write",
-        "name": "Write API",
-        "group": "not-portable",
-        "toggle": false,
-        "default_on": false,
-        "covers": "the write endpoint",
-        "summary": "Writes a file under an allow-listed directory with a shared-secret token.",
-        "reason": "Needs a token file provisioned by home-manager and is a write path into shared storage; this app is read-only by design."
-      },
-      {
-        "id": "git",
-        "name": "Git push API",
-        "group": "not-portable",
-        "toggle": false,
-        "default_on": false,
-        "covers": "the git endpoint",
-        "summary": "add, commit and push a scoped set of paths.",
-        "reason": "Needs a git binary and credentials the app does not have, and an exec surface a Tauri app does not carry."
-      },
-      {
-        "id": "watchdog",
-        "name": "Watchdog snapshot",
-        "group": "not-portable",
-        "toggle": false,
-        "default_on": false,
-        "covers": "the watchdog snapshot endpoint",
-        "summary": "Hands over my-watchdog's two-second metrics file.",
-        "reason": "The snapshot lives in /run or XDG_RUNTIME_DIR of a Linux session; Android has neither, and the phone's metrics are the Home tab."
-      },
-      {
-        "id": "apps",
-        "name": "App panels",
-        "group": "not-portable",
-        "toggle": false,
-        "default_on": false,
-        "covers": "the app panel prefix",
-        "summary": "Serves another project's dist/ directory as a panel.",
-        "reason": "Resolves a checkout under $HOME/git; there is no such tree on the phone."
-      }
-    ]
   },
   "android": {
     "application_id": "com.diegonmarcos.cloudwebserver",
@@ -449,16 +242,17 @@
     ]
   },
   "tests": {
-    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds. The server crate's own suite (cargo test, including the end-to-end run of the real server over a socket) executes in the ship workflow's build job before the APK is built.",
+    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds. The server crate's own suite (cargo test) and the SHARED web server's suite (ab_cloud-libs-shared/libs/fleet-webserver: vendor hash == the cloud-u-linux copy, every endpoint's contract, parity against the real Linux server) execute in the ship workflow's build job before the APK is built.",
     "shell": {
       "dir": "test",
       "requires": [
         "python3",
         "node",
         "grep",
-        "jq"
+        "jq",
+        "cargo"
       ],
-      "_doc_requires": "node runs the shell's pure render block to prove the tabs draw exactly what the route table says. A tester that shells out to a tool which is not installed does not fail, it answers from the tool's absence, so a missing one is fatal at the engine's preflight."
+      "_doc_requires": "node runs the Linux my-webserver as the oracle and the render check drives headless Chrome at the A37 density. A tester that shells out to a tool which is not installed does not fail, it answers from the tool's absence, so a missing one is fatal at the engine's preflight."
     }
   },
   "apk": false

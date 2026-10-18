@@ -9,8 +9,8 @@
 //! with [`set_source`] / [`set_opener`]; this crate stays platform-free and its
 //! tests run against a stub source.
 
-use crate::routes::jstr;
 use crate::{Ctx, Req, Resp};
+use fleet_webserver::render::jstr;
 use std::sync::OnceLock;
 
 /// (method, arg) -> Ok((mime, payload)) | Err(reason). Methods: about, logcat, diagnose.
@@ -43,9 +43,6 @@ pub fn page(_ctx: &Ctx, _req: &Req) -> Resp {
 }
 
 fn answer(ctx: &Ctx, method: &str, arg: &str) -> Resp {
-    if !ctx.engines.on("diag") {
-        return Resp::json(503, format!("{{\"error\":{}}}", jstr("the Fleet diagnostics bridge engine is switched off (Configs > Engines)")));
-    }
     let src = match SOURCE.get() {
         Some(s) => s,
         None => return Resp::json(503, format!("{{\"error\":{}}}", jstr("no diagnostics bridge in this process"))),

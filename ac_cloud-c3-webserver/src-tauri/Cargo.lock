@@ -171,9 +171,9 @@ dependencies = [
 
 [[package]]
 name = "c3-webserver"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
- "libc",
+ "fleet-webserver",
  "serde_json",
 ]
 
@@ -310,6 +310,10 @@ dependencies = [
  "tauri",
  "tauri-build",
 ]
+
+[[package]]
+name = "fleet-webserver"
+version = "0.1.0"
 
 [[package]]
 name = "combine"

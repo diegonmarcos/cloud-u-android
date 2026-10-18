@@ -1,35 +1,22 @@
 #!/usr/bin/env bash
-# ╔══════════════════════════════════════════════════════════════════════════╗
-# ║ cloud-c3-webserver — the route table is the ONE declaration, the tabs   ║
-# ║ are derived from it, the app is Rust + web (Tauri), the rename holds.   ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
+# ╔═════════════════════════════════════════════════════════════════╗
+# ║ cloud-c3-webserver — :8002 carries no UI of its own, the app is   ║
+# ║ Rust + web (Tauri), the rename holds.                             ║
+# ╚═════════════════════════════════════════════════════════════════╝
 #
-# THE FAILURES THIS EXISTS FOR. (1) The previous app's whole landing surface
-# was one hand-written page; a Pages/API tab that was typed by hand would drift
-# from the server the moment a route changed, and nothing would notice. (2) An
-# earlier five-tab APK in this family shipped tabs that drew "not built yet"
-# behind green checks. (3) A rename that leaves one copy of the old name behind
-# publishes to the wrong asset, package or workflow, and the guard for that is
-# a ledger, not a hope.
+# THE FAILURES THIS EXISTS FOR. (1) :8002 served a custom page (a five-tab shell, its own file
+# browser and renderers) the owner never asked for; the owner's rule is ONE web UI for the whole
+# fleet, the Linux my-webserver's, served by ONE shared server (ab_cloud-libs-shared/libs/fleet-webserver).
+# (2) An earlier APK in this family shipped pages that drew "not built yet" behind green checks.
+# (3) A rename that leaves one copy of the old name behind publishes to the wrong asset, package or
+# workflow, and the guard for that is a ledger, not a hope.
 #
-#   T1  ONE ROUTE TABLE. Every "/__…__" route literal anywhere in server/src is a
-#       path of a ROUTES row (or its prefix in find/check_table), dispatch is a
-#       walk over ROUTES, and no handler is attached by comparing a path outside
-#       routes.rs::find.
-#   T2  FIVE TABS, HOME CENTRE, DECLARED IN THE TABLE. The tab captions read from
-#       ROUTES in order are Pages, API, Home, Files, Configs; each tab row's path
-#       is /__tab__/<id>; and the shell has a view for every tab id and a tab id
-#       for every view (both directions, so an orphan either way is red).
-#   T3  THE SHELL IS DERIVED. shell.html spells no tab caption and no /__tab__/
-#       href; its only source is fetch('/__api__/routes'); and its PURE render
-#       block, run under node, draws a planted route and a planted tab and does
-#       not draw a removed one — the mutation pair at the layer the user sees.
-#       Home draws the Configs ▸ About shape: an Index cell per macro group,
-#       every group closing with "Go Back Up to Index", and "Copy All Infos"
-#       carrying every row (whose labels mirror superapp's own: see
-#       test-c3-webserver-about-mirror.sh, kept apart because it reads
-#       superapp's source and this file must stay own-source to stay fatal).
-#   T4  NO PLACEHOLDER IN A SHIPPED TAB: no not-built wording in ui/ or src/.
+#   T1  NO CUSTOM :8002 UI. server/ui holds diag.html (:8003) and nothing else; server/src holds
+#       diag, dns, lib and serving only; no route of :8002 is spelled in this crate; the crate
+#       depends on the shared server by path and serves :8002 through fleet_webserver::handler.
+#       (That the shared server IS the Linux UI is test-c3-webserver-shared.sh's business, and
+#       that it renders is test-c3-webserver-render.sh's.)
+#   T4  NO PLACEHOLDER IN A SHIPPED PAGE: no not-built wording in ui/ or src/.
 #   T5  TAURI SHAPE. build.json::tauri maps every shipped ABI to a tauri target;
 #       the app crate's [lib] is the declared lib_name and links the server
 #       crate; tauri.conf.json carries build.json's identity and declares NO
@@ -41,14 +28,10 @@
 #       test-c3-webserver-no-kotlin.sh.)
 #   T6  RENAME LEDGER. The retired spellings (the old cloud- id without the c3-
 #       family, its asset and image names) appear nowhere in this app.
-#   T7  ROUTE <-> TAB END TO END (needs cargo). The compiled /__api__/routes of
-#       the real routes.rs, rendered by the shell's own nav code under node, is
-#       the five tabs; a tab row planted in a copy of routes.rs appears in the
-#       nav, the Configs row removed from a copy disappears.
 #   M   mutation-proof: each defect above is planted in a copy and shown red.
 #
 # OWN-SOURCE ONLY: reads this application's directory and nothing else.
-# python3, node, grep, jq.
+# python3, grep, jq.
 set -uo pipefail
 
 APP="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -58,171 +41,50 @@ fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 for tool in python3 node grep jq; do
   command -v "$tool" >/dev/null 2>&1 || { echo "ERROR $tool absent — a verdict from a missing tool is not a verdict"; exit 1; }
 done
-for f in "$APP/build.json" "$APP/server/src/routes.rs" "$APP/server/src/lib.rs" "$APP/server/ui/shell.html" \
+for f in "$APP/build.json" "$APP/server/src/lib.rs" "$APP/server/ui/diag.html" \
          "$APP/src-tauri/src/lib.rs" "$APP/src-tauri/tauri.conf.json" "$APP/src-tauri/gen/android/app/build.gradle.kts"; do
   [ -f "$f" ] || { echo "ERROR missing source: $f — this tester is unrun, not passing"; exit 1; }
 done
 
-# ── t1 <app> : one route table ────────────────────────────────────────────
+# ── t1 <app> : :8002 has NO custom UI — it is the shared server, and only that ───────
 t1() {
   python3 - "$1" <<'PY'
 import glob, os, re, sys
 app = sys.argv[1]
-routes = open(os.path.join(app, "server/src/routes.rs")).read()
-table = re.search(r"pub const ROUTES: &\[Route\] = &\[(.*?)\n\];", routes, re.S)
-if not table:
-    print("    routes.rs has no `pub const ROUTES: &[Route]` table"); sys.exit(1)
-declared = re.findall(r'path:\s*"([^"]+)"', table.group(1))
-declared += ["/*"] if "path: CATCH_ALL" in table.group(1) else []
 bad = []
-if len(declared) != len(set(declared)):
-    bad.append("a path is declared twice: %s" % sorted({d for d in declared if declared.count(d) > 1}))
-# find() must be a walk over ROUTES and the only place a path is compared.
-find = re.search(r"pub fn find\(side: Side, path: &str\) -> Option<&'static Route> \{(.*?)\n\}", routes, re.S)
-if not find or "for r in ROUTES" not in find.group(1):
-    bad.append("routes.rs::find does not iterate ROUTES — dispatch must be a walk over the table")
-prefixes = ("/__tab__/", "/__lib__/")
-for src in sorted(glob.glob(os.path.join(app, "server/src/*.rs"))):
-    text = open(src).read()
-    # strip the test modules and comments: tests may plant literals on purpose
-    body = re.split(r"#\[cfg\(test\)\]", text)[0]
+ui = sorted(os.listdir(os.path.join(app, "server/ui"))) if os.path.isdir(os.path.join(app, "server/ui")) else []
+if ui != ["diag.html"]:
+    bad.append("server/ui holds %r; the only page this app may carry is diag.html (:8003): :8002 is the shared Linux UI" % ui)
+src = sorted(os.path.basename(p) for p in glob.glob(os.path.join(app, "server/src/*.rs")))
+if src != ["diag.rs", "dns.rs", "lib.rs", "serving.rs"]:
+    bad.append("server/src holds %r, want exactly diag.rs dns.rs lib.rs serving.rs (no routes/render/files/engines/about of :8002)" % src)
+cargo = open(os.path.join(app, "server/Cargo.toml")).read()
+if not re.search(r'^fleet-webserver\s*=\s*\{\s*path\s*=\s*"\.\./\.\./ab_cloud-libs-shared/libs/fleet-webserver"', cargo, re.M):
+    bad.append("server/Cargo.toml does not depend on the shared web server by path")
+for p in sorted(glob.glob(os.path.join(app, "server/src/*.rs"))):
+    body = re.split(r"#\[cfg\(test\)\]", open(p).read())[0]
     body = re.sub(r"//.*", "", body)
-    for lit in re.findall(r'"(/__[a-z_-]+__(?:/[a-z_-]*)?)"', body):
-        if lit in declared or lit in prefixes:
+    for lit in re.findall(r'"(/__[a-z_-]+__[^"]*)"', body):
+        if lit in ("/__diag__",) or lit.startswith("/__api__/diag/") or lit in ("/__api__/health", "/__api__/serving"):
             continue
-        bad.append("%s spells route %r, which is not a ROUTES path" % (os.path.relpath(src, app), lit))
-    if os.path.basename(src) != "routes.rs":
-        for m in re.finditer(r"(req\.path|path)\s*==\s*\"", body):
-            bad.append("%s compares a request path to a literal outside routes.rs::find — a handler attached outside the table" % os.path.relpath(src, app))
-    else:
-        outside_find = body.replace(find.group(0), "") if find else body
-        for m in re.finditer(r"req\.path\s*==\s*\"", outside_find):
-            bad.append("routes.rs compares req.path to a literal outside find() — a handler attached outside the table")
+        bad.append("%s spells the route %r: :8002's routes belong to the shared server" % (os.path.relpath(p, app), lit))
+    if re.search(r"include_str!\(\"\.\./ui/(?!diag\.html)", body):
+        bad.append("%s embeds a page other than diag.html" % os.path.relpath(p, app))
+lib = open(os.path.join(app, "server/src/lib.rs")).read()
+if "fleet_webserver::handler" not in lib:
+    bad.append("server/src/lib.rs does not serve :8002 through fleet_webserver::handler")
 for b in bad:
     print("    " + b)
 sys.exit(1 if bad else 0)
 PY
 }
 
-# ── t2 <app> : five tabs, Home centre, views both ways ────────────────────
-t2() {
-  python3 - "$1" <<'PY'
-import os, re, sys
-app = sys.argv[1]
-routes = open(os.path.join(app, "server/src/routes.rs")).read()
-table = re.search(r"pub const ROUTES: &\[Route\] = &\[(.*?)\n\];", routes, re.S).group(1)
-rows = re.findall(r'path:\s*"([^"]+)",\s*tab:\s*(Some\("([^"]+)"\)|None)', table)
-tabs = [(p, t[2]) for p, t, _ in [(r[0], r, r[2]) for r in rows] if t[2]]
-captions = [c for _, c in tabs]
-bad = []
-if captions != ["Pages", "API", "Home", "Files", "Configs"]:
-    bad.append("tab captions in table order are %r, want Pages, API, Home, Files, Configs" % captions)
-ids = []
-for path, cap in tabs:
-    m = re.fullmatch(r"/__tab__/([a-z0-9-]+)", path)
-    if not m:
-        bad.append("tab %r sits at %r, not /__tab__/<id>" % (cap, path)); continue
-    ids.append(m.group(1))
-shell = open(os.path.join(app, "server/ui/shell.html")).read()
-views = re.search(r"var views = \{(.*?)\n  \};", shell, re.S)
-if not views:
-    bad.append("shell.html has no `var views = {...}` map")
-else:
-    keys = re.findall(r"^\s*([a-z0-9-]+):\s*function", views.group(1), re.M)
-    for i in ids:
-        if i not in keys:
-            bad.append("tab %r is declared by the server but shell.html has no view for it — it would render an error" % i)
-    for k in keys:
-        if k not in ids:
-            bad.append("shell.html has a view %r that no tab in ROUTES declares — an orphan view" % k)
-for b in bad:
-    print("    " + b)
-sys.exit(1 if bad else 0)
-PY
-}
-
-# ── t3 <app> : the shell is derived, proven under node ─────────────────────
-t3() {
-  python3 - "$1" <<'PY'
-import os, re, subprocess, sys, tempfile
-app = sys.argv[1]
-shell = open(os.path.join(app, "server/ui/shell.html")).read()
-routes = open(os.path.join(app, "server/src/routes.rs")).read()
-table = re.search(r"pub const ROUTES: &\[Route\] = &\[(.*?)\n\];", routes, re.S).group(1)
-captions = re.findall(r'tab:\s*Some\("([^"]+)"\)', table)
-bad = []
-for cap in captions:
-    if re.search(r"""['">]%s[<'"]""" % re.escape(cap), shell):
-        bad.append("shell.html spells the tab caption %r — captions come from /__api__/routes" % cap)
-if re.search(r"""href=["']/__tab__/""", shell):
-    bad.append("shell.html hand-writes an href to a /__tab__/ page — the nav must be built from the route table")
-if "'/__api__/routes'" not in shell and '"/__api__/routes"' not in shell:
-    bad.append("shell.html never fetches /__api__/routes — where would its tabs come from?")
-pure = re.search(r'<script id="pure">(.*?)</script>', shell, re.S)
-if not pure:
-    bad.append("shell.html has no <script id=\"pure\"> block for node to run"); print("\n".join("    " + b for b in bad)); sys.exit(1)
-if re.search(r"\b(document|window|fetch|location)\b", pure.group(1)):
-    bad.append("the pure block touches document/window/fetch/location — it must be renderable under node")
-with tempfile.TemporaryDirectory() as d:
-    js = os.path.join(d, "pure.js")
-    open(js, "w").write(pure.group(1))
-    harness = r"""
-const p = require(process.argv[2]);
-const base = [
-  {kind:'page', path:'/', tab:null, summary:'shell'},
-  {kind:'page', path:'/__tab__/alpha', tab:'Alpha', summary:'a'},
-  {kind:'page', path:'/__tab__/home', tab:'Home', summary:'h'},
-  {kind:'api',  path:'/__api__/one', tab:null, summary:'one'},
-  {kind:'page', path:'/*', tab:null, summary:'files'},
-];
-const planted = base.concat([{kind:'api', path:'/__api__/planted', tab:null, summary:'PLANTED'},
-                             {kind:'page', path:'/__tab__/planted', tab:'Planted', summary:'pt'}]);
-const removed = base.filter(r => r.path !== '/__api__/one');
-function must(c, m){ if(!c){ console.log('    ' + m); process.exitCode = 1; } }
-const nav = p.renderNav(p.tabsFrom(planted), 'home');
-must(nav.includes('Planted') && nav.includes('Alpha'), 'renderNav does not draw a tab planted in the route table');
-must(p.tabsFrom(planted).map(t=>t.id).join(',') === 'alpha,home,planted', 'tabsFrom does not keep table order: ' + p.tabsFrom(planted).map(t=>t.id).join(','));
-must(p.renderRoutes(planted, 'api').includes('/__api__/planted'), 'the API tab does not draw a planted API route');
-must(p.renderRoutes(planted, 'page').includes('/__tab__/planted'), 'the Pages tab does not draw a planted page route');
-must(!p.renderRoutes(removed, 'api').includes('/__api__/one'), 'the API tab still draws a route removed from the table');
-must(!p.renderRoutes(base, 'api').includes('/__tab__/'), 'the API tab draws page routes');
-must(!p.renderRoutes(base, 'page').includes('/__api__/'), 'the Pages tab draws API routes');
-must(p.renderRoutes(base, 'page').includes('href="/"'), 'the catch-all row links to / rather than to a literal *');
-must(p.tabFromPath('/__tab__/files') === 'files' && p.tabFromPath('/') === null, 'tabFromPath misreads the URL');
-must(p.defaultTab(p.tabsFrom(base)) === 'home', 'defaultTab is not home when home is declared');
-must(p.renderSections([{title:'T', rows:[['k','<v>']]}]).includes('&lt;v&gt;'), 'renderSections does not escape values');
-must(p.renderListing([{name:'a<b', isDir:true}], '/x').includes('data-dir="/x/a&lt;b"'), 'renderListing does not escape or join paths');
-// Home = the Configs ▸ About shape, whatever groups the server sends.
-const about = [{macro:'M-ONE', sections:[{title:'S1', rows:[['k1','v1']]}]},
-               {macro:'M-TWO', sections:[{title:'S2', rows:[['k2','<v2>']]}, {title:'S3', rows:[['k3','v3']]}]}];
-const home = p.renderAbout(about);
-const cells = (home.match(/class="cell" data-jump="macro-\d+"/g) || []).length;
-must(cells === about.length, 'the Home index has ' + cells + ' cells for ' + about.length + ' macro groups');
-const anchors = (home.match(/<h2 class="macro" id="macro-\d+">/g) || []).length;
-must(anchors === about.length, 'Home draws ' + anchors + ' macro headers for ' + about.length + ' groups');
-const backs = (home.match(/data-jump="about-index">Go Back Up to Index/g) || []).length;
-must(backs === about.length, 'Home has ' + backs + ' "Go Back Up to Index" links for ' + about.length + ' groups');
-must(home.indexOf('M-ONE') < home.indexOf('M-TWO'), 'Home reorders the server\'s macro groups');
-must(home.includes('id="about-index"') && home.includes('data-copy-about'), 'Home has no Index anchor or no Copy All Infos button');
-must(home.includes('&lt;v2&gt;') && home.includes('>S3<'), 'Home drops or fails to escape a section');
-const text = p.aboutText(about);
-must(['M-ONE','M-TWO','S1','S2','S3','k1: v1','k2: <v2>','k3: v3'].every(x => text.includes(x)), 'Copy All Infos omits a group, a section or a row: ' + JSON.stringify(text));
-"""
-    h = os.path.join(d, "h.js"); open(h, "w").write(harness)
-    r = subprocess.run(["node", h, js], capture_output=True, text=True)
-    if r.returncode != 0 or r.stdout.strip():
-        bad.append("node run of the pure block failed:\n" + r.stdout + r.stderr)
-for b in bad:
-    print("    " + b)
-sys.exit(1 if bad else 0)
-PY
-}
 
 # ── t4 <app> : no placeholder in a shipped tab ─────────────────────────────
 t4() {
   local hits
-  # ui/lib is vendored third-party code (marked, js-yaml, Eruda), not a shipped tab; `placeholder=` is the HTML attribute.
-  hits="$(grep -rniE "not built( yet)?|coming soon|placeholder|TODO_PAGE|under construction|lorem ipsum" --exclude-dir=lib "$1/server/ui" "$1/server/src" 2>/dev/null | grep -v "^.*://" | grep -viE "placeholder=" || true)"
+  # `placeholder=` is the HTML attribute.
+  hits="$(grep -rniE "not built( yet)?|coming soon|placeholder|TODO_PAGE|under construction|lorem ipsum" "$1/server/ui" "$1/server/src" 2>/dev/null | grep -v "^.*://" | grep -viE "placeholder=" || true)"
   if [ -n "$hits" ]; then printf '    %s\n' "$hits"; return 1; fi
   return 0
 }
@@ -316,77 +178,14 @@ t6() {
   return 0
 }
 
-# ── t7 <app> : route <-> tab, end to end ───────────────────────────────────
-# The chain the user sees: routes.rs ROUTES -> (compiled) /__api__/routes JSON
-# -> the shell's own tabsFrom/renderNav under node -> the bottom-nav buttons.
-# On copies: the real table draws exactly Pages, API, Home, Files, Configs; a
-# tab row PLANTED in routes.rs appears in the nav; the Configs row REMOVED from
-# routes.rs disappears from it. Needs cargo (the crate is compiled).
-nav_of() {  # nav_of <app> -> one caption per line, as rendered
-  local out json
-  out="$(cd "$1/server" && CARGO_TARGET_DIR="$T7_TARGET" cargo test -q --lib dump_routes_json -- --ignored --nocapture 2>/dev/null)" || return 1
-  json="$(printf '%s' "$out" | sed -n 's/.*ROUTES_JSON_BEGIN\(.*\)ROUTES_JSON_END.*/\1/p')"
-  [ -n "$json" ] || return 1
-  python3 - "$1/server/ui/shell.html" "$json" <<'PY'
-import os, re, subprocess, sys, tempfile
-pure = re.search(r'<script id="pure">(.*?)</script>', open(sys.argv[1]).read(), re.S).group(1)
-with tempfile.TemporaryDirectory() as d:
-    js = os.path.join(d, "pure.js"); open(js, "w").write(pure)
-    h = os.path.join(d, "h.js"); open(h, "w").write(
-        "const p=require(process.argv[2]);const r=JSON.parse(process.argv[3]);"
-        "const t=p.tabsFrom(r);const n=p.renderNav(t,p.defaultTab(t));"
-        "(n.match(/<button[^>]*>[^<]*<\\/button>/g)||[]).forEach(b=>console.log(b.replace(/<[^>]*>/g,'')));")
-    r = subprocess.run(["node", h, js, sys.argv[2]], capture_output=True, text=True)
-    sys.stdout.write(r.stdout); sys.exit(r.returncode)
-PY
-}
-t7() {
-  local copy nav rc=0
-  T7_TARGET="$WORK7/target"
-  nav="$(nav_of "$1" | tr '\n' ',')"
-  [ "$nav" = "Pages,API,Home,Files,Configs," ] || { echo "    real table: nav is '$nav', want Pages,API,Home,Files,Configs"; rc=1; }
-  # server/build.rs resolves every serving port from its owner's build.json at <repo>/<owner>/, two levels above a
-  # crate; the planted copies sit under $WORK7, so the owners' declarations are copied beside them.
-  local o; for o in $(jq -r '.serving.endpoints[].owner' "$1/build.json" | sort -u); do
-    mkdir -p "$WORK7/$o"; cp "$1/../$o/build.json" "$WORK7/$o/"
-  done
-  copy="$WORK7/plant"; rm -rf "$copy"; mkdir -p "$copy"; cp -R "$1/server" "$1/build.json" "$copy/"; rm -rf "$copy/server/target"
-  python3 - "$copy/server/src/routes.rs" <<'PY' || { echo "    plant did not apply"; return 1; }
-import sys; p = sys.argv[1]; s = open(p).read()
-anchor = '    Route { kind: Kind::Api, path: "/__api__/routes"'
-assert anchor in s
-s = s.replace(anchor, '    Route { kind: Kind::Page, path: "/__tab__/planted", tab: Some("Planted"), on: Side::Drive, post: false, summary: "planted", handler: page_shell },\n' + anchor, 1)
-open(p, "w").write(s)
-PY
-  nav="$(nav_of "$copy" | tr '\n' ',')"
-  [ "$nav" = "Pages,API,Home,Files,Configs,Planted," ] || { echo "    tab row planted: nav is '$nav', want ...,Configs,Planted"; rc=1; }
-  copy="$WORK7/remove"; rm -rf "$copy"; mkdir -p "$copy"; cp -R "$1/server" "$1/build.json" "$copy/"; rm -rf "$copy/server/target"
-  python3 - "$copy/server/src/routes.rs" <<'PY' || { echo "    remove did not apply"; return 1; }
-import re, sys; p = sys.argv[1]; s = open(p).read()
-n = re.sub(r'\n    Route \{ kind: Kind::Page, path: "/__tab__/configs".*?\},', "", s, count=1)
-assert n != s; open(p, "w").write(n)
-PY
-  nav="$(nav_of "$copy" | tr '\n' ',')"
-  [ "$nav" = "Pages,API,Home,Files," ] || { echo "    Configs row removed: nav is '$nav', want Pages,API,Home,Files"; rc=1; }
-  return $rc
-}
-
-WORK7="$(mktemp -d)"
 echo "── cloud-c3-webserver ──"
-t1 "$APP" && pass "T1 one route table: every route literal is a ROUTES path and dispatch walks the table" || fail "T1 a route lives outside the table"
-t2 "$APP" && pass "T2 five tabs, Home centre, declared in the table; every tab has a view and every view a tab" || fail "T2 tabs and views disagree"
-t3 "$APP" && pass "T3 the shell is derived: no caption or /__tab__/ href typed, and under node it draws a planted route and drops a removed one" || fail "T3 the shell hand-lists or misrenders"
+t1 "$APP" && pass "T1 :8002 has no custom UI: server/ui is diag.html only, server/src has no :8002 routes or pages, the drive is served through fleet_webserver::handler" || fail "T1 custom :8002 UI or routes found in this app"
 t4 "$APP" && pass "T4 no placeholder wording in a shipped tab" || fail "T4 a shipped tab can render a placeholder"
 t5 "$APP" && pass "T5 Tauri shape: ABIs mapped, lib + server crate linked, identity from build.json, bind before window, storage asked from Rust, no shell residue" || fail "T5 the Tauri shape is broken"
-if command -v cargo >/dev/null 2>&1; then
-  t7 "$APP" && pass "T7 route<->tab end to end: a tab row planted in routes.rs appears in the rendered nav, a removed one disappears" || fail "T7 the nav does not follow routes.rs"
-else
-  echo "  SKIP  T7 cargo absent — the route<->tab chain is unverified here"
-fi
 t6 "$APP" && pass "T6 rename ledger clean: no retired spelling anywhere in this app" || fail "T6 a retired spelling survives"
 
 # ── M: mutation-proof ──────────────────────────────────────────────────────
-WORK="$(mktemp -d)"; trap 'rm -rf "$WORK" "$WORK7"' EXIT
+WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 mutate() {
   local title="$1" check="$2" mut="$3" copy="$WORK/m$RANDOM$RANDOM"
   mkdir -p "$copy"; cp -R "$APP/." "$copy/"
@@ -395,21 +194,23 @@ mutate() {
   "$mut" "$copy" || { fail "M: mutation '$title' did not apply — a mutation that does not mutate proves nothing"; return; }
   if "$check" "$copy" >/dev/null 2>&1; then fail "M: '$title' stayed GREEN — the check is vacuous"; else pass "M: '$title' goes red"; fi
 }
-m_route_outside() { python3 - "$1" <<'PY'
-import sys,re; p=sys.argv[1]+"/server/src/lib.rs"; s=open(p).read()
-new=s.replace("    let route = match routes::find(ctx.side, &req.path) {", "    if req.path == \"/__planted__/x\" { return Resp::text(200, \"planted\"); }\n    let route = match routes::find(ctx.side, &req.path) {")
-assert new!=s; open(p,"w").write(new)
-PY
-}
-m_nav_hardcoded() { python3 - "$1" <<'PY'
-import sys; p=sys.argv[1]+"/server/ui/shell.html"; s=open(p).read()
-new=s.replace('<nav id="nav" aria-label="tabs"></nav>', '<nav id="nav" aria-label="tabs"><a href="/__tab__/pages">Pages</a></nav>')
-assert new!=s; open(p,"w").write(new)
-PY
-}
 m_placeholder() { python3 - "$1" <<'PY'
-import sys; p=sys.argv[1]+"/server/ui/shell.html"; s=open(p).read()
-new=s.replace('<main id="main">', '<main id="main"><div>not built yet</div>')
+import sys; p=sys.argv[1]+"/server/ui/diag.html"; s=open(p).read()
+new=s.replace('<body>', '<body><div>not built yet</div>',1)
+assert new!=s; open(p,"w").write(new)
+PY
+}
+m_custom_page() { printf '<!doctype html><nav>Pages API Home</nav>' > "$1/server/ui/shell.html"; }
+m_route_in_lib() { python3 - "$1" <<'PY'
+import sys; p=sys.argv[1]+"/server/src/lib.rs"; s=open(p).read()
+new=s.replace('"/__api__/health" =>', '"/__tab__/pages" => Resp::text(200, "planted"),\n        "/__api__/health" =>')
+assert new!=s; open(p,"w").write(new)
+PY
+}
+m_own_renderer() { printf 'pub fn page() {}\n' > "$1/server/src/render.rs"; }
+m_drop_shared_dep() { python3 - "$1" <<'PY'
+import sys; p=sys.argv[1]+"/server/Cargo.toml"; s=open(p).read()
+new=s.replace('fleet-webserver = {','fleet-webserver-gone = {')
 assert new!=s; open(p,"w").write(new)
 PY
 }
@@ -422,24 +223,6 @@ PY
 m_old_asset() { python3 - "$1" <<'PY'
 import sys,json; p=sys.argv[1]+"/build.json"; d=json.load(open(p))
 d["release"]["gh_release"]["asset_name"]="Cloud-Web"+"Server.apk"; json.dump(d,open(p,"w"),indent=2)
-PY
-}
-m_drop_home_tab() { python3 - "$1" <<'PY'
-import sys,re; p=sys.argv[1]+"/server/src/routes.rs"; s=open(p).read()
-new=re.sub(r'\n    Route \{ kind: Kind::Page, path: "/__tab__/home".*?\},', "", s, count=1, flags=re.S)
-assert new!=s; open(p,"w").write(new)
-PY
-}
-m_view_orphan() { python3 - "$1" <<'PY'
-import sys; p=sys.argv[1]+"/server/ui/shell.html"; s=open(p).read()
-new=s.replace("    configs: function ()", "    ghost: function () { return Promise.resolve(''); },\n    configs: function ()")
-assert new!=s; open(p,"w").write(new)
-PY
-}
-m_render_drops_route() { python3 - "$1" <<'PY'
-import sys; p=sys.argv[1]+"/server/ui/shell.html"; s=open(p).read()
-new=s.replace("var rows = routes.filter(function (r) { return r.kind === kind; });", "var rows = routes.filter(function (r) { return r.kind === kind && r.path.indexOf('planted') < 0; });")
-assert new!=s; open(p,"w").write(new)
 PY
 }
 m_rust_port() { python3 - "$1" <<'PY'
@@ -458,36 +241,11 @@ import sys,json; p=sys.argv[1]+"/src-tauri/tauri.conf.json"; d=json.load(open(p)
 d["identifier"]="com.diegonmarcos.cloudc3webserver"; json.dump(d,open(p,"w"),indent=2)
 PY
 }
-m_about_no_back_link() { python3 - "$1" <<'PY'
-import sys; p=sys.argv[1]+"/server/ui/shell.html"; s=open(p).read()
-new=s.replace("""renderSections(g.sections) +
-      '<div class="back"><a data-jump="about-index">Go Back Up to Index</a></div>';""", "renderSections(g.sections);")
-assert new!=s; open(p,"w").write(new)
-PY
-}
-m_copy_all_drops_rows() { python3 - "$1" <<'PY'
-import sys; p=sys.argv[1]+"/server/ui/shell.html"; s=open(p).read()
-new=s.replace("return '# ' + s.title + '\\n' + s.rows.map(", "return '# ' + s.title + '\\n' + s.rows.slice(1).map(")
-assert new!=s; open(p,"w").write(new)
-PY
-}
-m_json_drops_tab() { python3 - "$1" <<'PY'
-import sys; p=sys.argv[1]+"/server/src/routes.rs"; s=open(p).read()
-new=s.replace('match r.tab { Some(t) => jstr(t), None => "null".to_string() }', '"null".to_string()')
-assert new!=s; open(p,"w").write(new)
-PY
-}
-if command -v cargo >/dev/null 2>&1; then
-  mutate "/__api__/routes stops carrying the tab caption"  t7 m_json_drops_tab
-fi
-mutate "a handler attached outside the route table"        t1 m_route_outside
-mutate "the Home tab removed from the table"                t2 m_drop_home_tab
-mutate "a view with no declared tab"                        t2 m_view_orphan
-mutate "a hand-written tab link in the nav"                 t3 m_nav_hardcoded
-mutate "the render function silently drops a route"         t3 m_render_drops_route
-mutate "a not-built body in the shell"                      t4 m_placeholder
-mutate "Home loses its Go Back Up to Index links"          t3 m_about_no_back_link
-mutate "Copy All Infos drops a row"                         t3 m_copy_all_drops_rows
+mutate "a custom page next to the shared UI"                 t1 m_custom_page
+mutate "a :8002 route spelled in this crate"                t1 m_route_in_lib
+mutate "a renderer of its own in this crate"                t1 m_own_renderer
+mutate "the shared server dependency dropped"               t1 m_drop_shared_dep
+mutate "a not-built body in the diagnostics page"           t4 m_placeholder
 mutate "the Rust library stored uncompressed"               t5 m_no_legacy_packaging
 mutate "the port typed into the Tauri app"                  t5 m_rust_port
 mutate "a window declared in tauri.conf.json (races bind)"  t5 m_window_before_bind
