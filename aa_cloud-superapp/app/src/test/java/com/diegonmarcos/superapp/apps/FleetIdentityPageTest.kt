@@ -90,14 +90,11 @@ class FleetIdentityPageTest : KitPageHarness() {
     }
 
     @Test
-    fun `I4 Identity is the Apps Mesh tab beside IPC and builds its host`() {
-        val tabs = Sections.byId("config")!!.pages.first { it.id == "apps-mesh" }.tabs
-        assertEquals(tabs.indexOf("ipc") + 1, tabs.indexOf("identity"))
-        val page = SectionPages.pagesFor("config", includeHidden = true).first { it.id == "identity" }
-        assertEquals("Identity", page.label)
-        val f = page.factory()
-        assertTrue("Apps Mesh > Identity builds ${f::class.java}", f is FleetIdentityFragment)
-        show(f)
+    fun `I4 Identity is Cloud Store Access only, Configs keeps one Apps Access tile`() {
+        val ids = Sections.byId("config")!!.pages.map { it.id }
+        assertTrue("Configs declares no identity page: $ids", "identity" !in ids && "apps-mesh" !in ids)
+        assertTrue("Configs has the Apps Access tile: $ids", "apps-access" in ids)
+        show(FleetIdentityFragment())
         compose.onNodeWithTag(FleetIdentity.TAG_SUMMARY, useUnmergedTree = true).assertExists()
     }
 }

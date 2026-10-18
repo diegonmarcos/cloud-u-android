@@ -1899,6 +1899,10 @@ open class ShellActivity : AppCompatActivity(),
                 com.diegonmarcos.superapp.kdeconnect.KdeConnectManager.connectFirstAsync()
                 findViewById<View>(R.id.fragment_container)?.snack("KDE Connect: connecting…")
             }
+            // Configs > Network > Apps Access: Cloud Store's Access section, else the Store's install offer.
+            actionType == "open_apps_access" -> {
+                if (!com.diegonmarcos.superapp.apps.CloudStoreHandoff.open(this, "access")) launchExternalApp("cloud-store")
+            }
             // Configs > Network > Webserver: the Cloud C3 Webserver app, else localhost in Cloud Browser.
             actionType == "open_webserver" -> {
                 if (com.diegonmarcos.superapp.launcher.WebserverLaunch.open(this) ==

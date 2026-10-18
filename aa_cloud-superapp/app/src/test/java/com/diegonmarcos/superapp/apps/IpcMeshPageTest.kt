@@ -69,18 +69,13 @@ class IpcMeshPageTest : KitPageHarness() {
     }
 
     @Test
-    fun `P3 Configs Network Apps Mesh IPC is reachable and hosts the shared page`() {
+    fun `P3 IPC is Cloud Store Access only, Configs keeps one Apps Access tile and hosts the shared page`() {
         val pages = Sections.byId("config")!!.pages
         val net = pages.filter { it.group == "Setup" && it.subgroup == "Network" && !it.hidden }.map { it.id }
-        assertTrue("ipc is no longer a Network tile: $net", "ipc" !in net)
-        val tabs = pages.first { it.id == "apps-mesh" }.tabs
-        assertEquals("IPC is the Apps Mesh tab after Apps", listOf("apps-mesh-members", "ipc"), tabs.take(2))
+        assertTrue("Configs declares no ipc page: ${pages.map { it.id }}", pages.none { it.id == "ipc" || it.id == "apps-mesh" })
+        assertTrue("Network holds the Apps Access tile: $net", "apps-access" in net)
         assertTrue("Network keeps the 2-8 rule: $net", net.size in 2..8)
-        val page = SectionPages.pagesFor("config", includeHidden = true).first { it.id == "ipc" }
-        assertEquals("IPC", page.label)
-        val f = page.factory()
-        assertTrue("Configs > Network > IPC builds ${f::class.java}", f is IpcMeshFragment)
-        show(f)
+        show(IpcMeshFragment())
         compose.onNodeWithTag(IpcMesh.TAG_SUMMARY, useUnmergedTree = true).assertExists()
     }
 

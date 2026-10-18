@@ -103,15 +103,7 @@ object SectionPages {
         // a button that opens Cloud Store on the same tab, else the page itself.
         sectionId == "config" && pageId == "store-cloud"    -> com.diegonmarcos.superapp.apps.CloudStoreHandoff.page(pageId)
         sectionId == "config" && pageId == "store-phone"    -> com.diegonmarcos.superapp.apps.CloudStoreHandoff.page(pageId)
-        // #733 the Store's Apps Mesh page, reached from Configs ▸ Mesh too —
-        // the same AppsMesh.page, hosted on its own (no copy).
-        // Apps Mesh is now a strip (build.json apps-mesh.tabs: Apps | IPC | Identity), so the strip
-        // branch at the top answers `apps-mesh`; its Apps tab is the same handoff page as before.
-        sectionId == "config" && pageId == "apps-mesh-members" -> com.diegonmarcos.superapp.apps.CloudStoreHandoff.page("apps-mesh")
-        // #ipc Configs > Network > Apps Mesh > IPC: the fleet's IPC Mesh, libs:appstore's shared IpcMeshPage (Cloud Store > Access > IPC draws the same).
-        sectionId == "config" && pageId == "ipc"            -> com.diegonmarcos.superapp.appstore.IpcMeshFragment()
-        // Configs > Network > Apps Mesh > Identity: each fleet app's Linux uid (libs:appstore FleetIdentityPage).
-        sectionId == "config" && pageId == "identity"       -> com.diegonmarcos.superapp.appstore.FleetIdentityFragment()
+        // Apps Mesh / IPC / Identity are Cloud Store > Access now (one tile, Configs > Network > Apps Access, action open_apps_access).
         // Configs > Network > ADB Shell: the privileged channel's full control (lib AdbShellPage).
         sectionId == "config" && pageId == "adb-shell"      -> com.diegonmarcos.superapp.configs.AdbShellFragment.newInstance()
         // Configs ▸ Observability ▸ Diagnostics: the device's own numbers (edge strips + events, gesture insets, measured tiles).

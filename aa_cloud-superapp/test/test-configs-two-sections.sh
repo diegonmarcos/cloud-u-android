@@ -78,7 +78,7 @@ want = {
     ('Fleet', ''):                     ['C3', 'Peer Control', 'Agents'],
     ('Setup', 'Connect'):          ['Account'],
     ('Setup', 'Apps'):             ['Store', 'Permissions'],
-    ('Setup', 'Network'):              ['Firewall', 'DNS', 'Webserver', 'Cloud Mesh', 'Apps Mesh', 'ADB Shell'],  # IPC is a tab of Apps Mesh, not a tile
+    ('Setup', 'Network'):              ['Firewall', 'DNS', 'Webserver', 'Cloud Mesh', 'Apps Access', 'ADB Shell'],  # IPC is a tab of Apps Mesh, not a tile
     ('Observability', ''):          ['Diagnostics', 'Logcat', 'About'],
 }
 problems = ['%s%s = %r' % (g, ' ▸ ' + s if s else '', members(g, s))
@@ -227,9 +227,9 @@ import json
 print(len(next(s for s in json.load(open('$BJ'))['ui']['sections']
                if s['id'] == 'config')['pages']))
 ")
-[ "$COUNT" = 33 ] \
-  && ok "33 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs; #ipc: plus ipc; Controls merge: plus panels, panels-ui and panels-tools; Apps Mesh strip: plus apps-mesh-members and identity)" \
-  || bad "$COUNT config pages, expected 33 — a page was added or DELETED, and T5 cannot report a page that is gone"
+[ "$COUNT" = 30 ] \
+  && ok "30 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs; #ipc: plus ipc; Controls merge: plus panels, panels-ui and panels-tools; Apps Mesh strip: plus apps-mesh-members and identity)" \
+  || bad "$COUNT config pages, expected 30 — a page was added or DELETED, and T5 cannot report a page that is gone"
 
 echo "== T6: ACTIONS IS UNTOUCHED =="
 # The owner said to keep it as it is. Three things make that true: the same three
@@ -310,9 +310,8 @@ BEFORE = {'presets', 'controls', 'onehand', 'notify', 'launcher',
           'panels', 'panels-ui', 'panels-tools',  # added on purpose: Configs ▸ Setup ▸ Launcher ▸ Controls ▸ Panels (UI | Tools), hidden tabs of the merged Controls
           'update', 'kde_connect', 'animations',
           'webserver',  # added on purpose: Configs ▸ Network ▸ Webserver (opens the Cloud C3 Webserver app, else localhost in Cloud Browser)
-          'apps-mesh',  # #733 added on purpose: Configs ▸ Mesh ▸ Apps Mesh (the Store's mesh page)
-          'ipc',        # #ipc added on purpose: Configs ▸ Network ▸ IPC (the fleet's IPC Mesh, libs:appstore IpcMeshPage); now the Apps Mesh tab
-          'apps-mesh-members', 'identity',  # added on purpose: Apps Mesh became a strip, Apps | IPC | Identity (fleet Linux uids)
+          'apps-mesh', 'ipc', 'apps-mesh-members', 'identity',  # were Apps Mesh and its tabs; now removed_pages (Cloud Store > Access)
+          'apps-access',  # added on purpose: Configs ▸ Network ▸ Apps Access (opens Cloud Store > Access, else the Store install offer)
           'adb-shell',  # added on purpose: Configs ▸ Network ▸ ADB Shell (the privileged channel's page)
           'c3', 'network-sep-1',   # added on purpose: Network's C3 entry and its separator
           'firewall',   # added on purpose: Configs ▸ Network ▸ Firewall hosts the firewall engine's controls (About keeps a summary)
@@ -354,8 +353,8 @@ import json
 sec = next(s for s in json.load(open('$BJ'))['ui']['sections'] if s['id'] == 'config')
 print(','.join(sorted(sec.get('removed_pages', {}))))
 ")
-[ "$REMOVED" = "ai,library,localsearch,network-sep-1,textenhance,tokens,websearch" ] \
-  && ok "removed_pages is exactly the AI page, its five tabs and the Network separator — nothing else left Configs by deletion" \
+[ "$REMOVED" = "ai,apps-mesh,apps-mesh-members,identity,ipc,library,localsearch,network-sep-1,textenhance,tokens,websearch" ] \
+  && ok "removed_pages is exactly the AI page, its five tabs, the Network separator and Apps Mesh with its IPC / Identity tabs (now Cloud Store > Access) — nothing else left Configs by deletion" \
   || bad "removed_pages = [$REMOVED] — the deletion escape hatch now covers a different set than #723 declared"
 
 echo "== T10: the rail and the drawer list Configs under the SAME declared headings as the grid (#697) =="
@@ -414,7 +413,7 @@ want = ['H:SETUP',
         'S:CONNECT',      'Account[ic_person]',
         'S:APPS',         'Store[ic_storefront]', 'Permissions[ic_key]',
         'S:LAUNCHER',     'Controls[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
-        'S:NETWORK',          'Firewall[ic_lock]', 'DNS[ic_world]', 'Webserver[ic_web]', 'Cloud Mesh[ic_wg]', 'Apps Mesh[ic_apps]', 'ADB Shell[ic_terminal]',
+        'S:NETWORK',          'Firewall[ic_lock]', 'DNS[ic_world]', 'Webserver[ic_web]', 'Cloud Mesh[ic_wg]', 'Apps Access[ic_security]', 'ADB Shell[ic_terminal]',
         'H:FLEET',        'C3[ic_p_watchdog]', 'Peer Control[ic_hub]', 'Agents[ic_robot]',
         'H:OBSERVABILITY', 'Diagnostics[ic_monitor_heart]', 'Logcat[ic_subject]', 'About[ic_info]',
         'H:ACTIONS',
@@ -425,7 +424,7 @@ else:
     print('rendered != spec: ' + ' | '.join(l for l in difflib.unified_diff(want, out, lineterm='', n=0)
                                            if l[:1] in '+-' and l[:3] not in ('+++', '---')))
 PY
-)" "grid = SETUP ▸ CONNECT[Account] ▸ APPS[Store,Permissions] ▸ LAUNCHER[Controls,One-Hand,Notify] ▸ NETWORK[Firewall,DNS,Webserver,Cloud Mesh,Apps Mesh,ADB Shell] FLEET[C3,Peer Control,Agents] OBSERVABILITY[Diagnostics,Logcat,About] ACTIONS[Update All,KDE Connect,Animations]"
+)" "grid = SETUP ▸ CONNECT[Account] ▸ APPS[Store,Permissions] ▸ LAUNCHER[Controls,One-Hand,Notify] ▸ NETWORK[Firewall,DNS,Webserver,Cloud Mesh,Apps Access,ADB Shell] FLEET[C3,Peer Control,Agents] OBSERVABILITY[Diagnostics,Logcat,About] ACTIONS[Update All,KDE Connect,Animations]"
 
 echo "== T12: THE AI PAGE IS GONE, not hidden — no route, target or tile names it (#723) =="
 # Deleting a declaration and leaving its door behind is the dead-tile failure:

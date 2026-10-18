@@ -8,8 +8,8 @@
 #   U3 no manifest outside a group in force sets android:sharedUserId, except to its own package
 #      (the terminals' ${TERMUX_PACKAGE_NAME} today: that shares nothing). A `pending` group whose value
 #      does not resolve yet is not in force.
-#   U4 the page exists and is reachable: build.json apps-mesh.tabs names identity, SectionPages
-#      builds FleetIdentityFragment for it, and FleetIdentityPageTest keeps its tests
+#   U4 Identity lives in Cloud Store > Access only: Configs declares no identity page (one Apps Access
+#      tile instead) and FleetIdentityPageTest keeps its tests
 # Then each planted defect must turn it red.
 set -u
 APP="$(cd "$(dirname "$0")/.." && pwd)"; ROOT="$(cd "$APP/.." && pwd)"
@@ -82,12 +82,12 @@ for path, (gid, pkg, val) in want.items():
 for path, v in seen.items():
     if path not in want and v not in own.get(path, ()): fails.append('U3 %s sets sharedUserId=%r but no declared group names it' % (path, v))
 pages = next(s for s in json.loads(rd('aa_cloud-superapp/build.json'))['ui']['sections'] if s['id'] == 'config')['pages']
-am = next((p for p in pages if p['id'] == 'apps-mesh'), {})
-if 'identity' not in am.get('tabs', []) or am.get('tabs', []).index('identity') != am['tabs'].index('ipc') + 1:
-    fails.append('U4 apps-mesh.tabs does not put identity beside ipc: %r' % am.get('tabs'))
+ids = {p['id'] for p in pages}
+if 'identity' in ids or 'apps-mesh' in ids: fails.append('U4 Configs still declares its own Identity / Apps Mesh page (Cloud Store > Access owns them)')
+if 'apps-access' not in ids: fails.append('U4 Configs has no Apps Access tile')
 sp = rd('aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt')
-if not re.search(r'pageId == "identity" +-> com\.diegonmarcos\.superapp\.appstore\.FleetIdentityFragment\(\)', sp):
-    fails.append('U4 SectionPages does not build FleetIdentityFragment for identity')
+if re.search(r'pageId == "identity"', sp):
+    fails.append('U4 SectionPages still builds an Identity page')
 try: ut = rd('aa_cloud-superapp/app/src/test/java/com/diegonmarcos/superapp/apps/FleetIdentityPageTest.kt')
 except FileNotFoundError: ut = ''
 for t in ('I1 the Identity tab renders a row per fleet app', 'I2 the shared terminal group is shown',
@@ -118,8 +118,8 @@ $OTHER_M|s.replace('<manifest ', '<manifest android:sharedUserId="cld.rogue" ', 
 $NIX_M|__import__('re').sub(r'android:sharedUserId="[^"]*"', 'android:sharedUserId="cld.other"', s, 1)
 aa_cloud-superapp/data/fleet-identity.json|s.replace('"members": ["cld.termux", "cld.termux.nix"]', '"members": ["cld.termux"]')
 aa_cloud-superapp/data/fleet-identity.json|s.replace('"key": "shared_store.shared_user_id"', '"key": "shared_store.nope"').replace('"pending": true,', '')
-aa_cloud-superapp/build.json|s.replace('"tabs": ["apps-mesh-members", "ipc", "identity"]', '"tabs": ["apps-mesh-members", "ipc"]')
-aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt|s.replace('appstore.FleetIdentityFragment()', 'appstore.IpcMeshFragment()')
+aa_cloud-superapp/build.json|s.replace('"id": "apps-access"', '"id": "identity"')
+aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt|s.replace('// Configs > Network > ADB Shell:', 'sectionId == "config" && pageId == "identity" -> x\n        // Configs > Network > ADB Shell:')
 aa_cloud-superapp/app/src/test/java/com/diegonmarcos/superapp/apps/FleetIdentityPageTest.kt|s.replace('fun \`I2 the shared terminal group is shown\`()', 'fun i2()')
 MUT
 echo "== RESULT(fleet shared uid): $FAIL failed =="

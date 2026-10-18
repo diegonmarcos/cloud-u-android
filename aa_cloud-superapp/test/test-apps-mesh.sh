@@ -69,17 +69,17 @@ by = {p['id']: p for p in pages}
 store_caption = json.load(open(sys.argv[2]))['pages']['mesh']['label']
 mesh = [p['id'] for p in pages if p.get('subgroup') == 'Network' and not p.get('hidden')]
 print('WG', by.get('wg', {}).get('label'), by.get('wg', {}).get('action'))
-print('APPS', by.get('apps-mesh', {}).get('label'), '|', store_caption)
+print('APPS', by.get('apps-access', {}).get('label'), by.get('apps-access', {}).get('action'), '|', store_caption, '|', ','.join(i for i in ('apps-mesh', 'ipc', 'identity', 'apps-mesh-members') if i in by))
 print('ORDER', ','.join(mesh))
 EOF
 )"
 echo "$out" | sed 's/^/    /'
 echo "$out" | grep -qx 'WG Cloud Mesh section:wg' && ok "the wg page reads Cloud Mesh and still opens section:wg" \
   || bad "the wg page is not 'Cloud Mesh' opening section:wg"
-echo "$out" | grep -qx 'APPS Apps Mesh | Apps Mesh' && ok "Configs apps-mesh and Store's mesh entry both read Apps Mesh" \
-  || bad "the two entry points to the Apps Mesh page do not both read 'Apps Mesh'"
-echo "$out" | grep -qx 'ORDER firewall,dns,webserver,wg,apps-mesh,adb-shell' && ok "Setup ▸ Network = Firewall · DNS (#740) · Webserver · Cloud Mesh · Apps Mesh (tabs Apps · IPC · Identity) · ADB Shell" \
-  || bad "Setup ▸ Network is not firewall, dns, webserver, wg, apps-mesh, adb-shell in that order"
+echo "$out" | grep -qx 'APPS Apps Access action:open_apps_access | Apps Mesh | ' && ok "Configs holds ONE Apps Access tile (action:open_apps_access) and declares no Apps Mesh / IPC / Identity page; the Store's Access keeps Apps Mesh" \
+  || bad "Configs must declare exactly the Apps Access tile and no apps-mesh, ipc, identity or apps-mesh-members page"
+echo "$out" | grep -qx 'ORDER firewall,dns,webserver,wg,apps-access,adb-shell' && ok "Setup ▸ Network = Firewall · DNS (#740) · Webserver · Cloud Mesh · Apps Access · ADB Shell" \
+  || bad "Setup ▸ Network is not firewall, dns, webserver, wg, apps-access, adb-shell in that order"
 
 echo "== C2: one page, two entry points =="
 code "$FRAG" | grep -qF 'AppsMesh.Page(this@AppsMeshFragment)' && ok "AppsMeshFragment hosts AppsMesh.Page" \
@@ -92,12 +92,13 @@ grep -qF 'AndroidFragment<AppsMeshFragment>' "$ACCESS" && ok "Store's Access pag
   || ok "the Cloud page draws no mesh (it moved to Access)"
 # #865 directly, or through the Cloud Store hand-off that embeds it until Cloud Store is installed.
 HANDOFF="$(dirname "$PAGES")/../apps/CloudStoreHandoff.kt"
-# Apps Mesh is a strip (apps-mesh.tabs); its first tab apps-mesh-members is the handoff page for "apps-mesh".
-{ grep -qE 'sectionId == "config" && pageId == "apps-mesh" +-> .*AppsMeshFragment\(\)' "$PAGES" ||
-  { grep -qE 'sectionId == "config" && pageId == "apps-mesh-members" +-> .*CloudStoreHandoff\.page\("apps-mesh"\)' "$PAGES" &&
-    python3 -c "import json,sys; ps=next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['id']=='config')['pages']; sys.exit(0 if next(p for p in ps if p['id']=='apps-mesh').get('tabs',[''])[0]=='apps-mesh-members' else 1)" "$BJ" &&
-    grep -qE '"apps-mesh" +to +[A-Za-z.]*AppsMeshFragment::class\.java' "$HANDOFF"; }; } \
-  && ok "config/apps-mesh routes to AppsMeshFragment" || bad "config/apps-mesh does not route to AppsMeshFragment"
+# The Configs tile hands over to Cloud Store's Access section (tab=access), or its install offer.
+grep -qE 'actionType == "open_apps_access" +->' "$APP/app/src/main/java/com/diegonmarcos/superapp/ShellActivity.kt" \
+  && grep -qE 'CloudStoreHandoff\.open\(this, "access"\)' "$APP/app/src/main/java/com/diegonmarcos/superapp/ShellActivity.kt" \
+  && grep -qE 'launchExternalApp\("cloud-store"\)' "$APP/app/src/main/java/com/diegonmarcos/superapp/ShellActivity.kt" \
+  && ok "open_apps_access opens Cloud Store on tab=access, else the Store install offer" || bad "open_apps_access does not open Cloud Store's Access / the install offer"
+grep -qE 'sectionId == "config" && pageId == "(apps-mesh|ipc|identity|apps-mesh-members)"' "$PAGES" \
+  && bad "SectionPages still routes an Apps Mesh / IPC / Identity page of its own" || ok "SectionPages hosts no Apps Mesh / IPC / Identity page (Cloud Store > Access owns them)"
 callers="$(grep -rlF 'StoreMesh.Mesh(' "$LIBS" "$APP/app/src/main" --include=*.kt | xargs -r -n1 sh -c 'python3 - "$0" <<EOF
 import re,sys
 s=open(sys.argv[1]).read(); s=re.sub(r"/\*.*?\*/","",s,flags=re.S); s=re.sub(r"(?m)^\s*//.*$","",s)
