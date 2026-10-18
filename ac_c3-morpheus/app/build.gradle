@@ -47,6 +47,7 @@ android {
 
     defaultConfig {
         applicationId a.application_id
+        resValue "string", "app_name", buildJson.display_name
         minSdk        a.min_sdk
         targetSdk     a.target_sdk
         versionCode   codeFinal

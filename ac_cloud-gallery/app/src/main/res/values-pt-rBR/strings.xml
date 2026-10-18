@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name_gallery">Galeria</string>
     <string name="change_app_name">Nome do app</string>
     <string name="change_app_name_summary">Altera o nome do app exibido no seu iniciador</string>
     <string name="favorite_icon_on_thumbnails">Ícone de favorito na miniatura</string>

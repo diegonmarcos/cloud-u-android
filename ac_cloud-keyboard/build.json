@@ -1,6 +1,7 @@
 {
   "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "keyboard", "category": "tools", "res": "../ab_cloud-libs-shared/libs/keyboard/src/main/res"},
   "name": "cloud-keyboard",
+  "display_name": "Cloud Keyboard",
   "description": "Cloud Keyboard — IME with on-device translation, voice input, and bundled sticker packs. Standalone constellation APK.",
   "category": "keyboard",
   "android": {

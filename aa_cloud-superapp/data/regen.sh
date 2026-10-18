@@ -269,6 +269,7 @@ regen_constellation() {
                 | ('"$variant_assets"') as $assets
                 | $acc + [ ( { id: $id,
                              label: (.name // $id),
+                             display_name: (.display_name // .name // $id),
                              package: .android.application_id,
                              alt_id: null,
                              registry: .release.ghcr.registry,
@@ -328,6 +329,7 @@ regen_constellation() {
                              # "Messenger (Element)" lived while every top-level
                              # app already said cloud-<x>.
                              label: (.name // $id),
+                             display_name: (.display_name // .name // $id),
                              package: $f.app_id,
                              alt_id: ($f.alt_id // null),
                              registry: $cg.registry,

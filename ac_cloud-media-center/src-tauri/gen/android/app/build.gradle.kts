@@ -64,8 +64,8 @@ android {
         versionName = "${androidJson["version_name"] as String} (sha-$gitShortSha)"
         buildConfigField("String", "GIT_SHORT_SHA", "\"$gitShortSha\"")
         // Launcher label = build.json::name, the application's one name (#351).
-        resValue("string", "app_name", buildJson["name"] as String)
-        resValue("string", "main_activity_title", buildJson["name"] as String)
+        resValue("string", "app_name", buildJson["display_name"] as String)
+        resValue("string", "main_activity_title", buildJson["display_name"] as String)
     }
     // English is the fleet's base language: drops the ~80 locales appcompat
     // and material would otherwise merge in.

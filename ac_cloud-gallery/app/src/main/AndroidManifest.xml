@@ -127,7 +127,7 @@
 
         <activity-alias
             android:name=".Launcher_Gallery"
-            android:label="@string/app_name_gallery"
+            android:label="@string/app_name"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
             android:targetActivity=".feature_node.presentation.main.MainActivity"
@@ -162,10 +162,10 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- App name "Gallery" with the legacy Gallery launcher logo -->
+        <!-- Cloud Gallery with the legacy Gallery launcher logo -->
         <activity-alias
             android:name=".Launcher_Gallery_GalleryLogo"
-            android:label="@string/app_name_gallery"
+            android:label="@string/app_name"
             android:icon="@mipmap/ic_launcher_gallery"
             android:roundIcon="@mipmap/ic_launcher_gallery_round"
             android:targetActivity=".feature_node.presentation.main.MainActivity"

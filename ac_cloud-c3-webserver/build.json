@@ -1,6 +1,7 @@
 {
   "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "dns", "category": "configs", "res": "src-tauri/gen/android/app/src/main/res"},
   "name": "cloud-c3-webserver",
+  "display_name": "Cloud C3 Webserver",
   "description": "The phone's local web server, as an APK, in Rust and web only: a Tauri 2 app whose Rust library starts the c3-webserver HTTP server in-process and opens its one webview on it, behind a five-tab shell — Pages, API, Home, Files, Configs — whose Pages and API tabs are derived from the server's own route table.",
   "category": "android",
   "build": {

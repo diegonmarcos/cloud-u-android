@@ -1,0 +1,39 @@
+# Launcher labels guard.
+#
+# Every Android app shows its launcher label as "Cloud " + Title Case words with
+# spaces ("Cloud Browser"), declared once in its build.json::display_name and
+# derived from there by gradle / the build scripts. build.json::name stays the
+# slug identity (cloud-browser). aa_cloud-superapp/test/test-launcher-labels.sh
+# fails on a hyphen, a "cloud-" slug, a lower-case word, a missing "Cloud "
+# prefix, or any surface (resValue, strings.xml, manifest literal, alias,
+# TERMUX_APP_NAME, configure flag) that disagrees with display_name.
+#
+# The second step plants a slug label and requires the tester to go red.
+name: "launcher labels guard — every app is labelled Cloud Title Case"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  launcher-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every launcher label is Cloud + Title Case words, from one declaration
+        run: bash aa_cloud-superapp/test/test-launcher-labels.sh
+      - name: The tester still fails when a slug label is put back
+        run: |
+          set -eu
+          jq '.display_name = "cloud-browser"' ac_cloud-browser/build.json > /tmp/b.json
+          mv /tmp/b.json ac_cloud-browser/build.json
+          if bash aa_cloud-superapp/test/test-launcher-labels.sh; then
+            echo "::error::test-launcher-labels.sh passed with display_name cloud-browser - the guard is vacuous"
+            exit 1
+          fi
+          echo "the tester went red on the slug label, as it must"

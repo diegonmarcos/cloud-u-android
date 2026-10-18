@@ -2,26 +2,16 @@
 # THE NAME THIS APP SHOWS THE OWNER IS THE FLEET NAME, AND IT MUST STILL GET THERE.
 #
 # THE HOLE THIS FILLS. aa_cloud-superapp/test/test-app-names-pattern.sh is the
-# fleet-wide rule: T1 every application is named cloud-<x>, T2 that name is the
-# app's own build.json::.name, T6 an app whose app/build.gradle reads its own
-# build.json takes its LAUNCHER LABEL from that name rather than copying it into
-# strings.xml. T6 says in its own comment that it covers only apps with such a
+# fleet-wide identity rule; test-launcher-labels.sh is the fleet LABEL rule: every
+# launcher label is build.json::display_name rather than a copy in strings.xml. T6 says in its own comment that it covers only apps with such a
 # reader. Cloud Office has none: its label comes from configure substituting
 # @APP_NAME@ into android/app/appSettings.gradle, two build systems away. So the
 # one app whose name travels the longest road is the one app the fleet rule
 # cannot see, and this is the rule that sees it.
 #
-# WHY THE VALUE IS A SLUG AND NOT "Cloud Office". configure.ac:1179 calls
-# --with-app-name "the user-visible name of the app you build" and defaults it to
-# "Collabora Online Development Edition", so upstream expects a display name with
-# spaces. This fleet answers differently and on purpose: ac_cloud-browser,
-# ac_cloud-writer and ac_cloud-drive all do
-# resValue "string", "app_name", buildJson.name, so their home screens read
-# cloud-browser, cloud-writer, cloud-drive. A capitalised "Cloud Office" was tried
-# at a43bc99c6 and test-app-names-pattern failed it (run 35048141723, 125 passed
-# 1 failed) — correctly: it would have spelled one app unlike all the others on
-# the same home screen, and that tester's header records the owner asking for the
-# pattern twice.
+# THE VALUE IS THE DISPLAY NAME. Every fleet app derives its launcher label from
+# build.json::display_name ("Cloud Browser", "Cloud Office"); the slug in .name is
+# identity only. aa_cloud-superapp/test/test-launcher-labels.sh is the fleet rule.
 #
 # WHAT #224's "rebrand fully" ACTUALLY MEANS IS THE ABSENCE OF "COLLABORA", and
 # that is true of the published bytes. resources.arsc in Cloud-Office.apk was
@@ -32,11 +22,9 @@
 #
 # TWO THINGS ARE CHECKED, AND THEY FAIL FOR DIFFERENT REASONS.
 #
-#   T1/T2 — THE VALUE. It must equal this app's build.json::.name, the single
-#   field the whole fleet is keyed on, and it must match the cloud-<x> pattern
-#   the fleet rule enforces. Keyed on .name rather than on a rendering of the
-#   asset name so a rename has ONE place to happen and no second field that can
-#   disagree with it.
+#   T1/T2 — THE VALUE. It must equal this app's build.json::.display_name, the one
+#   field every fleet launcher label derives from, and be "Cloud " + Title Case
+#   words.
 #
 #   T3 — THE CHAIN, against upstream at the pin. Nothing in this repository
 #   compiles browser/ or android/, so if upstream renames a placeholder or stops
@@ -92,14 +80,14 @@ else
     bad "$FLAG is '$NAME' but build.json::.$DERIVED_FROM is '$EXPECTED' — the home screen would spell this app differently from the fleet roster, the store row and every sibling app"
 fi
 
-echo "== T2: that name follows the fleet pattern =="
+echo "== T2: that name is Cloud + Title Case words =="
 # An INDEPENDENT shape check, so setting BOTH fields to a display name still
 # fails here. Same pattern as test-app-names-pattern.sh T1, restated on this side
 # because the value being checked is the one that reaches the home screen.
-if grep -qE '^(cloud|c3)-[a-z0-9]+(-[a-z0-9]+)*$' <<<"$NAME"; then
-    ok "'$NAME' matches the fleet's cloud-<x> / c3-<x> pattern"
+if grep -qE '^Cloud( [A-Z][A-Za-z0-9]*)+$' <<<"$NAME"; then
+    ok "'$NAME' is Cloud + Title Case words"
 else
-    bad "$FLAG is '$NAME', which is not cloud-<x> or c3-<x> — this value is what the launcher, the About box and the WebView <title> print verbatim, and aa_cloud-superapp/test/test-app-names-pattern.sh fails the whole fleet on it"
+    bad "$FLAG is '$NAME', which is not 'Cloud ' + Title Case words — this value is what the launcher, the About box and the WebView <title> print verbatim, and aa_cloud-superapp/test/test-launcher-labels.sh fails the whole fleet on it"
 fi
 
 echo "== T3: upstream still carries that one value to every surface =="
@@ -148,14 +136,14 @@ done < <(jq -c '.app_identity.substitution_chain[]' "$BJ")
 [ "$checked" -ge 1 ] || bad "not one link of the substitution chain was verified — this run proved nothing"
 
 if [ "$SELFTEST" -eq 1 ]; then
-    echo "== T4: SELF-TEST — a display name must fail T1 and T2 =="
-    # The exact value a43bc99c6 shipped and run 35048141723 rejected.
-    WRONG="Cloud Office"
+    echo "== T4: SELF-TEST — the slug must fail T1 and T2 =="
+    # The slug the fleet used before display_name existed.
+    WRONG="cloud-office"
     t1=0; t2=0
     [ "$WRONG" = "$EXPECTED" ] || t1=1
-    grep -qE '^(cloud|c3)-[a-z0-9]+(-[a-z0-9]+)*$' <<<"$WRONG" || t2=1
+    grep -qE '^Cloud( [A-Z][A-Za-z0-9]*)+$' <<<"$WRONG" || t2=1
     if [ "$t1" -eq 1 ] && [ "$t2" -eq 1 ]; then
-        ok "'$WRONG', the value the fleet guard rejected, fails T1 and T2 as it must"
+        ok "'$WRONG', the old slug, fails T1 and T2 as it must"
     else
         bad "'$WRONG' passes this rule — the tester cannot detect the defect it exists for"
     fi

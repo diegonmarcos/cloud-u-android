@@ -88,8 +88,8 @@ android {
         // product's identity on the owner's home screen, the #380/#381/#390/#424
         // defect family exactly. The name is DECLARED ONCE in build.json::name
         // and derived here; strings.xml no longer states it at all.
-        resValue "string", "app_name", buildJson.name
-        resValue "string", "title_activity_main", buildJson.name
+        resValue "string", "app_name", buildJson.display_name
+        resValue "string", "title_activity_main", buildJson.display_name
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders = [usesCleartextTraffic: "false"]
         aaptOptions {

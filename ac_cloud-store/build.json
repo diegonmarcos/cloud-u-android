@@ -1,6 +1,7 @@
 {
   "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "local_mall", "category": "configs", "res": "app/src/main/res"},
   "name": "cloud-store",
+  "display_name": "Cloud Store",
   "description": "Diego's Cloud Store — the constellation app store as its own APK (#865). Hosts libs:appstore: the Cloud fleet list (install, update, download-all, auto-update on Wi-Fi), the phone's installed apps (stop, uninstall, sources) and the apps mesh. It also runs the background fleet pass that keeps every constellation app updated, Cloud SuperApp and itself included. Split out of cloud-superapp so the store ships and updates on its own.",
   "category": "android",
   "build": {

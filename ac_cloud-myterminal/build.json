@@ -1,6 +1,7 @@
 {
   "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "terminal", "category": "agi", "res": "hub/src/main/res"},
   "name": "cloud-myterminal",
+  "display_name": "Cloud My Terminal",
   "description": "cloud-myterminal \u2014 constellation of three minimally-forked upstream developer apps (Acode code editor / Amaze File Manager / Amaze File Utilities) plus a thin original hub APK. The hub switches between the forks and brokers their data (workspaces, recent files, git status, storage analysis, transfers) to Cloud-SuperApp over signature-gated AIDL + ContentProvider IPC. The shared resource is a hub-owned on-device workspace tree (not a server). Forks are declarative: pinned upstream tag + committed patch series, materialized into gitignored tracker clones at build time. Built via Nix devShell (gradle + AGP + Android SDK + node/cordova for the Acode fork).",
   "category": "android",
   "build": {

@@ -122,6 +122,10 @@ print("== T5: nothing spells an application name the old way ==")
 def normalise(text):
     return re.sub(r"[^a-z0-9]", "", text.lower())
 normalised_names = [normalise(n) for n in names]
+# The display name ("Cloud Browser") is the one sanctioned human spelling; it is
+# declared once per app in build.json::display_name and checked by
+# test-launcher-labels.sh, so T5 must not flag it where a flag restates it.
+display_names = {d.get("display_name") for d in build_files.values()}
 # #733: a name only matches where it ENDS ON A WORD BOUNDARY of the caption.
 # Stripping spaces made "Cloud Mesh" read as "cloudmesh", which starts with
 # cloud-me's "cloudme" — a caption naming the mesh, not the app. The boundaries
@@ -136,7 +140,7 @@ for directory, data in sorted(build_files.items()):
     for path, node in walk(data):
         for key in ("label", "title", "name", "--with-app-name"):
             value = node.get(key)
-            if not isinstance(value, str) or PATTERN.match(value):
+            if not isinstance(value, str) or PATTERN.match(value) or value in display_names:
                 continue
             flat = normalise(value)
             if len(flat) <= len("cloud") + 1:
@@ -146,7 +150,7 @@ for directory, data in sorted(build_files.items()):
                 check(False, "%s/build.json%s.%s = %r spells an application name outside the pattern"
                       % (directory, path, key, value))
 
-print("== T6: an app whose gradle reads its build.json takes its launcher label from .name ==")
+print("== T6: an app whose gradle reads its build.json takes its launcher label from .display_name ==")
 # The home-screen label is the one surface every other check above cannot see:
 # it lived in res/values/strings.xml and said "Cloud Browser". Where
 # app/build.gradle already parses the app's own build.json, the label can be
@@ -177,7 +181,7 @@ print("== T6: an app whose gradle reads its build.json takes its launcher label 
 # Its OWN build.json only: a path that climbs into another application (file("../../ac_cloud-drive/build.json"),
 # read by ac_cloud-gallery for Cloud Drive's shared storage root) is a cross-app read, not the label's source.
 reads_build_json = re.compile(r"JsonSlurper\(\)\s*\.parse\(\s*file\((?![^)]*\bac_)[^)]*build\.json")
-derives_label = re.compile(r"resValue\s*\(?\s*[\"']string[\"']\s*,\s*[\"']app_name[\"']\s*,\s*buildJson(\.name\b|\[\s*\"name\"\s*\])")
+derives_label = re.compile(r"resValue\s*\(?\s*[\"']string[\"']\s*,\s*[\"']app_name[\"']\s*,\s*buildJson(\.display_name\b|\[\s*\"display_name\"\s*\])")
 def module_gradle(directory, module):
     for name in ("build.gradle", "build.gradle.kts"):
         path = os.path.join(root, directory, module, name)
@@ -199,14 +203,14 @@ for directory in sorted(build_files):
         continue
     covered += 1
     check(derives_label.search(source) is not None,
-          "%s reads build.json but does not set app_name from buildJson.name"
+          "%s reads build.json but does not set app_name from buildJson.display_name"
           % os.path.relpath(gradle, root))
     resources = os.path.join(root, directory, module, "src")
     for base, _, files in os.walk(resources):
         if "strings.xml" in files and os.path.basename(base).startswith("values"):
             path = os.path.join(base, "strings.xml")
             if re.search(r'<string\s+name="app_name"', open(path).read()):
-                check(False, "%s restates app_name — the launcher label comes from build.json::name"
+                check(False, "%s restates app_name — the launcher label comes from build.json::display_name"
                       % os.path.relpath(path, root))
 check(covered > 0, "T6 found no application whose gradle reads its build.json — the detection matched nothing")
 # A declared gradle_module that points at nothing is a check that quietly

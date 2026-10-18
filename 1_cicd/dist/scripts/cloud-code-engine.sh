@@ -42,12 +42,13 @@ command -v jq >/dev/null 2>&1 || die "jq is not on PATH"
 # No fallbacks: every value below is the app's declaration, and a default here
 # would be a second declaration that drifts.
 APP_NAME="$(_json '.name')"
+DISPLAY_NAME="$(_json '.display_name')"
 APP_ID="$(_json '.android.application_id')"
 ASSET="$(_json '.release.artifact.release')"
 IMG="$(_json '.release.ghcr.image')"
 VARIANT="$(_json '.upstream.flavor.variant')"
 FDROID="$(_json '.upstream.flavor.fdroid')"
-for _v in APP_NAME APP_ID ASSET IMG VARIANT FDROID; do
+for _v in APP_NAME DISPLAY_NAME APP_ID ASSET IMG VARIANT FDROID; do
   [ -n "${!_v}" ] || die "build.json is missing the value behind \$$_v"
 done
 unset _v
@@ -195,8 +196,8 @@ step_build_fork() {
   log "build-fork: upstream config (dev, $VARIANT)"
   node utils/config.js d "$VARIANT"
 
-  log "build-fork: launcher name ← build.json::name ($APP_NAME)"
-  python3 - "$APP_NAME" <<'PY'
+  log "build-fork: launcher name ← build.json::display_name ($DISPLAY_NAME)"
+  python3 - "$DISPLAY_NAME" <<'PY'
 import re, sys
 name = sys.argv[1]
 text = open('config.xml').read()

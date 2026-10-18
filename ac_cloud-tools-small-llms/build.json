@@ -1,6 +1,7 @@
 {
   "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "build", "category": "agi", "res": "app/src/main/res", "tile": "ic_tools_small_llms"},
   "name": "cloud-tools-small-llms",
+  "display_name": "Cloud Tools Small LLMs",
   "description": "Cloud Tools Small LLMs - an AI chat that does simple, direct text jobs with small, cheap models only, calling OpenRouter directly with the user's own token. A router reads each request and names the task (Jev, TypeSafe's decision model on OpenRouter's Decisions API, while it is listed; else a small JSON chat model), and one small worker model per task answers it with a fixed prompt: translate, summarize, rewrite, fix grammar, extract, classify, reply drafts, explain simply, quick maths, JSON/CSV fix, regex/command, titles and hashtags, sentiment, keywords, Q&A on pasted text. Every answer shows its task, model and actual cost (from OpenRouter's usage, router included); Costs keeps the day and month totals; Tasks lists what it can do with each worker's $/1M and the estimated cost of a typical call, priced by the shared libs:model-catalogue. The token lives in EncryptedSharedPreferences and is shown masked; of the fleet Account's key only whether it holds one is shown (decisions-use guard D5). English is the base language (#299); dark is the default theme (#336).",
   "category": "android",
   "android": {

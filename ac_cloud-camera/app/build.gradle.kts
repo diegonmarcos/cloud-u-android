@@ -129,12 +129,12 @@ android {
             if (useKeystoreProperties) {
                 signingConfig = signingConfigs.getByName("release")
             }
-            resValue("string", "app_name", "Cloud Camera")
+            resValue("string", "app_name", appMetadataJson["display_name"] as String)
         }
 
         getByName("debug") {
             applicationIdSuffix = ".dev"
-            resValue("string", "app_name", "Cloud Camera d")
+            resValue("string", "app_name", (appMetadataJson["display_name"] as String) + " Dev")
             // isDebuggable = false
         }
 

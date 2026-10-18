@@ -144,7 +144,7 @@ android {
         buildConfigField "String", "CLOUD_LEGACY_SHARED_ROOT", "\"${new groovy.json.JsonSlurper().parseText(file("$projectDir/../build.json").getText("UTF-8")).storage.shared_root}\""
 
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "cld.termux"
-        manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal (Termux)"
+        manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal Termux"
         manifestPlaceholders.TERMUX_API_APP_NAME = "Termux:API"
         manifestPlaceholders.TERMUX_BOOT_APP_NAME = "Termux:Boot"
         manifestPlaceholders.TERMUX_FLOAT_APP_NAME = "Termux:Float"

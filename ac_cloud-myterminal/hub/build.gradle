@@ -136,7 +136,7 @@ android {
         // build.json::android._doc_application_id); app_name is the launcher
         // label and is .name, the one spelling the fleet lists it under.
         applicationId buildJson.android.application_id
-        resValue "string", "app_name", buildJson.name
+        resValue "string", "app_name", buildJson.display_name
         minSdk 26
         targetSdk 34
         versionCode codeFinal

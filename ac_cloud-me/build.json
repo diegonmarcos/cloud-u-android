@@ -1,6 +1,7 @@
 {
   "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "person", "category": "tools", "res": "app/src/main/res"},
   "name": "cloud-me",
+  "display_name": "Cloud Me",
   "description": "Diego's Cloud Me \u2014 the personal-administration half of the constellation. Where Cloud SuperApp is the launcher for everything the cloud runs, Cloud Me is the launcher for everything the PERSON runs: paperwork and money (Buro), what is due (Agenda), the public profile (Me), travel and health (Projects) and study (Studying). It stores almost nothing of its own \u2014 cards live in Cloud Wallet, passwords in Cloud Vault, files in cloud-myterminal, health records in Health Connect \u2014 and is the one screen that indexes all of them.",
   "category": "android",
   "build": {

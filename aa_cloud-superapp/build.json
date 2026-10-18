@@ -1,5 +1,6 @@
 {
   "name": "cloud-superapp",
+  "display_name": "Cloud SuperApp",
   "description": "Diego's Cloud SuperApp — modularized monolith Android app. Single APK, gradle multi-module: app/ (launcher shell) + libs/{core,mail,cal,feed,net,ops,vault,chat}/ (independent feature modules). FairEmail-derived mail with JMAP, CalDAV/Radicale calendar, RSS, WireGuard tunnel, cloud ops dashboard, vault. Build via Nix devShell (gradle + AGP + Android SDK), one APK out.",
   "category": "android",
   "build": {

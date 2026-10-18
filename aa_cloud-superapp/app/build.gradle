@@ -446,7 +446,16 @@ def mailAccountsB64  = mailAccountsJson.bytes.encodeBase64().toString()
 // Companion external apps (Cloud-Comms hub + forks) — package ids + the
 // GitHub-release install URL come straight from build.json::ui.external_apps.
 // Resolved by Sections.externalApp() and launched via MainActivity.launchExternalApp.
-def externalAppsJson = groovy.json.JsonOutput.toJson(buildJson.ui.external_apps ?: [])
+// The launcher label an app shows is its build.json::display_name, carried in
+// the fleet file; ui.external_apps declares only ids, so the label is filled
+// from the fleet here and no second spelling exists in build.json.
+def fleetDisplayNames = [:]
+new groovy.json.JsonSlurper().parse(constellationFleetFile).apps.each { fa ->
+    if (fa.display_name) fleetDisplayNames[fa.label] = fa.display_name
+}
+def externalAppsJson = groovy.json.JsonOutput.toJson((buildJson.ui.external_apps ?: []).collect { ea ->
+    fleetDisplayNames[ea.id] ? (ea + [label: fleetDisplayNames[ea.id]]) : ea
+})
 def externalAppsB64  = externalAppsJson.bytes.encodeBase64().toString()
 // Floating Top Nav Bar — context-aware overlay nav (FloatingNavService).
 // Contexts + links come straight from build.json::ui.floating_nav.
@@ -763,7 +772,7 @@ android {
         // Launcher label = build.json::name, the application's one name (#351).
         // Never a strings.xml literal: that copy said "Cloud Browser" while
         // the fleet, the store and every roster said cloud-browser.
-        resValue "string", "app_name", buildJson.name
+        resValue "string", "app_name", buildJson.display_name
         // FLEET RULE (#299): English is the fleet's base language. Unlisted locales are
         // dropped from resources.arsc, so a Spanish phone resolves the English
         // in values/ instead of any values-es this module or a library ships.

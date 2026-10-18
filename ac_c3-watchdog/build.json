@@ -1,6 +1,7 @@
 {
   "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "security", "category": "configs", "res": "app/src/main/res"},
   "name": "c3-watchdog",
+  "display_name": "Cloud C3 Watchdog",
   "description": "The c3-watchdog panel as an Android app: a WebView showing the REAL dashboard, drawn by c3-watchdog-tui inside nix-on-droid and transcribed to HTML.",
   "category": "android",
   "build": {

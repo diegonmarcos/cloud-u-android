@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name_gallery">Galleria</string>
     <string name="change_app_name">Nome app</string>
     <string name="change_app_name_summary">Modifica il nome dell\'app visualizzato nel launcher</string>
     <string name="favorite_icon_on_thumbnails">Favorite icon on thumbnails</string>

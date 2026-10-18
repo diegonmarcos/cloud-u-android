@@ -138,7 +138,7 @@ android {
 
     defaultConfig {
         // Launcher label = build.json::name, the application's one name (#351).
-        resValue("string", "app_name", buildJson["name"].toString())
+        resValue("string", "app_name", buildJson["display_name"].toString())
         applicationId = "com.diegonmarcos.mediacenter"
         minSdk = 29
         targetSdk = 37

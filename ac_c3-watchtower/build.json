@@ -1,6 +1,7 @@
 {
   "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "visibility", "category": "configs", "res": "app/src/main/res"},
   "name": "c3-watchtower",
+  "display_name": "Cloud C3 Watchtower",
   "description": "c3-watchtower on a phone: ANALYTICS over the cloud's delivery pipeline. Watchdog watches what is running, Morpheus decides what runs, WatchTower counts what ran — per repo and per workflow, over a window: how many runs, what share of them succeeded, which workflow is failing, and how long ago the last green was.",
   "category": "android",
   "build": {

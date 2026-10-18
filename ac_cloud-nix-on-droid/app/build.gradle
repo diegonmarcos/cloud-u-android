@@ -152,7 +152,7 @@ android {
         buildConfigField "String", "CLOUD_SHARED_STORE_MIGRATION_ARCHIVE", "\"${cloudSharedStoreDecl().migration.archive}\""
         buildConfigField "String", "CLOUD_SHARED_STORE_MIGRATION_MARKER", "\"${cloudSharedStoreDecl().migration.marker}\""
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "cld.termux.nix"
-        manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal (Nix)"
+        manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal Nix"
         manifestPlaceholders.TERMUX_API_APP_NAME = "Termux:API"
         manifestPlaceholders.TERMUX_BOOT_APP_NAME = "Termux:Boot"
         manifestPlaceholders.TERMUX_FLOAT_APP_NAME = "Termux:Float"

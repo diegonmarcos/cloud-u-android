@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name_gallery">Galerija</string>
     <string name="change_app_name">Naziv aplikacije</string>
     <string name="change_app_name_summary">Promijeni naziv aplikacije prikazan na pokretaču</string>
     <string name="favorite_icon_on_thumbnails">Ikona favorita na sličicama</string>
