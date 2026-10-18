@@ -173,7 +173,7 @@ class PrivateNames(
                 "Open Cloud C3 WebServer once, then reload.</p>"
         }
 
-        /** Parse the baked `private_names` block: {dns:{host,port}, names:{"emulated.app":8002,...}}. */
+        /** Parse the baked `private_names` block: {dns:{host,port}, names:{<host>: <port>, ...}}. */
         fun parse(o: org.json.JSONObject?): PrivateNames {
             if (o == null) return NONE
             val dns = o.optJSONObject("dns") ?: return NONE

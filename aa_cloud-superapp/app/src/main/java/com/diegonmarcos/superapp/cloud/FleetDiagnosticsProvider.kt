@@ -19,7 +19,7 @@ import com.diegonmarcos.superapp.devtools.LogPipe
  * Bundle {ok, mime, payload, error}. Exported behind CONSTELLATION_DATA (signature) and re-checked in call(),
  * because the framework does not permission-check call() by itself - the FleetBearerProvider pattern.
  *
- * The data is the same object the debug API serves (`/api/system/about`, `/api/diagnostics/*`): one reader per
+ * The data is the same object the debug API serves (the system/about and diagnostics routes): one reader per
  * datum, here only wrapped for IPC. Logcat comes from the shared [LogPipe] stream, so it never execs its own
  * `logcat` (each exec would be another consent prompt).
  */
