@@ -137,7 +137,9 @@ jobs:
           # The line typed is `sh /sdcard/cloudsmoke.sh`: plain words, the same in bash and in
           # every fish version (older fish has no $(...)); /sdcard is bound into the rootfs and
           # /system is not. The script writes the verdict back to /sdcard for adb to read.
-          printf '%s\n' 'echo "L$(ls / | wc -l)U$(uname -s)F$(fish -c uname)" > /sdcard/cloudsmoke.txt' > cloudsmoke.sh
+          # ls lists $HOME with -a (never empty): in the nix terminal / is Android's own root, which
+          # SELinux does not let an app list, by nix-on-droid's design (no rootfs of its own).
+          printf '%s\n' 'echo "L$(ls -a "$HOME" | wc -l)U$(uname -s)F$(fish -c uname)" > /sdcard/cloudsmoke.txt' > cloudsmoke.sh
           adb push cloudsmoke.sh /sdcard/cloudsmoke.sh
           adb shell rm -f /sdcard/cloudsmoke.txt
           type_line() {
