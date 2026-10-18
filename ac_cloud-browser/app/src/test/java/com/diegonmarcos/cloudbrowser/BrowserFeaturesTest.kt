@@ -112,7 +112,7 @@ class BrowserFeaturesTest {
             configUrls = cfg,
             now = 3_000L,
         )
-        assertEquals(5, plan.size)
+        assertEquals(6, plan.size)
         assertFalse(plan.any { it.url == cfg[0] })
     }
 
