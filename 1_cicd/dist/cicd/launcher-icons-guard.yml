@@ -4,7 +4,7 @@
 # 1_cicd/src/scripts/cloud-android-launcher-icons.py from one pattern
 # (1_cicd/src/data/launcher-icons.json: glyph placement, cloud badge, category
 # colours, glyph library) and each app's build.json::launcher_icon
-# {glyph, category}. cloud-search is the one exemption. This guard fails when:
+# {glyph, category}. cloud-search and the SuperApp (cloud-sa) are the exemptions. This guard fails when:
 #   - a fleet app declares no launcher_icon, or an unknown glyph/category;
 #   - two apps share a glyph (every app has its own symbol);
 #   - a generated file drifted (hand edit) or is missing;

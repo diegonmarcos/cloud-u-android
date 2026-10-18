@@ -379,6 +379,12 @@ class PhoneAppsFragment : KitComposeFragment() {
          *  browsers — system browser, Chrome, Firefox, etc. — and
          *  nothing else. Personal / Work pass through (filter
          *  returns null = "no filter"). */
+        /** Whether [pkg] belongs in the installed-apps list. The SuperApp's own package is NOT
+         *  special-cased: it used to be dropped here, which is why Cloud ▸ All apps never showed
+         *  the SuperApp's own icon. Only the profile whitelist ([allowed], null = no filter) cuts. */
+        internal fun listsPackage(pkg: String, allowed: Set<String>?): Boolean =
+            allowed == null || pkg in allowed
+
         private fun collectLaunchableAppsStatic(ctx: Context): List<PhoneApp> {
             val me = Process.myUserHandle()
             val launcher = ctx.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
@@ -387,8 +393,7 @@ class PhoneAppsFragment : KitComposeFragment() {
             return runCatching {
                 launcher.getActivityList(null, me).mapNotNull { info ->
                     val pkg = info.applicationInfo.packageName
-                    if (pkg == ctx.packageName) return@mapNotNull null
-                    if (allowed != null && pkg !in allowed) return@mapNotNull null
+                    if (!listsPackage(pkg, allowed)) return@mapNotNull null
                     PhoneApp(
                         packageName       = pkg,
                         activityComponent = info.componentName,
