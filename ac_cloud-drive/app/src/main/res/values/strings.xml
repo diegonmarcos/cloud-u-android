@@ -364,6 +364,12 @@
 
     <!-- Configs -->
     <string name="configs_title">Configs</string>
+    <string name="configs_webserver">Webserver</string>
+    <string name="configs_webserver_body">cloud-c3-webserver serves this phone\'s storage on %1$s</string>
+    <string name="configs_webserver_open">Open c3-webserver</string>
+    <string name="configs_webserver_localhost">Open localhost</string>
+    <string name="configs_webserver_install">Install c3-webserver</string>
+    <string name="top_bar_profile">Profile</string>
     <string name="configs_storage_access">Storage access</string>
     <string name="configs_storage_access_body">All-files access is what lets Cloud Drive list shared storage</string>
     <string name="configs_sign_in">Sign in</string>

@@ -74,10 +74,22 @@ class DeclarationsTest {
 
     @Test fun configsPages() {
         val configs = configs()
-        // #609 three sub-pages: Git/Rclone/Mounts moved OUT to ui.sections[sync].pages. Backups came from
-        // its own tab at #603, General is #579's Configs page and Others is new.
-        assertEquals(listOf("backups", "general", "others"), configs.pages.map { it.id })
+        // #609 Git/Rclone/Mounts moved OUT to ui.sections[sync].pages. The owner's order: General (#579's Configs
+        // page), Webserver (opens cloud-c3-webserver), Backups (its own tab at #603) and Others.
+        assertEquals(listOf("general", "webserver", "backups", "others"), configs.pages.map { it.id })
         assertTrue(configs.pages.all { it.label.isNotBlank() && it.icon.isNotBlank() })
+    }
+
+    @Test fun webserverAndTopBarDeclarations() {
+        val ui = buildJson["ui"]!!.jsonObject
+        val ws = ui["webserver"]!!.jsonObject
+        assertEquals("c3-webserver", ws["fleet"]!!.jsonPrimitive.content)
+        assertTrue(ws["fallback_url"]!!.jsonPrimitive.content.startsWith("http://localhost:"))
+        // The bake carries the package resolved from the fleet manifest; it parses to a typed decl, a blank bake to none.
+        val baked = Declarations.parseWebserver("""{"package":"com.diegonmarcos.cloudwebserver","activity":".MainActivity","fallback_url":"http://localhost:8002"}""")
+        assertEquals(Declarations.WebserverDecl("com.diegonmarcos.cloudwebserver", ".MainActivity", "http://localhost:8002"), baked)
+        assertNull(Declarations.parseWebserver(""))
+        assertEquals(listOf("account", "configs"), ui["top_bar"]!!.jsonObject["settings"]!!.jsonArray.map { it.jsonPrimitive.content })
     }
 
     @Test fun syncPagesAndPeriods() {

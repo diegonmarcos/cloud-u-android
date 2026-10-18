@@ -201,6 +201,17 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
+      # The A37 screenshots DriveScreenshotTest wrote (header with the Settings button, the Configs strip),
+      # red or green, so the picture is reviewable without a phone.
+      - name: Upload A37 screenshots (drive-screens)
+        if: ${{ always() && steps.gate.outputs.skip != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-screens
+          path: ${{ env.WORK_DIR }}/app/build/drive-screens/
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Determine variant
         if: steps.gate.outputs.skip != 'true'
         id: variant

@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -21,12 +22,17 @@ import com.diegonmarcos.clouddrive.files.FilesController
 import com.diegonmarcos.clouddrive.files.FilesScreen
 import com.diegonmarcos.clouddrive.files.FilesUiState
 import com.diegonmarcos.clouddrive.files.Location
+import com.diegonmarcos.clouddrive.configs.WebserverLaunch
+import com.diegonmarcos.clouddrive.configs.WebserverPage
+import com.diegonmarcos.superapp.bottomnav.AccountLaunch
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
+import com.diegonmarcos.superapp.bottomnav.TopBarTags
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -100,6 +106,59 @@ class DriveShellTest {
         compose.onNodeWithTag(BottomNavTags.item(other.id)).assertIsSelected()
         compose.onNodeWithText("content:" + other.id).assertIsDisplayed()
         compose.onNodeWithTag(DriveTags.tab(other.id)).assertIsDisplayed()
+    }
+
+    @Test
+    fun `round Settings button sits at the top right and its dropdown offers Profile and Configs`() {
+        compose.setContent { DriveTheme { DriveShell { id, _ -> Text("content:$id") } } }
+        val settings = compose.onNodeWithTag(TopBarTags.SETTINGS)
+        settings.assertIsDisplayed()
+        val bar = compose.onNodeWithTag(TopBarTags.BAR).fetchSemanticsNode().boundsInRoot
+        val button = settings.fetchSemanticsNode().boundsInRoot
+        val island = compose.onNodeWithTag(BottomNavTags.ISLAND).fetchSemanticsNode().boundsInRoot
+        assertTrue("Settings is in the right half of the bar: $button in $bar", button.left > bar.width / 2 && button.right <= bar.right)
+        assertTrue("the bar is the first row, above the island: $bar vs $island", bar.top < island.top)
+        compose.onAllNodesWithTag(TopBarTags.settingsItem("account")).assertCountEquals(0)
+        settings.performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(TopBarTags.settingsItem("account")).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).assertIsDisplayed()
+        compose.onNodeWithText("Profile").assertIsDisplayed()
+    }
+
+    @Test
+    fun `Profile launches Cloud Account and Configs selects the Configs tab`() {
+        compose.setContent { DriveTheme { DriveShell { id, _ -> Text("content:$id") } } }
+        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(TopBarTags.settingsItem("account")).performClick()
+        compose.waitForIdle()
+        val started = shadowOf(compose.activity).nextStartedActivity
+        assertEquals(AccountLaunch.ACTION_OPEN, started.action)
+        assertEquals(AccountLaunch.PKG, started.`package`)
+        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("content:configs").assertIsDisplayed()
+        compose.onNodeWithTag(BottomNavTags.item("configs")).assertIsSelected()
+    }
+
+    @Test
+    fun `Webserver launches the declared component explicitly and falls back to localhost when it is not installed`() {
+        val decl = Declarations.webserver!!
+        val intent = WebserverLaunch.intent(decl)
+        assertEquals(decl.packageName, intent.component!!.packageName)
+        assertEquals(decl.packageName + decl.activity, intent.component!!.className)
+        val opened = mutableListOf<String>()
+        val actions = object : DriveActions by fakeActions { override fun openUrl(url: String) { opened += url } }
+        compose.setContent { DriveTheme { WebserverPage(actions) } }
+        compose.onNodeWithTag(DriveTags.WEBSERVER_OPEN).assertIsDisplayed()
+        compose.onNodeWithTag(DriveTags.WEBSERVER_INSTALL).assertIsDisplayed()
+        compose.onNodeWithText("Install c3-webserver").assertIsDisplayed()
+        compose.onNodeWithTag(DriveTags.WEBSERVER_LOCALHOST).performClick()
+        assertEquals(listOf(decl.fallbackUrl), opened)
+        assertTrue(decl.fallbackUrl.startsWith("http://localhost:"))
     }
 
     @Test

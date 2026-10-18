@@ -38,12 +38,12 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ViewList
@@ -501,7 +501,7 @@ internal class PdfReaderActivity : ComponentActivity(), PdfReaderView.Host {
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = { openSearch() }, modifier = Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.Search, stringResource(R.string.pdf_search)) }
-            IconButton(onClick = { showOutline() }, modifier = Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.Menu, stringResource(R.string.pdf_outline)) }
+            IconButton(onClick = { showOutline() }, modifier = Modifier.size(DriveMetrics.tap)) { Icon(Icons.AutoMirrored.Filled.Toc, stringResource(R.string.pdf_outline)) }
             IconButton(onClick = { toggleNight() }, modifier = Modifier.size(DriveMetrics.tap).alpha(if (nightOn) 1f else 0.55f)) {
                 Icon(Icons.Filled.DarkMode, stringResource(R.string.pdf_night))
             }

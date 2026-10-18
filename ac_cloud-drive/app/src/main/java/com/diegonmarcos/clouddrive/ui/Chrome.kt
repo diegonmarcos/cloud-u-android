@@ -182,6 +182,9 @@ object DriveTags {
     const val SYNC_CONNECTION_ROW = "sync_connection_row"
 
     const val CONFIGS_STRIP = "configs_strip"
+    const val WEBSERVER_OPEN = "configs_webserver_open"
+    const val WEBSERVER_LOCALHOST = "configs_webserver_localhost"
+    const val WEBSERVER_INSTALL = "configs_webserver_install"
     const val VOLUMES_CARD = "volumes_card"
     const val VOLUMES_STRIP = "volumes_strip"
     /** #630 one declared section of the Volumes tab: its own header, its own strip, its own rows. */
