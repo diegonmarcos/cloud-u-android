@@ -937,7 +937,8 @@ class BrowserHostFragment : Fragment() {
                     onCommitted(tabKey, view, u)
                     postDelayed({ if (webView === this@apply) saveTabState() }, 400)
                     // #887 an offline copy is not a visit.
-                    if (offlineSites.isOffline(u) || mhtml.allowsFile(u)) return
+                    if (offlineSites.isOffline(u)) return
+                    if (mhtml.allowsFile(u)) return   // nor is a saved page opened from a file
                     // #802 a private tab is never recorded: no history, no preview.
                     val origin = runCatching { java.net.URI(u) }.getOrNull()?.let { "${it.scheme}://${it.authority}" }
                     if (!privateSession.visit(prefs.byId(tabKey), origin)) return
