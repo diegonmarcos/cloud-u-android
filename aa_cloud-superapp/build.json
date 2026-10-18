@@ -4670,7 +4670,7 @@
             "_doc_label": "#626 RENAMED Profile → Account. This is the ONE declaration of the words: the Configs tile, the Home-Apps Configs row entry and the page title all read `label`, so the rename is this string and nothing else. The `id` deliberately stays `profile` — it is the page's IDENTITY, not a user-visible label (#380/#381/#499 is the rule that an identity string must not sit in a label, not that the two must be spelled the same). Renaming it would break three things that name it and have no reason to change: SectionPages.kt's route, the launcher-shortcut deep link, and ac_cloud-drive/build.json::…personal_auth.target = `page:config/profile`, which is another SHIPPED app's cross-app contract.",
             "id": "profile",
             "label": "Account",
-            "icon": "ic_settings",
+            "icon": "ic_person",
             "action": "extapp:cloud-account",
             "_doc_867": "#867 Account is its own app (ac_cloud-account, com.diegonmarcos.cloudaccount). This entry opens it: its action extapp:cloud-account is the tile's target. Not is_action, so the tile keeps its place under Setup > Apps instead of moving to the Actions row, and when it is not installed ui.external_apps[id=cloud-account].install_apk_url is offered. The page itself stays, hidden, for page: routes; AccountHandoff shows Open Cloud Account on it once the app is installed and the page itself (libs:account) until then.",
             "group": "Setup",
@@ -4681,7 +4681,7 @@
             "_doc_tabs_order": "Cloud first: the fleet is what the store exists to manage, and it is the tab the Update-All action, the update notification and a lib tile all land on (page:config/store-cloud).",
             "id": "store",
             "label": "Store",
-            "icon": "ic_refresh",
+            "icon": "ic_storefront",
             "action": "extapp:cloud-store",
           "_doc_865": "#865 the Store is its own app (ac_cloud-store, com.diegonmarcos.cloudstore). This entry opens it: its action extapp:cloud-store is the tile's target. Not is_action, so the tile keeps its place under Setup ▸ Apps instead of moving to the Actions row, and when it is not installed ui.external_apps[id=cloud-store].install_apk_url is offered. The two tab pages below stay, hidden, for page: links (the update notification, Update All); CloudStoreHandoff shows Open Cloud Store on them once the app is installed.",
             "group": "Setup",
@@ -4690,7 +4690,7 @@
           {
             "id": "perms",
             "label": "Permissions",
-            "icon": "ic_settings",
+            "icon": "ic_key",
             "group": "Setup",
             "subgroup": "Apps"
           },
@@ -4752,7 +4752,7 @@
             "_doc_tabs": "Apps Mesh is a strip over three tabs: Apps (apps-mesh-members, the Store's mesh page above), IPC (ipc, the fleet's IPC Mesh, which left the Network grid as its own tile and lives here) and Identity (identity, each fleet app's Linux uid: own, or the shared group data/fleet-identity.json declares).",
             "id": "apps-mesh",
             "label": "Apps Mesh",
-            "icon": "ic_mode_apps",
+            "icon": "ic_apps",
             "tabs": ["apps-mesh-members", "ipc", "identity"],
             "group": "Setup",
             "subgroup": "Network"
@@ -4783,7 +4783,7 @@
             "_doc": "ADB SHELL - THE page for the privileged channel (libs:shizuku-adb-debug-tools AdbShellPage), the same one Cloud Store (Settings), Cloud Account (Setup), the terminals (Settings) and every status chip draw. Six sections: the status table (Developer options, Wireless debugging, embedded adb, the local server on 38099, Shizuku, the active route and mode, each with a colour dot and when it was probed), Connect (the method that applies to the chosen mode, run step by step with the step that failed named), Active connection (Disconnect / Reconnect / Restart server / Stop server / Test round-trip, each disabled when it does not apply), Logs (an in-memory ring, tokens redacted, Copy and Clear), Declared needs (this app's privileged_channel above) and Setup (the checklist, each item opening its exact settings screen). The label is this one string: rename it here and nowhere else. Sits right after Apps Mesh.",
             "id": "adb-shell",
             "label": "ADB Shell",
-            "icon": "ic_settings",
+            "icon": "ic_terminal",
             "group": "Setup",
             "subgroup": "Network"
           },
@@ -4799,7 +4799,7 @@
             "_doc_label": "#723 RENAMED KDE → Peer Control and moved, with WireGuard, out of Setup ▸ Apps into the new Setup ▸ Network sub-section. Only the label moved: the id stays `kde` because page:config/kde is spoken by KdeStatusNotifier and KdeConfigsPageTest, and a page id is identity, not a caption. Moved again, with C3, into the Configs ▸ Fleet group (Setup, Fleet, Observability): the id is unchanged, so page:config/kde still opens it.",
             "id": "kde",
             "label": "Peer Control",
-            "icon": "ic_kde",
+            "icon": "ic_hub",
             "group": "Fleet"
           },
           {
@@ -4814,20 +4814,20 @@
             "_doc": "Configs ▸ Observability ▸ Diagnostics: build SHA, device/Android/One UI, density/fontScale/dp, gesture-nav mode and insets, overlay permission, edge service + attached strip rects + last 20 touch events, measured Configs tile/icon dp. DiagnosticsFragment draws it; the same JSON is served read-only at /api/diagnostics/get (+ screenshot, open, inject) on the fleet debug API.",
             "id": "diagnostics",
             "label": "Diagnostics",
-            "icon": "ic_settings",
+            "icon": "ic_monitor_heart",
             "group": "Observability"
           },
           {
             "_doc": "Configs ▸ Observability ▸ Logcat: the live logcat viewer (scope This App | All Apps | one app, All | Errors, Refresh / Copy / Export / Post). It used to be the LOGCAT macro group at the bottom of About; it is its own tab now, placed immediately before About, and About no longer carries it.",
             "id": "logcat",
             "label": "Logcat",
-            "icon": "ic_settings",
+            "icon": "ic_subject",
             "group": "Observability"
           },
           {
             "id": "about",
             "label": "About",
-            "icon": "ic_settings",
+            "icon": "ic_info",
             "group": "Observability"
           },
           {
@@ -4898,7 +4898,7 @@
             "_doc": "Update ALL constellation apps (not just self). Opens Store ▸ Cloud Constellation (page:config/store-cloud) + runs Fleet.installAll; the shared update overlay shows per-install progress with a Cancel button. MainActivity.dispatchHomeAction('update_all').",
             "id": "update",
             "label": "Update All",
-            "icon": "ic_refresh",
+            "icon": "ic_system_update",
             "action": "action:update_all",
             "_doc_is_action": "Fires and returns — no page behind it. Puts this entry under Actions in the Configs grid and on the ArcMenu's inner arc, instead of guessing from the action: prefix (import/keyboard carry one too but DO open a page).",
             "is_action": true
@@ -4907,14 +4907,14 @@
             "_doc": "Moved here from onehand.arc_menu.actions. That block and this one BOTH fed the Canopus arc's inner ring, so the star showed four actions while the Configs grid showed one - the same list kept in two places, which is the only reason they could ever disagree. is_action entries feed BOTH surfaces, so there is one list now and no way to drift.",
             "id": "kde_connect",
             "label": "KDE Connect",
-            "icon": "ic_kde",
+            "icon": "ic_devices",
             "action": "action:kde_connect_now",
             "is_action": true
           },
           {
             "id": "animations",
             "label": "Animations",
-            "icon": "ic_mode_apps",
+            "icon": "ic_animation",
             "action": "action:toggle_animations",
             "is_action": true
           }

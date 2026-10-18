@@ -410,14 +410,14 @@ for g, s, label, icon in tiles:
     if s and s != s0: out.append('S:' + s.upper()); s0 = s
     out.append('%s[%s]' % (label, icon))
 want = ['H:SETUP',
-        'S:CONNECT',      'Account[ic_settings]',
-        'S:APPS',         'Store[ic_refresh]', 'Permissions[ic_settings]',
+        'S:CONNECT',      'Account[ic_person]',
+        'S:APPS',         'Store[ic_storefront]', 'Permissions[ic_key]',
         'S:LAUNCHER',     'Controls[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
-        'S:NETWORK',          'Firewall[ic_lock]', 'DNS[ic_world]', 'Cloud Mesh[ic_wg]', 'Apps Mesh[ic_mode_apps]', 'ADB Shell[ic_settings]',
-        'H:FLEET',        'C3[ic_p_watchdog]', 'Peer Control[ic_kde]', 'Agents[ic_robot]',
-        'H:OBSERVABILITY', 'Diagnostics[ic_settings]', 'Logcat[ic_settings]', 'About[ic_settings]',
+        'S:NETWORK',          'Firewall[ic_lock]', 'DNS[ic_world]', 'Cloud Mesh[ic_wg]', 'Apps Mesh[ic_apps]', 'ADB Shell[ic_terminal]',
+        'H:FLEET',        'C3[ic_p_watchdog]', 'Peer Control[ic_hub]', 'Agents[ic_robot]',
+        'H:OBSERVABILITY', 'Diagnostics[ic_monitor_heart]', 'Logcat[ic_subject]', 'About[ic_info]',
         'H:ACTIONS',
-        'Update All[ic_refresh]', 'KDE Connect[ic_kde]', 'Animations[ic_mode_apps]']
+        'Update All[ic_system_update]', 'KDE Connect[ic_devices]', 'Animations[ic_animation]']
 if out == want: print('OK')
 else:
     import difflib

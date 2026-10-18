@@ -103,4 +103,22 @@ class ConfigsIconSizeTest : KitPageHarness() {
 
     @Test @Config(qualifiers = "w384dp-h672dp-450dpi")
     fun `F5 Cloud CONFIGS tab fits one A37 screen at fontScale 1_15`() = guard("cloud-configs-a37-1.15", 1.15f, "Configs")
+
+    // Owner rule: no repeated symbols. Two tiles on one screen must never share an icon, and every icon must resolve
+    // to a real drawable (a missing one silently falls back to the generic ic_link_tile, which would repeat).
+    @Test
+    fun `G1 no two visible tiles of a screen share an icon`() {
+        val ctx = compose.activity
+        val fallback = Sections.iconResFor(ctx, "")
+        for (section in Sections.all()) {
+            val seen = mutableMapOf<Int, String>()
+            for (p in section.pages.filterNot { it.hidden }) {
+                val name = p.iconName ?: continue
+                val res = Sections.iconResFor(ctx, name)
+                assertTrue("${section.id}: tile '${p.label}' icon '$name' does not resolve to a drawable", res != 0 && res != fallback)
+                val other = seen.put(res, p.label)
+                assertTrue("${section.id}: tiles '$other' and '${p.label}' share the icon '$name'", other == null)
+            }
+        }
+    }
 }

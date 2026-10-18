@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Configs tile: Peer Control (hub: a centre node wired to three peers). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:tint="?android:attr/textColorPrimary">
+    <path android:strokeColor="#000000" android:strokeWidth="1.8" android:pathData="M12,12L12,5M12,12L5.5,16M12,12L18.5,16"/>
+    <path android:fillColor="#000000" android:pathData="M12,9.5a2.5,2.5 0 1,0 0.001,0zM12,2.5a2.5,2.5 0 1,0 0.001,0zM5.5,13.5a2.5,2.5 0 1,0 0.001,0zM18.5,13.5a2.5,2.5 0 1,0 0.001,0z"/>
+</vector>
