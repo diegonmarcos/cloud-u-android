@@ -61,7 +61,7 @@ jobs:
   fresh-install:
     name: "Fresh install offline (${{ inputs.app }} · API ${{ inputs.api_level }})"
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Fetch this run's APKs
         continue-on-error: true
@@ -144,11 +144,12 @@ jobs:
             adb shell input keyevent 66
           }
           verdict=""
-          for i in $(seq 1 30); do   # up to ~15 min: the first start unpacks the rootfs
+          # Up to ~45 min: the first start unpacks the ~400 MB rootfs under proot, which on a
+          # CI emulator took 15-20 min. One line every 2.5 min: a busy tty queues what is typed.
+          for i in $(seq 1 90); do
             sleep 30
             adb shell pidof "$PKG" >/dev/null 2>&1 || { echo "::error::$PKG died during first start"; break; }
-            type_line
-            sleep 5
+            [ $((i % 5)) = 1 ] && type_line
             verdict=$(adb shell cat /sdcard/cloudsmoke.txt 2>/dev/null | tr -d '\r ' | grep -o 'L[0-9]*U[A-Za-z]*F[A-Za-z]*' | tail -1 || true)
             [ -n "$verdict" ] && break
             echo "no prompt yet (${i})"
@@ -174,6 +175,7 @@ jobs:
           target: google_apis
           disk-size: 8G
           ram-size: 4096M
+          cores: 4
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -wipe-data -noaudio -no-boot-anim
           disable-animations: true
           script: ./probe.sh
