@@ -22,7 +22,7 @@ pure = re.search(r'<script id="pure">(.*?)</script>', shell, re.S).group(1)
 glue = shell.split('<script id="pure">')[1].split('</script>', 1)[1]
 for ident in re.findall(r'"name":\s*"([a-z0-9-]+\.app)"', bj) + re.findall(r'"id":\s*"([a-z]+)",\s*"name":\s*"[a-z-]+\.app"', bj):
     if re.search(r"""['">]%s[<'"]""" % re.escape(ident), shell): bad.append("G3 shell.html spells %r" % ident)
-for e in re.findall(r'\be\("([a-z-]+)", "', eng):
+for e in [x['id'] for x in json.loads(bj)['engines']['list']]:
     if re.search(r"""(?<!role )(?<![=!])(===?|!==?|case)\s*['"]%s['"]""" % re.escape(e), shell): bad.append("G3 shell.html spells the engine id %r" % e)
 if re.search(r"\b(8000|8001|8002|8003|5353)\b", shell): bad.append("G3 shell.html spells a served port")
 with tempfile.TemporaryDirectory() as d:
