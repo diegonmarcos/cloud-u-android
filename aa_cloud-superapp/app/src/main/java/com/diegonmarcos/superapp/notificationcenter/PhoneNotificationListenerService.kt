@@ -57,6 +57,8 @@ class PhoneNotificationListenerService : NotificationListenerService() {
             title       = title,
             text        = text,
         ))
+        // The sender / large-icon avatar, 40dp in the cache, drawn round on the right of the row.
+        NotifAvatars.capture(this, sbn.key, n)
         // Boards ▸ Inboxes opens the thread itself when the app left one.
         com.diegonmarcos.superapp.boards.ThreadIntents.put(sbn.key, n.contentIntent)
     }

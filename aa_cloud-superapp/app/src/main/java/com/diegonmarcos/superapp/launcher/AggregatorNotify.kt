@@ -23,8 +23,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -77,7 +78,8 @@ import kotlin.math.max
  * The notification half of the aggregator page, in Compose, matched to Samsung One UI 8's notification panel: one
  * rounded translucent container per app, folded when it holds several ("+N", the fold lives on
  * AggregatorState.collapsedGroups so a toggle tap does not spring it open again), a swipe either way files the item
- * away, a long-press opens the Mark read / Archive / Open app sheet, and
+ * left files the item away and a swipe right toggles read, a long-press opens the Mark read / Archive / Open app bottom
+ * sheet, the header glyph is the app's own icon in monochrome, a phone row carries its sender's 40dp round avatar, and
  * the Archive is ONE collapsed section at the bottom of the page collecting every box the user filed away, whichever
  * card it came from.
  */
@@ -212,7 +214,13 @@ internal object NotifCard {
     val meta = Color(0xFF9A9AA0)
     val pill = Color(0xFF3A3A3F)
     val divider = Color(0x24FFFFFF)
-    val menu = Color(0xFF2A2A2E)
+    val menu = Color(0xFF242428)
+    val handle = Color(0x66FFFFFF)
+    /** The dark, blurred-look shade the containers float on (One UI's panel dim over the wallpaper). */
+    val panel = androidx.compose.ui.graphics.Brush.verticalGradient(
+        listOf(Color(0xF2141418), Color(0xF01B1B21), Color(0xF5101013)),
+    )
+    val avatar = 40.dp
     val radius = 26.dp
     val shape = RoundedCornerShape(radius)
     val pillShape = RoundedCornerShape(20.dp)
@@ -340,21 +348,31 @@ internal fun GroupBlock(
     }
 }
 
-/** One UI's long-press sheet, as a dark rounded menu anchored on the card. */
+/** One UI's long-press menu: a dark bottom sheet with 26dp top corners, a grab handle and full-width rows. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NotifSheet(open: Boolean, dismiss: () -> Unit, items: @Composable () -> Unit) {
-    DropdownMenu(
-        expanded = open, onDismissRequest = dismiss,
-        modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(NotifCard.menu),
-    ) { items() }
+    if (!open) return
+    ModalBottomSheet(
+        onDismissRequest = dismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = NotifCard.radius, topEnd = NotifCard.radius),
+        containerColor = NotifCard.menu,
+        scrimColor = Color(0x99000000),
+        dragHandle = {
+            Box(Modifier.padding(top = 10.dp, bottom = 6.dp).size(width = 36.dp, height = 4.dp)
+                .clip(CircleShape).background(NotifCard.handle))
+        },
+    ) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 20.dp).testTag(AggTags.SHEET)) { items() }
+    }
 }
 
 @Composable
 private fun SheetItem(label: String, tag: String, onClick: () -> Unit) {
-    DropdownMenuItem(
-        text = { Text(label, color = NotifCard.title, fontSize = 15.sp, fontFamily = NotifCard.font) },
-        onClick = onClick, modifier = Modifier.testTag(tag),
-    )
+    Text(label, color = NotifCard.title, fontSize = 16.sp, fontFamily = NotifCard.font,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 16.dp).testTag(tag))
 }
 
 /** A One UI pill: 20dp radius, #3A3A3F fill, 14sp white text. */
@@ -401,12 +419,50 @@ private fun GroupGlyph(g: NotifGroup, tint: Color) {
     if (icon == null && pkg.isNotBlank() && !AppIconCache.knownMissing(pkg)) {
         LaunchedEffect(pkg) { icon = withContext(Dispatchers.IO) { AppIconCache.load(ctx, pkg) } }
     }
-    val bmp = remember(icon) { icon?.let { runCatching { it.toBitmap(48, 48).asImageBitmap() }.getOrNull() } }
+    val bmp = remember(icon) { icon?.let { runCatching { monochromeGlyph(it).asImageBitmap() }.getOrNull() } }
     if (bmp != null) Image(bmp, null, colorFilter = ColorFilter.tint(tint), modifier = Modifier.size(16.dp))
     else Box(Modifier.size(16.dp), contentAlignment = Alignment.Center) {
         Text(g.label.trim().take(1).uppercase(), color = tint, fontSize = 13.sp, fontWeight = FontWeight.Black,
             fontFamily = NotifCard.font, lineHeight = 14.sp)
     }
+}
+
+/**
+ * One UI's notification glyph is the app's own icon as a one-colour silhouette. An adaptive icon gives its themed
+ * MONOCHROME layer when it has one (Android 13+), else its foreground (cropped to the 72/108 safe zone) — tinting the
+ * whole adaptive icon would only paint its opaque background as a blob. A legacy icon is used as is.
+ */
+internal fun monochromeGlyph(d: android.graphics.drawable.Drawable, px: Int = 48): android.graphics.Bitmap {
+    val layer: android.graphics.drawable.Drawable? =
+        if (android.os.Build.VERSION.SDK_INT >= 26 && d is android.graphics.drawable.AdaptiveIconDrawable) {
+            (if (android.os.Build.VERSION.SDK_INT >= 33) d.monochrome else null) ?: d.foreground
+        } else null
+    if (layer == null) return d.toBitmap(px, px)
+    val bmp = android.graphics.Bitmap.createBitmap(px, px, android.graphics.Bitmap.Config.ARGB_8888)
+    val inset = px / 4  // 18/72 of the visible edge on each side of a 108dp layer
+    layer.setBounds(-inset, -inset, px + inset, px + inset)
+    layer.draw(android.graphics.Canvas(bmp))
+    return bmp
+}
+
+/** The sender's avatar the listener stored for a phone row, drawn as a 40dp circle on the right of the body. */
+@Composable
+private fun RowAvatar(r: NotifRow, rid: String) {
+    if (!r.id.startsWith(AggregatorModel.PHONE_NS)) return
+    val ctx = LocalContext.current
+    val key = r.id.removePrefix(AggregatorModel.PHONE_NS)
+    var img by remember(key) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    LaunchedEffect(key) {
+        img = withContext(Dispatchers.IO) {
+            runCatching {
+                val f = com.diegonmarcos.superapp.notificationcenter.NotifAvatars.file(ctx, key)
+                if (f.isFile) android.graphics.BitmapFactory.decodeFile(f.path)?.asImageBitmap() else null
+            }.getOrNull()
+        }
+    }
+    val b = img ?: return
+    Image(b, null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+        modifier = Modifier.padding(start = 10.dp).size(NotifCard.avatar).clip(CircleShape).testTag(AggTags.rowAvatar(rid)))
 }
 
 // ── rows ─────────────────────────────────────────────────────────────
@@ -415,8 +471,8 @@ private fun GroupGlyph(g: NotifGroup, tint: Color) {
  * One notification inside its app container: 15sp semibold title (with its own time once the group is open), 14sp
  * #B0B0B5 body, two lines collapsed. Unread is a small dot in the app's tint before the title; a read title dims.
  *
- * Swipe EITHER way is One UI's dismiss: the item slides out and is filed into the Archive (inside the Archive the same
- * swipe restores it). Vertical scrolling is preserved because detectHorizontalDragGestures claims a drag only once it is
+ * Swipe LEFT is One UI's dismiss: the item slides out and is filed into the Archive (inside the Archive any swipe
+ * restores it). Swipe RIGHT toggles read/unread and springs back. Vertical scrolling is preserved because detectHorizontalDragGestures claims a drag only once it is
  * clearly sideways past the touch slop. Tap opens the app; long-press opens the sheet (Mark read/unread, Archive, Open).
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -452,6 +508,11 @@ private fun NotifRowItem(
                 val far = abs(total) > max(64.dp.toPx(), width * 0.22f)
                 scope.launch {
                     if (!far) { settle(offset, fade); return@launch }
+                    if (total > 0 && !inArchive) {
+                        Haptics.tap(hostView)
+                        state.markRead(r.id, state.isUnread(r))
+                        settle(offset, fade); return@launch
+                    }
                     val out = (if (total > 0) 1f else -1f) * width.coerceAtLeast(1)
                     offset.animateTo(out, tween(160)); fade.snapTo(0f)
                     state.archiveRow(r.id, !inArchive)
@@ -495,9 +556,13 @@ private fun NotifRowItem(
                 if (ownTime) Text(AggregatorModel.shortAgo(System.currentTimeMillis() - r.ts), color = NotifCard.meta,
                     fontSize = 13.sp, fontFamily = NotifCard.font, modifier = Modifier.padding(start = 8.dp))
             }
-            if (r.text.isNotBlank()) Text(r.text, color = NotifCard.body, fontSize = 14.sp, lineHeight = 19.sp,
-                fontFamily = NotifCard.font, maxLines = if (expanded) 8 else 2, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp))
+            Row(verticalAlignment = Alignment.Top) {
+                if (r.text.isNotBlank()) Text(r.text, color = NotifCard.body, fontSize = 14.sp, lineHeight = 19.sp,
+                    fontFamily = NotifCard.font, maxLines = if (expanded) 8 else 2, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(top = 2.dp))
+                else Box(Modifier.weight(1f))
+                RowAvatar(r, rid)
+            }
         }
         NotifSheet(menu, { menu = false }) {
             if (!inArchive) SheetItem(if (unread) AggregatorModel.MARK_READ_LABEL else "Mark unread", AggTags.rowRead(rid)) {

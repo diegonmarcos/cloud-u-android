@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -141,9 +142,13 @@ class AggregatorStackFragment : KitComposeFragment(),
             }
         }
 
+        // A page that carries notification containers sits on One UI's dark, blurred panel shade.
+        val shade = remember(panels) { panels.any { it.kind == "notification_center" || it.kind == "class_inbox" } }
         val page: @Composable () -> Unit = {
             Column(
-                Modifier.fillMaxSize().verticalScroll(scroll).onGloballyPositioned { anchors.content(it) }
+                Modifier.fillMaxSize()
+                    .then(if (shade) Modifier.background(NotifCard.panel) else Modifier)
+                    .verticalScroll(scroll).onGloballyPositioned { anchors.content(it) }
                     .padding(12.dp).testTag(AggTags.PAGE),
             ) {
                 CompositionLocalProvider(LocalAnchors provides anchors) {

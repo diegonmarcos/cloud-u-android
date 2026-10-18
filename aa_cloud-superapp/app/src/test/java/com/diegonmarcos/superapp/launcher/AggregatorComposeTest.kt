@@ -33,9 +33,10 @@ import org.robolectric.annotation.Config
  *   G1 a One UI 8 container is folded (newest + "+N" pill) and opens/folds on a header or pill tap
  *   G2 the long-press sheet's Mark read marks the group read and the read set is persisted under the page id
  *   G3 the sheet's Archive files the box away; the Archive card says Restore
- *   G4 a right swipe dismisses into the Archive; the row sheet flips read both ways
+ *   G4 a right swipe toggles read (never archives); the row sheet flips read both ways
  *   C1 a container draws the One UI header (name • 2m), the title and the body, no footer buttons
  *   S1 a left swipe (One UI's dismiss) files the row into the Archive
+ *   B1 the long-press menu is a bottom sheet (a dialog window), not an anchored dropdown
  *   M1 Mark all read / M2 Archive all as the centred pill row under the list
  *   T1 the top filter row (page tabs + toggle row) is unchanged
  *   F1 the Filters row draws the declared toggles, persists a pick, and a Tools pick returns Services to All
@@ -152,7 +153,7 @@ class AggregatorComposeTest : KitPageHarness() {
     }
 
     @Test
-    fun `G4 a right swipe dismisses into the Archive, and the row sheet flips read both ways`() {
+    fun `G4 a right swipe toggles read, and the row sheet flips read both ways`() {
         val st = state("g4-page")
         val r = row("phone:1", 300)  // newest: on top of the stack
         val r2 = row("phone:2", 200)
@@ -166,9 +167,25 @@ class AggregatorComposeTest : KitPageHarness() {
         assertTrue(st.isUnread(r))
         assertEquals(setOf<String>(), StackFilters.readKeys(ctx, "g4-page"))
         compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { swipeRight() }
-        compose.waitUntil(5_000) { st.isRowArchived(r) }
-        // Dismissing is not reading.
-        assertTrue(st.isUnread(r))
+        compose.waitUntil(5_000) { !st.isUnread(r) }
+        compose.waitForIdle()
+        // Right is read/unread, never a dismiss.
+        assertFalse(st.isRowArchived(r))
+        assertEquals(setOf("phone:1"), StackFilters.readKeys(ctx, "g4-page"))
+        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { swipeRight() }
+        compose.waitUntil(5_000) { st.isUnread(r) }
+        assertFalse(st.isRowArchived(r))
+    }
+
+    @Test
+    fun `B1 the long-press menu opens as a bottom sheet`() {
+        val st = state("b1-page")
+        showKit { GroupBlock(st, view(row("phone:1", 100)), archived = false) { } }
+        compose.onNodeWithTag(AggTags.SHEET).assertDoesNotExist()
+        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { longClick(centerLeft + androidx.compose.ui.geometry.Offset(40f, 0f)) }
+        compose.onNodeWithTag(AggTags.SHEET).assertExists()
+        compose.onNodeWithTag(AggTags.rowArchive("phone:1")).performClick()
+        compose.waitUntil(5_000) { st.isRowArchived(row("phone:1", 100)) }
     }
 
     @Test

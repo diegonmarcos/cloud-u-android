@@ -23,6 +23,7 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
 /** Test tags of the aggregator page: one place, so the tests and the page cannot drift apart. */
 internal object AggTags {
     const val PAGE = "agg:page"
+    const val SHEET = "agg:sheet"
     const val ARCHIVE_HEADER = "agg:archive-header"
     const val ARCHIVE_BODY = "agg:archive-body"
     const val REFRESH_NOTE = "agg:refresh-note"
@@ -48,6 +49,7 @@ internal object AggTags {
     fun rowRead(id: String) = "agg:row-read:$id"
     fun rowArchive(id: String) = "agg:row-archive:$id"
     fun rowOpen(id: String) = "agg:row-open:$id"
+    fun rowAvatar(id: String) = "agg:row-avatar:$id"
     const val LIST_ACTIONS = "agg:list-actions"
     const val MARK_ALL_READ = "agg:mark-all-read"
     const val ARCHIVE_ALL = "agg:archive-all"

@@ -7,6 +7,7 @@ import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.performScrollTo
@@ -63,46 +64,62 @@ class NotifyScreenTest : KitPageHarness() {
     /**
      * The One UI 8 notification panel on its own, at A37 size, with realistic data: a WhatsApp group of three (folded,
      * "+2"), Gmail with two (opened, each item with its own time), one Mail and one System item, then the bottom pill
-     * row. app/build/configs-screens/oneui.png.
+     * row, on One UI's dark panel shade; phone rows carry the sender avatar the listener stored (40dp, round, right
+     * of the body). app/build/configs-screens/oneui2.png.
      */
     @Test
     fun `render the One UI notification panel at A37 size`() {
         val now = System.currentTimeMillis()
         val min = 60_000L
         fun r(id: String, ago: Long, title: String, text: String) = NotifRow(now - ago, title, text, id = id)
+        // What the listener would have stored for a sender: a 40dp avatar in the cache, keyed by the sbn key.
+        fun avatar(key: String, color: Int, initial: String) {
+            val px = com.diegonmarcos.superapp.notificationcenter.NotifAvatars.sizePx(ctx.resources.displayMetrics.density)
+            val b = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+            val c = Canvas(b); c.drawColor(color)
+            c.drawText(initial, px * 0.32f, px * 0.68f, android.graphics.Paint().apply {
+                this.color = android.graphics.Color.WHITE; textSize = px * 0.5f; isAntiAlias = true })
+            val f = com.diegonmarcos.superapp.notificationcenter.NotifAvatars.file(ctx, key)
+            f.parentFile?.mkdirs(); f.outputStream().use { b.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        }
+        avatar("wa1", 0xFFB5556D.toInt(), "M"); avatar("gm1", 0xFF2C6FB5.toInt(), "H"); avatar("ml1", 0xFF1F8A70.toInt(), "A")
         val views = listOf(
             NotifGroup("com.whatsapp", "WhatsApp", "", listOf(
-                r("wa:1", 0, "Family · Mamá", "¿Venís el domingo a comer? Hago lasagna"),
-                r("wa:2", 3 * min, "Family · Pablo", "Yo llego tarde, guardadme un plato"),
-                r("wa:3", 9 * min, "Family · Lucía", "Foto"),
+                r("phone:wa1", 0, "Family · Mamá", "¿Venís el domingo a comer? Hago lasagna"),
+                r("phone:wa2", 3 * min, "Family · Pablo", "Yo llego tarde, guardadme un plato"),
+                r("phone:wa3", 9 * min, "Family · Lucía", "Foto"),
             )),
             NotifGroup("com.google.android.gm", "Gmail", "", listOf(
-                r("gm:1", 5 * min, "Hetzner Online", "Invoice 2291 for October is available. Amount due €7.14, paid by card ending 4421."),
-                r("gm:2", 42 * min, "GitHub", "[cloud-u-android] Run succeeded: Ship → SuperApp on main (#4120)"),
+                r("phone:gm1", 5 * min, "Hetzner Online", "Invoice 2291 for October is available. Amount due €7.14, paid by card ending 4421."),
+                r("phone:gm2", 42 * min, "GitHub", "[cloud-u-android] Run succeeded: Ship → SuperApp on main (#4120)"),
             )),
             NotifGroup("mail", "Mail", "", listOf(
-                r("ml:1", 2 * 3_600_000L, "Ana García", "Re: weekend plans — sounds good, let's meet at the station at ten and take the early train."),
+                r("phone:ml1", 2 * 3_600_000L, "Ana García", "Re: weekend plans — sounds good, let's meet at the station at ten and take the early train."),
             )),
             NotifGroup("system", "System", "", listOf(
-                r("sy:1", 3 * 3_600_000L, "Software update", "Android 16 · One UI 8 security patch is ready to install."),
+                r("phone:sy1", 3 * 3_600_000L, "Software update", "Android 16 · One UI 8 security patch is ready to install."),
             )),
         ).map { GroupView(it, GroupChip("${it.rows.size}", Tone.OK)) }
         val st = AggregatorState(ctx, "oneui-render", emptyList(), emptyList())
         st.collapsedGroups["com.google.android.gm"] = false
-        st.markRead("sy:1", true)
+        st.markRead("phone:sy1", true)
         showKit {
             androidx.compose.foundation.layout.Column(
                 androidx.compose.ui.Modifier.fillMaxSize()
-                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(
-                        androidx.compose.ui.graphics.Color(0xFF1C1E26), androidx.compose.ui.graphics.Color(0xFF121216))))
+                    .background(NotifCard.panel)
                     .padding(horizontal = 12.dp, vertical = 16.dp),
             ) {
                 GroupList(st, views) { }
                 NotifyListActions(st, always = true)
             }
         }
-        compose.waitForIdle()
-        snap("oneui.png")
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag(AggTags.rowAvatar("phone:wa1"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag(AggTags.rowAvatar("phone:ml1"), useUnmergedTree = true).assertExists()
+        // System stored no avatar, so its row draws none.
+        compose.onNodeWithTag(AggTags.rowAvatar("phone:sy1"), useUnmergedTree = true).assertDoesNotExist()
+        snap("oneui2.png")
     }
 
     private fun snap(name: String) {

@@ -27,7 +27,7 @@
 #   T6  an unavailable ntfy poll prunes nothing
 #   T7  prefs are committed, and the page key is set even without a filter row
 #   T8  still zero RecyclerView / ItemTouchHelper / child fragments on this path
-#   T9  the swipe is visibly answered (dismiss), read state stays reversible
+#   T9  right swipe toggles read, left swipe dismisses; read state stays reversible
 #   T10 the page does not narrate itself — no section subtitle describing what
 #       a section is, no empty state written as a paragraph
 set -uo pipefail
@@ -157,8 +157,11 @@ else
 fi
 
 echo "== the gesture is answered, and reversible =="
-# One UI 8: a swipe EITHER way dismisses (archives); read state moved to the
-# long-press sheet, which offers Mark read / Mark unread so it stays reversible.
+# Swipe RIGHT toggles read/unread (and springs back); swipe LEFT dismisses
+# (archives). The long-press sheet also offers Mark read / Mark unread.
+has "$NOTIFY" 'if (total > 0 && !inArchive) {' && has "$NOTIFY" 'state.markRead(r.id, state.isUnread(r))' \
+  && ok "T9: a right swipe toggles read, it does not archive" \
+  || bad "T9: the right swipe no longer toggles read"
 has "$NOTIFY" 'state.markRead(r.id, unread)' && has "$NOTIFY" '"Mark unread"' \
   && ok "T9: the long-press sheet TOGGLES read — a read row can be marked unread again" \
   || bad "T9: read state can no longer be flipped back"
