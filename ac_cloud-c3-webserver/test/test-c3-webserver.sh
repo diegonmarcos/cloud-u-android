@@ -345,6 +345,11 @@ t7() {
   T7_TARGET="$WORK7/target"
   nav="$(nav_of "$1" | tr '\n' ',')"
   [ "$nav" = "Pages,API,Home,Files,Configs," ] || { echo "    real table: nav is '$nav', want Pages,API,Home,Files,Configs"; rc=1; }
+  # server/build.rs resolves every serving port from its owner's build.json at <repo>/<owner>/, two levels above a
+  # crate; the planted copies sit under $WORK7, so the owners' declarations are copied beside them.
+  local o; for o in $(jq -r '.serving.endpoints[].owner' "$1/build.json" | sort -u); do
+    mkdir -p "$WORK7/$o"; cp "$1/../$o/build.json" "$WORK7/$o/"
+  done
   copy="$WORK7/plant"; rm -rf "$copy"; mkdir -p "$copy"; cp -R "$1/server" "$1/build.json" "$copy/"; rm -rf "$copy/server/target"
   python3 - "$copy/server/src/routes.rs" <<'PY' || { echo "    plant did not apply"; return 1; }
 import sys; p = sys.argv[1]; s = open(p).read()
