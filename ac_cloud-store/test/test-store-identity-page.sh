@@ -4,6 +4,8 @@
 #   I2 AccessPage routes PAGE_IDENTITY to the shared FleetIdentityPage
 #   I3 one FleetIdentityPage in the fleet (no second copy)
 #   I4 build.json::ui._doc names the Identity tab
+#   I5/I6 ONE source (store-identity-guard.py): shared-uid groups only in data/fleet-identity.json; the Access tab
+#      list only in build.json (AccessPage.kt's PAGE_* ids cannot drift, no Kotlin list of the tabs)
 # Then each planted defect must turn it red.
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -30,6 +32,8 @@ PY
 import json, sys
 sys.exit(0 if 'IPC | Identity | Android Perms' in json.load(open(sys.argv[1]))['ui']['_doc'] else 1)
 PY
+  python3 -I "$HERE/store-identity-guard.py" "$R" I5 && ok "I5 shared-uid groups are declared only in fleet-identity.json" || bad "I5 a shared-uid group is declared outside fleet-identity.json"
+  python3 -I "$HERE/store-identity-guard.py" "$R" I6 && ok "I6 Access tabs: Kotlin PAGE_* == build.json, no Kotlin list" || bad "I6 AccessPage PAGE_* drifted from build.json, or Kotlin lists the tabs"
   return $f
 }
 
@@ -39,7 +43,8 @@ PASS=$(printf '%s\n' "$out" | grep -c '  PASS:'); FAIL=$rc
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 mirror() {
   rm -rf "$TMP/r"; mkdir -p "$TMP/r"
-  for d in ac_cloud-store/build.json ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt; do
+  for d in ac_cloud-store/build.json ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt \
+           aa_cloud-superapp/data/fleet-identity.json ac_cloud-termux/build.json; do
     mkdir -p "$TMP/r/$(dirname "$d")"; cp "$ROOT/$d" "$TMP/r/$d"; done
 }
 while IFS='|' read -r file expr; do
@@ -53,6 +58,11 @@ done <<MUT
 ac_cloud-store/build.json|s.replace('"id": "identity"', '"id": "identity-x"')
 ac_cloud-store/build.json|s.replace('IPC | Identity | Android Perms', 'IPC | Android Perms')
 ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt|s.replace('PAGE_IDENTITY -> FleetIdentityPage()', 'PAGE_IDENTITY -> PermsList(cloud = true)')
+ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt|s.replace('const val PAGE_IDENTITY = "identity"', 'const val PAGE_IDENTITY = "identity2"')
+ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt|s.replace('const val PAGE_CLOUD = "cloud"', 'const val PAGE_CLOUD = "cloud"\nconst val PAGE_X = "x"')
+ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt|s.replace('const val PAGE_CLOUD = "cloud"', 'const val PAGE_CLOUD = "cloud"\nval TABS = listOf(PAGE_MESH, PAGE_IPC, PAGE_IDENTITY)')
+ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt|s.replace('const val PAGE_CLOUD = "cloud"', 'const val PAGE_CLOUD = "cloud"\nval UID = "cld.termux.shared"')
+ac_cloud-store/build.json|s.replace('"ui": {', '"ui": {"shared_user_id": "cld.rogue", ', 1)
 MUT
 
 echo "== RESULT(store Identity page): $PASS passed, $FAIL failed =="
