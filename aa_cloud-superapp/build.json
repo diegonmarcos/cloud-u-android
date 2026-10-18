@@ -4818,6 +4818,13 @@
             "group": "Observability"
           },
           {
+            "_doc": "Configs ▸ Observability ▸ Logcat: the live logcat viewer (scope This App | All Apps | one app, All | Errors, Refresh / Copy / Export / Post). It used to be the LOGCAT macro group at the bottom of About; it is its own tab now, placed immediately before About, and About no longer carries it.",
+            "id": "logcat",
+            "label": "Logcat",
+            "icon": "ic_settings",
+            "group": "Observability"
+          },
+          {
             "id": "about",
             "label": "About",
             "icon": "ic_settings",

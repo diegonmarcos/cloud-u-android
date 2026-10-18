@@ -157,32 +157,6 @@ class DevControlFragment : KitComposeFragment() {
             Toast.LENGTH_SHORT).show()
     }
 
-    /** Buffer handed to the SAF writer — the picker is async, so the text has to survive the round trip. */
-    private var pendingExport: String = ""
-
-    /** Save-as through the system picker: no FileProvider to declare and no storage permission to request, and the user
-     *  chooses the destination. */
-    private val exportLog =
-        registerForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain")
-        ) { uri ->
-            if (uri == null) return@registerForActivityResult
-            val ok = runCatching {
-                requireContext().contentResolver.openOutputStream(uri)?.use {
-                    it.write(pendingExport.toByteArray())
-                }
-            }.isSuccess
-            Toast.makeText(requireContext(),
-                if (ok) "Exported ${pendingExport.length} chars" else "Export failed",
-                Toast.LENGTH_SHORT).show()
-        }
-
-    private fun exportLogFile(text: String, fileName: String) {
-        pendingExport = text
-        runCatching { exportLog.launch(fileName) }
-            .onFailure { Toast.makeText(requireContext(), "No file picker available", Toast.LENGTH_SHORT).show() }
-    }
-
     /** Read per-app foreground + background time from UsageStatsManager. Returns (foregroundMs, backgroundMs); both -1 if the
      *  user hasn't granted PACKAGE_USAGE_STATS. Window = last 7 days. */
     private fun readUsageStats(ctx: Context): Pair<Long, Long> {
@@ -1292,12 +1266,6 @@ class DevControlFragment : KitComposeFragment() {
             row("Bundles",    "charger | battery | usb | thermal | pd   (build.json::shizuku_diagnostics)")
             row("Exec",       "curl -H 'Authorization: Bearer $adbTok' 'http://127.0.0.1:$adbPort/api/adb/exec?cmd=dumpsys%20battery'")
             small("Pairing/connect bind the socket to the Wi-Fi Network so it bypasses wg0. Pairing is once per boot (Android law; only root removes it). Pair port lives only while the pairing dialog is open — keep it open until step 1 returns ok.")
-        }
-
-        // 🔍 LOGCAT — the live viewer; the reader and the grant live in AboutLogcat.
-        macro("🔍  LOGCAT")
-        infoSection("App logs (this process)") {
-            custom { AboutLogcatViewer(onExport = ::exportLogFile) }
         }
 
         // ══ WEBSERVER macro section — a full static HTTP server living INSIDE

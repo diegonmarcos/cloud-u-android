@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * The logcat reader behind About ▸ LOGCAT.
+ * The logcat reader behind Configs ▸ Observability ▸ Logcat (LogcatFragment).
  *
  * Android hands an unprivileged app only its OWN lines, so reading anything else takes elevation. There are two ways to have
  * it, and they are very different to live with:
@@ -127,7 +127,7 @@ internal object AboutLogcat {
  * Refresh / Copy / Export / Post. DO NOT auto-refresh on open: any `logcat` exec by a non-shell app on Android 13+ (Samsung
  * especially) pops the system LogAccessDialogActivity, which launched OVER the About page every time it opened — the screen
  * looked like it "would not open / crashed" (2026-09-03). The user taps This App / All Apps / Refresh when they want logs, so
- * merely opening About never execs logcat.
+ * merely opening this tab never execs logcat.
  */
 @Composable
 internal fun AboutLogcatViewer(onExport: (text: String, fileName: String) -> Unit) {

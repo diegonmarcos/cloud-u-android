@@ -63,7 +63,7 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
         val SCREENS = listOf(
             "grid", "perms", "controls", "presets", "panels", "panels-ui", "panels-tools", "onehand",
             "firewall", "dns", "apps-mesh", "apps-mesh-members", "ipc", "identity", "adb-shell", "kde", "agents", "agents-superapp", "agents-fleet",
-            "diagnostics", "about", "battery", "profile", "store-cloud", "store-phone",
+            "diagnostics", "logcat", "about", "battery", "profile", "store-cloud", "store-phone",
         )
 
         @JvmStatic

@@ -2,7 +2,7 @@
 # Tester: Configs ▸ Fleet ▸ Agents — every agent the fleet runs, in one page with two tabs.
 #
 #   A1 Configs reads Launcher, Apps, Setup; Apps = C3 · Peer Control · Agents; Agents comes
-#      before About in the grid (Observability = Diagnostics, About)
+#      before About in the grid (Observability = Diagnostics, Logcat, About)
 #   A2 Agents is a page over exactly two tabs, SuperApp agents then Fleet agents, both hidden
 #      pages of their own (reached through the strip), and the nav rule holds (2..8 tabs)
 #   A3 both tabs route to AgentsFragment with their own scope; the page is drawn by PageTabs
@@ -53,10 +53,10 @@ ids = [p['id'] for p in vis]
 if 'agents' not in ids or 'about' not in ids or ids.index('agents') > ids.index('about'):
     probs.append('Agents is not before About: %r' % ids)
 obs = [p['label'] for p in vis if p.get('group') == 'Observability']
-if obs != ['Diagnostics', 'About']: probs.append('Observability = %r' % obs)
+if obs != ['Diagnostics', 'Logcat', 'About']: probs.append('Observability = %r' % obs)
 print('; '.join(probs) or 'OK')
 PY
-)" "Configs = Setup, Fleet[C3, Peer Control, Agents], Observability; Agents before About; Observability = Diagnostics + About"
+)" "Configs = Setup, Fleet[C3, Peer Control, Agents], Observability; Agents before About; Observability = Diagnostics + Logcat + About"
 
 echo "== A2: Agents is a strip over SuperApp agents | Fleet agents =="
 check "$(python3 - "$BJ" <<'PY'

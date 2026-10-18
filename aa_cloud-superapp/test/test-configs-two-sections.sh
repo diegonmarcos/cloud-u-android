@@ -79,13 +79,13 @@ want = {
     ('Setup', 'Connect'):          ['Account'],
     ('Setup', 'Apps'):             ['Store', 'Permissions'],
     ('Setup', 'Network'):              ['Firewall', 'DNS', 'Cloud Mesh', 'Apps Mesh', 'ADB Shell'],  # IPC is a tab of Apps Mesh, not a tile
-    ('Observability', ''):          ['Diagnostics', 'About'],
+    ('Observability', ''):          ['Diagnostics', 'Logcat', 'About'],
 }
 problems = ['%s%s = %r' % (g, ' ▸ ' + s if s else '', members(g, s))
             for (g, s), exp in want.items() if members(g, s) != exp]
 print('; '.join(problems) or 'OK')
 PY
-)" "Setup ▸ Connect = Account; Setup ▸ Launcher = Controls/One-Hand/Notify; Fleet = C3/Peer Control/Agents; Setup ▸ Apps = Store/Permissions; Network = Firewall/DNS/Cloud Mesh/Apps Mesh/ADB Shell (#733, #740; IPC and Identity are Apps Mesh tabs); Observability = Diagnostics/About (Diagnostics: the device's own numbers, remotely readable)"
+)" "Setup ▸ Connect = Account; Setup ▸ Launcher = Controls/One-Hand/Notify; Fleet = C3/Peer Control/Agents; Setup ▸ Apps = Store/Permissions; Network = Firewall/DNS/Cloud Mesh/Apps Mesh/ADB Shell (#733, #740; IPC and Identity are Apps Mesh tabs); Observability = Diagnostics/Logcat/About (Logcat: its own tab immediately before About, no longer inside it; Diagnostics: the device's own numbers, remotely readable)"
 
 echo "== T3: Store is the former Constellation, and Cloud Constellation is INSIDE it =="
 # #563 renamed the Constellation page Store; the word survives as the label of
@@ -172,9 +172,9 @@ w = {p[k] for p in pages for k in ('group', 'subgroup') if p.get(k)}
 w |= {p['label'] for p in pages if not p.get('hidden') and not p.get('is_action')}
 print(len(w))
 ")
-[ "$WORDS" = 23 ] \
-  && ok "T4 derived 23 words from the declaration (Setup, Apps, Launcher, Network, Fleet, Observability + 17 page labels, Diagnostics the last: the Agents regroup added Agents and dropped the | separator; #ipc added IPC; IPC became an Apps Mesh tab and left the labels)" \
-  || bad "T4 derived $WORDS words, expected 23 — it is checking a different set than it claims"
+[ "$WORDS" = 24 ] \
+  && ok "T4 derived 24 words from the declaration (Setup, Apps, Launcher, Network, Fleet, Observability + 18 page labels, Diagnostics and Logcat the last two: the Agents regroup added Agents and dropped the | separator; #ipc added IPC; IPC became an Apps Mesh tab and left the labels)" \
+  || bad "T4 derived $WORDS words, expected 24 — it is checking a different set than it claims"
 
 # The ONE heading Kotlin may still name is the fallback for a section that
 # declares none, which is every section but this one. Pinned so it stays the only
@@ -227,9 +227,9 @@ import json
 print(len(next(s for s in json.load(open('$BJ'))['ui']['sections']
                if s['id'] == 'config')['pages']))
 ")
-[ "$COUNT" = 31 ] \
-  && ok "31 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs; #ipc: plus ipc; Controls merge: plus panels, panels-ui and panels-tools; Apps Mesh strip: plus apps-mesh-members and identity)" \
-  || bad "$COUNT config pages, expected 31 — a page was added or DELETED, and T5 cannot report a page that is gone"
+[ "$COUNT" = 32 ] \
+  && ok "32 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs; #ipc: plus ipc; Controls merge: plus panels, panels-ui and panels-tools; Apps Mesh strip: plus apps-mesh-members and identity)" \
+  || bad "$COUNT config pages, expected 32 — a page was added or DELETED, and T5 cannot report a page that is gone"
 
 echo "== T6: ACTIONS IS UNTOUCHED =="
 # The owner said to keep it as it is. Three things make that true: the same three
@@ -318,6 +318,7 @@ BEFORE = {'presets', 'controls', 'onehand', 'notify', 'launcher',
           'dns',        # #740 added on purpose: Configs ▸ Mesh ▸ DNS (the fleet resolver)
           'agents', 'agents-superapp', 'agents-fleet',  # added on purpose: Configs ▸ Fleet ▸ Agents and its two tabs
           'diagnostics',  # added on purpose: Configs ▸ Observability ▸ Diagnostics (device numbers + remote read)
+          'logcat',     # added on purpose: Configs ▸ Observability ▸ Logcat, moved out of About into its own tab before it
           'battery'}    # added on purpose: Configs ▸ About ▸ Battery, the battery SoT's stats page (hidden, page:config/battery)
 sec     = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
                if s['id'] == 'config')
@@ -414,7 +415,7 @@ want = ['H:SETUP',
         'S:LAUNCHER',     'Controls[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
         'S:NETWORK',          'Firewall[ic_lock]', 'DNS[ic_world]', 'Cloud Mesh[ic_wg]', 'Apps Mesh[ic_mode_apps]', 'ADB Shell[ic_settings]',
         'H:FLEET',        'C3[ic_p_watchdog]', 'Peer Control[ic_kde]', 'Agents[ic_robot]',
-        'H:OBSERVABILITY', 'Diagnostics[ic_settings]', 'About[ic_settings]',
+        'H:OBSERVABILITY', 'Diagnostics[ic_settings]', 'Logcat[ic_settings]', 'About[ic_settings]',
         'H:ACTIONS',
         'Update All[ic_refresh]', 'KDE Connect[ic_kde]', 'Animations[ic_mode_apps]']
 if out == want: print('OK')
@@ -423,7 +424,7 @@ else:
     print('rendered != spec: ' + ' | '.join(l for l in difflib.unified_diff(want, out, lineterm='', n=0)
                                            if l[:1] in '+-' and l[:3] not in ('+++', '---')))
 PY
-)" "grid = SETUP ▸ CONNECT[Account] ▸ APPS[Store,Permissions] ▸ LAUNCHER[Controls,One-Hand,Notify] ▸ NETWORK[Firewall,DNS,Cloud Mesh,Apps Mesh,ADB Shell] FLEET[C3,Peer Control,Agents] OBSERVABILITY[Diagnostics,About] ACTIONS[Update All,KDE Connect,Animations]"
+)" "grid = SETUP ▸ CONNECT[Account] ▸ APPS[Store,Permissions] ▸ LAUNCHER[Controls,One-Hand,Notify] ▸ NETWORK[Firewall,DNS,Cloud Mesh,Apps Mesh,ADB Shell] FLEET[C3,Peer Control,Agents] OBSERVABILITY[Diagnostics,Logcat,About] ACTIONS[Update All,KDE Connect,Animations]"
 
 echo "== T12: THE AI PAGE IS GONE, not hidden — no route, target or tile names it (#723) =="
 # Deleting a declaration and leaving its door behind is the dead-tile failure:
@@ -466,6 +467,23 @@ PY
 grep -qE 'sectionId == "config" && pageId == "kde" +-> .*KdeConnectFragment' "$PAGES" \
   && ok "SectionPages still routes config/kde to KdeConnectFragment" \
   || bad "config/kde no longer resolves to KdeConnectFragment — the Peer Control tile opens a placeholder"
+
+echo "== T13: LOGCAT IS ITS OWN OBSERVABILITY TAB, immediately before About, and About no longer carries it =="
+check "$(python3 - "$BJ" <<'PY'
+import json, sys
+ids = [p['id'] for p in next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
+                             if s['id'] == 'config')['pages'] if p.get('group') == 'Observability']
+print('OK' if ids == ['diagnostics', 'logcat', 'about'] else 'Observability order = %r' % (ids,))
+PY
+)" "Observability = diagnostics, logcat, about — Logcat sits immediately before About"
+grep -qE 'sectionId == "config" && pageId == "logcat" +-> .*LogcatFragment' "$PAGES" \
+  && ok "SectionPages routes config/logcat to LogcatFragment" \
+  || bad "config/logcat does not resolve to LogcatFragment — the Logcat tab opens a placeholder"
+grep -q 'AboutLogcatViewer' "$KT/devcontrol/LogcatFragment.kt" \
+  && ok "LogcatFragment hosts the viewer" || bad "LogcatFragment does not host AboutLogcatViewer"
+if grep -nE 'AboutLogcatViewer|macro\("[^"]*LOGCAT' "$KT/devcontrol/DevControlFragment.kt" >/dev/null; then
+  bad "About (DevControlFragment) still names the Logcat viewer or a LOGCAT macro — it was meant to leave About completely"
+else ok "About (DevControlFragment) carries no Logcat macro or viewer"; fi
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

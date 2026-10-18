@@ -162,7 +162,7 @@
          declares. Signature-level: granted because both APKs carry the fleet key. -->
     <uses-permission android:name="com.diegonmarcos.clouddrive.permission.READ_AGENT_RESULTS" />
 
-    <!-- READ_LOGS — Configs → About → Logcat, "All Apps" / "Select a App".
+    <!-- READ_LOGS — Configs → Observability → Logcat, "All Apps" / "Select a App".
          Android hands an unprivileged app only its OWN log lines, which made
          the log viewer able to see everything except the app you are usually
          debugging. This permission is signature|privileged|DEVELOPMENT, and it
