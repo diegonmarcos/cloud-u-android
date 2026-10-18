@@ -5,9 +5,9 @@
 # ║ emulator with the network OFF: install the rootfs library APK first    ║
 # ║ when the app has one (as the Store does: the lib, then the app), then  ║
 # ║ the app, launch it, type a command line into the first session and     ║
-# ║ require it to run `ls`, `uname` and `fish`. The line reports through   ║
-# ║ /system/bin/log, so the verdict is read from logcat: only a session    ║
-# ║ that reached a prompt can execute what was typed.                      ║
+# ║ require it to run `ls`, `uname` and `fish`. The line writes its        ║
+# ║ verdict to /sdcard (bound into the rootfs; /system is not), read back  ║
+# ║ with adb: only a session at a prompt can execute what was typed.       ║
 # ║                                                                        ║
 # ║ Called as the LAST job of ship-cloud-termux.yml and                   ║
 # ║ ship-cloud-nix-on-droid.yml. A run whose gate skipped the build has no ║
@@ -40,6 +40,18 @@ on:
       api_level:
         type: string
         default: "34"
+  workflow_dispatch:
+    inputs:
+      app: {required: true, type: string}
+      artifact_prefix: {required: true, type: string}
+      lib_package: {type: string, default: ""}
+      lib_release_asset: {type: string, default: ""}
+      release_tag: {type: string, default: "latest"}
+      api_level: {type: string, default: "34"}
+      run_id:
+        description: "Ship run whose APK artifacts to test"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -57,6 +69,8 @@ jobs:
         with:
           pattern: ${{ inputs.artifact_prefix }}*
           path: apk
+          run-id: ${{ inputs.run_id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pick the app APK (and the lib APK)
         id: apk
@@ -120,9 +134,11 @@ jobs:
           act=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)
           case "$act" in */*) ;; *) echo "::error::$PKG has no launcher activity ($act)"; exit 2;; esac
           adb shell am start -W -n "$act"
-          # Type: /system/bin/log -t CLOUDSMOKE L$(ls /|wc -l)U$(uname -s)F$(fish -c uname)
+          # Type: echo L$(ls /|wc -l)U$(uname -s)F$(fish -c uname) >/sdcard/cloudsmoke.txt
+          # (/sdcard is bound into the rootfs; /system is not.) Works in bash and fish.
+          adb shell rm -f /sdcard/cloudsmoke.txt
           type_line() {
-            for tok in '/system/bin/log' '-t' 'CLOUDSMOKE' 'L$(ls' '/|wc' '-l)U$(uname' '-s)F$(fish' '-c' 'uname)'; do
+            for tok in 'echo' 'L$(ls' '/|wc' '-l)U$(uname' '-s)F$(fish' '-c' 'uname)' '>/sdcard/cloudsmoke.txt'; do
               adb shell "input text '$tok'"; adb shell input keyevent 62
             done
             adb shell input keyevent 66
@@ -133,7 +149,7 @@ jobs:
             adb shell pidof "$PKG" >/dev/null 2>&1 || { echo "::error::$PKG died during first start"; break; }
             type_line
             sleep 5
-            verdict=$(adb logcat -d -s CLOUDSMOKE:I | grep -o 'L[0-9]*ULinuxF[A-Za-z]*' | tail -1 || true)
+            verdict=$(adb shell cat /sdcard/cloudsmoke.txt 2>/dev/null | tr -d '\r ' | grep -o 'L[0-9]*U[A-Za-z]*F[A-Za-z]*' | tail -1 || true)
             [ -n "$verdict" ] && break
             echo "no prompt yet (${i})"
           done
@@ -141,8 +157,8 @@ jobs:
           adb exec-out screencap -p > out/screen.png || true
           echo "verdict: ${verdict:-none}"
           case "$verdict" in
-            L0U*|"") echo "::error title=$APP fresh install::no session ran ls/uname/fish offline (verdict '${verdict:-none}')"
-                     grep -E "$PKG|AndroidRuntime|CLOUDSMOKE" out/logcat.txt | tail -80; exit 1 ;;
+            L0U*|L*ULinuxF|"") echo "::error title=$APP fresh install::no session ran ls/uname/fish offline (verdict '${verdict:-none}')"
+                     grep -E "$PKG|AndroidRuntime" out/logcat.txt | tail -80; exit 1 ;;
             *ULinuxFLinux) echo "$APP: a fresh offline install reached a prompt; ls, uname and fish work." ;;
             *) echo "::error title=$APP fresh install::fish did not run (verdict '$verdict')"; exit 1 ;;
           esac

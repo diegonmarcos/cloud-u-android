@@ -302,5 +302,5 @@ jobs:
     with:
       app: cloud-terminal-nix
       artifact_prefix: cloud-nixdroid-x86_64-
-      lib_package: ""
-      lib_release_asset: ""
+      lib_package: "com.diegonmarcos.cloudlib.rootfsnixdroid"
+      lib_release_asset: "Cloud-Lib-Rootfs-Nixdroid-x86_64.apk"
