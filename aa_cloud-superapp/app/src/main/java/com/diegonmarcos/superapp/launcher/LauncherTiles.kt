@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -152,6 +153,9 @@ internal fun CompactTile(tileId: String, label: String, @DrawableRes iconRes: In
         }
         Text(label, color = p.textPrimary, fontSize = 9.sp, lineHeight = 10.sp, maxLines = 1,
             overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 1.dp, start = 1.dp, end = 1.dp).testTag("tilelabel:$tileId"))
+            // Unbounded: at fontScale 1.15 the line is ~1.5 dp taller than what 35 dp leaves; it spills into the 4 dp row gap
+            // instead of being cut through its descenders ("Notifv").
+            modifier = Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true)
+                .padding(top = 1.dp, start = 1.dp, end = 1.dp).testTag("tilelabel:$tileId"))
     }
 }
