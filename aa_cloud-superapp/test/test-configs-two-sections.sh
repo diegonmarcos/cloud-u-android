@@ -78,14 +78,14 @@ want = {
     ('Fleet', ''):                     ['C3', 'Peer Control', 'Agents'],
     ('Setup', 'Connect'):          ['Account'],
     ('Setup', 'Apps'):             ['Store', 'Permissions'],
-    ('Setup', 'Network'):              ['Firewall', 'DNS', 'Cloud Mesh', 'Apps Mesh', 'ADB Shell'],  # IPC is a tab of Apps Mesh, not a tile
+    ('Setup', 'Network'):              ['Firewall', 'DNS', 'Webserver', 'Cloud Mesh', 'Apps Mesh', 'ADB Shell'],  # IPC is a tab of Apps Mesh, not a tile
     ('Observability', ''):          ['Diagnostics', 'Logcat', 'About'],
 }
 problems = ['%s%s = %r' % (g, ' ▸ ' + s if s else '', members(g, s))
             for (g, s), exp in want.items() if members(g, s) != exp]
 print('; '.join(problems) or 'OK')
 PY
-)" "Setup ▸ Connect = Account; Setup ▸ Launcher = Controls/One-Hand/Notify; Fleet = C3/Peer Control/Agents; Setup ▸ Apps = Store/Permissions; Network = Firewall/DNS/Cloud Mesh/Apps Mesh/ADB Shell (#733, #740; IPC and Identity are Apps Mesh tabs); Observability = Diagnostics/Logcat/About (Logcat: its own tab immediately before About, no longer inside it; Diagnostics: the device's own numbers, remotely readable)"
+)" "Setup ▸ Connect = Account; Setup ▸ Launcher = Controls/One-Hand/Notify; Fleet = C3/Peer Control/Agents; Setup ▸ Apps = Store/Permissions; Network = Firewall/DNS/Webserver/Cloud Mesh/Apps Mesh/ADB Shell (#733, #740; IPC and Identity are Apps Mesh tabs); Observability = Diagnostics/Logcat/About (Logcat: its own tab immediately before About, no longer inside it; Diagnostics: the device's own numbers, remotely readable)"
 
 echo "== T3: Store is the former Constellation, and Cloud Constellation is INSIDE it =="
 # #563 renamed the Constellation page Store; the word survives as the label of
@@ -172,9 +172,9 @@ w = {p[k] for p in pages for k in ('group', 'subgroup') if p.get(k)}
 w |= {p['label'] for p in pages if not p.get('hidden') and not p.get('is_action')}
 print(len(w))
 ")
-[ "$WORDS" = 24 ] \
-  && ok "T4 derived 24 words from the declaration (Setup, Apps, Launcher, Network, Fleet, Observability + 18 page labels, Diagnostics and Logcat the last two: the Agents regroup added Agents and dropped the | separator; #ipc added IPC; IPC became an Apps Mesh tab and left the labels)" \
-  || bad "T4 derived $WORDS words, expected 24 — it is checking a different set than it claims"
+[ "$WORDS" = 25 ] \
+  && ok "T4 derived 25 words from the declaration (Setup, Apps, Launcher, Network, Fleet, Observability + 19 page labels, Diagnostics and Logcat the last two: the Agents regroup added Agents and dropped the | separator; #ipc added IPC; IPC became an Apps Mesh tab and left the labels)" \
+  || bad "T4 derived $WORDS words, expected 25 — it is checking a different set than it claims"
 
 # The ONE heading Kotlin may still name is the fallback for a section that
 # declares none, which is every section but this one. Pinned so it stays the only
@@ -227,9 +227,9 @@ import json
 print(len(next(s for s in json.load(open('$BJ'))['ui']['sections']
                if s['id'] == 'config')['pages']))
 ")
-[ "$COUNT" = 32 ] \
-  && ok "32 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs; #ipc: plus ipc; Controls merge: plus panels, panels-ui and panels-tools; Apps Mesh strip: plus apps-mesh-members and identity)" \
-  || bad "$COUNT config pages, expected 32 — a page was added or DELETED, and T5 cannot report a page that is gone"
+[ "$COUNT" = 33 ] \
+  && ok "33 config pages declared — the set T5 walks is the whole set (#649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs; #ipc: plus ipc; Controls merge: plus panels, panels-ui and panels-tools; Apps Mesh strip: plus apps-mesh-members and identity)" \
+  || bad "$COUNT config pages, expected 33 — a page was added or DELETED, and T5 cannot report a page that is gone"
 
 echo "== T6: ACTIONS IS UNTOUCHED =="
 # The owner said to keep it as it is. Three things make that true: the same three
@@ -309,6 +309,7 @@ BEFORE = {'presets', 'controls', 'onehand', 'notify', 'launcher',
           'store-cloud', 'store-phone',
           'panels', 'panels-ui', 'panels-tools',  # added on purpose: Configs ▸ Setup ▸ Launcher ▸ Controls ▸ Panels (UI | Tools), hidden tabs of the merged Controls
           'update', 'kde_connect', 'animations',
+          'webserver',  # added on purpose: Configs ▸ Network ▸ Webserver (opens the Cloud C3 Webserver app, else localhost in Cloud Browser)
           'apps-mesh',  # #733 added on purpose: Configs ▸ Mesh ▸ Apps Mesh (the Store's mesh page)
           'ipc',        # #ipc added on purpose: Configs ▸ Network ▸ IPC (the fleet's IPC Mesh, libs:appstore IpcMeshPage); now the Apps Mesh tab
           'apps-mesh-members', 'identity',  # added on purpose: Apps Mesh became a strip, Apps | IPC | Identity (fleet Linux uids)
@@ -413,7 +414,7 @@ want = ['H:SETUP',
         'S:CONNECT',      'Account[ic_person]',
         'S:APPS',         'Store[ic_storefront]', 'Permissions[ic_key]',
         'S:LAUNCHER',     'Controls[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
-        'S:NETWORK',          'Firewall[ic_lock]', 'DNS[ic_world]', 'Cloud Mesh[ic_wg]', 'Apps Mesh[ic_apps]', 'ADB Shell[ic_terminal]',
+        'S:NETWORK',          'Firewall[ic_lock]', 'DNS[ic_world]', 'Webserver[ic_web]', 'Cloud Mesh[ic_wg]', 'Apps Mesh[ic_apps]', 'ADB Shell[ic_terminal]',
         'H:FLEET',        'C3[ic_p_watchdog]', 'Peer Control[ic_hub]', 'Agents[ic_robot]',
         'H:OBSERVABILITY', 'Diagnostics[ic_monitor_heart]', 'Logcat[ic_subject]', 'About[ic_info]',
         'H:ACTIONS',

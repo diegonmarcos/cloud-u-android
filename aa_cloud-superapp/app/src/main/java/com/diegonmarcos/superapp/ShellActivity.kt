@@ -1899,6 +1899,13 @@ open class ShellActivity : AppCompatActivity(),
                 com.diegonmarcos.superapp.kdeconnect.KdeConnectManager.connectFirstAsync()
                 findViewById<View>(R.id.fragment_container)?.snack("KDE Connect: connecting…")
             }
+            // Configs > Network > Webserver: the Cloud C3 Webserver app, else localhost in Cloud Browser.
+            actionType == "open_webserver" -> {
+                if (com.diegonmarcos.superapp.launcher.WebserverLaunch.open(this) ==
+                    com.diegonmarcos.superapp.launcher.WebserverLaunch.Opened.NONE) {
+                    openEmbeddedBrowser(com.diegonmarcos.superapp.launcher.WebserverLaunch.FALLBACK_URL)
+                }
+            }
             actionType == "toggle_animations" -> {
                 val prefs = com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(this)
                 val on = !prefs.toggle("all_anim")

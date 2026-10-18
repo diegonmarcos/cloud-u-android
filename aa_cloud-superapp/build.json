@@ -4730,10 +4730,19 @@
             "subgroup": "Network"
           },
           {
-            "_doc": "#740 DNS — the fleet's resolver, chosen once and applied at the SuperApp VPN (ui.dns is its declaration; network/DnsFragment.kt draws it). Sits right after Firewall and before Cloud Mesh: Network reads C3, Peer Control, |, Firewall, DNS, Cloud Mesh, Apps Mesh.",
+            "_doc": "#740 DNS — the fleet's resolver, chosen once and applied at the SuperApp VPN (ui.dns is its declaration; network/DnsFragment.kt draws it). Sits right after Firewall (Webserver follows it) and before Cloud Mesh: Network reads C3, Peer Control, |, Firewall, DNS, Cloud Mesh, Apps Mesh.",
             "id": "dns",
             "label": "DNS",
             "icon": "ic_world",
+            "group": "Setup",
+            "subgroup": "Network"
+          },
+          {
+            "_doc": "Webserver - opens the Cloud C3 Webserver app (fleet id c3-webserver; the package is read from data/constellation-fleet.json at run time, WebserverLaunch.kt) through its explicit launch intent. If that app is not installed it opens http://localhost:8002 in Cloud Browser. Sits right after DNS.",
+            "id": "webserver",
+            "label": "Webserver",
+            "icon": "ic_web",
+            "action": "action:open_webserver",
             "group": "Setup",
             "subgroup": "Network"
           },
@@ -8245,7 +8254,7 @@
         "forks": {}
       },
       {
-        "_doc": "cloud-c3-webserver (#687) — the phone's local web server is an APK in the cloud-c3 family, and it is launched from INSIDE cloud-c3 (its Apps tab, beside Watchdog / Morpheus / WatchTower: ac_cloud-c3/build.json::ui.external_apps), NOT from Cloud ▸ Apps ▸ Configs — that grid links cloud-c3 itself and no family member below it (test-c3-family-apps.sh T2). This entry stays so extapp:cloud-c3-webserver still resolves here (Sections.externalApp() reads ONLY this array) and the Store row keeps its install contract (T1/T3). NO `label`: the id IS the application's one name (#351); the launcher derives the caption by dropping the family prefix. install_apk_url mirrors ac_cloud-c3-webserver/build.json::release.gh_release.asset_name (Cloud-C3-WebServer.apk, the arm64 rolling-latest asset). The applicationId stays com.diegonmarcos.cloudwebserver through the rename: identity, not brand, the ac_c3-watchdog / com.diegonmarcos.watchdog split.",
+        "_doc": "cloud-c3-webserver (#687) — the phone's local web server is an APK in the cloud-c3 family, and it is launched from INSIDE cloud-c3 (its Apps tab, beside Watchdog / Morpheus / WatchTower: ac_cloud-c3/build.json::ui.external_apps) and from the one Configs ▸ Network ▸ Webserver tile (target action:open_webserver, WebserverLaunch.kt: never an extapp:/page: target, so test-c3-family-apps.sh T2 still holds). This entry stays so extapp:cloud-c3-webserver still resolves here (Sections.externalApp() reads ONLY this array) and the Store row keeps its install contract (T1/T3). NO `label`: the id IS the application's one name (#351); the launcher derives the caption by dropping the family prefix. install_apk_url mirrors ac_cloud-c3-webserver/build.json::release.gh_release.asset_name (Cloud-C3-WebServer.apk, the arm64 rolling-latest asset). The applicationId stays com.diegonmarcos.cloudwebserver through the rename: identity, not brand, the ac_c3-watchdog / com.diegonmarcos.watchdog split.",
         "id": "cloud-c3-webserver",
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.cloudwebserver",
