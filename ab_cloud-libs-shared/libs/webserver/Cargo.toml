@@ -1,0 +1,16 @@
+[package]
+name = "cloud-webserver"
+version = "0.1.0"
+edition = "2021"
+description = "The ONE shared web server of the fleet (c3-webserver :8002, termux :8000, nix-on-droid :8001): the Linux my-webserver HTTP API served over a root, with the Linux frontend (vendor/, byte-identical, synced from cloud-u-linux) bundled at build time."
+
+# No dependencies on purpose: std only, so every consumer (Tauri app, Termux/nix static binary) builds it offline-clean.
+[dependencies]
+
+[lib]
+name = "cloud_webserver"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cloud-webserver"
+path = "src/main.rs"
