@@ -55,6 +55,7 @@
   }
   function renderMusic(d, st) {
     st = st || {};
+    if (st.cfg && st.cfg.search) d = Object.assign({}, d, { search: st.cfg.search });
     if (st.playlist) {
       var hit = musicPlaylists(d).filter(function (x) { return x.folder + '/' + x.p.name === st.playlist; })[0];
       if (!hit) return '<p class="empty">Playlist not found.</p>';
@@ -90,8 +91,8 @@
   }
 
   /* ── videos ────────────────────────────────────────────────────────── */
-  function videoCard(v) {
-    return ext(ytUrl(v.id), img('card__img--video', ytThumb(v.id)) + (v.duration ? '<span class="badge">' + esc(v.duration) + '</span>' : '') +
+  function videoCard(v, noDur) {
+    return ext(ytUrl(v.id), img('card__img--video', ytThumb(v.id)) + (v.duration && noDur !== true ? '<span class="badge">' + esc(v.duration) + '</span>' : '') +
       '</div><div class="card__body"><div class="card__title">' + esc(v.title) + '</div></div>', 'card');
   }
   function renderVideos(d, st) {
@@ -99,7 +100,7 @@
     var html = d.playlists.filter(function (p) { return !st.section || p.name === st.section; }).map(function (p) {
       var vids = p.videos.filter(function (v) { return matches(st.q, [v.title, p.name]); });
       if (!vids.length) return '';
-      return '<h2 class="section-title">' + esc(p.name) + ' · ' + plural(vids.length, 'video') + '</h2><div class="grid">' + vids.map(videoCard).join('') + '</div>';
+      return '<h2 class="section-title">' + esc(p.name) + ' · ' + plural(vids.length, 'video') + '</h2><div class="grid">' + vids.map(function (v) { return videoCard(v, !!(st.cfg && st.cfg.durations === false)); }).join('') + '</div>';
     }).join('');
     return html || '<p class="empty">No video matches.</p>';
   }
@@ -112,7 +113,7 @@
     return '<div class="grid">' + boards.map(function (b) {
       return ext(b.url, img('', b.cover, b.name, hue(b.name)) + '</div><div class="card__body"><div class="card__title">' + esc(b.name) +
         '</div><div class="card__meta">' + plural(b.pins, 'pin') + '</div></div>', 'card');
-    }).join('') + '</div>' + '<p>' + ext(d.profile_url, 'All boards on Pinterest ↗', 'btn btn--accent') + '</p>';
+    }).join('') + '</div>' + '<p>' + ext((st.cfg && st.cfg.profile_url) || d.profile_url, 'All boards on Pinterest ↗', 'btn btn--accent') + '</p>';
   }
 
   /* ── books ─────────────────────────────────────────────────────────── */
@@ -124,7 +125,7 @@
     if (!books.length) return '<p class="empty">No book matches.</p>';
     return '<div class="grid">' + books.map(function (b) {
       return ext(bookUrl(b), '<div class="card__img card__img--poster" style="background:' + esc(b.spine) + '"><div class="fallback">' + esc(b.title) +
-        '</div><img class="cover" loading="lazy" alt="" src="' + esc(bookCover(b.isbn)) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>' +
+        '</div>' + (st.cfg && st.cfg.covers === false ? '' : '<img class="cover" loading="lazy" alt="" src="' + esc(bookCover(b.isbn)) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">') + '</div>' +
         '<div class="card__body"><div class="card__title">' + esc(b.title) + '</div><div class="card__meta">' + esc(b.author) + '</div></div>', 'card');
     }).join('') + '</div>';
   }
@@ -153,7 +154,7 @@
       return '<article class="post"><span class="post__kind">' + esc(KIND[it.type] || it.type) + '</span>' +
         (it.title ? '<h2>' + esc(it.title) + '</h2>' : '') + '<p>' + esc(it.text) + '</p><div class="post__meta">' + esc(meta) + '</div>' +
         ((it.tags && it.tags.length) ? '<div class="post__tags">' + it.tags.map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('') + '</div>' : '') +
-        (it.body ? '<button class="btn" data-toggle="' + esc(it.id) + '">Read</button><div class="post__body" id="body-' + esc(it.id) + '" hidden>' + md(it.body) + '</div>' : '') +
+        (it.body ? '<button class="btn" data-toggle="' + esc(it.id) + '">' + (st.cfg && st.cfg.expand ? 'Close' : 'Read') + '</button><div class="post__body" id="body-' + esc(it.id) + '"' + (st.cfg && st.cfg.expand ? '' : ' hidden') + '>' + md(it.body) + '</div>' : '') +
         (it.url ? ext(it.url, 'Open ↗', 'btn btn--accent') : '') + '</article>';
     }).join('');
   }
@@ -228,7 +229,8 @@
     var tabs = doc.querySelector('.tabs');
     if (tabs) tabs.innerHTML = tabsHtml(page, page === 'home' ? '' : '../');
     if (page === 'home') return;
-    var spec = RENDER[page], st = { q: '', section: '' }, data = null;
+    if (!RENDER[page]) return;  // configs / profile: assets/configs.js draws them
+    var spec = RENDER[page], st = { q: '', section: '', cfg: root.CmcConfig ? root.CmcConfig.loadTab(page) : {} }, data = null;
     var main = doc.querySelector('main'), chips = doc.querySelector('.chips'), search = doc.querySelector('.search');
     var sub = doc.querySelector('.top h1 small'), sheet = doc.querySelector('.sheet');
     search.placeholder = spec.hint;
@@ -242,6 +244,8 @@
         var id = typeof c === 'string' ? c : c.id, name = typeof c === 'string' ? c : c.name;
         return '<button class="chip" aria-pressed="false" data-chip="' + esc(id) + '">' + esc(name) + '</button>';
       }).join('');
+      var start = st.cfg && st.cfg.start ? [].filter.call(chips.children, function (c) { return c.textContent.toLowerCase() === st.cfg.start.toLowerCase() || c.getAttribute('data-chip') === st.cfg.start; })[0] : null;
+      if (start) { [].forEach.call(chips.children, function (c) { c.setAttribute('aria-pressed', String(c === start)); }); st.section = start.getAttribute('data-chip'); }
       draw();
     }).catch(function (e) { main.innerHTML = '<p class="empty">Could not load ' + esc(page) + ': ' + esc(e) + '</p>'; });
     var timer;

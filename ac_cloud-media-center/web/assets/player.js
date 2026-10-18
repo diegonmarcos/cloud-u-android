@@ -3,39 +3,24 @@
  * Browser half only. The source list is web/data/sources.json and the logic is
  * web/assets/sources-core.js (window.LegalSources), both copied by data/regen.py
  * from diegonmarcos.github.io at build.json::data.shared.commit, so the web
- * site and this app read the same declaration. Settings (TMDB key, region,
- * Jellyfin/Emby/Plex URL + token, drive URL, buffer mode) live in this app's
- * webview storage only and are never committed. Links out (where-to-watch
+ * site and this app read the same declaration. Settings are edited on the
+ * Configs → Movies page (assets/configs.js, the shared MOVIE_CONFIG schema; the
+ * ⚙ here opens it), live in this app's webview storage only, never committed. Links out (where-to-watch
  * deep links) are a[data-ext], which pages.js hands to the phone's apps.
  */
 (function (root) {
   'use strict';
   var L = root.LegalSources, doc = root.document, KEY = 'cmc_sources_v1';
   var decl = null, settings = load(), run = 0, cleanup = function () {};
-  // User-defined torrent sources: added here, kept in this app's storage only, none shipped.
-  var UKEY = 'cmc_user_sources_v1', users = L.parseUserSources((function () { try { return root.localStorage.getItem(UKEY) || '[]'; } catch (e) { return '[]'; } })()), found = [];
-  function storeUsers(r) {
-    var m = el && el.querySelector('.player__umsg'); if (m) m.textContent = r.error || '';
-    if (r.error) return false;
-    users = r.list; try { root.localStorage.setItem(UKEY, JSON.stringify(users)); } catch (e) {}
-    if (el) { el.querySelector('.player__ulist').innerHTML = userList(); el.querySelector('.player__usearch').hidden = !users.length; }
-    return true;
-  }
-  function userList() {
-    return users.map(function (u) {
-      return '<div class="player__urow"><input type="checkbox" data-uon="' + esc(u.id) + '"' + (u.enabled ? ' checked' : '') + '><input data-uname="' + esc(u.id) + '" value="' + esc(u.name) + '"><small class="muted">' + esc(u.type) + '</small><button type="button" class="icon" data-udel="' + esc(u.id) + '">🗑</button></div>';
-    }).join('');
-  }
+  // User-defined torrent sources: managed on Configs → Movies, searched here.
+  var UKEY = 'cmc_user_sources_v1', users = [], found = [];
+  function loadUsers() { try { return L.parseUserSources(root.localStorage.getItem(UKEY) || '[]'); } catch (e) { return []; } }
   var ICON = { library: '🗄', local: '📁', providers: '📺', trailer: '🎞', catalogue: '🏛', torrent: '🧲' };
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function load() {
-    var s = {};
-    try { s = JSON.parse(root.localStorage.getItem(KEY) || '{}'); } catch (e) { s = {}; }
-    return {
-      tmdb_key: s.tmdb_key || '', region: (s.region || ((root.navigator.language || 'en-US').split('-')[1]) || 'US').toUpperCase(), buffer: s.buffer || '2m',
-      jellyfin: s.jellyfin || { url: '', token: '' }, emby: s.emby || { url: '', token: '' }, plex: s.plex || { url: '', token: '' }, drive: s.drive || { url: '' }
-    };
+    var raw = '{}'; try { raw = root.localStorage.getItem(KEY) || '{}'; } catch (e) { /* storage blocked */ }
+    return L.normalizeMovieConfig(raw, root.navigator.language);
   }
   function save() { try { root.localStorage.setItem(KEY, JSON.stringify(settings)); } catch (e) { /* storage blocked: this visit only */ } }
   function get(url, headers) { return fetch(url, { headers: headers }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }); }
@@ -49,34 +34,24 @@
     el = doc.createElement('div');
     el.className = 'player';
     el.innerHTML = '<div class="player__top"><b>' + esc(m.title) + '</b><span class="muted"> ' + esc(m.year || '') + '</span>' +
-      '<button class="icon" data-act="settings" aria-label="Settings">⚙</button><button class="icon" data-act="close" aria-label="Close">✕</button></div>' +
+      '<a class="icon" href="../configs/index.html#movies" aria-label="Movies config">⚙</a><button class="icon" data-act="close" aria-label="Close">✕</button></div>' +
       '<div class="player__stage"><p class="empty">Looking for this title in your sources…</p></div>' +
       '<div class="player__err" role="alert" hidden></div>' +
       '<div class="player__picker"><div class="player__list"></div>' +
       '<label class="player__row">📁 Files on this phone <input type="file" accept="video/*" multiple data-act="files"></label>' +
       '<form class="player__row" data-act="paste"><input name="t" placeholder="magnet:… or https://….torrent"><button class="btn">▶</button></form>' +
       '<form class="player__usearch" data-act="usearch"' + (users.length ? '' : ' hidden') + '><div class="muted">Your sources</div><div class="player__row"><input name="q" placeholder="Search: ' + esc(m.title) + '"><button class="btn">⌕</button></div><div class="player__ures"></div></form>' +
-      '<label class="player__row">Buffer <select data-act="buffer">' + L.BUFFER_MODES.map(function (b) { return '<option value="' + b.id + '"' + (b.id === settings.buffer ? ' selected' : '') + '>' + esc(b.label) + '</option>'; }).join('') + '</select></label></div>' +
-      '<form class="player__settings" hidden>' + settingsForm() + '</form>';
+      '<label class="player__row">Buffer <select data-act="buffer">' + L.streamBufferModes().map(function (b) { return '<option value="' + b.id + '"' + (b.id === settings.buffer ? ' selected' : '') + '>' + esc(b.label) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="player__row"><input type="checkbox" data-act="offline"' + (settings.offline ? ' checked' : '') + ' style="flex:none"> Offline: download, then play</label></div>';
     doc.body.appendChild(el);
-  }
-  function settingsForm() {
-    var f = function (lab, path, pw) { var v = path.split('.').reduce(function (o, k) { return o[k]; }, settings); return '<label>' + lab + '<input name="' + path + '" value="' + esc(v) + '"' + (pw ? ' type="password" autocomplete="off"' : '') + '></label>'; };
-    return '<p class="muted">Kept only in this app. Nothing is sent except to the servers you enter.</p>' + f('TMDB API key', 'tmdb_key', true) + f('Region', 'region') +
-      ['jellyfin', 'emby', 'plex'].map(function (k) { return f(k + ' URL', k + '.url') + f(k + ' token', k + '.token', true); }).join('') +
-      f('Drive media folder URL (serves index.json)', 'drive.url') + '<button class="btn btn--accent">Save &amp; re-check</button>' +
-      '<h4>Your torrent sources</h4><p class="muted">Added by you, kept on this phone only. Nothing is preset. Only use sources you have the right to download from.</p>' +
-      '<div class="player__ulist">' + userList() + '</div>' +
-      '<label>Name<input data-unew="name"></label><label>Type<select data-unew="type"><option value="torznab">Torznab / Jackett</option><option value="rss">RSS feed</option><option value="template">Search URL with {query}</option></select></label>' +
-      '<label>URL<input data-unew="url" placeholder="https://…"></label><label>API key (Torznab)<input data-unew="apikey" type="password" autocomplete="off"></label>' +
-      '<button type="button" class="btn" data-act="uadd">Add source</button><div class="player__umsg muted"></div>';
   }
   function err(msg) { var e = el.querySelector('.player__err'); e.hidden = !msg; e.textContent = msg ? '⚠ ' + msg : ''; }
 
   function probe(m) {
     var my = ++run, title = { imdbId: m.id, tmdbId: m.tmdbId, type: m.type, title: m.title, year: m.year }, list = el.querySelector('.player__list'), have = [], done = 0;
     list.innerHTML = '<div class="muted">Checking sources…</div>';
-    return declared().then(function (d) {
+    return declared().then(function (all) {
+      var d = L.enabledSources(all, settings);
       var pre = settings.tmdb_key && L.isImdbId(m.id) ? L.imdbToTmdb(get, m.id, m.type, settings.tmdb_key).catch(function () { return null; }) : Promise.resolve(null);
       return pre.then(function (f) {
         if (f) title.tmdbId = f.tmdbId;
@@ -93,7 +68,7 @@
           if (my !== run) return;
           var failed = all.filter(function (r) { return r.error; });
           if (!have.length) {
-            list.innerHTML = '<p class="empty">No legal source has this title.<br><span class="muted">Add your Jellyfin/Plex/Emby server, a drive folder or a TMDB key in ⚙, pick files on this phone, or paste a torrent you have the right to share.</span></p>';
+            list.innerHTML = '<p class="empty">No legal source has this title.<br><span class="muted">Add your Jellyfin/Plex/Emby server, a drive folder or a TMDB key in ⚙ (Configs → Movies), pick files on this phone, or paste a torrent you have the right to share.</span></p>';
             el.querySelector('.player__stage').innerHTML = '<p class="empty">Nothing to play.</p>';
           }
           if (failed.length) list.insertAdjacentHTML('beforeend', '<details class="muted"><summary>' + failed.length + ' source(s) failed</summary>' + failed.map(function (r) { return '<div>' + esc(r.source.name) + ': ' + esc(r.error) + '</div>'; }).join('') + '</details>');
@@ -116,7 +91,7 @@
       return;
     }
     stage.innerHTML = '<video controls playsinline preload="auto"></video><div class="bufbar"><i class="buf"></i><i class="pos"></i></div><div class="player__status muted"></div>';
-    var v = stage.querySelector('video'), status = stage.querySelector('.player__status'), pol = L.bufferPolicy(settings.buffer), objectUrl = '', client = null, alive = true;
+    var v = stage.querySelector('video'), status = stage.querySelector('.player__status'), pol = L.bufferPolicy(L.effectiveBuffer(settings)), objectUrl = '', client = null, alive = true;
     cleanup = function () { alive = false; try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {} if (objectUrl) URL.revokeObjectURL(objectUrl); if (client) try { client.destroy(); } catch (e) {} };
     v.addEventListener('progress', bar); v.addEventListener('timeupdate', bar);
     v.addEventListener('waiting', function () { if (!pol.offline && !v.paused) { v.pause(); hold(); } });
@@ -156,15 +131,17 @@
       status.textContent = 'Loading the torrent engine…';
       return loadWebTorrent().then(function (WT) {
         if (!alive) return;
-        client = new WT();
+        client = new WT(L.torrentClientOptions(settings));
         client.on('error', function (e) { err('Torrent error: ' + (e.message || e)); });
-        client.add(p.uri, function (t) {
+        client.add(p.uri, L.torrentAddOptions(settings), function (t) {
           var vf = L.pickTorrentVideo(t.files);
           if (!vf) { err('This torrent has no playable video (MP4/WebM).'); return; }
           t.files.forEach(function (x) { if (x !== vf) x.deselect(); }); vf.select();
           if (pol.offline) t.on('done', function () { vf.getBlobURL(function (e, u) { if (e) err(String(e)); else { objectUrl = u; play(u, true); } }); });
           else vf.renderTo(v, { autoplay: false }, function (e) { if (e) err('Torrent playback failed: ' + e.message); else hold(); });
-          (function tick() { if (!alive) return; status.textContent = Math.round(t.progress * 100) + '% · ' + t.numPeers + ' peers · ' + Math.round(t.downloadSpeed / 1024) + ' KB/s'; if (t.progress < 1) setTimeout(tick, 1000); })();
+          (function tick() { if (!alive) return; status.textContent = Math.round(t.progress * 100) + '% · ' + t.numPeers + ' peers · ' + Math.round(t.downloadSpeed / 1024) + ' KB/s'; if (t.progress < 1) { setTimeout(tick, 1000); return; } seed(Date.now()); })();
+          // Done: seed until the configured ratio or time (Configs → Movies → Torrents), then stop.
+          function seed(t0) { if (!alive) return; if (L.seedingDone(settings, t.ratio || 0, (Date.now() - t0) / 1000)) { try { t.pause(); t.wires.forEach(function (w) { w.destroy(); }); } catch (e) {} status.textContent = '100% · seeding stopped'; return; } setTimeout(function () { seed(t0); }, 5000); }
         });
       }).catch(function (e) { err('Torrent playback failed: ' + (e.message || e)); });
     }
@@ -179,7 +156,7 @@
   }
 
   function open(m) {
-    close(); shell(m); files = [];
+    close(); settings = load(); users = loadUsers(); shell(m); files = [];
     el.addEventListener('click', function (e) {
       var a = e.target.closest('[data-act]'), s = e.target.closest('[data-src]');
       if (s) return choose(el.querySelector('.player__list').__have[+s.getAttribute('data-src')]);
@@ -190,23 +167,14 @@
         if (!(r.magnet || r.torrent)) return err('That result has no magnet or .torrent link.');
         return choose({ source: { id: 'user', name: r.title, kind: 'torrent', order: 999 }, ok: true, torrent: r.magnet || r.torrent, badge: r.badge });
       }
-      var ud = e.target.closest('[data-udel]');
-      if (ud) return storeUsers(L.removeUserSource(users, ud.getAttribute('data-udel')));
-      if (a && a.getAttribute('data-act') === 'uadd') {
-        var nw = {}; [].forEach.call(el.querySelectorAll('[data-unew]'), function (i) { nw[i.getAttribute('data-unew')] = i.value.trim(); });
-        if (storeUsers(L.addUserSource(users, nw))) [].forEach.call(el.querySelectorAll('input[data-unew]'), function (i) { i.value = ''; });
-        return;
-      }
       if (!a) return;
       if (a.getAttribute('data-act') === 'close') close();
-      if (a.getAttribute('data-act') === 'settings') { var f = el.querySelector('.player__settings'); f.hidden = !f.hidden; }
     });
     el.addEventListener('change', function (e) {
       var a = e.target.getAttribute('data-act');
       if (a === 'files') { files = [].slice.call(e.target.files || []); probe(m); }
       if (a === 'buffer') { settings.buffer = e.target.value; save(); }
-      if (e.target.hasAttribute('data-uon')) storeUsers(L.updateUserSource(users, e.target.getAttribute('data-uon'), { enabled: e.target.checked }));
-      if (e.target.hasAttribute('data-uname')) storeUsers(L.updateUserSource(users, e.target.getAttribute('data-uname'), { name: e.target.value }));
+      if (a === 'offline') { settings.offline = e.target.checked; save(); }
     });
     el.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -224,10 +192,6 @@
         if (p.error) return err(p.error);
         return choose({ source: { id: 'pasted', name: 'Your torrent', kind: 'torrent', order: 999 }, ok: true, torrent: p.uri });
       }
-      [].forEach.call(e.target.querySelectorAll('input[name]'), function (i) {
-        var ks = i.name.split('.'), o = settings; while (ks.length > 1) o = o[ks.shift()]; o[ks[0]] = i.value.trim();
-      });
-      settings.region = (settings.region || 'US').toUpperCase(); save(); e.target.hidden = true; probe(m);
     });
     probe(m);
   }

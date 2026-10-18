@@ -95,7 +95,8 @@ t('user sources: add / edit / remove, {query} template, Torznab and RSS parsing,
   assert.equal(raw.user_sources, undefined, 'no user-source presets shipped');
 });
 const pl = fs.readFileSync(path.join(app, 'web/assets/player.js'), 'utf8');
-ok(/searchUserSources/.test(pl) && /localStorage\.setItem\(UKEY/.test(pl) && /data-udel/.test(pl) && /data-uon/.test(pl), 'player: user sources searched, stored on the device, enable/disable/delete');
+const cf = fs.readFileSync(path.join(app, 'web/assets/configs.js'), 'utf8');
+ok(/searchUserSources/.test(pl) && /localStorage\.getItem\(UKEY/.test(pl) && /setItem\(USER_KEY/.test(cf) && /data-udel/.test(cf) && /data-uon/.test(cf), 'player searches user sources; Configs → Movies stores them on the device, enable/disable/delete');
 const core = fs.readFileSync(path.join(app, 'web/assets/sources-core.js'), 'utf8');
 ok(core.includes(sh.repo + '@' + sh.commit), 'sources-core.js is the copy at build.json::data.shared.commit');
 for (const pg of ['movies', 'documentaries']) {
