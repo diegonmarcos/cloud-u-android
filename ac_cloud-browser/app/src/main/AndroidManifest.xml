@@ -90,6 +90,39 @@
                 <data android:scheme="file" />
                 <data android:mimeType="application/x-bittorrent" />
             </intent-filter>
+            <!-- Saved web pages (.mhtml / .mht): by type, then by name for the senders that give a generic type
+                 (a file manager says application/octet-stream). One .* per extra dot in the name: the matcher
+                 does not backtrack. file:// is loaded as it is; content:// is copied to the cache first (MhtmlOpener). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:mimeType="multipart/related" />
+                <data android:mimeType="message/rfc822" />
+                <data android:mimeType="application/x-mimearchive" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.mhtml" />
+                <data android:pathPattern=".*\\..*\\.mhtml" />
+                <data android:pathPattern=".*\\..*\\..*\\.mhtml" />
+                <data android:pathPattern=".*\\.mht" />
+                <data android:pathPattern=".*\\..*\\.mht" />
+                <data android:pathPattern=".*\\..*\\..*\\.mht" />
+            </intent-filter>
+            <!-- "Share" of a saved page. Not message/rfc822: every mail shared from any app would list this browser. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="multipart/related" />
+                <data android:mimeType="application/x-mimearchive" />
+            </intent-filter>
         </activity>
 
         <!-- #684 the auth-mission answerer: exported but GUARDED by the signature permission

@@ -31,6 +31,7 @@ import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.browser.BrowserHostFragment
 import com.diegonmarcos.superapp.browser.BrowserSearchPageHost
+import com.diegonmarcos.superapp.browser.MhtmlOpener
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitFragmentHost
 import com.diegonmarcos.superapp.uikit.KitFragmentHostState
@@ -41,7 +42,7 @@ import com.diegonmarcos.superapp.updater.Updater
 
 /**
  * Single-activity shell for Cloud Browser. Hosts [BrowserHostFragment] full-screen.
- * Handles VIEW intents (http/https) so other apps can open links here.
+ * Handles VIEW intents (http/https, and .mhtml / .mht archives by file/content uri) so other apps can open links and saved pages here.
  * Wires the self-updater (Updater) so the app can silently update itself from GHCR.
  *
  * [BrowserHostFragment] has no host interface, but it is NOT self-configuring:
@@ -63,6 +64,8 @@ import com.diegonmarcos.superapp.updater.Updater
  */
 class MainActivity : AppCompatActivity() {
 
+    private val mhtml by lazy { MhtmlOpener(this) }
+
     /** The island's selected item (null = none); the host moves it through [BrowserHostFragment.onOverlaysClosed]. */
     private var selectedId by mutableStateOf<String?>(null)
     /** #900 the Configs top tab showing (a ui.sections[configs].pages id), while Configs is the island's item. */
@@ -82,11 +85,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         selectedId = decl.default()?.id
-        // A link that started this activity opens once; a recreation brings the browser back on its own tabs.
-        // A magnet: link or a .torrent handed to the app is queued (and the Downloads page opens), never loaded as a page.
-        val torrent = savedInstanceState == null && com.diegonmarcos.cloudbrowser.torrent.TorrentIntents.consume(this, intent)
-        val openUrl = if (savedInstanceState == null && !torrent) intent?.dataString?.takeIf { it.isNotBlank() } else null
-        setContent {
+        fun show(openUrl: String?) = setContent {
             val palette = KitPalette(
                 surface = colorResource(R.color.browser_surface),
                 surfaceSelected = colorResource(R.color.browser_selected),
@@ -117,6 +116,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        // A link or saved page (.mhtml / .mht) that started this activity opens once; a recreation brings the
+        // browser back on its own tabs. A content:// archive is copied to the cache first, so the shell waits for it.
+        // A magnet: link or a .torrent handed to the app is queued (and the Downloads page opens), never loaded as a page.
+        val torrent = savedInstanceState == null && com.diegonmarcos.cloudbrowser.torrent.TorrentIntents.consume(this, intent)
+        if (savedInstanceState != null || torrent) show(null)
+        else mhtml.open(intent) { url -> if (!isFinishing && !isDestroyed) show(url?.takeIf { it.isNotBlank() }) }
 
         Updater.start(this)
         UpdateProgress.setListener { state ->
@@ -180,12 +185,15 @@ class MainActivity : AppCompatActivity() {
         // VIEW intent from another app: replace fragment with the new URL.
         // BrowserHostFragment takes its URL via newInstance args only.
         if (com.diegonmarcos.cloudbrowser.torrent.TorrentIntents.consume(this, intent)) { setIntent(intent); return }
-        val url = intent.dataString?.takeIf { it.isNotBlank() } ?: return
-        supportFragmentManager.commit {
-            replace(
-                R.id.fragment_container,
-                BrowserHostFragment.newInstance(url, BuildConfig.UI_BROWSER_CONFIG_B64),
-            )
+        // A saved page (.mhtml / .mht) is copied to the cache first when it arrives as a content:// stream.
+        mhtml.open(intent) { target ->
+            val url = target?.takeIf { it.isNotBlank() }
+            if (url != null && !isFinishing && !isDestroyed) supportFragmentManager.commit(allowStateLoss = true) {
+                replace(
+                    R.id.fragment_container,
+                    BrowserHostFragment.newInstance(url, BuildConfig.UI_BROWSER_CONFIG_B64),
+                )
+            }
         }
     }
 

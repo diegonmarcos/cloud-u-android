@@ -10,6 +10,7 @@ import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import java.io.File
+import com.diegonmarcos.superapp.browser.MhtmlIntent
 
 /**
  * Where a finished download goes. It downloads into app-specific storage (direct paths, no
@@ -81,8 +82,14 @@ object DlPublisher {
 
     fun openIntent(ctx: Context, j: DlJob): Intent? {
         val u = shareUri(ctx, j) ?: return null
-        return Intent(Intent.ACTION_VIEW).setDataAndType(u, j.mime.ifBlank { mimeOf(j.fileName) })
+        val view = Intent(Intent.ACTION_VIEW).setDataAndType(u, j.mime.ifBlank { mimeOf(j.fileName) })
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        // A saved page (.mhtml) opens in this browser when the host handles it (MhtmlOpener), not in whichever app is default.
+        if (MhtmlIntent.isMhtmlName(j.fileName)) {
+            val own = Intent(view).setPackage(ctx.packageName)
+            if (ctx.packageManager.queryIntentActivities(own, 0).isNotEmpty()) return own
+        }
+        return view
     }
 
     fun shareIntent(ctx: Context, j: DlJob): Intent? {
