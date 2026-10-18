@@ -4760,7 +4760,7 @@
             "_doc": "APPS ACCESS - the ONE Configs tile for what used to be Apps Mesh (+ IPC + Identity). Cloud Store's Access section is the single source of truth for Apps Mesh, IPC, Identity, Android Perms and Cloud Perms (ac_cloud-store build.json ui access.pages); this tile opens Cloud Store on it (CloudStoreHandoff.open tab=access, ShellActivity action open_apps_access). Cloud Store absent: the Store's install offer (launchExternalApp cloud-store, ui.external_apps[id=cloud-store]). SuperApp declares no Apps Mesh, IPC or Identity page of its own; libs:appstore keeps the shared pages Cloud Store hosts.",
             "id": "apps-access",
             "label": "Apps Access",
-            "icon": "ic_security",
+            "icon": "ic_apps",
             "action": "action:open_apps_access",
             "group": "Setup",
             "subgroup": "Network"
