@@ -74,6 +74,9 @@ if curl -fsS "http://127.0.0.1:$ws_port/cloud-webserver-probe.txt" 2>/dev/null |
 else
     echo "FAIL nothing serving \$HOME on 127.0.0.1:$ws_port ${i}s after login; server log: $(tail -5 "$W/home/.cloud-webserver.log" 2>/dev/null | tr '\n' ' ')"; fail=1
 fi
+# The baked server must hand out the LINUX UI at / (tree, viewer, toolbar; sha256 == Linux's).
+python3 "$HERE/../../ab_cloud-terminal-store/webserver-ui-check.py" --url "http://127.0.0.1:$ws_port" "$HERE/.." \
+    || { echo "FAIL the baked server does not serve the Linux UI"; fail=1; }
 listen="$(ss -Hltn "sport = :$ws_port" 2>/dev/null | awk '{print $4}' | sort -u | tr '\n' ' ')"
 case "$listen" in
     "127.0.0.1:$ws_port ") echo "ok   it listens on 127.0.0.1:$ws_port only" ;;
