@@ -1370,4 +1370,19 @@
     <string name="gw_chip_signed_in">Angemeldet</string>
     <string name="gw_chip_needs_sign_in">Anmeldung nötig</string>
     <string name="gw_chip_error">Fehler</string>
+    <string name="settings_offline_section">Offline</string>
+    <string name="settings_offline_window_title">E-Mails offline behalten für</string>
+    <string name="settings_offline_window_1">1 Monat</string>
+    <string name="settings_offline_window_3">3 Monate</string>
+    <string name="settings_offline_window_6">6 Monate</string>
+    <string name="settings_offline_window_12">12 Monate</string>
+    <string name="settings_offline_window_all">Alle E-Mails</string>
+    <string name="settings_offline_attachments_title">Anhänge herunterladen bis</string>
+    <string name="settings_offline_attachments_none">Keine</string>
+    <string name="settings_offline_attachments_5">5 MB</string>
+    <string name="settings_offline_attachments_25">25 MB</string>
+    <string name="settings_offline_attachments_100">100 MB</string>
+    <string name="settings_offline_status">Offline-Speicher: %1$s · Letzte Synchronisierung: %2$s</string>
+    <string name="settings_offline_never">nie</string>
+    <string name="message_sign_in_required">Deine Anmeldung ist abgelaufen. Melde dich erneut an, um diese Nachricht zu laden.</string>
 </resources>

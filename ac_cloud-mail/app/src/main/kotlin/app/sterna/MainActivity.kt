@@ -209,6 +209,8 @@ class MainActivity : AppCompatActivity() {
         // Live JMAP push while the app is on screen, whatever the delivery setting (seconds, not
         // the periodic worker's minutes).
         app.sterna.push.ForegroundPush.onForeground(this)
+        // Fill the offline cache on open; WorkManager waits for a network, so offline is a no-op.
+        app.sterna.mail.OfflineSyncWorker.runNow(this)
         applySecureFlag()
     }
 

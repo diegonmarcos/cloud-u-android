@@ -6,6 +6,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import app.sterna.core.data.mail.OfflineAttachmentLimit
+import app.sterna.core.data.mail.OfflineWindow
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -247,6 +250,28 @@ class SettingsRepository(context: Context) {
         dataStore.edit { it[KEY_QUOTED_DATES_UTC] = enabled }
     }
 
+    /** "Keep mail offline for": every message inside this window is stored for offline reading. */
+    val offlineWindow: Flow<OfflineWindow> = dataStore.data.map { OfflineWindow.from(it[KEY_OFFLINE_WINDOW]) }
+
+    suspend fun setOfflineWindow(window: OfflineWindow) {
+        dataStore.edit { it[KEY_OFFLINE_WINDOW] = window.name }
+    }
+
+    /** Largest attachment the offline sync downloads. */
+    val offlineAttachmentLimit: Flow<OfflineAttachmentLimit> =
+        dataStore.data.map { OfflineAttachmentLimit.from(it[KEY_OFFLINE_ATTACHMENTS]) }
+
+    suspend fun setOfflineAttachmentLimit(limit: OfflineAttachmentLimit) {
+        dataStore.edit { it[KEY_OFFLINE_ATTACHMENTS] = limit.name }
+    }
+
+    /** Epoch millis of the last completed offline sync; 0 = never. */
+    val offlineLastSync: Flow<Long> = dataStore.data.map { it[KEY_OFFLINE_LAST_SYNC] ?: 0L }
+
+    suspend fun setOfflineLastSync(millis: Long) {
+        dataStore.edit { it[KEY_OFFLINE_LAST_SYNC] = millis }
+    }
+
     /** Reading text size for the message body. */
     val messageTextSize: Flow<MessageTextSize> = dataStore.data.map { prefs ->
         prefs[KEY_MESSAGE_TEXT_SIZE]?.let { runCatching { MessageTextSize.valueOf(it) }.getOrNull() }
@@ -486,6 +511,9 @@ class SettingsRepository(context: Context) {
         private val KEY_SIGNATURE_DELIMITER = booleanPreferencesKey("signature_delimiter")
         private val KEY_PGP_PROVIDER = stringPreferencesKey("pgp_provider")
         private val KEY_MESSAGE_TEXT_SIZE = stringPreferencesKey("message_text_size")
+        private val KEY_OFFLINE_WINDOW = stringPreferencesKey("offline_window")
+        private val KEY_OFFLINE_ATTACHMENTS = stringPreferencesKey("offline_attachment_limit")
+        private val KEY_OFFLINE_LAST_SYNC = longPreferencesKey("offline_last_sync")
         private val KEY_CONTACT_SUGGESTIONS = booleanPreferencesKey("contact_suggestions")
         private val KEY_HAS_SEEN_WELCOME = booleanPreferencesKey("has_seen_welcome")
         private val KEY_HAS_PRIMED_CONTACTS = booleanPreferencesKey("has_primed_contacts")

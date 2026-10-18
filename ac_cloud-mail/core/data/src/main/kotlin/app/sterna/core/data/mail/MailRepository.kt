@@ -163,8 +163,8 @@ private const val MAX_APPEND_FILL_PAGES = 4
 /** How many of the inbox's newest messages to prefetch (bodies) into the cache per sync. */
 private const val PREFETCH_COUNT = 20
 
-/** Max cached message bodies kept per account (LRU); bounds on-device storage. */
-private const val BODY_CACHE_CAP = 100
+/** Upper bound of messages one offline-window sync asks the server for. */
+private const val OFFLINE_MAX_MESSAGES = 20_000
 
 /** Wall-clock budget for the IMAP envelope read the SEND path makes before it may destroy the draft
  *  a message was edited from. It bounds the connect and the reads, NOT the wait for the account's
@@ -1804,9 +1804,9 @@ class MailRepository(
      * Build JMAP auth for [credentials]: Bearer for API-token accounts (the token lives in the password slot)
      * and for OAuth (refreshing within 60 s of expiry), Basic otherwise.
      */
-    private suspend fun jmapAuth(credentials: AccountCredentials): JmapAuth {
+    private suspend fun jmapAuth(credentials: AccountCredentials, force: Boolean = false): JmapAuth {
         if (credentials.authType == AuthType.API_TOKEN) return BearerAuth(credentials.password)
-        val token = tokenRefresher.freshAccessToken(credentials)
+        val token = tokenRefresher.freshAccessToken(credentials, force)
             ?: return BasicAuth(credentials.username, credentials.password)
         return BearerAuth(token)
     }
@@ -2229,8 +2229,13 @@ class MailRepository(
         if (credentials.protocol == MailProtocol.IMAP) {
             return refineAuthClass(credentials.id, openEmailImap(credentials, emailId, markRead))
         }
-        val ctx = connect(credentials)
-        val email = refineAuthClass(credentials.id, client.getEmail(ctx.session, ctx.accountId, emailId, ctx.auth))
+        val email = refineAuthClass(
+            credentials.id,
+            AuthRetry.withRefreshOn401(refresh = { invalidateSession() }) {
+                val ctx = connect(credentials)
+                client.getEmail(ctx.session, ctx.accountId, emailId, ctx.auth)
+            },
+        )
         if (markRead && !email.isSeen) {
             // Through setRead, never inline: it also nudges the drawer count, protects the id from
             // the next reconcile and advances the mailbox emailState.
@@ -2436,13 +2441,18 @@ class MailRepository(
             if (markRead) bgScope.launch { runCatching { setRead(credentials, emailId, true) } }
             return body
         }
+        // Offline-first: a stored body is rendered with NO network call; inline images missing from it
+        // are filled in the background, never awaited.
         cachedMessage(credentials.id, emailId)?.let { cached ->
+            if (cached.email.inlineImageParts().isNotEmpty() && cached.inlineImages.isEmpty()) {
+                bgScope.launch { runCatching { ensureInlineImages(credentials, emailId, cached) } }
+            }
             if (markRead) bgScope.launch { runCatching { setRead(credentials, emailId, true) } }
             // A prefetched body can hold ciphertext: route it to the decrypt flow, not to armor.
             cryptoKindOf(cached.email)?.let { kind ->
                 return cached.copy(crypto = MessageCrypto.Locked(kind))
             }
-            return ensureInlineImages(credentials, emailId, cached)
+            return cached
         }
         val email = openEmail(credentials, emailId, markRead)
         cryptoKindOf(email)?.let { kind ->
@@ -2739,7 +2749,6 @@ class MailRepository(
                     fetchedAt = System.currentTimeMillis(),
                 ),
             )
-            emailBodyDao.pruneForAccount(accountId, BODY_CACHE_CAP)
         }
     }
 
@@ -5535,6 +5544,7 @@ class MailRepository(
         // The size is announced by the message (JMAP) or its BODYSTRUCTURE (IMAP): refuse before
         // the round-trip, and before the branch, so IMAP is held to the same ceiling as JMAP.
         DownloadLimits.enforce(part.size, maxBytes)
+        offlineAttachmentFile(credentials.id, emailId, part)?.takeIf { it.isFile }?.let { return it.readBytes() }
         if (credentials.protocol == MailProtocol.IMAP) {
             val (mb, uid) = imapTarget(emailId) ?: error("Couldn't locate the message.")
             val section = part.partId ?: error("Attachment has no section.")
@@ -5700,8 +5710,22 @@ class MailRepository(
     }
 
     private suspend fun connect(credentials: AccountCredentials): Context {
-        context?.let { if (it.credentials == credentials) return it }
-        val auth = jmapAuth(credentials)
+        context?.let { if (it.credentials == credentials && !tokenRefresher.isExpiring(credentials)) return it }
+        // A 401 (expired/revoked bearer, or the edge gate refusing it) refreshes the token and the
+        // session ONCE; a second refusal surfaces as SignInRequiredException, never a raw HTTP code.
+        var auth = jmapAuth(credentials)
+        return AuthRetry.withRefreshOn401(
+            refresh = {
+                context = null
+                auth = jmapAuth(accountStore.credentials(credentials.id) ?: credentials, force = true)
+            },
+        ) { connectOnce(credentials, auth) }
+    }
+
+    /** Drop the cached session so the next call reconnects (used after a 401 on a method call). */
+    private fun invalidateSession() { context = null }
+
+    private suspend fun connectOnce(credentials: AccountCredentials, auth: JmapAuth): Context {
         val session = client.fetchSession(Jmap.sessionUrlFor(credentials.server), auth)
         val accountId = jmapAccountIdFor(credentials, session)
         reconcileLinkedAccounts(credentials, session, auth)
@@ -5721,6 +5745,98 @@ class MailRepository(
         runCatching {
             val serverIdentities = storedServerIdentities(client.getIdentities(session, accountId, auth))
             accountStore.setServerIdentities(localAccountId, serverIdentities)
+        }
+    }
+
+    // ---- Offline window sync ----------------------------------------------------------------
+
+    private val offlineAttachmentsDir = java.io.File(outboxFilesDir.parentFile ?: outboxFilesDir, "offline-attachments")
+
+    private fun offlineAttachmentFile(accountId: String, emailId: String, part: EmailBodyPart): java.io.File? {
+        val key = part.blobId ?: part.partId ?: return null
+        fun safe(v: String) = v.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        return java.io.File(java.io.File(java.io.File(offlineAttachmentsDir, safe(accountId)), safe(emailId)), safe(key))
+    }
+
+    /** Bytes held for offline reading: stored bodies plus downloaded attachments, all accounts. */
+    suspend fun offlineCacheBytes(): Long {
+        val bodies = runCatching { emailBodyDao.totalBytes() }.getOrDefault(0L)
+        val files = offlineAttachmentsDir.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
+        return bodies + files
+    }
+
+    /** Download every message of [credentials] inside [window] for offline reading; evict older ones. */
+    suspend fun syncOffline(
+        credentials: AccountCredentials,
+        window: OfflineWindow,
+        limit: OfflineAttachmentLimit,
+        nowMillis: Long = System.currentTimeMillis(),
+    ): OfflineSyncResult = OfflineSync(offlinePort(credentials)).run(window, limit, nowMillis)
+
+    private fun offlinePort(credentials: AccountCredentials) = object : OfflineSyncPort {
+        override suspend fun idsInWindow(cutoffMillis: Long?): List<String> {
+            val local = emailDao.idsSince(credentials.id, cutoffMillis ?: Long.MIN_VALUE)
+            if (credentials.protocol == MailProtocol.IMAP) return local
+            val ctx = connect(credentials)
+            val server = AuthRetry.withRefreshOn401(refresh = { invalidateSession() }) {
+                val c = connect(credentials)
+                client.searchEmails(
+                    c.session, c.accountId, SearchQuery(afterMillis = cutoffMillis), OFFLINE_MAX_MESSAGES, c.auth,
+                    excludeMailboxIds = listOfNotNull(ctx.rolesToMailboxId["trash"], ctx.rolesToMailboxId["junk"]),
+                ).emails.map { it.id }
+            }
+            return (server + local).distinct()
+        }
+
+        override suspend fun cachedIds(ids: List<String>): Set<String> =
+            ids.chunked(500).flatMap { emailBodyDao.cachedIds(credentials.id, it) }.toSet()
+
+        override suspend fun fetchAndStore(ids: List<String>, attachmentMaxBytes: Long) {
+            val stored: List<Email> = if (credentials.protocol == MailProtocol.IMAP) {
+                ids.mapNotNull { id -> runCatching { openMessage(credentials, id, markRead = false).email }.getOrNull() }
+            } else {
+                val emails = AuthRetry.withRefreshOn401(refresh = { invalidateSession() }) {
+                    val ctx = connect(credentials)
+                    client.getEmailsWithBody(ctx.session, ctx.accountId, ids, ctx.auth)
+                }
+                val ctx = connect(credentials)
+                val origins = originalSendersOf(ctx, emails) ?: emptyMap()
+                emails.map { email ->
+                    val withOrigin = email.copy(originalSender = origins[email.id])
+                    if (cryptoKindOf(withOrigin) == null) {
+                        val inline = runCatching { fetchInlineImages(credentials, withOrigin, email.id) }.getOrDefault(emptyMap())
+                        persistBody(credentials.id, email.id, withOrigin, inline)
+                    }
+                    withOrigin
+                }
+            }
+            if (attachmentMaxBytes <= 0) return
+            for (email in stored) {
+                for (part in email.attachments) {
+                    if (part.size <= 0 || part.size > attachmentMaxBytes) continue
+                    val file = offlineAttachmentFile(credentials.id, email.id, part) ?: continue
+                    if (file.isFile) continue
+                    runCatching {
+                        val bytes = downloadAttachment(credentials, part, email.id, attachmentMaxBytes)
+                        file.parentFile?.mkdirs()
+                        val tmp = java.io.File(file.path + ".part")
+                        tmp.writeBytes(bytes)
+                        tmp.renameTo(file)
+                    }
+                }
+            }
+        }
+
+        override suspend fun evictOlderThan(cutoffMillis: Long): Int {
+            val old = emailDao.idsBefore(credentials.id, cutoffMillis)
+            old.chunked(500).forEach { emailBodyDao.deleteIds(credentials.id, it) }
+            val orphans = emailBodyDao.fetchedBefore(credentials.id, cutoffMillis)
+            orphans.chunked(500).forEach { emailBodyDao.deleteIds(credentials.id, it) }
+            val accountDir = offlineAttachmentFile(credentials.id, "x", EmailBodyPart(blobId = "x"))?.parentFile?.parentFile
+            (old + orphans).forEach { id ->
+                accountDir?.let { java.io.File(it, id.replace(Regex("[^A-Za-z0-9._-]"), "_")).deleteRecursively() }
+            }
+            return old.size + orphans.size
         }
     }
 }

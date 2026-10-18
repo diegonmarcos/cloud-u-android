@@ -1382,4 +1382,19 @@
     <string name="gw_chip_signed_in">Connecté</string>
     <string name="gw_chip_needs_sign_in">Connexion requise</string>
     <string name="gw_chip_error">Erreur</string>
+    <string name="settings_offline_section">Hors ligne</string>
+    <string name="settings_offline_window_title">Garder les e-mails hors ligne pendant</string>
+    <string name="settings_offline_window_1">1 mois</string>
+    <string name="settings_offline_window_3">3 mois</string>
+    <string name="settings_offline_window_6">6 mois</string>
+    <string name="settings_offline_window_12">12 mois</string>
+    <string name="settings_offline_window_all">Tous les e-mails</string>
+    <string name="settings_offline_attachments_title">Télécharger les pièces jointes jusqu’à</string>
+    <string name="settings_offline_attachments_none">Aucune</string>
+    <string name="settings_offline_attachments_5">5 Mo</string>
+    <string name="settings_offline_attachments_25">25 Mo</string>
+    <string name="settings_offline_attachments_100">100 Mo</string>
+    <string name="settings_offline_status">Cache hors ligne : %1$s · Dernière synchro : %2$s</string>
+    <string name="settings_offline_never">jamais</string>
+    <string name="message_sign_in_required">Votre connexion a expiré. Reconnectez-vous pour charger ce message.</string>
 </resources>

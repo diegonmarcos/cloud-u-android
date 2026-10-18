@@ -1376,4 +1376,19 @@
     <string name="gw_chip_signed_in">Accesso effettuato</string>
     <string name="gw_chip_needs_sign_in">Accesso richiesto</string>
     <string name="gw_chip_error">Errore</string>
+    <string name="settings_offline_section">Offline</string>
+    <string name="settings_offline_window_title">Conserva la posta offline per</string>
+    <string name="settings_offline_window_1">1 mese</string>
+    <string name="settings_offline_window_3">3 mesi</string>
+    <string name="settings_offline_window_6">6 mesi</string>
+    <string name="settings_offline_window_12">12 mesi</string>
+    <string name="settings_offline_window_all">Tutta la posta</string>
+    <string name="settings_offline_attachments_title">Scarica allegati fino a</string>
+    <string name="settings_offline_attachments_none">Nessuno</string>
+    <string name="settings_offline_attachments_5">5 MB</string>
+    <string name="settings_offline_attachments_25">25 MB</string>
+    <string name="settings_offline_attachments_100">100 MB</string>
+    <string name="settings_offline_status">Cache offline: %1$s · Ultima sincronizzazione: %2$s</string>
+    <string name="settings_offline_never">mai</string>
+    <string name="message_sign_in_required">L’accesso è scaduto. Accedi di nuovo per caricare questo messaggio.</string>
 </resources>

@@ -15,6 +15,19 @@ const val BODY_CACHE_CLEAR_SQL: String = "DELETE FROM email_bodies"
 @Dao
 interface EmailBodyDao {
 
+    @Query("DELETE FROM email_bodies WHERE accountId = :accountId AND id IN (:ids)")
+    suspend fun deleteIds(accountId: String, ids: List<String>)
+
+    /** Stored bodies with no list row left, fetched before [cutoff]: outside the offline window. */
+    @Query(
+        "SELECT b.id FROM email_bodies b WHERE b.accountId = :accountId AND b.fetchedAt < :cutoff " +
+            "AND NOT EXISTS (SELECT 1 FROM emails e WHERE e.accountId = b.accountId AND e.id = b.id)",
+    )
+    suspend fun fetchedBefore(accountId: String, cutoff: Long): List<String>
+
+    @Query("SELECT COALESCE(SUM(LENGTH(bodyJson) + LENGTH(inlineImagesJson)), 0) FROM email_bodies")
+    suspend fun totalBytes(): Long
+
     @Upsert
     suspend fun upsert(body: EmailBodyEntity)
 

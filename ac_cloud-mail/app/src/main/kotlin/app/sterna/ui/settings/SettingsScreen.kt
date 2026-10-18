@@ -656,6 +656,7 @@ private fun ReadingScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     onCheckedChange = viewModel::setUnarchiveOnReply,
                 )
             }
+            OfflineSection(viewModel)
             SettingsSection(stringResource(R.string.settings_message_section)) {
                 SettingChoiceRow(
                     title = stringResource(R.string.settings_text_size_title),
@@ -2920,4 +2921,60 @@ internal fun DeliveryModeOption(
             )
         }
     }
+}
+
+@Composable
+private fun OfflineSection(viewModel: SettingsViewModel) {
+    val window by viewModel.offlineWindow.collectAsStateWithLifecycle()
+    val limit by viewModel.offlineAttachmentLimit.collectAsStateWithLifecycle()
+    val lastSync by viewModel.offlineLastSync.collectAsStateWithLifecycle()
+    val bytes by viewModel.offlineCacheBytes.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(lastSync) { viewModel.refreshOfflineCacheSize() }
+    SettingsSection(stringResource(R.string.settings_offline_section)) {
+        SettingChoiceRow(
+            title = stringResource(R.string.settings_offline_window_title),
+            options = app.sterna.core.data.mail.OfflineWindow.entries.toList(),
+            selected = window,
+            optionLabel = { offlineWindowLabel(context, it) },
+            onSelect = viewModel::setOfflineWindow,
+        )
+        SettingChoiceRow(
+            title = stringResource(R.string.settings_offline_attachments_title),
+            options = app.sterna.core.data.mail.OfflineAttachmentLimit.entries.toList(),
+            selected = limit,
+            optionLabel = { offlineAttachmentLabel(context, it) },
+            onSelect = viewModel::setOfflineAttachmentLimit,
+        )
+        Text(
+            stringResource(
+                R.string.settings_offline_status,
+                android.text.format.Formatter.formatShortFileSize(context, bytes),
+                if (lastSync > 0) {
+                    java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                        .format(java.util.Date(lastSync))
+                } else {
+                    stringResource(R.string.settings_offline_never)
+                },
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s8),
+        )
+    }
+}
+
+private fun offlineWindowLabel(context: Context, w: app.sterna.core.data.mail.OfflineWindow): String = when (w) {
+    app.sterna.core.data.mail.OfflineWindow.ONE -> context.getString(R.string.settings_offline_window_1)
+    app.sterna.core.data.mail.OfflineWindow.THREE -> context.getString(R.string.settings_offline_window_3)
+    app.sterna.core.data.mail.OfflineWindow.SIX -> context.getString(R.string.settings_offline_window_6)
+    app.sterna.core.data.mail.OfflineWindow.TWELVE -> context.getString(R.string.settings_offline_window_12)
+    app.sterna.core.data.mail.OfflineWindow.ALL -> context.getString(R.string.settings_offline_window_all)
+}
+
+private fun offlineAttachmentLabel(context: Context, l: app.sterna.core.data.mail.OfflineAttachmentLimit): String = when (l) {
+    app.sterna.core.data.mail.OfflineAttachmentLimit.NONE -> context.getString(R.string.settings_offline_attachments_none)
+    app.sterna.core.data.mail.OfflineAttachmentLimit.MB_5 -> context.getString(R.string.settings_offline_attachments_5)
+    app.sterna.core.data.mail.OfflineAttachmentLimit.MB_25 -> context.getString(R.string.settings_offline_attachments_25)
+    app.sterna.core.data.mail.OfflineAttachmentLimit.MB_100 -> context.getString(R.string.settings_offline_attachments_100)
 }

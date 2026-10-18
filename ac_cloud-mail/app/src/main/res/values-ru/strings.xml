@@ -1393,4 +1393,19 @@
     <string name="gw_chip_signed_in">Вход выполнен</string>
     <string name="gw_chip_needs_sign_in">Нужен вход</string>
     <string name="gw_chip_error">Ошибка</string>
+    <string name="settings_offline_section">Офлайн</string>
+    <string name="settings_offline_window_title">Хранить почту офлайн</string>
+    <string name="settings_offline_window_1">1 месяц</string>
+    <string name="settings_offline_window_3">3 месяца</string>
+    <string name="settings_offline_window_6">6 месяцев</string>
+    <string name="settings_offline_window_12">12 месяцев</string>
+    <string name="settings_offline_window_all">Вся почта</string>
+    <string name="settings_offline_attachments_title">Скачивать вложения до</string>
+    <string name="settings_offline_attachments_none">Нет</string>
+    <string name="settings_offline_attachments_5">5 МБ</string>
+    <string name="settings_offline_attachments_25">25 МБ</string>
+    <string name="settings_offline_attachments_100">100 МБ</string>
+    <string name="settings_offline_status">Офлайн-кэш: %1$s · Последняя синхронизация: %2$s</string>
+    <string name="settings_offline_never">никогда</string>
+    <string name="message_sign_in_required">Срок входа истёк. Войдите снова, чтобы загрузить это письмо.</string>
 </resources>

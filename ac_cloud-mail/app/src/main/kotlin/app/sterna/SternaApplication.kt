@@ -261,6 +261,8 @@ class SternaApplication : Application() {
         // is downloaded here; the worker decides that, and on mobile data it asks
         // first. See ui/settings/UpdateScreen.kt for what the owner sees.
         Updater.start(this)
+        // Offline window sync (unmetered + charging); idempotent.
+        app.sterna.mail.OfflineSyncWorker.ensureScheduled(this)
     }
 }
 

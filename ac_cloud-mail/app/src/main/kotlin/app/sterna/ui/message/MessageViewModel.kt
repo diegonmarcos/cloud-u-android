@@ -90,7 +90,8 @@ import kotlinx.coroutines.withContext
 sealed interface MessageState {
     data object Loading : MessageState
     data class Loaded(val email: Email) : MessageState
-    data class Error(val message: String) : MessageState
+    /** [signIn]: the server refused the login even after a token refresh; offer 'Sign in again'. */
+    data class Error(val message: String, val signIn: Boolean = false) : MessageState
 }
 
 /** The opened message. [header] has the summary fields shown at once; [body] is the full email and its
@@ -317,6 +318,8 @@ internal const val CONFIRM_LINKS_UNLOADED = true
  */
 internal fun readFailureStringRes(t: Throwable): Int? = when (t) {
     is ContentTooLargeException -> R.string.status_message_too_large
+    // A 401 that survived the automatic refresh-and-retry: a clear action, never 'HTTP 401'.
+    is app.sterna.core.data.mail.SignInRequiredException -> R.string.message_sign_in_required
     // ONE sentence, naming no cause. Offline, destroyed server-side and a renumbered folder are
     // the expected three, but the repository wraps EVERY failure of that fetch — an expired password
     // and a bad certificate land here too.
@@ -1419,7 +1422,10 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
                 // REPLACES the technical text (#159) — so unless the throwable is logged here, the
                 // reason this message would not open exists nowhere.
                 android.util.Log.w("SternaMessage", "message load failed: $emailId", t)
-                _state.value = MessageState.Error(readFailureText(t))
+                _state.value = MessageState.Error(
+                    readFailureText(t),
+                    signIn = app.sterna.core.data.mail.AuthRetry.isAuthFailure(t),
+                )
             }
         }
     }

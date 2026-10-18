@@ -252,6 +252,9 @@ private fun pagerKey(entry: Pair<String, String?>): String =
  * (#13), or none of them for a lone message. Each page owns its own [MessageViewModel] and account
  * context, and mark-as-read fires on settle, never while a message is flicked past.
  */
+/** Where "Sign in again" goes from a message the server refused to load: the account's settings. */
+val LocalOpenAccountSettings = androidx.compose.runtime.staticCompositionLocalOf<(String?) -> Unit> { {} }
+
 @Composable
 fun MessageScreen(
     anchorEmailId: String,
@@ -2020,6 +2023,12 @@ private fun MessageContent(
                     stringResource(R.string.message_load_error, s.message),
                     color = MaterialTheme.colorScheme.error,
                 )
+                if (s.signIn) {
+                    val openAccountSettings = LocalOpenAccountSettings.current
+                    Button(onClick = { openAccountSettings(accountId) }) {
+                        Text(stringResource(R.string.gw_sign_in_again))
+                    }
+                }
                 Button(onClick = { viewModel.load(emailId, accountId, settled = true) }) {
                     Text(stringResource(R.string.message_retry))
                 }

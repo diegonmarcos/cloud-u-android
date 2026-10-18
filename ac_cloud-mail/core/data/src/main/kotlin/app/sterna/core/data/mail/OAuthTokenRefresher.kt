@@ -12,9 +12,11 @@ class OAuthTokenRefresher(
     private val accountStore: AccountStore,
 ) {
     /** A fresh access token for [credentials], or null when it isn't an OAuth account. */
-    suspend fun freshAccessToken(credentials: AccountCredentials): String? {
+    suspend fun freshAccessToken(credentials: AccountCredentials, force: Boolean = false): String? {
         val oauth = credentials.oauth ?: return null
-        if (oauth.accessToken.isNotBlank() &&
+        // force: the server answered 401 to a token our clock still thinks valid (revoked, rotated,
+        // or refused by the edge gate) — refresh regardless of the stored expiry.
+        if (!force && oauth.accessToken.isNotBlank() &&
             oauth.accessExpiresAtMillis - System.currentTimeMillis() > 60_000
         ) {
             return oauth.accessToken
@@ -28,5 +30,12 @@ class OAuthTokenRefresher(
             accessExpiresAtMillis = expiresAt,
         )
         return tokens.accessToken
+    }
+
+    /** Whether [credentials]' OAuth access token is (about to be) expired, so a cached session holding it is stale. */
+    fun isExpiring(credentials: AccountCredentials, nowMillis: Long = System.currentTimeMillis()): Boolean {
+        val oauth = credentials.oauth ?: return false
+        if (oauth.accessExpiresAtMillis <= 0) return false
+        return oauth.accessExpiresAtMillis - nowMillis <= 60_000
     }
 }

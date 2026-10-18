@@ -490,4 +490,45 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setMessageTextSize(size: MessageTextSize) {
         viewModelScope.launch { settings.setMessageTextSize(size) }
     }
+
+    val offlineWindow = settings.offlineWindow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = app.sterna.core.data.mail.OfflineWindow.DEFAULT,
+    )
+
+    fun setOfflineWindow(window: app.sterna.core.data.mail.OfflineWindow) {
+        viewModelScope.launch {
+            settings.setOfflineWindow(window)
+            app.sterna.mail.OfflineSyncWorker.runNow(getApplication())
+        }
+    }
+
+    val offlineAttachmentLimit = settings.offlineAttachmentLimit.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = app.sterna.core.data.mail.OfflineAttachmentLimit.DEFAULT,
+    )
+
+    fun setOfflineAttachmentLimit(limit: app.sterna.core.data.mail.OfflineAttachmentLimit) {
+        viewModelScope.launch {
+            settings.setOfflineAttachmentLimit(limit)
+            app.sterna.mail.OfflineSyncWorker.runNow(getApplication())
+        }
+    }
+
+    val offlineLastSync = settings.offlineLastSync.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = 0L,
+    )
+
+    private val _offlineCacheBytes = MutableStateFlow(0L)
+    val offlineCacheBytes = _offlineCacheBytes.asStateFlow()
+
+    fun refreshOfflineCacheSize() {
+        viewModelScope.launch {
+            _offlineCacheBytes.value = runCatching { getApplication<Application>().container.mailRepository.offlineCacheBytes() }.getOrDefault(0L)
+        }
+    }
 }

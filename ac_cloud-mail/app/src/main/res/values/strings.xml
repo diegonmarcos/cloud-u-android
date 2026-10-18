@@ -1479,4 +1479,19 @@
     <string name="gw_chip_signed_in">Signed in</string>
     <string name="gw_chip_needs_sign_in">Needs sign-in</string>
     <string name="gw_chip_error">Error</string>
+    <string name="settings_offline_section">Offline</string>
+    <string name="settings_offline_window_title">Keep mail offline for</string>
+    <string name="settings_offline_window_1">1 month</string>
+    <string name="settings_offline_window_3">3 months</string>
+    <string name="settings_offline_window_6">6 months</string>
+    <string name="settings_offline_window_12">12 months</string>
+    <string name="settings_offline_window_all">All mail</string>
+    <string name="settings_offline_attachments_title">Download attachments up to</string>
+    <string name="settings_offline_attachments_none">None</string>
+    <string name="settings_offline_attachments_5">5 MB</string>
+    <string name="settings_offline_attachments_25">25 MB</string>
+    <string name="settings_offline_attachments_100">100 MB</string>
+    <string name="settings_offline_status">Offline cache: %1$s · Last sync: %2$s</string>
+    <string name="settings_offline_never">never</string>
+    <string name="message_sign_in_required">Your sign-in has expired. Sign in again to load this message.</string>
 </resources>

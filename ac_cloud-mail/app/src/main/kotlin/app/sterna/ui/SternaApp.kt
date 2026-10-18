@@ -519,7 +519,12 @@ private fun MainNavHost(
             // WebView must not draw its GL functor into it (null-SkSurface SIGSEGV, #10).
             val navTransitionActive = transition.currentState != EnterExitState.Visible ||
                 transition.targetState != EnterExitState.Visible
-            CompositionLocalProvider(LocalNavTransitionActive provides navTransitionActive) {
+            CompositionLocalProvider(
+                LocalNavTransitionActive provides navTransitionActive,
+                app.sterna.ui.message.LocalOpenAccountSettings provides { id ->
+                    entry.navigateOnce { nav.navigate(if (id != null) "settings?accountId=$id" else "settings") }
+                },
+            ) {
                 MessageScreen(
                     anchorEmailId = emailId,
                     anchorAccountId = accountId,

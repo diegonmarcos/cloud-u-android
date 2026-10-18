@@ -1373,4 +1373,19 @@
     <string name="gw_chip_signed_in">Ingelogd</string>
     <string name="gw_chip_needs_sign_in">Inloggen nodig</string>
     <string name="gw_chip_error">Fout</string>
+    <string name="settings_offline_section">Offline</string>
+    <string name="settings_offline_window_title">Mail offline bewaren voor</string>
+    <string name="settings_offline_window_1">1 maand</string>
+    <string name="settings_offline_window_3">3 maanden</string>
+    <string name="settings_offline_window_6">6 maanden</string>
+    <string name="settings_offline_window_12">12 maanden</string>
+    <string name="settings_offline_window_all">Alle mail</string>
+    <string name="settings_offline_attachments_title">Bijlagen downloaden tot</string>
+    <string name="settings_offline_attachments_none">Geen</string>
+    <string name="settings_offline_attachments_5">5 MB</string>
+    <string name="settings_offline_attachments_25">25 MB</string>
+    <string name="settings_offline_attachments_100">100 MB</string>
+    <string name="settings_offline_status">Offline cache: %1$s · Laatste synchronisatie: %2$s</string>
+    <string name="settings_offline_never">nooit</string>
+    <string name="message_sign_in_required">Je aanmelding is verlopen. Meld je opnieuw aan om dit bericht te laden.</string>
 </resources>

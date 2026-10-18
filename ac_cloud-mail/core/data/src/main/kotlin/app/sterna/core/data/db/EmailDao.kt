@@ -47,6 +47,14 @@ const val SENDER_MESSAGE_IDS_SQL: String =
 @Dao
 interface EmailDao {
 
+    /** Offline window: ids of an account's messages received at or after [cutoff] (epoch millis). */
+    @Query("SELECT DISTINCT id FROM emails WHERE accountId = :accountId AND sortKey >= :cutoff")
+    suspend fun idsSince(accountId: String, cutoff: Long): List<String>
+
+    /** Offline window: ids of an account's messages received before [cutoff]. */
+    @Query("SELECT DISTINCT id FROM emails WHERE accountId = :accountId AND sortKey < :cutoff")
+    suspend fun idsBefore(accountId: String, cutoff: Long): List<String>
+
     /**
      * Paged source for the list; the query is built dynamically (MailRepository.pagingQuery)
      * because the ORDER BY and mailbox-id set vary per view.
