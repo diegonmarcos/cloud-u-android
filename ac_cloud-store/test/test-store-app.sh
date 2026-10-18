@@ -156,18 +156,18 @@ PY
   grep -q 'StoreDensity\.' "$S/app/src/main/java/com/diegonmarcos/cloudstore/ConfigsPage.kt" && ok "Cloud Store's screens read StoreDensity" || bad "Cloud Store's Configs page does not read StoreDensity"
   grep -q 'StoreDensity\.T_' "$L/StoreCloudFragment.kt" && grep -q 'StoreDensity\.T_' "$L/StorePhoneFragment.kt" && ok "the Cloud and Phone shelves draw their type from the ramp" || bad "a shelf page does not use the StoreDensity type ramp"
   # 7. #868 the fleet nav pattern: the island's five pages (#896) are build.json::ui.sections, the bar is the shared island
-  python3 - "$S/build.json" "$L/../../../../../assets/appstore-feeds.json" <<'PY' && ok "ui.bottom_nav is cloud, phone, feed, access (four, each a ui.sections id; settings is the section the top bar's Configs opens), Phone's pages are installed|search|declared, Feed's the declared feeds, Access's mesh|ipc|identity|android|cloud, default Cloud" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, feed, access (+ the settings section)"
+  python3 - "$S/build.json" "$L/../../../../../assets/appstore-feeds.json" <<'PY' && ok "ui.bottom_nav is EXACTLY cloud, phone, search, feed, access (five, each a ui.sections id; settings is the section the top bar's Configs opens), Phone's pages are installed|declared (Search is its own item with no child pages), Feed's the declared feeds, Access's mesh|ipc|identity|android|cloud, default Search" || bad "build.json ui.bottom_nav/sections/default_section do not declare cloud, phone, search, feed, access (+ the settings section), default search"
 import json, os, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
 secs = {s.get('id'): s for s in ui.get('sections') or []}
 feeds = json.load(open(sys.argv[2]))['feeds'] if os.path.exists(sys.argv[2]) else None
 pg = lambda i: [p.get('id') for p in secs.get(i, {}).get('pages') or []]
-ok = (ui.get('bottom_nav') == ['cloud', 'phone', 'feed', 'access']
+ok = (ui.get('bottom_nav') == ['cloud', 'phone', 'search', 'feed', 'access']
       and set(ui['bottom_nav']) <= set(secs) and 'settings' in secs and 'mesh' not in secs and 'perms' not in secs
       and pg('access') == ['mesh', 'ipc', 'identity', 'android', 'cloud']
-      and pg('phone') == ['installed', 'search', 'declared']
+      and pg('phone') == ['installed', 'declared'] and 'search' in secs and pg('search') == []
       and (pg('feed') == [f['id'] for f in feeds] if feeds else len(pg('feed')) >= 2)
-      and ui.get('default_section') == 'cloud')
+      and ui.get('default_section') == 'search')
 sys.exit(0 if ok else 1)
 PY
   local bg; bg="$(cat "$S/app/build.gradle")"
@@ -239,17 +239,22 @@ mutate "island no longer fed by NavDecl" store/app/src/main/java/com/diegonmarco
 mutate "a section leaves the bar" store/build.json '"bottom_nav": [
       "cloud",
       "phone",
+      "search",
       "feed",
       "access"
     ]' '"bottom_nav": [
       "cloud",
       "phone",
+      "search",
       "feed",
       "perms"
     ]' || M=$((M+1))
 mutate "Phone's action bar goes to the bottom again" lib/StorePhoneFragment.kt 'StorePage.Frame(strip) {' 'StorePage.Frame(strip, actions = col) {' || M=$((M+1))
 mutate "a tab gets a minimum height back" lib/StoreBar.kt 'base.storeSurface(style, on).testTag(tag)' 'base.storeSurface(style, on).heightIn(min = 120.dp).testTag(tag)' || M=$((M+1))
 mutate "a button gets a minimum height back" lib/StoreBar.kt '.storeSurface(style, false, if (onClick != null) fill else Ink.DISABLED)' '.heightIn(min = 120.dp).storeSurface(style, false, if (onClick != null) fill else Ink.DISABLED)' || M=$((M+1))
+mutate "the app opens on Cloud again, not Search" store/build.json '"default_section": "search"' '"default_section": "cloud"' || M=$((M+1))
+mutate "Search goes back under Phone" store/build.json '"phone",
+      "search",' '"phone",' || M=$((M+1))
 mutate "Phone loses its Installed tab" store/build.json '"id": "installed",' '"id": "installd",' || M=$((M+1))
 mutate "Feed page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'FeedPage(pageOf(it))' 'Unit' || M=$((M+1))
 mutate "Access page dropped" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'AccessPage(pageOf(it))' 'Unit' || M=$((M+1))

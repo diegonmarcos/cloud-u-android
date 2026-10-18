@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Store > Phone > Search: the landing (our list, filed under SuperApp > Phone's taxonomy) and the
+# Store > Search (its own island item after Phone): the landing (our list, filed under SuperApp > Phone's taxonomy) and the
 # merged multi-source search.
 #
 #  1. Behaviour (kotlinc, plain JVM): libs:appstore StoreSuggest + apps/PhoneTaxonomyLayout -
@@ -177,7 +177,8 @@ ui = json.load(open(sys.argv[2], encoding='utf-8')).get("ui", {})
 sec = {x.get("id"): x for x in ui.get("sections", []) if isinstance(x, dict)}
 pages = (sec.get("phone") or {}).get("pages") or []
 pages = [p.get("id") if isinstance(p, dict) else p for p in pages]
-if "search" not in pages: bad.append("Phone has no search page: %s" % pages)
+if "search" in pages: bad.append("Search is back under Phone: %s" % pages)
+if ui.get("bottom_nav", [])[:3] != ["cloud", "phone", "search"] or "search" not in sec: bad.append("Search is not its own island item right after Phone: %s" % ui.get("bottom_nav"))
 if not 2 <= len(pages) <= 8: bad.append("Phone has %d pages, outside 2..8" % len(pages))
 if not 2 <= len(r["order"]) + 1 <= 8: bad.append("the Phone source strip has %d pills, outside 2..8" % (len(r["order"]) + 1))
 for b in bad: print("  FAIL: " + b)

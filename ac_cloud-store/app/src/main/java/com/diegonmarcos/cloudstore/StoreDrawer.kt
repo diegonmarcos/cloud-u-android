@@ -16,7 +16,7 @@ import com.diegonmarcos.superapp.bottomnav.NavDecl
 /**
  * What the Store puts in the top bar's drawer ([com.diegonmarcos.superapp.bottomnav.TopBarDrawer], called by
  * MainActivity's shell): the Store's own categories, from the same build.json::ui the island and the page strip
- * read, so nothing is typed here. First the OPEN section's pages (Phone: Installed | Search | Declared, Feed:
+ * read, so nothing is typed here. First the OPEN section's pages (Phone: Installed | Declared, Feed:
  * Commits | CI-CD, Access: its four) when it has a strip, then every island section. A tap navigates and closes the
  * drawer. Configs is not listed: it is the top bar's Settings > Configs, once.
  *

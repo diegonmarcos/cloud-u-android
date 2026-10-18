@@ -2,7 +2,7 @@
 # Cloud Store ADOPTS the fleet's AppTopBar (libs:bottomnav): hamburger + page drawer, title, AI and Settings.
 # What this holds, statically (no build, no device, no network):
 #   T1 build.json::ui.top_bar declares the bar: drawer, ai, settings [account, configs] (the title is the app's build.json name, passed by the host)
-#   T2 Configs MOVED: ui.bottom_nav no longer lists settings (four island items), the settings section is still
+#   T2 Configs MOVED: ui.bottom_nav no longer lists settings (five island items, Settings among none), the settings section is still
 #      declared (it is the page Configs opens) and MainActivity still draws SettingsPage for it
 #   T3 MainActivity draws the declared bar with the SHARED AppTopBarScaffold: TopBarDecl from BuildConfig,
 #      Account = rememberAccountLauncher(), Configs = the settings section, AI = libs:ai's panel over the
@@ -42,15 +42,17 @@ import json, sys
 t = (json.load(open(sys.argv[1]))['ui'].get('top_bar') or {})
 sys.exit(0 if 'title' not in t and t.get('drawer') is True and t.get('ai') is True and t.get('settings') == ['account', 'configs'] else 1)
 PY
-  python3 - "$BJ" <<'PY' && ok "T2 settings left the island (four items) and stays a declared section" || bad "T2 ui.bottom_nav still lists settings, or the settings section is gone"
+  python3 - "$BJ" <<'PY' && ok "T2 settings left the island (five items: cloud, phone, search, feed, access; opens on search) and stays a declared section" || bad "T2 ui.bottom_nav still lists settings, or the settings section is gone"
 import json, sys
 ui = json.load(open(sys.argv[1]))['ui']
 secs = [s['id'] for s in ui['sections']]
-sys.exit(0 if ui['bottom_nav'] == ['cloud', 'phone', 'feed', 'access'] and 'settings' in secs else 1)
+sys.exit(0 if ui['bottom_nav'] == ['cloud', 'phone', 'search', 'feed', 'access'] and ui['default_section'] == 'search' and 'settings' in secs else 1)
 PY
   local ma; ma="$(strip "$MA")"
   printf '%s' "$ma" | grep -q 'if (selected == TAB_SETTINGS) section?.let { ConfigsPage(pageOf(it)) }' \
     && ok "T2 the settings section still draws the Configs page (ConfigsPage, with its declared pages)" || bad "T2 MainActivity no longer draws ConfigsPage for the settings section"
+  printf '%s' "$ma" | grep -q 'StorePages.select(TAB_PHONE, StorePhoneFragment.PAGE_SEARCH)' && printf '%s' "$ma" | grep -q 'selected == TAB_PHONE || selected == TAB_SEARCH' && printf '%s' "$ma" | grep -q '"search" -> Icons.Filled.Search' \
+    && ok "T2 Search is its own island item hosted by the Phone fragment's search page (no second copy), with its own icon" || bad "T2 MainActivity does not host the Search section on StorePhoneFragment's search page"
   printf '%s' "$ma" | grep -q 'AppTopBarScaffold(' && printf '%s' "$ma" | grep -q 'TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64)' \
     && ok "T3 MainActivity draws the declared bar with the shared AppTopBarScaffold" || bad "T3 MainActivity does not feed AppTopBarScaffold from the baked TopBarDecl"
   printf '%s' "$ma" | grep -q 'onAccount = rememberAccountLauncher()' \

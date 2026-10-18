@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 /**
  * The glyphs of the store's sections (ui.sections[].icon in ac_cloud-store/build.json), drawn
  * as plain path data so the page needs no icon artifact. The Android shell maps the same names to
- * Material icons (Cloud, PhoneAndroid, RssFeed, Security, Settings); the shapes here are the same idea, not a
+ * Material icons (Cloud, PhoneAndroid, Search, RssFeed, Security, Settings); the shapes here are the same idea, not a
  * pixel copy.
  */
 internal object StoreIcons {
@@ -26,6 +26,10 @@ internal object StoreIcons {
     private val phone = glyph(
         "phone",
         "M7,2h10a2,2 0 0 1 2,2v16a2,2 0 0 1 -2,2H7a2,2 0 0 1 -2,-2V4a2,2 0 0 1 2,-2zM7,5v12h10V5z",
+    )
+    private val search = glyph(
+        "search",
+        "M15.5,14h-0.79l-0.28,-0.27C15.41,12.59 16,11.11 16,9.5 16,5.91 13.09,3 9.5,3S3,5.91 3,9.5 5.91,16 9.5,16c1.61,0 3.09,-0.59 4.23,-1.57l0.27,0.28v0.79l5,4.99L20.49,19l-4.99,-5zM9.5,14C7.01,14 5,11.99 5,9.5S7.01,5 9.5,5 14,7.01 14,9.5 11.99,14 9.5,14z",
     )
     private val mesh = glyph(
         "mesh",
@@ -51,6 +55,7 @@ internal object StoreIcons {
     fun of(name: String): ImageVector = when (name) {
         "cloud" -> cloud
         "phone" -> phone
+        "search" -> search
         "mesh" -> mesh
         "feed" -> feed
         "access" -> perms

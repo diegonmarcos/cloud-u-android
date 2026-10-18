@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -48,7 +49,7 @@ import com.diegonmarcos.superapp.updater.Updater
 
 /**
  * #865 The three store pages SuperApp shows under Config, as sections of the fleet island (#868):
- * Cloud (the constellation fleet), Phone (installed apps), Feed and Access (#866). They are
+ * Cloud (the constellation fleet), Phone (installed apps), Search, Feed and Access (#866). They are
  * build.json::ui.sections and ui.bottom_nav; [NAV] reads them, the island draws them. Settings is the
  * fifth section but no longer an island item: it is the page the top bar's Settings > Configs opens.
  *
@@ -102,6 +103,12 @@ class MainActivity : AppCompatActivity() {
         }
         // Configs is not on the island any more (the top bar's Settings > Configs opens it), so Back leaves it for the home section.
         androidx.activity.compose.BackHandler(enabled = selected == TAB_SETTINGS) { selected = NAV.default()?.id ?: TAB_CLOUD }
+        // Search is its own island item but the same libs:appstore page as before (StorePhoneFragment's search page):
+        // the fragment follows StorePages, so opening Search selects it and Phone restores its own strip choice.
+        androidx.compose.runtime.LaunchedEffect(selected) {
+            if (selected == TAB_SEARCH) StorePages.select(TAB_PHONE, StorePhoneFragment.PAGE_SEARCH)
+            else if (selected == TAB_PHONE) NAV.section(TAB_PHONE)?.let { choose(TAB_PHONE, pageOf(it)) }
+        }
         val shell: @androidx.compose.runtime.Composable () -> Unit = {
             BottomNavHost(
                 entries = NAV.islandEntries { rememberVectorPainter(iconFor(it)) },
@@ -123,7 +130,7 @@ class MainActivity : AppCompatActivity() {
                 val shown = Modifier.fillMaxSize()
                 val hidden = Modifier.size(0.dp)
                 AndroidFragment<StoreCloudFragment>(if (selected == TAB_CLOUD) shown else hidden)
-                AndroidFragment<StorePhoneFragment>(if (selected == TAB_PHONE) shown else hidden)
+                AndroidFragment<StorePhoneFragment>(if (selected == TAB_PHONE || selected == TAB_SEARCH) shown else hidden)
                 // Feed and Access are composed only while shown: the feeds read GitHub on open, the mesh probes.
                 if (selected == TAB_FEED) section?.let { FeedPage(pageOf(it)) }
                 if (selected == TAB_ACCESS) section?.let { AccessPage(pageOf(it)) }
@@ -171,6 +178,7 @@ class MainActivity : AppCompatActivity() {
         private const val REQ_NOTIFICATIONS = 894
         const val TAB_CLOUD = "cloud"
         const val TAB_PHONE = "phone"
+        const val TAB_SEARCH = "search"
         const val TAB_FEED  = "feed"
         const val TAB_ACCESS = "access"
         /** The old Mesh tab: Apps Mesh is Access's first page now; an intent asking for `mesh` opens it. */
@@ -188,6 +196,7 @@ class MainActivity : AppCompatActivity() {
         private fun iconFor(name: String): ImageVector = when (name) {
             "cloud" -> Icons.Filled.Cloud
             "phone" -> Icons.Filled.PhoneAndroid
+            "search" -> Icons.Filled.Search
             "feed" -> Icons.Filled.RssFeed
             "access" -> Icons.Filled.Security
             else -> Icons.Filled.Settings
