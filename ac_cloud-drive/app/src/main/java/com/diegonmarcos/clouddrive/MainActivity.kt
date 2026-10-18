@@ -198,7 +198,8 @@ class MainActivity : ComponentActivity(), DriveActions {
         runCatching {
             val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
             // The system chooser, with the type the file really is (MimeTypes fills in what MimeTypeMap lacks: md, mht, 7z…).
-            val view = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mimeOf(file)).setClipData(ClipData.newRawUri(file.name, uri)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val view = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mimeOf(file)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            view.clipData = ClipData.newRawUri(file.name, uri)
             startActivity(Intent.createChooser(view, file.name).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
         }
     }
