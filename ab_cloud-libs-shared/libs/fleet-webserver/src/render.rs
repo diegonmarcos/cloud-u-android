@@ -16,6 +16,10 @@ pub const YAML_JS: &str = include_str!("../vendor/js-yaml.min.js");
 pub const ERUDA_JS: &str = include_str!("../assets/eruda.min.js");
 pub const MY_WEBSERVER_CJS: &str = include_str!("../vendor/my-webserver.cjs");
 
+pub const MARKED_VERSION: &str = "15.0.12";
+pub const YAML_VERSION: &str = "4.1.0";
+pub const ERUDA_VERSION: &str = "3.4.3";
+
 /// The tag every HTML page gets: same-origin and bundled.
 pub const ERUDA_TAG: &str = "<script src=\"/__lib__/eruda.min.js\"></script><script>eruda.init();</script>";
 

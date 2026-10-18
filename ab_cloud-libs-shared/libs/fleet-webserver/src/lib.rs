@@ -1,4 +1,4 @@
-//! cloud-webserver: THE web server of the fleet. The Linux `my-webserver` HTTP API over one root
+//! fleet-webserver: THE web server of the fleet. The Linux `my-webserver` HTTP API over one root
 //! directory, serving the Linux frontend (folder tree left, viewer right, toolbar on top) that
 //! is bundled into the binary at build time from vendor/ (byte-identical to cloud-u-linux,
 //! see sync.sh and tests/vendor.rs). c3-webserver (:8002), termux (:8000) and nix-on-droid
@@ -79,7 +79,7 @@ pub fn handler(cfg: &Config) -> Arc<http::Handler> {
 pub fn start(cfg: Config) -> Result<u16, String> {
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, cfg.port)).map_err(|e| format!("cannot bind 127.0.0.1:{} ({})", cfg.port, e))?;
     let port = listener.local_addr().map(|a| a.port()).unwrap_or(cfg.port);
-    println!("cloud-webserver {} on http://127.0.0.1:{}/ root={} pid={}", env!("CARGO_PKG_VERSION"), port, cfg.root, std::process::id());
+    println!("fleet-webserver {} on http://127.0.0.1:{}/ root={} pid={}", env!("CARGO_PKG_VERSION"), port, cfg.root, std::process::id());
     http::listen(listener, handler(&cfg));
     Ok(port)
 }

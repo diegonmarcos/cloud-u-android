@@ -47,7 +47,7 @@ fn start_node(root: &std::path::Path) -> (Node, u16) {
 const ERUDA_CDN: &str = "<script src=\"https://cdn.jsdelivr.net/npm/eruda\"></script><script>eruda.init();</script>";
 
 fn norm(s: String) -> String {
-    s.replace(ERUDA_CDN, cloud_webserver::render::ERUDA_TAG)
+    s.replace(ERUDA_CDN, fleet_webserver::render::ERUDA_TAG)
 }
 
 fn sorted_json_rows(s: &str) -> Vec<String> {

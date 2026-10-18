@@ -13,7 +13,7 @@ fn root_is_the_linux_frontend_and_nothing_else() {
         assert!(g.headers.contains("text/html"));
         let body = g.text();
         // the vendored browse.html, with only INIT_PATH filled in
-        let want = cloud_webserver::render::BROWSE_HTML.replacen("__INIT_PATH__", &cloud_webserver::render::safe_json_for_script(if target.starts_with("/docs") { "/docs/" } else { "/" }), 1);
+        let want = fleet_webserver::render::BROWSE_HTML.replacen("__INIT_PATH__", &fleet_webserver::render::safe_json_for_script(if target.starts_with("/docs") { "/docs/" } else { "/" }), 1);
         assert_eq!(body, want, "{} must be vendor/browse.html verbatim", target);
         assert!(body.contains("id=\"sidebar\"") && body.contains("id=\"file-list\""), "the folder tree is on the left");
         assert!(body.contains("id=\"viewer\"") && body.contains("id=\"right-panel\""), "the viewer is on the right");

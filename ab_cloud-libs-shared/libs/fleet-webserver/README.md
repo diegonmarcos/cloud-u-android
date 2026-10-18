@@ -1,7 +1,7 @@
-# cloud-webserver (shared)
+# fleet-webserver (shared)
 
 The ONE web server of the phone fleet: c3-webserver `:8002`, termux `:8000`, nix-on-droid `:8001`
-all consume this crate (`cloud_webserver`, or the static binary `cloud-webserver <port> [root]`).
+all consume this crate (`fleet_webserver`, or the static binary `fleet-webserver <port> [root]`).
 No app carries a copy of any of it.
 
 * **Frontend** = the Linux `my-webserver` UI (folder tree left, viewer right, toolbar on top).

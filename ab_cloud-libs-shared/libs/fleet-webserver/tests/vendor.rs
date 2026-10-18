@@ -1,7 +1,7 @@
 //! The frontend is ONE copy: cloud-u-linux/da_my-webserver/src. vendor/ is a byte-identical,
 //! hash-checked mirror of it; these tests fail the moment either side moves without the other.
 mod common;
-use cloud_webserver::sha256::sha256_hex;
+use fleet_webserver::sha256::sha256_hex;
 use std::fs;
 use std::path::PathBuf;
 
@@ -46,7 +46,7 @@ fn bundled_frontend_hash_equals_the_linux_repos_copy() {
 
 #[test]
 fn the_binary_embeds_exactly_the_vendored_bytes() {
-    use cloud_webserver::render;
+    use fleet_webserver::render;
     for (mine, got) in [
         ("browse.html", render::BROWSE_HTML),
         ("github-markdown-dark.css", render::MARKDOWN_CSS),
@@ -60,7 +60,7 @@ fn the_binary_embeds_exactly_the_vendored_bytes() {
 
 #[test]
 fn nothing_is_downloaded_at_runtime() {
-    use cloud_webserver::render;
+    use fleet_webserver::render;
     for page in [
         render::markdown_page("/a.md", "x"),
         render::structured_page("/a.yaml", "a: 1", render::Structured::Yaml),
@@ -71,4 +71,12 @@ fn nothing_is_downloaded_at_runtime() {
             assert!(!page.contains(host), "a served page names {}", host);
         }
     }
+}
+
+#[test]
+fn the_versions_we_print_are_the_versions_we_ship() {
+    use fleet_webserver::render::*;
+    assert!(MARKED_JS.contains(&format!("marked v{}", MARKED_VERSION)));
+    assert!(YAML_JS.contains(&format!("js-yaml {}", YAML_VERSION)));
+    assert!(ERUDA_JS.contains(&format!("eruda v{}", ERUDA_VERSION)));
 }
