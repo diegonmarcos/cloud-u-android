@@ -5,7 +5,7 @@
 #   G1 build.json declares the config section grid_columns 8 (not the Cloud stepper)
 #   G2 sectionGrid hands the section's count on; TileGridFragment draws the fixed 5-across small tile (owner, 6th ask)
 #   G3 the separator is a wrap_content TextView drawn like Data Apps' separatorCell, outside the slot count
-#   G4 Network reads Firewall, DNS, Cloud Mesh, Apps Mesh (tabs Apps · IPC · Identity), ADB Shell
+#   G4 Network reads Firewall, DNS, Webserver, Cloud Mesh, Apps Mesh (tabs Apps · IPC · Identity), ADB Shell
 #   G5 the Home Configs row skips the separator (no cell there either)
 set -u
 APP="$(cd "$(dirname "$0")/.." && pwd)"
@@ -55,7 +55,7 @@ pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['id'
 print(','.join(p['label'] for p in pages if p.get('subgroup') == 'Network' and not p.get('hidden')))
 PY
 )"
-[ "$got" = "Firewall,DNS,Cloud Mesh,Apps Mesh,ADB Shell" ] && ok "Network = $got" || bad "Network is: $got"
+[ "$got" = "Firewall,DNS,Webserver,Cloud Mesh,Apps Mesh,ADB Shell" ] && ok "Network = $got" || bad "Network is: $got"
 
 echo "== G5: Home row =="
 grep -q 'referenced.pages.filterNot { it.separator }' "$KT/Sections.kt" && ok "Home Configs row skips separator pages" || bad "Home row would draw the separator as a cell"
