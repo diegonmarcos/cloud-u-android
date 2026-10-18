@@ -281,7 +281,7 @@ for want, why in ((r'JsonSlurper\(\)\s*\.parse\(\s*file\("[^"]*build\.json"\)', 
                   (r'applicationId\s*=\s*androidJson\["application_id"\]', "take applicationId from build.json"),
                   (r'namespace\s*=\s*androidJson\["application_id"\]', "take the namespace from build.json"),
                   (r'targetSdk\s*=\s*\(androidJson\["target_sdk"\]', "take targetSdk from build.json"),
-                  (r'resValue\("string",\s*"app_name",\s*buildJson\["name"\]', "set the launcher label from build.json::name"),
+                  (r'resValue\("string",\s*"app_name",\s*buildJson\["display_name"\]', "set the launcher label from build.json::display_name"),
                   (r'useLegacyPackaging\s*=\s*true', "store the Rust library compressed (the size budget)"),
                   (r'manifestPlaceholders\["usesCleartextTraffic"\]\s*=\s*"true"', "allow cleartext to the loopback server in every build type")):
     if not re.search(want, gradle):

@@ -214,7 +214,7 @@ for d, _, fs in os.walk(src):
         if f.endswith(".kt"): used |= set(re.findall(r"R\.string\.([a-z0-9_]+)", open(os.path.join(d, f), encoding="utf-8").read()))
 used |= set(re.findall(r"@string/([a-z0-9_]+)", open(manifest, encoding="utf-8").read()))
 declared = set(re.findall(r'<string name="([a-z0-9_]+)"', open(strings, encoding="utf-8").read()))
-# app_name is build.gradle's resValue (the launcher label = build.json::name), never in strings.xml.
+# app_name is build.gradle's resValue (the launcher label = build.json::display_name), never in strings.xml.
 missing = sorted(used - declared - {"app_name"}); dead = sorted(declared - used)
 bad = 0
 if missing: print("    named in Kotlin but not declared: %s" % missing); bad = 1

@@ -45,7 +45,9 @@ check(len(apps) >= 30, "found only %d apps - the detection matched too little" %
 
 def skip(path):
     p = path.replace(os.sep, "/")
-    return any(x in p for x in ("/build/", "/libs/", "/test/", "/tests/", "/androidTest/", "/testharness/", "/patches/", "/node_modules/"))
+    # authenticator*/ is the vault tree's separate Authenticator module, not the
+    # launcher app (build.json::_doc: module `app` is the Cloud Vault launcher).
+    return any(x in p for x in ("/build/", "/libs/", "/test/", "/tests/", "/androidTest/", "/testharness/", "/patches/", "/node_modules/", "/authenticator"))
 def files(d, pattern):
     out = []
     for base, dirs, names in os.walk(os.path.join(root, d)):
