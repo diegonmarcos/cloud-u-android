@@ -3,7 +3,7 @@
 # character that takes no column slot. Static (no device, no build); the 360 dp arithmetic is
 # GridColumnsTest.configsGridIsEightWideAndItsIconFitsAt360dp (JVM suite).
 #   G1 build.json declares the config section grid_columns 8 (not the Cloud stepper)
-#   G2 sectionGrid hands the section's count to TileGridFragment, which uses it over GridColumns.cloud
+#   G2 sectionGrid hands the section's count on; TileGridFragment draws the fixed 5-across small tile (owner, 6th ask)
 #   G3 the separator is a wrap_content TextView drawn like Data Apps' separatorCell, outside the slot count
 #   G4 Network reads Firewall, DNS, Cloud Mesh, Apps Mesh (tabs Apps · IPC · Identity), ADB Shell
 #   G5 the Home Configs row skips the separator (no cell there either)
@@ -26,9 +26,11 @@ PY
 echo "== G2: the count reaches the grid =="
 grep -q 'columns = section.gridColumns' "$KT/LauncherNavController.kt" && ok "sectionGrid passes section.gridColumns" || bad "sectionGrid does not pass the section's columns"
 grep -q 'o.optInt("grid_columns"' "$KT/Sections.kt" && ok "Sections parses grid_columns" || bad "Sections does not parse grid_columns"
-grep -q 'args.getInt(ARG_COLS, 0).takeIf { it > 0 } ?: GridColumns.cloud' "$KT/TileGridFragment.kt" \
-  && ok "TileGridFragment uses the declared count, else the Cloud grid's" || bad "TileGridFragment ignores the declared count"
-grep -q 'cols = cols, pageDp = 0, chromeDp = 18' "$KT/TileGridFragment.kt" && ok "icon is sized from THIS grid's column count" || bad "icon size not derived from the grid's columns"
+# Owner (6th ask): every tile grid is the ONE small tile, CHIP_COLUMNS (5) across, so all Configs fit one A37 screen.
+grep -q 'val cols = CHIP_COLUMNS' "$KT/TileGridFragment.kt" && grep -q 'const val CHIP_COLUMNS = 5' "$KT/TileGridFragment.kt" \
+  && ok "TileGridFragment draws CHIP_COLUMNS (5) across" || bad "TileGridFragment is not 5 across"
+grep -q 'CompactTile(' "$KT/TileGridFragment.kt" && ! grep -q 'LauncherTile(' "$KT/TileGridFragment.kt" \
+  && ok "the grid draws the small CompactTile, never the old big tile" || bad "grid draws the old big tile"
 
 echo "== G3: the separator is inline =="
 # The separator is the composable TileSeparator (LauncherTiles.kt): text as wide as itself, no weight, no slot.
