@@ -37,8 +37,8 @@ class TileSizeTest : KitPageHarness() {
     fun `Z1 a tile is half the old 70 dp - 35 dp - with a 24 dp plate hugging a 20 dp glyph`() {
         showKit { Loose { CompactTile("t", "Label", R.drawable.ic_settings, onClick = {}) } }
         compose.onNodeWithTag(tileTag("t")).assertHeightIsEqualTo(35.dp)
-        compose.onNodeWithTag("tileplate:t").assertHeightIsEqualTo(24.dp)
-        compose.onNodeWithTag(tileIconTag("t")).assertHeightIsEqualTo(20.dp)
+        compose.onNodeWithTag("tileplate:t", useUnmergedTree = true).assertHeightIsEqualTo(24.dp)
+        compose.onNodeWithTag(tileIconTag("t"), useUnmergedTree = true).assertHeightIsEqualTo(20.dp)
     }
 
     @Test
