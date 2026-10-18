@@ -169,7 +169,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "z-ai/glm-5.3-flash",
-        "pricing_as_of": "2026-10-17",
+        "pricing_as_of": "2026-10-18",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -231,7 +231,7 @@
               "marketing/seo"
             ],
             "prompt": 0.08,
-            "completion": 0.45,
+            "completion": 0.35,
             "note": "Ranked for marketing/SEO only; light and predictable on short rewrites."
           },
           {
@@ -318,8 +318,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.0075,
-            "completion": 0.2829,
+            "prompt": 0.1,
+            "completion": 0.3,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
           {
@@ -365,8 +365,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.0226,
-            "completion": 0.3966,
+            "prompt": 0.048,
+            "completion": 0.2,
             "note": "The provider default: ranked in all twelve categories, and the cheapest all-rounder after DeepSeek."
           },
           {
