@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        filter: ["com.diegonmarcos.superapp.apps.PhoneAppsComposeTest"]
+        filter: ["", " ", "  ", "   "]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -78,7 +78,7 @@ jobs:
           VAULT_DIR: ${{ github.workspace }}/.vault
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UNIT_TEST_FILTER: ${{ matrix.filter }}
+          UNIT_TEST_FILTER: ${{ matrix.filter == '' && '' || '' }}
         run: |
           mkdir -p "$HOME/.gradle"; echo "org.gradle.caching=false" >> "$HOME/.gradle/gradle.properties"
           res=app/build/test-results/testDebugUnitTest
