@@ -159,8 +159,15 @@ jobs:
           GARMIN_USERNAME: ${{ secrets.GARMIN_USERNAME }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
         run: |
+          # Without credentials connect-iq-sdk-manager waits for a browser login
+          # on localhost until the job timeout cancels the run (every run since
+          # 2026-09-10). Fail at once, naming the missing secrets.
+          if [ -z "$GARMIN_USERNAME" ] || [ -z "$GARMIN_PASSWORD" ]; then
+            echo "::error title=Garmin SDK login::secrets GARMIN_USERNAME / GARMIN_PASSWORD are not set; the Connect IQ SDK cannot be downloaded without them"
+            exit 1
+          fi
           chmod +x build.sh
-          ./build.sh build "${{ matrix.design }}"
+          timeout 20m ./build.sh build "${{ matrix.design }}"
           ls -la "dist/${{ matrix.design }}/"
 
       - name: Upload .prg as workflow artifact
