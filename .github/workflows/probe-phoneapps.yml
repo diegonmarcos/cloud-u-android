@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        filter: ["", " ", "  ", "   "]
+        filter: ["", " ", "  ", "   ", "    ", "     "]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -82,7 +82,7 @@ jobs:
         run: |
           mkdir -p "$HOME/.gradle"; echo "org.gradle.caching=false" >> "$HOME/.gradle/gradle.properties"
           res=app/build/test-results/testDebugUnitTest
-          red=0; N=3
+          red=0; N=4
           for i in $(seq 1 $N); do
             rm -rf "$res" app/build/reports/tests/testDebugUnitTest
             echo "::group::iteration $i/$N"
