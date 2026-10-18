@@ -75,8 +75,8 @@ class BrowserTabSnapshotUiTest {
         val vals = FloatArray(9).also { img.imageMatrix.getValues(it) }
         assertTrue("scale covers the box", vals[android.graphics.Matrix.MSCALE_X] >= img.width / 90f - 0.001f)
         assertEquals("top edge kept", 0f, vals[android.graphics.Matrix.MTRANS_Y], 0.001f)
-        val plate = described(g, TabCardA11y.PLACEHOLDER).single()
-        assertEquals(View.GONE, plate.visibility)
+        // findViewsWithText only returns visible views: no match = the plate is hidden.
+        assertEquals("the fallback plate is hidden", 0, described(g, TabCardA11y.PLACEHOLDER).size)
     }
 
     @Test
@@ -100,6 +100,6 @@ class BrowserTabSnapshotUiTest {
         assertNull(fresh.cached("c"))
         val g = grid(fresh, tab("c"))
         assertEquals(1, described(g, TabCardA11y.SNAPSHOT).size)
-        assertEquals(View.GONE, described(g, TabCardA11y.PLACEHOLDER).single().visibility)
+        assertEquals(0, described(g, TabCardA11y.PLACEHOLDER).size)
     }
 }
