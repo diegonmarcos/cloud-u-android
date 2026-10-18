@@ -36,8 +36,8 @@ import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 
 /**
- * #609 CONFIGS: ONE island whose strip is build.json::ui.configs.pages — Backups (moved
- * in from its own tab at #603), General (#579's Configs cards) and Others. Git, Rclone
+ * #609 CONFIGS: ONE island whose strip is build.json::ui.configs.pages — General (#579's Configs cards),
+ * Webserver (opens cloud-c3-webserver), Backups (moved in from its own tab at #603) and Others. Git, Rclone
  * and Mounts moved OUT to the new Sync tab (SyncScreen). The strip is tabs inside the
  * tab, not a stack — back leaves the app. Every one of the three is a screen that
  * already existed: this file routes, it does not draw a card.
@@ -74,6 +74,7 @@ fun ConfigsScreen(
             when (id) {
                 "backups" -> BackupsScreen(mirrors, prefs)
                 "general" -> GeneralPage(prefs, actions, hasAccess)
+                "webserver" -> WebserverPage(actions)
                 "others" -> OthersPage(prefs, actions, rcloneVersion)
                 else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "")
             }

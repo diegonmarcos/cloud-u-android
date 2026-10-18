@@ -264,8 +264,8 @@ if "backups" in ui:
     print("    ui still carries a top-level backups block: it moved into ui.configs at #603"); bad = 1
 cfg_pages = next(s for s in ui["sections"] if s["id"] == "configs")["pages"]
 pages = [p["id"] for p in cfg_pages]
-if pages != ["backups", "general", "others"]:
-    print("    ui.configs.pages is %s, not backups/general/others (#609 moved git/rclone/mounts to ui.sync)" % pages); bad = 1
+if pages != ["general", "webserver", "backups", "others"]:
+    print("    ui.configs.pages is %s, not the owner's order general/webserver/backups/others (#609 moved git/rclone/mounts to ui.sync)" % pages); bad = 1
 if any(not p.get("label") or not p.get("icon") for p in cfg_pages):
     print("    a Configs sub-page lacks a label or an icon"); bad = 1
 sync_sec = next(s for s in ui["sections"] if s["id"] == "sync").get("pages", [])

@@ -277,6 +277,18 @@ if (!(cloudClasses instanceof List) || cloudClasses.isEmpty()) {
 def uiSectionsB64    = b64(uiDecl.sections)
 def uiBottomNav      = uiDecl.bottom_nav.join(',')
 def uiDefaultSection = (uiDecl.default_section ?: uiDecl.bottom_nav[0]).toString()
+// The top bar (libs:bottomnav TopBarDecl): ui.top_bar as base64 JSON, '' when none is declared.
+def uiTopBarB64 = uiDecl.top_bar ? b64(uiDecl.top_bar) : ''
+// Configs ▸ Webserver: the package comes from the SAME constellation manifest as the terminal's (one
+// package list for the fleet); a fleet id the manifest lacks is a hard error, not an intent at no package.
+def webserverB64 = ''
+if (uiDecl.webserver != null) {
+    def wsFleet = fleetById[uiDecl.webserver.fleet]
+    if (wsFleet == null) {
+        throw new GradleException("build.json::ui.webserver.fleet '${uiDecl.webserver.fleet}' is not in the constellation fleet manifest ($fleetAppsFile)")
+    }
+    webserverB64 = b64(['package': wsFleet.package.toString(), activity: uiDecl.webserver.activity, fallback_url: uiDecl.webserver.fallback_url])
+}
 // #642 Sync ▸ Git hands every git OPERATION to cloud-terminal-nix, so the terminal's package
 // is resolved here from the SAME constellation manifest personal_auth above resolves against —
 // one package list for the whole fleet, never a second (#170/#380/#381). Every {package}
@@ -506,6 +518,8 @@ android {
         buildConfigField "String", "UI_SECTIONS_B64",    "\"${uiSectionsB64}\""
         buildConfigField "String", "UI_BOTTOM_NAV",      "\"${uiBottomNav}\""
         buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
+        buildConfigField "String", "UI_TOP_BAR_B64",      "\"${uiTopBarB64}\""
+        buildConfigField "String", "UI_WEBSERVER_B64",    "\"${webserverB64}\""
         buildConfigField "String", "UI_SYNC_B64",     "\"${uiSyncB64}\""
         // #705 the gh engine: where it is, how to find its service, the contract this build needs.
         buildConfigField "String", "GH_ENGINE_PACKAGE",      "\"${ghEnginePackage}\""

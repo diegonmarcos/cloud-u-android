@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,8 +18,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.R
+import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
+import com.diegonmarcos.superapp.bottomnav.appTopBarLabels
 import com.diegonmarcos.superapp.bottomnav.islandEntries
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 
 /**
  * #579 the shell (cloud-drive-redesign.md §2): the tab content above the fleet's
@@ -47,19 +51,40 @@ fun DriveShell(select: String? = null, onSelected: () -> Unit = {}, content: @Co
     }
 
     // The fleet's own host: the page above the island, the scroll collapse and the inset handling.
-    BottomNavHost(
-        entries = entries,
-        selectedId = selected,
-        onSelect = { entry -> if (entry.id == selected) reselectTick++ else selected = entry.id },
-        modifier = Modifier.testTag(DriveTags.SHELL),
-    ) {
-        Box(Modifier.fillMaxSize().testTag(DriveTags.CONTENT)) {
-            AnimatedContent(targetState = selected, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "drive_tab") { id ->
-                Box(Modifier.fillMaxSize().testTag(DriveTags.tab(id))) {
-                    if (tabs.any { it.id == id }) content(id, reselectTick)
-                    else EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "")
+    val host: @Composable () -> Unit = {
+        BottomNavHost(
+            entries = entries,
+            selectedId = selected,
+            onSelect = { entry -> if (entry.id == selected) reselectTick++ else selected = entry.id },
+            modifier = Modifier.testTag(DriveTags.SHELL),
+        ) {
+            Box(Modifier.fillMaxSize().testTag(DriveTags.CONTENT)) {
+                AnimatedContent(targetState = selected, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "drive_tab") { id ->
+                    Box(Modifier.fillMaxSize().testTag(DriveTags.tab(id))) {
+                        if (tabs.any { it.id == id }) content(id, reselectTick)
+                        else EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "")
+                    }
                 }
             }
         }
     }
+    // The fleet's first row (libs:bottomnav AppTopBar, ui.top_bar): the round Settings button at the top right,
+    // a dropdown of Profile (Cloud Account) and Configs (this app's Configs tab). It owns the top inset, which the
+    // pages' own toolbar islands then find already consumed.
+    val topBar = Declarations.topBar
+    if (topBar == null) host() else {
+        val labels = appTopBarLabels().let { it.copy(account = stringResource(R.string.top_bar_profile)) }
+        Box(Modifier.fillMaxSize().windowInsetsPadding(topIslandInsets())) {
+            AppTopBarScaffold(
+                decl = topBar,
+                title = stringResource(R.string.app_name),
+                onAccount = rememberAccountLauncher(),
+                onConfigs = { if (tabs.any { it.id == CONFIGS_TAB }) selected = CONFIGS_TAB },
+                labels = labels,
+                content = host,
+            )
+        }
+    }
 }
+
+private const val CONFIGS_TAB = "configs"

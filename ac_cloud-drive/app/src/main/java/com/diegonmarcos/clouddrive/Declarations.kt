@@ -2,6 +2,7 @@ package com.diegonmarcos.clouddrive
 
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.TopBarDecl
 import java.util.Base64
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -29,6 +30,8 @@ object Declarations {
 
     data class TabDecl(val id: String, val label: String, val icon: String)
     data class PageDecl(val id: String, val label: String, val icon: String)
+    /** Configs ▸ Webserver (ui.webserver): cloud-c3-webserver's package (resolved from the fleet manifest), its launcher activity and the URL its server answers on. */
+    data class WebserverDecl(val packageName: String, val activity: String, val fallbackUrl: String)
     /** #609 the Configs strip: three sub-pages (Git/Rclone/Mounts moved out to ui.sync.pages). */
     data class ConfigsDecl(val pages: List<PageDecl>)
     /** #609 the Sync strip: Git/Rclone/Mounts, moved back out of Configs, plus the per-repository period choices the Git page offers, plus #608's Git page itself. */
@@ -292,6 +295,9 @@ object Declarations {
     }
     val tabs: List<TabDecl> get() = tabsOf(nav)
     val defaultTab: String get() = nav.default()?.id.orEmpty()
+    /** The first row (ui.top_bar): the round Settings button and its Profile / Configs dropdown; null = no bar. */
+    val topBar: TopBarDecl? by lazy { TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64) }
+    val webserver: WebserverDecl? by lazy { parseWebserver(decode(BuildConfig.UI_WEBSERVER_B64)) }
     val configs: ConfigsDecl by lazy { ConfigsDecl(pagesOf(nav, "configs")) }
     val sync: SyncDecl by lazy { parseSync(decode(BuildConfig.UI_SYNC_B64), pagesOf(nav, "sync")) }
     val files: FilesDecl by lazy { parseFiles(decode(BuildConfig.UI_FILES_B64)) }
@@ -313,6 +319,12 @@ object Declarations {
     fun decode(b64: String): String = if (b64.isBlank()) "" else runCatching { String(Base64.getDecoder().decode(b64), Charsets.UTF_8) }.getOrDefault("")
 
     // ── parsers (pure; JVM-tested) ─────────────────────────────────────────
+
+    fun parseWebserver(text: String): WebserverDecl? {
+        val o = element(text) as? JsonObject ?: return null
+        val pkg = o.str("package")
+        return if (pkg.isBlank()) null else WebserverDecl(pkg, o.str("activity"), o.str("fallback_url"))
+    }
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
