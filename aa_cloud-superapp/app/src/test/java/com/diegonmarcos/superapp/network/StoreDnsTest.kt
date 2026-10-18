@@ -74,6 +74,6 @@ class StoreDnsTest {
         assertEquals(60_000L, FleetDnsBridge.MIN_TTL_MS)
         assertTrue(DnsWire.isLiteral("10.0.0.4") && DnsWire.isLiteral("fd0c:1d00::1") && !DnsWire.isLiteral("github.com"))
         assertTrue(DnsWire.addresses(a.copyOf().apply { this[3] = 0x83.toByte() }).isEmpty())
-        assertEquals("bridge 127.0.0.1:0", FleetDnsBridge.label)
+        assertEquals("bridge 127.0.0.1:${FleetDnsBridge.port}", FleetDnsBridge.label) // the port is whatever an earlier test in this JVM bound, or 0
     }
 }
