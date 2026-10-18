@@ -69,7 +69,7 @@
     "serve_root": "/storage/emulated/0"
   },
   "serving": {
-    "_doc": "THE ONE name -> port map of the phone's local servers, and the private DNS that names them. src-tauri/build.rs and server/src/serving.rs (compiled in, validated by serving::parse and its tests) and ac_cloud-browser/app/build.gradle (baked into the browser, which fails the build when its pinned tabs or the map drift) all read THIS block; nothing else spells a name or a port. .app is a real public TLD and termux.app is a real website: only these four exact names are answered, by this app's own DNS server on loopback (udp, never :53 — Android cannot bind it without root and cannot point the system resolver at loopback), and only our own apps ask it; nothing is changed system-wide. DNS carries no ports, so the browser maps the port from this same block. Each port is also declared by its owner under runtime (ac_cloud-termux and ac_cloud-nix-on-droid: runtime.webserver.port; this app: runtime.port, runtime.diag.port); test/test-localhost-ports.sh fails when the two disagree or a port or name repeats.",
+    "_doc": "THE ONE name -> port map of the phone's local servers, and the private DNS that names them. It holds NO port number: each endpoint names its `owner` (an app dir) and `port_from`, the path inside that owner's build.json where the port is declared (ac_cloud-termux and ac_cloud-nix-on-droid: runtime.webserver.port; this app: runtime.port and runtime.diag.port), and every reader resolves the number from there at BUILD time -- server/build.rs (the Rust crate: it compiles the resolved copy in, so src-tauri/build.rs and server/src/serving.rs see an ordinary `port`) and ac_cloud-browser/app/build.gradle (baked into the browser, which fails the build when its pinned tabs drift or an endpoint spells a literal `port`). A port number written here would be a second copy of the owner's, so test/test-c3-webserver-ports.sh fails on one. .app is a real public TLD and termux.app is a real website: only these four exact names are answered, by this app's own DNS server on loopback (udp, never :53 -- Android cannot bind it without root and cannot point the system resolver at loopback), and only our own apps ask it; nothing is changed system-wide. DNS carries no ports, so the browser maps the port from the resolved block. test/test-localhost-ports.sh fails when a port or name repeats across apps.",
     "dns": {
       "host": "127.0.0.1",
       "port": 5353,
@@ -81,7 +81,7 @@
       {
         "id": "termux",
         "name": "termux.app",
-        "port": 8000,
+        "port_from": "runtime.webserver.port",
         "role": "external",
         "owner": "ac_cloud-termux",
         "title": "Termux",
@@ -90,7 +90,7 @@
       {
         "id": "nix",
         "name": "nix.app",
-        "port": 8001,
+        "port_from": "runtime.webserver.port",
         "role": "external",
         "owner": "ac_cloud-nix-on-droid",
         "title": "Nix",
@@ -99,7 +99,7 @@
       {
         "id": "emulated",
         "name": "emulated.app",
-        "port": 8002,
+        "port_from": "runtime.port",
         "role": "drive",
         "owner": "ac_cloud-c3-webserver",
         "title": "Local",
@@ -108,7 +108,7 @@
       {
         "id": "cloud",
         "name": "cloud.app",
-        "port": 8003,
+        "port_from": "runtime.diag.port",
         "role": "diag",
         "owner": "ac_cloud-c3-webserver",
         "title": "Cloud",

@@ -1,11 +1,13 @@
 //! The ports this phone serves and the private names that stand for them.
 //!
-//! ONE declaration: build.json::serving (names, ports, DNS server) beside
-//! build.json::runtime (the two listeners this app binds). It is compiled into
-//! the binary here; src-tauri/build.rs reads the same file for the ports it
-//! hands the server, and ac_cloud-browser/app/build.gradle bakes the same
-//! name -> port map into the browser. [parse] refuses a declaration whose
-//! ports or names collide, so a drifted copy fails the build, not the phone.
+//! ONE declaration: build.json::serving (names, DNS server) beside
+//! build.json::runtime (the two listeners this app binds). It holds NO port: each endpoint
+//! names its owner and the path of the owner's own port declaration (`port_from`), and
+//! server/build.rs resolves them into the build.json compiled in here, so [parse] still sees an
+//! ordinary `port`. src-tauri/build.rs reads the same file for the ports it hands the server, and
+//! ac_cloud-browser/app/build.gradle resolves the same way to bake the name -> port map into the
+//! browser. [parse] refuses a declaration whose ports or names collide, so a drifted copy fails the
+//! build, not the phone.
 //!
 //! .app is a real public TLD and termux.app is a real website. These four exact
 //! names are answered by this app's own DNS server (dns.rs) on loopback and are
@@ -17,7 +19,8 @@ use std::net::{IpAddr, SocketAddr, TcpStream};
 use std::sync::OnceLock;
 use std::time::Duration;
 
-pub const BUILD_JSON: &str = include_str!("../../build.json");
+/// build.json with every serving endpoint's `port` resolved from its owner's build.json (server/build.rs).
+pub const BUILD_JSON: &str = include_str!(concat!(env!("OUT_DIR"), "/build.json"));
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Role {
@@ -291,6 +294,22 @@ mod tests {
             "the owner's map: termux 8000, nix 8001, emulated drive 8002, cloud diagnostics 8003"
         );
         assert_eq!((sv.dns.host.as_str(), sv.dns.port), ("127.0.0.1", 5353));
+    }
+
+    #[test]
+    fn the_source_declaration_holds_no_port_and_the_resolved_ports_are_the_owners() {
+        let src: Value = serde_json::from_str(include_str!("../../build.json")).unwrap();
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..");
+        for e in src["serving"]["endpoints"].as_array().unwrap() {
+            assert!(e.get("port").is_none(), "serving.endpoints[{}] spells a literal port", e["id"]);
+            let owner: Value = serde_json::from_str(&std::fs::read_to_string(repo.join(e["owner"].as_str().unwrap()).join("build.json")).unwrap()).unwrap();
+            let mut node = &owner;
+            for k in e["port_from"].as_str().unwrap().split('.') {
+                node = &node[k];
+            }
+            let resolved = get().endpoints.iter().find(|r| r.id == e["id"].as_str().unwrap()).unwrap();
+            assert_eq!(node.as_u64(), Some(resolved.port as u64), "{} resolves to its owner's declared port", resolved.name);
+        }
     }
 
     #[test]

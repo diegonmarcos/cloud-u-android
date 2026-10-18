@@ -9,3 +9,7 @@ description = "The phone's local web server: an HTTP/1.1 server library whose ro
 libc = "0.2"
 # build.json::serving is compiled in and parsed here; the same crate the Tauri build script already uses.
 serde_json = "1"
+
+[build-dependencies]
+# build.rs resolves build.json::serving's ports from their owners' build.json (no port is written twice).
+serde_json = "1"

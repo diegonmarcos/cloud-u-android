@@ -30,15 +30,12 @@ class BrowserPrivateNamesTest {
     private fun json(rel: String) = JSONObject(File(rel).also { assertTrue("${it.absolutePath} missing", it.exists()) }.readText())
     private fun shipped(): BrowserConfig = BrowserConfig.parse(json("../build.json").getJSONObject("ui").getJSONObject("browser").toString())
 
-    /** What app/build.gradle bakes into the config: the serving block of the web server's build.json. */
-    private fun baked(): PrivateNames {
-        val sv = json("../../ac_cloud-c3-webserver/build.json").getJSONObject("serving")
-        val names = JSONObject()
-        val eps = sv.getJSONArray("endpoints")
-        for (i in 0 until eps.length()) names.put(eps.getJSONObject(i).getString("name"), eps.getJSONObject(i).getInt("port"))
-        val dns = sv.getJSONObject("dns")
-        return PrivateNames.parse(JSONObject().put("dns", JSONObject().put("host", dns.getString("host")).put("port", dns.getInt("port"))).put("names", names))
-    }
+    /**
+     * What app/build.gradle bakes into the config (BuildConfig.UI_BROWSER_CONFIG_B64): the serving block of the web server's
+     * build.json, each port resolved there from its owner's build.json. Read from the bake itself, so this test cannot agree
+     * with a second reading of the declaration while the shipped config says something else.
+     */
+    private fun baked(): PrivateNames = BrowserConfig.parseBase64(BuildConfig.UI_BROWSER_CONFIG_B64).privateNames
 
     private val names = baked()
 

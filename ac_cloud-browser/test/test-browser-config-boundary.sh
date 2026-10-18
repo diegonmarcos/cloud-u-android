@@ -108,20 +108,18 @@ check(PIN_URLS == EXPECTED,
 # The four local pins are the private names of cloud-c3-webserver's build.json::serving (THE name -> port map),
 # each with its owner's port, titled, and the browser bakes that same map (no second copy of a name or a port).
 SERVING = json.loads(must_read(os.path.join(ROOT, "ac_cloud-c3-webserver/build.json")) or "{}").get("serving") or {}
-def _port(rel, *keys):
-    d = json.loads(must_read(os.path.join(ROOT, rel)) or "{}")
-    for k in keys: d = (d or {}).get(k)
+def _resolve(e):
+    """The port the endpoint's owner declares at port_from: serving itself holds no port (one declaration, the owner's)."""
+    d = json.loads(must_read(os.path.join(ROOT, e["owner"] + "/build.json")) or "{}")
+    for k in str(e.get("port_from", "")).split("."): d = d.get(k) if isinstance(d, dict) else None
     return d
-OWNER_PORT = {"external": lambda e: _port(e["owner"] + "/build.json", "runtime", "webserver", "port"),
-              "drive":    lambda e: _port(e["owner"] + "/build.json", "runtime", "port"),
-              "diag":     lambda e: _port(e["owner"] + "/build.json", "runtime", "diag", "port")}
 check(len(SERVING.get("endpoints") or []) == 4, "cloud-c3-webserver declares four served endpoints",
       "got: %r" % (len(SERVING.get("endpoints") or []),))
 for e in SERVING.get("endpoints") or []:
     want = "http://%s" % e["name"]
-    check(OWNER_PORT[e["role"]](e) == e["port"],
-          "%s: serving says :%s and its owner %s declares the same" % (e["name"], e["port"], e["owner"]),
-          "owner declares %r" % (OWNER_PORT[e["role"]](e),))
+    check("port" not in e and isinstance(_resolve(e), int),
+          "%s: serving writes no port; its owner %s declares :%s at %s" % (e["name"], e["owner"], _resolve(e), e.get("port_from")),
+          "serving spells port=%r, owner declares %r" % (e.get("port"), _resolve(e)))
     check((browser.get("local_pinned_tabs") or {}).get(e["title"]) == want
           and want in PIN_URLS and PIN_TITLES.get(want) == e["title"],
           "%s pin is the private name %s and carries its title" % (e["title"], want),

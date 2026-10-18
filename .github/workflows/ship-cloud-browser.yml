@@ -47,8 +47,11 @@ on:
       # fleet-refresh.yml (schedule only) ships the app for a moved cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-browser.yml"
       #   input: "aa_cloud-superapp/data/constellation-fleet.json"
+      #   input: "ac_cloud-c3-webserver/build.json"
+      #   input: "ac_cloud-nix-on-droid/build.json"
       #   input: "ac_cloud-search/build.json"
       #   input: "ac_cloud-search/core/**"
+      #   input: "ac_cloud-termux/build.json"
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/ai/**"
       - "ab_cloud-libs-shared/libs/analytics/**"

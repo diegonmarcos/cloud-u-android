@@ -13,6 +13,9 @@ name: "Ship → Cloud-C3-WebServer APK (build + push to GHCR via ORAS + attach t
 # name is written in this file.
 
 on:
+  # ── MANAGED-REFRESH-TRIGGER (#836): fleet-refresh.yml dispatches this app ──
+  repository_dispatch:
+    types: [fleet-refresh-ac_cloud-c3-webserver]
   workflow_dispatch:
     inputs:
       variant:
@@ -57,6 +60,8 @@ on:
       # app compiles is watched above: any change in it ships every consumer.
       # fleet-refresh.yml (schedule only) ships the app for a moved cross-app dir.
       #   input: "1_cicd/src/cicd/ship-cloud-c3-webserver.yml"
+      #   input: "ac_cloud-nix-on-droid/build.json"
+      #   input: "ac_cloud-termux/build.json"
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"

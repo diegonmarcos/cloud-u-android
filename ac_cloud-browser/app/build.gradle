@@ -95,16 +95,20 @@ if (favDecl != null) {
     favDecl.remove('sources'); favDecl.remove('extra')
 }
 // THE name -> port map of the phone's local servers is ONE declaration: ac_cloud-c3-webserver/build.json::serving
-// (names, the private DNS server) beside each owner's runtime port. The four pins must be exactly those names with
-// those titles, and every port must be the one its owner declares; drift fails the build instead of shipping a dead
-// tab. The same map is baked below as ui.browser.private_names, which libs:browser PrivateNames resolves through the
-// c3-webserver's own loopback DNS (never the system's: termux.app is a real website).
+// (names, the private DNS server; no port) and each owner's runtime port, which is resolved from the owner's build.json below.
+// The four pins must be exactly those names with those titles; drift fails the build instead of shipping a dead tab. The
+// same map is baked below as ui.browser.private_names, which libs:browser PrivateNames resolves through the c3-webserver's
+// own loopback DNS (never the system's: termux.app is a real website).
 def servingDecl = new groovy.json.JsonSlurper().parse(file('../../ac_cloud-c3-webserver/build.json')).serving
 if (servingDecl == null || !servingDecl.endpoints) throw new GradleException("ac_cloud-c3-webserver/build.json::serving is missing: the private names have no declaration")
 servingDecl.endpoints.each { e ->
-    def owner = new groovy.json.JsonSlurper().parse(file("../../${e.owner}/build.json"))
-    def ownerPort = (e.role == 'external') ? owner.runtime?.webserver?.port : (e.role == 'drive') ? owner.runtime?.port : owner.runtime?.diag?.port
-    if (ownerPort != e.port) throw new GradleException("serving declares ${e.name} on port ${e.port}, but ${e.owner}/build.json declares ${ownerPort}")
+    // serving holds NO port: it names the owner and the path (`port_from`) of the owner's own declaration, and the number is
+    // resolved here, at build time. A literal `port` beside it would be a second copy that could drift, so it fails the build.
+    if (e.containsKey('port')) throw new GradleException("ac_cloud-c3-webserver/build.json::serving.endpoints[${e.id}] spells a literal port: name port_from in ${e.owner}/build.json instead")
+    def node = new groovy.json.JsonSlurper().parse(file("../../${e.owner}/build.json"))
+    e.port_from.toString().split('\\.').each { k -> node = (node instanceof Map) ? node[k] : null }
+    if (!(node instanceof Integer)) throw new GradleException("${e.owner}/build.json has no integer at ${e.port_from} (serving.endpoints[${e.id}].port_from)")
+    e.port = node
     def want = "http://${e.name}".toString()
     def got  = (buildJson.ui.browser?.local_pinned_tabs ?: [:])[e.title]
     if (got != want) throw new GradleException("ui.browser.local_pinned_tabs.${e.title} is '${got}', but ac_cloud-c3-webserver/build.json::serving names it ${e.name}")

@@ -15,12 +15,18 @@
 #
 #   Q1  THE DECLARATION. build.json::serving has exactly four endpoints; every
 #       name is one lowercase label under .app, names / ports / ids are unique,
-#       ports are 1024..65535, one endpoint is the drive and one the diagnostics
-#       page, and the DNS server is a loopback address on a port that is not 53
-#       and not any endpoint's.
-#   Q2  THE OWNERS AGREE. Each endpoint's port is the one its owner declares:
-#       termux and nix-on-droid runtime.webserver.port, this app runtime.port
-#       (the drive) and runtime.diag.port (the diagnostics page).
+#       ports (resolved from their owners, see Q2) are 1024..65535, one endpoint
+#       is the drive and one the diagnostics page, the drive resolves to the port
+#       this app binds (runtime.port) and the diagnostics page to runtime.diag.port,
+#       and the DNS server is a loopback address on a port that is not 53 and not
+#       any endpoint's.
+#   Q2  NO SECOND LITERAL. A port number is written once, in its owner's build.json
+#       (termux and nix-on-droid runtime.webserver.port, this app runtime.port and
+#       runtime.diag.port). build.json::serving writes none: no endpoint carries a
+#       `port`, each names its `owner` and `port_from`, and that path must lead to an
+#       integer in the owner's file. The readers resolve it at BUILD time (server/build.rs
+#       for the Rust crate, the browser's gradle) and each refuses a literal. The only
+#       `port` key under serving is the private DNS server's own, which no owner declares.
 #   Q3  THE READERS READ IT. The browser's pins are exactly the names with their
 #       titles, its build.json does NOT carry the map (so there is one copy),
 #       its gradle bakes ac_cloud-c3-webserver/build.json::serving; the web
@@ -73,20 +79,28 @@ eps = sv.get("endpoints") or []
 dns = sv.get("dns") or {}
 rt = bj.get("runtime") or {}
 
+def resolve(e):
+    """The port the endpoint's owner declares at port_from, or None (build.rs and the browser gradle do the same walk)."""
+    node = js(os.path.join(repo, str(e.get("owner", "?")), "build.json"))
+    for k in str(e.get("port_from", "")).split("."):
+        node = node.get(k) if isinstance(node, dict) else None
+    return node if isinstance(node, int) and not isinstance(node, bool) else None
+PORTS = {e.get("id"): resolve(e) for e in eps}
+
 if "q1" in which:
     if len(eps) != 4: bad.append("Q1 serving.endpoints has %d entries, want the four private names" % len(eps))
     for key in ("name", "port", "id"):
-        vals = [e.get(key) for e in eps]
+        vals = [PORTS[e.get("id")] if key == "port" else e.get(key) for e in eps]
         if len(vals) != len(set(vals)): bad.append("Q1 serving.endpoints %s repeats: %r" % (key, vals))
     for e in eps:
         n = e.get("name", "")
         if not re.fullmatch(r"[a-z0-9-]{2,}\.app", n): bad.append("Q1 name %r is not one lowercase label under .app (exact names only, never a wildcard)" % n)
-        p = e.get("port")
-        if not isinstance(p, int) or isinstance(p, bool) or not 1024 <= p <= 65535: bad.append("Q1 %s port %r is not an integer in 1024..65535" % (n, p))
+        p = PORTS[e.get("id")]
+        if not isinstance(p, int) or isinstance(p, bool) or not 1024 <= p <= 65535: bad.append("Q1 %s port %r (from %s %s) is not an integer in 1024..65535" % (n, p, e.get("owner"), e.get("port_from")))
     roles = sorted(e.get("role") for e in eps)
     if roles.count("drive") != 1 or roles.count("diag") != 1 or any(r not in ("external", "drive", "diag") for r in roles):
         bad.append("Q1 roles %r: want exactly one drive, one diag, the rest external" % roles)
-    ports = {e.get("role"): e.get("port") for e in eps}
+    ports = {e.get("role"): PORTS[e.get("id")] for e in eps}
     if ports.get("drive") != rt.get("port"): bad.append("Q1 the drive endpoint is %r but runtime.port is %r" % (ports.get("drive"), rt.get("port")))
     if ports.get("diag") != (rt.get("diag") or {}).get("port"): bad.append("Q1 the diag endpoint is %r but runtime.diag.port is %r" % (ports.get("diag"), (rt.get("diag") or {}).get("port")))
     import ipaddress
@@ -97,17 +111,34 @@ if "q1" in which:
             bad.append("Q1 serving.dns.%s = %r is not a loopback address" % (k, dns.get(k)))
     dp = dns.get("port")
     if not isinstance(dp, int) or dp == 53 or not 1024 <= dp <= 65535: bad.append("Q1 serving.dns.port %r must be 1024..65535 and never 53 (Android cannot bind it without root)" % (dp,))
-    if dp in [e.get("port") for e in eps]: bad.append("Q1 the DNS port %r is also an endpoint's port" % (dp,))
+    if dp in PORTS.values(): bad.append("Q1 the DNS port %r is also an endpoint's port" % (dp,))
     if not (sv.get("bridge") or {}).get("authority", "").endswith(".fleetdiag"): bad.append("Q1 serving.bridge.authority is not <package>.fleetdiag")
     if not (sv.get("opener") or {}).get("package"): bad.append("Q1 serving.opener.package is missing: the Pages tab would not know which browser to open")
 
 if "q2" in which:
-    def port_of(e):
-        o = js(os.path.join(repo, e.get("owner", "?"), "build.json")).get("runtime") or {}
-        return {"external": (o.get("webserver") or {}).get("port"), "drive": o.get("port"), "diag": (o.get("diag") or {}).get("port")}.get(e.get("role"))
     for e in eps:
-        if port_of(e) != e.get("port"):
-            bad.append("Q2 serving says %s is :%r but %s declares :%r" % (e.get("name"), e.get("port"), e.get("owner"), port_of(e)))
+        if "port" in e: bad.append("Q2 serving.endpoints[%s] spells a literal port %r: the number lives in %s, named by port_from" % (e.get("id"), e.get("port"), e.get("owner")))
+        if not e.get("owner") or not os.path.isfile(os.path.join(repo, str(e.get("owner")), "build.json")): bad.append("Q2 serving.endpoints[%s].owner %r has no build.json" % (e.get("id"), e.get("owner")))
+        if not re.fullmatch(r"[a-z_]+(\.[a-z_]+)+", str(e.get("port_from", ""))): bad.append("Q2 serving.endpoints[%s].port_from %r is not a dotted path" % (e.get("id"), e.get("port_from")))
+        elif PORTS[e.get("id")] is None: bad.append("Q2 %s/build.json has no integer at %s (serving.endpoints[%s])" % (e.get("owner"), e.get("port_from"), e.get("id")))
+    def port_keys(o, path=""):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if k == "port": yield path + ".port"
+                yield from port_keys(v, path + "." + k if path else k)
+        elif isinstance(o, list):
+            for i, v in enumerate(o): yield from port_keys(v, "%s[%d]" % (path, i))
+    stray = [k for k in port_keys(sv) if k != "dns.port"]
+    if stray: bad.append("Q2 build.json::serving writes a port at %s: only the DNS server's own (dns.port) may" % ", ".join(stray))
+    srv = read(os.path.join(app, "server/src/serving.rs"))
+    brs = read(os.path.join(app, "server/build.rs"))
+    if 'concat!(env!("OUT_DIR"), "/build.json")' not in srv: bad.append("Q2 server/src/serving.rs does not compile the RESOLVED build.json (OUT_DIR) in")
+    if 'include_str!("../../build.json")' in re.split(r"#\[cfg\(test\)\]", srv)[0]: bad.append("Q2 server/src/serving.rs still compiles the unresolved build.json into the binary")
+    if 'e.get("port").is_some()' not in brs or 'e["port_from"]' not in brs or 'e["port"] = port.into()' not in brs:
+        bad.append("Q2 server/build.rs no longer refuses a literal port and resolves port_from")
+    gradle = read(os.path.join(repo, "ac_cloud-browser/app/build.gradle"))
+    if "e.containsKey('port')" not in gradle or "e.port_from" not in gradle or "e.port = node" not in gradle:
+        bad.append("Q2 ac_cloud-browser/app/build.gradle no longer refuses a literal port and resolves port_from")
 
 if "q3" in which:
     b = js(os.path.join(repo, "ac_cloud-browser", "build.json"))
@@ -134,7 +165,7 @@ if "q3" in which:
 
 if "q4" in which:
     names = [e.get("name") for e in eps] + ["termux.app", "nix.app", "emulated.app", "cloud.app"]
-    nums = [str(e.get("port")) for e in eps] + [str(dns.get("port"))]
+    nums = [str(PORTS[e.get("id")]) for e in eps] + [str(dns.get("port"))]
     files = sorted(glob.glob(os.path.join(app, "server/src/*.rs")) + glob.glob(os.path.join(app, "src-tauri/src/*.rs")))
     files += [os.path.join(app, "server/ui/shell.html"), os.path.join(app, "server/ui/diag.html")]
     for f in files:
@@ -179,8 +210,8 @@ PY
 }
 
 echo "── cloud-c3-webserver ports / DNS map ──"
-check "$APP" "$REPO" q1 && pass "Q1 the declaration: four unique lowercase .app names, unique ports, one drive, one diag, DNS on loopback and not :53" || fail "Q1 the declaration is malformed"
-check "$APP" "$REPO" q2 && pass "Q2 each endpoint's port is the one its owner declares (termux, nix-on-droid, this app's drive and diagnostics)" || fail "Q2 the map and the owners disagree"
+check "$APP" "$REPO" q1 && pass "Q1 the declaration: four unique lowercase .app names, unique resolved ports, one drive, one diag, DNS on loopback and not :53" || fail "Q1 the declaration is malformed"
+check "$APP" "$REPO" q2 && pass "Q2 no second literal: serving writes no port, each endpoint resolves it from its owner's build.json (port_from) and the readers refuse a literal" || fail "Q2 a port is written twice, or an owner does not declare it"
 check "$APP" "$REPO" q3 && pass "Q3 the browser pins the names with their titles and bakes the one declaration; the server compiles it in; the provider authority matches" || fail "Q3 a reader of the map drifted"
 check "$APP" "$REPO" q4 && pass "Q4 no Rust source, shell page or Tauri glue of the app spells a name or a port" || fail "Q4 a name or a port is typed outside build.json"
 check "$APP" "$REPO" q6 && pass "Q6 the engine registry is declared once, in build.json::engines; no source repeats a description" || fail "Q6 a second copy of the engine registry"
@@ -212,7 +243,7 @@ p, stmt = sys.argv[1], sys.argv[2]
 d = json.load(open(p)); exec(stmt); json.dump(d, open(p, "w"), indent=2)
 PY
 }
-m_dup_port()      { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["endpoints"][1]["port"] = 8000'; }
+m_dup_port()      { bjset "$1" ac_cloud-nix-on-droid 'd["runtime"]["webserver"]["port"] = 8000'; }
 m_dup_name()      { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["endpoints"][1]["name"] = "termux.app"'; }
 m_com_name()      { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["endpoints"][1]["name"] = "nix.com"'; }
 m_wild_name()     { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["endpoints"][1]["name"] = "*.app"'; }
@@ -220,10 +251,39 @@ m_dns53()         { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["dns"]["port"
 m_dns_public()    { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["dns"]["host"] = "0.0.0.0"'; }
 m_dns_answer()    { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["dns"]["answer"] = "10.0.0.7"'; }
 m_dns_on_ep()     { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["dns"]["port"] = 8001'; }
-m_runtime_drift() { bjset "$1" ac_cloud-c3-webserver 'd["runtime"]["port"] = 8100'; }
-m_diag_drift()    { bjset "$1" ac_cloud-c3-webserver 'd["runtime"]["diag"]["port"] = 8100'; }
-m_owner_drift()   { bjset "$1" ac_cloud-termux 'd["runtime"]["webserver"]["port"] = 8100'; }
-m_nix_drift()     { bjset "$1" ac_cloud-nix-on-droid 'd["runtime"]["webserver"]["port"] = 8101'; }
+m_drive_path()    { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["endpoints"][2]["port_from"] = "runtime.diag.port"'; }
+m_diag_path()     { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["endpoints"][3]["port_from"] = "runtime.port"'; }
+m_literal_same()  { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["endpoints"][0]["port"] = 8000'; }
+m_literal_drift() { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["endpoints"][1]["port"] = 8101'; }
+m_stray_port()    { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["opener"]["port"] = 8000'; }
+m_owner_unset()   { bjset "$1" ac_cloud-termux 'del d["runtime"]["webserver"]["port"]'; }
+m_owner_string()  { bjset "$1" ac_cloud-nix-on-droid 'd["runtime"]["webserver"]["port"] = "8001"'; }
+m_owner_missing() { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["endpoints"][1]["owner"] = "ac_cloud-nowhere"'; }
+m_no_port_from()  { bjset "$1" ac_cloud-c3-webserver 'del d["serving"]["endpoints"][0]["port_from"]'; }
+m_buildrs_lenient() { python3 - "$1/ac_cloud-c3-webserver/server/build.rs" <<'PY'
+import sys; p = sys.argv[1]; s = open(p).read()
+n = s.replace('e.get("port").is_some()', 'false')
+assert n != s; open(p, "w").write(n)
+PY
+}
+m_raw_compiled()  { python3 - "$1/ac_cloud-c3-webserver/server/src/serving.rs" <<'PY'
+import sys; p = sys.argv[1]; s = open(p).read()
+n = s.replace('include_str!(concat!(env!("OUT_DIR"), "/build.json"))', 'include_str!("../../build.json")', 1)
+assert n != s; open(p, "w").write(n)
+PY
+}
+m_gradle_lenient() { python3 - "$1/ac_cloud-browser/app/build.gradle" <<'PY'
+import sys; p = sys.argv[1]; s = open(p).read()
+n = s.replace("e.containsKey('port')", "false")
+assert n != s; open(p, "w").write(n)
+PY
+}
+m_gradle_noresolve() { python3 - "$1/ac_cloud-browser/app/build.gradle" <<'PY'
+import sys; p = sys.argv[1]; s = open(p).read()
+n = s.replace("e.port = node", "e.port = e.port")
+assert n != s; open(p, "w").write(n)
+PY
+}
 m_two_drives()    { bjset "$1" ac_cloud-c3-webserver 'd["serving"]["endpoints"][0]["role"] = "drive"'; }
 m_pin_drift()     { bjset "$1" ac_cloud-browser 'br = d["ui"]["browser"]; br["default_pinned_tabs"][4]["url"] = "http://localhost:8001"'; }
 m_pin_title()     { bjset "$1" ac_cloud-browser 'br = d["ui"]["browser"]; br["default_pinned_tabs"][5]["title"] = "Drive"'; }
@@ -296,11 +356,20 @@ mutate "the DNS server on :53"                             q1 m_dns53
 mutate "the DNS server on a wildcard address"              q1 m_dns_public
 mutate "the DNS answering a non-loopback address"          q1 m_dns_answer
 mutate "the DNS port is also an endpoint's"                q1 m_dns_on_ep
-mutate "runtime.port drifts from the drive endpoint"       q1 m_runtime_drift
-mutate "runtime.diag.port drifts from the diag endpoint"   q1 m_diag_drift
+mutate "the drive endpoint stops following runtime.port"   q1 m_drive_path
+mutate "the diag endpoint stops following runtime.diag.port" q1 m_diag_path
 mutate "two drives"                                        q1 m_two_drives
-mutate "termux moves its port, the map does not"           q2 m_owner_drift
-mutate "nix-on-droid moves its port, the map does not"     q2 m_nix_drift
+mutate "a literal port beside port_from (same number)"     q2 m_literal_same
+mutate "a literal port that drifted from its owner"        q2 m_literal_drift
+mutate "a port written anywhere else under serving"        q2 m_stray_port
+mutate "the owner stops declaring its port"                q2 m_owner_unset
+mutate "the owner declares its port as a string"           q2 m_owner_string
+mutate "an endpoint names an owner with no build.json"     q2 m_owner_missing
+mutate "an endpoint loses its port_from"                   q2 m_no_port_from
+mutate "build.rs stops refusing a literal port"            q2 m_buildrs_lenient
+mutate "the binary compiles the unresolved build.json"     q2 m_raw_compiled
+mutate "the browser gradle stops refusing a literal port"  q2 m_gradle_lenient
+mutate "the browser gradle stops resolving port_from"      q2 m_gradle_noresolve
 mutate "a browser pin back on localhost"                   q3 m_pin_drift
 mutate "a browser pin loses its title"                     q3 m_pin_title
 mutate "a second copy of the map in the browser"           q3 m_second_copy
