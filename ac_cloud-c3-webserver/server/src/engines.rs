@@ -49,16 +49,16 @@ pub struct Engine {
     pub reason: String,
 }
 
-/// THE registry: build.json::engines.list, compiled in with the rest of build.json. Nothing in this crate spells
+/// THE registry: build.json::render_engines.list, compiled in with the rest of build.json. Nothing in this crate spells
 /// an engine's name, description or switch; only handlers spell ids, and the tests below hold both directions.
 pub fn all() -> &'static [Engine] {
     static ALL: OnceLock<Vec<Engine>> = OnceLock::new();
-    ALL.get_or_init(|| parse(crate::serving::BUILD_JSON).expect("build.json::engines is invalid (the tests catch this at build time)"))
+    ALL.get_or_init(|| parse(crate::serving::BUILD_JSON).expect("build.json::render_engines is invalid (the tests catch this at build time)"))
 }
 
 pub fn parse(text: &str) -> Result<Vec<Engine>, String> {
     let root: serde_json::Value = serde_json::from_str(text).map_err(|e| format!("build.json does not parse: {}", e))?;
-    let list = root["engines"]["list"].as_array().ok_or("build.json::engines.list must be an array")?;
+    let list = root["render_engines"]["list"].as_array().ok_or("build.json::render_engines.list must be an array")?;
     let st = |v: &serde_json::Value, k: &str| v[k].as_str().unwrap_or("").to_string();
     let mut out = Vec::new();
     for v in list {
@@ -214,7 +214,7 @@ mod tests {
     fn every_consulted_id_is_declared_and_every_switch_is_consulted() {
         let used = used_ids();
         for id in &used {
-            let x = find(id).unwrap_or_else(|| panic!("a handler asks for engine {:?}, which is not in build.json::engines", id));
+            let x = find(id).unwrap_or_else(|| panic!("a handler asks for engine {:?}, which is not in build.json::render_engines", id));
             assert!(x.toggle, "engines.on({:?}) is asked of something that cannot be switched", id);
         }
         for x in all().iter().filter(|x| x.toggle) {

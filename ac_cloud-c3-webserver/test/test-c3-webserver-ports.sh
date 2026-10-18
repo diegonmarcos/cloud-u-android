@@ -38,7 +38,7 @@
 #       server, accepts only a loopback answer and never falls back to the
 #       system (the pins the DNS resolver guard also holds); the server crate
 #       refuses names it does not own.
-#   Q6  THE ENGINE REGISTRY IS ONE DECLARATION. build.json::engines.list holds every
+#   Q6  THE ENGINE REGISTRY IS ONE DECLARATION. build.json::render_engines.list holds every
 #       engine's name, description and switch; no source of the app (Rust, the
 #       shell, the pages, the Tauri glue) repeats a description or a name.
 #   M   each defect above is planted in a copy and shown red.
@@ -195,15 +195,15 @@ if "q5" in which:
     if "RCODE_REFUSED" not in dnsrs or "is_loopback()" not in dnsrs: bad.append("Q5 dns.rs no longer refuses names it does not own or non-loopback peers")
     if re.search(r"\.send_to\([^)]*\)\s*;[^}]*forward|UdpSocket::bind\(\(\"0\.0\.0\.0\"", dnsrs): bad.append("Q5 dns.rs forwards or binds a wildcard address")
 if "q6" in which:
-    engines = (bj.get("engines") or {}).get("list") or []
-    if len(engines) < 15: bad.append("Q6 build.json::engines.list has %d entries, want the whole registry" % len(engines))
+    engines = (bj.get("render_engines") or {}).get("list") or []
+    if len(engines) < 15: bad.append("Q6 build.json::render_engines.list has %d entries, want the whole registry" % len(engines))
     srcs = glob.glob(os.path.join(app, "server/src/*.rs")) + glob.glob(os.path.join(app, "src-tauri/src/*.rs")) + glob.glob(os.path.join(app, "server/ui/*.html"))
     for f in srcs:
         text = re.split(r"#\[cfg\(test\)\]", read(f))[0] if f.endswith(".rs") else read(f)
         for e in engines:
             for key in ("summary",):
                 v = e.get(key, "")
-                if len(v) > 12 and v in text: bad.append("Q6 %s repeats engine %s's %s: it is declared only in build.json::engines" % (os.path.relpath(f, app), e.get("id"), key))
+                if len(v) > 12 and v in text: bad.append("Q6 %s repeats engine %s's %s: it is declared only in build.json::render_engines" % (os.path.relpath(f, app), e.get("id"), key))
 for b in bad: print("    " + b)
 sys.exit(1 if bad else 0)
 PY
@@ -214,7 +214,7 @@ check "$APP" "$REPO" q1 && pass "Q1 the declaration: four unique lowercase .app 
 check "$APP" "$REPO" q2 && pass "Q2 no second literal: serving writes no port, each endpoint resolves it from its owner's build.json (port_from) and the readers refuse a literal" || fail "Q2 a port is written twice, or an owner does not declare it"
 check "$APP" "$REPO" q3 && pass "Q3 the browser pins the names with their titles and bakes the one declaration; the server compiles it in; the provider authority matches" || fail "Q3 a reader of the map drifted"
 check "$APP" "$REPO" q4 && pass "Q4 no Rust source, shell page or Tauri glue of the app spells a name or a port" || fail "Q4 a name or a port is typed outside build.json"
-check "$APP" "$REPO" q6 && pass "Q6 the engine registry is declared once, in build.json::engines; no source repeats a description" || fail "Q6 a second copy of the engine registry"
+check "$APP" "$REPO" q6 && pass "Q6 the engine registry is declared once, in build.json::render_engines; no source repeats a description" || fail "Q6 a second copy of the engine registry"
 check "$APP" "$REPO" q5 && pass "Q5 the browser client is loopback-only and never falls back to the system; the server refuses names it does not own" || fail "Q5 the private DNS grew into a resolver"
 
 # ── M: mutation-proof ──────────────────────────────────────────────────────
@@ -338,7 +338,7 @@ PY
 }
 m_engine_copy()  { python3 - "$1/ac_cloud-c3-webserver/server/ui/shell.html" "$1/ac_cloud-c3-webserver/build.json" <<'PY2'
 import json, sys
-p, b = sys.argv[1:3]; e = json.load(open(b))["engines"]["list"][0]["summary"]
+p, b = sys.argv[1:3]; e = json.load(open(b))["render_engines"]["list"][0]["summary"]
 s = open(p).read(); n = s.replace("<main", "<!-- " + e + " --><main", 1); assert n != s; open(p, "w").write(n)
 PY2
 }

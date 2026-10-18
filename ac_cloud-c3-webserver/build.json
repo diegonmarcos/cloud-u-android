@@ -125,7 +125,7 @@
       "_doc": "The SuperApp's exported, CONSTELLATION_DATA signature-permission ContentProvider (aa_cloud-superapp FleetDiagnosticsProvider). call(about|logcat|diagnose) -> {ok, mime, payload}; read-only."
     }
   },
-  "engines": {
+  "render_engines": {
     "_doc": "THE ENGINE REGISTRY, declared once: every render and feature engine of the server. server/src/engines.rs compiles this block in (the handlers ask `ctx.engines.on(<id>)`; a test fails when a handler asks for an id declared nowhere or a switch has no handler), /__api__/engines serves it and Configs > Engines draws exactly it. group render|feature get a switch (toggle), core is always on, not-portable is an engine of my-webserver that cannot run on a phone and says why (reason). default_on is the state before the owner flips it; flips persist in the app's private files dir.",
     "list": [
       {
