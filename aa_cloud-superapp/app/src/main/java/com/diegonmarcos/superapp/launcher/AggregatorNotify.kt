@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
@@ -285,14 +286,14 @@ internal fun GroupBlock(
                         onClick = { Haptics.tap(hostView); toggle() },
                         onLongClick = { Haptics.tap(hostView); menu = true },
                     )
-                    .padding(start = NotifCard.pad, end = 10.dp, top = 12.dp, bottom = 2.dp)
+                    .padding(start = NotifCard.pad, end = 12.dp, top = 12.dp, bottom = 2.dp)
                     .testTag(AggTags.groupHeader(g.key)),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 GroupGlyph(g, tint)
                 Text(g.label, color = NotifCard.title, fontSize = 13.sp, fontWeight = FontWeight.Medium,
                     fontFamily = NotifCard.font, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = 8.dp).weight(1f, fill = false))
+                    modifier = Modifier.padding(start = 8.dp).widthIn(max = 200.dp))
                 if (g.newest > 0L) Text(" • " + AggregatorModel.shortAgo(System.currentTimeMillis() - g.newest),
                     color = NotifCard.meta, fontSize = 13.sp, fontFamily = NotifCard.font, maxLines = 1)
                 Box(Modifier.weight(1f))

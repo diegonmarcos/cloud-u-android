@@ -83,7 +83,7 @@ class AggregatorComposeTest : KitPageHarness() {
         compose.onNodeWithText("title phone:2").assertExists()
         compose.onNodeWithText("title phone:1").assertDoesNotExist()
         compose.onNodeWithTag(AggTags.groupMore("pkg.a")).assertTextContains("+1")
-        compose.onNodeWithTag(AggTags.groupChevron("pkg.a")).assertExists()
+        compose.onNodeWithTag(AggTags.groupChevron("pkg.a"), useUnmergedTree = true).assertExists()
         // A plain count is the pill's job, so the OK chip is not drawn.
         compose.onNodeWithTag(AggTags.groupChip("pkg.a")).assertDoesNotExist()
         compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performClick()
@@ -115,7 +115,7 @@ class AggregatorComposeTest : KitPageHarness() {
         // No footer buttons: the actions live in the long-press sheet.
         compose.onNodeWithTag(AggTags.groupCheck("pkg.a")).assertDoesNotExist()
         compose.onNodeWithTag(AggTags.groupArchive("pkg.a")).assertDoesNotExist()
-        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performTouchInput { longClick() }
+        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performTouchInput { longClick(centerLeft + androidx.compose.ui.geometry.Offset(40f, 0f)) }
         compose.onNodeWithTag(AggTags.groupCheck("pkg.a")).assertTextContains(AggregatorModel.MARK_READ_LABEL)
         compose.onNodeWithTag(AggTags.groupArchive("pkg.a")).assertTextContains(AggregatorModel.ARCHIVE_LABEL)
     }
@@ -126,7 +126,7 @@ class AggregatorComposeTest : KitPageHarness() {
         val v = view(row("phone:1", 100), row("phone:2", 200))
         showKit { GroupBlock(st, v, archived = false) { } }
         assertTrue(st.isUnread(v.group.rows[0]))
-        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performTouchInput { longClick() }
+        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performTouchInput { longClick(centerLeft + androidx.compose.ui.geometry.Offset(40f, 0f)) }
         compose.onNodeWithTag(AggTags.groupCheck("pkg.a")).performClick()
         assertFalse(st.isUnread(v.group.rows[0]))
         assertFalse(st.isUnread(v.group.rows[1]))
@@ -139,7 +139,7 @@ class AggregatorComposeTest : KitPageHarness() {
         val st = state("g3-page")
         val v = view(row("phone:1", 100))
         showKit { GroupBlock(st, v, archived = st.isArchived("pkg.a")) { } }
-        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performTouchInput { longClick() }
+        compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performTouchInput { longClick(centerLeft + androidx.compose.ui.geometry.Offset(40f, 0f)) }
         compose.onNodeWithTag(AggTags.groupArchive("pkg.a")).assertTextContains(AggregatorModel.ARCHIVE_LABEL)
             .performClick()
         assertTrue(st.isArchived("pkg.a"))
@@ -158,10 +158,10 @@ class AggregatorComposeTest : KitPageHarness() {
         val r2 = row("phone:2", 200)
         showKit { GroupBlock(st, view(r, r2), archived = false) { } }
         assertTrue(st.isUnread(r))
-        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { longClick() }
+        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { longClick(centerLeft + androidx.compose.ui.geometry.Offset(40f, 0f)) }
         compose.onNodeWithTag(AggTags.rowRead("phone:1")).assertTextContains(AggregatorModel.MARK_READ_LABEL).performClick()
         assertFalse(st.isUnread(r))
-        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { longClick() }
+        compose.onNodeWithTag(AggTags.row("phone:1")).performTouchInput { longClick(centerLeft + androidx.compose.ui.geometry.Offset(40f, 0f)) }
         compose.onNodeWithTag(AggTags.rowRead("phone:1")).assertTextContains("Mark unread").performClick()
         assertTrue(st.isUnread(r))
         assertEquals(setOf<String>(), StackFilters.readKeys(ctx, "g4-page"))
