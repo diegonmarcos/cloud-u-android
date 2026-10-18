@@ -164,6 +164,10 @@ class BrowserHostFragment : Fragment() {
     /** The host view (a ComposeView): what a Snackbar anchors to. */
     private var hostView: View? = null
     private var webView: WebView? = null
+    /** The tab [webView] shows: what a snapshot taken when the page is left is filed under. */
+    private var webTabKey: String? = null
+    /** Tab-switcher snapshots (build.json::ui.browser.tab_thumbnails): one cache per process. */
+    private val thumbs: TabThumbnails by lazy { TabThumbnails.shared(requireContext(), config.tabThumbs) }
     private var mode: Mode = Mode.GRID
     /** The ARG_OPEN_URL is consumed once: a rotation must not reopen it over where the user went. */
     private var openUrlHandled = false
@@ -357,6 +361,7 @@ class BrowserHostFragment : Fragment() {
             return
         }
         BrowserWebState.delete(requireContext(), tab.key)
+        thumbs.delete(tab.key)
         if (tab.previewPath.isNotBlank()) runCatching { File(tab.previewPath).delete() }
         val left = prefs.all()
         val plan = privateSession.close(tab, left)
@@ -425,6 +430,7 @@ class BrowserHostFragment : Fragment() {
         val c = swipeClose.commit(prefs.all()) ?: return
         val ctx = context ?: return
         BrowserWebState.delete(ctx, c.tab.key)
+        thumbs.delete(c.tab.key)
         if (c.tab.previewPath.isNotBlank()) runCatching { File(c.tab.previewPath).delete() }
         c.plan?.let {
             if (it.deleteProfile) dropPrivateProfile()
@@ -870,6 +876,7 @@ class BrowserHostFragment : Fragment() {
         addressFocused = false
         addressOpen = false
 
+        webTabKey = tabKey
         webView = WebView(ctx).apply {
             bindProfile(this, tab)   // before anything loads
             settings.javaScriptEnabled = true
@@ -960,12 +967,13 @@ class BrowserHostFragment : Fragment() {
                     // #887 an offline copy is not a visit.
                     if (offlineSites.isOffline(u)) return
                     if (mhtml.allowsFile(u)) return   // nor is a saved page opened from a file
-                    // #802 a private tab is never recorded: no history, no preview.
+                    // Snapshot for the tab switcher; a private tab follows build.json tab_thumbnails.incognito.
+                    postDelayed({ if (webView === this@apply) captureTab(this@apply, tabKey) }, 600)
+                    // #802 a private tab is never recorded: no history.
                     val origin = runCatching { java.net.URI(u) }.getOrNull()?.let { "${it.scheme}://${it.authority}" }
                     if (!privateSession.visit(prefs.byId(tabKey), origin)) return
                     // Item 5. Local store, no sink, no sync — see BrowserHistory.
                     history.record(u, view?.title ?: u)
-                    postDelayed({ capturePreview(this@apply, tabKey) }, 600)
                 }
             }
             // Long-press on a link or image: a dense sheet; text and fields keep the system actions.
@@ -1279,18 +1287,9 @@ class BrowserHostFragment : Fragment() {
 
     // ── misc ─────────────────────────────────────────────────────────
 
-    private fun capturePreview(wv: WebView, tabKey: String) {
-        runCatching {
-            val w = wv.width; val h = wv.height
-            if (w <= 0 || h <= 0) return
-            val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565)
-            wv.draw(Canvas(bmp))
-            val dir = File(requireContext().cacheDir, "tabs").apply { mkdirs() }
-            val file = File(dir, "${sha256(tabKey)}.png")
-            file.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 70, it) }
-            bmp.recycle()
-            prefs.updatePreviewById(tabKey, file.absolutePath)
-        }
+    private fun captureTab(wv: WebView, tabKey: String) {
+        val tab = prefs.byId(tabKey) ?: return   // a tab that just closed must not get its picture back
+        thumbs.capture(wv, tabKey, tab.isPrivate)
     }
 
     private fun sha256(s: String): String {
@@ -1778,6 +1777,7 @@ class BrowserHostFragment : Fragment() {
                             },
                             onEditGroup = { g -> showGroupEditor(g) },
                             groupColors = { prefs.groupColors() },
+                            thumbs = thumbs,
                         )
                     },
                     update = { grid -> grid.submit(BrowserGridRows.build(tabs, prefs.collapsedGroups())) },
@@ -2428,6 +2428,9 @@ class BrowserHostFragment : Fragment() {
 
     private fun teardownWebView() {
         saveTabState()
+        // Leaving a tab (to the switcher or to another tab): its last look, while the page is still alive.
+        webView?.let { wv -> webTabKey?.let { if (isAdded) runCatching { captureTab(wv, it) } } }
+        webTabKey = null
         webView?.let {
             runCatching { it.stopLoading() }
             runCatching { it.destroy() }

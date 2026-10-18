@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.browser
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -49,6 +48,8 @@ class BrowserTabGrid(
     private val onEditGroup: (String) -> Unit = {},
     /** #886 each group's colour (ARGB). */
     private val groupColors: () -> Map<String, Int> = { emptyMap() },
+    /** Tab snapshots (memory LRU + disk); null = every card shows the favicon plate. */
+    private val thumbs: TabThumbnails? = null,
 ) : RecyclerView(context) {
 
     private val adapter0 = Adapter()
@@ -308,12 +309,19 @@ class BrowserTabGrid(
             }
             clipToOutline = true
 
-            addView(ImageView(ctx).apply {
+            // The page snapshot, cropped to fill the card and anchored to its top (ContentScale.Crop + TopCenter).
+            addView(TopCropImageView(ctx).apply {
                 id = ID_PREVIEW
-                scaleType = ImageView.ScaleType.CENTER_CROP
                 layoutParams = FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT)
+            })
+            // No snapshot yet: the favicon on a plain plate.
+            addView(ImageView(ctx).apply {
+                id = ID_PLATE_ICON
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                contentDescription = TabCardA11y.PLACEHOLDER
+                layoutParams = FrameLayout.LayoutParams(dp(ctx, 48), dp(ctx, 48), Gravity.CENTER)
             })
 
             // #886 a thin bar in the group's colour across the top of a grouped tab's card.
@@ -334,6 +342,11 @@ class BrowserTabGrid(
                     id = ID_PIN
                     text = "📌"
                     setPadding(dp(ctx, 2), dp(ctx, 2), dp(ctx, 8), dp(ctx, 2))
+                })
+                addView(ImageView(ctx).apply {
+                    id = ID_FAVICON
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    layoutParams = LinearLayout.LayoutParams(dp(ctx, 16), dp(ctx, 16)).apply { marginEnd = dp(ctx, 6) }
                 })
                 addView(TextView(ctx).apply {
                     id = ID_TITLE
@@ -357,20 +370,34 @@ class BrowserTabGrid(
     }
 
     private fun bindCard(v: View, tab: BrowserTab) {
-        val preview = v.findViewById<ImageView>(ID_PREVIEW)
-        val file = tab.previewPath.takeIf { it.isNotBlank() }?.let { File(it) }
-        val bmp = if (file != null && file.exists()) {
-            runCatching { BitmapFactory.decodeFile(file.absolutePath) }.getOrNull()
-        } else null
-        if (bmp != null) {
-            preview.setImageBitmap(bmp)
-        } else {
-            preview.setImageDrawable(
-                GradientDrawable(
-                    GradientDrawable.Orientation.TL_BR,
-                    intArrayOf(0xFF2D1B69.toInt(), 0xFF1A0033.toInt()),
-                )
-            )
+        val preview = v.findViewById<TopCropImageView>(ID_PREVIEW)
+        val plate = v.findViewById<ImageView>(ID_PLATE_ICON)
+        val favicon = v.findViewById<ImageView>(ID_FAVICON)
+        val key = tab.key
+        preview.tag = key
+        favicon.tag = key
+        // Plain plate + favicon until a snapshot arrives; the snapshot, when cached, is set without any IO.
+        fun showSnapshot(bmp: android.graphics.Bitmap?) {
+            if (preview.tag != key) return   // the holder was rebound to another tab meanwhile
+            if (bmp == null) {
+                preview.setImageDrawable(GradientDrawable().apply { setColor(0xFF24103F.toInt()) })
+                preview.contentDescription = null
+                plate.visibility = View.VISIBLE
+            } else {
+                preview.setImageBitmap(bmp)
+                preview.contentDescription = TabCardA11y.SNAPSHOT
+                plate.visibility = View.GONE
+            }
+        }
+        val hit = thumbs?.cached(key)
+        showSnapshot(hit)
+        if (hit == null && thumbs != null) thumbs.load(key) { showSnapshot(it) }
+
+        plate.setImageDrawable(null); favicon.setImageDrawable(null)
+        if (tab.iconPath.isNotBlank() && thumbs != null) {
+            thumbs.loadIcon(tab.iconPath) { b ->
+                if (favicon.tag == key && b != null) { favicon.setImageBitmap(b); plate.setImageBitmap(b) }
+            }
         }
 
         // The pin icon is always there: bright when pinned, dim when not, and a tap toggles it.
@@ -401,6 +428,8 @@ class BrowserTabGrid(
         const val TYPE_HEADER = 0
         const val TYPE_CARD = 1
         val ID_PREVIEW     = View.generateViewId()
+        val ID_PLATE_ICON  = View.generateViewId()
+        val ID_FAVICON     = View.generateViewId()
         val ID_TITLE       = View.generateViewId()
         val ID_MENU        = View.generateViewId()
         val ID_PIN         = View.generateViewId()
@@ -411,5 +440,39 @@ class BrowserTabGrid(
 
         fun dp(ctx: Context, v: Int): Int =
             (v * ctx.resources.displayMetrics.density).toInt()
+    }
+}
+
+/** Content descriptions of the card's picture, so a test (and TalkBack) can tell a snapshot from the plate. */
+object TabCardA11y {
+    const val SNAPSHOT = "Page snapshot"
+    const val PLACEHOLDER = "No snapshot yet"
+}
+
+/** An ImageView that fills its box with the bitmap (crop) and keeps the TOP edge: Compose's ContentScale.Crop + Alignment.TopCenter. */
+class TopCropImageView(ctx: Context) : ImageView(ctx) {
+    init { scaleType = ScaleType.MATRIX }
+
+    override fun setFrame(l: Int, t: Int, r: Int, b: Int): Boolean =
+        super.setFrame(l, t, r, b).also { applyTopCrop() }
+
+    override fun setImageBitmap(bm: android.graphics.Bitmap?) {
+        super.setImageBitmap(bm); applyTopCrop()
+    }
+
+    override fun setImageDrawable(d: android.graphics.drawable.Drawable?) {
+        super.setImageDrawable(d); applyTopCrop()
+    }
+
+    private fun applyTopCrop() {
+        val d = drawable ?: return
+        val dw = d.intrinsicWidth; val dh = d.intrinsicHeight
+        val vw = width - paddingLeft - paddingRight; val vh = height - paddingTop - paddingBottom
+        if (dw <= 0 || dh <= 0 || vw <= 0 || vh <= 0) { imageMatrix = android.graphics.Matrix(); return }
+        val s = maxOf(vw.toFloat() / dw, vh.toFloat() / dh)
+        imageMatrix = android.graphics.Matrix().apply {
+            setScale(s, s)
+            postTranslate((vw - dw * s) / 2f, 0f)
+        }
     }
 }

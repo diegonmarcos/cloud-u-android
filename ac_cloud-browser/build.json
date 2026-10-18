@@ -1030,6 +1030,14 @@
           "default": "deny"
         }
       ],
+      "_doc_tab_thumbnails": "Tab-switcher snapshots, declared once. scale = capture size relative to the WebView (0.25 = a quarter of each side, RGB_565). memory_kb = memory LRU bound; disk_kb = disk cache bound under cacheDir/tabs (oldest file evicted first); quality = lossy WebP quality of the disk copy. incognito: 'skip' = a private tab is never captured; 'memory' = captured, kept in the memory LRU only, never written to disk. Captured when a page finishes loading, when a tab is left, and when the switcher opens; deleted when the tab closes. Read by libs:browser TabThumbConfig.",
+      "tab_thumbnails": {
+        "scale": 0.25,
+        "memory_kb": 8192,
+        "disk_kb": 32768,
+        "quality": 70,
+        "incognito": "skip"
+      },
       "_doc_tracker_hosts": "#900 Block trackers here: a subresource request to one of these hosts (or a subdomain) is answered empty while the site's `trackers` permission is deny (the default; setting block_trackers moves the default). Content of THIS app: libs:browser ships no list (BrowserTrackers matches whatever it is handed).",
       "tracker_hosts": [
         "adnxs.com",

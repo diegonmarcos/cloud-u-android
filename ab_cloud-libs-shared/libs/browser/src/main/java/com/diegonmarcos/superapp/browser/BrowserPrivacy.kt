@@ -136,7 +136,7 @@ object BrowserClearData {
             "history" -> BrowserHistory(ctx).clear()
             "cache" -> WebView(ctx).apply { clearCache(true); destroy() }
             "storage" -> WebStorage.getInstance().deleteAllData()
-            "previews" -> { File(ctx.cacheDir, "tabs").deleteRecursively(); BrowserTabPrefs(ctx).clearPreviews() }
+            "previews" -> { TabThumbnails.sharedOrNull()?.clear(); File(ctx.cacheDir, TabThumbnails.DIR).deleteRecursively(); BrowserTabPrefs(ctx).clearPreviews() }
             "downloads" -> BrowserDownloads(ctx).clear()
             "cookies" -> Unit   // asynchronous: below
             else -> out.put("ok", false).put("error", "$b: not a clear-data box")

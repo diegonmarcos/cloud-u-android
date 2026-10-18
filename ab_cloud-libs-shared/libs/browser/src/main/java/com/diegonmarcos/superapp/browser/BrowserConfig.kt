@@ -62,6 +62,8 @@ data class BrowserConfig(
     val trackerHosts: List<String> = emptyList(),
     /** The app's private names (exact hosts that stand for loopback servers, answered by the app's own DNS); NONE = no such names. */
     val privateNames: PrivateNames = PrivateNames.NONE,
+    /** Tab-switcher snapshots: capture scale, cache bounds, incognito policy (build.json::ui.browser.tab_thumbnails). */
+    val tabThumbs: TabThumbConfig = TabThumbConfig(),
 ) {
 
     /** The configured default, or the first engine, or Qwant. Never null. */
@@ -164,6 +166,7 @@ data class BrowserConfig(
                 settingsSections = sections,
                 configs = BrowserConfigPages.parse(o.optJSONObject("configs"), sections, addons),
                 privateNames = PrivateNames.parse(o.optJSONObject("private_names")),
+                tabThumbs = TabThumbConfig.parse(o.optJSONObject("tab_thumbnails")),
                 trackerHosts = o.optJSONArray("tracker_hosts").let { a ->
                     if (a == null) emptyList() else (0 until a.length()).map { i -> a.optString(i).trim().lowercase() }.filter { it.isNotEmpty() }
                 },
