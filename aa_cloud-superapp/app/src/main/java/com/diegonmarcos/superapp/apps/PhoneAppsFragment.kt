@@ -130,6 +130,7 @@ class PhoneAppsFragment : KitComposeFragment() {
         const val TAG_LIST = "phoneapps:list"
         const val TAG_MODE_CATEGORIES = "phoneapps:mode:categories"
         const val TAG_MODE_ALPHA = "phoneapps:mode:alpha"
+        @JvmField var PROBE_SLEEP_MS = 600L
 
         /**
          * A–Z (plus a trailing "#" bucket for non-letter labels) folders of every launchable app. All 26
@@ -194,6 +195,7 @@ class PhoneAppsFragment : KitComposeFragment() {
             // Captured BEFORE the probe starts, checked before it publishes — see [sCacheGeneration].
             val generation = sCacheGeneration
             return withContext(Dispatchers.IO) {
+                Thread.sleep(PROBE_SLEEP_MS) // PROBE ONLY: keep the smart-folder job in flight while the test clicks
                 val result = runCatching { computeSmartFolders(appContext, exclude) }.getOrNull()
                 // Published from INSIDE the IO block on purpose: cancellation stops the resumption, not
                 // the block already running, so a page left mid-fetch still warms the cache.
