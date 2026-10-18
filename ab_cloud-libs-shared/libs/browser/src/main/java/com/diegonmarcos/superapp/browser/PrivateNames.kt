@@ -66,7 +66,7 @@ class PrivateNames(
         private val URL_RE = Regex("""^([A-Za-z][A-Za-z0-9+.-]*)://([^/?#@:]*)((?:[/?#].*)?)$""", RegexOption.DOT_MATCHES_ALL)
         private val POOL = Executors.newSingleThreadExecutor { r -> Thread(r, "private-names").apply { isDaemon = true } }
 
-        /** `http://emulated.app/a?b#c` -> `http://127.0.0.1:8002/a?b#c`. Loopback servers speak plain http. */
+        /** `http://<name>/a?b#c` -> `http://<loopback ip>:<declared port>/a?b#c`. Loopback servers speak plain http. */
         fun rewrite(url: String, ip: String, port: Int): String {
             val m = URL_RE.matchEntire(url.trim()) ?: return url
             val rest = m.groupValues[3]
