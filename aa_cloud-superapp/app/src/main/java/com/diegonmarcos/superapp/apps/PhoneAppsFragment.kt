@@ -89,25 +89,32 @@ class PhoneAppsFragment : KitComposeFragment() {
         }
         val all = remember(epoch, alphaMode) { if (alphaMode) null else allApps(ctx) }
         val alpha = remember(epoch, alphaMode) { if (alphaMode) alphabetic(ctx) else null }
-        LazyColumn(Modifier.fillMaxSize().testTag(TAG_LIST), contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 96.dp)) {
-            // Right-aligned minimalist icon toggle: folder (categories) vs sort-alpha. Active icon is
-            // bright, inactive dim. A tap flips the mode.
-            item(key = "toggle") {
-                Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.End) {
-                    ModeButton(R.drawable.ic_p_folder, !alphaMode, "Categories", TAG_MODE_CATEGORIES) { alphaMode = false }
-                    ModeButton(R.drawable.ic_sort_alpha, alphaMode, "Alphabetic", TAG_MODE_ALPHA) { alphaMode = true }
+        // One LazyColumn per mode. Categories and Alphabetic are different lists, and flipping the mode inside ONE
+        // LazyColumn instance sometimes left its previous measured layout in place (Robolectric run 39124977196: the
+        // composition had alphaMode=true and the 26 folders built, the tree still showed the Categories layout, and a
+        // second click did nothing), which made PhoneAppsComposeTest.P1 fail about one JVM in six. A keyed list starts
+        // fresh (and at the top) whenever the mode flips; 24 fresh JVMs of the full suite went green with it.
+        androidx.compose.runtime.key(alphaMode) {
+            LazyColumn(Modifier.fillMaxSize().testTag(TAG_LIST), contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 96.dp)) {
+                // Right-aligned minimalist icon toggle: folder (categories) vs sort-alpha. Active icon is
+                // bright, inactive dim. A tap flips the mode.
+                item(key = "toggle") {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.End) {
+                        ModeButton(R.drawable.ic_p_folder, !alphaMode, "Categories", TAG_MODE_CATEGORIES) { alphaMode = false }
+                        ModeButton(R.drawable.ic_sort_alpha, alphaMode, "Alphabetic", TAG_MODE_ALPHA) { alphaMode = true }
+                    }
                 }
-            }
-            if (alpha != null) {
-                folderGridItems(ctx, "alpha", alpha.first, alpha.second, GridColumns.phone(ctx), 60) { open = it }
-            } else {
-                if (all != null) allAppsItems(ctx, all) { open = it }
-                smart?.takeIf { it.isNotEmpty() }?.let {
-                    item(key = "smart:title") { PhoneSubhead("Smart Folders") }
-                    smartFolderItems(ctx, it) { f -> open = f }
+                if (alpha != null) {
+                    folderGridItems(ctx, "alpha", alpha.first, alpha.second, GridColumns.phone(ctx), 60) { open = it }
+                } else {
+                    if (all != null) allAppsItems(ctx, all) { open = it }
+                    smart?.takeIf { it.isNotEmpty() }?.let {
+                        item(key = "smart:title") { PhoneSubhead("Smart Folders") }
+                        smartFolderItems(ctx, it) { f -> open = f }
+                    }
                 }
+                item(key = "refresh") { PhoneRefreshBar { invalidateCache(); epoch++ } }
             }
-            item(key = "refresh") { PhoneRefreshBar { invalidateCache(); epoch++ } }
         }
         open?.let { PhoneFolderSheet(it) { open = null } }
     }
