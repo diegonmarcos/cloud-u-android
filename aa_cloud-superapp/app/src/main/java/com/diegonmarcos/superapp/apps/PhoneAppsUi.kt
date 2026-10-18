@@ -147,7 +147,9 @@ internal fun LazyListScope.folderGridItems(
     cellDp: Int,
     onOpen: (OpenFolder) -> Unit,
 ) {
-    val cell = folderCellDp(ctx, cellDp, columns)
+    println("PROBE grid prefix=$keyPrefix folders=${folders.size} columns=$columns")
+    val cell = try { folderCellDp(ctx, cellDp, columns) } catch (t: Throwable) { println("PROBE cell threw $t"); throw t }
+    println("PROBE grid cell=$cell")
     val labelSp = GridColumns.labelSp(GridColumns.phone(ctx))
     folders.chunked(columns).forEachIndexed { i, row ->
         item(key = "$keyPrefix:$i") {

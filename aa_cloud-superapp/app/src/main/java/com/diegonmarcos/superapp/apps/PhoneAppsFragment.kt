@@ -90,6 +90,7 @@ class PhoneAppsFragment : KitComposeFragment() {
         }
         val all = remember(epoch, alphaMode) { if (alphaMode) null else allApps(ctx) }
         val alpha = remember(epoch, alphaMode) { if (alphaMode) alphabetic(ctx) else null }
+        println("PROBE body alphaMode=$alphaMode alphaFolders=${alpha?.first?.size} grouped=${alpha?.second?.size} cols=${GridColumns.phone(ctx)} width=${ctx.resources.displayMetrics.widthPixels} density=${ctx.resources.displayMetrics.density}")
         LazyColumn(Modifier.fillMaxSize().testTag(TAG_LIST), contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 96.dp)) {
             // Right-aligned minimalist icon toggle: folder (categories) vs sort-alpha. Active icon is
             // bright, inactive dim. A tap flips the mode.
