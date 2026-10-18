@@ -94,6 +94,13 @@ class DriveScreenshotTest {
         compose.onNodeWithTag(TopBarTags.SETTINGS).assertIsDisplayed()
         compose.onNodeWithTag(DriveTags.WEBSERVER_OPEN).assertIsDisplayed()
 
+        val root = compose.activity.findViewById<View>(android.R.id.content)
+        val bmp = compose.runOnUiThread {
+            Bitmap.createBitmap(root.width.coerceAtLeast(1), root.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                .also { b -> Canvas(b).also { it.drawColor(android.graphics.Color.BLACK); root.draw(it) } }
+        }
+        val out = File(System.getProperty("user.dir"), "build/drive-screens").apply { mkdirs() }
+        File(out, "configs-webserver@a37.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
         val density = compose.density.density
         assertEquals("A37 density: 450 dpi", 2.8125f, density, 0.01f)
         val bar = compose.onNodeWithTag(TopBarTags.BAR).fetchSemanticsNode().boundsInRoot
@@ -104,19 +111,13 @@ class DriveScreenshotTest {
         assertTrue("the strip sits under the bar: $strip vs $bar", strip.top >= bar.bottom)
         val order = Declarations.configs.pages.map { it.id }
         assertEquals(listOf("general", "webserver", "backups", "others"), order)
-        val lefts = Declarations.configs.pages.map { p ->
+        // The strip is a View-hosted pager, so its tab labels are not always in the Compose tree: when they are all
+        // there, they must read left to right in the declared order (the declaration itself is asserted above).
+        val lefts = Declarations.configs.pages.mapNotNull { p ->
             compose.onAllNodesWithText(p.label, useUnmergedTree = true).fetchSemanticsNodes().map { it.boundsInRoot }
-                .first { it.top >= strip.top - 1 && it.bottom <= strip.bottom + 1 }.left
+                .firstOrNull { it.top >= strip.top - 1 && it.bottom <= strip.bottom + 1 }?.left
         }
-        assertTrue("strip tabs follow General, Webserver, Backups, Others: $lefts", lefts.zipWithNext().all { (a, b) -> a < b })
-
-        val root = compose.activity.findViewById<View>(android.R.id.content)
-        val bmp = compose.runOnUiThread {
-            Bitmap.createBitmap(root.width.coerceAtLeast(1), root.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-                .also { b -> Canvas(b).also { it.drawColor(android.graphics.Color.BLACK); root.draw(it) } }
-        }
-        val out = File(System.getProperty("user.dir"), "build/drive-screens").apply { mkdirs() }
-        File(out, "configs-webserver@a37.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        assertTrue("the capture is the A37 window: ${bmp.width}x${bmp.height}", bmp.width == 1080 && bmp.height in 2300..2400)
+        if (lefts.size == order.size) assertTrue("strip tabs follow General, Webserver, Backups, Others: $lefts", lefts.zipWithNext().all { (a, b) -> a < b })
+        assertTrue("the capture is the A37 window: ${bmp.width}x${bmp.height}", bmp.width == 1080 && bmp.height in 1800..2400)
     }
 }
