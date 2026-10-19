@@ -326,7 +326,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-10-18",
+        "pricing_as_of": "2026-10-19",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -371,8 +371,8 @@
               "roleplay",
               "translation"
             ],
-            "prompt": 0.0675,
-            "completion": 0.225,
+            "prompt": 0.09,
+            "completion": 0.3,
             "note": "Sparse 26B (4B active): translation, academia and legal at a small-model price."
           },
           {
@@ -402,6 +402,7 @@
               "fp8"
             ],
             "trained_for": [
+              "legal",
               "roleplay",
               "translation"
             ],
@@ -444,7 +445,6 @@
               "fp8"
             ],
             "trained_for": [
-              "health",
               "roleplay"
             ],
             "prompt": 0.28,
@@ -475,8 +475,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.0151,
-            "completion": 0.45,
+            "prompt": 0.15,
+            "completion": 0.15,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
           {
@@ -489,6 +489,7 @@
               "nvfp4"
             ],
             "trained_for": [
+              "academia",
               "legal",
               "programming",
               "roleplay",
@@ -523,7 +524,7 @@
               "trivia"
             ],
             "prompt": 0.048,
-            "completion": 0.2,
+            "completion": 0.16,
             "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
           },
           {
@@ -560,7 +561,6 @@
             "name": "Gemini 2.5 Flash",
             "trained_for": [
               "finance",
-              "health",
               "marketing"
             ],
             "prompt": 0.3,
