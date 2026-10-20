@@ -141,6 +141,7 @@ dependencies {
     // ab_cloud-libs-shared (build.json::modules."libs:text-tools".dir), so this
     // app links the same copy cloud-mail and cloud-keyboard link.
     implementation project(':libs:text-tools')
+    implementation project(':libs:decisions-link')   // #882 writer_route: asks the decisions engine, holds no key
     // #743 fleet mesh membership: core defines + requests CONSTELLATION_DATA and
     // carries libs:devtools (fleet provider, MESH_MEMBER receiver and query).
     implementation project(':libs:core')

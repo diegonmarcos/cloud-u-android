@@ -18,6 +18,10 @@
     "jdk": "17"
   },
   "modules": {
+    "libs:decisions-link": {
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/decisions-link"
+    },
     "app": {
       "type": "application"
     },

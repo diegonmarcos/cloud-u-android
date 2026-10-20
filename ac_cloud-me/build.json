@@ -38,6 +38,10 @@
   },
   "_doc_modules": "Every libs:* entry is shared BY REFERENCE (`dir`) out of ab_cloud-libs-shared/libs \u2014 Cloud Me owns no library source of its own. That is the whole design: the app is an assembly. libs:health draws MyHealth, libs:fin draws the accounting dashboard. The calendar is the one exception: Agenda's events and todos come from the cal ENGINE (Cloud-Lib-Cal.apk), bound over IPC through build.json::engines.cal, not compiled in. A fix in any of them lands here on the next build with no copy to keep in step.",
   "modules": {
+    "libs:decisions-link": {
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/decisions-link"
+    },
     "app": {
       "type": "application",
       "depends_on": [

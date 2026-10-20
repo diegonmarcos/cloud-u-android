@@ -191,6 +191,7 @@ android {
 
 dependencies {
     implementation project(':libs:core')
+    implementation project(':libs:decisions-link')   // #882 updater_urgency: asks the decisions engine, holds no key
     // Fleet.shellInstall uses the shell channel (uid 2000, holds INSTALL_PACKAGES)
     // so "Update all" installs with no confirm dialog. No cycle: this module only
     // depends on :libs:core, same as us.
@@ -220,4 +221,7 @@ dependencies {
     implementation 'androidx.work:work-runtime-ktx:2.9.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+    testImplementation 'junit:junit:4.13.2'
+    // The real org.json: android.jar's copy is a stub that throws on the JVM.
+    testImplementation 'org.json:json:20240303'
 }

@@ -78,11 +78,18 @@ object WriterRoutes {
 
     fun defaultRoute(f: Function): Route = Route.of(block(f).optString("default_route"), Route.MODEL)
 
-    fun route(context: Context, f: Function): Route =
-        Route.of(WriterPrefs.prefs(context).getString(KEY_ROUTE_PREFIX + f.key, null), defaultRoute(f))
+    fun route(context: Context, f: Function): Route {
+        val saved = WriterPrefs.prefs(context).getString(KEY_ROUTE_PREFIX + f.key, null)
+        // #882 Jev may fill an UNCHOSEN route only; no advice = the default, exactly as before
+        return Routing.chosen(saved, if (saved == null) WriterJev.advice(context, f) else null, defaultRoute(f))
+    }
 
     fun setRoute(context: Context, f: Function, route: Route) =
         WriterPrefs.put(context, KEY_ROUTE_PREFIX + f.key, route.id)
+
+    /** Non-null only when the route in force came from the decision model (the owner saved none). */
+    private fun advisedOrNull(context: Context, f: Function): Route? =
+        if (WriterPrefs.prefs(context).contains(KEY_ROUTE_PREFIX + f.key)) null else route(context, f)
 
     fun defaultModel(f: Function): String = block(f).optString("default_model")
 
@@ -182,6 +189,7 @@ object WriterRoutes {
             },
         )
         lastTranslation = answer
+        WriterJev.observed(context, Function.TRANSLATION, advisedOrNull(context, Function.TRANSLATION), answer)
         return answer
     }
 
@@ -206,6 +214,7 @@ object WriterRoutes {
             ml = onDevice,
         )
         lastSpeech = answer
+        WriterJev.observed(context, Function.SPEECH, advisedOrNull(context, Function.SPEECH), answer)
         return answer
     }
 

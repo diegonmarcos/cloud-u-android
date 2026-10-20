@@ -204,7 +204,7 @@ object TextEnhancer {
     }
 
     @JvmStatic
-    fun enhance(context: Context, connection: RichInputConnection) = run(context, connection, AiRouter.enhanceStyle(context))
+    fun enhance(context: Context, connection: RichInputConnection) = run(context, connection, AiRouter.enhanceStyle(context), advise = true)
 
     /**
      * Whole-field / selection enhancement with an explicit [style] (GrammarChecker passes "grammar").
@@ -218,7 +218,7 @@ object TextEnhancer {
      * and carries the one reason it is allowed to have.
      */
     @JvmStatic
-    fun run(context: Context, connection: RichInputConnection, style: AiRouter.Style) {
+    fun run(context: Context, connection: RichInputConnection, style: AiRouter.Style, advise: Boolean = false) {
         val scope = scope(context)
 
         // An editor that declares TYPE_NULL accepts no text at all, and the InputConnection
@@ -244,7 +244,9 @@ object TextEnhancer {
 
         executor.execute {
             val improved = try {
-                rewrite(context, style, target.text)
+                // #883 Jev may pick the style when the owner never did (advise only on the ENHANCE key); no opinion = `style`
+                val used = if (advise) KeyboardJev.base(context, target.text)?.let { AiRouter.enhanceStyle(context, it) } ?: style else style
+                rewrite(context, used, target.text)
             } catch (e: AiRouter.NoTokenException) {
                 return@execute ended(context, "run $id", "no API key for ${e.provider.id}",
                     R.string.ai_no_token, e.provider.label)

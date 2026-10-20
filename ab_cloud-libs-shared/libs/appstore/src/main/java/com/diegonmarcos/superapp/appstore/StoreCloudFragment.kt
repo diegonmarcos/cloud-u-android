@@ -159,7 +159,17 @@ class StoreCloudFragment : KitComposeFragment() {
      *  classification of its package. ONE lookup, so the heading drawn over a
      *  run and the key that orders it cannot read different answers. */
     private fun shelfOf(app: Fleet.App): AppStoreHost.Shelf? =
-        libShelves[app.id] ?: shelves[app.pkg]
+        libShelves[app.id] ?: shelves[app.pkg] ?: jevShelf(app)
+
+    // #882 Jev may suggest an existing shelf for a row nothing filed; no suggestion = none (drawn as "Other"), as before
+    private val jevAsked = HashSet<String>()
+    private fun jevShelf(app: Fleet.App): AppStoreHost.Shelf? {
+        if (app.pkg.isEmpty()) return null
+        val known = (libShelves.values + shelves.values)
+        StoreJev.shelfFor(app.id, known)?.let { return it }
+        if (jevAsked.add(app.id)) StoreJev.ask(requireContext(), listOf(app.id to app.label), known)
+        return null
+    }
 
     /** The heading a row is drawn under: its ML application (#405) when its
      *  name declares one, else its shelf, else none. */

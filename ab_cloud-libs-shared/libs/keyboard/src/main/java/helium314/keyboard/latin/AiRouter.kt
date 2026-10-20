@@ -371,9 +371,9 @@ object AiRouter {
      * deliberately does NOT go through here (fixing grammar must not restyle, resize or translate
      * the text) — it goes through [styleById], which shares only the preamble.
      */
-    fun enhanceStyle(context: Context): Style {
+    fun enhanceStyle(context: Context, base: Style = style(context)): Style {
         return compose(
-            style(context),
+            base,
             listOfNotNull(
                 pick(context, tones, Settings.PREF_ENHANCE_TONE, defaultTone),
                 pick(context, lengths, Settings.PREF_ENHANCE_LENGTH, defaultLength),

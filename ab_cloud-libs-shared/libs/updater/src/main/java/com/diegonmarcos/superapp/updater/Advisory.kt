@@ -3,6 +3,8 @@ package com.diegonmarcos.superapp.updater
 import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
+import com.diegonmarcos.superapp.decisions.link.Advice
+import com.diegonmarcos.superapp.decisions.link.DecisionsLink
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -460,9 +462,56 @@ object Advisory {
         val p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val last = p.getLong("shown_${item.id}", 0L)
         val now = System.currentTimeMillis()
-        if (now - last < RENOTIFY_MS) return false
+        // #882 Jev may shorten ("interrupt") or lengthen ("low") the re-notify window; no opinion = RENOTIFY_MS
+        if (now - last < renotifyWindow(urgencyOf(ctx, item, now - last))) return false
         p.edit().putLong("shown_${item.id}", now).apply()
         return true
+    }
+
+    /** The re-notify window for a decision-model urgency: no opinion (null), an unsure or "normal" answer = today's. */
+    internal fun renotifyWindow(urgency: String?): Long = when (urgency) {
+        URGENCY_INTERRUPT -> INTERRUPT_RENOTIFY_MS
+        URGENCY_LOW -> LOW_RENOTIFY_MS
+        else -> RENOTIFY_MS
+    }
+
+    internal const val URGENCY_LOW = "low"
+    internal const val URGENCY_INTERRUPT = "interrupt"
+    private const val INTERRUPT_RENOTIFY_MS = 60L * 60L * 1000L
+    private const val LOW_RENOTIFY_MS = 24L * 60L * 60L * 1000L
+    private val urgencies = Advice.Suggestions()
+
+    internal fun urgencyQuestions(): JSONObject = JSONObject().put(
+        "urgency", JSONObject().put("type", "choice").put(
+            "instructions",
+            "An updater advisory about this phone's apps, titled `title` with severity `severity`, was last shown `hours_since_shown` hours ago. " +
+                "How urgently should the person be interrupted with it again?",
+        ).put("criteria", JSONObject()
+            .put("low", "It can wait a day: nothing is breaking and nothing new has happened.")
+            .put("normal", "The usual few hours between reminders is right.")
+            .put("interrupt", "Something is broken or the phone cannot update itself: remind them within the hour.")),
+    )
+
+    /**
+     * Jev's urgency for [item] when it was last shown [sinceMs] ago: only asked inside the last window's reach (the
+     * answer cannot change the outcome earlier) and never on the main thread; null = no opinion.
+     */
+    private fun urgencyOf(ctx: Context, item: Item, sinceMs: Long): String? {
+        if (sinceMs >= RENOTIFY_MS * 4) return null   // long past any window: it shows regardless
+        val key = "urgency:${item.id}"
+        urgencies.peek(key)?.let { return it.pick }
+        val app = ctx.applicationContext
+        val got = Advice.within(800) {
+            val state = JSONObject().put("title", item.title).put("severity", item.severity.name.lowercase())
+                .put("hours_since_shown", sinceMs / 3_600_000L)
+            val o = DecisionsLink.outcome(app, "updater_urgency", state, urgencyQuestions())
+            val pick = o.verdictOrNull?.pick("urgency", setOf("low", "normal", "interrupt"))
+            Advice.Suggestion(pick ?: "", o.callOrNull)
+        }
+        urgencies.put(key, got, 10 * 60_000L)
+        val pick = got?.pick?.ifEmpty { null } ?: return null
+        Advice.remember(app, "updater_urgency", got, JSONObject().put("urgency", pick))
+        return pick
     }
 
     // ── Session dismissal ───────────────────────────────────────────────────
@@ -500,6 +549,8 @@ object Advisory {
             .putLong("snooze_$id", System.currentTimeMillis())
             .commit()
         Log.i(TAG, "$id snoozed for ${SNOOZE_MS / 3_600_000L}h")
+        // outcome: the user dismissed it, so "low" was the right urgency for this advisory
+        Advice.explicit(ctx, "updater_urgency", urgencies.peek("urgency:$id")?.call, JSONObject().put("urgency", URGENCY_LOW))
         notifyListener()
     }
 

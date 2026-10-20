@@ -113,6 +113,7 @@ dependencies {
     // module exposes takes a text-tools type, and a consumer that wants the client
     // depends on :libs:text-tools directly rather than on the keyboard.
     implementation project(':libs:text-tools')
+    implementation project(':libs:decisions-link')   // #883 keyboard_style: asks the decisions engine, holds no key
 
     implementation project(':libs:translate')
 
@@ -137,6 +138,8 @@ dependencies {
 
     // #843: JVM tests of the view-state model (KeyboardViewStateTest). Pure Kotlin, no Robolectric.
     testImplementation 'junit:junit:4.13.2'
+    // The real org.json: android.jar's copy is a stub that throws on the JVM (KeyboardJevTest).
+    testImplementation 'org.json:json:20240303'
 
     // ── Keyboard engine dependencies. ─────────────────────────────────────
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'

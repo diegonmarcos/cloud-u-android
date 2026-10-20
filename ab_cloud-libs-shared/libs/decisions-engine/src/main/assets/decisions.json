@@ -120,6 +120,168 @@
     "min_precision": 0.85
    },
    "fallback_test": "aa_cloud-superapp/app/src/test/java/com/diegonmarcos/superapp/notificationcenter/JevNotifyTest.kt::JevNotifyTest"
+  },
+  "updater_urgency": {
+   "_doc": "#882 Jev wave 1 (spec 3.2): how urgently to re-notify an updater advisory (low: a day, normal: 6 h, interrupt: an hour). Called from libs:updater Advisory.shouldNotify. Observe-only until its own journal shows it right: gate.after is itself, so the engine scores and journals but answers gate_closed (today's behaviour) until >= 30 of its confident answers have an outcome (the person's correction, the observed result, or a suggestion left standing for a week) and >= 85% matched.",
+   "enabled": true,
+   "class": "user_facing",
+   "threshold": 0.8,
+   "max_calls_per_hour": 60,
+   "consent": "implicit",
+   "content": "none",
+   "apps": [
+    "com.diegonmarcos.superapp",
+    "com.diegonmarcos.cloudaccount",
+    "com.diegonmarcos.cloudbrowser",
+    "com.diegonmarcos.cloudc3",
+    "com.diegonmarcos.cloudcontacts",
+    "com.diegonmarcos.clouddrive",
+    "com.diegonmarcos.comms.mail",
+    "com.diegonmarcos.cloudme",
+    "com.diegonmarcos.cloudnav",
+    "com.diegonmarcos.cloudnews",
+    "com.diegonmarcos.cloudstore",
+    "com.diegonmarcos.cloudagenda",
+    "com.diegonmarcos.cloudwallet"
+   ],
+   "gate": {
+    "after": [
+     "updater_urgency"
+    ],
+    "min_labelled": 30,
+    "min_precision": 0.85
+   },
+   "fallback_test": "ab_cloud-libs-shared/libs/updater/src/test/java/com/diegonmarcos/superapp/updater/AdvisoryJevTest.kt::AdvisoryJevTest"
+  },
+  "phone_folder": {
+   "_doc": "#882 Jev wave 1 (spec 3.7): the phone folder of an app no rule claimed (only apps that would land on the sink); cached for a week. Called from libs:appstore PhoneTaxonomy. Observe-only until its own journal shows it right: gate.after is itself, so the engine scores and journals but answers gate_closed (today's behaviour) until >= 30 of its confident answers have an outcome (the person's correction, the observed result, or a suggestion left standing for a week) and >= 85% matched.",
+   "enabled": true,
+   "class": "background",
+   "threshold": 0.8,
+   "ttl_s": 604800,
+   "max_calls_per_hour": 120,
+   "consent": "implicit",
+   "content": "none",
+   "apps": [
+    "com.diegonmarcos.superapp",
+    "com.diegonmarcos.cloudaccount",
+    "com.diegonmarcos.cloudstore"
+   ],
+   "gate": {
+    "after": [
+     "phone_folder"
+    ],
+    "min_labelled": 30,
+    "min_precision": 0.85
+   },
+   "fallback_test": "ab_cloud-libs-shared/libs/appstore/src/test/java/com/diegonmarcos/superapp/apps/PhoneJevTest.kt::PhoneJevTest"
+  },
+  "store_shelf": {
+   "_doc": "#882 Jev wave 1 (spec 3.6): an existing shelf for a Store row nothing filed. Called from libs:appstore StoreCloudFragment. Observe-only until its own journal shows it right: gate.after is itself, so the engine scores and journals but answers gate_closed (today's behaviour) until >= 30 of its confident answers have an outcome (the person's correction, the observed result, or a suggestion left standing for a week) and >= 85% matched.",
+   "enabled": true,
+   "class": "background",
+   "threshold": 0.8,
+   "ttl_s": 86400,
+   "max_calls_per_hour": 120,
+   "consent": "implicit",
+   "content": "none",
+   "apps": [
+    "com.diegonmarcos.superapp",
+    "com.diegonmarcos.cloudaccount",
+    "com.diegonmarcos.cloudstore"
+   ],
+   "gate": {
+    "after": [
+     "store_shelf"
+    ],
+    "min_labelled": 30,
+    "min_precision": 0.85
+   },
+   "fallback_test": "ab_cloud-libs-shared/libs/appstore/src/test/java/com/diegonmarcos/superapp/apps/PhoneJevTest.kt::PhoneJevTest"
+  },
+  "writer_route": {
+   "_doc": "#882 Jev wave 1 (spec 3.9): the route (hosted model or on-device) of a Writer function the owner never chose a route for. Observe-only until its own journal shows it right: gate.after is itself, so the engine scores and journals but answers gate_closed (today's behaviour) until >= 30 of its confident answers have an outcome (the person's correction, the observed result, or a suggestion left standing for a week) and >= 85% matched.",
+   "enabled": true,
+   "class": "user_facing",
+   "threshold": 0.8,
+   "allowed": [
+    "model",
+    "ml"
+   ],
+   "max_calls_per_hour": 60,
+   "consent": "implicit",
+   "content": "none",
+   "apps": [
+    "com.diegonmarcos.cloudwriter"
+   ],
+   "gate": {
+    "after": [
+     "writer_route"
+    ],
+    "min_labelled": 30,
+    "min_precision": 0.85
+   },
+   "fallback_test": "ac_cloud-writer/core/src/test/kotlin/com/diegonmarcos/cloudwriter/core/RoutingJevTest.kt::RoutingJevTest"
+  },
+  "keyboard_style": {
+   "_doc": "#883 Jev wave 2 (spec 3.8): the ENHANCE style when the owner never picked one; sees the SHAPE of the text, never the text. Observe-only until its own journal shows it right: gate.after is itself, so the engine scores and journals but answers gate_closed (today's behaviour) until >= 30 of its confident answers have an outcome (the person's correction, the observed result, or a suggestion left standing for a week) and >= 85% matched.",
+   "enabled": true,
+   "class": "user_facing",
+   "threshold": 0.8,
+   "max_calls_per_hour": 60,
+   "consent": "implicit",
+   "content": "none",
+   "apps": [
+    "com.diegonmarcos.cloudkeyboard"
+   ],
+   "gate": {
+    "after": [
+     "keyboard_style"
+    ],
+    "min_labelled": 30,
+    "min_precision": 0.85
+   },
+   "fallback_test": "ab_cloud-libs-shared/libs/keyboard/src/test/java/helium314/keyboard/latin/KeyboardJevTest.kt::KeyboardJevTest"
+  },
+  "search_scope": {
+   "_doc": "#883 Jev wave 2 (spec 3.10): which scope chip to MARK for the query being typed (suggest-only). A typed query is the person's, so this is consent-gated (off until granted in the SuperApp). Observe-only until its own journal shows it right: gate.after is itself, so the engine scores and journals but answers gate_closed (today's behaviour) until >= 30 of its confident answers have an outcome (the person's correction, the observed result, or a suggestion left standing for a week) and >= 85% matched.",
+   "enabled": true,
+   "class": "user_facing",
+   "threshold": 0.8,
+   "max_calls_per_hour": 120,
+   "consent": "required",
+   "content": "none",
+   "apps": [
+    "com.diegonmarcos.superapp"
+   ],
+   "gate": {
+    "after": [
+     "search_scope"
+    ],
+    "min_labelled": 30,
+    "min_precision": 0.85
+   },
+   "fallback_test": "aa_cloud-superapp/app/src/test/java/com/diegonmarcos/superapp/search/SearchJevTest.kt::SearchJevTest"
+  },
+  "mail_move_target": {
+   "_doc": "#883 Jev wave 2 (spec 3.4): which folder to list FIRST in the mail move picker (suggest-only; sender and subject only, never the body). Mail is sensitive content: consent-gated, off until granted in the SuperApp. Observe-only until its own journal shows it right: gate.after is itself, so the engine scores and journals but answers gate_closed (today's behaviour) until >= 30 of its confident answers have an outcome (the person's correction, the observed result, or a suggestion left standing for a week) and >= 85% matched.",
+   "enabled": true,
+   "class": "user_facing",
+   "threshold": 0.8,
+   "max_calls_per_hour": 120,
+   "consent": "required",
+   "content": "mail",
+   "apps": [
+    "com.diegonmarcos.comms.mail"
+   ],
+   "gate": {
+    "after": [
+     "mail_move_target"
+    ],
+    "min_labelled": 30,
+    "min_precision": 0.85
+   },
+   "fallback_test": "ac_cloud-mail/app/src/test/kotlin/app/sterna/ui/inbox/MailJevTest.kt::MailJevTest"
   }
  }
 }

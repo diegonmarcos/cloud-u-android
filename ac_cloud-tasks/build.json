@@ -30,6 +30,10 @@
     "log_sink_stream": "cloud-tasks"
   },
   "modules": {
+    "libs:decisions-link": {
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/decisions-link"
+    },
     "_doc": "Single source of truth for the Gradle module graph. settings.gradle iterates this list.",
     "app": {
       "type": "application",

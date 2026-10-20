@@ -56,6 +56,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.Dispatchers
@@ -2615,6 +2616,25 @@ class InboxViewModel(
      * Move the selection to [targetMailboxId] (unarchive → Inbox, and move-to-folder). The messages
      * another account's folder cannot take are set aside, counted, and announced once.
      */
+    /** #883 mail_move_target: Jev's suggested folder for the (first) selected message, listed first in the picker. */
+    @Volatile private var moveCall: String? = null
+
+    suspend fun suggestMoveTarget(offered: List<Pair<String, String>>): String? = withContext(Dispatchers.IO) {
+        val key = _selectedKeys.value.firstOrNull() ?: return@withContext null
+        val email = runCatching { repo.cachedEmailsByIds(listOf(key)).firstOrNull() }.getOrNull() ?: return@withContext null
+        val s = MailJev.suggest(getApplication<Application>(), email.from.firstOrNull()?.email.orEmpty(), email.subject.orEmpty(), offered)
+        moveCall = s?.call
+        s?.pick
+    }
+
+    /** The person chose [folderId] in the picker: that is the outcome of the suggestion, right or wrong. */
+    fun reportMoveChoice(folderId: String) {
+        val call = moveCall ?: return
+        moveCall = null
+        com.diegonmarcos.superapp.decisions.link.Advice.explicit(
+            getApplication<Application>(), "mail_move_target", call, org.json.JSONObject().put("folder", folderId))
+    }
+
     fun moveSelectedTo(targetMailboxId: String, targetAccountId: String? = null) {
         val keys = _selectedKeys.value
         viewModelScope.launch {

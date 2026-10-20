@@ -50,6 +50,10 @@
     "jdk": "17"
   },
   "modules": {
+    "libs:decisions-link": {
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/decisions-link"
+    },
     "_doc": "Single source of truth for the Gradle module graph. settings.gradle iterates this list. Adding a new feature module = one entry here + mkdir + minimal build.gradle.",
     "app": {
       "type": "application",

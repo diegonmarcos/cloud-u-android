@@ -147,6 +147,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -411,13 +412,18 @@ fun InboxScreen(
         // Nested folders sharing a leaf are one and the same row without their parent path (#109).
         // Resolved against the WHOLE folder list, not the offered subset. Memoized like [targets]:
         // the filter field re-runs this block on every keystroke (#182).
-        val movePaths = remember(targets, moveTargetMailboxes) {
-            targets.map { folder -> mailboxPathLabel(folder, moveTargetMailboxes) }
+        // #883 Jev may suggest ONE of the offered folders; it is listed first, nothing else changes (no opinion = as before)
+        val suggestedMove by produceState<String?>(initialValue = null, targets) {
+            value = viewModel.suggestMoveTarget(targets.map { it.id to mailboxDisplayName(it.role, it.name) })
+        }
+        val offeredTargets = remember(targets, suggestedMove) { MailJev.promote(targets, suggestedMove) { it.id } }
+        val movePaths = remember(offeredTargets, moveTargetMailboxes) {
+            offeredTargets.map { folder -> mailboxPathLabel(folder, moveTargetMailboxes) }
         }
         // Painted over the WHOLE offered list and never over the filtered one: what the filter
         // compares is what the row shows, and the rows painted must not depend on what was typed.
         val moveRows = ArrayList<FolderPickerRow>(targets.size)
-        for ((folder, path) in targets.zip(movePaths)) {
+        for ((folder, path) in offeredTargets.zip(movePaths)) {
             moveRows += FolderPickerRow(folder, mailboxDisplayName(folder.role, folder.name), path)
         }
         val shownMoveRows = filterFolderRows(moveRows, moveQuery)
@@ -490,6 +496,7 @@ fun InboxScreen(
                                     .fillMaxWidth()
                                     .clickable {
                                         // The row's OWN folder, never a rank in the filtered list.
+                                        viewModel.reportMoveChoice(row.folder.id)
                                         viewModel.moveSelectedTo(row.folder.id, moveAccountId)
                                         showMoveSheet = false
                                         viewModel.chooseMoveAccount(null)

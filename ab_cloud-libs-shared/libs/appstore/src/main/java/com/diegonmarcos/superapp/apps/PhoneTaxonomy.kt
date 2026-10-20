@@ -115,6 +115,11 @@ object PhoneTaxonomy {
                 if (ctx != null || keywordId != sinkId) cache[pkg] = id
             }
         }
-        return labelsByPackage.keys.associateWith { cache[it] ?: sinkId }
+        // #882 Jev may suggest a folder for an app that landed on the sink; no suggestion = the sink, as before
+        if (ctx != null) {
+            val onSink = labelsByPackage.filterKeys { (cache[it] ?: sinkId) == sinkId }
+            if (onSink.isNotEmpty()) PhoneJev.ask(ctx, onSink, folders, sinkId)
+        }
+        return labelsByPackage.keys.associateWith { PhoneJev.refine(cache[it] ?: sinkId, sinkId, it) }
     }
 }

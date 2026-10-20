@@ -70,6 +70,14 @@ object Routing {
      * ([blocker]) or fails. NEVER the other way: an owner who chose on-device chose not to send
      * the text away, so an on-device failure is reported, not quietly billed to a provider.
      */
+    /**
+     * The route a function runs on: the one the owner SAVED when there is one (an unknown saved id falls to
+     * [default], as it always did), else the decision model's [advice] (#882 writer_route; null = no opinion),
+     * else [default]. Advice never overrides a choice, and no advice is exactly the old rule.
+     */
+    fun chosen(saved: String?, advice: Route?, default: Route): Route =
+        if (saved != null) Route.of(saved, default) else advice ?: default
+
     fun run(requested: Route, blocker: String?, model: () -> Outcome, ml: () -> Outcome): Answer {
         if (requested == Route.ML) {
             val o = ml()

@@ -110,6 +110,14 @@ class SearchController(
 
     fun setLive(q: String, r: LiveResult) { live = r; liveFor = q.trim() }
 
+    /** #883 Jev's suggested scope for the query typed (marked on its chip, never switched on); null = none. */
+    var suggestion by mutableStateOf<com.diegonmarcos.superapp.decisions.link.Advice.Suggestion?>(null)
+        private set
+
+    fun setSuggestion(s: com.diegonmarcos.superapp.decisions.link.Advice.Suggestion?) { suggestion = s }
+
+    val suggestedScope: String? get() = suggestion?.pick?.takeIf { it.isNotEmpty() }
+
     /** The sections for the current query. A live answer for an older query keeps only the rows
      *  that still match, so the browser rows do not blink out between two letters. */
     fun sections(): List<SearchEngine.Section> {
@@ -160,10 +168,11 @@ fun SearchScopeChips(c: SearchController, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(KitDensity.corner)
     Row(modifier.horizontalScroll(rememberScrollState()).testTag(SearchPanelTags.CHIPS),
         horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        val ctx = androidx.compose.ui.platform.LocalContext.current
         for (s in c.scopes) {
             val on = s.id in c.selected
             Text(
-                s.label,
+                if (s.id == c.suggestedScope && !on) s.label + " \u2726" else s.label,
                 color = if (on) p.tileInk else p.textSecondary,
                 fontSize = KitDensity.caption,
                 maxLines = 1,
@@ -171,7 +180,10 @@ fun SearchScopeChips(c: SearchController, modifier: Modifier = Modifier) {
                     .testTag(SearchPanelTags.chip(s.id))
                     .clip(shape)
                     .then(if (on) Modifier.background(p.accent) else Modifier.border(KitDensity.rule, p.hairline, shape))
-                    .toggleable(value = on, role = Role.Checkbox) { c.toggle(s.id) }
+                    .toggleable(value = on, role = Role.Checkbox) {
+                        if (!on) SearchJev.chose(ctx, c.suggestion, s.id)
+                        c.toggle(s.id)
+                    }
                     .padding(horizontal = 10.dp, vertical = 4.dp),
             )
         }
@@ -269,6 +281,15 @@ fun SearchResults(c: SearchController, surface: Color, cb: SearchCallbacks, modi
 fun SearchLiveEffect(c: SearchController) {
     val q = c.query
     val sel = c.selected
+    // #883 Jev may mark a scope chip for this query (suggest-only); no opinion = nothing marked
+    val appCtx = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(q) {
+        c.setSuggestion(null)
+        if (q.trim().length < SearchJev.MIN_QUERY) return@LaunchedEffect
+        delay(600)
+        val s = withContext(Dispatchers.IO) { runCatching { SearchJev.suggest(appCtx, q, c.scopes) }.getOrNull() }
+        c.setSuggestion(s)
+    }
     LaunchedEffect(q, sel) {
         if (q.isBlank() || c.liveScopes().isEmpty()) { c.setLive(q, LiveResult.EMPTY); return@LaunchedEffect }
         delay(150)

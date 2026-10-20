@@ -48,6 +48,7 @@ on:
       - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/databackend/**"
+      - "ab_cloud-libs-shared/libs/decisions-link/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fin/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"

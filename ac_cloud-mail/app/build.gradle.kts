@@ -388,6 +388,10 @@ dependencies {
     // API key in a second store.
     implementation(project(":libs:text-tools"))
 
+    // #883 mail_move_target: the move picker lists a suggested folder first. NOT a key: mail names a use and the
+    // decisions engine (its own APK) answers or does not, so mail still holds no credential (K1).
+    implementation(project(":libs:decisions-link"))
+
     // The bottom-navigation island, BY REFERENCE (#493). SternaApp renders
     // libs:bottomnav.BottomNavBar against this app's own NavHost. The nav's
     // items/icons/labels/contract are the ONE declaration in the shared module;
@@ -448,6 +452,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)
+    // The real org.json: android.jar's copy is a stub that throws on the JVM (MailJevTest).
+    testImplementation("org.json:json:20240303")
     // Virtual time + a background scope, to drive the unfolded conversations' live member stream
     // (a flow of flows) without sleeping on a real clock.
     testImplementation(libs.kotlinx.coroutines.test)

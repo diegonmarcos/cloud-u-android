@@ -139,6 +139,10 @@
     }
   },
   "modules": {
+    "libs:decisions-link": {
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/decisions-link"
+    },
     "_doc": "The gradle module graph, as data. settings.gradle loops over this instead of carrying a hardcoded include list, so the graph lives in exactly one place (FIRE RULE #6) - and the same list drives the ship workflow's path triggers and the publish gate's source hash. Upstream's own settings.gradle.kts holds the five upstream modules as literals; that copy is deliberately not carried over. The five upstream modules resolve at their default path (:core:jmap -> core/jmap); the entries carrying a `dir` are shared BY REFERENCE from ab_cloud-libs-shared and are the app's only links into the constellation - the Text tools binder, and the self-update chain the whole fleet uses. libs:analytics remains excluded, see the analytics block below.",
     "app": {},
     "core:jmap": {
