@@ -110,7 +110,7 @@ class MountCallsTest {
             "PROPFIND" -> {
                 if (p !in dirs) return MiniHttp.Reply(404)
                 val sb = StringBuilder("""<?xml version="1.0"?><d:multistatus xmlns:d="DAV:">""")
-                sb.append("<d:response><d:href>${enc(p)}/</d:href><d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>")
+                sb.append("<d:response><d:href>${enc(p).trimEnd('/')}/</d:href><d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>")
                 val prefix = if (p == "/") "/" else "$p/"
                 for (d in dirs.toList()) if (d != "/" && d.startsWith(prefix) && !d.removePrefix(prefix).contains('/'))
                     sb.append("<d:response><d:href>${enc(d)}/</d:href><d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>")
