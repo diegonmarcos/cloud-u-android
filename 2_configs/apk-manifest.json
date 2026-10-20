@@ -301,7 +301,17 @@
       "module": "ac_cloud-search",
       "application_id": "com.diegonmarcos.cloudsearch",
       "description": "Diego's Cloud Search (#779) - one app for searching what a life in Germany needs, from the owner's design mockup, on the owner's mockup bottom nav: Me (personal",
-      "web": null
+      "web": {
+        "_doc": "#876 Cloud Search as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-search-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-search-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
+        "dir": "web",
+        "host": "ubuntu-latest",
+        "artifact": "Cloud-Search.wasm.zip",
+        "gh_asset": "Cloud-Search.wasm.zip",
+        "portal_slug": "cloud-search",
+        "entry": "index.html",
+        "tester": "test-search-web.sh",
+        "size_budget_mb": 20
+      }
     },
     {
       "name": "cloud-store",
@@ -356,7 +366,17 @@
       "module": "ac_cloud-tools-small-llms",
       "application_id": "com.diegonmarcos.cloudtoolssmallllms",
       "description": "Cloud Tools Small LLMs - an AI chat that does simple, direct text jobs with small, cheap models only, calling OpenRouter directly with the user's own token. A r",
-      "web": null
+      "web": {
+        "_doc": "#876 Cloud Tools Small LLMs as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-tools-small-llms-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-tools-small-llms-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
+        "dir": "web",
+        "host": "ubuntu-latest",
+        "artifact": "Cloud-Tools-Small-LLMs.wasm.zip",
+        "gh_asset": "Cloud-Tools-Small-LLMs.wasm.zip",
+        "portal_slug": "cloud-tools-small-llms",
+        "entry": "index.html",
+        "tester": "test-tools-small-llms-web.sh",
+        "size_budget_mb": 20
+      }
     },
     {
       "name": "cloud-vault",

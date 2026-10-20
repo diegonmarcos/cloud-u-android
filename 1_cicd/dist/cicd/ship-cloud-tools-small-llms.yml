@@ -53,6 +53,7 @@ on:
       - "ab_cloud-libs-shared/libs/model-catalogue/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ac_cloud-tools-small-llms/**"
+      - "!ac_cloud-tools-small-llms/web/**"
 permissions:
   contents: write
   packages: write

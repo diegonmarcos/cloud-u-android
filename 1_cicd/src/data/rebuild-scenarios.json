@@ -585,15 +585,41 @@
       }
     },
     {
+      "id": "ac_cloud-search/web (#876: the page ships alone)",
+      "files": [
+        "ac_cloud-search/web/src/wasmJsMain/kotlin/com/diegonmarcos/cloudsearch/web/Main.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1,
+        "refresh": 0
+      }
+    },
+    {
+      "id": "ac_cloud-tools-small-llms/web (#876: the page ships alone)",
+      "files": [
+        "ac_cloud-tools-small-llms/web/src/wasmJsMain/kotlin/com/diegonmarcos/cloudtoolssmallllms/web/Main.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1,
+        "refresh": 0
+      }
+    },
+    {
       "id": "libs/ui-kit commonMain (#876: the two wasm pages + the static-lib consumers)",
       "files": [
         "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt"
       ],
       "expect": {
-        "apps": 29,
+        "apps": 31,
         "libs": 0,
         "rootfs": 0,
-        "ship": 30,
+        "ship": 32,
         "refresh": 0
       }
     }

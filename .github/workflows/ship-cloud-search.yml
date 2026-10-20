@@ -52,6 +52,7 @@ on:
       - "ab_cloud-libs-shared/libs/model-catalogue/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ac_cloud-search/**"
+      - "!ac_cloud-search/web/**"
 permissions:
   contents: write
   packages: write
