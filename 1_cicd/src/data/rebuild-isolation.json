@@ -151,6 +151,14 @@
       "1_cicd/src/cicd/ship-cloud-news-wasm.yml",
       "1_cicd/src/templates/ship-wasm.yml.in"
     ],
+    "ac_cloud-office/web": [
+      "ab_cloud-libs-shared/web/**",
+      "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",
+      "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/**",
+      "ac_cloud-office/tests/test-office-web.sh",
+      "1_cicd/src/cicd/ship-cloud-office-wasm.yml",
+      "1_cicd/src/templates/ship-wasm.yml.in"
+    ],
     "ac_cloud-calc/web": [
       "ab_cloud-libs-shared/web/**",
       "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",

@@ -314,7 +314,17 @@
       "module": "ac_cloud-office",
       "application_id": "com.diegonmarcos.cloudoffice",
       "description": null,
-      "web": null
+      "web": {
+        "_doc": "#876 Cloud Office as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-office-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by tests/test-office-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: this app declares no bottom-nav island, so the page is one dense list of mock data. The APK's own ship ignores this directory.",
+        "dir": "web",
+        "host": "ubuntu-latest",
+        "artifact": "Cloud-Office.wasm.zip",
+        "gh_asset": "Cloud-Office.wasm.zip",
+        "portal_slug": "cloud-office",
+        "entry": "index.html",
+        "tester": "test-office-web.sh",
+        "size_budget_mb": 20
+      }
     },
     {
       "name": "cloud-search",

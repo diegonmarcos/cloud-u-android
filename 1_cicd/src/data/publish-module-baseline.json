@@ -42,6 +42,7 @@
   "1_cicd/src/cicd/ship-cloud-nix-on-droid.yml": 1,
   "1_cicd/src/cicd/ship-cloud-notes-wasm.yml": 3,
   "1_cicd/src/cicd/ship-cloud-notes.yml": 2,
+  "1_cicd/src/cicd/ship-cloud-office-wasm.yml": 3,
   "1_cicd/src/cicd/ship-cloud-office.yml": 5,
   "1_cicd/src/cicd/ship-cloud-search-wasm.yml": 3,
   "1_cicd/src/cicd/ship-cloud-search.yml": 1,

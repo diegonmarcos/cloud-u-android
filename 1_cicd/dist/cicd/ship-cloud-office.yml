@@ -46,6 +46,7 @@ on:
       - "ab_cloud-libs-shared/libs/ml-l-image/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ac_cloud-office/**"
+      - "!ac_cloud-office/web/**"
 permissions:
   contents: write   # gh release upload
   packages: write   # ghcr push (oras)
