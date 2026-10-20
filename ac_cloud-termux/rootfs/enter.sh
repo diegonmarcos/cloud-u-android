@@ -215,7 +215,7 @@ fi
 
 # startup-step: local_webserver
 # local_webserver begin
-# Option 37.1 -- this terminal serves its own disk: my-webserver on 127.0.0.1, port from
+# Option 37.1 -- this terminal serves its own disk: fleet-webserver on 127.0.0.1, port from
 # build.json::runtime.webserver, root = this terminal's $HOME (bound as /root). The logic is
 # ab_cloud-terminal-store/local-webserver.sh, rendered with the port by build-rootfs.sh into
 # cloud-store/ beside this file; it starts the server only when nothing LISTENs on the port yet,

@@ -53,6 +53,22 @@ sudo install -D -m 0755 "$W/shim/libcloud-noexec-shebang.so" "$W/tree/usr/local/
 echo /usr/local/lib/libcloud-noexec-shebang.so | sudo tee "$W/tree/etc/ld.so.preload" >/dev/null
 sudo install -m 0644 "$STORE_SRC/gitconfig" "$W/tree/etc/gitconfig"
 
+# fleet_webserver_install (a build step; the nix terminal builds the same lib in rootfs-extras.nix)
+# rootfs.json::fleet_webserver -- the ONE shared fleet web server (ab_cloud-libs-shared/libs/fleet-webserver,
+# std-only, no crates) compiled from source to a STATIC musl binary on this runner's own CPU and
+# installed at /usr/local/bin/<bin>. Its Linux frontend is bundled in from the lib's vendor/ (the
+# lib's build.rs refuses a vendor/ whose hashes moved), so nothing is fetched on the phone and
+# there is no second copy of the server or the UI here. enter.sh starts it on build.json's port.
+WS_SRC="$(python3 -c 'import json,os,sys; d=json.load(open(sys.argv[1]))["fleet_webserver"]; print(os.path.normpath(os.path.join(os.path.dirname(sys.argv[1]), "..", d["src"])))' "$HERE/rootfs.json")"
+WS_BIN="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["fleet_webserver"]["bin"])' "$HERE/rootfs.json")"
+ws_triple="$(uname -m)-unknown-linux-musl"
+rustup target add "$ws_triple"
+bash "$WS_SRC/sync.sh" --check
+cargo build --release --locked --target "$ws_triple" --manifest-path "$WS_SRC/Cargo.toml" --target-dir "$W/ws-target"
+file "$W/ws-target/$ws_triple/release/$WS_BIN" | grep -q 'statically linked' \
+    || { echo "FAIL $WS_BIN is not a static binary: $(file "$W/ws-target/$ws_triple/release/$WS_BIN")" >&2; exit 1; }
+sudo install -D -m 0755 -s "$W/ws-target/$ws_triple/release/$WS_BIN" "$W/tree/usr/local/bin/$WS_BIN"
+
 # startup-step: linux_tools_install
 # store.json::linux_tools -- the pinned linux-store and linux-account CLIs and the fish greeting,
 # the same three files the nix bootstrap bake installs at the same absolute paths. The one

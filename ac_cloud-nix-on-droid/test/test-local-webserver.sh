@@ -1,23 +1,22 @@
 #!/bin/sh
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║ Option 37.1: bin/login starts my-webserver on build.json's port, ONCE     ║
+# ║ Option 37.1: bin/login starts fleet-webserver on build.json's port, ONCE     ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 #
-# This terminal serves its own $HOME through my-webserver on 127.0.0.1:<port>, where <port> is
+# This terminal serves its own $HOME through fleet-webserver on 127.0.0.1:<port>, where <port> is
 # build.json::runtime.webserver (8001; the termux terminal has 8000). bake_default_packages.py
 # (patch_bin_login_webserver) inlines the shared ab_cloud-terminal-store/local-webserver.sh,
 # rendered with that port, into bin/login, plus ONE launch DERIVED from bin/login's own proot
 # exec: same proot, same binds, no `exec`, no --kill-on-exit, the binary under the baked profile.
 #
-#  1. DECLARED: runtime.webserver is 8001 / 127.0.0.1 / $HOME; my-webserver is an extras attr
-#     built by rootfs-extras.nix from the termux rootfs.json entry, with both arch hashes pinned
-#     for the version that entry declares.
+#  1. DECLARED: runtime.webserver is 8001 / 127.0.0.1 / $HOME; fleet-webserver is an extras attr
+#     built from source by rootfs-extras.nix (ab_cloud-libs-shared/libs/fleet-webserver).
 #  2. GENERATED: on a fixture bin/login the patch keeps exactly one exec, puts the block before
 #     it, copies every bind, drops --kill-on-exit and login-inner, and refuses an exec it cannot
 #     parse (two execs; one that does not end in login-inner).
 #  3. EXECUTED with stubs: the patched bin/login runs under sh with its proot replaced by a stub
 #     that records argv + environment, and /proc/net/tcp{,6} by fixtures. Port free: exactly one
-#     `<profile>/bin/my-webserver 8001 $HOME` launch with the binds and HTTPD_WRITE* scrubbed, and
+#     `<profile>/bin/fleet-webserver 8001 $HOME` launch with the binds and HTTPD_WRITE* scrubbed, and
 #     the session exec still happens. 127.0.0.1:8001 LISTENing (or the first login's server): no
 #     launch. A listener on 8000 (the termux terminal's) does not count.
 #
@@ -35,21 +34,19 @@ bad() { echo "::error::FAIL — $1"; fails=$((fails + 1)); }
 echo "── local webserver autostart [$(basename "$DIR")] ──"
 
 # ── 1. declared ──────────────────────────────────────────────────────────────
-python3 - "$DIR" <<'PY' && ok "runtime.webserver = 8001 on 127.0.0.1 serving \$HOME; my-webserver is an extras attr pinned for rootfs.json's version, both arches" || bad "the runtime.webserver / extras declaration is wrong (see above)"
+python3 - "$DIR" <<'PY' && ok "runtime.webserver = 8001 on 127.0.0.1 serving \$HOME; fleet-webserver is an extras attr built from ab_cloud-libs-shared/libs/fleet-webserver" || bad "the runtime.webserver / extras declaration is wrong (see above)"
 import json, os, sys
 d = sys.argv[1]
 b = json.load(open(os.path.join(d, "build.json")))
-assert b["runtime"]["webserver"] == {"port": 8001, "bind": "127.0.0.1", "root": "$HOME", "binary": "my-webserver"}, b["runtime"]
+assert b["runtime"]["webserver"] == {"port": 8001, "bind": "127.0.0.1", "root": "$HOME", "binary": "fleet-webserver"}, b["runtime"]
 dp = b["forks"]["nixdroid"]["bootstrap"]["default_packages"]
-assert "my-webserver" in dp["extras"]["attrs"] and dp["provides"]["my-webserver"] == ["my-webserver"]
-assert "my-webserver" in dp["binaries"]
-pin = dp["extras"]["pins"]["my-webserver"]
-r = json.load(open(os.path.join(d, "..", "ac_cloud-termux", "rootfs", "rootfs.json")))["tarballs"]["my-webserver"]
-assert pin["version"] == r["version"], (pin["version"], r["version"])
-assert set(pin["hash"]) == set(r["arch_names"]) == {"amd64", "arm64"}
-assert all(h.startswith("sha256-") for h in pin["hash"].values())
+assert "fleet-webserver" in dp["extras"]["attrs"] and dp["provides"]["fleet-webserver"] == ["fleet-webserver"]
+assert "fleet-webserver" in dp["binaries"] and "my-webserver" not in dp["binaries"]
+assert "my-webserver" not in dp["extras"]["pins"], "the Node SEA is still pinned"
 nix = open(os.path.join(d, "app", "src", "main", "cpp", "rootfs-extras.nix")).read()
-assert 'my-webserver =' in nix and 'rootfs.tarballs."my-webserver"' in nix and 'dontStrip = true' in nix
+assert "fleet-webserver =" in nix and "rustPlatform.buildRustPackage" in nix and "ab_cloud-libs-shared/libs/fleet-webserver" in nix
+assert "fetchurl" not in nix.split("fleet-webserver =")[1].split("meta.mainProgram")[0], "fleet-webserver must be built from source, not fetched"
+assert os.path.isfile(os.path.join(d, "..", "ab_cloud-libs-shared", "libs", "fleet-webserver", "Cargo.lock"))
 PY
 
 # ── 2. generated ────────────────────────────────────────────────────────────
@@ -83,7 +80,7 @@ assert out.index("cloud_webserver_autostart \"$HOME\"") < out.index(exec_line), 
 blk = out[out.index("cloud_webserver_autostart \"$HOME\""):out.index(exec_line)]
 assert f"-b {pre}/usr/nix:/nix" in blk and f"-b {pre}/usr/etc:/etc" in blk, "a bind was not copied"
 assert "--kill-on-exit" not in blk and "login-inner" not in blk and "--link2symlink" in blk and "--sysvipc" in blk
-assert f"/{profile}/bin/my-webserver" in blk
+assert f"/{profile}/bin/fleet-webserver" in blk
 assert "CLOUD_WEBSERVER_PORT=8001" in out
 for bad_login, why in ((login + login.split("\n", 2)[2], "two execs"),
                        (login.replace('/usr/usr/lib/login-inner "$@"', '/usr/bin/something-else "$@"'), "no login-inner")):
@@ -130,8 +127,8 @@ if [ -f "$T/login.sh" ]; then
     if login && launched; then
         args="$(tr '\n' ' ' < "$T/launch")"
         case "$args" in
-            *"/usr/nix:/nix "*"/usr/etc:/etc "*"--link2symlink --sysvipc /$PROFILE/bin/my-webserver 8001 $T/home --env HTTPD_WRITE=unset HTTPD_WRITE_ROOTS=unset"*)
-                ok "port free: one my-webserver 8001 \$HOME under the profile, the exec's binds, HTTPD_WRITE* scrubbed; the session still execs" ;;
+            *"/usr/nix:/nix "*"/usr/etc:/etc "*"--link2symlink --sysvipc /$PROFILE/bin/fleet-webserver 8001 $T/home --env HTTPD_WRITE=unset HTTPD_WRITE_ROOTS=unset"*)
+                ok "port free: one fleet-webserver 8001 \$HOME under the profile, the exec's binds, HTTPD_WRITE* scrubbed; the session still execs" ;;
             *) bad "port free: the launch is wrong: $args" ;;
         esac
         case "$args" in

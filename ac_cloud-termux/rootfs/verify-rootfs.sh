@@ -66,13 +66,19 @@ echo "── option 37.1: the login started my-webserver on build.json's port, l
 # half is that it is really up, on 127.0.0.1 only, and that its root is this terminal's $HOME.
 ws_port="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["runtime"]["webserver"]["port"])' "$HERE/../build.json")"
 command -v fuser >/dev/null 2>&1 && trap 'fuser -k -n tcp "$ws_port" >/dev/null 2>&1 || true; rm -rf "$W"' EXIT
-echo "cloud-webserver-probe-$$" > "$W/home/cloud-webserver-probe.txt"
+echo "fleet-webserver-probe-$$" > "$W/home/fleet-webserver-probe.txt"
 i=0
 until curl -fsS -o /dev/null "http://127.0.0.1:$ws_port/" 2>/dev/null || [ "$i" -ge 90 ]; do sleep 1; i=$((i + 1)); done
-if curl -fsS "http://127.0.0.1:$ws_port/cloud-webserver-probe.txt" 2>/dev/null | grep -q "cloud-webserver-probe-$$"; then
+if curl -fsS "http://127.0.0.1:$ws_port/fleet-webserver-probe.txt" 2>/dev/null | grep -q "fleet-webserver-probe-$$"; then
     echo "ok   my-webserver answers on 127.0.0.1:$ws_port and serves the terminal's \$HOME (bound as /root)"
 else
     echo "FAIL nothing serving \$HOME on 127.0.0.1:$ws_port ${i}s after login; server log: $(tail -5 "$W/home/.cloud-webserver.log" 2>/dev/null | tr '\n' ' ')"; fail=1
+fi
+ws_bin="$STAGE/rootfs/usr/local/bin/fleet-webserver"
+if [ -x "$ws_bin" ] && file -bL "$ws_bin" | grep -q 'statically linked'; then
+    echo "ok   fleet-webserver (the shared ab_cloud-libs-shared/libs/fleet-webserver) is baked as a static executable"
+else
+    echo "FAIL $ws_bin is missing or not a static executable"; fail=1
 fi
 # The baked server must hand out the LINUX UI at / (tree, viewer, toolbar; sha256 == Linux's).
 python3 "$HERE/../../ab_cloud-terminal-store/webserver-ui-check.py" --url "http://127.0.0.1:$ws_port" "$HERE/.." \

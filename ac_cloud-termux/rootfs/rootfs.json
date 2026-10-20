@@ -80,16 +80,12 @@
       "_doc": "#737 -- sops for the shared toolset; not packaged in bookworm. The release asset IS the binary (a static Go build).",
       "version": "3.13.3",
       "url": "https://github.com/getsops/sops/releases/download/v{version}/sops-v{version}.linux.{arch}"
-    },
-    "my-webserver": {
-      "_doc": "Option 37.1 -- the terminal serves its own $HOME on 127.0.0.1 (build.json::runtime.webserver, started by enter.sh). cloud-u-linux da_my-webserver's per-arch Node SEA: the release asset IS the binary, glibc-linked, which is why it lives in this glibc root and never on the Android side. {version} is the publishing commit of the IMMUTABLE tag my-webserver-<sha> (da_my-webserver/nix/hashes.json::tag), never a rolling tag. ac_cloud-nix-on-droid bakes the same asset from this entry (rootfs-extras.nix) with the hashes pinned in its build.json.",
-      "version": "f795a4e4",
-      "url": "https://github.com/diegonmarcos/cloud-u-linux/releases/download/my-webserver-{version}/my-webserver-{arch}",
-      "arch_names": {
-        "amd64": "x86_64",
-        "arm64": "aarch64"
-      }
     }
+  },
+  "fleet_webserver": {
+    "_doc": "Option 37.1 -- the terminal serves its own $HOME on 127.0.0.1 (build.json::runtime.webserver, started by enter.sh) with the ONE shared fleet web server, ab_cloud-libs-shared/libs/fleet-webserver (c3-webserver :8002 and nix-on-droid :8001 run the same crate): build-rootfs.sh compiles `src` to a static musl binary on the runner of the rootfs's own CPU (native, no qemu, nothing fetched on the phone) and installs it as /usr/local/bin/<bin>. The Linux frontend is bundled in that binary from the lib's vendor/ mirror. It is NOT in `binaries`: verify-inside.sh runs every binary with --version, and this one takes a port, not flags; verify-rootfs.sh checks it separately (static ELF, then the Linux UI over HTTP).",
+    "src": "../ab_cloud-libs-shared/libs/fleet-webserver",
+    "bin": "fleet-webserver"
   },
   "npm_globals": {
     "_doc": "Installed with the node above. claude-code publishes a native binary per platform as optionalDependencies; npm picks the linux-gnu one for this glibc root.",
@@ -114,8 +110,7 @@
     "goose",
     "hermes",
     "agy",
-    "python3",
-    "my-webserver"
+    "python3"
   ],
   "_doc_binaries": "This terminal's tools BEYOND ab_cloud-terminal-store/store.json::toolset (#737: fish, zsh, node, claude, gh, ... -- the set both terminals ship) and beyond the fleet tool belt's `binaries`. resolve.py merges all three into the roster install-in-rootfs.sh installs and command -v's and verify-rootfs.sh proves present, loadable (PT_INTERP inside the root) and executable under the shipped proot. A name repeated from either other list is refused.",
   "default_shell": "/usr/bin/fish",
@@ -185,8 +180,21 @@
       "../ab_cloud-terminal-store/store.json",
       "../ab_cloud-terminal-store/noexec-shebang.c",
       "../ab_cloud-terminal-store/gitconfig",
-      "../ab_cloud-terminal-store/fetch-linux-tools.py"
+      "../ab_cloud-terminal-store/fetch-linux-tools.py",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/Cargo.toml",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/Cargo.lock",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/build.rs",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/assets/eruda.min.js",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/vendor/VENDOR.sha256",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/src/api.rs",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/src/files.rs",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/src/http.rs",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/src/lib.rs",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/src/main.rs",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/src/render.rs",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/src/sha256.rs"
     ],
+    "_doc_identity_files_webserver": "cloud_webserver: build-rootfs.sh compiles the shared lib into the tree, so its build inputs (sources, lockfile, bundled eruda, and vendor/VENDOR.sha256, which pins every vendored Linux frontend file) address the tarball; a lib or frontend change republishes the rootfs.",
     "_doc_identity_files_linux_tools": "store.json::linux_tools: build-rootfs.sh installs the pinned linux-store, linux-account and fish greeting into the tree through fetch-linux-tools.py, so the fetcher's bytes (and, through store.json, the pin and the hashes) address the tarball.",
     "_doc_identity_files_771": "#771 -- build-rootfs.sh compiles noexec-shebang.c into the tree (/usr/local/lib, listed in /etc/ld.so.preload) and installs gitconfig as /etc/gitconfig: both are bytes of the tarball, so both address it.",
     "_doc_identity_files_toolset": "#737 -- store.json carries the shared toolset, which decides what this tree installs. Left out, a toolset edit would keep the old asset name: nothing uploads, no phone refetches, CI green over a rootfs without the new tool. Relative to the app dir, like every entry here.",

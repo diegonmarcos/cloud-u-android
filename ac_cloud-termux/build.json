@@ -110,7 +110,7 @@
       "protection_level": "signature"
     },
     "web": {
-      "_doc": "my-webserver (option 37.1, ea687d9bf: started at termux login on build.json::runtime.webserver's loopback port, root $HOME) already serves the store read-only at http://<bind>:<port><mount>; nothing here starts a second server. enter.sh adds ONLY the write half: HTTPD_WRITE_ROOTS=/root/<dir> (my-webserver's allowlist: writes land in the store and nowhere else in $HOME) and HTTPD_WRITE_TOKEN_FILE=/root/<token_file> (0600, made once at login; every write must present it). No token file, no writes. test/test-shared-store.sh T7 pins it.",
+      "_doc": "fleet-webserver (option 37.1, ea687d9bf: started at termux login on build.json::runtime.webserver's loopback port, root $HOME) already serves the store read-only at http://<bind>:<port><mount>; nothing here starts a second server. enter.sh adds ONLY the write half: HTTPD_WRITE_ROOTS=/root/<dir> (my-webserver's allowlist: writes land in the store and nowhere else in $HOME) and HTTPD_WRITE_TOKEN_FILE=/root/<token_file> (0600, made once at login; every write must present it). No token file, no writes. test/test-shared-store.sh T7 pins it.",
       "bind": "127.0.0.1",
       "port": 8000,
       "mount": "/cloud-shared-store/",
@@ -137,12 +137,12 @@
     "wifi_lock": true
   },
   "runtime": {
-    "_doc": "Option 37.1 -- this terminal exposes its own disk through my-webserver (cloud-u-linux da_my-webserver, the per-arch Node SEA baked into the root). THE ONE declaration of its port: rendered by ab_cloud-terminal-store/render-local-webserver.py into the login (rootfs/enter.sh, via cloud-store/local-webserver.sh staged by rootfs/build-rootfs.sh), which starts it once per boot -- only when nothing already LISTENs on the port. bind is a statement, not a knob: my-webserver hard-binds 127.0.0.1 and refuses non-loopback peers, and the renderer refuses any other value. root is the terminal's own $HOME (bound as /root inside the rootfs). Writes stay token-gated and OFF: the login unsets HTTPD_WRITE, HTTPD_WRITE_ROOTS and HTTPD_WRITE_TOKEN_FILE. Every app's localhost ports live under runtime; ac_cloud-c3-webserver/test/test-localhost-ports.sh fails when two apps declare the same one.",
+    "_doc": "Option 37.1 -- this terminal exposes its own disk through fleet-webserver (the shared ab_cloud-libs-shared/libs/fleet-webserver, a static binary built from source and baked into the root). THE ONE declaration of its port: rendered by ab_cloud-terminal-store/render-local-webserver.py into the login (rootfs/enter.sh, via cloud-store/local-webserver.sh staged by rootfs/build-rootfs.sh), which starts it once per boot -- only when nothing already LISTENs on the port. bind is a statement, not a knob: fleet-webserver hard-binds 127.0.0.1 and refuses non-loopback peers, and the renderer refuses any other value. root is the terminal's own $HOME (bound as /root inside the rootfs). Writes stay token-gated and OFF: the login unsets HTTPD_WRITE, HTTPD_WRITE_ROOTS and HTTPD_WRITE_TOKEN_FILE. Every app's localhost ports live under runtime; ac_cloud-c3-webserver/test/test-localhost-ports.sh fails when two apps declare the same one.",
     "webserver": {
       "port": 8000,
       "bind": "127.0.0.1",
       "root": "$HOME",
-      "binary": "my-webserver"
+      "binary": "fleet-webserver"
     }
   },
   "shizuku_client": {

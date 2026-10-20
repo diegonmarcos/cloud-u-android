@@ -44,6 +44,7 @@ on:
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       - "ab_cloud-libs-shared/libs/sysdns/**"
+      - "ab_cloud-libs-shared/libs/fleet-webserver/**"
       - "ac_cloud-termux/**"
 permissions:
   contents: write   # gh release upload

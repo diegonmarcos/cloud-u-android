@@ -186,7 +186,25 @@ EXTRAS_REWRITES = (
      ".forks.nixdroid.bootstrap.default_packages.extras",
      "builtins.fromJSON (builtins.readFile ./extras.json)"),
     ("../../../../../ab_cloud-terminal-store/noexec-shebang.c", "./noexec-shebang.c"),
+    ("../../../../../ab_cloud-libs-shared/libs/fleet-webserver", "./fleet-webserver"),
 )
+# The shared web server's build inputs (Option 37.1), staged as ~/flakes/system/fleet-webserver/*
+# so `nix-on-droid switch` builds the same fleet-webserver the bake does, from the same bytes.
+WEBSERVER_LIB = Path(__file__).resolve().parents[5] / "ab_cloud-libs-shared" / "libs" / "fleet-webserver"
+WEBSERVER_FILES = ("Cargo.toml", "Cargo.lock", "build.rs", "assets", "vendor", "src/api.rs", "src/files.rs",
+                   "src/http.rs", "src/lib.rs", "src/main.rs", "src/render.rs", "src/sha256.rs")
+
+
+def webserver_files() -> dict:
+    """'fleet-webserver/<relpath>' -> bytes for every WEBSERVER_FILES entry (a directory: all of it)."""
+    out = {}
+    for entry in WEBSERVER_FILES:
+        path = WEBSERVER_LIB / entry
+        if not path.exists():
+            raise ValueError(f"the shared webserver lib is missing {path}")
+        for f in sorted([path] if path.is_file() else (q for q in path.rglob("*") if q.is_file())):
+            out[f"fleet-webserver/{f.relative_to(WEBSERVER_LIB).as_posix()}"] = f.read_bytes()
+    return out
 
 
 def extras_files(extras_decl: dict) -> dict:
@@ -205,6 +223,7 @@ def extras_files(extras_decl: dict) -> dict:
         "extras.json": (json.dumps(extras_decl, indent=2, sort_keys=True) + "\n").encode(),
         "rootfs.json": ROOTFS_JSON.read_bytes(),
         "noexec-shebang.c": (STORE_SRC / "noexec-shebang.c").read_bytes(),
+        **webserver_files(),
     }
 
 
@@ -836,7 +855,7 @@ def render_local_webserver(build_json: Path) -> str:
 
 # startup-step: local_webserver
 def patch_bin_login_webserver(bin_login: str, app_id: str, profile_link: str, rendered: str) -> str:
-    """Option 37.1 -- this terminal serves its own $HOME through my-webserver on 127.0.0.1, port
+    """Option 37.1 -- this terminal serves its own $HOME through fleet-webserver on 127.0.0.1, port
     from build.json::runtime.webserver. `rendered` is ab_cloud-terminal-store/local-webserver.sh
     with that port (render_local_webserver: the same text the termux terminal stages beside
     enter.sh); it is inlined before bin/login's proot exec, followed by ONE call that starts the
@@ -870,7 +889,7 @@ def patch_bin_login_webserver(bin_login: str, app_id: str, profile_link: str, re
     if not m:
         raise ValueError("the rendered local-webserver.sh sets no CLOUD_WEBSERVER_BIN")
     launcher.append(f"  /{profile_link}/bin/{m.group(1)}")
-    call = ("# startup-step: local_webserver -- my-webserver on its declared loopback port, once\n"
+    call = ("# startup-step: local_webserver -- fleet-webserver on its declared loopback port, once\n"
             + rendered.rstrip("\n") + "\n"
             + "\n".join(launcher) + "\n"
             + 'cloud_trace "local webserver: port $CLOUD_WEBSERVER_PORT checked"\n\n')
@@ -1188,7 +1207,7 @@ def main() -> int:
                 print(f"FAIL: {e}", file=sys.stderr)
                 return 1
 
-            # ── option 37.1: my-webserver on build.json::runtime.webserver's port, once per
+            # ── option 37.1: fleet-webserver on build.json::runtime.webserver's port, once per
             #    boot. LAST of the bin/login patches: its launcher copies the exec's binds.
             try:
                 bin_login = patch_bin_login_webserver(

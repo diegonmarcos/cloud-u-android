@@ -1,9 +1,9 @@
 #!/bin/sh
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║ Option 37.1: enter.sh starts my-webserver on build.json's port, ONCE      ║
+# ║ Option 37.1: enter.sh starts fleet-webserver on build.json's port, ONCE      ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 #
-# This terminal serves its own $HOME through my-webserver on 127.0.0.1:<port>, where <port> is
+# This terminal serves its own $HOME through fleet-webserver on 127.0.0.1:<port>, where <port> is
 # build.json::runtime.webserver (8000). enter.sh's `local_webserver` block sources the shared
 # ab_cloud-terminal-store/local-webserver.sh (rendered with the port by build-rootfs.sh) and
 # starts the server in a proot of its own -- only when nothing LISTENs on the port.
@@ -34,17 +34,18 @@ bad() { echo "::error::FAIL — $1"; fails=$((fails + 1)); }
 echo "── local webserver autostart [$(basename "$DIR")] ──"
 
 # ── 1. declared ──────────────────────────────────────────────────────────────
-python3 - "$DIR" <<'PY' && ok "build.json runtime.webserver = 8000 on 127.0.0.1 serving \$HOME; rootfs.json installs my-webserver from an immutable tag" || bad "the runtime.webserver / rootfs.json declaration is wrong (see above)"
+python3 - "$DIR" <<'PY' && ok "build.json runtime.webserver = 8000 on 127.0.0.1 serving \$HOME; rootfs.json builds the shared fleet-webserver from ab_cloud-libs-shared/libs/fleet-webserver" || bad "the runtime.webserver / rootfs.json declaration is wrong (see above)"
 import json, sys, os
 d = sys.argv[1]
 ws = json.load(open(os.path.join(d, "build.json")))["runtime"]["webserver"]
-assert ws == {"port": 8000, "bind": "127.0.0.1", "root": "$HOME", "binary": "my-webserver"}, ws
+assert ws == {"port": 8000, "bind": "127.0.0.1", "root": "$HOME", "binary": "fleet-webserver"}, ws
 r = json.load(open(os.path.join(d, "rootfs", "rootfs.json")))
-t = r["tarballs"]["my-webserver"]
-assert "my-webserver" in r["binaries"], "my-webserver is not in rootfs.json binaries"
-assert "/releases/download/my-webserver-{version}/" in t["url"], t["url"]
-assert "latest" not in t["url"] and "latest" not in t["version"], "a rolling tag"
-assert t["arch_names"] == {"amd64": "x86_64", "arm64": "aarch64"}, t["arch_names"]
+c = r["fleet_webserver"]
+assert c == {k: c[k] for k in ("_doc", "src", "bin")} and c["bin"] == "fleet-webserver", c
+assert os.path.isfile(os.path.join(d, c["src"], "Cargo.toml")), "the shared lib is not at " + c["src"]
+assert "my-webserver" not in r["tarballs"] and "my-webserver" not in r["binaries"], "the Node SEA is still installed"
+ids = r["artifact"]["identity_files"]
+assert any(i.endswith("libs/fleet-webserver/vendor/VENDOR.sha256") for i in ids) and any(i.endswith("libs/fleet-webserver/Cargo.lock") for i in ids), "the lib is not in the rootfs address"
 PY
 grep -q 'render-local-webserver.py" "$HERE/../build.json" "$OUT/cloud-store/local-webserver.sh"' "$DIR/rootfs/build-rootfs.sh" \
     && ok "build-rootfs.sh stages the rendered snippet as cloud-store/local-webserver.sh" \
@@ -76,7 +77,7 @@ mkdir -p "$T/here/cloud-store" "$T/rootfs/usr/local/bin" "$T/system/bin" "$T/hom
 ln -s "$(command -v grep)" "$T/system/bin/grep"
 python3 "$RENDER" "$DIR/build.json" | sed "s#/system/bin/#$T/system/bin/#g" > "$T/here/cloud-store/local-webserver.sh" \
     || bad "render-local-webserver.py failed on build.json"
-: > "$T/rootfs/usr/local/bin/my-webserver"; chmod 0755 "$T/rootfs/usr/local/bin/my-webserver"
+: > "$T/rootfs/usr/local/bin/fleet-webserver"; chmod 0755 "$T/rootfs/usr/local/bin/fleet-webserver"
 # The stub proot: what a real launch would exec, written down. With LISTEN=1 it also "binds".
 cat > "$T/here/proot" <<EOF
 #!/bin/sh
@@ -108,8 +109,8 @@ net ""
 if login && launched; then
     args="$(tr '\n' ' ' < "$T/launch")"
     case "$args" in
-        *"-r $T/rootfs "*"-b $T/home:/root "*"-b /x:/sdcard -w /root "*"/usr/local/bin/my-webserver 8000 /root --env HTTPD_WRITE=unset HTTPD_WRITE_ROOTS=unset HTTPD_WRITE_TOKEN_FILE=unset"*)
-            ok "port free: one my-webserver 8000 /root inside the root, the session's binds, HTTPD_WRITE* scrubbed" ;;
+        *"-r $T/rootfs "*"-b $T/home:/root "*"-b /x:/sdcard -w /root "*"/usr/local/bin/fleet-webserver 8000 /root --env HTTPD_WRITE=unset HTTPD_WRITE_ROOTS=unset HTTPD_WRITE_TOKEN_FILE=unset"*)
+            ok "port free: one fleet-webserver 8000 /root inside the root, the session's binds, HTTPD_WRITE* scrubbed" ;;
         *) bad "port free: the launch is wrong: $args" ;;
     esac
     case "$args" in
@@ -139,9 +140,9 @@ login && ! launched && ok "second login: the first one's server is LISTENing, no
 unset LISTEN
 
 net ""
-rm -f "$T/rootfs/usr/local/bin/my-webserver"
+rm -f "$T/rootfs/usr/local/bin/fleet-webserver"
 login && ! launched && ok "no binary in the root (an older tree): nothing runs, the login goes on" || bad "missing binary: the block failed the login or launched anyway"
-: > "$T/rootfs/usr/local/bin/my-webserver"; chmod 0755 "$T/rootfs/usr/local/bin/my-webserver"
+: > "$T/rootfs/usr/local/bin/fleet-webserver"; chmod 0755 "$T/rootfs/usr/local/bin/fleet-webserver"
 mv "$T/here/cloud-store/local-webserver.sh" "$T/lws.sh"
 login && ! launched && ok "no staged snippet: nothing runs, the login goes on" || bad "missing snippet: the block failed the login or launched anyway"
 
