@@ -72,7 +72,7 @@ def infraSliceB64      = infraSliceFile.bytes.encodeBase64().toString()
 // The Containers > Table rows and their More-page declarations. Each is baked as an ARRAY of base64 chunks: javac
 // caps one string constant at 65,535 bytes and declarations.json alone is ~140 KB once encoded.
 def chunkedB64 = { File f ->
-    if (!f.exists()) throw new GradleException("missing ${f.name} - run data/gen_infra_slice.py; the Containers Table would bake empty and look fine")
+    if (!f.exists()) throw new GradleException("missing ${f.name} - run data/gen_infra_slice.py (or data/gen_fleet_slice.py); the Containers Table / Infra pages would bake empty and look fine")
     def all = f.bytes.encodeBase64().toString()
     def parts = []
     for (int i = 0; i < all.length(); i += 30000) parts << all.substring(i, Math.min(all.length(), i + 30000))
@@ -80,6 +80,10 @@ def chunkedB64 = { File f ->
 }
 def routesB64Array       = chunkedB64(file("../data/routes.json"))
 def declarationsB64Array = chunkedB64(file("../data/declarations.json"))
+// The Infra section's pages (Providers / VMs / Storage / Electronics / Domains): data/fleet_slice.json, derived by
+// data/gen_fleet_slice.py from the fleet's own declarations in cloud-infra. A missing slice would draw five empty pages
+// that look like working ones (#276), so it is asserted present. Chunked: ~19 KB now, but it grows with the fleet.
+def fleetSliceB64Array   = chunkedB64(file("../data/fleet_slice.json"))
 def c3OpsBaseUrl       = (buildJson.ui.c3_ops?.base_url  ?: '').toString()
 
 // #648 THE CARRIED C3 SECTION: ui.carried_c3 (not nav: ui.sections is) is the SuperApp's declaration block,
@@ -89,9 +93,8 @@ def c3OpsBaseUrl       = (buildJson.ui.c3_ops?.base_url  ?: '').toString()
 // NtfyScopes and IndexTiles read the identical shapes they read there.
 def c3Section = buildJson.ui.carried_c3
 if (c3Section == null) throw new GradleException("build.json::ui.carried_c3 is missing — the Topology/Observability stacks would bake empty and the tabs would draw nothing")
-if (!c3Section.stack_topology || !c3Section.stack_observability || !c3Section.stack_infra) throw new GradleException("ui.carried_c3 is missing stack_topology / stack_infra / stack_observability — half the c3 surface would silently vanish")
+if (!c3Section.stack_topology || !c3Section.stack_observability) throw new GradleException("ui.carried_c3 is missing stack_topology / stack_observability — half the c3 surface would silently vanish")
 def stackTopologyB64   = b64(c3Section.stack_topology)
-def stackInfraB64      = b64(c3Section.stack_infra)
 def stackObservB64     = b64(c3Section.stack_observability)
 // The top bar declaration (libs:bottomnav TopBarDecl): ui.top_bar as base64 JSON, '' when the app declares none.
 def uiTopBarB64        = buildJson.ui?.top_bar ? b64(buildJson.ui.top_bar) : ''
@@ -207,11 +210,11 @@ android {
         buildConfigField "String", "INFRA_SLICE_B64",       "\"${infraSliceB64}\""
         buildConfigField "String[]", "ROUTES_B64",        routesB64Array
         buildConfigField "String[]", "DECLARATIONS_B64",  declarationsB64Array
+        buildConfigField "String[]", "FLEET_SLICE_B64",   fleetSliceB64Array
         buildConfigField "String", "C3_OPS_BASE_URL",       "\"${c3OpsBaseUrl}\""
         buildConfigField "String", "SERVICES_PUBLIC_B64",  "\"${servicesPublicB64}\""
         buildConfigField "String", "SERVICES_PRIVATE_B64", "\"${servicesPrivateB64}\""
         buildConfigField "String", "UI_STACK_TOPOLOGY_B64", "\"${stackTopologyB64}\""
-        buildConfigField "String", "UI_STACK_INFRA_B64",    "\"${stackInfraB64}\""
         buildConfigField "String", "UI_STACK_OBSERV_B64",   "\"${stackObservB64}\""
         buildConfigField "String", "UI_TOP_BAR_B64",        "\"${uiTopBarB64}\""
         buildConfigField "String", "UI_ALIASES_B64",        "\"${uiAliasesB64}\""

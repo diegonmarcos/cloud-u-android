@@ -127,7 +127,8 @@ class DeclarationsTest {
         // ui.carried_c3.stack_*), carried whole per the owner's escalation; dagu and the
         // WG mesh arrived with them. The SuperApp's sample-stub page ids stay undeclared,
         // which is what keeps "no placeholder in a shipped tab" assertable.
-        assertEquals(listOf("stack"), pageIds("infra"))
+        assertEquals("Infra = Providers | VMs | Storage | Electronics | Domains (2026-10-20); no Stack, Dbs or API page",
+            listOf("providers", "machines", "storage", "electronics", "domains"), pageIds("infra"))
         assertEquals("Public and Private URLs merged into Table", listOf("topology", "table"), pageIds("containers"))
         assertEquals(listOf("observability", "health", "dagu", "mesh"), pageIds("observ"))
         assertEquals(listOf("about"), pageIds("configs"))

@@ -50,7 +50,7 @@ class C3NavTest {
         assertEquals("Apps became Ops", Target("ops"), C3Nav.resolve(nav, aliases, "apps"))
         assertEquals(Target("containers", "table"), C3Nav.resolve(nav, aliases, "public"))
         assertEquals(Target("containers", "table"), C3Nav.resolve(nav, aliases, "private"))
-        assertEquals("Stack is Infra's page", Target("infra", "stack"), C3Nav.resolve(nav, aliases, "stack"))
+        assertEquals("the old Stack id opens Infra's first page", Target("infra", "providers"), C3Nav.resolve(nav, aliases, "stack"))
         assertEquals("a restored old tab opens its new home", Target("ops"), C3Nav.start(nav, aliases, "apps"))
     }
 

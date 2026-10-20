@@ -1,0 +1,714 @@
+{
+ "_meta": {
+  "generated_by": "data/gen_fleet_slice.py",
+  "sources": {
+   "consolidated": "1_cloud-configs/dist/_cloud-data-consolidated.json",
+   "zone": "c_vps/ba-clo_cloudflare/src/terraform.json",
+   "assets": "1_cloud-configs/src/inputs/fleet-assets.json",
+   "users": "1_cloud-configs/src/inputs/superapp-users.json"
+  },
+  "note": "READ from the fleet declarations; never edit - run the generator. No key, token or instance id is carried."
+ },
+ "providers": [
+  {
+   "id": "oci",
+   "label": "Oracle Cloud",
+   "account": "tenancy namespace axpmn3qtq4ig",
+   "plan": "Free + Paid",
+   "use": "OCI VMs with VCN, security lists, budget, and Terraform automation",
+   "cost": {
+    "live": "/cloud/oci/costs"
+   },
+   "links": [
+    {
+     "label": "Console",
+     "url": "https://cloud.oracle.com"
+    }
+   ],
+   "vms": [
+    "oci-E2-f_0",
+    "oci-E2-f_1",
+    "oci-A1-f_0"
+   ]
+  },
+  {
+   "id": "gcloud",
+   "label": "Google Cloud",
+   "account": "project diegonmarcos-infra-prod",
+   "plan": "Free + Paid (Spot)",
+   "use": "GCP instances - free micro central proxy",
+   "cost": {
+    "live": "/cloud/gcp/costs"
+   },
+   "links": [
+    {
+     "label": "Console",
+     "url": "https://console.cloud.google.com"
+    }
+   ],
+   "vms": [
+    "gcp-E2-f_0",
+    "gcp-L4-e_0"
+   ]
+  },
+  {
+   "id": "hetzner",
+   "label": "Hetzner",
+   "account": null,
+   "plan": null,
+   "use": "Terraform folder only (c_vps/vps_hetzner); no server is declared",
+   "cost": null,
+   "links": [
+    {
+     "label": "Console",
+     "url": "https://console.hetzner.cloud"
+    }
+   ],
+   "vms": []
+  },
+  {
+   "id": "aws",
+   "label": "Amazon Web Services",
+   "account": null,
+   "plan": "Exploration",
+   "use": "SES mail sending and verification records; no EC2 instance is active",
+   "cost": null,
+   "links": [
+    {
+     "label": "Console",
+     "url": "https://console.aws.amazon.com"
+    }
+   ],
+   "vms": []
+  },
+  {
+   "id": "cloudflare",
+   "label": "Cloudflare",
+   "account": "account e5cb0a0c6f448e54f217de484259f0ae",
+   "plan": "Free",
+   "use": "Registrar, DNS zone, Email Routing, Tunnel, Workers",
+   "cost": {
+    "amount": 0,
+    "currency": "USD",
+    "note": "Cloudflare Free Plan (subscription price 0, read 2026-10-20)"
+   },
+   "links": [
+    {
+     "label": "Dashboard",
+     "url": "https://dash.cloudflare.com"
+    },
+    {
+     "label": "Registrar",
+     "url": "https://dash.cloudflare.com/?to=/:account/domains/registrations"
+    }
+   ],
+   "vms": []
+  },
+  {
+   "id": "github",
+   "label": "GitHub",
+   "account": "@diegonmarcos",
+   "plan": null,
+   "use": "Source repositories, Actions runners (x86), GHCR images, Releases",
+   "cost": null,
+   "links": [
+    {
+     "label": "Profile",
+     "url": "https://github.com/diegonmarcos"
+    }
+   ],
+   "vms": []
+  },
+  {
+   "id": "vast-ai",
+   "label": "Vast.ai",
+   "account": null,
+   "plan": "On-demand rental",
+   "use": "On-demand GPU rental for LLM fallback when GCP spot is unavailable",
+   "cost": null,
+   "links": [
+    {
+     "label": "Console",
+     "url": "https://cloud.vast.ai"
+    }
+   ],
+   "vms": [
+    "vast-RTX-p_0"
+   ]
+  },
+  {
+   "id": "nvidia",
+   "label": "NVIDIA",
+   "account": null,
+   "plan": null,
+   "use": "Hosted LLM API (build.nvidia.com)",
+   "cost": null,
+   "links": [
+    {
+     "label": "Build",
+     "url": "https://build.nvidia.com"
+    }
+   ],
+   "vms": []
+  },
+  {
+   "id": "resend",
+   "label": "Resend",
+   "account": null,
+   "plan": null,
+   "use": "Transactional mail API (c_vps/vps_resend)",
+   "cost": null,
+   "links": [
+    {
+     "label": "Site",
+     "url": "https://resend.com"
+    }
+   ],
+   "vms": []
+  }
+ ],
+ "vms": [
+  {
+   "id": "oci-E2-f_0",
+   "alias": "oci-mail",
+   "provider": "oci",
+   "region": "eu-marseille-1",
+   "size": "VM.Standard.E2.1.Micro",
+   "gpu": null,
+   "cpu": 1,
+   "ram_gb": 1,
+   "disk_gb": 0,
+   "arch": "x86_64",
+   "public_ip": "130.110.251.193",
+   "wg_ip": "10.0.0.3",
+   "wg_public_ip": "10.1.0.3",
+   "wg_role": "spoke",
+   "public_ingress": false,
+   "desc": "Oracle Free - E2 Micro 0 - Mail Server"
+  },
+  {
+   "id": "oci-E2-f_1",
+   "alias": "oci-analytics",
+   "provider": "oci",
+   "region": "eu-marseille-1",
+   "size": "VM.Standard.E2.1.Micro",
+   "gpu": null,
+   "cpu": 1,
+   "ram_gb": 1,
+   "disk_gb": 0,
+   "arch": "x86_64",
+   "public_ip": "129.151.228.66",
+   "wg_ip": "10.0.0.4",
+   "wg_public_ip": "10.1.0.1",
+   "wg_role": "spoke",
+   "public_ingress": true,
+   "desc": "Oracle Free - E2 Micro 1 - Analytics + Workflows"
+  },
+  {
+   "id": "oci-A1-f_0",
+   "alias": "oci-apps",
+   "provider": "oci",
+   "region": "eu-marseille-1",
+   "size": "VM.Standard.A1.Flex",
+   "gpu": null,
+   "cpu": 4,
+   "ram_gb": 24,
+   "disk_gb": 0,
+   "arch": "aarch64",
+   "public_ip": "82.70.229.129",
+   "wg_ip": "10.0.0.6",
+   "wg_public_ip": "10.1.0.4",
+   "wg_role": "spoke",
+   "public_ingress": false,
+   "desc": "Oracle Free - A1 Flex 0 (4 OCPUs / 24GB / 100GB) — Consolidated"
+  },
+  {
+   "id": "gcp-E2-f_0",
+   "alias": "gcp-proxy",
+   "provider": "gcloud",
+   "region": "us-central1-a",
+   "size": "e2-micro",
+   "gpu": null,
+   "cpu": 2,
+   "ram_gb": 1,
+   "disk_gb": 30,
+   "arch": "x86_64",
+   "public_ip": "35.226.147.64",
+   "wg_ip": "10.0.0.1",
+   "wg_public_ip": "10.1.0.2",
+   "wg_role": "hub",
+   "public_ingress": true,
+   "desc": "GCloud Free - E2 Micro 0 - Central Proxy + Control"
+  },
+  {
+   "id": "gcp-L4-e_0",
+   "alias": "gcp-gpu-embed",
+   "provider": "gcloud",
+   "region": null,
+   "size": "g2-standard-4",
+   "gpu": "NVIDIA L4",
+   "cpu": 4,
+   "ram_gb": 16,
+   "disk_gb": 100,
+   "arch": "x86_64",
+   "public_ip": "34.66.107.117",
+   "wg_ip": null,
+   "wg_public_ip": null,
+   "wg_role": null,
+   "public_ingress": false,
+   "desc": "GCloud On-Demand - g2-standard-4 + NVIDIA L4 24GB (T4 stocked out in all us-central1 zones 2026-09-03) - cgc octocode GPU embedding runner (ollama nomic-embed-text behind Caddy bearer-auth on :443; see c_vps/vps_gcloud/src/startup-gpu-embed.sh). NOT a home-manager fleet member (no HM, no WireGuard mesh join) — started/stopped around cgc-db-index.yml's semantic-phase android job via devops_vm_start/devops_vm_stop. STOPPED by default between runs."
+  },
+  {
+   "id": "vast-RTX-p_0",
+   "alias": "vast-ollama",
+   "provider": "vast-ai",
+   "region": null,
+   "size": null,
+   "gpu": "RTX A4000",
+   "cpu": null,
+   "ram_gb": null,
+   "disk_gb": null,
+   "arch": "x86_64",
+   "public_ip": "TBD",
+   "wg_ip": null,
+   "wg_public_ip": null,
+   "wg_role": null,
+   "public_ingress": false,
+   "desc": "Vast.ai On-Demand - RTX A4000 (16GB VRAM) - Ollama LLM fallback"
+  }
+ ],
+ "storage": {
+  "buckets": [
+   {
+    "provider": "oci",
+    "name": "cloud-backups-binaries-medias",
+    "tier": "Standard",
+    "region": "eu-marseille-1",
+    "dns": "s3-backups-binaries.app"
+   },
+   {
+    "provider": "oci",
+    "name": "cloud-backups-db",
+    "tier": "Standard",
+    "region": "eu-marseille-1",
+    "dns": "s3-backups-db.app"
+   },
+   {
+    "provider": "oci",
+    "name": "cloud-backups-media",
+    "tier": "Archive",
+    "region": "eu-marseille-1",
+    "dns": "s3-backups-media.app"
+   },
+   {
+    "provider": "oci",
+    "name": "cloud-backups-non-binaries",
+    "tier": "Standard",
+    "region": "eu-marseille-1",
+    "dns": "s3-backups-nonbin.app"
+   },
+   {
+    "provider": "oci",
+    "name": "my-photos",
+    "tier": "Standard",
+    "region": "eu-marseille-1",
+    "dns": "s3-photos.app"
+   }
+  ],
+  "backends": [
+   {
+    "id": "google-drive",
+    "label": "Google Drive",
+    "provider": "Google Workspace",
+    "url": "https://drive.google.com",
+    "role": "Personal cloud drive reached through cloud-drive-mcp / google-workspace-mcp"
+   }
+  ]
+ },
+ "electronics": [
+  {
+   "id": "surface-8-pro",
+   "model": "Surface Pro 8",
+   "kind": "notebook",
+   "os": "NixOS",
+   "role": "Workstation: development laptop, mesh client",
+   "wg_ip": "10.0.0.5",
+   "wg_public_ip": "10.1.0.5"
+  },
+  {
+   "id": "samsung-s21plus",
+   "model": "Samsung Galaxy S21+",
+   "kind": "phone",
+   "os": "Android",
+   "role": "Primary phone: Termux host, mesh client",
+   "wg_ip": "10.0.0.9",
+   "wg_public_ip": "10.1.0.9"
+  },
+  {
+   "id": "samsung-a37",
+   "model": "Samsung Galaxy A37",
+   "kind": "phone",
+   "os": "Android",
+   "role": "Second phone: mesh client",
+   "wg_ip": "10.0.0.10",
+   "wg_public_ip": "10.1.0.12"
+  },
+  {
+   "id": "garmin-fenix-8-pro",
+   "model": "Garmin fenix 8 Pro 47mm",
+   "kind": "smartwatch",
+   "os": "Garmin Connect IQ",
+   "role": "Watch-face target (c_devices/garmin-watchface); no mesh identity",
+   "wg_ip": null,
+   "wg_public_ip": null
+  }
+ ],
+ "domains": [
+  {
+   "name": "diegonmarcos.com",
+   "registrar": "Cloudflare",
+   "admin": "Cloudflare",
+   "renewal_paid": "2026-10",
+   "expires": "2027-11-17",
+   "next_renewal": "2027-11-17",
+   "auto_renew": true,
+   "nameservers": [
+    "burt.ns.cloudflare.com",
+    "phoenix.ns.cloudflare.com"
+   ],
+   "verified": "Cloudflare registrar API GET /accounts/{account}/registrar/domains/diegonmarcos.com on 2026-10-20 (expires_at, auto_renew, current_registrar, name_servers); the domain was transferred to Cloudflare on 2026-10-18 and the renewal year was paid in October 2026",
+   "records": [
+    {
+     "group": "Web",
+     "name": "diegonmarcos.com",
+     "type": "A",
+     "content": "129.151.228.66",
+     "ttl": 300,
+     "proxied": false,
+     "priority": null,
+     "comment": null
+    },
+    {
+     "group": "Web",
+     "name": "diegonmarcos.com",
+     "type": "AAAA",
+     "content": "2603:c026:c104:8f00:0:c704:63b:6eee",
+     "ttl": 300,
+     "proxied": false,
+     "priority": null,
+     "comment": null
+    },
+    {
+     "group": "Web",
+     "name": "www.diegonmarcos.com",
+     "type": "A",
+     "content": "129.151.228.66",
+     "ttl": 300,
+     "proxied": false,
+     "priority": null,
+     "comment": null
+    },
+    {
+     "group": "Web",
+     "name": "www.diegonmarcos.com",
+     "type": "AAAA",
+     "content": "2603:c026:c104:8f00:0:c704:63b:6eee",
+     "ttl": 300,
+     "proxied": false,
+     "priority": null,
+     "comment": null
+    },
+    {
+     "group": "Web",
+     "name": "*.diegonmarcos.com",
+     "type": "A",
+     "content": "129.151.228.66",
+     "ttl": 1,
+     "proxied": false,
+     "priority": null,
+     "comment": "Wildcard → oci-analytics (public edge) ONLY. Internal wg0 mesh resolution is split-horizon via Hickory (10.0.0.1:53), NOT a public CF record — keeps RFC1918 mesh IPs off public DNS."
+    },
+    {
+     "group": "Web",
+     "name": "*.diegonmarcos.com",
+     "type": "AAAA",
+     "content": "2603:c026:c104:8f00:0:c704:63b:6eee",
+     "ttl": 1,
+     "proxied": false,
+     "priority": null,
+     "comment": "Wildcard → oci-analytics (public edge) ONLY. Internal wg0 mesh resolution is split-horizon via Hickory (10.0.0.1:53), NOT a public CF record — keeps RFC1918 mesh IPs off public DNS."
+    },
+    {
+     "group": "Web",
+     "name": "api.diegonmarcos.com",
+     "type": "A",
+     "content": "129.151.228.66",
+     "ttl": 300,
+     "proxied": false,
+     "priority": null,
+     "comment": "api.* → public edge (oci-analytics). Public /pub/* routes here; internal wg-cloud routes resolve via Hickory split-horizon, not a public mesh record."
+    },
+    {
+     "group": "Web",
+     "name": "api.diegonmarcos.com",
+     "type": "AAAA",
+     "content": "2603:c026:c104:8f00:0:c704:63b:6eee",
+     "ttl": 300,
+     "proxied": false,
+     "priority": null,
+     "comment": "api.* → public edge (oci-analytics). Public /pub/* routes here; internal wg-cloud routes resolve via Hickory split-horizon, not a public mesh record."
+    },
+    {
+     "group": "Web",
+     "name": "mail.diegonmarcos.com",
+     "type": "A",
+     "content": "129.151.228.66",
+     "ttl": 300,
+     "proxied": false,
+     "priority": null,
+     "comment": "Explicit A — CF wildcard doesn't catch bare 'mail' label when MX exists at same name"
+    },
+    {
+     "group": "Web",
+     "name": "mail.diegonmarcos.com",
+     "type": "AAAA",
+     "content": "2603:c026:c104:8f00:0:c704:63b:6eee",
+     "ttl": 300,
+     "proxied": false,
+     "priority": null,
+     "comment": "Explicit A — CF wildcard doesn't catch bare 'mail' label when MX exists at same name"
+    },
+    {
+     "group": "MX",
+     "name": "diegonmarcos.com",
+     "type": "MX",
+     "content": "route1.mx.cloudflare.net",
+     "ttl": null,
+     "proxied": null,
+     "priority": null,
+     "comment": "Cloudflare Email Routing (managed by Cloudflare; targets from the MTA-STS policy)"
+    },
+    {
+     "group": "MX",
+     "name": "diegonmarcos.com",
+     "type": "MX",
+     "content": "route2.mx.cloudflare.net",
+     "ttl": null,
+     "proxied": null,
+     "priority": null,
+     "comment": "Cloudflare Email Routing (managed by Cloudflare; targets from the MTA-STS policy)"
+    },
+    {
+     "group": "MX",
+     "name": "diegonmarcos.com",
+     "type": "MX",
+     "content": "route3.mx.cloudflare.net",
+     "ttl": null,
+     "proxied": null,
+     "priority": null,
+     "comment": "Cloudflare Email Routing (managed by Cloudflare; targets from the MTA-STS policy)"
+    },
+    {
+     "group": "MX",
+     "name": "mail.diegonmarcos.com",
+     "type": "MX",
+     "content": "feedback-smtp.us-east-1.amazonses.com",
+     "ttl": 300,
+     "proxied": null,
+     "priority": 10,
+     "comment": "AWS SES custom MAIL FROM - bounce handling"
+    },
+    {
+     "group": "SPF",
+     "name": "diegonmarcos.com",
+     "type": "TXT",
+     "content": "v=spf1 ip4:130.110.251.193 include:_spf.mx.cloudflare.net include:_spf.google.com include:amazonses.com include:eu.rp.oracleemaildelivery.com -all",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "SPF: Stalwart VM IP + CF Email Routing + Google Workspace + AWS SES + OCI relay — hardfail"
+    },
+    {
+     "group": "DMARC",
+     "name": "_dmarc.diegonmarcos.com",
+     "type": "TXT",
+     "content": "v=DMARC1; p=reject; sp=reject; rua=mailto:postmaster@diegonmarcos.com; ruf=mailto:postmaster@diegonmarcos.com; fo=1",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "DMARC: reject spoofed emails + subdomain policy + forensic reports"
+    },
+    {
+     "group": "SPF",
+     "name": "mail.diegonmarcos.com",
+     "type": "TXT",
+     "content": "v=spf1 include:amazonses.com ~all",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "AWS SES custom MAIL FROM - SPF for bounce subdomain"
+    },
+    {
+     "group": "MTA-STS",
+     "name": "_mta-sts.diegonmarcos.com",
+     "type": "TXT",
+     "content": "v=STSv1; id=20260414",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "MTA-STS: enforce TLS for inbound mail delivery"
+    },
+    {
+     "group": "TLS-RPT",
+     "name": "_smtp._tls.diegonmarcos.com",
+     "type": "TXT",
+     "content": "v=TLSRPTv1; rua=mailto:postmaster@diegonmarcos.com",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "TLS-RPT: receive reports on TLS delivery failures"
+    },
+    {
+     "group": "MTA-STS",
+     "name": "mta-sts.diegonmarcos.com",
+     "type": "CNAME",
+     "content": "diegonmarcos.com",
+     "ttl": 1,
+     "proxied": true,
+     "priority": null,
+     "comment": "MTA-STS policy endpoint — Caddy serves /.well-known/mta-sts.txt"
+    },
+    {
+     "group": "DKIM",
+     "name": "oci-mrs-202604._domainkey.diegonmarcos.com",
+     "type": "CNAME",
+     "content": "oci-mrs-202604.diegonmarcos.com.dkim.mrs1.oracleemaildelivery.com",
+     "ttl": 300,
+     "proxied": false,
+     "priority": null,
+     "comment": "OCI Email Delivery DKIM — relay signs outbound"
+    },
+    {
+     "group": "DKIM",
+     "name": "default._domainkey.diegonmarcos.com",
+     "type": "TXT",
+     "content": "public key (tfvars: dkim_maddy_public_key)",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "Maddy DKIM - selector: default"
+    },
+    {
+     "group": "DKIM",
+     "name": "cf2024-1._domainkey.diegonmarcos.com",
+     "type": "TXT",
+     "content": "public key (tfvars: dkim_cf_public_key)",
+     "ttl": 1,
+     "proxied": null,
+     "priority": null,
+     "comment": "Cloudflare Email Routing DKIM (auto-managed by CF)"
+    },
+    {
+     "group": "DKIM",
+     "name": "google._domainkey.diegonmarcos.com",
+     "type": "TXT",
+     "content": "public key (tfvars: dkim_google_public_key)",
+     "ttl": 1,
+     "proxied": null,
+     "priority": null,
+     "comment": "Google Workspace DKIM (legacy)"
+    },
+    {
+     "group": "DKIM",
+     "name": "<ses_dkim_token_1>._domainkey.diegonmarcos.com",
+     "type": "CNAME",
+     "content": "<token>.dkim.amazonses.com",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "AWS SES DKIM 1/3"
+    },
+    {
+     "group": "DKIM",
+     "name": "<ses_dkim_token_2>._domainkey.diegonmarcos.com",
+     "type": "CNAME",
+     "content": "<token>.dkim.amazonses.com",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "AWS SES DKIM 2/3"
+    },
+    {
+     "group": "DKIM",
+     "name": "<ses_dkim_token_3>._domainkey.diegonmarcos.com",
+     "type": "CNAME",
+     "content": "<token>.dkim.amazonses.com",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "AWS SES DKIM 3/3"
+    },
+    {
+     "group": "Other",
+     "name": "_amazonses.diegonmarcos.com",
+     "type": "TXT",
+     "content": "verification token (tfvars: ses_verification_token)",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "AWS SES domain verification"
+    },
+    {
+     "group": "Other",
+     "name": "diegonmarcos.com",
+     "type": "CAA",
+     "content": "0 issue \"letsencrypt.org\"",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "CAA: restrict cert issuance to Let's Encrypt only"
+    },
+    {
+     "group": "Other",
+     "name": "_imaps._tcp.diegonmarcos.com",
+     "type": "SRV",
+     "content": "0 1 443 imap.diegonmarcos.com",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "RFC 6186: IMAPS autodiscovery -> imap. :443 (SNI mux at public edge)"
+    },
+    {
+     "group": "Other",
+     "name": "_submissions._tcp.diegonmarcos.com",
+     "type": "SRV",
+     "content": "0 1 443 smtps.diegonmarcos.com",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "RFC 6186: SMTP submission over TLS autodiscovery -> smtps. :443 (SNI mux at public edge)"
+    },
+    {
+     "group": "Other",
+     "name": "_jmap._tcp.diegonmarcos.com",
+     "type": "SRV",
+     "content": "0 1 443 jmap.diegonmarcos.com",
+     "ttl": 300,
+     "proxied": null,
+     "priority": null,
+     "comment": "RFC 8620: JMAP session autodiscovery -> jmap. :443 (Stalwart)"
+    }
+   ],
+   "mta_sts": {
+    "domain": "mta-sts.diegonmarcos.com",
+    "mode": "enforce",
+    "max_age": 604800,
+    "mx": [
+     "route1.mx.cloudflare.net",
+     "route2.mx.cloudflare.net",
+     "route3.mx.cloudflare.net"
+    ]
+   }
+  }
+ ]
+}

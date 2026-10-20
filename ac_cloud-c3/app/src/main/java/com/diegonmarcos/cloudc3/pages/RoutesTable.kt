@@ -519,8 +519,8 @@ class RoutesTableFragment : KitComposeFragment() {
                 when (t) {
                     is RoutesTableModel.OpenTarget.Url -> (activity as? C3HealthFragment.UrlClickListener)?.onUrlClicked(t.url)
                     is RoutesTableModel.OpenTarget.Container -> container = t.name
-                    // The VM's place is the Infra page (Stack > VMs); C3 has no page per VM.
-                    is RoutesTableModel.OpenTarget.Vm -> (activity as? C3StackFragment.TargetListener)?.onTargetClicked("page:c3/${Declarations.infraPages.first().id}")
+                    // The VM's place is the Infra page VMs; C3 has no page per VM.
+                    is RoutesTableModel.OpenTarget.Vm -> (activity as? C3StackFragment.TargetListener)?.onTargetClicked("page:c3/${InfraSections.MACHINES}")
                     is RoutesTableModel.OpenTarget.Category -> Unit // handled inside the screen: it sets the category filter
                 }
             },

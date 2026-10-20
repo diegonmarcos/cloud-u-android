@@ -177,7 +177,7 @@
       "pages": {
         "public": "containers/table",
         "private": "containers/table",
-        "stack": "infra/stack"
+        "stack": "infra/providers"
       }
     },
     "sections": [
@@ -185,13 +185,37 @@
         "id": "infra",
         "label": "Infra",
         "icon": "ic_p_sol_cloud",
-        "_doc": "Promoted to a main section from Containers > Topology > Stack (owner: 'move Stack to main menu as Infra'): the Stack dashboard (Providers, VMs, Dbs, APIs) with its own Index. One page, so no strip.",
+        "_doc": "The fleet's hardware and accounts (owner request, 2026-10-20): five dense top tabs, each a page of data/fleet_slice.json - the slice data/gen_fleet_slice.py DERIVES from the fleet's own declarations in cloud-infra (VMs, IPs, buckets, devices, zone records) plus the one new input 1_cloud-configs/src/inputs/fleet-assets.json. Nothing fleet-shaped is typed in this file or in Kotlin (test-c3-infra.sh T3). Containers - the DBs, APIs and MCPs among them - are NOT here: they live in Containers (Topology and Table). There is no API tab: every API and MCP is a container, so nothing non-container was left for it to hold.",
         "pages": [
           {
-            "id": "stack",
-            "label": "Stack",
+            "id": "providers",
+            "label": "Providers",
+            "icon": "ic_p_sol_cloud",
+            "_doc": "InfraSectionFragment: each provider with account, plan, monthly cost (live from c3-infra-api /cloud/{oci,gcp}/costs, else the declared one) and its console links."
+          },
+          {
+            "id": "machines",
+            "label": "VMs",
+            "icon": "ic_p_c3_vms",
+            "_doc": "InfraSectionFragment: each VM with provider, region, size, public IP, wg0 and wg-public IP. The id is not `vms`: that is a SuperApp sample-stub page id test-c3-full-copy.sh keeps undeclared."
+          },
+          {
+            "id": "storage",
+            "label": "Storage",
             "icon": "ic_p_c3_stack",
-            "_doc": "C3StackFragment over ui.carried_c3.stack_infra: the Index row and the Stack card."
+            "_doc": "InfraSectionFragment: storage HARDWARE and backends only - S3 buckets, Google Drive, each VM's disk (declared size, live usage from /health/tier3/{vm}) and the devices' storage. No DB container (test-c3-infra.sh T2)."
+          },
+          {
+            "id": "electronics",
+            "label": "Electronics",
+            "icon": "ic_wg",
+            "_doc": "InfraSectionFragment: PC, phones, tablets, smartwatch - model, OS, WireGuard IP, role. Mesh peers are read from superapp-users.json, so a device is never restated."
+          },
+          {
+            "id": "domains",
+            "label": "Domains",
+            "icon": "ic_link_tile",
+            "_doc": "InfraSectionFragment: diegonmarcos.com registration (Cloudflare registrar and admin, renewal, expiry) and its DNS: web, MX, SPF, DKIM, DMARC, MTA-STS, TLS-RPT, CAA/SRV, plus the live zone view from /cloud-data/cloudflare-dns."
           }
         ]
       },
@@ -872,71 +896,6 @@
           "anchor": "containers-user",
           "title": "User Apps",
           "group": "user"
-        }
-      ],
-      "stack_infra": [
-        {
-          "_doc": "INDEX of the Infra page: the four `stack/*` anchors address sub-tables of the single Stack card below (see the card's _doc_anchors). Split off the Containers > Topology Index when the Stack section was promoted to its own main section, Infra (owner request, 2026-10-16).",
-          "kind": "tile_row",
-          "title": "Index",
-          "subtitle": "Jump to a table on this page",
-          "tiles": [
-            {
-              "id": "stack-providers",
-              "label": "Providers",
-              "icon": "ic_p_sol_cloud",
-              "target": "anchor:stack/providers"
-            },
-            {
-              "id": "stack-vms",
-              "label": "VMs",
-              "icon": "ic_p_c3_vms",
-              "target": "anchor:stack/vms"
-            },
-            {
-              "id": "stack-dbs",
-              "label": "Dbs",
-              "icon": "ic_p_c3_stack",
-              "target": "anchor:stack/dbs"
-            },
-            {
-              "id": "stack-apis",
-              "label": "APIs",
-              "icon": "ic_code",
-              "target": "anchor:stack/apis"
-            }
-          ]
-        },
-        {
-          "kind": "cloud_dashboard",
-          "anchor": "stack",
-          "title": "Stack",
-          "groups": [
-            "providers",
-            "dbs",
-            "mcpapi"
-          ],
-          "_doc_anchors": "The sub-tables this ONE card provides as anchor targets, declared the way a section declares its pages: an `id` other tiles point at with `target: \"anchor:<id>\"`, plus the header inside this card it lands on. `group` alone binds to that group's header; adding `subgroup` binds to a sub-header under it. The id is NEVER derived from a label — renaming the \"VMs\" sub-header cannot rename `stack/vms`, it only breaks the binding, and test/test-stack-anchors-declared.sh fails on a binding whose group/subgroup is not in data/cloud_services.json. It also removes the old ambiguity where group \"DBs (storage)\" and subgroup \"DBs\" both slugged to `dbs`: `stack/dbs` says group, so it lands on the group header by declaration rather than by registration order.",
-          "anchors": [
-            {
-              "id": "stack/providers",
-              "group": "providers"
-            },
-            {
-              "id": "stack/vms",
-              "group": "providers",
-              "subgroup": "VMs"
-            },
-            {
-              "id": "stack/dbs",
-              "group": "dbs"
-            },
-            {
-              "id": "stack/apis",
-              "group": "mcpapi",
-              "subgroup": "APIs"
-            }
-          ]
         }
       ]
     },

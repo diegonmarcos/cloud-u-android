@@ -12,7 +12,7 @@
 #       SuperApp's c3 section declares (visible, action AND hidden), and both stacks;
 #       stack_observability carries the FIVE feed cards (by source), the NTFY centre
 #       (stream=channels) and its Index/More rows; stack_topology carries the two address
-#       cards, the THREE container dashboards (infra / user / providers+dbs+mcpapi),
+#       cards, the TWO container dashboards (infra / user; the providers+dbs+mcpapi Stack card was dropped 2026-10-20),
 #       and its Index/More rows.
 #   T2  every declared panel KIND has a renderer arm in C3StackFragment, and every
 #       declared feed SOURCE has a fetcher arm — a card the declaration lists must not
@@ -68,8 +68,8 @@ if not any(p.get("kind") == "notification_center" and p.get("stream") == "channe
     bad.append("stack_observability lost the NTFY centre (kind=notification_center, stream=channels)")
 if sum(1 for p in obs if p.get("kind") == "tile_row") < 2:
     bad.append("stack_observability has fewer than two tile_rows — the Index and More rows are part of the page")
-infra = c3.get("stack_infra") or []
-if not infra: bad.append("stack_infra is missing or empty - the whole Infra page is gone")
+infra = []   # 2026-10-20: stack_infra is gone on purpose - the Infra section is five pages over data/fleet_slice.json (test-c3-infra.sh)
+if "stack_infra" in c3: bad.append("stack_infra is back: Infra is the five fleet pages, not the SuperApp's Stack card")
 # 2026-10-16: the two address cards left Topology; their data lives on in the Containers > Table page, so
 # 'lost nothing' is now: no row the cards showed is missing from data/infra_slice.json::routes.
 kinds_topo = [p.get("kind") for p in topo]
@@ -85,13 +85,13 @@ for fn, key, has_pub in (("services_public.json", "name", True), ("services_priv
         if (row[key], has_pub) not in _have:
             bad.append("the Table page lost %s row %r that the address cards showed" % (fn, row[key]))
 dash = [p for p in topo + infra if p.get("kind") == "cloud_dashboard"]
-if len(dash) != 3:
-    bad.append("stack_topology carries %d cloud_dashboard cards, not the three the SuperApp declares "
-               "(Infra Apps, User Apps, Stack)" % len(dash))
+if len(dash) != 2:
+    bad.append("stack_topology carries %d cloud_dashboard cards, not the two cloud-c3 keeps "
+               "(Infra Apps, User Apps; the Stack card was dropped 2026-10-20)" % len(dash))
 dash_groups = sorted(tuple(sorted(([p.get("group")] if p.get("group") else []) + (p.get("groups") or []))) for p in dash)
-if dash_groups != sorted([("infra",), ("user",), ("dbs", "mcpapi", "providers")]):
-    bad.append("the three dashboards' group bindings are %s, not infra / user / providers+dbs+mcpapi" % dash_groups)
-for _name, _stack in (("stack_topology", topo), ("stack_infra", infra)):
+if dash_groups != sorted([("infra",), ("user",)]):
+    bad.append("the dashboards' group bindings are %s, not infra / user" % dash_groups)
+for _name, _stack in (("stack_topology", topo),):
     if not any(p.get("kind") == "tile_row" and p.get("title") == "Index" for p in _stack):
         bad.append("%s lost its Index row" % _name)
     if any(p.get("kind") == "tile_row" and p.get("title") == "More" for p in _stack):
@@ -105,9 +105,6 @@ for key in ("labels", "scopes", "taxon"):
 for tab in ("infra", "containers", "observ", "ops", "configs"):
     sec = next((s for s in (ui.get("sections") or []) if s.get("id") == tab), {})
     for p in (sec.get("pages") or []):
-        # infra/stack is REAL (C3StackFragment over stack_infra), not the SuperApp's sample-stub page of that id
-        if tab == "infra" and p.get("id") == "stack":
-            continue
         if p.get("id") in ("reports", "stack", "workflows", "vms", "logs", "gha"):
             bad.append("ui.sections[%s] declares %r, a SuperApp sample-stub page with no fragment anywhere — "
                        "declaring it here ships a placeholder" % (tab, p.get("id")))
@@ -220,9 +217,13 @@ bad = []
 try:
     cs = json.load(open(app + "/data/cloud_services.json", encoding="utf-8"))
     ids = [g.get("id") for g in (cs.get("groups") or [])]
-    for g in ("infra", "user", "providers", "dbs", "mcpapi"):
+    for g in ("infra", "user"):
         if g not in ids:
             bad.append("data/cloud_services.json has no group %r — a dashboard card would render empty" % g)
+    for g in ("providers", "dbs", "mcpapi"):
+        if g in ids:
+            bad.append("data/cloud_services.json carries the cross-cut group %r again - the Infra section reads the fleet "
+                       "declarations (data/fleet_slice.json) and a literal VM/DB list here is a second copy (test-c3-infra.sh T3)" % g)
 except Exception as e:
     bad.append("data/cloud_services.json does not parse: %s" % e)
 try:
@@ -301,7 +302,7 @@ PYTHON
 }
 
 echo "── #648 cloud-c3: the WHOLE c3 surface, and 'lost nothing' as a property ──"
-t1 "$APP" && pass "T1 the carried declaration is complete: every page id, five feed cards, the NTFY centre, three dashboards, both address cards, Index+More rows" || fail "T1 the carried declaration lost something"
+t1 "$APP" && pass "T1 the carried declaration is complete: every page id, five feed cards, the NTFY centre, two dashboards, both address cards, Index+More rows" || fail "T1 the carried declaration lost something"
 t2 "$APP" && pass "T2 every declared panel kind and feed source has a renderer arm" || fail "T2 a declared card has no renderer"
 t3 "$APP" && pass "T3 the copy manifest holds: every enumerated artifact has its counterpart, with its content" || fail "T3 a copied artifact is lost or hollow"
 t4 "$APP" && pass "T4 the data travelled and every carried blob is baked into BuildConfig" || fail "T4 data missing or a blob unbaked"

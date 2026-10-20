@@ -34,14 +34,19 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
  */
 
 /**
- * INFRA - the Stack dashboard, promoted from Containers > Topology > Stack to a main section (owner request,
- * 2026-10-16): [C3StackFragment] over ui.carried_c3.stack_infra - the Index row (Providers, VMs, Dbs, APIs) and the
- * Stack card those anchors address.
+ * INFRA - the fleet's hardware and accounts, five dense top tabs (owner request, 2026-10-20): Providers, VMs, Storage,
+ * Electronics, Domains. Each page is [InfraSectionFragment] over data/fleet_slice.json (derived from the fleet's own
+ * declarations, never typed here), refreshed live from c3-infra-api where it can say more. Containers - the DBs, APIs
+ * and MCPs among them - are NOT on this section: they live in Containers (Topology and Table).
  */
 class InfraFragment : PagedFragment() {
     override fun pages(): List<NavPage> = Declarations.infraPages
     override fun pageFragment(pageId: String): Fragment? = when (pageId) {
-        "stack" -> C3StackFragment.newInstance(C3StackFragment.STACK_INFRA)
+        "providers" -> InfraSectionFragment.newInstance(InfraSections.PROVIDERS)
+        "machines" -> InfraSectionFragment.newInstance(InfraSections.MACHINES)
+        "storage" -> InfraSectionFragment.newInstance(InfraSections.STORAGE)
+        "electronics" -> InfraSectionFragment.newInstance(InfraSections.ELECTRONICS)
+        "domains" -> InfraSectionFragment.newInstance(InfraSections.DOMAINS)
         else -> null
     }
 }

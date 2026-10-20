@@ -508,7 +508,7 @@ sys.exit(1 if bad else 0)
 PYTHON
 }
 
-# t12 <build.json> <infra_slice.json> <TabFragments.kt> : Containers = Topology | Table, Infra = Stack, Table's data
+# t12 <build.json> <infra_slice.json> <TabFragments.kt> : Containers = Topology | Table, Infra = five fleet pages, Table's data
 t12() {
     python3 - "$1" "$2" "$3" <<'PYTHON'
 import json, re, sys
@@ -521,15 +521,15 @@ bad = []
 secs = {x["id"]: x for x in ui.get("sections") or []}
 def pids(i): return [p["id"] for p in (secs.get(i) or {}).get("pages") or []]
 if pids("containers") != ["topology", "table"]: bad.append("Containers pages are %s, not [topology, table]" % pids("containers"))
-if pids("infra") != ["stack"]: bad.append("Infra pages are %s, not [stack]" % pids("infra"))
+if pids("infra") != ["providers", "machines", "storage", "electronics", "domains"]: bad.append("Infra pages are %s, not [providers, machines, storage, electronics, domains]" % pids("infra"))
 c3 = ui["carried_c3"]
-topo, infra = c3.get("stack_topology") or [], c3.get("stack_infra") or []
+topo, infra = c3.get("stack_topology") or [], []
 for k in ("c3_public", "c3_private"):
     if any(p.get("kind") == k for p in topo): bad.append("Containers > Topology still embeds the %s address table" % k)
 if any(p.get("kind") == "tile_row" and p.get("title") == "More" for p in topo + infra):
     bad.append("the More table is back on the Topology / Infra page (owner item 10: removed)")
-if not any(p.get("anchor") == "stack" for p in infra): bad.append("stack_infra lost the Stack card")
-if any(p.get("anchor") == "stack" for p in topo): bad.append("the Stack card is still on Containers > Topology (it moved to Infra)")
+if "stack_infra" in c3: bad.append("stack_infra is back: the Infra section is five fleet pages now (data/fleet_slice.json), not the Stack card")
+if any(p.get("anchor") == "stack" for p in topo): bad.append("the Stack card is back on Containers > Topology (it is gone: Infra reads the fleet declarations)")
 if '"table" -> RoutesTableFragment()' not in tabs: bad.append("ContainersFragment resolves no RoutesTableFragment for the table page")
 _rt = open(sys.argv[3].replace("TabFragments.kt", "RoutesTable.kt"), encoding="utf-8").read()
 _rm = open(sys.argv[3].replace("TabFragments.kt", "RoutesTableModel.kt"), encoding="utf-8").read()
@@ -539,7 +539,7 @@ if "ProbeModel.light(" not in _rt or "LightSheet(" not in _rt or "DeclarationPag
     bad.append("the Table page lost its status light / breakdown sheet / More declaration page (owner item 13)")
 if "onLongClick" not in _rt or "Copy & Open" not in _rt or "fun openTarget(" not in _rm:
     bad.append("the Table page lost its long-press Copy / Open / Copy & Open menu (owner item 12)")
-if '"stack" -> C3StackFragment.newInstance(C3StackFragment.STACK_INFRA)' not in tabs: bad.append("InfraFragment does not render stack_infra")
+if "InfraSectionFragment.newInstance(" not in tabs: bad.append("InfraFragment does not render the Infra pages through InfraSectionFragment")
 routes = sl.get("routes") or []
 if set(_decl) != {r["container"] for r in routes}: bad.append("data/declarations.json does not cover exactly the Table rows - run data/gen_infra_slice.py")
 if len(routes) < 50: bad.append("data/routes.json carries %d routes - run data/gen_infra_slice.py" % len(routes))
@@ -566,7 +566,7 @@ t9 "$BJ" "$SRC/AppsCatalog.kt" "$APP/data/infra_slice.json" && pass "T9 Services
 t8 "$MAIN"                           && pass "T8 the top inset is READ (systemBars u displayCutout) and never consumed" || fail "T8 the top-overflow fix is not the declared one"
 t10 "$BJ" "$APP/app/build.gradle" "$SRC" && pass "T10 the first row is the shared AppTopBar (hamburger, AI, Account/Configs); no private top row, no Configs on the bottom nav" || fail "T10 the top bar is not the declared shared one"
 t11 "$BJ" "$SRC/C3Nav.kt" "$SRC"     && pass "T11 the drawer is the full declared tree and every moved id still resolves (ui.aliases)" || fail "T11 drawer tree or aliases broken"
-t12 "$BJ" "$APP/data/infra_slice.json" "$TABS" && pass "T12 Containers = Topology | Table, Infra = Stack, no More table, Table rows carry the seven columns" || fail "T12 the Containers/Infra pages or the Table data are wrong"
+t12 "$BJ" "$APP/data/infra_slice.json" "$TABS" && pass "T12 Containers = Topology | Table, Infra = Providers | VMs | Storage | Electronics | Domains, no More table, Table rows carry the seven columns" || fail "T12 the Containers/Infra pages or the Table data are wrong"
 
 # ── MUTATION PROOF ─────────────────────────────────────────────────────────
 echo
