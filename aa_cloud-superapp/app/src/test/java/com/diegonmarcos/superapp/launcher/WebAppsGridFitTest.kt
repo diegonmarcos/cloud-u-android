@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.view.View
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import org.junit.Assert.assertEquals
@@ -39,7 +40,7 @@ class WebAppsGridFitTest : KitPageHarness() {
     private fun guard(name: String, fontScale: Float) {
         RuntimeEnvironment.setFontScale(fontScale)
         TileMetrics.clear()
-        show(LauncherNavController.webAppsGrid(compose.activity, page))
+        show(SectionPages.webAppsGrid(compose.activity, page))
         compose.waitForIdle()
         val root = compose.activity.findViewById<View>(android.R.id.content)
         val out = File(System.getProperty("user.dir"), "build/configs-screens").apply { mkdirs() }
@@ -84,7 +85,7 @@ class WebAppsGridFitTest : KitPageHarness() {
 
     @Test @Config(qualifiers = "w384dp-h672dp-450dpi")
     fun `A3 no tab strip, no APK row and no web view is drawn`() {
-        show(LauncherNavController.webAppsGrid(compose.activity, page))
+        show(SectionPages.webAppsGrid(compose.activity, page))
         fun hasWeb(v: View): Boolean = v is android.webkit.WebView || (v as? android.view.ViewGroup)?.let { g -> (0 until g.childCount).any { hasWeb(g.getChildAt(it)) } } == true
         assertTrue(!hasWeb(compose.activity.window.decorView))
         compose.onNodeWithTag(com.diegonmarcos.superapp.bottomnav.PageTabsTags.tab("apps")).assertDoesNotExist()

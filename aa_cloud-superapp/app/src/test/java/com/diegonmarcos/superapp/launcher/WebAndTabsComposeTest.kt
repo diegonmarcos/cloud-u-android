@@ -65,7 +65,7 @@ class WebAndTabsComposeTest : KitPageHarness() {
         val page = Sections.byId("cloud")!!.pages.first { it.id == "webapps" }
         assertTrue("WebApps declares its apps", page.webapps.isNotEmpty())
         assertTrue("no url on the page itself: the apps are the single declaration", page.url.isBlank())
-        show(LauncherNavController.webAppsGrid(compose.activity, page))
+        show(SectionPages.webAppsGrid(compose.activity, page))
         for (w in page.webapps) compose.onNodeWithTag(tileTag(w.url)).assertExists()
         assertTrue(webViewIn(compose.activity.window.decorView) == null)
     }

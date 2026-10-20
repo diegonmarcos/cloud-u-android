@@ -145,4 +145,13 @@ object SectionPages {
             RecentAppsFragment.newInstance()
         else -> PageContentFragment.newInstance(sectionId, pageId, label)
     }
+
+    /**
+     * Cloud ▸ WebApps: only the web apps, as the same fitted chip grid Configs uses (no tab bar, no APK row).
+     * A tile's id is its https URL, which [ShellActivity.onTileClicked] opens in the embedded browser.
+     */
+    internal fun webAppsGrid(ctx: android.content.Context, page: Sections.Page): Fragment =
+        TileGridFragment.newInstance(page.label, page.webapps.map {
+            TileGridFragment.Tile(it.url, it.label, Sections.iconResFor(ctx, it.iconName))
+        }, columns = TileGridFragment.CHIP_COLUMNS, fit = true)
 }
