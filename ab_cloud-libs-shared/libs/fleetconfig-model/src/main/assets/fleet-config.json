@@ -2227,6 +2227,7 @@
         "lib-core",
         "lib-databackend",
         "lib-datamanager",
+        "lib-decisions-link",
         "lib-devtools",
         "lib-firewall",
         "lib-fleetconfig-model",
