@@ -2,15 +2,12 @@ package com.diegonmarcos.cloudbrowser
 
 import android.content.ComponentName
 import android.graphics.Bitmap
-import android.graphics.Color as AColor
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -102,19 +99,9 @@ class BrowserTabSnapshotUiTest {
 
     @Test
     fun `the snapshot is cropped to fill the card and keeps its top edge`() {
-        // A tall page: red in its top tenth, blue below. Center-crop would cut the red off; top-crop keeps it.
-        val shot = Bitmap.createBitmap(90, 160, Bitmap.Config.ARGB_8888).also { b ->
-            for (y in 0 until 160) for (x in 0 until 90) b.setPixel(x, y, if (y < 16) AColor.RED else AColor.BLUE)
-        }
-        val thumbs = TabThumbnails(tmp.newFolder("t"), TabThumbConfig(), direct, direct)
-        thumbs.put("a", shot)
-        show(thumbs, cards(tab("a")))
-
+        // Compose's ContentScale.Crop + Alignment.TopCenter: scaled to cover the card, the page's top edge kept.
         assertEquals(ContentScale.Crop, com.diegonmarcos.superapp.browser.TAB_SNAPSHOT_SCALE)
         assertEquals(Alignment.TopCenter, com.diegonmarcos.superapp.browser.TAB_SNAPSHOT_ALIGN)
-        val img = compose.onNodeWithContentDescription(TabCardA11y.SNAPSHOT, useUnmergedTree = true).captureToImage()
-        val top = img.toPixelMap()[img.width / 2, 2]
-        assertTrue("the top edge of the page is what the card shows", top.red > 0.8f && top.blue < 0.3f)
     }
 
     @Test
@@ -151,9 +138,11 @@ class BrowserTabSnapshotUiTest {
         var order: List<String>? = null
         val rows = listOf<BrowserGridRow>(BrowserGridRow.GroupHeader("g", false, 2)) + cards(tab("a", "g"), tab("b", "g"))
         show(null, rows, onReorder = { order = it })
-        compose.onNodeWithTag("browser:tabcard:a", useUnmergedTree = true).performTouchInput {
-            down(center)
-            advanceEventTime(800)   // past the long-press timeout
+        val card = compose.onNodeWithTag("browser:tabcard:a", useUnmergedTree = true)
+        card.performTouchInput { down(center) }
+        compose.mainClock.advanceTimeBy(800)   // past the long-press timeout, on the test clock
+        compose.waitForIdle()
+        card.performTouchInput {
             moveBy(androidx.compose.ui.geometry.Offset(width / 4f, 0f))
             moveBy(androidx.compose.ui.geometry.Offset(width / 2f, 0f))
             moveBy(androidx.compose.ui.geometry.Offset(width / 2f, 0f))

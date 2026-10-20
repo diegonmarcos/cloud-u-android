@@ -317,15 +317,6 @@ private fun TabCardItem(
             .background(if (tab.isPrivate) Color(0xFF1F2937) else Color(0xFF1A0033), shape)
             .border(ring.first, ring.second, shape)
             .onSizeChanged { width = it.width.toFloat() }
-            // Long-press picks the card up; the drop reorders or regroups.
-            .pointerInput(key) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { drag.begin(key) },
-                    onDrag = { change, amount -> change.consume(); drag.move(amount) },
-                    onDragEnd = { if (drag.key != null) onDropNow() },
-                    onDragCancel = { drag.cancel() },
-                )
-            }
             // A horizontal swipe closes it; a pinned tab snaps back and the host asks first.
             .pointerInput(key) {
                 detectHorizontalDragGestures(
@@ -337,6 +328,15 @@ private fun TabCardItem(
                     },
                     onDragCancel = { swipeX = 0f },
                     onHorizontalDrag = { change, amount -> if (drag.key == null) { change.consume(); swipeX += amount } },
+                )
+            }
+            // Long-press picks the card up (after the swipe in the chain, so it sees a held touch first).
+            .pointerInput(key) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { drag.begin(key) },
+                    onDrag = { change, amount -> change.consume(); drag.move(amount) },
+                    onDragEnd = { if (drag.key != null) onDropNow() },
+                    onDragCancel = { drag.cancel() },
                 )
             }
             .clickable { onOpen(tab) },
