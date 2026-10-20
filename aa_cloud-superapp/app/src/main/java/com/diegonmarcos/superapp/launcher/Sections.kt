@@ -361,8 +361,8 @@ object Sections {
             tiles.filterNot { it.separator }.flatMap { it.destinations }
     }
 
-    /** One web app tile: [url] = webapps_base + "/" + path + "/". */
-    data class WebApp(val id: String, val label: String, val iconName: String, val url: String)
+    /** One web app tile: [url] = webapps_base + "/" + path + "/"; [tile] = id or target of the Cloud tile that supplies its label and glyph. */
+    data class WebApp(val id: String, val tile: String, val url: String)
 
     data class Page(
         val id: String,
@@ -730,7 +730,7 @@ object Sections {
                             val base = po.optString("webapps_base", "").trimEnd('/')
                             (0 until wa.length()).map { k ->
                                 val w = wa.getJSONObject(k)
-                                WebApp(w.getString("id"), w.getString("label"), w.optString("icon", ""),
+                                WebApp(w.getString("app"), w.getString("tile"),
                                     "$base/${w.getString("path").trim('/')}/")
                             }
                         }.orEmpty(),
