@@ -72,6 +72,7 @@ on:
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-nav/**"
+      - "!ac_cloud-nav/web/**"
 permissions:
   contents: write   # for gh release create + tag push reads
   packages: write   # for ghcr push (oras)

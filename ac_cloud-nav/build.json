@@ -2442,12 +2442,24 @@
       "site_id": "1"
     }
   },
+  "web": {
+    "_doc": "#876 Cloud Nav as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-nav-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-nav-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked shell: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, one page has mock data, the rest say they live in the Android app. The APK's own ship ignores this directory.",
+    "dir": "web",
+    "host": "ubuntu-latest",
+    "artifact": "Cloud-Nav.wasm.zip",
+    "gh_asset": "Cloud-Nav.wasm.zip",
+    "portal_slug": "cloud-nav",
+    "entry": "index.html",
+    "tester": "test-nav-web.sh",
+    "size_budget_mb": 20
+  },
   "tests": {
     "_doc": "#868 what CI runs to prove the nav is the fleet's: test/test-nav-shape.sh pins the declaration, the island host and the strips (and mutates each to prove it bites). Read by cloud-android-test-engine.sh.",
     "shell": {
       "dir": "test",
       "requires": [
-        "python3"
+        "python3",
+        "jq"
       ]
     }
   }

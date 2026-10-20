@@ -26,6 +26,7 @@
   "1_cicd/src/cicd/ship-cloud-me.yml": 1,
   "1_cicd/src/cicd/ship-cloud-media-center.yml": 2,
   "1_cicd/src/cicd/ship-cloud-myterminal.yml": 2,
+  "1_cicd/src/cicd/ship-cloud-nav-wasm.yml": 3,
   "1_cicd/src/cicd/ship-cloud-nav.yml": 2,
   "1_cicd/src/cicd/ship-cloud-news.yml": 1,
   "1_cicd/src/cicd/ship-cloud-nix-on-droid.yml": 1,

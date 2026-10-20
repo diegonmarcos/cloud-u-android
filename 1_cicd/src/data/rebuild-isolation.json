@@ -15,6 +15,14 @@
   "explicit_inputs": {
     "aa_cloud-superapp": ["ab_cloud-libs-shared/build.json"],
     "ab_cloud-libs-shared/keyboard-engines": ["ab_cloud-keyboard-libs/**"],
+    "ac_cloud-nav/web": [
+      "ab_cloud-libs-shared/web/**",
+      "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",
+      "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/**",
+      "ac_cloud-nav/test/test-nav-web.sh",
+      "1_cicd/src/cicd/ship-cloud-nav-wasm.yml",
+      "1_cicd/src/templates/ship-wasm.yml.in"
+    ],
     "ac_cloud-calc/web": [
       "ab_cloud-libs-shared/web/**",
       "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",
