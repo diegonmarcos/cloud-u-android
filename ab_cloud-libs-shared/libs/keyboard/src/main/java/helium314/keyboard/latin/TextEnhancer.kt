@@ -204,7 +204,12 @@ object TextEnhancer {
     }
 
     @JvmStatic
-    fun enhance(context: Context, connection: RichInputConnection) = run(context, connection, AiRouter.enhanceStyle(context), advise = true)
+    fun enhance(context: Context, connection: RichInputConnection) {
+        adviseNext = true   // #883: the ENHANCE key (not Grammar's explicit style) may be advised on which style to use
+        run(context, connection, AiRouter.enhanceStyle(context))
+    }
+
+    @Volatile private var adviseNext = false
 
     /**
      * Whole-field / selection enhancement with an explicit [style] (GrammarChecker passes "grammar").
@@ -218,7 +223,9 @@ object TextEnhancer {
      * and carries the one reason it is allowed to have.
      */
     @JvmStatic
-    fun run(context: Context, connection: RichInputConnection, style: AiRouter.Style, advise: Boolean = false) {
+    fun run(context: Context, connection: RichInputConnection, style: AiRouter.Style) {
+        val advise = adviseNext
+        adviseNext = false
         val scope = scope(context)
 
         // An editor that declares TYPE_NULL accepts no text at all, and the InputConnection

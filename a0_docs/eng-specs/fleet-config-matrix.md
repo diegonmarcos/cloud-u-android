@@ -199,7 +199,7 @@ Coverage: 2 covered, 0 gaps.
 
 ## cloud-account — `com.diegonmarcos.cloudaccount`
 
-Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofill, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-mail, lib-net, lib-shared-store, lib-shizuku-adb-debug-tools, lib-text-tools, lib-ui-kit, lib-updater.
+Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofill, lib-bottomnav, lib-core, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-mail, lib-net, lib-shared-store, lib-shizuku-adb-debug-tools, lib-text-tools, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -238,7 +238,7 @@ Coverage: 15 covered, 0 gaps.
 
 ## cloud-tasks — `com.diegonmarcos.cloudagenda`
 
-Module `ac_cloud-tasks`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-ui-kit, lib-updater.
+Module `ac_cloud-tasks`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -267,7 +267,7 @@ Coverage: 6 covered, 0 gaps.
 
 ## cloud-browser — `com.diegonmarcos.cloudbrowser`
 
-Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottomnav, lib-browser, lib-core, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-text-tools, lib-ui-kit, lib-updater.
+Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottomnav, lib-browser, lib-core, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-text-tools, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -332,7 +332,7 @@ Coverage: 2 covered, 0 gaps.
 
 ## cloud-c3 — `com.diegonmarcos.cloudc3`
 
-Module `ac_cloud-c3`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-ops, lib-ui-kit, lib-updater.
+Module `ac_cloud-c3`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-ops, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -461,7 +461,7 @@ Coverage: 8 covered, 5 gaps — code_chat_sessions, file:filesDir or app storage
 
 ## cloud-contacts — `com.diegonmarcos.cloudcontacts`
 
-Module `ac_cloud-contacts`; libs: lib-analytics, lib-contacts, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-updater.
+Module `ac_cloud-contacts`; libs: lib-analytics, lib-contacts, lib-core, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -512,7 +512,7 @@ Coverage: 6 covered, 2 gaps — call_history, file:system CallLog and BlockedNum
 
 ## cloud-drive — `com.diegonmarcos.clouddrive`
 
-Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-disk, lib-disk-scan, lib-file-editor, lib-fleetconfig-model, lib-git-sync, lib-ml-l-image, lib-model-catalogue, lib-mounts, lib-rclone, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-updater.
+Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, lib-core, lib-databackend, lib-decisions-link, lib-devtools, lib-disk, lib-disk-scan, lib-file-editor, lib-fleetconfig-model, lib-git-sync, lib-ml-l-image, lib-model-catalogue, lib-mounts, lib-rclone, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -552,7 +552,7 @@ Coverage: 10 covered, 6 gaps — ai_sessions, file:filesDir/ai-sessions.json, fi
 
 ## cloud-keyboard — `com.diegonmarcos.cloudkeyboard`
 
-Module `ac_cloud-keyboard`; libs: lib-analytics, lib-autofill, lib-core, lib-devtools, lib-fleetconfig-model, lib-keyboard, lib-media, lib-text-tools, lib-translate, lib-ui-kit, lib-voice.
+Module `ac_cloud-keyboard`; libs: lib-analytics, lib-autofill, lib-core, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-keyboard, lib-media, lib-text-tools, lib-translate, lib-ui-kit, lib-voice.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -574,7 +574,7 @@ Coverage: 5 covered, 0 gaps.
 
 ## cloud-mail — `com.diegonmarcos.comms.mail`
 
-Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-text-tools, lib-updater.
+Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-text-tools, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -649,7 +649,7 @@ Coverage: 2 covered, 9 gaps — datastore:elementx_featureflag, datastore:elemen
 
 ## cloud-me — `com.diegonmarcos.cloudme`
 
-Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-databackend, lib-devtools, lib-fin, lib-fleetconfig-model, lib-health, lib-ui-kit, lib-updater.
+Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-databackend, lib-decisions-link, lib-devtools, lib-fin, lib-fleetconfig-model, lib-health, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -723,7 +723,7 @@ Coverage: 7 covered, 0 gaps.
 
 ## cloud-nav — `com.diegonmarcos.cloudnav`
 
-Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-maps, lib-ui-kit, lib-updater.
+Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-maps, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -757,7 +757,7 @@ Coverage: 12 covered, 0 gaps.
 
 ## cloud-news — `com.diegonmarcos.cloudnews`
 
-Module `ac_cloud-news`; libs: lib-analytics, lib-core, lib-databackend, lib-devtools, lib-fleetconfig-model, lib-updater.
+Module `ac_cloud-news`; libs: lib-analytics, lib-core, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -875,7 +875,7 @@ Coverage: 3 covered, 4 gaps — search_agents_state, search_chat_sessions, file:
 
 ## cloud-store — `com.diegonmarcos.cloudstore`
 
-Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-ui-kit, lib-updater.
+Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -965,7 +965,7 @@ Coverage: 3 covered, 1 gaps — room:PrivilegedAppDatabase.
 
 ## cloud-wallet — `com.diegonmarcos.cloudwallet`
 
-Module `ac_cloud-wallet`; libs: lib-analytics, lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model, lib-ui-kit, lib-updater, lib-wallet.
+Module `ac_cloud-wallet`; libs: lib-analytics, lib-bottomnav, lib-core, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-ui-kit, lib-updater, lib-wallet.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -986,7 +986,7 @@ Coverage: 6 covered, 0 gaps.
 
 ## cloud-writer — `com.diegonmarcos.cloudwriter`
 
-Module `ac_cloud-writer`; libs: lib-bottomnav, lib-core, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-text-tools, lib-ui-kit.
+Module `ac_cloud-writer`; libs: lib-bottomnav, lib-core, lib-decisions, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-text-tools, lib-ui-kit.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

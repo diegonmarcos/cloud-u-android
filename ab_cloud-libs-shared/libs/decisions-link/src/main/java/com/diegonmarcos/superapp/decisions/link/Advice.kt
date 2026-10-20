@@ -51,29 +51,29 @@ object Advice {
         }
         private val flying = HashSet<String>()
 
-        /** The standing suggestion for [key], or null (none yet, none wanted, or expired). Never blocks. */
-        @Synchronized fun peek(key: String, now: Long = System.currentTimeMillis()): Suggestion? =
-            map[key]?.takeIf { it.until > now }?.s
+        /** The standing suggestion for [slot], or null (none yet, none wanted, or expired). Never blocks. */
+        @Synchronized fun peek(slot: String, now: Long = System.currentTimeMillis()): Suggestion? =
+            map[slot]?.takeIf { it.until > now }?.s
 
         /**
-         * Peek, and when nothing is known start ONE background [ask] for [key] (null = no opinion, remembered for
+         * Peek, and when nothing is known start ONE background [ask] for [slot] (null = no opinion, remembered for
          * [ttlMs] too so a dead engine is not asked again for every draw).
          */
-        fun peekOrAsk(key: String, ttlMs: Long, now: Long = System.currentTimeMillis(), ask: () -> Suggestion?): Suggestion? {
+        fun peekOrAsk(slot: String, ttlMs: Long, now: Long = System.currentTimeMillis(), ask: () -> Suggestion?): Suggestion? {
             synchronized(this) {
-                val e = map[key]
+                val e = map[slot]
                 if (e != null && e.until > now) return e.s
-                if (!flying.add(key)) return null
+                if (!flying.add(slot)) return null
             }
             background {
                 val got = runCatching(ask).getOrNull()
-                synchronized(this) { map[key] = Entry(got, System.currentTimeMillis() + ttlMs); flying.remove(key) }
+                synchronized(this) { map[slot] = Entry(got, System.currentTimeMillis() + ttlMs); flying.remove(slot) }
             }
             return null
         }
 
-        @Synchronized fun put(key: String, s: Suggestion?, ttlMs: Long, now: Long = System.currentTimeMillis()) {
-            map[key] = Entry(s, now + ttlMs)
+        @Synchronized fun put(slot: String, s: Suggestion?, ttlMs: Long, now: Long = System.currentTimeMillis()) {
+            map[slot] = Entry(s, now + ttlMs)
         }
     }
 

@@ -173,7 +173,4 @@ dependencies {
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
     // The theme attributes the fleet's View hosts resolve (and the APK detail sheet's ModalBottomSheet window).
     implementation 'com.google.android.material:material:1.12.0'
-    testImplementation 'junit:junit:4.13.2'
-    // The real org.json: android.jar's copy is a stub that throws on the JVM.
-    testImplementation 'org.json:json:20240303'
 }

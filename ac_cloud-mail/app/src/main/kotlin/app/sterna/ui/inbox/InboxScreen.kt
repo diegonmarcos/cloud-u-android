@@ -413,8 +413,9 @@ fun InboxScreen(
         // Resolved against the WHOLE folder list, not the offered subset. Memoized like [targets]:
         // the filter field re-runs this block on every keystroke (#182).
         // #883 Jev may suggest ONE of the offered folders; it is listed first, nothing else changes (no opinion = as before)
+        val offeredNames = targets.map { it.id to mailboxDisplayName(it.role, it.name) }
         val suggestedMove by produceState<String?>(initialValue = null, targets) {
-            value = viewModel.suggestMoveTarget(targets.map { it.id to mailboxDisplayName(it.role, it.name) })
+            value = viewModel.suggestMoveTarget(offeredNames)
         }
         val offeredTargets = remember(targets, suggestedMove) { MailJev.promote(targets, suggestedMove) { it.id } }
         val movePaths = remember(offeredTargets, moveTargetMailboxes) {

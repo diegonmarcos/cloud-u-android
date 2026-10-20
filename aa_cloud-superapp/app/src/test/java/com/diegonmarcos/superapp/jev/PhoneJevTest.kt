@@ -1,4 +1,7 @@
-package com.diegonmarcos.superapp.apps
+package com.diegonmarcos.superapp.jev
+
+import com.diegonmarcos.superapp.apps.PhoneFolders
+import com.diegonmarcos.superapp.apps.PhoneJev
 
 import com.diegonmarcos.superapp.appstore.AppStoreHost
 import com.diegonmarcos.superapp.appstore.StoreJev

@@ -469,19 +469,19 @@ object Advisory {
     }
 
     /** The re-notify window for a decision-model urgency: no opinion (null), an unsure or "normal" answer = today's. */
-    internal fun renotifyWindow(urgency: String?): Long = when (urgency) {
+    fun renotifyWindow(urgency: String?): Long = when (urgency) {
         URGENCY_INTERRUPT -> INTERRUPT_RENOTIFY_MS
         URGENCY_LOW -> LOW_RENOTIFY_MS
         else -> RENOTIFY_MS
     }
 
-    internal const val URGENCY_LOW = "low"
-    internal const val URGENCY_INTERRUPT = "interrupt"
+    const val URGENCY_LOW = "low"
+    const val URGENCY_INTERRUPT = "interrupt"
     private const val INTERRUPT_RENOTIFY_MS = 60L * 60L * 1000L
     private const val LOW_RENOTIFY_MS = 24L * 60L * 60L * 1000L
     private val urgencies = Advice.Suggestions()
 
-    internal fun urgencyQuestions(): JSONObject = JSONObject().put(
+    fun urgencyQuestions(): JSONObject = JSONObject().put(
         "urgency", JSONObject().put("type", "choice").put(
             "instructions",
             "An updater advisory about this phone's apps, titled `title` with severity `severity`, was last shown `hours_since_shown` hours ago. " +

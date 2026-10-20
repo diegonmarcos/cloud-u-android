@@ -1,4 +1,6 @@
-package com.diegonmarcos.superapp.updater
+package com.diegonmarcos.superapp.jev
+
+import com.diegonmarcos.superapp.updater.Advisory
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

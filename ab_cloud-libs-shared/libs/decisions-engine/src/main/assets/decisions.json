@@ -151,7 +151,7 @@
     "min_labelled": 30,
     "min_precision": 0.85
    },
-   "fallback_test": "ab_cloud-libs-shared/libs/updater/src/test/java/com/diegonmarcos/superapp/updater/AdvisoryJevTest.kt::AdvisoryJevTest"
+   "fallback_test": "aa_cloud-superapp/app/src/test/java/com/diegonmarcos/superapp/jev/AdvisoryJevTest.kt::AdvisoryJevTest"
   },
   "phone_folder": {
    "_doc": "#882 Jev wave 1 (spec 3.7): the phone folder of an app no rule claimed (only apps that would land on the sink); cached for a week. Called from libs:appstore PhoneTaxonomy. Observe-only until its own journal shows it right: gate.after is itself, so the engine scores and journals but answers gate_closed (today's behaviour) until >= 30 of its confident answers have an outcome (the person's correction, the observed result, or a suggestion left standing for a week) and >= 85% matched.",
@@ -174,7 +174,7 @@
     "min_labelled": 30,
     "min_precision": 0.85
    },
-   "fallback_test": "ab_cloud-libs-shared/libs/appstore/src/test/java/com/diegonmarcos/superapp/apps/PhoneJevTest.kt::PhoneJevTest"
+   "fallback_test": "aa_cloud-superapp/app/src/test/java/com/diegonmarcos/superapp/jev/PhoneJevTest.kt::PhoneJevTest"
   },
   "store_shelf": {
    "_doc": "#882 Jev wave 1 (spec 3.6): an existing shelf for a Store row nothing filed. Called from libs:appstore StoreCloudFragment. Observe-only until its own journal shows it right: gate.after is itself, so the engine scores and journals but answers gate_closed (today's behaviour) until >= 30 of its confident answers have an outcome (the person's correction, the observed result, or a suggestion left standing for a week) and >= 85% matched.",
@@ -197,7 +197,7 @@
     "min_labelled": 30,
     "min_precision": 0.85
    },
-   "fallback_test": "ab_cloud-libs-shared/libs/appstore/src/test/java/com/diegonmarcos/superapp/apps/PhoneJevTest.kt::PhoneJevTest"
+   "fallback_test": "aa_cloud-superapp/app/src/test/java/com/diegonmarcos/superapp/jev/PhoneJevTest.kt::PhoneJevTest"
   },
   "writer_route": {
    "_doc": "#882 Jev wave 1 (spec 3.9): the route (hosted model or on-device) of a Writer function the owner never chose a route for. Observe-only until its own journal shows it right: gate.after is itself, so the engine scores and journals but answers gate_closed (today's behaviour) until >= 30 of its confident answers have an outcome (the person's correction, the observed result, or a suggestion left standing for a week) and >= 85% matched.",

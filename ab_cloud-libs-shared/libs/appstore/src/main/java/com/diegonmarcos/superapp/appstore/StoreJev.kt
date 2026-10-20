@@ -13,7 +13,7 @@ import org.json.JSONObject
  * shelf, never blocks a draw (the first draw is today's; a suggestion made meanwhile is used on the next), and
  * every doubt leaves the row exactly where it was. A suggestion nobody corrects counts as accepted after a week.
  */
-internal object StoreJev {
+object StoreJev {
 
     private const val TTL_MS = 24L * 60 * 60 * 1000
     private val memo = Advice.Suggestions(256)
@@ -23,10 +23,10 @@ internal object StoreJev {
         memo.peek(id, now)?.pick?.let { pick -> pick(pick, shelves) }
 
     /** The shelf whose heading is [pick], if any. */
-    internal fun pick(pick: String?, shelves: Collection<AppStoreHost.Shelf>): AppStoreHost.Shelf? =
+    fun pick(pick: String?, shelves: Collection<AppStoreHost.Shelf>): AppStoreHost.Shelf? =
         pick?.takeIf { it.isNotEmpty() }?.let { h -> shelves.firstOrNull { it.heading == h } }
 
-    internal fun questions(shelves: Collection<AppStoreHost.Shelf>): JSONObject {
+    fun questions(shelves: Collection<AppStoreHost.Shelf>): JSONObject {
         val crit = JSONObject()
         shelves.map { it.heading }.distinct().forEach { crit.put(it, "Apps of the kind \"$it\"") }
         return JSONObject().put(

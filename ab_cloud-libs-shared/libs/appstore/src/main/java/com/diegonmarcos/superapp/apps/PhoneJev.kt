@@ -15,7 +15,7 @@ import org.json.JSONObject
  * closed, unsure, a folder that does not exist. A standing suggestion that is never corrected counts as accepted
  * after a week (it is reported as such, so the use's gate can open).
  */
-internal object PhoneJev {
+object PhoneJev {
 
     private const val TTL_MS = 7L * 24 * 60 * 60 * 1000
     private const val MAX_ASKS_PER_BATCH = 8
@@ -26,10 +26,10 @@ internal object PhoneJev {
         if (id != sinkId) id else memo.peek(pkg, now)?.pick?.takeIf { it.isNotEmpty() && it != sinkId } ?: id
 
     /** The pick, if it is one of the offered folders and not the sink; else null. */
-    internal fun valid(pick: String?, folders: List<PhoneFolders.Folder>, sinkId: String): String? =
+    fun valid(pick: String?, folders: List<PhoneFolders.Folder>, sinkId: String): String? =
         pick?.takeIf { p -> p != sinkId && folders.any { it.id == p } }
 
-    internal fun questions(folders: List<PhoneFolders.Folder>, sinkId: String): JSONObject {
+    fun questions(folders: List<PhoneFolders.Folder>, sinkId: String): JSONObject {
         val crit = JSONObject()
         folders.filter { it.id != sinkId }.forEach { crit.put(it.id, it.label) }
         return JSONObject().put(
