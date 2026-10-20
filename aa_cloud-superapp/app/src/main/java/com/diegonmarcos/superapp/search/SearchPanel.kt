@@ -114,7 +114,7 @@ class SearchController(
     var suggestion by mutableStateOf<com.diegonmarcos.superapp.decisions.link.Advice.Suggestion?>(null)
         private set
 
-    fun setSuggestion(s: com.diegonmarcos.superapp.decisions.link.Advice.Suggestion?) { suggestion = s }
+    fun markSuggestion(s: com.diegonmarcos.superapp.decisions.link.Advice.Suggestion?) { suggestion = s }
 
     val suggestedScope: String? get() = suggestion?.pick?.takeIf { it.isNotEmpty() }
 
@@ -284,11 +284,11 @@ fun SearchLiveEffect(c: SearchController) {
     // #883 Jev may mark a scope chip for this query (suggest-only); no opinion = nothing marked
     val appCtx = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(q) {
-        c.setSuggestion(null)
+        c.markSuggestion(null)
         if (q.trim().length < SearchJev.MIN_QUERY) return@LaunchedEffect
         delay(600)
         val s = withContext(Dispatchers.IO) { runCatching { SearchJev.suggest(appCtx, q, c.scopes) }.getOrNull() }
-        c.setSuggestion(s)
+        c.markSuggestion(s)
     }
     LaunchedEffect(q, sel) {
         if (q.isBlank() || c.liveScopes().isEmpty()) { c.setLive(q, LiveResult.EMPTY); return@LaunchedEffect }

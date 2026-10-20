@@ -92,8 +92,8 @@ red "D2 the declaration stops treating git as sensitive" "D2 the declaration's s
 stage; plant "$CALCSITE" "$SITE_OK"
 red "D3 an app calls a use it is not listed for" "D3 $CALCSITE:2"
 stage; plant "$CALCSITE" 'package x
-fun f(ctx: Context) { DecisionsLink.decide(ctx, "writer_route", state, q) }'
-red "D3 an app calls a use nobody declared" "D3 $CALCSITE:2: use 'writer_route' is not declared"
+fun f(ctx: Context) { DecisionsLink.decide(ctx, "planted_undeclared_use", state, q) }'
+red "D3 an app calls a use nobody declared" "D3 $CALCSITE:2: use 'planted_undeclared_use' is not declared"
 stage; plant "$CALCSITE" 'package x
 fun f(ctx: Context) { DecisionsLink.outcome(ctx, USE_NAME, state, q) }'
 red "D3 a call whose use is not a string literal" "D3 $CALCSITE:2"

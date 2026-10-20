@@ -417,16 +417,16 @@ fun InboxScreen(
         val suggestedMove by produceState<String?>(initialValue = null, targets) {
             value = viewModel.suggestMoveTarget(offeredNames)
         }
-        val offeredTargets = remember(targets, suggestedMove) { MailJev.promote(targets, suggestedMove) { it.id } }
-        val movePaths = remember(offeredTargets, moveTargetMailboxes) {
-            offeredTargets.map { folder -> mailboxPathLabel(folder, moveTargetMailboxes) }
+        val movePaths = remember(targets, moveTargetMailboxes) {
+            targets.map { folder -> mailboxPathLabel(folder, moveTargetMailboxes) }
         }
         // Painted over the WHOLE offered list and never over the filtered one: what the filter
         // compares is what the row shows, and the rows painted must not depend on what was typed.
         val moveRows = ArrayList<FolderPickerRow>(targets.size)
-        for ((folder, path) in offeredTargets.zip(movePaths)) {
+        for ((folder, path) in targets.zip(movePaths)) {
             moveRows += FolderPickerRow(folder, mailboxDisplayName(folder.role, folder.name), path)
         }
+        MailJev.promoteInPlace(moveRows, suggestedMove) { it.folder.id }   // #883: Jev's suggestion first; none = untouched
         val shownMoveRows = filterFolderRows(moveRows, moveQuery)
         AlertDialog(
             onDismissRequest = { showMoveSheet = false; viewModel.chooseMoveAccount(null) },

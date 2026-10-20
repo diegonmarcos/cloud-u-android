@@ -26,6 +26,15 @@ class MailJevTest {
         assertEquals(rows.sorted(), MailJev.promote(rows, "trash") { it }.sorted())
     }
 
+    @Test fun promoteInPlaceTouchesTheListOnlyForARealSuggestion() {
+        val a = rows.toMutableList()
+        MailJev.promoteInPlace(a, null) { it }
+        MailJev.promoteInPlace(a, "unknown") { it }
+        assertEquals(rows, a)
+        MailJev.promoteInPlace(a, "trash") { it }
+        assertEquals(listOf("trash", "inbox", "archive", "work"), a)
+    }
+
     @Test fun onlyAnOfferedFolderIsAccepted() {
         for (pick in listOf(null, "", "spam")) assertNull("pick=$pick", MailJev.valid(pick, rows))
         assertEquals("work", MailJev.valid("work", rows))

@@ -28,6 +28,15 @@ internal object MailJev {
         return listOf(rows[i]) + rows.filterIndexed { j, _ -> j != i }
     }
 
+    /** [promote] in place, for the picker's row list: no match = the list is not touched at all. */
+    fun <T> promoteInPlace(rows: MutableList<T>, suggestedId: String?, idOf: (T) -> String) {
+        val promoted = promote(rows, suggestedId, idOf)
+        if (promoted === rows) return
+        val copy = promoted.toList()
+        rows.clear()
+        rows.addAll(copy)
+    }
+
     /** The folder id to promote: an offered one only. */
     fun valid(pick: String?, offered: Collection<String>): String? = pick?.takeIf { it.isNotEmpty() && it in offered }
 
