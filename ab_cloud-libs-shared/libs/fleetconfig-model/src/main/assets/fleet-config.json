@@ -545,7 +545,9 @@
       ],
       "keys": {
         "q:*": "device",
-        "things_location_asked": "device"
+        "things_location_asked": "device",
+        "agents_seen_*": "device",
+        "agents_spent_*": "device"
       }
     },
     "cloud_sound": {
@@ -1935,6 +1937,18 @@
         "ac_cloud-search"
       ]
     },
+    "search_agents_state": {
+      "kind": "file",
+      "class": "config",
+      "files": [
+        "agents/runs.json",
+        "agents/reports.json"
+      ],
+      "doc": "Cloud Search Agents (#913): the run log and the reports (drafts and their review state, never a message body sent anywhere, never a key), carried whole so a new phone keeps them. The agent settings, profile and templates are keys of the cloud_search prefs store (agents_*).",
+      "used_by": [
+        "ac_cloud-search"
+      ]
+    },
     "code_chat_sessions": {
       "kind": "file",
       "class": "config",
@@ -3224,6 +3238,13 @@
           "class": "config",
           "doc": "AI chat history (never carries the token); carried to a new phone through the search_chat_sessions store",
           "store": "search_chat_sessions"
+        },
+        {
+          "id": "agents-state",
+          "path": "filesDir/agents",
+          "class": "config",
+          "doc": "Agents run log and reports (runs.json, reports.json); carried to a new phone through the search_agents_state store",
+          "store": "search_agents_state"
         },
         {
           "id": "things-cache",

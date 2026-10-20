@@ -43,14 +43,14 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-terminal-nix | `cld.termux.nix` | 10 | 7 | 58% |
 | cloud-notes | `com.diegonmarcos.cloudnotes` | 2 | 1 | 66% |
 | cloud-office | `com.diegonmarcos.cloudoffice` | 3 | 0 | 100% |
-| cloud-search | `com.diegonmarcos.cloudsearch` | 3 | 2 | 60% |
+| cloud-search | `com.diegonmarcos.cloudsearch` | 3 | 4 | 42% |
 | cloud-store | `com.diegonmarcos.cloudstore` | 9 | 0 | 100% |
 | cloud-terminal-termux | `cld.termux` | 10 | 7 | 58% |
 | cloud-vault | `com.diegonmarcos.cloudvault` | 3 | 1 | 75% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 6 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 3 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 6 | 2 | 75% |
-| **fleet** | | **256** | **48** | **84%** |
+| **fleet** | | **256** | **50** | **83%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -855,10 +855,11 @@ Module `ac_cloud-search`; libs: lib-ai, lib-bottomnav, lib-core, lib-devtools, l
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
-| `cloud_search` | prefs | config (keys: q:*→device, things_location_asked→device) | yes | Cloud Search settings: dark theme, home city, chosen AI model, web-search toggle, and the saved listings (`saved`, a small JSON list kept only on this phone). #903 Things: the search radius (things_radius_km), the typed fallback city (things_city) and whether to use the coarse location (things_use_location) are configuration; whether the location permission was already asked (things_location_asked) is device state, as the permission itself is per phone. The last query per vertical (q:<vertical>) is device state. |
+| `cloud_search` | prefs | config (keys: agents_seen_*→device, agents_spent_*→device, q:*→device, things_location_asked→device) | yes | Cloud Search settings: dark theme, home city, chosen AI model, web-search toggle, and the saved listings (`saved`, a small JSON list kept only on this phone). #903 Things: the search radius (things_radius_km), the typed fallback city (things_city) and whether to use the coarse location (things_use_location) are configuration; whether the location permission was already asked (things_location_asked) is device state, as the permission itself is per phone. The last query per vertical (q:<vertical>) is device state. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `search_agents_state` | file | config | GAP | Cloud Search Agents (#913): the run log and the reports (drafts and their review state, never a message body sent anywhere, never a key), carried whole so a new phone keeps them. The agent settings, profile and templates are keys of the cloud_search prefs store (agents_*). |
 | `search_chat_sessions` | file | config | GAP | Cloud Search's AI chat history file (never a token), carried whole so a new phone keeps the conversations. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
@@ -867,9 +868,10 @@ Module `ac_cloud-search`; libs: lib-ai, lib-bottomnav, lib-core, lib-devtools, l
 | `filesDir/results` | device | cached search results, refetched from the sources |
 | `filesDir/catalog` | device | cached OpenRouter model catalog |
 | `filesDir/chat-sessions.json` | config | AI chat history (never carries the token); carried to a new phone through the search_chat_sessions store |
+| `filesDir/agents` | config | Agents run log and reports (runs.json, reports.json); carried to a new phone through the search_agents_state store |
 | `filesDir/things` | device | cached Things answers (OpenStreetMap stores per area, Open Prices, the store-site price service, geocoded cities), refetched from the sources |
 
-Coverage: 3 covered, 2 gaps — search_chat_sessions, file:filesDir/chat-sessions.json.
+Coverage: 3 covered, 4 gaps — search_agents_state, search_chat_sessions, file:filesDir/chat-sessions.json, file:filesDir/agents.
 
 ## cloud-store — `com.diegonmarcos.cloudstore`
 
