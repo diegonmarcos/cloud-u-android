@@ -326,7 +326,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-10-19",
+        "pricing_as_of": "2026-10-20",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -384,9 +384,7 @@
               "fp8",
               "bf16"
             ],
-            "trained_for": [
-              "marketing/seo"
-            ],
+            "trained_for": [],
             "prompt": 0.08,
             "completion": 0.35,
             "note": "Ranked for marketing/SEO only; light and predictable on short rewrites."
@@ -402,7 +400,6 @@
               "fp8"
             ],
             "trained_for": [
-              "legal",
               "roleplay",
               "translation"
             ],
@@ -475,8 +472,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.15,
-            "completion": 0.15,
+            "prompt": 0.44,
+            "completion": 1.32,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
           {
@@ -523,7 +520,7 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.048,
+            "prompt": 0.0375,
             "completion": 0.16,
             "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
           },
@@ -561,6 +558,7 @@
             "name": "Gemini 2.5 Flash",
             "trained_for": [
               "finance",
+              "health",
               "marketing"
             ],
             "prompt": 0.3,
