@@ -13,6 +13,7 @@ import com.diegonmarcos.clouddrive.configs.DriveGitChain
 import com.diegonmarcos.clouddrive.files.Places
 import com.diegonmarcos.cloudlib.gitsync.GitAuth
 import com.diegonmarcos.cloudlib.gitsync.GitEngine
+import com.diegonmarcos.cloudlib.gitsync.clone
 import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
 import com.diegonmarcos.cloudlib.gitsync.RepoRegistry
 import java.io.File
@@ -84,7 +85,7 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
             // a design, so origin is repointed at the declared URL of the new name.
             val url = decl?.let { family.cloneUrl(it) }
             if (move.moved && move.from.name != move.to.name && url != null) {
-                runCatching { GitEngine(move.to).use { it.setRemoteUrl("origin", url) } }
+                runCatching { GitEngine(applicationContext, move.to).use { it.setRemoteUrl("origin", url) } }
                     .onFailure { DriveDebugLog.i(applicationContext, TAG, "migration ${move.name}: origin not repointed: ${it.message}") }
             }
             registry.upsert(
@@ -120,7 +121,7 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
                     // cloud-shared-store: not in cld.termux's uid -> the clone runs inside it (CLOUD_EXEC).
                     val cloned = if (viaExec) com.diegonmarcos.clouddrive.sync.StoreGit.clone(applicationContext, url, dir, token, BuildConfig.SEED_DEPTH)
                         .let { if (it.ok) kotlin.Result.success(Unit) else kotlin.Result.failure(IllegalStateException(it.summary + " " + it.details)) }
-                    else runCatching { GitEngine.clone(url, dir, auth = auth, depth = BuildConfig.SEED_DEPTH).close() }
+                    else runCatching { GitEngine.clone(applicationContext, url, dir, auth = auth, depth = BuildConfig.SEED_DEPTH).close() }
                     if (cloned.isFailure) {
                         val why = cloned.exceptionOrNull()?.message ?: cloned.exceptionOrNull()?.javaClass?.simpleName ?: "clone failed"
                         // #683 STRUCTURAL, NOT TRANSIENT: the provider demanded a credential and

@@ -2,13 +2,18 @@ package com.diegonmarcos.cloudlib.gitsync
 
 import kotlinx.serialization.Serializable
 
+// The models are @Serializable because they cross the binder to and from the git sync engine (GitWire):
+// the same classes on both sides, one codec. (#871 move 11)
+
 /** How a path differs, on one side of the index (staged) or the other (worktree). */
+@Serializable
 enum class GitChange { ADDED, MODIFIED, DELETED, UNTRACKED }
 
 /**
  * One path in `git status`. Both sides can be set at once (a file edited after
  * it was staged), which is exactly the state a stage/unstage UI has to show.
  */
+@Serializable
 data class GitFileStatus(
     val path: String,
     val staged: GitChange? = null,
@@ -21,6 +26,7 @@ data class GitFileStatus(
     val hasUnstaged: Boolean get() = unstaged != null
 }
 
+@Serializable
 data class GitStatusSnapshot(
     val branch: String?,
     val upstream: String?,
@@ -36,6 +42,7 @@ data class GitStatusSnapshot(
     val isClean: Boolean get() = files.isEmpty()
 }
 
+@Serializable
 data class GitCommitInfo(
     val sha: String,
     val summary: String,
@@ -49,6 +56,7 @@ data class GitCommitInfo(
     val shortSha: String get() = sha.take(8)
 }
 
+@Serializable
 data class GitBranchInfo(
     /** Short name: `main`, or `origin/main` for a remote-tracking branch. */
     val name: String,
@@ -58,6 +66,7 @@ data class GitBranchInfo(
     val sha: String,
 )
 
+@Serializable
 data class GitRemoteInfo(
     val name: String,
     val fetchUrl: String,
@@ -65,6 +74,7 @@ data class GitRemoteInfo(
 )
 
 /** Which side of a conflict wins when the user resolves a path wholesale. */
+@Serializable
 enum class ConflictSide { OURS, THEIRS }
 
 /**
@@ -93,6 +103,7 @@ sealed class GitAuth {
 }
 
 /** The outcome of a transport operation, in words the UI can show as-is. */
+@Serializable
 data class GitOpResult(val ok: Boolean, val summary: String, val details: String = "")
 
 /**

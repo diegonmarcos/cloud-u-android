@@ -118,7 +118,7 @@ s5() {
     grep -qE 'DriveAuthApply\.vaultGitToken\(applicationContext\)' "$f" || { echo "    the seed does not consult the vault-delivered credential (the declared primary path)"; bad=1; }
     grep -qE 'DriveGitChain\.resolve\(applicationContext\)' "$f" || { echo "    the seed does not walk the declared chain (auth.git_chain) — a repo needing auth fails with no CredentialsProvider"; bad=1; }
     grep -qE 'GitAuth\.Https\(decl\.githubOwner, token\)' "$f" || { echo "    the resolved credential is not handed to the engine's clone"; bad=1; }
-    grep -qE 'GitEngine\.clone\(url, dir, auth = auth, depth = BuildConfig\.SEED_DEPTH\)' "$f" || { echo "    the clone does not carry the resolved auth"; bad=1; }
+    grep -qE 'GitEngine\.clone\(applicationContext, url, dir, auth = auth, depth = BuildConfig\.SEED_DEPTH\)' "$f" || { echo "    the clone does not carry the resolved auth"; bad=1; }
     return $bad
 }
 

@@ -9,6 +9,7 @@ import com.diegonmarcos.cloudlib.gitsync.GitBranchInfo
 import com.diegonmarcos.cloudlib.gitsync.GitCommitInfo
 import com.diegonmarcos.cloudlib.gitsync.GitCredentialStore
 import com.diegonmarcos.cloudlib.gitsync.GitEngine
+import com.diegonmarcos.cloudlib.gitsync.clone
 import com.diegonmarcos.cloudlib.gitsync.GitOpResult
 import com.diegonmarcos.cloudlib.gitsync.GitRemoteInfo
 import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
@@ -33,6 +34,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
 
     private val registry = RepoRegistry(File(ctx.filesDir, GitSyncWorker.REGISTRY_FILE))
     private val credentials = GitCredentialStore(ctx)
+
+    init { engineContext = ctx.applicationContext }
 
     /**
      * #669 THE ONE PLACE A REPOSITORY'S AUTH IS ASSEMBLED for this coordinator's
@@ -231,7 +234,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         scope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    GitEngine(File(repo.path)).use { e ->
+                    GitEngine(ctx, File(repo.path)).use { e ->
                         val steps = mutableListOf<String>()
                         e.stageAll()
                         running.update { it + (repo.id to Running(repo.id, Step.COMMITTING)) }
@@ -299,7 +302,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 val dir = File(repo.path)
                 if (!dir.isDirectory) return@withContext Details(loading = false, error = "gone")
                 runCatching {
-                    GitEngine(dir).use { e ->
+                    GitEngine(ctx, dir).use { e ->
                         Details(
                             loading = false,
                             remotes = e.remotes(),
@@ -344,7 +347,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     private fun perform(repo: ManagedRepo, opId: String, message: String, token: () -> String, trigger: String): GitOpResult {
             val result = run {
                 runCatching {
-                    GitEngine(File(repo.path)).use { e ->
+                    GitEngine(ctx, File(repo.path)).use { e ->
                         val auth = authFor(repo, token)
                         when (opId) {
                             OP_FETCH -> e.fetch(auth = auth)
@@ -392,7 +395,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         scope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    GitEngine(File(repo.path)).use { e ->
+                    GitEngine(ctx, File(repo.path)).use { e ->
                         if (e.remotes().none { r -> r.name == ORIGIN }) e.addRemote(ORIGIN, url)
                         else { e.setRemoteUrl(ORIGIN, url); e.setRemoteUrl(ORIGIN, url, push = true) }
                     }
@@ -440,7 +443,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                         else StoreGit.clone(ctx, url, dir, token).also { if (!it.ok) error(it.summary + " " + it.details) }
                     }
                     else if (GitEngine.isRepository(dir)) GitOpResult(true, "already cloned")
-                    else { GitEngine.clone(url, dir, auth = authFor(managed)).close(); GitOpResult(true, "cloned into ${dir.name}") }
+                    else { GitEngine.clone(ctx, url, dir, auth = authFor(managed)).close(); GitOpResult(true, "cloned into ${dir.name}") }
                 }.getOrElse {
                     val why = it.message ?: it.toString()
                     // #669 a fleet-session clone that fails must name its NEXT STEP —
@@ -466,6 +469,9 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     companion object {
         private const val TAG = "GitSync"
 
+        /** #871 the git verbs run in the engine APK, so the shared status probe needs a Context to find it: the one the coordinators were built with. */
+        @Volatile private var engineContext: Context? = null
+
         /**
          * #850 THE ONE STATUS READER of this process — shared by the page's coordinator and
          * the debug route's, so the cache, the in-flight claims and the bounds are one set.
@@ -481,7 +487,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         }
 
         /** The real probe: libs:git-sync's own status, never a second JGit call here. */
-        fun probeStatus(dir: File): GitStatusReader.Probe = GitEngine(dir).use { e ->
+        fun probeStatus(dir: File): GitStatusReader.Probe = GitEngine(engineContext ?: error("no coordinator has been built yet, so there is no Context to reach the git sync engine with"), dir).use { e ->
             val s = e.status()
             GitStatusReader.Probe(s.branch, s.upstream, s.ahead, s.behind, s.files.size - s.conflicts.size, s.conflicts.size, s.repositoryState)
         }

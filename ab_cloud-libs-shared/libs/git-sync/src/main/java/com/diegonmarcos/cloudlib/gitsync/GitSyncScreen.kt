@@ -1,5 +1,6 @@
 package com.diegonmarcos.cloudlib.gitsync
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -155,6 +156,7 @@ private fun RepoListScreen(
     onClose: () -> Unit,
     onSynced: (ManagedRepo) -> Unit,
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     var glances by remember { mutableStateOf<Map<String, RepoGlance>>(emptyMap()) }
@@ -165,7 +167,7 @@ private fun RepoListScreen(
         glances = withContext(Dispatchers.IO) {
             repos.associate { r ->
                 r.id to runCatching {
-                    GitEngine(File(r.path)).use { e ->
+                    GitEngine(context, File(r.path)).use { e ->
                         val s = e.status(); RepoGlance(s.branch, s.ahead, s.behind, s.files.size)
                     }
                 }.getOrElse { RepoGlance(null, 0, 0, 0, it.message ?: it.toString()) }
@@ -212,7 +214,7 @@ private fun RepoListScreen(
                                 scope.launch {
                                     val result = withContext(Dispatchers.IO) {
                                         runCatching {
-                                            GitEngine(File(repo.path)).use {
+                                            GitEngine(context, File(repo.path)).use {
                                                 it.sync(repo.syncMessage, repo.authorName.ifBlank { "cloud-drive" },
                                                     repo.authorEmail.ifBlank { "cloud-drive@localhost" },
                                                     rebase = repo.pullRebase, auth = credentials.authFor(repo))
@@ -248,6 +250,7 @@ private fun RepoListScreen(
 
 @Composable
 private fun AddRepoDialog(prefillPath: String, prefillUrl: String, credentials: GitCredentialStore, onDismiss: () -> Unit, onAdded: (ManagedRepo) -> Unit) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var mode by remember { mutableIntStateOf(if (prefillPath.isNotEmpty() && !GitEngine.isRepository(File(prefillPath))) 1 else 0) }
     var path by remember { mutableStateOf(prefillPath) }
@@ -289,11 +292,11 @@ private fun AddRepoDialog(prefillPath: String, prefillUrl: String, credentials: 
                             val auth = if (username.isNotBlank() || token.isNotBlank()) GitAuth.Https(username, token) else GitAuth.None
                             when (mode) {
                                 0 -> require(GitEngine.isRepository(dir)) { "$path is not a git repository" }
-                                1 -> { require(url.isNotBlank()) { "a clone needs a URL" }; GitEngine.clone(url.trim(), dir, auth).close() }
-                                else -> { dir.mkdirs(); GitEngine.init(dir).close() }
+                                1 -> { require(url.isNotBlank()) { "a clone needs a URL" }; GitEngine.clone(context, url.trim(), dir, auth).close() }
+                                else -> { dir.mkdirs(); GitEngine.init(context, dir).close() }
                             }
                             if (token.isNotBlank()) credentials.setSecret(id, token)
-                            val remoteUrl = if (mode == 1) url.trim() else GitEngine(dir).use { e -> e.remotes().firstOrNull()?.fetchUrl ?: "" }
+                            val remoteUrl = if (mode == 1) url.trim() else GitEngine(context, dir).use { e -> e.remotes().firstOrNull()?.fetchUrl ?: "" }
                             ManagedRepo(id, dir.name, dir.absolutePath, remoteUrl = remoteUrl,
                                 authKind = if (token.isNotBlank()) "https" else "none", authUsername = username)
                         }
@@ -310,7 +313,7 @@ private fun AddRepoDialog(prefillPath: String, prefillUrl: String, credentials: 
 // ── one repository ───────────────────────────────────────────────────────
 
 /** Everything the manager screen shows for one repository, refreshed after every verb. */
-private class RepoSession(val repo: ManagedRepo, val credentials: GitCredentialStore, val scope: CoroutineScope) {
+private class RepoSession(val repo: ManagedRepo, val credentials: GitCredentialStore, val scope: CoroutineScope, val context: Context) {
     var snapshot by mutableStateOf<GitStatusSnapshot?>(null)
     var commits by mutableStateOf<List<GitCommitInfo>>(emptyList())
     var branches by mutableStateOf<List<GitBranchInfo>>(emptyList())
@@ -328,7 +331,7 @@ private class RepoSession(val repo: ManagedRepo, val credentials: GitCredentialS
         scope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    GitEngine(File(repo.path)).use { e ->
+                    GitEngine(context, File(repo.path)).use { e ->
                         val r = block(e)
                         snapshot = e.status(); commits = e.log(); branches = e.branches(); remotes = e.remotes()
                         r
@@ -355,8 +358,9 @@ private fun RepoScreen(
     onSave: (ManagedRepo) -> Unit,
     onRemove: (ManagedRepo) -> Unit,
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val session = remember(repo.id) { RepoSession(repo, credentials, scope) }
+    val session = remember(repo.id) { RepoSession(repo, credentials, scope, context) }
     var tab by remember { mutableIntStateOf(0) }
     var diff by remember { mutableStateOf<Pair<String, String>?>(null) }
     var showDetails by remember { mutableStateOf(false) }
@@ -427,7 +431,7 @@ private fun RepoScreen(
         LaunchedEffect(key, kind) {
             text = withContext(Dispatchers.IO) {
                 runCatching {
-                    GitEngine(File(repo.path)).use { e ->
+                    GitEngine(context, File(repo.path)).use { e ->
                         when (kind) { "commit" -> e.commitDiff(key); "staged" -> e.diff(key, staged = true); else -> e.diff(key) }
                     }
                 }.getOrElse { "cannot diff: ${it.message}" }
