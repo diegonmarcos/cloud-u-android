@@ -116,8 +116,10 @@ internal class RcloneExec(
                     val code = try { p.waitFor(30, TimeUnit.SECONDS); p.exitValue() } catch (e: IllegalThreadStateException) { -1 }
                     job.finish(if (job.cancelled) -2 else code, harvest(conf, config))
                 } catch (t: Throwable) {
-                    job.add("engine: ${t.message ?: t.javaClass.simpleName}")
-                    job.finish(-1, harvest(conf, config))
+                    // destroy() closes the child's streams, so a cancelled job's reader ends in an IOException: that is the
+                    // cancel, not a failure of the engine
+                    if (!job.cancelled) job.add("engine: ${t.message ?: t.javaClass.simpleName}")
+                    job.finish(if (job.cancelled) -2 else -1, harvest(conf, config))
                 }
             }.apply { isDaemon = true; start() }
         } catch (t: Throwable) {
