@@ -275,6 +275,8 @@
               "fleet-webserver"
             ],
             "preload": "lib/libcloud-noexec-shebang.so",
+            "fleet_webserver_src": "../ab_cloud-libs-shared/libs/fleet-webserver",
+            "_doc_fleet_webserver_src": "The shared web server rootfs-extras.nix builds as the `fleet-webserver` attr (runtime.webserver). Declared here as a path so the ship workflow watches it and the publish gate hashes it (cloud_android_lib_closure by-reference inputs): a lib or frontend change rebuilds this terminal.",
             "pins": {
               "goose": {
                 "version": "1.44.0",

@@ -140,7 +140,14 @@ def included(root, app):
     return found or None
 
 
+def cargo_libs(root):
+    """Shared libs that are Cargo crates, not Gradle modules (fleet-webserver): never a project
+    edge, only ever reached by a path an app's JSON or gradle names (by_reference)."""
+    return {os.path.basename(os.path.dirname(g)) for g in glob.glob(os.path.join(root, SHARED_LIBS, "*", "Cargo.toml"))}
+
+
 def by_reference(root, app, libs):
+    libs = set(libs) | cargo_libs(root)
     out = set()
     for p in walk(os.path.join(root, app), (".gradle", ".gradle.kts", ".json")):
         rx = JSON_REF if p.endswith(".json") else PATH_REF
@@ -166,7 +173,7 @@ def analyse(root, app, edges=None, libs=None):
         why[m] = "modules"
     for m in cl:
         why[m] = "closure"
-    return seed, cl, {m: w for m, w in why.items() if m in libs}
+    return seed, cl, {m: w for m, w in why.items() if m in libs or m in cargo_libs(root)}
 
 
 def inputs(root, app, edges=None, libs=None):

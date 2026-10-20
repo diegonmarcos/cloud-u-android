@@ -110,7 +110,7 @@
       "protection_level": "signature"
     },
     "web": {
-      "_doc": "fleet-webserver (option 37.1, ea687d9bf: started at termux login on build.json::runtime.webserver's loopback port, root $HOME) already serves the store read-only at http://<bind>:<port><mount>; nothing here starts a second server. enter.sh adds ONLY the write half: HTTPD_WRITE_ROOTS=/root/<dir> (my-webserver's allowlist: writes land in the store and nowhere else in $HOME) and HTTPD_WRITE_TOKEN_FILE=/root/<token_file> (0600, made once at login; every write must present it). No token file, no writes. test/test-shared-store.sh T7 pins it.",
+      "_doc": "fleet-webserver (option 37.1, ea687d9bf: started at termux login on build.json::runtime.webserver's loopback port, root $HOME) already serves the store read-only at http://<bind>:<port><mount>; nothing here starts a second server. enter.sh adds ONLY the write half: HTTPD_WRITE_ROOTS=/root/<dir> (fleet-webserver's allowlist: writes land in the store and nowhere else in $HOME) and HTTPD_WRITE_TOKEN_FILE=/root/<token_file> (0600, made once at login; every write must present it). No token file, no writes. test/test-shared-store.sh T7 pins it.",
       "bind": "127.0.0.1",
       "port": 8000,
       "mount": "/cloud-shared-store/",

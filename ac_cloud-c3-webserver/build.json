@@ -9,6 +9,7 @@
   "display_name": "Cloud C3 Webserver",
   "description": "The phone's local web server, as an APK, in Rust and web only: a Tauri 2 app whose Rust library starts the shared fleet web server (ab_cloud-libs-shared/libs/fleet-webserver, the Linux my-webserver UI bundled verbatim) in-process on 8002, rooted at /storage/emulated/0 and nothing else, and opens its one webview on it. The SuperApp's About, Logcat and Diagnose are served on 8003, and a private DNS (udp 5353) answers termux.app, nix.app, emulated.app and cloud.app.",
   "category": "android",
+  "fleet_webserver_src": "../ab_cloud-libs-shared/libs/fleet-webserver",
   "build": {
     "type": "gradle",
     "entry": "build.sh"

@@ -104,7 +104,7 @@ cp "$STORE_SRC/cloud-store" "$STORE_SRC/login-init.sh" "$STORE_SRC/login-exec" "
 cp "$STORE_SRC/pty-check" "$STORE_SRC/pty-selftest.json" "$OUT/cloud-store/"
 python3 "$STORE_SRC/render-store.py" termux "$OUT/cloud-store/declaration.sh"
 # startup-step: local_webserver
-# Option 37.1 -- the login's my-webserver autostart: build.json::runtime.webserver (the ONE
+# Option 37.1 -- the login's fleet-webserver autostart: build.json::runtime.webserver (the ONE
 # declaration of the port) rendered into the shared snippet both terminals run. Staged here,
 # beside enter.sh, so a port change rides an app-code update (CloudRootfs stages every file in
 # cloud-store/) and never rebuilds the tree; only the binary itself is in the tarball.

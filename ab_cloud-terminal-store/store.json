@@ -56,7 +56,7 @@
       "linux_path": "/usr/local/bin on PATH, where the baked CLIs live",
       "fish_greeting_path": "/usr/share a fish data dir, where the baked greeting lives",
       "linux_first_start": "first start: linux-store switch when its prerequisites exist, else one line saying what is missing",
-      "local_webserver": "option 37.1: my-webserver on 127.0.0.1:<build.json::runtime.webserver.port> serving the terminal's own $HOME, started at login only when nothing listens there (local-webserver.sh, rendered by render-local-webserver.py; termux enter.sh, nix bin/login)"
+      "local_webserver": "option 37.1: fleet-webserver on 127.0.0.1:<build.json::runtime.webserver.port> serving the terminal's own $HOME, started at login only when nothing listens there (local-webserver.sh, rendered by render-local-webserver.py; termux enter.sh, nix bin/login)"
     }
   },
   "store": {

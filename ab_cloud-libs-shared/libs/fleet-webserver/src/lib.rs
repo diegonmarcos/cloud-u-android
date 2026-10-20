@@ -13,12 +13,15 @@
 //!   GET /__api__/read?path=
 //!   GET /__api__/search?q=&mode=filename|folder|content&path=&dot=1   (header x-search-partial)
 //!   GET /__lib__/{marked.min.js,github-markdown-dark.css,js-yaml.min.js,eruda.min.js,browse.html}
+//!   POST /__api__/write {path, content|b64}   OFF by default; HTTPD_WRITE=1 + HTTPD_WRITE_ROOTS
+//!                              allowlist + a token from HTTPD_WRITE_TOKEN_FILE (see write.rs)
 
 pub mod api;
 pub mod files;
 pub mod http;
 pub mod render;
 pub mod sha256;
+pub mod write;
 
 use http::{Req, Resp};
 use std::net::{Ipv4Addr, TcpListener};
@@ -32,6 +35,8 @@ pub struct Ctx {
     /// Host header values accepted besides loopback (the phone's private names). Anything else is a
     /// DNS-rebinding attempt or a stranger.
     pub extra_hosts: Vec<String>,
+    /// The token-gated write API; off unless the environment turns it on.
+    pub write: write::WriteCfg,
 }
 
 pub struct Config {
@@ -50,7 +55,11 @@ pub fn handle(ctx: &Ctx, req: &Req) -> Resp {
             return Resp::text(403, "Forbidden host");
         }
     }
+    if req.method == "POST" && req.path != "/__api__/write" {
+        return Resp::text(405, "method not allowed: POST is only accepted at /__api__/write").with("allow", "GET, HEAD");
+    }
     match req.path.as_str() {
+        "/__api__/write" => return write::write(&ctx.root, &ctx.write, req),
         "/__browse__" | "/__browse__/" => return Resp::html(render::browse_page("/")),
         "/__api__/ls" => return api::ls(ctx, req),
         "/__api__/read" => return api::read(ctx, req),
@@ -69,8 +78,15 @@ pub fn handle(ctx: &Ctx, req: &Req) -> Resp {
 /// path afresh, so a root that becomes readable later is served from then on.
 pub fn handler(cfg: &Config) -> Arc<http::Handler> {
     let root = std::fs::canonicalize(&cfg.root).unwrap_or_else(|_| PathBuf::from(&cfg.root));
+    let write = write::WriteCfg::from_env(&root);
+    handler_with(cfg, write)
+}
+
+/// [`handler`] with an explicit write configuration instead of the environment's.
+pub fn handler_with(cfg: &Config, write: write::WriteCfg) -> Arc<http::Handler> {
+    let root = std::fs::canonicalize(&cfg.root).unwrap_or_else(|_| PathBuf::from(&cfg.root));
     let search_ms = std::env::var("HTTPD_SEARCH_MS").ok().and_then(|v| v.parse().ok()).unwrap_or(api::SEARCH_DEADLINE_MS);
-    let ctx = Ctx { root, search_ms, extra_hosts: cfg.extra_hosts.clone() };
+    let ctx = Ctx { root, search_ms, extra_hosts: cfg.extra_hosts.clone(), write };
     Arc::new(move |req: &Req| handle(&ctx, req))
 }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render a terminal's build.json::runtime.webserver + local-webserver.sh into the sh both
 Cloud Terminals run at login (option 37.1: each terminal serves its own disk through
-my-webserver, on its own loopback port).
+fleet-webserver, on its own loopback port).
 
     render-local-webserver.py <app build.json> [<out>]   # default: stdout
 
@@ -10,7 +10,7 @@ ac_cloud-termux/rootfs/build-rootfs.sh runs this for the termux cloud-store/ cop
 port is declared once (build.json) and the logic is written once (local-webserver.sh).
 
 The declaration is checked here, at build time, so a bad one fails the build instead of a
-login: the port must be an unprivileged integer, the bind must be loopback (my-webserver
+login: the port must be an unprivileged integer, the bind must be loopback (fleet-webserver
 hard-binds 127.0.0.1; declaring anything else would be a lie this refuses), and the root must
 be "$HOME" (each caller maps it to its guest's view of the terminal's own home).
 """

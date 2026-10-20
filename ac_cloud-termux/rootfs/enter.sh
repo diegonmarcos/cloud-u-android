@@ -195,7 +195,7 @@ CLOUD_STORE_CFG="$HOME/.config/cloud-shared-store"
 mkdir -p "$CLOUD_STORE" "$CLOUD_STORE_CFG" 2>/dev/null || true
 # compat link, ONE release (shared_store.compat_link): the old name points at the new store.
 storage_link "$HOME/cloud-drive-shared-store" cloud-shared-store  # compat_link
-# The web token my-webserver's write path checks (shared_store.web.token_file); reads are
+# The web token fleet-webserver's write path checks (shared_store.web.token_file); reads are
 # loopback-only and need none. Made once, 0600, never printed.
 if [ ! -s "$CLOUD_STORE_CFG/web-token" ]; then
     ( umask 077; od -An -tx1 -N24 /dev/urandom 2>/dev/null | tr -d ' \n' > "$CLOUD_STORE_CFG/web-token" ) || true
@@ -224,7 +224,7 @@ fi
 # started it). Guarded on presence like cloud-store: an older tree without the binary, or a
 # staging without the snippet, logs in exactly as before.
 # cloud-shared-store (build.json::shared_store.web): the server stays read-only over $HOME; writes
-# are opened for the STORE ONLY (my-webserver's HTTPD_WRITE_ROOTS allowlist) and only with the 0600
+# are opened for the STORE ONLY (fleet-webserver's HTTPD_WRITE_ROOTS allowlist) and only with the 0600
 # token made above (HTTPD_WRITE_TOKEN_FILE: every write must present it). No token file, no writes.
 # Passed as explicit `env -i` words because the launcher starts from an empty environment.
 store_web_env=""

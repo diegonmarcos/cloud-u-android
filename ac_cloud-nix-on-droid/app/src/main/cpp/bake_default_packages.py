@@ -192,7 +192,8 @@ EXTRAS_REWRITES = (
 # so `nix-on-droid switch` builds the same fleet-webserver the bake does, from the same bytes.
 WEBSERVER_LIB = Path(__file__).resolve().parents[5] / "ab_cloud-libs-shared" / "libs" / "fleet-webserver"
 WEBSERVER_FILES = ("Cargo.toml", "Cargo.lock", "build.rs", "assets", "vendor", "src/api.rs", "src/files.rs",
-                   "src/http.rs", "src/lib.rs", "src/main.rs", "src/render.rs", "src/sha256.rs")
+                   "src/http.rs", "src/lib.rs", "src/main.rs", "src/render.rs", "src/sha256.rs",
+                   "src/write.rs")
 
 
 def webserver_files() -> dict:

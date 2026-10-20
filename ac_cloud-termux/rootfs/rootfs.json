@@ -192,7 +192,8 @@
       "../ab_cloud-libs-shared/libs/fleet-webserver/src/lib.rs",
       "../ab_cloud-libs-shared/libs/fleet-webserver/src/main.rs",
       "../ab_cloud-libs-shared/libs/fleet-webserver/src/render.rs",
-      "../ab_cloud-libs-shared/libs/fleet-webserver/src/sha256.rs"
+      "../ab_cloud-libs-shared/libs/fleet-webserver/src/sha256.rs",
+      "../ab_cloud-libs-shared/libs/fleet-webserver/src/write.rs"
     ],
     "_doc_identity_files_webserver": "cloud_webserver: build-rootfs.sh compiles the shared lib into the tree, so its build inputs (sources, lockfile, bundled eruda, and vendor/VENDOR.sha256, which pins every vendored Linux frontend file) address the tarball; a lib or frontend change republishes the rootfs.",
     "_doc_identity_files_linux_tools": "store.json::linux_tools: build-rootfs.sh installs the pinned linux-store, linux-account and fish greeting into the tree through fetch-linux-tools.py, so the fetcher's bytes (and, through store.json, the pin and the hashes) address the tarball.",

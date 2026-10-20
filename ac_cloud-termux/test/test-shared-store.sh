@@ -192,9 +192,9 @@ echo "── T7 web: the store is served read-only; writes only into the store, 
 want='store_web_env="HTTPD_WRITE=1 HTTPD_WRITE_ROOTS=/root/cloud-shared-store HTTPD_WRITE_TOKEN_FILE=/root/.config/cloud-shared-store/web-token"'
 if grep -qxF "    $want" "$ENTER" && grep -q '^if \[ -s "${CLOUD_STORE_CFG:-$HOME/.config/cloud-shared-store}/web-token" \]; then$' "$ENTER" \
    && grep -q 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin $store_web_env' "$ENTER"; then
-    ok "my-webserver writes are confined to the store and need the 0600 token (none without it)"
+    ok "fleet-webserver writes are confined to the store and need the 0600 token (none without it)"
 else
-    bad "enter.sh does not confine my-webserver writes to the store behind the token"
+    bad "enter.sh does not confine fleet-webserver writes to the store behind the token"
 fi
 if [ "$(grep -c 'HTTPD_WRITE_ROOTS=' "$ENTER")" = 1 ]; then ok "no other write root is opened"; else bad "enter.sh opens more than one write root"; fi
 

@@ -1,5 +1,6 @@
-# local-webserver.sh -- shared by BOTH Cloud Terminals: at session login, start my-webserver
-# (cloud-u-linux da_my-webserver, the per-arch Node SEA) on the terminal's declared loopback
+# local-webserver.sh -- shared by BOTH Cloud Terminals: at session login, start fleet-webserver
+# (ab_cloud-libs-shared/libs/fleet-webserver, built from source: the one web server of the fleet)
+# on the terminal's declared loopback
 # port, serving that terminal's $HOME -- once: a second session finds the port listening and
 # starts nothing.
 #
@@ -11,9 +12,11 @@
 # Each caller hands cloud_webserver_autostart its OWN launcher (its proot + binds + the guest
 # path of the binary), so the binary always runs inside the glibc root it was built for.
 #
-# Security: my-webserver binds 127.0.0.1 only and refuses non-loopback peers. Writes stay
-# token-gated and OFF: HTTPD_WRITE / HTTPD_WRITE_ROOTS / HTTPD_WRITE_TOKEN_FILE are unset for
-# the child, so a login environment can never turn them on by accident.
+# Security: fleet-webserver binds 127.0.0.1 only and refuses non-loopback peers. Writes
+# (POST /__api__/write) stay token-gated and OFF: HTTPD_WRITE / HTTPD_WRITE_ROOTS /
+# HTTPD_WRITE_TOKEN_FILE are unset for the child here, so a login environment can never turn
+# them on by accident. Only a launcher that passes them as explicit words after the unset
+# (termux enter.sh, for the shared store alone, behind its 0600 token) opens a write root.
 #
 # Runs in mksh (Android /system/bin/sh) before any proot, so tools are called by their
 # /system/bin path, as bin/login's storage block already does; the tests rewrite that prefix.

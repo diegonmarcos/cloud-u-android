@@ -41,10 +41,10 @@ on:
       - "1_cicd/src/scripts/cloud-termux-fork-engine.sh"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
+      - "ab_cloud-libs-shared/libs/fleet-webserver/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       - "ab_cloud-libs-shared/libs/sysdns/**"
-      - "ab_cloud-libs-shared/libs/fleet-webserver/**"
       - "ac_cloud-termux/**"
 permissions:
   contents: write   # gh release upload

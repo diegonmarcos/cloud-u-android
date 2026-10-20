@@ -1,6 +1,7 @@
 //! The HTTP/1.1 plumbing every listener of the fleet shares: parse a request, hand it to a
-//! handler, write the response. GET and HEAD only (the Linux frontend never sends anything
-//! else), loopback peers only, one thread per connection, `connection: close`.
+//! handler, write the response. GET and HEAD, plus POST (a body up to write::MAX_BODY, read for
+//! the handler; only /__api__/write accepts one), loopback peers only, one thread per
+//! connection, `connection: close`.
 
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -14,6 +15,8 @@ pub struct Req {
     pub query: Vec<(String, String)>,
     /// Lower-cased names.
     pub headers: Vec<(String, String)>,
+    /// The request body (POST only; empty otherwise).
+    pub body: Vec<u8>,
 }
 
 impl Req {
@@ -135,7 +138,7 @@ pub fn parse_request(head: &str) -> Option<Req> {
             headers.push((l[..i].trim().to_ascii_lowercase(), l[i + 1..].trim().to_string()));
         }
     }
-    Some(Req { method, path, query, headers })
+    Some(Req { method, path, query, headers, body: Vec::new() })
 }
 
 /// The host part of a Host value: `127.0.0.1:8002` -> `127.0.0.1`.
@@ -183,6 +186,26 @@ fn serve(handler: &Handler, mut stream: TcpStream, port: u16) {
             Some(req) if req.method == "GET" || req.method == "HEAD" => {
                 let resp = handler(&req);
                 (Some(req), resp)
+            }
+            Some(mut req) if req.method == "POST" => {
+                let declared = req.header("content-length").and_then(|v| v.trim().parse::<usize>().ok()).unwrap_or(0);
+                if declared > crate::write::MAX_BODY {
+                    let r = Resp::json(413, "{\"error\":\"request body too large (>32MB)\"}".to_string());
+                    (Some(req), r)
+                } else {
+                    let mut body = buf[head_end.unwrap()..].to_vec();
+                    while body.len() < declared {
+                        let n = match stream.read(&mut chunk) {
+                            Ok(0) | Err(_) => break,
+                            Ok(n) => n,
+                        };
+                        body.extend_from_slice(&chunk[..n]);
+                    }
+                    body.truncate(declared);
+                    req.body = body;
+                    let resp = handler(&req);
+                    (Some(req), resp)
+                }
             }
             Some(req) => (Some(req), Resp::text(405, "method not allowed: this server answers GET and HEAD").with("allow", "GET, HEAD")),
             None => (None, Resp::text(400, "Bad request")),

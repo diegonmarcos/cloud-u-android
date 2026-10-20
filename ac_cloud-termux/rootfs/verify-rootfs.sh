@@ -60,7 +60,7 @@ passwd_shell="$(sed -n 's/^root:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*://p' "$STAGE/rootf
     || { echo "FAIL rootfs /etc/passwd gives root '$passwd_shell', expected '$want_shell'"; fail=1; }
 [ -f "$STAGE/rootfs.tar.zst" ] && { echo "FAIL the tarball was not removed after a good unpack"; fail=1; } || true
 
-echo "── option 37.1: the login started my-webserver on build.json's port, loopback only, serving \$HOME ──"
+echo "── option 37.1: the login started fleet-webserver on build.json's port, loopback only, serving \$HOME ──"
 # The logins above already returned, which is half the proof: the server is double-forked away
 # from the session proot (a direct child kept the first login here waiting forever). The other
 # half is that it is really up, on 127.0.0.1 only, and that its root is this terminal's $HOME.
@@ -70,7 +70,7 @@ echo "fleet-webserver-probe-$$" > "$W/home/fleet-webserver-probe.txt"
 i=0
 until curl -fsS -o /dev/null "http://127.0.0.1:$ws_port/" 2>/dev/null || [ "$i" -ge 90 ]; do sleep 1; i=$((i + 1)); done
 if curl -fsS "http://127.0.0.1:$ws_port/fleet-webserver-probe.txt" 2>/dev/null | grep -q "fleet-webserver-probe-$$"; then
-    echo "ok   my-webserver answers on 127.0.0.1:$ws_port and serves the terminal's \$HOME (bound as /root)"
+    echo "ok   fleet-webserver answers on 127.0.0.1:$ws_port and serves the terminal's \$HOME (bound as /root)"
 else
     echo "FAIL nothing serving \$HOME on 127.0.0.1:$ws_port ${i}s after login; server log: $(tail -5 "$W/home/.cloud-webserver.log" 2>/dev/null | tr '\n' ' ')"; fail=1
 fi
