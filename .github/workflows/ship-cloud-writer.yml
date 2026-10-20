@@ -114,6 +114,7 @@ on:
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ac_cloud-writer/**"
+      - "!ac_cloud-writer/web/**"
 permissions:
   contents: write   # for gh release create + tag push reads
   packages: write   # for ghcr push (oras)
