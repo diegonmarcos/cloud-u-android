@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:mounts-engine — the MOUNTS ENGINE (#871), shipped only as Cloud-Lib-Mounts-Engine.apk. Apps
+     compile libs:mounts (the contract half) and ask this service to open a connection and run steps on it;
+     it speaks ftp / ftps / sftp / ssh / webdav from THIS process, with the credentials the caller sent for the
+     call that opened the connection and nothing stored. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Reaching the user's servers is this engine's job; apps keep their own INTERNET. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Downloads land in, and uploads are read from, the shared store (<storage>/CloudDrive), and this is
+         another uid: it needs its own all-files grant. Store ▸ Access ▸ Android Perms ▸ "Grant missing" gives
+         it to every constellation-signed APK that declares it (PermsGrant: appops set <pkg>
+         MANAGE_EXTERNAL_STORAGE allow), this one included; without it a transfer on a shared-storage path
+         answers the sentence that says so. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+
+    <application>
+        <!-- Guarded by the constellation's signature-level permission: only APKs signed
+             with the Cloud key can bind it. The action is how the handshaking client FINDS
+             the service, and CONTRACT is the version it reads through PackageManager
+             before binding. -->
+        <service
+            android:name="com.diegonmarcos.cloudlib.mounts.engine.MountsEngineService"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA">
+            <intent-filter>
+                <action android:name="${applicationId}.ENGINE" />
+            </intent-filter>
+            <meta-data
+                android:name="com.diegonmarcos.cloud.engine.CONTRACT"
+                android:value="1" />
+        </service>
+    </application>
+</manifest>

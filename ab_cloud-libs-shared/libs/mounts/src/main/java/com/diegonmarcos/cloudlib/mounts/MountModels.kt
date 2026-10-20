@@ -40,7 +40,8 @@ data class MountSpec(
     val uri: String get() = MountUri.format(this)
 }
 
-/** One directory entry on a remote. */
+/** One directory entry on a remote. @Serializable: it crosses the binder from the mounts engine (MountWire). */
+@Serializable
 data class RemoteEntry(val name: String, val path: String, val isDir: Boolean, val size: Long, val modifiedEpochMillis: Long)
 
 /**

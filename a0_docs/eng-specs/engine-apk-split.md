@@ -58,7 +58,7 @@ before any module moved, and it records the decisions that move or keep each mod
 | **ml-l-image-mlkit** | engine (ZXing + ML Kit OCR) | 28.48 / 11.06 / 1.49 / 9.87 | nothing (drive, mail, camera, gallery, office compile the contract `libs:ml-l-image`) | per image | **MOVE 6** (stage 4): contract/engine split, the image crosses as a file descriptor |
 | ml-l-text-mlkit | engine | 40.78 / 17.38 / 0.32 / 9.21 | keyboard-engines only | – | already separate (Cloud-Keyboard-Libs) |
 | ml-l-voice-vosk | engine | 21.20 / 9.03 / – / 5.74 | keyboard-engines only | – | already separate |
-| mounts | mixed: SFTP/SMB/WebDAV + `MountsScreen` | 21.42 / – / – / 64.94 | drive | per browse/transfer | blocked like git-sync: transfers land in per-package storage |
+| mounts | mixed: SFTP/SMB/WebDAV + `MountsScreen` | 21.42 / – / – / 64.94 | drive | per browse/transfer | **moved (move 12, #871)**: the protocol clients and the connections they hold are `libs/mounts-engine` (own APK); Drive keeps the screen, the models, the mount list and the credential store. The blocker ("transfers land in per-package storage") is answered by the shared store: downloads and uploads are paths in `<storage>/CloudDrive`, reachable by both uids with the Store's existing all-files grant |
 | net | contract + client of net-wg | 2.57 / – / – / 6.67 | superapp | – | stays (client half, already split) |
 | net-wg | engine (WireGuard) | 19.80 / 8.49 / – / 6.70 | nothing (own APK) | – | done |
 | **news** | engine | 2.33 / – / – / 5.76 | nothing (news binds it by handshake) | – | **MOVE 5** (stage 4); closes F2 and F3 for news |
@@ -319,7 +319,7 @@ file, not a tree, so the move-6 mechanism does not apply.
 | module | the tree |
 |---|---|
 | git-sync | **moved by move 11 (#871)** -- the working trees are reached through the engine's own all-files grant; the credentials and the ssh files stay the caller's and travel per call |
-| mounts | SFTP/SMB/WebDAV transfers land in the caller's storage, plus `MountsScreen` (Compose) |
+| mounts | **moved by move 12 (#871)** -- transfers are paths in the shared store both uids can reach; the connection is held by the engine, the credentials stay the caller's |
 | rclone | **moved by move 10 (#871)** -- the "binary-only split" and its exec question are replaced by an IPC engine that execs its own binary; the shared-store tree needs the engine's own all-files grant, given by the Store's existing "Grant missing" flow |
 
 GUI modules (appstore, bottomnav, browser, chat, cropper, file-editor, fin, gesture,
@@ -492,3 +492,33 @@ side. `test-engine-services.sh` E8 requires the engine (+4 mutations), the contr
 
 **Not verified on a device.** The bind, the all-files grant on the engine, a clone or push over the network and an ssh
 first contact are proven by static testers, the JVM suites and the APK build only.
+
+## Move 12 — mounts: the protocol clients leave Cloud Drive, the screen and the credentials stay (#871)
+
+Same two answers as moves 10 and 11. The engine APK runs sshj, commons-net and OkHttp in its own uid; a transfer is
+a path in the shared store (`<storage>/CloudDrive/mount-downloads`, `.../mounts-upload`), which both this app and
+the engine reach with the all-files grant the Store's "Grant missing" gives (the old app-external download
+directory is not writable by another uid, so the directories moved).
+
+| piece | where | what it does |
+|---|---|---|
+| contract + client + screen | `libs/mounts` (kept, class `gui`) | `IMountsEngine.aidl` (`call(method, request)` + `methods()`), `MountWire` (verbs and JSON names), `MountTransport` / `MountLink` (PackageManager handshake before any bind; bound for one step and its chunks), `EngineFs` (the `RemoteFs` the browser uses, over the transport), `MountFsFactory.open(context, spec, secret, knownHosts)` (connects now, so a refused login is the caller's exception at open), the models (`MountSpec`, `RemoteEntry` `@Serializable`), `MountStore`, `MountCredentialStore`, `MountsScreen` |
+| engine | `libs/mounts-engine` (new, `engine`, `Cloud-Lib-Mounts-Engine.apk`, package `com.diegonmarcos.cloudlib.mountsengine`, debug port 38235) | `MountsEngineService` (exported, `CONSTELLATION_DATA`, `${applicationId}.ENGINE`, CONTRACT 1, methods `info`, `open`, `fs`, `chunk`, `close`), `MountCalls` (the handle table, idle reaping after 15 min, the JSON), `MountEngines.kt` (the former `SftpFs`, `FtpFs`, `WebDavFs`, `TofuHostKeyVerifier`, unchanged in behaviour), `WebDavParser` |
+| connection | by handle | `open` connects and answers a handle; the engine keeps the authenticated connection between steps. Android may stop the engine process at any time: a step on a handle it no longer knows answers `unknown handle`, and `EngineFs` opens the connection again once, with the secret it still holds, and repeats the step |
+| credentials | on `open` | the password or passphrase as values; the ssh key and `known_hosts` as TEXT (files in the caller's private storage, unreadable by another uid), written to a private scratch directory and deleted as soon as the connection is made; a `known_hosts` that a first contact extended comes back and the caller stores it. The engine keeps and logs none of it |
+| long results | `chunk` | a listing over 400 kB comes back in chunks the client reassembles |
+| degradation | `MountLink` | an absent, too-old or failing engine is an `IOException` naming what to install; a transfer on a shared-storage path without the grant answers the sentence that says so |
+
+**What a change now rebuilds.** A library bump or a change to a protocol client: `Cloud-Lib-Mounts-Engine.apk` only
+(rebuild-scenarios: 0 apps, 1 lib). Cloud Drive no longer carries sshj, bouncycastle, commons-net and OkHttp.
+
+**Checks.** `MountCallsTest` (engine: a real WebDAV server on loopback driven through the JSON surface, the handle
+protocol, idle reaping, chunking, the ssh scratch files, the refusals) and `MountsEngineProtocolTest` (the parser and
+the host-key verifier); `EngineFsTest` (client, against a fake engine, including the reopen on a lost handle);
+`MountsEngineTest` keeps the URI, path and store halves. The engine-side shape checks moved to
+`lib-apks/test/test-mounts-engine.sh`; `test-drive-mounts-engine.sh` keeps the client side. `test-engine-services.sh`
+E8 requires the engine (+4 mutations), the contract guard covers `libs/mounts/engine-client.json` with K1, K4, K6, K7,
+K8 cases, `lib-classes` moves `mounts` to `gui` and `mounts-engine` to `engine` (backlog 28 to 27).
+
+**Not verified on a device.** The bind, the all-files grant on the engine and a live ftp / sftp / ssh session are
+proven by static testers, the JVM suites (WebDAV over loopback) and the APK build only.

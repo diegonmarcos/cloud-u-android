@@ -1,4 +1,11 @@
-// libs:mounts — the mounts engine — ftp / sftp / ssh / webdav connections with browse-through, download, upload (push 4 lands the engine).
+// libs:mounts — the mounts CONTRACT and its screen: the IMountsEngine wire, the EngineFs client (a thin face over
+// the engine, the same RemoteFs the browser was written against), the models, the mount list, the credential
+// store and MountsScreen.
+//
+// #871 engine-apk-split move 12: THE PROTOCOL CLIENTS ARE NOT HERE. ftp / ftps / sftp / ssh / webdav (sshj,
+// commons-net, OkHttp) run in libs:mounts-engine, shipped only as Cloud-Lib-Mounts-Engine.apk; this module is
+// what Cloud Drive compiles, so a library bump or a change to a protocol client republishes that one APK and no
+// app. Same module name, so Drive's wiring did not change.
 //
 // ONE OF THE FOUR cloud-drive ENGINE LIBRARIES (#567). The owner's rule for that
 // application: the main APK is chrome, every tooling is its own library, and the
@@ -25,10 +32,31 @@ plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
-    // MountSpec is persisted as JSON by MountStore (kotlinx-serialization, like
-    // libs:updater), so the JVM suite exercises the real (de)serialisation.
+    // MountSpec and RemoteEntry are @Serializable (MountStore persists MountSpec as JSON; both cross the binder
+    // to and from the engine); kotlinx-serialization, like libs:updater, so the JVM suite exercises the real
+    // (de)serialisation.
     id 'org.jetbrains.kotlin.plugin.serialization'
 }
+
+// #871 THE ENGINE THIS CLIENT BINDS: engine-client.json beside this file, its package from the
+// constellation fleet manifest. Anchored on this module's own (canonical) directory, the one thing
+// that does not move: consumers link this directory from their own trees and the canonical path
+// still leads back here.
+def moduleDir   = projectDir.canonicalFile
+def engineDecl  = new groovy.json.JsonSlurper().parse(new File(moduleDir, 'engine-client.json')).engines?.mounts
+if (engineDecl == null) throw new GradleException("libs:mounts: engine-client.json::engines.mounts is not declared")
+def fleetFile   = new File(moduleDir, '../../../aa_cloud-superapp/data/constellation-fleet.json')
+if (!fleetFile.isFile()) throw new GradleException("libs:mounts: the fleet manifest is not at ${fleetFile}")
+def engineFleet = new groovy.json.JsonSlurper().parse(fleetFile).apps.find { it.id == engineDecl.fleet }
+if (engineFleet == null) {
+    throw new GradleException(
+        "libs:mounts: engine-client.json::engines.mounts.fleet '${engineDecl.fleet}' is not in ${fleetFile} — " +
+        "every consumer would bind a package no Store row installs")
+}
+def mountsEnginePackage = engineFleet.package.toString()
+def mountsAction        = engineDecl.action.toString().replace('{package}', mountsEnginePackage)
+def mountsMinContract   = engineDecl.min_contract as int
+if (mountsMinContract < 1) throw new GradleException("libs:mounts: engines.mounts.min_contract must be >= 1")
 
 android {
     namespace 'com.diegonmarcos.cloudlib.mounts'
@@ -36,10 +64,19 @@ android {
 
     defaultConfig {
         minSdk 26
+        // #871 the mounts engine that runs the protocol clients (Cloud-Lib-Mounts-Engine.apk).
+        buildConfigField "String", "MOUNTS_ENGINE_PACKAGE",      "\"${mountsEnginePackage}\""
+        buildConfigField "String", "MOUNTS_ENGINE_ACTION",       "\"${mountsAction}\""
+        buildConfigField "int",    "MOUNTS_ENGINE_MIN_CONTRACT", "${mountsMinContract}"
+        // Resolved in THIS library's manifest, so every consumer's merged manifest queries the
+        // engine: on Android 11+ an unqueried package reads exactly like "not installed".
+        manifestPlaceholders = [mountsEnginePackage: mountsEnginePackage]
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
+        aidl = true
     }
 
     testOptions {
@@ -78,23 +115,10 @@ dependencies {
     // Compose's file picker for upload (rememberLauncherForActivityResult).
     implementation 'androidx.activity:activity-compose:1.9.3'
 
-    // THE ENGINES — maintained Java libraries, never a shelled-out binary
-    // (#567 brief: "ssh/sftp: prefer a maintained Java/Kotlin lib"):
-    //  - sftp / ssh: sshj 0.41.1 (hierynomus), verified against its sources jar
-    //    on 2026-09-24 — SSHClient.connect/authPassword/authPublickey/loadKeys/
-    //    newSFTPClient/startSession, SFTPClient.ls/get/put/mkdirs/rm/rmdir/rename,
-    //    HostKeyVerifier.verify + findExistingAlgorithms. Pulls bcprov/bcpkix
-    //    (runtime), slf4j-api, asn-one.
-    //  - ftp / ftps: commons-net 3.11.1 FTPClient / FTPSClient.
-    //  - webdav: OkHttp 4.12.0 for the PROPFIND/MKCOL/MOVE verbs
-    //    HttpURLConnection refuses; the multistatus is parsed with javax.xml,
-    //    which Android ships.
-    implementation 'com.hierynomus:sshj:0.41.1'
-    implementation 'commons-net:commons-net:3.11.1'
-    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
-    implementation 'org.slf4j:slf4j-nop:2.0.16'
     // Passwords / passphrases at rest (MountCredentialStore), keystore-backed.
     implementation 'androidx.security:security-crypto:1.1.0'
 
     testImplementation 'junit:junit:4.13.2'
+    // The real org.json: android.jar's copy is a stub that throws on the JVM.
+    testImplementation 'org.json:json:20240303'
 }

@@ -1,0 +1,85 @@
+// libs:mounts-engine — the MOUNTS ENGINE (#871, engine-apk-split move 12): the ftp / ftps / sftp / ssh / webdav
+// clients (sshj, commons-net, OkHttp) and the connections they hold, shipped only as Cloud-Lib-Mounts-Engine.apk.
+// Cloud Drive compiles libs:mounts (the contract half: the IMountsEngine wire, the EngineFs client, the models,
+// the mount list, the credential store and the screen) and does not compile this module, so a library bump or a
+// change to a protocol client republishes this APK and no app. Do not add this module to an app's module map or
+// ship watch list: the engine contract guard's K6 fails it.
+//
+// THE FILES ARE THE CALLER'S, in the shared store (<storage>/CloudDrive/mount-downloads and mounts-upload), and
+// this is another uid: the manifest declares MANAGE_EXTERNAL_STORAGE and the Store's "Grant missing" gives it, like
+// every constellation-signed APK that declares it. The credentials are the caller's too: a password or passphrase,
+// an ssh key and known_hosts text travel in the call that opens a connection, live in this process for that call
+// (the ssh files in a private temp dir, deleted after the connect) and are never kept or logged — what the engine
+// keeps between calls is the authenticated connection, by handle, until it is closed or idle.
+//
+// An app with no engine installed loses nothing but the mounts: each call answers an error the screen shows
+// ("install it from Store"), never a crash.
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.cloudlib.mounts.engine'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        // The libraries this engine runs, so it can state them without opening a connection.
+        buildConfigField 'String', 'MOUNTS_LIBS', '"sshj 0.41.1, commons-net 3.11.1, okhttp 4.12.0"'
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    testOptions {
+        unitTests {
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // CONSTELLATION_DATA (the signature permission guarding the service) is declared by core.
+    implementation project(':libs:core')
+    // The wire (IMountsEngine), the models (MountSpec, RemoteEntry, RemoteFs) and the wire codec this service answers in.
+    implementation project(':libs:mounts')
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+
+    // THE ENGINES — maintained Java libraries, never a shelled-out binary
+    // (#567 brief: "ssh/sftp: prefer a maintained Java/Kotlin lib"):
+    //  - sftp / ssh: sshj 0.41.1 (hierynomus), verified against its sources jar
+    //    on 2026-09-24 — SSHClient.connect/authPassword/authPublickey/loadKeys/
+    //    newSFTPClient/startSession, SFTPClient.ls/get/put/mkdirs/rm/rmdir/rename,
+    //    HostKeyVerifier.verify + findExistingAlgorithms. Pulls bcprov/bcpkix
+    //    (runtime), slf4j-api, asn-one.
+    //  - ftp / ftps: commons-net 3.11.1 FTPClient / FTPSClient.
+    //  - webdav: OkHttp 4.12.0 for the PROPFIND/MKCOL/MOVE verbs
+    //    HttpURLConnection refuses; the multistatus is parsed with javax.xml,
+    //    which Android ships.
+    implementation 'com.hierynomus:sshj:0.41.1'
+    implementation 'commons-net:commons-net:3.11.1'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'org.slf4j:slf4j-nop:2.0.16'
+
+    testImplementation 'junit:junit:4.13.2'
+    // The real org.json: android.jar's copy is a stub that throws on the JVM.
+    testImplementation 'org.json:json:20240303'
+}

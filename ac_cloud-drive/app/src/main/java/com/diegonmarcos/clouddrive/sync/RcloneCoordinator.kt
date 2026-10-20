@@ -79,7 +79,7 @@ class RcloneCoordinator(private val ctx: Context, private val scope: CoroutineSc
     fun testMount(m: MountSpec, onDone: (Boolean, String) -> Unit) {
         testing.update { it + m.id }
         scope.launch {
-            val res = withContext(Dispatchers.IO) { runCatching { MountFsFactory.open(m, mountCredentials.secretFor(m), mountCredentials.knownHosts).use { it.list(m.path).size } } }
+            val res = withContext(Dispatchers.IO) { runCatching { MountFsFactory.open(ctx, m, mountCredentials.secretFor(m), mountCredentials.knownHosts).use { it.list(m.path).size } } }
             testing.update { it - m.id }
             val ok = res.isSuccess
             prefs.setLastTest("mount:" + m.id, ok)
