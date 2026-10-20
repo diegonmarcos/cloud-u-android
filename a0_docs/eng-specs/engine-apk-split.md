@@ -63,7 +63,7 @@ before any module moved, and it records the decisions that move or keep each mod
 | net-wg | engine (WireGuard) | 19.80 / 8.49 / – / 6.70 | nothing (own APK) | – | done |
 | **news** | engine | 2.33 / – / – / 5.76 | nothing (news binds it by handshake) | – | **MOVE 5** (stage 4); closes F2 and F3 for news |
 | ops | GUI + Dagu client | 3.49 / – / – / 8.69 | superapp, c3 | per page open / Run tap | **MOVE 8** (#871): the HTTPS calls to Dagu and the parse of its payloads leave for `Cloud-Lib-Ops-Engine.apk`; the Dagu page, the encrypted bearer storage and the thin client stay in `libs:ops` |
-| rclone | mixed: static `rclone` + `RcloneScreen` | 179.58 / 78.33 / – / 54.39 | drive (29.05 MB compressed) | per job, progress stream | **blocked as an IPC engine**: jobs read and write the shared store. The viable split is binary-only — Drive execs `librclone.so` out of the sibling lib APK in Drive's own uid (the rootfs precedent, `CloudRootfs.trustedLibSourceDir`) — and it needs an on-device check that an app may exec another package's extracted native lib |
+| rclone | mixed: static `rclone` + `RcloneScreen` | 179.58 / 78.33 / – / 54.39 | drive (29.05 MB compressed) | per job, progress stream | **moved (move 10, #871)**: the binary and its exec are `libs/rclone-engine` (own APK); Drive keeps the screen, `rclone.conf` and the parsers. The two blockers below were dissolved, not waited out: the engine execs its OWN `librclone.so` in its OWN uid (nothing is exec'd across packages, so no on-device exec check is needed), and the shared-store tree is reached through the engine's own all-files grant (see Move 10) |
 | search | GUI + launcher search | 2.51 / – / – / 6.19 | superapp | per keystroke | stays |
 | shizuku-adb-debug-tools | privileged channel | 11.02 / 2.13 / – / 12.52 | superapp (+ appstore, battery, updater) | – | blocked: the Shizuku grant is per package |
 | text-tools | client of `ITextTools` (served by the keyboard) | 2.17 / – / – / 5.41 | superapp, keyboard, mail, writer | per action | **stays** — it is already the client half of an engine that lives in another APK |
@@ -320,7 +320,7 @@ file, not a tree, so the move-6 mechanism does not apply.
 |---|---|
 | git-sync | JGit working trees in the shared store (`<storage>/CloudDrive/git`), plus `GitSyncScreen` |
 | mounts | SFTP/SMB/WebDAV transfers land in the caller's storage, plus `MountsScreen` (Compose) |
-| rclone | jobs read and write the shared store, plus `RcloneScreen` (Compose). The binary-only split (Drive execs `librclone.so` from the lib APK in its own uid) still needs an on-device check that an app may exec another package's extracted native lib |
+| rclone | **moved by move 10 (#871)** -- the "binary-only split" and its exec question are replaced by an IPC engine that execs its own binary; the shared-store tree needs the engine's own all-files grant, given by the Store's existing "Grant missing" flow |
 
 GUI modules (appstore, bottomnav, browser, chat, cropper, file-editor, fin, gesture,
 keyboard, launcher-*, mail, maps, panoramaviewer, scrollbar, wallet) are out of scope
@@ -425,3 +425,41 @@ It now counts live members (packages with a fleet row).
 live Decisions API are proven by static testers, the JVM suites and the APK build only; `/api/decisions/probe`
 on a debug build is the end-to-end check.
 
+## Move 10 — rclone: the binary and its exec leave Cloud Drive, the screen stays (#871)
+
+The two reasons rclone was parked (stage 1 and stage 4: "jobs read and write the shared store"; "needs an
+on-device check that an app may exec another package's extracted native lib") were both about a design
+nobody needs: a split where Drive execs a binary that lives in a sibling APK. The engine design asks neither
+question. The engine APK execs ITS OWN `librclone.so`, out of ITS OWN `nativeLibraryDir`, in ITS OWN uid
+(`lib_apks.exec_native` makes the installer extract it, exactly as for gh), so nothing is exec'd across
+packages. And the shared-store tree is reached by the engine's own `MANAGE_EXTERNAL_STORAGE` grant: the
+manifest declares it, and the Store's Access > Android Perms > "Grant missing" already runs
+`appops set <pkg> MANAGE_EXTERNAL_STORAGE allow` for every constellation-signed APK that declares it
+(`PermsGrant`), so no new mechanism and no second screen. A job that names a shared-storage path while the
+grant is missing answers the sentence that says so.
+
+| piece | where | what it does |
+|---|---|---|
+| contract + client + screen | `libs/rclone` (kept, class `gui`) | `IRcloneEngine.aidl` (`call(method, request)` + `methods()`), `RcloneLink` (PackageManager handshake before any bind; bound only while a session is open: one call, a listing's chunks, or the length of a job), `RcloneTransport` (the seam the JVM suite fakes), `RcloneRunner` (the typed face the screens were written against, unchanged: `version`, `lsjson`, `obscure`, `test`, `start`, `download`), `RcloneScreen`, `rclone.conf` and `jobs.json` in the app's private files, the parsers. Consumer wiring is unchanged: the module name is the same |
+| engine | `libs/rclone-engine` (new, `engine`, `Cloud-Lib-Rclone-Engine.apk`, package `com.diegonmarcos.cloudlib.rcloneengine`, debug port 38233) | `RcloneEngineService` (exported, `CONSTELLATION_DATA`, `${applicationId}.ENGINE`, CONTRACT 1, methods `info`, `run`, `out_chunk`, `job_start`, `job_poll`, `job_cancel`), `RcloneExec` (the child process, the temp config, the job table), `ArgPolicy` (second lock), `RcloneCalls` (the JSON), the pinned binary (`data/rclone-binary.json`, moved here) and the `libs:sysdns` proxy that resolves a remote's name |
+| the config | per call | the app owns `rclone.conf`; every call carries its text, the engine writes it to a private temp file for that one run and deletes it, and when rclone rewrote it (an OAuth refresh) the new text comes back and the app stores it. The engine keeps no remote and no obscured secret between calls |
+| argument policy | `ArgPolicy` | the first argument must be one of `version, obscure, lsjson, copyto, copy, sync, move, check, bisync`; `--config`, `--cache-dir`, `--password-command`, `--rc*`, `--metrics*`, `--temp-dir`, `--log-file` are refused, so a sibling app cannot turn "run rclone" into "run anything" |
+| long answers | `out_chunk` | one binder transaction carries about 1 MB; a stdout over 400 kB (a big `lsjson`) comes back in chunks the client reassembles |
+| jobs | `job_start` / `job_poll` / `job_cancel` | the engine buffers the merged output (5000 lines), the client polls by cursor every 400 ms and parses the lines with the same `RcloneOutput` as before; the client holds its bind for the length of the job; exit codes are rclone's, -2 cancelled, -1 the engine could not run it (the sentence goes to the job's log) |
+| downloads | `RcloneRunner.downloadDir` | `<storage>/CloudDrive/rclone-downloads`, in the shared store both Drive and the engine can reach (the old app-external directory is not writable by another uid) |
+| degradation | `RcloneLink` | an absent, too-old or failing engine is an `IOException` naming what to install (Store > Cloud Constellation > Libs); `start` never throws, it ends the job with that sentence; the Rsync screen shows the same sentence in place of the old "binary missing" |
+| declaration | `libs/rclone/engine-client.json`, fleet row `lib-rclone-engine` | shared-client declaration; `build.gradle` resolves the package from the fleet manifest and merges `<queries>` into Drive |
+
+**What a change now rebuilds.** A rclone bump, the pin, the exec, the argument policy: `Cloud-Lib-Rclone-Engine.apk`
+only (rebuild-scenarios: 0 apps, 1 lib). Cloud Drive no longer carries 29 MB of binary and no longer sets
+`useLegacyPackaging`.
+
+**Checks.** `RcloneExecTest` (engine, against a fake binary): the policy, the caller-owned config, the job
+protocol, chunking, cancel, the two refusals. `RcloneRunnerTest` (client, against a fake engine). The pin and
+gradle checks moved to `lib-apks/test/test-rclone-engine.sh`; `test-drive-rclone-engine.sh` now holds the
+client side. `test-engine-services.sh` E8 requires the engine (+5 mutations incl. E6), the contract guard
+covers `libs/rclone/engine-client.json` with K1, K4, K6, K7, K8 cases, `lib-classes` moves `rclone` to `gui` and
+`rclone-engine` to `engine` (backlog 30 to 29).
+
+**Not verified on a device.** The bind, the all-files grant on the engine and a live transfer are proven by
+static testers, the two JVM suites and the APK build only.

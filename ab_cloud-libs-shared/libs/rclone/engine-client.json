@@ -1,0 +1,10 @@
+{
+  "_doc": "THE ENGINE THIS CONTRACT MODULE'S CLIENT BINDS (#871, engine-apk-split move 10). Same shape as libs:ops' declaration: Cloud Drive compiles libs:rclone (the screen, rclone.conf, the job file and this client) and does not compile the rclone engine that execs the pinned static binary. `fleet` is the Store row in aa_cloud-superapp/data/constellation-fleet.json from which build.gradle resolves the package (an unknown id fails the build) into BuildConfig and the merged <queries>; `action` finds the service ({package} substituted at build time, matching the engine manifest's ${applicationId}.ENGINE); `min_contract` is the lowest engine CONTRACT that answers every method RcloneRunner calls, read through PackageManager BEFORE binding. With the engine absent the screen shows the sentence that says what to install, never a crash.",
+  "engines": {
+    "rclone": {
+      "fleet": "lib-rclone-engine",
+      "action": "{package}.ENGINE",
+      "min_contract": 1
+    }
+  }
+}

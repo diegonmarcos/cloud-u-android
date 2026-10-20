@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:rclone-engine — the RCLONE ENGINE (#871), shipped only as Cloud-Lib-Rclone-Engine.apk. Apps
+     compile libs:rclone (the contract half) and hand this service one rclone run per call; it execs
+     the pinned static rclone from THIS APK's own nativeLibraryDir, in this uid, with the rclone.conf
+     the caller sent for that call and nothing stored. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- rclone's whole job is talking to the user's remotes; apps keep their own INTERNET. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Jobs read and write the shared store (the caller's trees), and this is another uid: it needs
+         its own all-files grant. Store ▸ Access ▸ Android Perms ▸ "Grant missing" gives it to every
+         constellation-signed APK that declares it (PermsGrant: appops set <pkg> MANAGE_EXTERNAL_STORAGE
+         allow), this one included; without it a job on a shared-storage path answers the sentence that
+         says so. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+
+    <application>
+        <!-- Guarded by the constellation's signature-level permission: only APKs signed
+             with the Cloud key can bind it. The action is how the handshaking client FINDS
+             the service, and CONTRACT is the version it reads through PackageManager
+             before binding. -->
+        <service
+            android:name="com.diegonmarcos.cloudlib.rclone.engine.RcloneEngineService"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA">
+            <intent-filter>
+                <action android:name="${applicationId}.ENGINE" />
+            </intent-filter>
+            <meta-data
+                android:name="com.diegonmarcos.cloud.engine.CONTRACT"
+                android:value="1" />
+        </service>
+    </application>
+</manifest>
