@@ -1,4 +1,11 @@
-package com.diegonmarcos.cloudlib.mounts
+package com.diegonmarcos.cloudlib.mounts.engine
+
+import com.diegonmarcos.cloudlib.mounts.MountSecret
+import com.diegonmarcos.cloudlib.mounts.MountSpec
+import com.diegonmarcos.cloudlib.mounts.MountType
+import com.diegonmarcos.cloudlib.mounts.RemoteEntry
+import com.diegonmarcos.cloudlib.mounts.RemoteFs
+import com.diegonmarcos.cloudlib.mounts.RemotePaths
 
 import java.io.File
 import java.io.IOException
@@ -156,6 +163,7 @@ class WebDavFs(private val spec: MountSpec, secret: MountSecret) : RemoteFs {
     override fun close() {}
 }
 
+/** Opens the protocol client for a spec; the engine service holds the result between calls. */
 object MountFsFactory {
     fun open(spec: MountSpec, secret: MountSecret, knownHosts: File): RemoteFs = when (spec.type) {
         MountType.SFTP, MountType.SSH -> SftpFs(spec, secret, knownHosts)

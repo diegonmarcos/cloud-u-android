@@ -409,6 +409,11 @@
       "expect": { "apps": 0, "libs": 1, "rootfs": 0, "ship": 1, "refresh": 0 }
     },
     {
+      "id": "#871 engine lib: libs/mounts-engine (the ftp / sftp / ssh / webdav clients, which left Cloud Drive)",
+      "files": ["ab_cloud-libs-shared/libs/mounts-engine/src/main/java/com/diegonmarcos/cloudlib/mounts/engine/MountEngines.kt"],
+      "expect": { "apps": 0, "libs": 1, "rootfs": 0, "ship": 1, "refresh": 0 }
+    },
+    {
       "id": "#871 engine binary pin: libs/rclone-engine/data/rclone-binary.json (a rclone bump republishes the engine APK alone)",
       "files": ["ab_cloud-libs-shared/libs/rclone-engine/data/rclone-binary.json"],
       "expect": { "apps": 0, "libs": 1, "rootfs": 0, "ship": 1, "refresh": 0 }

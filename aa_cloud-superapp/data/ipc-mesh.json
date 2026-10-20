@@ -289,6 +289,7 @@
      "lib-git-sync-engine",
      "lib-ml-l-image-mlkit",
      "lib-ml-l-sound-yamnet",
+     "lib-mounts-engine",
      "lib-net-wg",
      "lib-news",
      "lib-ops-engine",
@@ -519,6 +520,7 @@
      "lib-git-sync-engine",
      "lib-ml-l-image-mlkit",
      "lib-ml-l-sound-yamnet",
+     "lib-mounts-engine",
      "lib-net-wg",
      "lib-news",
      "lib-ops-engine",
@@ -641,6 +643,7 @@
      "lib-git-sync-engine",
      "lib-ml-l-image-mlkit",
      "lib-ml-l-sound-yamnet",
+     "lib-mounts-engine",
      "lib-net-wg",
      "lib-news",
      "lib-ops-engine",
@@ -805,6 +808,30 @@
     "aidl": [
      {
       "interface": "ISoundEngine",
+      "methods": [
+       "call",
+       "methods"
+      ]
+     }
+    ],
+    "callers": []
+   }
+  ],
+  "mounts-engine": [
+   {
+    "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+    "level": "signature",
+    "source": "libs:mounts-engine/src/main/AndroidManifest.xml",
+    "component": "com.diegonmarcos.cloudlib.mounts.engine.MountsEngineService",
+    "id": "service:com.diegonmarcos.cloudlib.mounts.engine.MountsEngineService",
+    "kind": "service",
+    "name": "MountsEngineService",
+    "actions": [
+     "<pkg>.ENGINE"
+    ],
+    "aidl": [
+     {
+      "interface": "IMountsEngine",
       "methods": [
        "call",
        "methods"
@@ -1104,6 +1131,7 @@
       "lib-git-sync-engine",
       "lib-ml-l-image-mlkit",
       "lib-ml-l-sound-yamnet",
+      "lib-mounts-engine",
       "lib-net-wg",
       "lib-news",
       "lib-ops-engine",
@@ -2944,6 +2972,21 @@
     "devtools",
     "fleetconfig-model",
     "ml-l-sound-yamnet"
+   ],
+   "endpoints": []
+  },
+  {
+   "id": "lib-mounts-engine",
+   "pkg": "com.diegonmarcos.cloudlib.mountsengine",
+   "label": "cloud-lib-mounts-engine",
+   "kind": "lib",
+   "dir": "libs:mounts-engine",
+   "door": true,
+   "libs": [
+    "core",
+    "devtools",
+    "fleetconfig-model",
+    "mounts-engine"
    ],
    "endpoints": []
   },

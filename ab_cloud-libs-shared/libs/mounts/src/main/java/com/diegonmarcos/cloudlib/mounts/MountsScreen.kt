@@ -88,7 +88,9 @@ fun MountsScreen(
     val context = LocalContext.current
     val store = remember { MountStore(File(context.filesDir, "mounts/mounts.json")) }
     val credentials = remember { MountCredentialStore(context) }
-    val downloadDir = remember { File(context.getExternalFilesDir(null) ?: context.filesDir, "mount-downloads") }
+    // #871 move 12: the engine writes the download and reads the upload, as another uid, so both live in the shared
+    // store (<storage>/CloudDrive), which this app and the engine both hold All-files access to; Android/data is not writable by it.
+    val downloadDir = remember { File(android.os.Environment.getExternalStorageDirectory(), "CloudDrive/mount-downloads") }
     var mounts by remember { mutableStateOf(store.load()) }
     var open by remember { mutableStateOf<MountSpec?>(null) }
     var editing by remember { mutableStateOf<MountSpec?>(null) }
@@ -131,7 +133,7 @@ fun MountsScreen(
                         else TextButton(onClick = {
                             testing = true
                             scope.launch {
-                                val r = withContext(Dispatchers.IO) { runCatching { MountFsFactory.open(m, credentials.secretFor(m), credentials.knownHosts).use { it.list(m.path).size } } }
+                                val r = withContext(Dispatchers.IO) { runCatching { MountFsFactory.open(context, m, credentials.secretFor(m), credentials.knownHosts).use { it.list(m.path).size } } }
                                 testing = false
                                 snackbar.showSnackbar(r.fold({ "${m.name}: reachable, $it entries" }, { "${m.name}: ${it.message ?: it}" }))
                             }
@@ -230,7 +232,7 @@ private fun BrowserScreen(mount: MountSpec, credentials: MountCredentialStore, d
         scope.launch {
             val r = withContext(Dispatchers.IO) {
                 runCatching {
-                    val f = fs ?: MountFsFactory.open(mount, credentials.secretFor(mount), credentials.knownHosts).also { fs = it }
+                    val f = fs ?: MountFsFactory.open(context, mount, credentials.secretFor(mount), credentials.knownHosts).also { fs = it }
                     f.list(p)
                 }
             }
@@ -247,7 +249,7 @@ private fun BrowserScreen(mount: MountSpec, credentials: MountCredentialStore, d
             val r = withContext(Dispatchers.IO) {
                 runCatching {
                     val name = context.contentResolver.query(u, null, null, null, null)?.use { c -> val i = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME); if (c.moveToFirst() && i >= 0) c.getString(i) else null } ?: "upload"
-                    val tmp = File(context.cacheDir, "mounts-upload/$name").apply { parentFile?.mkdirs() }
+                    val tmp = File(android.os.Environment.getExternalStorageDirectory(), "CloudDrive/mounts-upload/$name").apply { parentFile?.mkdirs() }
                     context.contentResolver.openInputStream(u)!!.use { i -> tmp.outputStream().use { o -> i.copyTo(o) } }
                     fs!!.upload(tmp, RemotePaths.join(path, name)); tmp.delete(); name
                 }

@@ -82,6 +82,14 @@ GSSVC=$GSENGINE/src/main/java/com/diegonmarcos/cloudlib/gitsync/engine/GitSyncEn
 for f in "$ROOT/$GS/engine-client.json" "$ROOT/$GSCLIENT" "$ROOT/$GSSVC"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
+# #871 the mounts engine (move 12): a SHARED client (libs:mounts, engine-client.json) Cloud Drive compiles, binding an engine it does not compile
+MT=ab_cloud-libs-shared/libs/mounts
+MTENGINE=ab_cloud-libs-shared/libs/mounts-engine
+MTCLIENT=$MT/src/main/java/com/diegonmarcos/cloudlib/mounts/MountLink.kt
+MTSVC=$MTENGINE/src/main/java/com/diegonmarcos/cloudlib/mounts/engine/MountsEngineService.kt
+for f in "$ROOT/$MT/engine-client.json" "$ROOT/$MTCLIENT" "$ROOT/$MTSVC"; do
+    [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
+done
 # #881 the decisions engine: a SHARED client (libs:decisions-link, engine-client.json) that apps compile once one asks a decision model
 DEC=ab_cloud-libs-shared/libs/decisions-link
 DECENGINE=ab_cloud-libs-shared/libs/decisions-engine
@@ -117,6 +125,7 @@ stage() {
     cp -r "$ROOT/$DEC" "$WORK/t/$DEC"; cp -r "$ROOT/$DECENGINE" "$WORK/t/$DECENGINE"
     cp -r "$ROOT/$RC" "$WORK/t/$RC"; cp -r "$ROOT/$RCENGINE" "$WORK/t/$RCENGINE"
     cp -r "$ROOT/$GS" "$WORK/t/$GS"; cp -r "$ROOT/$GSENGINE" "$WORK/t/$GSENGINE"
+    cp -r "$ROOT/$MT" "$WORK/t/$MT"; cp -r "$ROOT/$MTENGINE" "$WORK/t/$MTENGINE"
 }
 guard() { python3 "$GUARD" "$WORK/t" >"$WORK/out" 2>&1; }
 sub() { python3 -c "import sys; p=sys.argv[1]; s=open(p).read(); assert sys.argv[2] in s, 'anchor not found'; open(p,'w').write(s.replace(sys.argv[2], sys.argv[3], 1))" "$WORK/t/$1" "$2" "$3"; }
@@ -308,6 +317,24 @@ stage; js "$GS/engine-client.json" 'd["engines"]["gitsync"]["fleet"] = "lib-git-
 landed "$GS/engine-client.json" 'lib-git-sync-engine-renamed' && red "K1 #871 the git sync client names a Store row that does not exist" "K1"
 stage; js "$DRIVEBJ" 'd["modules"]["libs:git-sync-engine"] = {"dir": "../ab_cloud-libs-shared/libs/git-sync-engine", "type": "library"}'
 landed "$DRIVEBJ" '"libs:git-sync-engine"' && red "K6 #871 Cloud Drive declares the git sync engine's module (it would compile JGit back in)" "K6"
+stage; sub "$MTSVC" 'const val OPEN = "open"' 'const val OPEN = "open2"'
+landed "$MTSVC" '"open2"' && red "K4 #871 the mounts engine renames a method Cloud Drive's client still calls" "K4"
+stage; python3 - "$WORK/t/$MTCLIENT" <<'PYTHON'
+import sys
+p = sys.argv[1]; s = open(p).read()
+gate = "            if (found < needed) return "
+i = s.index(gate); j = s.index("\n", i) + 1
+open(p, "w").write(s[:i] + s[j:])
+PYTHON
+python3 -c 'import sys; sys.exit(0 if "found < needed" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$MTCLIENT" \
+    && red "K7 #871 the mounts client binds without a contract floor" "K7"
+stage; sub "$MT/src/main/AndroidManifest.xml" '<package android:name="${mountsEnginePackage}" />' ''
+python3 -c 'import sys; sys.exit(0 if "${mountsEnginePackage}" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$MT/src/main/AndroidManifest.xml" \
+    && red "K8 #871 the mounts client stops querying its engine for every consumer" "K8"
+stage; js "$MT/engine-client.json" 'd["engines"]["mounts"]["fleet"] = "lib-mounts-engine-renamed"'
+landed "$MT/engine-client.json" 'lib-mounts-engine-renamed' && red "K1 #871 the mounts client names a Store row that does not exist" "K1"
+stage; js "$DRIVEBJ" 'd["modules"]["libs:mounts-engine"] = {"dir": "../ab_cloud-libs-shared/libs/mounts-engine", "type": "library"}'
+landed "$DRIVEBJ" '"libs:mounts-engine"' && red "K6 #871 Cloud Drive declares the mounts engine's module (it would compile the protocol clients back in)" "K6"
 stage; sub "$DECSVC" 'const val CONSENT = "consent"' 'const val CONSENT = "consent2"'
 landed "$DECSVC" '"consent2"' && red "K4 #881 the decisions engine renames a method the client still calls" "K4"
 stage; python3 - "$WORK/t/$DECCLIENT" <<'PYTHON'
@@ -337,6 +364,7 @@ js "$OPS/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$DEC/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$RC/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$GS/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
+js "$MT/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 landed "$DRIVEBJ" 'no-engines' && landed "$SABJ" 'no-engines' && landed "$NEWSBJ" 'no-engines' && landed "$IMG/engine-client.json" 'no-engines' && red "vacuity: no app declares an engine, so nothing is checked" "no app declares"
 
 echo

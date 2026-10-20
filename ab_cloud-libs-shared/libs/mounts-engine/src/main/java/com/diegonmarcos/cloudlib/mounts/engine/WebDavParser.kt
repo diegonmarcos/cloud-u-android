@@ -1,4 +1,6 @@
-package com.diegonmarcos.cloudlib.mounts
+package com.diegonmarcos.cloudlib.mounts.engine
+
+import com.diegonmarcos.cloudlib.mounts.RemoteEntry
 
 import java.io.ByteArrayInputStream
 import java.net.URLDecoder

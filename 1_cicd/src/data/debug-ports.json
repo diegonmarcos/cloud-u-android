@@ -111,6 +111,7 @@
     "com.diegonmarcos.cloudmediacenter": 38231,
     "com.diegonmarcos.cloudtoolssmallllms": 38232,
     "com.diegonmarcos.cloudlib.rcloneengine": 38233,
-    "com.diegonmarcos.cloudlib.gitsyncengine": 38234
+    "com.diegonmarcos.cloudlib.gitsyncengine": 38234,
+    "com.diegonmarcos.cloudlib.mountsengine": 38235
   }
 }
