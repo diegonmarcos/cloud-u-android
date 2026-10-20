@@ -39,6 +39,22 @@
       "1_cicd/src/cicd/ship-cloud-browser-wasm.yml",
       "1_cicd/src/templates/ship-wasm.yml.in"
     ],
+    "ac_cloud-c3/web": [
+      "ab_cloud-libs-shared/web/**",
+      "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",
+      "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/**",
+      "ac_cloud-c3/test/test-c3-web.sh",
+      "1_cicd/src/cicd/ship-cloud-c3-wasm.yml",
+      "1_cicd/src/templates/ship-wasm.yml.in"
+    ],
+    "ac_cloud-camera/web": [
+      "ab_cloud-libs-shared/web/**",
+      "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",
+      "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/**",
+      "ac_cloud-camera/test/test-camera-web.sh",
+      "1_cicd/src/cicd/ship-cloud-camera-wasm.yml",
+      "1_cicd/src/templates/ship-wasm.yml.in"
+    ],
     "ac_cloud-calc/web": [
       "ab_cloud-libs-shared/web/**",
       "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",

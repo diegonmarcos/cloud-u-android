@@ -1038,6 +1038,17 @@
       }
     }
   },
+  "web": {
+    "_doc": "#876 Cloud C3 as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-c3-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-c3-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
+    "dir": "web",
+    "host": "ubuntu-latest",
+    "artifact": "Cloud-C3.wasm.zip",
+    "gh_asset": "Cloud-C3.wasm.zip",
+    "portal_slug": "cloud-c3",
+    "entry": "index.html",
+    "tester": "test-c3-web.sh",
+    "size_budget_mb": 20
+  },
   "tests": {
     "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds.",
     "shell": {
