@@ -222,7 +222,17 @@
       "module": "ac_cloud-me",
       "application_id": "com.diegonmarcos.cloudme",
       "description": "Diego's Cloud Me — the personal-administration half of the constellation. Where Cloud SuperApp is the launcher for everything the cloud runs, Cloud Me is the la",
-      "web": null
+      "web": {
+        "_doc": "#876 Cloud Me as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-me-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-me-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
+        "dir": "web",
+        "host": "ubuntu-latest",
+        "artifact": "Cloud-Me.wasm.zip",
+        "gh_asset": "Cloud-Me.wasm.zip",
+        "portal_slug": "cloud-me",
+        "entry": "index.html",
+        "tester": "test-me-web.sh",
+        "size_budget_mb": 20
+      }
     },
     {
       "name": "cloud-media-center",
@@ -267,7 +277,17 @@
       "module": "ac_cloud-notes",
       "application_id": "com.diegonmarcos.cloudnotes",
       "description": "Cloud Notes — our own signed build of AFFiNE (the local-first notes/whiteboard app), vendored at ac_cloud-notes/ as owned code. AFFiNE is the UPSTREAM PROJECT, ",
-      "web": null
+      "web": {
+        "_doc": "#876 Cloud Notes as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-notes-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-notes-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
+        "dir": "web",
+        "host": "ubuntu-latest",
+        "artifact": "Cloud-Notes.wasm.zip",
+        "gh_asset": "Cloud-Notes.wasm.zip",
+        "portal_slug": "cloud-notes",
+        "entry": "index.html",
+        "tester": "test-notes-web.sh",
+        "size_budget_mb": 20
+      }
     },
     {
       "name": "cloud-office",

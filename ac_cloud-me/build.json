@@ -730,13 +730,25 @@
       "site_id": "1"
     }
   },
+  "web": {
+    "_doc": "#876 Cloud Me as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-me-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-me-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
+    "dir": "web",
+    "host": "ubuntu-latest",
+    "artifact": "Cloud-Me.wasm.zip",
+    "gh_asset": "Cloud-Me.wasm.zip",
+    "portal_slug": "cloud-me",
+    "entry": "index.html",
+    "tester": "test-me-web.sh",
+    "size_budget_mb": 20
+  },
   "tests": {
     "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh; the ship workflow calls it. Until 2026-09-10 no workflow called ANY tester for this application, so test-ui-pages.sh sat in the tree unexecuted and the ship run's only question was whether Gradle exited 0.",
     "shell": {
       "dir": "test",
       "_doc_requires": "Tools a tester shells out to. A missing tool must be LOUD AND FATAL: a tester whose command is not found produces a verdict from the tool's ABSENCE, which reads as a pass. Both testers here read build.json with python3 and nothing else.",
       "requires": [
-        "python3"
+        "python3",
+        "jq"
       ]
     },
     "unit": {

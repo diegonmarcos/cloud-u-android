@@ -59,6 +59,7 @@ on:
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/model-catalogue/**"
       - "ac_cloud-notes/**"
+      - "!ac_cloud-notes/web/**"
 permissions:
   contents: write   # gh release upload (rolling 'latest')
   packages: write   # ghcr push (oras)

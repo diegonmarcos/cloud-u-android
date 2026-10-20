@@ -79,6 +79,22 @@
       "1_cicd/src/cicd/ship-cloud-drive-wasm.yml",
       "1_cicd/src/templates/ship-wasm.yml.in"
     ],
+    "ac_cloud-me/web": [
+      "ab_cloud-libs-shared/web/**",
+      "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",
+      "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/**",
+      "ac_cloud-me/test/test-me-web.sh",
+      "1_cicd/src/cicd/ship-cloud-me-wasm.yml",
+      "1_cicd/src/templates/ship-wasm.yml.in"
+    ],
+    "ac_cloud-notes/web": [
+      "ab_cloud-libs-shared/web/**",
+      "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",
+      "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/**",
+      "ac_cloud-notes/test/test-notes-web.sh",
+      "1_cicd/src/cicd/ship-cloud-notes-wasm.yml",
+      "1_cicd/src/templates/ship-wasm.yml.in"
+    ],
     "ac_cloud-calc/web": [
       "ab_cloud-libs-shared/web/**",
       "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",

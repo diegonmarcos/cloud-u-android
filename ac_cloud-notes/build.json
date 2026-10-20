@@ -212,6 +212,17 @@
       "_doc_kotlin_binding": "#522: the committed UniFFI binding, asserted against the SHIPPED .so by test-launch-payload.sh. #469 hand-edited this file to drop hashcash_mint and cut two lines too many, leaving `uniffi_affine_mobile_native_fn_func_new_doc_storage_pool` CALLED but never DECLARED and an orphan `): Pointer` in the interface body \u2014 committed Kotlin that does not parse. Nothing noticed, because Gradle regenerates the file from the built .so before javaCompile (the generate<Variant>UniFFIBindings task, which #469 believed was a no-op). A committed source that is never the source that builds is a trap with a fuse on it."
     }
   },
+  "web": {
+    "_doc": "#876 Cloud Notes as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-notes-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-notes-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
+    "dir": "web",
+    "host": "ubuntu-latest",
+    "artifact": "Cloud-Notes.wasm.zip",
+    "gh_asset": "Cloud-Notes.wasm.zip",
+    "portal_slug": "cloud-notes",
+    "entry": "index.html",
+    "tester": "test-notes-web.sh",
+    "size_budget_mb": 20
+  },
   "tests": {
     "_doc": "Shell testers under ac_cloud-notes/test/ that prove licence-cleanliness and app identity WITHOUT a build. Read by cloud-android-test-engine.sh::tests.shell.",
     "shell": {
@@ -219,7 +230,8 @@
       "requires": [
         "python3",
         "git",
-        "curl"
+        "curl",
+        "jq"
       ]
     },
     "root_scope": {
