@@ -436,6 +436,9 @@
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
     },
+    "libs:decisions-link": {
+      "dir": "../ab_cloud-libs-shared/libs/decisions-link"
+    },
     "libs:webserver": {
       "dir": "../ab_cloud-libs-shared/libs/webserver",
       "type": "library",

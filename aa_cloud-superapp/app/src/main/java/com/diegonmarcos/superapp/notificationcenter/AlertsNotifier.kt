@@ -63,6 +63,8 @@ object AlertsNotifier {
         if (shown.isEmpty()) { runCatching { nm.cancel(SUMMARY_ID) }; return emptyList() }
         ensureChannels(ctx)
         val key = NotifyGroups.key(g!!)
+        // #883 Jev may make the FRESH alert arrive silently; no opinion = it rings, as before
+        val quiet = if (fresh == null) emptySet() else JevNotify.quietIds(ctx, shown.firstOrNull { it.id == fresh })
         for (a in shown) runCatching {
             nm.notify(TAG_PREFIX + a.id, CHILD_ID, NotificationCompat.Builder(ctx, channelFor(a.severity))
                 .setSmallIcon(R.drawable.ic_stat_notify)
@@ -75,7 +77,7 @@ object AlertsNotifier {
                 .setGroup(key)
                 .setSortKey("%020d".format(Long.MAX_VALUE - a.ts))
                 .setOnlyAlertOnce(true)
-                .setSilent(a.id != fresh)
+                .setSilent(silent(a.id, fresh, quiet))
                 .apply { contentIntent(ctx, a)?.let { setContentIntent(it) } }
                 .setDeleteIntent(dismissIntent(ctx, a.id))
                 .build())
@@ -103,6 +105,9 @@ object AlertsNotifier {
         }
         return shown
     }
+
+    /** Only the [fresh] alert may make a sound, and not when Jev judged it not worth one ([quiet] is empty without an opinion). */
+    internal fun silent(alertId: String, fresh: String?, quiet: Set<String>): Boolean = alertId != fresh || alertId in quiet
 
     fun channelFor(severity: String) = if (severity == FleetAlerts.ERROR) CHANNEL_URGENT else CHANNEL_ID
 
@@ -140,7 +145,9 @@ object AlertsNotifier {
     class DismissReceiver : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             val id = intent.getStringExtra(EXTRA_ID) ?: return
+            val gone = AlertStore.all(ctx).firstOrNull { it.id == id }
             AlertStore.remove(ctx, id)
+            JevNotify.settle(ctx, gone)
             refresh(ctx)
         }
     }

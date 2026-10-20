@@ -12,6 +12,7 @@ import org.junit.Test
 class GateTest {
     private fun rig(minLabelled: Int = 2, minPrecision: Double = 0.75, ttl: Long = 0) = Rig(Fixtures.block {
         it.put("journal_max", 100)
+        it.getJSONObject("budget").put("per_app_daily_calls", 100).put("daily_usd_cap", 10.0)
         it.getJSONObject("uses").put("g", JSONObject()
             .put("enabled", true).put("class", "user_facing").put("threshold", 0.8).put("max_calls_per_hour", 100)
             .put("consent", "implicit").put("content", "none").put("ttl_s", ttl)

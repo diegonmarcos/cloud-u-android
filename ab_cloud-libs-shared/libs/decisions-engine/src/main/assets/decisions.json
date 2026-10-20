@@ -85,7 +85,7 @@
   "com.diegonmarcos.superapp"
  ],
  "cache_max": 128,
- "journal_max": 500,
+ "journal_max": 2000,
  "uses": {
   "probe": {
    "_doc": "#881 wave 0: the plumbing's own end-to-end check, called only by the engine's /api/decisions/probe debug route (so only on a debug build) to prove token, endpoint, budget and cache work. Its question is a fixed arithmetic statement; no user data is in it. Waves #882-#884 declare their uses beside it.",
@@ -100,6 +100,26 @@
    "apps": [
     "com.diegonmarcos.cloudlib.decisionsengine"
    ]
+  },
+  "alert_interrupt": {
+   "_doc": "#883 Jev wave 2 (spec 3.3): is a FRESH fleet alert worth a sound? A confident 'not worth it' makes it arrive silently; nothing else changes. Observe-only until its own journal shows it right: gate.after is itself, so the engine scores and journals but answers gate_closed (the alert rings, as today) until >= 30 alerts it judged confidently have an outcome (swiped away within 2 min = not worth) and >= 85% matched. Called only from the SuperApp's AlertsNotifier; the fallback test is JevNotifyTest.",
+   "enabled": true,
+   "class": "user_facing",
+   "threshold": 0.8,
+   "max_calls_per_hour": 60,
+   "consent": "implicit",
+   "content": "alert",
+   "apps": [
+    "com.diegonmarcos.superapp"
+   ],
+   "gate": {
+    "after": [
+     "alert_interrupt"
+    ],
+    "min_labelled": 30,
+    "min_precision": 0.85
+   },
+   "fallback_test": "aa_cloud-superapp/app/src/test/java/com/diegonmarcos/superapp/notificationcenter/JevNotifyTest.kt::JevNotifyTest"
   }
  }
 }
