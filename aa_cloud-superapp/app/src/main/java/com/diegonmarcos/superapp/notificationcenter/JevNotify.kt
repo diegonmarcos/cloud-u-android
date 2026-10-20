@@ -25,7 +25,6 @@ object JevNotify {
 
     const val WAIT_MS = 1500L
     const val QUICK_DISMISS_MS = 2 * 60_000L
-    private const val PREFS = "jev_notify"
     private const val MAX_CALLS = 200
 
     private val pool = Executors.newSingleThreadExecutor { r -> Thread(r, "jev-notify").apply { isDaemon = true } }
@@ -54,7 +53,7 @@ object JevNotify {
         val app = ctx.applicationContext
         val task = pool.submit(Callable {
             val o = DecisionsLink.outcome(app, "alert_interrupt", state(fresh, Calendar.getInstance().get(Calendar.HOUR_OF_DAY)), questions())
-            o.callOrNull?.let { remember(app, fresh.id, it) }
+            o.callOrNull?.let { remember(fresh.id, it) }
             quiet(o.verdictOrNull)
         })
         val quiet = runCatching { task.get(WAIT_MS, TimeUnit.MILLISECONDS) }.getOrDefault(false)
@@ -65,23 +64,20 @@ object JevNotify {
     fun settle(ctx: Context, alert: AlertStore.Alert?, now: Long = System.currentTimeMillis()) {
         val a = alert ?: return
         val app = ctx.applicationContext
-        val call = recall(app, a.id) ?: return
-        forget(app, a.id)
+        val call = recall(a.id) ?: return
+        forget(a.id)
         val label = worthLabel(now - a.ts) ?: return
         pool.execute { DecisionsLink.report(app, "alert_interrupt", call, JSONObject().put("worth", label)) }
     }
 
-    private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-
-    @Synchronized
-    private fun remember(ctx: Context, alertId: String, call: String) {
-        val p = prefs(ctx)
-        val e = p.edit()
-        if (p.all.size >= MAX_CALLS) e.clear()   // bounded: an alert never dismissed must not grow this forever
-        e.putString(alertId, call).apply()
+    /** alert id -> the decision's call id. In memory and bounded: a call lost with the process is a missing label, not a wrong one. */
+    private val calls = object : LinkedHashMap<String, String>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > MAX_CALLS
     }
 
-    private fun recall(ctx: Context, alertId: String): String? = prefs(ctx).getString(alertId, null)
+    @Synchronized private fun remember(alertId: String, call: String) { calls[alertId] = call }
 
-    private fun forget(ctx: Context, alertId: String) = prefs(ctx).edit().remove(alertId).apply()
+    @Synchronized private fun recall(alertId: String): String? = calls[alertId]
+
+    @Synchronized private fun forget(alertId: String) { calls.remove(alertId) }
 }
