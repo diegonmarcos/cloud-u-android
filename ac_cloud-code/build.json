@@ -102,13 +102,25 @@
     "_doc_ai": "libs:ai is NOT a module here either (a Compose lib): its assets dir (assets/ai/ai.json, the shared AI contract nav.json::chat.ai points at, and protocol-cases.json) is compiled in by reference from build-extras.gradle, and tools/resolve-targets.py reads the same file at build time. nav.json restates no gateway and no OpenRouter endpoint.",
  "_doc_model_catalogue": "libs:model-catalogue is NOT a module here: it is a Compose lib and this Cordova app has no Compose, so build-extras.gradle compiles its logic package dir and its assets dir by reference (the libs/sysdns precedent); the lib closure counts it as a source input from that literal path."
   },
+  "web": {
+    "_doc": "#876 Cloud Code as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-code-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-code-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: this app declares no bottom-nav island, so the page is one dense list of mock data. The APK's own ship ignores this directory.",
+    "dir": "web",
+    "host": "ubuntu-latest",
+    "artifact": "Cloud-Code.wasm.zip",
+    "gh_asset": "Cloud-Code.wasm.zip",
+    "portal_slug": "cloud-code",
+    "entry": "index.html",
+    "tester": "test-code-web.sh",
+    "size_budget_mb": 20
+  },
   "tests": {
     "_doc": "Shell testers under ac_cloud-code/test/, run by cloud-android-test-engine.sh shell in the ship workflow's FIRST step, before any toolchain. None needs a build.",
     "shell": {
       "dir": "test",
       "requires": [
         "python3",
-        "node"
+        "node",
+        "jq"
       ]
     },
     "cordova_surface": {

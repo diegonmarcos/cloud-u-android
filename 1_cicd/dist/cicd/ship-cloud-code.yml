@@ -58,6 +58,7 @@ on:
       - "ab_cloud-libs-shared/libs/sysdns/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ac_cloud-code/**"
+      - "!ac_cloud-code/web/**"
 permissions:
   contents: write   # gh release upload (rolling 'latest')
   packages: write   # ghcr push (oras)

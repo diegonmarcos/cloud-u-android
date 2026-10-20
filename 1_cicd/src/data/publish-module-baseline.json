@@ -17,6 +17,7 @@
   "1_cicd/src/cicd/ship-cloud-camera-wasm.yml": 3,
   "1_cicd/src/cicd/ship-cloud-camera.yml": 1,
   "1_cicd/src/cicd/ship-cloud-chat.yml": 3,
+  "1_cicd/src/cicd/ship-cloud-code-wasm.yml": 3,
   "1_cicd/src/cicd/ship-cloud-code.yml": 2,
   "1_cicd/src/cicd/ship-cloud-contacts.yml": 1,
   "1_cicd/src/cicd/ship-cloud-dialer.yml": 3,
