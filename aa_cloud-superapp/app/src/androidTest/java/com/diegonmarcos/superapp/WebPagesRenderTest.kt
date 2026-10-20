@@ -42,6 +42,8 @@ class WebPagesRenderTest {
 
     @After fun tearDown() { WebPageFragment.probe = null }
 
+    @Test fun a_webAppsGridRenders() = checkGrid("webapps-grid", night = false)
+    @Test fun b_webAppsGridRendersAtNight() = checkGrid("webapps-grid-night", night = true)
     @Test fun c_linktreeRenders() = check("linktree", "page:cloud/lnktree", night = false)
 
     /** The app is uninstalled after the run (taking its files dir with it), so the shell copies the evidence out. */
@@ -82,6 +84,68 @@ class WebPagesRenderTest {
         inst.runOnMainSync { w.evaluateJavascript(expr) { r = it; latch.countDown() } }
         latch.await(3, TimeUnit.SECONDS)
         return r
+    }
+
+    private fun allNodes(n: android.view.accessibility.AccessibilityNodeInfo?, into: MutableList<android.view.accessibility.AccessibilityNodeInfo>) {
+        if (n == null) return
+        into += n
+        for (i in 0 until n.childCount) allNodes(n.getChild(i), into)
+    }
+
+    /** #1062: the native Cloud > WebApps grid on the real emulator - every declared tile is on screen (inside the display,
+     *  visible to the user), no WebView is drawn and the Cloud page strip is hidden. Day and night. */
+    private fun checkGrid(name: String, night: Boolean) {
+        sh("settings put global adb_wifi_enabled 0")
+        val pkg = inst.targetContext.packageName
+        sh("appops set $pkg REQUEST_INSTALL_PACKAGES allow")
+        sh("cmd role add-role-holder android.app.role.HOME $pkg 0")
+        sh("cmd uimode night ${if (night) "yes" else "no"}"); SystemClock.sleep(1500)
+        sh("input keyevent KEYCODE_WAKEUP"); sh("wm dismiss-keyguard")
+        val ctx = inst.targetContext
+        val cloud = com.diegonmarcos.superapp.launcher.Sections.byId("cloud")!!
+        val page = cloud.pages.first { it.id == "webapps" }
+        val tiles = cloud.tileGroups.flatMap { it.destinations }
+        val labels = page.webapps.map { w -> tiles.firstOrNull { it.id == w.tile || it.target == w.tile }?.label ?: w.id }
+        val strip = cloud.pages.filter { it.id != "webapps" }.map { it.label }.filter { it !in labels }
+        ctx.startActivity(Intent().setClassName(ctx.packageName, "${ctx.packageName}.MainActivity")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            .putExtra("shortcut_action", "page:cloud/webapps"))
+        val dm = ctx.resources.displayMetrics
+        val screen = Rect(0, 0, dm.widthPixels, dm.heightPixels)
+        val t0 = SystemClock.elapsedRealtime()
+        var missing = labels; var offscreen = listOf<String>(); var stripShown = listOf<String>(); var hasWeb = false
+        val texts = mutableListOf<String>()
+        while (SystemClock.elapsedRealtime() - t0 < 25_000) {
+            SystemClock.sleep(1000)
+            clearPrompt()
+            val nodes = mutableListOf<android.view.accessibility.AccessibilityNodeInfo>()
+            allNodes(ua.rootInActiveWindow, nodes)
+            texts.clear()
+            nodes.forEach { n -> n.text?.let { texts += it.toString() }; n.contentDescription?.let { texts += it.toString() } }
+            fun nodeFor(l: String) = nodes.firstOrNull { n -> n.text?.toString()?.let { it == l || it.split(", ").contains(l) } == true }
+            missing = labels.filter { nodeFor(it) == null }
+            offscreen = labels.filter { l ->
+                val n = nodeFor(l) ?: return@filter false
+                val r = Rect(); n.getBoundsInScreen(r)
+                !n.isVisibleToUser || r.isEmpty || !screen.contains(r)
+            }
+            stripShown = strip.filter { l -> nodes.any { it.text?.toString() == l } }
+            hasWeb = nodes.any { it.className?.toString()?.contains("WebView") == true }
+            if (missing.isEmpty() && SystemClock.elapsedRealtime() - t0 > 5_000) break
+        }
+        clearPrompt(); SystemClock.sleep(500)
+        ua.takeScreenshot()?.let { File(out, "webpage-$name-screen.png").outputStream().use { o -> it.compress(Bitmap.CompressFormat.PNG, 100, o) } }
+        val report = "night=$night uimode=${sh("cmd uimode night").trim()} tiles=${labels.size} missing=$missing offscreen=$offscreen " +
+            "stripShown=$stripShown hasWeb=$hasWeb screen=$screen\ntexts=$texts"
+        File(out, "webpage-$name.txt").writeText(report)
+        runCatching { File(out, "logcat-$name.txt").writeText(sh("logcat -d -v time -t 3000")) }
+        export(name)
+        Log.i("WebPagesRenderTest", "[$name]\n$report")
+        assertTrue("[$name] ${labels.size} tiles declared, none found\n$report", missing.size < labels.size)
+        assertTrue("[$name] tiles missing from the screen: $missing\n$report", missing.isEmpty())
+        assertTrue("[$name] tiles outside the display: $offscreen\n$report", offscreen.isEmpty())
+        assertTrue("[$name] a WebView is drawn on the native grid\n$report", !hasWeb)
+        assertTrue("[$name] the Cloud page strip is shown: $stripShown\n$report", stripShown.isEmpty())
     }
 
     private fun check(name: String, target: String, night: Boolean) {
