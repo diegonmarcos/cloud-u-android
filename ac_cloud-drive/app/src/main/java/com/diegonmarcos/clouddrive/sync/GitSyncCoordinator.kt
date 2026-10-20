@@ -9,6 +9,7 @@ import com.diegonmarcos.cloudlib.gitsync.GitBranchInfo
 import com.diegonmarcos.cloudlib.gitsync.GitCommitInfo
 import com.diegonmarcos.cloudlib.gitsync.GitCredentialStore
 import com.diegonmarcos.cloudlib.gitsync.GitEngine
+import com.diegonmarcos.cloudlib.gitsync.clone
 import com.diegonmarcos.cloudlib.gitsync.GitOpResult
 import com.diegonmarcos.cloudlib.gitsync.GitRemoteInfo
 import com.diegonmarcos.cloudlib.gitsync.ManagedRepo

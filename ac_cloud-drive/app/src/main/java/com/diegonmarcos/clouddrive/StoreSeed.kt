@@ -13,6 +13,7 @@ import com.diegonmarcos.clouddrive.configs.DriveGitChain
 import com.diegonmarcos.clouddrive.files.Places
 import com.diegonmarcos.cloudlib.gitsync.GitAuth
 import com.diegonmarcos.cloudlib.gitsync.GitEngine
+import com.diegonmarcos.cloudlib.gitsync.clone
 import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
 import com.diegonmarcos.cloudlib.gitsync.RepoRegistry
 import java.io.File
