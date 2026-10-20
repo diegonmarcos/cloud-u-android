@@ -63,6 +63,22 @@
       "1_cicd/src/cicd/ship-cloud-code-wasm.yml",
       "1_cicd/src/templates/ship-wasm.yml.in"
     ],
+    "ac_cloud-dialer/web": [
+      "ab_cloud-libs-shared/web/**",
+      "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",
+      "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/**",
+      "ac_cloud-dialer/test/test-dialer-web.sh",
+      "1_cicd/src/cicd/ship-cloud-dialer-wasm.yml",
+      "1_cicd/src/templates/ship-wasm.yml.in"
+    ],
+    "ac_cloud-drive/web": [
+      "ab_cloud-libs-shared/web/**",
+      "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",
+      "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/**",
+      "ac_cloud-drive/test/test-drive-web.sh",
+      "1_cicd/src/cicd/ship-cloud-drive-wasm.yml",
+      "1_cicd/src/templates/ship-wasm.yml.in"
+    ],
     "ac_cloud-calc/web": [
       "ab_cloud-libs-shared/web/**",
       "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/**",

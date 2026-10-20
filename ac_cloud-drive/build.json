@@ -869,13 +869,25 @@
     "_doc_git_chain_libs": "#646 the git auth+ops chain's two pinned static binaries, libs:gh and libs:gix, are NOT linked here any more. #705: gh runs in Cloud-Lib-Gh.apk's own process and this app binds it (engines.gh); gix was linked and called by nothing, so it ships only as Cloud-Lib-Gix.apk. A change to either republishes that one lib APK and not this app; their build-time refusals and gix's clone/fetch-only verbs are checked where they ship (ab_cloud-libs-shared/lib-apks/test/test-git-binaries.sh). packaging.jniLibs.useLegacyPackaging stays on for libs:rclone's binary.",
     "_doc_engine_flag": "#579 `engine: true` marks a module as one of the FOUR ENGINE LIBRARIES (the host contract: one @Composable <X>Screen(target, onOpenFile, onClose), a title string, the module boundary). Until #579 every Compose library this app linked WAS an engine, so test-drive-engine-modules.sh discovered engines as 'Compose library'; libs:bottomnav (the fleet's nav island, chrome not tooling) is the first Compose library here that is not one, so the role is now declared, not inferred."
   },
+  "web": {
+    "_doc": "#876 Cloud Drive as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-drive-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-drive-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
+    "dir": "web",
+    "host": "ubuntu-latest",
+    "artifact": "Cloud-Drive.wasm.zip",
+    "gh_asset": "Cloud-Drive.wasm.zip",
+    "portal_slug": "cloud-drive",
+    "entry": "index.html",
+    "tester": "test-drive-web.sh",
+    "size_budget_mb": 20
+  },
   "tests": {
     "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds. Until #330 this block was absent and test/ did not exist, so the shell phase printed COVERAGE-GAP and exited 0: the only question this application's pipeline asked was whether Gradle exited 0, and Gradle cannot see a WebView calling a Kotlin class by string name.",
     "shell": {
       "dir": "test",
       "requires": [
         "python3",
-        "grep"
+        "grep",
+        "jq"
       ],
       "_doc_requires": "A tester that shells out to a tool which is not installed does not fail — it returns a verdict from the tool's ABSENCE. Listing them here makes a missing one fatal at the engine's preflight instead of a green tick over assertions that never ran."
     },

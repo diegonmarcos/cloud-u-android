@@ -151,14 +151,34 @@
       "module": "ac_cloud-dialer",
       "application_id": null,
       "description": null,
-      "web": null
+      "web": {
+        "_doc": "#876 Cloud Dialer as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-dialer-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-dialer-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
+        "dir": "web",
+        "host": "ubuntu-latest",
+        "artifact": "Cloud-Dialer.wasm.zip",
+        "gh_asset": "Cloud-Dialer.wasm.zip",
+        "portal_slug": "cloud-dialer",
+        "entry": "index.html",
+        "tester": "test-dialer-web.sh",
+        "size_budget_mb": 20
+      }
     },
     {
       "name": "cloud-drive",
       "module": "ac_cloud-drive",
       "application_id": "com.diegonmarcos.clouddrive",
       "description": "Diego's Cloud Drive — standalone Android storage app, lifted out of the SuperApp's Cloud▸Apps▸Drive pages so the phone's storage surface is its own icon. #609 R",
-      "web": null
+      "web": {
+        "_doc": "#876 Cloud Drive as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-drive-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-drive-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
+        "dir": "web",
+        "host": "ubuntu-latest",
+        "artifact": "Cloud-Drive.wasm.zip",
+        "gh_asset": "Cloud-Drive.wasm.zip",
+        "portal_slug": "cloud-drive",
+        "entry": "index.html",
+        "tester": "test-drive-web.sh",
+        "size_budget_mb": 20
+      }
     },
     {
       "name": "cloud-gallery",

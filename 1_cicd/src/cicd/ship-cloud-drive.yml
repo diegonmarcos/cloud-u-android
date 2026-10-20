@@ -69,6 +69,7 @@ on:
       - "ab_cloud-libs-shared/libs/sysdns/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-drive/**"
+      - "!ac_cloud-drive/web/**"
 permissions:
   contents: write
   packages: write

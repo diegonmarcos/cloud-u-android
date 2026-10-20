@@ -533,15 +533,41 @@
       }
     },
     {
+      "id": "ac_cloud-dialer/web (#876: the page ships alone)",
+      "files": [
+        "ac_cloud-dialer/web/src/wasmJsMain/kotlin/com/diegonmarcos/clouddialer/web/Main.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1,
+        "refresh": 0
+      }
+    },
+    {
+      "id": "ac_cloud-drive/web (#876: the page ships alone)",
+      "files": [
+        "ac_cloud-drive/web/src/wasmJsMain/kotlin/com/diegonmarcos/clouddrive/web/Main.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1,
+        "refresh": 0
+      }
+    },
+    {
       "id": "libs/ui-kit commonMain (#876: the two wasm pages + the static-lib consumers)",
       "files": [
         "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt"
       ],
       "expect": {
-        "apps": 25,
+        "apps": 27,
         "libs": 0,
         "rootfs": 0,
-        "ship": 26,
+        "ship": 28,
         "refresh": 0
       }
     }
