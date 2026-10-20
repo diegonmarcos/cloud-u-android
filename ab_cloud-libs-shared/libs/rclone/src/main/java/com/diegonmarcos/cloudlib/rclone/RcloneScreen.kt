@@ -106,7 +106,7 @@ fun RcloneScreen(
                     Column {
                         Text(stringResource(R.string.cloudlib_rclone_title))
                         Text(
-                            if (!runner.isAvailable) "binary missing: ${runner.binary}" else "rclone ${version ?: BuildConfig.RCLONE_VERSION} · ${remotes.size} remote(s)",
+                            if (!runner.isAvailable) "engine missing" else "rclone ${version ?: "…"} · ${remotes.size} remote(s)",
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -121,7 +121,7 @@ fun RcloneScreen(
                 listOf("Remotes", "Jobs", "Browse").forEachIndexed { i, label -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) }) }
             }
             if (!runner.isAvailable) {
-                Text("The rclone binary was not extracted at install (${runner.binary}). The packaging app must set useLegacyPackaging=true; see libs/rclone/data/rclone-binary.json.",
+                Text(runner.unavailableReason ?: "The rclone engine is not available.",
                     Modifier.padding(12.dp), color = MaterialTheme.colorScheme.error)
             }
             when (tab) {
@@ -267,7 +267,7 @@ private fun JobsTab(runner: RcloneRunner, store: RcloneJobStore, jobs: List<Rclo
     val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
 
     fun run(job: RcloneJob) {
-        if (!runner.isAvailable) { notify("rclone binary missing"); return }
+        if (!runner.isAvailable) { notify(runner.unavailableReason ?: "rclone engine missing"); return }
         val state = RunState(runner.start(job,
             onStats = { s -> runs[job.id]?.stats = s },
             onLine = { l -> runs[job.id]?.let { st -> st.lines = (st.lines + l).takeLast(200) } },

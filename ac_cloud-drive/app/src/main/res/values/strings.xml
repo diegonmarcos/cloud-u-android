@@ -313,7 +313,7 @@
     <string name="sync_settings_remove_body">The folder and its .git stay on disk; only this list forgets it and its stored credential.</string>
 
     <string name="rclone_binary_present">rclone %1$s</string>
-    <string name="rclone_binary_missing">rclone binary missing</string>
+    <string name="rclone_binary_missing">rclone engine missing</string>
     <string name="rclone_remotes_count">%1$d remotes</string>
     <string name="rclone_remotes_section">Remotes</string>
     <string name="rclone_jobs_section">Jobs</string>

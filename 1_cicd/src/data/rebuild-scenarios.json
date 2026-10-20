@@ -399,6 +399,16 @@
       "expect": { "apps": 0, "libs": 1, "rootfs": 0, "ship": 1, "refresh": 0 }
     },
     {
+      "id": "#871 engine lib: libs/rclone-engine (the rclone binary pin and its exec, which left Cloud Drive)",
+      "files": ["ab_cloud-libs-shared/libs/rclone-engine/src/main/java/com/diegonmarcos/cloudlib/rclone/engine/RcloneExec.kt"],
+      "expect": { "apps": 0, "libs": 1, "rootfs": 0, "ship": 1, "refresh": 0 }
+    },
+    {
+      "id": "#871 engine binary pin: libs/rclone-engine/data/rclone-binary.json (a rclone bump republishes the engine APK alone)",
+      "files": ["ab_cloud-libs-shared/libs/rclone-engine/data/rclone-binary.json"],
+      "expect": { "apps": 0, "libs": 1, "rootfs": 0, "ship": 1, "refresh": 0 }
+    },
+    {
       "id": "#870 static lib: libs/account (f89b4e580's lib)",
       "files": [
         "ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountData.kt"

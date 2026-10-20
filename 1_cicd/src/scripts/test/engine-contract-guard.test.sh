@@ -66,6 +66,14 @@ OPSSVC=$OPSENGINE/src/main/java/com/diegonmarcos/superapp/ops/engine/OpsEngineSe
 for f in "$ROOT/$OPS/engine-client.json" "$ROOT/$OPSCLIENT" "$ROOT/$OPSSVC"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
 done
+# #871 the rclone engine (move 10): a SHARED client (libs:rclone, engine-client.json) Cloud Drive compiles, binding an engine it does not compile
+RC=ab_cloud-libs-shared/libs/rclone
+RCENGINE=ab_cloud-libs-shared/libs/rclone-engine
+RCCLIENT=$RC/src/main/java/com/diegonmarcos/cloudlib/rclone/RcloneLink.kt
+RCSVC=$RCENGINE/src/main/java/com/diegonmarcos/cloudlib/rclone/engine/RcloneEngineService.kt
+for f in "$ROOT/$RC/engine-client.json" "$ROOT/$RCCLIENT" "$ROOT/$RCSVC"; do
+    [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
+done
 # #881 the decisions engine: a SHARED client (libs:decisions-link, engine-client.json) that apps compile once one asks a decision model
 DEC=ab_cloud-libs-shared/libs/decisions-link
 DECENGINE=ab_cloud-libs-shared/libs/decisions-engine
@@ -99,6 +107,7 @@ stage() {
     cp -r "$ROOT/$AN" "$WORK/t/$AN"; cp -r "$ROOT/$SINK" "$WORK/t/$SINK"
     cp -r "$ROOT/$OPS" "$WORK/t/$OPS"; cp -r "$ROOT/$OPSENGINE" "$WORK/t/$OPSENGINE"
     cp -r "$ROOT/$DEC" "$WORK/t/$DEC"; cp -r "$ROOT/$DECENGINE" "$WORK/t/$DECENGINE"
+    cp -r "$ROOT/$RC" "$WORK/t/$RC"; cp -r "$ROOT/$RCENGINE" "$WORK/t/$RCENGINE"
 }
 guard() { python3 "$GUARD" "$WORK/t" >"$WORK/out" 2>&1; }
 sub() { python3 -c "import sys; p=sys.argv[1]; s=open(p).read(); assert sys.argv[2] in s, 'anchor not found'; open(p,'w').write(s.replace(sys.argv[2], sys.argv[3], 1))" "$WORK/t/$1" "$2" "$3"; }
@@ -254,6 +263,24 @@ stage; js "$OPS/engine-client.json" 'd["engines"]["ops"]["fleet"] = "lib-ops-eng
 landed "$OPS/engine-client.json" 'lib-ops-engine-renamed' && red "K1 #871 the ops client names a Store row that does not exist" "K1"
 stage; js "$DRIVEBJ" 'd["modules"]["libs:ops-engine"] = {"dir": "../ab_cloud-libs-shared/libs/ops-engine", "type": "library"}'
 landed "$DRIVEBJ" '"libs:ops-engine"' && red "K6 #871 an app declares the ops engine's module (it would compile the Dagu calls back in)" "K6"
+stage; sub "$RCSVC" 'const val JOB_POLL = "job_poll"' 'const val JOB_POLL = "job_poll2"'
+landed "$RCSVC" '"job_poll2"' && red "K4 #871 the rclone engine renames a method Cloud Drive's client still calls" "K4"
+stage; python3 - "$WORK/t/$RCCLIENT" <<'PYTHON'
+import sys
+p = sys.argv[1]; s = open(p).read()
+gate = "            if (found < needed) return "
+i = s.index(gate); j = s.index("\n", i) + 1
+open(p, "w").write(s[:i] + s[j:])
+PYTHON
+python3 -c 'import sys; sys.exit(0 if "found < needed" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$RCCLIENT" \
+    && red "K7 #871 the rclone client binds without a contract floor" "K7"
+stage; sub "$RC/src/main/AndroidManifest.xml" '<package android:name="${rcloneEnginePackage}" />' ''
+python3 -c 'import sys; sys.exit(0 if "${rcloneEnginePackage}" not in open(sys.argv[1]).read() else 1)' "$WORK/t/$RC/src/main/AndroidManifest.xml" \
+    && red "K8 #871 the rclone client stops querying its engine for every consumer" "K8"
+stage; js "$RC/engine-client.json" 'd["engines"]["rclone"]["fleet"] = "lib-rclone-engine-renamed"'
+landed "$RC/engine-client.json" 'lib-rclone-engine-renamed' && red "K1 #871 the rclone client names a Store row that does not exist" "K1"
+stage; js "$DRIVEBJ" 'd["modules"]["libs:rclone-engine"] = {"dir": "../ab_cloud-libs-shared/libs/rclone-engine", "type": "library"}'
+landed "$DRIVEBJ" '"libs:rclone-engine"' && red "K6 #871 Cloud Drive declares the rclone engine's module (it would compile the binary back in)" "K6"
 stage; sub "$DECSVC" 'const val CONSENT = "consent"' 'const val CONSENT = "consent2"'
 landed "$DECSVC" '"consent2"' && red "K4 #881 the decisions engine renames a method the client still calls" "K4"
 stage; python3 - "$WORK/t/$DECCLIENT" <<'PYTHON'
@@ -281,6 +308,7 @@ js "$IMG/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$AN/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$OPS/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 js "$DEC/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
+js "$RC/engine-client.json" 'd.pop("engines"); d["_planted"] = "no-engines"'
 landed "$DRIVEBJ" 'no-engines' && landed "$SABJ" 'no-engines' && landed "$NEWSBJ" 'no-engines' && landed "$IMG/engine-client.json" 'no-engines' && red "vacuity: no app declares an engine, so nothing is checked" "no app declares"
 
 echo

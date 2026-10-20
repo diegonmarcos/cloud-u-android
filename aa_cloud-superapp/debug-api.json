@@ -66,6 +66,7 @@
     "com.diegonmarcos.cloudlib.ops": 38208,
     "com.diegonmarcos.cloudlib.opsengine": 38229,
     "com.diegonmarcos.cloudlib.rclone": 38209,
+    "com.diegonmarcos.cloudlib.rcloneengine": 38233,
     "com.diegonmarcos.cloudlib.rootfsnixdroid": 38220,
     "com.diegonmarcos.cloudlib.rootfstermux": 38221,
     "com.diegonmarcos.cloudlib.search": 38210,

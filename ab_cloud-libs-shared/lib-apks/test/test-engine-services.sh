@@ -40,7 +40,8 @@
 #       Cloud Calc and Cloud Camera reach through libs:ml-l-sound, #798) and
 #       fleetconfig (#825: every fleet app's FleetConfigProvider binds it) and analytics-sink (#871:
 #       the POST of every app's analytics events, reached through libs:analytics) and ops-engine (#871: the
-#       Dagu calls of the SuperApp's and C3's Dagu page, reached through libs:ops) and decisions-engine (#881:
+#       Dagu calls of the SuperApp's and C3's Dagu page, reached through libs:ops) and rclone-engine (#871 move 10:
+#       the pinned rclone binary and its exec, reached by Cloud Drive through libs:rclone) and decisions-engine (#881:
 #       the one place the fleet asks the Jev decision model, reached through libs:decisions-link). An engine whose contract meta-data
 #       went missing would drop out of every check above without a word.
 #   MUT each property, broken on a copy (and proven broken), goes red.
@@ -57,7 +58,7 @@ GH="$LIBS/gh"
 for required in "$BJ" "$GH/src/main/AndroidManifest.xml" "$GH/build.gradle" "$LIBS/cal/src/main/AndroidManifest.xml" "$LIBS/feed/src/main/AndroidManifest.xml" \
                 "$LIBS/news/src/main/AndroidManifest.xml" "$LIBS/calc/src/main/AndroidManifest.xml" \
                 "$LIBS/ml-l-image-mlkit/src/main/AndroidManifest.xml" "$LIBS/ml-l-sound-yamnet/src/main/AndroidManifest.xml" \
-                "$LIBS/fleetconfig/src/main/AndroidManifest.xml" "$LIBS/analytics-sink/src/main/AndroidManifest.xml" "$LIBS/ops-engine/src/main/AndroidManifest.xml" "$LIBS/decisions-engine/src/main/AndroidManifest.xml" \
+                "$LIBS/fleetconfig/src/main/AndroidManifest.xml" "$LIBS/analytics-sink/src/main/AndroidManifest.xml" "$LIBS/ops-engine/src/main/AndroidManifest.xml" "$LIBS/decisions-engine/src/main/AndroidManifest.xml" "$LIBS/rclone-engine/src/main/AndroidManifest.xml" \
                 "$GH/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
@@ -197,7 +198,7 @@ for module in modules:
                 no("E9 gh: LOGIN_START starts gh's sign-in without GhLoginKeeper.hold — its poll loses the network "
                    "the moment the browser is up")
 
-for must in ("gh", "cal", "feed", "news", "ml-l-image-mlkit", "calc", "ml-l-sound-yamnet", "fleetconfig", "analytics-sink", "ops-engine", "decisions-engine", "net-wg"):
+for must in ("gh", "cal", "feed", "news", "ml-l-image-mlkit", "calc", "ml-l-sound-yamnet", "fleetconfig", "analytics-sink", "ops-engine", "decisions-engine", "rclone-engine", "net-wg"):
     if must not in found:
         no("E8 no %s engine was found — the contract meta-data or the service moved, so every check above ran without it" % must)
 print("    engines: %s" % found)
@@ -224,7 +225,7 @@ _json() { python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); exec
 # a fresh copy of the shelf's gh engine and the lib-apks declaration, laid out as the real tree
 _stage() {
     rm -rf "$MUT/libs" "$MUT/build.json"; mkdir -p "$MUT/libs"
-    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp -r "$LIBS/ml-l-image-mlkit" "$MUT/libs/ml-l-image-mlkit"; cp -r "$LIBS/calc" "$MUT/libs/calc"; cp -r "$LIBS/ml-l-sound-yamnet" "$MUT/libs/ml-l-sound-yamnet"; cp -r "$LIBS/fleetconfig" "$MUT/libs/fleetconfig"; cp -r "$LIBS/analytics-sink" "$MUT/libs/analytics-sink"; cp -r "$LIBS/ops-engine" "$MUT/libs/ops-engine"; cp -r "$LIBS/decisions-engine" "$MUT/libs/decisions-engine"; cp -r "$LIBS/net-wg" "$MUT/libs/net-wg"; cp -r "$LIBS/net" "$MUT/libs/net"; cp "$BJ" "$MUT/build.json"
+    cp -r "$GH" "$MUT/libs/gh"; cp -r "$LIBS/cal" "$MUT/libs/cal"; cp -r "$LIBS/feed" "$MUT/libs/feed"; cp -r "$LIBS/news" "$MUT/libs/news"; cp -r "$LIBS/ml-l-image-mlkit" "$MUT/libs/ml-l-image-mlkit"; cp -r "$LIBS/calc" "$MUT/libs/calc"; cp -r "$LIBS/ml-l-sound-yamnet" "$MUT/libs/ml-l-sound-yamnet"; cp -r "$LIBS/fleetconfig" "$MUT/libs/fleetconfig"; cp -r "$LIBS/analytics-sink" "$MUT/libs/analytics-sink"; cp -r "$LIBS/ops-engine" "$MUT/libs/ops-engine"; cp -r "$LIBS/decisions-engine" "$MUT/libs/decisions-engine"; cp -r "$LIBS/rclone-engine" "$MUT/libs/rclone-engine"; cp -r "$LIBS/net-wg" "$MUT/libs/net-wg"; cp -r "$LIBS/net" "$MUT/libs/net"; cp "$BJ" "$MUT/build.json"
 }
 M_MF="$MUT/libs/gh/src/main/AndroidManifest.xml"
 M_SVC="$MUT/libs/gh/src/main/java/com/diegonmarcos/cloudlib/gh/GhBackendService.kt"
@@ -422,6 +423,38 @@ _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
     python3 -c 'import sys; sys.exit(0 if "project(%s:libs:core%s)" % (chr(39), chr(39)) not in open(sys.argv[1]).read() else 1)' "$MUT/libs/ops-engine/build.gradle" \
         && _applied "$LIBS/ops-engine/build.gradle" "$MUT/libs/ops-engine/build.gradle" "implementation project(':libs:ops')" \
         && _red "E5 #871 the ops engine no longer compiles against libs:core (the permission that guards it)" engines "$MUT/libs" "$MUT/build.json"; }
+
+M_RCMF="$MUT/libs/rclone-engine/src/main/AndroidManifest.xml"
+M_RCSVC="$MUT/libs/rclone-engine/src/main/java/com/diegonmarcos/cloudlib/rclone/engine/RcloneEngineService.kt"
+R_RCSVC="$LIBS/rclone-engine/src/main/java/com/diegonmarcos/cloudlib/rclone/engine/RcloneEngineService.kt"
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_RCMF" 'com.diegonmarcos.cloud.engine.CONTRACT' 'com.diegonmarcos.cloud.engine.VERSION'
+    _applied "$LIBS/rclone-engine/src/main/AndroidManifest.xml" "$M_RCMF" 'engine.VERSION' \
+        && _red "E8 #871 the rclone engine Cloud Drive runs every transfer through stops declaring its contract" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_RCSVC" '        JOB_CANCEL -> calls().jobCancel(JSONObject(request))
+' ''
+    python3 -c 'import sys; sys.exit(0 if "JOB_CANCEL -> calls" not in open(sys.argv[1]).read() else 1)' "$M_RCSVC" \
+        && _applied "$R_RCSVC" "$M_RCSVC" 'JOB_START -> calls' \
+        && _red "E4 #871 the rclone engine lists job_cancel but its dispatch no longer answers it (a running transfer could not be stopped)" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$M_RCMF" 'android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"' ''
+    _applied "$LIBS/rclone-engine/src/main/AndroidManifest.xml" "$M_RCMF" 'android:exported="true"' \
+        && _red "E1 #871 the rclone engine is exported without the signature guard (any app could run rclone on the user's remotes)" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _sub "$MUT/libs/rclone-engine/build.gradle" "    implementation project(':libs:core')
+" ''
+    python3 -c 'import sys; sys.exit(0 if "project(%s:libs:core%s)" % (chr(39), chr(39)) not in open(sys.argv[1]).read() else 1)' "$MUT/libs/rclone-engine/build.gradle" \
+        && _applied "$LIBS/rclone-engine/build.gradle" "$MUT/libs/rclone-engine/build.gradle" "implementation project(':libs:rclone')" \
+        && _red "E5 #871 the rclone engine no longer compiles against libs:core (the permission that guards it)" engines "$MUT/libs" "$MUT/build.json"; }
+
+_stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
+    _json "$MUT/build.json" 'd["lib_apks"]["exec_native"].pop("rclone-engine"); d["lib_apks"]["exec_native"]["_planted"] = "rclone-engine-removed"'
+    python3 -c 'import json,sys; sys.exit(0 if "rclone-engine" not in json.load(open(sys.argv[1]))["lib_apks"]["exec_native"] else 1)' "$MUT/build.json" \
+        && _red "E6 #871 the rclone engine execs a binary but its APK is no longer extracted at install (the exec would find nothing)" engines "$MUT/libs" "$MUT/build.json"; }
 
 M_DECMF="$MUT/libs/decisions-engine/src/main/AndroidManifest.xml"
 M_DECSVC="$MUT/libs/decisions-engine/src/main/java/com/diegonmarcos/superapp/decisions/engine/DecisionsEngineService.kt"
