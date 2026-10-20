@@ -100,7 +100,7 @@ class ConfigsMenuTest {
         assertFalse("Configs is opened from the top bar's Settings, not the island", "settings" in bar)
         val settings = ui.getJSONObject("top_bar").getJSONArray("settings")
         assertTrue("the top bar's Settings menu offers Configs", (0 until settings.length()).any { settings.getString(it) == "configs" })
-        assertEquals("the Store opens on Cloud, not on Configs", "cloud", ui.getString("default_section"))
+        assertEquals("the Store opens on Search (owner, 2026-10-18), not on Configs", "search", ui.getString("default_section"))
     }
 
     @Test
