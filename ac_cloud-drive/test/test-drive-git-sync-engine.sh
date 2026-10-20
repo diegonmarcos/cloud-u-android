@@ -5,31 +5,26 @@
 # ║ JVM test, and branches stay read-only                                    ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 #
-# WHY THIS EXISTS. The engine's verbs are proven by GitEngineTest against real
-# repositories, in the unit phase of every drive ship. What a JVM test cannot
-# see is the SHAPE of the module: whether the manager screen actually reaches
-# each verb (an engine verb no button calls is a feature that does not exist
-# on the phone), whether the engine stays pure JVM (an android.* import in
-# GitEngine.kt makes the JVM suite untestable and silently mocked), and whether
-# the read-only branch rule holds at the source level as well as the API level.
+# WHY THIS EXISTS. #871 move 11: JGit and the verbs' behaviour on real repositories moved to
+# libs:git-sync-engine (Cloud-Lib-Git-Sync-Engine.apk); their checks (the engine proper is pure JVM,
+# branches are read-only in JGit, JGitEngineTest names every verb, the jsch wiring, the session leg)
+# moved to ab_cloud-libs-shared/lib-apks/test/test-git-sync-engine.sh. What only a tester over THIS
+# app's module can see is the SHAPE of the client the manager screen is written against:
+# whether the manager screen actually reaches each verb (an engine verb no button calls is a feature
+# that does not exist on the phone), whether the client stays Android-free (an android.* import in
+# GitEngine.kt makes the JVM suite untestable and silently mocked), and whether the read-only branch
+# rule holds at the source level as well as the API level.
 #
-#   G1  the brief's verb inventory — status, stage, unstage, commit, push,
-#       pull, branches, log, diff, remotes, and the conflict surface's three
-#       verbs resolve / markResolved / abortMerge — is DECLARED on GitEngine
-#       (a `fun <verb>(` in GitEngine.kt) …
+#   G1  the brief's verb inventory — status, stage, unstage, commit, push, pull, branches, log, diff,
+#       remotes, and the conflict surface's three verbs resolve / markResolved / abortMerge — is DECLARED
+#       on GitEngine (a `fun <verb>(` in GitEngine.kt) …
 #   G2  … and REACHED from GitSyncScreen.kt (a `.<verb>(` call), both ends;
 #       and the conflict LIST itself (status().conflicts, the one snapshot) is
 #       rendered by the screen.
 #   G3  GitEngine.kt imports nothing from android.* — it is the JVM-tested half.
-#   G4  branches are read-only: no create/delete/checkout/rename-branch verb in
-#       the engine, no `branchCreate(`/`branchDelete(`/`branchRename(` JGit call
-#       anywhere in the module.
-#   G5  the JVM suite exists and covers every verb in G1 by name: each verb
-#       appears in GitEngineTest.kt, so a verb added to the engine without a
-#       test fails here, not on the phone.
-#   G6  the engine's dependencies are the ones the module doc says: JGit, the
-#       jsch SSH module with the original jsch EXCLUDED and the mwiede fork in
-#       its place (the fork is what understands accept-new).
+#   G4  branches are read-only: no create/delete/checkout/rename-branch verb on the client, and no
+#       JGit anywhere in the module (the app compiles none).
+#   G5  the client's JVM suite exists and covers every verb in G1 by name.
 #
 # OWN-SOURCE ONLY: everything read here is under a module dir this app's
 # build.json declares, so the engine judges the verdict as this app's own.
@@ -40,7 +35,7 @@ APP="$ROOT/ac_cloud-drive"
 MOD="$(python3 -c 'import json,os,sys; b=json.load(open(sys.argv[1])); print(os.path.normpath(os.path.join(sys.argv[2], b["modules"]["libs:git-sync"]["dir"])))' "$APP/build.json" "$APP")"
 ENGINE="$MOD/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitEngine.kt"
 SCREEN="$MOD/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitSyncScreen.kt"
-TEST="$MOD/src/test/java/com/diegonmarcos/cloudlib/gitsync/GitEngineTest.kt"
+TEST="$MOD/src/test/java/com/diegonmarcos/cloudlib/gitsync/GitEngineClientTest.kt"
 GRADLE="$MOD/build.gradle"
 
 FAILURES=0
@@ -83,22 +78,15 @@ fi
 WRITES="$(grep -rnE "\.(branchCreate|branchDelete|branchRename)\(" "$MOD/src/main")"
 if [ -z "$WRITES" ]; then pass "no JGit branchCreate/branchDelete/branchRename call in the module"; else fail "branch-writing JGit call:"; printf '%s\n' "$WRITES" | sed 's/^/        /'; fi
 
-echo "── G5 the JVM suite names every verb ──"
+echo "── G5 the client's JVM suite names every verb ──"
 TESTS="$(grep -cE "^\s*@Test" "$TEST")"
-if [ "$TESTS" -gt 0 ]; then pass "GitEngineTest has $TESTS @Test methods"; else fail "GitEngineTest has no @Test"; fi
+if [ "$TESTS" -gt 0 ]; then pass "GitEngineClientTest has $TESTS @Test methods"; else fail "GitEngineClientTest has no @Test"; fi
 for verb in $VERBS; do
     if grep -qE "\.$verb\(" "$TEST"; then pass "test exercises .$verb("; else fail "no test calls .$verb("; fi
 done
-if grep -qE "MERGING" "$TEST" && grep -qE "<<<<<<<" "$TEST"; then pass "the conflict test reads the merge state and the markers off disk"; else fail "the conflict test does not read the MERGING state and the conflict markers"; fi
-
-echo "── G6 dependencies match the module's own account of them ──"
-if grep -qE "org\.eclipse\.jgit:org\.eclipse\.jgit:" "$GRADLE"; then pass "JGit declared"; else fail "JGit not declared"; fi
-if grep -qE "org\.eclipse\.jgit\.ssh\.jsch" "$GRADLE" && grep -qE "exclude group: 'com\.jcraft', module: 'jsch'" "$GRADLE" && grep -qE "com\.github\.mwiede:jsch" "$GRADLE"; then
-    pass "ssh.jsch with the original jsch excluded and the mwiede fork in its place"
-else
-    fail "the SSH transport is not wired as documented (ssh.jsch + exclude com.jcraft:jsch + com.github.mwiede:jsch)"
-fi
-if grep -qE '"StrictHostKeyChecking", "accept-new"' "$ENGINE"; then pass "host keys: accept-new, never 'no'"; else fail "StrictHostKeyChecking is not accept-new"; fi
+echo "── G6 the app compiles no JGit ──"
+if grep -qE "org\.eclipse\.jgit|com\.jcraft" "$GRADLE"; then fail "libs:git-sync still depends on JGit/jsch — the engine APK carries them"; else pass "libs:git-sync carries no JGit and no jsch"; fi
+if grep -rqE "org\.eclipse\.jgit|com\.jcraft" "$MOD/src/main"; then fail "libs:git-sync's source imports JGit/jsch"; else pass "no JGit import in libs:git-sync"; fi
 
 echo
 if [ "$FAILURES" -eq 0 ]; then echo "test-drive-git-sync-engine: all checks passed"; else echo "test-drive-git-sync-engine: $FAILURES check(s) FAILED"; exit 1; fi

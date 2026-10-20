@@ -46,7 +46,7 @@ before any module moved, and it records the decisions that move or keep each mod
 | fin | GUI | 3.46 / – / – / 7.36 | me | – | stays |
 | firewall | engine (firestack VPN) + fragment | 22.10 / 19.45 / – / 6.48 | superapp | per connection | later, not safe: VPN consent and always-on are per package (net-wg is the precedent, but it moves the user's VPN identity) |
 | **gh** | engine (static `gh`) | 83.40 / 38.93 / – / 6.54 | drive (14.91 MB compressed) | per action: status, list, sign-in (streaming), credential | **MOVE 1** |
-| git-sync | mixed: JGit + `GitSyncScreen` | 18.90 / – / – / 60.95 | drive | per action | **blocked for now**: repos live in the shared store (`<storage>/CloudDrive/git`); an engine in its own uid needs its own all-files grant |
+| git-sync | mixed: JGit + `GitSyncScreen` | 18.90 / – / – / 60.95 | drive | per action | **moved (move 11, #871)**: JGit and the verbs over it are `libs/git-sync-engine` (own APK); Drive keeps the screen, the models, the registry, the credential store and the auth-chain walker. The blocker ("an engine in its own uid needs its own all-files grant") was answered, not waited out: the Store's existing "Grant missing" gives it (see Move 10) |
 | **gix** | engine (static gitoxide) | 44.52 / 18.77 / – / 6.54 | drive (9.92 MB compressed) — **zero call sites** | – | **MOVE 2** (unlink) |
 | health | mixed (Health Connect) | 12.65 / – / – / 31.46 | superapp, me | – | blocked: Health Connect grants are per package |
 | kde-connect | engine + device-admin receiver | 9.86 / – / – / 17.38 | superapp | per device event | later: device-admin enrolment is per package |
@@ -318,7 +318,7 @@ file, not a tree, so the move-6 mechanism does not apply.
 
 | module | the tree |
 |---|---|
-| git-sync | JGit working trees in the shared store (`<storage>/CloudDrive/git`), plus `GitSyncScreen` |
+| git-sync | **moved by move 11 (#871)** -- the working trees are reached through the engine's own all-files grant; the credentials and the ssh files stay the caller's and travel per call |
 | mounts | SFTP/SMB/WebDAV transfers land in the caller's storage, plus `MountsScreen` (Compose) |
 | rclone | **moved by move 10 (#871)** -- the "binary-only split" and its exec question are replaced by an IPC engine that execs its own binary; the shared-store tree needs the engine's own all-files grant, given by the Store's existing "Grant missing" flow |
 
@@ -463,3 +463,32 @@ covers `libs/rclone/engine-client.json` with K1, K4, K6, K7, K8 cases, `lib-clas
 
 **Not verified on a device.** The bind, the all-files grant on the engine and a live transfer are proven by
 static testers, the two JVM suites and the APK build only.
+
+## Move 11 — git-sync: JGit and the git verbs leave Cloud Drive, the screen and the credentials stay (#871)
+
+Same two answers as move 10. The engine APK runs JGit in its own uid on the caller's repository in the shared
+store (`<storage>/CloudDrive/git`), which needs the engine's own `MANAGE_EXTERNAL_STORAGE`: declared in its
+manifest and given by the Store's Access > Android Perms > "Grant missing" (`PermsGrant`), with the same
+sentence when it is missing. Nothing needs a per-package grant that an install cannot get.
+
+| piece | where | what it does |
+|---|---|---|
+| contract + client + screen | `libs/git-sync` (kept, class `gui`) | `IGitSyncEngine.aidl` (`call(method, request)` + `methods()`), `GitWire` (the verbs and the JSON names both sides speak), `GitTransport` / `GitLink` (PackageManager handshake before any bind; bound for one verb and its chunks), `GitEngine` (the same verbs the screens were written against, Android-free, over the transport; `GitEngines.kt` is its Context-taking face, so call sites read `GitEngine(context, dir)`), the models (now `@Serializable`: the same classes on both sides, one codec), `RepoRegistry`, `GitCredentialStore`, `GitAuthChain`, `GitSyncScreen` |
+| engine | `libs/git-sync-engine` (new, `engine`, `Cloud-Lib-Git-Sync-Engine.apk`, package `com.diegonmarcos.cloudlib.gitsyncengine`, debug port 38234) | `GitSyncEngineService` (exported, `CONSTELLATION_DATA`, `${applicationId}.ENGINE`, CONTRACT 1, methods `info`, `git`, `chunk`), `GitCalls` (one `git` method with a `verb`: the 26 verbs of `GitWire.VERBS`; the answer is the model as JSON text), `JGitEngine` (the former `GitEngine`, unchanged in behaviour), JGit + the mwiede jsch fork |
+| credentials | per call | the caller sends them: a token or session header as values; an ssh key and `known_hosts` as TEXT (they are files in the caller's private storage, which another uid cannot read), written to a private scratch directory for that one call and deleted after. A `known_hosts` that a first contact extended comes back and the caller stores it. The engine keeps and logs none of it |
+| long results | `chunk` | a diff over 400 kB comes back in chunks the client reassembles |
+| degradation | `GitLink` | an absent, too-old or failing engine is an `IOException` naming what to install; a verb on a shared-storage path without the grant answers the sentence that says so |
+
+**What a change now rebuilds.** A JGit bump, a verb, the ssh wiring: `Cloud-Lib-Git-Sync-Engine.apk` only
+(rebuild-scenarios: 0 apps, 1 lib). Cloud Drive no longer carries JGit, jsch and their dependencies.
+
+**Checks.** `JGitEngineTest` (the former `GitEngineTest`, real repositories over `file://`) and `GitCallsTest`
+(the JSON surface, ssh scratch files, chunks, refusals) in the engine; `GitEngineClientTest` (against a fake engine)
+in the contract. The engine-side shape checks (pure JVM, read-only branches, the jsch wiring, the session leg, wire
+verbs equal implemented verbs) moved to `lib-apks/test/test-git-sync-engine.sh`; the Drive testers keep the client
+side. `test-engine-services.sh` E8 requires the engine (+4 mutations), the contract guard covers
+`libs/git-sync/engine-client.json` with K1, K4, K6, K7, K8 cases, `lib-classes` moves `git-sync` to `gui` and
+`git-sync-engine` to `engine` (backlog 29 to 28).
+
+**Not verified on a device.** The bind, the all-files grant on the engine, a clone or push over the network and an ssh
+first contact are proven by static testers, the JVM suites and the APK build only.

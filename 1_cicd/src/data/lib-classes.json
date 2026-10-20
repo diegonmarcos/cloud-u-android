@@ -8,7 +8,7 @@
     "pinned": "Non-GUI, but bound to the consuming process by an OS boundary no IPC fixes; the reason is required.",
     "logic": "Non-GUI logic still compiled into its apps: the migration backlog. Each one is a candidate engine."
   },
-  "backlog_baseline": 29,
+  "backlog_baseline": 28,
   "libs": {
     "ai":                      { "class": "gui",      "why": "#823 the fleet's AI chat (renamed from search-page) in Compose: the page, the consent card, the assistant panel, the gateway and OpenRouter backends and the shared ai.json contract, hosted and themed by cloud-search, cloud-browser, cloud-drive and cloud-tools-small-llms. It stores nothing of its own (sessions go in the host's AiSessionStore), reads no OpenRouter key (the app hands an AiTokenSource) and ships no APK." },
     "analytics":               { "class": "contract", "why": "#871 engine-apk-split move 7: the contract half of the analytics sink -- the IAnalyticsSink wire, the SinkLink client, and what is per app and must survive an absent engine (the bounded per-sink queue, the consent flag, the visitor id, the site ids baked from the consuming app's build.json). The HTTP POST and the Umami/Matomo wire formats are the engine's (libs:analytics-sink). Stays dependency-free (no libs:core, no libs:databackend) because the upstream forks compile it with no shared-module graph, so the wire is its own one-method AIDL.", "budget_lines": 460 },
@@ -38,7 +38,8 @@
     "firewall":                { "class": "pinned",   "why": "A VpnService runs under the VPN consent of the app that requested it; moving it moves the consent and drops the tunnel." },
     "gesture":                 { "class": "gui",      "why": "Upstream gesture helper, gallery only." },
     "gh":                      { "class": "engine",   "why": "#705 GhBackendService execs libgh.so in Cloud-Lib-Gh; Drive binds it." },
-    "git-sync":                { "class": "logic",    "why": "Drive's git sync engine, compiled in." },
+    "git-sync":                { "class": "gui",      "why": "The GitSync screen (GitSyncScreen: repositories, changes, log, branches, remotes, settings) hosted by cloud-drive. #871 engine-apk-split move 11: JGit and the verbs over it left for libs:git-sync-engine; what stays is the screen, the models, the repository registry, the credential store (keystore-backed, the app's), the auth-chain walker and the thin client (the IGitSyncEngine wire, GitLink handshake-and-bind, GitEngine with the same verbs). It leaves the backlog (29 -> 28) because the logic compiled in is now the engine." },
+    "git-sync-engine":         { "class": "engine",   "why": "#871 Cloud-Lib-Git-Sync-Engine: JGit and every git verb the manager offers, in their own process, on the caller's repository with the credentials the caller sends for that call and nothing kept; cloud-drive compiles libs:git-sync (the contract) and not this. Holds its own All-files grant (Store > Access > Android Perms) for repositories in the shared store." },
     "gix":                     { "class": "engine",   "why": "Cloud-Lib-Gix (binary engine); no app compiles it." },
     "health":                  { "class": "gui",      "why": "Health dashboards (SuperApp, cloud-me)." },
     "keyboard":                { "class": "gui",      "why": "The IME itself (cloud-keyboard)." },

@@ -1,4 +1,12 @@
-// libs:git-sync — the fleet's native git manager — status, stage/unstage, commit, push/pull, branch list, log, diff, remotes, conflicts, over JGit (push 2 lands the engine).
+// libs:git-sync — the git manager's CONTRACT and its screen: the IGitSyncEngine wire, the GitEngine client
+// (a thin face over the engine, the same verbs the screens were written against), the models, the
+// repository registry, the credential store, the auth-chain walker and GitSyncScreen.
+//
+// #871 engine-apk-split move 11: JGIT AND THE PROCESS THAT RUNS IT ARE NOT HERE. The git verbs
+// (status, stage/unstage, commit, push/pull, branches, log, diff, remotes, conflicts, clone) run in
+// libs:git-sync-engine, shipped only as Cloud-Lib-Git-Sync-Engine.apk; this module is what Cloud Drive
+// compiles, so a JGit bump or a change to how a verb runs republishes that one APK and no app. Same
+// module name, so Drive's wiring did not change.
 //
 // ONE OF THE FOUR cloud-drive ENGINE LIBRARIES (#567). The owner's rule for that
 // application: the main APK is chrome, every tooling is its own library, and the
@@ -25,11 +33,31 @@ plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
-    // ManagedRepo is persisted as JSON by RepoRegistry; kotlinx-serialization,
-    // like libs:updater, so the JVM tests exercise the real (de)serialisation
-    // rather than android.jar's org.json stubs.
+    // ManagedRepo and the models are @Serializable (RepoRegistry persists ManagedRepo as JSON; the models
+    // cross the binder to and from the engine); kotlinx-serialization, like libs:updater, so the JVM
+    // tests exercise the real (de)serialisation rather than android.jar's org.json stubs.
     id 'org.jetbrains.kotlin.plugin.serialization'
 }
+
+// #871 THE ENGINE THIS CLIENT BINDS: engine-client.json beside this file, its package from the
+// constellation fleet manifest. Anchored on this module's own (canonical) directory, the one thing
+// that does not move: consumers link this directory from their own trees and the canonical path
+// still leads back here.
+def moduleDir   = projectDir.canonicalFile
+def engineDecl  = new groovy.json.JsonSlurper().parse(new File(moduleDir, 'engine-client.json')).engines?.gitsync
+if (engineDecl == null) throw new GradleException("libs:git-sync: engine-client.json::engines.gitsync is not declared")
+def fleetFile   = new File(moduleDir, '../../../aa_cloud-superapp/data/constellation-fleet.json')
+if (!fleetFile.isFile()) throw new GradleException("libs:git-sync: the fleet manifest is not at ${fleetFile}")
+def engineFleet = new groovy.json.JsonSlurper().parse(fleetFile).apps.find { it.id == engineDecl.fleet }
+if (engineFleet == null) {
+    throw new GradleException(
+        "libs:git-sync: engine-client.json::engines.gitsync.fleet '${engineDecl.fleet}' is not in ${fleetFile} — " +
+        "every consumer would bind a package no Store row installs")
+}
+def gitsyncEnginePackage = engineFleet.package.toString()
+def gitsyncAction        = engineDecl.action.toString().replace('{package}', gitsyncEnginePackage)
+def gitsyncMinContract   = engineDecl.min_contract as int
+if (gitsyncMinContract < 1) throw new GradleException("libs:git-sync: engines.gitsync.min_contract must be >= 1")
 
 android {
     namespace 'com.diegonmarcos.cloudlib.gitsync'
@@ -37,10 +65,19 @@ android {
 
     defaultConfig {
         minSdk 26
+        // #871 the git sync engine that runs JGit (Cloud-Lib-Git-Sync-Engine.apk).
+        buildConfigField "String", "GITSYNC_ENGINE_PACKAGE",      "\"${gitsyncEnginePackage}\""
+        buildConfigField "String", "GITSYNC_ENGINE_ACTION",       "\"${gitsyncAction}\""
+        buildConfigField "int",    "GITSYNC_ENGINE_MIN_CONTRACT", "${gitsyncMinContract}"
+        // Resolved in THIS library's manifest, so every consumer's merged manifest queries the
+        // engine: on Android 11+ an unqueried package reads exactly like "not installed".
+        manifestPlaceholders = [gitsyncEnginePackage: gitsyncEnginePackage]
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
+        aidl = true
     }
 
     testOptions {
@@ -77,31 +114,11 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
 
-    // THE ENGINE. JGit is the maintained pure-Java git (Eclipse), the same
-    // engine the original Kotlin GitSync used before it moved to Flutter + git2.
-    // Verified against the 7.8.0 sources jar on 2026-09-24: every command this
-    // module calls (status/add/rm/reset/commit/push/pull/fetch/branchList/log/
-    // diff/remote*/checkout stage) exists with the signature used. Its POM pulls
-    // JavaEWAH, slf4j-api and commons-codec; nothing native, nothing Android
-    // cannot load on minSdk 26 (java.nio.file, java.time, javax.net.ssl).
-    implementation 'org.eclipse.jgit:org.eclipse.jgit:7.8.0.202609011348-r'
-    // SSH transport over jsch. JGit's own ssh.jsch module declares the ORIGINAL
-    // com.jcraft:jsch (0.1.55, unmaintained since 2018); it is excluded and the
-    // maintained mwiede fork — same com.jcraft.jsch package, drop-in — is what
-    // ships. That fork is what understands StrictHostKeyChecking=accept-new,
-    // which GitEngine.sshCallback relies on to record a host key on first
-    // contact and refuse a changed one after.
-    implementation('org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:7.8.0.202609011348-r') {
-        exclude group: 'com.jcraft', module: 'jsch'
-    }
-    implementation 'com.github.mwiede:jsch:2.28.7'
-    // slf4j-api arrives through JGit; without a binding slf4j 2 prints one
-    // "no providers" line and discards everything, which is the wanted outcome
-    // on a phone. The nop binding makes that explicit instead of accidental.
-    implementation 'org.slf4j:slf4j-nop:2.0.16'
     // Tokens and passphrases at rest (GitCredentialStore): keystore-backed,
     // the same dependency libs:mail / libs:chat / libs:ops already carry.
     implementation 'androidx.security:security-crypto:1.1.0'
 
     testImplementation 'junit:junit:4.13.2'
+    // The real org.json: android.jar's copy is a stub that throws on the JVM.
+    testImplementation 'org.json:json:20240303'
 }

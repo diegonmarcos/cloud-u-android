@@ -286,6 +286,7 @@
      "lib-feed",
      "lib-fleetconfig",
      "lib-gh",
+     "lib-git-sync-engine",
      "lib-ml-l-image-mlkit",
      "lib-ml-l-sound-yamnet",
      "lib-net-wg",
@@ -515,6 +516,7 @@
      "lib-feed",
      "lib-fleetconfig",
      "lib-gh",
+     "lib-git-sync-engine",
      "lib-ml-l-image-mlkit",
      "lib-ml-l-sound-yamnet",
      "lib-net-wg",
@@ -636,6 +638,7 @@
      "lib-feed",
      "lib-fleetconfig",
      "lib-gh",
+     "lib-git-sync-engine",
      "lib-ml-l-image-mlkit",
      "lib-ml-l-sound-yamnet",
      "lib-net-wg",
@@ -685,6 +688,30 @@
      "aa_cloud-superapp",
      "drive"
     ]
+   }
+  ],
+  "git-sync-engine": [
+   {
+    "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+    "level": "signature",
+    "source": "libs:git-sync-engine/src/main/AndroidManifest.xml",
+    "component": "com.diegonmarcos.cloudlib.gitsync.engine.GitSyncEngineService",
+    "id": "service:com.diegonmarcos.cloudlib.gitsync.engine.GitSyncEngineService",
+    "kind": "service",
+    "name": "GitSyncEngineService",
+    "actions": [
+     "<pkg>.ENGINE"
+    ],
+    "aidl": [
+     {
+      "interface": "IGitSyncEngine",
+      "methods": [
+       "call",
+       "methods"
+      ]
+     }
+    ],
+    "callers": []
    }
   ],
   "keyboard": [
@@ -1074,6 +1101,7 @@
       "lib-feed",
       "lib-fleetconfig",
       "lib-gh",
+      "lib-git-sync-engine",
       "lib-ml-l-image-mlkit",
       "lib-ml-l-sound-yamnet",
       "lib-net-wg",
@@ -2871,6 +2899,21 @@
     "devtools",
     "fleetconfig-model",
     "gh"
+   ],
+   "endpoints": []
+  },
+  {
+   "id": "lib-git-sync-engine",
+   "pkg": "com.diegonmarcos.cloudlib.gitsyncengine",
+   "label": "cloud-lib-git-sync-engine",
+   "kind": "lib",
+   "dir": "libs:git-sync-engine",
+   "door": true,
+   "libs": [
+    "core",
+    "devtools",
+    "fleetconfig-model",
+    "git-sync-engine"
    ],
    "endpoints": []
   },
