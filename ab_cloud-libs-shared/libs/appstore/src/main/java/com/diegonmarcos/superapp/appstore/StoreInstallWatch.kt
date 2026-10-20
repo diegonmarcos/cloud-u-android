@@ -34,6 +34,15 @@ object StoreInstallWatch {
     const val MSG_RETRY = "the install prompt was dismissed, aborted or not answered — Retry installs " +
         "the downloaded APK again"
 
+    /** #906 The retry sentence, closed with what PackageInstaller last said (or that it said nothing),
+     *  so a handover that went quiet never reads as a bare "cached". Pure. */
+    fun retryMessage(lastStatus: String?): String =
+        "$MSG_RETRY (PackageInstaller: ${lastStatus ?: "no status was delivered for this session"})"
+
+    /** #906 The row text while a handover is still waiting. Pure. */
+    fun waitingText(lastStatus: String?): String =
+        "waiting on Android's installer - ${lastStatus ?: "handed over, no status delivered yet"}"
+
     /** A session may not be listed for a moment after handover (or a channel
      *  may not use one at all): "gone" counts only after this long. */
     const val SETTLE_MS = 10_000L
@@ -100,10 +109,10 @@ object StoreInstallWatch {
                 forget(ctx, app.pkg)
                 // The installer's own reason (ABORTED: "User rejected") wins.
                 if (ApkCache.noteOf(ctx, app.pkg) == null)
-                    ApkCache.note(ctx, app.pkg, ApkCache.STAGE_INSTALL, MSG_RETRY)
+                    ApkCache.note(ctx, app.pkg, ApkCache.STAGE_INSTALL, retryMessage(ApkCache.installerStatusOf(ctx, app.pkg)))
                 val st = UpdateProgress.state
                 if (st is UpdateProgress.State.Installing || st is UpdateProgress.State.Waiting)
-                    UpdateProgress.update(UpdateProgress.State.Failed(MSG_RETRY, appId = app.id, pkg = app.pkg))
+                    UpdateProgress.update(UpdateProgress.State.Failed(retryMessage(ApkCache.installerStatusOf(ctx, app.pkg)), appId = app.id, pkg = app.pkg))
                 Log.i(TAG, "${app.pkg}: install did not finish — row back to Retry")
             }
         }

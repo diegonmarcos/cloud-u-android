@@ -228,6 +228,23 @@ object ApkCache {
         if (pkg.isNotBlank()) notes(ctx).edit().remove(pkg).apply()
     }
 
+    /** #906 What PackageInstaller last said about [pkg]'s session, as a sentence
+     *  ("PENDING_USER_ACTION - ..."). Kept apart from [note]: a pending prompt is
+     *  not a failure and must not hold the unattended pass off the app. Read by
+     *  the Store row so a handover that goes quiet still names its last status. */
+    fun installerStatus(ctx: Context, pkg: String, text: String) {
+        if (pkg.isBlank()) return
+        notes(ctx).edit().putString("status:$pkg", "${System.currentTimeMillis()}\n$text").apply()
+    }
+
+    fun installerStatusOf(ctx: Context, pkg: String): String? = runCatching {
+        notes(ctx).getString("status:$pkg", null)?.substringAfter('\n')
+    }.getOrNull()
+
+    fun clearInstallerStatus(ctx: Context, pkg: String) {
+        if (pkg.isNotBlank()) notes(ctx).edit().remove("status:$pkg").apply()
+    }
+
     /** The record written by [keep], or null when there is none. */
     fun record(apk: File): Record? = runCatching {
         val lines = recordFile(apk).readLines()

@@ -129,7 +129,11 @@ object StoreStages {
         }
         // #858 a handover that was aborted, abandoned or never answered turns
         // into the Install-stage note read below: the row offers Retry.
-        runCatching { StoreInstallWatch.sweep(ctx, app) }
+        // #906 a handover still waiting says so (and what PackageInstaller last said),
+        // instead of falling back to "cached (ready to install)" with no word.
+        if (runCatching { StoreInstallWatch.sweep(ctx, app) }.getOrNull() == StoreInstallWatch.WAITING)
+            return Stage("installing", StoreInstallWatch.waitingText(ApkCache.installerStatusOf(ctx, app.pkg)),
+                emptyList(), cachedFor(ctx, app))
         // A uid change (INSTALL_FAILED_UID_CHANGED, -24) is not retryable: while the old
         // build is installed the row is the one-time migration, with no Install/Download.
         val mig = runCatching { SharedUidMigration.observe(ctx, app) }.getOrNull()
@@ -371,6 +375,7 @@ object StoreStages {
                 return
             }
             ApkCache.clearNote(ctx, app.pkg)
+            ApkCache.clearInstallerStatus(ctx, app.pkg)
             UpdateProgress.stage(UpdateProgress.STAGE_INSTALLING)
             val before = installedKey(ctx, app)
             val msg = installer(ctx, app, v)

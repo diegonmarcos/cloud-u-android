@@ -161,6 +161,7 @@ class StoreCacheStagesTest {
         ApkCache.clear(ctx)
         ApkCache.freeBytes = { c -> runCatching { android.os.StatFs(ApkCache.dir(c).path).availableBytes }.getOrElse { ApkCache.dir(c).usableSpace } }
         ApkCache.clearNote(ctx, pkg)
+        ApkCache.clearInstallerStatus(ctx, pkg)
         UpdateProgress.removeObserver(watch)
         UpdateProgress.reset()
     }
@@ -807,5 +808,52 @@ class StoreCacheStagesTest {
         sheet(accept = true)
         StoreStages.install(ctx, app())
         assertFalse(StoreDebugApi.progress().getBoolean("active"))
+    }
+
+    // ── #906 a handover that goes quiet says why, never "cached" ─────────
+
+    @Test
+    fun `906 - an installer that hands over and never answers reads as waiting, then as a Retry that names the missing status`() {
+        StoreStages.installer = { _, _, _ -> null }   // committed; the platform says nothing
+        val waiting = StoreStages.install(ctx, app())
+        assertEquals("a handover still open is installing, not cached", "installing", waiting.id)
+        assertTrue("it says what it waits on: ${waiting.text}", waiting.text.contains("waiting on Android's installer"))
+        assertEquals("the cache is kept for the retry", true, waiting.cached?.file?.exists())
+
+        // The session is gone and nothing arrived: the row becomes a Retry that names the silence.
+        com.diegonmarcos.superapp.appstore.StoreInstallWatch.sweep(ctx, app(),
+            System.currentTimeMillis() + com.diegonmarcos.superapp.appstore.StoreInstallWatch.SETTLE_MS + 1_000)
+        val after = StoreStages.stage(ctx, app())
+        assertEquals("error", after.id); assertEquals("install", after.failedAt)
+        assertTrue("no status delivered is stated: ${after.text}", after.text.contains("no status was delivered"))
+    }
+
+    @Test
+    fun `906 - the last PackageInstaller status is quoted while waiting and on the Retry`() {
+        StoreStages.installer = { c, _, v ->
+            PackageInstallerReceiver().onReceive(c, Intent()
+                .putExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_PENDING_USER_ACTION)
+                .putExtra(PackageInstaller.EXTRA_STATUS_MESSAGE, "")
+                .putExtra(Intent.EXTRA_INTENT, Intent("android.intent.action.VIEW"))
+                .putExtra(PackageInstallerReceiver.EXTRA_APK_PATH, v.file.absolutePath)
+                .putExtra(PackageInstallerReceiver.EXTRA_TARGET_PKG, pkg))
+            null
+        }
+        val waiting = StoreStages.install(ctx, app())
+        assertEquals("installing", waiting.id)
+        assertTrue("the pending prompt is named: ${waiting.text}", waiting.text.contains("PENDING_USER_ACTION"))
+        com.diegonmarcos.superapp.appstore.StoreInstallWatch.sweep(ctx, app(),
+            System.currentTimeMillis() + 400_000)
+        val after = StoreStages.stage(ctx, app())
+        assertEquals("error", after.id)
+        assertTrue("the Retry quotes the last status: ${after.text}", after.text.contains("PENDING_USER_ACTION"))
+    }
+
+    @Test
+    fun `906 - control - a landed install clears the watch, so the row never reads waiting`() {
+        sheet(accept = true)
+        val s = StoreStages.install(ctx, app())
+        assertEquals("installed", s.id)
+        assertEquals(null, ApkCache.installerStatusOf(ctx, pkg))
     }
 }

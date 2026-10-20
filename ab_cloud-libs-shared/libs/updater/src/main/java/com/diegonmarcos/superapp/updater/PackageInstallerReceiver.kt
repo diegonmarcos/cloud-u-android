@@ -172,6 +172,8 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                         quiet = inPass || !isNew(context, gateKey, build, "no confirmation screen"))
                     return
                 }
+                if (!isUninstall && gateKey.isNotEmpty()) ApkCache.installerStatus(context, gateKey,
+                    PENDING_STATUS_TEXT)
                 confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 // POST THE NOTIFICATION FIRST, ALWAYS. THEN TRY THE DIALOG.
                 //
@@ -261,6 +263,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                 // what is now installed can never be installed again.
                 if (!isUninstall && gateKey.isNotEmpty()) {
                     ApkCache.clearNote(context, gateKey)
+                    ApkCache.clearInstallerStatus(context, gateKey)
                     runCatching {
                         val pi = context.packageManager.getPackageInfo(gateKey, 0)
                         val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pi.longVersionCode
@@ -509,6 +512,8 @@ class PackageInstallerReceiver : BroadcastReceiver() {
     }
 
     companion object {
+        /** #906 what the Store row quotes while Android's install prompt is unanswered. */
+        const val PENDING_STATUS_TEXT = "PENDING_USER_ACTION (Android is waiting for your tap on the install prompt)"
         /** The "tap to finish installing" channel and its notification ids (confirm = id + 1);
          *  public so the SuperApp can retire what an older build posted (#894). */
         const val UPDATER_CHANNEL = "superapp-updater"
