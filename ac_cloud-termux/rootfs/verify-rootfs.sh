@@ -75,7 +75,7 @@ else
     echo "FAIL nothing serving \$HOME on 127.0.0.1:$ws_port ${i}s after login; server log: $(tail -5 "$W/home/.cloud-webserver.log" 2>/dev/null | tr '\n' ' ')"; fail=1
 fi
 ws_bin="$STAGE/rootfs/usr/local/bin/fleet-webserver"
-if [ -x "$ws_bin" ] && file -bL "$ws_bin" | grep -q 'statically linked'; then
+if [ -x "$ws_bin" ] && file -bL "$ws_bin" | grep -q -E 'statically linked|static-pie linked'; then
     echo "ok   fleet-webserver (the shared ab_cloud-libs-shared/libs/fleet-webserver) is baked as a static executable"
 else
     echo "FAIL $ws_bin is missing or not a static executable"; fail=1

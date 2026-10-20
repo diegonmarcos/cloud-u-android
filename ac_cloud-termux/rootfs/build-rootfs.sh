@@ -65,7 +65,7 @@ ws_triple="$(uname -m)-unknown-linux-musl"
 rustup target add "$ws_triple"
 bash "$WS_SRC/sync.sh" --check
 cargo build --release --locked --target "$ws_triple" --manifest-path "$WS_SRC/Cargo.toml" --target-dir "$W/ws-target"
-file "$W/ws-target/$ws_triple/release/$WS_BIN" | grep -q 'statically linked' \
+file "$W/ws-target/$ws_triple/release/$WS_BIN" | grep -q -E 'statically linked|static-pie linked' \
     || { echo "FAIL $WS_BIN is not a static binary: $(file "$W/ws-target/$ws_triple/release/$WS_BIN")" >&2; exit 1; }
 sudo install -D -m 0755 -s "$W/ws-target/$ws_triple/release/$WS_BIN" "$W/tree/usr/local/bin/$WS_BIN"
 
