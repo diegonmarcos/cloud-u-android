@@ -73,6 +73,10 @@ jobs:
 
       - name: Build (wasmJsBrowserDistribution)
         if: steps.gate.outputs.skip != 'true'
+        # YARN_IGNORE_PATH: an app whose tree carries a Yarn Berry config (.yarnrc.yml with yarnPath,
+        # as Cloud Notes does) must not hand Kotlin's own Yarn 1 install over to that Berry release.
+        env:
+          YARN_IGNORE_PATH: "1"
         run: cd "$WORK_DIR" && ./gradlew wasmJsBrowserDistribution --no-daemon --console=plain
 
       # The web tester asserts the dist, so it runs AFTER the build and is told
