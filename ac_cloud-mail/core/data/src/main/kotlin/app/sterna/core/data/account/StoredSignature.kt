@@ -52,6 +52,13 @@ data class StoredSignature(
      */
     fun renderableHtml(): String = if (isHtml) signatureWireHtml(html) else ""
 
+    /** This signature with every link to a [HTTPS_ONLY_HOSTS] site on https:// (#1007); same instance when none. */
+    fun withHttpsLinks(): StoredSignature {
+        val t = upgradeHttpsOnlyLinks(text)
+        val h = upgradeHttpsOnlyLinks(html)
+        return if (t == text && h == html) this else copy(text = t, html = h)
+    }
+
     companion object {
         /**
          * The id a pre-#206 single signature keeps when it becomes the first of the new set. Fixed
@@ -60,6 +67,17 @@ data class StoredSignature(
          */
         const val MIGRATED_ID = "migrated"
 
+        /** Sites that only answer on https; a signature link to one with http:// is a downgrade (#1007). */
+        val HTTPS_ONLY_HOSTS: List<String> = listOf("linkedin.com", "lnkd.in")
+
+        private val HTTP_LINK = Regex(
+            """http://((?:[A-Za-z0-9-]+\.)*(?:${HTTPS_ONLY_HOSTS.joinToString("|") { Regex.escape(it) }}))(?![A-Za-z0-9.-])""",
+            RegexOption.IGNORE_CASE,
+        )
+
+        /** [s] with `http://` turned into `https://` for every [HTTPS_ONLY_HOSTS] link, in hrefs and bare text alike. */
+        fun upgradeHttpsOnlyLinks(s: String): String = if (s.isEmpty()) s else HTTP_LINK.replace(s) { "https://" + it.groupValues[1] }
+
         /**
          * One signature from what the owner typed, telling the two halves of the label apart with
          * [looksLikeHtml] — the SAME discriminator [StoredIdentity.withSplitSignature] has always used
@@ -67,13 +85,15 @@ data class StoredSignature(
          * editor and the legacy split disagree about one string, which is how a signature ends up
          * rendered as literal characters in one place and as markup in another.
          */
-        fun of(id: String, name: String, source: String): StoredSignature =
-            if (looksLikeHtml(source)) {
+        fun of(id: String, name: String, rawSource: String): StoredSignature {
+            val source = upgradeHttpsOnlyLinks(rawSource)
+            return if (looksLikeHtml(source)) {
                 // keepLinkTargets: the flattened half is the whole of what a recipient without HTML
                 // receives, so a link that is a WORD there ("Whatsapp") must still carry its address.
                 StoredSignature(id, name, htmlToText(source, keepLinkTargets = true), source)
             } else {
                 StoredSignature(id, name, source, "")
             }
+        }
     }
 }

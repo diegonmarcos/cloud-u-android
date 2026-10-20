@@ -66,7 +66,7 @@ object SignatureTransfer {
     fun decodeEntry(text: String): Entry? =
         runCatching { json.decodeFromString(Entry.serializer(), text) }.getOrNull()?.let { entry ->
             entry.copy(
-                signatures = entry.signatures.map {
+                signatures = entry.signatures.map { it.withHttpsLinks() }.map {
                     if (it.html.isNotBlank() && it.text.isBlank()) it.copy(text = htmlToText(it.html, keepLinkTargets = true)) else it
                 },
             )

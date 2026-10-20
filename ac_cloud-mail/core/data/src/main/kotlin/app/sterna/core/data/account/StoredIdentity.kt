@@ -38,7 +38,7 @@ data class StoredIdentity(
      * in every picker and put a bare delimiter into every message they send.
      */
     fun resolvedSignatures(): List<StoredSignature> {
-        if (signatures.isNotEmpty()) return signatures
+        if (signatures.isNotEmpty()) return signatures.map { it.withHttpsLinks() }
         // Legacy raw HTML may still be sitting in the plain-text field; split it the way every other
         // reader of these two fields does, so the migrated entry is a correct (text, html) pair.
         val split = withSplitSignature()
@@ -49,7 +49,7 @@ data class StoredIdentity(
                 name = "",
                 text = split.signature,
                 html = split.signatureHtml,
-            ),
+            ).withHttpsLinks(),
         )
     }
 
