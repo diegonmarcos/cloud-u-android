@@ -54,7 +54,7 @@ DataStore / Room stores and declared files it cannot move yet.
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
-Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-auth, lib-battery, lib-bottomnav, lib-chat, lib-core, lib-databackend, lib-datamanager, lib-devtools, lib-firewall, lib-fleetconfig-model, lib-health, lib-kde-connect, lib-launcher-apptabs, lib-launcher-onehand, lib-launcher-zoomies, lib-mail, lib-net, lib-ops, lib-search, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-text-tools, lib-ui-kit, lib-updater, lib-webserver.
+Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-auth, lib-battery, lib-bottomnav, lib-chat, lib-core, lib-databackend, lib-datamanager, lib-decisions-link, lib-devtools, lib-firewall, lib-fleetconfig-model, lib-health, lib-kde-connect, lib-launcher-apptabs, lib-launcher-onehand, lib-launcher-zoomies, lib-mail, lib-net, lib-ops, lib-search, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-text-tools, lib-ui-kit, lib-updater, lib-webserver.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
