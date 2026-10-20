@@ -41,11 +41,11 @@ class FleetConfigTest {
     private val m: FleetPolicy.Manifest by lazy { FleetPolicy.manifest(ctx) }
 
     private fun phone(name: String) = FleetPolicy.Opener { _, file, create ->
-        val p = ctx.getSharedPreferences("${name}__$file", Context.MODE_PRIVATE)
+        val p = ctx.getSharedPreferences("${name}__${file.replace('/', '_')}", Context.MODE_PRIVATE)
         if (!create && p.all.isEmpty()) null else p
     }
 
-    private fun prefs(phone: String, file: String) = ctx.getSharedPreferences("${phone}__$file", Context.MODE_PRIVATE)
+    private fun prefs(phone: String, file: String) = ctx.getSharedPreferences("${phone}__${file.replace('/', '_')}", Context.MODE_PRIVATE)
 
     private val DEVICE_KEY = "zz_device_only_install_id"
 
