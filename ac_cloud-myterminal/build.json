@@ -166,6 +166,17 @@
       "site_id": "1"
     }
   },
+  "web": {
+    "_doc": "#876 Cloud My Terminal as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-myterminal-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-myterminal-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: this app declares no bottom-nav island, so the page is one dense list of mock data. The APK's own ship ignores this directory.",
+    "dir": "web",
+    "host": "ubuntu-latest",
+    "artifact": "Cloud-Myterminal.wasm.zip",
+    "gh_asset": "Cloud-Myterminal.wasm.zip",
+    "portal_slug": "cloud-myterminal",
+    "entry": "index.html",
+    "tester": "test-myterminal-web.sh",
+    "size_budget_mb": 20
+  },
   "tests": {
     "_doc": "What CI runs to prove this app works. Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which ship-cloud-myterminal.yml invokes before it builds. Until #675 this block was absent, so the shell phase printed COVERAGE-GAP and exited 0: the only question this app's pipeline asked was whether Gradle exited 0, and Gradle cannot see that the setup instructions named a port the SSH client never dialled, or that the backend switcher enumerated its two options in Kotlin.",
     "shell": {

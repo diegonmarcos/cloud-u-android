@@ -75,6 +75,7 @@ on:
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ac_cloud-myterminal/**"
+      - "!ac_cloud-myterminal/web/**"
 permissions:
   contents: write   # for gh release create
   packages: write   # for ghcr push (oras)

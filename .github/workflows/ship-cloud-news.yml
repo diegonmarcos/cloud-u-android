@@ -51,6 +51,7 @@ on:
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-news/**"
+      - "!ac_cloud-news/web/**"
 permissions:
   contents: write
   packages: write

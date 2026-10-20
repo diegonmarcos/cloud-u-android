@@ -246,7 +246,17 @@
       "module": "ac_cloud-myterminal",
       "application_id": "com.diegonmarcos.ide",
       "description": "cloud-myterminal — constellation of three minimally-forked upstream developer apps (Acode code editor / Amaze File Manager / Amaze File Utilities) plus a thin o",
-      "web": null
+      "web": {
+        "_doc": "#876 Cloud My Terminal as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-myterminal-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-myterminal-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: this app declares no bottom-nav island, so the page is one dense list of mock data. The APK's own ship ignores this directory.",
+        "dir": "web",
+        "host": "ubuntu-latest",
+        "artifact": "Cloud-Myterminal.wasm.zip",
+        "gh_asset": "Cloud-Myterminal.wasm.zip",
+        "portal_slug": "cloud-myterminal",
+        "entry": "index.html",
+        "tester": "test-myterminal-web.sh",
+        "size_budget_mb": 20
+      }
     },
     {
       "name": "cloud-nav",
@@ -270,7 +280,17 @@
       "module": "ac_cloud-news",
       "application_id": "com.diegonmarcos.cloudnews",
       "description": "Diego's Cloud News — standalone Android news app. WebView UI over GDELT-backed topic feeds (economy, technology, geopolitics, climate, finance, AI, energy, heal",
-      "web": null
+      "web": {
+        "_doc": "#876 Cloud News as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-news-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-news-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: this app declares no bottom-nav island, so the page is one dense list of mock data. The APK's own ship ignores this directory.",
+        "dir": "web",
+        "host": "ubuntu-latest",
+        "artifact": "Cloud-News.wasm.zip",
+        "gh_asset": "Cloud-News.wasm.zip",
+        "portal_slug": "cloud-news",
+        "entry": "index.html",
+        "tester": "test-news-web.sh",
+        "size_budget_mb": 20
+      }
     },
     {
       "name": "cloud-notes",
