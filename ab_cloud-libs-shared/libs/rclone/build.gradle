@@ -1,6 +1,12 @@
-// libs:rclone — the rclone engine: remotes config, declared and ad-hoc sync/copy
-// jobs with live progress, remote browsing, over a sha256-pinned STATIC rclone
-// binary (data/rclone-binary.json is the one pin; read its _doc first).
+// libs:rclone — the rclone CONTRACT and its screen: the IRcloneEngine wire, the RcloneRunner client
+// (a thin face over the engine, with the rclone.conf and the job file kept HERE), remotes config,
+// declared and ad-hoc sync/copy jobs with live progress, remote browsing.
+//
+// #871 engine-apk-split move 10: THE BINARY AND THE PROCESS THAT RUNS IT ARE NOT HERE. The pinned
+// static rclone (data/rclone-binary.json, now in libs:rclone-engine) is exec'd by
+// Cloud-Lib-Rclone-Engine.apk in its own uid; this module is what Cloud Drive compiles, so a change
+// to the binary pin or to how rclone is run republishes that one APK and no app. Same module name,
+// so no consumer wiring changed.
 //
 // ONE OF THE FOUR cloud-drive ENGINE LIBRARIES (#567). The owner's rule for that
 // application: the main APK is chrome, every tooling is its own library, and the
@@ -25,110 +31,25 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
-// ── the pinned binary ───────────────────────────────────────────────────────
-// Everything below is read from data/rclone-binary.json. Nothing here names a
-// version, a URL or a hash.
-def rclonePin = new groovy.json.JsonSlurper().parse(file('data/rclone-binary.json'))
-def rcloneJniDir = new File(buildDir, 'generated/rclone-jni')
-
-/**
- * A REAL task class, not a doLast closure: cloud-drive builds with Gradle's
- * configuration cache, which refuses a task action that reaches for script
- * objects ("Cannot reference a Gradle script object from a Groovy closure",
- * run 36072917399). Managed @Input/@Output properties and self-contained
- * helpers are what the cache supports. Downloads once, refuses on either hash
- * mismatch, reads the ELF program headers for PT_INTERP, stages jniLibs.
- */
-abstract class FetchRcloneBinaries extends DefaultTask {
-    @InputFile abstract RegularFileProperty getPinFile()
-    @Internal abstract DirectoryProperty getCacheDir()
-    @OutputDirectory abstract DirectoryProperty getOutDir()
-
-    @TaskAction
-    void fetch() {
-        def pinJson = new groovy.json.JsonSlurper().parse(pinFile.get().asFile)
-        def cache = cacheDir.get().asFile
-        def out = outDir.get().asFile
-        // A plain loop, not .each { }: Gradle runs a DECORATED subclass of this task,
-        // and a closure inside it cannot see the class's own helpers (run 36073449747:
-        // "Could not find method fetchPinned() … of type FetchRcloneBinaries").
-        for (entryAbi in pinJson.binaries.entrySet()) {
-            def abi = entryAbi.key; def pin = entryAbi.value
-            def url = pinJson.url_template.replace('{version}', pinJson.version).replace('{arch}', pin.arch)
-            def zip = new File(cache, "rclone-${pinJson.version}-${pin.arch}.zip")
-            fetchPinned(url, zip, pin.zip_sha256)
-            def entry = pinJson.entry_template.replace('{version}', pinJson.version).replace('{arch}', pin.arch)
-            def staged = new File(out, "${abi}/${pinJson.jni_name}")
-            staged.parentFile.mkdirs()
-            def zf = new java.util.zip.ZipFile(zip)
-            try {
-                def ze = zf.getEntry(entry)
-                if (ze == null) throw new GradleException("rclone: " + zip + " has no entry " + entry)
-                staged.withOutputStream { o -> zf.getInputStream(ze).withStream { i -> o << i } }
-            } finally { zf.close() }
-            def actual = sha256Of(staged)
-            if (actual != pin.binary_sha256) {
-                staged.delete()
-                throw new GradleException("rclone: extracted binary sha256 mismatch for " + abi + "\n  expected " + pin.binary_sha256 + "\n  actual   " + actual)
-            }
-            if (pinJson.interp == 'none' && hasProgramInterpreter(staged)) {
-                staged.delete()
-                throw new GradleException("rclone: " + abi + " binary carries a PT_INTERP — it is dynamically linked and will not run under bionic; the pin declares interp=none")
-            }
-            staged.setExecutable(true, false)
-            logger.quiet("rclone: staged ${abi}/${pinJson.jni_name} (" + staged.length() + " bytes, static)")
-        }
-    }
-
-    protected static String sha256Of(File f) {
-        def digest = java.security.MessageDigest.getInstance('SHA-256')
-        f.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
-        return digest.digest().encodeHex().toString()
-    }
-
-    protected void fetchPinned(String url, File target, String sha256) {
-        if (target.exists() && sha256Of(target) == sha256) return
-        logger.quiet("rclone: downloading " + url)
-        target.parentFile.mkdirs(); target.delete()
-        def connection = new URL(url).openConnection()
-        connection.setInstanceFollowRedirects(true)
-        target.withOutputStream { it << connection.inputStream }
-        def actual = sha256Of(target)
-        if (actual != sha256) {
-            target.delete()
-            throw new GradleException("rclone: wrong sha256 for " + url + "\n  expected " + sha256 + "\n  actual   " + actual)
-        }
-    }
-
-    /** True when the ELF64 file has a PT_INTERP program header (i.e. is dynamically linked). */
-    protected static boolean hasProgramInterpreter(File elf) {
-        def raf = new RandomAccessFile(elf, 'r')
-        try {
-            def magic = new byte[4]; raf.readFully(magic)
-            if (magic[0] != (byte) 0x7f || magic[1] != (byte) 'E' || magic[2] != (byte) 'L' || magic[3] != (byte) 'F')
-                throw new GradleException("rclone: " + elf + " is not an ELF file")
-            def order = java.nio.ByteOrder.LITTLE_ENDIAN
-            def header = new byte[64]; raf.seek(0); raf.readFully(header)
-            def bb = java.nio.ByteBuffer.wrap(header).order(order)
-            long phoff = bb.getLong(0x20); int phentsize = bb.getShort(0x36) & 0xffff; int phnum = bb.getShort(0x38) & 0xffff
-            for (int i = 0; i < phnum; i++) {
-                raf.seek(phoff + (long) i * phentsize)
-                def ph = new byte[4]; raf.readFully(ph)
-                int type = java.nio.ByteBuffer.wrap(ph).order(order).getInt(0)
-                if (type == 3) return true   // PT_INTERP
-            }
-            return false
-        } finally { raf.close() }
-    }
+// #871 THE ENGINE THIS CLIENT BINDS: engine-client.json beside this file, its package from the
+// constellation fleet manifest. Anchored on this module's own (canonical) directory, the one thing
+// that does not move: consumers link this directory from their own trees and the canonical path
+// still leads back here.
+def moduleDir   = projectDir.canonicalFile
+def engineDecl  = new groovy.json.JsonSlurper().parse(new File(moduleDir, 'engine-client.json')).engines?.rclone
+if (engineDecl == null) throw new GradleException("libs:rclone: engine-client.json::engines.rclone is not declared")
+def fleetFile   = new File(moduleDir, '../../../aa_cloud-superapp/data/constellation-fleet.json')
+if (!fleetFile.isFile()) throw new GradleException("libs:rclone: the fleet manifest is not at ${fleetFile}")
+def engineFleet = new groovy.json.JsonSlurper().parse(fleetFile).apps.find { it.id == engineDecl.fleet }
+if (engineFleet == null) {
+    throw new GradleException(
+        "libs:rclone: engine-client.json::engines.rclone.fleet '${engineDecl.fleet}' is not in ${fleetFile} — " +
+        "every consumer would bind a package no Store row installs")
 }
-
-def fetchRcloneBinaries = tasks.register('fetchRcloneBinaries', FetchRcloneBinaries) {
-    description = "Download, verify (sha256 + no PT_INTERP) and stage the pinned rclone binaries as jniLibs"
-    pinFile = file('data/rclone-binary.json')
-    cacheDir = layout.buildDirectory.dir('rclone-cache')
-    outDir = layout.buildDirectory.dir('generated/rclone-jni')
-}
-preBuild.dependsOn fetchRcloneBinaries
+def rcloneEnginePackage = engineFleet.package.toString()
+def rcloneAction        = engineDecl.action.toString().replace('{package}', rcloneEnginePackage)
+def rcloneMinContract   = engineDecl.min_contract as int
+if (rcloneMinContract < 1) throw new GradleException("libs:rclone: engines.rclone.min_contract must be >= 1")
 
 android {
     namespace 'com.diegonmarcos.cloudlib.rclone'
@@ -136,25 +57,19 @@ android {
 
     defaultConfig {
         minSdk 26
-        // The pin, baked so the engine card can state what it runs without
-        // shelling out first, and so RcloneRunner can name the .so it execs.
-        buildConfigField 'String', 'RCLONE_VERSION', "\"${rclonePin.version}\""
-        buildConfigField 'String', 'RCLONE_JNI_NAME', "\"${rclonePin.jni_name}\""
-        buildConfigField 'String', 'RCLONE_ARM64_SHA256', "\"${rclonePin.binaries['arm64-v8a'].binary_sha256}\""
-        buildConfigField 'String', 'RCLONE_X86_64_SHA256', "\"${rclonePin.binaries['x86_64'].binary_sha256}\""
-        // #741 how long a tunnel to a remote may sit quiet before libs:sysdns's ResolverProxy ends it.
-        buildConfigField 'int', 'RCLONE_PROXY_IDLE_MS', "${rclonePin.sandbox.idle_close_ms as int}"
-    }
-
-    sourceSets {
-        main {
-            jniLibs.srcDirs += rcloneJniDir
-        }
+        // #871 the rclone engine that execs the binary (Cloud-Lib-Rclone-Engine.apk).
+        buildConfigField "String", "RCLONE_ENGINE_PACKAGE",      "\"${rcloneEnginePackage}\""
+        buildConfigField "String", "RCLONE_ENGINE_ACTION",       "\"${rcloneAction}\""
+        buildConfigField "int",    "RCLONE_ENGINE_MIN_CONTRACT", "${rcloneMinContract}"
+        // Resolved in THIS library's manifest, so every consumer's merged manifest queries the
+        // engine: on Android 11+ an unqueried package reads exactly like "not installed".
+        manifestPlaceholders = [rcloneEnginePackage: rcloneEnginePackage]
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
+        aidl = true
     }
 
     testOptions {
@@ -181,8 +96,6 @@ kotlin {
 }
 
 dependencies {
-    // #741 how rclone resolves a remote's name inside an app: the fleet's one bridge to Android's resolver.
-    implementation project(':libs:sysdns')
     implementation platform('androidx.compose:compose-bom:2025.11.01')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.foundation:foundation'
@@ -194,4 +107,6 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
 
     testImplementation 'junit:junit:4.13.2'
+    // The real org.json: android.jar's copy is a stub that throws on the JVM.
+    testImplementation 'org.json:json:20240303'
 }

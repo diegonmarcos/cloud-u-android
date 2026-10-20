@@ -20,6 +20,7 @@
     "com.diegonmarcos.cloudlib.mllsoundyamnet": 38222,
     "com.diegonmarcos.cloudlib.netwg": 38205,
     "com.diegonmarcos.cloudlib.news": 38207,
-    "com.diegonmarcos.cloudlib.opsengine": 38229
+    "com.diegonmarcos.cloudlib.opsengine": 38229,
+    "com.diegonmarcos.cloudlib.rcloneengine": 38233
   }
 }
