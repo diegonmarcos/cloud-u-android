@@ -31,7 +31,7 @@ object StoreJev {
         shelves.map { it.heading }.distinct().forEach { crit.put(it, "Apps of the kind \"$it\"") }
         return JSONObject().put(
             "shelf", JSONObject().put("type", "choice").put(
-                "instructions", "Which shelf of an app store fits the app with id `id` and name `name`?",
+                "instructions", "Which shelf of an app store fits the app with id `id` and title `title`?",
             ).put("criteria", crit),
         )
     }
@@ -45,7 +45,7 @@ object StoreJev {
             if (memo.peek(id) != null) continue
             memo.peekOrAsk(id, TTL_MS) {
                 val o = DecisionsLink.outcome(app, "store_shelf",
-                    JSONObject().put("id", id).put("name", name), questions(shelves))
+                    JSONObject().put("id", id).put("title", name), questions(shelves))
                 val pick = o.verdictOrNull?.pick("shelf", headings.toSet())
                 Advice.Suggestion(pick.orEmpty(), o.callOrNull).also { s ->
                     if (pick != null) Advice.remember(app, "store_shelf", s, JSONObject().put("shelf", pick))
