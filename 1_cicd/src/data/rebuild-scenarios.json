@@ -468,15 +468,41 @@
       }
     },
     {
+      "id": "ac_cloud-account/web (#876: the page ships alone)",
+      "files": [
+        "ac_cloud-account/web/src/wasmJsMain/kotlin/com/diegonmarcos/cloudaccount/web/Main.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1,
+        "refresh": 0
+      }
+    },
+    {
+      "id": "ac_cloud-browser/web (#876: the page ships alone)",
+      "files": [
+        "ac_cloud-browser/web/src/wasmJsMain/kotlin/com/diegonmarcos/cloudbrowser/web/Main.kt"
+      ],
+      "expect": {
+        "apps": 1,
+        "libs": 0,
+        "rootfs": 0,
+        "ship": 1,
+        "refresh": 0
+      }
+    },
+    {
       "id": "libs/ui-kit commonMain (#876: the two wasm pages + the static-lib consumers)",
       "files": [
         "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt"
       ],
       "expect": {
-        "apps": 20,
+        "apps": 22,
         "libs": 0,
         "rootfs": 0,
-        "ship": 21,
+        "ship": 23,
         "refresh": 0
       }
     }

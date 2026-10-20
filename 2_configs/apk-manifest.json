@@ -8,14 +8,34 @@
       "module": "ac_cloud-account",
       "application_id": "com.diegonmarcos.cloudaccount",
       "description": "Diego's Cloud Account — turns an empty phone into the owner's phone and keeps it that way: the account and its sign-in ways, the per-device profile backed up to",
-      "web": null
+      "web": {
+        "_doc": "#876 Cloud Account as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-account-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-account-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
+        "dir": "web",
+        "host": "ubuntu-latest",
+        "artifact": "Cloud-Account.wasm.zip",
+        "gh_asset": "Cloud-Account.wasm.zip",
+        "portal_slug": "cloud-account",
+        "entry": "index.html",
+        "tester": "test-account-web.sh",
+        "size_budget_mb": 20
+      }
     },
     {
       "name": "cloud-browser",
       "module": "ac_cloud-browser",
       "application_id": "com.diegonmarcos.cloudbrowser",
       "description": "Diego's Cloud Browser — standalone WebView-based browser Android app. Lifted from Cloud SuperApp's libs:browser into its own focused APK. Multi-tab session pers",
-      "web": null
+      "web": {
+        "_doc": "#876 Cloud Browser as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-browser-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-browser-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
+        "dir": "web",
+        "host": "ubuntu-latest",
+        "artifact": "Cloud-Browser.wasm.zip",
+        "gh_asset": "Cloud-Browser.wasm.zip",
+        "portal_slug": "cloud-browser",
+        "entry": "index.html",
+        "tester": "test-browser-web.sh",
+        "size_budget_mb": 20
+      }
     },
     {
       "name": "cloud-c3",

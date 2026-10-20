@@ -61,6 +61,7 @@ on:
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-account/**"
+      - "!ac_cloud-account/web/**"
 permissions:
   contents: write
   packages: write

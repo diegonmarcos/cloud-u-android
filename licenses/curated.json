@@ -659,6 +659,14 @@
   "ac_cloud-nav/web/gradle/wrapper/gradle-wrapper.jar": {
    "licence": "Apache-2.0",
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-account/web/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-browser/web/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
   }
  }
 }
