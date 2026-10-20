@@ -36,7 +36,7 @@ WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 stage() {
     rm -rf "$WORK/t"; mkdir -p "$WORK/t"
-    (cd "$ROOT" && { git ls-files -z -- '*.gradle' '*.gradle.kts' '*.patch' '*.json' '.github/workflows/ship-*.yml' '*AndroidManifest.xml'
+    (cd "$ROOT" && { git ls-files -z -- '*.gradle' '*.gradle.kts' '*.patch' '*.json' '*Cargo.toml' '.github/workflows/ship-*.yml' '*AndroidManifest.xml'
                      printf '%s\0' "$INIT_KT"; } | xargs -0 cp --parents -t "$WORK/t")
 }
 
