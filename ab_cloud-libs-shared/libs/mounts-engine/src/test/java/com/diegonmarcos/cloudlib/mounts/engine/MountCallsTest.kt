@@ -6,8 +6,6 @@ import com.diegonmarcos.cloudlib.mounts.MountType
 import com.diegonmarcos.cloudlib.mounts.MountWire
 import com.diegonmarcos.cloudlib.mounts.RemoteEntry
 import com.diegonmarcos.cloudlib.mounts.RemoteFs
-import com.sun.net.httpserver.HttpExchange
-import com.sun.net.httpserver.HttpServer
 import kotlinx.serialization.builtins.ListSerializer
 import org.json.JSONObject
 import org.junit.After
@@ -18,7 +16,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
-import java.net.InetSocketAddress
+import java.io.BufferedInputStream
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
 import java.net.URLDecoder
 import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
@@ -34,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap
 class MountCallsTest {
     private lateinit var root: File
     private lateinit var scratch: File
-    private lateinit var server: HttpServer
+    private lateinit var server: MiniHttp
     private val files = ConcurrentHashMap<String, ByteArray>()      // "/dir/name" -> bytes
     private val dirs = java.util.Collections.synchronizedSet(linkedSetOf("/"))
     private var now = 1_000_000L
@@ -42,21 +43,72 @@ class MountCallsTest {
     @Before fun setUp() {
         root = Files.createTempDirectory("mount-calls-test").toFile()
         scratch = File(root, "scratch")
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { x -> try { dav(x) } catch (t: Throwable) { x.sendResponseHeaders(500, -1) } finally { x.close() } }
-        server.start()
+        server = MiniHttp { method, rawPath, headers, body -> dav(method, rawPath, headers, body) }
     }
 
-    @After fun tearDown() { server.stop(0); root.deleteRecursively() }
+    @After fun tearDown() { server.close(); root.deleteRecursively() }
 
-    private fun path(x: HttpExchange) = URLDecoder.decode(x.requestURI.rawPath, "UTF-8").let { if (it.length > 1) it.trimEnd('/') else it }
+    /**
+     * A tiny HTTP/1.1 server on a loopback socket (the JDK's com.sun.net.httpserver is not on an Android
+     * module's unit-test compile classpath), one request per connection, enough for OkHttp's WebDAV verbs.
+     */
+    private class MiniHttp(private val handler: (String, String, Map<String, String>, ByteArray) -> Reply) : AutoCloseable {
+        class Reply(val code: Int, val body: ByteArray = ByteArray(0), val type: String? = null, val headers: Map<String, String> = emptyMap())
+        private val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+        val port: Int get() = socket.localPort
+        @Volatile private var running = true
 
-    private fun dav(x: HttpExchange) {
-        val p = path(x)
-        when (x.requestMethod) {
+        init {
+            Thread {
+                while (running) {
+                    val c = try { socket.accept() } catch (e: Exception) { break }
+                    Thread { serve(c) }.apply { isDaemon = true; start() }
+                }
+            }.apply { isDaemon = true; start() }
+        }
+
+        private fun readLine(i: BufferedInputStream): String? {
+            val sb = StringBuilder()
+            while (true) {
+                val b = i.read()
+                if (b < 0) return if (sb.isEmpty()) null else sb.toString()
+                if (b == '\n'.code) return sb.toString().trimEnd('\r')
+                sb.append(b.toChar())
+            }
+        }
+
+        private fun serve(c: Socket) {
+            c.use {
+                val i = BufferedInputStream(it.getInputStream())
+                val first = readLine(i) ?: return
+                val parts = first.split(' ')
+                val headers = HashMap<String, String>()
+                while (true) {
+                    val h = readLine(i) ?: break
+                    if (h.isEmpty()) break
+                    headers[h.substringBefore(':').trim().lowercase()] = h.substringAfter(':').trim()
+                }
+                val length = headers["content-length"]?.toInt() ?: 0
+                val body = ByteArray(length)
+                var read = 0
+                while (read < length) { val n = i.read(body, read, length - read); if (n < 0) break; read += n }
+                val r = try { handler(parts[0], parts[1], headers, body) } catch (t: Throwable) { Reply(500) }
+                val head = StringBuilder("HTTP/1.1 ${r.code} X\r\nContent-Length: ${r.body.size}\r\nConnection: close\r\n")
+                r.type?.let { t -> head.append("Content-Type: $t\r\n") }
+                r.headers.forEach { (k, v) -> head.append("$k: $v\r\n") }
+                head.append("\r\n")
+                it.getOutputStream().apply { write(head.toString().toByteArray()); write(r.body); flush() }
+            }
+        }
+
+        override fun close() { running = false; runCatching { socket.close() } }
+    }
+
+    private fun dav(method: String, rawPath: String, headers: Map<String, String>, body: ByteArray): MiniHttp.Reply {
+        val p = URLDecoder.decode(rawPath.substringBefore('?'), "UTF-8").let { if (it.length > 1) it.trimEnd('/') else it }
+        return when (method) {
             "PROPFIND" -> {
-                x.requestBody.readBytes()
-                if (p !in dirs) { x.sendResponseHeaders(404, -1); return }
+                if (p !in dirs) return MiniHttp.Reply(404)
                 val sb = StringBuilder("""<?xml version="1.0"?><d:multistatus xmlns:d="DAV:">""")
                 sb.append("<d:response><d:href>${enc(p)}/</d:href><d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>")
                 val prefix = if (p == "/") "/" else "$p/"
@@ -65,26 +117,24 @@ class MountCallsTest {
                 for ((f, b) in files) if (f.startsWith(prefix) && !f.removePrefix(prefix).contains('/'))
                     sb.append("<d:response><d:href>${enc(f)}</d:href><d:propstat><d:prop><d:resourcetype/><d:getcontentlength>${b.size}</d:getcontentlength></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>")
                 sb.append("</d:multistatus>")
-                val body = sb.toString().toByteArray()
-                x.responseHeaders.add("Content-Type", "application/xml")
-                x.sendResponseHeaders(207, body.size.toLong()); x.responseBody.write(body)
+                MiniHttp.Reply(207, sb.toString().toByteArray(), "application/xml")
             }
-            "GET" -> { val b = files[p]; if (b == null) x.sendResponseHeaders(404, -1) else { x.sendResponseHeaders(200, b.size.toLong()); x.responseBody.write(b) } }
-            "PUT" -> { files[p] = x.requestBody.readBytes(); x.sendResponseHeaders(201, -1) }
-            "MKCOL" -> { dirs += p; x.sendResponseHeaders(201, -1) }
-            "DELETE" -> { files.remove(p); dirs.remove(p); x.sendResponseHeaders(204, -1) }
+            "GET" -> files[p]?.let { MiniHttp.Reply(200, it) } ?: MiniHttp.Reply(404)
+            "PUT" -> { files[p] = body; MiniHttp.Reply(201) }
+            "MKCOL" -> { dirs += p; MiniHttp.Reply(201) }
+            "DELETE" -> { files.remove(p); dirs.remove(p); MiniHttp.Reply(204) }
             "MOVE" -> {
-                val to = URLDecoder.decode(java.net.URI(x.requestHeaders.getFirst("Destination")).rawPath, "UTF-8")
+                val to = URLDecoder.decode(java.net.URI(headers.getValue("destination")).rawPath, "UTF-8")
                 files.remove(p)?.let { files[to] = it }
-                x.sendResponseHeaders(201, -1)
+                MiniHttp.Reply(201)
             }
-            else -> x.sendResponseHeaders(405, -1)
+            else -> MiniHttp.Reply(405)
         }
     }
 
     private fun enc(p: String) = p.split('/').joinToString("/") { java.net.URLEncoder.encode(it, "UTF-8").replace("+", "%20") }
 
-    private fun spec() = MountSpec("m1", "dav", MountType.WEBDAV, "127.0.0.1", server.address.port, "u", "/")
+    private fun spec() = MountSpec("m1", "dav", MountType.WEBDAV, "127.0.0.1", server.port, "u", "/")
     private fun calls(access: Boolean = true, opener: ((MountSpec, MountSecret, File) -> RemoteFs)? = null) =
         if (opener == null) MountCalls(scratch, "test", { access }, clock = { now })
         else MountCalls(scratch, "test", { access }, opener, { now })
