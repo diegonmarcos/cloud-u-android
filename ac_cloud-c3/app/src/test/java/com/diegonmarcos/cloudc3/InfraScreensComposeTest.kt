@@ -76,7 +76,8 @@ class InfraScreensComposeTest {
             r.assertTextContains("Account: ${p.account ?: "not declared"}")
             r.assertTextContains(p.plan ?: "plan not declared")
             r.assertTextContains("Monthly cost:", substring = true)
-            p.links.forEach { l -> r.assertTextContains("${l.label}: ${l.url}") }
+            // a link is clickable, so it is its own node in the merged tree rather than a line of the row
+            p.links.forEach { l -> compose.onNodeWithText("${l.label}: ${l.url}").assertExists() }
             p.vms.forEach { id -> r.assertTextContains(slice.vms.first { it.id == id }.alias, substring = true) }
         }
     }
