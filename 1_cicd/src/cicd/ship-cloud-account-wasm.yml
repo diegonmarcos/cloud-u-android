@@ -82,6 +82,12 @@ jobs:
       - name: Set up Gradle (cached)
         if: steps.gate.outputs.skip != 'true'
         uses: gradle/actions/setup-gradle@v6
+      # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
+      # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
+      - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
+        if: steps.gate.outputs.skip != 'true'
+        uses: ./.github/actions/gradle-cache-hygiene
+      # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
 
       - name: Build (wasmJsBrowserDistribution)
         if: steps.gate.outputs.skip != 'true'
@@ -127,6 +133,21 @@ jobs:
           names="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
           echo "$names" | grep -qxF "$(basename "$ASSET")" \
             || { echo "::error::gh-release: $(basename "$ASSET") missing on $TAG after upload"; exit 1; }
+
+      # ── MANAGED-PUBLISH-GUARD: injected by cloud-android-ship-repo-workflow-engine.sh ──
+      # Runs on everything but a cancellation, and is HANDED the two facts it
+      # judges: the publish gate's own answer to "did this source move?", and the
+      # `id: publish` step's own `if:` rendered to true/false. Putting that `if:`
+      # on this step instead — the obvious generalisation — would stop the guard
+      # running in exactly the case it exists for, a publish skipped by its own
+      # condition. Copied verbatim from that step, so there is one copy in the
+      # file and the two cannot drift.
+      # Edit 1_cicd/src/scripts/cloud-android-publish-guard.sh, never this block.
+      - name: A run that published nothing must not be green
+        if: ${{ !cancelled() }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ac_cloud-account/web" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' }}" "${{ github.event_name }}"
+      # ── end MANAGED-PUBLISH-GUARD ──
+
 
       # The portal (diegonmarcos.github.io, a-Portals/cloud-web) fetches the zip from
       # the release at ITS build time, so it has to be told. repository_dispatch to
