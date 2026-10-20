@@ -75,7 +75,7 @@ if grep -qE "applicationInfo\.nativeLibraryDir, BuildConfig\.RCLONE_JNI_NAME" "$
 if python3 -c 'import json,sys; sys.exit(0 if "rclone-engine" in json.load(open(sys.argv[1]))["lib_apks"]["exec_native"] else 1)' "$LIBAPKS"; then pass "lib_apks.exec_native lists rclone-engine (the installer extracts the .so)"; else fail "lib_apks.exec_native does not list rclone-engine — the .so is never extracted and the exec fails ENOENT"; fi
 
 echo "── R4 the contract module carries no binary ──"
-if grep -vE '^[[:space:]]*(\*|//|/\*)' "$CONTRACT/build.gradle" | grep -qE "jniLibs|fetchRcloneBinaries|rclone-binary\.json"; then fail "libs:rclone still stages or fetches the binary"; else pass "libs:rclone stages no binary"; fi
+if grep -qE "jniLibs|fetchRcloneBinaries|rclone-binary\.json" <<<"$(grep -vE '^[[:space:]]*(\*|//|/\*)' "$CONTRACT/build.gradle")"; then fail "libs:rclone still stages or fetches the binary"; else pass "libs:rclone stages no binary"; fi
 if grep -rqE "ProcessBuilder\(" "$CONTRACT/src/main"; then fail "libs:rclone still execs a process — apps must not run rclone"; else pass "libs:rclone execs nothing"; fi
 if [ -e "$CONTRACT/data/rclone-binary.json" ]; then fail "the pin is still in libs:rclone — one pin, in the engine"; else pass "the pin lives only in the engine"; fi
 

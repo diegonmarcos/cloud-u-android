@@ -39,7 +39,7 @@ for required in "$RUNNER" "$SCREEN" "$TEST" "$APP_GRADLE" "$PKG/RcloneLink.kt" "
 done
 
 echo "── R1 the app carries no binary ──"
-if grep -vE '^[[:space:]]*(\*|//|/\*)' "$APP_GRADLE" | grep -qE "useLegacyPackaging"; then fail "ac_cloud-drive/app/build.gradle still sets useLegacyPackaging — nothing here is exec'd from nativeLibraryDir any more (the engine APK's flavor sets it)"; else pass "no useLegacyPackaging: the app extracts no native lib"; fi
+if grep -qE "useLegacyPackaging" <<<"$(grep -vE '^[[:space:]]*(\*|//|/\*)' "$APP_GRADLE")"; then fail "ac_cloud-drive/app/build.gradle still sets useLegacyPackaging — nothing here is exec'd from nativeLibraryDir any more (the engine APK's flavor sets it)"; else pass "no useLegacyPackaging: the app extracts no native lib"; fi
 if python3 -c 'import json,sys; sys.exit(1 if "libs:rclone-engine" in json.load(open(sys.argv[1]))["modules"] else 0)' "$APP/build.json"; then pass "build.json::modules does not declare the engine"; else fail "build.json::modules declares libs:rclone-engine — the binary would be compiled back in"; fi
 
 echo "── R2 the client reaches the engine ──"
