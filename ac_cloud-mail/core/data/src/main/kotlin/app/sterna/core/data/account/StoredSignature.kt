@@ -85,14 +85,14 @@ data class StoredSignature(
          * editor and the legacy split disagree about one string, which is how a signature ends up
          * rendered as literal characters in one place and as markup in another.
          */
-        fun of(id: String, name: String, rawSource: String): StoredSignature {
-            val source = upgradeHttpsOnlyLinks(rawSource)
-            return if (looksLikeHtml(source)) {
+        fun of(id: String, name: String, source: String): StoredSignature {
+            val https = upgradeHttpsOnlyLinks(source)
+            return if (looksLikeHtml(https)) {
                 // keepLinkTargets: the flattened half is the whole of what a recipient without HTML
                 // receives, so a link that is a WORD there ("Whatsapp") must still carry its address.
-                StoredSignature(id, name, htmlToText(source, keepLinkTargets = true), source)
+                StoredSignature(id, name, htmlToText(https, keepLinkTargets = true), https)
             } else {
-                StoredSignature(id, name, source, "")
+                StoredSignature(id, name, https, "")
             }
         }
     }
