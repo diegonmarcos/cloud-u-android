@@ -33,6 +33,7 @@ import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.PillRow
 import com.diegonmarcos.clouddrive.ui.StatusLight
+import com.diegonmarcos.superapp.adbdebug.AdbShellPage
 
 /**
  * #603 CONFIGS ▸ OTHERS — what is neither an engine's configuration nor a daily setting:
@@ -63,6 +64,8 @@ fun OthersPage(prefs: DrivePrefs, actions: DriveActions, rcloneVersion: String?,
                 }
             }
         }
+        // The privileged shell is the lib's ONE page (adb-shell-one-place.json); Manage > Apps only reads its result.
+        item { AdbShellPage() }
         item {
             DriveCard(stringResource(R.string.configs_about), summary = BuildConfig.VERSION_NAME, tag = DriveTags.CONFIGS_CARD) {
                 AboutRow(stringResource(R.string.configs_version), BuildConfig.VERSION_NAME + " · " + BuildConfig.VERSION_CODE)

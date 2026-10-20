@@ -68,7 +68,6 @@ import com.diegonmarcos.clouddrive.ui.PillRow
 import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import com.diegonmarcos.clouddrive.ui.topIslandInsets
 import com.diegonmarcos.cloudlib.disk.AppSizes
-import com.diegonmarcos.superapp.adbdebug.ShellAccess
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -106,10 +105,8 @@ fun ManageScreen(actions: DriveActions, prefs: DrivePrefs, onShowInExplorer: (St
 @Composable
 fun AppsPage(prefs: DrivePrefs, collect: (android.content.Context) -> AppSnapshot.Snapshot = { AppSnapshot.collect(it) }) {
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
     var snap by remember { mutableStateOf<AppSnapshot.Snapshot?>(null) }
     var tick by remember { mutableStateOf(0) }
-    var shellNote by remember { mutableStateOf<String?>(null) }
     val saved = remember { prefs.appsSort() }
     var column by rememberSaveable { mutableStateOf(saved.first?.let { n -> AppColumn.entries.firstOrNull { it.name == n } } ?: AppTable.DEFAULT_SORT) }
     var descending by rememberSaveable { mutableStateOf(saved.second) }
@@ -132,8 +129,7 @@ fun AppsPage(prefs: DrivePrefs, collect: (android.content.Context) -> AppSnapsho
         }
         if (s.shell == null) {
             Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter, vertical = DriveMetrics.gap).testTag(DriveTags.APPS_SHELL_HINT), verticalAlignment = Alignment.CenterVertically) {
-                Text(shellNote ?: stringResource(R.string.manage_apps_shell_hint), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                Pill(stringResource(R.string.manage_apps_shell_connect), { scope.launch { shellNote = withContext(Dispatchers.IO) { runCatching { ShellAccess.ensure(ctx) { tick++ } }.getOrElse { it.message } }; tick++ } })
+                Text(stringResource(R.string.manage_apps_shell_hint), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
             }
         }
         val rows = remember(s, column, descending) { AppTable.sort(s.rows, column, descending) }
