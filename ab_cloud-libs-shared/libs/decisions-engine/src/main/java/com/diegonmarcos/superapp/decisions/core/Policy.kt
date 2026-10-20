@@ -38,6 +38,8 @@ data class UseDecl(
     val consentRequired: Boolean,
     val content: String,
     val apps: Set<String>,
+    /** Null = always served; else observe-only until the journal's evidence opens it (see [GateDecl]). */
+    val gate: GateDecl? = null,
 )
 
 data class BudgetRules(val dailyUsdCap: Double, val perAppDailyCalls: Int, val estCallUsd: Double)
@@ -134,6 +136,12 @@ class Policy private constructor(
             val consent = u.optString("consent", "required")
             if (consent != "required" && consent != "implicit") return "consent must be required or implicit"
             if (consent == "implicit" && u.optString("content") in sensitive) return "content ${u.optString("content")} always needs consent: required"
+            u.optJSONObject("gate")?.let { g ->
+                if (g.optJSONArray("after").strings().isEmpty()) return "gate.after names no use"
+                if (g.optInt("min_labelled", 0) < 1) return "gate.min_labelled must be at least 1"
+                val mp = g.optDouble("min_precision", Double.NaN)
+                if (!(mp > 0.0 && mp <= 1.0)) return "gate.min_precision must be in (0, 1]"
+            }
             return null
         }
 
@@ -148,6 +156,9 @@ class Policy private constructor(
             consentRequired = u.optString("consent", "required") == "required",
             content = u.optString("content"),
             apps = u.optJSONArray("apps").strings().toSet(),
+            gate = u.optJSONObject("gate")?.let {
+                GateDecl(it.optJSONArray("after").strings(), it.getInt("min_labelled"), it.getDouble("min_precision"))
+            },
         )
 
         private fun JSONObject.positive(key: String): Double {

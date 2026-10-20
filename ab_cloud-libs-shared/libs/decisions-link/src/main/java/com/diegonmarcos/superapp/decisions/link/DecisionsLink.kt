@@ -39,6 +39,15 @@ object DecisionsLink {
         return Outcome.parse(ask("decide", context, request))
     }
 
+    /**
+     * Report what really happened to the decision [call] ([Outcome.callOrNull] of the [outcome] that asked), read
+     * from the observed result: [label] is the option the user ended up with, true/false for a yes/no, or a
+     * JSONObject {question: label}. The engine joins it to its answer, which is how a use's precision, and the
+     * gates that wait on it, are measured without a manual label. Never throws; blocking.
+     */
+    fun report(context: Context, use: String, call: String, label: Any): Boolean =
+        ask("outcome", context, JSONObject().put("use", use).put("call", call).put("label", label)).optBoolean("ok", false)
+
     /** What the engine reports about itself and the calling app's uses: names and flags, never content. */
     fun status(context: Context): JSONObject = ask("status", context, JSONObject())
 

@@ -432,7 +432,7 @@ _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
         && _red "E8 #881 the decisions engine every app asks the decision model through stops declaring its contract" engines "$MUT/libs" "$MUT/build.json"; }
 
 _stage && _green engines engines "$MUT/libs" "$MUT/build.json" && {
-    _sub "$M_DECSVC" 'arrayOf(DECIDE, STATUS, CONSENT)' 'arrayOf(DECIDE, STATUS)'
+    _sub "$M_DECSVC" 'arrayOf(DECIDE, STATUS, CONSENT, OUTCOME)' 'arrayOf(DECIDE, STATUS)'
     _applied "$R_DECSVC" "$M_DECSVC" 'arrayOf(DECIDE, STATUS)' \
         && _red "E4 #881 the decisions engine dispatches consent but no longer lists it (the Configs switch would be refused)" engines "$MUT/libs" "$MUT/build.json"; }
 

@@ -64,10 +64,11 @@ class Engine(
         val cleaned = redactor.clean(request.opt("state"))
         if (!redactor.fits(cleaned.state)) return refuse(app, name, use, "state_too_large")
         val key = sha256(name + "\u0000" + canon(cleaned.state) + "\u0000" + canon(questions))
+        val call = key.take(12)
         if (use.ttlS > 0) {
             cache.get(key)?.let {
-                journal.record(app, name, "cached", JSONObject().put("class", use.cls.wire))
-                return answered(use, it, true)
+                journal.record(app, name, "cached", JSONObject().put("class", use.cls.wire).put("call", call))
+                return held(app, use, call) ?: answered(use, it, true, call)
             }
         }
         if (!env.online() && policy.suppress.offline) return refuse(app, name, use, "offline")
@@ -95,9 +96,9 @@ class Engine(
         val scores = JSONObject()
         for (id in results.keys()) scores.put(id, results.getJSONObject(id).getDouble("p"))
         journal.record(app, name, "answered", JSONObject().put("class", use.cls.wire).put("latency_ms", latency)
-            .put("cost", d.cost ?: JSONObject.NULL).put("scores", scores)
+            .put("cost", d.cost ?: JSONObject.NULL).put("scores", scores).put("call", call).put("picks", picks(results))
             .put("masked", cleaned.masked).put("dropped", cleaned.dropped))
-        return answered(use, results, false)
+        return held(app, use, call) ?: answered(use, results, false, call)
     }
 
     /**
@@ -132,9 +133,50 @@ class Engine(
             .put("uses", uses).put("rejected", JSONArray(policy.rejected.keys.toList()))
     }
 
-    private fun answered(use: UseDecl, results: JSONObject, cached: Boolean): JSONObject =
+    /**
+     * What really happened to decision [request]`.call` of the caller's [use], reported by the caller from
+     * the observed result (the user moved the mail, undid the change, dismissed the alert). Joined to the
+     * decision by the call id; the journal holds no state, so the label is the option or yes/no only.
+     */
+    fun outcome(caller: String, request: JSONObject): JSONObject {
+        val name = request.optString("use")
+        val use = policy.uses[name] ?: return refuse(caller, name, null, "unknown_use")
+        if (caller !in use.apps) return refuse(caller, name, use, "app_not_allowed")
+        val call = request.optString("call")
+        val label = request.opt("label")
+        if (call.isEmpty() || call.length > 64 || !(label is JSONObject || label is String || label is Boolean)) {
+            return refuse(caller, name, use, "bad_request")
+        }
+        journal.record(caller, name, "outcome", JSONObject().put("call", call).put("label", label))
+        return JSONObject().put("ok", true).put("use", name).put("call", call)
+    }
+
+    /** `gate_closed` (with the call id, so its outcome can still be recorded) while the use's evidence is not in. */
+    private fun held(app: String, use: UseDecl, call: String): JSONObject? {
+        val gate = use.gate ?: return null
+        if (Evidence.open(gate, journal.lines(policy.journalMax))) return null
+        journal.record(app, use.name, "held", JSONObject().put("class", use.cls.wire).put("call", call))
+        return JSONObject().put("ok", false).put("use", use.name).put("reason", "gate_closed").put("call", call)
+    }
+
+    /** The confident pick of each question: a noul's yes/no, a choice's option, a score's level. */
+    private fun picks(results: JSONObject): JSONObject {
+        val out = JSONObject()
+        for (id in results.keys()) {
+            val r = results.getJSONObject(id)
+            if (!r.optBoolean("confident")) continue
+            when (r.getString("type")) {
+                "noul" -> out.put(id, r.getBoolean("value"))
+                "choice" -> out.put(id, r.getString("pick"))
+                else -> out.put(id, r.getString("level"))
+            }
+        }
+        return out
+    }
+
+    private fun answered(use: UseDecl, results: JSONObject, cached: Boolean, call: String): JSONObject =
         JSONObject().put("ok", true).put("use", use.name).put("class", use.cls.wire).put("cached", cached)
-            .put("threshold", use.threshold).put("results", results)
+            .put("threshold", use.threshold).put("call", call).put("results", results)
             .also { if (use.cls == UseClass.GATING) it.put("advice_only", true) }
 
     private fun refuse(app: String, use: String, decl: UseDecl?, reason: String, latency: Long? = null): JSONObject {

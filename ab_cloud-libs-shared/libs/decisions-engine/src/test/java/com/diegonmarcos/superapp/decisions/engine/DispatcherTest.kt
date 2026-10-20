@@ -83,4 +83,11 @@ class DispatcherTest {
             assertEquals("no_policy", r.getString("reason"))
         }
     }
+
+    @Test fun outcomeRunsTheEngineForTheCallerTheBinderNamed() {
+        val r = JSONObject().put("use", "probe").put("call", "abc123").put("label", true)
+        assertTrue(JSONObject(d.outcome(self, r.toString())).getBoolean("ok"))
+        assertEquals("app_not_allowed", JSONObject(d.outcome("com.some.other.app", r.toString())).getString("reason"))
+        assertEquals("no_policy", JSONObject(Dispatcher { null }.outcome(self, r.toString())).getString("reason"))
+    }
 }

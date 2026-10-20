@@ -15,6 +15,9 @@ class Dispatcher(private val engine: () -> Engine?) {
 
     fun status(app: String): String = engine()?.status(app)?.toString() ?: noPolicy()
 
+    fun outcome(app: String, request: String): String =
+        engine()?.outcome(app, JSONObject(request))?.toString() ?: noPolicy()
+
     fun consent(app: String, request: String): String =
         engine()?.setConsent(app, JSONObject(request))?.toString() ?: noPolicy()
 

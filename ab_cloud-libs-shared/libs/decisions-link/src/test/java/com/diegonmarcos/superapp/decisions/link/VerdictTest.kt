@@ -94,4 +94,17 @@ class VerdictTest {
             assertTrue(Outcome.parse(JSONObject("""{"ok":true,"use":"u","class":"c","results":{"a":{"type":"noul","p":$p,"value":true,"confident":true}}}""")) is Outcome.Answered)
         }
     }
+
+    @Test fun theCallIdTravelsWithAnAnswerAndWithAHeldNoOpinion() {
+        val answered = Outcome.parse(JSONObject(reply.replace("\"use\":", "\"call\":\"abc123def456\",\"use\":")))
+        assertEquals("abc123def456", answered.callOrNull)
+        assertEquals("abc123def456", answered.verdictOrNull?.call)
+        val held = Outcome.parse(JSONObject("""{"ok":false,"use":"g","reason":"gate_closed","call":"c0ffee000001"}"""))
+        assertTrue(held is Outcome.NoOpinion)
+        assertEquals("gate_closed", (held as Outcome.NoOpinion).reason)
+        assertEquals("c0ffee000001", held.callOrNull)
+        assertNull(held.verdictOrNull)
+        assertNull(Outcome.parse(JSONObject("""{"ok":false,"reason":"no_key"}""")).callOrNull)
+        assertNull(verdict().call)
+    }
 }

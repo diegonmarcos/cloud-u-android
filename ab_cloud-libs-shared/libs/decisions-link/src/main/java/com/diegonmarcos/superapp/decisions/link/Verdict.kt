@@ -35,6 +35,8 @@ class Verdict(
     val threshold: Double,
     val adviceOnly: Boolean,
     val answers: Map<String, Answer>,
+    /** The engine's id of this decision: report what really happened with [DecisionsLink.report]. */
+    val call: String? = null,
 ) {
     val mayPreselect: Boolean get() = cls == USER_FACING && !adviceOnly
 
@@ -59,9 +61,12 @@ class Verdict(
 /** An answered call, or "no opinion" with the engine's reason. */
 sealed class Outcome {
     class Answered(val verdict: Verdict) : Outcome()
-    class NoOpinion(val reason: String) : Outcome()
+    class NoOpinion(val reason: String, val call: String? = null) : Outcome()
 
     val verdictOrNull: Verdict? get() = (this as? Answered)?.verdict
+
+    /** The decision's id, answered or held (observe-only): what [DecisionsLink.report] joins on. */
+    val callOrNull: String? get() = when (this) { is Answered -> verdict.call; is NoOpinion -> call }
 
     companion object {
         const val NO_ENGINE = "no_engine"
@@ -69,7 +74,7 @@ sealed class Outcome {
 
         /** Read the engine's reply without trusting its shape: it crossed a process. */
         fun parse(reply: JSONObject): Outcome {
-            if (!reply.optBoolean("ok", false)) return NoOpinion(reply.optString("reason").ifEmpty { MALFORMED })
+            if (!reply.optBoolean("ok", false)) return NoOpinion(reply.optString("reason").ifEmpty { MALFORMED }, reply.optString("call").ifEmpty { null })
             val results = reply.optJSONObject("results") ?: return NoOpinion(MALFORMED)
             val answers = LinkedHashMap<String, Answer>()
             for (id in results.keys()) {
@@ -80,7 +85,7 @@ sealed class Outcome {
             val cls = reply.optString("class")
             if (use.isEmpty() || cls.isEmpty()) return NoOpinion(MALFORMED)
             return Answered(Verdict(use, cls, reply.optBoolean("cached", false), reply.optDouble("threshold", 1.0),
-                reply.optBoolean("advice_only", false), answers))
+                reply.optBoolean("advice_only", false), answers, reply.optString("call").ifEmpty { null }))
         }
 
         private fun answer(o: JSONObject): Answer? {

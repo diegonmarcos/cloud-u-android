@@ -21,12 +21,13 @@ import org.json.JSONObject
  */
 class DecisionsEngineService : Service() {
 
-    fun methodNames(): Array<String> = arrayOf(DECIDE, STATUS, CONSENT)
+    fun methodNames(): Array<String> = arrayOf(DECIDE, STATUS, CONSENT, OUTCOME)
 
     fun dispatch(method: String, request: String, app: String): String = when (method) {
         DECIDE -> dispatcher.decide(app, request)
         STATUS -> dispatcher.status(app)
         CONSENT -> dispatcher.consent(app, request)
+        OUTCOME -> dispatcher.outcome(app, request)
         else -> throw IllegalArgumentException("unknown method: $method")
     }
 
@@ -53,5 +54,6 @@ class DecisionsEngineService : Service() {
         const val DECIDE = "decide"
         const val STATUS = "status"
         const val CONSENT = "consent"
+        const val OUTCOME = "outcome"
     }
 }

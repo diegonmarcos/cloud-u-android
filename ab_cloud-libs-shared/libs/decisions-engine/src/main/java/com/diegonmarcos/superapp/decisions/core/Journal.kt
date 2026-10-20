@@ -21,6 +21,9 @@ class Journal(private val sink: LineSink, private val max: Int, private val cloc
         }
     }
 
+    /** The newest [n] raw lines (the evidence gates read these; no state is ever in them). */
+    fun lines(n: Int): List<String> = sink.tail(n)
+
     /** The newest [n] entries as `app use ✓|✗ reason`: names and a mark, nothing else (the debug route). */
     fun summary(n: Int): List<String> = sink.tail(n).mapNotNull { raw ->
         runCatching {
