@@ -291,6 +291,7 @@
      "lib-net-wg",
      "lib-news",
      "lib-ops-engine",
+     "lib-rclone-engine",
      "lib-rootfs-nixdroid",
      "lib-rootfs-termux",
      "mail",
@@ -519,6 +520,7 @@
      "lib-net-wg",
      "lib-news",
      "lib-ops-engine",
+     "lib-rclone-engine",
      "lib-rootfs-nixdroid",
      "lib-rootfs-termux",
      "mail",
@@ -639,6 +641,7 @@
      "lib-net-wg",
      "lib-news",
      "lib-ops-engine",
+     "lib-rclone-engine",
      "lib-rootfs-nixdroid",
      "lib-rootfs-termux",
      "mail",
@@ -873,6 +876,30 @@
     "callers": []
    }
   ],
+  "rclone-engine": [
+   {
+    "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+    "level": "signature",
+    "source": "libs:rclone-engine/src/main/AndroidManifest.xml",
+    "component": "com.diegonmarcos.cloudlib.rclone.engine.RcloneEngineService",
+    "id": "service:com.diegonmarcos.cloudlib.rclone.engine.RcloneEngineService",
+    "kind": "service",
+    "name": "RcloneEngineService",
+    "actions": [
+     "<pkg>.ENGINE"
+    ],
+    "aidl": [
+     {
+      "interface": "IRcloneEngine",
+      "methods": [
+       "call",
+       "methods"
+      ]
+     }
+    ],
+    "callers": []
+   }
+  ],
   "watchdog": [
    {
     "permission": null,
@@ -1052,6 +1079,7 @@
       "lib-net-wg",
       "lib-news",
       "lib-ops-engine",
+      "lib-rclone-engine",
       "lib-rootfs-nixdroid",
       "lib-rootfs-termux",
       "mail",
@@ -2918,6 +2946,21 @@
     "devtools",
     "fleetconfig-model",
     "ops-engine"
+   ],
+   "endpoints": []
+  },
+  {
+   "id": "lib-rclone-engine",
+   "pkg": "com.diegonmarcos.cloudlib.rcloneengine",
+   "label": "cloud-lib-rclone-engine",
+   "kind": "lib",
+   "dir": "libs:rclone-engine",
+   "door": true,
+   "libs": [
+    "core",
+    "devtools",
+    "fleetconfig-model",
+    "rclone-engine"
    ],
    "endpoints": []
   },

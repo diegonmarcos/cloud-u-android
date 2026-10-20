@@ -1,56 +1,84 @@
 package com.diegonmarcos.cloudlib.rclone
 
 import android.content.Context
-import android.util.Log
-import com.diegonmarcos.cloudlib.sysdns.ResolverProxy
+import android.os.Environment
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
-import java.util.concurrent.TimeUnit
+import java.io.IOException
 
 /**
- * Execs the bundled static rclone. The binary lives where the installer put
- * it — applicationInfo.nativeLibraryDir/librclone.so — because that is the
- * one place an app may exec from on API 29+ (see data/rclone-binary.json).
- * The config lives in the app's private files, so remotes and their obscured
- * secrets never leave the sandbox. Blocking; callers run it on IO.
+ * Runs rclone THROUGH THE ENGINE (#871): the pinned static binary lives in Cloud-Lib-Rclone-Engine.apk
+ * and is exec'd there, in the engine's uid; this class is the same typed face the screens were
+ * written against, over [RcloneTransport]. The rclone.conf stays HERE, in the app's private files
+ * (remotes and their obscured secrets never leave the sandbox except for the length of one call):
+ * every call carries its text, and a copy rclone rewrote (an OAuth refresh) is written back.
+ *
+ * Blocking; callers run it on IO. An absent, too-old or failing engine is an [IOException] naming
+ * what to install ([unavailableReason]); [start] never throws, it ends the job with that sentence.
  */
-class RcloneRunner(context: Context) {
-    val binary: File = File(context.applicationInfo.nativeLibraryDir, BuildConfig.RCLONE_JNI_NAME)
-    val configFile: File = File(context.filesDir, "rclone/rclone.conf")
-    val cacheDir: File = File(context.cacheDir, "rclone")
-    /** Where "download" lands files the host may then open: app-external, browsable, no permission needed. */
-    val downloadDir: File = File(context.getExternalFilesDir(null) ?: context.filesDir, "rclone-downloads")
+class RcloneRunner(
+    private val transport: RcloneTransport,
+    val configFile: File,
+    /** Where "download" lands files the host may then open: the shared store, which both the host and the engine hold All-files access to. */
+    val downloadDir: File,
+) {
+    constructor(context: Context) : this(
+        RcloneLink(context),
+        File(context.filesDir, "rclone/rclone.conf"),
+        File(Environment.getExternalStorageDirectory(), "CloudDrive/rclone-downloads"),
+    )
 
-    val isAvailable: Boolean get() = binary.isFile
+    /** Null when the engine can be called, else the sentence that says what to install or update. */
+    val unavailableReason: String? get() = transport.unavailable()
 
-    /** A running rclone: its lines stream to [onLine]; [cancel] kills it. */
-    class Handle(private val process: Process) {
+    val isAvailable: Boolean get() = unavailableReason == null
+
+    private val configLock = Any()
+
+    /** A running rclone: its lines stream to the callbacks given to [start]; [cancel] stops it. */
+    class Handle internal constructor(private val stop: () -> Unit, private val exit: java.util.concurrent.CountDownLatch, private val code: () -> Int) {
         @Volatile var cancelled = false
-        fun cancel() { cancelled = true; process.destroy() }
-        fun waitFor(): Int = process.waitFor()
+        fun cancel() { cancelled = true; stop() }
+        fun waitFor(): Int { exit.await(); return code() }
     }
 
-    private fun base(): List<String> = listOf(binary.absolutePath, "--config", configFile.absolutePath, "--cache-dir", cacheDir.absolutePath)
+    private fun configText(): String = synchronized(configLock) { if (configFile.isFile) configFile.readText() else "" }
 
-    /**
-     * #741 rclone is a linux Go build (cgo off): left alone it looks names up in an
-     * /etc/resolv.conf the app does not have and finds no CA roots. Every rclone child gets the
-     * fleet's one bridge to Android's resolver (libs:sysdns, data/sysdns.json::_doc) as
-     * HTTPS_PROXY, so a remote's name resolves where the SuperApp's DNS menu decides, and
-     * Android's CA stores as SSL_CERT_DIR.
-     */
-    private fun process(args: List<String>): ProcessBuilder = ProcessBuilder(args).also { pb ->
-        pb.environment()["SSL_CERT_DIR"] = ResolverProxy.CA_DIRS
-        net?.let { pb.environment()["HTTPS_PROXY"] = it.url }
+    /** rclone rewrote the rclone.conf it was given (a refreshed token): keep it. */
+    private fun keepConfig(text: String?) {
+        if (text == null) return
+        synchronized(configLock) {
+            if (configFile.isFile && configFile.readText() == text) return
+            configFile.parentFile?.mkdirs()
+            val tmp = File(configFile.parentFile, configFile.name + ".tmp")
+            tmp.writeText(text)
+            if (!tmp.renameTo(configFile)) { configFile.writeText(text); tmp.delete() }
+        }
     }
 
-    /** Run to completion, capture stdout; stderr lines go to [onStderr]. */
-    fun capture(args: List<String>, onStderr: (String) -> Unit = {}): Pair<Int, String> {
-        val p = process(base() + args).redirectErrorStream(false).start()
-        val errThread = Thread { p.errorStream.bufferedReader().forEachLine(onStderr) }.apply { isDaemon = true; start() }
-        val out = p.inputStream.bufferedReader().readText()
-        val rc = p.waitFor(); errThread.join(2000)
-        return rc to out
+    private fun request(args: List<String>) = JSONObject().put("config", configText()).put("args", JSONArray(args))
+
+    private fun JSONObject.checked(): JSONObject {
+        if (!optBoolean("ok", false)) throw IOException(optString("error").ifBlank { "the rclone engine refused the call" })
+        return this
     }
+
+    /** Run to completion, capture stdout; stderr lines go to [onStderr]. Returns (exit code, stdout). */
+    fun capture(args: List<String>, onStderr: (String) -> Unit = {}): Pair<Int, String> =
+        transport.session().use { s ->
+            val a = s.run(request(args)).checked()
+            keepConfig(a.optString("config").takeIf { a.has("config") })
+            a.optString("stderr").lineSequence().filter { it.isNotEmpty() }.forEach(onStderr)
+            val out = StringBuilder(a.optString("stdout"))
+            var more = a.optBoolean("more", false)
+            val id = a.optString("id")
+            while (more) {
+                val c = s.outChunk(JSONObject().put("id", id).put("offset", out.length)).checked()
+                out.append(c.optString("stdout")); more = c.optBoolean("more", false)
+            }
+            a.getInt("rc") to out.toString()
+        }
 
     fun version(): String? = if (!isAvailable) null else runCatching { RcloneOutput.parseVersion(capture(listOf("version")).second) }.getOrNull()
 
@@ -74,25 +102,63 @@ class RcloneRunner(context: Context) {
     fun test(remoteName: String): Result<Int> = lsjson("$remoteName:").map { it.size }
 
     /**
-     * Start a job with live JSON stats every second. Returns a handle at once;
-     * [onStats] and [onLine] are called from the reader thread; [onExit] with the
-     * exit code when the process ends (rclone: 0 ok, non-zero errors).
+     * Start a job with live JSON stats every second. Returns a handle at once; [onStats] and
+     * [onLine] are called from the polling thread; [onExit] with the exit code when the job ends
+     * (rclone: 0 ok, non-zero errors; -2 cancelled; -1 the engine could not run it, and the
+     * sentence why went to [onLine]).
      */
     fun start(job: RcloneJob, onStats: (RcloneStats) -> Unit, onLine: (String) -> Unit, onExit: (Int) -> Unit): Handle {
-        val args = base() + job.arguments() + listOf("--use-json-log", "--stats", "1s", "--stats-log-level", "NOTICE", "-v")
-        val p = process(args).redirectErrorStream(true).start()
-        val handle = Handle(p)
+        val args = job.arguments() + listOf("--use-json-log", "--stats", "1s", "--stats-log-level", "NOTICE", "-v")
+        val exit = java.util.concurrent.CountDownLatch(1)
+        val code = java.util.concurrent.atomic.AtomicInteger(-1)
+        /** A job that never started: the sentence why, the exit -1, a handle that is already done. */
+        fun refused(why: String?): Handle {
+            val h = Handle({}, exit) { code.get() }
+            // reported from a thread, after the caller has recorded the handle, as a job that ran would be
+            Thread { Thread.sleep(REFUSED_DELAY_MS); onLine("[engine] $why"); onExit(-1); exit.countDown() }.apply { isDaemon = true; start() }
+            return h
+        }
+        val session = try { transport.session() } catch (e: IOException) { return refused(e.message) }
+        val id = try {
+            session.jobStart(request(args)).checked().getString("id")
+        } catch (e: Exception) {
+            session.close()
+            return refused(e.message ?: e.javaClass.simpleName)
+        }
+        val handle = Handle({ runCatching { session.jobCancel(JSONObject().put("id", id)) } }, exit) { code.get() }
         Thread {
-            p.inputStream.bufferedReader().forEachLine { line ->
-                RcloneOutput.parseStatsLine(line)?.let(onStats)
-                val msg = RcloneOutput.parseMessage(line)
-                if (msg != null) { if (msg.second.isNotBlank() && !line.contains("\"stats\"")) onLine("[${msg.first}] ${msg.second}") }
-                else if (line.isNotBlank()) onLine(line)
+            var cursor = 0
+            var rc = -1
+            try {
+                while (true) {
+                    val p = session.jobPoll(JSONObject().put("id", id).put("cursor", cursor)).checked()
+                    val lines = p.getJSONArray("lines")
+                    for (i in 0 until lines.length()) line(lines.getString(i), onStats, onLine)
+                    cursor = p.getInt("cursor")
+                    if (p.getBoolean("done")) {
+                        keepConfig(p.optString("config").takeIf { p.has("config") })
+                        rc = p.optInt("rc", -1)
+                        break
+                    }
+                    if (lines.length() == 0) Thread.sleep(POLL_IDLE_MS)
+                }
+            } catch (e: Exception) {
+                onLine("[engine] ${e.message ?: e.javaClass.simpleName}")
+            } finally {
+                runCatching { session.close() }
             }
-            val rc = try { p.waitFor(30, TimeUnit.SECONDS); p.exitValue() } catch (e: IllegalThreadStateException) { -1 }
-            onExit(if (handle.cancelled) -2 else rc)
+            code.set(if (handle.cancelled) -2 else rc)
+            onExit(code.get())
+            exit.countDown()
         }.apply { isDaemon = true; start() }
         return handle
+    }
+
+    private fun line(line: String, onStats: (RcloneStats) -> Unit, onLine: (String) -> Unit) {
+        RcloneOutput.parseStatsLine(line)?.let(onStats)
+        val msg = RcloneOutput.parseMessage(line)
+        if (msg != null) { if (msg.second.isNotBlank() && !line.contains("\"stats\"")) onLine("[${msg.first}] ${msg.second}") }
+        else if (line.isNotBlank()) onLine(line)
     }
 
     /** Copy one remote file into [downloadDir]; returns the local file. */
@@ -104,16 +170,8 @@ class RcloneRunner(context: Context) {
         File(downloadDir, name)
     }
 
-    companion object {
-        /**
-         * One proxy per process, any host a remote names, any port (remotes are the user's), never
-         * cut for quiet (rclone-binary.json::sandbox). Null if loopback would not open: rclone then
-         * fails on its lookup and says so.
-         */
-        private val net: ResolverProxy? by lazy {
-            runCatching { ResolverProxy("rclone", hosts = null, port = null, idleMs = BuildConfig.RCLONE_PROXY_IDLE_MS) { Log.i("RcloneEngine", it) } }
-                .onFailure { Log.e("RcloneEngine", "rclone-net: loopback proxy would not start; rclone cannot resolve names", it) }
-                .getOrNull()
-        }
+    private companion object {
+        const val POLL_IDLE_MS = 400L
+        const val REFUSED_DELAY_MS = 200L
     }
 }

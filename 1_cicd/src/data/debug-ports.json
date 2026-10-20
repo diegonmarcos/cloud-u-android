@@ -109,6 +109,7 @@
     "com.diegonmarcos.cloudlib.opsengine": 38229,
     "com.diegonmarcos.cloudlib.decisionsengine": 38230,
     "com.diegonmarcos.cloudmediacenter": 38231,
-    "com.diegonmarcos.cloudtoolssmallllms": 38232
+    "com.diegonmarcos.cloudtoolssmallllms": 38232,
+    "com.diegonmarcos.cloudlib.rcloneengine": 38233
   }
 }
