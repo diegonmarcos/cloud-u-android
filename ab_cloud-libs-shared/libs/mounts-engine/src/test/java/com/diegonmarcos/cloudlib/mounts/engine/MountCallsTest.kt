@@ -163,9 +163,9 @@ class MountCallsTest {
         ok(c.fs(fsReq(h, "mkdir", JSONObject().put("path", "/docs/new"))))
         assertTrue("/docs/new" in dirs)
         ok(c.fs(fsReq(h, "rename", JSONObject().put("from", "/docs/b.bin").put("to", "/docs/c.bin"))))
-        assertTrue("/docs/c.bin" in files && "/docs/b.bin" !in files)
+        assertTrue(files.containsKey("/docs/c.bin") && !files.containsKey("/docs/b.bin"))
         ok(c.fs(fsReq(h, "delete", JSONObject().put("path", "/docs/c.bin").put("is_dir", false))))
-        assertFalse("/docs/c.bin" in files)
+        assertFalse(files.containsKey("/docs/c.bin"))
 
         assertFalse("webdav has no command channel, so no result", ok(c.fs(fsReq(h, "exec", JSONObject().put("command", "id")))).has("result"))
     }
