@@ -83,8 +83,8 @@ import java.security.MessageDigest
  * Tabs host — three modes:
  *
  *   GRID     tab switcher. Cards of every open tab, drawn by
- *            [BrowserTabGrid] (a RecyclerView, so long-press drag can
- *            reorder them), with pinned tabs first and named groups as
+ *            [BrowserTabGrid] (a Compose LazyVerticalGrid; long-press drags
+ *            to reorder them, a swipe closes), with pinned tabs first and named groups as
  *            collapsible headers.
  *   DETAIL   WebView fullscreen. The address bar searches as well as
  *            navigates, and suggests from local history + open tabs.
@@ -1754,33 +1754,26 @@ class BrowserHostFragment : Fragment() {
                 Text(if (incog) "No incognito tabs. Tap New Incognito to open one." else "No tabs yet. Tap New Tab to open a URL or search.",
                     color = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(20.dp))
             } else {
-                // The tab switcher stays the RecyclerView-based renderer: long-press drag, swipe-to-close and
-                // drop-onto-a-group are ItemTouchHelper's, hosted here through AndroidView.
-                AndroidView(
+                BrowserTabGrid(
+                    rows = BrowserGridRows.build(tabs, prefs.collapsedGroups()),
                     modifier = Modifier.weight(1f).fillMaxWidth(),
-                    factory = { ctx ->
-                        BrowserTabGrid(
-                            ctx,
-                            onOpen = { tab -> prefs.setActiveId(tab.key); showDetail(tab) },
-                            onSwipeClose = { tab -> swipeClose(tab) },
-                            onPin = { tab -> prefs.setPinnedById(tab.key, !tab.pinned); showGrid() },
-                            onMenu = { tab, anchor -> showTabMenu(tab, anchor) },
-                            onToggleGroup = { g ->
-                                prefs.setGroupCollapsed(g, g !in prefs.collapsedGroups()); showGrid()
-                            },
-                            onReorder = { urls -> prefs.reorder(urls) },
-                            onDropOnTab = { drag, target ->
-                                prefs.dropOnTab(drag, target)?.let { c -> grouped(c); showGrid() }
-                            },
-                            onDropOnGroup = { drag, g ->
-                                prefs.dropOnGroup(drag, g)?.let { c -> grouped(c); showGrid() }
-                            },
-                            onEditGroup = { g -> showGroupEditor(g) },
-                            groupColors = { prefs.groupColors() },
-                            thumbs = thumbs,
-                        )
+                    onOpen = { tab -> prefs.setActiveId(tab.key); showDetail(tab) },
+                    onSwipeClose = { tab -> swipeClose(tab) },
+                    onPin = { tab -> prefs.setPinnedById(tab.key, !tab.pinned); showGrid() },
+                    onMenu = { tab -> showTabMenu(tab) },
+                    onToggleGroup = { g ->
+                        prefs.setGroupCollapsed(g, g !in prefs.collapsedGroups()); showGrid()
                     },
-                    update = { grid -> grid.submit(BrowserGridRows.build(tabs, prefs.collapsedGroups())) },
+                    onReorder = { urls -> prefs.reorder(urls) },
+                    onDropOnTab = { drag, target ->
+                        prefs.dropOnTab(drag, target)?.let { c -> grouped(c); showGrid() }
+                    },
+                    onDropOnGroup = { drag, g ->
+                        prefs.dropOnGroup(drag, g)?.let { c -> grouped(c); showGrid() }
+                    },
+                    onEditGroup = { g -> showGroupEditor(g) },
+                    groupColors = { prefs.groupColors() },
+                    thumbs = thumbs,
                 )
             }
         }
@@ -1913,7 +1906,7 @@ class BrowserHostFragment : Fragment() {
     }
 
     /** Per-tab actions. Long-press is spoken for by the drag, so: ⋮. */
-    private fun showTabMenu(tab: BrowserTab, @Suppress("UNUSED_PARAMETER") anchor: View) {
+    private fun showTabMenu(tab: BrowserTab) {
         val rows = listOfNotNull(
             SheetRow("pin", if (tab.pinned) "Unpin tab" else "Pin tab"),
             SheetRow("group", if (tab.group.isBlank()) "Add to group…" else "Move to group…"),

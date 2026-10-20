@@ -37,7 +37,7 @@ class BrowserTabCardTest {
         val src = gridSource()
         assertFalse("no close view id", src.contains("ID_CLOSE"))
         assertFalse("no x glyph on a card", src.contains("\" ✕ \""))
-        assertTrue(src.contains("id = ID_PIN") && src.contains("id = ID_MENU"))
+        assertTrue(src.contains("browser:tabcard:pin") && src.contains("browser:tabcard:menu"))
     }
 
     @Test

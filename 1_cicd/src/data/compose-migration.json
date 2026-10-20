@@ -550,20 +550,18 @@
       "id": "libs:browser",
       "scope": "in",
       "wave": 3,
-      "ui": "mixed",
+      "ui": "compose",
       "size": "S",
-      "screens_left": [
-        "BrowserTabGrid (custom: the RecyclerView + ItemTouchHelper tab switcher, hosted in the Compose host via AndroidView)"
-      ],
+      "screens_left": [],
       "consumers": [
         "browser"
       ],
-      "notes": "Host of the engine view: the engine stays an AndroidView, the chrome around it becomes Compose.",
+      "notes": "Done 2026-10-20: the tab switcher (cards, snapshot, long-press drag, swipe-to-close, group headers) is a Compose LazyVerticalGrid; the engine WebView stays an AndroidView.",
       "baseline": {
         "view_screens": 0,
         "layout_xml": 0,
-        "view_ui_files": 1,
-        "custom_views": 1
+        "view_ui_files": 0,
+        "custom_views": 0
       }
     },
     {

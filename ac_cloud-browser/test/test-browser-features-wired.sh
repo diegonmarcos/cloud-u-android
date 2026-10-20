@@ -79,17 +79,16 @@ def has(name, *needles):
     return all(nd in SRC.get(name, "") for nd in needles)
 
 # ── 1. hold-and-drag reorder, and it persists ────────────────────────
-check(has("BrowserTabGrid", "RecyclerView", "ItemTouchHelper", "attachToRecyclerView"),
-      "1: the tab grid is a RecyclerView driven by ItemTouchHelper")
+check(has("BrowserTabGrid", "LazyVerticalGrid", "detectDragGesturesAfterLongPress"),
+      "1: the tab grid is a Compose LazyVerticalGrid with a long-press drag")
 # Matched as the WHOLE declaration. Asserting "isLongPressDragEnabled"
 # and "return true" as two separate needles passed against a flipped
 # `= false`, because some other method in the file also returns true —
 # two greps ANDed prove co-occurrence, never proximity.
-check(has("BrowserTabGrid",
-          "override fun isLongPressDragEnabled(): Boolean = true"),
+check(has("BrowserTabGrid", "pointerInput(key)", "detectDragGesturesAfterLongPress(", "onDragStart = { drag.begin(key) }"),
       "1: long-press starts the drag (what he asked for)")
 # An import is not a reorder. The drop has to reach the store.
-check(has("BrowserTabGrid", "onReorder(adapter0.visibleTabUrls())"),
+check(has("BrowserTabGrid", "onReorder(model.visibleTabUrls())"),
       "1: the drop calls back to persist, not just animate")
 check(has("BrowserHostFragment", "onReorder = { urls -> prefs.reorder(urls) }"),
       "1: the host wires that callback to BrowserTabPrefs.reorder")
@@ -103,11 +102,11 @@ check(has("BrowserTab", "if (tab.pinned) return null"),
       "2: the refusal itself")
 check(not has("BrowserTabGrid", "ID_CLOSE") and not has("BrowserTabGrid", '" ✕ "'),
       "2: a card has no close button at all; swipe closes it")
-check(has("BrowserTabGrid", "ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT", "SwipeGesture.needsConfirm(tab)", "onSwipeClose(tab)"),
+check(has("BrowserTabGrid", "detectHorizontalDragGestures", "SwipeGesture.needsConfirm(tabNow)", "onSwipe(tabNow)"),
       "2: a card swipes left or right to close, a pinned one is confirmed first")
 check(has("BrowserHostFragment", "Snackbar", '"Undo"', "swipeClose.begin(tab)", "fun commitSwipe("),
       "2: a swipe-close offers Undo, and the teardown waits for the window to end")
-check(has("BrowserTabGrid", "id = ID_PIN", "onPin(tab)", "textSize = 24f"),
+check(has("BrowserTabGrid", "browser:tabcard:pin", "onPin(tab)", "fontSize = 24.sp"),
       "2: the card has a pin icon that toggles the pin, and a larger options icon")
 check(has("BrowserHostFragment", 'if (tab.pinned) "Unpin tab" else "Pin tab"'),
       "2: pin/unpin is reachable from the card menu")
@@ -121,7 +120,7 @@ check(has("BrowserHostFragment", "onToggleGroup", "setGroupCollapsed"),
       "3: tapping a group header collapses it")
 check(has("BrowserGridRows", "GroupHeader", "if (!isCollapsed)"),
       "3: a collapsed group contributes its header only")
-check(has("BrowserTabGrid", "GroupHeader", "getSpanSize"),
+check(has("BrowserTabGrid", "GroupHeader", "GridItemSpan(if (it is BrowserGridRow.GroupHeader) maxLineSpan else 1)"),
       "3: the header is actually drawn, spanning the grid")
 
 # ── 5. history: recorded, viewable, clearable, LOCAL ─────────────────

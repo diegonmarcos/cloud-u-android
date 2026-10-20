@@ -1,13 +1,27 @@
 package com.diegonmarcos.cloudbrowser
 
-import android.app.Activity
 import android.content.ComponentName
 import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
-import android.os.Looper
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
+import android.graphics.Color as AColor
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.center
+import androidx.compose.ui.test.down
+import androidx.compose.ui.test.moveBy
+import androidx.compose.ui.test.up
+import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.browser.BrowserGridRow
 import com.diegonmarcos.superapp.browser.BrowserTab
 import com.diegonmarcos.superapp.browser.BrowserTabGrid
@@ -15,15 +29,14 @@ import com.diegonmarcos.superapp.browser.TabCardA11y
 import com.diegonmarcos.superapp.browser.TabThumbConfig
 import com.diegonmarcos.superapp.browser.TabThumbnails
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.rules.TemporaryFolder
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
+import org.junit.runners.model.Statement
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -31,65 +44,86 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.util.concurrent.Executor
 
-/** A tab-switcher card with a snapshot draws it (top-aligned crop); one without shows the favicon plate. */
+/**
+ * The Compose tab switcher: a card with a snapshot draws it (top-aligned crop); one without shows the favicon plate;
+ * a horizontal swipe closes a card; a long-press drag inside a group reorders it.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w360dp-h800dp-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class BrowserTabSnapshotUiTest {
 
-    @get:Rule val tmp = TemporaryFolder()
+    private val tmp = TemporaryFolder()
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @get:Rule
+    val rules: RuleChain = RuleChain.outerRule(tmp).around(TestRule { base, _ ->
+        object : Statement() {
+            override fun evaluate() {
+                val app = RuntimeEnvironment.getApplication()
+                shadowOf(app.packageManager).addActivityIfNotPresent(ComponentName(app, ComponentActivity::class.java))
+                base.evaluate()
+            }
+        }
+    }).around(compose)
 
     private val direct = Executor { it.run() }
 
-    private fun tab(id: String) = BrowserTab("https://$id.example/", id, 1L, id = id)
+    private fun tab(id: String, group: String = "", pinned: Boolean = false) =
+        BrowserTab("https://$id.example/", id, 1L, id = id, group = group, pinned = pinned)
 
-    private fun grid(thumbs: TabThumbnails, vararg tabs: BrowserTab): BrowserTabGrid {
-        val app = RuntimeEnvironment.getApplication()
-        shadowOf(app.packageManager).addActivityIfNotPresent(ComponentName(app, Activity::class.java))
-        val act = Robolectric.buildActivity(Activity::class.java).setup().get()
-        val g = BrowserTabGrid(act, onOpen = {}, onSwipeClose = {}, onPin = {}, onMenu = { _, _ -> },
-            onToggleGroup = {}, onReorder = {}, thumbs = thumbs)
-        act.setContentView(g, ViewGroup.LayoutParams(720, 1600))
-        g.submit(tabs.map { BrowserGridRow.TabCard(it) })
-        g.measure(View.MeasureSpec.makeMeasureSpec(720, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(1600, View.MeasureSpec.EXACTLY))
-        g.layout(0, 0, 720, 1600)
-        shadowOf(Looper.getMainLooper()).idle()
-        return g
+    private fun show(
+        thumbs: TabThumbnails?, rows: List<BrowserGridRow>,
+        onSwipeClose: (BrowserTab) -> Unit = {}, onReorder: (List<String>) -> Unit = {},
+    ) {
+        compose.setContent {
+            Box(Modifier.fillMaxSize()) {
+                BrowserTabGrid(rows, onOpen = {}, onSwipeClose = onSwipeClose, onPin = {}, onMenu = {},
+                    onToggleGroup = {}, onReorder = onReorder, thumbs = thumbs)
+            }
+        }
+        compose.waitForIdle()
     }
 
-    private fun described(root: View, text: String): List<View> =
-        ArrayList<View>().also { root.findViewsWithText(it, text, View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION) }
+    private fun cards(vararg tabs: BrowserTab) = tabs.map { BrowserGridRow.TabCard(it) }
+
+    private fun count(desc: String) =
+        compose.onAllNodesWithContentDescription(desc, useUnmergedTree = true).fetchSemanticsNodes().size
 
     @Test
     fun `a card with a snapshot renders the image and hides the fallback plate`() {
         val thumbs = TabThumbnails(tmp.newFolder("t"), TabThumbConfig(), direct, direct)
-        val snap = Bitmap.createBitmap(90, 160, Bitmap.Config.RGB_565).also { it.eraseColor(0xFFFF8800.toInt()) }
-        thumbs.put("a", snap)
-        val g = grid(thumbs, tab("a"))
+        thumbs.put("a", Bitmap.createBitmap(90, 160, Bitmap.Config.RGB_565).also { it.eraseColor(0xFFFF8800.toInt()) })
+        show(thumbs, cards(tab("a")))
 
-        val shots = described(g, TabCardA11y.SNAPSHOT)
-        assertEquals("one card shows its snapshot", 1, shots.size)
-        val img = shots.single() as ImageView
-        assertSame(snap, (img.drawable as BitmapDrawable).bitmap)
-        // Crop + top alignment: scaled to cover the card width and pinned to y = 0.
-        val vals = FloatArray(9).also { img.imageMatrix.getValues(it) }
-        assertTrue("scale covers the box", vals[android.graphics.Matrix.MSCALE_X] >= img.width / 90f - 0.001f)
-        assertEquals("top edge kept", 0f, vals[android.graphics.Matrix.MTRANS_Y], 0.001f)
-        // findViewsWithText only returns visible views: no match = the plate is hidden.
-        assertEquals("the fallback plate is hidden", 0, described(g, TabCardA11y.PLACEHOLDER).size)
+        assertEquals("one card shows its snapshot", 1, count(TabCardA11y.SNAPSHOT))
+        assertEquals("the fallback plate is gone", 0, count(TabCardA11y.PLACEHOLDER))
+    }
+
+    @Test
+    fun `the snapshot is cropped to fill the card and keeps its top edge`() {
+        // A tall page: red in its top tenth, blue below. Center-crop would cut the red off; top-crop keeps it.
+        val shot = Bitmap.createBitmap(90, 160, Bitmap.Config.ARGB_8888).also { b ->
+            for (y in 0 until 160) for (x in 0 until 90) b.setPixel(x, y, if (y < 16) AColor.RED else AColor.BLUE)
+        }
+        val thumbs = TabThumbnails(tmp.newFolder("t"), TabThumbConfig(), direct, direct)
+        thumbs.put("a", shot)
+        show(thumbs, cards(tab("a")))
+
+        assertEquals(ContentScale.Crop, com.diegonmarcos.superapp.browser.TAB_SNAPSHOT_SCALE)
+        assertEquals(Alignment.TopCenter, com.diegonmarcos.superapp.browser.TAB_SNAPSHOT_ALIGN)
+        val img = compose.onNodeWithContentDescription(TabCardA11y.SNAPSHOT, useUnmergedTree = true).captureToImage()
+        val top = img.toPixelMap()[img.width / 2, 2]
+        assertTrue("the top edge of the page is what the card shows", top.red > 0.8f && top.blue < 0.3f)
     }
 
     @Test
     fun `a card without a snapshot renders the favicon plate`() {
         val thumbs = TabThumbnails(tmp.newFolder("t"), TabThumbConfig(), direct, direct)
-        val icon = tmp.newFile("fav.png")
-        icon.outputStream().use { Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.PNG, 100, it) }
-        val g = grid(thumbs, tab("b").copy(iconPath = icon.absolutePath))
+        show(thumbs, cards(tab("b")))
 
-        assertEquals("no snapshot drawn", 0, described(g, TabCardA11y.SNAPSHOT).size)
-        val plate = described(g, TabCardA11y.PLACEHOLDER).single() as ImageView
-        assertEquals(View.VISIBLE, plate.visibility)
-        assertNotNull("the favicon is on the plate", plate.drawable)
+        assertEquals("no snapshot drawn", 0, count(TabCardA11y.SNAPSHOT))
+        assertEquals("the plate is there", 1, count(TabCardA11y.PLACEHOLDER))
     }
 
     @Test
@@ -97,9 +131,35 @@ class BrowserTabSnapshotUiTest {
         val dir = tmp.newFolder("t")
         TabThumbnails(dir, TabThumbConfig(), direct, direct).put("c", Bitmap.createBitmap(90, 160, Bitmap.Config.RGB_565))
         val fresh = TabThumbnails(dir, TabThumbConfig(), direct, direct)   // empty memory, file on disk
-        assertNull(fresh.cached("c"))
-        val g = grid(fresh, tab("c"))
-        assertEquals(1, described(g, TabCardA11y.SNAPSHOT).size)
-        assertEquals(0, described(g, TabCardA11y.PLACEHOLDER).size)
+        show(fresh, cards(tab("c")))
+        compose.waitForIdle()
+        assertEquals(1, count(TabCardA11y.SNAPSHOT))
+        assertEquals(0, count(TabCardA11y.PLACEHOLDER))
+    }
+
+    @Test
+    fun `a horizontal swipe on a card closes it`() {
+        val closed = mutableListOf<String>()
+        show(null, cards(tab("a"), tab("b")), onSwipeClose = { closed += it.key })
+        compose.onNodeWithTag("browser:tabcard:a", useUnmergedTree = true).performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+        assertEquals(listOf("a"), closed)
+    }
+
+    @Test
+    fun `a long-press drag inside a group reorders it and reports the new order`() {
+        var order: List<String>? = null
+        val rows = listOf<BrowserGridRow>(BrowserGridRow.GroupHeader("g", false, 2)) + cards(tab("a", "g"), tab("b", "g"))
+        show(null, rows, onReorder = { order = it })
+        compose.onNodeWithTag("browser:tabcard:a", useUnmergedTree = true).performTouchInput {
+            down(center)
+            advanceEventTime(800)   // past the long-press timeout
+            moveBy(androidx.compose.ui.geometry.Offset(width / 4f, 0f))
+            moveBy(androidx.compose.ui.geometry.Offset(width / 2f, 0f))
+            moveBy(androidx.compose.ui.geometry.Offset(width / 2f, 0f))
+            up()
+        }
+        compose.waitForIdle()
+        assertEquals(listOf("b", "a"), order)
     }
 }
