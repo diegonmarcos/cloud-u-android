@@ -16,6 +16,8 @@ private const val C3_ACTIVITY = "com.diegonmarcos.cloudc3.MainActivity"
 private const val C3_TARGET_EXTRA = "shortcut_action"
 /** Cloud C3's Observ > Dagu page (page id `c3/dagu`), the native list of deterministic workflows. */
 private const val C3_WORKFLOWS_PAGE = "c3/dagu"
+/** Cloud C3's Ops > Agents page (page id `ops/agents`): the fleet's launchable agents. */
+private const val C3_AGENTS_PAGE = "ops/agents"
 private const val WORKFLOWS_WEB = "https://workflows.diegonmarcos.com"
 
 /** Home > AI: the Hermes agent's Telegram bot, same target as the superapp's AI action; t.me when Telegram is absent. Reports whether it left. */
@@ -26,6 +28,18 @@ internal fun openHermesAi(context: Context): Boolean {
         true
     } catch (_: ActivityNotFoundException) {
         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/$HERMES_BOT"))) }.isSuccess
+    }
+}
+
+/** Home > Agents: Cloud C3's Agents page (deep link); a toast when C3 is not installed. Reports whether it left. */
+internal fun openAgents(context: Context): Boolean {
+    val c3 = Intent().setClassName(C3_PACKAGE, C3_ACTIVITY).putExtra(C3_TARGET_EXTRA, "page:$C3_AGENTS_PAGE")
+    return try {
+        context.startActivity(c3)
+        true
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, R.string.home_agents_not_installed, Toast.LENGTH_SHORT).show()
+        false
     }
 }
 

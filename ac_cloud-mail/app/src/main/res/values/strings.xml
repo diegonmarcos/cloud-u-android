@@ -138,6 +138,8 @@
     <string name="inbox_settings">Settings</string>
     <string name="home_workflows">Workflows</string>
     <string name="home_ai">AI</string>
+    <string name="home_agents">Agents</string>
+    <string name="home_agents_not_installed">Cloud C3 is not installed, so the Agents page cannot open</string>
     <string name="home_workflows_not_installed">Cloud C3 is not installed, opening Workflows in the browser</string>
     <string name="inbox_cancel_selection">Cancel selection</string>
     <string name="inbox_selected_count">%1$d selected</string>

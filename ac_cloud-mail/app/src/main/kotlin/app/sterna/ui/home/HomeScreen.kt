@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Schedule
@@ -100,6 +101,7 @@ fun HomeScreen(
     onOpenOutbox: () -> Unit,
     onOpenMailBySender: () -> Unit,
     onOpenRss: () -> Unit,
+    onOpenAgents: () -> Unit,
     onOpenWorkflows: () -> Unit,
     onOpenAi: () -> Unit,
     viewModel: HomeViewModel = viewModel(),
@@ -121,6 +123,7 @@ fun HomeScreen(
                     HomeDestination.OUTBOX -> onOpenOutbox()
                     HomeDestination.BY_SENDER -> onOpenMailBySender()
                     HomeDestination.NEWS -> onOpenRss()
+                    HomeDestination.AGENTS -> onOpenAgents()
                     HomeDestination.WORKFLOWS -> onOpenWorkflows()
                     HomeDestination.AI -> onOpenAi()
                 }
@@ -202,8 +205,9 @@ internal enum class HomeDestination(val kind: Kind, val icon: ImageVector, @Stri
     COMPOSE(Kind.SHORTCUT, Icons.Filled.Create, R.string.inbox_compose),
     SEARCH(Kind.SHORTCUT, Icons.Filled.Search, R.string.inbox_search),
     SETTINGS(Kind.SHORTCUT, Icons.Filled.Settings, R.string.inbox_settings),
-    WORKFLOWS(Kind.SHORTCUT, Icons.Filled.AccountTree, R.string.home_workflows),
+    AGENTS(Kind.SHORTCUT, Icons.Filled.Hub, R.string.home_agents),
     AI(Kind.SHORTCUT, Icons.Filled.SmartToy, R.string.home_ai),
+    WORKFLOWS(Kind.SHORTCUT, Icons.Filled.AccountTree, R.string.home_workflows),
     STARRED(Kind.QUICKMARK, Icons.Filled.Star, R.string.folder_flagged),
     SCHEDULED(Kind.QUICKMARK, Icons.Filled.Schedule, R.string.inbox_scheduled),
     SNOOZED(Kind.QUICKMARK, Icons.Filled.Snooze, R.string.inbox_snoozed),
@@ -233,7 +237,7 @@ internal fun ShortcutsRow(actions: List<HomeAction>) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = MailMetrics.s16, vertical = MailMetrics.s12),
     ) {
-        // Five shortcuts: equal cells (not fixed gaps) so they fit a 360 dp phone in every language.
+        // Six shortcuts: equal cells (not fixed gaps) so they fit a 360 dp phone in every language.
         actions.forEach { action ->
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(

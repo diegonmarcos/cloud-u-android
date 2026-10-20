@@ -301,7 +301,7 @@ class AccountMailStatsTest {
 
     @Test fun `the page's tiles are the declared destinations, each once`() {
         assertEquals(
-            listOf("COMPOSE", "SEARCH", "SETTINGS", "WORKFLOWS", "AI"),
+            listOf("COMPOSE", "SEARCH", "SETTINGS", "AGENTS", "AI", "WORKFLOWS"),
             HomeDestination.entries.filter { it.kind == HomeDestination.Kind.SHORTCUT }.map { it.name },
         )
         assertEquals(

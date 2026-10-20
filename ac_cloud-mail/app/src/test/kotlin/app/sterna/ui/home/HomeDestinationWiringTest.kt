@@ -55,11 +55,12 @@ class HomeDestinationWiringTest {
                 """onOpenOutbox = { entry.navigateOnce { nav.navigate("outbox") } },""",
                 """onOpenMailBySender = { entry.navigateOnce { nav.navigate("bysender") } },""",
                 """onOpenRss = { entry.navigateOnce { nav.navigate("rss") } },""",
+                "onOpenAgents = { leaveOnce { openAgents(homeContext) } },
                 "onOpenWorkflows = { leaveOnce { openWorkflows(homeContext) } },",
                 "onOpenAi = { leaveOnce { openHermesAi(homeContext) } },",
                 ")",
             ),
-            block(STERNA_APP, """composable("home")""", count = 18),
+            block(STERNA_APP, """composable("home")""", count = 19),
         )
     }
 

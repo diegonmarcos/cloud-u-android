@@ -54,6 +54,7 @@ import app.sterna.ui.compose.IncognitoKeyboard
 import app.sterna.ui.connect.ConnectScreen
 import app.sterna.core.jmap.model.Email
 import app.sterna.ui.home.HomeScreen
+import app.sterna.ui.home.openAgents
 import app.sterna.ui.home.openHermesAi
 import app.sterna.ui.home.openWorkflows
 import app.sterna.ui.inbox.InboxScreen
@@ -689,6 +690,7 @@ private fun MainNavHost(
                     onOpenOutbox = { entry.navigateOnce { nav.navigate("outbox") } },
                     onOpenMailBySender = { entry.navigateOnce { nav.navigate("bysender") } },
                     onOpenRss = { entry.navigateOnce { nav.navigate("rss") } },
+                    onOpenAgents = { leaveOnce { openAgents(homeContext) } },
                     onOpenWorkflows = { leaveOnce { openWorkflows(homeContext) } },
                     onOpenAi = { leaveOnce { openHermesAi(homeContext) } },
                 )
