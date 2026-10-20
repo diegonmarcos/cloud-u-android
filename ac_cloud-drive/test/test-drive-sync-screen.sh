@@ -66,7 +66,7 @@ g6() {
 
 echo "── G1 the glance is the engine's status ──"
 if grep -qE 'data class Glance\(' "$COORD" && for f in branch upstream ahead behind changed conflicts repositoryState error gone; do grep -qE "val $f:" "$COORD" || exit 1; done; then pass "Glance carries branch, upstream, ahead, behind, changed, conflicts, repositoryState, error, gone"; else fail "Glance lacks a field the card prints"; fi
-if grep -qE 'GitEngine\(dir\)\.use \{ e ->' "$COORD" && grep -qE 'val s = e\.status\(\)' "$COORD"; then pass "the glance is GitEngine.status(), not a second git"; else fail "the coordinator does not read GitEngine.status()"; fi
+if grep -qE 'GitEngine\(ctx, dir\)\.use \{ e ->' "$COORD" && grep -qE 'val s = e\.status\(\)' "$COORD"; then pass "the glance is GitEngine.status(), not a second git"; else fail "the coordinator does not read GitEngine.status()"; fi
 if grep -rqE 'org\.eclipse\.jgit' "$SRC"; then fail "the app imports JGit directly — the library is the engine"; else pass "no JGit in the app: every verb goes through libs:git-sync"; fi
 if grep -qE 'RepoRegistry\(File\(ctx\.filesDir, GitSyncWorker\.REGISTRY_FILE\)\)' "$COORD" && grep -qE 'const val REGISTRY_FILE = "git-sync/repos\.json"' "$WORKER" && grep -qE 'RepoRegistry\(File\(context\.filesDir, "git-sync/repos\.json"\)\)' "$LIB_SCREEN"; then pass "card, worker and engine screen read the SAME registry"; else fail "registry paths differ"; fi
 

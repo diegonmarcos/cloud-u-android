@@ -1,4 +1,9 @@
-package com.diegonmarcos.cloudlib.gitsync
+package com.diegonmarcos.cloudlib.gitsync.engine
+
+import com.diegonmarcos.cloudlib.gitsync.ConflictSide
+import com.diegonmarcos.cloudlib.gitsync.GitAuth
+import com.diegonmarcos.cloudlib.gitsync.GitChange
+import com.diegonmarcos.cloudlib.gitsync.GitFileStatus
 
 import java.io.File
 import java.nio.file.Files
@@ -18,7 +23,7 @@ import org.junit.Test
  * involved. Nothing is mocked; a verb that stops doing what its name says
  * fails here, in the unit phase of every cloud-drive ship.
  */
-class GitEngineTest {
+class JGitEngineTest {
 
     private lateinit var root: File
     private lateinit var work: File
@@ -40,9 +45,9 @@ class GitEngineTest {
     @After fun tearDown() { root.deleteRecursively() }
 
     @Test fun initIsARepositoryAndStatusStartsClean() {
-        assertFalse(GitEngine.isRepository(work))
-        GitEngine.init(work).use { e ->
-            assertTrue(GitEngine.isRepository(work))
+        assertFalse(JGitEngine.isRepository(work))
+        JGitEngine.init(work).use { e ->
+            assertTrue(JGitEngine.isRepository(work))
             val s = e.status()
             assertTrue(s.isClean)
             assertEquals("SAFE", s.repositoryState)
@@ -51,7 +56,7 @@ class GitEngineTest {
     }
 
     @Test fun untrackedThenStagedThenCommittedThenModified() {
-        GitEngine.init(work).use { e ->
+        JGitEngine.init(work).use { e ->
             write(work, "notes/a.md", "hello\n")
             var s = e.status()
             assertEquals(listOf(GitFileStatus("notes/a.md", unstaged = GitChange.UNTRACKED)), s.files)
@@ -100,7 +105,7 @@ class GitEngineTest {
     }
 
     @Test fun deletedFileIsStagedAsDeletionAndDiscardRestores() {
-        GitEngine.init(work).use { e ->
+        JGitEngine.init(work).use { e ->
             write(work, "keep.txt", "k\n"); write(work, "gone.txt", "g\n")
             e.stageAll(); e.commit("base", "T", "t@x")
             File(work, "gone.txt").delete()
@@ -119,7 +124,7 @@ class GitEngineTest {
     }
 
     @Test fun untrackedDiffShowsWholeFileAndCommitDiffAgainstParentAndEmptyTree() {
-        GitEngine.init(work).use { e ->
+        JGitEngine.init(work).use { e ->
             write(work, "new.txt", "one\ntwo\n")
             val whole = e.diff("new.txt")
             assertTrue(whole.contains("+one") && whole.contains("+two"))
@@ -136,7 +141,7 @@ class GitEngineTest {
     }
 
     @Test fun amendRewritesTheTip() {
-        GitEngine.init(work).use { e ->
+        JGitEngine.init(work).use { e ->
             write(work, "a", "1"); e.stageAll(); val c1 = e.commit("typo", "T", "t@x")
             val c2 = e.commit("fixed", "T", "t@x", amend = true)
             assertEquals(listOf(c2.sha), e.log().map { it.sha })
@@ -146,7 +151,7 @@ class GitEngineTest {
     }
 
     @Test fun remotesAreListedAddedRenamedAndRemoved() {
-        GitEngine.init(work).use { e ->
+        JGitEngine.init(work).use { e ->
             assertTrue(e.remotes().isEmpty())
             e.addRemote("origin", bareUrl)
             val r = e.remotes().single()
@@ -162,7 +167,7 @@ class GitEngineTest {
     }
 
     @Test fun pushSetsUpstreamThenPullAndFetchTrackAheadBehind() {
-        GitEngine.init(work).use { e ->
+        JGitEngine.init(work).use { e ->
             write(work, "f", "1\n"); e.stageAll(); e.commit("c1", "T", "t@x")
             e.addRemote("origin", bareUrl)
             assertNull(e.status().upstream)
@@ -186,11 +191,11 @@ class GitEngineTest {
 
         // A second clone commits and pushes; the first is then BEHIND until it pulls.
         val other = File(root, "other")
-        GitEngine.clone(bareUrl, other).use { o ->
+        JGitEngine.clone(bareUrl, other).use { o ->
             write(other, "g", "from other\n"); o.stageAll(); o.commit("c3", "O", "o@x")
             assertTrue(o.push("origin").ok)
         }
-        GitEngine(work).use { e ->
+        JGitEngine(work).use { e ->
             assertTrue(e.fetch("origin").ok)
             val s = e.status()
             assertEquals(1, s.ahead); assertEquals(1, s.behind)
@@ -205,15 +210,15 @@ class GitEngineTest {
 
     @Test fun conflictSurfacesInStatusAndResolvesOursOrTheirs() {
         // Seed the remote with one file.
-        GitEngine.init(work).use { e ->
+        JGitEngine.init(work).use { e ->
             write(work, "shared.txt", "base\n"); e.stageAll(); e.commit("base", "T", "t@x")
             e.addRemote("origin", bareUrl); assertTrue(e.push("origin").ok)
         }
         val other = File(root, "other")
-        GitEngine.clone(bareUrl, other).use { o ->
+        JGitEngine.clone(bareUrl, other).use { o ->
             write(other, "shared.txt", "theirs\n"); o.stageAll(); o.commit("theirs", "O", "o@x"); assertTrue(o.push("origin").ok)
         }
-        GitEngine(work).use { e ->
+        JGitEngine(work).use { e ->
             write(work, "shared.txt", "ours\n"); e.stageAll(); e.commit("ours", "T", "t@x")
             val pulled = e.pull("origin", rebase = false)
             assertFalse("a diverging edit must not report success: ${pulled.summary}", pulled.ok)
@@ -238,7 +243,7 @@ class GitEngineTest {
         }
 
         // The mirror case: OURS, then abort instead of committing.
-        GitEngine(other).use { o ->
+        JGitEngine(other).use { o ->
             write(other, "shared.txt", "mine again\n"); o.stageAll(); o.commit("again", "O", "o@x")
             assertFalse(o.pull("origin", rebase = false).ok)
             o.resolve("shared.txt", ConflictSide.OURS)
@@ -262,7 +267,7 @@ class GitEngineTest {
     }
 
     @Test fun syncCommitsPullsAndPushesInOneTap() {
-        GitEngine.init(work).use { e ->
+        JGitEngine.init(work).use { e ->
             write(work, "n.md", "v1\n")
             val noRemote = e.sync("sync", "T", "t@x")
             assertTrue(noRemote.ok)
@@ -286,18 +291,18 @@ class GitEngineTest {
      * synonym for `push`.
      */
     @Test fun forcePushOverwritesTheRemoteAndForcePullOverwritesTheLocalSide() {
-        GitEngine.init(work).use { e ->
+        JGitEngine.init(work).use { e ->
             write(work, "f.txt", "base\n"); e.stageAll(); e.commit("base", "T", "t@x")
             e.addRemote("origin", bareUrl)
             assertTrue(e.push("origin").ok)
         }
         val other = File(root, "other")
-        GitEngine.clone(bareUrl, other).use { o ->
+        JGitEngine.clone(bareUrl, other).use { o ->
             write(other, "f.txt", "theirs\n"); o.stageAll(); o.commit("theirs", "O", "o@x")
             assertTrue(o.push("origin").ok)
         }
         // work rewrites its own tip: a plain push is a non-fast-forward and must be REJECTED.
-        GitEngine(work).use { e ->
+        JGitEngine(work).use { e ->
             write(work, "f.txt", "ours\n"); e.stageAll(); e.commit("ours", "T", "t@x")
             val plain = e.push("origin")
             assertFalse("a diverged push must be rejected: ${plain.summary}", plain.ok)
@@ -308,7 +313,7 @@ class GitEngineTest {
         }
         // other is now on a history the remote no longer has: a plain pull conflicts,
         // a force pull throws the local side away and lands exactly on the remote tip.
-        GitEngine(other).use { o ->
+        JGitEngine(other).use { o ->
             write(other, "f.txt", "mine again\n"); o.stageAll(); o.commit("again", "O", "o@x")
             assertFalse("a diverged pull must not report success", o.pull("origin", rebase = false).ok)
             o.abortMerge()
@@ -324,7 +329,7 @@ class GitEngineTest {
         val fresh = File(root, "fresh")
         val empty = File(root, "empty.git")
         org.eclipse.jgit.api.Git.init().setBare(true).setDirectory(empty).call().close()
-        GitEngine.init(fresh).use { f ->
+        JGitEngine.init(fresh).use { f ->
             write(fresh, "x", "1"); f.stageAll(); f.commit("only", "T", "t@x")
             f.addRemote("origin", "file://" + empty.absolutePath)
             val r = f.forcePull("origin")
@@ -342,13 +347,13 @@ class GitEngineTest {
         // On a non-HTTP transport the callback is a no-op, so a Session against a
         // local/file remote clones anonymously instead of crashing: clone, fetch
         // and pull all take the same withAuth path.
-        GitEngine.init(work).use { e ->
+        JGitEngine.init(work).use { e ->
             write(work, "f", "1\n"); e.stageAll(); e.commit("c1", "T", "t@x")
             e.addRemote("origin", bareUrl)
             assertTrue(e.push("origin").ok)
         }
         val other = File(root, "session-clone")
-        GitEngine.clone(bareUrl, other, auth = session).use { o ->
+        JGitEngine.clone(bareUrl, other, auth = session).use { o ->
             assertTrue(File(other, "f").isFile)
             assertTrue(o.fetch("origin", auth = session).ok)
             assertTrue(o.pull("origin", auth = session).ok)
@@ -359,7 +364,7 @@ class GitEngineTest {
         // The fleet rule: a manager may display branches, never create them. The
         // engine's public surface has no verb that does — checked by name so a
         // future "helpful" addition fails here before it ships.
-        val verbs = GitEngine::class.java.methods.map { it.name }.toSet()
+        val verbs = JGitEngine::class.java.methods.map { it.name }.toSet()
         for (forbidden in listOf("createBranch", "deleteBranch", "checkoutBranch", "branchCreate", "renameBranch")) {
             assertFalse("engine exposes $forbidden", forbidden in verbs)
         }

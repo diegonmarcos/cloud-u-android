@@ -75,7 +75,7 @@ REPOS="$APP/data/drive-git-repos.json"
 JVM="$APP/app/src/test/java/com/diegonmarcos/clouddrive/sync/GitPageTest.kt"
 GIT_MOD="$(python3 -c 'import json,os,sys; b=json.load(open(sys.argv[1])); print(os.path.normpath(os.path.join(sys.argv[2], b["modules"]["libs:git-sync"]["dir"])))' "$BJ" "$APP")"
 ENGINE="$GIT_MOD/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitEngine.kt"
-ENGINE_TEST="$GIT_MOD/src/test/java/com/diegonmarcos/cloudlib/gitsync/GitEngineTest.kt"
+ENGINE_TEST="$GIT_MOD/src/test/java/com/diegonmarcos/cloudlib/gitsync/GitEngineClientTest.kt"
 AUTH_MOD="$(python3 -c 'import json,os,sys; b=json.load(open(sys.argv[1])); print(os.path.normpath(os.path.join(sys.argv[2], b["modules"]["libs:auth"]["dir"])))' "$BJ" "$APP")"
 AUTH_UI="$AUTH_MOD/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
 SHARED_BJ="$ROOT/ab_cloud-libs-shared/build.json"
@@ -242,16 +242,15 @@ p3 "$BJ" "$PAGE" && pass "the screen dispatches exactly the declared sections an
 
 echo "── P4 every git verb is the engine's ──"
 p4 "$COORD" "$ENGINE" && pass "the coordinator runs each transport/commit operation through GitEngine, force verbs included" || fail "an operation does not go through the engine (or the engine lacks the force verbs)"
-if grep -qE 'fun forcePushOverwritesTheRemoteAndForcePullOverwritesTheLocalSide' "$ENGINE_TEST" \
-   && grep -qE 'assertFalse\("a diverged push must be rejected' "$ENGINE_TEST" \
-   && grep -qE 'forced\.summary\.contains\("force-pushed"\)' "$ENGINE_TEST" \
-   && grep -qE 'forced\.summary\.contains\("force-pulled"\)' "$ENGINE_TEST"; then
-    pass "the JVM suite drives both force verbs on real repositories AND shows the plain verbs refuse the same divergence first"
+# #871 move 11: the force verbs' behaviour on real repositories (JGit) is proven where JGit ships, by
+# JGitEngineTest in libs:git-sync-engine and checked by ab_cloud-libs-shared/lib-apks/test/
+# test-git-sync-engine.sh; this app's suite proves the client SENDS both force verbs.
+if grep -qE 'forcePush\(\)' "$ENGINE_TEST" && grep -qE 'forcePull\(\)' "$ENGINE_TEST" && grep -qE '"force_push", "force_pull"|"push", "fetch", "pull", "force_push", "force_pull"' "$ENGINE_TEST"; then
+    pass "the client's JVM suite sends both force verbs through the wire"
 else
-    fail "GitEngineTest does not prove the force verbs do what the plain ones cannot"
+    fail "GitEngineClientTest does not send the force verbs"
 fi
 if grep -rqE 'org\.eclipse\.jgit' "$SRC"; then fail "the app imports JGit directly — libs:git-sync is the engine"; else pass "no JGit in the app: every verb goes through the engine"; fi
-if grep -qE 'setForce\(true\)' "$ENGINE" && grep -qE 'ResetCommand\.ResetType\.HARD\)\.setRef\(ref\.name\)' "$ENGINE"; then pass "forcePush takes the fast-forward check off; forcePull resets HARD onto the fetched remote ref"; else fail "the force verbs are not implemented as force (a synonym for push/pull would pass every name check)"; fi
 
 echo "── P5 #653 there is no GITHUB login on this page, and no GitHub App anywhere ──"
 # The provider was a GitHub APP (`Ov23li` client_id prefix) and GitHub Apps ship with Device

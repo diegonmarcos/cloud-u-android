@@ -48,7 +48,7 @@ APP_GRADLE="$APP/app/build.gradle"
 SHIP_WF="$ROOT/1_cicd/src/cicd/ship-cloud-drive.yml"
 FLEET_CLIENT="$APP/app/src/main/java/com/diegonmarcos/clouddrive/sync/FleetGit.kt"
 GIT_MODELS="$SHARED/libs/git-sync/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitModels.kt"
-GIT_ENGINE="$SHARED/libs/git-sync/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitEngine.kt"
+GIT_ENGINE="$SHARED/libs/git-sync/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitWire.kt"
 COORD="$APP/app/src/main/java/com/diegonmarcos/clouddrive/sync/GitSyncCoordinator.kt"
 SIGNIN="$SHARED/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignIn.kt"
 SIGNIN_UI="$SHARED/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
@@ -720,14 +720,13 @@ PYTHON
         || { echo "    libs:git-sync has no Session auth (header + value)"; bad=1; }
     grep -qE 'override fun toString\(\): String = "Session\(header=\$header, value=<redacted>\)"' "$models" \
         || { echo "    GitAuth.Session's toString is not redacted — UI state or a log line could leak the cookie"; bad=1; }
-    # THE ENGINE ATTACHES IT on the HTTP transport, for clone AND for the shared
-    # withAuth path every later fetch/pull rides. Occurrences, not lines.
-    local wired
-    wired="$(_code "$engine" | grep -oE 'setTransportConfigCallback\(sessionCallback\(auth\)\)' | wc -l | tr -d ' ')"
-    [ "$wired" = "2" ] \
-        || { echo "    the engine wires the session $wired time(s); clone and withAuth (fetch/pull/push) are the two"; bad=1; }
-    grep -qE 'if \(transport is TransportHttp\) transport\.setAdditionalHeaders\(mapOf\(auth\.header to auth\.value\)\)' "$engine" \
-        || { echo "    the session does not ride TransportHttp.setAdditionalHeaders under the DECLARED header name"; bad=1; }
+    # THE CLIENT SENDS IT: since #871 move 11 JGit runs in Cloud-Lib-Git-Sync-Engine.apk, and what the
+    # engine attaches to the HTTP transport (on clone AND on the shared withAuth path every later
+    # fetch/pull/push rides) is checked where it ships, in ab_cloud-libs-shared/lib-apks/test/
+    # test-git-sync-engine.sh. Here: the wire form of the session carries the DECLARED header name and
+    # the value, and nothing else.
+    grep -qE 'is GitAuth\.Session -> JSONObject\(\)\.put\("kind", KIND_SESSION\)\.put\("header", auth\.header\)\.put\("value", auth\.value\)' "$engine" \
+        || { echo "    the client's wire form does not carry the session under the DECLARED header name"; bad=1; }
     # A BEARER NEVER REACHES GITEA: measured to collide with gitea's own token auth.
     local bearer f_
     for f_ in "$engine" "$coord" "$page"; do
@@ -1032,12 +1031,12 @@ _stage && _green "c11" _c11 && {
                            'override fun toString(): String = "Session(header=$header, value=$value)"'
     _red "C11 GitAuth.Session prints the cookie" _c11; }
 _stage && _green "c11" _c11 && {
-    _sub "$W/GitEngine.kt" 'is GitAuth.Session -> cmd.setTransportConfigCallback(sessionCallback(auth))' \
-                           'is GitAuth.Session -> Unit'
+    _sub "$W/GitEngine.kt" 'is GitAuth.Session -> JSONObject().put("kind", KIND_SESSION).put("header", auth.header).put("value", auth.value)' \
+                           'is GitAuth.Session -> JSONObject().put("kind", KIND_NONE)'
     _red "C11 the clone silently drops the session and dials anonymously" _c11; }
 _stage && _green "c11" _c11 && {
-    _sub "$W/GitEngine.kt" 'transport.setAdditionalHeaders(mapOf(auth.header to auth.value))' \
-                           'transport.setAdditionalHeaders(mapOf("Authorization" to "Bearer " + auth.value))'
+    _sub "$W/GitEngine.kt" '.put("header", auth.header).put("value", auth.value)' \
+                           '.put("header", "Authorization").put("value", "Bearer " + auth.value)'
     _red "C11 the session sent as a bearer — measured to collide with gitea's own token auth" _c11; }
 _stage && _green "c11" _c11 && {
     _sub "$W/GitSyncCoordinator.kt" 'GitAuth.Session(FleetGit.sessionHeader(), FleetSession.cookie)' \

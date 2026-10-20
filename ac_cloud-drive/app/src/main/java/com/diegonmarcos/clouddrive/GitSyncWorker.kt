@@ -61,7 +61,7 @@ class GitSyncWorker(context: Context, params: WorkerParameters) : Worker(context
                     (credentials.authFor(repo) as? com.diegonmarcos.cloudlib.gitsync.GitAuth.Https)?.secret.orEmpty(),
                 )
             }.getOrElse { GitOpResult(false, it.message ?: it.toString()) } else runCatching {
-                GitEngine(File(repo.path)).use { engine ->
+                GitEngine(applicationContext, File(repo.path)).use { engine ->
                     engine.sync(
                         repo.syncMessage,
                         repo.authorName.ifBlank { DEFAULT_AUTHOR },
