@@ -59,6 +59,7 @@ on:
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ac_cloud-vault/**"
+      - "!ac_cloud-vault/web/**"
 permissions:
   contents: write
   packages: write

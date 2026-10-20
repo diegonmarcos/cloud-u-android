@@ -50,6 +50,7 @@
   "1_cicd/src/cicd/ship-cloud-termux.yml": 2,
   "1_cicd/src/cicd/ship-cloud-tools-small-llms-wasm.yml": 3,
   "1_cicd/src/cicd/ship-cloud-tools-small-llms.yml": 1,
+  "1_cicd/src/cicd/ship-cloud-vault-wasm.yml": 3,
   "1_cicd/src/cicd/ship-cloud-vault.yml": 2,
   "1_cicd/src/cicd/ship-cloud-wallet.yml": 1,
   "1_cicd/src/cicd/ship-cloud-writer.yml": 2,

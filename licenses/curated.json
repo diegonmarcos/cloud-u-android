@@ -703,6 +703,10 @@
   "ac_cloud-tools-small-llms/web/gradle/wrapper/gradle-wrapper.jar": {
    "licence": "Apache-2.0",
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "ac_cloud-vault/web/gradle/wrapper/gradle-wrapper.jar": {
+   "licence": "Apache-2.0",
+   "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
   }
  }
 }
