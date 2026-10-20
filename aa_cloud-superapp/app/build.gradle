@@ -1147,6 +1147,9 @@ dependencies {
     // JVM unit tests (app/src/test) — see testOptions above. Run via the
     // engine: ./build.sh test  (task = build.json::tests.unit.task)
     testImplementation 'junit:junit:4.13.2'
+    // The real org.json for the plain (non-Robolectric) JVM tests: android.jar's copy is a stub that throws "not mocked"
+    // (JevNotifyTest builds the alert_interrupt question as JSON), the same dependency the engine modules' suites declare.
+    testImplementation 'org.json:json:20240303'
     testImplementation 'androidx.test:core:1.6.1'
     testImplementation 'org.robolectric:robolectric:4.16.1'
     // #531 the bottom-nav tests measure the real island through the compose test rule.
