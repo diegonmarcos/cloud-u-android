@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Cloud ▸ tabs: App | WebApps | Linktree | Configs, and WebApps is the cloud-mobile replica in the embedded browser.
+# Cloud ▸ tabs: App | WebApps | Linktree | Configs; WebApps (#1062) is a native grid of web apps, URLs declared ONCE in build.json.
 #   T1 the Cloud section lists exactly those four visible pages, in that order
-#   T2 WebApps declares the published site's URL (GitHub Pages, public) with ?embed=1
+#   T2 WebApps declares webapps_base + a path per app (no page url), every app a unique https URL under that one base
 #   T3 WebPageFragment appends the CloudSuperApp-Embed/1 user-agent marker, keyed off embed=1 only
 #   T4 an embed page is a pane: no floating Back, pull-to-refresh, the offline message, other sites leave via the link rules
 set -uo pipefail
@@ -19,7 +19,13 @@ vis = [p for p in s["pages"] if not p.get("hidden")]
 print("ORDER", ",".join(p["id"] for p in vis))
 print("LABELS", ",".join(p["label"] for p in vis))
 w = [p for p in s["pages"] if p["id"] == "webapps"]
-print("URL", w[0].get("url", "") if w else "")
+w = w[0] if w else {}
+b = w.get("webapps_base", "").rstrip("/")
+apps = w.get("webapps", [])
+us = [b + "/" + a["path"].strip("/") + "/" for a in apps]
+ok = bool(b.startswith("https://")) and len(apps) >= 20 and not w.get("url") and len(set(us)) == len(us) \
+     and all("://" not in a["path"] for a in apps)
+print("URL", "ok %d apps under %s" % (len(apps), b) if ok else "BAD base=%r apps=%d url=%r" % (b, len(apps), w.get("url")))
 PY
 )"
 [ "$(grep '^ORDER' <<<"$out" | cut -d' ' -f2)" = "apps,webapps,lnktree,configs" ] \
@@ -27,8 +33,7 @@ PY
 [ "$(grep '^LABELS' <<<"$out" | cut -d' ' -f2)" = "App,WebApps,Linktree,Configs" ] \
   && ok "T1 and they read App | WebApps | Linktree | Configs" || bad "T1 the tab labels moved ($(grep '^LABELS' <<<"$out"))"
 URL="$(grep '^URL' <<<"$out" | cut -d' ' -f2-)"
-[ "$URL" = "https://diegonmarcos.github.io/cloud-mobile/cloud/apps/?embed=1" ] \
-  && ok "T2 WebApps loads the published cloud-mobile Cloud > App page with ?embed=1" || bad "T2 WebApps url is '$URL'"
+case "$URL" in ok*) ok "T2 WebApps: $URL";; *) bad "T2 WebApps declaration is wrong: $URL";; esac
 grep -qF 'const val UA_MARKER = " CloudSuperApp-Embed/1"' "$WP" && grep -qF 'if (embed) settings.userAgentString = settings.userAgentString + UA_MARKER' "$WP" \
   && ok "T3 the UA marker is appended on embed pages only" || bad "T3 the user-agent marker is missing or unconditional"
 grep -qF 'if (!embed) Icon(painterResource(R.drawable.ic_back)' "$WP" \

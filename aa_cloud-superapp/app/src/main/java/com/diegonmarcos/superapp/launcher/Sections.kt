@@ -361,6 +361,9 @@ object Sections {
             tiles.filterNot { it.separator }.flatMap { it.destinations }
     }
 
+    /** One web app tile: [url] = webapps_base + "/" + path + "/". */
+    data class WebApp(val id: String, val label: String, val iconName: String, val url: String)
+
     data class Page(
         val id: String,
         val label: String,
@@ -446,6 +449,9 @@ object Sections {
          *  after the tab stops being its own entry — see
          *  [tabOwnerOf] and [LauncherNavController.openSectionPage]. */
         val tabs: List<String> = emptyList(),
+        /** Cloud ▸ WebApps: the web apps this page lists as a fitted tile grid, each with its resolved
+         *  https URL ([WebApp.url]). Declared once in build.json (`webapps_base` + each `path`). */
+        val webapps: List<WebApp> = emptyList(),
         /** true = this entry DOES something and returns (Update All, ...)
          *  rather than opening a page. Declared, not inferred: `import`,
          *  `keyboard` and `constellation` all carry an action: target yet
@@ -720,6 +726,14 @@ object Sections {
                         actionsFromSection = po.optString("actions_from_section", ""),
                         hidden   = po.optBoolean("hidden", false),
                         separator = po.optBoolean("separator", false),
+                        webapps  = po.optJSONArray("webapps")?.let { wa ->
+                            val base = po.optString("webapps_base", "").trimEnd('/')
+                            (0 until wa.length()).map { k ->
+                                val w = wa.getJSONObject(k)
+                                WebApp(w.getString("id"), w.getString("label"), w.optString("icon", ""),
+                                    "$base/${w.getString("path").trim('/')}/")
+                            }
+                        }.orEmpty(),
                         tabs     = po.optJSONArray("tabs")?.let { ta ->
                             (0 until ta.length()).map { ta.getString(it) }
                         }.orEmpty(),

@@ -42,8 +42,6 @@ class WebPagesRenderTest {
 
     @After fun tearDown() { WebPageFragment.probe = null }
 
-    @Test fun a_webAppsRenders() = check("webapps", "page:cloud/webapps", night = false)
-    @Test fun b_webAppsRendersAtNight() = check("webapps-night", "page:cloud/webapps", night = true)
     @Test fun c_linktreeRenders() = check("linktree", "page:cloud/lnktree", night = false)
 
     /** The app is uninstalled after the run (taking its files dir with it), so the shell copies the evidence out. */
@@ -179,11 +177,5 @@ class WebPagesRenderTest {
         assertTrue("[$name] body text is empty (len=$textLen)\n$report", textLen > 0)
         assertTrue("[$name] page laid out with zero height (<html> $htmlH px)\n$report", htmlH > 0)
         assertTrue("[$name] WebView renders blank (one colour)\n$report", colours > 1)
-        // WebApps must open ON the Cloud ▸ App page (path route /cloud-mobile/cloud/apps/), not the site's Home: its title is
-        // "Cloud · App · …" and it draws the tile groups (h2.tile-group__title).
-        if (target == "page:cloud/webapps") {
-            assertTrue("[$name] WebApps is not on the Cloud ▸ App page (title=$pageTitle)\n$report", pageTitle.contains("Cloud · App"))
-            assertTrue("[$name] WebApps shows no app tile groups (groups=$groups)\n$report", groups > 0)
-        }
     }
 }

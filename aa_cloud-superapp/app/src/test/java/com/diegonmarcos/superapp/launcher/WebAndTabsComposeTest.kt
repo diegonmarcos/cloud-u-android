@@ -61,16 +61,13 @@ class WebAndTabsComposeTest : KitPageHarness() {
     }
 
     @Test
-    fun `C2 WebApps hosts a web view on the embed URL with the embed user agent`() {
-        val url = Sections.byId("cloud")!!.pages.first { it.id == "webapps" }.url
-        assertTrue("the declared URL asks for the embed layout: $url", WebPageFragment.isEmbed(url))
-        show(WebPageFragment.newInstance(url))
-        compose.onNodeWithTag(WebPageFragment.TAG_WEB).assertExists()
-        // The embedded page is a pane: no floating Back over the site.
-        compose.onNodeWithTag(WebPageFragment.TAG_BACK).assertDoesNotExist()
-        val web = webViewIn(compose.activity.window.decorView)!!
-        assertTrue("loaded ${web.url}", web.url == url)
-        assertTrue("UA marker on: ${web.settings.userAgentString}", web.settings.userAgentString.endsWith(WebPageFragment.UA_MARKER))
+    fun `C2 WebApps is a native grid of the declared apps, not a web view`() {
+        val page = Sections.byId("cloud")!!.pages.first { it.id == "webapps" }
+        assertTrue("WebApps declares its apps", page.webapps.isNotEmpty())
+        assertTrue("no url on the page itself: the apps are the single declaration", page.url.isBlank())
+        show(LauncherNavController.webAppsGrid(compose.activity, page))
+        for (w in page.webapps) compose.onNodeWithTag(tileTag(w.url)).assertExists()
+        assertTrue(webViewIn(compose.activity.window.decorView) == null)
     }
 
     @Test
