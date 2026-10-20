@@ -452,6 +452,9 @@ object Sections {
         /** Cloud ▸ WebApps: the web apps this page lists as a fitted tile grid, each with its resolved
          *  https URL ([WebApp.url]). Declared once in build.json (`webapps_base` + each `path`). */
         val webapps: List<WebApp> = emptyList(),
+        /** true = the section's tab strip is not drawn while THIS page is selected (Cloud ▸ WebApps shows only its apps).
+         *  Declared per page in build.json (`hide_tabs`); the other pages of the section keep their strip. */
+        val hideTabs: Boolean = false,
         /** true = this entry DOES something and returns (Update All, ...)
          *  rather than opening a page. Declared, not inferred: `import`,
          *  `keyboard` and `constellation` all carry an action: target yet
@@ -726,6 +729,7 @@ object Sections {
                         actionsFromSection = po.optString("actions_from_section", ""),
                         hidden   = po.optBoolean("hidden", false),
                         separator = po.optBoolean("separator", false),
+                        hideTabs = po.optBoolean("hide_tabs", false),
                         webapps  = po.optJSONArray("webapps")?.let { wa ->
                             val base = po.optString("webapps_base", "").trimEnd('/')
                             (0 until wa.length()).map { k ->

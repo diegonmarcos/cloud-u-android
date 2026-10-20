@@ -46,4 +46,12 @@ grep -qF 'sameSite(url, target.toString())' "$WP" && grep -qF '.launchUri(target
 MUT="$(sed 's/settings.userAgentString + UA_MARKER/settings.userAgentString/' "$WP")"
 if grep -qF 'settings.userAgentString + UA_MARKER' <<<"$MUT"; then
   bad "mutation: the UA check cannot see the marker go"; else ok "mutation: removing the marker is visible to T3"; fi
+# T5 WebApps (and only it) hides SuperApp's own Cloud strip, declared per page
+h="$(python3 - "$APP/build.json" <<'PY'
+import json, sys
+s = [x for x in json.load(open(sys.argv[1]))["ui"]["sections"] if x["id"] == "cloud"][0]
+print(",".join(p["id"] for p in s["pages"] if p.get("hide_tabs")))
+PY
+)"
+[ "$h" = "webapps" ] && ok "T5 only WebApps declares hide_tabs" || bad "T5 hide_tabs is on '$h'"
 echo "PASS=$PASS FAIL=$FAIL"; [ "$FAIL" -eq 0 ]

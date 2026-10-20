@@ -2484,7 +2484,8 @@
             "id": "webapps",
             "label": "WebApps",
             "icon": "ic_world",
-            "_doc": "The Cloud web apps, one tile each (label and glyph come from the Cloud tile named by `tile`: its id, else its target - never a second copy of the icon), drawn natively (TileGridFragment fit mode, the Configs grid's engine) so all of them sit on one A37 screen with no tab bar and no APK row of the old HTML replica. ONE declaration of where they live: `webapps_base` + each entry's `path` give https://<base>/<path>/ , and a tap opens it in the app's embedded browser. Today they are the live GitHub Pages sites; moving them to the cloud-webapps repo is a change to `webapps_base` (and `path` if the folders are renamed), nothing else. Guarded by WebAppsGridFitTest and test-cloud-webapps-tab.sh.",
+            "_doc": "The Cloud web apps, one tile each (label and glyph come from the Cloud tile named by `tile`: its id, else its target - never a second copy of the icon), drawn natively and auto-scaled to FILL one screen (WebAppsGridFragment), with `hide_tabs` so SuperApp's own Cloud tab strip is not drawn here so all of them sit on one A37 screen with no tab bar and no APK row of the old HTML replica. ONE declaration of where they live: `webapps_base` + each entry's `path` give https://<base>/<path>/ , and a tap opens it in the app's embedded browser. Today they are the live GitHub Pages sites; moving them to the cloud-webapps repo is a change to `webapps_base` (and `path` if the folders are renamed), nothing else. Guarded by WebAppsGridFitTest and test-cloud-webapps-tab.sh.",
+            "hide_tabs": true,
             "webapps_base": "https://diegonmarcos.github.io/c__Cloud",
             "webapps": [
               {"app": "cloud-mail", "tile": "mail", "path": "c_inboxes/cloud-mail"},
