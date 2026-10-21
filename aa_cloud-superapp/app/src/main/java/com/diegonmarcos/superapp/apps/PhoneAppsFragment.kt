@@ -117,6 +117,7 @@ class PhoneAppsFragment : KitComposeFragment() {
                 item(key = "refresh") { PhoneRefreshBar { invalidateCache(); epoch++ } }
             }
         }
+        }
         open?.let { PhoneFolderSheet(it) { open = null } }
     }
 
