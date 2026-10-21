@@ -1,0 +1,125 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║ Test → wasm pages smoke (headless Chromium: every page must render)   ║
+# ║                                                                        ║
+# ║ #876. The ship-<app>-wasm workflows prove a bundle is built and has   ║
+# ║ the right files; nothing ever LOADED one. This takes every            ║
+# ║ Cloud-<App>.wasm.zip on the release, serves each unzipped bundle       ║
+# ║ from a local static server and opens it in headless Chromium            ║
+# ║ (WasmGC), failing an app when its page throws, logs a console error,   ║
+# ║ never gets a canvas, or paints nothing but one flat colour. A         ║
+# ║ screenshot per app is uploaded. Manual only (no push trigger): it      ║
+# ║ reads the PUBLISHED assets, so it judges the release, not the tree.    ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+name: "Test → wasm pages smoke (headless browser)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release holding the Cloud-<App>.wasm.zip assets"
+        default: "latest"
+      only:
+        description: "Space-separated asset stems to test (empty = all), e.g. Cloud-Calc Cloud-Store"
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Download the wasm bundles from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/wasm" && cd "$RUNNER_TEMP/wasm"
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" --pattern 'Cloud-*.wasm.zip'
+          for z in Cloud-*.wasm.zip; do
+            stem="${z%.wasm.zip}"
+            if [ -n "${{ inputs.only }}" ] && ! echo " ${{ inputs.only }} " | grep -q " $stem "; then rm -f "$z"; continue; fi
+            slug="$(echo "$stem" | tr 'A-Z' 'a-z')"
+            mkdir -p "site/$slug" && unzip -q "$z" -d "site/$slug"
+            test -f "site/$slug/index.html"
+          done
+          echo "bundles: $(ls site | tr '\n' ' ')"
+          test "$(ls site | wc -l)" -ge 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright with Chromium
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null
+          npm install playwright@1.48.2 pngjs@7.0.0
+          npx playwright install --with-deps chromium
+
+      - name: Load every page and check it rendered
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/pw"
+          cat > smoke.mjs <<'JS'
+          import { chromium } from "playwright";
+          import { PNG } from "pngjs";
+          import http from "node:http";
+          import fs from "node:fs";
+          import path from "node:path";
+
+          const root = process.argv[2], shots = process.argv[3];
+          fs.mkdirSync(shots, { recursive: true });
+          const types = { ".html": "text/html", ".js": "text/javascript", ".wasm": "application/wasm",
+            ".json": "application/json", ".css": "text/css", ".map": "application/json", ".txt": "text/plain" };
+          const server = http.createServer((req, res) => {
+            const p = path.normalize(decodeURIComponent(req.url.split("?")[0])).replace(/^(\.\.[/\\])+/, "");
+            let f = path.join(root, p);
+            if (fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, "index.html");
+            if (!fs.existsSync(f)) { res.writeHead(404); res.end(); return; }
+            res.writeHead(200, { "content-type": types[path.extname(f)] || "application/octet-stream" });
+            fs.createReadStream(f).pipe(res);
+          }).listen(0);
+          const port = server.address().port;
+
+          const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+          const failures = [];
+          for (const slug of fs.readdirSync(root).sort()) {
+            const problems = [];
+            const page = await browser.newPage({ viewport: { width: 412, height: 800 } });
+            page.on("pageerror", (e) => problems.push("pageerror: " + String(e).split("\n")[0]));
+            page.on("console", (m) => { if (m.type() === "error" && !/favicon/.test(m.text())) problems.push("console: " + m.text().split("\n")[0]); });
+            page.on("response", (r) => { if (r.status() >= 400 && !/favicon/.test(r.url())) problems.push("http " + r.status() + " " + r.url()); });
+            try {
+              await page.goto(`http://127.0.0.1:${port}/${slug}/index.html`, { waitUntil: "load", timeout: 60000 });
+              await page.waitForSelector("canvas", { timeout: 60000 });
+              await page.waitForTimeout(6000);
+              const size = await page.evaluate(() => { const c = document.querySelector("canvas"); return c ? [c.width, c.height] : [0, 0]; });
+              if (!(size[0] > 0 && size[1] > 0)) problems.push("canvas has no size");
+              const png = await page.screenshot({ path: path.join(shots, slug + ".png") });
+              const img = PNG.sync.read(png);
+              const seen = new Set();
+              for (let i = 0; i < img.data.length; i += 4 * 97) seen.add(img.data.readUInt32LE(i));
+              if (seen.size < 8) problems.push("page painted only " + seen.size + " distinct colour(s): blank");
+            } catch (e) {
+              problems.push("load: " + String(e).split("\n")[0]);
+            }
+            await page.close();
+            console.log((problems.length ? "FAIL " : "ok   ") + slug + (problems.length ? "\n  - " + [...new Set(problems)].slice(0, 6).join("\n  - ") : ""));
+            if (problems.length) failures.push(slug);
+          }
+          await browser.close(); server.close();
+          if (failures.length) { console.error("FAILED: " + failures.join(", ")); process.exit(1); }
+          JS
+          node smoke.mjs "$RUNNER_TEMP/wasm/site" "$RUNNER_TEMP/shots"
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-pages-screenshots
+          path: ${{ runner.temp }}/shots
+          if-no-files-found: ignore
