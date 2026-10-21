@@ -21,7 +21,7 @@ import java.io.File
  * (@id/fragment_container, view_content_panes.xml), padded by the top row's height; a page that owned its own chrome or
  * drew edge to edge would be the exception, so:
  *
- *   T1 the container's top padding covers the top row (toolbar_island: its top margin + the action-bar-size toolbar)
+ *   T1 the container's top padding covers the top row (toolbar_island: shell_top_row_margin + the action-bar-size toolbar; the typed 84 dp was 6 dp short)
  *   T2 no page takes the chrome over (ShellOverride has no implementer), so every page goes through that container
  *   T3 the pages' own content (Configs, Cloud ▸ Apps, the tile grid), hosted in the REAL container, draws nothing above
  *      the top row's bottom edge
@@ -36,8 +36,9 @@ class PageTopInsetTest : KitPageHarness() {
     private fun topRowBottomDp(): Float {
         val xml = File(layouts, "activity_main.xml").readText()
         val island = xml.substring(xml.indexOf("@+id/toolbar_island"))
-        val margin = Regex("layout_marginTop=\"(\\d+)dp\"").find(island)!!.groupValues[1].toFloat()
+        assertTrue("the top row's offset is the declared dimen", island.contains("android:layout_marginTop=\"@dimen/shell_top_row_margin\""))
         assertTrue("the toolbar is the action-bar size", island.contains("android:layout_height=\"?attr/actionBarSize\""))
+        val margin = compose.activity.resources.getDimension(R.dimen.shell_top_row_margin) / compose.activity.resources.displayMetrics.density
         val themed = ContextThemeWrapper(compose.activity, R.style.Theme_Superapp)
         val tv = android.util.TypedValue()
         val attr = themed.resources.getIdentifier("actionBarSize", "attr", themed.packageName)

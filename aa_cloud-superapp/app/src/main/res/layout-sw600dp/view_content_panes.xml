@@ -31,7 +31,7 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="0.40"
-        android:paddingTop="84dp"
+        android:paddingTop="@dimen/shell_top_inset"
         android:paddingBottom="92dp"
         android:clipToPadding="false" />
 
@@ -39,7 +39,7 @@
         android:id="@+id/pane_divider"
         android:layout_width="1dp"
         android:layout_height="match_parent"
-        android:layout_marginTop="84dp"
+        android:layout_marginTop="@dimen/shell_top_inset"
         android:layout_marginBottom="92dp"
         android:background="#22FFFFFF" />
 
@@ -48,7 +48,7 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="0.60"
-        android:paddingTop="84dp"
+        android:paddingTop="@dimen/shell_top_inset"
         android:paddingBottom="92dp"
         android:clipToPadding="false" />
 </LinearLayout>

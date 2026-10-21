@@ -59,7 +59,7 @@
             android:id="@+id/overlay_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:paddingTop="84dp"
+            android:paddingTop="@dimen/shell_top_inset"
             android:paddingBottom="92dp"
             android:clipToPadding="false"
             android:clickable="false"
@@ -185,7 +185,7 @@
             android:layout_gravity="top"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
-            android:layout_marginTop="26dp">
+            android:layout_marginTop="@dimen/shell_top_row_margin">
 
             <!-- The top row: hamburger (left) and Back (right) off the Home root, drawn in Compose (ui/ShellToolbar.kt).
                  A transparent ComposeView at the old action-bar height; it carries no title. -->

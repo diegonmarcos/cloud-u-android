@@ -17,6 +17,6 @@
     android:id="@+id/fragment_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingTop="84dp"
+    android:paddingTop="@dimen/shell_top_inset"
     android:paddingBottom="92dp"
     android:clipToPadding="false" />

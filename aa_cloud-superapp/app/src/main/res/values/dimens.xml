@@ -12,4 +12,10 @@
     <!-- The tab strips' vertical geometry (#477 / #573) is declared ONCE, in libs:bottomnav's
          res/values/dimens.xml (page_tabs_top_inset / page_tabs_bottom_inset) and drawn by PageTabs:
          every strip in the app is a PageTabsView, so no tab-strip token lives here any more. -->
+    <!-- The shell's top row (#1075): toolbar_island sits shell_top_row_margin below the status bar and holds the toolbar at
+         ?attr/actionBarSize (64 dp in Theme.Superapp), so it ends at 26 + 64 = 90 dp. EVERY page is hosted below that edge:
+         the content containers pad their top by shell_top_inset. The old typed 84 dp was 6 dp short, so a page with no padding
+         of its own (Configs) drew under the row. PageTopInsetTest holds shell_top_inset >= margin + the resolved actionBarSize. -->
+    <dimen name="shell_top_row_margin">26dp</dimen>
+    <dimen name="shell_top_inset">90dp</dimen>
 </resources>
