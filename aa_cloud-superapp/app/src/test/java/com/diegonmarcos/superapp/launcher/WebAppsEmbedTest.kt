@@ -39,7 +39,10 @@ class WebAppsEmbedTest : KitPageHarness() {
 
     @Test
     fun `E2 the WebApps tab is a web view on the declared URL with the embed user agent`() {
-        show(SectionTabsFragment.newInstance("cloud", "webapps"))
+        // The tab pane builds its page through this routing (SectionTabsFragment.render -> pageFragment -> SectionPages).
+        val frag = SectionPages.pagesFor("cloud", includeHidden = true).first { it.id == "webapps" }.factory.invoke()
+        assertTrue("the page routes to the embedded browser: ${frag.javaClass.simpleName}", frag is WebPageFragment)
+        show(frag)
         compose.waitForIdle()
         val web = webViewIn(compose.activity.window.decorView)
         assertTrue("a WebView is hosted", web != null)
