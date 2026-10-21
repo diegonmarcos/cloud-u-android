@@ -20,7 +20,7 @@
 #     same Android data dir answers -> ~/cloud-shared-store links to it, needs no
 #     storage grant, and a script in it executes) and fallback (it does not answer
 #     -> the legacy CloudDrive mirror the probe found, plus the SFTP 8023 line).
-#     ~/cloud-drive-shared-store is the compat link in both.
+#     The old store name is no longer linked at all (legacy_store_migration moves it in, see below).
 #
 # Offline, no Android SDK: python3 and source only. Root-independent: an
 # unwritable store is a regular FILE where the store dir would be.
@@ -48,7 +48,7 @@ open(t + "/login.sh", "w").write("set -eu\n" + body.replace("/system/bin/", t + 
 open(t + "/nroots", "w").write(str(len(roots)))
 PY
 mkdir -p "$T/system/bin" "$T/prefix-bin"
-for c in date ls ln rm rmdir mkdir touch; do ln -s "$(command -v $c)" "$T/system/bin/$c"; done
+for c in date ls ln rm rmdir mkdir touch mv cmp; do ln -s "$(command -v $c)" "$T/system/bin/$c"; done
 SH="$(command -v sh)"
 
 # The nix app's $HOME and the store's owner home, laid out as Android does (/data/user/0/<pkg>/files/home).
@@ -68,7 +68,7 @@ run() {
     else
         [ "$(readlink "$H/cloud-shared-store")" = "$2" ] || return 1
     fi
-    [ "$(readlink "$H/cloud-drive-shared-store")" = cloud-shared-store ] || return 1   # compat_link
+    [ ! -e "$H/cloud-drive-shared-store" ] && [ ! -L "$H/cloud-drive-shared-store" ] || return 1   # legacy_store_migration: no link of the old name
     case "$out" in *"$3"*) return 0 ;; esac
     echo "$out"; return 1
 }
@@ -108,7 +108,6 @@ if [ "$(id -u)" != 0 ]; then
     if run - - "sftp -P 8023"; then ok "an unreadable owner store falls back (SFTP hint)"; else bad "an unreadable owner store was linked"; fi
     chmod 755 "$OWNER"
 fi
-rm -rf "$T"
 
 # Guard: the nix bake mirrors build.json::shared_store (owner package, dir).
 python3 - "$BAKE_PY" "$DIR/../ac_cloud-termux/build.json" <<'PY' && ok "STORE_OWNER_PACKAGE / STORE_DIR mirror ac_cloud-termux/build.json::shared_store" || bad "the nix bake's store constants drifted from ac_cloud-termux/build.json::shared_store"
@@ -133,5 +132,19 @@ else
     bad "probe lists drifted — termux: '$termux', nix: '$nix'"
 fi
 
+echo "── legacy store name: bin/login migrates it into the store and removes it (direct mode) ──"
+OLDN=cloud-drive-shared-store   # legacy_store_migration
+mkdir -p "$T/r3" "$OWNER/git/keep"
+rm -rf "$H"; mkdir -p "$H/$OLDN/git/moved" "$H/$OLDN/git/keep"
+echo m > "$H/$OLDN/git/moved/f"; echo old > "$H/$OLDN/git/keep/f"; echo new > "$OWNER/git/keep/f"
+out="$(HOME="$H" PATH="$T/prefix-bin" "$SH" "$T/login.sh" 2>&1)" || echo "$out"
+bk="$(ls -d "$OWNER"/.legacy-backup-* 2>/dev/null | head -1)"
+if [ ! -e "$H/$OLDN" ] && [ ! -L "$H/$OLDN" ] && [ "$(cat "$OWNER/git/moved/f" 2>/dev/null)" = m ] \
+   && [ "$(cat "$OWNER/git/keep/f")" = new ] && [ "$(cat "$bk/git/keep/f" 2>/dev/null)" = old ]; then
+    ok "old dir merged into the owner's store (conflict kept in .legacy-backup), old name removed"
+else bad "legacy store migration wrong in bin/login: $out"; fi
+out="$(HOME="$H" PATH="$T/prefix-bin" "$SH" "$T/login.sh" 2>&1)" && [ ! -e "$H/$OLDN" ] && ok "a second login is a no-op" || bad "second login failed: $out"
+
+rm -rf "$T"
 [ "$fails" -eq 0 ] || { echo "$fails failure(s)"; exit 1; }
 echo "all passed"

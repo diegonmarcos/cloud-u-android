@@ -33,10 +33,10 @@
     { "repo": "cloud-data-my-ai-memory", "what": "layout.json dotfile map + per-repo a_commits snapshots: keyed by repo name, no list of its own", "reads": "none", "guard": "n/a" }
   ],
 
-  "base_dir_doc": "Where clones live. Override with $CLOUD_GIT_BASE; otherwise ~/cloud-drive-shared-store/git — every repo lives in that ONE place, on every machine; there is no ~/cloud-drive-shared-store/git. Clones are NEVER placed inside this repo — repo_master holds relative symlinks (../../<name> from a group directory) pointing out to them, committed, so `ls <group>/` is the inventory and a dangling link is just a repo you have not cloned yet.",
-  "base_dir_default": "~/cloud-drive-shared-store/git",
+  "base_dir_doc": "Where clones live. Override with $CLOUD_GIT_BASE; otherwise ~/cloud-shared-store/git — every repo lives in that ONE place, on every machine. Clones are NEVER placed inside this repo — repo_master holds relative symlinks (../../<name> from a group directory) pointing out to them, committed, so `ls <group>/` is the inventory and a dangling link is just a repo you have not cloned yet.",
+  "base_dir_default": "~/cloud-shared-store/git",
 
-  "_path_doc": "`path` is where the clone actually sits under base_dir; it defaults to `name`. Only the d_lecole entries set it, because those ten were moved into ~/cloud-drive-shared-store/git/lecole-42/ on 2026-08-18 to keep the root of ~/cloud-drive-shared-store/git legible. Indexing them and moving them are separate decisions: `path` lets this file describe where they are instead of demanding they move back.",
+  "_path_doc": "`path` is where the clone actually sits under base_dir; it defaults to `name`. Only the d_lecole entries set it, because those ten were moved into ~/cloud-shared-store/git/lecole-42/ on 2026-08-18 to keep the root of ~/cloud-shared-store/git legible. Indexing them and moving them are separate decisions: `path` lets this file describe where they are instead of demanding they move back.",
 
   "_archived_doc": "FairEmail and octocode forks were deleted on GitHub on 2026-08-18 — FairEmail was fully reproduced by unix/aa_cloud-mail/patches, octocode was 0 commits ahead of Muvon/octocode. Nothing else has been archived. The ten d_lecole repos were deregistered the same day and are registered again as of 2026-08-20; they were never gone, only unindexed.",
 
@@ -109,7 +109,7 @@
     "a_cloud": "The cloud project — infrastructure, services, data, devices and the tooling built for them. Its own project master is `cloud`, which indexes this same set minus the account-level repos.",
     "b_front": "The front-end — the published site, its content, its assets and its experiments. Its project master is `ffront`. Kept out of a_cloud because it ships on its own cadence to its own hosts; folding it in was what made a_cloud mean nothing.",
     "c_gh": "Account-level GitHub repos — things that exist because GitHub requires a repo for them, not because they are a project.",
-    "d_lecole": "42 / l'École coursework and its experiments. Clones live under ~/cloud-drive-shared-store/git/lecole-42/ (see _path_doc), so these entries carry `path`."
+    "d_lecole": "42 / l'École coursework and its experiments. Clones live under ~/cloud-shared-store/git/lecole-42/ (see _path_doc), so these entries carry `path`."
   },
 
   "repos": [
@@ -150,7 +150,7 @@
       "doc": "The owner's PUBLIC data (the public half of cloud-me). Added 2026-10-21 (#1073): cloud-drive seeded it but this registry did not list it." },
 
     { "name": "front", "group": "b_front", "url": "git@github.com:diegonmarcos/front.git", "private": false, "renamed_from": ["ffront"],
-      "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-drive-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-drive-shared-store/git/front/front-data/... paths in cloud-infra already assume." },
+      "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-shared-store/git/front/front-data/... paths in cloud-infra already assume." },
     { "name": "front-diegonmarcos", "group": "b_front", "url": "git@github.com:diegonmarcos/diegonmarcos.github.io.git", "private": false,
       "parts": [ { "name": "linktree", "path": "Linktree", "status": "placeholder", "ticket": "#1072", "doc": "Every linktree folder. Placeholder: nothing moves until the owner approves the layout." }, { "name": "projects", "path": "Projects", "status": "placeholder", "ticket": "#1072", "doc": "Every other folder except the cloud ones (those go to cloud-webapps, #1062). Placeholder." } ],
       "doc": "Front-end: the published site and its derive job (1_front-configs). Cloned as 'front-diegonmarcos', not after its repo name (diegonmarcos.github.io) — every front member is front-<thing>, and the bare 'front' now belongs to the project master, exactly as 'cloud' does for a_cloud." },
@@ -164,7 +164,7 @@
       "doc": "Unity asset pipeline (unity-asset-vm: upkg2gltf, fetch-and-convert) plus its assets. Was front-asset-cdn, the predecessor of front-assets-cdn; renamed 2026-08-18 to match what it actually holds - the CDN itself is front-assets-cdn." },
 
     { "name": "front-gh-profile-diegonmarcos", "group": "c_gh", "url": "git@github.com:diegonmarcos/diegonmarcos.git", "private": false,
-      "doc": "GitHub profile README repo (diegonmarcos). Cloned under a descriptive front-* name because 'diegonmarcos' at the root of ~/cloud-drive-shared-store/git says nothing about what it is." },
+      "doc": "GitHub profile README repo (diegonmarcos). Cloned under a descriptive front-* name because 'diegonmarcos' at the root of ~/cloud-shared-store/git says nothing about what it is." },
 
     { "name": "lecole42", "group": "d_lecole", "path": "lecole-42/lecole42", "url": "git@github.com:diegonmarcos/lecole42.git", "private": true,
       "doc": "The 42 curriculum itself." },

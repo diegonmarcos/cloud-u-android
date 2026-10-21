@@ -96,7 +96,7 @@
       "name": "front",
       "repo": "diegonmarcos/front",
       "private": false,
-      "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-drive-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-drive-shared-store/git/front/front-data/... paths in cloud-infra already assume."
+      "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-shared-store/git/front/front-data/... paths in cloud-infra already assume."
     },
     {
       "name": "front-data",

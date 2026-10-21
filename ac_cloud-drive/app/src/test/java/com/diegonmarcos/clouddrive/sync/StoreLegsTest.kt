@@ -16,7 +16,7 @@ import java.io.File
 
 /** #1070: Sync's engines (rclone, git) cannot open the store in cld.termux; legs are staged, git goes through cld.termux, saved jobs migrate. */
 class StoreLegsTest {
-    private val p = StorePaths("cld.termux", "cloud-shared-store", "CloudDrive", "cloud-drive-shared-store")  // compat_link: the old name is the rule's input
+    private val p = StorePaths("cld.termux", "cloud-shared-store", "CloudDrive", "cloud-drive-shared-store")  // legacy_store_migration: the old name is the rule's input
     private val root = p.hostRoot(0)
     private val sd = "/storage/emulated/" + 0
     @get:Rule val tmp = TemporaryFolder()
@@ -89,7 +89,7 @@ class StoreLegsTest {
         val store = RcloneJobStore(File(tmp.root, "jobs.json"))
         store.save(listOf(
             RcloneJob(id = "1", name = "a", op = "copy", source = "drive:x", destination = "$sd/CloudDrive/mirror"),
-            RcloneJob(id = "2", name = "b", op = "sync", source = "/data/data/cld.termux.nix/files/home/cloud-drive-shared-store/git", destination = "drive:y"),  // compat_link: the old name is the rule's input
+            RcloneJob(id = "2", name = "b", op = "sync", source = "/data/data/cld.termux.nix/files/home/cloud-drive-shared-store/git", destination = "drive:y"),  // legacy_store_migration: the old name is the rule's input
             RcloneJob(id = "3", name = "c", op = "copy", source = "drive:z", destination = "$sd/Download/keep"),
         ))
         val rule = { x: String -> p.migrateLegacy(x, 0) }

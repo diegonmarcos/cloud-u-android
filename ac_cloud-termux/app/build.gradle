@@ -136,7 +136,7 @@ android {
         // provider other fleet apps reach it through.
         buildConfigField "String", "CLOUD_SHARED_STORE_DIR", "\"${cloudSharedStore().dir}\""
         buildConfigField "String", "CLOUD_SHARED_STORE_AUTHORITY", "\"${cloudSharedStore().provider.authority}\""
-        buildConfigField "String", "CLOUD_SHARED_STORE_COMPAT_LINK", "\"${cloudSharedStore().compat_link.name}\""
+        buildConfigField "String", "CLOUD_SHARED_STORE_LEGACY_NAME", "\"${cloudSharedStore().legacy_name.name}\""
         buildConfigField "String", "CLOUD_SHARED_STORE_EXPORT_FLAG", "\"${cloudSharedStore().export_mirror.flag_file}\""
         buildConfigField "String", "CLOUD_SHARED_STORE_MIGRATION_DIR", "\"${cloudSharedStore().migration.backup_dir}\""
         buildConfigField "String", "CLOUD_SHARED_STORE_MIGRATION_ARCHIVE", "\"${cloudSharedStore().migration.archive}\""

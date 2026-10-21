@@ -544,7 +544,38 @@ SHARED_STORE_PROBE_ROOTS = (
 # folder in the owner's $HOME. MIRRORS that declaration; test/test-shared-store-probe.sh fails on drift.
 STORE_OWNER_PACKAGE = "cld.termux"
 STORE_DIR = "cloud-shared-store"
+LEGACY_STORE_NAME = "cloud-drive-shared-store"  # legacy_store_migration: mirrors build.json::shared_store.legacy_name
 STORE_SFTP_PORT = 8023  # the owner's sshd (the watchdog's declared termux backend), the EXEC-less fallback
+
+# legacy_store_migration: the ONE-TIME, idempotent move of the store's OLD name into the store (build.json::
+# shared_store.legacy_name). Same text as ac_cloud-termux/rootfs/enter.sh's block with every command spelled
+# /system/bin/<cmd> (test/test-shared-store.sh pins that), because bin/login runs before PATH has anything.
+LEGACY_STORE_MIGRATION = r'''# legacy_store_migration begin (build.json::shared_store.legacy_name): one-time, idempotent, never deletes user data.
+# The old store name is only ever an INPUT here: whatever is under it is merged into the store and the old
+# link/dir goes. test/test-shared-store.sh pins this block equal to cloud-terminal-nix's (bake_default_packages.py).
+legacy_store_merge() {  # $1 = dir emptied into $2; $3 = where a differing file of the same name is kept
+    for e in "$1"/* "$1"/.[!.]* "$1"/..?*; do
+        [ -e "$e" ] || [ -L "$e" ] || continue
+        n="${e##*/}"
+        if [ ! -e "$2/$n" ] && [ ! -L "$2/$n" ]; then /system/bin/mv "$e" "$2/$n"
+        elif [ -d "$e" ] && [ ! -L "$e" ] && [ -d "$2/$n" ] && [ ! -L "$2/$n" ]; then
+            ( legacy_store_merge "$e" "$2/$n" "$3/$n" ); /system/bin/rmdir "$e" 2>/dev/null || true
+        elif [ -f "$e" ] && [ ! -L "$e" ] && [ -f "$2/$n" ] && /system/bin/cmp -s "$e" "$2/$n"; then /system/bin/rm -f "$e"
+        else
+            /system/bin/mkdir -p "$3"; t="$3/$n"; [ ! -e "$t" ] && [ ! -L "$t" ] || t="$t.$$"
+            /system/bin/mv "$e" "$t"
+        fi
+    done
+}
+legacy_store_migrate() {  # $1 = the old name in $HOME, $2 = the store
+    if [ -L "$1" ]; then /system/bin/rm -f "$1"; return 0; fi
+    [ -d "$1" ] || return 0
+    /system/bin/mkdir -p "$2" 2>/dev/null || true
+    legacy_store_merge "$1" "$2" "$2/.legacy-backup-$(/system/bin/date +%Y%m%d)"
+    /system/bin/rmdir "$1" 2>/dev/null || echo "⚠ $1 still has content or is a mount point; it is left in place and migrated again at the next login" >&2
+}
+# legacy_store_migration end
+'''
 
 
 # startup-step: storage_links
@@ -583,7 +614,7 @@ def storage_setup(shared_root_name: str, roots=SHARED_STORE_PROBE_ROOTS,
     has /data/user/<n>/...), so no absolute path is baked. When the shared uid is NOT in effect the
     directory does not answer: the link then falls back to the LEGACY CloudDrive mirror found by the
     probe above (fallback only) and one line names the live store over the owner's sshd (SFTP 8023).
-    ~/cloud-drive-shared-store is the one-release compat link to it."""
+    The store's old name is migrated into it once and removed (LEGACY_STORE_MIGRATION)."""
     fallback = roots[-1]
     cands = " ".join(roots)
     # startup-step: shared_store
@@ -603,7 +634,8 @@ def storage_setup(shared_root_name: str, roots=SHARED_STORE_PROBE_ROOTS,
         'fi\n'
         'cloud_trace "cloud-shared-store: $CLOUD_SHARED_STORE_MODE ($CLOUD_STORE_OWNER)"\n'
         f'export CLOUD_SHARED_STORE_MODE CLOUD_SHARED_STORE_SFTP="sftp://127.0.0.1:{STORE_SFTP_PORT}/~/{store_dir}"\n'
-        f'cloud_storage_link "$HOME/cloud-drive-shared-store" {store_dir}  # compat_link\n'
+        + LEGACY_STORE_MIGRATION
+        + f'legacy_store_migrate "$HOME/{LEGACY_STORE_NAME}" "$HOME/{store_dir}"  # legacy_store_migration\n'
     )
     return (
         'cloud_storage_link() {\n'

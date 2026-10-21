@@ -248,7 +248,7 @@
     <string name="donate_preference_title">Donate</string>
 
     <string name="shared_store_migration_title">Cloud shared store</string>
-    <string name="shared_store_migration_body">This terminal now shares one Linux user with Cloud Terminal (Termux), which owns the store, so both see ~/cloud-shared-store directly (compat link: the old ~/cloud-drive-shared-store name points to it for one release).\n\nThat change needed a reinstall, which cleared this app\'s data.</string>
+    <string name="shared_store_migration_body">This terminal now shares one Linux user with Cloud Terminal (Termux), which owns the store, so both see ~/cloud-shared-store directly (anything under its old name is migrated into it once at login).\n\nThat change needed a reinstall, which cleared this app\'s data.</string>
     <string name="shared_store_migration_restore">\n\nA backup of your home was found:\n%1$s\n\nRestore it now? Files already in your home are kept unless the backup has a newer copy.</string>
     <string name="shared_store_migration_no_backup">\n\nNo backup was found at %1$s. If you made one, grant storage access and reopen the app.</string>
     <string name="shared_store_migration_restore_action">Restore</string>

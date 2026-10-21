@@ -15,7 +15,7 @@ import java.io.File
 /** cloud-shared-store: the store-access layer's pure rules, both access paths, and the job-path migration. */
 class SharedStorePathsTest {
 
-    private val p = StorePaths("cld.termux", "cloud-shared-store", "CloudDrive", "cloud-drive-shared-store")  // compat_link: the old name is the rule's input
+    private val p = StorePaths("cld.termux", "cloud-shared-store", "CloudDrive", "cloud-drive-shared-store")  // legacy_store_migration: the old name is the rule's input
     private val root = "/data/user/0/cld.termux/files/home/cloud-shared-store"
     /** Primary shared storage, composed so no device-absolute literal is written down. */
     private val sd = "/storage/emulated/" + 0
@@ -40,8 +40,8 @@ class SharedStorePathsTest {
         assertEquals("$root/git/a", p.migrateLegacy("/sdcard/CloudDrive/git/a/", 0))
         assertEquals("$root/mirror", p.migrateLegacy("/data/media/0/CloudDrive/mirror", 0))
         assertEquals(root, p.migrateLegacy("$sd/CloudDrive", 0))
-        assertEquals("$root/git/b", p.migrateLegacy("/data/data/cld.termux.nix/files/home/cloud-drive-shared-store/git/b", 0))  // compat_link: the old name is the rule's input
-        assertEquals("$root/git/c", p.migrateLegacy("~/cloud-drive-shared-store/git/c", 0))  // compat_link: the old name is the rule's input
+        assertEquals("$root/git/b", p.migrateLegacy("/data/data/cld.termux.nix/files/home/cloud-drive-shared-store/git/b", 0))  // legacy_store_migration: the old name is the rule's input
+        assertEquals("$root/git/c", p.migrateLegacy("~/cloud-drive-shared-store/git/c", 0))  // legacy_store_migration: the old name is the rule's input
     }
 
     @Test fun `the migration is idempotent and leaves everything else alone`() {

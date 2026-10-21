@@ -146,12 +146,16 @@ echo "── #612/#730 + cloud-shared-store: no shared storage here ──"
 # the storage grant. enter.sh must say so and must NOT leave an empty ~/emulated
 # (an empty mount point is how a fresh phone's missing grant was misread as empty
 # storage). The STORE does not depend on the grant: ~/cloud-shared-store is a real
-# directory in the app's home, and the one-release compat link points at it.
-# Pre-create both old entries empty, the state an earlier enter.sh left on
-# upgraded phones, so this also proves they are replaced.
+# directory in the app's home. Pre-create the old entries, the state an earlier
+# enter.sh left on upgraded phones: an empty ~/emulated and the store's OLD name as
+# a real directory with content (one file also exists, different, in the new store),
+# so this proves the one-time migration merges it, keeps the conflict and removes it.
 rm -rf "$W/home/cloud-shared-store" "$W/home/emulated"
-rm -f "$W/home/cloud-drive-shared-store"  # compat_link: an earlier login's link would dangle
-mkdir -p "$W/home/emulated" "$W/home/cloud-drive-shared-store"  # compat_link: the old empty mount point
+rm -rf "$W/home/cloud-drive-shared-store"  # legacy_store_migration
+mkdir -p "$W/home/emulated" "$W/home/cloud-drive-shared-store/git/legacy-repo" "$W/home/cloud-shared-store"  # legacy_store_migration
+echo old-only > "$W/home/cloud-drive-shared-store/legacy-only.txt"  # legacy_store_migration
+echo from-old > "$W/home/cloud-drive-shared-store/clash.txt"  # legacy_store_migration
+echo from-new > "$W/home/cloud-shared-store/clash.txt"
 notice="$(enter -c true 2>&1 >/dev/null || true)"
 if [ -e "$W/home/emulated" ]; then
     echo "FAIL \$HOME/emulated is left behind with storage unreadable — it reads as empty storage"; fail=1
@@ -163,10 +167,14 @@ if [ -d "$W/home/cloud-shared-store" ] && [ ! -L "$W/home/cloud-shared-store" ];
 else
     echo "FAIL ~/cloud-shared-store is not a real directory in \$HOME"; fail=1
 fi
-if [ "$(readlink "$W/home/cloud-drive-shared-store")" = "cloud-shared-store" ]; then  # compat_link
-    echo "ok   the compat link (old name) points at cloud-shared-store"
+OLDN=cloud-drive-shared-store  # legacy_store_migration
+if [ ! -e "$W/home/$OLDN" ] && [ ! -L "$W/home/$OLDN" ] \
+   && [ "$(cat "$W/home/cloud-shared-store/legacy-only.txt" 2>/dev/null)" = old-only ] && [ -d "$W/home/cloud-shared-store/git/legacy-repo" ] \
+   && [ "$(cat "$W/home/cloud-shared-store/clash.txt")" = from-new ] \
+   && [ "$(cat "$W"/home/cloud-shared-store/.legacy-backup-*/clash.txt 2>/dev/null)" = from-old ]; then  # legacy_store_migration
+    echo "ok   the old store name was merged into cloud-shared-store (conflict kept in .legacy-backup-<date>) and removed"
 else
-    echo "FAIL the compat link is '$(readlink "$W/home/cloud-drive-shared-store" 2>&1)', not cloud-shared-store"; fail=1  # compat_link
+    echo "FAIL the old store name was not migrated into cloud-shared-store"; fail=1
 fi
 [ -s "$W/home/.config/cloud-shared-store/web-token" ] && [ "$(stat -c %a "$W/home/.config/cloud-shared-store/web-token")" = 600 ] \
     && echo "ok   the store's web write token exists, mode 600" \
@@ -178,12 +186,12 @@ esac
 # The guest reads, writes and EXECUTES the store (ext4, not FUSE), and the env names it.
 mkdir -p "$W/home/cloud-shared-store/git/cloud-probe-repo"
 printf '#!/bin/sh\necho store-exec-ok\n' > "$W/home/cloud-shared-store/probe.sh"; chmod 755 "$W/home/cloud-shared-store/probe.sh"
-got="$(enter -c "sh -c 'ls ~/cloud-shared-store/git; ls ~/cloud-drive-shared-store/git; ~/cloud-shared-store/probe.sh; echo \$CLOUD_SHARED_STORE'" 2>/dev/null </dev/null || true)"  # compat_link
+got="$(enter -c "sh -c 'ls ~/cloud-shared-store/git; ~/cloud-shared-store/probe.sh; echo \$CLOUD_SHARED_STORE'" 2>/dev/null </dev/null || true)"
 case "$got" in
-    *cloud-probe-repo*cloud-probe-repo*store-exec-ok*/root/cloud-shared-store*) echo "ok   the guest lists the store (both names), executes from it, and sees CLOUD_SHARED_STORE" ;;
+    *cloud-probe-repo*store-exec-ok*/root/cloud-shared-store*) echo "ok   the guest lists the store, executes from it, and sees CLOUD_SHARED_STORE" ;;
     *) echo "FAIL the guest's view of the store: '$(echo "$got" | tr '\n' ' ')'"; fail=1 ;;
 esac
-rm -rf "$W/home/cloud-shared-store/git" "$W/home/cloud-shared-store/probe.sh"
+rm -rf "$W/home/cloud-shared-store/git" "$W/home/cloud-shared-store/probe.sh" "$W/home/cloud-shared-store/legacy-only.txt" "$W/home/cloud-shared-store/clash.txt" "$W"/home/cloud-shared-store/.legacy-backup-*
 
 echo "── #736: with shared storage readable, the GUEST shell lists the real storage ──"
 # The phone's report: ~/emulated listed empty while the file manager showed it

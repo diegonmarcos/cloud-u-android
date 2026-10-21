@@ -18,7 +18,7 @@ android {
         minSdk 26
         buildConfigField "String", "STORE_DIR", "\"${store.dir}\""
         buildConfigField "String", "OWNER_PACKAGE", "\"${store.owner_package}\""
-        buildConfigField "String", "COMPAT_LINK", "\"${store.compat_link.name}\""
+        buildConfigField "String", "COMPAT_LINK", "\"${store.legacy_name.name}\""
         buildConfigField "String", "PROVIDER_AUTHORITY", "\"${store.provider.authority}\""
         buildConfigField "String", "LEGACY_SHARED_ROOT", "\"${storage.shared_root}\""
         buildConfigField "String", "GIT_SUBDIR", "\"${storage.git_subdir}\""

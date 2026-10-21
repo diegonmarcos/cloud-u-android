@@ -12,8 +12,9 @@
 #       to build.json::shared_store.shared_user_id; none sets sharedUserMaxSdkVersion
 #       (the exit hatch documented there, never set silently).
 #   T3  the old name (cloud-drive-shared-store) appears nowhere in the tracked tree
-#       except the compat link (a line that says compat_link / compat link) and its
-#       own declaration in build.json::shared_store.compat_link.
+#       except the migration code (a line that says legacy_store_migration) and its
+#       own declaration in build.json::shared_store.legacy_name. No link/dir of that
+#       name is created any more; the migration only moves it into the store.
 #   T4  the store is declared ONCE: storage.shared_root / storage.git_subdir and
 #       shared_store.dir live in ac_cloud-termux/build.json only; enter.sh's literal
 #       and nix's STORE_DIR equal it.
@@ -86,18 +87,18 @@ if not bad: print("  ok   — every member of fleet-identity.json's terminal gro
 sys.exit(1 if bad else 0)
 PY
 
-echo "── T3 the old name is gone (compat link aside) ──"
+echo "── T3 the old name is gone (migration code aside) ──"
 OLD="cloud-drive-""shared-store"
 hits="$(cd "$ROOT" && git ls-files -z 2>/dev/null | xargs -0 grep -nI -- "$OLD" 2>/dev/null \
-    | grep -vE 'compat_link|compat link|compat_name' \
+    | grep -vE 'legacy_store_migration' \
     | grep -vE '^ac_cloud-termux/build.json:' \
     | grep -vE '^ac_cloud-termux/test/test-shared-store.sh:' || true)"
-if [ -z "$hits" ]; then ok "no '$OLD' outside the compat link"; else bad "the old name is still used:"; printf '%s\n' "$hits" | head -40 | sed 's/^/        /'; fi
-python3 - "$BJ" "$OLD" <<'PY' && ok "in build.json the old name lives only under shared_store (compat_link + its docs)" || bad "build.json names the old store outside shared_store.compat_link"
+if [ -z "$hits" ]; then ok "no '$OLD' outside the migration code"; else bad "the old name is still used:"; printf '%s\n' "$hits" | head -40 | sed 's/^/        /'; fi
+python3 - "$BJ" "$OLD" <<'PY' && ok "in build.json the old name lives only under shared_store (legacy_name + its docs)" || bad "build.json names the old store outside shared_store.legacy_name"
 import json, sys
 d = json.load(open(sys.argv[1])); old = sys.argv[2]
 rest = {k: v for k, v in d.items() if k != "shared_store"}
-sys.exit(0 if old not in json.dumps(rest) and d["shared_store"]["compat_link"]["name"] == old else 1)
+sys.exit(0 if old not in json.dumps(rest) and d["shared_store"]["legacy_name"]["name"] == old else 1)
 PY
 
 echo "── T4 the store is declared once ──"
@@ -117,6 +118,9 @@ sys.exit(0 if sorted(own) == sorted(want) else 1)
 PY
 DIRV="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["shared_store"]["dir"])' "$BJ")"
 grep -qxF "CLOUD_STORE=\"\$HOME/$DIRV\"" "$ENTER" && ok "enter.sh's store literal is shared_store.dir ($DIRV)" || bad "enter.sh does not make \$HOME/$DIRV"
+LEGV="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["shared_store"]["legacy_name"]["name"])' "$BJ")"
+grep -qxF "LEGACY_STORE_NAME = \"$LEGV\"  # legacy_store_migration: mirrors build.json::shared_store.legacy_name" "$BAKE" && ok "nix's LEGACY_STORE_NAME is shared_store.legacy_name" || bad "bake_default_packages.py LEGACY_STORE_NAME differs from shared_store.legacy_name"
+grep -qF "legacy_store_migrate \"\$HOME/$LEGV\" \"\$CLOUD_STORE\"  # legacy_store_migration" "$ENTER" && ok "enter.sh migrates the declared legacy name" || bad "enter.sh does not migrate shared_store.legacy_name"
 grep -qxF "STORE_DIR = \"$DIRV\"" "$BAKE" && ok "nix's STORE_DIR is shared_store.dir" || bad "bake_default_packages.py STORE_DIR differs from shared_store.dir"
 
 echo "── T5 the two terminals carry the same classes ──"
@@ -197,6 +201,37 @@ else
     bad "enter.sh does not confine fleet-webserver writes to the store behind the token"
 fi
 if [ "$(grep -c 'HTTPD_WRITE_ROOTS=' "$ENTER")" = 1 ]; then ok "no other write root is opened"; else bad "enter.sh opens more than one write root"; fi
+
+echo "── T8 the legacy-store migration: same text in both terminals, EXECUTED, idempotent, never deletes ──"
+W8="$(mktemp -d)"; trap 'rm -rf "$W8"' EXIT
+sed -n '/^# legacy_store_migration begin/,/^# legacy_store_migration end/p' "$ENTER" > "$W8/termux.sh"
+python3 - "$BAKE" "$W8/nix.sh" <<'PY' || bad "could not read LEGACY_STORE_MIGRATION from bake_default_packages.py"
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("bake", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+open(sys.argv[2], "w").write(m.LEGACY_STORE_MIGRATION.replace("/system/bin/", ""))
+PY
+if [ -s "$W8/termux.sh" ] && [ -s "$W8/nix.sh" ] && diff -q <(sed 's/ *#.*$//' "$W8/termux.sh" | grep -v '^$') <(sed 's/ *#.*$//' "$W8/nix.sh" | grep -v '^$') >/dev/null; then
+    ok "enter.sh and bin/login carry the same migration code (nix only spells commands /system/bin/<cmd>)"
+else bad "the migration block differs between enter.sh and bake_default_packages.py"; fi
+OLD8="$LEGV"; H8="$W8/home"
+mig() { ( HOME="$H8" sh -c ". '$W8/termux.sh'; legacy_store_migrate \"\$HOME/$OLD8\" \"\$HOME/$DIRV\"" ) 2>&1; }
+mkdir -p "$H8/$OLD8/git/a" "$H8/$OLD8/git/b" "$H8/$OLD8/.hidden" "$H8/$DIRV/git/a"
+echo old-only > "$H8/$OLD8/only-old.txt"; echo same > "$H8/$OLD8/same.txt"; echo same > "$H8/$DIRV/same.txt"
+echo old > "$H8/$OLD8/conflict.txt"; echo new > "$H8/$DIRV/conflict.txt"; echo x > "$H8/$OLD8/.hidden/h"
+echo a-old > "$H8/$OLD8/git/a/f"; echo a-new > "$H8/$DIRV/git/a/f"; echo b > "$H8/$OLD8/git/b/f"
+out="$(mig)"
+BK="$(ls -d "$H8/$DIRV"/.legacy-backup-* 2>/dev/null | head -1)"
+if [ ! -e "$H8/$OLD8" ] && [ ! -L "$H8/$OLD8" ] \
+   && [ "$(cat "$H8/$DIRV/only-old.txt")" = old-only ] && [ "$(cat "$H8/$DIRV/.hidden/h")" = x ] && [ "$(cat "$H8/$DIRV/git/b/f")" = b ] \
+   && [ "$(cat "$H8/$DIRV/conflict.txt")" = new ] && [ "$(cat "$BK/conflict.txt")" = old ] \
+   && [ "$(cat "$H8/$DIRV/git/a/f")" = a-new ] && [ "$(cat "$BK/git/a/f")" = a-old ] \
+   && [ "$(cat "$H8/$DIRV/same.txt")" = same ] && [ ! -e "$BK/same.txt" ]; then
+    ok "old dir merged into the store: new content wins in place, differing old files kept in .legacy-backup-<date>, duplicates dropped, old dir removed"
+else bad "migration result wrong ($out)"; ( cd "$H8" && find . | sort | head -30 | sed 's/^/        /' ); fi
+snap="$(cd "$H8" && find . | sort)"; out="$(mig)"
+[ "$snap" = "$(cd "$H8" && find . | sort)" ] && [ -z "$out" ] && ok "a second run changes nothing (idempotent)" || bad "the migration is not idempotent"
+ln -s "$DIRV" "$H8/$OLD8"; mig >/dev/null
+[ ! -e "$H8/$OLD8" ] && [ ! -L "$H8/$OLD8" ] && [ -f "$H8/$DIRV/only-old.txt" ] && ok "an old symlink (the earlier compat link) is removed, the store untouched" || bad "old symlink not removed"
 
 [ "$fails" -eq 0 ] || { echo "test-shared-store: $fails failure(s)"; exit 1; }
 echo "test-shared-store: all passed"

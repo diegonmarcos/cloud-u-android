@@ -193,8 +193,32 @@ fi
 CLOUD_STORE="$HOME/cloud-shared-store"
 CLOUD_STORE_CFG="$HOME/.config/cloud-shared-store"
 mkdir -p "$CLOUD_STORE" "$CLOUD_STORE_CFG" 2>/dev/null || true
-# compat link, ONE release (shared_store.compat_link): the old name points at the new store.
-storage_link "$HOME/cloud-drive-shared-store" cloud-shared-store  # compat_link
+# legacy_store_migration begin (build.json::shared_store.legacy_name): one-time, idempotent, never deletes user data.
+# The old store name is only ever an INPUT here: whatever is under it is merged into the store and the old
+# link/dir goes. test/test-shared-store.sh pins this block equal to cloud-terminal-nix's (bake_default_packages.py).
+legacy_store_merge() {  # $1 = dir emptied into $2; $3 = where a differing file of the same name is kept
+    for e in "$1"/* "$1"/.[!.]* "$1"/..?*; do
+        [ -e "$e" ] || [ -L "$e" ] || continue
+        n="${e##*/}"
+        if [ ! -e "$2/$n" ] && [ ! -L "$2/$n" ]; then mv "$e" "$2/$n"
+        elif [ -d "$e" ] && [ ! -L "$e" ] && [ -d "$2/$n" ] && [ ! -L "$2/$n" ]; then
+            ( legacy_store_merge "$e" "$2/$n" "$3/$n" ); rmdir "$e" 2>/dev/null || true
+        elif [ -f "$e" ] && [ ! -L "$e" ] && [ -f "$2/$n" ] && cmp -s "$e" "$2/$n"; then rm -f "$e"
+        else
+            mkdir -p "$3"; t="$3/$n"; [ ! -e "$t" ] && [ ! -L "$t" ] || t="$t.$$"
+            mv "$e" "$t"
+        fi
+    done
+}
+legacy_store_migrate() {  # $1 = the old name in $HOME, $2 = the store
+    if [ -L "$1" ]; then rm -f "$1"; return 0; fi
+    [ -d "$1" ] || return 0
+    mkdir -p "$2" 2>/dev/null || true
+    legacy_store_merge "$1" "$2" "$2/.legacy-backup-$(date +%Y%m%d)"
+    rmdir "$1" 2>/dev/null || echo "⚠ $1 still has content or is a mount point; it is left in place and migrated again at the next login" >&2
+}
+# legacy_store_migration end
+legacy_store_migrate "$HOME/cloud-drive-shared-store" "$CLOUD_STORE"  # legacy_store_migration
 # The web token fleet-webserver's write path checks (shared_store.web.token_file); reads are
 # loopback-only and need none. Made once, 0600, never printed.
 if [ ! -s "$CLOUD_STORE_CFG/web-token" ]; then
