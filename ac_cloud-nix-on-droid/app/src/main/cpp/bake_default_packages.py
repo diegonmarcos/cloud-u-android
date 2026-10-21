@@ -568,7 +568,10 @@ legacy_store_merge() {  # $1 = dir emptied into $2; $3 = where a differing file 
     done
 }
 legacy_store_migrate() {  # $1 = the old name in $HOME, $2 = the store
-    if [ -L "$1" ]; then /system/bin/rm -f "$1"; return 0; fi
+    if [ -L "$1" ]; then
+        if [ ! -e "$2" ] && [ ! -L "$2" ]; then /system/bin/mv "$1" "$2"; else /system/bin/rm -f "$1"; fi
+        return 0
+    fi
     [ -d "$1" ] || return 0
     /system/bin/mkdir -p "$2" 2>/dev/null || true
     legacy_store_merge "$1" "$2" "$2/.legacy-backup-$(/system/bin/date +%Y%m%d)"
