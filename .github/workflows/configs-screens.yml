@@ -4,6 +4,10 @@ name: "Configs screens — render every SuperApp Configs page at Galaxy A37 dens
 # 384x832dp / 450dpi (Samsung Galaxy A37, SM-A376B) and fontScale 1.0 + 1.3, writes a PNG and a TSV of every
 # clickable's dp size per screen, and fails when a button renders over 32dp or a row over 44dp (fontScale 1.0).
 # The PNGs + TSVs are uploaded as the `configs-screens` artifact, red or green.
+# #1080: ShellTopInsetGuardTest renders Configs, Configs with its search open, ADB Shell and every native Configs / Cloud page
+# in the shell's real page container under a moving top row (top-inset-*.png) and fails when any starts under it;
+# AdbPeerDotsTest renders the home status with its two ADB dots (home-top-status-adb-dots*.png); Cloud Store's own suite
+# renders its Configs > ADB Shell (ac_cloud-store/app/build/configs-screens/store-configs-adb-shell.png).
 # HomeOverflowMatrixTest renders the home screen (status strip over the home grid, centre camera cutout) at 420/450/480/508
 # dpi (1080 px wide: 411/384/360/340 dp, Samsung Screen zoom) x fontScale 1.0/1.15/1.3, fails when any child leaves the
 # screen or the strip's safe width, and writes app/build/home-overflow/ into the same artifact.
@@ -17,6 +21,8 @@ on:
       - "aa_cloud-superapp/app/src/**"
       - "aa_cloud-superapp/build.json"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
+      - "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
+      - "ac_cloud-store/app/src/**"
 
 permissions:
   contents: read
@@ -129,6 +135,38 @@ jobs:
           UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.TileSeparatorAlignTest"
         run: bash ./build.sh test
 
+      - name: Guard + render every page under the top row, at every strip height (top-inset-*.png)
+        if: always()
+        working-directory: aa_cloud-superapp
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.ShellTopInset*"
+        run: bash ./build.sh test
+
+      - name: Render the home status with its two ADB dots (home-top-status-adb-dots*.png)
+        if: always()
+        working-directory: aa_cloud-superapp
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.AdbPeerDotsTest"
+        run: bash ./build.sh test
+
+      - name: Render Cloud Store Configs > ADB Shell (store-configs-adb-shell.png) and run the Store suites
+        if: always()
+        working-directory: ac_cloud-store
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash ./build.sh test
+
       - name: Summary (dp per control, every screen)
         if: always()
         run: |
@@ -144,5 +182,6 @@ jobs:
           path: |
             aa_cloud-superapp/app/build/configs-screens/
             aa_cloud-superapp/app/build/home-overflow/
+            ac_cloud-store/app/build/configs-screens/
             aa_cloud-superapp/app/build/reports/tests/
           if-no-files-found: warn

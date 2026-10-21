@@ -66,13 +66,21 @@ ok("FeedViewer.feeds(ctx)" in cp and "StoreSourcePrefs.set(ctx, f.id, it)" in cp
    "Sources lists the Store's feeds with switches, the install ladder and the fleet token", "the Sources page is not built from the Store's own declared feeds / ladder / token")
 fp = rd(K + "FeedPage.kt")
 ok("StoreSourcePrefs.enabled(ctx, feed.id)" in fp, "a feed switched off in Sources is not read by the Feed page", "the Feed page ignores the Sources switches")
-ok("AdbShellPage()" in cp and "AdbIdentity.host(ctx.packageName)" in cp, "ADB Shell is the shared page, under this app's own identity", "the ADB Shell page is not the shared page / does not show this app's identity")
+adbp = rd(LIBS + "shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/AdbShellPage.kt")
+ok("AdbShellHostedPage(" in cp and "AdbIdentity.host(ctx.packageName)" in adbp, "ADB Shell is the shared page (the one SuperApp hosts too), under this app's own identity", "the ADB Shell page is not the shared page / does not show this app's identity")
+ok("val own = page != ConfigsPages.ADB" in cp and "Modifier.verticalScroll(rememberScrollState())" in cp, "the shared page is hosted bare (it scrolls itself), every other page in this host's scrolling column", "the ADB Shell page is nested in a second scroll, or another page lost its scroll")
 ok("AiSettingsPickers(" in cp and "AiFleetChat.chat(ctx, BuildConfig.AI_GATEWAY_URL)" in cp and "OutlinedTextField" not in cp.split("private fun AiPage")[1].split("// ── Notifications")[0],
    "AI is libs:ai's agent/model pickers over the fleet gateway, with no token field", "the AI page lacks the shared pickers or carries a token field")
 ok("StoreNotifyPrefs.Kind.values()" in cp and "StoreNotifyPrefs.Channel.values()" in cp and "StoreNotifyPrefs.set(ctx, kind, ch, it)" in cp,
    "Notifications is the kinds x channels matrix", "the Notifications page is not the kinds x channels matrix")
 ok("versionName" in cp and "BuildConfig.GIT_SHORT_SHA" in cp and "BuildConfig.BUILD_TIMESTAMP" in cp and "LICENSING.md" in cp,
    "About shows version, build and the licence / attribution pointer", "About lacks version, build or licence")
+
+# C5 the chips open the page in the Configs frame (MainActivity is the lib's AdbShellHost), never a second screen
+ok("AdbShellHost" in ma and "override fun openAdbShellInFrame(): Boolean" in ma and "choose(TAB_SETTINGS, ConfigsPages.ADB)" in ma and "requested = TAB_SETTINGS" in ma,
+   "MainActivity hosts the ADB Shell page in Configs for every chip that opens it", "MainActivity does not open Configs > ADB Shell for the Wireless debugging chip")
+ok("ConfigsAdbShellTest" in open(f"{R}/ac_cloud-store/app/src/test/java/com/diegonmarcos/cloudstore/ConfigsAdbShellTest.kt", encoding="utf-8").read(),
+   "the in-frame opening has its own suite (ConfigsAdbShellTest)", "ConfigsAdbShellTest is missing")
 
 # C4
 npf = rd(LIBS + "core/src/main/java/com/diegonmarcos/superapp/core/StoreNotifyPrefs.kt")
@@ -109,6 +117,8 @@ FILES="ac_cloud-store/build.json ac_cloud-store/build.gradle
 ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/ConfigsPage.kt
 ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt
 ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/FeedPage.kt
+$L/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/AdbShellPage.kt
+ac_cloud-store/app/src/test/java/com/diegonmarcos/cloudstore/ConfigsAdbShellTest.kt
 $L/core/src/main/java/com/diegonmarcos/superapp/core/StoreNotifyPrefs.kt
 $L/updater/src/main/java/com/diegonmarcos/superapp/updater/PackageInstallerReceiver.kt
 $L/updater/src/main/java/com/diegonmarcos/superapp/updater/PassLedger.kt
@@ -146,7 +156,10 @@ mutate "an undeclared page body" $K/ConfigsPage.kt 'const val ABOUT = "about"' '
 mutate "MainActivity back to the single screen" $K/MainActivity.kt 'section?.let { ConfigsPage(pageOf(it)) }' 'SettingsPage()' || M=$((M+1))
 mutate "Sources forgets the feeds" $K/ConfigsPage.kt 'FeedViewer.feeds(ctx)' 'emptyList<FeedViewer.Feed>()' || M=$((M+1))
 mutate "the Feed page ignores the switch" $K/FeedPage.kt 'StoreSourcePrefs.enabled(ctx, feed.id)' 'true' || M=$((M+1))
-mutate "ADB Shell shows no identity" $K/ConfigsPage.kt 'AdbIdentity.host(ctx.packageName)' 'null' || M=$((M+1))
+mutate "ADB Shell shows no identity" $L/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug/AdbShellPage.kt 'AdbIdentity.host(ctx.packageName)' 'null' || M=$((M+1))
+mutate "ADB Shell nested in a second scroll" $K/ConfigsPage.kt 'val own = page != ConfigsPages.ADB' 'val own = true' || M=$((M+1))
+mutate "the chip no longer opens Configs" $K/MainActivity.kt 'choose(TAB_SETTINGS, ConfigsPages.ADB)' '' || M=$((M+1))
+mutate "MainActivity is no longer the host" $K/MainActivity.kt 'override fun openAdbShellInFrame(): Boolean {' 'fun openAdbShellInFrameX(): Boolean {' || M=$((M+1))
 mutate "AI grows a token field" $K/ConfigsPage.kt 'Head("Gateway")' 'Head("Gateway"); OutlinedTextField(value = "", onValueChange = {})' || M=$((M+1))
 mutate "AI loses the shared pickers" $K/ConfigsPage.kt 'AiSettingsPickers(chat, materialAiTheme())' '' || M=$((M+1))
 mutate "Notifications keeps one channel" $K/ConfigsPage.kt 'StoreNotifyPrefs.Channel.values().forEach' 'listOf(StoreNotifyPrefs.Channel.PUSH).forEach' || M=$((M+1))

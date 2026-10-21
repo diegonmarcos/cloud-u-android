@@ -107,6 +107,7 @@ open class ShellActivity : AppCompatActivity(),
     MailHost,
     SearchOpener,
     com.diegonmarcos.superapp.apptabs.AppTabsHost,
+    com.diegonmarcos.superapp.adbdebug.AdbShellHost,
     LauncherNavController.NavHost {
 
     /** Must match REAPPLY_SENTINEL in the stalwart sorter (crate/src/main.rs). */
@@ -493,6 +494,8 @@ open class ShellActivity : AppCompatActivity(),
             // The galaxy, the island's wave and neon frame and the music line are Compose layers now.
             ShellFxState.install(this, findViewById(R.id.galaxy_backdrop))
             findViewById<androidx.compose.ui.platform.ComposeView>(R.id.launcher_status_strip)?.let { LauncherStatusStrip.install(this, it) }
+            // The shell, not the pages, owns where the top row ends: every content host is padded to the row's bottom edge (#1080).
+            com.diegonmarcos.superapp.ui.ShellTopInset.install(findViewById(android.R.id.content))
             // App Tabs LRU window size — data-driven from build.json::ui.app_tabs.cap.
             com.diegonmarcos.superapp.apptabs.AppTabPrefs.cap = BuildConfig.UI_APP_TABS_CAP
             modePrefs = ModePrefs(this)
@@ -1103,6 +1106,8 @@ open class ShellActivity : AppCompatActivity(),
         // the decor black — the gradient did not come back until the process
         // was killed. A surface painted in one branch has to be repainted in
         // all of them, which is what a palette read outside the `when` gives.
+        // The row may have moved or been shown/hidden above: re-seat the content hosts under it.
+        com.diegonmarcos.superapp.ui.ShellTopInset.apply(findViewById(android.R.id.content))
         window.setBackgroundDrawableResource(LauncherPalette.forTheme(this, theme).windowRes)
 
         // Apply the theme's background_pause / wireguard_required
@@ -1970,6 +1975,9 @@ open class ShellActivity : AppCompatActivity(),
      *  folder_id) go through [MailPages.fragmentFor]. */
     fun openSectionPage(sectionId: String, pageId: String, args: Bundle? = null) =
         nav.openSectionPage(sectionId, pageId, args)
+
+    /** Every chip that opens the ADB Shell page (the embedded Store's bar, Permissions, Dev control) lands on Configs > ADB Shell, in the frame. */
+    override fun openAdbShellInFrame(): Boolean { openSectionPage("config", "adb-shell"); return true }
 
     // ── HomeDrawerFragment delegate (data-driven from Sections) ──────────
 

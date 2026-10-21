@@ -113,7 +113,11 @@ import kotlin.math.roundToInt
  */
 
 /** One left-cluster icon: its label, text tint, and the dots row under it (level 0..4, or -1 for the empty footprint). */
-internal data class StripChip(val label: String, val tint: Int, val dots: Int = SignalLevels.NONE, val dotsTint: Int = tint)
+internal data class StripChip(
+    val label: String, val tint: Int, val dots: Int = SignalLevels.NONE, val dotsTint: Int = tint,
+    /** Instead of the four signal dots: one dot per app (ADB: SuperApp, Cloud Store), each in its own tint, with the spoken form. */
+    val peerDots: List<Int>? = null, val peerDescription: String = "",
+)
 
 /** A tool's pet: a FIXED animal whose gait follows the tool's strength. */
 internal data class ToolPet(
@@ -178,6 +182,9 @@ class StatusStripModel(private val context: Context) {
     private var hasAdb = false
     private var hasHotspot = false
     private var hasKde = false
+    /** The adb channel of each app that has one (SuperApp, Cloud Store), as the other apps' providers last said. */
+    private var adbPeers: List<com.diegonmarcos.superapp.adbdebug.PeerStatus> = emptyList()
+    private var adbPeersPinned = false
     private var wifiLevel = SignalLevels.NONE
     private var mobile = MobileLink.Reading(MobileLink.Kind.NO_SERVICE, MobileLink.OFF_LABEL, WgLink.TINT_OFF, 0, "", null)
     private val mobileWatch = MobileProbe.Watch(context) { signalOnly -> refreshMobile(signalOnly) }
@@ -383,6 +390,7 @@ class StatusStripModel(private val context: Context) {
         mobileWatch.start()
         gpsWatch.start()
         refreshAdb()
+        mainHandler.post(adbPeersTicker)
         refreshWgLevel()
         runCatching {
             (context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager)
@@ -410,6 +418,7 @@ class StatusStripModel(private val context: Context) {
             (context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager)?.unregisterNetworkCallback(networkCallback)
         }
         mainHandler.removeCallbacks(metricsTicker)
+        mainHandler.removeCallbacks(adbPeersTicker)
         mainHandler.removeCallbacks(wgRefresh)
     }
 
@@ -450,6 +459,24 @@ class StatusStripModel(private val context: Context) {
         }
         hasHotspot = TetherModel.State(tetherIfaces, apState, usbTetherFn).active
         applyIconTints()
+    }
+
+    /** Take the adb channels' readings. [pin] freezes them against the background refresh (a test's fixed reading). */
+    internal fun noteAdbPeers(list: List<com.diegonmarcos.superapp.adbdebug.PeerStatus>, pin: Boolean = false) {
+        if (pin) adbPeersPinned = true else if (adbPeersPinned) return
+        adbPeers = list
+        applyIconTints()
+    }
+
+    /** Every 15 s while the strip is on screen: one blocking pass (a probe and a binder call to the other app) off the main thread. */
+    private val adbPeersTicker = object : Runnable {
+        override fun run() {
+            Thread {
+                val r = runCatching { com.diegonmarcos.superapp.adbdebug.AdbPeerReader.read(context) }.getOrNull()
+                if (r != null) mainHandler.post { noteAdbPeers(r) }
+            }.start()
+            mainHandler.postDelayed(this, 15_000)
+        }
     }
 
     private fun refreshAdb() {
@@ -550,7 +577,9 @@ class StatusStripModel(private val context: Context) {
             NetworkSections.MESH to StripChip(label.getValue(NetworkSections.MESH), wgTint,
                 if (wgLink.onMesh) wgLink.level else SignalLevels.NONE),
             NetworkSections.KDE to StripChip(label.getValue(NetworkSections.KDE), if (hasKde) on else off),
-            NetworkSections.ADB to StripChip(label.getValue(NetworkSections.ADB), if (hasAdb) on else off),
+            // ADB: the label follows USB / Wireless debugging; the two dots are the SuperApp's and Cloud Store's own channels.
+            NetworkSections.ADB to StripChip(label.getValue(NetworkSections.ADB), if (hasAdb) on else off,
+                peerDots = AdbPeerDots.tints(adbPeers), peerDescription = AdbPeerDots.describe(adbPeers)),
             NetworkSections.DATA to StripChip(label.getValue(NetworkSections.DATA), if (hasUsbData) on else off),
             NetworkSections.HOTSPOT to StripChip(label.getValue(NetworkSections.HOTSPOT), if (hasHotspot) on else off),
             // GPS: white with location on; dots = the passive / last fix's quality (0 = none).
@@ -732,7 +761,8 @@ internal fun StatusStripBody(model: StatusStripModel, ctx: Context) {
                             Tappable("strip:$key", onTap = { r -> NetworkInfoPopup.show(ctx, host, r, key) }) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     IconLabel(chip.label, chip.tint)
-                                    SignalDots(chip.dots, chip.dotsTint)
+                                    if (chip.peerDots != null) PeerDots(chip.peerDots, chip.peerDescription)
+                                    else SignalDots(chip.dots, chip.dotsTint)
                                 }
                             }
                         }

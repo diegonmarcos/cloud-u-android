@@ -26,8 +26,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.diegonmarcos.superapp.adbdebug.AdbIdentity
-import com.diegonmarcos.superapp.adbdebug.AdbShellPage
+import com.diegonmarcos.superapp.adbdebug.AdbShellHostedPage
 import com.diegonmarcos.superapp.ai.AiFleetChat
 import com.diegonmarcos.superapp.ai.AiSettingsPickers
 import com.diegonmarcos.superapp.ai.materialAiTheme
@@ -61,8 +60,11 @@ object ConfigsPages {
 @Composable
 fun ConfigsPage(page: String) {
     val pad = StoreDensity.dpValue(StoreDensity.S12).dp
+    // The ADB Shell page is the shared lib page and carries its own scroll and padding, so it is hosted bare, exactly as
+    // SuperApp hosts it; every other page is a column this host scrolls.
+    val own = page != ConfigsPages.ADB
     Column(
-        Modifier.fillMaxSize().testTag(ConfigsPages.body(page)).verticalScroll(rememberScrollState()).padding(pad),
+        Modifier.fillMaxSize().testTag(ConfigsPages.body(page)).then(if (own) Modifier.verticalScroll(rememberScrollState()).padding(pad) else Modifier),
         verticalArrangement = Arrangement.spacedBy(StoreDensity.dpValue(StoreDensity.S8).dp),
     ) {
         when (page) {
@@ -138,12 +140,7 @@ private fun FleetTokenEntry(ctx: Context) {
 
 /** #894 this app's own shell channel (silent installs): THE ADB Shell page, with this app's own identity, keys and state. */
 @Composable
-private fun AdbPage() {
-    val ctx = LocalContext.current
-    val id = remember { AdbIdentity.host(ctx.packageName) }
-    Note("Connection name: ${id.deviceName}  ·  ${id.applicationId}")
-    AdbShellPage()
-}
+private fun AdbPage() = AdbShellHostedPage()
 
 // ── AI ────────────────────────────────────────────────────────────────────────────────────────────────
 

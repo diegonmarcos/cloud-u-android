@@ -14,6 +14,12 @@
 #   G6  every app presents ITS OWN identity: the lib hard-codes no app label (pairing name, key subject, server
 #       process name) and derives them from the host's build.json (AdbIdentity); the Store's channel status is
 #       held per package (AdbScope), so it never reads another app's state
+#   G7  two apps, one phone: every app that runs a server of its own has its OWN port and process name, the peer list
+#       (AdbPeers.FLEET) names the SuperApp's and Cloud Store's real application ids, each app answers the other over its own
+#       AdbStatusProvider authority, the pairing window is claimed and refused across apps, and the SuperApp's home status
+#       draws one dot per app
+#   G8  ONE page: no first-party code outside the lib draws an ADB Shell page of its own, and the SuperApp and Cloud Store
+#       host the same AdbShellHostedPage with no copy beside it
 # Then each violation is planted in a scratch copy and must turn a check red.
 #
 # Usage: ./test-adb-shell-one-place.sh
@@ -119,11 +125,45 @@ ok(not hard, "no shared ADB code hard-codes an app label (pairing name, key subj
 am = code(f"{adbsrc}/AdbManager.kt")
 ok("identity.deviceName" in am and "identity.certSubject" in am and "AdbIdentity.host(" in am, "AdbManager names the pairing and the key from the host's AdbIdentity", "AdbManager does not derive its pairing name and key subject from AdbIdentity")
 gr = open(f"{R}/{LIB}/build.gradle", encoding="utf-8").read()
-ok("HOST_APP_NAME" in gr and "HOST_APP_ID" in gr and "shizukuClientJson.name" in gr, "the lib bakes the consuming app's build.json name + application_id", "the lib does not bake HOST_APP_NAME / HOST_APP_ID from the consuming build.json")
+ok('"HOST_APP_NAME"' in gr and '"HOST_APP_ID"' in gr and "shizukuClientJson.name" in gr, "the lib bakes the consuming app's build.json name + application_id", "the lib does not bake HOST_APP_NAME / HOST_APP_ID from the consuming build.json")
 ss = code("ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreStatus.kt")
 ok("AdbScope" in ss and "packageName" in ss and not re.search(r"@Volatile\s+private\s+var\s+probe\b", ss), "the Store bar's channel status is held per package (AdbScope)", "StoreStatus keeps one process-wide probe that any app's state could fill")
 bs = code(f"{adbsrc}/AdbShellBootstrap.kt")
 ok("niceName()" in bs.split("pkill", 1)[1][:80] if "pkill" in bs else False, "restarting the server kills THIS app's process name, never another app's", "the server restart kills a hard-coded process name")
+
+# G7: two apps, one phone (SuperApp + Cloud Store share ONE adbd and ONE pairing window, and nothing else)
+servers = {}
+for d in sorted(os.listdir(R)):
+    if not re.match(r"^(aa|ac)_", d): continue
+    bp = os.path.join(R, d, "build.json")
+    if not os.path.isfile(bp): continue
+    ls = ((json.load(open(bp, encoding="utf-8")).get("shizuku_diagnostics") or {}).get("local_server")) or {}
+    if ls: servers[d] = (ls.get("port"), ls.get("nice_name"))
+ports = [v[0] for v in servers.values()]; nices = [v[1] for v in servers.values()]
+ok(len(servers) >= 2 and all(isinstance(p, int) for p in ports) and len(set(ports)) == len(ports),
+   f"every app with a server of its own has its own port ({servers})", f"two apps share a local-server port, or one has none: {servers}")
+ok(all(nices) and len(set(nices)) == len(nices), "every app with a server of its own has its own process name", f"two apps share a server process name: {servers}")
+ids = {d: json.load(open(os.path.join(R, d, "build.json"), encoding="utf-8"))["android"]["application_id"] for d in ("aa_cloud-superapp", "ac_cloud-store")}
+peers = code(f"{adbsrc}/AdbPeers.kt")
+ok(all(f'"{i}"' in peers for i in ids.values()), f"the peer list names the SuperApp's and Cloud Store's application ids as their build.json declares them ({', '.join(ids.values())})",
+   "AdbPeers.FLEET does not name the application ids the two build.json files declare")
+ok(len(set(ids.values())) == 2, "the two apps have different application ids (so different keys, prefs, notification channels)", "the two apps share an application id")
+prov = re.search(r"<provider\b[^>]*AdbStatusProvider[^>]*/>", man, re.S)
+pt = prov.group(0) if prov else ""
+ok('android:authorities="${applicationId}.adbstatus"' in pt and 'android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"' in pt and 'android:exported="true"' in pt,
+   "every app that links the lib answers its peer over ${applicationId}.adbstatus, behind the signature permission", "the lib manifest does not declare AdbStatusProvider on ${applicationId}.adbstatus behind CONSTELLATION_DATA")
+ps = code(f"{adbsrc}/AdbPairingService.kt")
+ok("PairingClaim.take(" in ps and "PairingClaim.release()" in ps and "AdbPeerReader.pairingHeldElsewhere(" in ps and "AdbPeers.pairingRefusal(" in ps,
+   "pairing claims the shared window, releases it, and is refused while the other app holds it", "AdbPairingService does not claim / release / respect the pairing window across apps")
+st = code("aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherStatusStrip.kt")
+dots = code("aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/AdbPeerDots.kt")
+ok("AdbPeerDots.tints(" in st and "PeerDots(" in st and "AdbPeers.FLEET.map" in dots, "the home status draws ADB as one dot per app (SuperApp, Cloud Store)", "the home status strip does not draw one ADB dot per app")
+
+# G8: ONE page, no copy
+copies = [p for p in sources if not p.startswith(LIB + "/") and re.search(r"\bfun\s+AdbShell\w*\s*\(|\bAdbShellScreen\(", code(p))]
+ok(not copies, "no first-party code outside the lib draws an ADB Shell page of its own", "an ADB Shell page outside the lib: " + ", ".join(copies))
+both = [a for a in ("aa_cloud-superapp", "ac_cloud-store") if "AdbShellHostedPage(" not in code(hosts[a]["file"])]
+ok(not both, "the SuperApp and Cloud Store host the SAME AdbShellHostedPage", "these apps do not host AdbShellHostedPage: " + ", ".join(both))
 
 if mode == "--files":
     keep = set(allow_files) | {h["file"] for h in hosts.values()} | {f"{pdir}/{f}" for f in pg["files"]}
@@ -133,8 +173,12 @@ if mode == "--files":
              "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/devcontrol/DevControlFragment.kt",
              "ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/PermsPage.kt",
              f"{adbsrc}/AdbManager.kt", f"{adbsrc}/AdbShellBootstrap.kt", f"{LIB}/build.gradle",
+             f"{adbsrc}/AdbPeers.kt", f"{adbsrc}/AdbPairingService.kt",
+             "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherStatusStrip.kt",
+             "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/AdbPeerDots.kt",
              "ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreStatus.kt"}
     keep |= {f"{a}/build.json" for a in hosts} | {f"{a}/privileged-channel.json" for a in hosts}
+    keep |= {f"{d}/build.json" for d in servers}
     for c in consumers:
         for g in ("app/build.gradle", "build.gradle", "settings.gradle"):
             if os.path.isfile(os.path.join(R, c, g)): keep.add(f"{c}/{g}")
@@ -175,7 +219,17 @@ mutate "a new place opens Developer options" $A/devcontrol/DevControlFragment.kt
 mutate "Shizuku prompt in a screen" $A/configs/PermissionsFragment.kt '' $'\nfun s(c: android.content.Context) { ShizukuStatus.act(c) }\n' || M=$((M+1))
 mutate "a stale allowlist entry" $A/system/PrivilegedPlaneWorker.kt 'EmbeddedAdbChannel.autoConnect(' 'EmbeddedAdbChannel.everPaired(' || M=$((M+1))
 mutate "Termux loses its page entry" ac_cloud-termux/app/src/main/java/com/termux/app/activities/SettingsActivity.java 'AdbShellLink.INSTANCE.open(' 'Unit.open(' || M=$((M+1))
-mutate "Store loses its page" $S/ConfigsPage.kt 'AdbShellPage()' 'Unit' || M=$((M+1))
+mutate "Store loses its page" $S/ConfigsPage.kt 'AdbShellHostedPage()' 'Unit' || M=$((M+1))
+mutate "the SuperApp hosts a page of its own" $A/configs/AdbShellFragment.kt 'AdbShellHostedPage()' 'AdbShellScreen(dark = true)' || M=$((M+1))
+mutate "a second copy of the page in an app" $S/MainActivity.kt '' $'\n@androidx.compose.runtime.Composable fun AdbShellMine() {}\n' || M=$((M+1))
+mutate "two apps on one server port" ac_cloud-store/build.json '"port": 38098' '"port": 38099' || M=$((M+1))
+mutate "two apps with one server process name" ac_cloud-store/build.json '"nice_name": "cloudstore-adb"' '"nice_name": "superapp-adb"' || M=$((M+1))
+mutate "the peer list drifts from build.json" $P/AdbPeers.kt '"com.diegonmarcos.cloudstore"' '"com.diegonmarcos.cloudstoreX"' || M=$((M+1))
+mutate "the status provider is not declared" ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/AndroidManifest.xml 'com.diegonmarcos.superapp.adbdebug.AdbStatusProvider' 'com.diegonmarcos.superapp.adbdebug.Gone' || M=$((M+1))
+mutate "the status provider loses its permission" ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/AndroidManifest.xml 'android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"' '' || M=$((M+1))
+mutate "pairing never claims the window" $P/AdbPairingService.kt 'PairingClaim.take()' 'Unit' || M=$((M+1))
+mutate "pairing ignores the other app's claim" $P/AdbPairingService.kt 'AdbPeerReader.pairingHeldElsewhere(app)' 'null' || M=$((M+1))
+mutate "the home status loses the per-app dots" $A/launcher/LauncherStatusStrip.kt 'AdbPeerDots.tints(adbPeers)' 'emptyList()' || M=$((M+1))
 mutate "the Store pairs under the SuperApp's name" $P/AdbManager.kt 'getDeviceName(): String = identity.deviceName' 'getDeviceName(): String = "CloudSuperApp"' || M=$((M+1))
 mutate "the key subject is the SuperApp's" $P/AdbManager.kt 'X500Name(identity.certSubject)' 'X500Name("CN=cloud-superapp, OU=adbdebug")' || M=$((M+1))
 mutate "a server restart kills the SuperApp's process" $P/AdbShellBootstrap.kt "pkill -f '\${niceName().dropLast(1)}[\${niceName().last()}]'" "pkill -f 'superapp-ad[b]'" || M=$((M+1))

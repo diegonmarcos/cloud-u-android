@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Configs > Network > ADB Shell: the privileged channel's ONE page. Static (no build, no device).
 #  1. build.json: the page is declared once, in Setup > Network, RIGHT AFTER Apps Mesh, labelled "ADB Shell".
-#  2. SectionPages routes it to AdbShellFragment, which only hosts the lib's AdbShellScreen.
-#  3. The page lives in libs:shizuku-adb-debug-tools with its six sections in order (status table, connect,
-#     active connection, logs, declared needs, setup), the four modes, the five connection buttons and the
+#  2. SectionPages routes it to AdbShellFragment, which only hosts the lib's AdbShellHostedPage (the one Cloud Store hosts).
+#  3. The page lives in libs:shizuku-adb-debug-tools with its seven sections in order (status table, connect,
+#     active connection, logs, declared needs, setup, side by side), the four modes, the five connection buttons and the
 #     log's Copy / Clear; every rule behind it is a pure, tested model.
 #  4. The SuperApp's default mode is the local server (it declares its own local_server port) and it declares
 #     what it needs the channel for.
@@ -34,12 +34,12 @@ echo "$out" | grep -qx 'ONCE 1' && ok "declared once" || bad "declared 0 or 2+ t
 echo "$out" | grep -qx 'OWN True' && ok "the SuperApp declares its own local server, so its default mode is Local server" || bad "no local_server in the SuperApp's build.json"
 echo "$out" | grep -qE '^NEEDS [1-9]' && ok "the SuperApp declares what it needs the channel for" || bad "no privileged_channel.needs in the SuperApp's build.json"
 grep -q 'pageId == "adb-shell".*AdbShellFragment' "$ROOT/aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt" && ok "routed to AdbShellFragment" || bad "adb-shell is not routed"
-grep -q 'AdbShellScreen(' "$ROOT/aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs/AdbShellFragment.kt" && ok "the fragment hosts the lib page" || bad "the fragment does not host AdbShellScreen"
+grep -q 'AdbShellHostedPage(' "$ROOT/aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs/AdbShellFragment.kt" && ok "the fragment hosts the lib page" || bad "the fragment does not host AdbShellHostedPage"
 # the six sections, in the order the owner asked for
-python3 - "$LM/AdbShellPage.kt" <<'PY' && ok "the page draws its six sections in order" || bad "the page's sections are missing or out of order"
+python3 - "$LM/AdbShellPage.kt" <<'PY' && ok "the page draws its seven sections in order" || bad "the page's sections are missing or out of order"
 import sys
 s = open(sys.argv[1], encoding='utf-8').read()
-want = ['"1  STATUS"', '"2  CONNECT"', '"3  ACTIVE CONNECTION"', '"4  LOGS"', '"5  DECLARED NEEDS"', '"6  SETUP"']
+want = ['"1  STATUS"', '"2  CONNECT"', '"3  ACTIVE CONNECTION"', '"4  LOGS"', '"5  DECLARED NEEDS"', '"6  SETUP"', '"7  SIDE BY SIDE"']
 at = [s.find(w) for w in want]
 sys.exit(0 if all(a >= 0 for a in at) and at == sorted(at) else 1)
 PY

@@ -45,6 +45,14 @@
             android:exported="false"
             android:label="ADB Shell"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
+        <!-- This app's channel state for the other adb app on the phone (the SuperApp's home status draws one dot per app)
+             and its pairing claim, so two apps never race for one pairing code. Read-only, signature permission,
+             re-checked in call(); see AdbStatusProvider. One authority per app: ${applicationId}.adbstatus. -->
+        <provider
+            android:name="com.diegonmarcos.superapp.adbdebug.AdbStatusProvider"
+            android:authorities="${applicationId}.adbstatus"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
         <service
             android:name="com.diegonmarcos.superapp.adbdebug.AdbPairingService"
             android:exported="false"

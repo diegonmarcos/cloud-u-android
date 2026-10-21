@@ -33,8 +33,8 @@
   },
   "hosts": {
     "_doc": "Every app whose gradle links the lib must expose the page, and must say what it needs the channel for (build.json::privileged_channel.needs). `has` is a string that must appear in `file`.",
-    "aa_cloud-superapp": {"file": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs/AdbShellFragment.kt", "has": "AdbShellScreen("},
-    "ac_cloud-store": {"file": "ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/ConfigsPage.kt", "has": "AdbShellPage()"},
+    "aa_cloud-superapp": {"file": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/configs/AdbShellFragment.kt", "has": "AdbShellHostedPage("},
+    "ac_cloud-store": {"file": "ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/ConfigsPage.kt", "has": "AdbShellHostedPage("},
     "ac_cloud-account": {"file": "ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt", "has": "AdbShellPage()"},
     "ac_cloud-termux": {"file": "ac_cloud-termux/app/src/main/java/com/termux/app/activities/SettingsActivity.java", "has": "AdbShellLink.INSTANCE.open("},
     "ac_cloud-drive": {"file": "ac_cloud-drive/app/src/main/java/com/diegonmarcos/clouddrive/configs/OthersPage.kt", "has": "AdbShellPage()"},

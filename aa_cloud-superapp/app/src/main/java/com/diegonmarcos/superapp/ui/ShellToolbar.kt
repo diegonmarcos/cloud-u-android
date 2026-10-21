@@ -1,5 +1,7 @@
 package com.diegonmarcos.superapp.ui
 
+import android.view.View
+import android.view.ViewGroup
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -105,5 +107,84 @@ fun ShellToolbarRow(onMenu: () -> Unit, onBack: () -> Unit, tic: Boolean) {
         ) {
             Icon(painterResource(R.drawable.ic_back), stringResource(R.string.action_back), Modifier.size(24.dp), tint = ink)
         }
+    }
+}
+
+/**
+ * WHERE THE TOP ROW ENDS AND PAGE CONTENT BEGINS: owned here, once, by the shell. No page declares, measures or guesses it.
+ *
+ * The top row is toolbar_island. Its offset is not a constant: in launcher mode ShellActivity seats it under the status
+ * strip ([com.diegonmarcos.superapp.launcher.StripIslandGap]: the strip's height + a gap, and the strip grows after its
+ * first layout), in the other modes 6 dp under the system bar. A content host padded by a typed number is therefore right
+ * only in the mode the number was typed for; that is how the ADB Shell page and the Configs search bar ended up under the row.
+ *
+ * So the inset is the row's own bottom edge, applied to every content host the shell owns (the page container, the tablet
+ * detail pane and its divider, the overlay host), and re-applied whenever the row moves or is shown/hidden:
+ *
+ *   inset = max(shell_top_inset, island.bottom)      while the island is shown and laid out
+ *   inset = shell_top_inset                           otherwise (the declared floor, res/values/dimens.xml)
+ *
+ * A page lays out inside its host's padding, so it starts at or below the row by construction; a page that needs less
+ * room than that cannot ask for it (no page reads the inset), and one that draws above it is caught by
+ * ShellTopInsetGuardTest, which renders every registered page.
+ */
+object ShellTopInset {
+
+    /** The pure rule: the declared floor, or the island's bottom edge when that is lower and the island is on screen. */
+    fun insetPx(declaredPx: Int, islandShown: Boolean, islandBottomPx: Int): Int =
+        if (islandShown && islandBottomPx > declaredPx) islandBottomPx else declaredPx
+
+    /** The hosts that carry page content: padded by the inset (and the tablet divider, which is margin-inset). */
+    private val HOSTS = intArrayOf(R.id.fragment_container, R.id.detail_container, R.id.overlay_container)
+
+    /** The view [id] under this one, or null (the tablet-only hosts are absent on a phone). Not findViewById: this file draws no Views. */
+    private fun View.viewOrNull(id: Int): View? = runCatching { androidx.core.view.ViewCompat.requireViewById<View>(this, id) }.getOrNull()
+
+    /** [v]'s top in [ancestor]'s coordinates (the island and the hosts do not share a parent on a tablet). */
+    private fun topIn(ancestor: View, v: View): Int {
+        var t = 0
+        var c: View = v
+        while (c !== ancestor) {
+            t += c.top
+            c = c.parent as? View ?: break
+        }
+        return t
+    }
+
+    /**
+     * The padding [host] needs right now: the island's bottom edge measured from [host]'s own top (both in the island's
+     * parent's coordinates, so the shell's own status-bar padding cancels), floored at the declared dimen.
+     */
+    fun insetFor(root: View, host: View): Int {
+        val declared = root.resources.getDimensionPixelSize(R.dimen.shell_top_inset)
+        val island = root.viewOrNull(R.id.toolbar_island) ?: return declared
+        val shared = island.parent as? View ?: return declared
+        val shown = island.visibility == View.VISIBLE && island.height > 0 && host.height > 0
+        return insetPx(declared, shown, topIn(shared, island) + island.height - topIn(shared, host))
+    }
+
+    /** The inset the page container needs right now (what every page below the row is laid out under). */
+    fun currentInsetPx(root: View): Int = root.viewOrNull(R.id.fragment_container)?.let { insetFor(root, it) }
+        ?: root.resources.getDimensionPixelSize(R.dimen.shell_top_inset)
+
+    /** Pad every content host under [root] to the row's bottom edge. */
+    fun apply(root: View) {
+        for (id in HOSTS) {
+            val host = root.viewOrNull(id) ?: continue
+            val pad = insetFor(root, host)
+            if (host.paddingTop != pad) host.setPadding(host.paddingLeft, pad, host.paddingRight, host.paddingBottom)
+        }
+        root.viewOrNull(R.id.pane_divider)?.let { d ->
+            val lp = d.layoutParams as? ViewGroup.MarginLayoutParams ?: return@let
+            val inset = insetFor(root, d.parent as? View ?: d)
+            if (lp.topMargin != inset) { lp.topMargin = inset; d.layoutParams = lp }
+        }
+    }
+
+    /** Seat the hosts now and follow the island from here on: every layout of the row (it moves when the strip grows) re-applies. */
+    fun install(root: View) {
+        val island = root.viewOrNull(R.id.toolbar_island) ?: return
+        island.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> apply(root) }
+        apply(root)
     }
 }

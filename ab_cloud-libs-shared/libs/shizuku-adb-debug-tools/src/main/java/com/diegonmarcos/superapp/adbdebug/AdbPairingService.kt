@@ -63,6 +63,7 @@ class AdbPairingService : Service() {
             }
             else -> {
                 startForeground(NOTIF_ID, notification(statusLine()))
+                PairingClaim.take()   // the other adb app (AdbPeers) refuses to pair while this one holds the window
                 intent?.getStringExtra(KEY_CODE)?.takeIf { it.isNotBlank() }?.let { pendingCode = it.trim() }
                 startDiscovery()
             }
@@ -71,6 +72,7 @@ class AdbPairingService : Service() {
     }
 
     override fun onDestroy() {
+        PairingClaim.release()
         mdns?.stop()
         super.onDestroy()
     }
@@ -203,9 +205,25 @@ class AdbPairingService : Service() {
          *  the port is still discovered, never given. */
         @JvmStatic
         fun start(ctx: Context, code: String? = null) {
-            val i = Intent(ctx, AdbPairingService::class.java).setAction(ACTION_START)
+            val app = ctx.applicationContext
+            val i = Intent(app, AdbPairingService::class.java).setAction(ACTION_START)
             if (!code.isNullOrBlank()) i.putExtra(KEY_CODE, code)
-            ContextCompat.startForegroundService(ctx, i)
+            // One phone has ONE pairing window. If the other adb app (SuperApp / Cloud Store) is already waiting for the code,
+            // two services would race for it: refuse here with a plain reason instead. The peer read crosses a process
+            // boundary, so it runs off the caller's (main) thread; an app that is not installed or not answering never blocks.
+            Thread {
+                val holder = runCatching { AdbPeerReader.pairingHeldElsewhere(app) }.getOrNull()
+                if (holder != null) {
+                    val why = AdbPeers.pairingRefusal(holder)
+                    ChannelLog.shared.add("pair", why)
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        android.widget.Toast.makeText(app, why, android.widget.Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    runCatching { ContextCompat.startForegroundService(app, i) }
+                        .onFailure { ChannelLog.shared.add("pair", "could not start the pairing service: ${it.message}") }
+                }
+            }.start()
         }
     }
 }

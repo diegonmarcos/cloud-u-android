@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -171,6 +172,10 @@ fun AdbShellPage(modifier: Modifier = Modifier) {
         }
     }
 
+    // The other adb app(s) on this phone: one pass per probe, off the main thread (binder calls into their providers).
+    var peers by remember { mutableStateOf<List<PeerStatus>?>(null) }
+    LaunchedEffect(tick) { peers = withContext(Dispatchers.IO) { runCatching { AdbPeerReader.read(ctx) }.getOrNull() } }
+
     val facts = raw?.copy(mode = mode, connecting = connecting)
     val conn = facts?.let { ChannelState.connState(it) }
 
@@ -204,6 +209,9 @@ fun AdbShellPage(modifier: Modifier = Modifier) {
             Text(conn?.title() ?: "Reading", fontSize = 12.sp, modifier = Modifier.weight(1f))
             DenseButton("Refresh", onClick = { tick++ })
         }
+        // WHO this app is to adbd (the pairing name in the phone's paired-devices list), the same line in every app.
+        val identity = remember { AdbIdentity.host(ctx.packageName) }
+        Dim("Connection name: ${identity.deviceName}  ·  ${identity.applicationId}", size = 11)
 
         // ── 1  status table ──────────────────────────────────────────────────────────────────────
         Section("1  STATUS") {
@@ -341,8 +349,37 @@ fun AdbShellPage(modifier: Modifier = Modifier) {
                 }
             }
         }
+
+        // ── 7  apps on this phone ───────────────────────────────────────────────────────────────
+        Section("7  SIDE BY SIDE") {
+            val list = peers
+            if (list == null) Dim("Reading the other apps...", size = 11)
+            else {
+                for (st in list) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    StateDot(AdbPeers.dot(st.link).color())
+                    Text(st.peer.label + (if (st.peer.applicationId == ctx.packageName) " (this app)" else ""), Modifier.width(98.dp), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text(AdbPeers.title(st.link) + if (AdbPeers.holdsPairing(st, System.currentTimeMillis())) ", pairing now" else "", Modifier.weight(1f), fontSize = 11.sp)
+                }
+                Dim("Each app has its own key, paired-devices entry, port and process; only the pairing window is shared, so one app pairs at a time.")
+            }
+        }
     }
 }
+
+/**
+ * THE page as every app hosts it inside its own frame (SuperApp > Configs > ADB Shell, Cloud Store > Configs > ADB Shell):
+ * the page itself, scrolling, with [pad] around it. The theme is the host's own (SuperApp's kit theme, Cloud Store's dense
+ * Material), so the page looks the same in both and there is no second copy of any of it.
+ */
+@Composable
+fun AdbShellHostedPage(pad: androidx.compose.ui.unit.Dp = HOSTED_PAD) {
+    Column(Modifier.fillMaxSize().testTag(HOSTED_TAG).verticalScroll(rememberScrollState()).padding(pad)) { AdbShellPage() }
+}
+
+const val HOSTED_TAG = "adb_shell_page"
+
+/** The padding around the hosted page: ONE value, so both apps frame it identically (the page adds its own 8 dp inside). */
+val HOSTED_PAD: androidx.compose.ui.unit.Dp = 12.dp
 
 /**
  * The page as a whole screen: themed, on a surface, scrolling. [dark] null follows the system. Used by
@@ -359,7 +396,7 @@ fun AdbShellScreen(dark: Boolean? = null) {
             androidx.compose.material3.LocalMinimumInteractiveComponentSize provides 36.dp,
         ) {
             Surface(Modifier.fillMaxSize()) {
-                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { AdbShellPage() }
+                AdbShellHostedPage(pad = 0.dp)
             }
         }
     }

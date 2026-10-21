@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import com.diegonmarcos.superapp.ai.AiFleetChatPanel
+import com.diegonmarcos.superapp.adbdebug.AdbShellHost
 import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
@@ -60,7 +61,7 @@ import com.diegonmarcos.superapp.updater.Updater
  * three stay composed and the hidden ones are sized to zero, so switching
  * tabs keeps a running download list and its scroll position.
  */
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), AdbShellHost {
 
     /** The tab an Intent asked for; read by the composition. */
     private var requested by mutableStateOf<String?>(null)
@@ -88,6 +89,21 @@ class MainActivity : AppCompatActivity() {
         Updater.start(this)
     }
 
+    /** The tab on screen, kept for [openAdbShellInFrame] (the composition writes it) and the tab Back returns to from the ADB page. */
+    private var shown: String = ""
+    private var adbReturnTo: String? = null
+
+    /**
+     * Every chip that opens the ADB Shell page (the Cloud tab's Wireless debugging button, Access > Android Perms)
+     * lands here: Configs > ADB Shell, inside the Configs frame under its own top row and tabs, never a full-screen page.
+     */
+    override fun openAdbShellInFrame(): Boolean {
+        if (shown != TAB_SETTINGS) adbReturnTo = shown.takeIf { it.isNotEmpty() }
+        choose(TAB_SETTINGS, ConfigsPages.ADB)
+        requested = TAB_SETTINGS
+        return true
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -102,7 +118,11 @@ class MainActivity : AppCompatActivity() {
             requested?.let { selected = it; requested = null }
         }
         // Configs is not on the island any more (the top bar's Settings > Configs opens it), so Back leaves it for the home section.
-        androidx.activity.compose.BackHandler(enabled = selected == TAB_SETTINGS) { selected = NAV.default()?.id ?: TAB_CLOUD }
+        androidx.activity.compose.BackHandler(enabled = selected == TAB_SETTINGS) {
+            selected = adbReturnTo?.takeIf { NAV.section(it) != null } ?: NAV.default()?.id ?: TAB_CLOUD
+            adbReturnTo = null
+        }
+        androidx.compose.runtime.SideEffect { shown = selected }
         // Search is its own island item but the same libs:appstore page as before (StorePhoneFragment's search page):
         // the fragment follows StorePages, so opening Search selects it and Phone restores its own strip choice.
         androidx.compose.runtime.LaunchedEffect(selected) {
