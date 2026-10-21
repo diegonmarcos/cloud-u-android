@@ -679,6 +679,14 @@
         "lib-appstore"
       ]
     },
+    "update_checks": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "#1078 Cloud Store: whether the one-time battery-optimization prompt has been shown on this phone; a prompt marker, never migrated (the new phone asks once itself).",
+      "used_by": [
+        "ac_cloud-store"
+      ]
+    },
     "dagu_prefs_fallback": {
       "kind": "prefs",
       "class": "config",
