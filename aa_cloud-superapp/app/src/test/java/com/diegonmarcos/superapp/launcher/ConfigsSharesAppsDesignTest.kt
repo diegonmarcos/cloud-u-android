@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.launcher
 import android.app.Application
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
@@ -43,7 +44,24 @@ class ConfigsSharesAppsDesignTest : KitPageHarness() {
         assertTrue("TileStrip draws TileCell", Regex("TileCell\\(tile").containsMatchIn(apps))
         assertTrue("Configs draws a tile of its own", !Regex("CompactTile|TileCell\\(|Icon\\(|Text\\(").containsMatchIn(configs))
         assertTrue("Configs states a size of its own", !Regex("\\d\\s*\\.(dp|sp)\\b").containsMatchIn(configs))
+        // The Home grid's Configs row is the same page again (#1075).
+        val home = code("HomeGroupedFragment.kt")
+        for (shared in listOf("TileStrip(", "GroupTitle(", "TILE_PAGE_PADDING"))
+            assertTrue("the Home grid does not use $shared", home.contains(shared))
+        assertTrue("the Home grid draws a tile of its own", !Regex("CompactTile|TileCell\\(|Icon\\(|Text\\(").containsMatchIn(home))
         assertTrue("the Apps cell width is one token", Regex("TILE_CELL_WIDTH").findAll(apps).count() >= 3)
+    }
+
+    @Test
+    fun `D3 a Home grid tile is the Apps cell too`() {
+        val cfg = ConfigsPageFixture.tiles(compose.activity)
+        val first = HomeGroupedFragment.buckets(compose.activity).first { it.tiles.isNotEmpty() }.tiles.first().first
+        show(HomeGroupedFragment.newInstance())
+        val cell = compose.onAllNodesWithTag(GroupedTilesFragment.tileTag(first), useUnmergedTree = true).onFirst().getBoundsInRoot()
+        val icon = compose.onAllNodesWithTag(tileIconTag(first), useUnmergedTree = true).onFirst().getBoundsInRoot()
+        assertEquals("cell width", TILE_CELL_WIDTH.value, cell.width.value, 0.5f)
+        assertEquals("glyph", 32f, icon.width.value, 0.5f)
+        assertTrue(cfg.isNotEmpty())
     }
 
     @Test

@@ -1,6 +1,4 @@
 package com.diegonmarcos.superapp.launcher
-import com.diegonmarcos.superapp.settings.GridColumns
-import com.diegonmarcos.superapp.settings.redrawOnGridColumns
 
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.system.ModePrefs
@@ -10,25 +8,18 @@ import com.diegonmarcos.superapp.uikit.KitComposeFragment
 import android.content.Context
 import android.os.Bundle
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 
 /**
  * Grouped Home master view.
  *
- * Each group contributes (header + N tile rows) of [GridColumns.cloud] columns; a fixed row height
- * keeps icon + label legible at every group size, and the page scrolls when the content exceeds the
+ * Each group is Cloud ▸ Apps' [GroupTitle] over a wrapped [TileStrip] of [TileCell]s (#1075); the page scrolls when the content exceeds the
  * visible area (the earlier "auto-fit to one screen" weight layout crammed rows into too-short
  * heights and clipped tile labels).
  *
@@ -49,55 +40,30 @@ class HomeGroupedFragment : KitComposeFragment() {
     /** One group as drawn: its heading and its tiles (id, label, icon name). */
     internal class Bucket(val title: String, val tiles: List<Triple<String, String, String>>, val scroll: String? = null)
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        redrawOnGridColumns(GridColumns.Kind.CLOUD)
-    }
-
     override fun palette() = LauncherPalette.kit(requireContext())
 
     @Composable
     override fun Content() {
         val ctx = LocalContext.current
-        // build.json::ui.tile_columns is the default; the Controls stepper overrides it.
-        val cols = TileGridFragment.CHIP_COLUMNS
         val groups = remember { buckets(ctx) }
         val click = { id: String -> (activity as? TileGridFragment.TileClickListener)?.onTileClicked(id); Unit }
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(6.dp)) {
-            for (bucket in groups) {
-                TileGroupHeaderPlain(bucket.title)
-                // All groups render as a full multi-row grid (COLS per row, wrapping to as many rows as
-                // needed) — every icon visible, row per row. The build.json `scroll:"horizontal"` flag is
-                // intentionally ignored now: the old single-row HorizontalScrollView strip hid apps
-                // behind a left/right scroll.
-                for (row in bucket.tiles.chunked(cols)) {
-                    Row(Modifier.fillMaxWidth()) {
-                        for ((id, label, iconName) in row) {
-                            CompactTile(
-                                tileId = id, label = label,
-                                iconRes = Sections.iconResFor(ctx, iconName).takeIf { it != 0 } ?: R.drawable.ic_settings,
-                                onClick = { click(id) },
-                                modifier = Modifier.weight(1f).padding(2.dp),
-                            )
-                        }
-                        for (k in row.size until cols) Spacer(Modifier.weight(1f))
+        // Cloud ▸ Apps' page (#1075): the same GroupTitle + TileStrip/TileCell at the same tokens, cells wrapped onto lines
+        // so every icon is visible (the build.json `scroll:"horizontal"` flag stays ignored: no hidden sideways strips).
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(TILE_PAGE_PADDING)) {
+            groups.forEachIndexed { i, bucket ->
+                item(key = "g:$i") {
+                    Column {
+                        GroupTitle(bucket.title)
+                        TileStrip(bucket.tiles.map { (id, label, icon) -> Sections.AggTile(id, label, icon, id) }, click,
+                            { click(it.target) }, wrap = true)
                     }
                 }
             }
         }
     }
 
-    @Composable
-    private fun TileGroupHeaderPlain(title: String) {
-        androidx.compose.material3.Text(title.uppercase(), color = com.diegonmarcos.superapp.uikit.LocalKitPalette.current.accent,
-            style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
-            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, top = 12.dp, end = 10.dp, bottom = 4.dp).testTag(headerTag(title)))
-    }
-
     companion object {
         fun newInstance() = HomeGroupedFragment()
-
-        fun headerTag(title: String) = "homegrouped:group:$title"
 
         /**
          * The groups of the grouped "All Apps" grid (build.json::ui.home_groups + ui.home_actions).
