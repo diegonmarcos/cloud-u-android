@@ -34,7 +34,7 @@ import org.robolectric.annotation.Config
  *   G2 the long-press sheet's Mark read marks the group read and the read set is persisted under the page id
  *   G3 the sheet's Archive files the box away; the Archive card says Restore
  *   G4 a right swipe toggles read (never archives); the row sheet flips read both ways
- *   C1 a container draws the One UI header (name • 2m), the title and the body, no footer buttons
+ *   C1 a container draws the One UI header (name • 2m), the title, the body and the Mark read / Archive / Open / Reply pills
  *   S1 a left swipe (One UI's dismiss) files the row into the Archive
  *   B1 the long-press menu is a bottom sheet (a dialog window), not an anchored dropdown
  *   M1 Mark all read / M2 Archive all as the centred pill row under the list
@@ -101,7 +101,7 @@ class AggregatorComposeTest : KitPageHarness() {
     }
 
     @Test
-    fun `C1 a container renders the One UI header, the title and the body, with no footer`() {
+    fun `C1 a container renders the One UI header, the title, the body and the box's action pills`() {
         val st = state("c1-page")
         showKit { GroupBlock(st, view(row("phone:1", System.currentTimeMillis() - 120_000L)), archived = false) { } }
         compose.onNodeWithText("App A").assertExists()
@@ -113,7 +113,8 @@ class AggregatorComposeTest : KitPageHarness() {
         compose.onNodeWithTag(AggTags.rowUnread("phone:1"), useUnmergedTree = true).assertExists()
         // A single notification is not a stack: no "+N".
         compose.onNodeWithTag(AggTags.groupMore("pkg.a")).assertDoesNotExist()
-        // No footer buttons: the actions live in the long-press sheet.
+        // The box's own pills (#1068) are drawn; the sheet's items only exist once the sheet is open.
+        for (a in NotifActions.REQUIRED_PER_BOX) compose.onNodeWithTag(NotifActions.tag(a, "pkg.a")).assertExists()
         compose.onNodeWithTag(AggTags.groupCheck("pkg.a")).assertDoesNotExist()
         compose.onNodeWithTag(AggTags.groupArchive("pkg.a")).assertDoesNotExist()
         compose.onNodeWithTag(AggTags.groupHeader("pkg.a")).performTouchInput { longClick(centerLeft + androidx.compose.ui.geometry.Offset(40f, 0f)) }

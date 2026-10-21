@@ -1288,7 +1288,7 @@ print('; '.join(problems) or 'OK')
 PY
 )" "every producer names an owner file that exists and an icon that resolves"
 
-echo "== T31: Notify leads with the persistent badges, Configs sits UNDER the Filters, collapsed (#580) =="
+echo "== T31: Notify leads with the badge cards; every control (Filters + Configs) is ONE folded Settings section at the very bottom (#580, #1068) =="
 # The merge is declared, not coded: two stack_my-rss panels, one flagged
 # above_filters and one collapsed. The Kotlin only has to honour the flags, in
 # the order the page reads: above-filter panels, the Filters, the rest.
@@ -1305,8 +1305,8 @@ bad = []
 if badges is None:  bad.append('no notification_badges panel in stack_my-rss')
 elif not badges.get('above_filters'): bad.append('the badges panel is not above_filters, so it would sit under the Filters')
 if configs is None: bad.append('no notification_badge_configs panel in stack_my-rss')
-elif not configs.get('collapsed'):     bad.append('the Configs panel is not collapsed by default')
-elif configs.get('above_filters'):     bad.append('the Configs panel is above the Filters; it belongs under them')
+elif not configs.get('bottom'):        bad.append('the Configs panel is not flagged bottom, so it would sit among the cards')
+elif configs.get('above_filters'):     bad.append('the Configs panel is above the cards; it belongs at the very bottom')
 if badges and configs and kinds.index('notification_badges') > kinds.index('notification_badge_configs'):
     bad.append('badges are declared after Configs')
 # Only THIS page: the other five clones must not grow a second copy of the badges.
@@ -1321,26 +1321,29 @@ for msg in bad: print('  ' + msg)
 sys.exit(1 if bad else 0)
 PY
 grep -q 'aboveFilters *= p.optBoolean("above_filters"' "$SECTIONS" || nb_fail="$nb_fail Sections:above_filters-not-parsed"
+grep -q 'bottom *= p.optBoolean("bottom"' "$SECTIONS" || nb_fail="$nb_fail Sections:bottom-not-parsed"
 python3 - "$AGG" "$AGGPANELS" <<'PY' || nb_fail="$nb_fail AggregatorStackFragment:order"
 import re, sys
 s = open(sys.argv[1], encoding='utf-8').read()
 panels = open(sys.argv[2], encoding='utf-8').read()
 try:
     a = s.index('for ((i, panel) in above)')
-    f = s.index('FilterRow(st)')
+    f = s.index('ConfigSection(st')
     b = s.index('for ((i, panel) in below)')
 except ValueError as e:
     print('  missing marker: %s' % e); sys.exit(1)
-if not (a < f < b):
-    print('  render order is not above-panels, Filters, other panels'); sys.exit(1)
+if not (a < b < f):
+    print('  render order is not above-panels, other panels, then the Settings section last'); sys.exit(1)
+if 'FilterRow(st)' in s:
+    print('  the Filters are drawn on the page again; they belong inside ConfigSection'); sys.exit(1)
 if 'it.value.aboveFilters' not in s:
     print('  the page no longer partitions on aboveFilters'); sys.exit(1)
-for kind in ('notification_badges', 'notification_badge_configs'):
-    if not re.search(r'"%s"\s*->\s*BadgePane' % kind, panels):
+for kind, r in (('notification_badges', r'BadgeCards\(\)'), ('notification_badge_configs', r'BadgePane')):
+    if not re.search(r'"%s"\s*->\s*%s' % (kind, r), panels):
         print('  panel kind %s has no renderer' % kind); sys.exit(1)
 PY
 [ -z "$nb_fail" ] \
-  && ok "stack_my-rss: badges above_filters, Configs collapsed under the Filters, only on this page; Kotlin draws them in that order" \
+  && ok "stack_my-rss: badge cards lead, Configs + Filters are the folded Settings section last, only on this page" \
   || bad "Notify's badge/Configs layout is not what #580 declared:$nb_fail"
 
 echo "== T32: the badge panes are VIEWS — they post, clear and store nothing (#497/#515 single centre) =="

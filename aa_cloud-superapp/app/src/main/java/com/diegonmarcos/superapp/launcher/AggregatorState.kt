@@ -52,6 +52,15 @@ internal class AggregatorState(
     /** Bumped to make every notification body re-read its stores (a toggle, a pull, a swipe that hides a row). */
     var epoch by mutableIntStateOf(0)
     private var archiveVersion by mutableIntStateOf(0)
+    /** The page's SETTINGS section at the very bottom: folded until the user opens it, remembered per page. */
+    var configOpen by mutableStateOf(
+        StackFilters.selected(ctx, page, yesNo(AggregatorModel.FILTER_CONFIG_OPEN)) == "yes")
+
+    fun toggleConfigOpen() {
+        configOpen = !configOpen
+        StackFilters.select(ctx, page, AggregatorModel.FILTER_CONFIG_OPEN, if (configOpen) "yes" else "no")
+    }
+
     var archiveOpen by mutableStateOf(
         StackFilters.selected(ctx, page, yesNo(AggregatorModel.FILTER_ARCHIVE_OPEN)) == "yes")
 

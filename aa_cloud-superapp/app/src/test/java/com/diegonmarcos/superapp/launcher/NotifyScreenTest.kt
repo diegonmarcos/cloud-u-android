@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.core.NotificationStore
 import com.diegonmarcos.superapp.ui.KitPageHarness
@@ -29,7 +30,7 @@ import java.io.File
  * app/build/configs-screens/notify-after.png (the Configs screens workflow uploads the folder).
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class, qualifiers = "w384dp-h832dp-450dpi")
+@Config(sdk = [34], application = Application::class, qualifiers = "w384dp-h832dp-450dpi-night")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class NotifyScreenTest : KitPageHarness() {
 
@@ -39,6 +40,7 @@ class NotifyScreenTest : KitPageHarness() {
     @Before
     fun seed() {
         AggregatorModel.ntfyPoller = { topics -> topics.associateWith { NtfyResult(true, "", emptyList()) } }
+        NotifyFixtures.install()
         NotificationStore.clear(ctx)
         val samples = listOf(
             Triple("Backups", "Nightly backup finished", "oci-vm1 · 4.2 GB in 3m 12s, 0 errors. Next run 03:00."),
@@ -58,6 +60,7 @@ class NotifyScreenTest : KitPageHarness() {
     @After
     fun restore() {
         AggregatorModel.ntfyPoller = realPoller
+        NotifyFixtures.uninstall()
         NotificationStore.clear(ctx)
     }
 
@@ -130,6 +133,24 @@ class NotifyScreenTest : KitPageHarness() {
         }
         val out = File(System.getProperty("user.dir"), "build/configs-screens").apply { mkdirs() }
         File(out, name).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
+    /** #1068: the page in three A37 frames - the live cards at the top, the app containers, the folded Settings opened. */
+    @Test
+    fun `render the Notify page for 1068 at A37 size`() {
+        show(AggregatorStackFragment.newInstance("communication", "", "my-rss"))
+        compose.waitForIdle()
+        compose.onNodeWithTag(AggTags.PAGE).assertExists()
+        snap("notify1068-1-cards.png")
+        compose.onNodeWithTag(AggTags.group("Backups")).performScrollTo()
+        compose.waitForIdle()
+        snap("notify1068-2-notifications.png")
+        compose.onNodeWithTag(AggTags.CONFIG_HEADER).performScrollTo()
+        compose.onNodeWithTag(AggTags.CONFIG_HEADER).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(AggTags.CONFIG_HEADER).performScrollTo()
+        compose.waitForIdle()
+        snap("notify1068-3-settings.png")
     }
 
     @Test

@@ -55,6 +55,14 @@ object BadgeDeclaration {
         val url: String,
     )
 
+    /**
+     * #1068 — how the Notify page DRAWS this badge as a One UI live card: [kind] picks the card body (`level` a battery-style
+     * progress, `quotes` the instruments as value tiles, `alerts` the fleet alert count and latest, `media` a transport line,
+     * `text` the posted notification's own lines) and [accent] tints its header glyph and progress. Data, not Kotlin: a badge
+     * added to the declaration appears on the page as a card with no edit anywhere else.
+     */
+    data class Card(val kind: String = "text", val accent: String = "")
+
     data class Badge(
         val id: String,
         val label: String,
@@ -79,6 +87,7 @@ object BadgeDeclaration {
         /** What this badge quotes, in declaration order. Empty for every badge
          *  that is not quoting anything. */
         val instruments: List<Instrument> = emptyList(),
+        val card: Card = Card(),
     )
 
     /**
@@ -147,6 +156,7 @@ object BadgeDeclaration {
                 notBadgeReason = o.optString("not_badge_reason", ""),
                 customization = options(o.optJSONArray("customization")),
                 instruments = instruments(o.optJSONArray("instruments")),
+                card = o.optJSONObject("card")?.let { Card(it.optString("kind", "text"), it.optString("accent", "")) } ?: Card(),
             )
         }
         return out

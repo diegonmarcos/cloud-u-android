@@ -181,6 +181,9 @@ object BadgePanes {
                 caption(ctx.getString(R.string.push_none_badges))
                 return@Column
             }
+            // #1068: the badge CONTROLS live here, at the very bottom of Notify — Launch, the group switches and their order, the
+            // alerts filters and each badge's live state line. The page itself draws the badges as cards.
+            this@BadgePanes.badges(redraw)
             caption(ctx.getString(R.string.push_section_custom_sub))
             for (b in badges) customMenu(redraw, b)
         }
