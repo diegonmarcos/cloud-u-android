@@ -45,11 +45,11 @@
         "root_a": "Documents/Sync",
         "root_b": {
           "host": "oci-apps.app",
-          "user": "diego",
-          "path": "/srv/sync/documents"
+          "user": "ubuntu",
+          "path": "sync/documents"
         },
         "schedule_minutes": 60,
-        "notes": "The reference pair. Off until the user switches it on (Sync > Rsync > Unison pairs) because it needs an ssh connection to oci-apps.app under Sync > Mounts and a unison of the pinned version on that host. Conflicts are never resolved on their own: no `prefer`, so every conflicting file waits for keep-A / keep-B / keep-both."
+        "notes": "The reference pair. host and user are the fleet declaration's own (cloud-infra b_infra/nixhm-sudo-oci-apps/build.json: dashboard.dns oci-apps.app, hm.user ubuntu; sshd on the default port); the remote folder is relative to that user's home. Off until the user switches it on (Sync > Rsync > Unison pairs) because it needs an ssh connection to oci-apps.app under Sync > Mounts and a unison of the pinned version on that host. Conflicts are never resolved on their own: no `prefer`, so every conflicting file waits for keep-A / keep-B / keep-both."
       }
     ]
   }
