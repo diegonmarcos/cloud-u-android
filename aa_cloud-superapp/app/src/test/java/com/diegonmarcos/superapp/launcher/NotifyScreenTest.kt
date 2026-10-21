@@ -30,7 +30,7 @@ import java.io.File
  * app/build/configs-screens/notify-after.png (the Configs screens workflow uploads the folder).
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class, qualifiers = "w384dp-h832dp-450dpi-night")
+@Config(sdk = [34], application = Application::class, qualifiers = "w384dp-h832dp-night-450dpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class NotifyScreenTest : KitPageHarness() {
 
