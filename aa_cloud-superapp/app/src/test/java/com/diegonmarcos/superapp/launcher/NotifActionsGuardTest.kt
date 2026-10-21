@@ -42,7 +42,7 @@ class NotifActionsGuardTest : KitPageHarness() {
         val a = view("pkg.a", NotifRow(now - 60_000, "t1", "b1", id = "phone:a1"), NotifRow(now - 30_000, "t2", "b2", id = "phone:a2"))
         val b = view("pkg.b", NotifRow(now - 20_000, "t3", "b3", id = "phone:b1"))
         val st = AggregatorState(ctx, "actions-guard", emptyList(), emptyList())
-        showKit { GroupList(st, listOf(a, b)) { } }
+        showKit { androidx.compose.foundation.layout.Column { GroupList(st, listOf(a, b)) { } } }
         for (key in listOf("pkg.a", "pkg.b")) for (act in NotifActions.REQUIRED_PER_BOX) {
             compose.onNodeWithTag(NotifActions.tag(act, key)).assertExists()
         }
