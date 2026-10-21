@@ -697,6 +697,7 @@ dependencies {
     // The JVM unit phase (build.json::tests.unit) runs these on every ship: PdfConvertTest and
     // PdfLayoutTest execute the converter and the page layout, which no shell tester can.
     testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'   // real org.json on the JVM (the android.jar stubs throw): TermuxGitWireTest builds wire requests
 
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
