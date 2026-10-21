@@ -109,7 +109,7 @@ fun GitSyncScreen(
     LaunchedEffect(target) {
         val t = target?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
         val dir = File(t)
-        if (GitEngine.isRepository(dir)) {
+        if (GitEngine.isRepositoryAsync(dir)) {
             val existing = repos.firstOrNull { File(it.path).absolutePath == dir.absolutePath }
             open = existing ?: ManagedRepo(RepoRegistry.idFor(t), dir.name, dir.absolutePath).also {
                 repos = registry.upsert(it)
@@ -252,7 +252,9 @@ private fun RepoListScreen(
 private fun AddRepoDialog(prefillPath: String, prefillUrl: String, credentials: GitCredentialStore, onDismiss: () -> Unit, onAdded: (ManagedRepo) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var mode by remember { mutableIntStateOf(if (prefillPath.isNotEmpty() && !GitEngine.isRepository(File(prefillPath))) 1 else 0) }
+    var mode by remember { mutableIntStateOf(0) }
+    // asked off the main thread: a repo in the shared store is answered by cld.termux, never by a disk look from here
+    LaunchedEffect(prefillPath) { if (prefillPath.isNotEmpty() && !GitEngine.isRepositoryAsync(File(prefillPath))) mode = 1 }
     var path by remember { mutableStateOf(prefillPath) }
     var url by remember { mutableStateOf(prefillUrl) }
     var username by remember { mutableStateOf("") }

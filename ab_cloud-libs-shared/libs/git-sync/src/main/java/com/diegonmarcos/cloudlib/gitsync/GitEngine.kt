@@ -138,13 +138,36 @@ class GitEngine(
     }
 
     companion object {
-        /** Set by a host that routes some directories elsewhere ([GitTransports]): true/false when it knows, null to look at the disk. */
+        /** Set by a host that routes some directories elsewhere ([GitTransports]): true/false when it knows, null when it cannot say (for example on the main thread). */
         @Volatile var repositoryProbe: ((File) -> Boolean?)? = null
 
-        fun isRepository(dir: File): Boolean = File(dir, ".git").exists() || repositoryProbe?.invoke(dir) == true
+        private const val REPO_TTL_MS = 30_000L
+        private val repoCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Boolean, Long>>()
+
+        /** Forget what was learned about [dir] (after a clone or init changed the answer). */
+        fun forgetRepository(dir: File) { repoCache.remove(dir.absolutePath) }
+
+        /**
+         * Blocking: a directory the host routes (a repo in the shared store, asked of cld.termux) is answered by
+         * the host's probe, cached per path for [REPO_TTL_MS]. Call it OFF the main thread, or use
+         * [isRepositoryAsync]: from the main thread a routed directory has no answer unless one is cached.
+         */
+        fun isRepository(dir: File): Boolean {
+            if (File(dir, ".git").exists()) return true
+            val key = dir.absolutePath
+            val now = System.currentTimeMillis()
+            repoCache[key]?.let { (v, at) -> if (now - at < REPO_TTL_MS) return v }
+            val asked = repositoryProbe?.invoke(dir) ?: return false
+            repoCache[key] = asked to now
+            return asked
+        }
+
+        /** [isRepository] on the IO dispatcher: what UI code calls. */
+        suspend fun isRepositoryAsync(dir: File): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { isRepository(dir) }
 
         fun init(transport: GitTransport, dir: File): GitEngine {
             GitEngine(transport, dir).call("init")
+            forgetRepository(dir)
             return GitEngine(transport, dir)
         }
 
@@ -155,6 +178,7 @@ class GitEngine(
          */
         fun clone(transport: GitTransport, url: String, dir: File, auth: GitAuth = GitAuth.None, depth: Int = 0): GitEngine {
             GitEngine(transport, dir).call("clone", JSONObject().put("url", url).put("depth", depth), auth)
+            forgetRepository(dir)
             return GitEngine(transport, dir)
         }
     }
