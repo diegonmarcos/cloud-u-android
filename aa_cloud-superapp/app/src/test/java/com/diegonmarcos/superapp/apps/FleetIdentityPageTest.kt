@@ -90,6 +90,16 @@ class FleetIdentityPageTest : KitPageHarness() {
     }
 
     @Test
+    fun `I5 the page opens outside CloudKitTheme (the Store host) and an uninstalled app is a row state`() {
+        val reg = FleetIdentity.baked()
+        assertTrue("nothing installed: probe returns no rows, throws nothing",
+            FleetIdentity.probe(compose.activity.applicationContext, reg).isEmpty())
+        compose.setContent { com.diegonmarcos.superapp.uikit.KitDenseMaterial(androidx.compose.material3.darkColorScheme()) { FleetIdentityPage() } }
+        compose.waitForIdle()
+        compose.onNodeWithTag(FleetIdentity.TAG_SUMMARY, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
     fun `I4 Identity is Cloud Store Access only, Configs keeps one Apps Access tile`() {
         val ids = Sections.byId("config")!!.pages.map { it.id }
         assertTrue("Configs declares no identity page: $ids", "identity" !in ids && "apps-mesh" !in ids)

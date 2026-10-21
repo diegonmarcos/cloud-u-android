@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitComposeFragment
 import com.diegonmarcos.superapp.uikit.KitDensity
@@ -164,9 +165,16 @@ fun FleetIdentityPage(registry: FleetIdentity.Registry? = null, live: Map<String
     val reg = remember { registry ?: FleetIdentity.baked() }
     var seen by remember { mutableStateOf(live ?: emptyMap()) }
     LaunchedEffect(reg) {
-        if (live == null) { val app = ctx.applicationContext; thread(name = "fleet-identity-probe") { seen = FleetIdentity.probe(app, reg) } }
+        // A probe failure is a page with no live column, never an uncaught thread death.
+        if (live == null) { val app = ctx.applicationContext; thread(name = "fleet-identity-probe") { runCatching { FleetIdentity.probe(app, reg) }.onSuccess { seen = it } } }
     }
-    val rows = FleetIdentity.rows(reg, seen)
+    // The Store hosts this page in a bare Material shell (no CloudKitTheme): LocalKitPalette has no default and
+    // threw there (#1067), so the page brings its own theme - the Store palette every libs:appstore page draws with.
+    CloudKitTheme(StoreSearchPage.palette(ctx)) { IdentityBody(FleetIdentity.rows(reg, seen), reg) }
+}
+
+@Composable
+private fun IdentityBody(rows: List<FleetIdentity.Row>, reg: FleetIdentity.Registry) {
     val p = LocalKitPalette.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(KitDensity.small)) {
         KitSectionHeader("Identity", "Which Linux user each fleet app runs as. Own uid unless declared in a shared group (android:sharedUserId).")
