@@ -34,6 +34,7 @@
   ],
 
   "base_dir_doc": "Where clones live. Override with $CLOUD_GIT_BASE; otherwise ~/cloud-shared-store/git — every repo lives in that ONE place, on every machine. Clones are NEVER placed inside this repo — repo_master holds relative symlinks (../../<name> from a group directory) pointing out to them, committed, so `ls <group>/` is the inventory and a dangling link is just a repo you have not cloned yet.",
+  "shared_store_dir": "cloud-shared-store",
   "base_dir_default": "~/cloud-shared-store/git",
 
   "_path_doc": "`path` is where the clone actually sits under base_dir; it defaults to `name`. Only the d_lecole entries set it, because those ten were moved into ~/cloud-shared-store/git/lecole-42/ on 2026-08-18 to keep the root of ~/cloud-shared-store/git legible. Indexing them and moving them are separate decisions: `path` lets this file describe where they are instead of demanding they move back.",
@@ -142,10 +143,10 @@
       "doc": "Claude Code's durable state and the source it runs from. ~/.claude symlinks in, not out: a_sessions/<instance>/ holds transcripts, file-history, shell-snapshots and history.jsonl; b_projects/ holds MEMORY.md and memory-entries; a_commits/ snapshots every commit object of every repo here." },
     { "name": "cloud-notes", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-notes.git", "private": true,
       "doc": "Personal notes (Obsidian vault)." },
-    { "name": "cloud-webapps", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-webapps.git", "private": false, "status": "pending_creation",
-      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Repo not created yet as of 2026-10-21; until then the same tree lives in front-diegonmarcos/cloud-webapps." },
-    { "name": "cloud-me-containers", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me-containers.git", "private": true, "status": "pending_creation",
-      "doc": "The owner's own (cloud-me) containers. Repo not created yet as of 2026-10-21 (#1073): declared so every farmer already knows it and skips it until the status field is removed." },
+    { "name": "cloud-webapps", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-webapps.git", "private": false,
+      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps." },
+    { "name": "cloud-me-containers", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me-containers.git", "private": true,
+      "doc": "The owner's own (cloud-me) containers. Created 2026-10-21 (private)." },
     { "name": "cloud-me_data-pub", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me_data-pub.git", "private": false,
       "doc": "The owner's PUBLIC data (the public half of cloud-me). Added 2026-10-21 (#1073): cloud-drive seeded it but this registry did not list it." },
 

@@ -51,6 +51,12 @@
       "doc": "Workstation + device configuration, nix flakes, the superapp. Holds the Claude SoT (da_my-ai/src/data/claude)."
     },
     {
+      "name": "cloud-me-containers",
+      "repo": "diegonmarcos/cloud-me-containers",
+      "private": true,
+      "doc": "The owner's own (cloud-me) containers. Created 2026-10-21 (private)."
+    },
+    {
       "name": "cloud-me_cgc",
       "repo": "diegonmarcos/cloud-me_cgc",
       "private": true,
@@ -91,6 +97,12 @@
       "repo": "diegonmarcos/cloud-u-linux",
       "private": false,
       "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs."
+    },
+    {
+      "name": "cloud-webapps",
+      "repo": "diegonmarcos/cloud-webapps",
+      "private": false,
+      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps."
     },
     {
       "name": "front",
