@@ -1,0 +1,115 @@
+name: "PROBE PhoneAppsComposeTest flake (temporary, scratch branch only)"
+
+# StorePhoneAppsTest compares the Cloud and Phone Apps tabs' Store bars. The Wireless Dbg chip is filled by a probe on
+# its own thread, and the test once read one tab while that probe was still running ("Wireless Dbg: checking..." vs
+# "not paired - Pair"), then passed on a re-run. The test now idles the main looper until the chip settles; this job
+# proves it stays green by running the class 20 times, each in a new test JVM (so StoreStatus starts cold every time),
+# with the build cache off and the previous results deleted so no iteration is answered from a cache.
+
+on:
+  push:
+    branches: [claude/probe-phoneapps]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: probe-phoneapps-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  stress:
+    strategy:
+      fail-fast: false
+      matrix:
+        filter: ["", " ", "  ", "   ", "    ", "     "]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-36 platforms;android-35 platforms;android-34 platforms;android-26 build-tools;36.0.0 build-tools;35.0.0 build-tools;34.0.0 platform-tools cmake;3.22.1 ndk;28.0.13004108 ndk;26.1.10909125"
+
+      - name: Set up Gradle 8.14 (cached)
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.14"
+      # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
+      # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
+      - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
+        uses: ./.github/actions/gradle-cache-hygiene
+      # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
+
+      - name: Cache firestack Go modules + checksum-db tiles
+        uses: actions/cache@v4
+        with:
+          path: ab_cloud-libs-shared/.cache/gomodcache
+          key: firestack-gomodcache-${{ runner.os }}-${{ hashFiles('ab_cloud-libs-shared/libs/firewall/firestack/go.sum') }}
+          restore-keys: firestack-gomodcache-${{ runner.os }}-
+
+      - name: Checkout vault (shared Android signing key)
+        uses: actions/checkout@v4
+        with:
+          repository: diegonmarcos/cloud-me_vault
+          token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
+          path: .vault
+
+      - name: Install sops (pinned, sha256-checked, fails at the download)
+        uses: ./.github/actions/install-pinned-tools
+        with:
+          tools: sops
+
+      - name: PhoneAppsComposeTest probe (never stops early; tallies red iterations)
+        working-directory: aa_cloud-superapp
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UNIT_TEST_FILTER: ${{ matrix.filter == '' && '' || '' }}
+        run: |
+          mkdir -p "$HOME/.gradle"; echo "org.gradle.caching=false" >> "$HOME/.gradle/gradle.properties"
+          res=app/build/test-results/testDebugUnitTest
+          red=0; N=4
+          for i in $(seq 1 $N); do
+            rm -rf "$res" app/build/reports/tests/testDebugUnitTest
+            echo "::group::iteration $i/$N"
+            bash ./build.sh test || true
+            echo "::endgroup::"
+            bad=$(python3 - "$res" <<'PY'
+          import glob, sys, xml.etree.ElementTree as ET
+          out = []
+          for f in glob.glob(sys.argv[1] + "/*.xml"):
+              for tc in ET.parse(f).getroot().iter("testcase"):
+                  if tc.find("failure") is not None or tc.find("error") is not None:
+                      out.append(tc.get("classname").split(".")[-1] + "." + tc.get("name"))
+          print(";".join(sorted(out)))
+          PY
+          )
+            n=$(ls "$res"/*.xml 2>/dev/null | wc -l)
+            echo "iteration $i/$N: classes=$n red=[${bad}]" | tee -a "$GITHUB_STEP_SUMMARY"
+            [ -z "$bad" ] || red=$((red+1))
+          done
+          echo "RESULT filter=${UNIT_TEST_FILTER} red_iterations=$red/$N" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload last test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: store-phone-apps-stress
+          path: |
+            aa_cloud-superapp/app/build/reports/tests/
+            aa_cloud-superapp/app/build/test-results/
+          if-no-files-found: warn
