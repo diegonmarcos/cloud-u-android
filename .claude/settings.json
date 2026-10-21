@@ -26,24 +26,16 @@
 
   "_why_cloud-infra-mcp_is_no_longer_here": "It was in this list, and that quietly defeated the entire off-mesh auth chain. c3-infra-mcp is the ONLY MCP endpoint reachable from off the WireGuard mesh, so it is the one server a container, CI runner or web session can actually use — and it was the one being default-disabled. A disabled server is never dialed at all: it appears in neither the connected nor the failed list, which is why it read as 'missing' rather than 'off' and was diagnosed twice as an auth problem it never had.\n\nThe trap was the NAME. derive-mcp-json.ts names servers after the service directory (infra-api_cloud-infra-mcp -> cloud-infra-mcp) while the URL keeps the deployed path (/c3-infra-mcp/mcp). Until the derive was regenerated, the shipped .mcp.json still carried the older key c3-infra-mcp, which this list does not match — so the server WAS dialed and the disable was inert. Regenerating renamed the key to cloud-infra-mcp, which this list DOES match, and the server silently stopped being dialed at the same moment the static bearer header was added to make it work. Two changes that each looked correct, cancelling out.\n\nWith ENABLE_TOOL_SEARCH: auto the cost of leaving it enabled is bounded anyway: past ~10% of context its tools defer behind Tool Search instead of being dropped, so they stay reachable. An unreachable server is not a saving.",
 
+  "_enableAllProjectMcpServers_comment": "Owner decision 31 (2026-10-17): fleet MCPs in .mcp.json are stdio entries running .claude/mcp-connect.mjs (mesh first, else public + bearer; no OAuth). Project stdio servers need this approval or they are never started in a fresh clone / cloud session. Same value as settings.base.json.",
+  "enableAllProjectMcpServers": true,
+
   "disabledMcpjsonServers": ["cloud-services-mcp"],
 
   "permissions": {
+    "_defaultMode_doc": "2026-10-15 OWNER DECISION: every session from every repo starts as full root (bypassPermissions) with every tool and MCP server allowed. Supersedes the earlier note that defaultMode stays user-level. Note: this file is committed to public repos, so anyone who clones one also gets this default.",
+    "defaultMode": "bypassPermissions",
     "_doc": "2026-09-06: populated by the repo owner's explicit decision, reversing the earlier 'left empty on purpose'. That text held that pre-approval is a per-person trust choice; in practice the auto-mode classifier blocked plain `git commit`, `npx tsc --noEmit` and a curl to the fleet's OWN MCP mid-incident — five denials in a row, read-only steps included — so a session whose whole job is to run the fleet through c3-infra-mcp could not ship a fix. These rules pre-approve the tools that ARE the control plane: the shell, the file tools, and the MCP servers. Allow rules stay in force under auto mode (autoMode.classifyAllShell is unset, i.e. false), so matched calls never reach the classifier. defaultMode stays user-level on purpose: settings.base.json sets \"auto\", and forcing a mode from a committed file would override that choice for anyone who clones this repo.",
-    "allow": [
-      "Bash",
-      "Read",
-      "Edit",
-      "Write",
-      "Glob",
-      "Grep",
-      "WebFetch",
-      "mcp__cloud-infra-mcp",
-      "mcp__cloud-cgc-pub-mcp",
-      "mcp__cloud-services-mcp",
-      "mcp__github",
-      "mcp__Claude_Code_Remote"
-    ],
+    "allow": ["Bash", "Read", "Edit", "Write", "Glob", "Grep", "WebFetch", "WebSearch", "NotebookEdit", "Agent", "Skill", "mcp__cloud-infra-mcp", "mcp__cloud-cgc-pub-mcp", "mcp__cloud-cgc-pvt-mcp", "mcp__cloud-services-mcp", "mcp__cloud-vault-mcp", "mcp__cloud-drive-mcp", "mcp__cloud-mail-mcp", "mcp__cloud-mattermost-mcp", "mcp__cloud-superapp-mcp", "mcp__google-personal-mcp", "mcp__google-workspace-mcp", "mcp__github", "mcp__Claude_Code_Remote", "mcp__claude-code-remote"],
     "deny": []
   },
 
@@ -52,7 +44,15 @@
     "allow": [
       "$defaults",
       "Operating the owner's own fleet through the c3-infra-mcp / cloud-infra-mcp tools is routine and pre-authorised: docker container, image and volume management on the VMs (including removing orphaned volumes and dangling images), service restarts, workflow dispatch, and committing and pushing to main in the diegonmarcos/* repositories.",
-      "Writing, type-checking, committing and pushing source code for the fleet's MCP servers and CI scripts — including tools whose purpose is to delete docker volumes or images on the fleet — is ordinary development work here, not a destructive action."
-    ]
+      "Writing, type-checking, committing and pushing source code for the fleet's MCP servers and CI scripts — including tools whose purpose is to delete docker volumes or images on the fleet — is ordinary development work here, not a destructive action.",
+      "Pushing tested commits to main from a /dev/shm git worktree of any diegonmarcos/* repository (cloud-infra, cloud-u-containers, cloud-u-android, cloud-data*, cloud-u-linux) is the normal delivery path for this fleet, including changes to its CI workflows and the cgc-db indexing scripts. Worktrees are used precisely so the shared checkout is never stashed, reset or rebased.",
+      "Dispatching, re-running and cancelling GitHub Actions runs in diegonmarcos/* repositories (including cgc-db force reindexes and superseded queued runs) is routine fleet operation.",
+      "Removing temporary git worktrees, scratch directories and build caches that the session itself created under /dev/shm or /tmp is housekeeping, not destruction of shared resources.",
+      "OWNER STANDING AUTHORISATION (2026-10-15, 'you are root, you are allowed'): changing the public exposure of the owner's own fleet hosts to match the owner's declared URL scheme is routine — e.g. opening auth.diegonmarcos.com (Authelia) to the internet, switching a host or MCP between public, token-gated and mesh-only (wg_only), adding mesh/private addresses — then deploying it with ship.yml.",
+      "Changing a repo's own guard, tester or ratchet when the OWNER changes the architecture rule it enforces (e.g. 'all apps must be Compose' replacing a no-Compose tester) is authorised; doing it only to hide a real failure is not.",
+      "Running a Bash command with dangerouslyDisableSandbox to repair a dead Bash sandbox (every call exits 1 with no output), per .claude/SESSION-SURVIVAL.md, is authorised.",
+      "Committing and pushing to main across every diegonmarcos/* repository, adding repos to the session, and dispatching/cancelling GitHub Actions and Ship deploys are pre-authorised fleet operations."
+    ],
+    "_doc_cloud_sessions": "2026-10-09: in a Claude Code cloud session these rules are read only when the session has ONE repository, and the session's mode dropdown still decides. In Auto, calls the classifier refuses are refused outright (pushes to cloud-infra main and worktree cleanup were refused all day although 'Bash' is allowed). Use 'Accept edits' for fleet work: refusals become approval prompts instead."
   }
 }

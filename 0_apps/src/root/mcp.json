@@ -1,22 +1,40 @@
 {
-  "_warning": "GENERATED — DO NOT EDIT. Derived from a_solutions/*/build.json .mcp blocks by 1_cloud-configs/src/derive/derive-mcp-json.ts. Edit the service build.json, then run 1_cloud-configs/build.sh derive.",
+  "_warning": "GENERATED — DO NOT EDIT. Derived by 1_cloud-configs/src/derive/derive-mcp-json.ts (writeProjectMcp) from the same inputs as dist/mcp.json.",
   "_schema": "mcp-servers/v1",
-  "_doc": "Project-scoped MCP servers for Claude Code. In cloud, 9_others/build.sh refreshes src/apps/root/mcp.json from THIS file and deploys it to .mcp.json, so regenerating the derive is enough. In the other repos the copy under 0_apps/src/root/ is propagated by hand — nothing automates that hop, and it is how vault ended up without the cloud-infra-mcp headersHelper while cloud had it. Re-sync after changing this file.",
-  "_skipped": [
-    "infra-api_cloud-vault-mcp (not publicly routed)"
-  ],
+  "_doc": "Owner decision 31: mesh first (no auth), else public https://mcp.diegonmarcos.com/<svc>/mcp with Authorization: Bearer $FLEET_BEARER (fallback $AUTHELIA_BEARER_TOKEN). No OAuth/DCR. Set FLEET_BEARER in the Claude Code cloud environment secrets / your shell. Bridge: .claude/mcp-connect.mjs.",
   "mcpServers": {
     "cloud-cgc-pub-mcp": {
-      "type": "http",
-      "url": "https://mcp.diegonmarcos.com/cloud-cgc-pub-mcp/mcp"
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-connect.mjs",
+        "--mesh",
+        "https://c3-cloud-cgc-pub-mcp.app/mcp",
+        "--public",
+        "https://mcp.diegonmarcos.com/cloud-cgc-pub-mcp/mcp"
+      ]
     },
     "cloud-cgc-pvt-mcp": {
-      "type": "http",
-      "url": "http://10.0.0.6:3107/mcp"
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-connect.mjs",
+        "--mesh",
+        "http://10.0.0.6:3107/mcp",
+        "--public",
+        "https://mcp.diegonmarcos.com/cloud-cgc-pvt-mcp/mcp"
+      ]
     },
     "cloud-drive-mcp": {
-      "type": "http",
-      "url": "https://mcp.diegonmarcos.com/cloud-drive-mcp/mcp"
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-connect.mjs",
+        "--mesh",
+        "https://c3-cloud-drive-mcp.app/mcp",
+        "--public",
+        "https://mcp.diegonmarcos.com/cloud-drive-mcp/mcp"
+      ]
     },
     "cloud-infra-mcp": {
       "type": "http",
@@ -27,32 +45,81 @@
       "headersHelper": "sh \"${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-auth-headers.sh\""
     },
     "cloud-mail-mcp": {
-      "type": "http",
-      "url": "https://mcp.diegonmarcos.com/mail-mcp/mcp"
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-connect.mjs",
+        "--mesh",
+        "https://c3-cloud-mail-mcp.app/mcp",
+        "--public",
+        "https://mcp.diegonmarcos.com/mail-mcp/mcp"
+      ]
     },
     "cloud-mattermost-mcp": {
-      "type": "http",
-      "url": "https://mcp.diegonmarcos.com/mattermost-mcp/mcp"
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-connect.mjs",
+        "--mesh",
+        "https://c3-cloud-mattermost-mcp.app/mcp",
+        "--public",
+        "https://mcp.diegonmarcos.com/mattermost-mcp/mcp"
+      ]
     },
     "cloud-services-mcp": {
-      "type": "http",
-      "url": "https://mcp.diegonmarcos.com/c3-services-mcp/mcp"
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-connect.mjs",
+        "--mesh",
+        "https://c3-cloud-services-mcp.app/mcp",
+        "--public",
+        "https://mcp.diegonmarcos.com/c3-services-mcp/mcp"
+      ]
     },
     "cloud-superapp-mcp": {
-      "type": "http",
-      "url": "https://mcp.diegonmarcos.com/cloud-superapp-mcp/mcp"
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-connect.mjs",
+        "--mesh",
+        "https://c3-cloud-superapp-mcp.app/mcp",
+        "--public",
+        "https://mcp.diegonmarcos.com/cloud-superapp-mcp/mcp"
+      ]
     },
     "cloud-vault-mcp": {
-      "type": "http",
-      "url": "http://10.0.0.6:3111/mcp"
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-connect.mjs",
+        "--mesh",
+        "http://10.0.0.6:3111/mcp",
+        "--public",
+        "https://mcp.diegonmarcos.com/cloud-vault-mcp/mcp"
+      ]
     },
     "google-personal-mcp": {
-      "type": "http",
-      "url": "https://mcp.diegonmarcos.com/g-personal/mcp"
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-connect.mjs",
+        "--mesh",
+        "https://c3-google-personal-mcp.app/mcp",
+        "--public",
+        "https://mcp.diegonmarcos.com/g-personal/mcp"
+      ]
     },
     "google-workspace-mcp": {
-      "type": "http",
-      "url": "https://mcp.diegonmarcos.com/g-workspace/mcp"
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-connect.mjs",
+        "--mesh",
+        "https://c3-google-workspace-mcp.app/mcp",
+        "--public",
+        "https://mcp.diegonmarcos.com/g-workspace/mcp"
+      ]
     }
   }
 }
