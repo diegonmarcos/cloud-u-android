@@ -15,7 +15,7 @@ DataStore / Room stores and declared files it cannot move yet.
 
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
-| cloud-superapp | `com.diegonmarcos.superapp` | 46 | 0 | 100% |
+| cloud-superapp | `com.diegonmarcos.superapp` | 47 | 0 | 100% |
 | c3-morpheus | `com.diegonmarcos.morpheus` | 2 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 2 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 2 | 0 | 100% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 6 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 3 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 6 | 2 | 75% |
-| **fleet** | | **256** | **50** | **83%** |
+| **fleet** | | **257** | **50** | **83%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -71,6 +71,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `charge_snapshots` | prefs | device | no | Local charge snapshots of this battery. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `cloud_webserver` | prefs | config | yes | Local web server settings: enabled, port, doc_root, loopback_only, directory_listing. |
+| `cloudflare_keys` | encrypted | secret (keys: mesh_key_stash→secret, one_endpoint→device, one_id→device, one_license→secret, one_peer→device, one_priv→secret, one_token→secret, one_v4→device, one_v6→device, warp_endpoint→device, warp_id→device, warp_license→secret, warp_peer→device, warp_priv→secret, warp_token→secret, warp_v4→device, warp_v6→device) | yes | #1074 EncryptedSharedPreferences holding the Cloudflare WARP / Cloudflare One device registrations of THIS phone: the WireGuard private key generated here, the device token and licence the API returned, the peer, endpoint and addresses, and the mesh interface key parked while a Cloudflare profile borrows the engine's one key slot. A registration names one device, so none of it migrates. |
 | `dagu_prefs` | encrypted | config (keys: bearer_token→secret) | yes | Dagu server URL and user label are account links; bearer_token is a credential. |
 | `dagu_prefs_fallback` | prefs | config (keys: bearer_token→secret) | yes | Plain-prefs fallback of dagu_prefs (same keys). |
 | `data_usage_history` | prefs | device | no | Per-app/sub data usage history measured on this device. |
@@ -147,7 +148,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)` | config | Defaults baked into the APK from build.json; not device state but the fallback for unset prefs. |
 | `filesDir/<KEYSTORE_FILE>` | device | This device's KDE Connect TLS identity keystore; never migrate, re-pair |
 
-Coverage: 46 covered, 0 gaps.
+Coverage: 47 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 
