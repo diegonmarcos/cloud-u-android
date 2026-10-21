@@ -256,6 +256,11 @@ def constellationB64 = b64(resolvedConstellation)
 def syncRulesFile = file('../data/drive-sync-rules.json')
 def syncRulesB64  = b64(syncRulesFile.exists()
     ? (new groovy.json.JsonSlurper().parse(syncRulesFile).rules ?: []) : [])
+// #1084 the Unison folder pairs: the `unison` object of the SAME file (one source of truth for sync
+// declarations), baked whole. libs:rclone's UnisonConfig validates it at runtime and the JVM suite
+// (UnisonDeclarationTest) pins the shipped file; an absent block is a phone with no Unison pair.
+def unisonDecl    = syncRulesFile.exists() ? (new groovy.json.JsonSlurper().parse(syncRulesFile).unison ?: [:]) : [:]
+def unisonB64     = unisonDecl.isEmpty() ? '' : b64(unisonDecl)
 // #579 THE STRUCTURE OF THE CHROME: build.json::ui declares the tabs, the Sync
 // pages, the Files places/filters/sort keys and the icon default. Baked whole on
 // the same carrier as every other list here and decoded ONCE by Declarations.kt.
@@ -557,6 +562,7 @@ android {
         buildConfigField "String", "UI_VOLUMES_B64",  "\"${uiVolumesB64}\""
         buildConfigField "String", "UI_CONSTELLATION_B64", "\"${constellationB64}\""
         buildConfigField "String", "SYNC_RULES_B64",  "\"${syncRulesB64}\""
+        buildConfigField "String", "UNISON_B64",      "\"${unisonB64}\""
         buildConfigField "String", "UI_ICON_DEFAULT", "\"${uiIconDefault}\""
         buildConfigField "String", "AUTH_APPLIES_B64", "\"${authAppliesB64}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""

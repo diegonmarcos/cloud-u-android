@@ -122,6 +122,119 @@ def fetchRcloneBinaries = tasks.register('fetchRcloneBinaries', FetchRcloneBinar
 }
 preBuild.dependsOn fetchRcloneBinaries
 
+// ── the pinned Unison (#1084) ────────────────────────────────────────────────
+// data/unison-binary.json is the one pin: version, OCaml build, per-ABI tarball and sha256. Same
+// fetch-once-refuse-on-mismatch pattern as rclone above; lands as jniLibs/<abi>/libunison.so.
+def unisonPin = new groovy.json.JsonSlurper().parse(file('data/unison-binary.json'))
+def unisonJniDir = new File(buildDir, 'generated/unison-jni')
+
+abstract class FetchUnisonBinaries extends DefaultTask {
+    @InputFile abstract RegularFileProperty getPinFile()
+    @Internal abstract DirectoryProperty getCacheDir()
+    @OutputDirectory abstract DirectoryProperty getOutDir()
+
+    @TaskAction
+    void fetch() {
+        def pinJson = new groovy.json.JsonSlurper().parse(pinFile.get().asFile)
+        def cache = cacheDir.get().asFile
+        def out = outDir.get().asFile
+        for (entryAbi in pinJson.binaries.entrySet()) {
+            def abi = entryAbi.key; def pin = entryAbi.value
+            if (!pin.tar_sha256 || !pin.binary_sha256)
+                throw new GradleException("unison: " + abi + " has no sha256 in data/unison-binary.json (run build-unison-static.yml and pin it)")
+            def tar = new File(cache, "unison-${pinJson.version}-${abi}.tar.gz")
+            fetchPinned(pin.url, tar, pin.tar_sha256)
+            def entry = pinJson.entry_template.replace('{dir}', pin.dir)
+            def staged = new File(out, "${abi}/${pinJson.jni_name}")
+            staged.parentFile.mkdirs()
+            if (!untar(tar, entry, staged)) throw new GradleException("unison: " + tar + " has no entry " + entry)
+            def actual = sha256Of(staged)
+            if (actual != pin.binary_sha256) {
+                staged.delete()
+                throw new GradleException("unison: extracted binary sha256 mismatch for " + abi + "\n  expected " + pin.binary_sha256 + "\n  actual   " + actual)
+            }
+            if (pinJson.interp == 'none' && hasProgramInterpreter(staged)) {
+                staged.delete()
+                throw new GradleException("unison: " + abi + " binary carries a PT_INTERP, it is dynamically linked and will not run under bionic")
+            }
+            staged.setExecutable(true, false)
+            logger.quiet("unison: staged ${abi}/${pinJson.jni_name} (" + staged.length() + " bytes, static)")
+        }
+    }
+
+    protected static String sha256Of(File f) {
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        f.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
+        return digest.digest().encodeHex().toString()
+    }
+
+    protected void fetchPinned(String url, File target, String sha256) {
+        if (target.exists() && sha256Of(target) == sha256) return
+        logger.quiet("unison: downloading " + url)
+        target.parentFile.mkdirs(); target.delete()
+        def connection = new URL(url).openConnection()
+        connection.setInstanceFollowRedirects(true)
+        target.withOutputStream { it << connection.inputStream }
+        def actual = sha256Of(target)
+        if (actual != sha256) {
+            target.delete()
+            throw new GradleException("unison: wrong sha256 for " + url + "\n  expected " + sha256 + "\n  actual   " + actual)
+        }
+    }
+
+    /** Copy the one regular file named [entry] out of a .tar.gz (ustar headers, 512-byte blocks). */
+    protected static boolean untar(File tarGz, String entry, File dest) {
+        def ins = new java.io.DataInputStream(new java.io.BufferedInputStream(new java.util.zip.GZIPInputStream(new FileInputStream(tarGz))))
+        try {
+            def header = new byte[512]
+            while (true) {
+                try { ins.readFully(header) } catch (EOFException e) { return false }
+                if (header[0] == 0) return false
+                def name = new String(header, 0, 100, 'UTF-8').trim().replace('\u0000', '')
+                def prefix = new String(header, 345, 155, 'UTF-8').trim().replace('\u0000', '')
+                if (prefix) name = prefix + '/' + name
+                def size = Long.parseLong(new String(header, 124, 12, 'UTF-8').trim().replace('\u0000', '') ?: '0', 8)
+                def type = (char) header[156]
+                if (name == entry && (type == (char) '0' || type == (char) 0)) {
+                    dest.withOutputStream { o ->
+                        def left = size; def buf = new byte[1 << 16]
+                        while (left > 0) { int n = ins.read(buf, 0, (int) Math.min(buf.length, left)); if (n < 0) throw new GradleException("unison: truncated " + tarGz); o.write(buf, 0, n); left -= n }
+                    }
+                    return true
+                }
+                long skip = ((size + 511) / 512) * 512
+                while (skip > 0) { long n = ins.skip(skip); if (n <= 0) { if (ins.read() < 0) return false; n = 1 }; skip -= n }
+            }
+        } finally { ins.close() }
+    }
+
+    /** True when the ELF64 file has a PT_INTERP program header (i.e. is dynamically linked). */
+    protected static boolean hasProgramInterpreter(File elf) {
+        def raf = new RandomAccessFile(elf, 'r')
+        try {
+            def header = new byte[64]; raf.readFully(header)
+            if (header[0] != (byte) 0x7f || header[1] != (byte) 'E' || header[2] != (byte) 'L' || header[3] != (byte) 'F')
+                throw new GradleException("unison: " + elf + " is not an ELF file")
+            def bb = java.nio.ByteBuffer.wrap(header).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            long phoff = bb.getLong(0x20); int phentsize = bb.getShort(0x36) & 0xffff; int phnum = bb.getShort(0x38) & 0xffff
+            for (int i = 0; i < phnum; i++) {
+                raf.seek(phoff + (long) i * phentsize)
+                def ph = new byte[4]; raf.readFully(ph)
+                if (java.nio.ByteBuffer.wrap(ph).order(java.nio.ByteOrder.LITTLE_ENDIAN).getInt(0) == 3) return true
+            }
+            return false
+        } finally { raf.close() }
+    }
+}
+
+def fetchUnisonBinaries = tasks.register('fetchUnisonBinaries', FetchUnisonBinaries) {
+    description = "Download, verify (sha256 + no PT_INTERP) and stage the pinned unison binaries as jniLibs"
+    pinFile = file('data/unison-binary.json')
+    cacheDir = layout.buildDirectory.dir('unison-cache')
+    outDir = layout.buildDirectory.dir('generated/unison-jni')
+}
+preBuild.dependsOn fetchUnisonBinaries
+
 android {
     namespace 'com.diegonmarcos.cloudlib.rclone.engine'
     compileSdk 36
@@ -132,6 +245,10 @@ android {
         // the runner can name the .so it execs.
         buildConfigField 'String', 'RCLONE_VERSION', "\"${rclonePin.version}\""
         buildConfigField 'String', 'RCLONE_JNI_NAME', "\"${rclonePin.jni_name}\""
+        // #1084 the pinned Unison (data/unison-binary.json): what the engine states and the .so it execs.
+        buildConfigField 'String', 'UNISON_VERSION', "\"${unisonPin.version}\""
+        buildConfigField 'String', 'UNISON_OCAML', "\"${unisonPin.ocaml}\""
+        buildConfigField 'String', 'UNISON_JNI_NAME', "\"${unisonPin.jni_name}\""
         buildConfigField 'String', 'RCLONE_ARM64_SHA256', "\"${rclonePin.binaries['arm64-v8a'].binary_sha256}\""
         buildConfigField 'String', 'RCLONE_X86_64_SHA256', "\"${rclonePin.binaries['x86_64'].binary_sha256}\""
         // #741 how long a tunnel to a remote may sit quiet before libs:sysdns's ResolverProxy ends it.
@@ -141,6 +258,7 @@ android {
     sourceSets {
         main {
             jniLibs.srcDirs += rcloneJniDir
+            jniLibs.srcDirs += unisonJniDir
         }
     }
 
@@ -178,6 +296,9 @@ dependencies {
     implementation project(':libs:rclone')
     // #741 how rclone resolves a remote's name inside this process: the fleet's one bridge to Android's resolver.
     implementation project(':libs:sysdns')
+    // #1084 the SSH leg of a Unison pair: the same library the mounts engine ships, no ssh binary to exec.
+    implementation 'com.hierynomus:sshj:0.41.1'
+    implementation 'org.slf4j:slf4j-nop:2.0.16'
 
     testImplementation 'junit:junit:4.13.2'
     // The real org.json: android.jar's copy is a stub that throws on the JVM.

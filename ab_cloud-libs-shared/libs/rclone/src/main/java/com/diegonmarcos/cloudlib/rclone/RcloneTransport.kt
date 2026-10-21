@@ -22,6 +22,12 @@ interface RcloneTransport {
         fun jobStart(request: JSONObject): JSONObject
         fun jobPoll(request: JSONObject): JSONObject
         fun jobCancel(request: JSONObject): JSONObject
+
+        /** #1084 the Unison half (engine CONTRACT 2). An engine below it answers "unknown method"; a fake that never serves Unison keeps these defaults. */
+        fun unisonStart(request: JSONObject): JSONObject = throw java.io.IOException("this transport has no unison")
+        fun unisonPoll(request: JSONObject): JSONObject = throw java.io.IOException("this transport has no unison")
+        fun unisonCancel(request: JSONObject): JSONObject = throw java.io.IOException("this transport has no unison")
+        fun unisonKeepCopy(request: JSONObject): JSONObject = throw java.io.IOException("this transport has no unison")
         override fun close()
     }
 }

@@ -29,7 +29,7 @@
             </intent-filter>
             <meta-data
                 android:name="com.diegonmarcos.cloud.engine.CONTRACT"
-                android:value="1" />
+                android:value="2" />
         </service>
     </application>
 </manifest>

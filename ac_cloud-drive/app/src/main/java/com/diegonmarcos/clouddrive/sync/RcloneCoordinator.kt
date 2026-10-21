@@ -29,6 +29,8 @@ import kotlinx.coroutines.withContext
 class RcloneCoordinator(private val ctx: Context, private val scope: CoroutineScope, private val prefs: DrivePrefs) {
 
     val runner = RcloneRunner(ctx)
+    /** #1084 the Unison pairs: the same Sync page, the same engine APK, one more way to sync. */
+    val unison = UnisonCoordinator(ctx, scope, prefs)
     init { runCatching { com.diegonmarcos.clouddrive.JobPathMigration.run(ctx) } }
     private val jobStore = RcloneJobStore(File(ctx.filesDir, "rclone/jobs.json"))
     private val mountStore = MountStore(File(ctx.filesDir, "mounts/mounts.json"))

@@ -312,6 +312,11 @@ object Declarations {
     val volumes: VolumesDecl by lazy { parseVolumes(decode(BuildConfig.UI_VOLUMES_B64), classesOf(nav)) }
     val constellation: List<ConstellationAppDecl> by lazy { parseConstellation(decode(BuildConfig.UI_CONSTELLATION_B64)) }
     val syncRules: List<SyncRuleDecl> by lazy { parseSyncRules(decode(BuildConfig.SYNC_RULES_B64)) }
+    /** #1084 the Unison folder pairs (data/drive-sync-rules.json `unison`), parsed and validated by libs:rclone; a pair that breaks a rule is a sentence in `problems`, never a half-valid run. */
+    val unison: com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.Declared by lazy {
+        runCatching { com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.parse(decode(BuildConfig.UNISON_B64)) }
+            .getOrElse { com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.Declared(emptyList(), listOf("the unison declaration is not valid JSON: ${it.message}")) }
+    }
     val iconDefault: String get() = BuildConfig.UI_ICON_DEFAULT
     val apps: List<AppTileDecl> by lazy { parseApps(decode(BuildConfig.UI_APPS_B64)) }
     val connections: List<ConnectionDecl> by lazy { parseConnections(decode(BuildConfig.CONNECTIONS_B64)) }

@@ -193,6 +193,10 @@ object DriveTags {
     /** #630 the line a Fleet-Volumes row prints instead of offering an Open that cannot work. */
     const val VOLUMES_OWNER_ONLY = "volumes_owner_only"
     const val RSYNC_RULE_CARD = "rsync_rule_card"
+    /** #1084 one declared Unison pair on the Sync ▸ Rsync page, and one of its conflicted paths. */
+    const val UNISON_PAIR_CARD = "unison_pair_card"
+    const val UNISON_CONFLICT_ROW = "unison_conflict_row"
+    const val UNISON_SYNC_NOW = "unison_sync_now"
     const val HOME_CARD = "home_card"
     const val HOME_STORAGE_BAR = "home_storage_bar"
     const val APPS_GRID = "apps_grid"

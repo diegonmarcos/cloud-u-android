@@ -68,6 +68,12 @@ fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions:
     val testing by coordinator.testing.collectAsState()
     val results by coordinator.testResults.collectAsState()
     LaunchedEffect(Unit) { coordinator.refresh() }
+    // #1084 the Unison pairs share this page: their state is read here, drawn by unisonSection below.
+    val unison = coordinator.unison
+    val unisonStates by unison.states.collectAsState()
+    val unisonLive by unison.live.collectAsState()
+    val unisonUnavailable by unison.unavailable.collectAsState()
+    LaunchedEffect(Unit) { unison.refresh() }
     val fmt = java.text.DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
     val declared = Declarations.remotes.associateBy { it.name }
     val available = coordinator.runner.isAvailable
@@ -120,6 +126,7 @@ fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions:
                 }
             }
         }
+        unisonSection(unison, unisonStates, unisonLive, unisonUnavailable, onMessage)
         item { SectionHeader(stringResource(R.string.rclone_remotes_section), count = remotes.size) }
         if (remotes.isEmpty()) item { EmptyState(Icons.Filled.CloudSync, stringResource(R.string.rclone_remotes_empty), stringResource(R.string.rclone_remotes_empty_hint)) }
         items(remotes, key = { "remote-" + it.name }) { r ->

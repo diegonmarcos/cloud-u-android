@@ -13,15 +13,17 @@
    "origin": "built",
    "url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/unison-static-2.53.8-r1/unison-2.53.8-linux-aarch64-musl-static.tar.gz",
    "dir": "unison-2.53.8-linux-aarch64-musl-static",
-   "tar_sha256": "",
-   "binary_sha256": ""
+   "tar_sha256": "bb239a7e8f3aa07138810b54375657779b6f616716f568648ff6459275ebfd62",
+   "binary_sha256": "49d14995c44a2fa236c41c42c0a6d89f84847adc636b381f5a9d3f9a4714ebea",
+   "binary_bytes": 3178496
   },
   "x86_64": {
    "origin": "upstream",
    "url": "https://github.com/bcpierce00/unison/releases/download/v2.53.8/unison-2.53.8-ubuntu-22.04-x86_64-static.tar.gz",
    "dir": "unison-2.53.8-ubuntu-22.04-x86_64-static",
    "tar_sha256": "bea4d8a8af15f8867ffe5de90b464b9438ae8190057eb8746c1d71e64be99d9e",
-   "binary_sha256": "75af29760ae71f99342c97d7e16ca8c9714163548a3d60ea2f7aa86bc441da22"
+   "binary_sha256": "75af29760ae71f99342c97d7e16ca8c9714163548a3d60ea2f7aa86bc441da22",
+   "binary_bytes": 3212720
   }
  },
  "peers": [

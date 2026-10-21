@@ -100,6 +100,8 @@ class MainActivity : ComponentActivity(), DriveActions {
         Updater.start(this)
         // #575 the GitSync scheduler: repositories that opted in sync in the background.
         GitSyncWorker.schedule(this)
+        // #1084 the Unison pairs that declare a schedule tick on the same WorkManager.
+        UnisonSyncWorker.schedule(this)
         // #603 the shared store's first-run seed (build.json::storage.seed): the declared PUBLIC
         // repositories, cloned shallow into the store the first time it does not hold them.
         StoreSeedWorker.schedule(this)

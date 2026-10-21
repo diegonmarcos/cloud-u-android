@@ -75,6 +75,10 @@ class RcloneLink(context: Context) : RcloneTransport {
             override fun jobStart(request: JSONObject) = ask("job_start", request)
             override fun jobPoll(request: JSONObject) = ask("job_poll", request)
             override fun jobCancel(request: JSONObject) = ask("job_cancel", request)
+            override fun unisonStart(request: JSONObject) = ask("unison_start", request)
+            override fun unisonPoll(request: JSONObject) = ask("unison_poll", request)
+            override fun unisonCancel(request: JSONObject) = ask("unison_cancel", request)
+            override fun unisonKeepCopy(request: JSONObject) = ask("unison_keep_copy", request)
             override fun close() = conn.release(ctx)
 
             private fun ask(method: String, request: JSONObject): JSONObject {

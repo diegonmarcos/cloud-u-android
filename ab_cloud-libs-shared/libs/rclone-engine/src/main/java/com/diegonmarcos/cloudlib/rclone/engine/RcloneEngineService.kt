@@ -27,19 +27,31 @@ import java.io.File
  */
 class RcloneEngineService : Service() {
 
-    fun methodNames(): Array<String> = arrayOf(INFO, RUN, OUT_CHUNK, JOB_START, JOB_POLL, JOB_CANCEL)
+    fun methodNames(): Array<String> = arrayOf(INFO, RUN, OUT_CHUNK, JOB_START, JOB_POLL, JOB_CANCEL, UNISON_START, UNISON_POLL, UNISON_CANCEL, UNISON_KEEP_COPY)
 
     fun dispatch(method: String, request: String): String = when (method) {
-        INFO -> calls().info()
+        INFO -> unisonInfo(calls().info())
         RUN -> calls().run(JSONObject(request))
         OUT_CHUNK -> calls().outChunk(JSONObject(request))
         JOB_START -> calls().jobStart(JSONObject(request))
         JOB_POLL -> calls().jobPoll(JSONObject(request))
         JOB_CANCEL -> calls().jobCancel(JSONObject(request))
+        UNISON_START -> unison().start(JSONObject(request))
+        UNISON_POLL -> unison().poll(JSONObject(request))
+        UNISON_CANCEL -> unison().cancel(JSONObject(request))
+        UNISON_KEEP_COPY -> unison().keepCopy(JSONObject(request))
         else -> throw IllegalArgumentException("unknown method: $method")
     }
 
     private fun calls(): RcloneCalls = EngineState.calls(applicationContext)
+
+    private fun unison(): UnisonCalls = EngineState.unison(applicationContext)
+
+    /** #1084 the pinned Unison, stated beside rclone's version so a client can say what it is talking to. */
+    private fun unisonInfo(rclone: String): String = JSONObject(rclone)
+        .put("unison_version", BuildConfig.UNISON_VERSION).put("unison_ocaml", BuildConfig.UNISON_OCAML)
+        .put("unison_available", File(applicationContext.applicationInfo.nativeLibraryDir, BuildConfig.UNISON_JNI_NAME).isFile)
+        .toString()
 
     private val binder = object : IRcloneEngine.Stub() {
         override fun call(method: String?, request: String?): String =
@@ -60,6 +72,10 @@ class RcloneEngineService : Service() {
         const val JOB_START = "job_start"
         const val JOB_POLL = "job_poll"
         const val JOB_CANCEL = "job_cancel"
+        const val UNISON_START = "unison_start"
+        const val UNISON_POLL = "unison_poll"
+        const val UNISON_CANCEL = "unison_cancel"
+        const val UNISON_KEEP_COPY = "unison_keep_copy"
     }
 }
 
@@ -70,6 +86,22 @@ internal object EngineState {
     fun calls(context: Context): RcloneCalls = calls ?: synchronized(this) {
         calls ?: build(context).also { calls = it }
     }
+
+    @Volatile private var unison: UnisonCalls? = null
+
+    /** #1084 the Unison half: archives and generated profiles live in this APK's private files dir. */
+    fun unison(context: Context): UnisonCalls = unison ?: synchronized(this) {
+        unison ?: run {
+            val home = File(context.filesDir, "unison")
+            val binary = File(context.applicationInfo.nativeLibraryDir, BuildConfig.UNISON_JNI_NAME)
+            val exec = UnisonExec(binary, home) { mapOf("HOME" to home.absolutePath, "UNISON" to home.absolutePath, "UNISONLOCALHOSTNAME" to LOCAL_HOSTNAME) }
+            UnisonCalls(exec, home, File(home, "known_hosts.txt"), filesAccess = { if (Build.VERSION.SDK_INT >= 30) Environment.isExternalStorageManager() else true })
+                .also { unison = it }
+        }
+    }
+
+    /** Unison names an archive after the machine; an Android hostname is not stable, so it is fixed here. */
+    private const val LOCAL_HOSTNAME = "cloud-drive-phone"
 
     private fun build(context: Context): RcloneCalls {
         val binary = File(context.applicationInfo.nativeLibraryDir, BuildConfig.RCLONE_JNI_NAME)

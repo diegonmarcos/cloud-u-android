@@ -36,3 +36,11 @@ jobs:
 
       - name: Every engine an app binds answers what that app calls
         run: python3 1_cicd/src/scripts/cloud-android-engine-contract-guard.py .
+
+      # #1084 the Unison the sync engine ships is ONE pinned version on every peer. The tester plants
+      # a drifted peer, a drifted pin and a gradle that stops checking, and requires RED each time.
+      - name: The Unison pin guard still fails when a peer drifts
+        run: bash 1_cicd/src/scripts/test/unison-pin-guard.test.sh
+
+      - name: One Unison version, built and read from one place
+        run: python3 1_cicd/src/scripts/cloud-android-unison-pin-guard.py check .
