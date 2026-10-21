@@ -8,8 +8,6 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performScrollToNode
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.printToString
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.launcher.AppDrawerSheetFragment
 import com.diegonmarcos.superapp.launcher.GroupedTilesFragment
@@ -93,19 +91,8 @@ class PhoneAppsComposeTest : KitPageHarness() {
     fun `P1 the phone tab toggles between categories and the alphabet`() {
         show(PhoneAppsFragment.newInstance())
         compose.onNodeWithTag(PhoneAppsFragment.TAG_MODE_ALPHA).performClick()
-        compose.mainClock.advanceTimeBy(1000)
         compose.waitForIdle()
-        try {
-            for (c in 'A'..'Z') compose.onAllNodesWithTag(folderTag("alpha:$c")).assertCountEquals(1)
-        } catch (e: AssertionError) {
-            println("PROBE-P1 FAILED; tree:\n" + compose.onRoot(useUnmergedTree = true).printToString(60))
-            println("PROBE-P1 threads: " + Thread.getAllStackTraces().keys.map { it.name }.sorted())
-            Thread.sleep(3000); compose.waitForIdle()
-            println("PROBE-P1 LATE alpha:A present after 3 s = " + compose.onAllNodesWithTag(folderTag("alpha:A")).fetchSemanticsNodes().isNotEmpty())
-            compose.onNodeWithTag(PhoneAppsFragment.TAG_MODE_ALPHA).performClick(); compose.waitForIdle()
-            println("PROBE-P1 after a SECOND click alpha:A present = " + compose.onAllNodesWithTag(folderTag("alpha:A")).fetchSemanticsNodes().isNotEmpty())
-            throw e
-        }
+        for (c in 'A'..'Z') compose.onAllNodesWithTag(folderTag("alpha:$c")).assertCountEquals(1)
         compose.onNodeWithTag(PhoneAppsFragment.TAG_MODE_CATEGORIES).performClick()
         compose.waitForIdle()
         compose.onAllNodesWithTag(folderTag("alpha:A")).assertCountEquals(0)

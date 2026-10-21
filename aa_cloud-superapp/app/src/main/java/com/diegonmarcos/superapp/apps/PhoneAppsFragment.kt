@@ -84,7 +84,6 @@ class PhoneAppsFragment : KitComposeFragment() {
         // installs / uninstalls) and rebuilds the folder + smart-folder content in place.
         var epoch by remember { mutableIntStateOf(0) }
         var open by remember { mutableStateOf<OpenFolder?>(null) }
-        androidx.compose.runtime.SideEffect { println("PROBE composed alphaMode=$alphaMode epoch=$epoch") }
         val smart by produceState<List<SmartRendered>?>(null, epoch, alphaMode) {
             value = if (alphaMode) null else loadSmartFolders(ctx, emptySet())
         }
@@ -117,7 +116,6 @@ class PhoneAppsFragment : KitComposeFragment() {
                 item(key = "refresh") { PhoneRefreshBar { invalidateCache(); epoch++ } }
             }
         }
-        }
         open?.let { PhoneFolderSheet(it) { open = null } }
     }
 
@@ -128,9 +126,8 @@ class PhoneAppsFragment : KitComposeFragment() {
         Icon(painterResource(res), contentDescription = desc,
             tint = if (active) p.textPrimary else p.textSecondary.copy(alpha = 0.5f),
             modifier = Modifier.clickable {
-                println("PROBE onClick tag=$tag active=$active")
-                try { Haptics.tap(view) } catch (t: Throwable) { println("PROBE tap threw " + t) }
-                if (!active) { println("PROBE onPick"); onPick() }
+                Haptics.tap(view)
+                if (!active) onPick()
             }.padding(6.dp).size(20.dp).testTag(tag))
     }
 
