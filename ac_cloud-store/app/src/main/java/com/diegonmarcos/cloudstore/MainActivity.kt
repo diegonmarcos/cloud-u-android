@@ -140,6 +140,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         Box(Modifier.fillMaxSize().statusBarsPadding()) {
+            BatteryPrompt()   // #1078 once, while the app is still battery-optimized
             val topBar = TOP_BAR
             if (topBar == null) shell() else AppTopBarScaffold(
                 decl = topBar,

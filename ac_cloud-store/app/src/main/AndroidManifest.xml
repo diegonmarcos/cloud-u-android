@@ -95,6 +95,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- #1078 re-arms the periodic fleet check after a reboot or an update of this app. -->
+        <receiver
+            android:name=".UpdateChecksBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Same provider cloud-superapp declares: lets the Shizuku install
              channel bind when Shizuku is present. -->
         <provider

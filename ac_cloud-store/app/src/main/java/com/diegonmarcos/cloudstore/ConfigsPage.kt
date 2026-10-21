@@ -164,6 +164,7 @@ private fun AiPage() {
 @Composable
 private fun NotificationsPage() {
     val ctx = LocalContext.current
+    UpdateChecksCard()   // #1078
     Head("Store notifications")
     Note("What Cloud Store tells you, and where. Each kind has a switch for the system notification and one for the in-app feed.")
     StoreNotifyPrefs.Kind.values().forEach { kind ->
