@@ -275,8 +275,8 @@ if sync_pages != ["git", "rclone", "mounts"]:
 if any(not p.get("label") or not p.get("icon") for p in sync_sec):
     print("    a Sync sub-page lacks a label or an icon"); bad = 1
 sections = [x["id"] for x in ui["files"]["sections"]]
-if len(sections) != 2 or "emulated" not in sections:
-    print("    ui.files.sections is %s: #603 declares Emulated and the store's own section" % sections); bad = 1
+if len(sections) != 3 or "emulated" not in sections or "terminal" not in sections:
+    print("    ui.files.sections is %s: #603 declares Emulated, the store's own section and the Terminal root" % sections); bad = 1
 store = [p for p in ui["files"]["places"] if p["kind"] == "shared_root"]
 if len(store) != 1 or store[0].get("section") == "emulated":
     print("    the shared store is not a section of its own"); bad = 1

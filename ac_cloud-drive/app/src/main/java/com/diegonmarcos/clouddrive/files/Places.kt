@@ -31,6 +31,9 @@ object Places {
                 "external_root" -> external
                 "public_dir" -> publicDir(external, p.dir)
                 "external_path" -> File(external, p.path)
+                // The terminal's filesystem, reached directly through the shared uid (libs:shared-store).
+                "terminal_home" -> SharedStore.root().parentFile
+                "store_path" -> File(SharedStore.root(), p.path)
                 else -> null
             }
             // A place that does not exist is not offered: a tap leading to "folder not found"

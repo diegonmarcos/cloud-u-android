@@ -236,7 +236,7 @@ object Declarations {
     /** #603 a section header of the Files navigator; [PlaceDecl.section] names one of these. */
     data class SectionDecl(val id: String, val label: String, val icon: String)
 
-    /** kind: shared_root | external_root | public_dir (dir = Environment.DIRECTORY_<dir>) | external_path (path relative to shared storage). */
+    /** kind: shared_root | external_root | public_dir (dir = Environment.DIRECTORY_<dir>) | external_path (path relative to shared storage) | terminal_home (the terminal's $HOME) | store_path (path relative to the shared store). */
     data class PlaceDecl(val id: String, val label: String, val icon: String, val kind: String, val section: String, val dir: String, val path: String, val hero: Boolean)
 
     data class FilterDecl(val id: String, val label: String, val icon: String, val mime: String?, val mimePrefix: String?, val extensions: Set<String>) {

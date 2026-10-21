@@ -174,7 +174,7 @@ class DeclarationsTest {
 
     @Test fun filesDeclaresTwoSectionsAndEveryPlaceNamesOne() {
         val files = Declarations.parseFiles(section("files"))
-        assertEquals(2, files.sections.size)
+        assertEquals(3, files.sections.size)
         assertTrue("Emulated is a declared section", files.sections.any { it.id == "emulated" })
         assertTrue(files.sections.all { it.label.isNotBlank() && it.icon.isNotBlank() })
         val ids = files.sections.map { it.id }.toSet()
@@ -185,12 +185,21 @@ class DeclarationsTest {
         assertEquals(1, files.places.count { it.section == store.section })
     }
 
+    @Test fun theTerminalFilesystemIsADeclaredRootBesideEmulated() {
+        val files = Declarations.parseFiles(section("files"))
+        assertTrue(files.sections.any { it.id == "terminal" })
+        val terminal = files.places.filter { it.section == "terminal" }
+        assertTrue("home is a root", terminal.any { it.kind == "terminal_home" })
+        assertTrue("the clones folder is a root", terminal.any { it.kind == "store_path" && it.path == "git" })
+        assertTrue("emulated stays", files.places.any { it.section == "emulated" })
+    }
+
     @Test fun filesPlacesFiltersAndSort() {
         val files = Declarations.parseFiles(section("files"))
         assertEquals("the shared store is the first, hero place", "shared_root", files.places.first().kind)
         assertTrue(files.places.first().hero)
         assertEquals(1, files.places.count { it.kind == "shared_root" })
-        assertTrue(files.places.all { it.kind in setOf("shared_root", "external_root", "public_dir", "external_path") })
+        assertTrue(files.places.all { it.kind in setOf("shared_root", "external_root", "public_dir", "external_path", "terminal_home", "store_path") })
         assertTrue(files.places.filter { it.kind == "public_dir" }.all { it.dir.isNotBlank() })
         assertTrue(files.places.filter { it.kind == "external_path" }.all { it.path.isNotBlank() && !it.path.startsWith("/") })
         assertTrue(files.sortKeys.containsAll(listOf("name", "size", "modified", "type")))
