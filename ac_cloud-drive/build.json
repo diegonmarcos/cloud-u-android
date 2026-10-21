@@ -45,9 +45,9 @@
     "repos_source": {
       "_doc": "#1073 THE REPO LIST COMES FROM ONE PLACE: git-repos-master/repos.json (cloud-repos/v1). `path` is the byte copy of it that ships in this repo (refreshed by git-repos-master's ./clone.sh --sync or tools/sync-repos-sot.sh), `url` is where that registry is declared, `sha256` pins the copy. app/build.gradle BAKES the copy (REPOS_SOT_B64) and fails the build if its sha256 differs from this one, if data/drive-git-repos.json is not what tools/gen-drive-git-repos.js makes from data/drive-git-family.json + the copy, or if the family names a repo the registry lists as pending_creation or does not list. Nothing is downloaded at runtime: the APK carries the copy. test/test-drive-repos-sot.sh also compares the copy with `url` when the network answers. `ref` is the branch in the url; flip it to main once git-repos-master's claude/new-session-vb0job is merged.",
       "path": "data/repos.sot.json",
-      "url": "https://raw.githubusercontent.com/diegonmarcos/git-repos-master/main/repos.json",
+      "url": "https://raw.githubusercontent.com/diegonmarcos/git-repos-master/claude/new-session-vb0job/repos.json",
       "schema": "cloud-repos/v1",
-      "sha256": "829058be83ff55470303f1f3963e7a3a79a05a95a637bab6d975c2a2316b23b1",
+      "sha256": "94c6aa928dcdffd0560e3810f25cae6ace2978c370db0c09b22261b2239719b4",
       "family": "data/drive-git-family.json",
       "generated": "data/drive-git-repos.json"
     },
