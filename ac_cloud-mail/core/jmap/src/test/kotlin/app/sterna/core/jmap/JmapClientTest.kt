@@ -83,6 +83,40 @@ class JmapClientTest {
         assertEquals(expected, server.takeRequest().getHeader("Authorization"))
     }
 
+    /** #1071: a 401 on the session request is told apart by who answered, for each auth scheme. */
+    private fun sessionFailure(auth: JmapAuth, response: MockResponse): JmapException = runBlocking {
+        server.enqueue(response)
+        try { client.fetchSession(server.url("/.well-known/jmap").toString(), auth); error("expected a 401") }
+        catch (e: JmapException) { e }
+    }
+
+    private val edge401 get() = MockResponse().setResponseCode(401).setHeader("Content-Type", "text/html; charset=utf-8").setBody("Unauthorized")
+    private val stalwart401 get() = MockResponse().setResponseCode(401).setHeader("Content-Type", "application/problem+json")
+        .setHeader("WWW-Authenticate", "Basic realm=\"Stalwart Server\"").setBody("{\"status\":401}")
+
+    @Test fun session401_basic_fromTheEdge_isToldAsTheGate() {
+        val e = sessionFailure(BasicAuth("me@x.test", "pw"), edge401)
+        assertEquals(401, e.httpCode); assertTrue(e.edge)
+        val text = GatewayErrors.syncMessage(e)!!
+        assertTrue(text, text.startsWith("Gate refused") && text.contains("VPN"))
+    }
+
+    @Test fun session401_basic_fromStalwart_tellsTheOwnerToRenewTheAppPassword() {
+        val e = sessionFailure(BasicAuth("me@x.test", "pw"), stalwart401)
+        assertFalse(e.edge)
+        val text = GatewayErrors.syncMessage(e)!!
+        assertTrue(text, text.contains("app password") && text.contains("Stalwart"))
+    }
+
+    @Test fun session401_bearer_fromStalwart_andFromTheEdge() {
+        assertFalse(sessionFailure(BearerAuth("tok"), stalwart401).edge)
+        assertTrue(sessionFailure(BearerAuth("tok"), edge401).edge)
+    }
+
+    @Test fun syncMessage_leavesOtherFailuresToTheirOwnText() {
+        assertNull(GatewayErrors.syncMessage(JmapException("Could not parse JMAP session")))
+    }
+
     @Test fun fetchSession_reAuthenticatesAfterCrossHostRedirect() = runBlocking {
         // OkHttp strips the Authorization header when a redirect crosses hosts (here: two mock
         // servers on different ports), which is exactly the Fastmail autodiscovery shape —

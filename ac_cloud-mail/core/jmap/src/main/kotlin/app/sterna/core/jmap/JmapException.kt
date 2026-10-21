@@ -20,4 +20,6 @@ class JmapException(
     val permanent: Boolean = false,
         /** The EDGE GATE refused the request (fleet token / Authelia session), not the mailbox behind it. */
     val gate: Boolean = false,
+        /** A 401/403 that carries no mail-server marks: the EDGE answered, though no gate credential was set. */
+    val edge: Boolean = false,
 ) : Exception(message, cause)

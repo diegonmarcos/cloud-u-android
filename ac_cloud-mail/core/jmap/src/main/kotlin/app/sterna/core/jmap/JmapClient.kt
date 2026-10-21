@@ -105,6 +105,8 @@ class JmapClient internal constructor(
                         throw JmapException(
                             "Session request failed: HTTP ${response.code} ${response.message}",
                             httpCode = response.code,
+                            edge = (response.code == 401 || response.code == 403) &&
+                                RejectionLayer.of(response.headers("WWW-Authenticate"), response.header("Content-Type")) == RejectionLayer.GATE,
                         )
                     }
                     runCatching { json.decodeFromString<JmapSession>(body) }

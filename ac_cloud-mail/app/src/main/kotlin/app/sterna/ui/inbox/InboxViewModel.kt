@@ -1416,7 +1416,7 @@ class InboxViewModel(
                     }
                     is RefreshOutcome.Failed -> {
                         val cause = outcome.cause
-                        status.value = Status(refreshing = false, error = cause.message ?: cause.javaClass.simpleName)
+                        status.value = Status(refreshing = false, error = app.sterna.core.jmap.GatewayErrors.syncMessage(cause) ?: cause.message ?: cause.javaClass.simpleName)
                         connectivity.reportFailure(cause)
                     }
                     RefreshOutcome.AbandonedAtBudget -> {
@@ -1430,7 +1430,7 @@ class InboxViewModel(
             } catch (c: CancellationException) {
                 throw c // a superseding refresh cancelled us — don't stomp its status
             } catch (t: Throwable) {
-                status.value = Status(refreshing = false, error = t.message ?: t.javaClass.simpleName)
+                status.value = Status(refreshing = false, error = app.sterna.core.jmap.GatewayErrors.syncMessage(t) ?: t.message ?: t.javaClass.simpleName)
                 connectivity.reportFailure(t)
             }
         }

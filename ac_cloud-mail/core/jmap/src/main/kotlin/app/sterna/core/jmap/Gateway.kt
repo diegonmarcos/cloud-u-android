@@ -145,7 +145,7 @@ object GatewayErrors {
     fun kind(t: Throwable): Kind {
         var c: Throwable? = t
         while (c != null) {
-            if (c is JmapException && c.gate) return Kind.GATE
+            if (c is JmapException && (c.gate || c.edge)) return Kind.GATE
             if (c is JmapException) when (c.httpCode) { 401 -> return Kind.UNAUTHORIZED; 403 -> return Kind.FORBIDDEN }
             when (c) {
                 is javax.net.ssl.SSLException -> return Kind.TLS
@@ -158,9 +158,13 @@ object GatewayErrors {
         return Kind.OTHER
     }
 
+    /** The sync banner's text: the told-apart wording for a 401/403, else null (the caller keeps the raw message). */
+    fun syncMessage(t: Throwable): String? =
+        when (kind(t)) { Kind.GATE, Kind.UNAUTHORIZED, Kind.FORBIDDEN -> describe(t); else -> null }
+
     fun describe(t: Throwable): String = when (kind(t)) {
-        Kind.GATE -> "Gate refused: the edge gate rejected the fleet token or Authelia session (the mailbox was not reached). Check the token, or sign in again."
-        Kind.UNAUTHORIZED -> "401 Unauthorized: the mailbox rejected the account login. The gate let the request through; check the password or API token."
+        Kind.GATE -> "Gate refused: the edge gate rejected the request (the mailbox was not reached). Off the VPN the edge needs a fleet token or an Authelia session: switch the VPN on so the mail host resolves to the mesh, or set Account > Authentication > Bearer token / Authelia, then sign in again."
+        Kind.UNAUTHORIZED -> "401 Unauthorized: the mailbox rejected the account login. The gate let the request through; the saved app password or API token was revoked or expired. Create a new app password for this account in the mail server (Stalwart: account > app passwords) and enter it under Account > Sign in."
         Kind.FORBIDDEN -> "403 Forbidden: the account login is valid, but not allowed to use this server."
         Kind.TLS -> "TLS error: the certificate could not be verified for this host."
         Kind.DNS -> "DNS error: the server name could not be resolved. Check the address and the network."
