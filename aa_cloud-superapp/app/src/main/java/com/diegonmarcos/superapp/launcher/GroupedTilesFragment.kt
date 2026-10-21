@@ -20,7 +20,6 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import android.content.Context
 import android.os.Bundle
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -216,29 +215,14 @@ private fun GroupTitle(text: String) {
 @Composable
 internal fun TileStrip(tiles: List<Sections.AggTile>, click: (String) -> Unit, openFolder: (Sections.AggTile) -> Unit) {
     LazyRow(Modifier.fillMaxWidth()) {
-        // A separator is no item: it rides on the right edge of the tile before it (zero width, so every tile keeps its slot).
-        val shown = tiles.withIndex().filter { !it.value.separator }
-        items(shown) { (i, tile) ->
-            TileCell(tile, click, openFolder, sepAfter = tiles.getOrNull(i + 1)?.takeIf { it.separator })
-        }
+        items(tiles) { tile -> TileCell(tile, click, openFolder) }
     }
 }
 
-/** A tile in a strip. [sepAfter] is the `separator` declared right after it: a thin divider on its right edge, centred on the icon line. */
+/** A tile in a strip. A `separator` is the faint "|" between two runs of tiles: a glyph, not a control. */
 @Composable
-internal fun TileCell(tile: Sections.AggTile, click: (String) -> Unit, openFolder: (Sections.AggTile) -> Unit,
-                      sepAfter: Sections.AggTile? = null) {
-    Box(Modifier.width(60.dp)) {
-        TileCellBody(tile, click, openFolder)
-        if (sepAfter != null) TileDivider(tileSepTag(sepAfter.id), TILE_CELL_ICON_CENTRE, 0.5.dp, Modifier.align(Alignment.TopEnd))
-    }
-}
-
-/** Distance from a strip tile's top to its icon's centre: 6 dp padding + half the 32 dp glyph. */
-internal val TILE_CELL_ICON_CENTRE = 22.dp
-
-@Composable
-private fun TileCellBody(tile: Sections.AggTile, click: (String) -> Unit, openFolder: (Sections.AggTile) -> Unit) {
+internal fun TileCell(tile: Sections.AggTile, click: (String) -> Unit, openFolder: (Sections.AggTile) -> Unit) {
+    if (tile.separator) { TileSeparator(tile.label); return }
     val ctx = LocalContext.current
     val view = LocalView.current
     val p = LocalKitPalette.current
@@ -268,7 +252,7 @@ private fun TileCellBody(tile: Sections.AggTile, click: (String) -> Unit, openFo
             // A tile that declares tint:false keeps its glyph's own colours; the placeholder is always tinted.
             Icon(painterResource(iconRes), contentDescription = null,
                 tint = if (missing) p.textSecondary else if (tile.tint) p.textPrimary else androidx.compose.ui.graphics.Color.Unspecified,
-                modifier = Modifier.size(32.dp).testTag(tileIconTag(tile.target)))
+                modifier = Modifier.size(32.dp))
         }
         Text(tile.label, color = if (missing) p.textSecondary else p.textPrimary.copy(alpha = 0.8f), maxLines = 2,
             overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, fontSize = 12.sp,

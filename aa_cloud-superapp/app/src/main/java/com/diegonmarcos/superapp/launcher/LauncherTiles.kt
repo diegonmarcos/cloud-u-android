@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -33,7 +32,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -85,22 +83,15 @@ object TileMetrics {
     fun clear() { tiles.clear(); last = null }
 }
 
-/** Height of the inline divider: a thin rule shorter than the glyph it sits beside. */
-internal val SEP_HEIGHT: Dp = 16.dp
-
-internal fun tileSepTag(id: String) = "tilesep:$id"
-
 /**
- * A `separator` page as a thin inline divider (#438, #1069): NOT a row child and NOT a tile, so it takes no column and the
- * icons keep theirs. A tile draws it as an overlay on its own leading/trailing edge (`modifier` carries the `align`),
- * centred vertically on the ICON line ([iconCentreY] = distance from the tile's top to the icon's centre) and horizontally
- * on the boundary ([edgeShift] = half the gap to the neighbour). Never a control, hidden from accessibility.
+ * A `separator` page as a CHARACTER: the same faint caption the Data Apps row draws (alpha 0x66 of the ink,
+ * caption size), as wide as its own text and no wider (no weight, no column slot), never a control and
+ * hidden from accessibility — TalkBack walks from the tile before it to the tile after it.
  */
 @Composable
-internal fun TileDivider(tag: String, iconCentreY: Dp, edgeShift: Dp, modifier: Modifier = Modifier) {
-    Box(modifier.offset(x = edgeShift, y = iconCentreY - SEP_HEIGHT / 2).size(1.dp, SEP_HEIGHT)
-        .background(LocalKitPalette.current.textPrimary.copy(alpha = 0.4f))
-        .clearAndSetSemantics { testTag = tag })
+internal fun TileSeparator(text: String, modifier: Modifier = Modifier) {
+    Text(text, color = LocalKitPalette.current.textPrimary.copy(alpha = 0.4f), fontSize = 12.sp,
+        textAlign = TextAlign.Center, modifier = modifier.padding(6.dp).clearAndSetSemantics { })
 }
 
 /** Group heading between tile rows: the declared words, upper-cased. */
@@ -168,3 +159,4 @@ internal fun CompactTile(tileId: String, label: String, @DrawableRes iconRes: In
                 .padding(top = 1.dp, start = 1.dp, end = 1.dp).testTag("tilelabel:$tileId"))
     }
 }
+internal fun tileSepTag(id: String) = "tilesep:$id"
