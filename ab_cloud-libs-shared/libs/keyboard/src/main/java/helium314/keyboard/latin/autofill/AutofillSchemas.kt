@@ -52,7 +52,7 @@ object AutofillSchemas {
         )
     }
 
-    /** The extras Cloud Account's Import hands to Cloud Vault's add-identity entry point (suffix of com.diegonmarcos.cloudvault.extra.*). Never stored in the account. */
+    /** The extras Cloud Account's Import hands to Cloud Vault's add-identity entry point (the name after the extra prefix). Never stored in the account. */
     val IDENTITY_HANDOFF = listOf("ID_TYPE", "ID_NUMBER", "ID_SUPPORT", "ID_ISSUING_COUNTRY", "ID_VALID_UNTIL", "ID_ISSUED",
         "FIRST_NAME", "MIDDLE_NAME", "LAST_NAME")
 
@@ -72,7 +72,7 @@ object AutofillSchemas {
     /** All the vault's fields are secrets: they are listed so the user sees what exists, and are never read by the keyboard. */
     private fun secret(keys: List<String>) = keys.map { SchemaField(it, label(it.lowercase()), sensitive = true) }
 
-    fun identityHandoff() = SchemaTable("account.identity-handoff", ACCOUNT, "intent com.diegonmarcos.cloudvault.action.ADD_IDENTITY",
+    fun identityHandoff() = SchemaTable("account.identity-handoff", ACCOUNT, "Cloud Vault add-identity entry point (intent)",
         "Identity hand-off", secret(IDENTITY_HANDOFF), readable = false)
 
     fun vault(): List<SchemaTable> = listOf(
