@@ -95,7 +95,8 @@ class MeshPageComposeTest : KitPageHarness() {
         val store = showStore()
         open(store, "peers")
         compose.onNodeWithTag(MeshTags.peer(0)).assertExists(); compose.onNodeWithTag(MeshTags.peer(1)).assertExists()
-        compose.onNode(hasText("gcp-proxy") and hasAnyAncestor(hasTestTag(MeshTags.peer(0)))).performClick()
+        compose.onNode(hasText("gcp-proxy") and hasAnyAncestor(hasTestTag(MeshTags.peer(0))))
+            .performScrollTo().performClick()   // the peers sit below the status rows in the one scroll
         compose.waitForIdle()
         compose.onNodeWithTag(MeshTags.control("peer_copy")).assertExists()
         compose.onNodeWithTag(MeshTags.control("peer_remove")).assertExists()
