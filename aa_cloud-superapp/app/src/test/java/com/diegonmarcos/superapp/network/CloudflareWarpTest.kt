@@ -93,7 +93,7 @@ class CloudflareWarpTest {
         val (priv1, reg1) = client.warp()
         assertEquals(1, calls.size); assertEquals("POST", calls[0].method)
         assertEquals("the private key is held in the key store", priv1, keys.warpPrivateKey())
-        assertTrue("the request carries the PUBLIC half of the stored key", calls[0].body!!.contains(com.wireguard.crypto.KeyPair(com.wireguard.crypto.Key.fromBase64(priv1)).publicKey.toBase64()))
+        assertEquals("the request carries the PUBLIC half of the stored key", com.wireguard.crypto.KeyPair(com.wireguard.crypto.Key.fromBase64(priv1)).publicKey.toBase64(), JSONObject(calls[0].body!!).getString("key"))
         val (priv2, reg2) = client.warp()
         assertEquals("no second registration", 1, calls.size); assertEquals(priv1, priv2); assertEquals(reg1, reg2)
     }
