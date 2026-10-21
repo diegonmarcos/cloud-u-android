@@ -1831,6 +1831,33 @@
         "ac_cloud-mail"
       ]
     },
+    "cloudflare_keys": {
+      "kind": "encrypted",
+      "class": "secret",
+      "doc": "#1074 EncryptedSharedPreferences holding the Cloudflare WARP / Cloudflare One device registrations of THIS phone: the WireGuard private key generated here, the device token and licence the API returned, the peer, endpoint and addresses, and the mesh interface key parked while a Cloudflare profile borrows the engine's one key slot. A registration names one device, so none of it migrates.",
+      "used_by": [
+        "aa_cloud-superapp"
+      ],
+      "keys": {
+        "warp_priv": "secret",
+        "warp_token": "secret",
+        "warp_license": "secret",
+        "warp_id": "device",
+        "warp_peer": "device",
+        "warp_endpoint": "device",
+        "warp_v4": "device",
+        "warp_v6": "device",
+        "one_priv": "secret",
+        "one_token": "secret",
+        "one_license": "secret",
+        "one_id": "device",
+        "one_peer": "device",
+        "one_endpoint": "device",
+        "one_v4": "device",
+        "one_v6": "device",
+        "mesh_key_stash": "secret"
+      }
+    },
     "wireguard_prefs": {
       "kind": "prefs",
       "class": "config",
