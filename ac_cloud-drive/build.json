@@ -47,7 +47,7 @@
       "path": "data/repos.sot.json",
       "url": "https://raw.githubusercontent.com/diegonmarcos/git-repos-master/claude/new-session-vb0job/repos.json",
       "schema": "cloud-repos/v1",
-      "sha256": "18bd47b9be13ca0bf571f1babd4fd9eed9a5d507ac6d4ac45fd731f60e1f5b9f",
+      "sha256": "94c6aa928dcdffd0560e3810f25cae6ace2978c370db0c09b22261b2239719b4",
       "family": "data/drive-git-family.json",
       "generated": "data/drive-git-repos.json"
     },
