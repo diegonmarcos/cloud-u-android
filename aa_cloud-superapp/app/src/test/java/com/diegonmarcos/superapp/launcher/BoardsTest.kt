@@ -170,6 +170,10 @@ class BoardsTest : KitPageHarness() {
         waitForText("No places recorded")
     }
 
+    private fun inboxState() = AggregatorState(
+        androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>(),
+        "board-inbox-test", emptyList(), emptyList())
+
     @Test fun `Inboxes groups fleet mail and phone apps by app`() {
         val now = System.currentTimeMillis()
         use(Fake(
@@ -181,7 +185,7 @@ class BoardsTest : KitPageHarness() {
                 InboxItem(Boards.MAIL_PKG, "Cloud Mail", "dup", "dup", now, true, "extapp:cloud-mail", "k3", fleet = true),
             )),
         ))
-        showKit { BoardInboxBody(0) { opened += it } }
+        showKit { BoardInboxBody(inboxState()) { opened += it } }
         waitFor(BoardTags.group("com.whatsapp"))
         compose.onNodeWithTag(BoardTags.group(Boards.MAIL_PKG)).assertExists()
         compose.onNodeWithText("Invoice October").assertExists()
@@ -192,9 +196,38 @@ class BoardsTest : KitPageHarness() {
         assertEquals(listOf("app:com.whatsapp"), opened)
     }
 
+    @Test fun `every Inbox box carries every required action and the pills act`() {
+        val now = System.currentTimeMillis()
+        use(Fake(phone = Read.Ok(listOf(
+            InboxItem("com.whatsapp", "WhatsApp", "Luis", "See you at ten", now - 120_000, true, "app:com.whatsapp", "k1"),
+            InboxItem("org.thoughtcrime.securesms", "Signal", "Ana", "hola", now - 90_000, true, "app:org.thoughtcrime.securesms", "k2"),
+        ))))
+        val st = inboxState()
+        showKit { BoardInboxBody(st) { opened += it } }
+        waitFor(BoardTags.group("com.whatsapp"))
+        for (pkg in listOf("com.whatsapp", "org.thoughtcrime.securesms")) {
+            for (a in NotifActions.REQUIRED_PER_BOX) compose.onNodeWithTag(NotifActions.tag(a, pkg)).assertExists()
+        }
+        // Mark read: the box's unread count goes away.
+        compose.onNodeWithTag(NotifActions.tag(NotifActions.MARK_READ, "com.whatsapp")).performClick()
+        compose.waitForIdle()
+        assertTrue(st.readIds.any { it.startsWith("board:com.whatsapp/") })
+        // Open: the thread / app route.
+        compose.onNodeWithTag(NotifActions.tag(NotifActions.OPEN, "org.thoughtcrime.securesms")).performClick()
+        assertEquals(listOf("app:org.thoughtcrime.securesms"), opened)
+        // Archive: the box leaves the list and keeps a Restore.
+        compose.onNodeWithTag(NotifActions.tag(NotifActions.ARCHIVE, "com.whatsapp")).performClick()
+        compose.waitForIdle()
+        assertTrue(st.isArchived("board:com.whatsapp"))
+        compose.onNodeWithTag(BoardTags.group("com.whatsapp")).assertDoesNotExist()
+        compose.onNodeWithTag(NotifActions.tag("restore", "com.whatsapp")).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(BoardTags.group("com.whatsapp")).assertExists()
+    }
+
     @Test fun `Inboxes without notification access says why`() {
         use(Fake(phone = Read.Unavailable(Why.NO_PERMISSION, "Notification Access is off, so other apps' messages cannot be read")))
-        showKit { BoardInboxBody(0) { opened += it } }
+        showKit { BoardInboxBody(inboxState()) { opened += it } }
         waitForText("Notification Access is off")
     }
 

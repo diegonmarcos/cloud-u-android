@@ -149,15 +149,15 @@ class AggregatorStackFragment : KitComposeFragment(),
                 Modifier.fillMaxSize()
                     .then(if (shade) Modifier.background(NotifCard.panel) else Modifier)
                     .verticalScroll(scroll).onGloballyPositioned { anchors.content(it) }
-                    .padding(12.dp).testTag(AggTags.PAGE),
+                    .padding(if (shade) 16.dp else 12.dp).testTag(AggTags.PAGE),
             ) {
                 CompositionLocalProvider(LocalAnchors provides anchors) {
                     RefreshNote(st)
                     // `above_filters` panels lead the page, ahead of the Filters they do not answer to (Notify's
                     // persistent badges, #580).
-                    val (above, below) = panels.withIndex().partition { it.value.aboveFilters }
+                    val (above, rest) = panels.withIndex().partition { it.value.aboveFilters }
+                    val (bottom, below) = rest.partition { it.value.bottom }
                     for ((i, panel) in above) if (st.visible(panel)) PagePanel(st, i, panel, anchors, actions)
-                    if (filters.isNotEmpty()) FilterRow(st)
                     for ((i, panel) in below) if (st.visible(panel)) PagePanel(st, i, panel, anchors, actions)
                     // One UI's bottom pill row ("Notification settings" / "Clear"), centred under the cards.
                     NotifyListActions(st)
@@ -168,6 +168,9 @@ class AggregatorStackFragment : KitComposeFragment(),
                         AggEmptyHint("No panel on this page carries ${st.sourceLabel()} notifications. Switch Source back to Both.",
                             Modifier.testTag(AggTags.SOURCE_EMPTY))
                     }
+                    // #1068: every control of the page (the Filters, badge settings) is ONE folded section at the very bottom,
+                    // below all the cards, the Archive and the page actions.
+                    ConfigSection(st, filters.isNotEmpty(), bottom, anchors, actions)
                 }
             }
         }

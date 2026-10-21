@@ -218,6 +218,9 @@ object Sections {
          *  the first thing on the page, the Filters that narrow the cards
          *  come after them. Absent means below, which is every other panel. */
         val aboveFilters: Boolean = false,
+        /** Draw this panel in the page's collapsed SETTINGS section at the very bottom, below every card, the Archive
+         *  and the page actions (#1068: Notify is a page to look at, its controls come last). */
+        val bottom: Boolean = false,
     )
 
     /** One declared in-panel anchor: the [id] tiles point at, plus the header
@@ -925,6 +928,7 @@ object Sections {
                         classId         = p.optString("class", ""),
                         limit           = p.optInt("limit", 0),
                         aboveFilters    = p.optBoolean("above_filters", false),
+                        bottom          = p.optBoolean("bottom", false),
                     ))
                 }
                 return out

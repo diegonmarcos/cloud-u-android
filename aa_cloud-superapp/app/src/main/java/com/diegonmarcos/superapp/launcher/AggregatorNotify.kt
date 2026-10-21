@@ -221,11 +221,21 @@ internal object NotifCard {
         listOf(Color(0xF2141418), Color(0xF01B1B21), Color(0xF5101013)),
     )
     val avatar = 40.dp
-    val radius = 26.dp
+    // Style tokens: docs/oneui-notification-spec.md is their source and NotifStyleGuardTest holds them to it.
+    val radius = 28.dp
     val shape = RoundedCornerShape(radius)
     val pillShape = RoundedCornerShape(20.dp)
     val gap = 8.dp
-    val pad = 14.dp
+    val pad = 16.dp
+    val headerIcon = 18.dp
+    val nameSp = 12.sp
+    val metaSp = 12.sp
+    val titleSp = 16.sp
+    val bodySp = 14.sp
+    val actionHeight = 36.dp
+    val actionRadius = 18.dp
+    val actionShape = RoundedCornerShape(actionRadius)
+    val actionSp = 14.sp
     val font = FontFamily.Default
 }
 
@@ -299,11 +309,11 @@ internal fun GroupBlock(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 GroupGlyph(g, tint)
-                Text(g.label, color = NotifCard.title, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                Text(g.label, color = NotifCard.title, fontSize = NotifCard.nameSp, fontWeight = FontWeight.Medium,
                     fontFamily = NotifCard.font, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(start = 8.dp).widthIn(max = 200.dp))
                 if (g.newest > 0L) Text(" • " + AggregatorModel.shortAgo(System.currentTimeMillis() - g.newest),
-                    color = NotifCard.meta, fontSize = 13.sp, fontFamily = NotifCard.font, maxLines = 1)
+                    color = NotifCard.meta, fontSize = NotifCard.metaSp, fontFamily = NotifCard.font, maxLines = 1)
                 Box(Modifier.weight(1f))
                 // Only a verdict that is NOT a plain count is drawn (an ntfy channel's "silent 7d" or poll failure):
                 // the count is what the "+N" pill says.
@@ -334,7 +344,19 @@ internal fun GroupBlock(
                 Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
                 horizontalArrangement = Arrangement.End,
             ) { ArchivePill(state, g, archived = true, rowArchive = rowArchive) }
-            else Box(Modifier.height(6.dp))
+            else {
+                // The box's own actions, back in One UI's action-pill row (#1068): Mark read, Archive, Open, Reply.
+                val replyRow = rows.filter { it.id.startsWith(AggregatorModel.PHONE_NS) }.maxByOrNull { it.ts }
+                val unreadAny = rows.any { state.isUnread(it) }
+                NotifActionRow(
+                    key = g.key,
+                    onRead = { state.markGroupRead(g) },
+                    onArchive = { state.setArchived(g.key, true) },
+                    onOpen = launch,
+                    replyKey = replyRow?.id?.removePrefix(AggregatorModel.PHONE_NS),
+                    unread = unreadAny,
+                )
+            }
         }
         NotifSheet(menu, { menu = false }) {
             if (!archived && g.rows.isNotEmpty()) SheetItem(AggregatorModel.MARK_READ_LABEL, AggTags.groupCheck(g.key)) {
@@ -420,8 +442,8 @@ private fun GroupGlyph(g: NotifGroup, tint: Color) {
         LaunchedEffect(pkg) { icon = withContext(Dispatchers.IO) { AppIconCache.load(ctx, pkg) } }
     }
     val bmp = remember(icon) { icon?.let { runCatching { monochromeGlyph(it).asImageBitmap() }.getOrNull() } }
-    if (bmp != null) Image(bmp, null, colorFilter = ColorFilter.tint(tint), modifier = Modifier.size(16.dp))
-    else Box(Modifier.size(16.dp), contentAlignment = Alignment.Center) {
+    if (bmp != null) Image(bmp, null, colorFilter = ColorFilter.tint(tint), modifier = Modifier.size(NotifCard.headerIcon))
+    else Box(Modifier.size(NotifCard.headerIcon), contentAlignment = Alignment.Center) {
         Text(g.label.trim().take(1).uppercase(), color = tint, fontSize = 13.sp, fontWeight = FontWeight.Black,
             fontFamily = NotifCard.font, lineHeight = 14.sp)
     }
@@ -550,14 +572,14 @@ private fun NotifRowItem(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (unread) Box(Modifier.padding(end = 6.dp).size(6.dp).clip(CircleShape).background(tint)
                     .testTag(AggTags.rowUnread(rid)))
-                Text(r.title, color = titleColor, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                Text(r.title, color = titleColor, fontSize = NotifCard.titleSp, fontWeight = FontWeight.SemiBold,
                     fontFamily = NotifCard.font, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f))
                 if (ownTime) Text(AggregatorModel.shortAgo(System.currentTimeMillis() - r.ts), color = NotifCard.meta,
-                    fontSize = 13.sp, fontFamily = NotifCard.font, modifier = Modifier.padding(start = 8.dp))
+                    fontSize = NotifCard.metaSp, fontFamily = NotifCard.font, modifier = Modifier.padding(start = 8.dp))
             }
             Row(verticalAlignment = Alignment.Top) {
-                if (r.text.isNotBlank()) Text(r.text, color = NotifCard.body, fontSize = 14.sp, lineHeight = 19.sp,
+                if (r.text.isNotBlank()) Text(r.text, color = NotifCard.body, fontSize = NotifCard.bodySp, lineHeight = 19.sp,
                     fontFamily = NotifCard.font, maxLines = if (expanded) 8 else 2, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f).padding(top = 2.dp))
                 else Box(Modifier.weight(1f))

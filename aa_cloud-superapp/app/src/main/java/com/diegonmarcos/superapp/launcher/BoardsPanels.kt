@@ -47,6 +47,7 @@ import com.diegonmarcos.superapp.boards.StepsBoard
 import com.diegonmarcos.superapp.boards.TaskProject
 import com.diegonmarcos.superapp.boards.ThreadIntents
 import com.diegonmarcos.superapp.boards.Why
+import com.diegonmarcos.superapp.notificationcenter.ReplyActions
 import com.diegonmarcos.superapp.ui.AppIconCache
 import com.diegonmarcos.superapp.uikit.KitAction
 import com.diegonmarcos.superapp.uikit.KitDensity
@@ -108,10 +109,14 @@ private fun installFix(onOpen: (String) -> Unit, why: Why, target: String, app: 
 
 // ── Inboxes ──────────────────────────────────────────────────────────
 
+/** The id a board inbox item is read / archived under in the page state: its app, time and sender. */
+private fun itemId(i: InboxItem) = "board:${i.pkg}/${i.ts}/${i.sender}"
+private fun boxKey(pkg: String) = "board:$pkg"
+
 @Composable
-internal fun BoardInboxBody(epoch: Int, onOpen: (String) -> Unit) {
+internal fun BoardInboxBody(state: AggregatorState, onOpen: (String) -> Unit) {
     val ctx = LocalContext.current
-    val reads = rememberBoardRead(epoch, "inbox") { s -> s.fleetMail() to s.phoneNotifications() }
+    val reads = rememberBoardRead(state.epoch, "inbox") { s -> s.fleetMail() to s.phoneNotifications() }
     Column(Modifier.fillMaxWidth().testTag(BoardTags.INBOX)) {
         if (reads == null) { BoardLoading(); return@Column }
         val (mail, phone) = reads
@@ -131,55 +136,100 @@ internal fun BoardInboxBody(epoch: Int, onOpen: (String) -> Unit) {
         val now = System.currentTimeMillis()
         var lastFleet: Boolean? = null
         for (g in groups) {
+            if (state.isArchived(boxKey(g.pkg))) continue
             if (g.fleet != lastFleet) { AggShadeLabel(if (g.fleet) "FLEET" else "PHONE APPS"); lastFleet = g.fleet }
-            InboxGroupCard(g, now, onOpen)
+            InboxGroupCard(state, g, now, onOpen)
+        }
+        // A filed-away app keeps its way back: the Archive line lists them, each with Restore.
+        val filed = groups.filter { state.isArchived(boxKey(it.pkg)) }
+        if (filed.isNotEmpty()) {
+            AggShadeLabel("ARCHIVE")
+            for (g in filed) Row(
+                Modifier.fillMaxWidth().padding(bottom = NotifCard.gap).clip(NotifCard.shape).background(NotifCard.surface)
+                    .padding(start = NotifCard.pad, end = 8.dp, top = 6.dp, bottom = 6.dp).testTag(BoardTags.group(g.pkg) + ":archived"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(g.appLabel, color = NotifCard.title, fontSize = NotifCard.bodySp, fontFamily = NotifCard.font,
+                    modifier = Modifier.weight(1f))
+                Text(AggregatorModel.ARCHIVE_RESTORE_LABEL, color = NotifCard.title, fontSize = NotifCard.actionSp,
+                    fontWeight = FontWeight.Medium, fontFamily = NotifCard.font,
+                    modifier = Modifier.clip(NotifCard.actionShape).background(NotifCard.pill)
+                        .clickable { state.setArchived(boxKey(g.pkg), false) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp).testTag(NotifActions.tag("restore", g.pkg)))
+            }
         }
     }
 }
 
+/** One app's inbox as a One UI container: header, its items (swipe right = read, left = archive), and the box's
+ *  Mark read / Archive / Open / Reply pills - the same NotifActionRow the Notify page draws. */
 @Composable
-private fun InboxGroupCard(g: InboxGroup, now: Long, onOpen: (String) -> Unit) {
-    val p = LocalKitPalette.current
+private fun InboxGroupCard(state: AggregatorState, g: InboxGroup, now: Long, onOpen: (String) -> Unit) {
     val ctx = LocalContext.current
     var expanded by remember(g.pkg) { mutableStateOf(false) }
-    // Through the launcher's one icon cache, off the main thread (each PackageManager icon is a Knox binder call).
     val icon by produceState<ImageBitmap?>(null, g.pkg) {
         value = withContext(Dispatchers.IO) {
             runCatching { AppIconCache.load(ctx, g.pkg)?.toBitmap(64, 64)?.asImageBitmap() }.getOrNull()
         }
     }
-    val shown = if (expanded) g.items else g.items.take(3)
-    Column(Modifier.fillMaxWidth().padding(vertical = KitDensity.small / 2).clip(RoundedCornerShape(KitDensity.corner))
-        .background(p.surface).padding(horizontal = KitDensity.rowPadH, vertical = KitDensity.rowPadV)
+    val items = g.items.filter { itemId(it) !in state.archivedRowIds }
+    val unread = items.count { it.unread && itemId(it) !in state.readIds }
+    val shown = if (expanded) items else items.take(3)
+    val newest = items.maxByOrNull { it.ts }
+    val openApp: (() -> Unit)? = newest?.let { n -> { openItem(n, onOpen) } }
+    val replyItem = items.filter { ReplyActions.has(it.threadKey) }.maxByOrNull { it.ts }
+    Column(Modifier.fillMaxWidth().padding(bottom = NotifCard.gap).clip(NotifCard.shape).background(NotifCard.surface)
         .testTag(BoardTags.group(g.pkg))) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(start = NotifCard.pad, end = NotifCard.pad, top = 12.dp, bottom = 2.dp),
+            verticalAlignment = Alignment.CenterVertically) {
             AppGlyph(icon, g.appLabel)
-            Text(g.appLabel, color = p.textPrimary, fontSize = KitDensity.title, fontWeight = FontWeight.SemiBold,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = KitDensity.small))
-            Text(if (g.unread > 0) "${g.unread} unread" else "${g.items.size}", color = p.textSecondary, fontSize = KitDensity.caption)
+            Text(g.appLabel, color = NotifCard.title, fontSize = NotifCard.nameSp, fontWeight = FontWeight.Medium,
+                fontFamily = NotifCard.font, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 8.dp))
+            if (g.newest > 0L) Text(" • " + AggregatorModel.shortAgo(now - g.newest), color = NotifCard.meta,
+                fontSize = NotifCard.metaSp, fontFamily = NotifCard.font, maxLines = 1)
+            Box(Modifier.weight(1f))
+            if (unread > 0) Text("$unread unread", color = NotifCard.title, fontSize = NotifCard.metaSp,
+                fontFamily = NotifCard.font,
+                modifier = Modifier.clip(NotifCard.pillShape).background(NotifCard.pill).padding(horizontal = 8.dp, vertical = 2.dp))
         }
-        for (item in shown) InboxRow(item, now, onOpen)
-        if (g.items.size > 3) Text(if (expanded) "Show less" else AggregatorModel.moreLabel(g.items.size - 3),
-            color = p.accent, fontSize = KitDensity.caption,
-            modifier = Modifier.clickable { expanded = !expanded }.padding(top = KitDensity.small / 2))
+        for (item in shown) androidx.compose.runtime.key(itemId(item)) { InboxRow(state, item, now, onOpen) }
+        if (items.size > 3) Text(if (expanded) "Show less" else AggregatorModel.moreLabel(items.size - 3),
+            color = NotifCard.meta, fontSize = NotifCard.metaSp, fontWeight = FontWeight.Medium, fontFamily = NotifCard.font,
+            modifier = Modifier.clickable { expanded = !expanded }
+                .padding(start = NotifCard.pad, top = 2.dp, bottom = 2.dp))
+        NotifActionRow(
+            key = g.pkg,
+            onRead = { for (i in items) state.markRead(itemId(i), true) },
+            onArchive = { state.setArchived(boxKey(g.pkg), true) },
+            onOpen = openApp,
+            replyKey = replyItem?.threadKey,
+            unread = unread > 0,
+        )
     }
 }
 
 @Composable
-private fun InboxRow(item: InboxItem, now: Long, onOpen: (String) -> Unit) {
-    val p = LocalKitPalette.current
-    Row(Modifier.fillMaxWidth().clickable { openItem(item, onOpen) }.padding(vertical = KitDensity.small / 2),
+private fun InboxRow(state: AggregatorState, item: InboxItem, now: Long, onOpen: (String) -> Unit) {
+    val id = itemId(item)
+    val unread = item.unread && id !in state.readIds
+    Row(Modifier.fillMaxWidth()
+        .rowSwipe(id, onRight = { state.markRead(id, unread) }, onLeft = { state.archiveRow(id, true) })
+        .clickable { openItem(item, onOpen) }
+        .padding(horizontal = NotifCard.pad, vertical = 6.dp).testTag("board:inbox:row:$id"),
         verticalAlignment = Alignment.Top) {
-        Box(Modifier.padding(top = 6.dp).size(KitDensity.dot / 1.5f).clip(CircleShape)
-            .background(if (item.unread) p.accent else p.surface))
-        Column(Modifier.weight(1f).padding(start = KitDensity.small)) {
-            Text(item.sender.ifBlank { item.appLabel }, color = p.textPrimary, fontSize = KitDensity.body,
-                fontWeight = if (item.unread) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (item.preview.isNotBlank()) Text(item.preview, color = p.textSecondary, fontSize = KitDensity.caption,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (unread) Box(Modifier.padding(end = 6.dp).size(6.dp).clip(CircleShape).background(NotifCard.title))
+                Text(item.sender.ifBlank { item.appLabel }, color = if (unread) NotifCard.title else NotifCard.title.copy(alpha = 0.72f),
+                    fontSize = NotifCard.titleSp, fontWeight = FontWeight.SemiBold, fontFamily = NotifCard.font,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(if (item.ts > 0) AggregatorModel.shortAgo(now - item.ts) else "", color = NotifCard.meta,
+                    fontSize = NotifCard.metaSp, fontFamily = NotifCard.font, modifier = Modifier.padding(start = 8.dp))
+            }
+            if (item.preview.isNotBlank()) Text(item.preview, color = NotifCard.body, fontSize = NotifCard.bodySp,
+                fontFamily = NotifCard.font, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
         }
-        Text(if (item.ts > 0) AggregatorModel.ago(now - item.ts) else "", color = p.textSecondary,
-            fontSize = KitDensity.caption, modifier = Modifier.padding(start = KitDensity.small))
     }
 }
 
@@ -193,8 +243,8 @@ private fun openItem(item: InboxItem, onOpen: (String) -> Unit) {
 @Composable
 private fun AppGlyph(icon: ImageBitmap?, label: String) {
     val p = LocalKitPalette.current
-    if (icon != null) Image(icon, contentDescription = label, modifier = Modifier.size(KitDensity.glyph * 0.8f).clip(RoundedCornerShape(KitDensity.small)))
-    else Box(Modifier.size(KitDensity.glyph * 0.8f).clip(RoundedCornerShape(KitDensity.small)).background(p.surfaceSelected),
+    if (icon != null) Image(icon, contentDescription = label, modifier = Modifier.size(NotifCard.headerIcon).clip(RoundedCornerShape(5.dp)))
+    else Box(Modifier.size(NotifCard.headerIcon).clip(RoundedCornerShape(5.dp)).background(p.surfaceSelected),
         contentAlignment = Alignment.Center) { Text(label.take(1).uppercase(), color = p.textPrimary, fontSize = KitDensity.body) }
 }
 

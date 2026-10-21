@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -139,24 +140,39 @@ internal fun PagePanel(
                 .anchorTarget(anchors, panel.anchor).testTag(AggTags.panel(index)))
         return
     }
+    if (panel.kind == "notification_badges") {
+        // #1068: the badges are One UI live cards straight on the page, not a titled, foldable card of controls.
+        // `key` on the epoch: a return to the page re-reads every provider.
+        Column(Modifier.fillMaxWidth().anchorTarget(anchors, panel.anchor).testTag(AggTags.panel(index))) {
+            androidx.compose.runtime.key(state.badgeEpoch) { BadgeCards() }
+        }
+        return
+    }
     val open = state.isOpen(index, panel)
     val turn by animateFloatAsState(if (open) 90f else 0f, tween(180), label = "panel-chevron")
     // A panel whose body is a child fragment stays COMPOSED while folded (zero-size): leaving the composition would
     // detach its container and the fragment, still attached to the manager, would have nowhere to draw when reopened.
     val keep = panel.kind in AggregatorState.EMBED_KINDS
+    // #1068: a notification stream is not a card holding cards - the app containers sit straight on the One UI shade under a
+    // plain section label (the label still folds the stream, so the page keeps its fold and nav re-tap behaviour).
+    val bare = panel.kind == "notification_center"
     Column(
-        Modifier.fillMaxWidth().padding(bottom = 10.dp).clip(RoundedCornerShape(14.dp)).background(p.surface)
+        Modifier.fillMaxWidth().padding(bottom = if (bare) 4.dp else 10.dp)
+            .then(if (bare) Modifier else Modifier.clip(RoundedCornerShape(14.dp)).background(p.surface))
             .anchorTarget(anchors, panel.anchor).testTag(AggTags.panel(index)),
     ) {
         Row(
-            Modifier.fillMaxWidth().clickable { state.panelOpen[index] = !open }.padding(14.dp)
+            Modifier.fillMaxWidth().clickable { state.panelOpen[index] = !open }
+                .padding(if (bare) PaddingValues(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 6.dp) else PaddingValues(14.dp))
                 .testTag(AggTags.panelHeader(index)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(panelTitle(ctx, panel), color = p.accent, style = MaterialTheme.typography.titleMedium,
+            if (bare) Text(panelTitle(ctx, panel), color = NotifCard.meta, fontSize = NotifCard.bodySp,
+                fontWeight = FontWeight.Medium, fontFamily = NotifCard.font, modifier = Modifier.weight(1f))
+            else Text(panelTitle(ctx, panel), color = p.accent, style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Icon(painterResource(R.drawable.ic_chevron_right), null, tint = p.textPrimary,
-                modifier = Modifier.size(20.dp).rotate(turn))
+            Icon(painterResource(R.drawable.ic_chevron_right), null, tint = if (bare) NotifCard.meta else p.textPrimary,
+                modifier = Modifier.size(if (bare) 18.dp else 20.dp).rotate(turn))
         }
         if (panel.subtitle.isNotBlank()) {
             Text(panel.subtitle, color = p.textPrimary, style = MaterialTheme.typography.labelSmall,
@@ -165,7 +181,7 @@ internal fun PagePanel(
         if (open || keep) {
             // A notification shade is edge-to-edge: its group headers and rows supply their own structure, so the card's
             // inner gutter is chrome that only steals width from the list.
-            val gutter = if (panel.kind == "notification_center") 6.dp else 16.dp
+            val gutter = if (panel.kind == "notification_center") 0.dp else 16.dp
             Column(
                 Modifier.fillMaxWidth().foldable(open).padding(start = gutter, top = 8.dp, end = gutter, bottom = 16.dp)
                     .testTag(AggTags.panelBody(index)),
@@ -204,13 +220,13 @@ private fun PanelBody(state: AggregatorState, index: Int, panel: Sections.StackP
         "notification_center" -> NotificationCenterBody(state, panel, onOpen)
         // The two halves of the retired Push tab (#580): views into the one notification centre, drawn by BadgePanes
         // from ui.notification_center — no second producer.
-        "notification_badges" -> BadgePane(state) { redraw -> BadgePanes.badges(redraw) }
+        "notification_badges" -> BadgeCards()
         "notification_badge_configs" -> BadgePane(state) { redraw -> BadgePanes.configs(redraw) }
         "feed" -> FeedBody(panel, onOpen)
         "stats" -> { StatsBody(panel); InboxNotifications(state, panel, onOpen) }
         "class_inbox" -> ClassInboxBody(state, panel, onOpen)
         // Boards (BoardsPanels.kt): each reads its owner app live, never a number of its own.
-        "board_inbox" -> BoardInboxBody(state.epoch, onOpen)
+        "board_inbox" -> BoardInboxBody(state, onOpen)
         "board_steps" -> BoardStepsBody(state.epoch, onOpen)
         "board_places" -> BoardPlacesBody(state.epoch, onOpen)
         "board_task_projects" -> BoardTaskProjectsBody(state.epoch, onOpen)
@@ -525,6 +541,42 @@ internal fun FilterRow(state: AggregatorState) {
                             .padding(horizontal = 8.dp, vertical = 7.dp).testTag(AggTags.filter(filter.id, option.id)))
                 }
             }
+        }
+    }
+}
+
+// ── the Settings section: every control of the page, folded, at the very bottom (#1068) ──────────────
+
+/**
+ * The page is for LOOKING: the badge cards, then the notifications. Everything that configures it — the Filters toggles
+ * and the panels flagged `bottom` in build.json (badge switches, order, customisation) — lives in this one folded
+ * section after the last card, the Archive and the page actions. Folded until opened; remembered per page.
+ */
+@Composable
+internal fun ConfigSection(
+    state: AggregatorState, hasFilters: Boolean, bottom: List<IndexedValue<Sections.StackPanel>>,
+    anchors: PageAnchors, actions: PageActions,
+) {
+    if (!hasFilters && bottom.isEmpty()) return
+    val p = LocalKitPalette.current
+    val hostView = LocalView.current
+    val open = state.configOpen
+    val turn by animateFloatAsState(if (open) 90f else 0f, tween(180), label = "config-chevron")
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp).testTag(AggTags.CONFIG_SECTION)) {
+        Row(
+            Modifier.fillMaxWidth().clip(NotifCard.shape).background(NotifCard.surface)
+                .clickable { Haptics.tap(hostView); state.toggleConfigOpen() }
+                .padding(horizontal = NotifCard.pad, vertical = 14.dp).testTag(AggTags.CONFIG_HEADER),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Settings", color = NotifCard.title, fontSize = NotifCard.titleSp, fontWeight = FontWeight.Medium,
+                fontFamily = NotifCard.font, modifier = Modifier.weight(1f))
+            Icon(painterResource(R.drawable.ic_chevron_right), null, tint = NotifCard.title,
+                modifier = Modifier.size(20.dp).rotate(turn))
+        }
+        if (open) Column(Modifier.fillMaxWidth().padding(top = 8.dp).testTag(AggTags.CONFIG_BODY)) {
+            if (hasFilters) FilterRow(state)
+            for ((i, panel) in bottom) if (state.visible(panel)) PagePanel(state, i, panel, anchors, actions)
         }
     }
 }

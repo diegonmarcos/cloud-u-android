@@ -59,6 +59,7 @@ internal object AggregatorModel {
     const val FILTER_COLLAPSED = "__collapsed"
     const val ARCHIVED_PREFIX = "__archived/"
     const val FILTER_ARCHIVE_OPEN = "__archive_open"
+    const val FILTER_CONFIG_OPEN = "__config_open"
     const val ARCHIVE_LABEL = "Archive"
     const val ARCHIVE_RESTORE_LABEL = "Restore"
     const val MARK_READ_LABEL = "Mark read"
