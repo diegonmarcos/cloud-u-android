@@ -76,7 +76,7 @@ class CloudflareWarpTest {
         val peer = cfg.peers.single()
         assertEquals("bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=", peer.publicKey.toBase64())
         assertEquals("engage.cloudflareclient.com:2408", peer.endpoint.get().toString())
-        assertEquals(listOf("0.0.0.0/0", "::/0"), peer.allowedIps.map { it.toString() })
+        assertEquals(listOf("0.0.0.0/0", "0:0:0:0:0:0:0:0/0"), peer.allowedIps.map { it.toString() })   // the parser prints ::/0 expanded
         assertEquals(25, peer.persistentKeepalive.get())
     }
 

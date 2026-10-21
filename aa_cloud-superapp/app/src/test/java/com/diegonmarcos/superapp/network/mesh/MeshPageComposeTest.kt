@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onFirst
@@ -94,7 +95,7 @@ class MeshPageComposeTest : KitPageHarness() {
         val store = showStore()
         open(store, "peers")
         compose.onNodeWithTag(MeshTags.peer(0)).assertExists(); compose.onNodeWithTag(MeshTags.peer(1)).assertExists()
-        compose.onNodeWithTag(MeshTags.peer(0)).performClick()
+        compose.onNode(hasText("gcp-proxy") and hasAnyAncestor(hasTestTag(MeshTags.peer(0)))).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(MeshTags.control("peer_copy")).assertExists()
         compose.onNodeWithTag(MeshTags.control("peer_remove")).assertExists()
