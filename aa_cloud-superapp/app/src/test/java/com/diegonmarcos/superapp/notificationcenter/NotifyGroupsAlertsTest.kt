@@ -73,7 +73,7 @@ class NotifyGroupsAlertsTest {
     // ── the groups ──────────────────────────────────────────────────────
 
     @Test fun `exactly the declared groups, in the brief's order and membership`() {
-        assertEquals(listOf("live", "actions", "media", "alerts", "network"), NotifyGroups.declared.map { it.id })
+        assertEquals(listOf("network", "live", "alerts", "media", "actions"), NotifyGroups.declared.map { it.id })
         assertTrue("#894 no Store group or badge: Store notifications are Cloud Store's",
             NotifyGroups.declared.none { it.id == "store" } && BadgeServices.declared.none { it.id == "store_updates" })
         assertEquals(listOf("markets_prices", "health_activity", "weather_today"), group("live").members)
@@ -128,9 +128,9 @@ class NotifyGroupsAlertsTest {
 
     @Test fun `order is the owner's and survives a re-read`() {
         NotifyGroups.move(ctx, group("alerts"), -3)
-        assertEquals(listOf("alerts", "live", "actions", "media", "network"), NotifyGroups.ordered(ctx).map { it.id })
+        assertEquals(listOf("alerts", "network", "live", "media", "actions"), NotifyGroups.ordered(ctx).map { it.id })
         NotifyGroups.move(ctx, group("live"), +1)
-        assertEquals(listOf("alerts", "actions", "live", "media", "network"), NotifyGroups.ordered(ctx).map { it.id })
+        assertEquals(listOf("alerts", "network", "media", "live", "actions"), NotifyGroups.ordered(ctx).map { it.id })
     }
 
     // ── mock data is gone ───────────────────────────────────────────────

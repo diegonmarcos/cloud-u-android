@@ -954,6 +954,28 @@
     "callers": []
    }
   ],
+  "shizuku-adb-debug-tools": [
+   {
+    "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+    "level": "signature",
+    "source": "libs:shizuku-adb-debug-tools/src/main/AndroidManifest.xml",
+    "component": "com.diegonmarcos.superapp.adbdebug.AdbStatusProvider",
+    "id": "provider:<pkg>.adbstatus",
+    "kind": "provider",
+    "name": "AdbStatusProvider",
+    "authority": "<pkg>.adbstatus",
+    "callers": [
+     "aa_cloud-superapp",
+     "account",
+     "drive",
+     "lib-rootfs-nixdroid",
+     "lib-rootfs-termux",
+     "nix-on-droid",
+     "store",
+     "termux"
+    ]
+   }
+  ],
   "watchdog": [
    {
     "permission": null,
@@ -986,7 +1008,8 @@
     "appstore",
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "shizuku-adb-debug-tools"
    ],
    "endpoints": [
     {
@@ -1243,7 +1266,8 @@
     "appstore",
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "shizuku-adb-debug-tools"
    ],
    "endpoints": [
     {
@@ -1782,7 +1806,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "shizuku-adb-debug-tools"
    ],
    "endpoints": [
     {
@@ -2200,7 +2225,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "shizuku-adb-debug-tools"
    ],
    "endpoints": [
     {
@@ -2442,7 +2468,8 @@
     "appstore",
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "shizuku-adb-debug-tools"
    ],
    "endpoints": [
     {
@@ -2500,7 +2527,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "shizuku-adb-debug-tools"
    ],
    "endpoints": [
     {
@@ -3060,7 +3088,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "shizuku-adb-debug-tools"
    ],
    "endpoints": [
     {
@@ -3148,7 +3177,8 @@
    "libs": [
     "core",
     "devtools",
-    "fleetconfig-model"
+    "fleetconfig-model",
+    "shizuku-adb-debug-tools"
    ],
    "endpoints": [
     {
