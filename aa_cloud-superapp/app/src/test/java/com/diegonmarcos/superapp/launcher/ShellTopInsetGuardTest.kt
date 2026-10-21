@@ -197,9 +197,14 @@ class ShellTopInsetGuardTest(private val key: String) : KitPageHarness() {
                     val strips = stripNodes()
                     if (strips.isEmpty()) continue   // a strip-less page (hide_tabs) has nothing to measure
                     measured++
+                    // The reserved band ends at the row's bottom edge, or at the declared floor when the row sits higher than it
+                    // (no strip: 6 dp margin here, 26 dp in the real shell, where the two coincide). Tabs start AT that edge.
+                    val band = windowTop(shell) + compose.runOnUiThread { shell.findViewById<View>(R.id.fragment_container).let { it.top + it.paddingTop } }.toFloat()
                     val top = strips.minOf { it.boundsInWindow.top }
-                    if (kotlin.math.abs(top - limit) > tol)
-                        out += "$name @strip ${stripDp}dp: the tab strip starts at ${top}px, the top row ends at ${limit}px (a gap of ${top - limit}px; tabs must sit directly under the row)"
+                    if (kotlin.math.abs(top - band) > tol)
+                        out += "$name @strip ${stripDp}dp: the tab strip starts at ${top}px, the reserved band ends at ${band}px (a gap of ${top - band}px; tabs must sit directly under the row)"
+                    if (stripDp == SHOT_STRIP && kotlin.math.abs(top - limit) > tol)
+                        out += "$name @strip ${stripDp}dp: the tab strip starts at ${top}px, the top row ends at ${limit}px (tabs must sit directly under the row)"
                     val first = strips.minByOrNull { it.boundsInWindow.top }!!
                     val pane = compose.runOnUiThread { compose.activity.findViewById<View>(R.id.section_pane_0)?.let { windowTop(it) } }
                     if (pane != null && pane > 0) {
