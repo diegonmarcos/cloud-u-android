@@ -27,12 +27,12 @@ import com.diegonmarcos.superapp.R
  * apps kept OUTSIDE the tunnel (Interface.ExcludedApplications, which the engine's VpnService honours).
  */
 @Composable
-fun MeshRoutesPage(store: MeshStore, modifier: Modifier = Modifier) {
+fun MeshRoutesPage(store: MeshStore, modifier: Modifier = Modifier, embedded: Boolean = false) {
     val page = store.decl.page("routes")
     val peers = store.snapshot?.cfg?.peers.orEmpty()
     val table = remember(peers, store.decl.nat64Marker) { Routes.derive(peers, store.decl.nat64Marker) }
     Column(
-        modifier.fillMaxSize().testTag(MeshTags.page("routes")).verticalScroll(rememberScrollState())
+        modifier.pageBody(embedded).testTag(MeshTags.page("routes"))
             .padding(MeshDensity.dp(MeshDensity.S8)),
     ) {
         MHeader(stringResource(R.string.mesh_routes_summary))

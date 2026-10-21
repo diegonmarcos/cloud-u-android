@@ -85,6 +85,17 @@ interface MeshPort {
     fun setRelayKey(v: String): String
     /** Every rung probed on its own, in ladder order: Direct UDP, system DNS, pinned IP, DoH, TLS-443 relay. */
     fun testFallbacks(): List<ProbeLine>
+
+    // ── #1074 Cloudflare WARP / One (network/CloudflareWarp.kt; keys only in the encrypted CfKeyStore) ──
+    fun cloudflare(): CfView
+    /** Register this device with the WARP API when needed, then make the WARP config the tunnel. */
+    fun useWarp(): String
+    /** Remove the WARP registration and its keys, and give the engine's key slot back to the mesh. */
+    fun forgetWarp(): String
+    /** The team login page for the Custom Tab. */
+    fun oneLoginUrl(): String
+    /** Finish Cloudflare One enrolment with the Access token the team login returned. */
+    fun enrolOne(token: String): String
 }
 
 /** What the page needs from its host fragment: the Android surfaces a composable cannot open itself. */
@@ -98,7 +109,12 @@ interface MeshHost {
     fun importConf()
     fun exportConf()
     fun exportProfiles()
+    /** #1074 Open [url] in a Custom Tab (the Cloudflare One team login). */
+    fun openCustomTab(url: String)
 }
+
+/** #1074 What is registered with Cloudflare: [warp] a WARP device exists, [one] a Cloudflare One device exists, [active] the profile name that is the tunnel when it is a Cloudflare one. */
+data class CfView(val warp: Boolean = false, val one: Boolean = false, val active: String = "")
 
 /**
  * Which way the tunnel reaches its hubs. [path]: direct | pinned | doh | relay | none, "" before the first

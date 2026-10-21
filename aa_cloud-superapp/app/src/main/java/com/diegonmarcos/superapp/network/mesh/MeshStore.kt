@@ -28,7 +28,10 @@ class MeshStore(
 ) {
     // ── observable state ──
     var snapshot by mutableStateOf<MeshSnapshot?>(null)
-    var page by mutableStateOf(decl.startPage.id)
+    /** The open tab of the strip (#1074: Status / Profile / Logs). */
+    var tab by mutableStateOf(if (decl.tabs.isEmpty()) "" else decl.startTab.id)
+    /** #1074 Cloudflare WARP / One: what is registered and whether One is waiting on the Zero Trust apply. */
+    var cf by mutableStateOf(CfView())
     var notice by mutableStateOf("")
     var busy by mutableStateOf(false)
     /** The tunnel is up on a config older than the stored one. */
@@ -71,7 +74,7 @@ class MeshStore(
         val now = clock()
         val cfg = runCatching { port.config() }.getOrElse { fail("read config", it); return }
         var s = runCatching { port.sample(now) }.getOrElse { fail("read the engine", it); return }
-        val probe = s.up && tick % decl.latencyEveryTicks == 0 && (page == "status" || page == "peers")
+        val probe = s.up && tick % decl.latencyEveryTicks == 0 && tab == "status"
         if (probe) s = s.copy(latency = runCatching { port.probeLatency(cfg, decl.latencyTimeoutMs, now) }.getOrNull())
         tick++
         val (snap, events) = MeshReducer.reduce(prev, cfg, s, th)
@@ -93,6 +96,7 @@ class MeshStore(
             lockdown = port.lockdown()
             transport = port.transport()
             hasRelayKey = port.hasRelayKey()
+            cf = runCatching { port.cloudflare() }.getOrDefault(cf)
             if (dnsChoices.isEmpty()) dnsChoices = port.dnsChoices()
         }
     }
@@ -196,6 +200,19 @@ class MeshStore(
         },
         "clipboard.log" to { _, _ -> host.copy("mesh log", journal.text()); notice = "${journal.list().size} journal lines copied" },
         "log.clear" to { _, _ -> journal.clear(); journalRev++; notice = "journal cleared" },
+        "cf.warp.use" to { _, _ -> perform("cloudflare warp") { port.useWarp() } },
+        "cf.warp.forget" to { _, _ -> perform("cloudflare warp") { port.forgetWarp() } },
+        "cf.one.enrol" to { a, _ ->
+            val one = decl.cloudflare.one
+            when {
+                !one.enabled -> {
+                    notice = "cloudflare one: waiting on ${one.waitingOn} (Zero Trust apply)"
+                    journal.add(LogEvent(clock(), "action", notice)); journalRev++
+                }
+                a.isBlank() -> { host.openCustomTab(port.oneLoginUrl()); notice = "cloudflare one: team login opened (${one.loginHost})" }
+                else -> perform("cloudflare one") { port.enrolOne(a) }
+            }
+        },
         "saf.importConf" to { _, _ -> host.importConf() },
         "saf.exportConf" to { _, _ -> host.exportConf() },
         "saf.exportProfiles" to { _, _ -> host.exportProfiles() },

@@ -566,4 +566,26 @@
     <string name="mesh_opt_direct">Direct UDP only</string>
     <string name="mesh_opt_relay">TLS-443 relay always</string>
     <string name="mesh_relay_key_text">The relay server\'s key (WSTUNNEL_PATH_PREFIX, sops in cloud-u-containers). Kept on this phone only; never shown, copied or exported.</string>
+    <!-- #1074 Cloud Mesh: tabs, Cloudflare WARP / One -->
+    <string name="mesh_tab_status">Status</string>
+    <string name="mesh_tab_profile">Profile</string>
+    <string name="mesh_tab_logs">Logs</string>
+    <string name="mesh_row_cloudflare">Cloudflare</string>
+    <string name="mesh_k_cf_transport">Transport</string>
+    <string name="mesh_k_cf_warp">WARP device</string>
+    <string name="mesh_k_cf_one">Cloudflare One</string>
+    <string name="mesh_cf_t_mesh">Cloud Mesh (WireGuard)</string>
+    <string name="mesh_cf_t_warp">Cloudflare WARP</string>
+    <string name="mesh_cf_t_one">Cloudflare One</string>
+    <string name="mesh_cf_registered">registered</string>
+    <string name="mesh_cf_not_registered">not registered</string>
+    <string name="mesh_cf_one_waiting">waiting on Zero Trust apply (%1$s)</string>
+    <string name="mesh_cf_one_ready">ready: team login (%1$s)</string>
+    <string name="mesh_cf_one_enrolled">enrolled</string>
+    <string name="mesh_cf_one_why">Not available yet: the Zero Trust routes and device enrolment policy are not applied (%1$s). This lights up once they are.</string>
+    <string name="mesh_cf_header">Cloudflare</string>
+    <string name="mesh_cf_text">WARP: this phone registers itself with Cloudflare and runs the WireGuard config it gets on the same engine; its keys stay in the encrypted store. Cloudflare One: a Zero Trust tunnel into the mesh after the team login.</string>
+    <string name="mesh_ctl_cf_warp_register">Use WARP</string>
+    <string name="mesh_ctl_cf_warp_forget">Forget WARP device</string>
+    <string name="mesh_ctl_cf_one_enrol">Enrol in Cloudflare One</string>
 </resources>

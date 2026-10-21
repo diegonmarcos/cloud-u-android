@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -61,6 +63,7 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
 /** Test tags of the mesh page, for compose tests and the debug API. */
 object MeshTags {
     fun page(id: String) = "mesh:page:$id"
+    fun tab(id: String) = "mesh:tab:$id"
     fun control(id: String) = "mesh:ctl:$id"
     fun row(id: String) = "mesh:row:$id"
     fun peer(i: Int) = "mesh:peer:$i"
@@ -335,3 +338,11 @@ fun FieldLine(label: String, modifier: Modifier = Modifier, content: @Composable
         Box(Modifier.padding(top = MeshDensity.dp(MeshDensity.S2))) { content() }
     }
 }
+
+/**
+ * #1074 A section fills the screen and scrolls on its own; embedded in a tab it is one block of the
+ * tab's single scroll (a scroller inside a scroller has no height to measure).
+ */
+@Composable
+fun Modifier.pageBody(embedded: Boolean): Modifier =
+    if (embedded) this else this.fillMaxSize().verticalScroll(rememberScrollState())

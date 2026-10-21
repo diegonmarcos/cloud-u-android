@@ -50,6 +50,9 @@ object MeshDecl {
         fun control(id: String): Control? = controls.firstOrNull { it.id == id }
     }
 
+    /** #1074 A tab of the strip: [sections] are the ids of `pages` it draws, in this order. */
+    data class Tab(val id: String, val label: String, val icon: String, val sections: List<String>)
+
     data class Decl(
         val defaultPage: String,
         val pollMs: Long,
@@ -60,7 +63,20 @@ object MeshDecl {
         val handshakeStaleS: Long,
         val nat64Marker: String,
         val pages: List<Page>,
+        /** #1074 The strip: Status / Profile / Logs, each over declared sections. */
+        val tabs: List<Tab> = emptyList(),
+        val defaultTab: String = "",
+        /** #1074 Every control id the page had before the reorganisation; the guard that none silently disappears. */
+        val previousControls: List<String> = emptyList(),
+        val cloudflare: com.diegonmarcos.superapp.network.CloudflareWarp.Decl = com.diegonmarcos.superapp.network.CloudflareWarp.Decl.parse(null),
     ) {
+        fun tab(id: String?): Tab? = tabs.firstOrNull { it.id == id }
+        /** The tab the strip opens on: the declared default, else the first. */
+        val startTab: Tab get() = tab(defaultTab) ?: tabs.first()
+        /** The tab that draws section [pageId], or null when no tab does. */
+        fun tabOf(pageId: String): Tab? = tabs.firstOrNull { pageId in it.sections }
+        /** Every control reachable from some tab. */
+        val reachableControls: Set<String> get() = tabs.flatMap { t -> t.sections.flatMap { s -> page(s)?.controls.orEmpty().map { it.id } } }.toSet()
         fun page(id: String?): Page? = pages.firstOrNull { it.id == id }
         fun control(id: String): Control? = pages.firstNotNullOfOrNull { it.control(id) }
         /** The page the strip opens on: the declared default, else the first. */
@@ -83,6 +99,15 @@ object MeshDecl {
             handshakeFreshS = hs.optLong("fresh_s", 150L),
             handshakeStaleS = hs.optLong("stale_s", 300L),
             nat64Marker = o.optString("nat64_marker"),
+            tabs = o.optJSONArray("tabs").let { a ->
+                if (a == null) emptyList() else (0 until a.length()).map { i ->
+                    val x = a.getJSONObject(i)
+                    Tab(x.getString("id"), x.optString("label", x.getString("id")), x.optString("icon"), x.optJSONArray("sections").strings())
+                }
+            },
+            defaultTab = o.optString("default_tab"),
+            previousControls = o.optJSONArray("previous_controls").strings(),
+            cloudflare = com.diegonmarcos.superapp.network.CloudflareWarp.Decl.parse(o.optJSONObject("cloudflare")),
             pages = (0 until ps.length()).map { i ->
                 val p = ps.getJSONObject(i)
                 val cs = p.optJSONArray("controls") ?: JSONArray()

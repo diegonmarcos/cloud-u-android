@@ -17,6 +17,9 @@
 #   T7  every existing route into the page still resolves to it; the hosting fragment is Compose
 #   T8  the private key never reaches an export, a copy, a QR or a prefilled box
 #   T9  planted mutations of each of the above are caught
+#   T10 (#1074) three tabs - Status / Profile / Logs - declared in build.json, every section in exactly one,
+#       the profile table before the controls; the guard (previous_controls): no control the page had
+#       before the reorganisation is undeclared or unreachable from a tab
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 python3 - "$ROOT" <<'PY'
@@ -170,6 +173,32 @@ def check(root):
         if ids != ["config", "status"] or not wg["pages"][1].get("hidden"): P.append("T7 section wg pages changed: %r" % ids)
     except Exception as e: P.append("T7 cannot read sections: %s" % e)
     P += t8(root)
+
+    # ── T10 ──
+    tabs = decl.get("tabs", [])
+    ids = [p["id"] for p in pages]
+    if [x["id"] for x in tabs] != ["status", "profile", "logs"]: P.append("T10 the tabs are not Status, Profile, Logs: %r" % [x["id"] for x in tabs])
+    if decl.get("default_tab") not in [x["id"] for x in tabs]: P.append("T10 default_tab is not a declared tab")
+    placed = [s for x in tabs for s in x.get("sections", [])]
+    for s in ids:
+        if placed.count(s) != 1: P.append("T10 section %s sits in %d tabs, not exactly one" % (s, placed.count(s)))
+    for s in placed:
+        if s not in ids: P.append("T10 a tab names undeclared section %s" % s)
+    prof = next((x.get("sections", []) for x in tabs if x["id"] == "profile"), [])
+    if "profiles" not in prof or "controls" not in prof or prof.index("profiles") > prof.index("controls"): P.append("T10 the Profile tab does not put the profile table before the controls")
+    for x in tabs:
+        for loc, have in (("values", en), ("values-es", es)):
+            if "mesh_tab_" + x["id"] not in have: P.append("T10 tab %s has no mesh_tab_%s in %s" % (x["id"], x["id"], loc))
+    reach = {c["id"] for p in pages if p["id"] in placed for c in p.get("controls", [])}
+    prev = decl.get("previous_controls", [])
+    if len(prev) < 37: P.append("T10 the guard lists %d controls, fewer than the 37 the page shipped with" % len(prev))
+    for c in prev:
+        if c not in {x["id"] for x in controls}: P.append("T10 control %s was removed (it is in previous_controls)" % c)
+        elif c not in reach: P.append("T10 control %s is declared but no tab reaches it" % c)
+    for c in controls:
+        if c["id"] not in prev and not c["id"].startswith("cf_"): P.append("T10 control %s is new and not Cloudflare: list it in previous_controls only if it is old" % c["id"])
+    cf = decl.get("cloudflare", {})
+    if "waiting_on" not in cf.get("one", {}) or "team" not in cf.get("one", {}): P.append("T10 cloudflare.one lacks team / waiting_on")
     return P
 
 def t8(root):
@@ -202,9 +231,10 @@ for tag, label in [("T1", "declaration <-> code, both directions, and the string
                    ("T4", "silence guard: an unsupported control is disabled WITH its reason; no empty click"),
                    ("T5", "no View navigation; the strip is PageTabs with no colour or size passed"),
                    ("T6", "polling is lifecycle-bound (RESUMED only), never in the background"),
-                   ("T7", "every existing route still opens the page; the fragment is Compose")]:
+                   ("T7", "every existing route still opens the page; the fragment is Compose"),
+                   ("T10", "three tabs over the sections; no control the page had before is lost")]:
     report(label, [p for p in probs if p.startswith(tag)])
-other = [p for p in probs if not re.match(r"T[1-7] ", p)]
+other = [p for p in probs if not re.match(r"T(?:[1-7]|10) ", p)]
 report("no stray findings", other)
 
 report("the private key never reaches an export, a copy, a QR or a prefilled box", [p for p in probs if p.startswith("T8")])
@@ -245,17 +275,17 @@ def bj(edit):
         json.dump(j, open(p, "w", encoding="utf-8"))
     return f
 M = MESH
-mutate("M1 a dp literal in a page", "T2", sub(M + "/MeshStatusPage.kt", "modifier.fillMaxSize()", "modifier.fillMaxSize().padding(12.dp)"))
+mutate("M1 a dp literal in a page", "T2", sub(M + "/MeshStatusPage.kt", "modifier.pageBody(embedded)", "modifier.pageBody(embedded).padding(12.dp)"))
 mutate("M2 an sp literal in a widget", "T2", sub(M + "/MeshWidgets.kt", "fontSize = MeshDensity.sp(MeshDensity.T_META),", "fontSize = 13.sp,"))
 mutate("M3 a hex colour in a page", "T2", sub(M + "/MeshRoutesPage.kt", "MText(r.cidr,", "MText(androidx.compose.ui.graphics.Color(0xFF00FF00).toString(),"))
-mutate("M4 a declared page loses its branch", "T1", sub(M + "/MeshScreen.kt", '"routes" -> MeshRoutesPage(store)', '"routes" -> Unit'))
+mutate("M4 a declared page loses its branch", "T1", sub(M + "/MeshScreen.kt", '"routes" -> MeshRoutesPage(store, embedded = true)', '"routes" -> Unit'))
 mutate("M5 a control names an engine call nobody dispatches", "T1", bj(lambda m: next(c for p in m["pages"] for c in p["controls"] if c["id"] == "mtu").update(engine="prefs.nope")))
 mutate("M6 an unsupported control loses its reason", "T1", bj(lambda m: next(c for p in m["pages"] for c in p["controls"] if c["id"] == "kill_switch").pop("unsupported")))
 mutate("M7 a declared page has no Spanish label", "T1", sub("app/src/main/res/values-es/strings.xml", 'name="mesh_page_routes"', 'name="mesh_page_routes_x"'))
 mutate("M8 a status row has no drawing", "T1", bj(lambda m: next(p for p in m["pages"] if p["id"] == "status")["rows"].append("jitter")))
 mutate("M9 a dispatch entry no control declares", "T1", sub(M + "/MeshStore.kt", '"log.clear" to', '"log.explode" to'))
 mutate("M10 a TabLayout sneaks in", "T5", sub(M + "/MeshScreen.kt", "Column(modifier.fillMaxSize()", "com.google.android.material.tabs.TabLayout(null); Column(modifier.fillMaxSize()"))
-mutate("M11 the strip is handed a colour", "T5", sub(M + "/MeshScreen.kt", "PageTabs(pages, store.page, onSelect = { store.page = it.id })", "PageTabs(pages, store.page, onSelect = { store.page = it.id }, modifier = Modifier.background(Color.Red))"))
+mutate("M11 the strip is handed a colour", "T5", sub(M + "/MeshScreen.kt", "PageTabs(tabs, store.tab, onSelect = { store.tab = it.id })", "PageTabs(tabs, store.tab, onSelect = { store.tab = it.id }, modifier = Modifier.background(Color.Red))"))
 mutate("M12 a second tunnel path (own GoBackend)", "T3", sub(M + "/AndroidMeshPort.kt", "private val backend get() = WgState.backend(ctx)", "private val backend get() = com.wireguard.android.backend.GoBackend(ctx, null)"))
 mutate("M13 connect brings the tunnel up without the fleet DNS", "T3", sub(M + "/AndroidMeshPort.kt", "val cfg = prefs.toTunnelConfig()\n        val r = backend", "val cfg = prefs.toWgConfig()\n        val r = backend"))
 mutate("M14 the ticker polls in the background", "T6", sub(M + "/MeshScreen.kt", "LaunchedEffect(resumed)", "LaunchedEffect(Unit)"))
@@ -264,6 +294,10 @@ mutate("M16 an unsupported control is drawn without its reason", "T4", sub(M + "
 mutate("M17 an empty click handler", "T4", sub(M + "/MeshStatusPage.kt", "{ store.run(\"state.reconnect\") }", "{ }"))
 mutate("M18 the hidden status route stops rendering the Status tab", "T7", sub("app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt", 'WireGuardFragment.newInstance("status")', "C3MeshFragment.newInstance()"))
 mutate("M19 the profile export reads the key", "T8", sub("app/src/main/java/com/diegonmarcos/superapp/network/WireGuardFragment.kt", "val written = mutableListOf<String>()", "val written = mutableListOf<String>(); prefs.interfacePrivateKey"))
+mutate("M21 a control is dropped from the declaration", "T10", bj(lambda m: next(p for p in m["pages"] if p["id"] == "controls")["controls"].pop(0)))
+mutate("M22 a section is left without a tab", "T10", bj(lambda m: next(x for x in m["tabs"] if x["id"] == "logs").update(sections=[])))
+mutate("M23 the controls move above the profile table", "T10", bj(lambda m: next(x for x in m["tabs"] if x["id"] == "profile").update(sections=["controls", "profiles"])))
+mutate("M24 a control is declared but no tab reaches it", "T10", bj(lambda m: next(x for x in m["tabs"] if x["id"] == "status").update(sections=["status", "routes"])))
 mutate("M20 a secret field is prefilled", "T8", sub(M + "/MeshWidgets.kt", 'if (secret) "" else value', "value", -1))
 
 print("\n== RESULT: %d passed, %d failed ==" % (passes, fails))

@@ -196,6 +196,15 @@ profile must be replaced with one written from scratch (the keys are device fact
 | 10 | Unresolved licences (`NOASSERTION`): `com.bitwarden:sdk-android`, `org.fossify:commons`, `org.fossify:IndicatorFastScroll`, `net.zetetic:sqlcipher-android`, `com.gemalto.jp2:jp2-android`, `com.facebook.react:react-native`, a few npm packages | `inventory.json` | look each up once and pin it in `curated.json` (Fossify Commons is GPL-3.0; the Bitwarden SDK has its own licence terms; SQLCipher Community is BSD-style) |
 | 11 | AFFiNE Enterprise directories | already guarded by `licence-guard.yml` | none |
 
+### Reference-only upstreams (no code taken)
+
+- **wgcf** (github.com/ViRb3/wgcf, MIT) - #1074: `aa_cloud-superapp/.../network/CloudflareWarp.kt` talks to the
+  Cloudflare WARP registration API using the request/response shapes wgcf documents. No wgcf source is vendored,
+  copied or translated; the code was written for this repository, so it is the owner's own code and nothing is
+  added to `upstreams.json` or `inventory.json`. If wgcf code is ever vendored, add the directory to
+  `licenses/upstreams.json` with its MIT licence and keep its copyright notice. The WARP service itself is
+  Cloudflare's, under its own terms of service.
+
 ## 6. Keeping it true
 
 - New dependency / vendored directory / binary / top-level directory → CI fails. Add the

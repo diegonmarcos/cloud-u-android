@@ -5,6 +5,8 @@ import android.content.Intent
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.firewall.FirewallController
 import com.diegonmarcos.superapp.network.AccountMesh
+import com.diegonmarcos.superapp.network.CfKeyStore
+import com.diegonmarcos.superapp.network.CloudflareWarp
 import com.diegonmarcos.superapp.network.FleetDns
 import com.diegonmarcos.superapp.network.MeshTransport
 import com.diegonmarcos.superapp.network.WgState
@@ -306,12 +308,14 @@ class AndroidMeshPort(context: Context) : MeshPort {
     override fun activeProfile() = prefs.activeProfile
 
     override fun activateProfile(name: String): String {
+        runCatching { prefs.leaveCloudflare(cfKeys) }
         val cfg = prefs.activateProfile(name)
         return reapplyIfUp("$name is the tunnel: ${cfg.peers.size} peers")
     }
 
     override fun installDeclared(id: String): String {
         val prof = WireGuardProfiles.byId(id) ?: error("no declared profile $id")
+        runCatching { prefs.leaveCloudflare(cfKeys) }
         val key = prefs.interfacePrivateKey
         check(key.isNotBlank()) { "no private key on this device - generate or paste one in Controls first" }
         val text = WireGuardProfiles.render(prof).replace(Regex("(?m)^PrivateKey = *$"), "PrivateKey = ${WireGuardPrefs.PROVIDED_BY_DEVICE}")
@@ -352,6 +356,35 @@ class AndroidMeshPort(context: Context) : MeshPort {
         prefs.saveProfiles(prefs.profiles() + (name to conf))
         prefs.activeProfile = name
         return reapplyIfUp(r)
+    }
+
+    // ── #1074 Cloudflare WARP / One ──
+
+    private val cfDecl get() = MeshDecl.baked.cloudflare
+    private val cfKeys by lazy { CfKeyStore(ctx) }
+    private val cfClient by lazy { CloudflareWarp.Client(cfDecl, CloudflareWarp.UrlHttp, cfKeys) }
+
+    override fun cloudflare() = CfView(
+        warp = cfKeys.warpRegistration() != null, one = cfKeys.oneRegistration() != null,
+        active = prefs.activeProfile.takeIf { it == cfDecl.warp.profileName || it == cfDecl.one.profileName }.orEmpty(),
+    )
+
+    override fun useWarp(): String {
+        val (priv, reg) = cfClient.warp()
+        val name = cfDecl.warp.profileName
+        val cfg = prefs.applyCloudflare(name, CloudflareWarp.warpConf(cfDecl, priv, reg), cfKeys)
+        return reapplyIfUp("$name is the tunnel: WARP device ${reg.id.take(8)}, ${cfg.peers.size} peer")
+    }
+
+    override fun forgetWarp(): String = cfClient.forgetWarp() + "; pick a mesh profile to leave WARP"
+
+    override fun oneLoginUrl() = CloudflareWarp.oneLoginUrl(cfDecl)
+
+    override fun enrolOne(token: String): String {
+        val (priv, reg) = cfClient.enrolOne(token)
+        val name = cfDecl.one.profileName
+        val cfg = prefs.applyCloudflare(name, CloudflareWarp.oneConf(cfDecl, priv, reg), cfKeys)
+        return reapplyIfUp("$name is the tunnel: team ${cfDecl.one.team}, ${cfg.peers.size} peer")
     }
 
     private companion object {

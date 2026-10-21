@@ -71,6 +71,12 @@ class FakePort(
         rec("test")
         return listOf(ProbeLine("udp", true, "handshake 4 s ago"), ProbeLine("dns", false, "answered 10.9.9.9"), ProbeLine("relay", null, "engine too old"))
     }
+    var cfWarp = false; var cfOne = false; var cfActive = ""
+    override fun cloudflare() = CfView(cfWarp, cfOne, cfActive)
+    override fun useWarp() = rec("warp.use").also { cfWarp = true; cfActive = "wg-cloudflare-warp" }
+    override fun forgetWarp() = rec("warp.forget").also { cfWarp = false }
+    override fun oneLoginUrl() = "https://diegonmarcos.cloudflareaccess.com/warp"
+    override fun enrolOne(token: String) = rec("one.enrol=$token").also { cfOne = true }
 }
 
 class FakeHost : MeshHost {
@@ -85,4 +91,5 @@ class FakeHost : MeshHost {
     override fun importConf() { events += "importConf" }
     override fun exportConf() { events += "exportConf" }
     override fun exportProfiles() { events += "exportProfiles" }
+    override fun openCustomTab(url: String) { events += "tab:$url" }
 }

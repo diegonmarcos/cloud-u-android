@@ -19,11 +19,11 @@ import com.diegonmarcos.superapp.R
  * [StatusRow] draws one by id, and an id it has no drawing for says so on the page rather than vanishing.
  */
 @Composable
-fun MeshStatusPage(store: MeshStore, modifier: Modifier = Modifier) {
+fun MeshStatusPage(store: MeshStore, modifier: Modifier = Modifier, embedded: Boolean = false) {
     val s = store.snapshot
     val rows = store.decl.page("status")?.rows.orEmpty()
     Column(
-        modifier.fillMaxSize().testTag(MeshTags.page("status")).verticalScroll(rememberScrollState())
+        modifier.pageBody(embedded).testTag(MeshTags.page("status"))
             .padding(MeshDensity.dp(MeshDensity.S8)),
     ) {
         if (s == null) MText(stringResource(R.string.mesh_reading), muted = true)
@@ -134,6 +134,18 @@ private fun StatusRow(id: String, store: MeshStore, s: MeshSnapshot) {
             KvRow(stringResource(R.string.mesh_k_profile), cfg.activeProfile.substringAfterLast('/').ifBlank { stringResource(R.string.mesh_profile_none) }, tag = tag)
             KvRow(stringResource(R.string.mesh_k_provider), store.provider.ifBlank { "-" })
         }
+        "cloudflare" -> {
+            MHeader(stringResource(R.string.mesh_row_cloudflare))
+            val active = store.cf.active
+            val one = store.decl.cloudflare.one
+            KvRow(stringResource(R.string.mesh_k_cf_transport), stringResource(when (active) {
+                one.profileName -> R.string.mesh_cf_t_one
+                store.decl.cloudflare.warp.profileName -> R.string.mesh_cf_t_warp
+                else -> R.string.mesh_cf_t_mesh
+            }), tag = tag)
+            KvRow(stringResource(R.string.mesh_k_cf_warp), stringResource(if (store.cf.warp) R.string.mesh_cf_registered else R.string.mesh_cf_not_registered))
+            KvRow(stringResource(R.string.mesh_k_cf_one), oneStateText(store))
+        }
         else -> MText(stringResource(R.string.mesh_row_unknown, id), Modifier.testTag(tag), size = MeshDensity.T_META, muted = true)
     }
 }
@@ -164,3 +176,10 @@ internal fun healthWord(h: Health): String = stringResource(
         Health.UNKNOWN -> R.string.mesh_unknown
     },
 )
+
+@Composable
+internal fun oneStateText(store: MeshStore): String = when (com.diegonmarcos.superapp.network.CloudflareWarp.oneState(store.decl.cloudflare, store.cf.one)) {
+    com.diegonmarcos.superapp.network.CloudflareWarp.OneState.WAITING -> stringResource(R.string.mesh_cf_one_waiting, store.decl.cloudflare.one.waitingOn)
+    com.diegonmarcos.superapp.network.CloudflareWarp.OneState.READY -> stringResource(R.string.mesh_cf_one_ready, store.decl.cloudflare.one.team)
+    com.diegonmarcos.superapp.network.CloudflareWarp.OneState.ENROLLED -> stringResource(R.string.mesh_cf_one_enrolled)
+}

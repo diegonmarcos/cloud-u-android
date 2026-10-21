@@ -32,12 +32,12 @@ import com.diegonmarcos.superapp.launcher.Sections
  * block under the list - the apps-mesh page's visuals, drawn here without merging the two pages.
  */
 @Composable
-fun MeshPeersPage(store: MeshStore, modifier: Modifier = Modifier) {
+fun MeshPeersPage(store: MeshStore, modifier: Modifier = Modifier, embedded: Boolean = false) {
     val s = store.snapshot
     val page = store.decl.page("peers")
     var open by remember { mutableStateOf(-1) }
     Column(
-        modifier.fillMaxSize().testTag(MeshTags.page("peers")).verticalScroll(rememberScrollState())
+        modifier.pageBody(embedded).testTag(MeshTags.page("peers"))
             .padding(MeshDensity.dp(MeshDensity.S8)),
     ) {
         page?.control("peer_sort")?.let { c ->

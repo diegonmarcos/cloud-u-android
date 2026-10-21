@@ -22,6 +22,45 @@ class MeshDeclTest {
         assertEquals(d.defaultPage, d.startPage.id)
     }
 
+    @Test fun `three tabs - Status, Profile, Logs - cover every section exactly once`() {
+        assertEquals(listOf("status", "profile", "logs"), d.tabs.map { it.id })
+        assertEquals("status", d.startTab.id)
+        assertEquals(listOf("status", "routes", "peers"), d.tab("status")!!.sections)
+        assertEquals("the profile table comes before every control", listOf("profiles", "controls"), d.tab("profile")!!.sections)
+        assertEquals(listOf("log"), d.tab("logs")!!.sections)
+        val placed = d.tabs.flatMap { it.sections }
+        assertEquals("a section sits in one tab only", placed.size, placed.toSet().size)
+        assertEquals("no section is left without a tab", d.pages.map { it.id }.toSet(), placed.toSet())
+        for (id in placed) assertTrue("tab names undeclared section $id", d.page(id) != null)
+    }
+
+    @Test fun `the guard - every control the page had before is still declared and reachable from a tab`() {
+        assertTrue("the guard list is empty", d.previousControls.size >= 37)
+        val declared = d.pages.flatMap { it.controls }.map { it.id }.toSet()
+        assertEquals("previous controls that are no longer declared", emptyList<String>(), d.previousControls.filter { it !in declared })
+        assertEquals("previous controls no tab reaches", emptyList<String>(), d.previousControls.filter { it !in d.reachableControls })
+        // every former Controls-page control sits in the Profile tab, below the profile table
+        for (c in d.page("controls")!!.controls) assertTrue("${c.id} is not on the Profile tab", c.id in d.tab("profile")!!.sections.flatMap { s -> d.page(s)!!.controls.map { it.id } })
+    }
+
+    @Test fun `the guard names the exact controls the page shipped with`() {
+        assertEquals(
+            listOf("peer_sort", "topology", "peer_add", "peer_remove", "peer_copy"),
+            d.previousControls.take(5),
+        )
+        for (id in listOf("connect", "reconnect", "auto_boot", "auto_wifi", "auto_mobile", "kill_switch", "vpn_settings", "dns_preset", "mtu", "keepalive",
+            "tunnel_name", "address", "listen_port", "private_key", "generate_key", "transport_mode", "relay_key", "test_fallbacks", "log_copy", "log_clear", "excluded_apps", "route_filter"))
+            assertTrue("$id missing from the guard", id in d.previousControls)
+    }
+
+    @Test fun `cloudflare is declared - warp ready, one waiting on the zero trust apply`() {
+        val cf = d.cloudflare
+        assertEquals("engage.cloudflareclient.com:2408", cf.warp.endpoint)
+        assertEquals("diegonmarcos", cf.one.team); assertEquals("diegonmarcos.cloudflareaccess.com", cf.one.loginHost)
+        assertTrue("One stays off until #994 is applied", !cf.one.enabled); assertEquals("#994", cf.one.waitingOn)
+        for (id in listOf("cf_warp_register", "cf_warp_forget", "cf_one_enrol")) assertTrue(id, d.control(id) != null)
+    }
+
     @Test fun `a control acts through a real engine call or says why it cannot`() {
         for (c in d.pages.flatMap { it.controls }) {
             assertTrue("${c.id} declares neither an engine call nor an unsupported reason", c.engine.isNotBlank() || c.unsupported.isNotBlank())

@@ -154,13 +154,39 @@ class MeshStoreTest {
     }
 
     @Test fun `latency is probed on the Status tab every Nth poll and carried between`() {
-        val s = store(FakePort(up = true)); s.page = "status"
+        val s = store(FakePort(up = true)); s.tab = "status"
         s.poll()
         assertEquals(12, s.snapshot!!.hubLatencyMs); assertEquals(20, s.snapshot!!.peers[0].latencyMs)
         s.poll()
         assertEquals("the last reading is carried on a thinned tick", 12, s.snapshot!!.hubLatencyMs)
-        val off = store(FakePort(up = true)); off.page = "log"; off.poll()
+        val off = store(FakePort(up = true)); off.tab = "logs"; off.poll()
         assertNull("no probing from a tab that does not show latency", off.snapshot!!.hubLatencyMs)
+    }
+
+    @Test fun `cloudflare warp registers through the port and shows as the active transport`() {
+        val port = FakePort(); val s = store(port); s.poll()
+        assertEquals(CfView(), s.cf)
+        s.run("cf.warp.use")
+        assertTrue(port.calls.contains("warp.use")); assertTrue(s.cf.warp); assertEquals("wg-cloudflare-warp", s.cf.active)
+        s.run("cf.warp.forget")
+        assertTrue(port.calls.contains("warp.forget")); assertTrue(!s.cf.warp)
+    }
+
+    @Test fun `cloudflare one says it waits on the zero trust apply instead of failing`() {
+        val port = FakePort(); val host = FakeHost(); val s = MeshStore(port, MeshDecl.baked, host, exec = { it.run() })
+        assertTrue("the shipped declaration keeps One off until #994 is applied", !MeshDecl.baked.cloudflare.one.enabled)
+        s.run("cf.one.enrol")
+        assertTrue(s.notice, s.notice.contains("waiting on #994"))
+        assertTrue("no login opens and nothing is called while waiting", host.events.none { it.startsWith("tab:") } && port.calls.isEmpty())
+    }
+
+    @Test fun `cloudflare one opens the team login once enabled, and enrols with the token`() {
+        val on = MeshDecl.baked.copy(cloudflare = MeshDecl.baked.cloudflare.copy(one = MeshDecl.baked.cloudflare.one.copy(enabled = true)))
+        val port = FakePort(); val host = FakeHost(); val s = MeshStore(port, on, host, exec = { it.run() })
+        s.run("cf.one.enrol")
+        assertEquals(listOf("tab:https://diegonmarcos.cloudflareaccess.com/warp"), host.events)
+        s.run("cf.one.enrol", "TOKEN")
+        assertTrue(port.calls.contains("one.enrol=TOKEN")); assertTrue(s.cf.one)
     }
 
     @Test fun `a pending apply is surfaced`() {

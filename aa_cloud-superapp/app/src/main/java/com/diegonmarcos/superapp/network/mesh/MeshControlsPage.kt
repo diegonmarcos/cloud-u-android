@@ -21,11 +21,11 @@ import com.diegonmarcos.superapp.R
  * honour but cannot right now (engine absent, no key) is disabled with that reason. None is silent.
  */
 @Composable
-fun MeshControlsPage(store: MeshStore, modifier: Modifier = Modifier) {
+fun MeshControlsPage(store: MeshStore, modifier: Modifier = Modifier, embedded: Boolean = false) {
     val page = store.decl.page("controls")
     val seeds = remember0 { MeshDecl.seeds() }
     Column(
-        modifier.fillMaxSize().testTag(MeshTags.page("controls")).verticalScroll(rememberScrollState())
+        modifier.pageBody(embedded).testTag(MeshTags.page("controls"))
             .padding(MeshDensity.dp(MeshDensity.S8)),
     ) {
         var group = ""

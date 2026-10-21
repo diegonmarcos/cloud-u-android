@@ -24,7 +24,7 @@ import java.io.InputStreamReader
 
 /**
  * Configs ▸ Cloud Mesh (#877) - the tunnel's one page, in Compose: a tab strip (libs:bottomnav's PageTabs)
- * over Status · Peers · Profiles · Routes · Controls · Log, declared in `build.json::ui.mesh_page` and
+ * over Status · Profile · Logs (#1074; the sections Peers, Routes, Profiles, Controls, Log live inside them), declared in `build.json::ui.mesh_page` and
  * drawn by network/mesh/. It replaces the View form that lived here; the routes to it did not move:
  * `page:config/wg`, `page:wg/config` and `section:wg` open the page on its declared first tab, and the
  * hidden `wg/status` page opens the SAME fragment on the Status tab ([newInstance] `page`).
@@ -40,7 +40,7 @@ class WireGuardFragment : KitComposeFragment() {
 
     private val store: MeshStore by lazy {
         MeshStore(AndroidMeshPort(requireContext()), MeshDecl.baked, host).also { s ->
-            arguments?.getString(ARG_PAGE)?.takeIf { s.decl.page(it) != null }?.let { s.page = it }
+            arguments?.getString(ARG_PAGE)?.let { a -> (s.decl.tab(a) ?: s.decl.tabOf(a))?.let { s.tab = it.id } }
         }
     }
 
@@ -100,6 +100,12 @@ class WireGuardFragment : KitComposeFragment() {
 
         override fun openVpnSettings() = startActivity(Intent(Settings.ACTION_VPN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         override fun openAccount() { (activity as? ShellActivity)?.nav?.openSectionPage("config", "profile") }
+        /** A Custom Tab by its intent contract (the extra below), without the androidx.browser dependency. */
+        override fun openCustomTab(url: String) {
+            val i = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            i.putExtras(android.os.Bundle().apply { putBinder("android.support.customtabs.extra.SESSION", null) })
+            startActivity(i)
+        }
         override fun importConf() = importLauncher.launch("*/*")
         override fun exportConf() = exportLauncher.launch("${prefs.tunnelName.ifBlank { "wg" }}.conf")
         override fun exportProfiles() {

@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.network.mesh
 
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -39,25 +40,40 @@ class MeshPageComposeTest : KitPageHarness() {
     }
 
     private fun open(store: MeshStore, id: String) {
-        compose.runOnUiThread { store.page = id }
+        compose.runOnUiThread { store.tab = decl.tabOf(id)?.id ?: id }
         compose.waitForIdle()
     }
 
-    @Test fun `every declared page composes under the strip`() {
+    @Test fun `the strip has the three tabs and each draws its declared sections`() {
         val store = showStore()
-        for (p in decl.pages) {
-            compose.onNodeWithTag(PageTabsTags.tab(p.id)).assertExists()
-            open(store, p.id)
-            compose.onNodeWithTag(MeshTags.page(p.id)).assertExists()
+        assertEquals(listOf("status", "profile", "logs"), decl.tabs.map { it.id })
+        for (t in decl.tabs) {
+            compose.onNodeWithTag(PageTabsTags.tab(t.id)).assertExists()
+            compose.runOnUiThread { store.tab = t.id }
+            compose.waitForIdle()
+            compose.onNodeWithTag(MeshTags.tab(t.id)).assertExists()
+            for (s in t.sections) compose.onNodeWithTag(MeshTags.page(s)).assertExists()
         }
     }
 
-    @Test fun `tapping a tab moves the page`() {
+    @Test fun `tapping a tab moves the tab`() {
         val store = showStore()
-        compose.onNodeWithTag(PageTabsTags.tab("log")).performClick()
+        compose.onNodeWithTag(PageTabsTags.tab("logs")).performClick()
         compose.waitForIdle()
-        assertEquals("log", store.page)
+        assertEquals("logs", store.tab)
         compose.onNodeWithTag(MeshTags.page("log")).assertExists()
+    }
+
+    @Test fun `profile draws the profile table first, then the controls, with the Cloudflare cards`() {
+        val store = showStore()
+        compose.runOnUiThread { store.tab = "profile" }
+        compose.waitForIdle()
+        compose.onNodeWithTag("mesh:cf:warp").assertExists()
+        compose.onNodeWithTag("mesh:cf:one").assertExists()
+        compose.onNodeWithTag("mesh:cf:one:state").assertTextContains("waiting on Zero Trust apply", substring = true)
+        compose.onNodeWithTag(MeshTags.control("cf_one_enrol")).assertIsNotEnabled()
+        compose.onNodeWithTag(MeshTags.control("cf_warp_register")).assertExists()
+        for (c in decl.page("controls")!!.controls) compose.onNodeWithTag(MeshTags.control(c.id)).assertExists()
     }
 
     @Test fun `status draws every declared row from the engine's reading`() {
@@ -78,7 +94,7 @@ class MeshPageComposeTest : KitPageHarness() {
         val store = showStore()
         open(store, "peers")
         compose.onNodeWithTag(MeshTags.peer(0)).assertExists(); compose.onNodeWithTag(MeshTags.peer(1)).assertExists()
-        compose.onNodeWithText("gcp-proxy").performClick()
+        compose.onNodeWithTag(MeshTags.peer(0)).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(MeshTags.control("peer_copy")).assertExists()
         compose.onNodeWithTag(MeshTags.control("peer_remove")).assertExists()
@@ -133,7 +149,7 @@ class MeshPageComposeTest : KitPageHarness() {
 
     @Test fun `the hosting fragment opens on the declared first page, or the one it is told to`() {
         val page = show(WireGuardFragment.newInstance())
-        compose.onNodeWithTag(PageTabsTags.tab(decl.startPage.id)).assertExists()
+        compose.onNodeWithTag(PageTabsTags.tab(decl.startTab.id)).assertExists()
         compose.onNodeWithTag(MeshTags.page(decl.startPage.id)).assertExists()
         page.hashCode()
     }
@@ -141,6 +157,12 @@ class MeshPageComposeTest : KitPageHarness() {
     @Test fun `the hidden status route and a named page open on their tab`() {
         show(WireGuardFragment.newInstance("peers"))
         compose.onNodeWithTag(MeshTags.page("peers")).assertExists()
+    }
+
+    @Test fun `a route into a former Controls page opens the Profile tab`() {
+        show(WireGuardFragment.newInstance("controls"))
+        compose.onNodeWithTag(MeshTags.tab("profile")).assertExists()
+        compose.onNodeWithTag(MeshTags.page("controls")).assertExists()
     }
 
     private fun androidx.compose.ui.test.junit4.ComposeContentTestRule.onAllNodesWithTextCount(t: String) =

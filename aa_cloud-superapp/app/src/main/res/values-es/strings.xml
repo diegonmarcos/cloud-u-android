@@ -480,4 +480,26 @@
     <string name="mesh_opt_direct">Solo UDP directo</string>
     <string name="mesh_opt_relay">Siempre el relay TLS-443</string>
     <string name="mesh_relay_key_text">La clave del servidor relay (WSTUNNEL_PATH_PREFIX, sops en cloud-u-containers). Solo se guarda en este teléfono; nunca se muestra, copia ni exporta.</string>
+    <!-- #1074 Cloud Mesh: pestanas, Cloudflare WARP / One -->
+    <string name="mesh_tab_status">Estado</string>
+    <string name="mesh_tab_profile">Perfil</string>
+    <string name="mesh_tab_logs">Registros</string>
+    <string name="mesh_row_cloudflare">Cloudflare</string>
+    <string name="mesh_k_cf_transport">Transporte</string>
+    <string name="mesh_k_cf_warp">Dispositivo WARP</string>
+    <string name="mesh_k_cf_one">Cloudflare One</string>
+    <string name="mesh_cf_t_mesh">Cloud Mesh (WireGuard)</string>
+    <string name="mesh_cf_t_warp">Cloudflare WARP</string>
+    <string name="mesh_cf_t_one">Cloudflare One</string>
+    <string name="mesh_cf_registered">registrado</string>
+    <string name="mesh_cf_not_registered">sin registrar</string>
+    <string name="mesh_cf_one_waiting">a la espera de aplicar Zero Trust (%1$s)</string>
+    <string name="mesh_cf_one_ready">listo: inicio de sesion del equipo (%1$s)</string>
+    <string name="mesh_cf_one_enrolled">inscrito</string>
+    <string name="mesh_cf_one_why">Aun no disponible: las rutas de Zero Trust y la politica de inscripcion de dispositivos no estan aplicadas (%1$s). Se activa cuando lo esten.</string>
+    <string name="mesh_cf_header">Cloudflare</string>
+    <string name="mesh_cf_text">WARP: este telefono se registra en Cloudflare y ejecuta la config WireGuard recibida en el mismo motor; sus claves quedan en el almacen cifrado. Cloudflare One: un tunel Zero Trust hacia la malla tras el inicio de sesion del equipo.</string>
+    <string name="mesh_ctl_cf_warp_register">Usar WARP</string>
+    <string name="mesh_ctl_cf_warp_forget">Olvidar dispositivo WARP</string>
+    <string name="mesh_ctl_cf_one_enrol">Inscribir en Cloudflare One</string>
 </resources>

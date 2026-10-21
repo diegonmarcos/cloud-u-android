@@ -3869,7 +3869,7 @@
         "drawer_default_children": [
           "WireGuard"
         ],
-        "_doc_merge": "SINGLE-PAGE section. One page, drawn by WireGuardFragment (#877: Compose, network/mesh/) as a libs:bottomnav PageTabs strip over the pages ui.mesh_page declares - Status, Peers, Profiles, Routes, Controls, Log. The old tunnel form, Generate/Import/Export buttons, Connect status and the wg-mesh topology (data/mesh.json, now Peers ▸ Fleet topology) are folded into those tabs. No page grid: a section with exactly one non-action page opens that page directly (LauncherNavController.goSection single-page rule). Back returns to Configs (parent=config).",
+        "_doc_merge": "SINGLE-PAGE section. One page, drawn by WireGuardFragment (#877: Compose, network/mesh/) as a libs:bottomnav PageTabs strip over the tabs ui.mesh_page declares (#1074) - Status, Profile, Logs - whose sections are the former pages Status, Peers, Profiles, Routes, Controls, Log. The old tunnel form, Generate/Import/Export buttons, Connect status and the wg-mesh topology (data/mesh.json, now Peers ▸ Fleet topology) are folded into those tabs. No page grid: a section with exactly one non-action page opens that page directly (LauncherNavController.goSection single-page rule). Back returns to Configs (parent=config).",
         "pages": [
           {
             "id": "config",
@@ -6595,6 +6595,40 @@
         "stale_s": 300
       },
       "nat64_marker": "ff9b",
+      "default_tab": "status",
+      "_doc_tabs": "#1074 The strip: three TABS over the sections in `pages` (a section is a former page; its controls and rows are declared there, once). Status = every config in effect (state, interface, endpoint, transport, handshakes, traffic, latency, DNS, active profile, the Cloudflare transport) then the routes and the peers; Profile = the profile table where one is chosen (with the Cloudflare WARP / One cards), then ALL former Controls (tunnel connect/reconnect, start-up, DNS preset, MTU, keepalive, identity, key, fallbacks); Logs = the journal. A section lives in exactly one tab; test-mesh-page.sh and MeshDeclTest hold that every section is reachable.",
+      "tabs": [
+        { "id": "status",  "label": "Status",  "icon": "ic_wg", "sections": ["status", "routes", "peers"] },
+        { "id": "profile", "label": "Profile", "icon": "ic_wg", "sections": ["profiles", "controls"] },
+        { "id": "logs",    "label": "Logs",    "icon": "ic_wg", "sections": ["log"] }
+      ],
+      "_doc_previous_controls": "#1074 THE GUARD: every control id the page had before the three-tab reorganisation. Each must still be declared in `pages` AND be reachable from a tab (MeshDeclTest, test-mesh-page.sh T10), so a control cannot silently disappear in a later reshuffle. A control removed on purpose is removed here in the same commit, with the reason in the commit message. New controls are not listed (they are guarded by their own tests).",
+      "previous_controls": ["peer_sort", "topology", "peer_add", "peer_remove", "peer_copy", "provider", "profile_select", "profile_import_clipboard", "profile_import_vault", "profile_diff", "profile_export_text", "profile_export_qr", "profile_export_folder", "conf_import", "conf_export", "route_filter", "excluded_apps", "connect", "reconnect", "auto_boot", "auto_wifi", "auto_mobile", "kill_switch", "vpn_settings", "dns_preset", "mtu", "keepalive", "tunnel_name", "address", "listen_port", "private_key", "generate_key", "transport_mode", "relay_key", "test_fallbacks", "log_copy", "log_clear"],
+      "_doc_cloudflare": "#1074 Cloudflare as a Cloud Mesh transport (network/CloudflareWarp.kt). WARP (no Zero Trust): the phone generates a key pair, POSTs its PUBLIC key to the WARP API at api/api_version/reg (the open registration logic the MIT-licensed wgcf documents; written here, nothing vendored) and runs the WireGuard config in the answer on the existing engine; the private key and device token live only in CfKeyStore (EncryptedSharedPreferences). Cloudflare One (Zero Trust tunnel into the mesh, team `one.team`): the team login opens as a Custom Tab on <team>.cloudflareaccess.com<login_path>, the Access token it returns enrols the device, and the answer is the config. `one.enabled` is false while the server side is not applied (#994: Zero Trust routes + device enrolment policy, waiting on owner approval): the page then shows 'waiting on Zero Trust apply' and the enrol button stays disabled. Flip `one.enabled` to true in the commit that follows #994's apply and the option lights up; nothing else changes.",
+      "cloudflare": {
+        "warp": {
+          "api": "https://api.cloudflareclient.com",
+          "api_version": "v0a1922",
+          "client_version": "a-6.3-1922",
+          "user_agent": "okhttp/3.12.1",
+          "endpoint": "engage.cloudflareclient.com:2408",
+          "profile_name": "wg-cloudflare-warp",
+          "dns": "1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001",
+          "mtu": "1280",
+          "allowed_ips": "0.0.0.0/0, ::/0",
+          "keepalive": "25"
+        },
+        "one": {
+          "team": "diegonmarcos",
+          "enabled": false,
+          "waiting_on": "#994",
+          "login_path": "/warp",
+          "callback_scheme": "com.cloudflare.warp",
+          "profile_name": "wg-cloudflare-one",
+          "allowed_ips": "10.0.0.0/24, 10.1.0.0/24",
+          "keepalive": "25"
+        }
+      },
       "pages": [
         {
           "id": "status",
@@ -6610,7 +6644,8 @@
             "traffic",
             "latency",
             "dns",
-            "profile"
+            "profile",
+            "cloudflare"
           ],
           "controls": []
         },
@@ -6727,6 +6762,24 @@
               "kind": "action",
               "label": "Export this tunnel",
               "engine": "saf.exportConf"
+            },
+            {
+              "id": "cf_warp_register",
+              "kind": "action",
+              "label": "Use WARP",
+              "engine": "cf.warp.use"
+            },
+            {
+              "id": "cf_warp_forget",
+              "kind": "action",
+              "label": "Forget WARP device",
+              "engine": "cf.warp.forget"
+            },
+            {
+              "id": "cf_one_enrol",
+              "kind": "action",
+              "label": "Enrol in Cloudflare One",
+              "engine": "cf.one.enrol"
             }
           ]
         },

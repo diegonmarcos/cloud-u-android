@@ -1076,6 +1076,7 @@ dependencies {
     // extracted from app/launcher. Consumed by LauncherStatusStrip.
     implementation project(':libs:launcher-zoomies')
 
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'   // #1074 CfKeyStore: the Cloudflare WARP / One keys in the encrypted store
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     // MediaStyle for the persistent floating-nav notification (album art +

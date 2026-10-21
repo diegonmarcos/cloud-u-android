@@ -35,10 +35,10 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
  * a row copies or draws as a QR is the declared TEMPLATE, whose PrivateKey line is empty.
  */
 @Composable
-fun MeshProfilesPage(store: MeshStore, modifier: Modifier = Modifier) {
+fun MeshProfilesPage(store: MeshStore, modifier: Modifier = Modifier, embedded: Boolean = false) {
     val page = store.decl.page("profiles")
     Column(
-        modifier.fillMaxSize().testTag(MeshTags.page("profiles")).verticalScroll(rememberScrollState())
+        modifier.pageBody(embedded).testTag(MeshTags.page("profiles"))
             .padding(MeshDensity.dp(MeshDensity.S8)),
     ) {
         page?.control("provider")?.let { c ->
@@ -56,6 +56,7 @@ fun MeshProfilesPage(store: MeshStore, modifier: Modifier = Modifier) {
         WireGuardProfiles.mesh.forEach { ProfileRow(store, it) }
         MHeader(stringResource(R.string.mesh_profiles_external))
         WireGuardProfiles.external.forEach { ProfileRow(store, it) }
+        CloudflareBlock(store)
         MHeader(stringResource(R.string.mesh_profiles_io))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MeshDensity.dp(MeshDensity.S6))) {
             for (id in listOf("conf_import", "conf_export", "profile_export_folder")) {
@@ -75,6 +76,36 @@ fun MeshProfilesPage(store: MeshStore, modifier: Modifier = Modifier) {
             onConfirm = { store.confirmCloudPreset() },
             onDismiss = { store.confirmCloud = false },
         )
+    }
+}
+
+/** #1074 The two Cloudflare transports: WARP (no Zero Trust) and Cloudflare One (Zero Trust tunnel into the mesh). */
+@Composable
+private fun CloudflareBlock(store: MeshStore) {
+    val page = store.decl.page("profiles")
+    val cf = store.decl.cloudflare
+    val oneReady = cf.one.enabled
+    MHeader(stringResource(R.string.mesh_cf_header))
+    Reason(stringResource(R.string.mesh_cf_text))
+    Column(Modifier.fillMaxWidth().testTag("mesh:cf:warp").padding(vertical = MeshDensity.dp(MeshDensity.S4))) {
+        MText(stringResource(R.string.mesh_cf_t_warp) + " · " + stringResource(if (store.cf.warp) R.string.mesh_cf_registered else R.string.mesh_cf_not_registered), size = MeshDensity.T_BODY, bold = store.cf.active == cf.warp.profileName)
+        MText(cf.warp.endpoint, size = MeshDensity.T_CAPTION, mono = true, muted = true, maxLines = 1)
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = MeshDensity.dp(MeshDensity.S2)), horizontalArrangement = Arrangement.spacedBy(MeshDensity.dp(MeshDensity.S4))) {
+            page?.control("cf_warp_register")?.let { c ->
+                MButton(declLabel("ctl", c.id, c.label), { store.run(c.engine) }, Modifier.testTag(MeshTags.control(c.id)), enabled = !store.busy && store.cf.active != cf.warp.profileName, emphasised = store.cf.active != cf.warp.profileName)
+            }
+            page?.control("cf_warp_forget")?.let { c ->
+                MButton(declLabel("ctl", c.id, c.label), { store.run(c.engine) }, Modifier.testTag(MeshTags.control(c.id)), enabled = !store.busy && store.cf.warp)
+            }
+        }
+    }
+    Column(Modifier.fillMaxWidth().testTag("mesh:cf:one").padding(vertical = MeshDensity.dp(MeshDensity.S4))) {
+        MText(stringResource(R.string.mesh_cf_t_one) + " · " + cf.one.team, size = MeshDensity.T_BODY, bold = store.cf.active == cf.one.profileName)
+        MText(oneStateText(store), Modifier.testTag("mesh:cf:one:state"), size = MeshDensity.T_CAPTION, muted = true)
+        page?.control("cf_one_enrol")?.let { c ->
+            MButton(declLabel("ctl", c.id, c.label), { store.run(c.engine) }, Modifier.padding(top = MeshDensity.dp(MeshDensity.S2)).testTag(MeshTags.control(c.id)), enabled = oneReady && !store.busy, emphasised = oneReady)
+        }
+        if (!oneReady) Reason(stringResource(R.string.mesh_cf_one_why, cf.one.waitingOn))
     }
 }
 

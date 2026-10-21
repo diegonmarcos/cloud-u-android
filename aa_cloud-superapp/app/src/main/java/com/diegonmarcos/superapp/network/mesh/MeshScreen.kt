@@ -1,6 +1,8 @@
 package com.diegonmarcos.superapp.network.mesh
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,30 +27,43 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 /**
- * #877 THE Cloud Mesh page: libs:bottomnav's [PageTabs] strip over the declared pages
- * (`ui.mesh_page.pages`), one composable per page id, the notice line between them. The strip takes no
- * colour or size from here - the lib owns its look.
+ * #877 THE Cloud Mesh page: libs:bottomnav's [PageTabs] strip over the declared tabs
+ * (`ui.mesh_page.tabs`, #1074: Status / Profile / Logs), the notice line under it, and the open tab's
+ * declared sections (`pages`) drawn one after the other in a single scroll. One composable per section id.
+ * The strip takes no colour or size from here - the lib owns its look.
  *
  * [ticker] false leaves polling to the caller (tests drive [MeshStore.poll] themselves).
  */
 @Composable
 fun MeshScreen(store: MeshStore, modifier: Modifier = Modifier, ticker: Boolean = true) {
     if (ticker) MeshTicker(store)
-    val pages = store.decl.pages.map { NavPage(it.id, declLabel("page", it.id, it.label), it.icon) }
+    val tabs = store.decl.tabs.map { NavPage(it.id, declLabel("tab", it.id, it.label), it.icon) }
+    val open = store.decl.tab(store.tab)
     Column(modifier.fillMaxSize().testTag("mesh:screen")) {
-        PageTabs(pages, store.page, onSelect = { store.page = it.id })
+        PageTabs(tabs, store.tab, onSelect = { store.tab = it.id })
         MeshNotice(store)
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            when (store.page) {
-                "status" -> MeshStatusPage(store)
-                "peers" -> MeshPeersPage(store)
-                "profiles" -> MeshProfilesPage(store)
-                "routes" -> MeshRoutesPage(store)
-                "controls" -> MeshControlsPage(store)
-                "log" -> MeshLogPage(store)
-                else -> MText(store.page, Modifier.padding(MeshDensity.dp(MeshDensity.S8)), muted = true)
+        Column(Modifier.weight(1f).fillMaxWidth().testTag(MeshTags.tab(store.tab)).verticalScroll(rememberScrollState())) {
+            if (open == null) MText(store.tab, Modifier.padding(MeshDensity.dp(MeshDensity.S8)), muted = true)
+            open?.sections?.forEachIndexed { i, id ->
+                val label = store.decl.page(id)?.label ?: id
+                if (i > 0) MHeader(declLabel("page", id, label), Modifier.padding(horizontal = MeshDensity.dp(MeshDensity.S8)))
+                MeshSection(id, store)
             }
         }
+    }
+}
+
+/** One declared section, drawn as a block of its tab's scroll. */
+@Composable
+fun MeshSection(id: String, store: MeshStore) {
+    when (id) {
+        "status" -> MeshStatusPage(store, embedded = true)
+        "peers" -> MeshPeersPage(store, embedded = true)
+        "profiles" -> MeshProfilesPage(store, embedded = true)
+        "routes" -> MeshRoutesPage(store, embedded = true)
+        "controls" -> MeshControlsPage(store, embedded = true)
+        "log" -> MeshLogPage(store, embedded = true)
+        else -> MText(id, Modifier.padding(MeshDensity.dp(MeshDensity.S8)), muted = true)
     }
 }
 

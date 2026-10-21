@@ -19,12 +19,12 @@ import com.diegonmarcos.superapp.R
  * event stream to subscribe to, and the page says so rather than implying a history it does not hold.
  */
 @Composable
-fun MeshLogPage(store: MeshStore, modifier: Modifier = Modifier) {
+fun MeshLogPage(store: MeshStore, modifier: Modifier = Modifier, embedded: Boolean = false) {
     val page = store.decl.page("log")
     @Suppress("UNUSED_VARIABLE") val rev = store.journalRev
     val lines = store.journal.list().asReversed()
     Column(
-        modifier.fillMaxSize().testTag(MeshTags.page("log")).verticalScroll(rememberScrollState())
+        modifier.pageBody(embedded).testTag(MeshTags.page("log"))
             .padding(MeshDensity.dp(MeshDensity.S8)),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(MeshDensity.dp(MeshDensity.S6))) {

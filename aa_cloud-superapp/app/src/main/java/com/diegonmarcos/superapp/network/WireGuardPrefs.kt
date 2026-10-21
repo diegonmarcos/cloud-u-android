@@ -203,6 +203,30 @@ class WireGuardPrefs(context: Context) {
     }
 
     /**
+     * #1074 Make a Cloudflare WARP / One config THE tunnel. It carries its own key pair (registered with
+     * Cloudflare), and the engine has ONE interface slot, so the mesh key is parked in the ENCRYPTED
+     * [keys] store first (only when none is parked yet) and handed back by [leaveCloudflare]. The profile
+     * text is not added to the stored set: it holds a key that must stay out of plain prefs.
+     */
+    fun applyCloudflare(name: String, conf: String, keys: CfKeyStore): Config {
+        val cfg = Config.parse(java.io.BufferedReader(java.io.StringReader(conf)))
+        if (keys.meshKeyStash.isBlank() && interfacePrivateKey.isNotBlank()) keys.meshKeyStash = interfacePrivateKey
+        tunnelName = name.take(15)
+        hydrateFromConfig(cfg)
+        configProvider = PROVIDER_CUSTOM
+        activeProfile = name
+        return cfg
+    }
+
+    /** #1074 Give the interface slot back to the mesh key a Cloudflare profile borrowed it from; no-op when none is parked. */
+    fun leaveCloudflare(keys: CfKeyStore) {
+        val parked = keys.meshKeyStash
+        if (parked.isBlank()) return
+        interfacePrivateKey = parked
+        keys.meshKeyStash = ""
+    }
+
+    /**
      * #877 Package names kept OUTSIDE the tunnel: the engine builds its VpnService with each one
      * disallowed (Interface.ExcludedApplications -> GoBackend), so their traffic never enters the mesh.
      * Applied at the next connect, like every tunnel field. Not touched by a profile import.
