@@ -8,6 +8,7 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -114,15 +116,25 @@ class TileGridFragment : KitComposeFragment() {
                     is GridItem.SubHeader -> TileSubgroupHeader(item.text, Modifier.testTag(subHeaderTag(item.text)), compact = true)
                     is GridItem.TileRow -> Row(Modifier.fillMaxWidth().padding(vertical = CHIP_GAP / 2),
                         horizontalArrangement = Arrangement.spacedBy(CHIP_GAP)) {
-                        for (k in 0 until item.span) {
-                            val at = item.first + k
-                            if (ids[at].startsWith(SEPARATOR_PREFIX)) { TileSeparator(labels[at]); continue }
-                            CompactTile(
-                                tileId = ids[at], label = labels[at],
-                                iconRes = icons.getOrNull(at)?.takeIf { it != 0 } ?: R.drawable.ic_settings,
-                                onClick = { click(ids[at]) },
-                                modifier = Modifier.weight(1f),
-                            )
+                        val at = (0 until item.span).map { item.first + it }
+                        for ((n, i) in at.withIndex()) {
+                            if (ids[i].startsWith(SEPARATOR_PREFIX)) continue
+                            // A separator is no row child: it is drawn on the edge of the tile before (or, leading, after) it,
+                            // so the row keeps its `cols` equal columns (#1069).
+                            val after = at.getOrNull(n + 1)?.let { ids[it].startsWith(SEPARATOR_PREFIX) } == true
+                            val before = n == 1 && ids[at[0]].startsWith(SEPARATOR_PREFIX)
+                            Box(Modifier.weight(1f)) {
+                                CompactTile(
+                                    tileId = ids[i], label = labels[i],
+                                    iconRes = icons.getOrNull(i)?.takeIf { it != 0 } ?: R.drawable.ic_settings,
+                                    onClick = { click(ids[i]) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                                if (after) TileDivider(tileSepTag(ids[at[n + 1]]), TILE_PLATE / 2, CHIP_GAP / 2,
+                                    Modifier.align(Alignment.TopEnd))
+                                if (before) TileDivider(tileSepTag(ids[at[0]]), TILE_PLATE / 2, -CHIP_GAP / 2,
+                                    Modifier.align(Alignment.TopStart))
+                            }
                         }
                         for (k in item.slots until cols) Spacer(Modifier.weight(1f))
                     }
