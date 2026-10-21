@@ -119,7 +119,7 @@ class WebPagesRenderTest {
 
         var htmlH = -1
         var embedHeaders = ""; var embedBottom = -1; var embedInner = -1; var embedOverflow = -1; var embedOwnTabs = -1; var embedApkRow = -1
-        var islandBottom = -1; var islandShown = false
+        var embedTiles = -1; var islandBottom = -1; var islandShown = false
         var pageTitle = ""; var groups = -1
         val report = StringBuilder()
         val w = web
@@ -144,6 +144,7 @@ class WebPagesRenderTest {
             if (embed) {
                 fun num(expr: String) = js(w, expr).trim('"').toIntOrNull() ?: -1
                 embedHeaders = js(w, "[...document.querySelectorAll('.tile-group__title')].map(e=>e.textContent.trim()).join(' | ')")
+                embedTiles = num("document.querySelectorAll('[data-app-group] .tile').length")
                 embedBottom = num("(()=>{const r=document.querySelector('#embed-fit');return r?Math.round(r.getBoundingClientRect().bottom):-1})()")
                 embedInner = num("innerHeight")
                 embedOverflow = num("(()=>{const c=document.querySelector('.content');return (c.scrollHeight>c.clientHeight+1||document.documentElement.scrollHeight>innerHeight)?1:0})()")
@@ -157,7 +158,7 @@ class WebPagesRenderTest {
                         islandBottom = l[1] + island.height; islandShown = island.isShown && island.height > 0
                     }
                 }
-                report.appendLine("embed: headers=[$embedHeaders] fitBottom=$embedBottom/$embedInner overflow=$embedOverflow ownTabs=$embedOwnTabs apkRow=$embedApkRow " +
+                report.appendLine("embed: headers=[$embedHeaders] fitBottom=$embedBottom/$embedInner overflow=$embedOverflow ownTabs=$embedOwnTabs apkRow=$embedApkRow tiles=$embedTiles " +
                     "webTop=${loc[1]} topRowBottom=$islandBottom topRowShown=$islandShown")
             }
             report.appendLine("ua=${js(w, "navigator.userAgent")}")
@@ -203,6 +204,9 @@ class WebPagesRenderTest {
         if (embed) {
             val webTop = IntArray(2).also { a -> inst.runOnMainSync { w!!.getLocationOnScreen(a) } }[1]
             assertTrue("[$name] the section headers are missing: [$embedHeaders]\n$report", groups >= 5)
+            val sourceTiles = com.diegonmarcos.superapp.launcher.Sections.byId("cloud")!!.tileGroups.flatMap { it.destinations }.size
+            assertTrue("[$name] the embedded page shows $embedTiles app tiles, the SuperApp's Cloud list has $sourceTiles (an app went missing)\n$report",
+                embedTiles == sourceTiles && embedTiles >= 40)
             assertTrue("[$name] the page still draws its own tab bar\n$report", embedOwnTabs == 0)
             assertTrue("[$name] the page still draws the APK download row\n$report", embedApkRow == 0)
             assertTrue("[$name] the page does not fit one screen: bottom $embedBottom of $embedInner, overflow=$embedOverflow\n$report",
