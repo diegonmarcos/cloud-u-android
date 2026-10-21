@@ -707,7 +707,6 @@ def passwd_setup(app_id: str, shell: str, name: str = "nix-on-droid") -> str:
         f'  cloud_ids_entry "$CLOUD_ETC/group" "$CLOUD_GID" "{name}:x:$CLOUD_GID:" 2>/dev/null || true\n'
         f'  cloud_trace "passwd: {name} = $CLOUD_UID:$CLOUD_GID"\n'
         'fi\n'
-        + store
     )
 
 
