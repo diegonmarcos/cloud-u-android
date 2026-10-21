@@ -20,6 +20,17 @@ object JobPathMigration {
 
     data class Report(val repos: Int, val jobs: Int)
 
+    /** Rewrites both legs of every saved rclone job that names an old location; returns how many jobs moved. */
+    fun migrateJobs(store: RcloneJobStore, rule: (String) -> String?): Int {
+        var jobs = 0
+        val nj = store.load().map { j ->
+            val s = rule(j.source); val d = rule(j.destination)
+            if (s == null && d == null) j else { jobs++; j.copy(source = s ?: j.source, destination = d ?: j.destination) }
+        }
+        if (jobs > 0) store.save(nj)
+        return jobs
+    }
+
     fun run(ctx: Context): Report {
         val u = StoreAccess.userId()
         val rule = { p: String -> StoreAccess.paths.migrateLegacy(p, u) }
@@ -34,14 +45,7 @@ object JobPathMigration {
             r.copy(id = id, path = to)
         }
         if (repos > 0) registry.save(moved)
-        var jobs = 0
-        val store = RcloneJobStore(File(ctx.filesDir, "rclone/jobs.json"))
-        val js = store.load()
-        val nj = js.map { j ->
-            val s = rule(j.source); val d = rule(j.destination)
-            if (s == null && d == null) j else { jobs++; j.copy(source = s ?: j.source, destination = d ?: j.destination) }
-        }
-        if (jobs > 0) store.save(nj)
+        val jobs = migrateJobs(RcloneJobStore(File(ctx.filesDir, "rclone/jobs.json")), rule)
         if (repos + jobs > 0) DriveDebugLog.i(ctx, "JobPathMigration", "rewrote $repos repo path(s) and $jobs rclone job(s) to ${StoreAccess.root()}")
         return Report(repos, jobs)
     }

@@ -65,9 +65,37 @@ class StorePaths(
     /** True when [path] still names an old location (what the "no old path" checks ask). */
     fun isLegacy(path: String, userId: Int): Boolean = migrateLegacy(path, userId) != null
 
+    /**
+     * Where an ENGINE APK (rclone, git: their own uid, All-files access to shared storage only) can
+     * meet the store's content: a scratch folder in the legacy shared root. The store itself is
+     * cld.termux's private home, which no engine can open, whatever this app's own [Mode] is.
+     */
+    fun stagingRoot(userId: Int): String = "/storage/emulated/$userId/$legacySharedRoot/.store-stage"
+
+    /** True when [path] is the store or inside it (no `..` escapes). */
+    fun inStore(path: String, userId: Int): Boolean {
+        val root = hostRoot(userId)
+        val p = path.trimEnd('/')
+        return (p == root || p.startsWith("$root/")) && p.split('/').none { it == ".." }
+    }
+
+    /** The staging twin of a store path (same relative tail, one folder per [tag]), or null outside the store. */
+    fun stagePath(path: String, userId: Int, tag: String): String? {
+        if (!inStore(path, userId)) return null
+        val rel = path.trimEnd('/').removePrefix(hostRoot(userId)).trimStart('/')
+        return stagingRoot(userId) + "/" + tag + (if (rel.isEmpty()) "" else "/$rel")
+    }
+
     enum class Mode { DIRECT, EXEC, NONE }
 
     companion object {
+        /**
+         * An engine APK (JGit, rclone) runs in ITS OWN uid, so it cannot open the store even when
+         * this app joined the shared uid (DIRECT): everything an engine would do on the store goes
+         * through cld.termux (CLOUD_EXEC) whenever cld.termux answers at all.
+         */
+        fun viaOwner(mode: Mode): Boolean = mode != Mode.NONE
+
         /**
          * The runtime decision: DIRECT only when the shared uid is really in effect (our uid IS
          * the owner's uid) AND the store directory answers; EXEC when the owner is installed and

@@ -150,4 +150,35 @@ class RcloneRunnerTest {
         runner(f).start(job(), {}, { lines += it }, { exit.countDown() })
         assertTrue(exit.await(5, TimeUnit.SECONDS)); assertNotNull(lines.singleOrNull { it.contains("not allowed") })
     }
+
+    @Test fun aStagedJobRunsTheStagedArgsAndCopiesBackOnlyAfterAnExitOfZero() {
+        val order = CopyOnWriteArrayList<String>()
+        val f = Fake { m, _ -> when (m) { "job_start" -> ok().put("id", "J1"); else -> ok().put("lines", JSONArray()).put("cursor", 0).put("done", true).put("rc", 0) } }
+        RcloneRunner.legStaging = object : RcloneRunner.LegStaging {
+            override fun refusal(args: List<String>): String? = null
+            override fun begin(args: List<String>) = RcloneRunner.Staged(listOf("copy", "drive:a", "/staged/dst"), { order += "pull"; null }, { rc -> order += "finish$rc"; null })
+        }
+        try {
+            val exit = CountDownLatch(1); var code = 99
+            runner(f).start(job(), {}, {}, { code = it; exit.countDown() })
+            assertTrue(exit.await(10, TimeUnit.SECONDS)); assertEquals(0, code)
+            assertEquals(listOf("pull", "finish0"), order.toList())
+            val args = f.calls.first { it.first == "job_start" }.second.getJSONArray("args")
+            assertEquals("/staged/dst", args.getString(2))
+        } finally { RcloneRunner.legStaging = null }
+    }
+
+    @Test fun aStagingRefusalEndsTheJobWithItsSentenceAndNeverCallsTheEngine() {
+        val f = Fake { _, _ -> ok() }
+        RcloneRunner.legStaging = object : RcloneRunner.LegStaging {
+            override fun refusal(args: List<String>) = "no store here"
+            override fun begin(args: List<String>): RcloneRunner.Staged? = null
+        }
+        try {
+            val exit = CountDownLatch(1); var code = 99; val lines = CopyOnWriteArrayList<String>()
+            runner(f).start(job(), {}, { lines += it }, { code = it; exit.countDown() })
+            assertTrue(exit.await(10, TimeUnit.SECONDS)); assertEquals(-1, code)
+            assertEquals(listOf("[engine] no store here"), lines.toList()); assertTrue(f.calls.isEmpty())
+        } finally { RcloneRunner.legStaging = null }
+    }
 }

@@ -127,7 +127,9 @@ object DriveDebugApi {
         val root = runCatching { SharedStore.root().absolutePath }.getOrElse { "unavailable: ${it.message}" }
         // cloud-shared-store: direct (same uid as cld.termux) | exec (git runs in cld.termux) | none.
         val mode = runCatching { com.diegonmarcos.cloudlib.sharedstore.StoreAccess.mode(ctx).name.lowercase() }.getOrElse { "unknown" }
-        return """{"ok":true,"app":"${esc(ctx.packageName)}","version_code":${BuildConfig.VERSION_CODE},"version_name":"${esc(BuildConfig.VERSION_NAME)}","store_root":"${esc(root)}","store_mode":"${esc(mode)}","legacy_root":"${esc(SharedStore.legacyRoot().absolutePath)}"}"""
+        // The git and rclone engine APKs are other uids: they reach the store only through cld.termux.
+        val route = runCatching { if (com.diegonmarcos.cloudlib.sharedstore.StorePaths.viaOwner(com.diegonmarcos.cloudlib.sharedstore.StoreAccess.mode(ctx))) "cld.termux" else "unreachable" }.getOrElse { "unknown" }
+        return """{"ok":true,"app":"${esc(ctx.packageName)}","version_code":${BuildConfig.VERSION_CODE},"version_name":"${esc(BuildConfig.VERSION_NAME)}","store_root":"${esc(root)}","store_mode":"${esc(mode)}","engine_route":"${esc(route)}","legacy_root":"${esc(SharedStore.legacyRoot().absolutePath)}"}"""
     }
 
     // ── /api/git/* ──────────────────────────────────────────────────────────

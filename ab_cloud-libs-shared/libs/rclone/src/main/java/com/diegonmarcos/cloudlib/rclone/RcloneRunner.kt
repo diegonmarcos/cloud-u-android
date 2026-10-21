@@ -20,13 +20,13 @@ import java.io.IOException
 class RcloneRunner(
     private val transport: RcloneTransport,
     val configFile: File,
-    /** Where "download" lands files the host may then open: the shared store, which both the host and the engine hold All-files access to. */
+    /** Where "download" lands files the host may then open: the shared store, declared as build.json::storage.shared_root (shared storage, not the store: the engine cannot open the store). */
     val downloadDir: File,
 ) {
     constructor(context: Context) : this(
         RcloneLink(context),
         File(context.filesDir, "rclone/rclone.conf"),
-        File(Environment.getExternalStorageDirectory(), "CloudDrive/rclone-downloads"),
+        File(Environment.getExternalStorageDirectory(), BuildConfig.HANDOFF_ROOT + "/rclone-downloads"),
     )
 
     /** Null when the engine can be called, else the sentence that says what to install or update. */
@@ -108,7 +108,53 @@ class RcloneRunner(
      * sentence why went to [onLine]).
      */
     fun start(job: RcloneJob, onStats: (RcloneStats) -> Unit, onLine: (String) -> Unit, onExit: (Int) -> Unit): Handle {
-        val args = job.arguments() + listOf("--use-json-log", "--stats", "1s", "--stats-log-level", "NOTICE", "-v")
+        val base = job.arguments()
+        val hook = legStaging ?: return startArgs(base, onStats, onLine, onExit)
+        hook.refusal(base)?.let { why ->
+            val exit = java.util.concurrent.CountDownLatch(1)
+            Thread { Thread.sleep(REFUSED_DELAY_MS); onLine("[engine] $why"); onExit(-1); exit.countDown() }.apply { isDaemon = true; start() }
+            return Handle({}, exit) { -1 }
+        }
+        val staged = hook.begin(base) ?: return startArgs(base, onStats, onLine, onExit)
+        // A leg in the shared store: the engine cannot open it, so it works on a staged copy (see LegStaging).
+        val exit = java.util.concurrent.CountDownLatch(1)
+        val code = java.util.concurrent.atomic.AtomicInteger(-1)
+        val inner = java.util.concurrent.atomic.AtomicReference<Handle?>(null)
+        val handle = Handle({ inner.get()?.cancel() }, exit) { code.get() }
+        Thread {
+            val why = staged.prepare()
+            if (why != null || handle.cancelled) {
+                if (why != null) onLine("[engine] $why")
+                staged.finish(-1)
+                code.set(if (handle.cancelled) -2 else -1); onExit(code.get()); exit.countDown()
+                return@Thread
+            }
+            inner.set(startArgs(staged.args, onStats, onLine) { rc ->
+                val back = staged.finish(rc)
+                if (back != null) onLine("[engine] $back")
+                code.set(if (handle.cancelled) -2 else if (back != null && rc == 0) -1 else rc)
+                onExit(code.get()); exit.countDown()
+            })
+            if (handle.cancelled) inner.get()?.cancel()
+        }.apply { isDaemon = true; start() }
+        return handle
+    }
+
+    /**
+     * Jobs whose local leg is in the shared store. The store is in cld.termux's private home and the
+     * engine APK runs in its own uid, so it cannot open it: [begin] stages the legs where the engine
+     * can (shared storage), [Staged.finish] copies a destination back and removes the staging. The
+     * host app sets it once; unset (or a job with no store leg) runs the args as written.
+     */
+    interface LegStaging {
+        fun refusal(args: List<String>): String?
+        fun begin(args: List<String>): Staged?
+    }
+
+    class Staged(val args: List<String>, val prepare: () -> String?, val finish: (Int) -> String?)
+
+    private fun startArgs(jobArgs: List<String>, onStats: (RcloneStats) -> Unit, onLine: (String) -> Unit, onExit: (Int) -> Unit): Handle {
+        val args = jobArgs + listOf("--use-json-log", "--stats", "1s", "--stats-log-level", "NOTICE", "-v")
         val exit = java.util.concurrent.CountDownLatch(1)
         val code = java.util.concurrent.atomic.AtomicInteger(-1)
         /** A job that never started: the sentence why, the exit -1, a handle that is already done. */
@@ -170,8 +216,10 @@ class RcloneRunner(
         File(downloadDir, name)
     }
 
-    private companion object {
-        const val POLL_IDLE_MS = 400L
-        const val REFUSED_DELAY_MS = 200L
+    companion object {
+        /** Set by the host app (Drive) to stage legs that name the shared store; null = run args as written. */
+        @Volatile var legStaging: LegStaging? = null
+        private const val POLL_IDLE_MS = 400L
+        private const val REFUSED_DELAY_MS = 200L
     }
 }

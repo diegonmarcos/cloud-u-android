@@ -51,12 +51,17 @@ def rcloneAction        = engineDecl.action.toString().replace('{package}', rclo
 def rcloneMinContract   = engineDecl.min_contract as int
 if (rcloneMinContract < 1) throw new GradleException("libs:rclone: engines.rclone.min_contract must be >= 1")
 
+// The engines hand files over through shared storage (they cannot open the store): its folder name is
+// declared ONCE, ac_cloud-termux/build.json::storage.shared_root.
+def handoffRoot = new groovy.json.JsonSlurper().parse(new File(projectDir, '../../../ac_cloud-termux/build.json')).storage.shared_root
+
 android {
     namespace 'com.diegonmarcos.cloudlib.rclone'
     compileSdk 36
 
     defaultConfig {
         minSdk 26
+        buildConfigField "String", "HANDOFF_ROOT", "\"${handoffRoot}\""
         // #871 the rclone engine that execs the binary (Cloud-Lib-Rclone-Engine.apk).
         buildConfigField "String", "RCLONE_ENGINE_PACKAGE",      "\"${rcloneEnginePackage}\""
         buildConfigField "String", "RCLONE_ENGINE_ACTION",       "\"${rcloneAction}\""

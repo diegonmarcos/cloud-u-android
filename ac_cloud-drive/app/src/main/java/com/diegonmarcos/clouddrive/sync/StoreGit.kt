@@ -9,15 +9,16 @@ import com.diegonmarcos.cloudlib.sharedstore.StorePaths
 import java.io.File
 
 /**
- * cloud-shared-store's EXEC fallback for git: when this app is NOT in cld.termux's uid
- * (StoreAccess.mode == EXEC) the store is not a File it can open, so the clone / sync runs
+ * cloud-shared-store's EXEC fallback for git: because the git engine APK (its own uid) cannot open
+ * the store in either access mode, so the clone / sync runs
  * INSIDE cld.termux's glibc root on the store (Debian git, /root/cloud-shared-store/...),
  * through the signature-level CLOUD_EXEC service. The token goes over stdin only.
- * DIRECT keeps the in-process JGit path; [useExec] is the one switch every caller asks.
+ * [useExec] is the one switch every caller asks.
  */
 object StoreGit {
 
-    fun useExec(ctx: Context): Boolean = StoreAccess.mode(ctx) == StorePaths.Mode.EXEC
+    /** The git engine APK is another uid and cannot open the store even when this app shares cld.termux's uid, so git runs in cld.termux whenever it answers. */
+    fun useExec(ctx: Context): Boolean = StorePaths.viaOwner(StoreAccess.mode(ctx))
 
     private fun guest(dir: File): String =
         StoreAccess.paths.guestPath(dir.absolutePath, StoreAccess.userId())

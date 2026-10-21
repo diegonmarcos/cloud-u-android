@@ -89,8 +89,8 @@ fun MountsScreen(
     val store = remember { MountStore(File(context.filesDir, "mounts/mounts.json")) }
     val credentials = remember { MountCredentialStore(context) }
     // #871 move 12: the engine writes the download and reads the upload, as another uid, so both live in the shared
-    // store (<storage>/CloudDrive), which this app and the engine both hold All-files access to; Android/data is not writable by it.
-    val downloadDir = remember { File(android.os.Environment.getExternalStorageDirectory(), "CloudDrive/mount-downloads") }
+    // shared storage (<storage>/<storage.shared_root>), which this app and the engine both hold All-files access to (the store itself is cld.termux's private home); Android/data is not writable by it.
+    val downloadDir = remember { File(android.os.Environment.getExternalStorageDirectory(), com.diegonmarcos.cloudlib.mounts.BuildConfig.HANDOFF_ROOT + "/mount-downloads") }
     var mounts by remember { mutableStateOf(store.load()) }
     var open by remember { mutableStateOf<MountSpec?>(null) }
     var editing by remember { mutableStateOf<MountSpec?>(null) }
@@ -249,7 +249,7 @@ private fun BrowserScreen(mount: MountSpec, credentials: MountCredentialStore, d
             val r = withContext(Dispatchers.IO) {
                 runCatching {
                     val name = context.contentResolver.query(u, null, null, null, null)?.use { c -> val i = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME); if (c.moveToFirst() && i >= 0) c.getString(i) else null } ?: "upload"
-                    val tmp = File(android.os.Environment.getExternalStorageDirectory(), "CloudDrive/mounts-upload/$name").apply { parentFile?.mkdirs() }
+                    val tmp = File(android.os.Environment.getExternalStorageDirectory(), com.diegonmarcos.cloudlib.mounts.BuildConfig.HANDOFF_ROOT + "/mounts-upload/$name").apply { parentFile?.mkdirs() }
                     context.contentResolver.openInputStream(u)!!.use { i -> tmp.outputStream().use { o -> i.copyTo(o) } }
                     fs!!.upload(tmp, RemotePaths.join(path, name)); tmp.delete(); name
                 }

@@ -6,8 +6,8 @@
 // verb runs republishes this APK and no app. Do not add this module to an app's module map or ship watch
 // list: the engine contract guard's K6 fails it.
 //
-// THE REPOSITORIES ARE THE CALLER'S TREES in the shared store (<storage>/CloudDrive/git), and this is another
-// uid: the manifest declares MANAGE_EXTERNAL_STORAGE and the Store's "Grant missing" gives it, like every
+// A REPOSITORY IN THE SHARED STORE (cld.termux's private home) IS NOT REACHABLE FROM HERE: this is another uid, so
+// the caller runs those through cld.termux (CLOUD_EXEC). Trees in shared storage still work: the manifest declares MANAGE_EXTERNAL_STORAGE and the Store's "Grant missing" gives it, like every
 // constellation-signed APK that declares it. The credentials are the caller's too: a token, or an ssh key and
 // known_hosts text, travel in each request, live in this process for that one call (the ssh files in a private
 // temp dir, deleted after) and are never kept or logged.

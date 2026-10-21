@@ -58,12 +58,17 @@ def mountsAction        = engineDecl.action.toString().replace('{package}', moun
 def mountsMinContract   = engineDecl.min_contract as int
 if (mountsMinContract < 1) throw new GradleException("libs:mounts: engines.mounts.min_contract must be >= 1")
 
+// The engines hand files over through shared storage (they cannot open the store): its folder name is
+// declared ONCE, ac_cloud-termux/build.json::storage.shared_root.
+def handoffRoot = new groovy.json.JsonSlurper().parse(new File(projectDir, '../../../ac_cloud-termux/build.json')).storage.shared_root
+
 android {
     namespace 'com.diegonmarcos.cloudlib.mounts'
     compileSdk 36
 
     defaultConfig {
         minSdk 26
+        buildConfigField "String", "HANDOFF_ROOT", "\"${handoffRoot}\""
         // #871 the mounts engine that runs the protocol clients (Cloud-Lib-Mounts-Engine.apk).
         buildConfigField "String", "MOUNTS_ENGINE_PACKAGE",      "\"${mountsEnginePackage}\""
         buildConfigField "String", "MOUNTS_ENGINE_ACTION",       "\"${mountsAction}\""
