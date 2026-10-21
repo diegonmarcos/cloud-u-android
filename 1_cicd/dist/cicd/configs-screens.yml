@@ -171,7 +171,7 @@ jobs:
         if: always()
         run: |
           d=aa_cloud-superapp/app/build/configs-screens
-          [ -d "$d" ] || exit 0
+          ls "$d"/*.tsv >/dev/null 2>&1 || exit 0
           { echo '```'; for f in "$d"/*.tsv; do cat "$f"; echo; done; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload PNGs + TSVs + test report
