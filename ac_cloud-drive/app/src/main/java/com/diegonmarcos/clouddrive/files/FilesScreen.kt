@@ -689,7 +689,7 @@ private fun PlacesSheet(d: FilesDialog.Places, ui: FilesUiState, controller: Fil
 }
 
 @Composable
-private fun PlaceRow(p: Places.Place, onRemove: (() -> Unit)? = null, onClick: () -> Unit) {
+internal fun PlaceRow(p: Places.Place, onRemove: (() -> Unit)? = null, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
         Icon(IconCatalog.vectorOrDefault(p.icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.width(DriveMetrics.padWide))

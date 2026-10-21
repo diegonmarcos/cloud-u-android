@@ -23,6 +23,8 @@ object Places {
     /** [section] is the declared ui.files.sections id this place sits under; blank for a discovered one. */
     data class Place(val id: String, val label: String, val icon: String, val kind: Kind, val location: Location.Local?, val hero: Boolean = false, val hint: String = "", val section: String = "")
 
+    private val TERMINAL_KINDS = setOf("terminal_home", "store_path")
+
     fun declared(ctx: Context): List<Place> {
         val external = Environment.getExternalStorageDirectory()
         return Declarations.files.places.mapNotNull { p ->
@@ -38,7 +40,9 @@ object Places {
             }
             // A place that does not exist is not offered: a tap leading to "folder not found"
             // is worse than the entry simply not being there.
-            if (dir == null || !dir.isDirectory) return@mapNotNull null
+            // The terminal roots stay offered when only CLOUD_EXEC reaches them (ExecListing browses them).
+            val viaTerminal = p.kind in TERMINAL_KINDS && com.diegonmarcos.cloudlib.sharedstore.StorePaths.viaOwner(com.diegonmarcos.cloudlib.sharedstore.StoreAccess.mode(ctx))
+            if (dir == null || (!dir.isDirectory && !viaTerminal)) return@mapNotNull null
             Place(p.id, p.label, p.icon, Kind.PATH, Location.Local(dir.absolutePath), hero = p.hero, hint = if (p.kind == "shared_root") ctx.getString(R.string.files_store_hint) else "", section = p.section)
         }
     }

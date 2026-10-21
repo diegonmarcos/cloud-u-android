@@ -8,7 +8,10 @@ import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveActions
@@ -119,5 +122,68 @@ class DriveScreenshotTest {
         }
         if (lefts.size == order.size) assertTrue("strip tabs follow General, Webserver, Backups, Others: $lefts", lefts.zipWithNext().all { (a, b) -> a < b })
         assertTrue("the capture is the A37 window: ${bmp.width}x${bmp.height}", bmp.width == 1080 && bmp.height in 1800..2400)
+    }
+
+    /** Sync's top row with the terminal action, over Files' top row (the neighbour whose actions it must match). */
+    @Test
+    fun `A37 Sync island terminal action sits like the Files island actions`() {
+        compose.setContent {
+            DriveTheme {
+                androidx.compose.foundation.layout.Column {
+                    ToolbarIsland(title = "Sync", subtitle = "Git", actions = { com.diegonmarcos.clouddrive.sync.TerminalIslandAction(actions) {} })
+                    ToolbarIsland(title = "Files", subtitle = "/storage/emulated/0", actions = {
+                        IslandAction(androidx.compose.material.icons.Icons.Filled.Search, "Search") {}
+                        IslandAction(androidx.compose.material.icons.Icons.Filled.FolderOpen, "Places") {}
+                        IslandAction(androidx.compose.material.icons.Icons.Filled.MoreVert, "More") {}
+                    })
+                }
+            }
+        }
+        repeat(2) { compose.runOnUiThread { shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(300)) }; compose.waitForIdle() }
+        val density = compose.density.density
+        val islands = compose.onAllNodesWithTag(DriveTags.ISLAND).fetchSemanticsNodes().map { it.boundsInRoot }
+        assertEquals(2, islands.size)
+        assertEquals("both islands are the same height", islands[0].height, islands[1].height, 1f)
+        val actionBox = compose.onAllNodesWithContentDescription("Open terminal (starts it first)").fetchSemanticsNodes().single().boundsInRoot
+        val search = compose.onAllNodesWithContentDescription("Search").fetchSemanticsNodes().single().boundsInRoot
+        assertEquals("the terminal action is the same size as a Files island action", search.width, actionBox.width, 1f)
+        assertEquals(search.height, actionBox.height, 1f)
+        assertTrue("the action sits inside the right edge of its island", actionBox.right <= islands[0].right && actionBox.right > islands[0].right - 16 * density)
+        shot("sync-terminal-action@a37.png")
+    }
+
+    /** The Places sheet's root switcher: Emulated, Drive store and Terminal sections drawn with the same rows. */
+    @Test
+    fun `A37 Places sheet lists Terminal roots under their own header`() {
+        val ctx = RuntimeEnvironment.getApplication()
+        val labels = Declarations.files.sections.map { it.label }
+        assertEquals(listOf("Emulated", "Drive store", "Terminal"), labels)
+        val terminal = Declarations.files.places.filter { it.section == "terminal" }.map { it.label }
+        assertEquals(listOf("Terminal home", "Terminal clones"), terminal)
+        compose.setContent {
+            DriveTheme {
+                androidx.compose.foundation.layout.Column {
+                    labels.forEach { header ->
+                        com.diegonmarcos.clouddrive.ui.SectionHeader(header)
+                        Declarations.files.places.filter { p -> Declarations.files.sections.first { it.label == header }.id == p.section }.forEach { p ->
+                            com.diegonmarcos.clouddrive.files.PlaceRow(com.diegonmarcos.clouddrive.files.Places.Place(p.id, p.label, p.icon, com.diegonmarcos.clouddrive.files.Places.Kind.PATH, null, section = p.section)) {}
+                        }
+                    }
+                }
+            }
+        }
+        repeat(2) { compose.runOnUiThread { shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(300)) }; compose.waitForIdle() }
+        listOf("Emulated", "Drive store", "Terminal", "Terminal home", "Terminal clones").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
+        shot("files-roots@a37.png")
+    }
+
+    private fun shot(name: String) {
+        val root = compose.activity.findViewById<View>(android.R.id.content)
+        val bmp = compose.runOnUiThread {
+            Bitmap.createBitmap(root.width.coerceAtLeast(1), root.height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                .also { b -> Canvas(b).also { it.drawColor(android.graphics.Color.BLACK); root.draw(it) } }
+        }
+        val out = File(System.getProperty("user.dir"), "build/drive-screens").apply { mkdirs() }
+        File(out, name).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 }
