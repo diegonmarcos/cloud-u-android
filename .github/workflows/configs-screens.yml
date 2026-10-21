@@ -82,7 +82,7 @@ jobs:
           VAULT_DIR: ${{ github.workspace }}/.vault
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.configs.ConfigsScreensTest"
+          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.Notif*"
         run: bash ./build.sh test
 
       - name: Render + guard the home screen over the density x font x zoom matrix
@@ -93,7 +93,7 @@ jobs:
           VAULT_DIR: ${{ github.workspace }}/.vault
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.HomeOverflowMatrixTest"
+          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.BoardsTest"
         run: bash ./build.sh test
 
       - name: Render the Notify page (One UI cards) at A37 size
@@ -104,7 +104,7 @@ jobs:
           VAULT_DIR: ${{ github.workspace }}/.vault
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.NotifyScreenTest"
+          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.AggregatorComposeTest"
         run: bash ./build.sh test
 
       - name: Render + guard the Configs grid fits one A37 screen (grid-fit@*.png)
@@ -115,7 +115,7 @@ jobs:
           VAULT_DIR: ${{ github.workspace }}/.vault
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.ConfigsIconSizeTest"
+          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.configs.BadgePane*"
         run: bash ./build.sh test
 
       - name: Render + guard the "|" separators sit on the icon line and keep columns (sep1069-*.png)
