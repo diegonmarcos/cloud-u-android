@@ -6,6 +6,10 @@ import android.graphics.Canvas
 import android.os.Looper
 import android.view.View
 import androidx.activity.ComponentActivity
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -132,9 +136,9 @@ class DriveScreenshotTest {
                 androidx.compose.foundation.layout.Column {
                     ToolbarIsland(title = "Sync", subtitle = "Git", actions = { com.diegonmarcos.clouddrive.sync.TerminalIslandAction(actions) {} })
                     ToolbarIsland(title = "Files", subtitle = "Internal storage", actions = {
-                        IslandAction(androidx.compose.material.icons.Icons.Filled.Search, "Search") {}
-                        IslandAction(androidx.compose.material.icons.Icons.Filled.FolderOpen, "Places") {}
-                        IslandAction(androidx.compose.material.icons.Icons.Filled.MoreVert, "More") {}
+                        IslandAction(Icons.Filled.Search, "Search") {}
+                        IslandAction(Icons.Filled.FolderOpen, "Places") {}
+                        IslandAction(Icons.Filled.MoreVert, "More") {}
                     })
                 }
             }
