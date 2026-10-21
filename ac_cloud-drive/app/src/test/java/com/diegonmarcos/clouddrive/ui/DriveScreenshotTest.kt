@@ -131,7 +131,7 @@ class DriveScreenshotTest {
             DriveTheme {
                 androidx.compose.foundation.layout.Column {
                     ToolbarIsland(title = "Sync", subtitle = "Git", actions = { com.diegonmarcos.clouddrive.sync.TerminalIslandAction(actions) {} })
-                    ToolbarIsland(title = "Files", subtitle = "/storage/emulated/0", actions = {
+                    ToolbarIsland(title = "Files", subtitle = "Internal storage", actions = {
                         IslandAction(androidx.compose.material.icons.Icons.Filled.Search, "Search") {}
                         IslandAction(androidx.compose.material.icons.Icons.Filled.FolderOpen, "Places") {}
                         IslandAction(androidx.compose.material.icons.Icons.Filled.MoreVert, "More") {}
