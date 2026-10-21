@@ -9026,19 +9026,14 @@
       "_doc_groups": "#777 THE FOUR shade groups of Configs ▸ Launcher ▸ Notify, as data: NotifyGroups gives every member's notification its group's key (setGroup) and posts one summary per group, so the shade shows four bundles instead of seven loose badges. `members` are producer ids below, in the order they sort inside the group; a producer in no group posts ungrouped. Group order and on/off are the owner's (Notify page, stored per group id); the declaration order is the default order. `alerts: true` marks the group whose member is the fleet alerts channel (FleetAlerts → AlertStore → AlertsNotifier); the Notify page draws its filters and Clear all from that flag, never from a name. `max_in_shade` caps how many alert children are posted (the store keeps more; Android drops an app's notifications past ~50).",
       "groups": [
         {
+          "id": "network",
+          "label": "Network",
+          "members": ["network_mesh", "network_data", "battery_status"]
+        },
+        {
           "id": "live",
-          "label": "Markets · Health · Weather",
-          "members": ["markets_prices", "health_activity", "weather_today"]
-        },
-        {
-          "id": "actions",
-          "label": "Quick Actions · KDE Connect",
-          "members": ["floating_nav_quick_actions", "kde_status"]
-        },
-        {
-          "id": "media",
-          "label": "Media Player",
-          "members": ["media_now_playing"]
+          "label": "Weather · Markets · Health",
+          "members": ["weather_today", "markets_prices", "health_activity"]
         },
         {
           "id": "alerts",
@@ -9048,9 +9043,14 @@
           "max_in_shade": 20
         },
         {
-          "id": "network",
-          "label": "Network",
-          "members": ["network_mesh", "network_data", "battery_status"]
+          "id": "media",
+          "label": "Media Player",
+          "members": ["media_now_playing"]
+        },
+        {
+          "id": "actions",
+          "label": "Quick Actions · KDE Connect",
+          "members": ["floating_nav_quick_actions", "kde_status"]
         }
       ],
       "producers": [

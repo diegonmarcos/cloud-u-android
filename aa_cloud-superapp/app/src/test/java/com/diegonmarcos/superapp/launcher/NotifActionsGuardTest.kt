@@ -1,7 +1,7 @@
 package com.diegonmarcos.superapp.launcher
 
 import android.app.Application
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -46,9 +46,11 @@ class NotifActionsGuardTest : KitPageHarness() {
         for (key in listOf("pkg.a", "pkg.b")) for (act in NotifActions.REQUIRED_PER_BOX) {
             compose.onNodeWithTag(NotifActions.tag(act, key)).assertExists()
         }
+        compose.onNodeWithTag(NotifActions.tag(NotifActions.MARK_READ, "pkg.a")).assertHasClickAction()
         compose.onNodeWithTag(NotifActions.tag(NotifActions.MARK_READ, "pkg.a")).performClick()
         compose.waitForIdle()
-        assertTrue(st.readIds.containsAll(listOf("phone:a1", "phone:a2")))
+        assertTrue("readIds=${st.readIds} stored=${StackFilters.readKeys(ctx, "actions-guard")}",
+            st.readIds.containsAll(listOf("phone:a1", "phone:a2")))
         assertFalse("phone:b1" in st.readIds)
         compose.onNodeWithTag(NotifActions.tag(NotifActions.ARCHIVE, "pkg.b")).performClick()
         compose.waitForIdle()
