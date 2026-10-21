@@ -34,7 +34,7 @@ import com.diegonmarcos.superapp.profile.AccountModel
 import com.diegonmarcos.superapp.profile.AccountPermsPage
 import com.diegonmarcos.superapp.profile.AccountProfilePage
 import com.diegonmarcos.superapp.profile.AccountStore
-import com.diegonmarcos.superapp.profile.ActivityLog
+import com.diegonmarcos.superapp.profile.ActivityFeed
 import com.diegonmarcos.superapp.profile.ActivityPage
 import com.diegonmarcos.superapp.profile.BackupsPage
 import com.diegonmarcos.superapp.profile.C3ConfigsPage
@@ -102,10 +102,10 @@ class SectionScreensTest(private val section: String, private val page: String) 
             }"""), "screens-test", "2026-10-21T00:00:00Z")
             model.invalidate()
         }
-        ActivityLog.clear(ctx)
-        ActivityLog.record(ctx, "backup", "auto-backup of galaxy-s21: ok", now = 1_760_000_000_000)
-        ActivityLog.record(ctx, "secret", "revealed github.token", now = 1_760_000_100_000)
-        ActivityLog.record(ctx, "import", "imported 3 token(s)", now = 1_760_000_200_000)
+        ActivityFeed.clear(ctx)
+        ActivityFeed.record(ctx, "backup", "auto-backup of galaxy-s21: ok", now = 1_760_000_000_000)
+        ActivityFeed.record(ctx, "secret", "revealed github.token", now = 1_760_000_100_000)
+        ActivityFeed.record(ctx, "import", "imported 3 token(s)", now = 1_760_000_200_000)
     }
 
     @Composable private fun PageFor(go: (String, String) -> Unit) {

@@ -100,7 +100,7 @@ object MeshStatus {
  * never a secret value: callers pass names ("revealed github.token"), and [record] drops a text that [PublicConfig]
  * says looks like a secret.
  */
-object ActivityLog {
+object ActivityFeed {
     const val CAP = 200
     private const val FILE = "account_activity"
     private const val KEY = "log"

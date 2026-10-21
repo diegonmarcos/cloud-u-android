@@ -38,7 +38,7 @@ import java.util.Locale
 /**
  * The pages #1081 added to Cloud Account's five sections (Personal Info ▸ Wallet, Configs ▸ Desktop / C3,
  * Data ▸ Backups / Devices ▸ Mesh, Activity). Each is drawn from [GroupTitle] and [Tile] only. The pure parts
- * ([PublicConfig], [MeshStatus], [ActivityLog]) are in SectionKit.kt.
+ * ([PublicConfig], [MeshStatus], [ActivityFeed]) are in SectionKit.kt.
  */
 object SectionPageTags {
     const val WALLET = "section:wallet"
@@ -202,12 +202,12 @@ fun DevicesMeshPage() {
 fun ActivityPage() {
     val ctx = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
-    val items = remember(tick) { ActivityLog.items(ctx) }
+    val items = remember(tick) { ActivityFeed.items(ctx) }
     val fmt = remember { SimpleDateFormat("d MMM HH:mm", Locale.getDefault()) }
     SectionColumn(SectionPageTags.ACTIVITY) {
         GroupTitle("Activity · ${items.size}")
         if (items.isEmpty()) KitStatusBanner("nothing recorded yet", KitState.IDLE, tag = "activity:none")
         for (row in items) Tile(row.text, tag = "activity:${row.at}:${row.kind}", secondary = "${fmt.format(Date(row.at))} · ${row.kind}")
-        if (items.isNotEmpty()) KitActionBar(listOf(KitAction("Clear log", SectionPageTags.CLEAR) { ActivityLog.clear(ctx); tick++ }), filledFirst = false)
+        if (items.isNotEmpty()) KitActionBar(listOf(KitAction("Clear log", SectionPageTags.CLEAR) { ActivityFeed.clear(ctx); tick++ }), filledFirst = false)
     }
 }

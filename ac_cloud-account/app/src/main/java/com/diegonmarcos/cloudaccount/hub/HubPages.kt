@@ -1,6 +1,6 @@
 package com.diegonmarcos.cloudaccount.hub
 
-import com.diegonmarcos.superapp.profile.ActivityLog
+import com.diegonmarcos.superapp.profile.ActivityFeed
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -119,7 +119,7 @@ fun SecretLine(e: SecretEntry, onChanged: () -> Unit) {
         pill = (if (e.expired) "expired" else "stored") to (if (e.expired) KitState.BAD else KitState.OK),
         onClick = {
             if (shown != null) shown = null
-            else gate.reveal("Show ${e.name}", { HubAndroid.value(ctx, e.path) }, { shown = it; ActivityLog.record(ctx, "secret", "revealed ${e.path}") }, { note = "not shown: device auth refused" })
+            else gate.reveal("Show ${e.name}", { HubAndroid.value(ctx, e.path) }, { shown = it; ActivityFeed.record(ctx, "secret", "revealed ${e.path}") }, { note = "not shown: device auth refused" })
         })
     val v = shown
     if (v != null) Text(v, color = LocalKitPalette.current.textPrimary, fontSize = KitDensity.body, modifier = Modifier.testTag(HubTags.reveal(e.path)))
@@ -127,11 +127,11 @@ fun SecretLine(e: SecretEntry, onChanged: () -> Unit) {
     KitActionBar(listOf(
         KitAction(if (v == null) "Reveal" else "Hide", "hub:secret:reveal:${e.path}") {
             if (v != null) shown = null
-            else gate.reveal("Show ${e.name}", { HubAndroid.value(ctx, e.path) }, { shown = it; ActivityLog.record(ctx, "secret", "revealed ${e.path}") }, { note = "not shown: device auth refused" })
+            else gate.reveal("Show ${e.name}", { HubAndroid.value(ctx, e.path) }, { shown = it; ActivityFeed.record(ctx, "secret", "revealed ${e.path}") }, { note = "not shown: device auth refused" })
         },
         KitAction("Copy", "hub:secret:copy:${e.path}") {
             gate.reveal("Copy ${e.name}", { HubAndroid.value(ctx, e.path) },
-                { SecretClipboard.copy(ctx, it); ActivityLog.record(ctx, "secret", "copied ${e.path}"); note = "copied · clears in ${SecretClipboard.CLEAR_AFTER_MS / 1000}s" },
+                { SecretClipboard.copy(ctx, it); ActivityFeed.record(ctx, "secret", "copied ${e.path}"); note = "copied · clears in ${SecretClipboard.CLEAR_AFTER_MS / 1000}s" },
                 { note = "not copied: device auth refused" })
         },
         KitAction("Edit / rotate", "hub:secret:edit:${e.path}") { editing = true },
@@ -144,13 +144,13 @@ fun SecretLine(e: SecretEntry, onChanged: () -> Unit) {
             modifier = Modifier.fillMaxWidth().testTag("hub:secret:edit:field:${e.path}"))
         KitActionBar(listOf(
             KitAction("Save", "hub:secret:edit:save:${e.path}", enabled = text.isNotBlank()) {
-                HubAndroid.put(ctx)(e.path, text.trim()); editing = false; shown = null; note = "rotated"; ActivityLog.record(ctx, "secret", "rotated ${e.path}"); onChanged()
+                HubAndroid.put(ctx)(e.path, text.trim()); editing = false; shown = null; note = "rotated"; ActivityFeed.record(ctx, "secret", "rotated ${e.path}"); onChanged()
             },
             KitAction("Cancel", "hub:secret:edit:cancel:${e.path}") { editing = false },
         ))
     }
     if (confirmDelete) KitConfirmDialog("Delete ${e.name}?", "${e.path} is removed from this phone's account. Apps that use it stop working until you set it again.",
-        "Delete", "Keep", onConfirm = { confirmDelete = false; HubAndroid.remove(ctx, e.path); ActivityLog.record(ctx, "secret", "deleted ${e.path}"); onChanged() }, onDismiss = { confirmDelete = false })
+        "Delete", "Keep", onConfirm = { confirmDelete = false; HubAndroid.remove(ctx, e.path); ActivityFeed.record(ctx, "secret", "deleted ${e.path}"); onChanged() }, onDismiss = { confirmDelete = false })
 }
 
 // ── a provider: its secrets + its own Setup (connect, test, re-auth) ─────────────────────────────────────────
@@ -446,14 +446,14 @@ private fun TokenImporter(pickText: PickText, changed: () -> Unit) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Caption("→ ${r.path}" + if (r.expires.isNotBlank()) " · expires ${r.expires.take(10)}" else "")
                 TextButton(onClick = {
-                    TokenImport.importOne(r, HubAndroid.put(ctx)); rows.removeAt(i); note = "imported ${r.name}"; ActivityLog.record(ctx, "import", "imported ${r.name}"); changed()
+                    TokenImport.importOne(r, HubAndroid.put(ctx)); rows.removeAt(i); note = "imported ${r.name}"; ActivityFeed.record(ctx, "import", "imported ${r.name}"); changed()
                 }, modifier = Modifier.testTag("hub:tokens:import:$i")) { Text("Import") }
             }
         }
         Caption("Tap a provider or a type to change it.")
         KitActionBar(listOf(KitAction("Import all (${rows.count { it.selected }})", HubTags.TOKENS_IMPORT_ALL, enabled = rows.any { it.selected }) {
             val n = TokenImport.importAll(rows.toList(), HubAndroid.put(ctx))
-            rows.removeAll { it.selected }; note = "imported $n token(s)"; ActivityLog.record(ctx, "import", "imported $n token(s)"); changed()
+            rows.removeAll { it.selected }; note = "imported $n token(s)"; ActivityFeed.record(ctx, "import", "imported $n token(s)"); changed()
         }, KitAction("Discard", "hub:tokens:discard") { rows.clear(); note = "" }))
     }
 }

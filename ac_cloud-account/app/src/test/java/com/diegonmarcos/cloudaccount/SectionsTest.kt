@@ -2,7 +2,7 @@ package com.diegonmarcos.cloudaccount
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.diegonmarcos.superapp.profile.ActivityLog
+import com.diegonmarcos.superapp.profile.ActivityFeed
 import com.diegonmarcos.superapp.profile.MeshStatus
 import com.diegonmarcos.superapp.profile.PublicConfig
 import org.json.JSONObject
@@ -83,18 +83,18 @@ class SectionsTest {
 
     @Test fun activityLogKeepsNewestFirstAndCapsAndRefusesSecrets() {
         val ctx: Context = ApplicationProvider.getApplicationContext()
-        ActivityLog.clear(ctx)
-        ActivityLog.record(ctx, "backup", "first", now = 1)
-        ActivityLog.record(ctx, "secret", "revealed github.token", now = 2)
-        ActivityLog.record(ctx, "secret", "pasted " + fakeToken(), now = 3)   // refused: looks like a secret
-        assertEquals(listOf("revealed github.token", "first"), ActivityLog.items(ctx).map { it.text })
+        ActivityFeed.clear(ctx)
+        ActivityFeed.record(ctx, "backup", "first", now = 1)
+        ActivityFeed.record(ctx, "secret", "revealed github.token", now = 2)
+        ActivityFeed.record(ctx, "secret", "pasted " + fakeToken(), now = 3)   // refused: looks like a secret
+        assertEquals(listOf("revealed github.token", "first"), ActivityFeed.items(ctx).map { it.text })
         var json: String? = null
-        for (i in 1..ActivityLog.CAP + 25) json = ActivityLog.append(json, ActivityLog.Item(i.toLong(), "k", "e$i"))
-        val kept = ActivityLog.parse(json)
-        assertEquals(ActivityLog.CAP, kept.size)
-        assertEquals("e${ActivityLog.CAP + 25}", kept.last().text)
+        for (i in 1..ActivityFeed.CAP + 25) json = ActivityFeed.append(json, ActivityFeed.Item(i.toLong(), "k", "e$i"))
+        val kept = ActivityFeed.parse(json)
+        assertEquals(ActivityFeed.CAP, kept.size)
+        assertEquals("e${ActivityFeed.CAP + 25}", kept.last().text)
         assertEquals("e26", kept.first().text)
-        ActivityLog.clear(ctx)
-        assertTrue(ActivityLog.items(ctx).isEmpty())
+        ActivityFeed.clear(ctx)
+        assertTrue(ActivityFeed.items(ctx).isEmpty())
     }
 }

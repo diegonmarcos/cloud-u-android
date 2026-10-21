@@ -556,7 +556,7 @@
         "background": "dark",
         "pages": [
           {
-            "_doc": "New in #1081: the on-device log of what the account did (libs:account ActivityLog), newest first.",
+            "_doc": "New in #1081: the on-device log of what the account did (libs:account ActivityFeed), newest first.",
             "id": "activity",
             "label": "Activity",
             "icon": "activity"
