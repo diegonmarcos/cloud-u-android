@@ -52,13 +52,13 @@ class FleetIdentityPageTest : KitPageHarness() {
         val reg = FleetIdentity.baked()
         val g = reg.groups.firstOrNull { it.id == "terminal" }
         assertNotNull("data/fleet-identity.json declares the terminal group", g)
-        assertEquals(setOf("cld.termux", "cld.termux.nix"), g!!.members.toSet())
+        assertEquals(setOf("cld.termux", "cld.termux.nix", "com.diegonmarcos.clouddrive"), g!!.members.toSet())
         val rows = FleetIdentity.rows(reg, emptyMap()).associateBy { it.member.pkg }
         // pending until cloud-shared-store declares the value: each terminal is on its own uid today
         val want = g.sharedUserId ?: FleetIdentity.OWN
         assertEquals(want, rows.getValue("cld.termux").declared)
         assertEquals(want, rows.getValue("cld.termux.nix").declared)
-        if (g.sharedUserId != null) assertEquals(listOf("cld.termux.nix"), rows.getValue("cld.termux").sharesWith)
+        if (g.sharedUserId != null) assertEquals(listOf("cld.termux.nix", "com.diegonmarcos.clouddrive"), rows.getValue("cld.termux").sharesWith)
         assertTrue("no app outside the group is shared", rows.values.filter { it.group == null }.all { it.declared == FleetIdentity.OWN })
         // the terminals' sharedUserId=${'$'}{TERMUX_PACKAGE_NAME} is their own package: own uid, no mismatch
         if (g.sharedUserId == null) {
