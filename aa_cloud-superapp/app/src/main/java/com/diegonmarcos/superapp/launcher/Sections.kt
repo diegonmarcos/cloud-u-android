@@ -338,6 +338,8 @@ object Sections {
          *  glyph IS the mockup's gradient, and a tint flattens it to a
          *  silhouette. `"tint": false` in build.json (default true). */
         val tint: Boolean = true,
+        /** A drawable already resolved by the page builder (Configs' grid, whose tiles arrive with their icon); 0 = resolve [iconName]. */
+        @androidx.annotation.DrawableRes val iconRes: Int = 0,
     ) {
         /** What can actually be OPENED from this tile: itself when it is a
          *  destination, and its [children] when it is a folder. A folder
@@ -480,6 +482,10 @@ object Sections {
          *  Blank ⇒ the default Pages heading, which is every other section. */
         val group: String = "",
         val subgroup: String = "",
+
+        /** Names of the settings this page holds, declared as `settings` in build.json: what the Configs search finds
+         *  besides the page's own name (#1076). Empty ⇒ the page is found by its name alone. */
+        val settings: List<String> = emptyList(),
 
         /** `<sectionId>/<tile group title>` whose tiles this page opens with,
          *  as an app row. A REFERENCE to the canonical list, never a copy:
@@ -739,6 +745,7 @@ object Sections {
                         rowBreak = po.optBoolean("row_break", false),
                         group    = po.optString("group", ""),
                         subgroup = po.optString("subgroup", ""),
+                        settings = po.optJSONArray("settings")?.let { sa -> (0 until sa.length()).map { sa.getString(it) } }.orEmpty(),
                         appsFromTileGroup = po.optString("apps_from_tile_group", ""),
                         appsExtraTileIds = po.optJSONArray("apps_extra_tile_ids")?.let { ea ->
                             (0 until ea.length()).map { ea.getString(it) }

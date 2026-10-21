@@ -72,7 +72,7 @@ class SearchController(
     private val prefs: SearchScopePrefs?,
     declared: List<SearchScope> = SearchScopes.fromBuildConfig(),
 ) {
-    val scopes: List<SearchScope> = SearchEngine.scopesOrAll(declared)
+    val scopes: List<SearchScope> = SearchEngine.scopesOrAll(entry.scopesOf(declared))
 
     var query by mutableStateOf("")
     /** The bar holds focus: an inline search then shows its chips before anything is typed. */

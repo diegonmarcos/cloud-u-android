@@ -25,6 +25,8 @@ object SuperappSearchIndex {
         "phone_apps"    -> phoneApps(scope.id, ctx)
         "cloud_configs" -> cloudConfigs(scope.id, ctx)
         "phone_configs" -> PhoneConfigs.hits(ctx, scope.id)
+        SearchKinds.CONFIGS -> configsOnly(scope.id)
+        SearchKinds.APP_ALL -> cloudApps(scope.id) + cloudConfigs(scope.id, ctx)
         // browser_fav / browser_history / browser_web are per query: [Source.live].
         else -> emptyList()
     }
@@ -97,6 +99,17 @@ object SuperappSearchIndex {
                     phoneApp = PhoneAppRef(comp, app.user))
             }
         }
+
+    /** Configs' own scope (#1076): the pages of the `config` section, read from the same declaration the Configs grid
+     *  draws (name, heading crumb, and the settings a page declares), nothing from any other section. */
+    internal fun configsOnly(scopeId: String): List<SearchHit> = Sections.byId("config")?.let { sec ->
+        sec.pages.filter { !it.separator }.flatMap { page ->
+            val target = if (page.action.isNotBlank()) page.action else "page:${sec.id}/${page.id}"
+            val crumb = listOf(sec.label, page.group, page.subgroup).filter { it.isNotBlank() }.joinToString(" · ")
+            listOf(SearchHit(page.label, crumb, scopeId, target = target)) +
+                page.settings.map { SearchHit(it, "$crumb · ${page.label}", scopeId, target = target) }
+        }
+    }.orEmpty()
 
     /** Cloud-Configs: every section sub-page PLUS cached consolidated.json
      *  service entries (tap copies the value). Consolidated entries appear

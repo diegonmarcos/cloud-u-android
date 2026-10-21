@@ -32,6 +32,10 @@ grep -q 'val cols = CHIP_COLUMNS' "$KT/TileGridFragment.kt" && grep -q 'const va
 grep -q 'CompactTile(' "$KT/TileGridFragment.kt" && ! grep -q 'LauncherTile(' "$KT/TileGridFragment.kt" \
   && ok "the grid draws the small CompactTile, never the old big tile" || bad "grid draws the old big tile"
 
+# #1075: Configs itself is no longer a TileGridFragment: it is ConfigsFragment, Cloud > Apps' tile strip wrapped onto lines.
+grep -q 'ConfigsFragment.newInstance(tiles)' "$KT/LauncherNavController.kt" && grep -q 'TileStrip(' "$KT/ConfigsFragment.kt" \
+  && ok "Configs is drawn by ConfigsFragment through the Apps TileStrip" || bad "Configs is not drawn through the shared Apps tile strip"
+
 echo "== G3: the separator is inline =="
 # #1069: the separator is the composable TileDivider (LauncherTiles.kt): a 1 dp rule drawn as an OVERLAY on the edge of the
 # neighbouring tile (never a row child), so it takes no slot and no width, centred on the icon line, not clickable.

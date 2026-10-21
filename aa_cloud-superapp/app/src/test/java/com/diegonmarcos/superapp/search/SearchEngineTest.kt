@@ -123,7 +123,7 @@ class SearchEngineTest {
     }
 
     @Test fun `the entry points are told apart in storage`() {
-        assertEquals(3, SearchEntry.values().map { it.id }.toSet().size)
+        assertEquals(4, SearchEntry.values().map { it.id }.toSet().size)
     }
 
     @Test fun `a taxonomy with none of an entry's kinds starts on everything`() {

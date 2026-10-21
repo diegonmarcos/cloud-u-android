@@ -77,6 +77,10 @@ object SearchKinds {
     const val BROWSER_HISTORY = "browser_history"
     const val BROWSER_WEB = "browser_web"
 
+    /** Configs' own search ([SearchEntry.CONFIGS_PAGE]): the Configs entries only, and the whole app. */
+    const val CONFIGS = "configs"
+    const val APP_ALL = "app_all"
+
     /** Kinds answered per query rather than indexed once: their data is another app's. */
     val LIVE = setOf(BROWSER_FAV, BROWSER_HISTORY, BROWSER_WEB)
 }

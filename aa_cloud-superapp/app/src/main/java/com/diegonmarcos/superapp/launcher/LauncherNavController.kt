@@ -399,18 +399,14 @@ class LauncherNavController(private val host: NavHost) {
         // page, and testing for the fallback name dropped every one of them off
         // the grid the moment #649 gave Configs its own headings.
         val pages = own.filterNot { it.group == GROUP_ACTIONS }
-        return TileGridFragment.newInstance(
-            title = title,
-            // No actions AND no declared headings? Drop the headings entirely —
-            // a lone "PAGES" banner over every other grid is noise. A section
-            // that DID declare its own headings keeps them either way: they are
-            // the structure the owner asked for, not a side effect of having
-            // actions to separate.
-            tiles = if (actions.isEmpty() && pages.all { it.group == GROUP_PAGES && it.subgroup.isEmpty() })
+        // No actions AND no declared headings? Drop the headings entirely — a lone "PAGES" banner over every other grid
+        // is noise. A section that DID declare its own headings keeps them either way.
+        val tiles = if (actions.isEmpty() && pages.all { it.group == GROUP_PAGES && it.subgroup.isEmpty() })
                         pages.map { it.copy(group = "") }
-                    else pages + actions,
-            columns = section.gridColumns,
-            fit = section.id == "config")
+                    else pages + actions
+        // Configs wears the same page as Cloud ▸ Apps (#1075): one tile component, one set of size tokens.
+        if (section.id == "config") return ConfigsFragment.newInstance(tiles)
+        return TileGridFragment.newInstance(title = title, tiles = tiles, columns = section.gridColumns)
     }
 
     /** The extras declared on a section's radial node (KDE Connect,

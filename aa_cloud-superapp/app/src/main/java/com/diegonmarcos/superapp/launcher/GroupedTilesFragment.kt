@@ -160,7 +160,7 @@ internal fun GroupedTilesPage(sectionId: String, click: (String) -> Unit) {
             BelowFold(allApps(ctx, only = Sections.constellationPackages(ctx.packageName)), GroupedTilesFragment.recentTiles(ctx))
         }
     }
-    LazyColumn(Modifier.fillMaxSize().testTag(GroupedTilesFragment.TAG_LIST), contentPadding = PaddingValues(12.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag(GroupedTilesFragment.TAG_LIST), contentPadding = PaddingValues(TILE_PAGE_PADDING)) {
         // Suite is the only section merging in the generic "All Apps" grid + a "Recently Used" smart folder
         // below its Quickmarks — other users (Home, Labs, Configs, …) keep their plain grouped tiles.
         if (sectionId == "cloud") item(key = "h:quick") { GroupTitle("Quickmarks") }
@@ -168,7 +168,7 @@ internal fun GroupedTilesPage(sectionId: String, click: (String) -> Unit) {
             item(key = "g:$gi") {
                 Column {
                     GroupTitle(g.title)
-                    TileStrip(g.tiles, click) { folder = it }
+                    TileStrip(g.tiles, click, { folder = it })
                 }
             }
         }
@@ -176,7 +176,7 @@ internal fun GroupedTilesPage(sectionId: String, click: (String) -> Unit) {
         if (sectionId == "cloud") {
             val actions = GroupedTilesFragment.starActions()
             if (actions.isNotEmpty()) item(key = "g:actions") {
-                Column { GroupTitle("Actions"); TileStrip(actions, click) { folder = it } }
+                Column { GroupTitle("Actions"); TileStrip(actions, click, { folder = it }) }
             }
         }
         val b = below
@@ -192,7 +192,7 @@ internal fun GroupedTilesPage(sectionId: String, click: (String) -> Unit) {
             item(key = "div:2") { PhoneSectionDivider() }
             item(key = "h:smart") { GroupTitle("Smart Folders") }
             item(key = "h:recent") { GroupTitle("Recently Used") }
-            if (b.recent.isNotEmpty()) item(key = "recent") { TileStrip(b.recent, click) { folder = it } }
+            if (b.recent.isNotEmpty()) item(key = "recent") { TileStrip(b.recent, click, { folder = it }) }
             else item(key = "recent-empty") {
                 Text("Open a few Cloud tiles and they'll show up here", color = LocalKitPalette.current.textSecondary,
                     style = MaterialTheme.typography.bodySmall,
@@ -206,27 +206,35 @@ internal fun GroupedTilesPage(sectionId: String, click: (String) -> Unit) {
 }
 
 @Composable
-private fun GroupTitle(text: String) {
+internal fun GroupTitle(text: String) {
     Text(text, color = LocalKitPalette.current.textPrimary, style = MaterialTheme.typography.titleSmall,
         modifier = Modifier.fillMaxWidth().padding(start = 4.dp, top = 12.dp, bottom = 4.dp).testTag(GroupedTilesFragment.groupTag(text)))
 }
 
-/** One horizontally-scrollable strip per group — tiles stay on a single line regardless of count; the user
- *  scrolls right for overflow (replaces the previous 5-column wrap so groups like Data Apps don't break). */
+/** The page padding of every tile page (Cloud ▸ Apps and Configs). */
+internal val TILE_PAGE_PADDING = 12.dp
+
+/** Width of one tile cell: THE size token of Cloud ▸ Apps and Configs alike (both draw [TileCell] in a cell this wide). */
+internal val TILE_CELL_WIDTH = 60.dp
+
+/** One group of tiles: [TileCell]s in [TILE_CELL_WIDTH] cells. [wrap] = false is one horizontally-scrollable line per
+ *  group (Cloud ▸ Apps: tiles stay on a single line, the user scrolls right for overflow); [wrap] = true wraps the same
+ *  cells onto further lines (Configs, which has no sideways scrolling). One component, so the two cannot drift apart. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-internal fun TileStrip(tiles: List<Sections.AggTile>, click: (String) -> Unit, openFolder: (Sections.AggTile) -> Unit) {
-    LazyRow(Modifier.fillMaxWidth()) {
-        // A separator is no item: it rides on the right edge of the tile before it (zero width, so every tile keeps its slot).
-        val shown = tiles.withIndex().filter { !it.value.separator }
-        items(shown) { (i, tile) ->
-            Box(Modifier.width(60.dp)) {
-                TileCell(tile, click, openFolder)
-                tiles.getOrNull(i + 1)?.takeIf { it.separator }?.let {
-                    TileDivider(tileSepTag(it.id), TILE_CELL_ICON_CENTRE, 0.5.dp, Modifier.align(Alignment.TopEnd))
-                }
+internal fun TileStrip(tiles: List<Sections.AggTile>, click: (String) -> Unit, openFolder: (Sections.AggTile) -> Unit, wrap: Boolean = false) {
+    // A separator is no item: it rides on the right edge of the tile before it (zero width, so every tile keeps its slot).
+    val shown = tiles.withIndex().filter { !it.value.separator }
+    val cell: @Composable (Int, Sections.AggTile) -> Unit = { i, tile ->
+        Box(Modifier.width(TILE_CELL_WIDTH)) {
+            TileCell(tile, click, openFolder)
+            tiles.getOrNull(i + 1)?.takeIf { it.separator }?.let {
+                TileDivider(tileSepTag(it.id), TILE_CELL_ICON_CENTRE, 0.5.dp, Modifier.align(Alignment.TopEnd))
             }
         }
     }
+    if (wrap) androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth()) { for ((i, t) in shown) cell(i, t) }
+    else LazyRow(Modifier.fillMaxWidth()) { items(shown) { (i, tile) -> cell(i, tile) } }
 }
 
 /** Distance from a strip tile's top to its icon's centre: 6 dp padding + half the 32 dp glyph. */
@@ -242,11 +250,11 @@ internal fun TileCell(tile: Sections.AggTile, click: (String) -> Unit, openFolde
     // glyph, same strings — instead of an icon that promises an app. The tap is unchanged: it still reaches
     // launchExternalApp, which installs from the Store's asset.
     val missing = remember(tile.target) { Sections.extappMissing(ctx, tile.target) }
-    val iconRes = if (missing) R.drawable.ic_app_not_installed else Sections.iconResFor(ctx, tile.iconName)
+    val iconRes = if (missing) R.drawable.ic_app_not_installed else tile.iconRes.takeIf { it != 0 } ?: Sections.iconResFor(ctx, tile.iconName)
     val hint = if (missing) stringResource(R.string.phone_app_not_installed_tile_hint, tile.label) else null
     Column(
         // Fixed-width cells so the sideways row shows ~6 tiles at a time on a typical phone width.
-        Modifier.width(60.dp)
+        Modifier.width(TILE_CELL_WIDTH)
             .clickable {
                 // A folder HOLDS destinations instead of being one, so it opens the popup and the entries inside
                 // dispatch. A folder opens a POPUP, which is not a tile click and reaches no dispatcher, so it buzzes

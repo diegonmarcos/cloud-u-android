@@ -89,7 +89,7 @@ class ConfigsScreensTest(private val screen: String, private val fontScale: Floa
                     rowBreak = p.rowBreak,
                 )
             }
-            return TileGridFragment.newInstance("Configs", tiles, columns = section.gridColumns, fit = true)
+            return com.diegonmarcos.superapp.launcher.ConfigsFragment.newInstance(tiles)
         }
         return SectionPages.pagesFor("config", includeHidden = true).first { it.id == id }.factory()
     }
