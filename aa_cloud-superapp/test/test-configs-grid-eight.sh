@@ -4,7 +4,7 @@
 # GridColumnsTest.configsGridIsEightWideAndItsIconFitsAt360dp (JVM suite).
 #   G1 build.json declares the config section grid_columns 8 (not the Cloud stepper)
 #   G2 sectionGrid hands the section's count on; TileGridFragment draws the fixed 5-across small tile (owner, 6th ask)
-#   G3 the separator is a wrap_content TextView drawn like Data Apps' separatorCell, outside the slot count
+#   G3 the separator is a thin TileDivider overlay on the neighbouring tile's edge (#1069), outside the slot count
 #   G4 Network reads Firewall, DNS, Webserver, Cloud Mesh, Apps Access (Cloud Store > Access), ADB Shell
 #   G5 the Home Configs row skips the separator (no cell there either)
 set -u
@@ -33,17 +33,16 @@ grep -q 'CompactTile(' "$KT/TileGridFragment.kt" && ! grep -q 'LauncherTile(' "$
   && ok "the grid draws the small CompactTile, never the old big tile" || bad "grid draws the old big tile"
 
 echo "== G3: the separator is inline =="
-# The separator is the composable TileSeparator (LauncherTiles.kt): text as wide as itself, no weight, no slot.
-sep="$(awk '/^internal fun TileSeparator/{f=1} f{print} f&&/^}$/{exit}' "$KT/LauncherTiles.kt")"
-echo "$sep" | grep -q 'Text(' && ! echo "$sep" | grep -qE 'weight\(|fillMaxWidth|clickable' && ok "separator is as wide as its text (no weight, no fill, no slot, not clickable)" || bad "separator is not wrap_content"
-# Data Apps' separators (GroupedTilesFragment) and this grid's are now the ONE TileSeparator composable, so they
-# cannot differ in ink, caption size, centring or accessibility; the faint 0x66 ink, the caption size, the
-# centring and the a11y-hidden semantics are pinned on it above and in the next four checks.
-grep -q 'TileSeparator(' "$KT/GroupedTilesFragment.kt" && grep -q 'TileSeparator(' "$KT/TileGridFragment.kt" \
-  && ok "Data Apps and the section grid draw their separators with the same TileSeparator" || bad "a grid draws its own separator again"
+# #1069: the separator is the composable TileDivider (LauncherTiles.kt): a 1 dp rule drawn as an OVERLAY on the edge of the
+# neighbouring tile (never a row child), so it takes no slot and no width, centred on the icon line, not clickable.
+sep="$(awk '/^internal fun TileDivider/{f=1} f{print} f&&/^}$/{exit}' "$KT/LauncherTiles.kt")"
+echo "$sep" | grep -q 'size(1.dp, SEP_HEIGHT)' && ! echo "$sep" | grep -qE 'weight\(|fillMaxWidth|clickable|Text\(' && ok "separator is a 1 dp rule (no weight, no fill, no slot, not clickable)" || bad "separator is not wrap_content"
+# Data Apps' separators (GroupedTilesFragment) and this grid's are the ONE TileDivider composable, so they cannot differ
+# in ink, centring or accessibility; the faint 0x66 ink and the a11y-hidden semantics are pinned on it below.
+grep -q 'TileDivider(' "$KT/GroupedTilesFragment.kt" && grep -q 'TileDivider(' "$KT/TileGridFragment.kt" \
+  && ok "Data Apps and the section grid draw their separators with the same TileDivider" || bad "a grid draws its own separator again"
 echo "$sep" | grep -q 'alpha = 0.4f' && ok "the separator ink is the faint 0x66 (40%) ink" || bad "separator ink is not the faint 0x66 ink"
-echo "$sep" | grep -q 'fontSize = 12.sp' && ok "the separator is caption size" || bad "separator is not caption size"
-echo "$sep" | grep -q 'TextAlign.Center' && ok "the separator is centred" || bad "separator is not centred"
+echo "$sep" | grep -q 'iconCentreY' && ok "the separator is centred on the icon line" || bad "separator is not centred on the icon line"
 echo "$sep" | grep -q 'clearAndSetSemantics' && ok "the separator is hidden from accessibility" || bad "separator is not hidden from accessibility"
 grep -q 'if (!sep) slots++' "$KT/TileGridFragment.kt" && grep -q 'if (!sep && slots == cols) break' "$KT/TileGridFragment.kt" \
   && ok "separators are not counted against the column slots" || bad "separators count as column slots"
