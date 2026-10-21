@@ -219,26 +219,22 @@ internal fun TileStrip(tiles: List<Sections.AggTile>, click: (String) -> Unit, o
         // A separator is no item: it rides on the right edge of the tile before it (zero width, so every tile keeps its slot).
         val shown = tiles.withIndex().filter { !it.value.separator }
         items(shown) { (i, tile) ->
-            TileCell(tile, click, openFolder, sepAfter = tiles.getOrNull(i + 1)?.takeIf { it.separator })
+            Box(Modifier.width(60.dp)) {
+                TileCell(tile, click, openFolder)
+                tiles.getOrNull(i + 1)?.takeIf { it.separator }?.let {
+                    TileDivider(tileSepTag(it.id), TILE_CELL_ICON_CENTRE, 0.5.dp, Modifier.align(Alignment.TopEnd))
+                }
+            }
         }
     }
 }
 
-/** A tile in a strip. [sepAfter] is the `separator` declared right after it: a thin divider on its right edge, centred on the icon line. */
-@Composable
-internal fun TileCell(tile: Sections.AggTile, click: (String) -> Unit, openFolder: (Sections.AggTile) -> Unit,
-                      sepAfter: Sections.AggTile? = null) {
-    Box(Modifier.width(60.dp)) {
-        TileCellBody(tile, click, openFolder)
-        if (sepAfter != null) TileDivider(tileSepTag(sepAfter.id), TILE_CELL_ICON_CENTRE, 0.5.dp, Modifier.align(Alignment.TopEnd))
-    }
-}
-
 /** Distance from a strip tile's top to its icon's centre: 6 dp padding + half the 32 dp glyph. */
-internal val TILE_CELL_ICON_CENTRE = 22.dp
+private val TILE_CELL_ICON_CENTRE = 22.dp
 
+/** A tile in a strip. A `separator` is never passed here: [TileStrip] draws it as a divider on the previous tile's edge. */
 @Composable
-private fun TileCellBody(tile: Sections.AggTile, click: (String) -> Unit, openFolder: (Sections.AggTile) -> Unit) {
+internal fun TileCell(tile: Sections.AggTile, click: (String) -> Unit, openFolder: (Sections.AggTile) -> Unit) {
     val ctx = LocalContext.current
     val view = LocalView.current
     val p = LocalKitPalette.current
