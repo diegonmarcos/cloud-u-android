@@ -160,4 +160,18 @@ class GitStatusReaderTest {
         // never presented to a host the credential does not belong to
         assertEquals(GitAuth.None, GitSyncCoordinator.pickAuth("none", none, sess, { "tok" }, "o", false))
     }
+
+    /** A store repository in EXEC mode has no `.git` this app can see: the routed probe's answer decides, so it is not "not cloned". */
+    @Test fun aRepositoryOnlyTheRoutedProbeCanSeeIsStillRead() = runBlocking {
+        val gone = File(tmp, "in-the-store")
+        val reader = GitStatusReader(probe = { probe(ahead = 1) }, timeoutMs = 2_000, concurrency = 1, ttlMs = 60_000, isRepository = { true })
+        withTimeout(5_000) { reader.request(listOf(GitStatusReader.Target("in-the-store", gone))).join() }
+        assertEquals(GitStatusReader.State.AHEAD, reader.statuses.value["in-the-store"]!!.state)
+    }
+
+    @Test fun aDirectoryNobodyCallsARepositoryIsNotCloned() = runBlocking {
+        val reader = GitStatusReader(probe = { error("must not be probed") }, timeoutMs = 2_000, concurrency = 1, ttlMs = 60_000, isRepository = { false })
+        withTimeout(5_000) { reader.request(listOf(GitStatusReader.Target("x", File(tmp, "x")))).join() }
+        assertEquals(GitStatusReader.State.NOT_CLONED, reader.statuses.value["x"]!!.state)
+    }
 }

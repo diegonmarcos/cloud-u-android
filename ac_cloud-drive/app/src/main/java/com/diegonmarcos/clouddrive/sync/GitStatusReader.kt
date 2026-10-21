@@ -48,6 +48,8 @@ class GitStatusReader(
     private val ttlMs: Long,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Is [dir] a clone? A store repository is invisible to File checks in EXEC mode, so this asks the routed probe (GitEngine). */
+    private val isRepository: (File) -> Boolean = { com.diegonmarcos.cloudlib.gitsync.GitEngine.isRepository(it) },
 ) {
     /** What one `git status` says, before it is classified. */
     data class Probe(
@@ -128,13 +130,10 @@ class GitStatusReader(
         try {
             permits.withPermit {
                 val begin = clock()
-                if (!t.dir.isDirectory || !File(t.dir, ".git").exists()) {
-                    publish(t.id, Status(State.NOT_CLONED, readAtMs = clock()))
-                    return@withPermit
-                }
-                val done = CompletableDeferred<Result<Probe>>()
+                val done = CompletableDeferred<Result<Probe?>>()
                 val thread = Thread({
-                    val r = runCatching { probe(t.dir) }
+                    // null = not a clone (checked here, on the probe thread: a store repository is asked of cld.termux).
+                    val r = runCatching { if (isRepository(t.dir)) probe(t.dir) else null }
                     // A probe that outlived its timeout frees its repository only now; the
                     // completion and the release are one step under the reader's lock.
                     synchronized(inFlight) {
@@ -156,7 +155,8 @@ class GitStatusReader(
                         Status(State.ERROR, reason = "timeout after " + if (timeoutMs >= 1000) "${timeoutMs / 1000}s" else "${timeoutMs}ms", readAtMs = clock(), tookMs = took)
                     }
                     r.isFailure -> Status(State.ERROR, reason = r.exceptionOrNull()?.let { it.message ?: it.javaClass.simpleName } ?: "unknown", readAtMs = clock(), tookMs = took)
-                    else -> classify(r.getOrThrow(), clock(), took)
+                    r.getOrNull() == null -> Status(State.NOT_CLONED, readAtMs = clock(), tookMs = took)
+                    else -> classify(r.getOrThrow()!!, clock(), took)
                 }
                 publish(t.id, status)
             }

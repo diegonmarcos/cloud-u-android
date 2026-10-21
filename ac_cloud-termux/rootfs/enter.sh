@@ -207,10 +207,10 @@ if [ "$(cat "$CLOUD_STORE_CFG/export-mirror" 2>/dev/null)" = "on" ] && [ -n "$sd
     ( mkdir -p "$sdcard/CloudDrive/export" && cp -ru "$CLOUD_STORE/export/." "$sdcard/CloudDrive/export/" ) \
         >"$CLOUD_STORE_CFG/export-mirror.log" 2>&1 </dev/null &
 fi
-# One-time hint: repositories cloud-drive cloned into the legacy CloudDrive folder are not
-# copied automatically (gigabytes, and the FUSE copy has no exec bits to keep).
+# One-time hint: Cloud Drive itself imports the clones it made in the legacy CloudDrive folder
+# (LegacyImport, run by its seed worker; anything missing is cloned from the declared list).
 if [ ! -d "$CLOUD_STORE/git" ] && [ -n "$sdcard" ] && [ -d "$sdcard/CloudDrive/git" ]; then
-    echo "ℹ ~/cloud-shared-store/git is empty; to import the legacy CloudDrive clones once: cp -a /storage/emulated/0/CloudDrive/git ~/cloud-shared-store/" >&2
+    echo "ℹ ~/cloud-shared-store/git is empty; Cloud Drive imports the legacy CloudDrive clones when it next opens (nothing to do here)" >&2
 fi
 
 # startup-step: local_webserver

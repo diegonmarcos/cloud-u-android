@@ -84,8 +84,13 @@ s1() {
 # s2 <StoreSeed.kt> : an incomplete pass RETRIES
 s2() {
     local f="$1" bad=0
-    grep -qE 'return if \(report\.complete\) Result\.success\(\) else Result\.retry\(\)' "$f" \
-        || { echo "    the pass does not return retry() when the report is incomplete"; bad=1; }
+    # The verdict goes through SeedPolicy: retry while the budget lasts (bounded, never for ever), success only when complete.
+    grep -qE 'return conclude\(report\)' "$f" \
+        || { echo "    the pass does not hand its report to the retry budget"; bad=1; }
+    grep -qE 'SeedPolicy\.Next\.RETRY -> .*Result\.retry\(\)' "$f" \
+        || { echo "    an incomplete report within budget does not return retry()"; bad=1; }
+    grep -qE 'SeedPolicy\.Next\.GIVE_UP' "$f" \
+        || { echo "    an incomplete report past the budget is not stopped with a surfaced report"; bad=1; }
     # A bare `return Result.success()` at the end of the seed pass is the original defect.
     if awk '/val report = SeedReport/{seen=1} seen && /^ *return Result\.success\(\)/{found=1} END{exit !found}' "$f"; then
         echo "    the pass still ends in an unconditional Result.success()"; bad=1
@@ -107,7 +112,7 @@ s4() {
     grep -qE 'outcomes\.size == declared && resumable\.isEmpty\(\)' "$f" \
         || { echo "    complete is not 'every declared repository, none resumable'"; bad=1; }
     # #730 needs-storage is resumable too: the all-files grant turns the next pass into clones.
-    grep -qE 'RESUMABLE = setOf\(FAILED, DEFERRED, NEEDS_STORAGE\)' "$f" || { echo "    failed/deferred/needs-storage are not the resumable kinds"; bad=1; }
+    grep -qE 'RESUMABLE = setOf\(FAILED, DEFERRED, NEEDS_STORAGE, NEEDS_STORE\)' "$f" || { echo "    failed/deferred/needs-storage are not the resumable kinds"; bad=1; }
     return $bad
 }
 
@@ -130,7 +135,7 @@ s6() {
     grep -qE 'BLOCKED = setOf\(NEEDS_CREDENTIAL\)' "$report" || { echo "    needs-credential is not the blocked (terminal, unfinished) kind"; bad=1; }
     # In RESUMABLE it would retry forever against a clone that cannot succeed — s4's verbatim
     # set already pins this, but say it here in this defect's own words too.
-    grep -qE 'RESUMABLE = setOf\(FAILED, DEFERRED, NEEDS_STORAGE\)$' "$report" || { echo "    needs-credential leaked into the resumable kinds — the unwinnable retry is back"; bad=1; }
+    grep -qE 'RESUMABLE = setOf\(FAILED, DEFERRED, NEEDS_STORAGE, NEEDS_STORE\)$' "$report" || { echo "    needs-credential leaked into the resumable kinds — the unwinnable retry is back"; bad=1; }
     return $bad
 }
 
@@ -245,7 +250,7 @@ PYTHON
 }
 
 mutate "an unconditional Result.success() at the end of the pass" s2 "$SEED" \
-    's = s.replace("return if (report.complete) Result.success() else Result.retry()", "return Result.success()")'
+    's = s.replace("return conclude(report)", "return Result.success()")'
 mutate "the swallow-and-skip failure loop restored" s1 "$SEED" \
     's = s.replace("SeedOutcome.FAILED", "Log.w(TAG, why).let { return@forEach }")'
 mutate "the completeness ladder removed" m1 "$MIGRATION" \
@@ -276,7 +281,7 @@ python3 - "$MUT/report-resumable.kt" <<'PYTHON'
 import sys
 p = sys.argv[1]
 s = open(p, encoding="utf-8").read()
-s = s.replace("RESUMABLE = setOf(FAILED, DEFERRED, NEEDS_STORAGE)", "RESUMABLE = setOf(FAILED, DEFERRED, NEEDS_STORAGE, NEEDS_CREDENTIAL)")
+s = s.replace("RESUMABLE = setOf(FAILED, DEFERRED, NEEDS_STORAGE, NEEDS_STORE)", "RESUMABLE = setOf(FAILED, DEFERRED, NEEDS_STORAGE, NEEDS_STORE, NEEDS_CREDENTIAL)")
 open(p, "w", encoding="utf-8").write(s)
 PYTHON
 if s6 "$SEED" "$MUT/report-resumable.kt" >/dev/null 2>&1 || s4 "$MUT/report-resumable.kt" >/dev/null 2>&1; then fail "MUT needs-credential made resumable: the mutation passed"; else pass "MUT needs-credential made resumable goes RED (s4 and s6 both)"; fi

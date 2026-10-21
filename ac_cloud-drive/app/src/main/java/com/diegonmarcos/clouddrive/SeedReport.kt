@@ -50,10 +50,17 @@ data class SeedOutcome(val name: String, val kind: String, val detail: String) {
          */
         const val NEEDS_STORAGE = "needs-storage"
 
+        /**
+         * The shared store itself did not answer (cld.termux absent, CLOUD_EXEC unbound, the folder
+         * not creatable), so no clone was tried. Resumable but BOUNDED by [SeedPolicy]: it used to be
+         * retried without limit, with no word to the owner about the store being the cause.
+         */
+        const val NEEDS_STORE = "needs-store"
+
         /** The kinds a repository can carry and still leave the store finished. */
         val SETTLED = setOf(PRESENT, SEEDED, UNDECLARED)
         /** The kinds another pass could still turn into a clone. */
-        val RESUMABLE = setOf(FAILED, DEFERRED, NEEDS_STORAGE)
+        val RESUMABLE = setOf(FAILED, DEFERRED, NEEDS_STORAGE, NEEDS_STORE)
         /** #683 Terminal but NOT finished: no retry can help, and the store still lacks the repository. */
         val BLOCKED = setOf(NEEDS_CREDENTIAL)
     }
@@ -99,8 +106,39 @@ data class SeedReport(val declared: Int, val outcomes: List<SeedOutcome>) {
             if (hasStorage) null
             else SeedReport(names.size, names.map { SeedOutcome(it, SeedOutcome.NEEDS_STORAGE, "Cloud Drive holds no all-files access yet; granting it resumes the seed") })
 
+        /** The store did not verify: every declared repository carries the one actionable [why]. */
+        fun withoutStore(names: List<String>, why: String): SeedReport =
+            SeedReport(names.size, names.map { SeedOutcome(it, SeedOutcome.NEEDS_STORE, why) })
+
         /** #730 what the Git page shows BEFORE any pass ran: the seed is queued, and on what it waits. */
         fun pending(declared: Int, unmetered: Boolean): String =
             "seed 0/$declared pending: queued, waiting for " + (if (unmetered) "an unmetered (Wi-Fi) network" else "a network") + " and all-files access"
+    }
+}
+
+/**
+ * The seed worker's retry budget, pure so the JVM suite can run the loop it guards. An incomplete
+ * pass used to return `Result.retry()` with no limit: a store that never became reachable (or a
+ * clone that could never succeed) re-ran for ever and the page said "will retry" for ever. Now
+ * the pass number decides: retry up to [MAX_PASSES], then stop with a report that names the
+ * repositories and the way out. A later app launch or the page's Retry starts a fresh budget.
+ */
+object SeedPolicy {
+    const val MAX_PASSES = 6
+
+    enum class Next { DONE, RETRY, GIVE_UP }
+
+    /** [pass] is 1 for the first run of the work. */
+    fun decide(report: SeedReport, pass: Int): Next = when {
+        report.complete -> Next.DONE
+        pass >= MAX_PASSES -> Next.GIVE_UP
+        else -> Next.RETRY
+    }
+
+    /** The persisted report once the budget is spent; its last line is what the Git page shows. */
+    fun stopped(report: SeedReport, pass: Int): String {
+        val tally = "seed ${report.present.size}/${report.declared} STOPPED after $pass passes, not retried again: " +
+            report.resumable.joinToString { it.name } + " (fix the cause above, then press Retry)"
+        return (report.outcomes.map { it.line() } + tally).joinToString("\n")
     }
 }

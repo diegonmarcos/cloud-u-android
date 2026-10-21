@@ -62,10 +62,33 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
         SeedReport.withoutStorage(Declarations.seedRepos.map { it.name }, Places.hasAllFilesAccess(applicationContext))?.let { blocked ->
             blocked.lines().forEach { DriveDebugLog.i(applicationContext, TAG, it) }
             runCatching { reportFile(applicationContext).writeText(blocked.text()) }
-            return Result.retry()
+            return conclude(blocked)
+        }
+        // The store itself, verified (and created) before any clone: a bounded look that ends in one
+        // actionable sentence, never an unexplained retry.
+        StoreReady.verify { StoreReady.probe(applicationContext) }?.let { why ->
+            val blocked = SeedReport.withoutStore(Declarations.seedRepos.map { it.name }, why)
+            blocked.lines().forEach { DriveDebugLog.i(applicationContext, TAG, it) }
+            return conclude(blocked)
         }
         val family = Declarations.gitFamily
         val registry = RepoRegistry(File(applicationContext.filesDir, GitSyncWorker.REGISTRY_FILE))
+        // The legacy CloudDrive clones come into the store here, automatically and once (idempotent:
+        // a destination that is already a repository is skipped). Anything not imported is cloned below.
+        val storeIsRepo: (File) -> Boolean = { d -> if (com.diegonmarcos.clouddrive.sync.StoreGit.useExec(applicationContext)) com.diegonmarcos.clouddrive.sync.StoreGit.isRepository(applicationContext, d) else GitEngine.isRepository(d) }
+        val imported = runCatching {
+            val items = LegacyImport.plan(File(SharedStore.legacyRoot(), BuildConfig.GIT_SUBDIR), SharedStore.gitRoot(), storeIsRepo)
+            val copier = if (com.diegonmarcos.cloudlib.sharedstore.StoreAccess.mode(applicationContext) == com.diegonmarcos.cloudlib.sharedstore.StorePaths.Mode.DIRECT) com.diegonmarcos.clouddrive.sync.StoreLegs.FileCopier()
+                else com.diegonmarcos.clouddrive.sync.ExecCopier(applicationContext, com.diegonmarcos.cloudlib.sharedstore.StoreAccess.paths, com.diegonmarcos.cloudlib.sharedstore.StoreAccess.userId())
+            LegacyImport.run(items, copier, storeIsRepo)
+        }.getOrElse { listOf(LegacyImport.Outcome("-", false, it.message ?: it.javaClass.simpleName)) }
+        imported.forEach { o ->
+            DriveDebugLog.i(applicationContext, TAG, o.line())
+            if (o.ok) family.repos.firstOrNull { it.name == o.name }?.let { decl ->
+                val dir = SharedStore.repoDir(o.name)
+                registry.upsert(ManagedRepo(id = RepoRegistry.idFor(dir.absolutePath), name = o.name, path = dir.absolutePath, remoteUrl = family.cloneUrl(decl).orEmpty()))
+            }
+        }
         // #606/#629 the one-time migration runs BEFORE the seed loop, so the seed then finds a
         // migrated repository present and does not clone a second copy of it. Manifest-driven
         // (every declared name), never a hardcoded repository, and it decides by COMPLETENESS
@@ -166,7 +189,22 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
         runCatching { reportFile(applicationContext).writeText(report.text()) }
         // THE LOAD-BEARING LINE. retry, not success, on an incomplete pass: success is terminal for
         // unique work, and a terminal success is how three repositories went missing for good.
-        return if (report.complete) Result.success() else Result.retry()
+        return conclude(report)
+    }
+
+    /** Persist the verdict and map it through the retry budget: done, retry, or stop with the way out. */
+    private fun conclude(report: SeedReport): Result {
+        val pass = runAttemptCount + 1
+        return when (SeedPolicy.decide(report, pass)) {
+            SeedPolicy.Next.DONE -> { runCatching { reportFile(applicationContext).writeText(report.text()) }; Result.success() }
+            SeedPolicy.Next.RETRY -> { runCatching { reportFile(applicationContext).writeText(report.text()) }; Result.retry() }
+            SeedPolicy.Next.GIVE_UP -> {
+                val text = SeedPolicy.stopped(report, pass)
+                text.lines().forEach { DriveDebugLog.i(applicationContext, TAG, it) }
+                runCatching { reportFile(applicationContext).writeText(text) }
+                Result.failure()
+            }
+        }
     }
 
     companion object {
