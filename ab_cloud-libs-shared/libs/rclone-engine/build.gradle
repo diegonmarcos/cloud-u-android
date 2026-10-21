@@ -202,7 +202,7 @@ abstract class FetchUnisonBinaries extends DefaultTask {
                     }
                     return true
                 }
-                long skip = ((size + 511) / 512) * 512
+                long skip = ((size + 511L).intdiv(512L)) * 512L   // intdiv: Groovy's / on longs is a BigDecimal division
                 while (skip > 0) { long n = ins.skip(skip); if (n <= 0) { if (ins.read() < 0) return false; n = 1 }; skip -= n }
             }
         } finally { ins.close() }
