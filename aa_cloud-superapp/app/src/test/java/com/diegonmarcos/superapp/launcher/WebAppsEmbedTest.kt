@@ -12,7 +12,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * #1062 - Cloud ▸ WebApps is ONE page: the cloud-mobile site embedded in the shell (a WebView pane), not a second native grid.
+ * #1062 - Cloud ▸ WebApps is ONE page: the cloud-superapp site embedded in the shell (a WebView pane), not a second native grid.
  *
  *   E1 the page's URL is the one declared (webapps_base + webapps_path), https, with embed=1 and no second url or app list
  *   E2 the WebApps tab hosts a WebView on exactly that URL with the embed user agent and no floating Back
@@ -32,7 +32,7 @@ class WebAppsEmbedTest : KitPageHarness() {
     @Test
     fun `E1 the URL is the one declaration, https, with embed=1`() {
         val url = page.url
-        assertEquals("https://diegonmarcos.github.io/cloud-mobile/cloud/apps/?embed=1", url)
+        assertEquals("https://diegonmarcos.github.io/cloud-superapp/cloud/apps/?embed=1", url)
         assertTrue("https: $url", url.startsWith("https://"))
         assertTrue("embed=1: $url", WebPageFragment.isEmbed(url))
     }
