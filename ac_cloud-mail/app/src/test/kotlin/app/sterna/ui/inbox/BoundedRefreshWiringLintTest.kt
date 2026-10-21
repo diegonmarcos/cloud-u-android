@@ -60,13 +60,13 @@ class BoundedRefreshWiringLintTest {
         val arm = whenArm("is RefreshOutcome.Failed")
         assertEquals(
             "The arm taken when the work threw must be exactly what the old catch(Throwable) did: " +
-                "refreshing = false, the cause's own message (or its class name) in 'error', and the " +
+                "refreshing = false, the cause's told-apart 401/403 text (#1071) or its own message (or its class name) in 'error', and the " +
                 "cause handed to connectivity.reportFailure. 'error = null' there is one word and " +
                 "makes every failure mute again, which is #65 undone; dropping the reportFailure call " +
                 "blinds the connectivity probe. Arm was:\n$arm",
             "is RefreshOutcome.Failed -> { " +
                 "val cause = outcome.cause " +
-                "status.value = Status(refreshing = false, error = cause.message ?: cause.javaClass.simpleName) " +
+                "status.value = Status(refreshing = false, error = app.sterna.core.jmap.GatewayErrors.syncMessage(cause) ?: cause.message ?: cause.javaClass.simpleName) " +
                 "connectivity.reportFailure(cause) }",
             arm,
         )
