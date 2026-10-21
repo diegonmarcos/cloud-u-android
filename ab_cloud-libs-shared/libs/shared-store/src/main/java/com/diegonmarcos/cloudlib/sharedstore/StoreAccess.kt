@@ -17,6 +17,9 @@ object StoreAccess {
 
     val paths = StorePaths(BuildConfig.OWNER_PACKAGE, BuildConfig.STORE_DIR, BuildConfig.LEGACY_SHARED_ROOT, BuildConfig.COMPAT_LINK)
 
+    /** The terminal that owns the store (build.json::shared_store.owner_package): what a launch shortcut starts. */
+    fun ownerPackage(): String = BuildConfig.OWNER_PACKAGE
+
     fun userId(): Int = Process.myUid() / 100000
 
     /** The store's host path (never created here unless DIRECT). */

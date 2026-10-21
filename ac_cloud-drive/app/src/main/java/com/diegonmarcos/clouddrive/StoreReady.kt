@@ -39,4 +39,10 @@ object StoreReady {
             if (r.ok) null else "the shared store did not answer inside cld.termux (exit ${r.exit}): ${r.err.ifBlank { r.out }.take(200)}"
         }
     }
+
+    /**
+     * Start what the store needs before the terminal is shown: binding CLOUD_EXEC brings up
+     * cld.termux's process and its service, and the store folder is created on the way. Blocking.
+     */
+    fun wake(ctx: Context): String? = verify(attempts = 2, pauseMs = 1_000) { probe(ctx) }
 }

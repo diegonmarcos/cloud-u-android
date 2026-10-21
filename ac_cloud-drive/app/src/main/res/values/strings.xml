@@ -497,6 +497,8 @@
     <!-- #669 a fleet-listed clone needs the fleet session it was listed with; without one the
          gate answers instead of the git server. The message names the next step: the Authelia
          sign-in on this same page. -->
+    <string name="sync_open_terminal">Open terminal (starts it first)</string>
+    <string name="sync_terminal_name">Cloud Terminal Termux</string>
     <string name="git_seed_retry">Retry seed</string>
     <string name="git_fleet_clone_no_session">No fleet session is on this phone — the Authelia sign-in on this page starts one; the clone rides it.</string>
     <!-- #684 THE TWO PARALLEL WAY-CARDS (GitHub / Cloud git). The card names are DECLARED

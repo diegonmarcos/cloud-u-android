@@ -38,6 +38,11 @@ import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.EmptyState
 import com.diegonmarcos.clouddrive.ui.IconCatalog
+import com.diegonmarcos.clouddrive.ui.IslandAction
+import com.diegonmarcos.clouddrive.StoreReady
+import com.diegonmarcos.cloudlib.sharedstore.StoreAccess
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Terminal
 import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import kotlinx.coroutines.Dispatchers
@@ -90,7 +95,20 @@ fun SyncScreen(
     fun say(msg: String) { scope.launch { snackbar.showSnackbar(msg) } }
 
     Column(modifier.fillMaxSize()) {
-        ToolbarIsland(title = stringResource(R.string.sync_tab_title), subtitle = pages.firstOrNull { it.id == current }?.label)
+        ToolbarIsland(
+            title = stringResource(R.string.sync_tab_title),
+            subtitle = pages.firstOrNull { it.id == current }?.label,
+            actions = {
+                // The terminal owns the shared store: start it (process, service, store folder), then open it.
+                IslandAction(Icons.Filled.Terminal, stringResource(R.string.sync_open_terminal)) {
+                    scope.launch {
+                        val why = withContext(Dispatchers.IO) { StoreReady.wake(ctx.applicationContext) }
+                        if (!actions.launchApp(StoreAccess.ownerPackage(), "")) say(ctx.getString(R.string.chrome_not_installed, ctx.getString(R.string.sync_terminal_name)))
+                        else if (why != null) say(why)
+                    }
+                }
+            },
+        )
         // #868 the strip is libs:bottomnav's PageTabs over ui.sections[sync].pages.
         PageTabs(pages = Declarations.navPages("sync"), selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.SYNC_STRIP), underTopChrome = false)
         AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "sync_page", modifier = Modifier.weight(1f)) { id ->
