@@ -5,7 +5,8 @@
 # ║   ./sync.sh                sync everything due                   ║
 # ║   ./sync.sh --list         what is indexed, and how current      ║
 # ║   ./sync.sh --force        re-download even if the sha matches   ║
-# ║   ./sync.sh --refresh-list regenerate repos.json from the farms  ║
+# ║   ./sync.sh --refresh-list regenerate repos.json (repos.sot.json)║
+# ║   ./sync.sh --check-list   fail if repos.json is stale           ║
 # ║   ./sync.sh <name>...      sync only these                       ║
 # ║                                                                  ║
 # ║ NOT a clone. Each repo is the extracted tip TARBALL, so there is ║
@@ -69,32 +70,40 @@ sync_one() {
   printf '  %-30s updated  %s -> %s\n' "$name" "${cur:0:8}" "${head:0:8}"
 }
 
-refresh_list() {
-  local farms=("$HOME/git/cloud/repos.json" "$HOME/git/front/repos.json")
-  for f in "${farms[@]}"; do [ -f "$f" ] || { echo "missing farm registry: $f" >&2; exit 1; }; done
-  python3 - "$CFG" "${farms[@]}" <<'PY'
+# #1073 the list is DERIVED from the one registry, git-repos-master/repos.json, vendored byte-for-byte
+# next to this file as repos.sot.json (refreshed by git-repos-master's ./clone.sh --sync). No farm is read
+# any more; a pending_creation entry (repo not created yet) is never listed.
+#   --refresh-list  rewrite repos.json from repos.sot.json     --check-list  exit 1 if repos.json is stale
+_derive_list() {  # $1 = write | check
+  python3 - "$CFG" "$HERE/repos.sot.json" "$1" <<'PY'
 import json,sys,collections
-cfg=sys.argv[1]; farms=sys.argv[2:]
+cfg,sot,mode=sys.argv[1:4]
 d=json.load(open(cfg), object_pairs_hook=collections.OrderedDict)
-union={}
-for f in farms:
-    for r in json.load(open(f))['repos']: union[r['name']]=r
+reg=json.load(open(sot))
+assert reg.get('_schema')=='cloud-repos/v1', 'repos.sot.json is not cloud-repos/v1'
 ex=set(d['exclude'])
 out=[]
-for name in sorted(union):
-    if name in ex: continue
-    r=union[name]
+for r in sorted(reg['repos'], key=lambda r:r['name']):
+    if r.get('group') not in ('a_cloud','b_front'): continue   # the cloud + front projects, as the two farms were
+    if r.get('status')=='pending_creation' or r['name'] in ex: continue
     out.append(collections.OrderedDict([
-        ("name",name),
+        ("name",r['name']),
         ("repo",r['url'].split(':')[-1].removesuffix('.git')),
         ("private",bool(r.get('private'))),
         ("doc",r.get('doc','')),
     ]))
+if mode=='check':
+    if json.loads(json.dumps(d['repos']))!=json.loads(json.dumps(out)):
+        have={r['name'] for r in d['repos']}; want={r['name'] for r in out}
+        print("repos.json is stale vs repos.sot.json: extra=%s missing=%s (run ./sync.sh --refresh-list)"%(sorted(have-want),sorted(want-have)))
+        sys.exit(1)
+    print("repos.json: up to date with repos.sot.json (%d entries)"%len(out)); sys.exit(0)
 d['repos']=out
 open(cfg,'w').write(json.dumps(d,indent=2,ensure_ascii=False)+'\n')
-print(f"  repos.json refreshed from the farms: {len(out)} entries")
+print(f"  repos.json refreshed from repos.sot.json: {len(out)} entries")
 PY
 }
+refresh_list() { _derive_list write; }
 
 FORCE=0; TARGETS=()
 case "${1:-}" in
@@ -108,6 +117,7 @@ case "${1:-}" in
     done < <(_cfg '.repos[].name')
     exit 0 ;;
   --refresh-list) refresh_list; exit 0 ;;
+  --check-list) _derive_list check; exit $? ;;
   --force) FORCE=1; shift ;;
 esac
 [ $# -gt 0 ] && TARGETS=("$@")

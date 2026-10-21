@@ -283,6 +283,14 @@ object Declarations {
         /** old clone name -> current name, from every repository's declared `renamed_from`. */
         val renames: Map<String, String> get() = repos.flatMap { r -> r.renamedFrom.map { it to r.name } }.toMap()
     }
+    /** #1073 one entry of the repo registry (git-repos-master/repos.json) as baked in REPOS_SOT_B64. [github] is the GitHub repository name; [pending] = not created yet, so nothing may clone or list it. */
+    data class RepoSotEntry(val name: String, val github: String, val private: Boolean, val pending: Boolean, val renamedFrom: List<String> = emptyList())
+    /** The registry, the ONE list of repositories; the Sync > Git family is held to it. */
+    data class RepoSotDecl(val repos: List<RepoSotEntry>) {
+        fun byGithub(github: String): RepoSotEntry? = repos.firstOrNull { it.github == github }
+        /** true only for a repository the registry lists AND has created. */
+        fun cloneable(github: String): Boolean = byGithub(github)?.let { !it.pending } ?: false
+    }
     data class MirrorJobDecl(val name: String, val source: String, val destination: String, val delete: Boolean, val notes: String)
     data class RemoteDecl(val name: String, val type: String, val purpose: String, val endpoint: String, val host: String, val auth: String, val status: String, val reason: String, val notes: String, val declaredToPhone: Boolean)
     data class RcloneJobDecl(val name: String, val kind: String, val source: String, val destination: String, val schedule: String, val notes: String)
@@ -307,7 +315,10 @@ object Declarations {
     val iconDefault: String get() = BuildConfig.UI_ICON_DEFAULT
     val apps: List<AppTileDecl> by lazy { parseApps(decode(BuildConfig.UI_APPS_B64)) }
     val connections: List<ConnectionDecl> by lazy { parseConnections(decode(BuildConfig.CONNECTIONS_B64)) }
-    val gitFamily: GitFamilyDecl by lazy { parseGitFamily(decode(BuildConfig.GIT_REPOS_B64)) }
+    /** #1073 the repo registry, baked from build.json::storage.repos_source. */
+    val repoSot: RepoSotDecl by lazy { parseRepoSot(decode(BuildConfig.REPOS_SOT_B64)) }
+    /** The Sync > Git family, minus any repository the registry does not list or has not created (pending_creation). */
+    val gitFamily: GitFamilyDecl by lazy { restrictToRegistry(parseGitFamily(decode(BuildConfig.GIT_REPOS_B64)), repoSot) }
     val mirrorJobs: List<MirrorJobDecl> by lazy { parseMirrorJobs(decode(BuildConfig.MIRROR_JOBS_B64)) }
     val remotes: List<RemoteDecl> by lazy { parseRemotes(decode(BuildConfig.RCLONE_REMOTES_B64)) }
     val rcloneJobs: List<RcloneJobDecl> by lazy { parseRcloneJobs(decode(BuildConfig.RCLONE_JOBS_B64)) }
@@ -499,6 +510,15 @@ object Declarations {
         val name = c.str("name"); if (name.isBlank()) return@mapNotNull null
         ConnectionDecl(name, c.str("kind"), c.str("endpoint"), c.str("auth"), c.str("vm"), c.str("status"), c.str("scope"), c.str("notes"), c.str("reason"), c.str("uri"), c.str("machine", MACHINE_CONTAINER))
     }
+
+    fun parseRepoSot(text: String): RepoSotDecl = RepoSotDecl(objects(element(text)).mapNotNull { r ->
+        val name = r.str("name"); if (name.isBlank()) return@mapNotNull null
+        RepoSotEntry(name, r.str("github", name), r.bool("private"), r.bool("pending"), r.strings("renamed_from"))
+    })
+
+    /** #1073 a family repository survives only when the registry lists it and it exists: a pending_creation repo is never offered for clone or seed. */
+    fun restrictToRegistry(family: GitFamilyDecl, sot: RepoSotDecl): GitFamilyDecl =
+        family.copy(repos = family.repos.filter { sot.cloneable(it.name) })
 
     fun parseGitFamily(text: String): GitFamilyDecl {
         val o = element(text) as? JsonObject ?: return GitFamilyDecl(emptyList(), emptyList())

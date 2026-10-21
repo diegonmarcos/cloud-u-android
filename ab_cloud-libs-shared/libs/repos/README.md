@@ -34,15 +34,16 @@ tree.
 
 ## The list is not invented here
 
-`repos.json` is the union of `~/git/cloud/repos.json` and
-`~/git/front/repos.json` — the two symlink farms that already index this
-account. Regenerate with `--refresh-list`.
+`repos.json` is derived from the one registry, `git-repos-master/repos.json`,
+vendored byte-for-byte as `repos.sot.json` (refreshed by git-repos-master's
+`./clone.sh --sync`): every non-`pending_creation` entry of the `a_cloud` and
+`b_front` groups, minus `exclude`. Regenerate with `./sync.sh --refresh-list`;
+`./sync.sh --check-list` fails when `repos.json` is stale (#1073).
 
-This matters more than it looks: in those registries `name` is the **local
-directory** and `url` is the **GitHub repo**, and they legitimately differ —
-`front-diegonmarcos` is `diegonmarcos.github.io`. Deriving
-the list from a GitHub name filter silently misses repos, which is exactly the
-mistake this file exists to avoid repeating.
+In the registry `name` is the **local directory** and `url` is the **GitHub
+repo**, and they legitimately differ - `front-diegonmarcos` is
+`diegonmarcos.github.io`. Deriving the list from a GitHub name filter silently
+misses repos, which is exactly the mistake this file exists to avoid repeating.
 
 ## What is excluded, and why
 

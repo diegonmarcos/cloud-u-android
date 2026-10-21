@@ -1,6 +1,6 @@
 {
   "_doc": "libs:repos — read-only, history-free snapshots of the cloud and front repos, so this machine can read any of them without cloning, without them ever going stale, and without any of them ever being dirty. NOT a git clone: sync.sh downloads the tip TARBALL and extracts it, so there is no .git directory at all. 'Never dirty' is therefore structural rather than enforced — there is no repo to commit from, no branch to drift, nothing to reset.",
-  "_doc_source": "The repo list is NOT invented here. It is the union of ~/git/cloud/repos.json and ~/git/front/repos.json — the two symlink farms that already index this account — regenerated with `./sync.sh --refresh-list`. `name` is the local directory and `url` is the GitHub repo, and they legitimately differ (front-diegonmarcos is diegonmarcos.github.io); the farms encode that mapping, which is exactly why deriving the list from a GitHub name filter misses repos.",
+  "_doc_source": "#1073 The repo list is NOT invented here. It is DERIVED from the one registry, git-repos-master/repos.json (cloud-repos/v1), vendored byte-for-byte as repos.sot.json (refreshed by git-repos-master's ./clone.sh --sync): every non-pending a_cloud + b_front entry minus `exclude`. Regenerate with `./sync.sh --refresh-list`; `./sync.sh --check-list` (run by ac_cloud-drive/test/test-drive-repos-sot.sh) fails when this file is stale. `name` is the registry's local directory and `repo` is the GitHub repo; they legitimately differ (front-diegonmarcos is diegonmarcos.github.io). A pending_creation repo (cloud-webapps, cloud-me-containers) is never listed.",
   "_doc_freshness": "Never behind, cheaply: each snapshot records the commit sha it came from in .head. A sync asks GitHub for the branch head (one API call) and re-downloads ONLY when it differs. Unchanged repos cost one request and no bytes. The download lands in <dir>.new and is swapped in atomically, so an interrupted sync can never leave a half-updated tree.",
   "_doc_private": "private:true entries are listed but NOT synced unless include_private is set. They would sit as plaintext source inside a public repo's working tree; that is a deliberate choice, not a default.",
   "_schema": "cloud-repos-mirror/v1",
@@ -18,7 +18,7 @@
       "name": "cloud",
       "repo": "diegonmarcos/cloud",
       "private": false,
-      "doc": "Project master (symlink farm): repos.json + clone.sh + committed symlinks to its members."
+      "doc": "Project master for the cloud project: a repos.json subset of this file plus committed symlinks. Had a symlink here but no entry until 2026-08-20 — the drift that made `ls a_cloud/` disagree with `--list`."
     },
     {
       "name": "cloud-data",
@@ -51,6 +51,24 @@
       "doc": "Workstation + device configuration, nix flakes, the superapp. Holds the Claude SoT (da_my-ai/src/data/claude)."
     },
     {
+      "name": "cloud-me_cgc",
+      "repo": "diegonmarcos/cloud-me_cgc",
+      "private": true,
+      "doc": "The PRIVATE half of the cgc pipeline (pvt surface: the private repos -> cloud-cgc-pvt-mcp). A thin orchestrator rendered from cloud-u-containers_cgc at a pinned sha, so private-repo runs and logs stay private. Was cloud-u-containers_cgc-pvt; renamed 2026-10-10 into the private cloud-me family (split-outs are named <parent>_<name>; every cloud-u-* repo is public)."
+    },
+    {
+      "name": "cloud-me_configs",
+      "repo": "diegonmarcos/cloud-me_configs",
+      "private": true,
+      "doc": "Private configs (cloud-me family). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it. (/home/user/cloud-vault is just a second clone of cloud-me_vault, not a separate repo.)"
+    },
+    {
+      "name": "cloud-me_data-pub",
+      "repo": "diegonmarcos/cloud-me_data-pub",
+      "private": false,
+      "doc": "The owner's PUBLIC data (the public half of cloud-me). Added 2026-10-21 (#1073): cloud-drive seeded it but this registry did not list it."
+    },
+    {
       "name": "cloud-notes",
       "repo": "diegonmarcos/cloud-notes",
       "private": true,
@@ -63,6 +81,12 @@
       "doc": "The containerised services a_solutions ships: one dir per service, each with build.json. Mounted back into cloud-infra as a submodule at a_solutions/ so the ship engine keeps globbing a_solutions/*/build.json."
     },
     {
+      "name": "cloud-u-containers_cgc",
+      "repo": "diegonmarcos/cloud-u-containers_cgc",
+      "private": false,
+      "doc": "The PUBLIC cgc code-knowledge-graph pipeline (pub surface: octocode indexes of the public repos -> GHCR -> cloud-cgc-pub-mcp), split out of cloud-u-containers / cloud-infra; split-outs are named <parent>_<name>. Holds the pipeline code and the reusable cgc-db-index.yml the private half calls by sha."
+    },
+    {
       "name": "cloud-u-linux",
       "repo": "diegonmarcos/cloud-u-linux",
       "private": false,
@@ -72,7 +96,7 @@
       "name": "front",
       "repo": "diegonmarcos/front",
       "private": false,
-      "doc": "Project master (symlink farm): repos.json + clone.sh + committed symlinks to its members."
+      "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-drive-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-drive-shared-store/git/front/front-data/... paths in cloud-infra already assume."
     },
     {
       "name": "front-data",

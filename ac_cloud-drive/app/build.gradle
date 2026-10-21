@@ -146,6 +146,31 @@ def seedUnmetered = seedDecl.require_unmetered_network == null ? true : seedDecl
 def gitReposFile = file('../data/drive-git-repos.json')
 def gitReposB64  = b64(gitReposFile.exists()
     ? new groovy.json.JsonSlurper().parse(gitReposFile) : [:])
+// #1073 build.json::storage.repos_source: the repo registry (git-repos-master/repos.json) is the
+// ONE list of repositories. Its byte copy is BAKED here (REPOS_SOT_B64 = identity, visibility,
+// pending, renames only) and the build fails when the copy is not the pinned one, or when the
+// Sync > Git family names a repository the registry does not list / has not created yet.
+// data/drive-git-repos.json is generated from the family overlay + that copy by
+// tools/gen-drive-git-repos.js (test/test-drive-repos-sot.sh holds it to --check).
+def reposSrcDecl = storageDecl.repos_source ?: [:]
+def reposSotFile = file("../${reposSrcDecl.path ?: 'data/repos.sot.json'}")
+if (!reposSotFile.isFile()) throw new GradleException("build.json::storage.repos_source.path ${reposSotFile} is missing -- the repo list is read from git-repos-master/repos.json, vendored there")
+def reposSotSha = java.security.MessageDigest.getInstance('SHA-256').digest(reposSotFile.bytes).encodeHex().toString()
+if (reposSotSha != (reposSrcDecl.sha256 ?: '').toString()) {
+    throw new GradleException("repos.sot.json sha256 ${reposSotSha} != build.json::storage.repos_source.sha256 -- run ac_cloud-drive/tools/sync-repos-sot.sh (the copy drifted from its pin)")
+}
+def reposSot = new groovy.json.JsonSlurper().parse(reposSotFile)
+if (reposSot._schema != 'cloud-repos/v1') throw new GradleException("repos.sot.json _schema is '${reposSot._schema}', expected cloud-repos/v1")
+def reposSotSlim = reposSot.repos.collect { r ->
+    [name: r.name, github: r.url.toString().replaceFirst(/^.*[\/:]/, '').replaceFirst(/\.git$/, ''),
+     private: (r.private == true), pending: (r.status == 'pending_creation'), renamed_from: (r.renamed_from ?: [])]
+}
+def reposSotB64 = b64(reposSotSlim)
+((gitReposFile.exists() ? new groovy.json.JsonSlurper().parse(gitReposFile) : [repos: []]).repos ?: []).each { fr ->
+    def hit = reposSotSlim.find { it.github == fr.name }
+    if (hit == null) throw new GradleException("data/drive-git-repos.json lists '${fr.name}', which the repo registry (repos.sot.json) does not -- edit the registry, then drive-git-family.json")
+    if (hit.pending) throw new GradleException("data/drive-git-repos.json lists '${fr.name}', which the registry marks pending_creation (repo not created yet)")
+}
 // The Apps tab grid. data/drive-apps.json declares WHICH apps the grid links to
 // and how each tile looks; the constellation fleet manifest — the SAME canonical
 // file :libs:updater bakes into CONSTELLATION_FLEET_B64 — supplies each entry's
@@ -507,6 +532,7 @@ android {
         buildConfigField "String", "RCLONE_REMOTES_B64", "\"${rcloneRemotesB64}\""
         buildConfigField "String", "RCLONE_JOBS_B64",    "\"${rcloneJobsB64}\""
         buildConfigField "String", "GIT_REPOS_B64",      "\"${gitReposB64}\""
+        buildConfigField "String", "REPOS_SOT_B64",      "\"${reposSotB64}\""
         buildConfigField "boolean", "SEED_ENABLED",       "${seedEnabled}"
         buildConfigField "int",     "SEED_DEPTH",         "${seedDepth}"
         buildConfigField "boolean", "SEED_REQUIRE_UNMETERED", "${seedUnmetered}"

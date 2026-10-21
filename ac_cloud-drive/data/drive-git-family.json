@@ -1,0 +1,102 @@
+{
+ "_doc": "The fleet's git repositories, as data, for the Sync tab's Git subpage. The family is the SAME curated 8 the SuperApp's GH Repos / Gitea Repos cards reuse: these two cards read 'the same repos, two remotes' instead of one card being a long unrelated list (aa_cloud-superapp/build.json, github_feed section). Gitea mirrors EVERY non-fork GitHub repo except cloud-vault (mirror_policy.exclude) — a longer list than these 8 — but this tab deliberately lists the curated family so the mirrors and the upstream read as one set.",
+ "_doc_source": "#1073 THIS FILE IS THE DRIVE-OWNED OVERLAY of the Sync > Git list: WHICH repositories the tab shows (`family`, in order), their label, whether the first run seeds them (`seed`), the note, and nothing else: `renamed_from` is derived from the registry too. It holds NO identity: whether a repository exists, is private or public, is pending creation, its owner and its GitHub name come from the one registry git-repos-master/repos.json, vendored byte-for-byte as data/repos.sot.json (build.json storage.repos_source). data/drive-git-repos.json is GENERATED from the two by tools/gen-drive-git-repos.js (node tools/gen-drive-git-repos.js; --check fails on drift) and is what app/build.gradle bakes as GIT_REPOS_B64. A family name the registry does not list, or lists as pending_creation, is a hard error; a private repository marked seed is a hard error.",
+ "_doc_secret_rule": "Repositories are public or imported public mirrors; nothing here authenticates. A private read needs a GitHub token this app does not store — that is stated in the subpage, not faked.",
+ "instances": [
+  {
+   "name": "github",
+   "kind": "upstream",
+   "org": "diegonmarcos",
+   "host": "github.com",
+   "auth": "anonymous for public reads; a token is needed for private repos and the app does not store one",
+   "reachable": true
+  },
+  {
+   "name": "gitea",
+   "kind": "mirror",
+   "org": "diego",
+   "host": "10.0.0.6",
+   "port": 3002,
+   "ssh_port": 2222,
+   "auth": "unauthenticated on the mesh for public mirrors (confirmed live by GiteaFeed)",
+   "reachable": true,
+   "reach": "mesh-only (10.0.0.6:3002); the public git.diegonmarcos.com sits behind two-factor this app cannot complete"
+  }
+ ],
+ "family": [
+  {
+   "name": "cloud",
+   "label": "cloud",
+   "seed": true,
+   "notes": "The fleet hub repository (repos.json, clone.sh)"
+  },
+  {
+   "name": "cloud-data-my-ai-memory",
+   "label": "cloud-data-my-ai-memory",
+   "notes": "The owner's memory + product backlog. cloud-code's Backlog tab reads and writes it HERE, through the shared store (#575 proof case) — no second clone."
+  },
+  {
+   "name": "cloud-infra",
+   "label": "cloud-infra",
+   "seed": true,
+   "notes": "Infrastructure declarations, keys, CI"
+  },
+  {
+   "name": "cloud-infra-desktop",
+   "label": "cloud-infra-desktop",
+   "seed": true,
+   "notes": "Desktop-NixOS twin of the cloud"
+  },
+  {
+   "name": "cloud-me_data-pub",
+   "label": "cloud-me_data-pub",
+   "seed": true,
+   "notes": "The owner's PUBLIC data (the public half of cloud-me). Public per the live API (an unauthenticated GET answers 200); the private cloud-me* repositories are NOT here."
+  },
+  {
+   "name": "cloud-u-android",
+   "label": "cloud-u-android",
+   "seed": true,
+   "notes": "This app's own repository"
+  },
+  {
+   "name": "cloud-u-containers",
+   "label": "cloud-u-containers",
+   "seed": true,
+   "notes": "Container compose declarations"
+  },
+  {
+   "name": "cloud-u-linux",
+   "label": "cloud-u-linux",
+   "seed": true,
+   "notes": "Linux fleet configs"
+  },
+  {
+   "name": "diegonmarcos.github.io",
+   "label": "front · site",
+   "seed": true,
+   "notes": "The public site. #629 CORRECTED: the prose here contradicted the flag beside it, and a reader trusted the prose — it IS seeded. #821: `front-diegonmarcos` is NOT a repository (GitHub 404 to the owner's own token, 81249a55) but the fleet's LOCAL directory name for this one (the front symlink farm, libs/repos/repos.json). The seed declared it until 81249a55, so a device holds git/front-diegonmarcos — the failed seed's leftover, or this site cloned under its farm name — and `renamed_from` settles it into git/diegonmarcos.github.io under the completeness rule instead of leaving an undeclared directory in the store."
+  },
+  {
+   "name": "front",
+   "label": "front",
+   "seed": true,
+   "notes": "The fleet's front-end tree. #731 renamed upstream from `ffront` (2026-10-01): `renamed_from` makes the seed worker MOVE a device's git/ffront clone to git/front and repoint its origin, instead of cloning a second copy beside it."
+  },
+  {
+   "name": "front-assets-cdn",
+   "label": "front-assets-cdn",
+   "seed": true,
+   "notes": "Static assets. #629 CORRECTED: the prose here contradicted the flag beside it — it IS seeded."
+  },
+  {
+   "name": "front-data",
+   "label": "front-data",
+   "seed": true,
+   "notes": "Front-end data feeds. #608 CORRECTED: this file said private: true and the live API says private=false (an unauthenticated GET of the repository answers 200), so it is public and belongs to the Git page's declared public set. #629 CORRECTED the trailing claim that it was not seeded: it carries the seed flag and IS seeded."
+  }
+ ],
+ "_doc_clone": "#575/#606 Every repository here is cloned INTO THE ONE SHARED STORE (ac_cloud-drive/build.json::storage.shared_root) as <root>/<git_subdir>/<name>, by the page's Clone/Open button: the target folder and the upstream URL (https://<github host>/<github_owner>/<name>.git, composed from the github instance above) are handed to the native git manager (libs:git-sync), which asks only for a token when the repository is private. A folder that already holds the clone opens instead of cloning. Nothing here is a path: the root lives in build.json and the page reads it through FilesBridge.sharedRoot().",
+ "_doc_private": "private: true marks a repository the anonymous read cannot fetch: the git manager stores the HTTPS token the user types in its keystore-backed credential store (GitCredentialStore), never in this file and never in .git/config.",
+ "_doc_seed": "#603 SEEDING THE SHARED STORE. `seed: true` marks a PUBLIC repository the store is populated with on FIRST RUN (build.json::storage.seed) — the set is DERIVED from the flags below, never a fixed count restated here: StoreSeed registers each in libs:git-sync's RepoRegistry as <shared_root>/<git_subdir>/<name> and clones it SHALLOW (depth 1) through GitEngine.clone — no second git, and no clone bytes inside the APK, which could not carry them and would ship them stale. PUBLIC REPOSITORIES ONLY, and that is not a preference: an anonymous clone of a private repository fails every time, so seeding one would bake a permanent red. `public: true` states the fact the flag rests on. #629: front-assets-cdn, front-data, diegonmarcos.github.io and front-diegonmarcos ALL carry the flag and are all seeded — twelve repositories, and the owner's device held nine of them because StoreSeedWorker reported a truncated pass as success (see StoreSeed.kt and test/test-drive-seed-and-migration.sh), not because of anything here. Every repository marked `private: true` here (cloud-data-my-ai-memory) carries NO seed flag; all of them stay not-cloned on the Git sub-page until the user clones one, and #608 gives the private ones a real route there: a GitHub sign-in through libs:auth (declared scope `repo`) lists them and clones them with the approval's token, which the credential store then holds."
+}

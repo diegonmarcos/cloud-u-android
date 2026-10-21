@@ -1,0 +1,102 @@
+package com.diegonmarcos.clouddrive
+
+import java.io.File
+import java.security.MessageDigest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+
+/**
+ * #1073 cloud-drive reads ONE repo list: git-repos-master/repos.json, vendored as data/repos.sot.json
+ * (build.json storage.repos_source). Held here, by the parser the phone runs: the copy is the pinned one,
+ * every Sync > Git repository is listed by the registry and created, visibility agrees, and a
+ * pending_creation repository (cloud-webapps, cloud-me-containers) is never offered for clone or seed.
+ */
+@RunWith(RobolectricTestRunner::class)
+class RepoSotTest {
+
+    private val data = listOf(File("data"), File("../data"), File("ac_cloud-drive/data")).first { File(it, "repos.sot.json").isFile }.canonicalFile
+    private val json = Json { ignoreUnknownKeys = true }
+    private val sotText = File(data, "repos.sot.json").readText()
+    private val sot: JsonObject = json.parseToJsonElement(sotText).jsonObject
+
+    /** The slim shape app/build.gradle bakes as REPOS_SOT_B64, rebuilt from the copy the same way. */
+    private fun baked(): String = JsonArray(sot["repos"]!!.jsonArray.map { e ->
+        val r = e.jsonObject
+        val github = r["url"]!!.jsonPrimitive.content.substringAfterLast('/').substringAfterLast(':').removeSuffix(".git")
+        JsonObject(mapOf(
+            "name" to r["name"]!!, "github" to JsonPrimitive(github),
+            "private" to JsonPrimitive(r["private"]?.jsonPrimitive?.boolean == true),
+            "pending" to JsonPrimitive(r["status"]?.jsonPrimitive?.content == "pending_creation"),
+            "renamed_from" to (r["renamed_from"] ?: JsonArray(emptyList()))))
+    }).toString()
+
+    private val decl = Declarations.parseRepoSot(baked())
+    private val family = Declarations.parseGitFamily(File(data, "drive-git-repos.json").readText())
+
+    @Test fun theCopyIsThePinnedOne() {
+        val build = json.parseToJsonElement(File(data.parentFile, "build.json").readText()).jsonObject["storage"]!!.jsonObject["repos_source"]!!.jsonObject
+        val sha = MessageDigest.getInstance("SHA-256").digest(File(data, "repos.sot.json").readBytes()).joinToString("") { "%02x".format(it) }
+        assertEquals("repos.sot.json drifted from build.json::storage.repos_source.sha256", build["sha256"]!!.jsonPrimitive.content, sha)
+        assertEquals("cloud-repos/v1", sot["_schema"]!!.jsonPrimitive.content)
+        assertEquals("data/repos.sot.json", build["path"]!!.jsonPrimitive.content)
+        assertTrue("url must name git-repos-master", "/git-repos-master/" in build["url"]!!.jsonPrimitive.content)
+        assertTrue("url must name the registry file", build["url"]!!.jsonPrimitive.content.endsWith("/repos.json"))
+    }
+
+    @Test fun everyFamilyRepositoryIsListedAndCreated() {
+        assertTrue(family.repos.isNotEmpty())
+        for (r in family.repos) {
+            val e = decl.byGithub(r.name)
+            assertTrue("${r.name} is in drive-git-repos.json but not in the registry", e != null)
+            assertFalse("${r.name} is pending_creation in the registry", e!!.pending)
+            assertEquals("${r.name} visibility must be the registry's", e.private, r.private)
+        }
+        assertEquals("a created, listed family loses nothing", family.repos.map { it.name }, Declarations.restrictToRegistry(family, decl).repos.map { it.name })
+    }
+
+    @Test fun pendingRepositoriesAreDeclaredAndNeverCloneable() {
+        for (n in listOf("cloud-webapps", "cloud-me-containers")) {
+            val e = decl.byGithub(n)
+            assertTrue("$n must be declared in the registry", e != null)
+            assertTrue("$n is not created yet", e!!.pending)
+            assertFalse(decl.cloneable(n))
+        }
+        val withPending = Declarations.GitFamilyDecl(family.instances, family.repos + family.repos.first().copy(name = "cloud-webapps", seed = true, private = false))
+        assertEquals("a pending repository is dropped from the family", family.repos.map { it.name }, Declarations.restrictToRegistry(withPending, decl).repos.map { it.name })
+        val unknown = Declarations.GitFamilyDecl(family.instances, family.repos + family.repos.first().copy(name = "not-in-the-registry"))
+        assertFalse("an unlisted repository is dropped", Declarations.restrictToRegistry(unknown, decl).repos.any { it.name == "not-in-the-registry" })
+    }
+
+    @Test fun renamesComeFromTheRegistry() {
+        val front = decl.byGithub("front")!!
+        assertTrue("ffront -> front (#731) is the registry's rename", "ffront" in front.renamedFrom)
+        assertTrue("the drive family carries the same device-side rename", family.renames["ffront"] == "front")
+        assertEquals("front-diegonmarcos", family.repos.first { it.name == "diegonmarcos.github.io" }.renamedFrom.single())
+        assertTrue("cloud-mobile is not a repository", sot["repos"]!!.jsonArray.none { it.jsonObject["name"]!!.jsonPrimitive.content == "cloud-mobile" })
+        assertTrue(sot["renames"]!!.jsonArray.any { val o = it.jsonObject; o["from"]!!.jsonPrimitive.content == "cloud-mobile" && o["to"]!!.jsonPrimitive.content == "cloud-superapp" })
+    }
+
+    @Test fun blankAndBrokenRegistryParseToEmptyAndListNothing() {
+        assertTrue(Declarations.parseRepoSot("").repos.isEmpty())
+        assertTrue(Declarations.parseRepoSot("{not json").repos.isEmpty())
+        assertTrue("no registry = nothing is cloneable (fail closed)", Declarations.restrictToRegistry(family, Declarations.parseRepoSot("")).repos.isEmpty())
+    }
+
+    @Test fun libsReposMirrorUsesTheSameCopy() {
+        val libs = File(data.parentFile.parentFile, "ab_cloud-libs-shared/libs/repos/repos.sot.json")
+        assertTrue("libs:repos copy missing at $libs", libs.isFile)
+        assertEquals("libs:repos copy drifted from cloud-drive's", sotText, libs.readText())
+    }
+}

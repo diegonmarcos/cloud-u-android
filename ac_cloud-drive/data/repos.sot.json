@@ -1,0 +1,183 @@
+{
+  "_doc": "Registry of every repository owned by this account. clone.sh reads this and nothing else — adding a repo here is the only edit needed for it to show up in `./clone.sh --list`, be clonable, and get a symlink. Deliberately NOT submodules: a submodule pins a commit, and this is an index of working clones, not a pinned build input. cloud-master carries a SUBSET of these entries — the cloud project — with identical name/url/private fields; this file is the superset and the two must not disagree.",
+  "_schema": "cloud-repos/v1",
+
+  "_self_doc": "git-repos-master is the only repo of the account with no entry here. It is the index; an entry would give it a symlink to its own parent directory, which is a loop, not information.",
+
+  "_visibility_doc": "`private` mirrors GitHub visibility as of 2026-08-20 and only drives the \"(private)\" hint in `--list` plus a clearer message when a clone fails for lack of credentials. It grants nothing.",
+
+  "_status_doc": "`status` is optional. Absent = the repo exists and is cloned/linked as usual. `pending_creation` = declared on purpose, but the GitHub repo is NOT created yet: every farmer (clone.sh, the cloud-drive seed, the libs:repos mirror, the fleet dotfiles guard) must SKIP it - no clone, no symlink, no seed - and the guard fails if a pending entry is treated as live. Flip it by deleting the field in the same commit that creates the repo. `parts` (optional) lists named sub-trees that live INSIDE the same repo, declared as placeholders so farmers and docs know the planned layout before any file moves; a part is never a repo of its own and is never cloned or linked.",
+  "_renames_doc": "`renames` records an old name -> new name for things that are not (or not only) repos, so a path that still says the old name is findable and a guard can flag it. `kind: repo` = a repository rename (the entry also carries `renamed_from`); `kind: app-folder` = a folder/app inside a repo. Farmers never create the old name.",
+  "renames": [
+    { "from": "cloud-mobile", "to": "cloud-superapp", "kind": "app-folder", "since": "2026-10-21", "ticket": "#1073",
+      "doc": "The SuperApp web replica folder (front/a-Portals/cloud-mobile) is now cloud-superapp, matching the APK folder aa_cloud-superapp. The deployed page URL https://diegonmarcos.github.io/cloud-mobile/ is a SITE path owned by #1062/#1072 and moves with that deploy split, not here." },
+    { "from": "ffront", "to": "front", "kind": "repo", "since": "2026-10-01", "ticket": "#731",
+      "doc": "GitHub repo diegonmarcos/ffront was renamed front; the registry url followed on 2026-10-21 (it still said ffront)." }
+  ],
+  "_consumers_doc": "Every symlink farmer / list reader of this account and where it takes its list from. THIS FILE is the only editable source; each consumer holds either a byte copy (fleet_files, refreshed by `./clone.sh --sync`) or a subset it must keep consistent with this file (`node repos-sot.js check-subset <file>`). A consumer's own drift guard fails when its copy differs from this file or names a repo this file does not know.",
+  "consumers": [
+    { "repo": "git-repos-master", "what": "clone.sh + committed symlink farm", "reads": "repos.json (itself)", "guard": "9_others/test/test-repos-sot.sh" },
+    { "repo": "cloud", "what": "project master subset (a_cloud + front) used by derive-repo-map and the libs:repos refresh", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset cloud/repos.json" },
+    { "repo": "ffront", "what": "front project master subset", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset front/repos.json" },
+    { "repo": "cloud-infra", "what": "fleet dotfiles manifest fleet.repos, derive-repo-map, github-repos inventory", "reads": "1_cloud-configs/src/inputs/repos.sot.json (byte copy)", "guard": "9_others/test/repos-sot.test.sh" },
+    { "repo": "cloud-u-android", "what": "libs:repos mirror list, cloud-drive Sync > Git list, cloud-drive seed/clone targets", "reads": "ac_cloud-drive/data/repos.sot.json + ab_cloud-libs-shared/libs/repos/repos.sot.json (byte copies)", "guard": "ac_cloud-drive/test/test-drive-repos-sot.sh + RepoSotTest.kt" },
+    { "repo": "cloud-infra-desktop", "what": "NixOS/home-manager twin: embeds only the `cloud` index submodule, keeps no repo list", "reads": "none (submodule of cloud)", "guard": "n/a" },
+    { "repo": "cloud-u-linux", "what": "dtk/linux-account: no repo list of its own", "reads": "none", "guard": "n/a" },
+    { "repo": "cloud-data-my-ai-memory", "what": "layout.json dotfile map + per-repo a_commits snapshots: keyed by repo name, no list of its own", "reads": "none", "guard": "n/a" }
+  ],
+
+  "base_dir_doc": "Where clones live. Override with $CLOUD_GIT_BASE; otherwise ~/cloud-drive-shared-store/git — every repo lives in that ONE place, on every machine; there is no ~/cloud-drive-shared-store/git. Clones are NEVER placed inside this repo — repo_master holds relative symlinks (../../<name> from a group directory) pointing out to them, committed, so `ls <group>/` is the inventory and a dangling link is just a repo you have not cloned yet.",
+  "base_dir_default": "~/cloud-drive-shared-store/git",
+
+  "_path_doc": "`path` is where the clone actually sits under base_dir; it defaults to `name`. Only the d_lecole entries set it, because those ten were moved into ~/cloud-drive-shared-store/git/lecole-42/ on 2026-08-18 to keep the root of ~/cloud-drive-shared-store/git legible. Indexing them and moving them are separate decisions: `path` lets this file describe where they are instead of demanding they move back.",
+
+  "_archived_doc": "FairEmail and octocode forks were deleted on GitHub on 2026-08-18 — FairEmail was fully reproduced by unix/aa_cloud-mail/patches, octocode was 0 commits ahead of Muvon/octocode. Nothing else has been archived. The ten d_lecole repos were deregistered the same day and are registered again as of 2026-08-20; they were never gone, only unindexed.",
+
+  "_fleet_files_doc": "Files that MUST be byte-identical in every repo that has the module they belong to, and where the one authoritative copy lives. `./clone.sh --sync` copies each `from` (resolved under base_dir) to each `to` in every cloned repo that has the entry's `requires` path. `requires` is the OPT-IN and it is explicit on purpose: the obvious shortcut — 'copy where the destination's parent directory exists' — is wrong for any destination at the repo ROOT, because the root always exists. That rule put .mcp.json into all sixteen repos that have no dotfiles module at all (cloud-notes, cloud-u-linux, every lecole-42 entry) on its first run. `requires` names the directory that proves the module is present, so a root-level file is gated by the module it belongs to rather than by its own location.\n\nThis exists because 'one shared implementation, many callers' was only ever true by hand. It was not: deploy-dotfiles.sh had already drifted in cloud-infra-desktop (missing the whole claude-SoT refresh block) and was MISSING outright in four repos whose build.sh calls it, and .mcp.json's own _doc admitted 'propagated by hand — nothing automates that hop', which is how cloud-vault ended up without the cloud-infra-mcp headersHelper while cloud had it. Every one of those was a file claiming, in its own header, to be the same file as another.\n\nADDING a file here is the whole registration: no code change. `from` is <repo>/<path> under base_dir; a `to` list means one source lands at several destinations (mcp.json is both the dotfiles-module source AND the deployed root file, so a repo is consistent whether or not its build.sh has run).",
+  "fleet_files": [
+    {
+      "from": "git-repos-master/repos.json",
+      "to": ["1_cloud-configs/src/inputs/repos.sot.json"],
+      "requires": "1_cloud-configs/src/inputs",
+      "doc": "#1073 cloud-infra: byte copy of THIS registry, the source its fleet-manifest and derive guards read (9_others/test/repos-sot.test.sh fails on any difference)."
+    },
+    {
+      "from": "git-repos-master/repos.json",
+      "to": ["ac_cloud-drive/data/repos.sot.json", "ab_cloud-libs-shared/libs/repos/repos.sot.json"],
+      "requires": "ac_cloud-drive/data",
+      "doc": "#1073 cloud-u-android: byte copy of THIS registry, baked into cloud-drive at build time (build.json storage.repos_source) and read by libs:repos sync.sh --refresh-list. Guards: ac_cloud-drive/test/test-drive-repos-sot.sh, RepoSotTest.kt."
+    },
+    {
+      "from": "git-repos-master/.claude/SESSION-SURVIVAL.md",
+      "to": [".claude/SESSION-SURVIVAL.md"],
+      "requires": ".claude",
+      "doc": "Shell-death recovery runbook from the 2026-10-15 incident (Bash sandbox died after a glob delete in /tmp). Every repo's CLAUDE.md imports it via `@.claude/SESSION-SURVIVAL.md` so every session has it. requires is .claude because sync_all refuses entries without one."
+    },
+    {
+      "from": "cloud-infra/1_cloud-configs/dist/mcp.json",
+      "to": ["0_apps/src/root/mcp.json", ".mcp.json"],
+      "requires": "0_apps/src/root",
+      "doc": "GENERATED by cloud-infra 1_cloud-configs/src/derive/derive-mcp-json.ts from the .mcp blocks in a_solutions/*/build.json. Regenerate there (./9_others/build.sh dotfiles in cloud-infra does it), then --sync to spread it. Only cloud-infra HAS 1_cloud-configs, which is exactly why the other twelve repos could never refresh themselves."
+    },
+    {
+      "from": "cloud-infra/0_apps/src/claude/settings.json",
+      "to": ["0_apps/src/claude/settings.json", ".claude/settings.json"],
+      "requires": "0_apps/src/claude",
+      "doc": "Project-scoped Claude Code settings. Ultimate SoT is da_my-ai/data/claude/settings.project.json; cloud-infra's copy is refreshed from it by deploy-dotfiles.sh, and cloud-infra is the `from` here because it is the only repo whose build reliably runs that refresh. This file gates which MCP servers are dialed at all (disabledMcpjsonServers), so drift here is invisible: a server disabled by a stale copy appears in NEITHER the connected nor the failed list, and reads as missing rather than off."
+    },
+    {
+      "from": "cloud-infra/0_apps/src/claude/mcp-auth-headers.sh",
+      "to": ["0_apps/src/claude/mcp-auth-headers.sh", ".claude/mcp-auth-headers.sh"],
+      "requires": "0_apps/src/claude",
+      "doc": "The headersHelper .mcp.json points at. Must travel WITH the .mcp.json that references it — a repo whose mcp.json names a helper it does not ship gets a silent {} and an unexplained 403."
+    },
+    {
+      "from": "cloud-infra/9_others/src/deploy-dotfiles.sh",
+      "to": ["9_others/src/deploy-dotfiles.sh"],
+      "requires": "9_others/src",
+      "doc": "THE shared dotfiles deploy implementation. Every repo's 9_others/build.sh calls `sh $SCRIPT_DIR/src/deploy-dotfiles.sh` — including four that did not ship the file at all, so their dotfiles verb failed. cloud-infra is the source because it is the only repo whose copy is exercised end-to-end (it alone runs the derive refresh path inside it)."
+    },
+    {
+      "from": "cloud-infra/0_apps/src/claude/settings.json",
+      "to": ["ac_cloud-vault/.claude/settings.json"],
+      "requires": "ac_cloud-vault/.claude",
+      "doc": "cloud-u-android/ac_cloud-vault: a bare .claude/settings.json, no module around it. Nested module copy of the project settings: a sub-project directory that carries its own copy of the module (or just the file) because it is worked on from its own directory, where the repo-root .claude/ is not the one Claude Code loads. Not covered by the repo-root entry above (its `requires` and paths are root-relative), so it was never refreshed and drifted: ac_cloud-vault, da_dtk and others/ all lacked autoMode and the 2026-10-09 rules. The test-claude-sot.sh settings-verbatim check lists these same paths."
+    },
+    {
+      "from": "cloud-infra/0_apps/src/claude/settings.json",
+      "to": ["da_dtk/0_apps/src/claude/settings.json", "da_dtk/0_apps/dist/dotfiles/claude/settings.json", "da_dtk/.claude/settings.json"],
+      "requires": "da_dtk/0_apps/src/claude",
+      "doc": "cloud-u-linux/da_dtk: carries its own 0_apps module (src, dist and the deployed .claude). Nested module copy of the project settings: a sub-project directory that carries its own copy of the module (or just the file) because it is worked on from its own directory, where the repo-root .claude/ is not the one Claude Code loads. Not covered by the repo-root entry above (its `requires` and paths are root-relative), so it was never refreshed and drifted: ac_cloud-vault, da_dtk and others/ all lacked autoMode and the 2026-10-09 rules. The test-claude-sot.sh settings-verbatim check lists these same paths."
+    },
+    {
+      "from": "cloud-infra/0_apps/src/claude/settings.json",
+      "to": ["others/0_apps/src/claude/settings.json", "others/0_apps/dist/dotfiles/claude/settings.json"],
+      "requires": "others/0_apps/src/claude",
+      "doc": "cloud-me_vault/others: a vendored copy of the cloud module (src and dist; no deployed .claude). Nested module copy of the project settings: a sub-project directory that carries its own copy of the module (or just the file) because it is worked on from its own directory, where the repo-root .claude/ is not the one Claude Code loads. Not covered by the repo-root entry above (its `requires` and paths are root-relative), so it was never refreshed and drifted: ac_cloud-vault, da_dtk and others/ all lacked autoMode and the 2026-10-09 rules. The test-claude-sot.sh settings-verbatim check lists these same paths."
+    }
+  ],
+
+  "groups": {
+    "2_vault": "Secrets (sops/age) — every credential the fleet uses. Numbered so it sorts ahead of the lettered groups: it is the one repo whose absence breaks the others.",
+    "a_cloud": "The cloud project — infrastructure, services, data, devices and the tooling built for them. Its own project master is `cloud`, which indexes this same set minus the account-level repos.",
+    "b_front": "The front-end — the published site, its content, its assets and its experiments. Its project master is `ffront`. Kept out of a_cloud because it ships on its own cadence to its own hosts; folding it in was what made a_cloud mean nothing.",
+    "c_gh": "Account-level GitHub repos — things that exist because GitHub requires a repo for them, not because they are a project.",
+    "d_lecole": "42 / l'École coursework and its experiments. Clones live under ~/cloud-drive-shared-store/git/lecole-42/ (see _path_doc), so these entries carry `path`."
+  },
+
+  "repos": [
+    { "name": "cloud-me_vault", "group": "2_vault", "url": "git@github.com:diegonmarcos/cloud-me_vault.git", "private": true,
+      "doc": "Secrets (sops/age). Every credential the fleet uses." },
+
+    { "name": "cloud", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud.git", "private": false,
+      "doc": "Project master for the cloud project: a repos.json subset of this file plus committed symlinks. Had a symlink here but no entry until 2026-08-20 — the drift that made `ls a_cloud/` disagree with `--list`." },
+    { "name": "cloud-infra", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-infra.git", "private": false,
+      "doc": "Fleet: services, infra, the derive engine (1_cloud-configs)." },
+    { "name": "cloud-infra-desktop", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-infra-desktop.git", "private": false,
+      "doc": "Workstation + device configuration, nix flakes, the superapp. Holds the Claude SoT (da_my-ai/src/data/claude)." },
+    { "name": "cloud-u-android", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-u-android.git", "private": false,
+      "doc": "Android client." },
+    { "name": "cloud-u-containers", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-u-containers.git", "private": false,
+      "doc": "The containerised services a_solutions ships: one dir per service, each with build.json. Mounted back into cloud-infra as a submodule at a_solutions/ so the ship engine keeps globbing a_solutions/*/build.json." },
+    { "name": "cloud-u-containers_cgc", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-u-containers_cgc.git", "private": false,
+      "doc": "The PUBLIC cgc code-knowledge-graph pipeline (pub surface: octocode indexes of the public repos -> GHCR -> cloud-cgc-pub-mcp), split out of cloud-u-containers / cloud-infra; split-outs are named <parent>_<name>. Holds the pipeline code and the reusable cgc-db-index.yml the private half calls by sha." },
+    { "name": "cloud-me_cgc", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me_cgc.git", "private": true,
+      "doc": "The PRIVATE half of the cgc pipeline (pvt surface: the private repos -> cloud-cgc-pvt-mcp). A thin orchestrator rendered from cloud-u-containers_cgc at a pinned sha, so private-repo runs and logs stay private. Was cloud-u-containers_cgc-pvt; renamed 2026-10-10 into the private cloud-me family (split-outs are named <parent>_<name>; every cloud-u-* repo is public)." },
+    { "name": "cloud-me_configs", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me_configs.git", "private": true,
+      "doc": "Private configs (cloud-me family). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it. (/home/user/cloud-vault is just a second clone of cloud-me_vault, not a separate repo.)" },
+    { "name": "cloud-u-linux", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-u-linux.git", "private": false,
+      "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs." },
+    { "name": "cloud-data", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-data.git", "private": true,
+      "doc": "Generated fleet config consumed by cloud's services." },
+    { "name": "cloud-data-lfs", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-data-lfs.git", "private": true,
+      "doc": "Large binary artefacts (git-lfs) for cloud-data." },
+    { "name": "cloud-data-my-ai-memory", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-data-my-ai-memory.git", "private": true,
+      "doc": "Claude Code's durable state and the source it runs from. ~/.claude symlinks in, not out: a_sessions/<instance>/ holds transcripts, file-history, shell-snapshots and history.jsonl; b_projects/ holds MEMORY.md and memory-entries; a_commits/ snapshots every commit object of every repo here." },
+    { "name": "cloud-notes", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-notes.git", "private": true,
+      "doc": "Personal notes (Obsidian vault)." },
+    { "name": "cloud-webapps", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-webapps.git", "private": false, "status": "pending_creation",
+      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Repo not created yet as of 2026-10-21; until then the same tree lives in front-diegonmarcos/cloud-webapps." },
+    { "name": "cloud-me-containers", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me-containers.git", "private": true, "status": "pending_creation",
+      "doc": "The owner's own (cloud-me) containers. Repo not created yet as of 2026-10-21 (#1073): declared so every farmer already knows it and skips it until the status field is removed." },
+    { "name": "cloud-me_data-pub", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me_data-pub.git", "private": false,
+      "doc": "The owner's PUBLIC data (the public half of cloud-me). Added 2026-10-21 (#1073): cloud-drive seeded it but this registry did not list it." },
+
+    { "name": "front", "group": "b_front", "url": "git@github.com:diegonmarcos/front.git", "private": false, "renamed_from": ["ffront"],
+      "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-drive-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-drive-shared-store/git/front/front-data/... paths in cloud-infra already assume." },
+    { "name": "front-diegonmarcos", "group": "b_front", "url": "git@github.com:diegonmarcos/diegonmarcos.github.io.git", "private": false,
+      "parts": [ { "name": "linktree", "path": "Linktree", "status": "placeholder", "ticket": "#1072", "doc": "Every linktree folder. Placeholder: nothing moves until the owner approves the layout." }, { "name": "projects", "path": "Projects", "status": "placeholder", "ticket": "#1072", "doc": "Every other folder except the cloud ones (those go to cloud-webapps, #1062). Placeholder." } ],
+      "doc": "Front-end: the published site and its derive job (1_front-configs). Cloned as 'front-diegonmarcos', not after its repo name (diegonmarcos.github.io) — every front member is front-<thing>, and the bare 'front' now belongs to the project master, exactly as 'cloud' does for a_cloud." },
+    { "name": "front-assets-cdn", "group": "b_front", "url": "git@github.com:diegonmarcos/front-assets-cdn.git", "private": false,
+      "doc": "Front-end static assets served from the CDN." },
+    { "name": "front-data", "group": "b_front", "url": "git@github.com:diegonmarcos/front-data.git", "private": false,
+      "doc": "Front-end content and data." },
+    { "name": "front-galaxy-gaia", "group": "b_front", "url": "git@github.com:diegonmarcos/front-galaxy-gaia.git", "private": true,
+      "doc": "Front-end experiment." },
+    { "name": "front-unity", "group": "b_front", "url": "git@github.com:diegonmarcos/front-unity.git", "private": true,
+      "doc": "Unity asset pipeline (unity-asset-vm: upkg2gltf, fetch-and-convert) plus its assets. Was front-asset-cdn, the predecessor of front-assets-cdn; renamed 2026-08-18 to match what it actually holds - the CDN itself is front-assets-cdn." },
+
+    { "name": "front-gh-profile-diegonmarcos", "group": "c_gh", "url": "git@github.com:diegonmarcos/diegonmarcos.git", "private": false,
+      "doc": "GitHub profile README repo (diegonmarcos). Cloned under a descriptive front-* name because 'diegonmarcos' at the root of ~/cloud-drive-shared-store/git says nothing about what it is." },
+
+    { "name": "lecole42", "group": "d_lecole", "path": "lecole-42/lecole42", "url": "git@github.com:diegonmarcos/lecole42.git", "private": true,
+      "doc": "The 42 curriculum itself." },
+    { "name": "back-Algo", "group": "d_lecole", "path": "lecole-42/back-Algo", "url": "git@github.com:diegonmarcos/back-Algo.git", "private": false,
+      "doc": "Algorithms coursework." },
+    { "name": "back-Graphic", "group": "d_lecole", "path": "lecole-42/back-Graphic", "url": "git@github.com:diegonmarcos/back-Graphic.git", "private": false,
+      "doc": "Graphics coursework." },
+    { "name": "back-System", "group": "d_lecole", "path": "lecole-42/back-System", "url": "git@github.com:diegonmarcos/back-System.git", "private": false,
+      "doc": "Systems coursework." },
+    { "name": "cyber-Cyberwarfare", "group": "d_lecole", "path": "lecole-42/cyber-Cyberwarfare", "url": "git@github.com:diegonmarcos/cyber-Cyberwarfare.git", "private": false,
+      "doc": "Security coursework." },
+    { "name": "dev", "group": "d_lecole", "path": "lecole-42/dev", "url": "git@github.com:diegonmarcos/dev.git", "private": true,
+      "doc": "Scratch and experiments." },
+    { "name": "ml-Agentic", "group": "d_lecole", "path": "lecole-42/ml-Agentic", "url": "git@github.com:diegonmarcos/ml-Agentic.git", "private": false,
+      "doc": "Agentic-AI work." },
+    { "name": "ml-DataScience", "group": "d_lecole", "path": "lecole-42/ml-DataScience", "url": "git@github.com:diegonmarcos/ml-DataScience.git", "private": false,
+      "doc": "Data-science work. Was the whole of the b_data_science group, which held one repo and then none." },
+    { "name": "ml-MachineLearning", "group": "d_lecole", "path": "lecole-42/ml-MachineLearning", "url": "git@github.com:diegonmarcos/ml-MachineLearning.git", "private": false,
+      "doc": "Machine-learning work." },
+    { "name": "ops-Mylibs", "group": "d_lecole", "path": "lecole-42/ops-Mylibs", "url": "git@github.com:diegonmarcos/ops-Mylibs.git", "private": false,
+      "doc": "Personal libraries." }
+  ]
+}

@@ -42,6 +42,15 @@
       "interval_minutes": 60,
       "require_unmetered_network": true
     },
+    "repos_source": {
+      "_doc": "#1073 THE REPO LIST COMES FROM ONE PLACE: git-repos-master/repos.json (cloud-repos/v1). `path` is the byte copy of it that ships in this repo (refreshed by git-repos-master's ./clone.sh --sync or tools/sync-repos-sot.sh), `url` is where that registry is declared, `sha256` pins the copy. app/build.gradle BAKES the copy (REPOS_SOT_B64) and fails the build if its sha256 differs from this one, if data/drive-git-repos.json is not what tools/gen-drive-git-repos.js makes from data/drive-git-family.json + the copy, or if the family names a repo the registry lists as pending_creation or does not list. Nothing is downloaded at runtime: the APK carries the copy. test/test-drive-repos-sot.sh also compares the copy with `url` when the network answers. `ref` is the branch in the url; flip it to main once git-repos-master's claude/new-session-vb0job is merged.",
+      "path": "data/repos.sot.json",
+      "url": "https://raw.githubusercontent.com/diegonmarcos/git-repos-master/claude/new-session-vb0job/repos.json",
+      "schema": "cloud-repos/v1",
+      "sha256": "df39bae4bcbb6544334c6141c678ea236d82bc7f0e0c884ad24f307031498d4d",
+      "family": "data/drive-git-family.json",
+      "generated": "data/drive-git-repos.json"
+    },
     "seed": {
       "_doc": "#603 THE ONE seed declaration of the shared store. An APK cannot carry a working clone (a .git of the fleet's repositories is hundreds of megabytes and would be stale the day it shipped), so the store is seeded on FIRST RUN instead: when <shared storage>/<shared_root>/<name> does not exist for a repository data/drive-git-repos.json marks `seed: true`, StoreSeed registers it in libs:git-sync's own RepoRegistry and clones it SHALLOW (depth below) through the engine's GitEngine.clone — the same mechanism the Git sub-page's Clone button uses, never a second git. PUBLIC REPOSITORIES ONLY: a private repository needs a token this APK does not hold, so seeding one would be a clone that always fails; those stay declared-not-cloned on the Git sub-page, where the user can type a token. The manifest is the file below and nothing here restates a repository name.",
       "enabled": true,
