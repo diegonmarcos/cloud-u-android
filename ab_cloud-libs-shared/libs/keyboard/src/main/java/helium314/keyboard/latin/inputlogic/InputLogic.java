@@ -1280,6 +1280,7 @@ public final class InputLogic {
 
         inputTransaction.requireShiftUpdate(InputTransaction.SHIFT_UPDATE_NOW);
         GrammarChecker.checkAndFix(mLatinIME, mConnection);
+        syncCommittedWordWithField();
     }
 
     /**
@@ -1340,7 +1341,8 @@ public final class InputLogic {
             updateInlineEmojiSearch();
             inputTransaction.setRequiresUpdateSuggestions();
         } else {
-            if (mLastComposedWord.canRevertCommit() && inputTransaction.getSettingsValues().mBackspaceRevertsAutocorrect) {
+            if (mLastComposedWord.canRevertCommit() && inputTransaction.getSettingsValues().mBackspaceRevertsAutocorrect
+                    && committedWordIsBeforeCursor()) {
                 final String lastComposedWord = mLastComposedWord.mTypedWord;
                 revertCommit(inputTransaction);
                 StatsUtils.onRevertAutoCorrect();
@@ -1945,6 +1947,32 @@ public final class InputLogic {
     }
 
     /**
+     * #1082: backspace may revert only when the remembered committed word is still what sits before
+     * the cursor. Case may differ (the grammar fixer capitalises after the commit); anything else
+     * drops the record and the key does a normal backspace. Never throws, in any build.
+     */
+    private boolean committedWordIsBeforeCursor() {
+        final int deleteLength = mLastComposedWord.mCommittedWord.length() + mLastComposedWord.mSeparatorString.length();
+        if (RevertCommitCheck.actualCommittedWord(mLastComposedWord.mCommittedWord,
+                mLastComposedWord.mSeparatorString.length(), mConnection.getTextBeforeCursor(deleteLength, 0)) != null)
+            return true;
+        Log.w(TAG, "revertCommit skipped: \"" + mLastComposedWord.mCommittedWord + "\" is no longer before the cursor");
+        mLastComposedWord = LastComposedWord.NOT_A_COMPOSED_WORD;
+        return false;
+    }
+
+    /** #1082: after the grammar fixer ran, make the remembered committed word the text actually in the field. */
+    private void syncCommittedWordWithField() {
+        if (!mLastComposedWord.canRevertCommit()) return;
+        final CharSequence committed = mLastComposedWord.mCommittedWord;
+        final int separatorLength = mLastComposedWord.mSeparatorString.length();
+        final CharSequence actual = RevertCommitCheck.actualCommittedWord(committed, separatorLength,
+                mConnection.getTextBeforeCursor(committed.length() + separatorLength, 0));
+        if (actual != null && !actual.toString().contentEquals(committed))
+            mLastComposedWord = mLastComposedWord.withCommittedWord(actual.toString());
+    }
+
+    /**
      * Reverts a previous commit with auto-correction.
      * <p>
      * This is triggered upon pressing backspace just after a commit with auto-correction.
@@ -1965,18 +1993,6 @@ public final class InputLogic {
         final int separatorLength = separatorString.length();
         // TODO: should we check our saved separator against the actual contents of the text view?
         final int deleteLength = cancelLength + separatorLength;
-        if (DebugFlags.DEBUG_ENABLED) {
-            if (mWordComposer.isComposingWord()) {
-                throw new RuntimeException("revertCommit, but we are composing a word");
-            }
-            final CharSequence wordBeforeCursor =
-                    mConnection.getTextBeforeCursor(deleteLength, 0).subSequence(0, cancelLength);
-            if (!TextUtils.equals(committedWord, wordBeforeCursor)) {
-                throw new RuntimeException("revertCommit check failed: we thought we were "
-                        + "reverting \"" + committedWord
-                        + "\", but before the cursor we found \"" + wordBeforeCursor + "\"");
-            }
-        }
         mConnection.deleteTextBeforeCursor(deleteLength);
         if (!TextUtils.isEmpty(committedWord)) {
             unlearnWord(committedWordString, inputTransaction.getSettingsValues(),

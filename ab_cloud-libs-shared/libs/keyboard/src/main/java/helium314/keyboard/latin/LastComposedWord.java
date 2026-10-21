@@ -69,6 +69,14 @@ public final class LastComposedWord {
         mCapitalizedMode = capitalizedMode;
     }
 
+    /** #1082: the same record, for text that was rewritten after the commit (only its case may differ). */
+    public LastComposedWord withCommittedWord(final CharSequence committedWord) {
+        final LastComposedWord copy = new LastComposedWord(mEvents, mInputPointers, mTypedWord,
+                committedWord, mSeparatorString, mNgramContext, mCapitalizedMode);
+        copy.mActive = mActive;
+        return copy;
+    }
+
     public void deactivate() {
         mActive = false;
     }
