@@ -164,10 +164,11 @@ class MeshRelay(
                 try { p.setData(buf); sock.receive(p) } catch (e: IOException) { if (closed) return else continue }
                 peer = p.socketAddress
                 val out = tunnel() ?: continue
+                // Count before the write: the echo can be back (and status() read) before a count made after it.
+                tx += p.length
                 try {
                     synchronized(out) { WsTunnel.writeFrame(out.getOutputStream(), WsTunnel.OP_BINARY, buf, 0, p.length) }
-                    tx += p.length
-                } catch (e: IOException) { drop(out, "send: ${relay.why(e)}") }
+                } catch (e: IOException) { tx -= p.length; drop(out, "send: ${relay.why(e)}") }
             }
         }
 
@@ -193,8 +194,8 @@ class MeshRelay(
                 while (!closed) {
                     val m = WsTunnel.readMessage(i) { ping -> synchronized(sock) { WsTunnel.writeFrame(sock.getOutputStream(), WsTunnel.OP_PONG, ping) } }
                     val to = peer ?: continue
-                    udp?.send(DatagramPacket(m, m.size, to))
                     rx += m.size
+                    udp?.send(DatagramPacket(m, m.size, to))
                 }
             } catch (e: Exception) { if (!closed) drop(sock, "receive: ${relay.why(e)}") }
         }
