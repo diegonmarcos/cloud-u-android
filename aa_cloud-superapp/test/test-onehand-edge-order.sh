@@ -250,15 +250,15 @@ q "print(oh['search_star']['target'] in {a['target'] for a in oh['circular_menu'
   && ok "its target is one of the declared star actions, so it cannot drift from the Sirius ring" \
   || bad "the search star's target is not in circular_menu.actions — two declarations of one destination"
 # The floor is the top island: toolbar_island sits at layout_marginTop 26dp and
-# is one ?attr/actionBarSize tall (56dp on a phone). Below 82dp the star's touch
-# box overlaps the toolbar and the wrong view takes the tap.
+# is one ?attr/actionBarSize tall (64dp in Theme.Superapp, #1075). Below 90dp (the
+# declared shell_top_inset) the star's touch box overlaps the toolbar and the wrong
+# view takes the tap.
 TOP_OFFSET=$(q "print(oh['search_star']['top_offset_dp'])")
-ISLAND_TOP=$(awk '/android:id="@\+id\/toolbar_island"/,/^$/ {
-    if ($0 ~ /layout_marginTop/) { gsub(/[^0-9]/, "", $0); print; exit } }' "$LAYOUT")
+ISLAND_TOP=$(sed -n 's|.*name="shell_top_row_margin">\([0-9]*\)dp<.*|\1|p' "$(dirname "$LAYOUT")/../values/dimens.xml")
 if [ -n "$TOP_OFFSET" ] && [ -n "$ISLAND_TOP" ]; then
-  FLOOR=$((ISLAND_TOP + 56))
+  FLOOR=$((ISLAND_TOP + 64))
   if [ "$TOP_OFFSET" -ge "$FLOOR" ]; then
-    ok "top_offset_dp ${TOP_OFFSET} clears the toolbar island (${ISLAND_TOP}dp + 56dp actionBar = ${FLOOR}dp)"
+    ok "top_offset_dp ${TOP_OFFSET} clears the toolbar island (${ISLAND_TOP}dp + 64dp actionBar = ${FLOOR}dp)"
   else
     bad "top_offset_dp ${TOP_OFFSET} lands ON the toolbar island, which ends at ${FLOOR}dp"
   fi
