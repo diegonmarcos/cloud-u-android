@@ -106,6 +106,8 @@ class EngineActivity : ComponentActivity() {
         fun declareFromBuild(context: Context) {
             // Sync's rclone legs in the shared store are staged for the engine APK (another uid).
             com.diegonmarcos.clouddrive.sync.RcloneStoreLegs.install(context)
+            // Git on a repository in the store goes through cld.termux: every screen and worker that builds a GitEngine.
+            com.diegonmarcos.clouddrive.sync.TermuxGitTransport.install(context)
             fun decode(b64: String): JSONArray = runCatching { JSONArray(String(Base64.decode(b64, Base64.DEFAULT), Charsets.UTF_8)) }.getOrElse { JSONArray() }
             val remotes = decode(BuildConfig.RCLONE_REMOTES_B64)
             val declaredRemotes = (0 until remotes.length()).mapNotNull { i ->

@@ -39,6 +39,7 @@ class GitSyncWorker(context: Context, params: WorkerParameters) : Worker(context
 
     override fun doWork(): Result {
         runCatching { JobPathMigration.run(applicationContext) }
+        com.diegonmarcos.clouddrive.sync.TermuxGitTransport.install(applicationContext)
         val registry = RepoRegistry(File(applicationContext.filesDir, REGISTRY_FILE))
         val credentials = GitCredentialStore(applicationContext)
         val history = SyncHistory(File(applicationContext.filesDir, SyncHistory.FILE))

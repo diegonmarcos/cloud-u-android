@@ -138,7 +138,10 @@ class GitEngine(
     }
 
     companion object {
-        fun isRepository(dir: File): Boolean = File(dir, ".git").exists()
+        /** Set by a host that routes some directories elsewhere ([GitTransports]): true/false when it knows, null to look at the disk. */
+        @Volatile var repositoryProbe: ((File) -> Boolean?)? = null
+
+        fun isRepository(dir: File): Boolean = File(dir, ".git").exists() || repositoryProbe?.invoke(dir) == true
 
         fun init(transport: GitTransport, dir: File): GitEngine {
             GitEngine(transport, dir).call("init")
