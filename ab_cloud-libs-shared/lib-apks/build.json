@@ -10,6 +10,7 @@
     ],
     "_doc_exclude": "Modules that must NOT ship as a standalone APK, each with the reason. An exclusion is a claim about install-time behaviour, so it belongs in data next to the scan rule rather than as a silent skip in gradle.",
     "exclude": {
+      "ai": "#870 static lib: compiled in via project(':libs:x'), not a runtime engine (no ENGINE service CONTRACT in its manifests) -- ships no lib APK.",
       "sysdns": "#741 The fleet's one bridge to Android's resolver for code that cannot use it directly (ResolverProxy for the gh, rclone and gix binaries; SystemDnsBridge for terminal shells). A plain library: no component, nothing to install, nothing an app binds. It is compiled into Cloud-Lib-Gh/-Rclone/-Gix here (settings.gradle includes it for them) and into cloud-drive, and the terminal forks compile its bridge source by reference.",
       "decisions": "#772 OpenRouter's Decisions API client (plain JVM Kotlin), compiled by Cloud Calc's Jev section and by Cloud-Lib-Ml-L-Image-Mlkit's OpenRouter route. No component, nothing to install, nothing an app binds: it rides inside the APKs that need it.",
       "decisions-core": "#881 The PIT harness of the decisions engine's logic: it compiles libs:decisions-engine's own core package as plain JVM Kotlin, runs its suite and mutation-tests it. No component, nothing to install; the logic itself lives in the engine's directory so the publish gate republishes the engine when it changes, and no app may compile this module.",
