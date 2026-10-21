@@ -125,7 +125,8 @@ fun SignInWays(
                 SignIn.Kind.AUTHELIA_BEARER -> pill(stringResource(R.string.auth_way_bearer, p.label), SignInTags.way(p.id)) { open = Open.Bearer(p) }
                 SignIn.Kind.AUTHELIA_WEB -> pill(stringResource(R.string.auth_way_browser, p.label), SignInTags.way(p.id)) { open = Open.Web(p) }
                 SignIn.Kind.DEVICE_FLOW -> pill(stringResource(R.string.auth_way_code, p.label), SignInTags.way(p.id)) { open = Open.Device(p) }
-                SignIn.Kind.UNKNOWN -> Unit
+                // Cloudflare Access is not a pill of this shared surface: its host (Cloud Account ▸ Connect ▸ Authentication providers) draws it.
+                SignIn.Kind.CLOUDFLARE_ACCESS, SignIn.Kind.UNKNOWN -> Unit
             }
         }
         if (status.isNotBlank()) {

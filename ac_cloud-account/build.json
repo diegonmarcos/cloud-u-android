@@ -534,6 +534,12 @@
             "icon": "connect",
             "pages": [
               {
+                "_doc": "#1083 The four sign-in providers (Authelia, Google, GitHub, Cloudflare) with live status and a Sign in action each; Authelia is the hub that accepts the other three. Declared once in ab_cloud-libs-shared/build.json auth.sign_in.providers (libs:account AuthProvidersPage).",
+                "id": "hub",
+                "label": "Providers",
+                "icon": "connect"
+              },
+              {
                 "_doc": "Sign in to the vault: the declared forge ways and the offline file. Was Home > Connect.",
                 "id": "signin",
                 "label": "Sign in",

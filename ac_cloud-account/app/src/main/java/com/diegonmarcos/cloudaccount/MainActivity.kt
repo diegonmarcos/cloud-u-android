@@ -49,6 +49,7 @@ import com.diegonmarcos.superapp.bottomnav.NavSection
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.profile.AccountConnectPage
+import com.diegonmarcos.superapp.profile.AuthProvidersPage
 import com.diegonmarcos.superapp.profile.AccountHost
 import com.diegonmarcos.superapp.profile.AccountModel
 import com.diegonmarcos.superapp.profile.AccountPermsPage
@@ -224,6 +225,7 @@ class MainActivity : AppCompatActivity() {
             }
             "connect" -> when (page) {
                 "apps" -> AppProfilesPage()
+                "hub" -> AuthProvidersPage()
                 "signin" -> AccountConnectPage()
                 "settings" -> AccountSettingsPage("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA} · built ${BuildConfig.BUILD_TIMESTAMP}")
                 else -> ConnectionsPage(go)

@@ -134,6 +134,9 @@ class HubTest {
         assertEquals(listOf("android", "adb-shell"), path("configs", "adb-shell"))
         assertEquals(listOf("status", "apps"), path("connect", "apps"))
         assertEquals(listOf("auth", "signin"), path("connect", "signin"))
+        assertEquals(listOf("auth", "hub"), path("connect", "hub"))
+        assertEquals(listOf("hub", "signin", "settings"), nav.section("connect")!!.page("auth")!!.pages.map { it.id })
+        assertEquals("hub", nav.section("connect")!!.page("auth")!!.leaf().id)
         assertEquals(listOf("desktop"), path("configs", "desktop"))
         // the owner's tabs, exactly and in order
         fun tabs(section: String) = nav.section(section)!!.pages.map { it.id }

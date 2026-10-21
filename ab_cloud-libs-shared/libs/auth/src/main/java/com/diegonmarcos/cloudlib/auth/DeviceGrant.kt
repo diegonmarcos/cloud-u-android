@@ -37,8 +37,15 @@ object DeviceGrant {
      */
     suspend fun run(p: SignIn.Provider, report: (Phase) -> Unit, openUrl: (String) -> Unit): Approval? {
         report(Phase.Asking)
-        val code = withContext(Dispatchers.IO) { SignIn.requestDeviceCode(p) }
-            .getOrElse { report(Phase.Failed(it.message ?: it.javaClass.simpleName)); return null }
+        // #1083 A refused declared client (GitHub: the owner's OAuth App has Device Flow off) retries once with the
+        // declared fallback client; the poll below then uses the client that was accepted.
+        var use = p
+        var asked = withContext(Dispatchers.IO) { SignIn.requestDeviceCode(use) }
+        if (asked.isFailure && p.fallbackClientId.isNotBlank() && p.fallbackClientId != p.clientId) {
+            use = p.copy(clientId = p.fallbackClientId)
+            asked = withContext(Dispatchers.IO) { SignIn.requestDeviceCode(use) }
+        }
+        val code = asked.getOrElse { report(Phase.Failed(it.message ?: it.javaClass.simpleName)); return null }
         report(Phase.Prompt(code))
         runCatching { openUrl(code.verificationUri) }
 
@@ -46,9 +53,9 @@ object DeviceGrant {
         var interval = code.intervalSeconds * 1000L
         while (System.currentTimeMillis() < deadline) {
             delay(interval)
-            when (val step = withContext(Dispatchers.IO) { SignIn.pollForToken(p, code.deviceCode) }) {
+            when (val step = withContext(Dispatchers.IO) { SignIn.pollForToken(use, code.deviceCode) }) {
                 is SignIn.Step.Token -> {
-                    val who = withContext(Dispatchers.IO) { SignIn.identity(p, step.accessToken) }.orEmpty()
+                    val who = withContext(Dispatchers.IO) { SignIn.identity(use, step.accessToken) }.orEmpty()
                     report(Phase.Approved(who))
                     return Approval(p, step.accessToken, who)
                 }

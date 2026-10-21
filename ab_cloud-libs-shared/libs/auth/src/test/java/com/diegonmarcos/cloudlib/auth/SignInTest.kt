@@ -51,14 +51,16 @@ class SignInTest {
         assertEquals(SignIn.Kind.AUTHELIA_BEARER, primaries.single().kind)
     }
 
-    @Test fun `three ways in - the SSO's bearer and web-auth are two providers of distinct kinds (#578)`() {
-        assertEquals(3, SignIn.providers.size)
+    @Test fun `five ways in over four providers - the SSO's bearer and web-auth are two ways of one family (#578, #1083)`() {
+        assertEquals(5, SignIn.providers.size)
         assertEquals(
-            listOf(SignIn.Kind.AUTHELIA_BEARER, SignIn.Kind.AUTHELIA_WEB, SignIn.Kind.DEVICE_FLOW),
+            listOf(SignIn.Kind.AUTHELIA_BEARER, SignIn.Kind.AUTHELIA_WEB, SignIn.Kind.DEVICE_FLOW, SignIn.Kind.DEVICE_FLOW, SignIn.Kind.CLOUDFLARE_ACCESS),
             SignIn.providers.map { it.kind },
         )
-        assertEquals("ids are unique", 3, SignIn.providers.map { it.id }.toSet().size)
-        assertEquals("labels are unique - each pill says which way it is", 3, SignIn.providers.map { it.label }.toSet().size)
+        assertEquals("ids are unique", 5, SignIn.providers.map { it.id }.toSet().size)
+        assertEquals("labels are unique - each pill says which way it is", 5, SignIn.providers.map { it.label }.toSet().size)
+        assertEquals("four families: Authelia, Google, GitHub, Cloudflare", listOf("authelia", "google", "github", "cloudflare"),
+            ProviderStatus.families(SignIn.providers).keys.toList())
         // Both SSO ways are startable and reach the same fetches; neither is the device grant.
         val sso = SignIn.providers.filter { it.kind == SignIn.Kind.AUTHELIA_BEARER || it.kind == SignIn.Kind.AUTHELIA_WEB }
         assertEquals(2, sso.size)
@@ -69,28 +71,51 @@ class SignInTest {
     }
 
     /**
-     * #641 THE GITHUB DEVICE-FLOW PROVIDER IS DELETED, and this is the assertion that keeps it
-     * deleted. It carried an `Ov23li` client_id, which is a GitHub APP, and GitHub Apps ship with
-     * Device Flow OFF — so the grant could never start. Re-declaring it turns this red, and the
-     * count below makes sure the check cannot pass by finding NO device-flow provider at all.
+     * #1083 GitHub is declared again, and this is what keeps it the RIGHT kind of client. #641 deleted an earlier
+     * provider whose client id was a GitHub APP (Device Flow off, so the grant never started). The one declared now is
+     * the owner's own GitHub OAuth App (`Ov23li1WLY8SoctMF2hp`) with the GitHub CLI's public client as the fallback
+     * the device grant retries with. Neither carries a secret: the app's secret lives only in the auth broker's sops.
      */
-    @Test fun `there is no github device-flow provider, and no Ov23li client id anywhere (#641)`() {
+    @Test fun `github is the owner's OAuth App with the gh public client as fallback, and no secret anywhere (#1083)`() {
         val arr = declared().getJSONArray("providers")
-        val declaredIds = (0 until arr.length()).map { arr.getJSONObject(it).getString("id") }
-        assertFalse("a github provider is declared again", "github" in declaredIds)
-        assertNull("a github provider is baked", SignIn.provider("github"))
+        val d = (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("id") == "github" }
+        val gh = SignIn.provider("github")!!
+        assertEquals(SignIn.Kind.DEVICE_FLOW, gh.kind)
+        assertEquals("Ov23li1WLY8SoctMF2hp", gh.clientId)
+        assertEquals("178c6fc778ccc68e1d6a", gh.fallbackClientId)
+        assertTrue("startable", gh.configured)
+        assertEquals("", gh.clientSecret)
+        assertFalse("no secret field in the declaration", d.has("client_secret"))
+        assertTrue(gh.deviceCodeUrl.startsWith("https://github.com/") && gh.tokenUrl.startsWith("https://github.com/"))
         val flows = SignIn.providers.filter { it.kind == SignIn.Kind.DEVICE_FLOW }
-        assertEquals("exactly one device grant is left, and it is Google's", 1, flows.size)
-        assertEquals("google", flows.single().id)
-        // A GitHub App's client id, in the declaration or in the bake, is the defect itself.
-        SignIn.providers.forEach { assertFalse("${it.id} carries a GitHub App client id", it.clientId.startsWith("Ov23li")) }
-        assertFalse("the declaration carries a GitHub App client id", declared().toString().contains("Ov23li"))
-        assertFalse("the bake carries a GitHub App client id", AuthDeclaration.decode(BuildConfig.AUTH_B64).contains("Ov23li"))
-        // The remedy rows that existed ONLY to word this provider's dead end are gone too.
+        assertEquals("exactly two device grants: google and github", listOf("google", "github"), flows.map { it.id })
+        // The remedy rows that worded the old App-client dead end stay gone.
         val remedies = AuthDeclaration.current.grantRemedies
         assertTrue("a remedy table is still declared — the mechanism stays", remedies.isNotEmpty())
-        assertFalse("a device_flow_disabled remedy is declared for a provider that no longer exists",
-            remedies.any { it.match.contains("device_flow_disabled") || it.match.contains("Device Flow must be explicitly enabled") })
+        assertFalse("a device_flow_disabled remedy is declared", remedies.any { it.match.contains("device_flow_disabled") })
+    }
+
+    @Test fun `no declared provider carries a client secret or a token (#1083)`() {
+        val text = declared().toString()
+        val arr = declared().getJSONArray("providers")
+        for (i in 0 until arr.length()) {
+            val d = arr.getJSONObject(i)
+            assertEquals("${d.getString("id")}: client_secret must stay empty", "", d.optString("client_secret"))
+            for (k in d.keys()) assertFalse("${d.getString("id")}: $k looks like a credential", k.contains("secret", true) && d.optString(k).isNotBlank())
+        }
+        assertFalse("a bearer-looking value in the declaration", Regex("""(gho_|ghp_|github_pat_|GOCSPX-)""").containsMatchIn(text))
+    }
+
+    @Test fun `google and cloudflare carry their declared ids and routes (#1083)`() {
+        val g = SignIn.provider("google")!!
+        assertEquals("514615763870-0p4p464r7cul0jt6nge7deumie5ubdl3.apps.googleusercontent.com", g.serverClientId)
+        assertEquals("google_credential", g.native)
+        assertTrue(g.startUrl.startsWith("https://auth.diegonmarcos.com/oauth2/google/"))
+        val cf = SignIn.provider("cloudflare")!!
+        assertEquals(SignIn.Kind.CLOUDFLARE_ACCESS, cf.kind)
+        assertTrue(cf.loginUrl.startsWith("https://diegonmarcos.cloudflareaccess.com"))
+        assertTrue(cf.configured)
+        SignIn.providers.forEach { assertTrue("${it.id}: probe_url must be https", it.probeUrl.startsWith("https://")) }
     }
 
     @Test fun `Google's owner-minted client id has landed, and the secret is never in the public repo (#611)`() {

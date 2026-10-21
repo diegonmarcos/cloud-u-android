@@ -3588,6 +3588,8 @@
           "id": "authelia",
           "label": "Authelia bearer",
           "kind": "authelia_bearer",
+          "family": "authelia",
+          "probe_url": "https://auth.diegonmarcos.com/api/health",
           "primary": true,
           "grants": [
             "config_artifact",
@@ -3598,6 +3600,8 @@
           "id": "authelia_web",
           "label": "Authelia web-auth",
           "kind": "authelia_web",
+          "family": "authelia",
+          "probe_url": "https://auth.diegonmarcos.com/api/health",
           "_doc_portal_url": "#669 WHAT THE EMBEDDED BROWSER LOADS: the portal ITSELF, not a protected route. Loading a protected route rides #655's broken rd round-trip — the Authelia redirect drops the handle_path prefix (ONE generator template, 26 blocks), so a COMPLETED login lands on a 404 inside the dialog and reads as failure. Loading the declared portal page involves no rd at all: the post-login landing is the portal's own signed-in page, which exists. This is NOT a client-side repair of #655 (nothing rewrites a return URL; the edge defect stays filed on the edge) — it simply stops the sign-in surface from depending on the defective round-trip.",
           "portal_url": "https://auth.diegonmarcos.com/",
           "grants": [
@@ -3609,12 +3613,50 @@
           "id": "google",
           "label": "Google",
           "kind": "device_flow",
+          "family": "google",
+          "_doc_native": "#1083 Google's own sign-in on a phone is Credential Manager (Sign in with Google): `server_client_id` is the project's WEB client (public id; its secret stays server-side in the auth broker's sops file), the ID token it returns proves the address. Where Play services are absent the row falls back to the broker's web sign-in at `start_url`. The device-grant fields below are the older route, kept for the shared pill (libs:auth SignInWays).",
+          "native": "google_credential",
+          "server_client_id": "514615763870-0p4p464r7cul0jt6nge7deumie5ubdl3.apps.googleusercontent.com",
+          "start_url": "https://auth.diegonmarcos.com/oauth2/google/start",
+          "probe_url": "https://auth.diegonmarcos.com/oauth2/google/health",
           "device_code_url": "https://oauth2.googleapis.com/device/code",
           "token_url": "https://oauth2.googleapis.com/token",
           "userinfo_url": "https://openidconnect.googleapis.com/v1/userinfo",
           "client_id": "514615763870-tp8jndd2aiedqq3k833m610ocilpthbm.apps.googleusercontent.com",
           "client_secret": "",
           "scope": "openid email",
+          "grants": [
+            "identity"
+          ]
+        },
+        {
+          "id": "github",
+          "label": "GitHub",
+          "kind": "device_flow",
+          "family": "github",
+          "_doc": "#1083 GitHub by the OAuth device flow (RFC 8628). `client_id` is the owner's own GitHub OAuth App (public id, no secret on the phone; the app's secret is the auth broker's sops key AUTH_BROKER_GITHUB_APP_CLIENT_SECRET and is used only by the broker's web redirect flow). If that app has Device Flow switched off, GitHub refuses the code request and the same flow is retried with `fallback_client_id`, the GitHub CLI's public client. #641 deleted an earlier GitHub provider that carried a GitHub App id; this one is an OAuth App.",
+          "device_code_url": "https://github.com/login/device/code",
+          "token_url": "https://github.com/login/oauth/access_token",
+          "userinfo_url": "https://api.github.com/user",
+          "client_id": "Ov23li1WLY8SoctMF2hp",
+          "fallback_client_id": "178c6fc778ccc68e1d6a",
+          "start_url": "https://auth.diegonmarcos.com/oauth2/github/start",
+          "probe_url": "https://auth.diegonmarcos.com/oauth2/github/health",
+          "scope": "read:user",
+          "grants": [
+            "identity"
+          ]
+        },
+        {
+          "id": "cloudflare",
+          "label": "Cloudflare Access",
+          "kind": "cloudflare_access",
+          "family": "cloudflare",
+          "_doc": "#1083 Cloudflare Zero Trust (Access / WARP). The sign-in is the team login page; WARP / Cloudflare One enrolment is the existing CloudflareWarp + CfKeyStore code of Cloud SuperApp (Mesh page), reached by `route`. `probe_url` is the team's public certs document: a 200 means the team is live.",
+          "team": "diegonmarcos",
+          "login_url": "https://diegonmarcos.cloudflareaccess.com/",
+          "probe_url": "https://diegonmarcos.cloudflareaccess.com/cdn-cgi/access/certs",
+          "route": "extapp:cloud-superapp",
           "grants": [
             "identity"
           ]

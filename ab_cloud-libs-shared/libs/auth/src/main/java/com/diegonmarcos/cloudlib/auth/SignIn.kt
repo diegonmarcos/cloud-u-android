@@ -31,7 +31,7 @@ object SignIn {
 
     /** [AUTHELIA_BEARER] and [AUTHELIA_WEB] are the fleet SSO's two distinct ways in (#578):
      *  a stored/pasted bearer, and the portal login in the embedded browser. */
-    enum class Kind { AUTHELIA_BEARER, AUTHELIA_WEB, DEVICE_FLOW, UNKNOWN }
+    enum class Kind { AUTHELIA_BEARER, AUTHELIA_WEB, DEVICE_FLOW, CLOUDFLARE_ACCESS, UNKNOWN }
 
     /** The grant vocabulary — what a sign-in through a provider can then fetch
      *  (build.json::ui.vault_connect.sign_in._doc_sign_in). Names the code
@@ -60,14 +60,32 @@ object SignIn {
          *  protected route lands on a 404); the portal's own signed-in page is a
          *  landing that exists. */
         val portalUrl: String = "",
+        /** #1083 The provider this way belongs to (`authelia` for both SSO ways); blank means its own id. */
+        val family: String = "",
+        /** #1083 Second public client tried when the declared one is refused (GitHub: the OAuth App may have Device Flow off). */
+        val fallbackClientId: String = "",
+        /** #1083 `google_credential`: the row signs in through Credential Manager with [serverClientId]; blank = no native way. */
+        val native: String = "",
+        val serverClientId: String = "",
+        /** #1083 The auth broker's web sign-in page (browser fallback); blank when the provider has none. */
+        val startUrl: String = "",
+        /** #1083 A public URL whose answer says the provider is reachable now (live status). */
+        val probeUrl: String = "",
+        /** #1083 Cloudflare Access: the team login page and the app that holds the WARP / One enrolment. */
+        val loginUrl: String = "",
+        val route: String = "",
     ) {
+        /** The group this way is listed under. */
+        val familyId: String get() = family.ifBlank { id }
+
         fun grants(what: String) = what in grants
 
         /** Whether a flow through this provider can start at all: the fleet SSO
          *  always can (its endpoints are the config source); a device grant
          *  needs a client id, and says so instead of failing halfway. */
         val configured: Boolean get() =
-            kind == Kind.AUTHELIA_BEARER || kind == Kind.AUTHELIA_WEB || (kind == Kind.DEVICE_FLOW && clientId.isNotBlank())
+            kind == Kind.AUTHELIA_BEARER || kind == Kind.AUTHELIA_WEB || (kind == Kind.DEVICE_FLOW && clientId.isNotBlank()) ||
+                (kind == Kind.CLOUDFLARE_ACCESS && loginUrl.startsWith("https://"))
     }
 
     fun parseProviders(o: JSONObject): List<Provider> {
@@ -82,6 +100,7 @@ object SignIn {
                     "authelia_bearer" -> Kind.AUTHELIA_BEARER
                     "authelia_web" -> Kind.AUTHELIA_WEB
                     "device_flow" -> Kind.DEVICE_FLOW
+                    "cloudflare_access" -> Kind.CLOUDFLARE_ACCESS
                     else -> Kind.UNKNOWN
                 },
                 primary = p.optBoolean("primary", false),
@@ -93,6 +112,14 @@ object SignIn {
                 scope = p.optString("scope"),
                 grants = if (g == null) emptyList() else (0 until g.length()).map { g.getString(it) },
                 portalUrl = p.optString("portal_url"),
+                family = p.optString("family"),
+                fallbackClientId = p.optString("fallback_client_id"),
+                native = p.optString("native"),
+                serverClientId = p.optString("server_client_id"),
+                startUrl = p.optString("start_url"),
+                probeUrl = p.optString("probe_url"),
+                loginUrl = p.optString("login_url"),
+                route = p.optString("route"),
             )
         }
     }
