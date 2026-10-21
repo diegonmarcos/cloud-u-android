@@ -18,6 +18,12 @@ APP="$ROOT/ac_cloud-drive"; DATA="$APP/data"
 fails=0
 ok()  { echo "  PASS  $1"; }
 bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
+# raw.githubusercontent.com is CDN-cached for minutes after a push, so try the contents API (always fresh) first.
+fetch_registry() {  # $1 = raw url, $2 = out file
+  local api; api="$(printf '%s' "$1" | sed -E 's#^https://raw.githubusercontent.com/([^/]+)/([^/]+)/(.+)/([^/]+)$#https://api.github.com/repos/\1/\2/contents/\4?ref=\3#')"
+  curl -fsSL --max-time 20 -H 'Accept: application/vnd.github.raw' ${GITHUB_TOKEN:+-H "Authorization: Bearer $GITHUB_TOKEN"} "$api" -o "$2" 2>/dev/null \
+    || curl -fsSL --max-time 20 "$1" -o "$2" 2>/dev/null
+}
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 
 echo "── R1 the copy is the pinned one ──"
@@ -69,7 +75,7 @@ node "$T/app/tools/gen-drive-git-repos.js" --check >/dev/null 2>&1 && bad "--che
 
 echo "── R6 the copy equals the declared url ──"
 url="$(node -e 'console.log(require(process.argv[1]).storage.repos_source.url)' "$APP/build.json")"
-if curl -fsSL --max-time 20 "$url" -o "$T/live.json" 2>/dev/null && node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$T/live.json" 2>/dev/null; then
+if fetch_registry "$url" "$T/live.json" && node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$T/live.json" 2>/dev/null; then
   cmp -s "$T/live.json" "$DATA/repos.sot.json" && ok "repos.sot.json = $url" || bad "repos.sot.json DRIFTED from $url (run ac_cloud-drive/tools/sync-repos-sot.sh)"
 else
   echo "  INFO  $url not reachable from here; live comparison not made (R1 pin still enforced)"

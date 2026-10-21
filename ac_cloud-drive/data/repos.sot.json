@@ -24,9 +24,9 @@
   "_consumers_doc": "Every symlink farmer / list reader of this account and where it takes its list from. THIS FILE is the only editable source; each consumer holds either a byte copy (fleet_files, refreshed by `./clone.sh --sync`) or a subset it must keep consistent with this file (`node repos-sot.js check-subset <file>`). A consumer's own drift guard fails when its copy differs from this file or names a repo this file does not know.",
   "consumers": [
     { "repo": "git-repos-master", "what": "clone.sh + committed symlink farm", "reads": "repos.json (itself)", "guard": "9_others/test/test-repos-sot.sh" },
-    { "repo": "cloud", "what": "project master subset (a_cloud + front) used by derive-repo-map and the libs:repos refresh", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset cloud/repos.json" },
-    { "repo": "ffront", "what": "front project master subset", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset front/repos.json" },
-    { "repo": "cloud-infra", "what": "fleet dotfiles manifest fleet.repos, derive-repo-map, github-repos inventory", "reads": "1_cloud-configs/src/inputs/repos.sot.json (byte copy)", "guard": "9_others/test/repos-sot.test.sh" },
+    { "repo": "cloud", "what": "project master subset (a_cloud + front) used by derive-repo-map and the libs:repos refresh", "reads": "repos.json (subset)", "guard": "check-repos-sot.sh (in the cloud repo)" },
+    { "repo": "front", "what": "front project master subset", "reads": "repos.json (subset)", "guard": "check-repos-sot.sh (in the front repo)" },
+    { "repo": "cloud-infra", "what": "fleet dotfiles manifest fleet.repos, derive-repo-map, github-repos inventory", "reads": "1_cloud-configs/src/inputs/repos.sot.json (byte copy)", "guard": "9_others/test/repos-sot.test.sh (registered in 9_others/test-registry.json)" },
     { "repo": "cloud-u-android", "what": "libs:repos mirror list, cloud-drive Sync > Git list, cloud-drive seed/clone targets", "reads": "ac_cloud-drive/data/repos.sot.json + ab_cloud-libs-shared/libs/repos/repos.sot.json (byte copies)", "guard": "ac_cloud-drive/test/test-drive-repos-sot.sh + RepoSotTest.kt" },
     { "repo": "cloud-infra-desktop", "what": "NixOS/home-manager twin: embeds only the `cloud` index submodule, keeps no repo list", "reads": "none (submodule of cloud)", "guard": "n/a" },
     { "repo": "cloud-u-linux", "what": "dtk/linux-account: no repo list of its own", "reads": "none", "guard": "n/a" },
