@@ -12,14 +12,14 @@ class UnisonConfigTest {
     private fun decl(pair: String, defaults: String = "{}", ignore: String = "[]") =
         """{"defaults":$defaults,"ignore":$ignore,"pairs":[$pair]}"""
 
-    private val ssh = """{"id":"docs","name":"Docs","root_a":"/storage/emulated/0/Sync/Docs","root_b":{"host":"oci-apps.app","user":"diego","path":"/srv/sync/docs"}}"""
+    private val ssh = """{"id":"docs","name":"Docs","root_a":"Sync/Docs","root_b":{"host":"oci-apps.app","user":"diego","path":"/srv/sync/docs"}}"""
 
     @Test fun aValidSshPairParsesWithTheDeclaredDefaults() {
         val d = UnisonConfig.parse(decl(ssh, defaults = """{"auto":true,"fastcheck":"default","backup":true,"max_backups":5}""", ignore = """["Name .DS_Store","Name *.tmp","Name build"]"""))
         assertEquals(emptyList<String>(), d.problems)
         val p = d.pairs.single()
         assertEquals("docs", p.id)
-        assertEquals("/storage/emulated/0/Sync/Docs", p.rootA)
+        assertEquals("/sdcard/Sync/Docs", p.rootA)
         assertEquals(UnisonConfig.Peer.Ssh("oci-apps.app", 22, "diego", "/srv/sync/docs", "", "unison -server"), p.peer)
         assertEquals(listOf("Name .DS_Store", "Name *.tmp", "Name build"), p.ignore)
         assertNull("no policy = every conflict asks", p.prefer)
@@ -40,7 +40,7 @@ class UnisonConfigTest {
     }
 
     @Test fun aLocalToLocalPairIsAllowed() {
-        val d = UnisonConfig.parse(decl("""{"id":"pics","root_a":"/storage/emulated/0/DCIM","root_b":{"path":"/storage/1234-ABCD/DCIM"}}"""))
+        val d = UnisonConfig.parse(decl("""{"id":"pics","root_a":"DCIM","root_b":{"path":"/storage/1234-ABCD/DCIM"}}"""))
         assertEquals(emptyList<String>(), d.problems)
         assertEquals(UnisonConfig.Peer.Local("/storage/1234-ABCD/DCIM"), d.pairs.single().peer)
     }
@@ -70,8 +70,8 @@ class UnisonConfigTest {
         refused(ssh.replace("\"root_b\"", "\"max_backups\":0,\"root_b\""), needle = "max_backups")
         refused(ssh.replace("\"root_b\"", "\"schedule_minutes\":5,\"root_b\""), needle = "WorkManager's floor")
         refused(ssh.replace("\"root_b\"", "\"ignore\":[\"*.tmp\"],\"root_b\""), needle = "ignore rule '*.tmp'")
-        refused(ssh.replace("/storage/emulated/0/Sync/Docs", "relative/dir"), needle = "root_a must be an absolute folder")
-        refused(ssh.replace("/storage/emulated/0/Sync/Docs", "/data/data/com.diegonmarcos.clouddrive/files/x"), needle = "private data")
+        refused(ssh.replace("Sync/Docs", "/abs/dir"), needle = "root_a must be a folder relative to shared storage")
+        refused(ssh.replace("Sync/Docs", "../../data/data/x"), needle = "no ..")
         refused(ssh.replace("/srv/sync/docs", "/srv/../etc"), needle = "climbs")
         refused(ssh.replace("\"id\":\"docs\"", "\"id\":\"Docs Pair\""), needle = "id must be")
     }

@@ -20,10 +20,10 @@ import java.util.concurrent.TimeUnit
  */
 class UnisonRunnerTest {
     private val pair = UnisonConfig.parse(
-        """{"ignore":["Name .DS_Store"],"pairs":[{"id":"docs","root_a":"/storage/emulated/0/Sync/Docs","root_b":{"host":"oci-apps.app","user":"diego","path":"/srv/sync/docs"}}]}"""
+        """{"ignore":["Name .DS_Store"],"pairs":[{"id":"docs","root_a":"Sync/Docs","root_b":{"host":"oci-apps.app","user":"diego","path":"/srv/sync/docs"}}]}"""
     ).pairs.single()
     private val local = UnisonConfig.parse(
-        """{"pairs":[{"id":"pics","root_a":"/storage/emulated/0/DCIM","root_b":{"path":"/storage/1234-ABCD/DCIM"}}]}"""
+        """{"pairs":[{"id":"pics","root_a":"DCIM","root_b":{"path":"/storage/1234-ABCD/DCIM"}}]}"""
     ).pairs.single()
 
     private class Fake(
@@ -182,7 +182,7 @@ class UnisonRunnerTest {
         val (r, log) = resolve(t, UnisonResolve.Choice.KEEP_BOTH)
         val copy = t.sent.first { it.first == "unison_keep_copy" }.second
         assertEquals("docs", copy.getString("profile"))
-        assertEquals("/storage/emulated/0/Sync/Docs", copy.getString("root"))
+        assertEquals("/sdcard/Sync/Docs", copy.getString("root"))
         assertEquals("notes/todo.md", copy.getString("path"))
         assertTrue(copy.getString("suffix").startsWith("conflict-local-2026"))
         assertTrue(log.any { it.contains("kept your version as todo.conflict-local-x.md") })

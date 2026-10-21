@@ -9,7 +9,7 @@ import org.junit.Test
 /** #1084 conflict handling, part two: what keep-A, keep-B and keep-both ask the engine, and that none of them overwrites silently. */
 class UnisonResolveTest {
     private val pair = UnisonConfig.parse(
-        """{"pairs":[{"id":"docs","root_a":"/storage/emulated/0/Sync/Docs","root_b":{"host":"oci-apps.app","user":"diego","path":"/srv/sync/docs"},"max_backups":4}]}"""
+        """{"pairs":[{"id":"docs","root_a":"Sync/Docs","root_b":{"host":"oci-apps.app","user":"diego","path":"/srv/sync/docs"},"max_backups":4}]}"""
     ).pairs.single()
     private val rootB = "socket://127.0.0.1:{PORT}//srv/sync/docs"
 
@@ -18,7 +18,7 @@ class UnisonResolveTest {
     @Test fun keepAPrefersThePhonesRootForOnePathOnly() {
         val p = UnisonResolve.plan(pair, "notes/todo.md", UnisonResolve.Choice.KEEP_A, "20261021-120000")
         assertEquals("notes/todo.md", flag(p.extra, "-path"))
-        assertEquals("/storage/emulated/0/Sync/Docs", flag(p.extra, "-prefer"))
+        assertEquals("/sdcard/Sync/Docs", flag(p.extra, "-prefer"))
         assertNull(p.keepCopyRoot)
     }
 
@@ -31,7 +31,7 @@ class UnisonResolveTest {
     @Test fun keepBothKeepsTheOtherSidesNameAndCopiesThePhonesVersionBesideIt() {
         val p = UnisonResolve.plan(pair, "notes/todo.md", UnisonResolve.Choice.KEEP_BOTH, "20261021-120000")
         assertEquals(rootB, flag(p.extra, "-prefer"))
-        assertEquals("the phone's version is the one that must be copied back", "/storage/emulated/0/Sync/Docs", p.keepCopyRoot)
+        assertEquals("the phone's version is the one that must be copied back", "/sdcard/Sync/Docs", p.keepCopyRoot)
         assertEquals("conflict-local-20261021-120000", p.suffix)
     }
 

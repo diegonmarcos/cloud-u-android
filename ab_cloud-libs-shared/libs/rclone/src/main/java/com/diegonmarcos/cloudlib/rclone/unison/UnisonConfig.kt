@@ -51,6 +51,9 @@ object UnisonConfig {
 
     data class Declared(val pairs: List<Pair>, val problems: List<String>)
 
+    /** Where a relative `root_a` is rooted when the host app does not say (the app passes Environment.getExternalStorageDirectory()). */
+    const val DEFAULT_STORAGE_ROOT = "/sdcard"
+
     val FASTCHECK = setOf("default", "true", "false", "yes", "no")
     val PREFER = setOf("a", "b", "newer", "older")
     private val ID = Regex("[a-z0-9][a-z0-9-]{0,40}")
@@ -68,7 +71,7 @@ object UnisonConfig {
      * Parse the declaration. Every defect is a sentence in [Declared.problems] and that pair is left
      * out, so one bad pair never hides the rest and a bad pair never runs half-valid.
      */
-    fun parse(text: String): Declared {
+    fun parse(text: String, storageRoot: String = DEFAULT_STORAGE_ROOT): Declared {
         if (text.isBlank()) return Declared(emptyList(), emptyList())
         val root = JSONObject(text)
         val d = root.optJSONObject("defaults") ?: JSONObject()
@@ -82,10 +85,13 @@ object UnisonConfig {
             fun bad(why: String) { problems += "unison pair '${id.ifBlank { "#$i" }}': $why" }
             if (!ID.matches(id)) { bad("id must be [a-z0-9-], 1..41 characters"); continue }
             if (pairs.any { it.id == id }) { bad("id is declared twice"); continue }
-            val rootA = p.str("root_a")
-            if (!rootA.startsWith("/") || '\n' in rootA || rootA.startsWith("/data/data/") || rootA.startsWith("/data/user/")) {
-                bad("root_a must be an absolute folder outside any app's private data (the engine cannot open it): '$rootA'"); continue
+            // root_a is a folder RELATIVE to shared storage (the engine runs in its own uid and can open shared storage,
+            // never another app's private data); the host resolves it, so no device path is written in the declaration.
+            val relA = p.str("root_a")
+            if (relA.isBlank() || relA.startsWith("/") || '\n' in relA || relA.split('/').any { it == ".." }) {
+                bad("root_a must be a folder relative to shared storage (no leading slash, no ..): '$relA'"); continue
             }
+            val rootA = storageRoot.trimEnd('/') + "/" + relA.trim('/')
             val b = p.optJSONObject("root_b")
             if (b == null) { bad("root_b is missing"); continue }
             val peer: Peer = if (b.has("host")) {
@@ -116,7 +122,7 @@ object UnisonConfig {
             val badIgnore = ignore.firstOrNull { !IGNORE.matches(it) || '\n' in it }
             if (badIgnore != null) { bad("ignore rule '$badIgnore' is not `Name|Path|BelowPath|Regex <pattern>`"); continue }
             pairs += Pair(
-                id = id, name = p.str("name", id), enabled = p.boolOr("enabled", true), rootA = rootA.trimEnd('/').ifEmpty { "/" }, peer = peer,
+                id = id, name = p.str("name", id), enabled = p.boolOr("enabled", true), rootA = rootA, peer = peer,
                 scheduleMinutes = schedule, ignore = ignore,
                 batch = p.boolOr("batch", d.boolOr("batch", true)), auto = p.boolOr("auto", d.boolOr("auto", true)),
                 fastcheck = fast, prefer = prefer, backup = backup, maxBackups = maxBackups, times = p.boolOr("times", d.boolOr("times", true)),

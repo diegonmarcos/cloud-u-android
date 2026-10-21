@@ -9,13 +9,13 @@ import org.junit.Test
 class UnisonProfileTest {
 
     private fun pair(extra: String = "", root: String = """{"host":"oci-apps.app","user":"diego","path":"/srv/sync/docs"}""", defaults: String = "{}") =
-        UnisonConfig.parse("""{"defaults":$defaults,"ignore":["Name .DS_Store","Name *.tmp","Name build"],"pairs":[{"id":"docs","root_a":"/storage/emulated/0/Sync/Docs"$extra,"root_b":$root}]}""").pairs.single()
+        UnisonConfig.parse("""{"defaults":$defaults,"ignore":["Name .DS_Store","Name *.tmp","Name build"],"pairs":[{"id":"docs","root_a":"Sync/Docs"$extra,"root_b":$root}]}""").pairs.single()
 
     private fun lines(p: UnisonConfig.Pair) = UnisonProfile.generate(p).lines().filter { it.isNotBlank() && !it.startsWith("#") }
 
     @Test fun anSshPairBridgesTheSecondRootThroughALoopbackSocketWithAnAbsolutePathDoubleSlash() {
         val l = lines(pair())
-        assertEquals("root = /storage/emulated/0/Sync/Docs", l[0])
+        assertEquals("root = /sdcard/Sync/Docs", l[0])
         assertEquals("root = socket://127.0.0.1:{PORT}//srv/sync/docs", l[1])
     }
 
@@ -49,7 +49,7 @@ class UnisonProfileTest {
 
     @Test fun policiesMapOntoPreferAndAlwaysKeepBackups() {
         val a = lines(pair(""","prefer":"a""""))
-        assertTrue("prefer = /storage/emulated/0/Sync/Docs" in a)
+        assertTrue("prefer = /sdcard/Sync/Docs" in a)
         assertTrue("backup = Name *" in a)
         val b = lines(pair(""","prefer":"b""""))
         assertTrue("prefer = socket://127.0.0.1:{PORT}//srv/sync/docs" in b)
@@ -77,7 +77,7 @@ class UnisonProfileTest {
     }
 
     @Test fun rootsAreWhatThePreferValuesAreCheckedAgainst() {
-        assertEquals(listOf("/storage/emulated/0/Sync/Docs", "socket://127.0.0.1:{PORT}//srv/sync/docs"), UnisonProfile.roots(pair()))
+        assertEquals(listOf("/sdcard/Sync/Docs", "socket://127.0.0.1:{PORT}//srv/sync/docs"), UnisonProfile.roots(pair()))
     }
 
     @Test fun generationIsDeterministic() {

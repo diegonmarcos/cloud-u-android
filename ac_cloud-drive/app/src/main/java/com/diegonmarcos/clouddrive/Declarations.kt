@@ -314,7 +314,7 @@ object Declarations {
     val syncRules: List<SyncRuleDecl> by lazy { parseSyncRules(decode(BuildConfig.SYNC_RULES_B64)) }
     /** #1084 the Unison folder pairs (data/drive-sync-rules.json `unison`), parsed and validated by libs:rclone; a pair that breaks a rule is a sentence in `problems`, never a half-valid run. */
     val unison: com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.Declared by lazy {
-        runCatching { com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.parse(decode(BuildConfig.UNISON_B64)) }
+        runCatching { com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.parse(decode(BuildConfig.UNISON_B64), runCatching { android.os.Environment.getExternalStorageDirectory().absolutePath }.getOrNull() ?: com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.DEFAULT_STORAGE_ROOT) }
             .getOrElse { com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.Declared(emptyList(), listOf("the unison declaration is not valid JSON: ${it.message}")) }
     }
     val iconDefault: String get() = BuildConfig.UI_ICON_DEFAULT
