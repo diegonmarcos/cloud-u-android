@@ -77,7 +77,7 @@ jobs:
         # as Cloud Notes does) must not hand Kotlin's own Yarn 1 install over to that Berry release.
         env:
           YARN_IGNORE_PATH: "1"
-        run: cd "$WORK_DIR" && ./gradlew wasmJsBrowserDistribution --no-daemon --console=plain
+        run: cd "$WORK_DIR" && ./gradlew wasmJsBrowserDistribution --no-daemon --console=plain@GRADLE_EXTRA@
 
       # The web tester asserts the dist, so it runs AFTER the build and is told
       # to treat an absent dist as a failure (locally it skips, with a reason).

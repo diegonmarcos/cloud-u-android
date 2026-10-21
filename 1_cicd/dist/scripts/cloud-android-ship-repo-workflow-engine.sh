@@ -245,6 +245,9 @@ for build_json in sorted(glob.glob(os.path.join(root, "*", "build.json"))):
         "WASM_ASSET": web["gh_asset"],
         "PORTAL_SLUG": web["portal_slug"],
         "ENTRY": web["entry"],
+        # web.gradle_extra: optional flags for the wasm build, e.g. " --refresh-dependencies" to step over a restored
+        # Gradle cache that recorded a failed lookup (#876: cloud-drive). Empty for every app that does not set it.
+        "GRADLE_EXTRA": web.get("gradle_extra", ""),
         "WEB_TRIGGER_PATHS": "\n".join('      - "%s"' % p for p in sorted(paths)),
     }
     text = open(template).read()

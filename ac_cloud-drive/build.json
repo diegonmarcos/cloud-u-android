@@ -891,7 +891,8 @@
     "portal_slug": "cloud-drive",
     "entry": "index.html",
     "tester": "test-drive-web.sh",
-    "size_budget_mb": 20
+    "size_budget_mb": 20,
+    "gradle_extra": " --refresh-dependencies"
   },
   "tests": {
     "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds. Until #330 this block was absent and test/ did not exist, so the shell phase printed COVERAGE-GAP and exited 0: the only question this application's pipeline asked was whether Gradle exited 0, and Gradle cannot see a WebView calling a Kotlin class by string name.",
