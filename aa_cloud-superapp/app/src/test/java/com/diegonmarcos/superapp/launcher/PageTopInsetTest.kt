@@ -4,6 +4,7 @@ import android.app.Application
 import android.view.ContextThemeWrapper
 import android.view.View
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.R
