@@ -22,6 +22,7 @@ import org.robolectric.RobolectricTestRunner
  * (build.json storage.repos_source). Held here, by the parser the phone runs: the copy is the pinned one,
  * every Sync > Git repository is listed by the registry and created, visibility agrees, and a
  * pending_creation repository (cloud-webapps, cloud-me-containers) is never offered for clone or seed.
+ * (The libs:repos copy lives outside this module's CI checkout; test/test-drive-repos-sot.sh R1 holds it byte-identical.)
  */
 @RunWith(RobolectricTestRunner::class)
 class RepoSotTest {
@@ -92,11 +93,5 @@ class RepoSotTest {
         assertTrue(Declarations.parseRepoSot("").repos.isEmpty())
         assertTrue(Declarations.parseRepoSot("{not json").repos.isEmpty())
         assertTrue("no registry = nothing is cloneable (fail closed)", Declarations.restrictToRegistry(family, Declarations.parseRepoSot("")).repos.isEmpty())
-    }
-
-    @Test fun libsReposMirrorUsesTheSameCopy() {
-        val libs = File(data.parentFile.parentFile, "ab_cloud-libs-shared/libs/repos/repos.sot.json")
-        assertTrue("libs:repos copy missing at $libs", libs.isFile)
-        assertEquals("libs:repos copy drifted from cloud-drive's", sotText, libs.readText())
     }
 }
