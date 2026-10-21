@@ -22,7 +22,7 @@ import java.io.File
  * here. Boards > Inbox has the same guard in BoardsTest ("every Inbox box carries every required action").
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class)
+@Config(sdk = [34], application = Application::class, qualifiers = "w384dp-h1600dp-450dpi")
 class NotifActionsGuardTest : KitPageHarness() {
 
     private val ctx get() = ApplicationProvider.getApplicationContext<Application>()

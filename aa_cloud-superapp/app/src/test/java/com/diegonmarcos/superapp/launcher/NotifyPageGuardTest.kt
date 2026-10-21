@@ -5,6 +5,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Dp
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.core.NotificationStore
@@ -87,6 +88,7 @@ class NotifyPageGuardTest : KitPageHarness() {
         // folded: no control is on the page until the section is opened
         compose.onNodeWithTag(AggTags.CONFIG_BODY).assertDoesNotExist()
         assertEquals(0, compose.onAllNodesWithTag(AggTags.FILTERS_TOGGLE).fetchSemanticsNodes().size)
+        compose.onNodeWithTag(AggTags.CONFIG_HEADER).performScrollTo()
         compose.onNodeWithTag(AggTags.CONFIG_HEADER).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(AggTags.CONFIG_BODY).assertExists()
