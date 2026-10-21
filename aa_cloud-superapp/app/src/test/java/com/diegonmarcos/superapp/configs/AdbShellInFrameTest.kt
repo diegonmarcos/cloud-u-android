@@ -6,12 +6,18 @@ import com.diegonmarcos.superapp.launcher.SectionPages
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.File
+import android.app.Application
 
 /**
  * #1080 every chip that opens the ADB Shell page (the embedded Store's bar, Permissions, Dev control) lands on SuperApp's own
  * Configs > ADB Shell INSIDE the shell, and that page is the lib's one AdbShellHostedPage, the one Cloud Store hosts.
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
 class AdbShellInFrameTest {
     private val java = File(System.getProperty("user.dir"), "src/main/java/com/diegonmarcos/superapp")
 
