@@ -103,9 +103,21 @@ jobs:
               if (!(size[0] > 0 && size[1] > 0)) problems.push("canvas has no size");
               const png = await page.screenshot({ path: path.join(shots, slug + ".png") });
               const img = PNG.sync.read(png);
-              const seen = new Set();
-              for (let i = 0; i < img.data.length; i += 4 * 97) seen.add(img.data.readUInt32LE(i));
+              const seen = new Map();
+              for (let i = 0; i < img.data.length; i += 4 * 97) { const k = img.data.readUInt32LE(i); seen.set(k, (seen.get(k) || 0) + 1); }
               if (seen.size < 8) problems.push("page painted only " + seen.size + " distinct colour(s): blank");
+              // Contrast: the pages use a dark palette (light text), so the colour covering most of the
+              // page must be dark. A white canvas under light text (#876) is unreadable.
+              const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+              const lum = (k) => 0.2126 * lin(k & 255) + 0.7152 * lin((k >> 8) & 255) + 0.0722 * lin((k >> 16) & 255);
+              const [bg] = [...seen.entries()].sort((a, b) => b[1] - a[1])[0];
+              const bgLum = lum(bg);
+              if (bgLum > 0.1) problems.push("dominant page colour is light (luminance " + bgLum.toFixed(2) + "): light text on a light page");
+              // The brightest colour that is common enough to be text/ink must contrast with it >= 4.5:1.
+              const total = [...seen.values()].reduce((a, b) => a + b, 0);
+              const ink = Math.max(...[...seen.entries()].filter(([, n]) => n > total * 0.0005).map(([k]) => lum(k)));
+              const ratio = (Math.max(ink, bgLum) + 0.05) / (Math.min(ink, bgLum) + 0.05);
+              if (ratio < 4.5) problems.push("lightest common colour has contrast " + ratio.toFixed(1) + ":1 against the page (< 4.5)");
             } catch (e) {
               problems.push("load: " + String(e).split("\n")[0]);
             }

@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
-import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.fleet.web.FleetWebTheme
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
@@ -31,7 +31,7 @@ private val PagePalette = KitPalette(
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     ComposeViewport(document.body!!) {
-        CloudKitTheme(PagePalette) {
+        FleetWebTheme(PagePalette) {
             MockPage()
         }
     }

@@ -44,6 +44,12 @@ internal object CalcIcons {
             "M11,1h2v3h-2zM11,20h2v3h-2zM1,11h3v2H1zM20,11h3v2h-3z",
     )
 
+    /** The backspace key: a vector, because no bundled font carries U+232B (it drew a missing-glyph box). */
+    val backspace = glyph(
+        "backspace",
+        "M22,3H7c-0.69,0 -1.23,0.35 -1.59,0.88L0,12l5.41,8.11c0.36,0.53 0.9,0.89 1.59,0.89h15c1.1,0 2,-0.9 2,-2V5C24,3.9 23.1,3 22,3zM19,15.59L17.59,17L14,13.41L10.41,17L9,15.59L12.59,12L9,8.41L10.41,7L14,10.59L17.59,7L19,8.41L15.41,12L19,15.59z",
+    )
+
     fun of(name: String): ImageVector = when (name) {
         "calculate" -> calculate
         "table_chart" -> sheet

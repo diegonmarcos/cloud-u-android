@@ -27,7 +27,7 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
-import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.fleet.web.FleetWebTheme
 import com.diegonmarcos.superapp.uikit.KitEmptyState
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitPalette
@@ -49,7 +49,7 @@ private val NavPalette = KitPalette(
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     ComposeViewport(document.body!!) {
-        CloudKitTheme(NavPalette) {
+        FleetWebTheme(NavPalette) {
             NavScreen()
         }
     }

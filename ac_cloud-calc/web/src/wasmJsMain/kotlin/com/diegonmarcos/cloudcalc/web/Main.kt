@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,7 +35,7 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
-import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.fleet.web.FleetWebTheme
 import com.diegonmarcos.superapp.uikit.KitEmptyState
 import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
@@ -53,7 +55,7 @@ private val CalcPalette = KitPalette(
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     ComposeViewport(document.body!!) {
-        CloudKitTheme(CalcPalette) {
+        FleetWebTheme(CalcPalette) {
             CalcScreen()
         }
     }
@@ -141,7 +143,8 @@ private fun Keypad() {
                             .clickable { expr = press(expr, key) },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(key, color = if (op) p.tileInk else p.textPrimary, style = MaterialTheme.typography.titleMedium)
+                        if (key == "⌫") Icon(rememberVectorPainter(CalcIcons.backspace), "Backspace", tint = p.textPrimary, modifier = Modifier.size(22.dp))
+                        else Text(key, color = if (op) p.tileInk else p.textPrimary, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }

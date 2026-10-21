@@ -30,7 +30,7 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
-import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.fleet.web.FleetWebTheme
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitEmptyState
 import com.diegonmarcos.superapp.uikit.KitPalette
@@ -54,7 +54,7 @@ private val StorePalette = KitPalette(
 fun main() {
     ComposeViewport(document.body!!) {
         // CloudKitTheme is the one Material wrapper (dense typography + touch floor); no bare MaterialTheme above it.
-        CloudKitTheme(StorePalette) {
+        FleetWebTheme(StorePalette) {
             StoreScreen()
         }
     }
