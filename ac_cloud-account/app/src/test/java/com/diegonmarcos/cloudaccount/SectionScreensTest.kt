@@ -89,19 +89,25 @@ class SectionScreensTest(private val section: String, private val page: String) 
         val ctx: Context = ApplicationProvider.getApplicationContext()
         ConfigsPrefs.factory = { it.getSharedPreferences("screens_test", Context.MODE_PRIVATE) }
         AccountHost.mesh = null
-        runCatching {
-            val model = AccountModel.get(ctx)
-            model.store.write(AccountStore.Slot.S, JSONObject("""{
-              "electronics": {
-                "computers": {"fedora-box": {"label": "Fedora box", "type": "notebook", "os": "fedora 43", "home_manager": "diego@fedora-box",
-                    "wg_peer": {"name": "fedora-box", "wg_ip": "10.0.0.2"}}},
-                "phones": {"galaxy-s21": {"label": "Galaxy S21", "type": "phone", "os": "android 15",
-                    "wg_peer": {"name": "galaxy", "wg_ip": "10.0.0.3"}}}
-              },
-              "containers": {"caddy": {"image": "caddy:2", "host": "vm-1"}, "authelia": {"image": "authelia:4", "host": "vm-1"}}
-            }"""), "screens-test", "2026-10-21T00:00:00Z")
-            model.invalidate()
-        }
+        // The phone's model keeps its files in an EncryptedFile (Android Keystore), which Robolectric does not have: the
+        // seeding used to fail there inside a runCatching and every page drew its empty state. A plain-file model is installed
+        // instead, and a seed that does not land fails the test rather than shooting empty screens.
+        val model = AccountModel(ctx, AccountStore(File(ctx.filesDir, "account-screens"), AccountStore.PlainIo))
+        AccountModel.install(model)
+        model.store.write(AccountStore.Slot.S, JSONObject("""{
+          "electronics": {
+            "computers": {"fedora-box": {"label": "Fedora box", "type": "notebook", "os": "fedora 43", "home_manager": "diego@fedora-box",
+                "wg_peer": {"name": "fedora-box", "wg_ip": "10.0.0.2"}}},
+            "phones": {"galaxy-s21": {"label": "Galaxy S21", "type": "phone", "os": "android 15",
+                "wg_peer": {"name": "galaxy", "wg_ip": "10.0.0.3"}}}
+          },
+          "containers": {"caddy": {"image": "caddy:2", "host": "vm-1"}, "authelia": {"image": "authelia:4", "host": "vm-1"}}
+        }"""), "screens-test", "2026-10-21T00:00:00Z")
+        model.invalidate()
+        val seeded = model.doc(AccountStore.Slot.S)?.body
+        assertTrue("the vault seed did not land in slot S: the screenshots would show empty states",
+            seeded != null && seeded.optJSONObject("electronics")?.optJSONObject("computers")?.has("fedora-box") == true &&
+                seeded.optJSONObject("containers")?.has("caddy") == true)
         ActivityFeed.clear(ctx)
         ActivityFeed.record(ctx, "backup", "auto-backup of galaxy-s21: ok", now = 1_760_000_000_000)
         ActivityFeed.record(ctx, "secret", "revealed github.token", now = 1_760_000_100_000)

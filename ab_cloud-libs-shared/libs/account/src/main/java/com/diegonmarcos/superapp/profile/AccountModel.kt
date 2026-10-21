@@ -327,6 +327,9 @@ class AccountModel(private val ctx: Context, val store: AccountStore) {
 
         @Volatile private var instance: AccountModel? = null
 
+        /** The JVM suite's seam: the Android Keystore behind [EncryptedIo] does not exist under Robolectric, so a test installs a model over [AccountStore.PlainIo]. null puts the phone's model back. */
+        fun install(model: AccountModel?) { instance = model }
+
         /** The process's one model, its files in an EncryptedFile per slot under filesDir/account. */
         fun get(ctx: Context): AccountModel = instance ?: synchronized(this) {
             instance ?: AccountModel(ctx.applicationContext, AccountStore(File(ctx.applicationContext.filesDir, "account"), EncryptedIo(ctx.applicationContext))).also {

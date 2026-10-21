@@ -288,7 +288,7 @@ WG_PROFILES="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardProfil
 # The id -> page map is the ONLY page knowledge in Kotlin; every LABEL is the declaration's
 # (ac_cloud-account/build.json::ui.sections, read through NavDecl).
 has "$ACCT_MAIN" 'NavDecl.fromBuildConfig(' "the island and the strips are built from the declaration"
-for page in '"connect" -> AccountConnectPage()' '"working" -> ProfilesWorkingPage()' '"diff" -> ProfilesDiffPage(model)' '"devices" -> ProfilesDevicesPage()' '"apps" -> AppsPage()' 'else -> AccountProfilePage(go)'; do
+for page in '"signin" -> AccountConnectPage()' '"working" -> ProfilesWorkingPage()' '"diff" -> ProfilesDiffPage(model)' '"files" -> ProfilesDevicesPage()' '"apps" -> AppsPage()' 'else -> AccountProfilePage(go)'; do
     has "$ACCT_MAIN" "$page" "the page is mounted: $page"
 done
 # No page label is a Kotlin literal, and none of the tabs the strip lost comes back.
