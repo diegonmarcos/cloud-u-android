@@ -20,6 +20,7 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import android.content.Context
 import android.os.Bundle
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -271,7 +272,7 @@ internal fun TileCell(tile: Sections.AggTile, click: (String) -> Unit, openFolde
             // A tile that declares tint:false keeps its glyph's own colours; the placeholder is always tinted.
             Icon(painterResource(iconRes), contentDescription = null,
                 tint = if (missing) p.textSecondary else if (tile.tint) p.textPrimary else androidx.compose.ui.graphics.Color.Unspecified,
-                modifier = Modifier.size(32.dp))
+                modifier = Modifier.size(32.dp).testTag(tileIconTag(tile.target)))
         }
         Text(tile.label, color = if (missing) p.textSecondary else p.textPrimary.copy(alpha = 0.8f), maxLines = 2,
             overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, fontSize = 12.sp,
