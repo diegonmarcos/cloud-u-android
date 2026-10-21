@@ -1,7 +1,9 @@
-package com.diegonmarcos.cloudlib.sharedstore
+package com.diegonmarcos.clouddrive.sync
 
 import android.content.Context
+import com.diegonmarcos.cloudlib.sharedstore.StoreExec
 import com.diegonmarcos.cloudlib.sharedstore.StoreExec.Companion.q
+import com.diegonmarcos.cloudlib.sharedstore.StorePaths
 
 /**
  * [StoreLegs.Copier] over CLOUD_EXEC: the copy runs inside cld.termux, where the store is

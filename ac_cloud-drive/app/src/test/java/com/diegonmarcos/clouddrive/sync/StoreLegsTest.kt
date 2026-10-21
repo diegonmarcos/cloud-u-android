@@ -3,8 +3,6 @@ package com.diegonmarcos.clouddrive.sync
 import com.diegonmarcos.clouddrive.JobPathMigration
 import com.diegonmarcos.cloudlib.rclone.RcloneJob
 import com.diegonmarcos.cloudlib.rclone.RcloneJobStore
-import com.diegonmarcos.cloudlib.sharedstore.ExecCopier
-import com.diegonmarcos.cloudlib.sharedstore.StoreLegs
 import com.diegonmarcos.cloudlib.sharedstore.StorePaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

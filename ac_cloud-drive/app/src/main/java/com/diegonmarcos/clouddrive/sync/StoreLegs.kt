@@ -1,5 +1,6 @@
-package com.diegonmarcos.cloudlib.sharedstore
+package com.diegonmarcos.clouddrive.sync
 
+import com.diegonmarcos.cloudlib.sharedstore.StorePaths
 import java.io.File
 
 /**

@@ -2,9 +2,7 @@ package com.diegonmarcos.clouddrive.sync
 
 import android.content.Context
 import com.diegonmarcos.cloudlib.rclone.RcloneRunner
-import com.diegonmarcos.cloudlib.sharedstore.ExecCopier
 import com.diegonmarcos.cloudlib.sharedstore.StoreAccess
-import com.diegonmarcos.cloudlib.sharedstore.StoreLegs
 import com.diegonmarcos.cloudlib.sharedstore.StorePaths
 import java.util.UUID
 
