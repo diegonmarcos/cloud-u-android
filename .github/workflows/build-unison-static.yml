@@ -1,0 +1,75 @@
+name: "build unison static — the pinned Unison for arm64 Android, built from the upstream tag"
+
+# WHY (#1084). Cloud Drive's Unison engine ships ONE pinned Unison (ab_cloud-libs-shared/libs/rclone-engine/
+# data/unison-binary.json). Upstream publishes a static linux build for x86_64 only; the phone is arm64, and
+# a glibc-linked binary (PT_INTERP) cannot run under bionic. So the arm64 binary is built HERE, from the
+# upstream source tag, on Alpine (musl) with a fully static link, by the OCaml the pin declares, and published
+# as an immutable GitHub release asset the pin names by URL and sha256. A mismatch of OCaml or version fails
+# this job instead of publishing a binary the pin does not describe.
+#
+# Manual only: it runs when the pin's version changes or an arm64 asset is missing, never on a push.
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: "build revision suffix of the release tag (bump to rebuild the same version)"
+        default: "r1"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the pin
+        id: pin
+        run: |
+          PIN=ab_cloud-libs-shared/libs/rclone-engine/data/unison-binary.json
+          echo "version=$(jq -r .version $PIN)" >> "$GITHUB_OUTPUT"
+          echo "ocaml=$(jq -r .ocaml $PIN)" >> "$GITHUB_OUTPUT"
+
+      - name: Build static unison on Alpine (musl)
+        env:
+          VER: ${{ steps.pin.outputs.version }}
+          OCAML: ${{ steps.pin.outputs.ocaml }}
+        run: |
+          mkdir -p out
+          docker run --rm -e VER -e OCAML -v "$PWD/out:/out" alpine:3.21 sh -euc '
+            apk add --no-cache build-base ocaml curl tar binutils file
+            test "$(ocamlfind ocamlc -version 2>/dev/null || ocamlc -version)" = "$OCAML" \
+              || { echo "OCaml is $(ocamlc -version), the pin declares $OCAML"; exit 1; }
+            cd /tmp
+            curl -fsSL "https://github.com/bcpierce00/unison/archive/refs/tags/v${VER}.tar.gz" -o src.tgz
+            tar xzf src.tgz
+            cd "unison-${VER}"
+            LDFLAGS=-static make UISTYLE=text
+            strip src/unison
+            ./src/unison -version
+            ./src/unison -version | grep -q "unison version ${VER} (ocaml ${OCAML})"
+            ! readelf -lW src/unison | grep -q INTERP
+            file src/unison
+            D="unison-${VER}-linux-aarch64-musl-static"
+            mkdir -p "/out/${D}/bin"
+            cp src/unison "/out/${D}/bin/unison"
+            cp LICENSE "/out/${D}/"
+          '
+          cd out
+          tar czf "unison-${VER}-linux-aarch64-musl-static.tar.gz" "unison-${VER}-linux-aarch64-musl-static"
+          sha256sum "unison-${VER}-linux-aarch64-musl-static.tar.gz" "unison-${VER}-linux-aarch64-musl-static/bin/unison"
+          stat -c '%s %n' "unison-${VER}-linux-aarch64-musl-static/bin/unison"
+
+      - name: Publish the immutable release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ steps.pin.outputs.version }}
+          REV: ${{ inputs.revision }}
+        run: |
+          TAG="unison-static-${VER}-${REV}"
+          gh release create "$TAG" "out/unison-${VER}-linux-aarch64-musl-static.tar.gz" \
+            --target "$GITHUB_SHA" --title "Unison ${VER} static arm64 (${REV})" \
+            --notes "Built from bcpierce00/unison v${VER} on Alpine musl, static, by build-unison-static.yml. Pinned by sha256 in unison-binary.json."
