@@ -341,7 +341,6 @@ class LauncherNavController(private val host: NavHost) {
         return when {
             sectionId == "mail" -> MailPages.fragmentFor(pageId, args)
             section != null && page != null && page.facet -> aggregatorPage(section, page)
-            page != null && page.webapps.isNotEmpty() -> SectionPages.webAppsGrid(host.navContext(), page)
             else -> SectionPages.pagesFor(sectionId, includeHidden = true).firstOrNull { it.id == pageId }
                 ?.factory?.invoke() ?: SectionFragment.forSection(sectionId, pageId)
         }

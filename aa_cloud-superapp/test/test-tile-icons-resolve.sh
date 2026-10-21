@@ -154,10 +154,7 @@ def walk(o):
     global n
     if isinstance(o, dict):
         if o.get('icon') == 'ic_ai_chat': n += 1
-        # ui.sections[].pages[].webapps is the web-app catalogue (one entry per hosted page,
-        # deliberately reusing its app's glyph), not a tile: it is not counted here.
-        for k, x in o.items():
-            if k != 'webapps': walk(x)
+        for x in o.values(): walk(x)
     elif isinstance(o, list):
         for x in o: walk(x)
 walk(d.get('ui') or {})

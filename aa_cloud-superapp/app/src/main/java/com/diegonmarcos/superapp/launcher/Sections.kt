@@ -361,9 +361,6 @@ object Sections {
             tiles.filterNot { it.separator }.flatMap { it.destinations }
     }
 
-    /** One web app tile: [url] = webapps_base + "/" + path + "/"; [tile] = id or target of the Cloud tile that supplies its label and glyph. */
-    data class WebApp(val id: String, val tile: String, val url: String)
-
     data class Page(
         val id: String,
         val label: String,
@@ -449,10 +446,7 @@ object Sections {
          *  after the tab stops being its own entry — see
          *  [tabOwnerOf] and [LauncherNavController.openSectionPage]. */
         val tabs: List<String> = emptyList(),
-        /** Cloud ▸ WebApps: the web apps this page lists as a fitted tile grid, each with its resolved
-         *  https URL ([WebApp.url]). Declared once in build.json (`webapps_base` + each `path`). */
-        val webapps: List<WebApp> = emptyList(),
-        /** true = the section's tab strip is not drawn while THIS page is selected (Cloud ▸ WebApps shows only its apps).
+        /** true = the section's tab strip is not drawn while THIS page is selected (Cloud ▸ WebApps is the cloud-mobile page and draws its own sections).
          *  Declared per page in build.json (`hide_tabs`); the other pages of the section keep their strip. */
         val hideTabs: Boolean = false,
         /** true = this entry DOES something and returns (Update All, ...)
@@ -723,21 +717,18 @@ object Sections {
                         action   = po.optString("action", ""),
                         facet    = po.optBoolean("facet", false),
                         mode     = po.optString("mode", ""),
-                        url      = po.optString("url", ""),
+                        // `webapps_base` + `webapps_path` is the ONE declaration of the web apps' address (Cloud ▸ WebApps).
+                        url      = po.optString("url", "").ifBlank {
+                            po.optString("webapps_base", "").trimEnd('/').let { b ->
+                                if (b.isBlank()) "" else "$b/${po.optString("webapps_path", "").trimStart('/')}"
+                            }
+                        },
                         mirrorSection = po.optString("mirror_section", ""),
                         mirrorPage = po.optString("mirror_page", ""),
                         actionsFromSection = po.optString("actions_from_section", ""),
                         hidden   = po.optBoolean("hidden", false),
                         separator = po.optBoolean("separator", false),
                         hideTabs = po.optBoolean("hide_tabs", false),
-                        webapps  = po.optJSONArray("webapps")?.let { wa ->
-                            val base = po.optString("webapps_base", "").trimEnd('/')
-                            (0 until wa.length()).map { k ->
-                                val w = wa.getJSONObject(k)
-                                WebApp(w.getString("app"), w.getString("tile"),
-                                    "$base/${w.getString("path").trim('/')}/")
-                            }
-                        }.orEmpty(),
                         tabs     = po.optJSONArray("tabs")?.let { ta ->
                             (0 until ta.length()).map { ta.getString(it) }
                         }.orEmpty(),

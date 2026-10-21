@@ -24,7 +24,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * Cloud ▸ WebApps and Cloud ▸ Linktree on a REAL emulator WebView (Robolectric cannot render one). Opens each page through
+ * Cloud ▸ WebApps (the embedded cloud-mobile page: section headers kept, fits one screen, sits below the SuperApp top row) and Cloud ▸ Linktree on a REAL emulator WebView (Robolectric cannot render one). Opens each page through
  * the same route a tile uses, waits up to 20 s, and writes the evidence to /data/local/tmp/webpage-<name>.{png,txt}:
  * the WebView's on-screen pixels, its measured size, document.readyState, the body's text length, every console line,
  * every load / HTTP error and the final URL. Fails when the body has no text or the WebView's pixels are one colour.
@@ -42,8 +42,8 @@ class WebPagesRenderTest {
 
     @After fun tearDown() { WebPageFragment.probe = null }
 
-    @Test fun a_webAppsGridRenders() = checkGrid("webapps-grid", night = false)
-    @Test fun b_webAppsGridRendersAtNight() = checkGrid("webapps-grid-night", night = true)
+    @Test fun a_webAppsEmbedRenders() = check("webapps", "page:cloud/webapps", night = false, embed = true)
+    @Test fun b_webAppsEmbedRendersAtNight() = check("webapps-night", "page:cloud/webapps", night = true, embed = true)
     @Test fun c_linktreeRenders() = check("linktree", "page:cloud/lnktree", night = false)
 
     /** The app is uninstalled after the run (taking its files dir with it), so the shell copies the evidence out. */
@@ -86,69 +86,7 @@ class WebPagesRenderTest {
         return r
     }
 
-    private fun allNodes(n: android.view.accessibility.AccessibilityNodeInfo?, into: MutableList<android.view.accessibility.AccessibilityNodeInfo>) {
-        if (n == null) return
-        into += n
-        for (i in 0 until n.childCount) allNodes(n.getChild(i), into)
-    }
-
-    /** #1062: the native Cloud > WebApps grid on the real emulator - every declared tile is on screen (inside the display,
-     *  visible to the user), no WebView is drawn and the Cloud page strip is hidden. Day and night. */
-    private fun checkGrid(name: String, night: Boolean) {
-        sh("settings put global adb_wifi_enabled 0")
-        val pkg = inst.targetContext.packageName
-        sh("appops set $pkg REQUEST_INSTALL_PACKAGES allow")
-        sh("cmd role add-role-holder android.app.role.HOME $pkg 0")
-        sh("cmd uimode night ${if (night) "yes" else "no"}"); SystemClock.sleep(1500)
-        sh("input keyevent KEYCODE_WAKEUP"); sh("wm dismiss-keyguard")
-        val ctx = inst.targetContext
-        val cloud = com.diegonmarcos.superapp.launcher.Sections.byId("cloud")!!
-        val page = cloud.pages.first { it.id == "webapps" }
-        val tiles = cloud.tileGroups.flatMap { it.destinations }
-        val labels = page.webapps.map { w -> tiles.firstOrNull { it.id == w.tile || it.target == w.tile }?.label ?: w.id }
-        val strip = cloud.pages.filter { it.id != "webapps" }.map { it.label }.filter { it !in labels }
-        ctx.startActivity(Intent().setClassName(ctx.packageName, "${ctx.packageName}.MainActivity")
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            .putExtra("shortcut_action", "page:cloud/webapps"))
-        val dm = ctx.resources.displayMetrics
-        val screen = Rect(0, 0, dm.widthPixels, dm.heightPixels)
-        val t0 = SystemClock.elapsedRealtime()
-        var missing = labels; var offscreen = listOf<String>(); var stripShown = listOf<String>(); var hasWeb = false
-        val texts = mutableListOf<String>()
-        while (SystemClock.elapsedRealtime() - t0 < 25_000) {
-            SystemClock.sleep(1000)
-            clearPrompt()
-            val nodes = mutableListOf<android.view.accessibility.AccessibilityNodeInfo>()
-            allNodes(ua.rootInActiveWindow, nodes)
-            texts.clear()
-            nodes.forEach { n -> n.text?.let { texts += it.toString() }; n.contentDescription?.let { texts += it.toString() } }
-            fun nodeFor(l: String) = nodes.firstOrNull { n -> n.text?.toString()?.let { it == l || it.split(", ").contains(l) } == true }
-            missing = labels.filter { nodeFor(it) == null }
-            offscreen = labels.filter { l ->
-                val n = nodeFor(l) ?: return@filter false
-                val r = Rect(); n.getBoundsInScreen(r)
-                !n.isVisibleToUser || r.isEmpty || !screen.contains(r)
-            }
-            stripShown = strip.filter { l -> nodes.any { it.text?.toString() == l } }
-            hasWeb = nodes.any { it.className?.toString()?.contains("WebView") == true }
-            if (missing.isEmpty() && SystemClock.elapsedRealtime() - t0 > 5_000) break
-        }
-        clearPrompt(); SystemClock.sleep(500)
-        ua.takeScreenshot()?.let { File(out, "webpage-$name-screen.png").outputStream().use { o -> it.compress(Bitmap.CompressFormat.PNG, 100, o) } }
-        val report = "night=$night uimode=${sh("cmd uimode night").trim()} tiles=${labels.size} missing=$missing offscreen=$offscreen " +
-            "stripShown=$stripShown hasWeb=$hasWeb screen=$screen\ntexts=$texts"
-        File(out, "webpage-$name.txt").writeText(report)
-        runCatching { File(out, "logcat-$name.txt").writeText(sh("logcat -d -v time -t 3000")) }
-        export(name)
-        Log.i("WebPagesRenderTest", "[$name]\n$report")
-        assertTrue("[$name] ${labels.size} tiles declared, none found\n$report", missing.size < labels.size)
-        assertTrue("[$name] tiles missing from the screen: $missing\n$report", missing.isEmpty())
-        assertTrue("[$name] tiles outside the display: $offscreen\n$report", offscreen.isEmpty())
-        assertTrue("[$name] a WebView is drawn on the native grid\n$report", !hasWeb)
-        assertTrue("[$name] the Cloud page strip is shown: $stripShown\n$report", stripShown.isEmpty())
-    }
-
-    private fun check(name: String, target: String, night: Boolean) {
+    private fun check(name: String, target: String, night: Boolean, embed: Boolean = false) {
         sh("settings put global adb_wifi_enabled 0")
         // FirstRunPerms asks for these two on launch with a dialog over the page; grant them so the pane is unobstructed.
         val pkg = inst.targetContext.packageName
@@ -180,6 +118,8 @@ class WebPagesRenderTest {
         clearPrompt(); SystemClock.sleep(1500)
 
         var htmlH = -1
+        var embedHeaders = ""; var embedBottom = -1; var embedInner = -1; var embedOverflow = -1; var embedOwnTabs = -1; var embedApkRow = -1
+        var islandBottom = -1; var islandShown = false
         var pageTitle = ""; var groups = -1
         val report = StringBuilder()
         val w = web
@@ -201,6 +141,25 @@ class WebPagesRenderTest {
             pageTitle = js(w, "document.title").trim('"')
             groups = js(w, "document.querySelectorAll('.tile-group__title').length").trim('"').toIntOrNull() ?: -1
             report.appendLine("title=$pageTitle tileGroups=$groups")
+            if (embed) {
+                fun num(expr: String) = js(w, expr).trim('"').toIntOrNull() ?: -1
+                embedHeaders = js(w, "[...document.querySelectorAll('.tile-group__title')].map(e=>e.textContent.trim()).join(' | ')")
+                embedBottom = num("(()=>{const r=document.querySelector('#embed-fit');return r?Math.round(r.getBoundingClientRect().bottom):-1})()")
+                embedInner = num("innerHeight")
+                embedOverflow = num("(()=>{const c=document.querySelector('.content');return (c.scrollHeight>c.clientHeight+1||document.documentElement.scrollHeight>innerHeight)?1:0})()")
+                embedOwnTabs = num("(()=>{const e=document.querySelector('.page-tabs-bar');return e&&getComputedStyle(e).display!=='none'?1:0})()")
+                embedApkRow = num("(()=>{const e=document.querySelector('.site-footer');return e&&getComputedStyle(e).display!=='none'?1:0})()")
+                // The SuperApp's top row (status / app top bar island) stays visible and the page sits BELOW it, inside the shell.
+                inst.runOnMainSync {
+                    val island = resumed()?.findViewById<View>(R.id.toolbar_island)
+                    if (island != null) {
+                        val l = IntArray(2); island.getLocationOnScreen(l)
+                        islandBottom = l[1] + island.height; islandShown = island.isShown && island.height > 0
+                    }
+                }
+                report.appendLine("embed: headers=[$embedHeaders] fitBottom=$embedBottom/$embedInner overflow=$embedOverflow ownTabs=$embedOwnTabs apkRow=$embedApkRow " +
+                    "webTop=${loc[1]} topRowBottom=$islandBottom topRowShown=$islandShown")
+            }
             report.appendLine("ua=${js(w, "navigator.userAgent")}")
             report.appendLine("bodyText=${js(w, "(document.body ? document.body.innerText.slice(0,400) : '')")}")
             report.appendLine("bodyStyle=${js(w, "(()=>{const s=getComputedStyle(document.body);return [s.color,s.backgroundColor,s.display,s.visibility,s.opacity,document.documentElement.scrollHeight,innerWidth+'x'+innerHeight].join(' | ')})()")}")
@@ -241,5 +200,15 @@ class WebPagesRenderTest {
         assertTrue("[$name] body text is empty (len=$textLen)\n$report", textLen > 0)
         assertTrue("[$name] page laid out with zero height (<html> $htmlH px)\n$report", htmlH > 0)
         assertTrue("[$name] WebView renders blank (one colour)\n$report", colours > 1)
+        if (embed) {
+            val webTop = IntArray(2).also { a -> inst.runOnMainSync { w!!.getLocationOnScreen(a) } }[1]
+            assertTrue("[$name] the section headers are missing: [$embedHeaders]\n$report", groups >= 5)
+            assertTrue("[$name] the page still draws its own tab bar\n$report", embedOwnTabs == 0)
+            assertTrue("[$name] the page still draws the APK download row\n$report", embedApkRow == 0)
+            assertTrue("[$name] the page does not fit one screen: bottom $embedBottom of $embedInner, overflow=$embedOverflow\n$report",
+                embedBottom in 1..embedInner && embedOverflow == 0)
+            assertTrue("[$name] the SuperApp's top row is not visible\n$report", islandShown)
+            assertTrue("[$name] the page (top $webTop px) is not below the SuperApp's top row (bottom $islandBottom px)\n$report", webTop >= islandBottom - 2)
+        }
     }
 }

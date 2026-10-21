@@ -346,9 +346,7 @@ def walk(node, path):
         if node.get('icon') == name:
             seen.append(node.get('id') or node.get('label') or path)
         for k, v in node.items():
-            # the web-app catalogue (pages[].webapps) reuses an app's glyph for its hosted page; it is not a tile or sector
-            if k != 'webapps':
-                walk(v, path + '/' + str(k))
+            walk(v, path + '/' + str(k))
     elif isinstance(node, list):
         for i, v in enumerate(node):
             walk(v, path + '/%d' % i)

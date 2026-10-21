@@ -145,13 +145,4 @@ object SectionPages {
             RecentAppsFragment.newInstance()
         else -> PageContentFragment.newInstance(sectionId, pageId, label)
     }
-
-    /** Cloud ▸ WebApps: only the web apps, auto-scaled to fill one screen ([WebAppsGridFragment]). */
-    internal fun webAppsGrid(ctx: android.content.Context, page: Sections.Page): Fragment {
-        val tiles = Sections.byId("cloud")?.tileGroups.orEmpty().flatMap { it.destinations }
-        return WebAppsGridFragment.newInstance(page.webapps.map { w ->
-            val t = tiles.firstOrNull { it.id == w.tile || it.target == w.tile }
-            TileGridFragment.Tile(w.url, t?.label ?: w.id, t?.let { Sections.iconResFor(ctx, it.iconName) } ?: 0)
-        })
-    }
 }

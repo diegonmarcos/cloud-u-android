@@ -19,7 +19,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * Cloud > Linktree is a live web page in the embedded browser (Cloud > WebApps is a native grid since #1062) (WebPageFragment), never a bundled copy.
+ * Cloud > WebApps and Cloud > Linktree are live web pages in the embedded browser (WebPageFragment), never a bundled copy.
  *   W1 both declared pages route to a WebPageFragment on their declared https url
  *   W2 each page's WebView has a real size and loads exactly that url, over https, from the network (no asset or file)
  *   W3 only the embed page tells the site it is embedded (query + user-agent marker); the linktree site, which has no embed mode, is left alone
@@ -53,7 +53,7 @@ class WebPagesLoadTest : KitPageHarness() {
     }
 
     @Test fun `W1 and W2 each page loads its declared https url, live, in a WebView with a size`() {
-        for (id in listOf("lnktree")) {
+        for (id in listOf("webapps", "lnktree")) {
             val url = declared(id)
             assertTrue("$id is not https: $url", url.startsWith("https://"))
             val (_, web) = shown(id)
@@ -66,12 +66,10 @@ class WebPagesLoadTest : KitPageHarness() {
         }
     }
 
-    @Test fun `W3 an embed url is told it is embedded and linktree is not`() {
-        // Cloud > WebApps is a native grid now; the embed mode stays for any page that declares ?embed=1.
-        val embedUrl = "https://diegonmarcos.github.io/cloud-mobile/cloud/apps/?embed=1"
-        show(WebPageFragment.newInstance(embedUrl))
-        val apps = webViewOf(compose.activity.window.decorView)!!
+    @Test fun `W3 the embed page is told it is embedded and linktree is not`() {
+        val (_, apps) = shown("webapps")
         assertTrue("embed page lost its user-agent marker", apps.settings.userAgentString.endsWith(WebPageFragment.UA_MARKER))
+        assertTrue(declared("webapps").contains("embed=1"))
         compose.runOnUiThread { compose.activity.supportFragmentManager.beginTransaction().remove(
             compose.activity.supportFragmentManager.fragments.last()).commitNow() }
         val (_, tree) = shown("lnktree")
@@ -80,7 +78,7 @@ class WebPagesLoadTest : KitPageHarness() {
     }
 
     @Test fun `W4 re-entering revalidates the document only, never bypasses the cache for subresources`() {
-        for (id in listOf("lnktree")) {
+        for (id in listOf("webapps", "lnktree")) {
             val (page, web) = shown(id)
             // LOAD_NO_CACHE refetched every icon on every entry and tripped the edge rate limit (broken "?" icons, 2026-10-17).
             assertEquals("the first show must keep the HTTP cache for subresources", WebSettings.LOAD_DEFAULT, web.settings.cacheMode)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Cloud ▸ tabs: App | WebApps | Linktree | Configs; WebApps (#1062) is a native grid of web apps, URLs declared ONCE in build.json.
+# Cloud ▸ tabs: App | WebApps | Linktree | Configs; WebApps (#1062) is the cloud-mobile page embedded in the shell, its address declared ONCE (webapps_base + webapps_path).
 #   T1 the Cloud section lists exactly those four visible pages, in that order
-#   T2 WebApps declares webapps_base + a path per app (no page url), every app a unique https URL under that one base
+#   T2 WebApps declares webapps_base (https) + webapps_path with embed=1, and no second url or per-app list
 #   T3 WebPageFragment appends the CloudSuperApp-Embed/1 user-agent marker, keyed off embed=1 only
 #   T4 an embed page is a pane: no floating Back, pull-to-refresh, the offline message, other sites leave via the link rules
 set -uo pipefail
@@ -21,11 +21,9 @@ print("LABELS", ",".join(p["label"] for p in vis))
 w = [p for p in s["pages"] if p["id"] == "webapps"]
 w = w[0] if w else {}
 b = w.get("webapps_base", "").rstrip("/")
-apps = w.get("webapps", [])
-us = [b + "/" + a["path"].strip("/") + "/" for a in apps]
-ok = bool(b.startswith("https://")) and len(apps) >= 20 and not w.get("url") and len(set(us)) == len(us) \
-     and all("://" not in a["path"] for a in apps)
-print("URL", "ok %d apps under %s" % (len(apps), b) if ok else "BAD base=%r apps=%d url=%r" % (b, len(apps), w.get("url")))
+path = w.get("webapps_path", "")
+ok = b.startswith("https://") and "embed=1" in path and not w.get("url") and "webapps" not in w
+print("URL", "ok " + b + "/" + path.lstrip("/") if ok else "BAD base=%r path=%r url=%r" % (b, path, w.get("url")))
 PY
 )"
 [ "$(grep '^ORDER' <<<"$out" | cut -d' ' -f2)" = "apps,webapps,lnktree,configs" ] \
