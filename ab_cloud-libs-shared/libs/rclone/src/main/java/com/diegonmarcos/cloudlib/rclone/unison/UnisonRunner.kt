@@ -58,7 +58,7 @@ class UnisonRunner(
         execute(pair, emptyList(), onLine, onDone)
 
     /** The engine call underneath [sync] and [resolve]'s scoped run. */
-    private fun execute(pair: UnisonConfig.Pair, extra: List<String>, onLine: (String) -> Unit, onDone: (UnisonOutput.Result) -> Unit): Handle {
+    private fun execute(pair: UnisonConfig.Pair, extra: List<String>, onLine: (String) -> Unit, onDone: (UnisonOutput.Result) -> Unit, after: (UnisonOutput.Result) -> UnisonOutput.Result = { it }): Handle {
         val exit = CountDownLatch(1)
         var result = UnisonOutput.parse(emptyList(), -1)
         fun refused(why: String): Handle {
@@ -104,7 +104,7 @@ class UnisonRunner(
                 val why = e.message ?: e.javaClass.simpleName
                 all += "Fatal error: $why"; onLine("[engine] $why")
             } finally { runCatching { session.close() } }
-            result = UnisonOutput.parse(all, if (handle.cancelled) -2 else rc, back)
+            result = runCatching { after(UnisonOutput.parse(all, if (handle.cancelled) -2 else rc, back)) }.getOrElse { UnisonOutput.parse(all, if (handle.cancelled) -2 else rc, back) }
             runCatching { onDone(result) }
             exit.countDown()
         }.apply { isDaemon = true; start() }
@@ -118,8 +118,8 @@ class UnisonRunner(
     fun resolve(pair: UnisonConfig.Pair, path: String, choice: UnisonResolve.Choice, onLine: (String) -> Unit, onDone: (UnisonOutput.Result) -> Unit): Handle {
         val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US).format(java.util.Date(clock()))
         val plan = UnisonResolve.plan(pair, path, choice, stamp)
-        return execute(pair, plan.extra, onLine) { r ->
-            if (plan.keepCopyRoot == null || r.rc !in 0..1) { onDone(r); return@execute }
+        return execute(pair, plan.extra, onLine, onDone) { r ->
+            if (plan.keepCopyRoot == null || r.rc !in 0..1) return@execute r
             // exit 1 is allowed: other files may still be conflicted, this path was scoped
             val copied = try {
                 transport.session().use { s ->
@@ -128,11 +128,11 @@ class UnisonRunner(
             } catch (e: IOException) { JSONObject().put("ok", false).put("error", e.message ?: "engine") }
             if (copied.optBoolean("ok", false)) {
                 onLine("[keep both] kept your version as ${copied.optString("copied")}")
-                onDone(r)
+                r
             } else {
                 val why = copied.optString("error").ifBlank { "the copy failed" }
                 onLine("[keep both] $why")
-                onDone(r.copy(failures = r.failures + UnisonOutput.Failure(path, "keep both: $why")))
+                r.copy(failures = r.failures + UnisonOutput.Failure(path, "keep both: $why"))
             }
         }
     }
