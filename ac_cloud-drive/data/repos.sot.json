@@ -14,6 +14,13 @@
     { "from": "ffront", "to": "front", "kind": "repo", "since": "2026-10-01", "ticket": "#731",
       "doc": "GitHub repo diegonmarcos/ffront was renamed front; the registry url followed on 2026-10-21 (it still said ffront)." }
   ],
+  "unregistered_ok": [
+    { "name": "git-repos-master", "reason": "this index itself (see _self_doc)" },
+    { "name": "cloud-me", "reason": "on GitHub but not indexed here as of 2026-10-21 (#1073); owner to decide: register or archive" },
+    { "name": "cloud-me_data-private", "reason": "on GitHub but not indexed here as of 2026-10-21 (#1073); owner to decide: register or archive" },
+    { "name": "My-ai-memory", "reason": "on GitHub but not indexed here as of 2026-10-21 (#1073); owner to decide: register or archive" }
+  ],
+  "_unregistered_doc": "GitHub repos (by GitHub name) that exist but deliberately have no entry. cloud-infra's repos-sot tester fails when the fetched GitHub inventory holds a repo that is neither registered above nor listed here, and when a pending_creation repo already shows up in the inventory (flip its status).",
   "_consumers_doc": "Every symlink farmer / list reader of this account and where it takes its list from. THIS FILE is the only editable source; each consumer holds either a byte copy (fleet_files, refreshed by `./clone.sh --sync`) or a subset it must keep consistent with this file (`node repos-sot.js check-subset <file>`). A consumer's own drift guard fails when its copy differs from this file or names a repo this file does not know.",
   "consumers": [
     { "repo": "git-repos-master", "what": "clone.sh + committed symlink farm", "reads": "repos.json (itself)", "guard": "9_others/test/test-repos-sot.sh" },
@@ -106,7 +113,7 @@
   },
 
   "repos": [
-    { "name": "cloud-me_vault", "group": "2_vault", "url": "git@github.com:diegonmarcos/cloud-me_vault.git", "private": true,
+    { "name": "cloud-me_vault", "group": "2_vault", "url": "git@github.com:diegonmarcos/cloud-me_vault.git", "private": true, "renamed_from": ["cloud-vault"],
       "doc": "Secrets (sops/age). Every credential the fleet uses." },
 
     { "name": "cloud", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud.git", "private": false,
