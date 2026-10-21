@@ -92,8 +92,8 @@ class FleetIdentityPageTest : KitPageHarness() {
     @Test
     fun `I5 the page opens outside CloudKitTheme (the Store host) and an uninstalled app is a row state`() {
         val reg = FleetIdentity.baked()
-        assertTrue("nothing installed: probe returns no rows, throws nothing",
-            FleetIdentity.probe(compose.activity.applicationContext, reg).isEmpty())
+        val live = FleetIdentity.probe(compose.activity.applicationContext, reg)  // most fleet apps are not installed here: no throw
+        assertTrue("an uninstalled app has no live row: ${live.keys}", "cld.termux" !in live)
         compose.setContent { com.diegonmarcos.superapp.uikit.KitDenseMaterial(androidx.compose.material3.darkColorScheme()) { FleetIdentityPage() } }
         compose.waitForIdle()
         compose.onNodeWithTag(FleetIdentity.TAG_SUMMARY, useUnmergedTree = true).assertExists()
