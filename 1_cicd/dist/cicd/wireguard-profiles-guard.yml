@@ -65,5 +65,7 @@ jobs:
         run: python3 1_cicd/src/scripts/cloud-android-wireguard-profiles-guard.py check
       - name: build.json's wireguard block is exactly what the deriver would produce
         run: python3 1_cicd/src/scripts/cloud-android-wireguard-profiles-guard.py derive --check
+      - name: Every phone profile resolves through the mesh resolvers (#1071)
+        run: python3 1_cicd/src/scripts/cloud-android-wireguard-profiles-guard.py dns
       - name: The guard still fails on drift, endpoint changes, and a missing reference
         run: bash 1_cicd/src/scripts/test/wireguard-profiles-guard.test.sh

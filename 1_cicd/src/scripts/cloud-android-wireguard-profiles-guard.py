@@ -86,6 +86,7 @@ made rather than guessing a name or silently dropping a peer.
 """
 
 import difflib
+import ipaddress
 import json
 import os
 import sys
@@ -390,6 +391,44 @@ def cmd_derive(build, wireguard, path, write):
     return 0
 
 
+def cmd_dns(build):
+    """#1071: every phone profile resolves through the MESH resolvers only.
+
+    A full tunnel whose DNS is missing or public lets the phone resolve
+    jmap./mails. to the public edge: Caddy then sees the public relay and the
+    edge gate answers 401. build.json is the one source (derive --check pins it
+    to the published dist), so this reads only build.json."""
+    mesh = [ipaddress.ip_network(n) for n in ("10.0.0.0/24", "10.1.0.0/24", "fd0c:1d00::/64", "fd0c:1d01::/64")]
+    profiles = ((build.get("ui", {}) or {}).get(UI_KEY, {}) or {}).get("profiles", [])
+    failures = []
+    for profile in profiles:
+        servers = [s.strip() for s in str(profile.get("dns", "")).split(",") if s.strip()]
+        label = profile.get("id", "?")
+        if not servers:
+            failures.append("%s sets no DNS" % label)
+        for server in servers:
+            try:
+                address = ipaddress.ip_address(server)
+            except ValueError:
+                failures.append("%s DNS %r is not an address" % (label, server))
+                continue
+            if not any(address in net for net in mesh):
+                failures.append("%s DNS %s is not a mesh resolver" % (label, server))
+    full = [p for p in profiles if str(p.get("id", "")).endswith("-full")]
+    if len(full) < 2:
+        failures.append("fewer than two full-tunnel profiles found (%d)" % len(full))
+    for profile in full:
+        first = str(profile.get("dns", "")).split(",")[0].strip()
+        if first not in ("10.0.0.1", "fd0c:1d01::1"):
+            failures.append("%s full tunnel does not lead with a mesh resolver (hickory 10.0.0.1 or DNS64 fd0c:1d01::1): %r" % (profile.get("id"), first))
+    for failure in failures:
+        print("FAIL: " + failure)
+    if failures:
+        return 1
+    print("ok: %d profiles resolve through mesh DNS only" % len(profiles))
+    return 0
+
+
 def main(argv):
     subcommand, write, positional = "check", False, []
     for argument in argv:
@@ -397,14 +436,17 @@ def main(argv):
             write = False
         elif argument == "--write":
             write = True
-        elif argument in ("check", "derive"):
+        elif argument in ("check", "derive", "dns"):
             subcommand = argument
         else:
             positional.append(argument)
     if positional:
-        print("usage: cloud-android-wireguard-profiles-guard.py [check|derive] [--check|--write]")
+        print("usage: cloud-android-wireguard-profiles-guard.py [check|derive|dns] [--check|--write]")
         return 2
     path = os.path.join(repo_root(), BUILD_JSON)
+    if subcommand == "dns" and os.path.isfile(path):
+        with open(path, "r", encoding="utf-8") as handle:
+            return cmd_dns(json.load(handle))
     if not os.path.isfile(path):
         print("FAIL: %s is not a file — the guard has no build.json to check" % path)
         return 1

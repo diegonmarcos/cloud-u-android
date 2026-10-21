@@ -198,6 +198,11 @@ elif action == "flip_dns":
         '"id": "v6-split"',
         '"dns": "fd0c:1d01::1, 10.1.0.1"',
         '              "dns": "8.8.8.8, 10.1.0.1",')
+elif action == "empty_full_dns":
+    replace_line_after(
+        '"id": "v4-full"',
+        '"dns": "10.0.0.1, 10.1.0.1"',
+        '              "dns": "",')
 elif action == "shuffle_allowed":
     # Same routes, same set, different order and one double space — the
     # normalised comparison must NOT see this as drift. The anchor legitimately
@@ -400,6 +405,17 @@ else
 fi
 expect_clean "post-heal: the rewritten tree passes the peer-set check" "$SB" "$DIST_FIXTURE" check
 expect_clean "post-heal: the rewritten tree is exactly derived" "$SB" "$DIST_FIXTURE" derive --check
+
+# ── #1071: every profile resolves through the mesh DNS only ────────
+expect_clean "the working tree resolves through mesh DNS only" "$TREE" "$DIST_FIXTURE" dns
+SB="$(sandbox dns-public)"
+mutate flip_dns "$SB/aa_cloud-superapp/build.json"
+expect_caught "a profile with a public resolver is caught" \
+    "v6-split DNS 8.8.8.8 is not a mesh resolver" "$SB" "$DIST_FIXTURE" dns
+SB="$(sandbox dns-empty)"
+mutate empty_full_dns "$SB/aa_cloud-superapp/build.json"
+expect_caught "a full tunnel with no DNS is caught" \
+    "v4-full sets no DNS" "$SB" "$DIST_FIXTURE" dns
 
 if [ "$FAILURES" -eq 0 ]; then
     echo "PASS — the guard fails on every way the APK's wireguard block can drift from the published dist, and fails closed when the reference is unreadable."
