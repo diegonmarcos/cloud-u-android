@@ -199,7 +199,6 @@
     <string name="popup_keys_number" tools:keep="@string/popup_keys_number">Talrække</string>
     <string name="popup_keys_language_priority" tools:keep="@string/popup_keys_language_priority">Sprog (prioritet)</string>
     <string name="popup_keys_layout" tools:keep="@string/popup_keys_layout">Layout</string>
-    <string name="toolbar_keys">Vælg taster på værktøjslinje</string>
     <string name="clipboard" tools:keep="@string/clipboard">Udklipsholder</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">Ryd udklipsholder</string>
     <string name="voice" tools:keep="@string/voice">Stemmeinput</string>

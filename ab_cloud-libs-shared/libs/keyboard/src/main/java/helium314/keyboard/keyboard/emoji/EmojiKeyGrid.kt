@@ -52,8 +52,6 @@ import java.util.WeakHashMap
 private const val TAG = "EmojiKeyGrid"
 private const val KEY_PRESS_DELAY_TIME = 250L // msec
 private const val KEY_RELEASE_DELAY_TIME = 30L // msec
-// patch 0010: hold 5 seconds on any emoji to pin/unpin it
-private const val EMOJI_PIN_HOLD_TIME = 5000L // msec
 
 /**
  * The popup machinery of the emoji keys: the skin-tone / variant popup keys keyboard and the
@@ -188,6 +186,8 @@ internal class EmojiKeyTouch(
     private val callback: EmojiViewCallback,
     private val popups: EmojiKeyPopups,
     private val anchor: View,
+    /** #1077: a long press pins or unpins the emoji (the merged Last used + Pinned page) instead of opening the variants. */
+    private val pinOnLongPress: Boolean,
     private val redraw: () -> Unit,
 ) {
     private val handler = Handler(Looper.getMainLooper())
@@ -202,8 +202,8 @@ internal class EmojiKeyTouch(
     private var currentKey: Key? = null
     private var pendingKeyDown: Runnable? = null
     private var pendingLongPress: Runnable? = null
-    // patch 0010: independent 5-second timer for pin/unpin (additive to the ~500ms skin-tone timer)
-    private var pendingPinEmoji: Runnable? = null
+    /** A long press already pinned or unpinned the emoji under the finger: its release must not input it. */
+    private var pinnedByHold = false
     /** The panel that is up (the variants or just the description); it takes the finger's release. */
     private var shownPanel: PopupKeysPanel? = null
 
@@ -226,10 +226,6 @@ internal class EmojiKeyTouch(
         val longPress = Runnable { onLongPressed(key) }
         pendingLongPress = longPress
         handler.postDelayed(longPress, Settings.getValues().mKeyLongpressTimeout.toLong())
-        // patch 0010: start the independent 5-second pin timer alongside the ~500ms skin-tone timer
-        val pin = Runnable { callback.onPinEmoji(key) }
-        pendingPinEmoji = pin
-        handler.postDelayed(pin, EMOJI_PIN_HOLD_TIME)
     }
 
     private fun callListenerOnReleaseKey(releasedKey: Key, withKeyRegistering: Boolean) {
@@ -256,14 +252,16 @@ internal class EmojiKeyTouch(
     fun cancelLongPress() {
         pendingLongPress?.let { handler.removeCallbacks(it) }
         pendingLongPress = null
-        // patch 0010: also cancel the pin timer (finger moved off key or released before 5s)
-        pendingPinEmoji?.let { handler.removeCallbacks(it) }
-        pendingPinEmoji = null
     }
 
     private fun onLongPressed(key: Key?) {
         if (popups.isShowingPopupKeysPanel) return
         if (key == null) return
+        if (pinOnLongPress) { // #1077: on the merged page the long press pins / unpins
+            pinnedByHold = true
+            callback.onPinEmoji(key)
+            return
+        }
 
         val descriptionPanel = popups.showDescription(key, callback, renderer)
         val popupKeysPanel = popups.showPopupKeysKeyboard(key, keyboard, renderer.newLabelPaint(key))
@@ -290,6 +288,7 @@ internal class EmojiKeyTouch(
         val key = getKey(x, y)
         releaseCurrentKey(false)
         currentKey = key
+        pinnedByHold = false
         if (key == null) return false
         registerPress(key)
         registerLongPress(key)
@@ -305,7 +304,10 @@ internal class EmojiKeyTouch(
         releaseCurrentKey(false)
 
         val shown = shownPanel
-        if (popups.isShowingPopupKeysPanel) {
+        if (pinnedByHold) {
+            // the long press pinned the emoji: lifting the finger inputs nothing
+            pinnedByHold = false
+        } else if (popups.isShowingPopupKeysPanel) {
             // the variants take the release as the chosen key; a description alone inputs its own emoji
             shown?.onUpEvent(shown.translateX(hostX(x)), shown.translateY(hostY(y)), pointerId, eventTime)
             popups.dismiss()
@@ -369,6 +371,7 @@ internal fun EmojiKeyGrid(
     popups: EmojiKeyPopups,
     version: Int,
     modifier: Modifier = Modifier,
+    pinOnLongPress: Boolean = false,
 ) {
     val context = LocalContext.current
     val anchor = LocalView.current
@@ -380,7 +383,7 @@ internal fun EmojiKeyGrid(
             it.setKeyboard(keyboard)
         }
     }
-    val touch = remember(keyboard, callback, popups, anchor) { EmojiKeyTouch(keyboard, renderer, callback, popups, anchor) { tick++ } }
+    val touch = remember(keyboard, callback, popups, anchor, pinOnLongPress) { EmojiKeyTouch(keyboard, renderer, callback, popups, anchor, pinOnLongPress) { tick++ } }
     DisposableEffect(touch) {
         onDispose {
             touch.dispose()

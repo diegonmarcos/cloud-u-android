@@ -158,7 +158,6 @@
     <string name="popup_keys_language_priority" tools:keep="@string/popup_keys_language_priority">Nyelv (elsőbbség)</string>
     <string name="popup_keys_layout" tools:keep="@string/popup_keys_layout">Elrendezés</string>
     <string name="popup_keys_symbols" tools:keep="@string/popup_keys_symbols">Szimbólumok</string>
-    <string name="toolbar_keys">Eszköztárbillentyűk kiválasztása</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">Vágólap ürítése</string>
     <string name="voice" tools:keep="@string/voice">Hangbevitel</string>
     <string name="clipboard" tools:keep="@string/clipboard">Vágólap</string>
@@ -371,8 +370,6 @@
     <string name="word_left" tools:keep="@string/word_left">Balra lévő szó</string>
     <string name="word_right" tools:keep="@string/word_right">Jobbra lévő szó</string>
     <string name="close_history" tools:keep="@string/close_history">Vágólapelőzmények bezárása</string>
-    <string name="clipboard_toolbar_keys">Vágólapeszköztár billentyűinek kiválasztása</string>
-    <string name="second_row_toolbar_keys">Kitűzött eszköztárbillentyűk kiválasztása</string>
     <string name="prefs_font_scale">Billentyűzet betűmérete</string>
     <string name="prefs_emoji_skin_tone_neutral">Semleges</string>
     <string name="subtype_generic_phonetic">%s (Fonetikus)</string>

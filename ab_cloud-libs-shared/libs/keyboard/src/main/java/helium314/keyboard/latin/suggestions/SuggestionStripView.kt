@@ -666,27 +666,34 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private fun ToolbarRow(pressedColor: Color) {
         val density = LocalDensity.current
         val keyWidth = dimensionResource(R.dimen.config_suggestions_strip_edge_key_width)
-        val iconPx = with(density) { keyWidth.roundToPx() }
+        val baseCellPx = with(density) { keyWidth.roundToPx() }
         val minFling = remember { android.view.ViewConfiguration.get(context).scaledMinimumFlingVelocity.toFloat() }
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
-            val page = ToolbarPaging.pageWidth(constraints.maxWidth, iconPx)
+            // #1077: the page is laid out from the available px. Icons per page = floor(width / cell), the cell is the
+            // declared one times the scale; the cells of a page share the width exactly, so a page is one screen.
+            val viewport = constraints.maxWidth
+            val scale = density.fontScale
             val keys = toolbar.map { it.key }
-            val gaps = remember(keys, page, iconPx) { ToolbarPaging.gaps(keys, toolbarKeysOnOwnPage, iconPx, page) }
+            val layout = remember(keys, viewport, baseCellPx, scale) {
+                ToolbarPaging.layout(keys, toolbarKeysOnOwnPage, viewport, baseCellPx, scale)
+            }
+            val page = layout.page
             val scroll = rememberScrollState()
             val fling = remember(scroll, page) { PagedToolbarFling(scroll, { page }, minFling) }
             Row(Modifier.fillMaxHeight().horizontalScroll(scroll, flingBehavior = fling)) {
                 toolbar.forEachIndexed { i, item ->
-                    if (gaps.getOrElse(i) { 0 } > 0) Spacer(Modifier.width(with(density) { gaps[i].toDp() }))
-                    ToolbarKeyCell(item, false, pressedColor)
+                    if (layout.gapBefore[i] > 0) Spacer(Modifier.width(with(density) { layout.gapBefore[i].toDp() }))
+                    ToolbarKeyCell(item, false, pressedColor, with(density) { layout.keyWidth[i].toDp() })
                 }
+                if (layout.trailing > 0) Spacer(Modifier.width(with(density) { layout.trailing.toDp() }))
             }
         }
     }
 
     @Composable
-    private fun ToolbarKeyCell(item: ToolbarKeyItem, inSecondRow: Boolean, pressedColor: Color) {
+    private fun ToolbarKeyCell(item: ToolbarKeyItem, inSecondRow: Boolean, pressedColor: Color, width: androidx.compose.ui.unit.Dp? = null) {
         val density = LocalDensity.current
-        val keyWidth = dimensionResource(R.dimen.config_suggestions_strip_edge_key_width)
+        val keyWidth = width ?: dimensionResource(R.dimen.config_suggestions_strip_edge_key_width)
         val tick = activationTick // a toggle changed: the icon is redrawn in its new state
         val activated = remember(tick, item) { isToolbarKeyActivated(context, item.key) }
         // a key pinned to the second row is marked in the first (when pinning is on)

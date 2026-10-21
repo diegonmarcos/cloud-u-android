@@ -22,6 +22,7 @@ import helium314.keyboard.latin.utils.KeyboardUpdate
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils.displayName
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.NextScreenIcon
+import helium314.keyboard.settings.ConfigsEntry
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.settings.initPreview
@@ -37,6 +38,7 @@ fun MainSettingsScreen(
     onClickTextCorrection: () -> Unit,
     onClickGrammarCheck: () -> Unit, // SuperApp addition (patch 0002)
     onClickClipboard: () -> Unit, // SuperApp addition
+    onClickAutocomplete: () -> Unit, // #1077
     onClickTranslation: () -> Unit, // SuperApp addition
     onClickEmoji: () -> Unit, // SuperApp addition
     onClickVoiceTranscript: () -> Unit, // SuperApp addition
@@ -64,58 +66,67 @@ fun MainSettingsScreen(
             Column(
                 Modifier.verticalScroll(rememberScrollState()).then(Modifier.padding(innerPadding))
             ) {
-                // ── SuperApp section (patch 0011 reorder): our own additions first ──
-                Preference(
-                    name = stringResource(R.string.settings_screen_clipboard),
-                    onClick = onClickClipboard,
-                    icon = R.drawable.ic_settings_preferences
-                ) { NextScreenIcon() }
-                Preference(
-                    name = stringResource(R.string.settings_screen_emoji),
-                    onClick = onClickEmoji,
-                    icon = R.drawable.ic_settings_about
-                ) { NextScreenIcon() }
-                Preference(
-                    name = stringResource(R.string.settings_screen_translation),
-                    onClick = onClickTranslation,
-                    icon = R.drawable.ic_settings_about
-                ) { NextScreenIcon() }
-                // SuperApp addition — Text Enhancements sits before Grammar check (both
-                // are "fix my text" tools; enhancement is the broader one).
-                Preference(
-                    name = stringResource(R.string.settings_screen_enhance),
-                    onClick = onClickTextEnhance,
-                    icon = R.drawable.ic_toolbar_enhance
-                ) { NextScreenIcon() }
-                Preference(
-                    name = stringResource(R.string.settings_screen_grammar),
-                    onClick = onClickGrammarCheck,
-                    icon = R.drawable.ic_settings_correction
-                ) { NextScreenIcon() }
-                Preference(
-                    name = stringResource(R.string.settings_screen_voice_transcript),
-                    onClick = onClickVoiceTranscript,
-                    icon = R.drawable.ic_settings_about
-                ) { NextScreenIcon() }
-                // SuperApp addition — AI Model Routing: the shared provider/key/model
-                // used by Text Enhancements, Grammar check (AI mode) and translation.
-                Preference(
-                    name = stringResource(R.string.settings_screen_ai_routing),
-                    description = stringResource(R.string.settings_screen_ai_routing_summary),
-                    onClick = onClickAiRouting,
-                    icon = R.drawable.ic_settings_advanced
-                ) { NextScreenIcon() }
-                // #776 Config ▸ Update: version, the fleet Store's update management for this
-                // app, and Restart. Shown when the consuming app's build.json declares an update
-                // block (KeyboardUpdate.enabled) - it used to be a package-name literal that
-                // opened a raw GitHub download in the browser.
-                if (KeyboardUpdate.enabled) {
-                    Preference(
-                        name = stringResource(R.string.keyboard_update),
-                        description = stringResource(R.string.keyboard_update_summary),
-                        onClick = onClickUpdate,
-                        icon = R.drawable.ic_settings_about
-                    ) { NextScreenIcon() }
+                // ── SuperApp section (patch 0011 reorder): our own additions first, in ConfigsEntry order (#1077) ──
+                ConfigsEntry.entries.forEach { entry ->
+                    when (entry) {
+                        ConfigsEntry.TOOLBAR -> Preference(
+                            name = stringResource(R.string.settings_screen_toolbar),
+                            onClick = onClickToolbar,
+                            icon = R.drawable.ic_settings_toolbar
+                        ) { NextScreenIcon() }
+                        ConfigsEntry.CLIPBOARD -> Preference(
+                            name = stringResource(R.string.settings_screen_clipboard),
+                            onClick = onClickClipboard,
+                            icon = R.drawable.ic_settings_preferences
+                        ) { NextScreenIcon() }
+                        ConfigsEntry.AUTOCOMPLETE -> Preference(
+                            name = stringResource(R.string.settings_screen_autocomplete),
+                            onClick = onClickAutocomplete,
+                            icon = R.drawable.ic_toolbar_autocomplete
+                        ) { NextScreenIcon() }
+                        ConfigsEntry.EMOJI -> Preference(
+                            name = stringResource(R.string.settings_screen_emoji),
+                            onClick = onClickEmoji,
+                            icon = R.drawable.ic_settings_about
+                        ) { NextScreenIcon() }
+                        ConfigsEntry.TRANSLATION -> Preference(
+                            name = stringResource(R.string.settings_screen_translation),
+                            onClick = onClickTranslation,
+                            icon = R.drawable.ic_settings_about
+                        ) { NextScreenIcon() }
+                        ConfigsEntry.TEXT_ENHANCE -> Preference(
+                            name = stringResource(R.string.settings_screen_enhance),
+                            onClick = onClickTextEnhance,
+                            icon = R.drawable.ic_toolbar_enhance
+                        ) { NextScreenIcon() }
+                        ConfigsEntry.GRAMMAR_CHECK -> Preference(
+                            name = stringResource(R.string.settings_screen_grammar),
+                            onClick = onClickGrammarCheck,
+                            icon = R.drawable.ic_settings_correction
+                        ) { NextScreenIcon() }
+                        ConfigsEntry.VOICE_TRANSCRIPT -> Preference(
+                            name = stringResource(R.string.settings_screen_voice_transcript),
+                            onClick = onClickVoiceTranscript,
+                            icon = R.drawable.ic_settings_about
+                        ) { NextScreenIcon() }
+                        // AI Model Routing: the shared provider/key/model used by Text Enhancements,
+                        // Grammar Check (AI engine) and translation.
+                        ConfigsEntry.AI_ROUTING -> Preference(
+                            name = stringResource(R.string.settings_screen_ai_routing),
+                            description = stringResource(R.string.settings_screen_ai_routing_summary),
+                            onClick = onClickAiRouting,
+                            icon = R.drawable.ic_settings_advanced
+                        ) { NextScreenIcon() }
+                        // #776 Config ▸ Update: shown when the consuming app's build.json declares an update block.
+                        ConfigsEntry.UPDATE -> if (KeyboardUpdate.enabled) {
+                            Preference(
+                                name = stringResource(R.string.keyboard_update),
+                                description = stringResource(R.string.keyboard_update_summary),
+                                onClick = onClickUpdate,
+                                icon = R.drawable.ic_settings_about
+                            ) { NextScreenIcon() }
+                        }
+                    }
                 }
 
                 // ── Everything below is the base keyboard menu ─────────────────────
@@ -130,11 +141,6 @@ fun MainSettingsScreen(
                     name = stringResource(R.string.dictionary_settings_category),
                     onClick = onClickDictionaries,
                     icon = R.drawable.ic_dictionary
-                ) { NextScreenIcon() }
-                Preference(
-                    name = stringResource(R.string.settings_screen_toolbar),
-                    onClick = onClickToolbar,
-                    icon = R.drawable.ic_settings_toolbar
                 ) { NextScreenIcon() }
                 Preference(
                     name = stringResource(R.string.settings_screen_preferences),
@@ -190,7 +196,7 @@ private fun PreviewScreen() {
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {
-            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
         }
     }
 }

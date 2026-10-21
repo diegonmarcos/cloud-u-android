@@ -45,7 +45,8 @@
     <!-- Settings screen title for text correction options -->
     <string name="settings_screen_correction">Text correction</string>
     <!-- SuperApp addition — Grammar check settings screen -->
-    <string name="settings_screen_grammar">Grammar check</string>
+    <string name="settings_screen_grammar">Grammar Check</string>
+    <string name="settings_screen_autocomplete">Autocomplete</string>
     <!-- SuperApp addition — Clipboard settings, promoted out of Preferences -->
     <string name="settings_screen_clipboard">Clipboard</string>
     <!-- SuperApp addition — Translation / Emoji / Voice Transcript info screens -->
@@ -269,7 +270,15 @@
     <string name="grammar_check_now">Fix current text</string>
     <string name="grammar_check_now_summary">Run grammar fixes over the whole current field</string>
     <string name="grammar_category_fixes">Fixes</string>
-    <string name="grammar_mode_title">Grammar mode</string>
+    <string name="grammar_mode_title">Grammar engine</string>
+    <string name="grammar_check_mode_title">Grammar mode</string>
+    <string name="grammar_check_mode_summary">Auto Correct fixes as you type, Highlight only marks what it would change, Off does neither</string>
+    <string name="grammar_check_mode_auto_correct">Auto Correct</string>
+    <string name="grammar_check_mode_highlight">Highlight</string>
+    <string name="grammar_check_mode_off">Off</string>
+    <string name="grammar_engines_category">Engines used</string>
+    <string name="grammar" tools:keep="@string/grammar">Grammar mode</string>
+    <string name="autocomplete" tools:keep="@string/autocomplete">Autocomplete</string>
     <string name="grammar_mode_off">Off</string>
     <string name="grammar_mode_local">Local</string>
     <string name="grammar_mode_remote">Remote</string>
@@ -534,7 +543,7 @@
     <!-- Option to hide clipboard and emoji toolbars when main toolbar is hidden -->
     <string name="toolbar_hiding_global">Hide clipboard and emoji toolbars too</string>
     <!-- Title of the setting to set toolbar keys -->
-    <string name="toolbar_keys">Select toolbar keys</string>
+    <string name="toolbar_keys">Keyboard - first row icons</string>
     <!-- Names of the toolbar keys-->
     <string name="paste" tools:keep="@string/paste" translatable="false">@android:string/paste</string>
     <string name="copy" tools:keep="@string/copy" translatable="false">@android:string/copy</string>
@@ -566,9 +575,9 @@
     <string name="emoji" tools:keep="@string/emoji">Emoji</string>
     <string name="floating" tools:keep="@string/floating">Floating Keyboard</string>
     <!-- Title of the setting to set clipboard toolbar keys -->
-    <string name="clipboard_toolbar_keys">Select clipboard toolbar keys</string>
+    <string name="clipboard_toolbar_keys">Clipboard - first row icons</string>
     <!-- Title of the setting to set pinned toolbar keys -->
-    <string name="second_row_toolbar_keys">Select second row keys</string>
+    <string name="second_row_toolbar_keys">Keyboard - second row icons</string>
     <!-- Title of the setting to quick-pin toolbar keys -->
     <string name="quick_pin_toolbar_keys">Pin toolbar key on long press</string>
     <!-- Description of the setting to quick-pin toolbar keys -->

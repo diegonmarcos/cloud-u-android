@@ -43,6 +43,7 @@ import helium314.keyboard.settings.preferences.SwitchPreferenceWithEmojiDictWarn
 import helium314.keyboard.latin.utils.previewDark
 import androidx.core.content.edit
 import helium314.keyboard.keyboard.internal.PopupKeySpec
+import helium314.keyboard.latin.settings.GrammarMode
 import helium314.keyboard.settings.preferences.SliderPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
 
@@ -54,7 +55,7 @@ fun TextCorrectionScreen(
     val b = (LocalContext.current.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
     if ((b?.value ?: 0) < 0)
         Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
-    val autocorrectEnabled = prefs.getBoolean(Settings.PREF_AUTO_CORRECTION, Defaults.PREF_AUTO_CORRECTION)
+    val autocorrectEnabled = GrammarMode.read(prefs).autoCorrects // #1077: the Auto Correction switch lives in Grammar Check
     val suggestionsVisible = Settings.readToolbarMode(prefs).let { it == ToolbarMode.SUGGESTION_STRIP || it == ToolbarMode.EXPANDABLE }
     val suggestionsEnabled = suggestionsVisible && prefs.getBoolean(Settings.PREF_SHOW_SUGGESTIONS, Defaults.PREF_SHOW_SUGGESTIONS)
     val gestureEnabled = JniUtils.sHaveGestureLib && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
@@ -62,11 +63,6 @@ fun TextCorrectionScreen(
         SettingsWithoutKey.EDIT_PERSONAL_DICTIONARY,
         R.string.settings_category_correction,
         Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE,
-        Settings.PREF_AUTO_CORRECTION,
-        if (autocorrectEnabled) Settings.PREF_MORE_AUTO_CORRECTION else null,
-        if (autocorrectEnabled) Settings.PREF_AUTOCORRECT_SHORTCUTS else null,
-        if (autocorrectEnabled) Settings.PREF_AUTO_CORRECT_CONFIDENCE else null,
-        if (autocorrectEnabled) Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT else null,
         Settings.PREF_AUTO_CAP,
         R.string.settings_category_space,
         Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD,
@@ -114,11 +110,6 @@ fun createCorrectionSettings(context: Context) = listOf(
         R.string.prefs_block_potentially_offensive_title, R.string.prefs_block_potentially_offensive_summary
     ) {
         SwitchPreference(it, Defaults.PREF_BLOCK_POTENTIALLY_OFFENSIVE)
-    },
-    Setting(context, Settings.PREF_AUTO_CORRECTION,
-        R.string.autocorrect, R.string.auto_correction_summary
-    ) {
-        SwitchPreference(it, Defaults.PREF_AUTO_CORRECTION)
     },
     Setting(context, Settings.PREF_MORE_AUTO_CORRECTION,
         R.string.more_autocorrect, R.string.more_autocorrect_summary

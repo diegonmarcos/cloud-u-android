@@ -220,7 +220,6 @@
     <string name="show_popup_hints_summary">Vis hint hvis å holde knappen inne utløser tilleggsfunksjonalitet</string>
     <string name="prefs_narrow_key_gaps">Smale tastemellomrom</string>
     <string name="subtype_xdq">Kaitag</string>
-    <string name="toolbar_keys">Velg verktøylinjetaster</string>
     <string name="subtype_akkhor_bn_BD">%s (Akkhor)</string>
     <string name="about_github_link">Se på GitHub</string>
     <string name="subtype_generic_sebeolsik_final">%s (Sebeolsik Final)</string>
@@ -358,8 +357,6 @@
     <string name="page_down" tools:keep="@string/page_down">Side ned</string>
     <string name="close_history" tools:keep="@string/close_history">Lukk utklippstavlehistorikk</string>
     <string name="emoji" tools:keep="@string/emoji">Emoji</string>
-    <string name="clipboard_toolbar_keys">Velg verktøylinjetaster for utklippstavle</string>
-    <string name="second_row_toolbar_keys">Velg festede verktøylinjetaster</string>
     <string name="quick_pin_toolbar_keys">Fest verktøylinjetast ved langt trykk</string>
     <string name="quick_pin_toolbar_keys_summary">Dette deaktiverer andre handlinger med langt trykk for verktøylinjetaster som ikke er festet</string>
     <string name="remove_redundant_popups">Fjern overflødige popup-vinduer</string>

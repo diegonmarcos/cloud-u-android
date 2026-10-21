@@ -57,41 +57,49 @@ done
 
 echo "== cloud-keyboard toolbar: a full page of icons, measured not declared =="
 
-# ── A1 the page size is measured ────────────────────────────────────────────
-# The division IS the derivation: as many whole icons as the viewport can show.
+# ── A1 the page is laid out from the available px ──────────────────────────
+# #1077: icons per page = floor(width / cell), the cell from the scale. The division IS the derivation.
 if grep -q 'viewport / icon' "$PV"; then
-    pass "A1 page size divides the measured viewport by a measured key width"
+    pass "A1 icons per page divides the measured viewport by the cell"
 else
     fail "A1 the toolbar paging no longer derives its page from measurements ($PV)"
 fi
-# A page size sitting in the paging code as a number is the failure A1 exists to
-# catch: it cannot be right on two screen widths at once.
-if grep -nE '(perPage|keysPerPage|PAGE_SIZE|pageSize)[[:space:]]*=[[:space:]]*[0-9]+' "$PV"; then
-    fail "A1 a hardcoded keys-per-page constant in the paging view ($PV)"
+if grep -q 'Math.round(baseCell \* scale' "$PV" && grep -q 'val scale = density.fontScale' "$SV"; then
+    pass "A1 the cell follows the scale (the system font scale)"
 else
-    pass "A1 no hardcoded keys-per-page constant in the paging view"
+    fail "A1 the cell no longer follows the scale ($PV, $SV)"
+fi
+# A page size sitting in the paging code as a number is the failure A1 exists to catch.
+if grep -nE '(perPage|keysPerPage|PAGE_SIZE|pageSize)[[:space:]]*=[[:space:]]*[0-9]+' "$PV"; then
+    fail "A1 a hardcoded keys-per-page constant in the paging code ($PV)"
+else
+    pass "A1 no hardcoded keys-per-page constant in the paging code"
 fi
 
-# ── A2 one gap per key ──────────────────────────────────────────────────────
-# The row indexes the gaps by key; a single gap applied to all 22 keys is the bug.
-if grep -q 'ToolbarPaging.gaps(keys, toolbarKeysOnOwnPage, iconPx, page)' "$SV"; then
-    pass "A2 the row takes its page gaps from ToolbarPaging.gaps"
+# ── A2 one gap and one width per key ────────────────────────────────────────
+if grep -q 'ToolbarPaging.layout(keys, toolbarKeysOnOwnPage, viewport, baseCellPx, scale)' "$SV"; then
+    pass "A2 the row takes its layout from ToolbarPaging.layout"
 else
-    fail "A2 the row no longer takes its page gaps from ToolbarPaging.gaps ($SV)"
+    fail "A2 the row no longer takes its layout from ToolbarPaging.layout ($SV)"
 fi
-if grep -q 'gaps\[i\].toDp()' "$SV"; then
-    pass "A2 each key is given its own gap"
+if grep -q 'layout.gapBefore\[i\]' "$SV" && grep -q 'layout.keyWidth\[i\]' "$SV"; then
+    pass "A2 each key is given its own gap and its own width"
 else
-    fail "A2 the keys do not each take their own gap ($SV)"
+    fail "A2 the keys do not each take their own gap and width ($SV)"
 fi
 if grep -q 'gaps.max()' "$SV"; then
     fail "A2 a single shared gap for the whole row ($SV)"
 else
     pass "A2 no single shared gap for the whole row"
 fi
+if grep -q 'layout.trailing' "$SV"; then
+    pass "A2 the row ends on a page boundary (trailing filler)"
+else
+    fail "A2 the last page is short: no trailing filler ($SV)"
+fi
 
 # ── A4 one writer of the page-start gap ─────────────────────────────────────
-writers=$(grep -c '\] = gapForOwnPage(' "$SV" "$PV" | awk -F: '{ sum += $2 } END { print sum + 0 }')
+writers=$(grep -c '\] = gapSlotsForOwnPage(' "$SV" "$PV" | awk -F: '{ sum += $2 } END { print sum + 0 }')
 if [ "$writers" = 1 ]; then
     pass "A4 exactly one page-start gap writer"
 else
@@ -99,25 +107,16 @@ else
 fi
 
 # ── A3 the arithmetic, from the shipped width and the real default row ──────
-if python3 - "$CFG" "$TU" "$SV" <<'PYEOF'
+if python3 - "$CFG" "$TU" <<'PYEOF'
 import re, sys
 
-cfg, tu, sv = (open(p, encoding='utf-8').read() for p in sys.argv[1:4])
+cfg, tu = (open(p, encoding='utf-8').read() for p in sys.argv[1:3])
 
-# The SHIPPED key width, from the resource the keyboard actually builds keys to.
 m = re.search(r'"config_suggestions_strip_edge_key_width">(\d+)dp', cfg)
-assert m, 'config_suggestions_strip_edge_key_width is gone — the key width is not 36dp any more'
+assert m, 'config_suggestions_strip_edge_key_width is gone'
 key_dp = int(m.group(1))
 
-# The REAL default first row: the listOf block that holds the row's own keys,
-# chosen by content rather than by position, so the clipboard row below it can
-# never be read by accident.
-#
-# The block ends at a ')' ALONE on its own line, not at the first ')' in the
-# text. The row's comment says "(toolbarKeysOnOwnPage)", and a non-greedy match
-# to the first ')' stops there — truncating the list one key early, dropping
-# VAULT, and reporting a missing third page as a layout defect. That false red
-# is what this anchor exists to prevent.
+# The block ends at a ')' ALONE on its own line (the row's comment contains "(toolbarKeysOnOwnPage)").
 blocks = re.findall(r'val default = listOf\((.*?)\n\s*\)', tu, re.S)
 row = next((b for b in blocks if 'FULL_LEFT' in b), None)
 assert row is not None, 'the default first toolbar row is gone from ToolbarUtils'
@@ -126,61 +125,41 @@ own_page = set(re.findall(r'ToolbarKey\.([A-Z_]+)',
                re.search(r'toolbarKeysOnOwnPage = setOf\(([^)]*)\)', tu).group(1)))
 assert own_page, 'no key asks for its own page — Cloud Vault shared a page again'
 
-# WHICH PARAMS MODEL THE SOURCE ACTUALLY HAS. This is what makes the geometry
-# below fail on the pre-fix state instead of quietly assuming the fix: a shared
-# object spreads the own-page margin to every key, so the row is laid out with
-# that margin on all of them.
-shared_params = 'gaps[i].toDp()' not in sv
+def slot_start(slot, per, page):          # ToolbarPaging.slotStart
+    return (slot // per) * page + (slot % per) * page // per
 
-# A 411dp-class portrait viewport — the whole width, because the expand key is
-# hidden in the two-row strip. 411/36 = 11.4, so eleven whole keys fit and
-# eleven is what #301 asks for; the spec and the hardware agree here.
-VIEWPORT = 411
-per_page = VIEWPORT // key_dp                    # ToolbarPaging.pageWidth
-page = per_page * key_dp
-assert per_page == 11, f'{key_dp}dp keys give {per_page} per page on {VIEWPORT}dp, the design is 11'
-
-def layout(margins):
-    """Key lefts, the way the strip lays the row out: each key's own gap then its width."""
-    left, lefts = 0, []
+def layout(viewport, base, scale):        # ToolbarPaging.layout
+    cell = max(1, int(base * min(max(scale, 0.85), 1.3) + 0.5))
+    per = max(1, viewport // cell)
+    slot, starts, widths = 0, [], []
     for k in keys:
-        left += margins.get(k, 0)
-        lefts.append(left)
-        left += key_dp
-    return lefts
+        if k in own_page:
+            slot += (per - slot % per) % per
+        starts.append(slot_start(slot, per, viewport))
+        widths.append(slot_start(slot + 1, per, viewport) - starts[-1])
+        slot += 1
+    return per, starts, widths
 
-# ToolbarPaging.gaps(), iterated the way a re-layout re-runs it.
-margins, changed, lefts = {}, False, []
-for _ in range(4):
-    lefts = layout(margins)
-    changed = False
-    for k, left in zip(keys, lefts):
-        if k not in own_page:
-            continue
-        gap = (page - (left - margins.get(k, 0)) % page) % page
-        if margins.get(k, 0) != gap:
-            margins[k] = gap
-            changed = True
-    if shared_params and margins:
-        # One object: the margin written for the own-page key is the margin every
-        # key now carries.
-        margins = {k: max(margins.values()) for k in keys}
-    if not changed:
-        break
-assert not changed, 'the own-page margin never settled — a second pass still moved it'
+for scale in (0.85, 1.0, 1.15, 1.3):
+    for viewport in (960, 1080, 1176, 1188, 1440):
+        per, starts, widths = layout(viewport, key_dp * 3, scale)
+        for k, st, w in zip(keys, starts, widths):
+            assert st // viewport == (st + w - 1) // viewport, f'{k} straddles a page at scale {scale}, {viewport}px'
+        for k, st in zip(keys, starts):
+            if k in own_page:
+                assert st % viewport == 0, f'{k} does not start a page at scale {scale}, {viewport}px'
 
+per, starts, widths = layout(1188, key_dp * 3, 1.0)
 pages = {}
-for k, left in zip(keys, lefts):
-    pages.setdefault(left // page, []).append(k)
+for k, st in zip(keys, starts):
+    pages.setdefault(st // 1188, []).append(k)
 counts = [len(pages[p]) for p in sorted(pages)]
-last = pages[max(pages)]
-assert counts == [11, 10, 1], f'pages hold {counts}, the design is 11 / 10 / the own-page key alone'
-assert set(last) == own_page, f'the last page holds {last}, not the own-page key alone'
-print(f'    {key_dp}dp keys, {len(keys)} in the default row, {per_page} per page, split {counts}, '
-      f'page {max(pages) + 1} = {last[0]}')
+assert per == 11 and counts == [11, 10, 1], f'pages hold {counts} at {per} per page, the design is 11 / 10 / the own-page key alone'
+assert set(pages[max(pages)]) == own_page
+print(f'    {key_dp}dp keys, {len(keys)} in the default row, scales 0.85-1.3 checked, 1.0 splits {counts}')
 PYEOF
 then
-    pass "A3 the page geometry gives 11 / 10 / the own-page key alone"
+    pass "A3 the page geometry holds at scales 0.85 / 1.0 / 1.15 / 1.3 and splits 11 / 10 / the own-page key alone"
 else
     fail "A3 the page geometry no longer matches the design"
 fi

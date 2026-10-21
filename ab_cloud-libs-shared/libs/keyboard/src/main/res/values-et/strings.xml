@@ -175,7 +175,6 @@
     <string name="more_autocorrect_summary">Käivata automaatne korrektuur ka siis, kui sisendväli seda otseselt ei eelda</string>
     <string name="show_popup_keys_main">Kuva vaid väga levinud variante (vaikimisi väärtus)</string>
     <string name="hint_source">Vali vihjete allikas</string>
-    <string name="toolbar_keys">Vali tööriistariba klahvid</string>
     <string name="one_handed" tools:keep="@string/one_handed">Režiim kasutamiseks ühe käega</string>
     <string name="full_left" tools:keep="@string/full_left">Täis vasak</string>
     <string name="full_right" tools:keep="@string/full_right">Täis parem</string>
@@ -212,7 +211,6 @@
     <string name="button_load_custom">Laadi fail</string>
     <string name="subtype_mns">Mansi</string>
     <string name="prefs_space_bar_text">Sinu tekst tühikuklahvil</string>
-    <string name="clipboard_toolbar_keys">Vali lõikelaua nupud tööriistariba jaoks</string>
     <string name="subtype_generic_extended">%s (laiendatud)</string>
     <string name="load">Laadi</string>
     <string name="button_title_add_custom_layout">Lisa kohandatud paigutus</string>
@@ -222,7 +220,6 @@
     <string name="file_read_error">Faili lugemine ei õnnestu</string>
     <string name="delete_layout">Kas sa kindlasti soovid kustutada sinu tehtud klahvistiku paigutuse „%s“?</string>
     <string name="layout_error">Klahvistiku paigutuse viga: %s</string>
-    <string name="second_row_toolbar_keys">Vali esiletõstetud tööriistariba nupud</string>
     <string name="quick_pin_toolbar_keys_summary">Selle valiku kasutamisega blokeerid muud pikast vajutusest avanevad tegevused, välja arvatud need mille oled esile tõstnud</string>
     <string name="prefs_narrow_key_gaps">Kitsaste klahvide vahed</string>
     <string name="prefs_bottom_padding_scale">Alumiste veeriste mõõtkava</string>

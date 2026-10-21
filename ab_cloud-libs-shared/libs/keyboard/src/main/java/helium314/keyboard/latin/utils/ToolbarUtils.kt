@@ -14,6 +14,7 @@ import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.Constants.Separators
 import helium314.keyboard.latin.settings.Defaults
+import helium314.keyboard.latin.settings.GrammarMode
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ToolbarKey.*
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +52,7 @@ fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
 fun setToolbarButtonsActivatedStateOnPrefChange(key: String?, refresh: () -> Unit) {
     // settings need to be updated when buttons change
     if (key != Settings.PREF_AUTO_CORRECTION
+        && key != Settings.PREF_GRAMMAR_CHECK_MODE
         && key != Settings.PREF_ALWAYS_INCOGNITO_MODE
         && key != GestureDataGatheringSettings.PREF_BACKGROUND_GATHERING_ENABLED
         && key != GestureDataGatheringSettings.PREF_BACKGROUND_DISABLED_BEFORE_TIME_MILLIS
@@ -79,7 +81,7 @@ fun isToolbarKeyActivated(context: Context, key: ToolbarKey): Boolean = when (ke
     INCOGNITO -> context.prefs().getBoolean(Settings.PREF_ALWAYS_INCOGNITO_MODE, Defaults.PREF_ALWAYS_INCOGNITO_MODE)
     ONE_HANDED -> Settings.getValues().mOneHandedModeEnabled
     SPLIT -> Settings.getValues().mIsSplitKeyboardEnabled
-    AUTOCORRECT -> Settings.getValues().mAutoCorrectionEnabledPerUserSettings
+    GRAMMAR -> GrammarMode.read(context.prefs()).checksGrammar // #1077: lit unless the mode is Off
     BACKGROUND_GATHERING -> useBackgroundGathering
     else -> true
 }
@@ -98,7 +100,6 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     PASTE -> KeyCode.CLIPBOARD_PASTE
     ONE_HANDED -> KeyCode.TOGGLE_ONE_HANDED_MODE
     INCOGNITO -> KeyCode.TOGGLE_INCOGNITO_MODE
-    AUTOCORRECT -> KeyCode.TOGGLE_AUTOCORRECT
     CLEAR_CLIPBOARD -> KeyCode.CLIPBOARD_CLEAR_HISTORY
     CLOSE_HISTORY -> KeyCode.ALPHA
     EMOJI -> KeyCode.EMOJI
@@ -118,7 +119,8 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     FLOATING -> KeyCode.TOGGLE_FLOATING_WINDOW
     BACKGROUND_GATHERING -> KeyCode.BACKGROUND_GATHERING
     TRANSLATE -> KeyCode.TRANSLATE // SuperApp addition (patch 0001)
-    GRAMMAR -> KeyCode.GRAMMAR    // SuperApp addition (patch 0002)
+    GRAMMAR -> KeyCode.GRAMMAR_MODE // #1077: Grammar mode, tap cycles Highlight / Auto Correct / Off
+    AUTOCOMPLETE -> KeyCode.AUTOCOMPLETE // #1077
     ENHANCE -> KeyCode.ENHANCE_BAR // SuperApp addition — Text Enhancements: tap opens the bar
     LANGUAGE_SWITCH -> KeyCode.LANGUAGE_SWITCH // cloud-keyboard: same code the globe key emits → InputLogic → LatinIME.switchToNextSubtype
     VAULT -> KeyCode.VAULT // cloud-keyboard: launches Cloud Vault
@@ -142,7 +144,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
     PAGE_DOWN -> KeyCode.MOVE_END_OF_PAGE
     BACKGROUND_GATHERING -> KeyCode.BACKGROUND_GATHERING_TEMP_OFF
     TRANSLATE -> KeyCode.TRANSLATE_BAR // SuperApp addition (patch 0001) — long-press opens the live translate bar
-    GRAMMAR -> KeyCode.UNSPECIFIED     // SuperApp addition (patch 0002) — no long-press action defined
+    GRAMMAR -> KeyCode.GRAMMAR         // #1077: long-press runs the whole-field check (what tap used to do)
     ENHANCE -> KeyCode.ENHANCE         // SuperApp addition — long-press rewrites in place, no bar
     LANGUAGE_SWITCH -> KeyCode.SYSTEM_INPUT_METHOD_PICKER // cloud-keyboard: globe long-press = picker (PointerTracker → showInputPickerDialog); same dialog
     else -> KeyCode.UNSPECIFIED
@@ -151,10 +153,11 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
 // names need to be aligned with resources strings (using lowercase of key.name)
 enum class ToolbarKey {
     VOICE, CLIPBOARD, NUMPAD, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, FLOATING, SPLIT,
-    INCOGNITO, AUTOCORRECT, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
+    INCOGNITO, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
     PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, BACKGROUND_GATHERING,
     TRANSLATE, // SuperApp addition (patch 0001) — on-device ML Kit translate to active subtype language
-    GRAMMAR,   // SuperApp addition (patch 0002) — on-demand whole-field grammar fix
+    GRAMMAR,   // #1077: "Grammar mode" - Auto Correction and Grammar Check merged; tap cycles the mode, long-press checks the field
+    AUTOCOMPLETE, // #1077: opens the list of Cloud Account / Cloud Vault autocomplete fields (tap pastes, long-press copies)
     ENHANCE,   // SuperApp addition — Text Enhancements: rewrite selection/field via AI Model Routing
     LANGUAGE_SWITCH, // cloud-keyboard: toolbar twin of the globe key (tap = next subtype/IME per "Language switch key behavior", long-press = picker). In the default first row.
     VAULT // cloud-keyboard: opens Cloud Vault. Not an editing tool, so it sits alone on its own page — see [toolbarKeysOnOwnPage].
@@ -184,7 +187,7 @@ val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java))
 // A change of THIS order reaches existing phones only via TOOLBAR_LAYOUT_REVISION.
 val defaultToolbarPref by lazy {
     val default = listOf(
-        FULL_LEFT, GRAMMAR, AUTOCORRECT, ENHANCE, TRANSLATE, NUMPAD, CLIPBOARD, EMOJI, VOICE, LANGUAGE_SWITCH,
+        FULL_LEFT, GRAMMAR, AUTOCOMPLETE, ENHANCE, TRANSLATE, NUMPAD, CLIPBOARD, EMOJI, VOICE, LANGUAGE_SWITCH,
         FULL_RIGHT, SELECT_ALL, WORD_RIGHT, WORD_LEFT, REDO, UNDO, SELECT_WORD, COPY, PASTE, CUT, PAGE_START,
         // Last, and alone on the page it starts (toolbarKeysOnOwnPage): the 21 editing keys above
         // fill the first two pages, Cloud Vault gets the third.
@@ -218,7 +221,7 @@ val defaultClipboardToolbarPref by lazy {
  * the stored value does not know yet, so without this a reordered default would be visible to
  * fresh installs only — the exact trap that made earlier default changes look like no-ops.
  */
-const val TOOLBAR_LAYOUT_REVISION = 2
+const val TOOLBAR_LAYOUT_REVISION = 3 // 3: #1077 Grammar mode + Autocomplete replace Grammar + Auto Correction
 
 /**
  * Adopt the current default first and second rows, once per [TOOLBAR_LAYOUT_REVISION]. This
@@ -233,6 +236,10 @@ private fun adoptToolbarLayoutRevision(prefs: SharedPreferences) {
         putInt(Settings.PREF_TOOLBAR_LAYOUT_REVISION, TOOLBAR_LAYOUT_REVISION)
     }
 }
+
+/** True while the stored rows are older than the shipped arrangement ([TOOLBAR_LAYOUT_REVISION]). */
+fun toolbarLayoutRevisionPending(prefs: SharedPreferences): Boolean =
+    prefs.getInt(Settings.PREF_TOOLBAR_LAYOUT_REVISION, 0) < TOOLBAR_LAYOUT_REVISION
 
 /** add missing keys, typically because a new key has been added */
 fun upgradeToolbarPrefs(prefs: SharedPreferences) {

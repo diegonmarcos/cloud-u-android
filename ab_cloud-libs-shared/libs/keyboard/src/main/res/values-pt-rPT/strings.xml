@@ -203,7 +203,6 @@
     <string name="locales_with_dict">Idiomas com dicionários</string>
     <string name="clipboard" tools:keep="@string/clipboard">Área de transferência</string>
     <string name="quick_pin_toolbar_keys">Fixar tecla da barra de ferramentas em toque longo</string>
-    <string name="second_row_toolbar_keys">Selecionar teclas fixadas da barra de ferramentas</string>
     <string name="toast_msg_clipboard_copy">Conteúdo copiado</string>
     <string name="label_switch_onehanded_key" tools:keep="@string/label_switch_onehanded_key">Mudar o lado do modo de uma mão</string>
     <string name="file_read_error">Não foi possível ler o ficheiro</string>
@@ -228,7 +227,6 @@
     <string name="theme_style">Estilo</string>
     <string name="select_color_functional_key_background">Fundo da tecla funcional</string>
     <string name="auto_user_color">Escolher cor automaticamente</string>
-    <string name="toolbar_keys">Selecionar teclas da barra de ferramentas</string>
     <string name="prefs_narrow_key_gaps">Teclas com espaços estreitos</string>
     <string name="subtype_xdq">Kaitag</string>
     <string name="layout_symbols_arabic" tools:keep="@string/layout_symbols_arabic">Símbolos (Árabe)</string>
@@ -299,7 +297,6 @@
     <string name="show_tld_popup_keys_summary">Substituir popups de ponto final por domínios de topo ao digitar URLs e endereços de e-mail</string>
     <string name="split" tools:keep="@string/split">Teclado dividido</string>
     <string name="page_down" tools:keep="@string/page_down">Página para baixo</string>
-    <string name="clipboard_toolbar_keys">Selecionar teclas da barra de ferramentas de área de transferência</string>
     <string name="quick_pin_toolbar_keys_summary">Desativa outras ações de toque longo para teclas da barra de ferramentas desafixadas</string>
     <string name="show_popup_hints">Mostrar dicas funcionais</string>
     <string name="show_popup_hints_summary">Mostrar dicas se um toque longo numa tecla ativa funcionalidade adicional</string>

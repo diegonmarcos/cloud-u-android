@@ -219,7 +219,6 @@
     <string name="toolbar_mode_suggestion_strip">Tik pasiūlymai</string>
     <string name="toolbar_mode_hidden">Paslėpta</string>
     <string name="toolbar_hiding_global">Paslėpti iškarpinę ir jaustukų įrankių juostą</string>
-    <string name="toolbar_keys">Pasirinkti įrankių juostos mygtukus</string>
     <string name="clipboard" tools:keep="@string/clipboard">iškarpinė</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">Išvalyti iškarpinę</string>
     <string name="voice" tools:keep="@string/voice">Balso įvestis</string>
@@ -240,8 +239,6 @@
     <string name="page_down" tools:keep="@string/page_down">Puslapis žemyn</string>
     <string name="close_history" tools:keep="@string/close_history">Užverti iškarpinės istoriją</string>
     <string name="emoji" tools:keep="@string/emoji">Jaustukai</string>
-    <string name="clipboard_toolbar_keys">Pasirinkti iškarpinės įrankių juostos mygtukus</string>
-    <string name="second_row_toolbar_keys">Pasirinkti prisegtus įrankių juostos mygtukus</string>
     <string name="quick_pin_toolbar_keys">Ilgai paspaudus prisegti įrankių juostos mygtuką</string>
     <string name="prefs_long_press_keyboard_to_change_lang">Pakeisti įvesties režimą su tarpo klavišu</string>
     <string name="prefs_long_press_keyboard_to_change_lang_summary">Ilgai paspaudus tarpą atsiras kalbos pasirinkimo meniu</string>

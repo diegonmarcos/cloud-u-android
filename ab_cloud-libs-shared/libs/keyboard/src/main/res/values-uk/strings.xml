@@ -206,7 +206,6 @@
     <string name="show_popup_keys_more">Додати розповсюджені варіанти</string>
     <string name="popup_keys_number" tools:keep="@string/popup_keys_number">Ряд з цифрами</string>
     <string name="popup_keys_language_priority" tools:keep="@string/popup_keys_language_priority">Мова (пріоритет)</string>
-    <string name="toolbar_keys">Вибір клавіш панелі інструментів</string>
     <string name="load_gesture_library_message">Вам знадобиться бібліотека для «%s». Несумісні бібліотеки можуть призвести до несправності при використанні набору тексту за допомогою жестів.
 \n
 \nУвага: завантаження зовнішнього коду може становити загрозу безпеці. Використовуйте бібліотеку лише з джерела, якому ви довіряєте.</string>
@@ -292,7 +291,6 @@
     <string name="main_colors">Показувати лише основні кольори</string>
     <string name="replace_dictionary_message">Замінити словник користувача «%1$s»?\n\nПоточний словник:\n%2$s\n\nНовий словник:\n%3$s</string>
     <string name="no_dictionary_message">"Без словника ви отримуватимете пропозиції лише для попередньо введеного тексту.&lt;br&gt;\n        Ви можете завантажити словники %1$s або перевірити, чи може словник для «%2$s» завантажити безпосередньо %3$s."</string>
-    <string name="second_row_toolbar_keys">Вибрати закріплені клавіші панелі інструментів</string>
     <string name="gesture_fast_typing_cooldown">Час відновлення швидкого друку</string>
     <string name="gesture_fast_typing_cooldown_instant">Завжди починати негайно</string>
     <string name="auto_show_toolbar">Показувати панель інструментів автоматично</string>
@@ -317,7 +315,6 @@
     <string name="word_right" tools:keep="@string/word_right">Слово правіше</string>
     <string name="page_up" tools:keep="@string/page_up">Сторінка вгору</string>
     <string name="page_down" tools:keep="@string/page_down">Сторінка вниз</string>
-    <string name="clipboard_toolbar_keys">Вибрати клавіші панелі інструментів буфера обміну</string>
     <string name="quick_pin_toolbar_keys">Закріплювати клавіші панелі інструментів при тривалому натисканні</string>
     <string name="quick_pin_toolbar_keys_summary">Це вимикає інші функції клавіш панелі інструментів при тривалому натисканні</string>
     <string name="page_start" tools:keep="@string/page_start">Початок сторінки</string>

@@ -31,6 +31,7 @@ import helium314.keyboard.settings.screens.PreferencesScreen
 import helium314.keyboard.settings.screens.SecondaryLayoutScreen
 import helium314.keyboard.settings.screens.SubtypeScreen
 import helium314.keyboard.settings.screens.AiRoutingScreen
+import helium314.keyboard.settings.screens.AutocompleteScreen
 import helium314.keyboard.settings.screens.UpdateScreen
 import helium314.keyboard.settings.screens.GrammarCheckScreen
 import helium314.keyboard.settings.screens.TextEnhanceScreen
@@ -80,6 +81,7 @@ fun SettingsNavHost(
                 onClickTextCorrection = { navController.navigate(SettingsDestination.TextCorrection) },
                 onClickGrammarCheck = { navController.navigate(SettingsDestination.GrammarCheck) }, // SuperApp patch 0002
                 onClickClipboard = { navController.navigate(SettingsDestination.Clipboard) },
+                onClickAutocomplete = { navController.navigate(SettingsDestination.Autocomplete) }, // #1077
                 onClickTranslation = { navController.navigate(SettingsDestination.Translation) },
                 onClickEmoji = { navController.navigate(SettingsDestination.Emoji) },
                 onClickVoiceTranscript = { navController.navigate(SettingsDestination.VoiceTranscript) },
@@ -109,6 +111,9 @@ fun SettingsNavHost(
         }
         composable(SettingsDestination.GrammarCheck) { // SuperApp addition (patch 0002)
             GrammarCheckScreen(onClickBack = ::goBack)
+        }
+        composable(SettingsDestination.Autocomplete) { // #1077
+            AutocompleteScreen(onClickBack = ::goBack)
         }
         composable(SettingsDestination.Clipboard) {
             ClipboardSettingsScreen(onClickBack = ::goBack)
@@ -194,6 +199,7 @@ object SettingsDestination {
     const val TextCorrection = "text_correction"
     const val GrammarCheck = "grammar_check" // SuperApp addition (patch 0002)
     const val Clipboard = "clipboard" // SuperApp addition
+    const val Autocomplete = "autocomplete" // #1077
     const val Translation = "translation_info" // SuperApp addition
     const val Emoji = "emoji_info" // SuperApp addition
     const val VoiceTranscript = "voice_transcript_info" // SuperApp addition

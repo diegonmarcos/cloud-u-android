@@ -225,7 +225,6 @@
     <string name="toolbar_mode_suggestion_strip" tools:keep="@string/toolbar_mode_suggestion_strip">Samo prijedlozi</string>
     <string name="toolbar_mode_hidden" tools:keep="@string/toolbar_mode_hidden">Sakriveno</string>
     <string name="toolbar_hiding_global">Sakrij i alatne trake međuspremnika i emojija</string>
-    <string name="toolbar_keys">Odaberi tipke alatne trake</string>
     <string name="clipboard" tools:keep="@string/clipboard">Međuspremnik</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">Očisti međuspremnik</string>
     <string name="voice" tools:keep="@string/voice">Glasovni unos</string>
@@ -238,8 +237,6 @@
     <string name="down" tools:keep="@string/down">Dolje</string>
     <string name="close_history" tools:keep="@string/close_history">Zatvori povijest međuspremnika</string>
     <string name="emoji" tools:keep="@string/emoji">Emoji</string>
-    <string name="clipboard_toolbar_keys">Odaberi tipke alatne trake međuspremnika</string>
-    <string name="second_row_toolbar_keys">Odaberi prikvačene tipke alatne trake</string>
     <string name="quick_pin_toolbar_keys">Prikvači tipke alatne trake pomoću dugog pritiska</string>
     <string name="quick_pin_toolbar_keys_summary">Ovo će onemogućiti druge radnje za dugi pritisak tipki alatne trake koje nisu prikvačene</string>
     <string name="remove_redundant_popups">Ukloni suvišne skočne tipke</string>

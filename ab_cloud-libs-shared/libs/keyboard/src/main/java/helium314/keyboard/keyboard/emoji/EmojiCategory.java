@@ -154,9 +154,9 @@ public final class EmojiCategory {
 
     public void initialize() {
         int defaultCategoryId = EmojiCategory.ID_SMILEYS_EMOTION;
+        // #1077: ONE first page, "Last used" with the pinned emoji on top. ID_PINNED stays as the data the page
+        // reads (its own keyboard, PREF_EMOJI_PINNED_KEYS) but has no page or tab of its own.
         addShownCategoryId(EmojiCategory.ID_RECENTS);
-        // patch 0010: pinned category immediately after recents
-        addShownCategoryId(EmojiCategory.ID_PINNED);
         addShownCategoryId(EmojiCategory.ID_SMILEYS_EMOTION);
         addShownCategoryId(EmojiCategory.ID_PEOPLE_BODY);
         addShownCategoryId(EmojiCategory.ID_ANIMALS_NATURE);
@@ -170,22 +170,40 @@ public final class EmojiCategory {
         }
         addShownCategoryId(EmojiCategory.ID_EMOTICONS);
 
-        DynamicGridKeyboard recentsKbd = getKeyboard(EmojiCategory.ID_RECENTS, 0);
-        mCurrentCategoryId = mPrefs.getInt(Settings.PREF_LAST_SHOWN_EMOJI_CATEGORY_ID, defaultCategoryId);
-        mCurrentCategoryPageId = mPrefs.getInt(Settings.PREF_LAST_SHOWN_EMOJI_CATEGORY_PAGE_ID, Defaults.PREF_LAST_SHOWN_EMOJI_CATEGORY_PAGE_ID);
-        if (!isShownCategoryId(mCurrentCategoryId)) {
-            mCurrentCategoryId = defaultCategoryId;
-        } else if (mCurrentCategoryId == EmojiCategory.ID_RECENTS &&
-                recentsKbd.getSortedKeys().isEmpty()) {
-            mCurrentCategoryId = defaultCategoryId;
-        }
+        getKeyboard(EmojiCategory.ID_RECENTS, 0);
+        // #1077: the merged Last used + Pinned page is always the first page opened, never the last one shown.
+        mCurrentCategoryId = EmojiMerge.FIRST_PAGE_CATEGORY;
+        mCurrentCategoryPageId = 0;
+    }
 
-        if (mCurrentCategoryPageId >= computeCategoryPageCount(mCurrentCategoryId)) {
-            mCurrentCategoryPageId = 0;
+    private DynamicGridKeyboard mMerged;
+
+    /** #1077: the merged page's keys changed (a recent used, an emoji pinned); it is built again when next read. */
+    public void invalidateMerged() {
+        synchronized (mCategoryKeyboardMap) {
+            mMerged = null;
+        }
+    }
+
+    /** #1077: pinned emoji first, then the recent ones, as one grid. A throw-away keyboard: it never saves anything. */
+    public DynamicGridKeyboard getMergedKeyboard() {
+        synchronized (mCategoryKeyboardMap) {
+            if (mMerged != null) return mMerged;
+            final int currentWidth = ResourceUtils.getKeyboardWidth(mContext, Settings.getValues());
+            final DynamicGridKeyboard kbd = DynamicGridKeyboard.ofKeyCount(mPrefs,
+                    mLayoutSet.getKeyboard(KeyboardId.ELEMENT_EMOJI_RECENTS),
+                    Integer.MAX_VALUE / 2, EmojiCategory.ID_PINNED /* drops popup keys; adding keys here saves nothing */, currentWidth);
+            for (final Key key : EmojiMerge.INSTANCE.merge(
+                    getKeyboard(EmojiCategory.ID_PINNED, 0).getSortedKeys(), getKeyboard(EmojiCategory.ID_RECENTS, 0).getSortedKeys())) {
+                kbd.addKeyLast(key);
+            }
+            mMerged = kbd;
+            return kbd;
         }
     }
 
     public void clearKeyboardCache() {
+        mMerged = null;
         mCategoryKeyboardMap.clear();
         for (CategoryProperties props: mShownCategories)
             props.mPageCount = -1; // reset page count in case size (number of keys per row) changed
@@ -295,6 +313,7 @@ public final class EmojiCategory {
 
     // Returns a keyboard from the recycler view's adapter position.
     public DynamicGridKeyboard getKeyboardFromAdapterPosition(int categoryId, final int position) {
+        if (categoryId == EmojiCategory.ID_RECENTS && position == 0) return getMergedKeyboard(); // #1077
         if (position >= 0 && position < getCategoryPageCount(categoryId)) {
             return getKeyboard(categoryId, position);
         }

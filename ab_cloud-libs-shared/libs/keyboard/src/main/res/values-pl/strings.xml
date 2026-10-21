@@ -254,7 +254,6 @@
     <string name="auto_user_color">Wybierz kolor automatycznie</string>
     <string name="settings_screen_about">O aplikacji</string>
     <string name="down" tools:keep="@string/down">W dół</string>
-    <string name="toolbar_keys">Wybierz klawisze paska narzędzi</string>
     <string name="license">Licencje open source</string>
     <string name="theme_name_ocean" tools:keep="@string/theme_name_ocean">Niebieskie</string>
     <string name="backup_error">Błąd podczas tworzenia kopii zapasowej: %s</string>
@@ -337,7 +336,6 @@
     <string name="center_suggestion_text_to_enter">Zawsze używaj środkowej sugestii</string>
     <string name="center_suggestion_text_to_enter_summary">Po naciśnięciu spacji lub znaku interpunkcyjnego zostanie wpisana środkowa sugestia</string>
     <string name="close_history" tools:keep="@string/close_history">Zamknij schowek</string>
-    <string name="clipboard_toolbar_keys">Wybierz klawisze paska narzędzi w schowku</string>
     <string name="subtype_generic_extended">%s (rozszerzony)</string>
     <string name="subtype_mns">mansyjski</string>
     <string name="more_colors">Pokaż więcej kolorów</string>
@@ -348,7 +346,6 @@
     <string name="quick_pin_toolbar_keys">Przypnij klawisz paska narzędzi po długim naciśnięciu</string>
     <string name="settings_screen_toolbar">Pasek narzędzi</string>
     <string name="quick_pin_toolbar_keys_summary">Spowoduje to wyłączenie funkcji związanych z długim naciśnięciem klawiszy, które nie zostały przypięte</string>
-    <string name="second_row_toolbar_keys">Wybierz przypięte klawisze paska narzędzi</string>
     <string name="toast_msg_clipboard_copy">Skopiowano</string>
     <string name="auto_hide_toolbar_summary">Ukryj pasek narzędzi, jeśli są dostępne sugestie</string>
     <string name="auto_show_toolbar_summary">Pokaż pasek narzędzi, jeśli rozpocznie się wprowadzanie lub tekst zostanie zaznaczony</string>

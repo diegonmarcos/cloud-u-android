@@ -242,7 +242,6 @@
     <string name="word_right" tools:keep="@string/word_right">字词向右</string>
     <string name="page_up" tools:keep="@string/page_up">向上翻页</string>
     <string name="page_down" tools:keep="@string/page_down">向下翻页</string>
-    <string name="clipboard_toolbar_keys">选择剪贴板工具栏键</string>
     <string name="page_start" tools:keep="@string/page_start">页面开始</string>
     <string name="page_end" tools:keep="@string/page_end">页面结束</string>
     <string name="word_left" tools:keep="@string/word_left">字词向左</string>
@@ -257,12 +256,10 @@
     <string name="show_popup_keys_all">添加所有可用变体</string>
     <string name="voice" tools:keep="@string/voice">语音输入</string>
     <string name="left" tools:keep="@string/left">左</string>
-    <string name="second_row_toolbar_keys">选择固定工具栏键</string>
     <string name="quick_pin_toolbar_keys">长按固定工具栏键</string>
     <string name="popup_order">选择弹出键顺序</string>
     <string name="popup_keys_layout" tools:keep="@string/popup_keys_layout">布局</string>
     <string name="popup_keys_symbols" tools:keep="@string/popup_keys_symbols">符号</string>
-    <string name="toolbar_keys">选择工具栏键</string>
     <string name="clipboard" tools:keep="@string/clipboard">剪贴板</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">清除剪贴板</string>
     <string name="prefs_narrow_key_gaps">缩小按键间距</string>

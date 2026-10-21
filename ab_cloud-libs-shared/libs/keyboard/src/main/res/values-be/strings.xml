@@ -207,7 +207,6 @@
     <string name="right" tools:keep="@string/right">Направа</string>
     <string name="clipboard" tools:keep="@string/clipboard">Буфер абмену</string>
     <string name="down" tools:keep="@string/down">Ўніз</string>
-    <string name="toolbar_keys">Выберыце клавішы панэлі інструментаў</string>
     <string name="full_left" tools:keep="@string/full_left">Ў левы канец</string>
     <string name="select_word" tools:keep="@string/select_word">Выберыце слова</string>
     <string name="left" tools:keep="@string/left">Налева</string>
@@ -297,7 +296,6 @@
     <string name="language_switch_key_behavior">Паводзіны клавішы змены мовы</string>
     <string name="center_suggestion_text_to_enter">Заўсёды выкарыстоўваць сярэднюю прапанову</string>
     <string name="gesture_fast_typing_cooldown">Час аднаўлення хуткага друку</string>
-    <string name="clipboard_toolbar_keys">Выбраць клавішы панэлі інструментаў буфера абмену</string>
     <string name="all_colors_warning">Гэтая настройка паказвае ўсе колеры, якія выкарыстоўваюцца ўнутры праграмы. Спіс колераў можа мяняцца. Колер па змаўчанні з\'яўляецца выпадковым, і імёны не будуць перакладзены.</string>
     <string name="auto_show_toolbar_summary">Паказваць панэль інструментаў пры ўводзе ці пры выбары тэксту</string>
     <string name="auto_hide_toolbar">Хаваць панэль інструментаў аўтаматычна</string>
@@ -308,7 +306,6 @@
     <string name="close_history" tools:keep="@string/close_history">Закрыць буфер абмену</string>
     <string name="subtype_generic_extended">%s (Пашыраная)</string>
     <string name="emoji" tools:keep="@string/emoji">Эмодзі</string>
-    <string name="second_row_toolbar_keys">Выбраць замацаваныя клавішы панэлі інструментаў</string>
     <string name="settings_screen_toolbar">Панэль інструментаў</string>
     <string name="subtype_mns">Мансійская</string>
     <string name="more_colors">Паказаць больш колераў</string>

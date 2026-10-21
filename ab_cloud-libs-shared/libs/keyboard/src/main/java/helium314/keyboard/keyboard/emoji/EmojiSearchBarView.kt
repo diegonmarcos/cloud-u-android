@@ -199,7 +199,7 @@ class EmojiSearchBarView(context: Context) : KitImeComposeView(context) {
             dictionaryLocale = locale
         }
         val facilitator = dictionaryFacilitator ?: return emptyList()
-        return facilitator.getSuggestions(query.splitOnWhitespace())
+        return facilitator.getSuggestions(EmojiSearchQuery.terms(query)) // #1077: lower-cased words, offline names and keywords of the bundled emoji dictionary
             .filter { it.isEmoji }
             .map { getEmojiDefaultVersion(it.word) }
             .take(30)

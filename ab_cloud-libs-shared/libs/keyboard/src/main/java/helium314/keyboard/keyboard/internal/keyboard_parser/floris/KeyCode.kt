@@ -104,6 +104,8 @@ object KeyCode {
     const val ENHANCE =                     -305 // SuperApp addition — Text Enhancements toolbar key (AI rewrite of selection/field, long-press)
     const val ENHANCE_BAR =                 -306 // SuperApp addition — open the Text Enhancements bar (tap)
     const val VAULT =                       -307 // SuperApp addition — open Cloud Vault (com.diegonmarcos.cloudvault)
+    const val GRAMMAR_MODE =                -308 // #1077 — cycle Grammar mode: Highlight / Auto Correct / Off
+    const val AUTOCOMPLETE =                -309 // #1077 — open the Autocomplete list (Cloud Account / Cloud Vault fields)
 
     const val CURRENCY_SLOT_1 =             -801
     const val CURRENCY_SLOT_2 =             -802

@@ -172,7 +172,6 @@
     <string name="full_left" tools:keep="@string/full_left">Úplně vlevo</string>
     <string name="prefs_long_press_symbol_for_numpad">Dlouhé stisknutí klávesy se symboly pro numerickou klávesnici</string>
     <string name="popup_order">Zvolit pořadí kláves vyskakovacího okna</string>
-    <string name="toolbar_keys">Výběr kláves na panelu nástrojů</string>
     <string name="prefs_narrow_key_gaps">Zmenšit mezery mezi klávesami</string>
     <string name="button_title_add_custom_layout">Přidat vlastní rozložení</string>
     <string name="setup_step3_action">Konfigurace klávesnice</string>
@@ -193,7 +192,6 @@
     <string name="action_none">Žádné</string>
     <string name="subtype_xdq">Kaitag</string>
     <string name="close_history" tools:keep="@string/close_history">Zavřít historii schránky</string>
-    <string name="clipboard_toolbar_keys">Výběr kláves panelu nástrojů schránky</string>
     <string name="prefs_bottom_padding_scale">Měřítko dolního odsazení</string>
     <string name="message_add_custom_layout">Vybrat soubor v kompatibilním formátu. Informace o formátech jsou k dispozici %s.</string>
     <string name="layout_symbols" tools:keep="@string/layout_symbols">Symboly</string>
@@ -401,7 +399,6 @@
     <string name="label_delete_key" tools:keep="@string/label_delete_key">Delete</string>
     <string name="label_shift_key" tools:keep="@string/label_shift_key">Shift</string>
     <string name="prefs_language_swipe_distance">Přepnout vzdálenost přejetí jazyka</string>
-    <string name="second_row_toolbar_keys">Vyberte připnuté klávesy v panelu nástrojů</string>
     <string name="quick_pin_toolbar_keys_summary">Toto zakáže další akce dlouhého stisknutí pro klávesy panelu nástrojů, které nejsou připnuty</string>
     <string name="remove_redundant_popups_summary">Zakázat vyskakovací klávesy, které se již nacházejí v základním rozložení klávesnice</string>
     <string name="get_colors_message">Barvy můžete najít a sdílet v %s.</string>

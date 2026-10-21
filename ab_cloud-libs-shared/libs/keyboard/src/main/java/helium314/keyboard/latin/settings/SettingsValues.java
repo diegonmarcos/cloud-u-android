@@ -218,7 +218,7 @@ public class SettingsValues {
                 && inputAttributes.mIsGeneralTextInput;
         mBlockPotentiallyOffensive = prefs.getBoolean(Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE, Defaults.PREF_BLOCK_POTENTIALLY_OFFENSIVE);
         mUrlDetectionEnabled = prefs.getBoolean(Settings.PREF_URL_DETECTION, Defaults.PREF_URL_DETECTION);
-        mAutoCorrectionEnabledPerUserSettings = prefs.getBoolean(Settings.PREF_AUTO_CORRECTION, Defaults.PREF_AUTO_CORRECTION);
+        mAutoCorrectionEnabledPerUserSettings = GrammarMode.read(prefs).getAutoCorrects(); // #1077: one mode for Auto Correction and Grammar Check
         mAutoCorrectEnabled = mAutoCorrectionEnabledPerUserSettings
                 && (mInputAttributes.mInputTypeShouldAutoCorrect || prefs.getBoolean(Settings.PREF_MORE_AUTO_CORRECTION, Defaults.PREF_MORE_AUTO_CORRECTION))
                 && (mUrlDetectionEnabled || !InputTypeUtils.isUriOrEmailType(mInputAttributes.mInputType));

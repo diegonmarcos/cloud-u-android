@@ -168,7 +168,6 @@
     <string name="popup_keys_language_priority" tools:keep="@string/popup_keys_language_priority">Dil (öncelikli)</string>
     <string name="popup_keys_layout" tools:keep="@string/popup_keys_layout">Düzen</string>
     <string name="popup_keys_symbols" tools:keep="@string/popup_keys_symbols">Semboller</string>
-    <string name="toolbar_keys">Araç çubuğu tuşlarını seç</string>
     <string name="clipboard" tools:keep="@string/clipboard">Pano</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">Panoyu temizle</string>
     <string name="layout_functional_keys" tools:keep="@string/layout_functional_keys">İşlevsel tuşlar</string>
@@ -231,7 +230,6 @@
     <string name="hidden_features_summary">Fark edilmeyebilecek özellikleri göster</string>
     <string name="hidden_features_text">cihaz korumalı depolama</string>
     <string name="close_history" tools:keep="@string/close_history">Pano geçmişini kapat</string>
-    <string name="clipboard_toolbar_keys">Pano araç çubuğu tuşlarını seç</string>
     <string name="show_popup_hints_summary">Bir tuşa uzun süre basmak ek işlevleri tetikliyorsa ipuçlarını göster</string>
     <string name="button_title_add_custom_layout">Özel düzen ekle</string>
     <string name="layout_symbols" tools:keep="@string/layout_symbols">Semboller</string>
@@ -313,7 +311,6 @@
     <string name="page_down" tools:keep="@string/page_down">Sayfa aşağı</string>
     <string name="quick_pin_toolbar_keys_summary">Bu, sabitlenmemiş araç çubuğu tuşları için diğer uzun basma işlemlerini devre dışı bırakacaktır</string>
     <string name="show_popup_hints">İşlevsel ipuçlarını göster</string>
-    <string name="second_row_toolbar_keys">Sabitlenmiş araç çubuğu tuşlarını seç</string>
     <string name="quick_pin_toolbar_keys">Uzun basıldığında araç çubuğu tuşunu sabitle</string>
     <string name="subtype_generic_sebeolsik_390">%s (Sebeolsik 390)</string>
     <string name="subtype_generic_sebeolsik_final">%s (Sebeolsik Final)</string>

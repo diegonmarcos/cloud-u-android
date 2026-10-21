@@ -2225,6 +2225,18 @@ public class LatinIME extends InputMethodService implements
         startActivity(intent);
     }
 
+    /** #1077: the Grammar mode icon. Cycles Highlight / Auto Correct / Off and names the new mode. */
+    public void cycleGrammarMode() {
+        Settings.getInstance().cycleGrammarMode();
+        final helium314.keyboard.latin.settings.GrammarMode mode =
+                helium314.keyboard.latin.settings.GrammarMode.read(helium314.keyboard.latin.utils.DeviceProtectedUtils.getSharedPreferences(this));
+        final int label = mode == helium314.keyboard.latin.settings.GrammarMode.AUTO_CORRECT ? R.string.grammar_check_mode_auto_correct
+                : mode == helium314.keyboard.latin.settings.GrammarMode.HIGHLIGHT ? R.string.grammar_check_mode_highlight
+                : R.string.grammar_check_mode_off;
+        android.widget.Toast.makeText(this, getString(R.string.grammar_check_mode_title) + ": " + getString(label),
+                android.widget.Toast.LENGTH_SHORT).show();
+    }
+
     public void launchEmojiSearch() {
         Log.d("emoji-search", "before activity launch");
         startActivity(new Intent().setClass(this, EmojiSearchActivity.class)

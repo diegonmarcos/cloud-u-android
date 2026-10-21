@@ -211,7 +211,6 @@
     <string name="popup_keys_language_priority" tools:keep="@string/popup_keys_language_priority">Idioma (prioridade)</string>
     <string name="popup_keys_layout" tools:keep="@string/popup_keys_layout">Disposición</string>
     <string name="popup_keys_symbols" tools:keep="@string/popup_keys_symbols">Símbolos</string>
-    <string name="toolbar_keys">Elixe teclas barra ferramentas</string>
     <string name="clipboard" tools:keep="@string/clipboard">Portapapeis</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">Limpar portapapeis</string>
     <string name="voice" tools:keep="@string/voice">Escribir por voz</string>
@@ -301,7 +300,6 @@
     <string name="prefs_long_press_symbol_for_numpad">Tecla con pulsación longa para teclado numérico</string>
     <string name="center_suggestion_text_to_enter">Usar sempre a suxestión do medio</string>
     <string name="center_suggestion_text_to_enter_summary">Ao premer no espazo ou puntuación, escríbese a suxestión do medio</string>
-    <string name="clipboard_toolbar_keys">Escoller teclas da barra de ferramentas do portapapeis</string>
     <string name="close_history" tools:keep="@string/close_history">Pechar historial do portapapeis</string>
     <string name="subtype_generic_extended">%s (Extendido)</string>
     <string name="subtype_mns">Mansi</string>
@@ -311,7 +309,6 @@
     <string name="layout_functional_keys_symbols_shifted" tools:keep="@string/layout_functional_keys_symbols_shifted">Teclas función (Máis símbolos)</string>
     <string name="layout_functional_keys_symbols" tools:keep="@string/layout_functional_keys_symbols">Teclas función (Símbolos)</string>
     <string name="quick_pin_toolbar_keys">Fixa unha tecla na barra mantendo premida</string>
-    <string name="second_row_toolbar_keys">Escolle as teclas da barra fixada</string>
     <string name="quick_pin_toolbar_keys_summary">Esto desactivará outras accións de pulsación longa para teclas da barra que non están fixadas</string>
     <string name="settings_screen_toolbar">Barra de ferramentas</string>
     <string name="toast_msg_clipboard_copy">Copiouse o contido</string>

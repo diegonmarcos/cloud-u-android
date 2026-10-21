@@ -202,7 +202,6 @@
     <string name="popup_keys_language_priority" tools:keep="@string/popup_keys_language_priority">Hizkuntza (lehenetsia)</string>
     <string name="popup_keys_layout" tools:keep="@string/popup_keys_layout">Diseinua</string>
     <string name="popup_keys_symbols" tools:keep="@string/popup_keys_symbols">Ikurrak</string>
-    <string name="toolbar_keys">Hautatu tresna barraren teklak</string>
     <string name="clipboard" tools:keep="@string/clipboard">Arbela</string>
     <string name="one_handed" tools:keep="@string/one_handed">Esku bakarreko modua</string>
     <string name="full_left" tools:keep="@string/full_left">Guztiz ezkerrean</string>
@@ -304,13 +303,11 @@
     <string name="center_suggestion_text_to_enter">Erabili beti erdiko iradokizuna</string>
     <string name="center_suggestion_text_to_enter_summary">Zuriunea edo puntuazioa sakatzean, erdiko iradokizuna sartuko da</string>
     <string name="close_history" tools:keep="@string/close_history">Itxi arbelaren historia</string>
-    <string name="clipboard_toolbar_keys">Hautatu arbeleko tresna-barrako teklak</string>
     <string name="more_colors">Erakutsi kolore gehiago</string>
     <string name="all_colors_warning">Ezarpen honek barnean erabiltzen diren kolore guztiak agerian uzten ditu. Koloreen zerrenda edozein unetan alda daiteke. Kolore lehenetsia aleatorioa da, eta izenak ez dira itzuliko.</string>
     <string name="layout_functional_keys" tools:keep="@string/layout_functional_keys">Funtzio-teklak</string>
     <string name="layout_functional_keys_symbols_shifted" tools:keep="@string/layout_functional_keys_symbols_shifted">Funtzio-teklak (ikur gehiago)</string>
     <string name="layout_functional_keys_symbols" tools:keep="@string/layout_functional_keys_symbols">Funtzio-teklak (ikurrak)</string>
-    <string name="second_row_toolbar_keys">Hautatu ainguratu beharreko tresna-barrako teklak</string>
     <string name="quick_pin_toolbar_keys">Ainguratu tresna-barrako tekla luze sakatzean</string>
     <string name="auto_hide_toolbar">Ezkutatu automatikoki tresna-barra</string>
     <string name="auto_show_toolbar">Erakutsi automatikoki tresna-barra</string>

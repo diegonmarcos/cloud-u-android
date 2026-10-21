@@ -21,15 +21,84 @@ import kotlin.math.abs
  * value below is computed from the current measurements at the moment it is needed.
  */
 object ToolbarPaging {
+    /** The icon scale the toolbar follows (the system font scale): the bounds of what the owner's scale control offers. */
+    const val MIN_SCALE = 0.85f
+    const val MAX_SCALE = 1.3f
+
+    /** One icon's cell in px: the declared cell times the scale, never below one px. */
+    @JvmStatic
+    fun cell(baseCell: Int, scale: Float): Int = Math.round(baseCell * scale.coerceIn(MIN_SCALE, MAX_SCALE)).coerceAtLeast(1)
+
+    /** As many whole cells as the viewport shows. Never zero, so a cell wider than the viewport still pages one at a time. */
+    @JvmStatic
+    fun iconsPerPage(viewport: Int, icon: Int): Int {
+        if (icon <= 0) return 1
+        return (viewport / icon).coerceAtLeast(1)
+    }
 
     /**
-     * As many whole icons as the viewport can show. Never zero, so an icon wider than the viewport
-     * still pages one icon at a time, and an unmeasured row still pages by a viewport.
+     * A page IS one screen: exactly the viewport's width. The icons of a page are stretched to share it, so no
+     * sliver of the next page shows at the edge and one swipe turns exactly one screen.
      */
     @JvmStatic
-    fun pageWidth(viewport: Int, icon: Int): Int {
-        if (icon <= 0) return viewport.coerceAtLeast(1)
-        return (viewport / icon).coerceAtLeast(1) * icon
+    fun pageWidth(viewport: Int): Int = viewport.coerceAtLeast(1)
+
+    /** Left edge of cell [slot], in px. The cells of a page are whole pixels that add up to exactly [page]. */
+    @JvmStatic
+    fun slotStart(slot: Int, perPage: Int, page: Int): Int =
+        (slot / perPage) * page + ((slot % perPage).toLong() * page / perPage).toInt()
+
+    /** Cells to leave empty in front of a key so it starts the next page when it wants a page of its own. */
+    @JvmStatic
+    fun gapSlotsForOwnPage(slot: Int, perPage: Int): Int = (perPage - slot % perPage) % perPage
+
+    /**
+     * The gap in cells in front of every key. A key in [ownPage] gets the cells that are left of the page it would
+     * otherwise land in the middle of. Computed from the measured [perPage], never from a count.
+     */
+    @JvmStatic
+    fun gaps(keys: List<ToolbarKey>, ownPage: Set<ToolbarKey>, perPage: Int): IntArray {
+        val gaps = IntArray(keys.size)
+        var slot = 0
+        keys.forEachIndexed { i, key ->
+            if (key in ownPage && perPage > 0) gaps[i] = gapSlotsForOwnPage(slot, perPage)
+            slot += gaps[i] + 1
+        }
+        return gaps
+    }
+
+    /** Where every key of the row sits, in px. [keyStart] and [keyWidth] are per key, [gapBefore] the empty px in front of it. */
+    class Layout(
+        val perPage: Int, val page: Int, val cell: Int,
+        val keyStart: IntArray, val keyWidth: IntArray, val gapBefore: IntArray, val trailing: Int,
+    ) {
+        val pages: Int get() = if (keyStart.isEmpty()) 1 else (keyStart.last() + keyWidth.last() + trailing) / page
+    }
+
+    /**
+     * The whole toolbar layout from the available width in px: icons per page = floor(viewport / cell), where the cell is
+     * the declared one times the [scale]; each page is exactly [viewport] wide (cells share it), the row ends on a page
+     * boundary, and a key in [ownPage] starts a page of its own.
+     */
+    @JvmStatic
+    fun layout(keys: List<ToolbarKey>, ownPage: Set<ToolbarKey>, viewport: Int, baseCell: Int, scale: Float): Layout {
+        val cell = cell(baseCell, scale)
+        val perPage = iconsPerPage(viewport, cell)
+        val page = pageWidth(viewport)
+        val gapSlots = gaps(keys, ownPage, perPage)
+        val start = IntArray(keys.size)
+        val width = IntArray(keys.size)
+        val gapPx = IntArray(keys.size)
+        var slot = 0
+        keys.indices.forEach { i ->
+            gapPx[i] = slotStart(slot + gapSlots[i], perPage, page) - slotStart(slot, perPage, page)
+            slot += gapSlots[i]
+            start[i] = slotStart(slot, perPage, page)
+            width[i] = slotStart(slot + 1, perPage, page) - start[i]
+            slot++
+        }
+        val end = if (keys.isEmpty()) 0 else start.last() + width.last()
+        return Layout(perPage, page, cell, start, width, gapPx, (page - end % page) % page)
     }
 
     /**
@@ -55,32 +124,6 @@ object ToolbarPaging {
         val before = (scroll / page * page).coerceAtMost(limit)
         val after = (before + page).coerceAtMost(limit)
         return if (scroll - before <= after - scroll) before else after
-    }
-
-    /** The left gap that puts a key starting at [startWithoutGap] on the start of the next page. */
-    @JvmStatic
-    fun gapForOwnPage(startWithoutGap: Int, page: Int): Int = (page - startWithoutGap % page) % page
-
-    /**
-     * The gap in front of every key of the row, in px. A key in [ownPage] gets a gap sized to
-     * whatever is left of the page it would otherwise land in the middle of, so it starts a page of
-     * its own. The same gap is what pushes the row past its last full page and so makes that page
-     * reachable at all.
-     *
-     * The gap comes from the measured [page], never from a key count: how many icons fit on a page
-     * depends on screen width, icon size and rotation, so filler keys could not do this. Each gap is
-     * computed from the position EXCLUDING the gap it is about to set, so there is one answer and it
-     * does not move when the row is laid out again.
-     */
-    @JvmStatic
-    fun gaps(keys: List<ToolbarKey>, ownPage: Set<ToolbarKey>, icon: Int, page: Int): IntArray {
-        val gaps = IntArray(keys.size)
-        var x = 0
-        keys.forEachIndexed { i, key ->
-            if (key in ownPage && page > 0) gaps[i] = gapForOwnPage(x, page)
-            x += gaps[i] + icon
-        }
-        return gaps
     }
 }
 

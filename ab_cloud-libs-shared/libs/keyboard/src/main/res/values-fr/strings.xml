@@ -174,7 +174,6 @@ Nouveau dictionnaire:
     <string name="popup_keys_language_priority">Langue (prioritaire)</string>
     <string name="popup_keys_layout">Disposition</string>
     <string name="popup_keys_symbols">Symboles</string>
-    <string name="toolbar_keys">Sélectionner les touches de la barre d\'outils</string>
     <string name="clipboard">Presse-papier</string>
     <string name="clear_clipboard">Effacer presse-papier</string>
     <string name="voice">Entrée vocale</string>
@@ -298,7 +297,6 @@ Nouveau dictionnaire:
     <string name="center_suggestion_text_to_enter">Toujours utiliser la suggestion du milieu</string>
     <string name="center_suggestion_text_to_enter_summary">En appuyant sur espace ou sur un signe de ponctuation, la suggestion du milieu sera saisie</string>
     <string name="close_history" tools:keep="@string/close_history">Fermer le presse-papiers</string>
-    <string name="clipboard_toolbar_keys">Sélectionner les touches de la barre d\'outils du presse-papiers</string>
     <string name="subtype_generic_extended">%s (Étendu)</string>
     <string name="subtype_mns">Mansi</string>
     <string name="more_colors">Afficher plus de couleurs</string>
@@ -308,7 +306,6 @@ Nouveau dictionnaire:
     <string name="layout_functional_keys_symbols" tools:keep="@string/layout_functional_keys_symbols">Touches fonctionnelles (Symboles)</string>
     <string name="quick_pin_toolbar_keys">Épingler les touches de la barre d\'outils lors d\'un appui-long</string>
     <string name="settings_screen_toolbar">Barre d\'outils</string>
-    <string name="second_row_toolbar_keys">Sélectionner les touches épinglées de la barre d\'outils</string>
     <string name="quick_pin_toolbar_keys_summary">Cela désactivera les autres actions lors d\'un appui-long sur les touches de la barre d\'outils qui ne sont pas épinglées</string>
     <string name="toast_msg_clipboard_copy">Contenu copié</string>
     <string name="auto_hide_toolbar">Masquer automatiquement la barre d\'outils</string>

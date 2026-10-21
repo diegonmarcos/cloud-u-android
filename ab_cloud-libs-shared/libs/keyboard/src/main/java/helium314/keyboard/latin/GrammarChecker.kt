@@ -8,6 +8,7 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.SuggestionSpan
 import helium314.keyboard.latin.settings.Defaults
+import helium314.keyboard.latin.settings.GrammarMode
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.prefs
 import org.json.JSONObject
@@ -171,7 +172,7 @@ object GrammarChecker {
      *
      * Must NOT be called on the IME main thread.
      */
-    private fun callRemote(context: Context, text: String, language: String): CharSequence? {
+    private fun callRemote(context: Context, text: String, language: String, highlightOnly: Boolean = false): CharSequence? {
         return try {
             val prefs = context.prefs()
             val urlStr = prefs.getString(Settings.PREF_GRAMMAR_REMOTE_URL, Defaults.PREF_GRAMMAR_REMOTE_URL)
@@ -204,7 +205,7 @@ object GrammarChecker {
             val sb = SpannableStringBuilder(text)
             for (m in found) {
                 val end = m.offset + m.length
-                if (m.replacements.size == 1) {
+                if (m.replacements.size == 1 && !highlightOnly) {
                     sb.replace(m.offset, end, m.replacements[0])
                 } else {
                     sb.setSpan(
@@ -230,8 +231,12 @@ object GrammarChecker {
     @JvmStatic
     fun checkAndFix(context: Context, connection: RichInputConnection) {
         if (resolveMode(context) == "off") return
-        // Always local: remote only from checkWholeField.
+        // #1077: the merged mode. Off does nothing; Highlight marks the word and leaves the text alone.
         val prefs = context.prefs()
+        val grammarMode = GrammarMode.read(prefs)
+        if (!grammarMode.checksGrammar) return
+        val highlightOnly = !grammarMode.autoCorrects
+        // Always local: remote only from checkWholeField.
         val capitalizeI  = prefs.getBoolean(Settings.PREF_GRAMMAR_FIX_CAPITALIZE_I,      Defaults.PREF_GRAMMAR_FIX_CAPITALIZE_I)
         val dedupeWords  = prefs.getBoolean(Settings.PREF_GRAMMAR_FIX_REPEATED_WORDS,    Defaults.PREF_GRAMMAR_FIX_REPEATED_WORDS)
         val sentenceCaps = prefs.getBoolean(Settings.PREF_GRAMMAR_FIX_SENTENCE_CAPS,     Defaults.PREF_GRAMMAR_FIX_SENTENCE_CAPS)
@@ -246,7 +251,7 @@ object GrammarChecker {
 
         // fix 1 — standalone "i" -> "I"
         if (capitalizeI && lastWord == "i") {
-            replace(context, connection, before, lastWordStart, lastWordStart + 1, "I", tail)
+            replace(context, connection, before, lastWordStart, lastWordStart + 1, "I", tail, highlightOnly)
             return
         }
 
@@ -255,7 +260,7 @@ object GrammarChecker {
             val beforeLastWord = trimmed.substring(0, lastWordStart).trimEnd()
             val prevWordMatch = TRAILING_WORD.find(beforeLastWord)
             if (prevWordMatch != null && prevWordMatch.value.equals(lastWord, ignoreCase = true)) {
-                replace(context, connection, before, prevWordMatch.range.last + 1, lastWordStart + lastWord.length, "", tail)
+                replace(context, connection, before, prevWordMatch.range.last + 1, lastWordStart + lastWord.length, "", tail, highlightOnly)
                 return
             }
         }
@@ -266,7 +271,7 @@ object GrammarChecker {
             val isSentenceStart = beforeWord.isBlank() || SENTENCE_END.containsMatchIn(beforeWord)
             if (isSentenceStart)
                 replace(context, connection, before, lastWordStart, lastWordStart + lastWord.length,
-                    lastWord.replaceFirstChar { it.uppercase() }, tail)
+                    lastWord.replaceFirstChar { it.uppercase() }, tail, highlightOnly)
         }
     }
 
@@ -278,9 +283,14 @@ object GrammarChecker {
      */
     @JvmStatic
     fun checkWholeField(context: Context, connection: RichInputConnection) {
-        when (resolveMode(context)) {
+        val grammarMode = GrammarMode.read(context.prefs())
+        if (!grammarMode.checksGrammar) return // #1077: Off
+        val engine = resolveMode(context)
+        // Highlight never rewrites the field: only the remote engine can mark without replacing.
+        if (!grammarMode.autoCorrects && engine != "remote") return
+        when (engine) {
             "off" -> return
-            "remote" -> checkWholeFieldRemote(context, connection)
+            "remote" -> checkWholeFieldRemote(context, connection, highlightOnly = !grammarMode.autoCorrects)
             // "ai": the AI Model Routing provider with the grammar-only prompt — same
             // in-place replace + revert span as Text Enhancements, no LanguageTool.
             "ai" -> TextEnhancer.run(context, connection, AiRouter.styleById("grammar"))
@@ -304,7 +314,7 @@ object GrammarChecker {
         connection.endBatchEdit()
     }
 
-    private fun checkWholeFieldRemote(context: Context, connection: RichInputConnection) {
+    private fun checkWholeFieldRemote(context: Context, connection: RichInputConnection, highlightOnly: Boolean = false) {
         connection.finishComposingText()
         val rawBefore = connection.getTextBeforeCursor(FIELD_LIMIT, 0)?.toString() ?: return
         val rawAfter  = connection.getTextAfterCursor(FIELD_LIMIT, 0)?.toString() ?: ""
@@ -314,7 +324,7 @@ object GrammarChecker {
 
         // Capture connection reference for the background thread callback.
         remoteExecutor.execute {
-            val fixedFull: CharSequence = callRemote(context, full, language) ?: applyLocalRules(context, full)
+            val fixedFull: CharSequence = callRemote(context, full, language, highlightOnly) ?: (if (highlightOnly) full else applyLocalRules(context, full))
             val cut = rawBefore.length.coerceAtMost(fixedFull.length)
             val fixedBefore = fixedFull.subSequence(0, cut)
             // ponytail: matches that land after the cursor are dropped (text after the
@@ -334,10 +344,20 @@ object GrammarChecker {
 
     // ── private low-level helper ─────────────────────────────────────────────
 
-    private fun replace(context: Context, connection: RichInputConnection, before: String, start: Int, end: Int, replacement: String, tail: String) {
+    private fun replace(context: Context, connection: RichInputConnection, before: String, start: Int, end: Int, replacement: String, tail: String, highlightOnly: Boolean = false) {
         val original = before.substring(start, end)
         if (original == replacement) return
         connection.deleteTextBeforeCursor(before.length - start)
+        if (highlightOnly) { // #1077 Highlight: same text back, the word marked with the fix as its suggestion
+            val marked = SpannableString(original + tail)
+            marked.setSpan(
+                SuggestionSpan(context, null, if (replacement.isEmpty()) emptyArray() else arrayOf(replacement),
+                    SuggestionSpan.FLAG_MISSPELLED, null),
+                0, original.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            connection.commitText(marked, 1)
+            return
+        }
         val combined = SpannableString(replacement + tail)
         if (replacement.isNotEmpty()) {
             combined.setSpan(

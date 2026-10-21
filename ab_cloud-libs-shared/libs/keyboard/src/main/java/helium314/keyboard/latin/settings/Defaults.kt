@@ -151,7 +151,7 @@ object Defaults {
     const val PREF_SHOW_POPUP_HINTS = false
     const val PREF_SHOW_TLD_POPUP_KEYS = true
     const val PREF_MORE_POPUP_KEYS = "main"
-    const val PREF_SPACE_TO_CHANGE_LANG = true
+    const val PREF_SPACE_TO_CHANGE_LANG = false // #1077: swiping the space bar no longer changes language by default
     const val PREF_LANGUAGE_SWIPE_DISTANCE = 5
     const val PREF_TOUCHPAD_SENSITIVITY = 50
     const val PREF_TOUCHPAD_EDGE_SCROLL = true
@@ -191,9 +191,9 @@ object Defaults {
     const val PREF_LAST_SHOWN_EMOJI_CATEGORY_PAGE_ID = 0
     // Grammar check (SuperApp addition)
     const val PREF_GRAMMAR_CHECK_ENABLED = true
-    const val PREF_GRAMMAR_FIX_CAPITALIZE_I = true
-    const val PREF_GRAMMAR_FIX_SENTENCE_CAPS = true
-    const val PREF_GRAMMAR_FIX_REPEATED_WORDS = true
+    const val PREF_GRAMMAR_FIX_CAPITALIZE_I = false // #1077: off by default (DefaultsMigration moves users still on the old true)
+    const val PREF_GRAMMAR_FIX_SENTENCE_CAPS = false // #1077: "capitalise first word", off by default
+    const val PREF_GRAMMAR_FIX_REPEATED_WORDS = false // #1077: off by default
     // "remote" by default: "local" only ever ran the 3 built-in rules, so the
     // LanguageTool server was never consulted unless the user found the setting.
     // Remote falls back to the local rules on any network failure (off-mesh).

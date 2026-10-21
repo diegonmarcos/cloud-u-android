@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -273,7 +274,10 @@ class EmojiPalettesView(context: Context, attrs: AttributeSet?, defStyle: Int) :
         if (ready) bumpCategory(EmojiCategory.ID_RECENTS)
     }
 
-    private fun bumpCategory(categoryId: Int) {
+    private fun bumpCategory(requested: Int) {
+        // #1077: pinned and recent are ONE page (the recents category): either change redraws it
+        val categoryId = if (requested == EmojiCategory.ID_PINNED) EmojiCategory.ID_RECENTS else requested
+        if (categoryId == EmojiCategory.ID_RECENTS) emojiCategory.invalidateMerged()
         categoryEpochs[categoryId] = (categoryEpochs[categoryId] ?: 0) + 1
     }
 
@@ -285,6 +289,11 @@ class EmojiPalettesView(context: Context, attrs: AttributeSet?, defStyle: Int) :
 
     fun startEmojiPalettes(keyVisualAttr: KeyVisualAttributes?, editorInfo: EditorInfo?, keyboardActionListener: KeyboardActionListener) {
         initialize()
+        // #1077: every opening starts on the merged Last used + Pinned page, at its top
+        settledCategoryId = EmojiMerge.FIRST_PAGE_CATEGORY
+        if (emojiCategory.currentCategoryId != EmojiMerge.FIRST_PAGE_CATEGORY) setCurrentCategoryId(EmojiMerge.FIRST_PAGE_CATEGORY, false)
+        listStates.clear()
+        cacheEpoch++
         // the sizes follow the settings, and change when the keyboard goes floating
         refreshGeometry()
 
@@ -398,10 +407,11 @@ class EmojiPalettesView(context: Context, attrs: AttributeSet?, defStyle: Int) :
             .height(with(density) { secondaryHeightPx.toDp() } + tabRowHeight)) {
             if (typeTabRowShown) TypeTabRow()
             if (mediaType == MediaType.EMOJI) {
+                SearchBox()
                 HorizontalPager(
                     pagerState,
                     Modifier.fillMaxWidth()
-                        .height(with(density) { emojiLayout.emojiKeyboardHeight.toDp() })
+                        .height(with(density) { emojiLayout.emojiKeyboardHeight.toDp() } - SEARCH_ROW_HEIGHT)
                         .padding(start = with(density) { sideLeftPx.toDp() }, end = with(density) { sideRightPx.toDp() }),
                     beyondViewportPageCount = 1,
                     key = { categories[it].mCategoryId },
@@ -419,6 +429,25 @@ class EmojiPalettesView(context: Context, attrs: AttributeSet?, defStyle: Int) :
                 factory = { (bottomRow.parent as? ViewGroup)?.removeView(bottomRow); bottomRow },
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+    }
+
+    /**
+     * #1077: the search box of the panel. Typing needs the letter keys, so a tap opens the keyboard with the search bar
+     * (the existing EMOJI_SEARCH flow), whose results come from the bundled emoji dictionary: names and keywords, offline.
+     */
+    @Composable
+    private fun SearchBox() {
+        val textColor = Color(colors.get(ColorType.EMOJI_KEY_TEXT))
+        Row(
+            Modifier.fillMaxWidth().height(SEARCH_ROW_HEIGHT).padding(horizontal = 8.dp, vertical = 3.dp)
+                .background(Color(colors.get(ColorType.STRIP_BACKGROUND)), RoundedCornerShape(8.dp))
+                .clickable {
+                    keyboardActionListener.onCodeInput(KeyCode.EMOJI_SEARCH, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+                }.padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("\uD83D\uDD0D  " + stringResource(R.string.emoji_search_hint), color = textColor.copy(alpha = 0.6f), fontSize = 14.sp, maxLines = 1)
         }
     }
 
@@ -456,7 +485,7 @@ class EmojiPalettesView(context: Context, attrs: AttributeSet?, defStyle: Int) :
         LazyColumn(Modifier.fillMaxSize(), state = listState) {
             items(pageCount) { index ->
                 val keyboard = remember(epoch, index) { emojiCategory.getKeyboardFromAdapterPosition(categoryId, index) }
-                if (keyboard != null) EmojiKeyGrid(keyboard, this@EmojiPalettesView, popups, epoch)
+                if (keyboard != null) EmojiKeyGrid(keyboard, this@EmojiPalettesView, popups, epoch, pinOnLongPress = EmojiMerge.pinsOnLongPress(categoryId))
             }
         }
     }
@@ -493,6 +522,7 @@ class EmojiPalettesView(context: Context, attrs: AttributeSet?, defStyle: Int) :
 
     companion object {
         private val TYPE_TAB_ROW_HEIGHT = 40.dp
+        private val SEARCH_ROW_HEIGHT = 36.dp
         private var sDictionaryFacilitator: SingleDictionaryFacilitator? = null
 
         @JvmStatic

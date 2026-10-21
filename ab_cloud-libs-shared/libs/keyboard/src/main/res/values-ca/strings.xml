@@ -167,7 +167,6 @@
     <string name="one_handed" tools:keep="@string/one_handed">Mode d\'una sola mà</string>
     <string name="full_left" tools:keep="@string/full_left">Tot a l\'esquerra</string>
     <string name="full_right" tools:keep="@string/full_right">Tot a la dreta</string>
-    <string name="second_row_toolbar_keys">Seleccioneu les tecles de la barra d\'eines fixades</string>
     <string name="emoji" tools:keep="@string/emoji">Emojis</string>
     <string name="prefs_space_bar_text">Text personalitzat a la barra espaiadora</string>
     <string name="customize_currencies">Personalitza divises</string>
@@ -189,7 +188,6 @@
     <string name="replace_dictionary_message">Realment substituir el diccionari afegit per l\'usuari «%1$s»?\n\nDiccionari actual:\n%2$s\n\nNou diccionari:\n%3$s</string>
     <string name="replace_dictionary">Substitueix diccionari</string>
     <string name="remove_dictionary_message">Eliminar realment el diccionari afegit per l\'usuari «%s»?</string>
-    <string name="clipboard_toolbar_keys">Selecciona les tecles de la barra d\'eines del porta-retalls</string>
     <string name="close_history" tools:keep="@string/close_history">Tanca l\'historial del porta-retalls</string>
     <string name="layout_symbols_arabic" tools:keep="@string/layout_symbols_arabic">Símbols (Àrab)</string>
     <string name="layout_symbols" tools:keep="@string/layout_symbols">Símbols</string>
@@ -250,7 +248,6 @@
     <string name="load_gesture_library_button_delete">Suprimir la biblioteca</string>
     <string name="checksum_mismatch_message">Fitxer de biblioteca desconegut. Segur que l\'heu obtingut d\'una font de confiança i que és per a «%s»?</string>
     <string name="popup_keys_symbols" tools:keep="@string/popup_keys_symbols">Símbols</string>
-    <string name="toolbar_keys">Selecciona les tecles de la barra d\'eines</string>
     <string name="clipboard" tools:keep="@string/clipboard">Porta-retalls</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">Esborra el porta-retalls</string>
     <string name="voice" tools:keep="@string/voice">Entrada de veu</string>

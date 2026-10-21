@@ -215,7 +215,9 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_GRAMMAR_FIX_CAPITALIZE_I = "grammar_fix_capitalize_i";
     public static final String PREF_GRAMMAR_FIX_SENTENCE_CAPS = "grammar_fix_sentence_caps";
     public static final String PREF_GRAMMAR_FIX_REPEATED_WORDS = "grammar_fix_repeated_words";
-    public static final String PREF_GRAMMAR_MODE = "grammar_mode"; // "off"|"local"|"remote"
+    public static final String PREF_GRAMMAR_MODE = "grammar_mode"; // the ENGINE: "off"|"local"|"remote"|"ai" (label: Grammar engine)
+    public static final String PREF_GRAMMAR_CHECK_MODE = "grammar_check_mode"; // #1077 "auto_correct"|"highlight"|"off", see GrammarMode
+    public static final String PREF_DEFAULTS_REVISION = "defaults_revision"; // #1077 DefaultsMigration
     public static final String PREF_GRAMMAR_REMOTE_URL = "grammar_remote_url";
     public static final String PREF_GRAMMAR_PT_VARIANT = "grammar_pt_variant"; // "pt-PT"|"pt-BR" for a bare "pt" subtype
     public static final String PREF_GRAMMAR_NGRAM_URL = "grammar_ngram_url"; // placeholder for future n-gram API
@@ -363,8 +365,13 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     }
 
     public void toggleAutoCorrect() {
-        final boolean oldValue = mPrefs.getBoolean(PREF_AUTO_CORRECTION, Defaults.PREF_AUTO_CORRECTION);
-        mPrefs.edit().putBoolean(Settings.PREF_AUTO_CORRECTION, !oldValue).apply();
+        // #1077: the mode is the one switch; the old key code flips between Auto Correct and Highlight.
+        GrammarMode.write(mPrefs, GrammarMode.read(mPrefs) == GrammarMode.AUTO_CORRECT ? GrammarMode.HIGHLIGHT : GrammarMode.AUTO_CORRECT);
+    }
+
+    /** #1077: the toolbar's Grammar mode icon: Highlight -> Auto Correct -> Off -> Highlight. */
+    public void cycleGrammarMode() {
+        GrammarMode.write(mPrefs, GrammarMode.read(mPrefs).next());
     }
 
     public static boolean readGestureDynamicPreviewEnabled(final SharedPreferences prefs) {

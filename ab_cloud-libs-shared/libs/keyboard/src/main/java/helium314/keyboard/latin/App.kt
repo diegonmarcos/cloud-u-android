@@ -12,6 +12,8 @@ import helium314.keyboard.latin.utils.LayoutUtilsCustom
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.prefs
+import helium314.keyboard.latin.settings.DefaultsMigration
+import helium314.keyboard.latin.utils.toolbarLayoutRevisionPending
 import helium314.keyboard.latin.utils.upgradeToolbarPrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +42,10 @@ class App : Application() {
 
         RichInputMethodManager.init(this)
         checkVersionUpgrade(this)
-        if (BuildConfig.DEBUG) // do this on every debug apk start because we may work on adding a new toolbar key
+        // #1077: both run at every start, not only when the version code moves (the keyboard's version code is a constant):
+        // each is a no-op once its revision is stored.
+        DefaultsMigration.apply(prefs())
+        if (BuildConfig.DEBUG || toolbarLayoutRevisionPending(prefs())) // debug: every start, we may work on adding a new toolbar key
             upgradeToolbarPrefs(prefs())
         transferOldPinnedClips(this) // todo: remove in a few months, maybe end 2026
         app = this

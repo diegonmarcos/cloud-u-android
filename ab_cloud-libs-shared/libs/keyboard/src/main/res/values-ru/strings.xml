@@ -220,7 +220,6 @@
     <string name="hint_source">Выберите источник подсказки</string>
     <string name="button_select_language">Выберите язык</string>
     <string name="day_or_night_image">Установить изображение для дневного или ночного режима?</string>
-    <string name="toolbar_keys">Выбрать клавиши панели инструментов</string>
     <string name="theme_name_ocean" tools:keep="@string/theme_name_ocean">Океан</string>
     <string name="show_popup_hints_summary">Показывать подсказки, если долгое нажатие на клавишу вызывает дополнительные функции</string>
     <string name="theme_name_sand" tools:keep="@string/theme_name_sand">Песок</string>
@@ -294,7 +293,6 @@
     <string name="subtype_generic_student">%s (Студенческая)</string>
     <string name="language_switch_key_behavior">Действие клавиши смены языка</string>
     <string name="emoji" tools:keep="@string/emoji">Эмодзи</string>
-    <string name="second_row_toolbar_keys">Выбрать закреплённые клавиши панели инструментов</string>
     <string name="quick_pin_toolbar_keys_summary">При этом отключатся остальные функции долгого нажатия для незакреплённых клавиш панели</string>
     <string name="quick_pin_toolbar_keys">Закреплять клавиши панели инструментов при долгом нажатии</string>
     <string name="toast_msg_clipboard_copy">Контент скопирован</string>
@@ -303,7 +301,6 @@
     <string name="center_suggestion_text_to_enter">Всегда использовать среднюю подсказку</string>
     <string name="center_suggestion_text_to_enter_summary">При нажатии пробела или знака препинания будет выбран средний вариант подсказки</string>
     <string name="close_history" tools:keep="@string/close_history">Закрыть историю буфера обмена</string>
-    <string name="clipboard_toolbar_keys">Выбрать клавиши панели буфера обмена</string>
     <string name="subtype_generic_extended">%s (Расширенная)</string>
     <string name="auto_hide_toolbar_summary">Скрывать панель инструментов при появлении подсказок</string>
     <string name="settings_screen_toolbar">Панель инструментов</string>

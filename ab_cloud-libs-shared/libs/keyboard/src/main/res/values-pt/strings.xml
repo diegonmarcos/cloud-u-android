@@ -229,7 +229,6 @@
     <string name="word_left" tools:keep="@string/word_left">Palavra à esquerda</string>
     <string name="toolbar_mode_hidden">Escondido</string>
     <string name="toolbar_hiding_global">Esconder a área de transferência e barras de ferramentas de emoji também</string>
-    <string name="toolbar_keys">Selecionar teclas da barra de ferramentas</string>
     <string name="voice" tools:keep="@string/voice">Entrada de voz</string>
     <string name="toolbar_mode_toolbar_keys">Só teclas da barra de ferramentas</string>
     <string name="toolbar_mode_suggestion_strip">Só sugestões</string>
@@ -305,9 +304,7 @@
     <string name="no_dictionary_dont_show_again_button">Não mostrar novamente</string>
     <string name="available_dictionary_experimental">%s (experimental)</string>
     <string name="replace_dictionary_message">Substituir o dicionário \"%1$s\" adicionado pelo utilizador?\n\nDicionário atual:\n%2$s\n\nNovo dicionário:\n%3$s</string>
-    <string name="clipboard_toolbar_keys">Selecionar teclas da barra de ferramentas da área de transferência</string>
     <string name="remove_redundant_popups">Remover pop-ups redundantes</string>
-    <string name="second_row_toolbar_keys">Selecionar teclas afixadas da barra de ferramentas</string>
     <string name="quick_pin_toolbar_keys">Fixar tecla da barra de ferramentas ao pressionar</string>
     <string name="quick_pin_toolbar_keys_summary">Isto irá desativar as outras ações ao pressionar para teclas da barra de ferramentas que não estão afixadas</string>
     <string name="show_popup_hints">Mostrar dicas funcionais</string>

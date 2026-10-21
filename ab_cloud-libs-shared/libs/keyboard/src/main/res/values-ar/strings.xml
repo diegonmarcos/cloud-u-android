@@ -248,7 +248,6 @@
     <string name="language_and_layouts_title">اللغات والتخطيطات</string>
     <string name="hint_source">حدد مصدر التلميح</string>
     <string name="popup_keys_layout" tools:keep="@string/popup_keys_layout">تخطيط</string>
-    <string name="toolbar_keys">حدد مفاتيح شريط الأدوات</string>
     <string name="full_left" tools:keep="@string/full_left">اليسار الكامل</string>
     <string name="full_right" tools:keep="@string/full_right">اليمين الكامل</string>
     <string name="show_popup_hints_summary">أظهِر تلميحات إذا كان الضغط لفترة طويلة على المفتاح يؤدي إلى تشغيل وظائف إضافية</string>
@@ -302,7 +301,6 @@
     <string name="center_suggestion_text_to_enter">استخدم دائمًا الاقتراح الأوسط</string>
     <string name="center_suggestion_text_to_enter_summary">عند الضغط على مسافة أو علامات الترقيم، سيتم إدخال الاقتراح الأوسط</string>
     <string name="close_history" tools:keep="@string/close_history">أغلِق سجل الحافظة</string>
-    <string name="clipboard_toolbar_keys">حدد مفاتيح شريط أدوات الحافظة</string>
     <string name="subtype_generic_extended">%s (ممتدة)</string>
     <string name="subtype_mns">مانسي</string>
     <string name="more_colors">أظهِر المزيد من الالوان</string>
@@ -312,7 +310,6 @@
     <string name="layout_functional_keys_symbols" tools:keep="@string/layout_functional_keys_symbols">المفاتيح الوظيفية (الرموز)</string>
     <string name="quick_pin_toolbar_keys">تثبيت مفتاح شريط الأدوات عند الضغط لفترة طويلة</string>
     <string name="quick_pin_toolbar_keys_summary">سيؤدي هذا إلى تعطيل إجراءات الضغط لفترة طويلة الأخرى لمفاتيح شريط الأدوات غير المثبتة</string>
-    <string name="second_row_toolbar_keys">حدد مفاتيح شريط الأدوات المثبتة</string>
     <string name="toast_msg_clipboard_copy">نُسخ المحتوى</string>
     <string name="language_switch_key_behavior">سلوك مفتاح تبديل اللغة</string>
     <string name="auto_show_toolbar">أظهِر شريط الأدوات تلقائيًا</string>

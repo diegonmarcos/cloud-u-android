@@ -30,19 +30,20 @@ absent() { grep -q -- "$2" "$1" && bad "$3 ($1)" || ok "$3"; }
 
 echo "== keyboard toolbar paging: eleven icons on a page, Vault on its own =="
 
-# ── T1 one gap per key ───────────────────────────────────────────────────────
-# The row indexes ToolbarPaging.gaps by key; a single gap value applied to every key would be
-# the shared-params bug again.
-has "$SV" 'ToolbarPaging.gaps(keys, toolbarKeysOnOwnPage, iconPx, page)' "T1 the gaps come from ToolbarPaging.gaps"
-has "$SV" 'gaps\[i\].toDp()' "T1 each key is given ITS OWN gap"
+# ── T1 one gap and one width per key ─────────────────────────────────────────
+# #1077: the row's layout comes from ToolbarPaging.layout (icons per page = floor(width / cell), the cell from the
+# scale); a single gap value applied to every key would be the shared-params bug again.
+has "$SV" 'ToolbarPaging.layout(keys, toolbarKeysOnOwnPage, viewport, baseCellPx, scale)' "T1 the layout comes from ToolbarPaging.layout"
+has "$SV" 'layout.gapBefore\[i\]' "T1 each key is given ITS OWN gap"
+has "$SV" 'layout.keyWidth\[i\]' "T1 and its own width, so a page is exactly one screen"
 absent "$SV" 'gaps.max()' "T1 no single shared gap for the whole row"
 absent "$SV" 'secondRowKeys.add(original)' "T1 the second-row copy does not share the original key's icon"
 
 # ── T2 one writer of the page-start gap ──────────────────────────────────────
-n=$(grep -c '\] = gapForOwnPage(' "$PV" "$SV" | awk -F: '{s+=$2} END {print s+0}')
+n=$(grep -c '\] = gapSlotsForOwnPage(' "$PV" "$SV" | awk -F: '{s+=$2} END {print s+0}')
 [ "$n" = 1 ] && ok "T2 exactly one page-start gap writer" \
              || bad "T2 $n page-start gap writers on toolbar keys — gaps from two places cannot converge"
-has "$PV" 'gaps\[i\] = gapForOwnPage(x, page)' "T2 and it is the own-page alignment"
+has "$PV" 'gaps\[i\] = gapSlotsForOwnPage(slot, perPage)' "T2 and it is the own-page alignment"
 
 # ── T3 the arithmetic, against the shipped key width and default row ─────────
 if python3 - "$DIM" "$TU" <<'EOF'
@@ -54,55 +55,35 @@ row = re.search(r'val default = listOf\((.*?)\n    \)', tu, re.S).group(1)
 keys = [k for k in re.findall(r'\b([A-Z][A-Z_]+)\b', re.sub(r'//[^\n]*', '', row))]
 own_page = set(re.findall(r'ToolbarKey\.([A-Z_]+)', re.search(r'toolbarKeysOnOwnPage = setOf\(([^)]*)\)', tu).group(1)))
 
-# A 411dp portrait viewport: 1080px at the phone's 2.625 density, and the whole width,
-# because the two-row strip has no expand key.
-VIEWPORT = 411
-per_page = VIEWPORT // key_dp                      # ToolbarPaging.pageWidth
-page = per_page * key_dp
-assert per_page == 11, f'{key_dp}dp keys give {per_page} per page, the design is 11'
+def slot_start(slot, per, page):
+    return (slot // per) * page + (slot % per) * page // per
 
-# Lay the row out the way the strip does, with each key holding its own gap.
-def layout(margins):
-    left, lefts = 0, []
+def layout(viewport, base, scale):
+    cell = max(1, int(base * min(max(scale, 0.85), 1.3) + 0.5))
+    per = max(1, viewport // cell)
+    slot, starts, widths = 0, [], []
     for k in keys:
-        left += margins.get(k, 0)
-        lefts.append(left)
-        left += key_dp
-    return lefts
+        if k in own_page: slot += (per - slot % per) % per
+        starts.append(slot_start(slot, per, viewport))
+        widths.append(slot_start(slot + 1, per, viewport) - starts[-1])
+        slot += 1
+    return per, starts, widths
 
-margins, lefts = {}, None
-for _ in range(4):
-    lefts = layout(margins)
-    changed = False
-    for k, left in zip(keys, lefts):
-        if k not in own_page: continue
-        gap = (page - (left - margins.get(k, 0)) % page) % page
-        if margins.get(k, 0) != gap: margins[k], changed = gap, True
-    if not changed: break
-assert not changed, 'the own-page margin never settled — a second pass still moved it'
-
+# A 1188px viewport at 3 px/dp is 396dp: 11 cells of 36dp. At every scale the keys sit inside one page.
+for scale in (0.85, 1.0, 1.15, 1.3):
+    per, starts, widths = layout(1188, key_dp * 3, scale)
+    assert per == 1188 // max(1, int(key_dp * 3 * scale + 0.5)), f'icons per page at scale {scale}'
+    for k, st, w in zip(keys, starts, widths):
+        assert st // 1188 == (st + w - 1) // 1188, f'{k} straddles a page at scale {scale}'
+per, starts, widths = layout(1188, key_dp * 3, 1.0)
 pages = {}
-for k, left in zip(keys, lefts): pages.setdefault(left // page, []).append(k)
+for k, st in zip(keys, starts): pages.setdefault(st // 1188, []).append(k)
 counts = [len(pages[p]) for p in sorted(pages)]
-assert counts == [11, 10, 1], f'pages hold {counts}, the design is 11 / 10 / Vault alone'
+assert per == 11 and counts == [11, 10, 1], f'pages hold {counts}, the design is 11 / 10 / Vault alone'
 assert pages[max(pages)] == ['VAULT'], f'page 3 holds {pages[max(pages)]}'
-
-# And the same row with ONE shared params object, which is what shipped: the margin set for
-# Vault lands on every key, and each pass adds another key width to it, so the row loses
-# icons every time it is laid out and never settles. This is the state T1 forbids.
-shared, seen = 0, []
-for _ in range(3):
-    left = 0
-    for k in keys:
-        left += shared
-        if k in own_page: start = left - shared
-        left += key_dp
-    shared = (page - start % page) % page
-    seen.append(page // (key_dp + shared))
-assert seen[0] > seen[-1], 'the shared-params row should decay, so this check proves nothing'
-print(f'{key_dp}dp keys, {per_page}/page, split {counts}; shared params would show {seen}')
+print(f'{key_dp}dp keys, {per}/page, split {counts}')
 EOF
-then ok "T3 the page arithmetic gives 11 / 10 / Vault"; else bad "T3 page arithmetic"; fi
+then ok "T3 the page arithmetic gives 11 / 10 / Vault and holds at every scale"; else bad "T3 page arithmetic"; fi
 
 # ── T4 Vault's place in the row ──────────────────────────────────────────────
 has "$TU" 'toolbarKeysOnOwnPage = setOf(ToolbarKey.VAULT)' "T4 Vault is the own-page key"

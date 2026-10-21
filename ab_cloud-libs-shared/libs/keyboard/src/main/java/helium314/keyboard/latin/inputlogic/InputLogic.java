@@ -749,10 +749,18 @@ public final class InputLogic {
                 mLatinIME.toggleTranslateBar();
                 break;
             case KeyCode.GRAMMAR:
-                // SuperApp addition (patch 0002): TAP → run the whole-field grammar
+                // SuperApp addition (patch 0002); #1077: now the Grammar mode icon's LONG-PRESS → run the whole-field grammar
                 // fixer across text before the cursor (capitalize "i", sentence caps,
                 // dedupe repeated words).  Respects the per-user pref toggles.
                 helium314.keyboard.latin.GrammarChecker.checkWholeField(mLatinIME, mConnection);
+                break;
+            case KeyCode.GRAMMAR_MODE:
+                // #1077: TAP on the Grammar mode icon -> Highlight / Auto Correct / Off. The icon redraws
+                // from the pref change; a toast names the new mode.
+                mLatinIME.cycleGrammarMode();
+                break;
+            case KeyCode.AUTOCOMPLETE:
+                // #1077: opening the list is KeyboardState's job (it is the clipboard panel's second source).
                 break;
             case KeyCode.ENHANCE:
                 // SuperApp addition: LONG-PRESS → Text Enhancements without the bar. Sends

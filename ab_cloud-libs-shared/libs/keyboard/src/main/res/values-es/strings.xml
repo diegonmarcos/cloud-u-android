@@ -235,7 +235,6 @@
     <string name="layout_symbols_shifted" tools:keep="@string/layout_symbols_shifted">Más símbolos</string>
     <string name="layout_number" tools:keep="@string/layout_number">Números</string>
     <string name="quick_pin_toolbar_keys_summary">Esto deshabilita otras acciones de pulsación prolongada para teclas de la barra de herramientas que no están fijadas</string>
-    <string name="second_row_toolbar_keys">Seleccionar teclas fijas de la barra de herramientas</string>
     <string name="quick_pin_toolbar_keys">Fijar tecla de la barra de herramientas con pulsación prolongada</string>
     <string name="layout_functional_keys" tools:keep="@string/layout_functional_keys">Teclas funcionales</string>
     <string name="settings_screen_appearance">Apariencia</string>
@@ -244,7 +243,6 @@
     <string name="auto_show_toolbar">Mostrar barra de herramientas automaticamente</string>
     <string name="language_switch_key_behavior">Comportamiento de la tecla de cambio de idioma</string>
     <string name="show_popup_keys_normal">Mostrar variantes definidas en los idiomas del teclado</string>
-    <string name="toolbar_keys">Seleccionar teclas de la barra de herramientas</string>
     <string name="split_spacer_scale">Distancia de separación</string>
     <string name="language_switch_key_switch_both">Cambiar ambos</string>
     <string name="prefs_narrow_key_gaps">Espacio estrecho entre teclas</string>
@@ -266,7 +264,6 @@
     <string name="var_toolbar_direction">Dirección variable de la barra de herramientas</string>
     <string name="subtype_xdq">Kaitag</string>
     <string name="close_history" tools:keep="@string/close_history">Cerrar historial del portapapeles</string>
-    <string name="clipboard_toolbar_keys">Seleccionar teclas de la barra de herramientas del portapapeles</string>
     <string name="show_popup_hints">Mostrar símbolos funcionales</string>
     <string name="show_popup_hints_summary">Muestra símbolos si al mantener pulsada una tecla se activan funciones adicionales</string>
     <string name="var_toolbar_direction_summary">Invertir dirección cuando un subtipo de teclado Derecha-a-Izquierda está seleccionado</string>
@@ -657,7 +654,6 @@
     <string name="grammar_mode_local">Local</string>
     <string name="grammar_mode_off">Desactivado</string>
     <string name="grammar_mode_remote">Remoto</string>
-    <string name="grammar_mode_title">Modo de gramática</string>
     <string name="grammar_ngram_url_summary">Punto de acceso para la futura detección de pares confundibles por n-gramas (marcador de posición: aún no está activo)</string>
     <string name="grammar_ngram_url_title">Conexión con la API de n-gramas de gramática</string>
     <string name="grammar_pt_variant_br">Brasileño (pt-BR)</string>
@@ -681,7 +677,6 @@
     <string name="settings_screen_clipboard">Portapapeles</string>
     <string name="settings_screen_emoji">Emojis, GIF y pegatinas</string>
     <string name="settings_screen_enhance">Mejoras de texto</string>
-    <string name="settings_screen_grammar">Revisión gramatical</string>
     <string name="settings_screen_resume">Resumen de texto</string>
     <string name="settings_screen_translation">Traducción</string>
     <string name="settings_screen_voice_transcript">Transcripción de voz</string>

@@ -168,7 +168,6 @@
     <string name="popup_keys_language_priority" tools:keep="@string/popup_keys_language_priority">Bahasa (prioritas)</string>
     <string name="popup_keys_layout" tools:keep="@string/popup_keys_layout">Tata letak</string>
     <string name="popup_keys_symbols" tools:keep="@string/popup_keys_symbols">Simbol</string>
-    <string name="toolbar_keys">Pilih tombol pada bilah perkakas</string>
     <string name="clipboard" tools:keep="@string/clipboard">Papan klip</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">Hapus papan klip</string>
     <string name="voice" tools:keep="@string/voice">Masukkan suara</string>
@@ -324,7 +323,6 @@
     <string name="vibrate_in_dnd_mode">Bergetar dalam mode jangan ganggu</string>
     <string name="page_end" tools:keep="@string/page_end">Akhir halaman</string>
     <string name="word_left" tools:keep="@string/word_left">Kata tersisa</string>
-    <string name="clipboard_toolbar_keys">Pilih tombol bilah alat papan klip</string>
     <string name="quick_pin_toolbar_keys">Sematkan tombol bilah alat saat ditekan lama</string>
     <string name="quick_pin_toolbar_keys_summary">Ini akan menonaktifkan tindakan tekan lama lainnya untuk tombol bilah alat yang tidak disematkan</string>
     <string name="prefs_long_press_symbol_for_numpad">Tekan lama tombol simbol untuk papan nomor</string>
@@ -341,7 +339,6 @@
     <string name="auto_correct_shortcuts">Pintasan koreksi otomatis</string>
     <string name="auto_correct_shortcuts_summary">Saat diaktifkan, pintasan mungkin diperluas dengan koreksi otomatis</string>
     <string name="page_down" tools:keep="@string/page_down">Halaman bawah</string>
-    <string name="second_row_toolbar_keys">Pilih tombol bilah alat yang disematkan</string>
     <string name="page_up" tools:keep="@string/page_up">Halaman atas</string>
     <string name="word_right" tools:keep="@string/word_right">Kata yang tepat</string>
     <string name="custom_font">Atur font khusus dari file</string>

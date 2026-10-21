@@ -651,6 +651,8 @@ class KeyboardState(private val switchActions: SwitchActions) {
             KeyCode.ALPHA -> setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
             // Note: Printing clipboard content is handled in InputLogic.handleFunctionalEvent
             KeyCode.CLIPBOARD -> if (Settings.getValues().mClipboardHistoryEnabled) setClipboardKeyboard()
+            // #1077: the Autocomplete list is the clipboard panel's second source: ask for it, then open the panel
+            KeyCode.AUTOCOMPLETE -> { helium314.keyboard.keyboard.clipboard.AutocompletePanel.request(); setClipboardKeyboard() }
             KeyCode.NUMPAD -> toggleNumpad(false, autoCapsFlags, recapitalizeMode, false, true)
             KeyCode.SYMBOL -> setSymbolsKeyboard()
             KeyCode.TOGGLE_ONE_HANDED_MODE -> switchActions.setOneHandedModeEnabled(!Settings.getValues().mOneHandedModeEnabled)

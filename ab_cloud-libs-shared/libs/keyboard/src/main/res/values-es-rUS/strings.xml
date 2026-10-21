@@ -192,7 +192,6 @@
     <string name="popup_keys_language_priority" tools:keep="@string/popup_keys_language_priority">Lengua (prioridad)</string>
     <string name="popup_keys_layout" tools:keep="@string/popup_keys_layout">Diseño</string>
     <string name="popup_keys_symbols" tools:keep="@string/popup_keys_symbols">Símbolos</string>
-    <string name="toolbar_keys">Seleccionar teclas de la barra de herramientas</string>
     <string name="clipboard" tools:keep="@string/clipboard">Portapapeles</string>
     <string name="theme_name_user" tools:keep="@string/theme_name_user">Definido por el usuario</string>
     <string name="select_color_key">Color del texto de tecla</string>
@@ -302,7 +301,6 @@
     <string name="center_suggestion_text_to_enter">Utilizar siempre la sugerencia del centro</string>
     <string name="center_suggestion_text_to_enter_summary">Al presionar espacio o puntuación, se ingresará la sugerencia central</string>
     <string name="close_history" tools:keep="@string/close_history">Cerrar el historial del portapapeles</string>
-    <string name="clipboard_toolbar_keys">Seleccionar teclas de la barra de herramientas del portapapeles</string>
     <string name="subtype_generic_extended">%s (Extendido)</string>
     <string name="subtype_mns">Mansi</string>
     <string name="more_colors">Mostrar más colores</string>
@@ -310,7 +308,6 @@
     <string name="layout_functional_keys" tools:keep="@string/layout_functional_keys">Teclas funcionales</string>
     <string name="layout_functional_keys_symbols_shifted" tools:keep="@string/layout_functional_keys_symbols_shifted">Teclas funcionales (Más símbolos)</string>
     <string name="layout_functional_keys_symbols" tools:keep="@string/layout_functional_keys_symbols">Teclas funcionales (Símbolos)</string>
-    <string name="second_row_toolbar_keys">Seleccionar teclas ancladas en la barra de herramientas</string>
     <string name="quick_pin_toolbar_keys">Fijar la tecla en la barra de herramientas con una pulsación larga</string>
     <string name="quick_pin_toolbar_keys_summary">Esto desactivará otras acciones de pulsación larga para las teclas de la barra de herramientas que no estén ancladas</string>
     <string name="toast_msg_clipboard_copy">Contenido copiado</string>

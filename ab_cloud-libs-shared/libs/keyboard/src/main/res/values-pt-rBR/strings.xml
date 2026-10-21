@@ -198,7 +198,6 @@
     <string name="select_color_spacebar_background">Fundo da barra de espaço</string>
     <string name="hidden_features_summary">Mostrar funções que podem passar despercebido</string>
     <string name="switch_language">Alterar idioma</string>
-    <string name="toolbar_keys">Selecionar teclas da barra de ferramentas</string>
     <string name="full_left" tools:keep="@string/full_left">Inteiramente para a esquerda</string>
     <string name="full_right" tools:keep="@string/full_right">Inteiramente para a direita</string>
     <string name="left" tools:keep="@string/left">Esquerda</string>
@@ -301,10 +300,8 @@
     <string name="center_suggestion_text_to_enter">Sempre usar a sugestão do meio</string>
     <string name="center_suggestion_text_to_enter_summary">Ao pressionar espaço ou pontuação, a sugestão do meio será inserida</string>
     <string name="close_history" tools:keep="@string/close_history">Fechar histórico da área de transferência</string>
-    <string name="clipboard_toolbar_keys">Selecionar teclas da barra de ferramentas de área de transferência</string>
     <string name="subtype_generic_extended">%s (Extendido)</string>
     <string name="all_colors_warning">Essa configuração expõe todas as cores que são usadas internamente. A lista de cores pode mudar a qualquer momento. A cor padrão é derivada das cores normais, e os nomes não são traduzidos.</string>
-    <string name="second_row_toolbar_keys">Selecionar teclas fixadas da barra de ferramentas</string>
     <string name="gesture_fast_typing_cooldown_instant">Começar instantaneamente sempre</string>
     <string name="gesture_fast_typing_cooldown">Tempo de espera para digitação rápida</string>
     <string name="quick_pin_toolbar_keys">Fixar tecla da barra de ferramentas em toque longo</string>

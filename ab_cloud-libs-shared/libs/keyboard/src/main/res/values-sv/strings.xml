@@ -221,9 +221,7 @@
     <string name="popup_keys_number" tools:keep="@string/popup_keys_number">Sifferrad</string>
     <string name="popup_keys_symbols" tools:keep="@string/popup_keys_symbols">Symboler</string>
     <string name="popup_keys_layout" tools:keep="@string/popup_keys_layout">Layout</string>
-    <string name="toolbar_keys">Välj verktygsfältstangenter</string>
     <string name="close_history" tools:keep="@string/close_history">Stäng urklippshistorik</string>
-    <string name="clipboard_toolbar_keys">Välj verktygsfältstangenter för urklipp</string>
     <string name="show_popup_hints_summary">Visa tips om långtryck på en tangent aktiverar ytterligare funktionalitet</string>
     <string name="show_popup_hints">Visa funktionalitetstips</string>
     <string name="clipboard" tools:keep="@string/clipboard">Urklipp</string>
@@ -250,7 +248,6 @@
     <string name="word_left" tools:keep="@string/word_left">Ord vänster</string>
     <string name="auto_hide_toolbar">Dölj verktygsfält automatiskt</string>
     <string name="quick_pin_toolbar_keys_summary">Detta kommer att inaktivera andra långtryckningsåtgärder för verktygsfältstangenter som inte är fästa</string>
-    <string name="second_row_toolbar_keys">Välj fästa verktygsfältstangenter</string>
     <string name="quick_pin_toolbar_keys">Fäst verktygsfältstangent genom långtryckning</string>
     <string name="setup_step3_action">Konfigurera tangentbordet</string>
     <string name="page_down" tools:keep="@string/page_down">Sida ner</string>

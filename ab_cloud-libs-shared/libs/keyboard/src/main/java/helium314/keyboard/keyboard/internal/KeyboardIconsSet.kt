@@ -138,7 +138,6 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.ONE_HANDED -> R.drawable.sym_keyboard_start_onehanded_holo
                     ToolbarKey.FLOATING -> R.drawable.ic_drag_indicator
                     ToolbarKey.INCOGNITO -> R.drawable.sym_keyboard_incognito_holo
-                    ToolbarKey.AUTOCORRECT -> R.drawable.ic_autocorrect
                     ToolbarKey.CLEAR_CLIPBOARD -> R.drawable.sym_keyboard_clear_clipboard_holo
                     ToolbarKey.CLOSE_HISTORY -> R.drawable.ic_close
                     ToolbarKey.EMOJI -> R.drawable.sym_keyboard_smiley_holo
@@ -161,6 +160,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance      // SuperApp addition — Text Enhancements
                     ToolbarKey.LANGUAGE_SWITCH -> R.drawable.sym_keyboard_language_switch // cloud-keyboard: same globe drawable as NAME_LANGUAGE_SWITCH_KEY in this theme map
                     ToolbarKey.VAULT -> R.drawable.ic_toolbar_vault // cloud-keyboard: opens Cloud Vault
+                    ToolbarKey.AUTOCOMPLETE -> R.drawable.ic_toolbar_autocomplete // #1077
                 })
             }
         } }
@@ -206,7 +206,6 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.ONE_HANDED -> R.drawable.sym_keyboard_start_onehanded_lxx
                     ToolbarKey.FLOATING -> R.drawable.ic_drag_indicator
                     ToolbarKey.INCOGNITO -> R.drawable.sym_keyboard_incognito_lxx
-                    ToolbarKey.AUTOCORRECT -> R.drawable.ic_autocorrect
                     ToolbarKey.CLEAR_CLIPBOARD -> R.drawable.sym_keyboard_clear_clipboard_lxx
                     ToolbarKey.CLOSE_HISTORY -> R.drawable.ic_close
                     ToolbarKey.EMOJI -> R.drawable.sym_keyboard_smiley_lxx
@@ -229,6 +228,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance      // SuperApp addition — Text Enhancements
                     ToolbarKey.LANGUAGE_SWITCH -> R.drawable.sym_keyboard_language_switch_lxx // cloud-keyboard: same globe drawable as NAME_LANGUAGE_SWITCH_KEY in this theme map
                     ToolbarKey.VAULT -> R.drawable.ic_toolbar_vault // cloud-keyboard: opens Cloud Vault
+                    ToolbarKey.AUTOCOMPLETE -> R.drawable.ic_toolbar_autocomplete // #1077
                 })
             }
         } }
@@ -274,7 +274,6 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.ONE_HANDED -> R.drawable.sym_keyboard_start_onehanded_rounded
                     ToolbarKey.FLOATING -> R.drawable.ic_drag_indicator
                     ToolbarKey.INCOGNITO -> R.drawable.sym_keyboard_incognito_lxx
-                    ToolbarKey.AUTOCORRECT -> R.drawable.ic_autocorrect_rounded
                     ToolbarKey.CLEAR_CLIPBOARD -> R.drawable.sym_keyboard_clear_clipboard_rounded
                     ToolbarKey.CLOSE_HISTORY -> R.drawable.ic_close_rounded
                     ToolbarKey.EMOJI -> R.drawable.sym_keyboard_smiley_rounded
@@ -297,6 +296,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance      // SuperApp addition — Text Enhancements
                     ToolbarKey.LANGUAGE_SWITCH -> R.drawable.sym_keyboard_language_switch_lxx // cloud-keyboard: same globe drawable as NAME_LANGUAGE_SWITCH_KEY in this theme map
                     ToolbarKey.VAULT -> R.drawable.ic_toolbar_vault // cloud-keyboard: opens Cloud Vault
+                    ToolbarKey.AUTOCOMPLETE -> R.drawable.ic_toolbar_autocomplete // #1077
                 })
             }
         } }

@@ -275,7 +275,6 @@
     <string name="show_popup_keys_normal">কিবোর্ডের ভাষায় নির্ধারিত বিকল্প প্রদর্শন (ডিফল্ট)</string>
     <string name="language_and_layouts_title">ভাষা ও লেআউট</string>
     <string name="localized_number_row_summary">ল্যাটিন সংখ্যার চেয়ে স্থানীয় সংখ্যা প্রাধান্য দেবে</string>
-    <string name="toolbar_keys">টুলবার বোতাম নির্বাচন</string>
     <string name="full_right" tools:keep="@string/full_right">সম্পূর্ণ ডান</string>
     <string name="prefs_bottom_padding_scale">নিম্ন প্যাডিং স্কেল</string>
     <string name="message_add_custom_layout">সামঞ্জস্যপূর্ণ ফরম্যাটে ফাইল নির্বাচন করুন। %s ফরম্যাট সম্পর্কিত তথ্য রয়েছে।</string>
@@ -294,7 +293,6 @@
     <string name="prefs_language_swipe_distance">ভাষা পরিবর্তন অভিস্পর্শের দূরত্ব</string>
     <string name="subtype_generic_student">%s (শিক্ষার্থী)</string>
     <string name="language_switch_key_behavior">ভাষা পরিবর্তন বোতামের আচরণ</string>
-    <string name="second_row_toolbar_keys">পিন করে রাখা টুলবার বোতাম নির্বাচন</string>
     <string name="quick_pin_toolbar_keys">টুলবার বোতামে দীর্ঘ চাপ পিন করবে</string>
     <string name="toast_msg_clipboard_copy">আধেয় অনুলিপি করা হয়েছে</string>
     <string name="auto_show_toolbar_summary">ইনপুট শুরু হলে বা লেখা সিলেক্ট করা হলে টুলবার প্রদর্শিত হবে</string>
@@ -302,7 +300,6 @@
     <string name="auto_hide_toolbar_summary">পরামর্শ উপলব্ধ হলে টুলবার আড়াল হবে</string>
     <string name="auto_show_toolbar">টুলবার স্বয়ংক্রিয়ভাবে প্রদর্শন</string>
     <string name="close_history" tools:keep="@string/close_history">ক্লিপবোর্ড ইতিহাস বন্ধকরণ</string>
-    <string name="clipboard_toolbar_keys">ক্লিপবোর্ড টুলবার বোতাম নির্বাচন</string>
     <string name="subtype_generic_extended">%s (বর্ধিত)</string>
     <string name="emoji" tools:keep="@string/emoji">ইমোজি</string>
     <string name="settings_screen_toolbar">টুলবার</string>

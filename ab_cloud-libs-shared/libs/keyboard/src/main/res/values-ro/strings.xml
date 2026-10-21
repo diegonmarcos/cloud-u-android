@@ -176,7 +176,6 @@
     <string name="load_gesture_library_message">Vei avea nevoie de biblioteca pentru „%s”. Bibliotecile incompatibile se pot bloca atunci când utilizezi tastarea prin gesturi.
 \n
 \nAtenție: încărcarea codului extern poate reprezenta un risc de securitate. Utilizează doar o bibliotecă dintr-o sursă în care ai încredere.</string>
-    <string name="toolbar_keys">Selectează tastele barei de instrumente</string>
     <string name="show_popup_hints">Afișează sugestii funcționale</string>
     <string name="hint_source">Selectează sursa indicilor</string>
     <string name="prefs_long_press_keyboard_to_change_lang_summary">Apăsarea lungă a tastei spațiu va solicita meniul de selectare a metodei de introducere</string>
@@ -316,7 +315,6 @@
     <string name="gesture_floating_preview_static_summary">Afișează cuvântul sugerat când utilizezi gesturi</string>
     <string name="gesture_floating_preview_dynamic_summary">Mută previzualizarea în timpul unui gest</string>
     <string name="gesture_trail_fadeout_duration">Durata de viață a traseului gesturilor</string>
-    <string name="second_row_toolbar_keys">Selectează tastele fixate din bara de instrumente</string>
     <string name="layout_number_row" tools:keep="@string/layout_number_row">Rând de numere</string>
     <string name="subtype_generic_phonetic">%s (Fonetic)</string>
     <string name="subtype_dru">Dargwa (Urakhi)</string>
@@ -337,7 +335,6 @@
     <string name="page_down" tools:keep="@string/page_down">Pagină jos</string>
     <string name="quick_pin_toolbar_keys">Fixează tasta din bara de instrumente la apăsarea lungă</string>
     <string name="close_history" tools:keep="@string/close_history">Închide istoricul clipboardului</string>
-    <string name="clipboard_toolbar_keys">Selectează tastele barei de instrumente clipboard</string>
     <string name="switch_keyboard_after">Comutare la tastatura principală după…</string>
     <string name="after_emoji">Se selectează emoji în vizualizarea emoji</string>
     <string name="after_clip">Selectarea unei intrări din istoricul clipboardului</string>

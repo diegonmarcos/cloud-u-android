@@ -230,7 +230,6 @@
     <string name="toolbar_mode_suggestion_strip" tools:keep="@string/toolbar_mode_suggestion_strip">فقط پیشنهادها</string>
     <string name="toolbar_mode_hidden" tools:keep="@string/toolbar_mode_hidden">پنهان</string>
     <string name="toolbar_hiding_global">پنهان کردن نوار ابزارهای کلیپ‌بورد و ایموجی</string>
-    <string name="toolbar_keys">انتخاب کلیدهای نوار ابزار</string>
     <string name="clipboard" tools:keep="@string/clipboard">کلیپ‌بورد</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">پاک کردن کلیپ‌بورد</string>
     <string name="voice" tools:keep="@string/voice">ورودی صوتی</string>
@@ -252,8 +251,6 @@
     <string name="close_history" tools:keep="@string/close_history">بستن تاریخچه کلیپ‌بورد</string>
     <string name="emoji" tools:keep="@string/emoji">ایموجی</string>
     <string name="floating" tools:keep="@string/floating">صفحه‌کلید شناور</string>
-    <string name="clipboard_toolbar_keys">انتخاب کلیدهای نوار ابزار کلیپ‌بورد</string>
-    <string name="second_row_toolbar_keys">انتخاب کلیدهای سنجاق‌شده نوار ابزار</string>
     <string name="quick_pin_toolbar_keys">سنجاق کردن کلید نوار ابزار با لمس طولانی</string>
     <string name="quick_pin_toolbar_keys_summary">این کار سایر عملکردهای لمس طولانی را برای کلیدهای سنجاق‌نشده نوار ابزار غیرفعال می‌کند</string>
     <string name="show_popup_hints">نمایش راهنمای عملکردها</string>

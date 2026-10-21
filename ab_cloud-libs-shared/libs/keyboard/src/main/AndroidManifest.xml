@@ -94,6 +94,12 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
             </intent-filter>
         </activity>
 
+        <!-- #1077: the screen-lock check before the Autocomplete list shows or pastes a sensitive field. Not exported. -->
+        <activity android:name="helium314.keyboard.latin.autofill.AutocompleteUnlockActivity"
+                android:theme="@android:style/Theme.Translucent.NoTitleBar"
+                android:excludeFromRecents="true"
+                android:exported="false" />
+
         <activity android:name=".spellcheck.SpellCheckerSettingsActivity"
                 android:theme="@style/platformActivityTheme"
                 android:label="@string/spell_checker_service_name"

@@ -192,7 +192,6 @@
     <string name="theme_name_user" tools:keep="@string/theme_name_user">Aangepast</string>
     <string name="show_horizontal_space_swipe">Horizontaal veeggebaar over spatiebalk</string>
     <string name="close_history" tools:keep="@string/close_history">Klembordgeschiedenis sluiten</string>
-    <string name="clipboard_toolbar_keys">Klembord-werkbalktoetsen kiezen</string>
     <string name="prefs_long_press_symbol_for_numpad">Druk lang op de toets symbolen voor het numpad</string>
     <string name="button_load_custom">Bestand laden</string>
     <string name="file_read_error">Kan bestand niet lezen</string>
@@ -214,7 +213,6 @@
     <string name="clipboard" tools:keep="@string/clipboard">Klembord</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">Klembord wissen</string>
     <string name="select_word" tools:keep="@string/select_word">Woord selecteren</string>
-    <string name="toolbar_keys">Werkbalktoetsen kiezen</string>
     <string name="full_left" tools:keep="@string/full_left">Geheel links</string>
     <string name="full_right" tools:keep="@string/full_right">Geheel rechts</string>
     <string name="left" tools:keep="@string/left">Links</string>
@@ -345,7 +343,6 @@
     <string name="layout_functional_keys" tools:keep="@string/layout_functional_keys">Functietoetsen</string>
     <string name="layout_functional_keys_symbols" tools:keep="@string/layout_functional_keys_symbols">Functietoetsen (symbolen)</string>
     <string name="layout_functional_keys_symbols_shifted" tools:keep="@string/layout_functional_keys_symbols_shifted">Functietoetsen (meer symbolen)</string>
-    <string name="second_row_toolbar_keys">Vastgezette werkbalktoetsen selecteren</string>
     <string name="quick_pin_toolbar_keys">Werkbalktoets vastzetten bij lang indrukken</string>
     <string name="quick_pin_toolbar_keys_summary">Hiermee worden andere lang indrukkenacties uitgeschakeld voor werkbalktoetsen die niet zijn vastgezet</string>
     <string name="settings_screen_toolbar">Werkbalk</string>
