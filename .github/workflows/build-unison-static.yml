@@ -47,7 +47,7 @@ jobs:
             curl -fsSL "https://github.com/bcpierce00/unison/archive/refs/tags/v${VER}.tar.gz" -o src.tgz
             tar xzf src.tgz
             cd "unison-${VER}"
-            LDFLAGS=-static make UISTYLE=text
+            LDFLAGS=-static make
             strip src/unison
             ./src/unison -version
             ./src/unison -version | grep -q "unison version ${VER} (ocaml ${OCAML})"
