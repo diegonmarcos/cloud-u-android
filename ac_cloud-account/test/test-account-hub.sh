@@ -2,10 +2,11 @@
 # test-account-hub: Cloud Account's information architecture (a0_docs/eng-specs/cloud-account-ia.md), statically.
 #
 # Holds that:
-#  1. build.json::ui.bottom_nav is profiles, secrets, home, configs (no Setup island), default home; the three
-#     strips (Profiles > Autofill / Phone, Configs > Setup) are declared as a page's own pages, every section
-#     declares its background, and MainActivity draws a second PageTabs for them through NavDecl.stripSurface;
-#  2. every old (section, page) id - the redesign's five islands AND the 2026-10-13 four - has its place in
+#  1. build.json::ui.bottom_nav is personal, configs, data, connect, activity (#1081), default personal; the
+#     strips (Autocomplete, Android, Secrets, Backups, Devices, Status, Authentication providers) are declared as
+#     a page's own pages, every section declares its background, and MainActivity draws a second PageTabs for them
+#     through NavDecl.stripSurface;
+#  2. every old (section, page) id - the five islands, the four of 2026-10-13 and of 2026-10-14 - has its place in
 #     HubNav.LEGACY, every LEGACY target is a declared leaf, and MainActivity's go() and OPEN-intent deep links
 #     resolve through it;
 #  3. the hub pages draw a secret value only through RevealGate (a reveal / copy asks device auth first), the
@@ -38,14 +39,17 @@ def ok(c, good, bad):
     if not c: fails += 1
 
 ui = json.loads(rd(f"{A}/build.json"))["ui"]
-ok(ui["bottom_nav"] == ["profiles", "secrets", "home", "configs"] and ui["default_section"] == "home",
-   "island: Profiles, Secrets, Home, Configs; default Home", f"island is {ui['bottom_nav']}")
+ok(ui["bottom_nav"] == ["personal", "configs", "data", "connect", "activity"] and ui["default_section"] == "personal",
+   "bottom nav: Personal Info, Configs, Data, Connect, Activity; default Personal Info", f"bottom nav is {ui['bottom_nav']}")
 ok(all(s["id"] != "setup" for s in ui["sections"]), "no Setup island", "a Setup island is declared")
 
 nav = code(rd(f"{K}/hub/HubNav.kt"))
-old = {"account": ["", "profile", "connect", "autofill", "sites", "snippets", "import"], "profiles": ["", "devices", "working", "diff"],
-       "setup": ["", "runbook", "apps", "configs", "perms", "adb-shell"], "secrets": ["", "connections", "secrets", "grants"], "settings": [""],
-       "home": ["", "home", "account", "connect", "import"], "configs": ["", "settings", "runbook", "apps", "configs", "perms", "adb-shell"]}
+old = {"account": ["", "profile", "connect", "autofill", "sites", "snippets", "import"],
+       "profiles": ["", "apps", "autofill", "personal", "sites", "snippets", "phone", "devices", "working", "diff"],
+       "setup": ["", "runbook", "apps", "configs", "perms", "adb-shell"],
+       "secrets": ["", "providers", "connections", "bundle", "secrets", "grants"], "settings": [""],
+       "home": ["", "home", "account", "connections", "connect", "import"],
+       "configs": ["", "settings", "setup", "runbook", "apps", "configs", "perms", "adb-shell"]}
 def leaves(pages):
     for p in pages:
         if p.get("pages"): yield from leaves(p["pages"])
@@ -53,12 +57,13 @@ def leaves(pages):
 pages = {s["id"]: list(leaves(s["pages"])) for s in ui["sections"]}
 legacy = dict(((a, b), (c, d)) for a, b, c, d in re.findall(r'\("([\w-]+)" to "([\w-]*)"\) to \("([\w-]+)" to "([\w-]*)"\)', nav))
 missing = [f"{s}/{p}" for s, ps in old.items() for p in ps if (s, p) not in legacy]
-ok(not missing, "every old page (five islands + 2026-10-13 four) has a place in HubNav.LEGACY", f"no place for {missing}")
+ok(not missing, "every old page (all earlier layouts) has a place in HubNav.LEGACY", f"no place for {missing}")
 dead = [f"{a}/{b}->{c}/{d}" for (a, b), (c, d) in legacy.items() if c not in pages or (d and d not in pages[c])]
 ok(not dead, "every LEGACY target is a declared leaf page", f"LEGACY points at undeclared or container pages {dead}")
 ok(nav.index("LEGACY[section to page.orEmpty()]") < nav.index("if (section in ORDER)"), "resolve() translates a renamed page before passing a current section through", "a renamed page inside a current section passes through untranslated")
 strips = {s["id"]: [p["id"] for p in s["pages"] if p.get("pages")] for s in ui["sections"]}
-ok(strips == {"home": [], "profiles": ["autofill", "phone"], "secrets": [], "configs": ["setup"]}, "the second strips are Profiles > Autofill / Phone and Configs > Setup", f"second strips are {strips}")
+ok(strips == {"personal": ["autocomplete"], "configs": ["android"], "data": ["secrets", "backups", "devices"], "connect": ["status", "auth"], "activity": []},
+   "the second strips are Personal > Autocomplete, Configs > Android, Data > Secrets / Backups / Devices, Connect > Status / Authentication providers", f"second strips are {strips}")
 ok(all(s.get("background") in ("dark", "light", "theme") for s in ui["sections"]), "every section declares its strip background", "a section leaves its background undeclared")
 ma = code(rd(f"{K}/MainActivity.kt"))
 ok("HubNav.resolve(s, p)" in ma, "MainActivity's go() resolves old ids", "go() does not go through HubNav.resolve")
@@ -87,12 +92,12 @@ conn = pg[pg.index("fun ConnectionsPage("):pg.index("fun ImportPage(")]
 order = ["KitStatTile(", "KitStatusBanner(", "ConnectionsList(", "SetupAllCard {"]
 pos = [conn.find(x) for x in order]
 ok(all(p >= 0 for p in pos) and pos == sorted(pos) and all(f'tag = "{t}"' in conn for t in ("home:empty", "home:expired-banner", "home:todo", "home:ok")),
-   "Home > Connections: tiles, the status banner (empty / expired / to do / ok) with its next action, the provider list, Setup all", f"Connections blocks missing or out of order {pos}")
+   "Connect > Status > Providers: tiles, the status banner (empty / expired / to do / ok) with its next action, the provider list, Setup all", f"Connections blocks missing or out of order {pos}")
 imp = pg[pg.index("fun ImportPage("):pg.index("private fun ConnectionsList(")]
-ok(imp.find("AutofillImportBody(") >= 0 and imp.find("AutofillImportBody(") < imp.find("TokenImporter("), "Home > Import: personal data, then tokens", "Import blocks missing or out of order")
+ok(imp.find("AutofillImportBody(") >= 0 and imp.find("AutofillImportBody(") < imp.find("TokenImporter("), "Data > Secrets > Import: personal data, then tokens", "Import blocks missing or out of order")
 ok(pg.count("AutofillImportBody(") == 1 and pg.count("TokenImporter(") == 2, "one importer: the personal-data body and the token importer are each drawn once", "an importer is drawn in two places")
 prov = pg[pg.index("fun ProviderCard("):pg.index("private fun ConnectToken(")]
-ok(pg.count("SecretLine(e,") == 1 and "SecretLine(e," in prov and pg.count("SecretLine(e)") == 0, "the token list is drawn by the provider card only (Secrets > Providers)", "a secret line is drawn outside the provider card")
+ok(pg.count("SecretLine(e,") == 1 and "SecretLine(e," in prov and pg.count("SecretLine(e)") == 0, "the token list is drawn by the provider card only (Data > Secrets > Providers)", "a secret line is drawn outside the provider card")
 ok("HubAndroid.providerTarget(ctx, p).run()" in pg and "HubAndroid.appTarget(ctx, app, plan).run()" in pg,
    "each provider and each app profile has its own Setup", "a provider or app profile lost its Setup")
 apps = pg[pg.index("fun AppProfilesPage("):pg.index("fun ConnectionsPage(")]
@@ -128,9 +133,9 @@ PY
 }
 M=0
 mutate "Setup island back" "$A/build.json" '"bottom_nav": [
-      "profiles",' '"bottom_nav": [
+      "personal",' '"bottom_nav": [
       "setup",
-      "profiles",' || M=1
+      "personal",' || M=1
 mutate "an old page loses its place" "$K/hub/HubNav.kt" '("setup" to "perms") to ("configs" to "perms"),' '' || M=1
 mutate "go() skips the resolver" "$K/MainActivity.kt" 'HubNav.resolve(s, p)' 'Pair(s, p)' || M=1
 mutate "gate reads before auth" "$K/hub/Reveal.kt" 'if (!ok) { denied(); return@authenticate }' 'read(); if (!ok) { denied(); return@authenticate }' || M=1
@@ -138,16 +143,16 @@ mutate "no lock still reveals" "$K/hub/Reveal.kt" '!km.isDeviceSecure) { finish(
 mutate "copy without the gate" "$K/hub/HubPages.kt" 'SecretClipboard.copy(ctx, it)' 'SecretClipboard.copy(ctx, HubAndroid.value(ctx, e.path).orEmpty())' || M=1
 mutate "a hub file logs" "$K/hub/TokenImport.kt" 'val t = text.trim()' 'val t = text.trim(); android.util.Log.d("x", t)' || M=1
 mutate "Setup all dropped from Connections" "$K/hub/HubPages.kt" '        SetupAllCard { tick++ }' '' || M=1
-mutate "a 2026-10-13 id loses its place" "$K/hub/HubNav.kt" '("secrets" to "connections") to ("secrets" to "bundle"),' '' || M=1
+mutate "a 2026-10-13 id loses its place" "$K/hub/HubNav.kt" '("secrets" to "connections") to ("data" to "bundle"),' '' || M=1
 mutate "a renamed page passes through untranslated" "$K/hub/HubNav.kt" 'val exact = LEGACY[section to page.orEmpty()]
         if (exact != null) return exact.first to exact.second.ifEmpty { null }
         if (section in ORDER) return section to page' 'if (section in ORDER) return section to page
         val exact = LEGACY[section to page.orEmpty()]
         if (exact != null) return exact.first to exact.second.ifEmpty { null }' || M=1
 mutate "LEGACY points at a container" "$K/hub/HubNav.kt" '("setup" to "") to ("configs" to "runbook"),' '("setup" to "") to ("configs" to "setup"),' || M=1
-mutate "a strip is flattened" "$A/build.json" '"id": "phone",' '"id": "phonex",' || M=1
-mutate "a section drops its background" "$A/build.json" '"icon": "home",
-        "background": "dark",' '"icon": "home",' || M=1
+mutate "a strip is flattened" "$A/build.json" '"id": "devices",' '"id": "devicesx",' || M=1
+mutate "a section drops its background" "$A/build.json" '"icon": "activity",
+        "background": "dark",' '"icon": "activity",' || M=1
 mutate "deep link bypasses the resolver" "$K/MainActivity.kt" 'return HubNav.resolve(s, intent' 'return Pair(s, intent' || M=1
 mutate "second strip drawn on the section's surface" "$K/MainActivity.kt" 'surface = NAV.stripSurface(section.id, darkTheme = true, pageId = container.id),' 'surface = NAV.stripSurface(section.id, darkTheme = true),' || M=1
 mutate "token list drawn on Connections too" "$K/hub/HubPages.kt" '        KitSectionHeader("Setup all", "", eyebrow = true)' '        for (e in groups.values.flatten()) SecretLine(e) { tick++ }

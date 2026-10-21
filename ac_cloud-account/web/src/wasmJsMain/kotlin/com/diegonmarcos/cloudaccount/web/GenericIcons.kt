@@ -48,7 +48,7 @@ internal object GenericIcons {
             "person" in n || "profile" in n || "contact" in n || n.endsWith("me") || "id" == n || "ids" == n -> person
             "folder" in n || "storage" in n || "document" in n || "pages" in n || "writer" in n || "vault" in n || "vcards" in n -> doc
             "chat" in n || "sms" in n || "assistant" in n || "send" in n || "agent" in n -> bubble
-            "history" in n || "recent" in n || "agenda" in n || "event" in n || "task" in n || "timeline" in n -> clock
+            "activity" in n || "history" in n || "recent" in n || "agenda" in n || "event" in n || "task" in n || "timeline" in n -> clock
             else -> tile
         }
     }

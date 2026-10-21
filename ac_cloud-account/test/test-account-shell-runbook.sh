@@ -74,7 +74,7 @@ ok(not any(x in ap for x in (".intent", "startActivity", "storePage", "play.goog
 ok("versionName" not in ap and "settings" not in ap, "apps rows are names and classes only", "apps page prints a value")
 ok("handToStore()" in ap and "DeviceVault(ctx).backup(" in ap, "apps page: Install missing via Store + Capture", "apps page lost an action")
 ma = rd("ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt")
-ok('"runbook" -> RunbookPage(go)' in ma and '"apps" -> AppsPage()' in ma and '"configs" -> FleetSetupPage(model)' in ma, "Setup mounts runbook / apps / configs", "Setup does not mount runbook/apps/configs")
+ok('else -> RunbookPage(go)' in ma and '"apps" -> AppsPage()' in ma and '"push" -> FleetSetupPage(model)' in ma, "Setup mounts runbook / apps / configs", "Setup does not mount runbook/apps/configs")
 ok('q["step"].isNullOrBlank() -> r.runAll(' in api and 'Op("apps"' in api and '"apps" -> SetupRunbook(ctx).appsPlan()' in api, "debug API: run=1 = Run all, apps op", "debug API lacks Run all or apps")
 
 # spec 4.6 step 3: a foreground service holds the process up (channel + debug server are process state)
@@ -191,7 +191,7 @@ mutate "a value printed in an apps row" $P/AppsPage.kt 'pl.installed.map { it.pk
 mutate "a Play page offered" $P/AppsPage.kt '(pl.store.map { it.entry } + pl.manual)' '(pl.store.also { ctx.startActivity(it.first().intent) }.map { it.entry } + pl.manual)' || M=$((M+1))
 mutate "no source declared dropped" $P/AppsPage.kt '"no source declared: add it to the source map"' '"open in Play"' || M=$((M+1))
 mutate "perms step not wired to PermsPlan" $P/SetupRunbook.kt 'PermsPlan.apply(ctx, plan, ch)' 'PermsPlan.Outcome(emptyList())' || M=$((M+1))
-mutate "runbook page unmounted" $K/MainActivity.kt '"runbook" -> RunbookPage(go)' '"runbook" -> AccountPlaceholderPage(section, page, "x")' || M=$((M+1))
+mutate "runbook page unmounted" $K/MainActivity.kt 'else -> RunbookPage(go)' 'else -> AccountPlaceholderPage(section, page, "x")' || M=$((M+1))
 mutate "debug run=1 without step is not Run all" $P/AccountDebugApi.kt 'q["step"].isNullOrBlank() -> r.runAll(' 'false -> r.runAll(' || M=$((M+1))
 
 S=ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/src/main/java/com/diegonmarcos/superapp/adbdebug

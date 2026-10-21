@@ -15,8 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -54,6 +55,12 @@ import com.diegonmarcos.superapp.profile.AccountPermsPage
 import com.diegonmarcos.superapp.profile.AccountPlaceholderPage
 import com.diegonmarcos.superapp.profile.AccountProfilePage
 import com.diegonmarcos.superapp.profile.AccountSettingsPage
+import com.diegonmarcos.superapp.profile.ActivityPage
+import com.diegonmarcos.superapp.profile.BackupsPage
+import com.diegonmarcos.superapp.profile.C3ConfigsPage
+import com.diegonmarcos.superapp.profile.DesktopConfigsPage
+import com.diegonmarcos.superapp.profile.DevicesMeshPage
+import com.diegonmarcos.superapp.profile.WalletPage
 import com.diegonmarcos.superapp.profile.AppsPage
 import com.diegonmarcos.superapp.profile.RunbookPage
 import com.diegonmarcos.superapp.profile.ConnectionsTab
@@ -67,18 +74,19 @@ import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.updater.Updater
 
 /**
- * Cloud Account: the four islands of build.json::ui.bottom_nav (Profiles, Secrets, Home, Configs), drawn by
- * libs:bottomnav (island + PageTabs) from the baked NavDecl. A section's pages are its top strip; a page with
- * pages of its own (Profiles ▸ Autofill, Profiles ▸ Phone, Configs ▸ Setup) gets a second strip under it, so
- * every leaf is at most two taps from the island. Every leaf (section, page) is mapped to ONE composable in
- * [Page]; nothing is drawn in two places (a0_docs/eng-specs/cloud-account-ia.md).
+ * Cloud Account: the five sections of build.json::ui.bottom_nav (Personal Info, Configs, Data, Connect, Activity), drawn
+ * by libs:bottomnav (island + PageTabs) from the baked NavDecl. A section's pages are its top strip; a page with pages
+ * of its own (Autocomplete, Android, Secrets, Backups, Devices, Status, Authentication providers) gets a second strip
+ * under it, so every leaf is at most two taps from the island. Every leaf (section, page) is mapped to ONE composable
+ * in [Page]; nothing is drawn in two places. The page starts below the top chrome through the one `statusBarsPadding`
+ * of [AccountShell] (the framework's inset, no per-page padding).
  *
- * Links from libs:account pages that still name the old islands ("setup", "account", "settings"), the
- * 2026-10-13 ids ("home/home", "secrets/connections") and an OPEN intent's `section` / `page` extras all go
- * through [HubNav.resolve], so every old page and deep link lands where that page lives now.
+ * Links from libs:account pages that still name the old islands ("setup", "account", "settings"), the earlier
+ * layouts' ids and an OPEN intent's `section` / `page` extras all go through [HubNav.resolve], so every old page and
+ * deep link lands where that page lives now.
  */
 class MainActivity : AppCompatActivity() {
-    // Secrets ▸ bundle: real file pickers behind ConnectionsTab's pickBundle / export callbacks.
+    // Data ▸ Backups ▸ Bundle: real file pickers behind ConnectionsTab's pickBundle / export callbacks.
     private var pendingPick: ((String) -> Unit)? = null
     private var pendingExport: Pair<String, String>? = null
     private val pickLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -179,40 +187,48 @@ class MainActivity : AppCompatActivity() {
         val ctx = LocalContext.current
         val model = remember { AccountModel.get(ctx) }
         when (section) {
-            "profiles" -> when (page) {
-                // Autofill: the non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md).
+            "personal" -> when (page) {
+                "wallet" -> WalletPage()
+                // Autocomplete: the non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md).
                 "personal" -> AutofillProfilesPage()
                 "sites" -> AutofillRulesPage()
                 "snippets" -> AutofillSnippetsPage()
-                // Phone: the per-device profile files.
-                "devices" -> ProfilesDevicesPage()
-                "working" -> ProfilesWorkingPage()
-                "diff" -> ProfilesDiffPage(model)
-                else -> AppProfilesPage()
+                else -> AccountProfilePage(go)
             }
-            "secrets" -> when (page) {
+            // PUBLIC: no page here may show a secret value (test-account-configs-public.sh lists the only composables allowed).
+            "configs" -> when (page) {
+                "apps" -> AppsPage()
+                "push" -> FleetSetupPage(model)
+                "perms" -> AccountPermsPage(go)
+                "adb-shell" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { com.diegonmarcos.superapp.adbdebug.AdbShellPage() }
+                "desktop" -> DesktopConfigsPage()
+                "c3" -> C3ConfigsPage()
+                else -> RunbookPage(go)
+            }
+            // PRIVATE: secrets stay masked until reveal behind device auth.
+            "data" -> when (page) {
+                "keys" -> SecretsTab(openVault = { AccountHost.route(this, "extapp:cloud-vault") })
+                "grants" -> GrantsTab()
+                "import" -> ImportPage(::pickText)
+                "databases" -> BackupsPage()
                 "bundle" -> ConnectionsTab(
                     pickBundle = { onText -> pendingPick = onText; pickLauncher.launch(arrayOf("application/json", "text/plain", "text/html")) },
                     export = { name, text -> pendingExport = name to text; exportLauncher.launch(name) },
                 )
-                "secrets" -> SecretsTab(openVault = { AccountHost.route(this, "extapp:cloud-vault") })
-                "grants" -> GrantsTab()
+                "mesh" -> DevicesMeshPage()
+                // Devices: the per-device profile files.
+                "files" -> ProfilesDevicesPage()
+                "working" -> ProfilesWorkingPage()
+                "diff" -> ProfilesDiffPage(model)
                 else -> SecretsProvidersPage(go)
             }
-            "home" -> when (page) {
-                "connections" -> ConnectionsPage(go)
-                "connect" -> AccountConnectPage()
-                "import" -> ImportPage(::pickText)
-                else -> AccountProfilePage(go)
+            "connect" -> when (page) {
+                "apps" -> AppProfilesPage()
+                "signin" -> AccountConnectPage()
+                "settings" -> AccountSettingsPage("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA} · built ${BuildConfig.BUILD_TIMESTAMP}")
+                else -> ConnectionsPage(go)
             }
-            "configs" -> when (page) {
-                "runbook" -> RunbookPage(go)
-                "apps" -> AppsPage()
-                "configs" -> FleetSetupPage(model)
-                "perms" -> AccountPermsPage(go)
-                "adb-shell" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { com.diegonmarcos.superapp.adbdebug.AdbShellPage() }
-                else -> AccountSettingsPage("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA} · built ${BuildConfig.BUILD_TIMESTAMP}")
-            }
+            "activity" -> ActivityPage()
             else -> AccountPlaceholderPage(section, page, "no task: undeclared section")
         }
     }
@@ -242,8 +258,9 @@ class MainActivity : AppCompatActivity() {
 
         /** The declared icon name → the glyph the island draws. */
         private fun iconFor(name: String): ImageVector = when (name) {
-            "secrets" -> Icons.Filled.Key
-            "home" -> Icons.Filled.Home
+            "data" -> Icons.Filled.Key
+            "connect" -> Icons.Filled.Share
+            "activity" -> Icons.Filled.Notifications
             "configs" -> Icons.Filled.Settings
             else -> Icons.Filled.AccountCircle
         }

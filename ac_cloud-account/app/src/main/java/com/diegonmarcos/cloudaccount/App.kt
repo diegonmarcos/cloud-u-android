@@ -66,6 +66,11 @@ class App : Application() {
         }
         private const val SUPERAPP = "com.diegonmarcos.superapp"
         private const val STORE = "com.diegonmarcos.cloudstore"
+        private val PEERS = mapOf(
+            "cloud-drive" to "com.diegonmarcos.clouddrive",
+            "cloud-c3" to "com.diegonmarcos.cloudc3",
+            "cloud-wallet" to "com.diegonmarcos.cloudwallet",
+        )
         /** SuperApp's Store page (a launcher route, not one of this app's ui.sections). */
         private const val STORE_PAGE = "config/store"
 
@@ -76,6 +81,11 @@ class App : Application() {
          */
         fun open(activity: Activity, route: String): Boolean = runCatching {
             val pm = activity.packageManager
+            // #1081 Backups opens Cloud Drive, Configs ▸ C3 opens Cloud C3, Wallet opens Cloud Wallet: each its own app.
+            PEERS.entries.firstOrNull { route.startsWith("extapp:${it.key}") }?.let { peer ->
+                pm.getLaunchIntentForPackage(peer.value)?.let { activity.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return@runCatching true }
+                return@runCatching false
+            }
             val store = route.startsWith("extapp:cloud-store") || route.removePrefix("page:").startsWith(STORE_PAGE)
             val intent = if (store && pm.getLaunchIntentForPackage(STORE) != null)
                 Intent("$STORE.OPEN").setPackage(STORE).putExtra("tab", if (route.endsWith("store-phone")) "phone" else "cloud")

@@ -44,7 +44,7 @@ import java.io.File
 import java.time.Instant
 
 /**
- * The reorganised Cloud Account (Profiles, Secrets, Home, Configs): the island order, every old page still
+ * The reorganised Cloud Account (Personal Info, Configs, Data, Connect, Activity): the nav order, every old page still
  * reachable, the Connections table built from what the account vault stores, the token import parser, reveal
  * behind device auth, the self-clearing copy, Setup per provider / app and Setup all, and no value in a log.
  * Every value here is an obvious fake.
@@ -69,30 +69,31 @@ class HubTest {
 
     // ── nav ──────────────────────────────────────────────────────────────
 
-    @Test fun islandOrderIsProfilesSecretsHomeConfigs() {
-        assertEquals(listOf("profiles", "secrets", "home", "configs"), HubNav.ORDER)
-        assertEquals("profiles,secrets,home,configs", BuildConfig.UI_BOTTOM_NAV)
+    @Test fun bottomNavIsPersonalConfigsDataConnectActivity() {
+        assertEquals(listOf("personal", "configs", "data", "connect", "activity"), HubNav.ORDER)
+        assertEquals("personal,configs,data,connect,activity", BuildConfig.UI_BOTTOM_NAV)
         assertEquals(HubNav.ORDER, MainActivity.NAV.bottomSections().map { it.id })
-        assertEquals("home", MainActivity.NAV.default()?.id)
-        assertTrue("no Setup island any more", MainActivity.NAV.section("setup") == null)
+        assertEquals(listOf("Personal Info", "Configs", "Data", "Connect", "Activity"), MainActivity.NAV.bottomSections().map { it.label })
+        assertEquals("personal", MainActivity.NAV.default()?.id)
+        assertTrue("no Setup, Profiles, Secrets or Home section any more", listOf("setup", "profiles", "secrets", "home").all { MainActivity.NAV.section(it) == null })
     }
 
     @Test fun everyOldPageIsReachable() {
         val old = mapOf(
             // the redesign's five islands
             "account" to listOf("", "profile", "connect", "autofill", "sites", "snippets", "import"),
-            "profiles" to listOf("", "devices", "working", "diff"),
             "setup" to listOf("", "runbook", "apps", "configs", "perms", "adb-shell"),
-            "secrets" to listOf("", "connections", "secrets", "grants"),
             "settings" to listOf(""),
-            // the four islands of 2026-10-13 (#964)
-            "home" to listOf("", "home", "account", "connect", "import"),
-            "configs" to listOf("", "settings", "runbook", "apps", "configs", "perms", "adb-shell"),
+            // the four islands of 2026-10-13 (#964) and of 2026-10-14
+            "profiles" to listOf("", "apps", "autofill", "personal", "sites", "snippets", "phone", "devices", "working", "diff"),
+            "secrets" to listOf("", "providers", "connections", "bundle", "secrets", "grants"),
+            "home" to listOf("", "home", "account", "connections", "connect", "import"),
+            "configs" to listOf("", "settings", "setup", "runbook", "apps", "configs", "perms", "adb-shell"),
         )
         for ((s, pages) in old) for (p in pages) {
             val (ns, np) = HubNav.resolve(s, p)
             val sec = MainActivity.NAV.section(ns)
-            assertNotNull("$s/$p -> $ns: not an island", sec)
+            assertNotNull("$s/$p -> $ns: not a section", sec)
             assertTrue("$s/$p -> $ns/$np: not a page", np == null || sec!!.allPages().any { it.id == np })
             assertTrue("$s/$p has an explicit place", HubNav.LEGACY.containsKey(s to p))
         }
@@ -104,37 +105,53 @@ class HubTest {
         }
         // the links libs:account pages send with the old ids
         assertEquals("configs" to "adb-shell", HubNav.resolve("setup", "adb-shell"))
-        assertEquals("home" to "connect", HubNav.resolve("account", "connect"))
+        assertEquals("connect" to "signin", HubNav.resolve("account", "connect"))
         assertEquals("configs" to "perms", HubNav.resolve("setup", "perms"))
         assertEquals("configs" to "apps", HubNav.resolve("setup", "apps"))
-        assertEquals("profiles" to "working", HubNav.resolve("profiles", "working"))
+        assertEquals("data" to "working", HubNav.resolve("profiles", "working"))
+        assertEquals("connect" to "settings", HubNav.resolve("settings", ""))
         // the 2026-10-13 ids: Home's one page became four, Bundle got its own id
-        assertEquals("home" to "account", HubNav.resolve("home", "home"))
-        assertEquals("home" to "import", HubNav.resolve("home", "import"))
-        assertEquals("secrets" to "bundle", HubNav.resolve("secrets", "connections"))
-        // a current id passes through, an unknown island opens the default
-        assertEquals("secrets" to "providers", HubNav.resolve("secrets", "providers"))
-        assertEquals("profiles" to "sites", HubNav.resolve("profiles", "sites"))
-        assertEquals("home" to null, HubNav.resolve("nowhere", "x"))
+        assertEquals("personal" to "me", HubNav.resolve("home", "home"))
+        assertEquals("data" to "import", HubNav.resolve("home", "import"))
+        assertEquals("data" to "bundle", HubNav.resolve("secrets", "connections"))
+        assertEquals("data" to "keys", HubNav.resolve("secrets", "secrets"))
+        // a current id passes through, an unknown section opens the default
+        assertEquals("data" to "providers", HubNav.resolve("data", "providers"))
+        assertEquals("personal" to "sites", HubNav.resolve("personal", "sites"))
+        assertEquals("personal" to null, HubNav.resolve("nowhere", "x"))
     }
 
     @Test fun strippedPagesSitUnderOneContainerEach() {
         val nav = MainActivity.NAV
         fun path(section: String, page: String) = nav.section(section)!!.path(page).map { it.id }
-        assertEquals(listOf("autofill", "personal"), path("profiles", "personal"))
-        assertEquals(listOf("autofill", "sites"), path("profiles", "sites"))
-        assertEquals(listOf("phone", "diff"), path("profiles", "diff"))
-        assertEquals(listOf("setup", "runbook"), path("configs", "runbook"))
-        assertEquals(listOf("setup", "perms"), path("configs", "perms"))
-        assertEquals(listOf("adb-shell"), path("configs", "adb-shell"))
+        assertEquals(listOf("autocomplete", "personal"), path("personal", "personal"))
+        assertEquals(listOf("autocomplete", "sites"), path("personal", "sites"))
+        assertEquals(listOf("devices", "diff"), path("data", "diff"))
+        assertEquals(listOf("devices", "mesh"), path("data", "mesh"))
+        assertEquals(listOf("secrets", "providers"), path("data", "providers"))
+        assertEquals(listOf("backups", "bundle"), path("data", "bundle"))
+        assertEquals(listOf("android", "runbook"), path("configs", "runbook"))
+        assertEquals(listOf("android", "adb-shell"), path("configs", "adb-shell"))
+        assertEquals(listOf("status", "apps"), path("connect", "apps"))
+        assertEquals(listOf("auth", "signin"), path("connect", "signin"))
+        assertEquals(listOf("desktop"), path("configs", "desktop"))
+        // the owner's tabs, exactly and in order
+        fun tabs(section: String) = nav.section(section)!!.pages.map { it.id }
+        assertEquals(listOf("me", "wallet", "autocomplete"), tabs("personal"))
+        assertEquals(listOf("android", "desktop", "c3"), tabs("configs"))
+        assertEquals(listOf("secrets", "backups", "devices"), tabs("data"))
+        assertEquals(listOf("status", "auth"), tabs("connect"))
+        assertEquals(listOf("activity"), tabs("activity"))
         // a container opens on its first leaf; a section opens on its first page's leaf
-        assertEquals("personal", nav.section("profiles")!!.page("autofill")!!.leaf().id)
+        assertEquals("personal", nav.section("personal")!!.page("autocomplete")!!.leaf().id)
         assertEquals("runbook", nav.section("configs")!!.page(null)!!.leaf().id)
-        assertEquals("account", nav.section("home")!!.page(null)!!.leaf().id)
-        // one place per thing: no leaf id repeats inside a section, and the two "apps" are in different islands
+        assertEquals("me", nav.section("personal")!!.page(null)!!.leaf().id)
+        assertEquals("providers", nav.section("data")!!.page(null)!!.leaf().id)
+        // one place per thing: no leaf id repeats inside a section
         for (s in nav.sections) {
             val ids = s.allPages().filter { it.pages.isEmpty() }.map { it.id }
             assertEquals("${s.id}: a leaf id repeats", ids.size, ids.toSet().size)
+            assertEquals("${s.id}: a page id repeats", s.allPages().size, s.allPages().map { it.id }.toSet().size)
         }
         assertTrue(nav.problems().isEmpty())
     }
@@ -147,10 +164,10 @@ class HubTest {
         assertNull("no extras = the default", MainActivity.deepLink(i(null, null)))
         assertNull(MainActivity.deepLink(null))
         assertEquals("configs" to "adb-shell", MainActivity.deepLink(i("setup", "adb-shell")))
-        assertEquals("secrets" to "bundle", MainActivity.deepLink(i("secrets", "connections")))
-        assertEquals("home" to "account", MainActivity.deepLink(i("home", "")))
-        assertEquals("profiles" to "snippets", MainActivity.deepLink(i("account", "snippets")))
-        assertEquals("home" to null, MainActivity.deepLink(i("bogus", "x")))
+        assertEquals("data" to "bundle", MainActivity.deepLink(i("secrets", "connections")))
+        assertEquals("personal" to "me", MainActivity.deepLink(i("home", "")))
+        assertEquals("personal" to "snippets", MainActivity.deepLink(i("account", "snippets")))
+        assertEquals("personal" to null, MainActivity.deepLink(i("bogus", "x")))
     }
 
     // ── Connections table ────────────────────────────────────────────────

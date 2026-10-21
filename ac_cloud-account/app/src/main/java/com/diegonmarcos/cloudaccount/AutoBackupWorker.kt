@@ -9,6 +9,7 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.diegonmarcos.superapp.profile.AccountDevice
+import com.diegonmarcos.superapp.profile.ActivityLog
 import com.diegonmarcos.superapp.profile.AutoBackup
 import com.diegonmarcos.superapp.profile.DeviceVault
 import java.util.concurrent.TimeUnit
@@ -23,6 +24,7 @@ class AutoBackupWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, par
         val id = AccountDevice.id(applicationContext)
         if (id.isBlank()) return Result.success()   // no device picked: nothing to back up to
         val r = runCatching { DeviceVault(applicationContext).backup(id, false) }.getOrNull() ?: return Result.retry()
+        ActivityLog.record(applicationContext, "backup", "auto-backup of $id: " + if (r.optBoolean("ok")) "ok" else "failed, will retry")
         return if (r.optBoolean("ok")) Result.success() else Result.retry()
     }
 

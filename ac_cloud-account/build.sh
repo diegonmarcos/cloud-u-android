@@ -247,7 +247,8 @@ step_test() {
   [ -n "$task" ] || task="test"
   log "Test: JVM unit tests (gradle $task)"
   _resolve_signing
-  in_nix gradle "$task"
+  # UNIT_TEST_FILTER=<class pattern> narrows the run (CI: the account-screens workflow).
+  if [ -n "${UNIT_TEST_FILTER:-}" ]; then in_nix gradle "$task" --tests "$UNIT_TEST_FILTER"; else in_nix gradle "$task"; fi
 }
 step_instrument() { log "Test: instrumented (needs device)"; in_nix gradle connectedAndroidTest; }
 step_lint()       { log "Lint"; in_nix gradle lint; }
