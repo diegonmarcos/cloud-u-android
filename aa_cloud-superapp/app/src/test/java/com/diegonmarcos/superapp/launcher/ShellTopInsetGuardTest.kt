@@ -17,6 +17,7 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.performTextInput
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import com.diegonmarcos.superapp.ui.ShellTopInset
 import org.junit.Assert.assertTrue
@@ -41,6 +42,9 @@ import java.time.Duration
  *
  *   G1  the container is padded to at least the row's bottom edge
  *   G2  every node the page draws (Compose semantics, and every View) starts at or below that edge
+ *   G3  no gap: on every registered tab strip (each tabbed section, each page that declares tabs) the strip's top equals the
+ *       row's bottom edge (within 1 dp) and the content pane starts right below the strip (its own declared bottom gap, no
+ *       more, no overlap). The "tabs-all" key renders them all; the same strip hosted under the row twice-inset fails here.
  *
  * Evidence: app/build/configs-screens/top-inset-<page>@<strip>.png (the row outlined in red, its bottom edge as a line).
  * [ShellTopInsetStaticGuardTest] holds the same rule for the rest of the registry without rendering it.
@@ -56,8 +60,11 @@ class ShellTopInsetGuardTest(private val key: String) : KitPageHarness() {
         /** The tallest-but-real one gets the screenshot. */
         const val SHOT_STRIP = 72
         const val GAP_DP = 6
+        /** G3 tolerance (dp) and the key that renders every registered tab strip. */
+        const val GAP_TOL_DP = 1
+        const val TABS_ALL = "tabs-all"
         /** The pages the shell must render here; every other page is rendered when it can be and recorded when it cannot. */
-        val MUST = setOf("configs", "configs-search", "config/adb-shell", "config/about", "config/perms")
+        val MUST = setOf("configs", "configs-search", "config/adb-shell", "config/about", "config/perms", TABS_ALL)
 
         val OUT = File(System.getProperty("user.dir"), "build/configs-screens").apply { mkdirs() }
 
@@ -67,7 +74,7 @@ class ShellTopInsetGuardTest(private val key: String) : KitPageHarness() {
          * [ShellTopInsetStaticGuardTest]: all of them reach the screen through the one padded container.
          */
         fun keys(): List<String> =
-            listOf("configs", "configs-search") + com.diegonmarcos.superapp.configs.ConfigsScreensTest.SCREENS.filter { it != "grid" }.map { "config/$it" }
+            listOf("configs", "configs-search", TABS_ALL) + com.diegonmarcos.superapp.configs.ConfigsScreensTest.SCREENS.filter { it != "grid" }.map { "config/$it" }
 
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
@@ -82,7 +89,7 @@ class ShellTopInsetGuardTest(private val key: String) : KitPageHarness() {
     private fun px(dp: Int) = (dp * compose.density.density).toInt()
 
     private fun pageFor(k: String): Fragment = when (k) {
-        "configs", "configs-search" -> ConfigsFragment.newInstance(ConfigsPageFixture.tiles(compose.activity))
+        "configs", "configs-search", TABS_ALL -> ConfigsFragment.newInstance(ConfigsPageFixture.tiles(compose.activity))
         else -> {
             val id = k.substringAfter("/")
             SectionPages.pagesFor("config", includeHidden = true).first { it.id == id }.factory()
@@ -160,6 +167,57 @@ class ShellTopInsetGuardTest(private val key: String) : KitPageHarness() {
         }.getOrDefault(emptyList()).filter { it.boundsInWindow.width > 0f && it.boundsInWindow.height > 0f }
             .map { (it.config.getOrNull(SemanticsProperties.TestTag) ?: it.config.getOrNull(SemanticsProperties.Text)?.firstOrNull()?.text ?: "node#${it.id}") to it.boundsInWindow.top }
 
+    private fun stripNodes() = runCatching {
+        compose.onAllNodes(SemanticsMatcher("strip") { it.config.getOrNull(SemanticsProperties.TestTag) == PageTabsTags.STRIP }, useUnmergedTree = true)
+            .fetchSemanticsNodes(false)
+    }.getOrDefault(emptyList()).filter { it.boundsInWindow.height > 0f }
+
+    /**
+     * G3: host every registered tab strip in the real container and measure it against the row. Pages whose children cannot
+     * render in this harness are recorded (not failed) except the Cloud section, which the app's own tab tests render.
+     */
+    private fun tabsProblems(): List<String> {
+        val out = mutableListOf<String>()
+        val targets = mutableListOf<Pair<String, () -> Fragment>>()
+        for (s in Sections.all()) {
+            if (s.tabs && s.pages.isNotEmpty()) targets += "tabs/${s.id}" to { SectionTabsFragment.newInstance(s.id) }
+            for (p in s.allPages) if (p.tabs.isNotEmpty()) targets += "tabs/${s.id}/${p.id}" to { SectionTabsFragment.forPage(s.id, p.id) }
+        }
+        if (targets.isEmpty()) out += "no tabbed section or tab-owning page is registered"
+        val tol = px(GAP_TOL_DP).toFloat()
+        val bottomInset = compose.activity.resources.getDimensionPixelSize(
+            compose.activity.resources.getIdentifier("page_tabs_bottom_inset", "dimen", compose.activity.packageName)).toFloat()
+        var measured = 0
+        for ((name, make) in targets) {
+            try {
+                host(make())
+                for (stripDp in listOf(0, SHOT_STRIP)) {
+                    settle(stripDp)
+                    val limit = (windowTop(shell) + compose.runOnUiThread { island.top + island.height }).toFloat()
+                    val strips = stripNodes()
+                    if (strips.isEmpty()) continue   // a strip-less page (hide_tabs) has nothing to measure
+                    measured++
+                    val top = strips.minOf { it.boundsInWindow.top }
+                    if (kotlin.math.abs(top - limit) > tol)
+                        out += "$name @strip ${stripDp}dp: the tab strip starts at ${top}px, the top row ends at ${limit}px (a gap of ${top - limit}px; tabs must sit directly under the row)"
+                    val first = strips.minByOrNull { it.boundsInWindow.top }!!
+                    val pane = compose.runOnUiThread { compose.activity.findViewById<View>(R.id.section_pane_0)?.let { windowTop(it) } }
+                    if (pane != null && pane > 0) {
+                        val gap = pane - first.boundsInWindow.bottom
+                        if (gap < -tol || gap > bottomInset + tol)
+                            out += "$name @strip ${stripDp}dp: the content pane starts ${gap}px below the strip (declared gap ${bottomInset}px)"
+                    }
+                    if (stripDp == SHOT_STRIP) shot("top-inset-${name.replace('/', '-')}@$stripDp", limit)
+                }
+            } catch (t: Throwable) {
+                File(OUT, "top-inset-${name.replace('/', '-')}.err").writeText("${t.javaClass.simpleName}: ${t.message?.replace('\n', ' ')?.take(300)}\n")
+                if (name == "tabs/cloud") out += "$name did not render: ${t.javaClass.simpleName}: ${t.message?.take(300)}"
+            }
+        }
+        if (measured == 0) out += "no tab strip was measured"
+        return out
+    }
+
     private fun shot(name: String, limitPx: Float) {
         val bmp = compose.runOnUiThread {
             val root = compose.activity.findViewById<View>(android.R.id.content)
@@ -182,6 +240,11 @@ class ShellTopInsetGuardTest(private val key: String) : KitPageHarness() {
         val problems = mutableListOf<String>()
         try {
             buildShell()
+            if (key == TABS_ALL) {
+                problems += tabsProblems()
+                assertTrue("$key: tab strips off the top row:\n" + problems.joinToString("\n"), problems.isEmpty())
+                return
+            }
             host(pageFor(key))
             if (key == "configs-search") {
                 compose.onNode(hasSetTextAction()).performTextInput("adb")

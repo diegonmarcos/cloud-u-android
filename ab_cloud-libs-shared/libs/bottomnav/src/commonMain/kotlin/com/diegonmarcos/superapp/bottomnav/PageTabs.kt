@@ -65,7 +65,8 @@ import androidx.compose.ui.unit.sp
  *    ellipsis, and only if even the floor overflows does the strip scroll. See [planPills].
  *  - `inset`: 4dp strip padding, a 10dp gap above and below, plus - for a strip under the toolbar
  *    island ([underTopChrome]) - the live status-bar / display-cutout inset on top (#477). The
- *    inset is READ, never consumed.
+ *    inset is READ, never consumed. [flushTop] drops both top terms: a strip the host already seats directly under a
+ *    reserved top band (the SuperApp shell's page container, #1080) starts AT the band's edge, with no gap above it.
  *  - a LAUNCH page (non-blank [NavPage.action]) wears a pill but is not a destination; the first
  *    one after a destination is preceded by the literal "|" divider the superapp draws.
  *
@@ -87,8 +88,9 @@ public fun PageTabs(
     onReselect: (NavPage) -> Unit = {},
     underTopChrome: Boolean = true,
     surface: TabSurface = TabSurface.Dark,
+    flushTop: Boolean = false,
 ) {
-    PageTabsImpl(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, null, surface)
+    PageTabsImpl(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, null, surface, flushTop)
 }
 
 /** What a page-tab strip is drawn over; picks one of the two lib-owned palettes in [NavTokens]. */
@@ -105,10 +107,11 @@ internal fun PageTabsImpl(
     underTopChrome: Boolean,
     insets: WindowInsets?,
     surface: TabSurface = TabSurface.Dark,
+    flushTop: Boolean = false,
 ) {
     // An app's MaterialTheme text style (line height, family) must not reach the pills.
     CompositionLocalProvider(LocalTextStyle provides TextStyle.Default) {
-        PageTabsContent(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, insets, surface)
+        PageTabsContent(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, insets, surface, flushTop)
     }
 }
 
@@ -122,6 +125,7 @@ private fun PageTabsContent(
     underTopChrome: Boolean,
     insets: WindowInsets?,
     surface: TabSurface,
+    flushTop: Boolean,
 ) {
     if (pages.isEmpty()) return
     val tokens = navTokens()
@@ -131,7 +135,7 @@ private fun PageTabsContent(
 
     // The strip's geometry is laid out in pixels, as it always was; the tokens are dp / sp.
     val stripPad = with(density) { tokens.tabsStripPadding.toPx() }
-    val topBase = with(density) { tokens.tabsTopInset.toPx() }
+    val topBase = if (flushTop) 0f else with(density) { tokens.tabsTopInset.toPx() }
     val bottomGap = with(density) { tokens.tabsBottomInset.toPx() }
     val padH = with(density) { tokens.tabsPillPadH.toPx() }
     val margin = with(density) { tokens.tabsPillMargin.toPx() }
@@ -142,7 +146,7 @@ private fun PageTabsContent(
     val minChars = tokens.tabsMinChars
 
     val live = insets ?: WindowInsets.statusBars.union(WindowInsets.displayCutout)
-    val liveTop = if (underTopChrome) live.getTop(density) else 0
+    val liveTop = if (underTopChrome && !flushTop) live.getTop(density) else 0
     val divider = pages.indexOfFirst { it.action.isNotBlank() }.takeIf { it > 0 }
 
     fun styleAt(px: Float, color: Color = Color.Unspecified) = pillStyle(density, px, spacing, color)

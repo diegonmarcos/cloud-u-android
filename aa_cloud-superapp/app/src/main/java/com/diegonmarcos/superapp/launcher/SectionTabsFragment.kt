@@ -171,7 +171,7 @@ class SectionTabsFragment : KitComposeFragment(), Collapsible {
                 activePane = if (paneCount > 1) position.coerceAtMost(paneCount - 1) else 0
                 (activity as? ShellActivity)?.nav?.syncModeForPage(page.id)
                 (activity as? ShellActivity)?.nav?.recordActiveTab(tabKey, page.id)
-            })
+            }, underTopChrome = false, flushTop = true)   // #1080: the shell's container already clears the top row; the strip starts at its edge
             Row(Modifier.fillMaxWidth().weight(1f)) {
                 for (i in 0 until paneCount) {
                     // One pane per page on a tablet (Suite shows Cloud and Phone side by side); one pane on a phone,

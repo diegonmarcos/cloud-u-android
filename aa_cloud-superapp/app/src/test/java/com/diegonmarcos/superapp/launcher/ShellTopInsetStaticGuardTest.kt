@@ -103,4 +103,21 @@ class ShellTopInsetStaticGuardTest {
             .filter { Regex("[:,]\\s*ShellOverride\\b").containsMatchIn(text(it)) }.map { it.name }.toList()
         assertFalse("these pages take the chrome over: $implementers", implementers.isNotEmpty())
     }
+
+    @Test fun `S6 a tab strip under the shell takes no second top inset`() {
+        // The container is already padded to the row's bottom edge; the lib's default (status-bar inset + a 10 dp gap above the
+        // strip) is a second inset on top of it, the empty line between the row and the tabs. So no call may rely on the default,
+        // and the strips the shell hosts (section / page tabs, Cloud Mesh) start flush at the container's edge.
+        val shellHosted = setOf("com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt", "com/diegonmarcos/superapp/network/mesh/MeshScreen.kt")
+        for (f in java.walkTopDown().filter { it.isFile && it.extension == "kt" }) {
+            val src = text(f)
+            val calls = Regex("\\bPageTabs\\(").findAll(src).count()
+            if (calls == 0) continue
+            val rel = f.relativeTo(java).path
+            assertEquals("$rel: every PageTabs call states underTopChrome = false (the default adds the status-bar inset again)",
+                calls, Regex("underTopChrome\\s*=\\s*false").findAll(src).count())
+            if (rel in shellHosted)
+                assertEquals("$rel: the shell-hosted strip is flush with the container's edge", calls, Regex("flushTop\\s*=\\s*true").findAll(src).count())
+        }
+    }
 }

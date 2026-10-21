@@ -83,6 +83,7 @@ class PageTabsTest {
 
     private var injected by mutableStateOf<WindowInsets?>(WindowInsets(0, 0, 0, 0))
     private var under by mutableStateOf(true)
+    private var flush by mutableStateOf(false)
 
     /** null = the call every existing host makes, with no surface argument at all (the default). */
     private var surface by mutableStateOf<TabSurface?>(null)
@@ -94,8 +95,8 @@ class PageTabsTest {
             val g = ground
             Box(Modifier.fillMaxSize().then(if (g != null) Modifier.background(g) else Modifier).testTag(ROOT)) {
                 val s = surface
-                if (s == null) PageTabsImpl(pages, selected, { tapped += it.id }, Modifier.testTag(BOX), { retapped += it.id }, under, injected)
-                else PageTabsImpl(pages, selected, { tapped += it.id }, Modifier.testTag(BOX), { retapped += it.id }, under, injected, s)
+                if (s == null) PageTabsImpl(pages, selected, { tapped += it.id }, Modifier.testTag(BOX), { retapped += it.id }, under, injected, flushTop = flush)
+                else PageTabsImpl(pages, selected, { tapped += it.id }, Modifier.testTag(BOX), { retapped += it.id }, under, injected, s, flush)
             }
         }
         compose.waitForIdle()
@@ -316,6 +317,16 @@ class PageTabsTest {
         compose.waitForIdle()
         near("a strip not under the toolbar ignores the live inset",
             top + strip + margin, bounds(PageTabsTags.tab("cloud")).top - bounds(ROOT).top)
+    }
+
+    @Test
+    fun `1080 a flush strip starts at the top edge of its box, with neither the inset nor the live inset above it`() {
+        selected = "cloud"
+        injected = WindowInsets(0, 24, 0, 0)
+        flush = true
+        show(three)
+        near("the strip's top is the box's top", 0f, bounds(PageTabsTags.STRIP).top - bounds(BOX).top)
+        near("the bottom gap is unchanged", px(R.dimen.page_tabs_bottom_inset), bounds(BOX).bottom - bounds(PageTabsTags.STRIP).bottom)
     }
 
     @Test

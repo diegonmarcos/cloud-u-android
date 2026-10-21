@@ -50,12 +50,13 @@ t2() {   # $1 = PageTabs.kt, $2 = NavPlatformAndroid.kt
     local c p; c=$(codeof "$1"); p=$(codeof "$2")
     grep -q 'tabsTopInset = dp(R.dimen.page_tabs_top_inset)' <<<"$p" || return 1
     grep -q 'tabsBottomInset = dp(R.dimen.page_tabs_bottom_inset)' <<<"$p" || return 1
-    grep -q 'val topBase = with(density) { tokens.tabsTopInset.toPx() }' <<<"$c" || return 1
+    grep -q 'val topBase = if (flushTop) 0f else with(density) { tokens.tabsTopInset.toPx() }' <<<"$c" || return 1
     grep -q 'val bottomGap = with(density) { tokens.tabsBottomInset.toPx() }' <<<"$c" || return 1
     grep -q 'top = with(density) { (topBase + liveTop).toDp() }' <<<"$c" || return 1
     grep -q 'bottom = with(density) { bottomGap.toDp() }' <<<"$c" || return 1
     grep -q 'WindowInsets.statusBars.union(WindowInsets.displayCutout)' <<<"$c" || return 1
-    grep -q 'if (underTopChrome) live.getTop(density) else 0' <<<"$c" || return 1
+    grep -q 'if (underTopChrome && !flushTop) live.getTop(density) else 0' <<<"$c" || return 1
+    grep -q 'flushTop: Boolean' <<<"$c" || return 1
     grep -q 'underTopChrome: Boolean' <<<"$c" || return 1
     return 0
 }

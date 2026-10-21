@@ -40,7 +40,7 @@ fun MeshScreen(store: MeshStore, modifier: Modifier = Modifier, ticker: Boolean 
     val tabs = store.decl.tabs.map { NavPage(it.id, declLabel("tab", it.id, it.label), it.icon) }
     val open = store.decl.tab(store.tab)
     Column(modifier.fillMaxSize().testTag("mesh:screen")) {
-        PageTabs(tabs, store.tab, onSelect = { store.tab = it.id })
+        PageTabs(tabs, store.tab, onSelect = { store.tab = it.id }, underTopChrome = false, flushTop = true)
         MeshNotice(store)
         Column(Modifier.weight(1f).fillMaxWidth().testTag(MeshTags.tab(store.tab)).verticalScroll(rememberScrollState())) {
             if (open == null) MText(store.tab, Modifier.padding(MeshDensity.dp(MeshDensity.S8)), muted = true)
