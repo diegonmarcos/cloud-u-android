@@ -344,6 +344,7 @@ internal fun GroupBlock(
                 Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
                 horizontalArrangement = Arrangement.End,
             ) { ArchivePill(state, g, archived = true, rowArchive = rowArchive) }
+            else if (rows.isEmpty()) Box(Modifier.height(6.dp))   // a quiet channel has nothing to read, archive or reply to
             else {
                 // The box's own actions, back in One UI's action-pill row (#1068): Mark read, Archive, Open, Reply.
                 val replyRow = rows.filter { it.id.startsWith(AggregatorModel.PHONE_NS) }.maxByOrNull { it.ts }

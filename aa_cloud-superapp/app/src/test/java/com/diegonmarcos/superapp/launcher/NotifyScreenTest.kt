@@ -148,7 +148,7 @@ class NotifyScreenTest : KitPageHarness() {
         compose.onNodeWithTag(AggTags.CONFIG_HEADER).performScrollTo()
         compose.onNodeWithTag(AggTags.CONFIG_HEADER).performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(AggTags.CONFIG_HEADER).performScrollTo()
+        compose.onNodeWithTag(AggTags.CONFIG_BODY).performScrollTo()
         compose.waitForIdle()
         snap("notify1068-3-settings.png")
     }
