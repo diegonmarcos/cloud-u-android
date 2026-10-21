@@ -97,7 +97,7 @@ jobs:
               await page.goto(`http://127.0.0.1:${port}/${slug}/index.html`, { waitUntil: "load", timeout: 60000 });
               await page.waitForSelector("canvas", { timeout: 60000 });
               await page.waitForTimeout(6000);
-              const size = await page.evaluate(() => { const c = document.querySelector("canvas"); return c ? [c.width, c.height] : [0, 0]; });
+              const size = await page.evaluate(() => { let w = 0, h = 0; for (const c of document.querySelectorAll("canvas")) { const r = c.getBoundingClientRect(); w = Math.max(w, r.width, c.width); h = Math.max(h, r.height, c.height); } return [w, h]; });
               if (!(size[0] > 0 && size[1] > 0)) problems.push("canvas has no size");
               const png = await page.screenshot({ path: path.join(shots, slug + ".png") });
               const img = PNG.sync.read(png);
