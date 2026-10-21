@@ -30,13 +30,11 @@ import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.notificationcenter.BadgeCardData
 import com.diegonmarcos.superapp.notificationcenter.BadgeDeclaration
 import com.diegonmarcos.superapp.notificationcenter.BadgeServices
-import com.diegonmarcos.superapp.notificationcenter.NotifyGroups
 import com.diegonmarcos.superapp.ui.Haptics
 
 /**
  * #1068 — the top of the Notify page: every declared badge as a One UI live / ongoing card, in the order build.json
- * declares them (the groups of `ui.notification_center.groups` in the owner's order, their members in order, then any
- * badge in no group). One list, one source: [BadgeDeclaration.badges] over [BadgeServices.declared]; a card exists for
+ * ranks them (`card.rank` in `ui.notification_center.producers`; the shade's own group order is untouched). One list, one source: [BadgeDeclaration.badges] over [BadgeServices.declared]; a card exists for
  * every entry, drawn from [BadgeCardData] (the badge providers' real data), so a badge added to build.json is a card
  * here with no edit. No control lives on a card: the switches, Launch and customisation are in the page's Settings
  * section at the very bottom.
@@ -47,13 +45,9 @@ internal object BadgeCardTags {
     fun progress(id: String) = "badge-card-progress:$id"
 }
 
-/** The declared badges in display order. */
-internal fun orderedBadges(ctx: android.content.Context): List<BadgeDeclaration.Badge> {
-    val badges = BadgeDeclaration.badges(BadgeServices.declared)
-    val byId = badges.associateBy { it.id }
-    val grouped = NotifyGroups.ordered(ctx).flatMap { it.members }.distinct()
-    return grouped.mapNotNull { byId[it] } + badges.filter { it.id !in grouped }
-}
+/** The declared badges in display order: `card.rank` from build.json, ties in declaration order (the sort is stable). */
+internal fun orderedBadges(@Suppress("UNUSED_PARAMETER") ctx: android.content.Context): List<BadgeDeclaration.Badge> =
+    BadgeDeclaration.badges(BadgeServices.declared).sortedBy { it.card.rank }
 
 @Composable
 internal fun BadgeCards() {

@@ -8994,14 +8994,19 @@
       "_doc_groups": "#777 THE FOUR shade groups of Configs ▸ Launcher ▸ Notify, as data: NotifyGroups gives every member's notification its group's key (setGroup) and posts one summary per group, so the shade shows four bundles instead of seven loose badges. `members` are producer ids below, in the order they sort inside the group; a producer in no group posts ungrouped. Group order and on/off are the owner's (Notify page, stored per group id); the declaration order is the default order. `alerts: true` marks the group whose member is the fleet alerts channel (FleetAlerts → AlertStore → AlertsNotifier); the Notify page draws its filters and Clear all from that flag, never from a name. `max_in_shade` caps how many alert children are posted (the store keeps more; Android drops an app's notifications past ~50).",
       "groups": [
         {
-          "id": "network",
-          "label": "Network",
-          "members": ["network_mesh", "network_data", "battery_status"]
+          "id": "live",
+          "label": "Markets · Health · Weather",
+          "members": ["markets_prices", "health_activity", "weather_today"]
         },
         {
-          "id": "live",
-          "label": "Weather · Markets · Health",
-          "members": ["weather_today", "markets_prices", "health_activity"]
+          "id": "actions",
+          "label": "Quick Actions · KDE Connect",
+          "members": ["floating_nav_quick_actions", "kde_status"]
+        },
+        {
+          "id": "media",
+          "label": "Media Player",
+          "members": ["media_now_playing"]
         },
         {
           "id": "alerts",
@@ -9011,20 +9016,15 @@
           "max_in_shade": 20
         },
         {
-          "id": "media",
-          "label": "Media Player",
-          "members": ["media_now_playing"]
-        },
-        {
-          "id": "actions",
-          "label": "Quick Actions · KDE Connect",
-          "members": ["floating_nav_quick_actions", "kde_status"]
+          "id": "network",
+          "label": "Network",
+          "members": ["network_mesh", "network_data", "battery_status"]
         }
       ],
       "producers": [
         {
           "id": "kde_status",
-          "card": {"kind": "text", "accent": "#3DAEE9"},
+          "card": {"rank": 10, "kind": "text", "accent": "#3DAEE9"},
           "label": "KDE Connect",
           "subtitle": "Ongoing 'Cloud SA - KDE' notification plus an in-app card mirroring the paired desktop's connection, battery and plugin state.",
           "icon": "ic_kde",
@@ -9078,7 +9078,7 @@
         },
         {
           "id": "media_now_playing",
-          "card": {"kind": "media", "accent": "#FF5C8D"},
+          "card": {"rank": 8, "kind": "media", "accent": "#FF5C8D"},
           "label": "Media Playing",
           "subtitle": "The 'Cloud SA - Media' transport badge mirroring the active media session. Pinned even when paused so the transport is always reachable.",
           "icon": "ic_music",
@@ -9140,7 +9140,7 @@
         },
         {
           "id": "floating_nav_quick_actions",
-          "card": {"kind": "text", "accent": "#8C9EFF"},
+          "card": {"rank": 9, "kind": "text", "accent": "#8C9EFF"},
           "label": "Quickmarks",
           "subtitle": "The persistent 'Cloud SA - Quick Actions' badge the floating overlay pins while it is running.",
           "icon": "ic_settings",
@@ -9196,7 +9196,7 @@
         },
         {
           "id": "fleet_alerts",
-          "card": {"kind": "alerts", "accent": "#FFB340"},
+          "card": {"rank": 7, "kind": "alerts", "accent": "#FFB340"},
           "label": "Alerts",
           "subtitle": "#777 The fleet's ONE alerts channel. Every Cloud app raises its user-facing alerts through FleetAlerts (libs:core) and they land here, one child per alert under one 'Cloud SA - Alerts' summary. Only real alerts: an empty store posts nothing. It replaced the 'Grouped alerts' badge, which showed sample data baked from ui.notification_infos.",
           "icon": "ic_stat_notify",
@@ -9227,7 +9227,7 @@
         },
         {
           "id": "network_mesh",
-          "card": {"kind": "text", "accent": "#3DDC97"},
+          "card": {"rank": 1, "kind": "text", "accent": "#3DDC97"},
           "label": "Mesh",
           "subtitle": "The mesh at a glance (the Mesh badge of the Network group): connected or not, the tunnel, this device's mesh IP, peer count and rx/tx; expanded, the last handshake per peer, the interface and peer addresses, DNS (the mesh DNS, the resolvers Android uses now, the 127.0.0.1 bridge status, Private DNS mode) and uptime. Buttons: Always On (shows the system state, opens the VPN settings where it is switched), Connect/Disconnect, More (the Cloud Mesh page). Read over INetBackend from Cloud-Lib-Net-Wg; refreshed on connect/disconnect and VPN network events, plus every 30s only while connected.",
           "icon": "ic_stat_notify",
@@ -9260,7 +9260,7 @@
         },
         {
           "id": "network_data",
-          "card": {"kind": "text", "accent": "#4DB6FF"},
+          "card": {"rank": 2, "kind": "text", "accent": "#4DB6FF"},
           "label": "Data",
           "subtitle": "The Data badge of the Network group: data used today and this month, mobile vs Wi-Fi, and the top apps of the month, all from the Data Manager engine (libs:datamanager, the one behind Configs > About > Data Usage). Buttons: Data Manager (opens it), Refresh; without Usage Access the badge says so and offers Grant access. Read when the screen comes on and on Refresh; nothing polls.",
           "icon": "ic_stat_notify",
@@ -9293,7 +9293,7 @@
         },
         {
           "id": "battery_status",
-          "card": {"kind": "level", "accent": "#4CD964"},
+          "card": {"rank": 3, "kind": "level", "accent": "#4CD964"},
           "label": "Battery",
           "subtitle": "The battery at a glance, time first: charging shows the time until full, discharging the time until empty from the average drain since the last unplug or full charge (h:mm, labelled as an estimate; 'learning' until 2% is used or 15 min pass). Expanded: level, status and plug, current now and average, voltage, temperature, health, cycles, charge and capacity, time and percent used since the last charge, and the short-term rate. Refreshed on the battery-changed event only; nothing polls.",
           "icon": "ic_stat_notify",
@@ -9326,7 +9326,7 @@
         },
         {
           "id": "health_activity",
-          "card": {"kind": "text", "accent": "#FF6B6B"},
+          "card": {"rank": 6, "kind": "text", "accent": "#FF6B6B"},
           "label": "Health",
           "subtitle": "Steps, active kcal and km walked today, read from Health Connect on this device. Never estimated — a half with no grant reads 'not available'. Tap opens Cloud Navigation > Timeline > Steps.",
           "click_target": "extapp:cloud-nav#page:timeline/steps",
@@ -9406,7 +9406,7 @@
         },
         {
          "id": "weather_today",
-         "card": {"kind": "text", "accent": "#58C4FF"},
+         "card": {"rank": 4, "kind": "text", "accent": "#58C4FF"},
          "label": "Weather",
          "click_target": "https://open-meteo.com/en/docs#latitude={lat}&longitude={lon}",
          "subtitle": "Today where the device is: current temperature, the day's max/min and the hour-by-hour forecast, from Open-Meteo (no key, no account) for the last known position. The place name comes from Android's own geocoder. Location is never actively requested — the badge reads the position someone else already paid for.",
@@ -9468,7 +9468,7 @@
         },
         {
           "id": "markets_prices",
-          "card": {"kind": "quotes", "accent": "#F5C542"},
+          "card": {"rank": 5, "kind": "quotes", "accent": "#F5C542"},
           "label": "Markets",
           "subtitle": "Live last-traded prices for the declared instruments, from Yahoo Finance. One action button per instrument opens that instrument's Yahoo ticker page in the app's own embedded browser. A quote that could not be fetched reads '—', never the last good number.",
           "icon": "ic_p_markets_prices",
