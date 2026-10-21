@@ -12,7 +12,6 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.fragment.app.FragmentActivity
 import com.diegonmarcos.superapp.uikit.KitDenseMaterial
 import org.junit.Assert.assertEquals
