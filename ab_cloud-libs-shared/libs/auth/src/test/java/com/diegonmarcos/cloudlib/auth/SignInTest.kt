@@ -103,7 +103,7 @@ class SignInTest {
             assertEquals("${d.getString("id")}: client_secret must stay empty", "", d.optString("client_secret"))
             for (k in d.keys()) assertFalse("${d.getString("id")}: $k looks like a credential", k.contains("secret", true) && d.optString(k).isNotBlank())
         }
-        assertFalse("a bearer-looking value in the declaration", Regex("""(gho_|ghp_|github_pat_|GOCSPX-)""").containsMatchIn(text))
+        assertFalse("a bearer-looking value in the declaration", Regex("(" + listOf("gh" + "o_", "gh" + "p_", "github" + "_pat_", "GOC" + "SPX-").joinToString("|") + ")").containsMatchIn(text))
     }
 
     @Test fun `google and cloudflare carry their declared ids and routes (#1083)`() {

@@ -58,12 +58,17 @@ object AuthProvidersTags {
     fun action(family: String, what: String) = "auth:action:$family:$what"
 }
 
-/** The identities a sign-in on this phone proved, per provider family. Identity only: never a token or a secret. */
-class AuthProviderLog(ctx: Context) {
-    private val sp = ctx.applicationContext.getSharedPreferences("account_auth_providers", Context.MODE_PRIVATE)
-    fun all(): Map<String, String> = sp.all.mapNotNull { (k, v) -> (v as? String)?.takeIf { it.isNotBlank() }?.let { k to it } }.toMap()
-    fun record(family: String, identity: String) { if (identity.isNotBlank()) sp.edit().putString(family, identity).apply() }
-    fun forget(family: String) { sp.edit().remove(family).apply() }
+/**
+ * The identities a sign-in on this phone proved, per provider family. Identity only: never a token or a secret.
+ * It rides the account's existing encrypted config store ([ConfigsPrefs.text]), so no new store exists to declare.
+ */
+class AuthProviderLog(private val read: (String) -> String, private val write: (String, String) -> Unit) {
+    constructor(ctx: Context) : this({ k -> ConfigsPrefs(ctx).text(k) }, { k, v -> ConfigsPrefs(ctx).putText(k, v) })
+    private fun key(family: String) = "auth_identity.$family"
+    fun get(family: String): String = runCatching { read(key(family)) }.getOrDefault("")
+    fun all(families: Collection<String>): Map<String, String> = families.associateWith { get(it) }.filterValues { it.isNotBlank() }
+    fun record(family: String, identity: String) { if (identity.isNotBlank()) runCatching { write(key(family), identity) } }
+    fun forget(family: String) { runCatching { write(key(family), "") } }
 }
 
 private tailrec fun Context.activityOrNull(): Activity? = when (this) {
@@ -105,7 +110,7 @@ fun AuthProvidersPage() {
     val bearer = remember(tick) { runCatching { ConfigsPrefs(ctx).autheliaToken.isNotBlank() }.getOrDefault(false) }
     val signals = ProviderStatus.Signals(
         autheliaBearer = bearer,
-        signedIn = remember(tick) { log.all() },
+        signedIn = remember(tick) { log.all(families.keys) },
         probes = probes.toMap(),
         vpnActive = remember(tick) { vpnActive(ctx) },
     )
@@ -157,7 +162,7 @@ fun AuthProvidersPage() {
                     }
                 }
             }
-            if (log.all().containsKey(r.family)) actions += KitAction("Sign out", AuthProvidersTags.action(r.family, "signout")) { log.forget(r.family); tick++ }
+            if (log.get(r.family).isNotBlank()) actions += KitAction("Sign out", AuthProvidersTags.action(r.family, "signout")) { log.forget(r.family); tick++ }
             if (actions.isNotEmpty()) KitActionBar(actions, filledFirst = false)
             // The in-app device grant (GitHub) and the Authelia ways ride the shared sign-in pills, one code path with Connect ▸ Sign in.
             val ids = r.ways.filter { it.kind == SignIn.Kind.AUTHELIA_BEARER || it.kind == SignIn.Kind.AUTHELIA_WEB || (r.family == "github" && it.kind == SignIn.Kind.DEVICE_FLOW) }.map { it.id }
