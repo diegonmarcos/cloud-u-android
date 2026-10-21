@@ -7,7 +7,7 @@
 #   N1  ONE source of truth: the pairs are data/drive-sync-rules.json::unison, baked as UNISON_B64 from
 #       that same file and read by Declarations.unison; no .prf is committed, and no Kotlin file of the
 #       app restates a mesh host or a root.
-#   N2  every declared pair is valid (roots absolute, host a <name>.app mesh name, a winner policy keeps
+#   N2  every declared pair is valid (roots relative to shared storage, host a <name>.app mesh name, a winner policy keeps
 #       backups) and the Unison version is NOT restated in the app: it is pinned once, in the engine.
 #   N3  the conflict surface: the Sync page draws the pairs (unisonSection), the card has Sync now and
 #       Stop, and each conflicted path carries all three of keep-A / keep-B / keep-both, each reaching
@@ -54,6 +54,8 @@ for dp, _, fs in os.walk(tree):
             print("    a hand-written profile is committed: " + os.path.join(dp, f)); bad = 1
 hosts = [p["root_b"].get("host") for p in d.get("unison", {}).get("pairs", []) if "host" in p.get("root_b", {})]
 roots = [p["root_a"] for p in d.get("unison", {}).get("pairs", [])]
+if any(r.startswith("/") for r in roots):
+    print("    a root_a is an absolute device path"); bad = 1
 for dp, _, fs in os.walk(os.path.join(tree, "app", "src", "main", "java")):
     for f in fs:
         if not f.endswith(".kt"): continue
@@ -75,7 +77,8 @@ bad = 0
 for p in d["pairs"]:
     i = p.get("id")
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,40}", i or ""): print("    bad id %r" % i); bad = 1
-    if not p.get("root_a", "").startswith("/"): print("    %s: root_a is not absolute" % i); bad = 1
+    ra = p.get("root_a", "")
+    if not ra or ra.startswith("/") or ".." in ra.split("/"): print("    %s: root_a must be relative to shared storage (no device path written down)" % i); bad = 1
     b = p.get("root_b", {})
     if "host" in b and not re.fullmatch(r"[a-z0-9][a-z0-9-]*\.app", b["host"]): print("    %s: host %r is not a <name>.app mesh name" % (i, b["host"])); bad = 1
     pref = p.get("prefer", d.get("defaults", {}).get("prefer"))
