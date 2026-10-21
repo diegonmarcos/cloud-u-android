@@ -52,7 +52,8 @@ for (const n of ["cloud-webapps","cloud-me-containers"]) { const x=r.repos.find(
 if (r.repos.some(x=>x.name==="cloud-mobile")) e.push("cloud-mobile is a repo");
 if (!(r.renames||[]).some(x=>x.from==="cloud-mobile"&&x.to==="cloud-superapp")) e.push("cloud-mobile->cloud-superapp not declared");
 if (e.length){console.error(e.join("\n"));process.exit(1)}' "$DATA/repos.sot.json" "$DATA/drive-git-family.json" && ok "webapps/me-containers pending + not offered; cloud-superapp rename declared" || bad "reorganisations missing"
-grep -rIn 'cloud-mobile' "$DATA" "$APP/build.json" 2>/dev/null | grep -v 'repos.sot.json' | grep -q . && bad "cloud-mobile still referenced in cloud-drive data/build.json" || ok "no cloud-mobile path in cloud-drive data"
+old_refs="$(grep -rIn 'cloud-mobile' "$DATA" "$APP/build.json" 2>/dev/null | grep -v 'repos.sot.json' || true)"
+[ -n "$old_refs" ] && bad "cloud-mobile still referenced in cloud-drive data/build.json" || ok "no cloud-mobile path in cloud-drive data"
 
 echo "── R4 the build bakes and guards the copy ──"
 g="$APP/app/build.gradle"; k="$APP/app/src/main/java/com/diegonmarcos/clouddrive/Declarations.kt"
