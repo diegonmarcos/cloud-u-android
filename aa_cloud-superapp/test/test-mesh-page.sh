@@ -285,7 +285,7 @@ mutate("M7 a declared page has no Spanish label", "T1", sub("app/src/main/res/va
 mutate("M8 a status row has no drawing", "T1", bj(lambda m: next(p for p in m["pages"] if p["id"] == "status")["rows"].append("jitter")))
 mutate("M9 a dispatch entry no control declares", "T1", sub(M + "/MeshStore.kt", '"log.clear" to', '"log.explode" to'))
 mutate("M10 a TabLayout sneaks in", "T5", sub(M + "/MeshScreen.kt", "Column(modifier.fillMaxSize()", "com.google.android.material.tabs.TabLayout(null); Column(modifier.fillMaxSize()"))
-mutate("M11 the strip is handed a colour", "T5", sub(M + "/MeshScreen.kt", "PageTabs(tabs, store.tab, onSelect = { store.tab = it.id })", "PageTabs(tabs, store.tab, onSelect = { store.tab = it.id }, modifier = Modifier.background(Color.Red))"))
+mutate("M11 the strip is handed a colour", "T5", sub(M + "/MeshScreen.kt", "PageTabs(tabs, store.tab, onSelect = { store.tab = it.id }, underTopChrome = false, flushTop = true)", "PageTabs(tabs, store.tab, onSelect = { store.tab = it.id }, underTopChrome = false, flushTop = true, modifier = Modifier.background(Color.Red))"))
 mutate("M12 a second tunnel path (own GoBackend)", "T3", sub(M + "/AndroidMeshPort.kt", "private val backend get() = WgState.backend(ctx)", "private val backend get() = com.wireguard.android.backend.GoBackend(ctx, null)"))
 mutate("M13 connect brings the tunnel up without the fleet DNS", "T3", sub(M + "/AndroidMeshPort.kt", "val cfg = prefs.toTunnelConfig()\n        val r = backend", "val cfg = prefs.toWgConfig()\n        val r = backend"))
 mutate("M14 the ticker polls in the background", "T6", sub(M + "/MeshScreen.kt", "LaunchedEffect(resumed)", "LaunchedEffect(Unit)"))
