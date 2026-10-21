@@ -1,13 +1,16 @@
-package com.diegonmarcos.superapp.autofill
+package helium314.keyboard.latin.autofill
+
+import com.diegonmarcos.superapp.autofill.AutofillSot
 
 /**
  * #1077: every autocomplete field the fleet deploys, as ONE declaration the keyboard's
- * Configs > Autocomplete page and Autocomplete list read.
+ * Configs > Autocomplete page and Autocomplete list read. It lives in the keyboard, not in libs:autofill: that
+ * contract lib is compiled into three apps and held to a line budget, and only the keyboard draws these tables.
  *
  *  - Cloud Account's autofill store is NOT copied here: its tables and columns come from [AutofillSot]
  *    (the provider's own declaration), so a new column shows up in the keyboard with no edit.
  *  - Cloud Account's identity hand-off and Cloud Vault's autofill fields live in the vault app, which
- *    this library cannot compile against. [Vault] and [IDENTITY_HANDOFF] therefore name them here, and
+ *    the keyboard cannot compile against. [Vault] and [IDENTITY_HANDOFF] therefore name them here, and
  *    ac_cloud-keyboard/test/test-keyboard-autocomplete-schemas.sh fails the build when either list differs
  *    from the vault's IdentityField / AddIdentityRequest / AutofillSaveItem or the account's VaultIdentityHandoff.
  */

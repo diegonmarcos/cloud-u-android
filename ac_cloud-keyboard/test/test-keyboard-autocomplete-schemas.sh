@@ -15,7 +15,7 @@ set -uo pipefail
 ROOT="${CLOUD_ANDROID_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && while [ "$PWD" != "/" ] && [ ! -e "$PWD/.git" ]; do cd ..; done; printf '%s' "$PWD")}"
 L="$ROOT/ab_cloud-libs-shared/libs"
 K="$L/keyboard/src/main/java/helium314/keyboard"
-SCH="$L/autofill/src/main/java/com/diegonmarcos/superapp/autofill/AutofillSchemas.kt"
+SCH="$K/latin/autofill/AutofillSchemas.kt"
 VAULT="$ROOT/ac_cloud-vault/app/src/main/kotlin/com/x8bit/bitwarden/data/autofill"
 ACCT="$ROOT/ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/autofill/VaultIdentityHandoff.kt"
 FAILURES=0

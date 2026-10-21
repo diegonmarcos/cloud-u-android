@@ -2,7 +2,6 @@
 package helium314.keyboard.latin.autofill
 
 import com.diegonmarcos.superapp.autofill.AutofillProfile
-import com.diegonmarcos.superapp.autofill.AutofillSchemas
 import com.diegonmarcos.superapp.autofill.AutofillSot
 import com.diegonmarcos.superapp.autofill.Snippet
 

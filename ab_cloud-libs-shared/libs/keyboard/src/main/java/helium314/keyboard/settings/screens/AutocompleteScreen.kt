@@ -20,8 +20,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.diegonmarcos.superapp.autofill.AutofillSchemas
-import com.diegonmarcos.superapp.autofill.SchemaTable
+import helium314.keyboard.latin.autofill.AutofillSchemas
+import helium314.keyboard.latin.autofill.SchemaTable
 import helium314.keyboard.latin.R
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.preferences.PreferenceCategory

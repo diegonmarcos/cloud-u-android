@@ -4,7 +4,6 @@ package helium314.keyboard.latin.autofill
 import com.diegonmarcos.superapp.autofill.AutofillAddress
 import com.diegonmarcos.superapp.autofill.AutofillContact
 import com.diegonmarcos.superapp.autofill.AutofillProfile
-import com.diegonmarcos.superapp.autofill.AutofillSchemas
 import com.diegonmarcos.superapp.autofill.AutofillSot
 import com.diegonmarcos.superapp.autofill.Snippet
 import org.junit.Assert.assertEquals
