@@ -151,8 +151,10 @@ class WebPagesRenderTest {
                 embedOwnTabs = num("(()=>{const e=document.querySelector('.page-tabs-bar');return e&&getComputedStyle(e).display!=='none'?1:0})()")
                 embedApkRow = num("(()=>{const e=document.querySelector('.site-footer');return e&&getComputedStyle(e).display!=='none'?1:0})()")
                 // The SuperApp's top row (status / app top bar island) stays visible and the page sits BELOW it, inside the shell.
+                // resumed() itself runs on the main thread: calling it inside runOnMainSync throws "can not be called from the main application thread".
+                val shell = resumed()
                 inst.runOnMainSync {
-                    val island = resumed()?.findViewById<View>(R.id.toolbar_island)
+                    val island = shell?.findViewById<View>(R.id.toolbar_island)
                     if (island != null) {
                         val l = IntArray(2); island.getLocationOnScreen(l)
                         islandBottom = l[1] + island.height; islandShown = island.isShown && island.height > 0
