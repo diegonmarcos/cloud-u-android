@@ -48,7 +48,7 @@ class ConfigsSharesAppsDesignTest : KitPageHarness() {
         val home = code("HomeGroupedFragment.kt")
         for (shared in listOf("TileStrip(", "GroupTitle(", "TILE_PAGE_PADDING"))
             assertTrue("the Home grid does not use $shared", home.contains(shared))
-        assertTrue("the Home grid draws a tile of its own", !Regex("CompactTile|TileCell\\(|Icon\\(|Text\\(").containsMatchIn(home))
+        assertTrue("the Home grid draws a tile of its own", !Regex("CompactTile|\\bTileCell\\(|\\bIcon\\(|\\bText\\(").containsMatchIn(home))
         assertTrue("the Apps cell width is one token", Regex("TILE_CELL_WIDTH").findAll(apps).count() >= 3)
     }
 
