@@ -5,7 +5,6 @@ import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.launcher.AppInstall
 import com.diegonmarcos.superapp.launcher.AppLongPressMenu
 import com.diegonmarcos.superapp.launcher.Sections
-import com.diegonmarcos.superapp.launcher.TileSeparator
 import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.ui.snack
 import com.diegonmarcos.superapp.R
