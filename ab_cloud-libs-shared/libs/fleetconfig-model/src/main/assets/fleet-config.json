@@ -104,6 +104,12 @@
         "ac_cloud-chat"
       ]
     },
+    "account_activity": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "#1081 Cloud Account's Activity page: a short on-device log (newest last, capped at 200) of what the account did, as sentences naming a thing (revealed github.token, auto-backup ok). It never holds a secret value (ActivityLog.record drops one that looks like it) and records this phone's history, never configuration.",
+      "used_by": ["lib-account"]
+    },
     "account_data_migration": {
       "kind": "prefs",
       "class": "device",

@@ -58,6 +58,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `account_activity` | prefs | device | no | #1081 Cloud Account's Activity page: a short on-device log (newest last, capped at 200) of what the account did, as sentences naming a thing (revealed github.token, auto-backup ok). It never holds a secret value (ActivityLog.record drops one that looks like it) and records this phone's history, never configuration. |
 | `account_data_migration` | prefs | device | no | #867 whether this app has already copied the imported configs, profile and S/R/L account files over from the Cloud Account app. It records this phone's progress, never configuration. |
 | `account_migrate` | prefs | device | no | #783 the new-phone migration journal: per app, the hash of the declared copy applied and its outcome, so a re-run resumes. It describes this phone's progress, never configuration. |
 | `adb_shell` | prefs | device | no | Per-install random token shared with the local adb shell server (install identity), the flag that this install was ever paired with Wireless Debugging (drives the Cloud Store channel control: not paired vs down), and channel_mode, the owner's Privileged channel choice (local \| embedded \| shizuku \| auto; default local where the app owns a local server). |
@@ -204,6 +205,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofi
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
+| `account_activity` | prefs | device | no | #1081 Cloud Account's Activity page: a short on-device log (newest last, capped at 200) of what the account did, as sentences naming a thing (revealed github.token, auto-backup ok). It never holds a secret value (ActivityLog.record drops one that looks like it) and records this phone's history, never configuration. |
 | `account_data_migration` | prefs | device | no | #867 whether this app has already copied the imported configs, profile and S/R/L account files over from the Cloud Account app. It records this phone's progress, never configuration. |
 | `account_migrate` | prefs | device | no | #783 the new-phone migration journal: per app, the hash of the declared copy applied and its outcome, so a re-run resumes. It describes this phone's progress, never configuration. |
 | `adb_shell` | prefs | device | no | Per-install random token shared with the local adb shell server (install identity), the flag that this install was ever paired with Wireless Debugging (drives the Cloud Store channel control: not paired vs down), and channel_mode, the owner's Privileged channel choice (local \| embedded \| shizuku \| auto; default local where the app owns a local server). |
