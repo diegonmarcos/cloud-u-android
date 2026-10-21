@@ -93,6 +93,7 @@ class PhoneAppsComposeTest : KitPageHarness() {
     fun `P1 the phone tab toggles between categories and the alphabet`() {
         show(PhoneAppsFragment.newInstance())
         compose.onNodeWithTag(PhoneAppsFragment.TAG_MODE_ALPHA).performClick()
+        compose.mainClock.advanceTimeBy(1000)
         compose.waitForIdle()
         try {
             for (c in 'A'..'Z') compose.onAllNodesWithTag(folderTag("alpha:$c")).assertCountEquals(1)
