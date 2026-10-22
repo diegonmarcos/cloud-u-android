@@ -41,6 +41,7 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/scripts/cloud-office-source-engine.sh"
       - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/ml-l-image/**"

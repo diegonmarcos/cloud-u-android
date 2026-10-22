@@ -108,6 +108,7 @@ on:
       # does not match what the source produces.
       - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/decisions-link/**"
       - "ab_cloud-libs-shared/libs/decisions/**"
       - "ab_cloud-libs-shared/libs/devtools/**"

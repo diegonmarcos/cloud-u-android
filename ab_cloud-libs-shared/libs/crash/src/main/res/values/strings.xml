@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crash_report_title">%1$s hit an error</string>
+    <string name="crash_report_body">The app kept running instead of closing. Copy or share the trace below, or retry without the optional startup work.</string>
+    <string name="crash_report_copy">Copy</string>
+    <string name="crash_report_copied">Copied</string>
+    <string name="crash_report_share">Share</string>
+    <string name="crash_report_safe_mode">Retry in safe mode</string>
+    <string name="crash_report_close">Close</string>
+</resources>

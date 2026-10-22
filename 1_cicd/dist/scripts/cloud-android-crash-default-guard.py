@@ -13,6 +13,7 @@ import sys
 ROOT = sys.argv[1] if len(sys.argv) > 1 else "."
 POLICY = os.path.join(ROOT, "1_cicd/src/data/crash-default-guard.json")
 CORE = "ab_cloud-libs-shared/libs/core"
+CRASH = "ab_cloud-libs-shared/libs/crash"
 
 
 def read(rel):
@@ -21,6 +22,10 @@ def read(rel):
             return f.read()
     except OSError:
         return None
+
+
+def strip(text):
+    return re.sub(r"//[^\n]*|/\*.*?\*/", "", text, flags=re.S)
 
 
 def main():
@@ -39,8 +44,12 @@ def main():
         bad.append(f"{CORE}: CoreInitProvider does not install CrashReports.installHandler (the default handler)")
     if "CrashReports.flushLocal(" not in provider:
         bad.append(f"{CORE}: CoreInitProvider does not retry the local sink (CrashReports.flushLocal)")
-    if "CRASH_SINK_PORT" not in (read(f"{CORE}/build.gradle") or ""):
-        bad.append(f"{CORE}/build.gradle: CRASH_SINK_PORT (the local sink's declared port) is not baked")
+    if not re.search(r"""project\(\s*['"]:libs:crash['"]""", read(f"{CORE}/build.gradle") or ""):
+        bad.append(f"{CORE}/build.gradle: libs:core no longer depends on :libs:crash (the module that holds the default handler and screen)")
+    if "CRASH_SINK_PORT" not in (read(f"{CRASH}/build.gradle") or ""):
+        bad.append(f"{CRASH}/build.gradle: CRASH_SINK_PORT (the local sink's declared port) is not baked")
+    if "CrashActivity" not in (read(f"{CRASH}/src/main/AndroidManifest.xml") or ""):
+        bad.append(f"{CRASH}: the manifest no longer declares CrashActivity (the generic crash screen)")
     if "/__app__/api/crashes" not in (read("ac_cloud-c3-webserver/server/src/app.rs") or ""):
         bad.append("ac_cloud-c3-webserver: the local crash sink route /__app__/api/crashes is not served")
 
@@ -57,7 +66,11 @@ def main():
             continue
         if not d.get("android", {}).get("application_id") and "modules" not in d:
             continue
-        linked = "libs:core" in (d.get("modules") or {})
+        # linked by the build.json module map, or by a hand-written settings file (Gallery, Camera: upstream trees
+        # whose settings.gradle(.kts) includes the shared module by path)
+        linked = "libs:core" in (d.get("modules") or {}) or any(
+            re.search(r"""include\(\s*['"]:libs:core['"]""", strip(open(sf, encoding="utf-8", errors="replace").read()))
+            for sf in glob.glob(os.path.join(ROOT, app, "settings.gradle*")))
         if d.get("crash_default") is False:
             bad.append(f"{app}/build.json: crash_default=false — an app cannot opt out of the default crash handler")
         if not linked and app not in not_linked:

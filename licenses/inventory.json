@@ -199,6 +199,7 @@
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/chat",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/databackend",
     "ab_cloud-libs-shared/libs/datamanager",
     "ab_cloud-libs-shared/libs/decisions-link",
@@ -229,6 +230,7 @@
    "app_licence": "LicenseRef-NoLicenseGranted",
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/ui-kit"
@@ -238,6 +240,7 @@
    "app_licence": "LicenseRef-NoLicenseGranted",
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/ui-kit",
@@ -248,6 +251,7 @@
    "app_licence": "LicenseRef-NoLicenseGranted",
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/ui-kit"
@@ -262,6 +266,7 @@
     "ab_cloud-libs-shared/libs/autofill",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/databackend",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
@@ -286,6 +291,7 @@
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/browser",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
@@ -303,6 +309,7 @@
     "ab_cloud-libs-shared/libs/analytics",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
@@ -316,6 +323,7 @@
    "app_licence": "LicenseRef-NoLicenseGranted",
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model"
    ]
@@ -326,6 +334,7 @@
     "ab_cloud-libs-shared/libs/ai",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/databackend",
     "ab_cloud-libs-shared/libs/decisions",
     "ab_cloud-libs-shared/libs/devtools",
@@ -341,6 +350,7 @@
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/ml-l-image",
@@ -352,6 +362,7 @@
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/analytics",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model"
    ]
@@ -360,6 +371,7 @@
    "app_licence": "MIT",
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/text-tools"
@@ -371,6 +383,7 @@
     "ab_cloud-libs-shared/libs/analytics",
     "ab_cloud-libs-shared/libs/contacts",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/databackend",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
@@ -384,6 +397,7 @@
     "ab_cloud-libs-shared/libs/analytics",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/ui-kit"
@@ -397,6 +411,7 @@
     "ab_cloud-libs-shared/libs/auth",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/databackend",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
@@ -421,6 +436,7 @@
     "ab_cloud-libs-shared/libs/analytics",
     "ab_cloud-libs-shared/libs/autofill",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
@@ -437,6 +453,7 @@
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/databackend",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
@@ -452,6 +469,7 @@
    "app_licence": "AGPL-3.0-only OR LicenseRef-Element-Commercial",
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model"
    ]
@@ -462,6 +480,7 @@
     "ab_cloud-libs-shared/libs/analytics",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/databackend",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
@@ -476,6 +495,7 @@
    "app_licence": "LicenseRef-NoLicenseGranted",
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model"
    ]
@@ -485,6 +505,7 @@
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/analytics",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/ui-kit"
@@ -496,6 +517,7 @@
     "ab_cloud-libs-shared/libs/analytics",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
@@ -509,6 +531,7 @@
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/analytics",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/databackend",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
@@ -522,6 +545,7 @@
     "ab_cloud-libs-shared/libs/ai",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/model-catalogue"
@@ -533,6 +557,7 @@
     "ab_cloud-libs-shared/libs/ai",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/model-catalogue",
@@ -547,6 +572,7 @@
     "ab_cloud-libs-shared/libs/appstore",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
@@ -565,6 +591,7 @@
     "ab_cloud-libs-shared/libs/analytics",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/databackend",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
@@ -578,6 +605,7 @@
    "app_licence": "GPL-3.0-only",
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools"
@@ -589,6 +617,7 @@
     "ab_cloud-libs-shared/libs/ai",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/decisions",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
@@ -602,6 +631,7 @@
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleet-endpoints",
     "ab_cloud-libs-shared/libs/fleet-endpoints-android",
@@ -614,6 +644,7 @@
     "ab_cloud-libs-shared/libs/analytics",
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
@@ -627,6 +658,7 @@
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
+    "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/decisions",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
@@ -2943,6 +2975,7 @@
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-gallery/gradle/libs.versions.toml",
+    "ac_cloud-keyboard/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
     "ac_cloud-me/app/build.gradle",
@@ -3296,6 +3329,7 @@
     "ac_cloud-dialer/app/build.gradle.kts",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-gallery/gradle/libs.versions.toml",
+    "ac_cloud-keyboard/app/build.gradle",
     "ac_cloud-me/app/build.gradle",
     "ac_cloud-myterminal/hub/build.gradle",
     "ac_cloud-nav/app/build.gradle",
@@ -3752,6 +3786,7 @@
     "ac_cloud-camera/app/build.gradle.kts",
     "ac_cloud-dialer/app/build.gradle.kts",
     "ac_cloud-drive/app/build.gradle",
+    "ac_cloud-keyboard/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
     "ac_cloud-me/app/build.gradle",

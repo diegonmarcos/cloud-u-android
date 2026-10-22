@@ -43,10 +43,10 @@ class CoreInitProvider : ContentProvider() {
         // out of a provider's onCreate takes the whole process down before
         // Application.onCreate ever runs.
         runCatching { Telemetry.installCrashHandler(ctx) }
-        // #1122 installed AFTER Telemetry's so it is the outermost handler: persist to files/crashes first,
+        // #1122 (libs:crash) installed AFTER Telemetry's so it is the outermost handler: persist to files/crashes first,
         // then the phone's local C3 WebServer sink (offline), then Telemetry's remote upload runs as before.
-        runCatching { CrashReports.installHandler(ctx) }
-        runCatching { CrashReports.flushLocal(ctx) }
+        runCatching { com.diegonmarcos.superapp.crash.CrashReports.installHandler(ctx) }
+        runCatching { com.diegonmarcos.superapp.crash.CrashReports.flushLocal(ctx) }
         // The crashes the last run could not send (offline, mesh down) go out now.
         runCatching { Telemetry.flushQueue(ctx) }
         // #777: /api/fleetalert/raise in EVERY fleet app, so "an app raises an

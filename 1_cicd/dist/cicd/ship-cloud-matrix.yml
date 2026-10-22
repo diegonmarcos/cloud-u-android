@@ -31,6 +31,7 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/scripts/cloud-matrix-fork-engine.sh"
       - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ac_cloud-matrix/**"

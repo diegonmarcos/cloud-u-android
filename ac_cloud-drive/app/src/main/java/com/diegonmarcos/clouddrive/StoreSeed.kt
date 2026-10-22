@@ -239,7 +239,7 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
             // #1106 safe mode skips the network work; a throw here must not end MainActivity.onCreate.
             if (com.diegonmarcos.clouddrive.startup.StartupGuard.safeMode) return
             runCatching { enqueue(context, ExistingWorkPolicy.KEEP) }
-                .onFailure { com.diegonmarcos.clouddrive.startup.StartupGuard.record(com.diegonmarcos.clouddrive.startup.StartupGuard.dir(context), "StoreSeedWorker.schedule", it, "") }
+                .onFailure { com.diegonmarcos.superapp.crash.CrashReports.report(context, "StoreSeedWorker.schedule", it) }
         }
 
         /**

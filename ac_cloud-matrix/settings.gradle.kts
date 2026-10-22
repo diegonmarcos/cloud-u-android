@@ -84,6 +84,9 @@ project(":libs:devtools").projectDir = file("../ab_cloud-libs-shared/libs/devtoo
 // #873 libs:core declares `api project(':libs:fleetconfig-model')` (the setup contract): the include is not optional.
 include(":libs:fleetconfig-model")
 project(":libs:fleetconfig-model").projectDir = file("../ab_cloud-libs-shared/libs/fleetconfig-model")
+// #1122 libs:core declares `api project(':libs:crash')` (the default crash handler and screen): the include is not optional.
+include(":libs:crash")
+project(":libs:crash").projectDir = file("../ab_cloud-libs-shared/libs/crash")
 // ':libs:<x>' implicitly declares a ':libs' container whose default projectDir
 // is <root>/libs, which this fork does not have — and Gradle 9 fails outright
 // on a project directory that does not exist. Point it at the shared root.

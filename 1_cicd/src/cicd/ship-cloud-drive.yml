@@ -53,6 +53,7 @@ on:
       - "ab_cloud-libs-shared/libs/auth/**"
       - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/databackend/**"
       - "ab_cloud-libs-shared/libs/decisions-link/**"
       - "ab_cloud-libs-shared/libs/devtools/**"

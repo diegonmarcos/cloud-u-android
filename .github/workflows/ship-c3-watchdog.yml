@@ -71,6 +71,7 @@ on:
       #   input: "1_cicd/src/cicd/ship-c3-watchdog.yml"
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"

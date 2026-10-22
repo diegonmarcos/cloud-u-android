@@ -11,7 +11,10 @@ mk() {
   echo '{"not_linked":{}}' > "$r/1_cicd/src/data/crash-default-guard.json"
   echo '<manifest><application><provider android:name="x.CoreInitProvider" android:exported="false"/></application></manifest>' > "$r/ab_cloud-libs-shared/libs/core/src/main/AndroidManifest.xml"
   printf 'class CoreInitProvider { fun f(){ CrashReports.installHandler(c); CrashReports.flushLocal(c) } }\n' > "$r/ab_cloud-libs-shared/libs/core/src/main/java/com/diegonmarcos/superapp/core/CoreInitProvider.kt"
-  echo 'buildConfigField "int", "CRASH_SINK_PORT", "1"' > "$r/ab_cloud-libs-shared/libs/core/build.gradle"
+  mkdir -p "$r/ab_cloud-libs-shared/libs/crash/src/main"
+  echo "api project(':libs:crash')" > "$r/ab_cloud-libs-shared/libs/core/build.gradle"
+  echo 'buildConfigField "int", "CRASH_SINK_PORT", "1"' > "$r/ab_cloud-libs-shared/libs/crash/build.gradle"
+  echo '<manifest><application><activity android:name="x.CrashActivity"/></application></manifest>' > "$r/ab_cloud-libs-shared/libs/crash/src/main/AndroidManifest.xml"
   echo 'path: "/__app__/api/crashes"' > "$r/ac_cloud-c3-webserver/server/src/app.rs"
   echo '{"android":{"application_id":"a.b"},"modules":{"libs:core":{"dir":"x"}}}' > "$r/ac_cloud-a/build.json"
   echo '<manifest/>' > "$r/ac_cloud-a/app/src/main/AndroidManifest.xml"
@@ -29,5 +32,10 @@ r="$(mk)"; echo '<manifest><application><provider android:name="x.CoreInitProvid
 r="$(mk)"; echo 'class CoreInitProvider {}' > "$r/ab_cloud-libs-shared/libs/core/src/main/java/com/diegonmarcos/superapp/core/CoreInitProvider.kt"; expect "core no longer installing the handler is red" 1 "$r"
 r="$(mk)"; : > "$r/ac_cloud-c3-webserver/server/src/app.rs"; expect "the web server dropping the sink route is red" 1 "$r"
 r="$(mk)"; echo '{"not_linked":{"ac_cloud-a":"x"}}' > "$r/1_cicd/src/data/crash-default-guard.json"; expect "a stale not_linked entry is red" 1 "$r"
+r="$(mk)"; echo "api project(':libs:fleetconfig-model')" > "$r/ab_cloud-libs-shared/libs/core/build.gradle"; expect "core dropping :libs:crash is red" 1 "$r"
+r="$(mk)"; echo 'CRASH_SINK_PORT' > "$r/ab_cloud-libs-shared/libs/core/build.gradle"; expect "the sink port left out of libs:crash is red" 1 "$r"
+r="$(mk)"; echo '<manifest/>' > "$r/ab_cloud-libs-shared/libs/crash/src/main/AndroidManifest.xml"; expect "libs:crash without the crash screen is red" 1 "$r"
+r="$(mk)"; echo '{"android":{"application_id":"a.b"}}' > "$r/ac_cloud-a/build.json"; echo 'include(":libs:core")' > "$r/ac_cloud-a/settings.gradle.kts"; expect "an app that includes libs:core in its settings is green" 0 "$r"
+r="$(mk)"; echo '{"android":{"application_id":"a.b"}}' > "$r/ac_cloud-a/build.json"; echo '// include(":libs:core")' > "$r/ac_cloud-a/settings.gradle.kts"; expect "a commented-out settings include is red" 1 "$r"
 rm -f /tmp/crash-default-guard.$$
 [ "$fails" -eq 0 ] && echo "crash-default-guard.test: all green" || { echo "crash-default-guard.test: $fails FAILED"; exit 1; }

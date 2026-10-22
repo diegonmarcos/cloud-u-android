@@ -59,6 +59,9 @@ project(":libs:devtools").projectDir = file("../ab_cloud-libs-shared/libs/devtoo
 // #873 libs:core declares `api project(':libs:fleetconfig-model')` (the setup contract): the include is not optional.
 include(":libs:fleetconfig-model")
 project(":libs:fleetconfig-model").projectDir = file("../ab_cloud-libs-shared/libs/fleetconfig-model")
+// #1122 libs:core declares `api project(':libs:crash')` (the default crash handler and screen): the include is not optional.
+include(":libs:crash")
+project(":libs:crash").projectDir = file("../ab_cloud-libs-shared/libs/crash")
 
 // ':libs:<x>' implicitly declares an intermediate ':libs' project whose default
 // projectDir is <root>/libs. This app HAD one, so it never needed mapping —

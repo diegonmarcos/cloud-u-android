@@ -265,6 +265,11 @@
         "_doc": "#873 — pulled in by core's `api project(':libs:fleetconfig-model')` (the setup contract every fleet app answers at <package>.fleetsetup); android/app does not link it directly. Linked because that project path resolves against android/settings.gradle, which patch 0007 makes include it, and listed so a change to the model re-ships this app.",
         "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
         "materialize_to": "android/libs/fleetconfig-model"
+      },
+      "crash": {
+        "_doc": "#1122 — pulled in by core's `api project(':libs:crash')` (the default crash handler, the phone's local crash sink and the generic crash screen); android/app does not link it directly. Linked because that project path resolves against android/settings.gradle, which patch 0008 makes include it, and listed so a change to it re-ships this app.",
+        "dir": "../ab_cloud-libs-shared/libs/crash",
+        "materialize_to": "android/libs/crash"
       }
     },
     "build_json_to": "android/build.json",

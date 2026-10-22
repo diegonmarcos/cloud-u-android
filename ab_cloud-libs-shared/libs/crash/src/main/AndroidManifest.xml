@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- #1122 the crash screen of every app that links libs:core. Its own process (:crash) so it survives the
+             crash it reports; a platform theme so nothing the app's own startup could break is on its path.
+             Never exported: CrashReports launches it by action with the app's own package set. -->
+        <activity
+            android:name="com.diegonmarcos.superapp.crash.CrashActivity"
+            android:exported="false"
+            android:process=":crash"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            <intent-filter>
+                <action android:name="com.diegonmarcos.cloud.action.SHOW_CRASH_REPORT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

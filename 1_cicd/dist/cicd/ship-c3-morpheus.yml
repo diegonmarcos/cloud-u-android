@@ -87,6 +87,7 @@ on:
       # generated-up-to-date.yml, which fails the build when the emitted copy
       # does not match what the source produces.
       - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"

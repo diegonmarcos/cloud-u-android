@@ -47,6 +47,7 @@ on:
       - "ab_cloud-libs-shared/libs/ai/**"
       - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/decisions/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"

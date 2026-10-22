@@ -1,5 +1,6 @@
-package com.diegonmarcos.superapp.core
+package com.diegonmarcos.superapp.crash
 
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -16,7 +17,7 @@ import java.util.TimeZone
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * #1122 CRASH-SAFE BY DEFAULT, for every fleet app. [CoreInitProvider] installs [installHandler] before
+ * #1122 CRASH-SAFE BY DEFAULT, for every fleet app (libs:crash, linked by libs:core). libs:core's CoreInitProvider installs [installHandler] before
  * Application.onCreate, so an app gets all of this with no code of its own:
  *
  *  1. PERSIST FIRST. The report is written to `files/crashes/crash-<ms>-<n>.txt` before anything that can
@@ -27,8 +28,8 @@ import java.util.concurrent.atomic.AtomicInteger
  *     network down. A report the sink could not take stays unmarked and is retried at the next start
  *     ([flushLocal]).
  *  3. REMOTE. Then the handler this one wrapped runs: [Telemetry]'s mesh-first, c3-pvt-second, queued upload.
- *  4. SCREEN. An app that declares an activity answering [ACTION_SHOW] gets it launched with the report
- *     (Drive's "hit a startup error" screen with Copy / Share / Retry in safe mode).
+ *  4. SCREEN. [CrashActivity] (own process, answers [ACTION_SHOW]) is launched with the report: stack trace,
+ *     Copy, Share, Retry in safe mode. Every app gets it; Drive's own StartupGuard report is gone.
  *
  * The file handling is plain java.io and unit-tested; only [installHandler] touches Android.
  */
@@ -45,6 +46,7 @@ object CrashReports {
     private const val SUNK = ".sunk"
     private const val SEEN = ".seen"
     private const val KEEP = 20
+    private const val MAX_SHARE_CHARS = 150_000
 
     private val seq = AtomicInteger(0)
     @Volatile private var inHandler = false
@@ -101,6 +103,13 @@ object CrashReports {
     fun latest(dir: File): File? = reports(dir).firstOrNull()
     fun markAllSeen(dir: File) { unseen(dir).forEach { f -> runCatching { f.renameTo(File(f.path + SEEN)); File(f.path + SUNK).renameTo(File(f.path + SEEN + SUNK)) } } }
 
+    /** What Copy / Share send: the newest report, capped so the intent stays inside the binder limit. */
+    fun shareText(dir: File): String {
+        val f = latest(dir) ?: return "No error has been recorded."
+        val text = runCatching { f.readText() }.getOrDefault("(report unreadable)")
+        return if (text.length <= MAX_SHARE_CHARS) text else text.take(MAX_SHARE_CHARS) + "\n...(truncated)"
+    }
+
     /** Reports the local sink has not taken yet. */
     fun unsunk(dir: File): List<File> = reports(dir).filter { !File(it.path + SUNK).exists() && !File(it.path.removeSuffix(SEEN) + SUNK).exists() }
     fun markSunk(f: File) { runCatching { File(f.path.removeSuffix(SEEN) + SUNK).writeText("") } }
@@ -147,7 +156,12 @@ object CrashReports {
         return f
     }
 
-    /** The crash screen, if this app declares one. Never throws. */
+    /** True in the crash screen's own process (`:crash`), where a throw must not open the screen again. */
+    fun isCrashProcess(): Boolean =
+        (if (Build.VERSION.SDK_INT >= 28) Application.getProcessName() else runCatching { File("/proc/self/cmdline").readText().trim('\u0000') }.getOrNull())
+            ?.endsWith(":crash") == true
+
+    /** The crash screen. Never throws. */
     fun showScreen(ctx: Context, clearTask: Boolean) {
         runCatching {
             val i = Intent(ACTION_SHOW).setPackage(ctx.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -166,7 +180,7 @@ object CrashReports {
         val ctx = context.applicationContext
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, t ->
-            if (!inHandler) {
+            if (!inHandler && !isCrashProcess()) {
                 inHandler = true
                 runCatching { report(ctx, "uncaught exception on ${thread.name}", t) }
                 runCatching { showScreen(ctx, clearTask = true) }

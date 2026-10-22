@@ -1,0 +1,72 @@
+// libs:crash (#1122): the fleet's crash-safe default, split out of libs:core (which is at its line budget).
+// libs:core `api`s this module and its CoreInitProvider installs CrashReports before Application.onCreate, so an
+// app gets: the report persisted to files/crashes, a POST to the phone's local C3 WebServer, and the generic crash
+// screen (stack trace, Copy, Share, Retry in safe mode) with no code of its own. Depends on nothing in this repo
+// (never on libs:core: that edge would be a cycle).
+//
+// The screen is Compose. The compose compiler plugin is resolved from the consuming app's root build (the bare id,
+// as libs:bottomnav does); an app whose root does not declare it (a Tauri or React Native shell) keeps the same
+// activity but gets src/main/plain's screen, which hands the report to the share sheet, so linking this module
+// never breaks that app's configuration.
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android' apply false
+}
+
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+
+def composeOn = false
+try {
+    apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+    composeOn = true
+} catch (org.gradle.api.plugins.UnknownPluginException ignored) {
+    logger.lifecycle("libs:crash: no compose compiler plugin in this build; the crash screen uses the share sheet")
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.crash'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        // The phone's local crash sink: the C3 WebServer's loopback port, read from its own declaration
+        // (ac_cloud-c3-webserver/build.json::runtime.port, the number emulated.app stands for). 0 = not found at
+        // build time, and the local leg is skipped rather than guessed.
+        def c3ws = [new File(projectDir, '../../../ac_cloud-c3-webserver/build.json'), new File(rootDir, '../ac_cloud-c3-webserver/build.json'),
+                    new File(rootDir, 'ac_cloud-c3-webserver/build.json')].find { it.exists() }
+        buildConfigField "int", "CRASH_SINK_PORT", "${c3ws ? (new groovy.json.JsonSlurper().parse(c3ws).runtime?.port ?: 0) : 0}"
+    }
+
+    buildFeatures {
+        buildConfig true
+        compose = composeOn
+    }
+
+    sourceSets.main.java.srcDir(composeOn ? 'src/main/compose' : 'src/main/plain')
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    implementation 'androidx.activity:activity-ktx:1.9.3'
+    if (composeOn) {
+        implementation platform('androidx.compose:compose-bom:2025.11.01')
+        implementation 'androidx.compose.ui:ui'
+        implementation 'androidx.compose.foundation:foundation'
+        implementation 'androidx.compose.material3:material3'
+        implementation 'androidx.activity:activity-compose:1.9.3'
+    }
+    testImplementation 'junit:junit:4.13.2'
+}

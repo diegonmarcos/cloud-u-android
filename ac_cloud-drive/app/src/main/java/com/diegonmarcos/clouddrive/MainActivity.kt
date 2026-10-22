@@ -46,6 +46,7 @@ import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
 import com.diegonmarcos.clouddrive.sync.SyncScreen
 import com.diegonmarcos.clouddrive.startup.StartupGate
 import com.diegonmarcos.clouddrive.startup.StartupGuard
+import com.diegonmarcos.superapp.crash.CrashReports
 import com.diegonmarcos.clouddrive.startup.StartupState
 import com.diegonmarcos.clouddrive.startup.StoreStartupController
 import com.diegonmarcos.cloudlib.sharedstore.StoreAccess
@@ -83,20 +84,20 @@ class MainActivity : ComponentActivity(), DriveActions {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // #1106 CRASH-SAFE STARTUP: nothing below may take the app down. "Retry in safe mode" (the
-        // report screen) skips the optional initialisers; a report nobody has seen yet is shown
-        // before anything else runs.
-        StartupGuard.safeMode = intent?.getBooleanExtra(StartupGuard.EXTRA_SAFE_MODE, false) == true
-        if (!StartupGuard.safeMode && StartupGuard.unseen(StartupGuard.dir(this)).isNotEmpty()) {
-            StartupGuard.launchReport(this, clearTask = true)
+        // #1106 CRASH-SAFE STARTUP: nothing below may take the app down. "Retry in safe mode" (libs:crash's
+        // report screen) skips the optional initialisers; a report nobody has seen yet is shown before
+        // anything else runs. #1122 the handler, the report file and the screen are libs:crash's.
+        StartupGuard.safeMode = intent?.getBooleanExtra(CrashReports.EXTRA_SAFE_MODE, false) == true
+        if (!StartupGuard.safeMode && CrashReports.unseen(CrashReports.dir(this)).isNotEmpty()) {
+            CrashReports.showScreen(this, clearTask = true)
             finish()
             return
         }
         try {
             startup()
         } catch (t: Throwable) {
-            StartupGuard.record(StartupGuard.dir(this), "MainActivity.onCreate", t, "uid ${android.os.Process.myUid()}")
-            StartupGuard.launchReport(this, clearTask = true)
+            CrashReports.report(this, "MainActivity.onCreate", t)
+            CrashReports.showScreen(this, clearTask = true)
             finish()
             return
         }
@@ -105,7 +106,7 @@ class MainActivity : ComponentActivity(), DriveActions {
         // (StoreSeedWorker.schedule guards itself and no-ops in safe mode.)
         StoreSeedWorker.schedule(this)
         // A phase failed but the app is up: show the trace over it (Close returns to the app).
-        if (StartupGuard.failureCount() > 0) StartupGuard.launchReport(this, clearTask = false)
+        if (StartupGuard.failureCount() > 0) CrashReports.showScreen(this, clearTask = false)
     }
 
     /** Every initialiser, each behind [guarded]: one failing phase is recorded and the rest still run. */

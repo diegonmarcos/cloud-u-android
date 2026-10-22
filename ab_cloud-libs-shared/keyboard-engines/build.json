@@ -72,6 +72,11 @@
       "type": "library",
       "_doc_dir": "#873 pulled in by libs:core with an api dependency (the setup contract every fleet app answers); declared because core references it by project path, and a missing declaration stops the build at configuration.",
       "dir": "../libs/fleetconfig-model"
+    },
+    "libs:crash": {
+      "type": "library",
+      "_doc_dir": "#1122 pulled in by libs:core with an api dependency (the default crash handler, the local crash sink and the generic crash screen); declared because core references it by project path, and a missing declaration stops the build at configuration.",
+      "dir": "../libs/crash"
     }
   },
   "keyboard_media": {

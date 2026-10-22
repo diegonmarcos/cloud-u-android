@@ -62,6 +62,11 @@
       "_doc": "2026-10-16 owner decision: all apps must be Compose. Shared BY REFERENCE: the fleet's Compose kit (CloudKitTheme + KitPalette) ScreeningLogActivity and CallProviderChooserSheet paint with.",
       "dir": "../ab_cloud-libs-shared/libs/ui-kit"
     },
+    "libs:crash": {
+      "_doc": "#1122 libs:core `api`s this module (the default crash handler, the local crash sink and the generic crash screen); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
+      "dir": "../ab_cloud-libs-shared/libs/crash",
+      "type": "library"
+    },
     "libs:fleetconfig-model": {
       "_doc": "#873 libs:core `api`s this module (the setup provider every app serves, describe / export / apply / status); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
       "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",

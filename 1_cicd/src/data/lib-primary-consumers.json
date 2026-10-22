@@ -13,6 +13,7 @@
     "autofill": "ac_cloud-account",
     "bottomnav": "aa_cloud-superapp",
     "core": null,
+    "crash": null,
     "databackend": "ac_cloud-contacts",
     "decisions": "ac_cloud-calc",
     "devtools": null,

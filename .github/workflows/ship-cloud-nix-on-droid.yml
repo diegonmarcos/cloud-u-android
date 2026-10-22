@@ -52,6 +52,7 @@ on:
       # and it is one of the bootstrap's identity_files.
       - "1_cicd/src/scripts/cloud-nix-on-droid-fork-engine.sh"
       - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleet-webserver/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"

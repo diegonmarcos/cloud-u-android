@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.core
+package com.diegonmarcos.superapp.crash
 
 import java.io.File
 import java.net.ServerSocket
@@ -67,5 +67,25 @@ class CrashReportsTest {
         val dir = tmp()
         repeat(30) { CrashReports.persist(dir, "p$it", "t", meta, 1_000L + it) }
         assertEquals(20, dir.listFiles()!!.count { it.name.endsWith(".txt") })
+    }
+
+    @Test fun anUnshownReportIsSurfacedUntilMarkedSeen() {
+        val dir = tmp()
+        CrashReports.persist(dir, "a", "t1", meta, 1_000L)
+        CrashReports.persist(dir, "b", "t2", meta, 2_000L)
+        assertEquals(2, CrashReports.unseen(dir).size)
+        assertTrue(CrashReports.latest(dir)!!.readText().contains("phase: b"))
+        CrashReports.markAllSeen(dir)
+        assertTrue("shown once, not on every launch", CrashReports.unseen(dir).isEmpty())
+        assertTrue("still readable for Copy / Share", CrashReports.shareText(dir).contains("phase: b"))
+    }
+
+    @Test fun persistNeverThrowsAndShareTextIsBounded() {
+        val blocked = File(tmp(), "file").apply { writeText("x") }
+        assertEquals("a dir that cannot be created is swallowed", null, CrashReports.persist(File(blocked, "sub"), "p", "t", meta))
+        assertTrue(CrashReports.shareText(tmp()).startsWith("No error"))
+        val dir = tmp()
+        CrashReports.persist(dir, "big", "x".repeat(200_000), meta, 5L)
+        assertTrue(CrashReports.shareText(dir).length < 151_000 && CrashReports.shareText(dir).endsWith("(truncated)"))
     }
 }

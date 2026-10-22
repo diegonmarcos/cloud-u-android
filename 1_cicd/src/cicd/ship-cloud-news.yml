@@ -46,6 +46,7 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "ab_cloud-libs-shared/libs/analytics/**"
       - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/databackend/**"
       - "ab_cloud-libs-shared/libs/decisions-link/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
