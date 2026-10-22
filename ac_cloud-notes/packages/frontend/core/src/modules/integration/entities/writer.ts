@@ -73,13 +73,13 @@ export class IntegrationWriter extends Entity {
       if (!doc) throw new Error('Doc not found');
 
       if (updateStrategy === 'override') {
-        const pageBlock = doc.getBlocksByFlavour('affine:page')[0];
+        const pageBlock = doc.getBlocksByFlavour('cloud-notes:page')[0];
         // remove all children of the page block
         pageBlock.model.children.forEach(child => {
           doc.deleteBlock(child);
         });
         // add a new note block
-        const noteBlockId = doc.addBlock('affine:note', {}, pageBlock.id);
+        const noteBlockId = doc.addBlock('cloud-notes:note', {}, pageBlock.id);
         // import the markdown to the note block
         await MarkdownTransformer.importMarkdownToBlock({
           doc,
@@ -88,8 +88,8 @@ export class IntegrationWriter extends Entity {
           extensions: getStoreManager().config.init().value.get('store'),
         });
       } else if (updateStrategy === 'append') {
-        const pageBlockId = doc.getBlocksByFlavour('affine:page')[0]?.id;
-        const blockId = doc.addBlock('affine:note', {}, pageBlockId);
+        const pageBlockId = doc.getBlocksByFlavour('cloud-notes:page')[0]?.id;
+        const blockId = doc.addBlock('cloud-notes:note', {}, pageBlockId);
         await MarkdownTransformer.importMarkdownToBlock({
           doc,
           blockId,

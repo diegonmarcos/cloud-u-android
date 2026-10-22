@@ -398,9 +398,9 @@ test('indent attachment block to paragraph', async ({ page }) => {
   await waitLoading();
 
   await assertBlockChildrenIds(page, '1', ['2', '4']);
-  await assertBlockFlavour(page, '1', 'affine:note');
-  await assertBlockFlavour(page, '2', 'affine:paragraph');
-  await assertBlockFlavour(page, '4', 'affine:attachment');
+  await assertBlockFlavour(page, '1', 'cloud-notes:note');
+  await assertBlockFlavour(page, '2', 'cloud-notes:paragraph');
+  await assertBlockFlavour(page, '4', 'cloud-notes:attachment');
 
   await focusRichText(page);
   await pressArrowDown(page);
@@ -426,9 +426,9 @@ test('indent attachment block to list', async ({ page }) => {
   await waitLoading();
 
   await assertBlockChildrenIds(page, '1', ['3', '5']);
-  await assertBlockFlavour(page, '1', 'affine:note');
-  await assertBlockFlavour(page, '3', 'affine:list');
-  await assertBlockFlavour(page, '5', 'affine:attachment');
+  await assertBlockFlavour(page, '1', 'cloud-notes:note');
+  await assertBlockFlavour(page, '3', 'cloud-notes:list');
+  await assertBlockFlavour(page, '5', 'cloud-notes:attachment');
 
   await focusRichText(page);
   await pressArrowDown(page);
@@ -460,5 +460,5 @@ test('attachment can be dragged from note to surface top level block', async ({
   await dragBlockToPoint(page, '4', { x: 200, y: 200 });
 
   await waitNextFrame(page);
-  await assertParentBlockFlavour(page, '4', 'affine:surface');
+  await assertParentBlockFlavour(page, '4', 'cloud-notes:surface');
 });

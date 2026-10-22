@@ -53,13 +53,13 @@ export const EMBED_CARD_HEIGHT: Record<EmbedCardStyle, number> = {
 };
 
 export const EMBED_BLOCK_FLAVOUR_LIST = [
-  'affine:embed-github',
-  'affine:embed-youtube',
-  'affine:embed-figma',
-  'affine:embed-linked-doc',
-  'affine:embed-synced-doc',
-  'affine:embed-html',
-  'affine:embed-loom',
+  'cloud-notes:embed-github',
+  'cloud-notes:embed-youtube',
+  'cloud-notes:embed-figma',
+  'cloud-notes:embed-linked-doc',
+  'cloud-notes:embed-synced-doc',
+  'cloud-notes:embed-html',
+  'cloud-notes:embed-loom',
 ] as const;
 
 export const EMBED_BLOCK_MODEL_LIST = [

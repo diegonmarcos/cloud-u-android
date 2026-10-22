@@ -213,7 +213,7 @@ describe('AIChatMessages scrolling', () => {
           outline: [
             {
               id: 'block-1',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               text: { content: 'Welcome to Cloud Notes', truncated: false },
             },
           ],

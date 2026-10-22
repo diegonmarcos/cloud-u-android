@@ -9,7 +9,7 @@ export * from './utils';
 export type { DragBlockPayload } from './watchers/drag-event-watcher';
 
 export const dragHandleWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_DRAG_HANDLE_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_DRAG_HANDLE_WIDGET)}`
 );

@@ -12,7 +12,7 @@ import { getBlockProps } from '../../utils';
  */
 const canMergeBlocks = (blockA: BlockModel, blockB: BlockModel): boolean => {
   // Paragraphs can always be merged to
-  if (blockB.flavour === 'affine:paragraph') {
+  if (blockB.flavour === 'cloud-notes:paragraph') {
     return true;
   }
 
@@ -26,7 +26,7 @@ const canMergeBlocks = (blockA: BlockModel, blockB: BlockModel): boolean => {
  */
 const isMergableBlock = (block: BlockModel): boolean => {
   // Blocks that can potentially be merged
-  const mergableTypes = ['affine:paragraph', 'affine:list'];
+  const mergableTypes = ['cloud-notes:paragraph', 'cloud-notes:list'];
 
   return mergableTypes.includes(block.flavour);
 };

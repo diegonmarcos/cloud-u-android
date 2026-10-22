@@ -12,7 +12,7 @@
 export function getCollapsedState(viewId: string, groupKey: string): boolean {
   try {
     const value = sessionStorage.getItem(
-      `affine:table-group:${viewId}:${groupKey}:collapsed`
+      `cloud-notes:table-group:${viewId}:${groupKey}:collapsed`
     );
     if (!value) return false;
     const parsed = JSON.parse(value);
@@ -35,7 +35,7 @@ export function setCollapsedState(
 ): void {
   try {
     sessionStorage.setItem(
-      `affine:table-group:${viewId}:${groupKey}:collapsed`,
+      `cloud-notes:table-group:${viewId}:${groupKey}:collapsed`,
       JSON.stringify(collapsed)
     );
   } catch {

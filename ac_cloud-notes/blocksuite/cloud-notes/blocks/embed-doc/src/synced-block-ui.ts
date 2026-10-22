@@ -19,7 +19,7 @@ const MAX_TARGETS = 8;
 
 /** `/synced`: paste the block most recently copied as synced right here. */
 export const SyncedBlockSlashMenuExtension: ExtensionType =
-  SlashMenuConfigExtension('affine:synced-block', {
+  SlashMenuConfigExtension('cloud-notes:synced-block', {
     items: [
       {
         name: 'Synced Block',
@@ -47,7 +47,7 @@ export const SyncedBlockSlashMenuExtension: ExtensionType =
 
 /** Block toolbar on a paragraph: copy as synced, paste as synced, sync to another doc. */
 export const SyncedBlockToolbarExtension: ExtensionType = ToolbarModuleExtension({
-  id: BlockFlavourIdentifier('affine:paragraph'),
+  id: BlockFlavourIdentifier('cloud-notes:paragraph'),
   config: {
     actions: [
       {

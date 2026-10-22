@@ -576,7 +576,7 @@ export class DatabaseBlockDataSource extends DataSourceBase {
       typeof insertPosition === 'number'
         ? insertPosition
         : insertPositionToIndex(insertPosition, this._model.children);
-    return this.doc.addBlock('affine:paragraph', {}, this._model.id, index);
+    return this.doc.addBlock('cloud-notes:paragraph', {}, this._model.id, index);
   }
 
   rowDelete(ids: string[]): void {
@@ -679,7 +679,7 @@ export const convertToDatabase = (host: EditorHost, viewType: string) => {
   }
 
   const id = host.store.addBlock(
-    'affine:database',
+    'cloud-notes:database',
     {},
     parentModel,
     parentModel.children.indexOf(firstModel)

@@ -22,7 +22,7 @@ test('basic assert', () => {
 describe('doc / note empty checker', () => {
   test('a paragraph is empty if it dose not contain text and child blocks', () => {
     const noteId = addNote(doc);
-    const paragraphId = doc.addBlock('affine:paragraph', {}, noteId);
+    const paragraphId = doc.addBlock('cloud-notes:paragraph', {}, noteId);
     const paragraph = doc.getBlock(paragraphId)?.model;
     expect(paragraph?.isEmpty()).toBe(true);
   });
@@ -30,7 +30,7 @@ describe('doc / note empty checker', () => {
   test('a paragraph is not empty if it contains text', () => {
     const noteId = addNote(doc);
     const paragraphId = doc.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       {
         text: new Text('hello'),
       },
@@ -42,11 +42,11 @@ describe('doc / note empty checker', () => {
 
   test('a paragraph is not empty if it contains children blocks', () => {
     const noteId = addNote(doc);
-    const paragraphId = doc.addBlock('affine:paragraph', {}, noteId);
+    const paragraphId = doc.addBlock('cloud-notes:paragraph', {}, noteId);
     const paragraph = doc.getBlock(paragraphId)?.model;
 
     // sub paragraph
-    doc.addBlock('affine:paragraph', {}, paragraphId);
+    doc.addBlock('cloud-notes:paragraph', {}, paragraphId);
     expect(paragraph?.isEmpty()).toBe(false);
   });
 
@@ -70,7 +70,7 @@ describe('doc / note empty checker', () => {
   test('a note is not empty if it contains multi blocks', () => {
     const noteId = addNote(doc);
     const note = doc.getBlock(noteId)!.model;
-    doc.addBlock('affine:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
     expect(note.isEmpty()).toBe(false);
   });
 
@@ -85,7 +85,7 @@ describe('doc / note empty checker', () => {
     surface.deleteElement(shapeId);
     expect(surface.isEmpty()).toBe(true);
 
-    const frameId = doc.addBlock('affine:frame', {}, surface.id);
+    const frameId = doc.addBlock('cloud-notes:frame', {}, surface.id);
     const frame = doc.getBlock(frameId)!.model;
     expect(surface.isEmpty()).toBe(false);
     doc.deleteBlock(frame);
@@ -134,7 +134,7 @@ describe('doc / note empty checker', () => {
     doc.deleteBlock(newNote);
     expect(doc.isEmpty).toBe(true);
 
-    const newParagraphId = doc.addBlock('affine:paragraph', {}, note);
+    const newParagraphId = doc.addBlock('cloud-notes:paragraph', {}, note);
     const newParagraph = doc.getBlock(newParagraphId)!.model;
     expect(doc.isEmpty).toBe(false);
     doc.deleteBlock(newParagraph);

@@ -40,7 +40,7 @@ export class EmbedCardCreateModal extends SignalWatcher(
     const { mode } = this.createOptions;
     if (mode === 'page') {
       const { parentModel, index } = this.createOptions;
-      let flavour = 'affine:bookmark';
+      let flavour = 'cloud-notes:bookmark';
 
       if (embedOptions) {
         flavour = embedOptions.flavour;

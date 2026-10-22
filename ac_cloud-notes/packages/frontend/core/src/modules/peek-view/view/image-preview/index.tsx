@@ -424,7 +424,7 @@ const ImagePreviewModalImpl = ({
 };
 
 const filterImageBlock = (block: BlockModel): block is ImageBlockModel => {
-  return block.flavour === 'affine:image';
+  return block.flavour === 'cloud-notes:image';
 };
 
 export const ImagePreviewPeekView = (

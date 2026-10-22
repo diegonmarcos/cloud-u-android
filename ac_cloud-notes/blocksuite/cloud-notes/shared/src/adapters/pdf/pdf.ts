@@ -197,7 +197,7 @@ export class PdfAdapter extends BaseAdapter<PdfAdapterFile> {
         ? parentTextStart
         : depth * BLOCK_CHILDREN_CONTAINER_PADDING_LEFT;
 
-    if (flavour === 'affine:paragraph') {
+    if (flavour === 'cloud-notes:paragraph') {
       content.push(
         ...(await this._createParagraphContent(
           props,
@@ -208,7 +208,7 @@ export class PdfAdapter extends BaseAdapter<PdfAdapterFile> {
           depth
         ))
       );
-    } else if (flavour === 'affine:list') {
+    } else if (flavour === 'cloud-notes:list') {
       content.push(
         ...(await this._createListContent(
           props,
@@ -218,9 +218,9 @@ export class PdfAdapter extends BaseAdapter<PdfAdapterFile> {
           block
         ))
       );
-    } else if (flavour === 'affine:code') {
+    } else if (flavour === 'cloud-notes:code') {
       content.push(...this._createCodeContent(props, textContent, baseIndent));
-    } else if (flavour === 'affine:divider') {
+    } else if (flavour === 'cloud-notes:divider') {
       content.push({
         canvas: [
           {
@@ -235,7 +235,7 @@ export class PdfAdapter extends BaseAdapter<PdfAdapterFile> {
         ],
         margin: [0, 10, 0, 10],
       });
-    } else if (flavour === 'affine:callout') {
+    } else if (flavour === 'cloud-notes:callout') {
       const calloutContent = await this._createCalloutContent(
         props,
         textContent,
@@ -246,14 +246,14 @@ export class PdfAdapter extends BaseAdapter<PdfAdapterFile> {
       );
       content.push(...calloutContent);
       return content;
-    } else if (flavour === 'affine:bookmark') {
+    } else if (flavour === 'cloud-notes:bookmark') {
       content.push({
         text: props.title || props.url || '',
         link: props.url,
         color: PDF_COLORS.link,
         margin: [0, 2, 0, 2],
       });
-    } else if (flavour === 'affine:image') {
+    } else if (flavour === 'cloud-notes:image') {
       const imageContent = await this._createImageContent(
         props.sourceId,
         props.caption || '',
@@ -263,7 +263,7 @@ export class PdfAdapter extends BaseAdapter<PdfAdapterFile> {
         props.height
       );
       content.push(...imageContent);
-    } else if (flavour === 'affine:latex') {
+    } else if (flavour === 'cloud-notes:latex') {
       content.push({
         text: props.latex || '',
         margin: [baseIndent, 5, 0, 5],
@@ -271,17 +271,17 @@ export class PdfAdapter extends BaseAdapter<PdfAdapterFile> {
         color: PDF_COLORS.textMuted,
         alignment: 'center',
       });
-    } else if (flavour === 'affine:database') {
+    } else if (flavour === 'cloud-notes:database') {
       content.push(...this._createDatabaseContent(props));
       return content;
-    } else if (flavour === 'affine:table') {
+    } else if (flavour === 'cloud-notes:table') {
       const tableContent = await this._createTableContent(props);
       if (tableContent) {
         content.push(tableContent);
       }
     } else if (
-      flavour === 'affine:embed-linked-doc' ||
-      flavour === 'affine:embed-synced-doc'
+      flavour === 'cloud-notes:embed-linked-doc' ||
+      flavour === 'cloud-notes:embed-synced-doc'
     ) {
       content.push(this._createLinkedDocContent(props, baseIndent));
     } else if (hasTextContent(textContent)) {
@@ -293,18 +293,18 @@ export class PdfAdapter extends BaseAdapter<PdfAdapterFile> {
 
     if (block.children && block.children.length) {
       const shouldIncrementDepth =
-        flavour !== 'affine:page' && flavour !== 'affine:note';
+        flavour !== 'cloud-notes:page' && flavour !== 'cloud-notes:note';
       const childDepth = shouldIncrementDepth ? depth + 1 : depth;
 
       const childListNestingLevel =
-        flavour === 'affine:list'
+        flavour === 'cloud-notes:list'
           ? listNestingLevel + 1
           : parentTextStart > 0
             ? listNestingLevel
             : 0;
 
       const childParentTextStart =
-        flavour === 'affine:list'
+        flavour === 'cloud-notes:list'
           ? baseIndent + BLOCK_CHILDREN_CONTAINER_PADDING_LEFT
           : parentTextStart > 0
             ? parentTextStart

@@ -108,7 +108,7 @@ export class ImageBlockPageComponent extends SignalWatcher(
 
       const index = parent.children.indexOf(this._model);
       const blockId = this._doc.addBlock(
-        'affine:paragraph',
+        'cloud-notes:paragraph',
         {},
         parent,
         index + 1

@@ -54,7 +54,7 @@ function transcriptNodes(input: ShareImportInput) {
     .sort((left, right) => left.startSeconds - right.startSeconds);
   const children: ShareBlockPlanNode[] = [
     {
-      flavour: 'affine:paragraph',
+      flavour: 'cloud-notes:paragraph',
       props: { type: 'h6', text: 'Transcript', collapsed: true },
     },
   ];
@@ -66,7 +66,7 @@ function transcriptNodes(input: ShareImportInput) {
       chapters[chapterIndex].startSeconds <= segmentStart
     ) {
       children.push({
-        flavour: 'affine:paragraph',
+        flavour: 'cloud-notes:paragraph',
         props: { type: 'h6', text: chapters[chapterIndex].title },
       });
       chapterIndex += 1;
@@ -80,7 +80,7 @@ function transcriptNodes(input: ShareImportInput) {
       .filter(Boolean)
       .join(' ');
     children.push({
-      flavour: 'affine:paragraph',
+      flavour: 'cloud-notes:paragraph',
       props: {
         type: 'text',
         text: prefix ? `${prefix} ${segment.text.trim()}` : segment.text.trim(),
@@ -90,7 +90,7 @@ function transcriptNodes(input: ShareImportInput) {
 
   return [
     {
-      flavour: 'affine:callout',
+      flavour: 'cloud-notes:callout',
       props: {
         icon: { type: 'emoji', unicode: '💬' },
         backgroundColorName: 'grey',
@@ -113,7 +113,7 @@ export function createShareBlockPlan(
         props: { url: input.content.url, style: embedOptions.styles[0] },
       }
     : {
-        flavour: 'affine:bookmark',
+        flavour: 'cloud-notes:bookmark',
         props: {
           url: input.content.url,
           title: preview?.title,
@@ -130,7 +130,7 @@ export function createShareBlockPlan(
     ...(selectedText
       ? [
           {
-            flavour: 'affine:paragraph',
+            flavour: 'cloud-notes:paragraph',
             props: { type: 'quote', text: selectedText },
           },
         ]

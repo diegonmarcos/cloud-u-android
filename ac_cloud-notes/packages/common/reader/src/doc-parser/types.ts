@@ -11,7 +11,7 @@ export interface WorkspacePage {
   properties?: Record<string, any>;
 }
 
-export type BaseFlavour<T extends string> = `affine:${T}`;
+export type BaseFlavour<T extends string> = `cloud-notes:${T}`;
 
 export type Flavour = BaseFlavour<
   | 'page'
@@ -48,26 +48,26 @@ export interface ParsedDoc {
 }
 
 export interface ParagraphBlock extends BaseParsedBlock {
-  flavour: 'affine:paragraph';
+  flavour: 'cloud-notes:paragraph';
   type: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'quote';
 }
 
 export interface DividerBlock extends BaseParsedBlock {
-  flavour: 'affine:divider';
+  flavour: 'cloud-notes:divider';
 }
 
 export interface ListBlock extends BaseParsedBlock {
-  flavour: 'affine:list';
+  flavour: 'cloud-notes:list';
   type: 'bulleted' | 'numbered';
 }
 
 export interface CodeBlock extends BaseParsedBlock {
-  flavour: 'affine:code';
+  flavour: 'cloud-notes:code';
   language: string;
 }
 
 export interface ImageBlock extends BaseParsedBlock {
-  flavour: 'affine:image';
+  flavour: 'cloud-notes:image';
   sourceId: string;
   blobUrl: string;
   width?: number;
@@ -76,39 +76,39 @@ export interface ImageBlock extends BaseParsedBlock {
 }
 
 export interface AttachmentBlock extends BaseParsedBlock {
-  flavour: 'affine:attachment';
+  flavour: 'cloud-notes:attachment';
   type: string;
   sourceId: string;
 }
 
 export interface EmbedYoutubeBlock extends BaseParsedBlock {
-  flavour: 'affine:embed-youtube';
+  flavour: 'cloud-notes:embed-youtube';
   videoId: string;
 }
 
 export interface BookmarkBlock extends BaseParsedBlock {
-  flavour: 'affine:bookmark';
+  flavour: 'cloud-notes:bookmark';
   url: string;
 }
 
 export interface EmbedLinkedDocBlock extends BaseParsedBlock {
-  flavour: 'affine:embed-linked-doc';
+  flavour: 'cloud-notes:embed-linked-doc';
   pageId: string;
 }
 
 export interface EmbedSyncedDocBlock extends BaseParsedBlock {
-  flavour: 'affine:embed-synced-doc';
+  flavour: 'cloud-notes:embed-synced-doc';
   pageId: string;
 }
 
 export interface DatabaseBlock extends BaseParsedBlock {
   title: string;
-  flavour: 'affine:database';
+  flavour: 'cloud-notes:database';
   rows: Record<string, string>[];
 }
 
 export interface TableBlock extends BaseParsedBlock {
-  flavour: 'affine:table';
+  flavour: 'cloud-notes:table';
   rows: string[][];
   columns: string[];
 }

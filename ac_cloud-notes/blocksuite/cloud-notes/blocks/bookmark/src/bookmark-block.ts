@@ -143,7 +143,7 @@ export class BookmarkBlockComponent extends CaptionedBlockComponent<BookmarkBloc
     event.stopPropagation();
 
     if (
-      this.model.parent?.flavour !== 'affine:surface' &&
+      this.model.parent?.flavour !== 'cloud-notes:surface' &&
       !this.store.readonly
     ) {
       this.selectBlock();

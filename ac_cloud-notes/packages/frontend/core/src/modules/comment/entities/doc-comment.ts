@@ -138,7 +138,7 @@ export class DocCommentEntity extends Entity<{
     const mention: string | undefined = reply?.user.id;
     if (mention) {
       // insert mention at the end of the paragraph
-      const paragraph = doc.getModelsByFlavour('affine:paragraph').at(-1);
+      const paragraph = doc.getModelsByFlavour('cloud-notes:paragraph').at(-1);
       if (paragraph) {
         paragraph.text?.insert(' ', paragraph.text.length, {
           mention: {

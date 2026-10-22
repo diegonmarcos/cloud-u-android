@@ -11,7 +11,7 @@ const flavour = EmbedSyncedDocBlockSchema.model.flavour;
 export const EmbedSyncedDocViewExtensions: ExtensionType[] = [
   FlavourExtension(flavour),
   BlockViewExtension(flavour, model => {
-    return model.parent?.flavour === 'affine:surface'
+    return model.parent?.flavour === 'cloud-notes:surface'
       ? literal`cloud-notes-embed-edgeless-synced-doc-block`
       : literal`cloud-notes-embed-synced-doc-block`;
   }),

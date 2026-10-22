@@ -82,7 +82,7 @@ export function getSelectedModels(editorHost: EditorHost) {
 }
 
 export function traverse(model: DraftModel, drafts: DraftModel[]) {
-  const isDatabase = model.flavour === 'affine:database';
+  const isDatabase = model.flavour === 'cloud-notes:database';
   const children = isDatabase
     ? model.children
     : model.children.filter(child => {
@@ -132,7 +132,7 @@ export async function selectAboveBlocks(editorHost: EditorHost, num = 10) {
 
   let noteModel: BlockModel | null = lastLeafModel;
   let lastRootModel: BlockModel | null = null;
-  while (noteModel && noteModel.flavour !== 'affine:note') {
+  while (noteModel && noteModel.flavour !== 'cloud-notes:note') {
     lastRootModel = noteModel;
     noteModel = editorHost.store.getParent(noteModel);
   }

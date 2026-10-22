@@ -33,14 +33,14 @@ export const insertLinkByQuickSearchCommand: Command<
       if ('docId' in result) {
         const editorMode = std.get(DocModeProvider).getEditorMode();
         const editorSettings = std.get(EditorSettingProvider);
-        let flavour: LinkableFlavour = 'affine:embed-linked-doc';
+        let flavour: LinkableFlavour = 'cloud-notes:embed-linked-doc';
         if (editorMode === 'edgeless') {
           flavour =
             editorSettings.setting$.value.docCanvasPreferView ?? flavour;
         }
 
         const insertCommand =
-          flavour === 'affine:embed-linked-doc'
+          flavour === 'cloud-notes:embed-linked-doc'
             ? insertEmbedLinkedDocCommand
             : insertEmbedSyncedDocCommand;
 

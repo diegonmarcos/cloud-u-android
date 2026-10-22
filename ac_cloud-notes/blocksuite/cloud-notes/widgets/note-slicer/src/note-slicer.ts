@@ -178,7 +178,7 @@ export class NoteSlicer extends WidgetComponent<RootBlockModel> {
       this._divingLinePositions[this._activeSlicerIndex].y;
     const newY = this.gfx.viewport.toModelCoord(x, sliceVerticalPos)[1];
     const newNoteId = this.store.addBlock(
-      'affine:note',
+      'cloud-notes:note',
       {
         background,
         displayMode,
@@ -445,7 +445,7 @@ export class NoteSlicer extends WidgetComponent<RootBlockModel> {
 }
 
 export const noteSlicerWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   NOTE_SLICER_WIDGET,
   literal`${unsafeStatic(NOTE_SLICER_WIDGET)}`
 );

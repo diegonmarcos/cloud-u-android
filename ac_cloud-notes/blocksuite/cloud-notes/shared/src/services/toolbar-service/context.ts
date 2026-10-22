@@ -147,9 +147,9 @@ abstract class ToolbarContextBase {
       const flavour = this.flavour$.peek();
       const elementsMap = this.elementsMap$.peek();
       const elements = [
-        'affine:surface',
-        'affine:surface:locked',
-        'affine:surface:alignment',
+        'cloud-notes:surface',
+        'cloud-notes:surface:locked',
+        'cloud-notes:surface:alignment',
       ].includes(flavour)
         ? Array.from(elementsMap.values()).flat()
         : elementsMap.get(flavour);

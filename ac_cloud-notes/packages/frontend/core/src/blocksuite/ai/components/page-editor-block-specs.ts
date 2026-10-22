@@ -10,7 +10,7 @@ const customPageEditorBlockSpecs: ExtensionType[] = [
   {
     setup: di => {
       di.override(
-        BlockViewIdentifier('affine:page'),
+        BlockViewIdentifier('cloud-notes:page'),
         () => literal`cloud-notes-page-root`
       );
     },

@@ -15,7 +15,7 @@ export interface MindMapElement {
   index: string;
   seed: number;
   children: {
-    'affine:surface:ymap': boolean;
+    'cloud-notes:surface:ymap': boolean;
     json: MindMapJson;
   };
   layoutType: number;

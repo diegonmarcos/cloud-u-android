@@ -88,9 +88,9 @@ async function extractEdgelessSelected(
       const fragment = fragmentDoc.getStore();
       fragmentDoc.load();
 
-      const rootId = fragment.addBlock('affine:page');
-      fragment.addBlock('affine:surface', {}, rootId);
-      const noteId = fragment.addBlock('affine:note', {}, rootId);
+      const rootId = fragment.addBlock('cloud-notes:page');
+      fragment.addBlock('cloud-notes:surface', {}, rootId);
+      const noteId = fragment.addBlock('cloud-notes:note', {}, rootId);
       const surface = getSurfaceBlock(fragment);
       if (!surface) {
         throw new Error('Failed to get surface block');
@@ -224,7 +224,7 @@ export async function extractMarkdownFromDoc(doc: Store): Promise<string> {
 
 function getNoteBlockModels(doc: Store) {
   const notes = doc
-    .getBlocksByFlavour('affine:note')
+    .getBlocksByFlavour('cloud-notes:note')
     .filter(
       note =>
         (note.model as NoteBlockModel).props.displayMode !==

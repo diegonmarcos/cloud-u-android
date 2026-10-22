@@ -16,4 +16,4 @@ export interface CodeBlockConfig {
 }
 
 export const CodeBlockConfigExtension =
-  ConfigExtensionFactory<CodeBlockConfig>('affine:code');
+  ConfigExtensionFactory<CodeBlockConfig>('cloud-notes:code');

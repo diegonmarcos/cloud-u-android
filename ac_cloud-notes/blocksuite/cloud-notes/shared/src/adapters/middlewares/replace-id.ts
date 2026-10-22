@@ -90,12 +90,12 @@ export const replaceIdMiddleware =
         const original = model.props.reference;
         // If there exists a replacement, replace the reference with the new id.
         // Otherwise,
-        // 1. If the reference is an affine:frame not in doc, generate a new id.
+        // 1. If the reference is an cloud-notes:frame not in doc, generate a new id.
         // 2. If the reference is graph, keep the original id.
         if (idMap.has(original)) {
           model.props.reference = idMap.get(original)!;
         } else if (
-          model.props.refFlavour === 'affine:frame' &&
+          model.props.refFlavour === 'cloud-notes:frame' &&
           !model.store.hasBlock(original)
         ) {
           const newId = idGenerator();
@@ -149,9 +149,9 @@ export const replaceIdMiddleware =
       )
       .subscribe(payload => {
         const { snapshot } = payload;
-        if (snapshot.flavour === 'affine:page') {
+        if (snapshot.flavour === 'cloud-notes:page') {
           const index = snapshot.children.findIndex(
-            c => c.flavour === 'affine:surface'
+            c => c.flavour === 'cloud-notes:surface'
           );
           if (index !== -1) {
             const [surface] = snapshot.children.splice(index, 1);
@@ -170,7 +170,7 @@ export const replaceIdMiddleware =
         snapshot.id = newId;
 
         // Should be re-paired.
-        if (['affine:attachment', 'affine:image'].includes(snapshot.flavour)) {
+        if (['cloud-notes:attachment', 'cloud-notes:image'].includes(snapshot.flavour)) {
           if (!assetsManager.uploadingAssetsMap.has(original)) return;
 
           const data = assetsManager.uploadingAssetsMap.get(original)!;
@@ -179,7 +179,7 @@ export const replaceIdMiddleware =
           return;
         }
 
-        if (snapshot.flavour === 'affine:surface') {
+        if (snapshot.flavour === 'cloud-notes:surface') {
           // Generate new IDs for images and frames in advance.
           snapshot.children.forEach(child => {
             const original = child.id;

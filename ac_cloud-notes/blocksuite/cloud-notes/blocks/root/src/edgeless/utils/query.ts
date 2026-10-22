@@ -25,7 +25,7 @@ export function isEdgelessTextBlock(
   return (
     !!element &&
     'flavour' in element &&
-    element.flavour === 'affine:edgeless-text'
+    element.flavour === 'cloud-notes:edgeless-text'
   );
 }
 
@@ -33,7 +33,7 @@ export function isImageBlock(
   element: BlockModel | GfxModel | null
 ): element is ImageBlockModel {
   return (
-    !!element && 'flavour' in element && element.flavour === 'affine:image'
+    !!element && 'flavour' in element && element.flavour === 'cloud-notes:image'
   );
 }
 
@@ -41,7 +41,7 @@ export function isAttachmentBlock(
   element: BlockModel | GfxModel | null
 ): element is AttachmentBlockModel {
   return (
-    !!element && 'flavour' in element && element.flavour === 'affine:attachment'
+    !!element && 'flavour' in element && element.flavour === 'cloud-notes:attachment'
   );
 }
 
@@ -51,7 +51,7 @@ export function isEmbedSyncedDocBlock(
   return (
     !!element &&
     'flavour' in element &&
-    element.flavour === 'affine:embed-synced-doc'
+    element.flavour === 'cloud-notes:embed-synced-doc'
   );
 }
 
@@ -94,7 +94,7 @@ export function getCursorMode(edgelessTool: ToolOptionWithType) {
     case 'shape':
     case 'connector':
     case 'frame':
-    case 'affine:note':
+    case 'cloud-notes:note':
       return 'crosshair';
     case 'text':
       return 'text';

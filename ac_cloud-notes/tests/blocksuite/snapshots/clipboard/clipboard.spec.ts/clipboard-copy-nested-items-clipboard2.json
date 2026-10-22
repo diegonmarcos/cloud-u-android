@@ -2,13 +2,13 @@
   {
     "type": "block",
     "id": "",
-    "flavour": "affine:note",
+    "flavour": "cloud-notes:note",
     "props": {},
     "children": [
       {
         "type": "block",
         "id": "4",
-        "flavour": "affine:paragraph",
+        "flavour": "cloud-notes:paragraph",
         "version": 1,
         "props": {
           "type": "text",
@@ -27,7 +27,7 @@
       {
         "type": "block",
         "id": "5",
-        "flavour": "affine:paragraph",
+        "flavour": "cloud-notes:paragraph",
         "version": 1,
         "props": {
           "type": "text",

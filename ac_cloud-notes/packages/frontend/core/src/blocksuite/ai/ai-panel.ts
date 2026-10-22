@@ -102,7 +102,7 @@ function createNewNote(host: EditorHost): AIItemConfig {
       doc.transact(() => {
         if (!doc.root || !panel.answer) return;
         const noteBlockId = doc.addBlock(
-          'affine:note',
+          'cloud-notes:note',
           {
             xywh: newBound.serialize(),
             displayMode: NoteDisplayMode.EdgelessOnly,

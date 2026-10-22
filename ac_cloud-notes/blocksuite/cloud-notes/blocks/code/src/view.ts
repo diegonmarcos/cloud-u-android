@@ -24,7 +24,7 @@ import { effects } from './effects.js';
 import { CodeBlockMarkdownExtension } from './markdown.js';
 
 const codeToolbarWidget = WidgetViewExtension(
-  'affine:code',
+  'cloud-notes:code',
   CLOUD_NOTES_CODE_TOOLBAR_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_CODE_TOOLBAR_WIDGET)}`
 );
@@ -40,10 +40,10 @@ export class CodeBlockViewExtension extends ViewExtensionProvider {
   override setup(context: ViewExtensionContext) {
     super.setup(context);
     context.register([
-      FlavourExtension('affine:code'),
+      FlavourExtension('cloud-notes:code'),
       CodeBlockHighlighter,
-      BlockViewExtension('affine:code', literal`cloud-notes-code`),
-      SlashMenuConfigExtension('affine:code', codeSlashMenuConfig),
+      BlockViewExtension('cloud-notes:code', literal`cloud-notes-code`),
+      SlashMenuConfigExtension('cloud-notes:code', codeSlashMenuConfig),
       CodeKeymapExtension,
       CodeBlockMarkdownExtension,
       ...getCodeClipboardExtensions(),

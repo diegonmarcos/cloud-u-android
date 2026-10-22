@@ -107,8 +107,8 @@ export class MiniMindmapPreview extends WithDisposable(LitElement) {
     collection.meta.initialize();
     const doc = collection.createDoc('doc:home').getStore();
     doc.load();
-    const rootId = doc.addBlock('affine:page', {});
-    const surfaceId = doc.addBlock('affine:surface', {}, rootId);
+    const rootId = doc.addBlock('cloud-notes:page', {});
+    const surfaceId = doc.addBlock('cloud-notes:surface', {}, rootId);
     const surface = doc.getModelById(surfaceId) as SurfaceBlockModel;
     doc.resetHistory();
 

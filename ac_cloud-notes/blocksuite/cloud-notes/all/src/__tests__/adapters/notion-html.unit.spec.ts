@@ -29,7 +29,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -41,7 +41,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:code',
+          flavour: 'cloud-notes:code',
           props: {
             language: 'Plain Text',
             wrap: false,
@@ -85,7 +85,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -97,7 +97,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -113,7 +113,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[2]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -129,7 +129,7 @@ describe('notion html to snapshot', () => {
                 {
                   type: 'block',
                   id: 'matchesReplaceMap[3]',
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: 'text',
                     text: {
@@ -148,7 +148,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[4]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -167,7 +167,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[5]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -200,7 +200,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -212,7 +212,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'h1',
             text: {
@@ -229,7 +229,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[2]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'h2',
             text: {
@@ -246,7 +246,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[3]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'h3',
             text: {
@@ -366,7 +366,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -378,7 +378,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'bulleted',
             text: {
@@ -396,7 +396,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[2]',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'bulleted',
                 text: {
@@ -414,7 +414,7 @@ describe('notion html to snapshot', () => {
                 {
                   type: 'block',
                   id: 'matchesReplaceMap[3]',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   props: {
                     type: 'bulleted',
                     text: {
@@ -435,7 +435,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[4]',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'bulleted',
                 text: {
@@ -456,7 +456,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[5]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'bulleted',
             text: {
@@ -475,7 +475,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[6]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'todo',
             text: {
@@ -493,7 +493,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[7]',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'todo',
                 text: {
@@ -511,7 +511,7 @@ describe('notion html to snapshot', () => {
                 {
                   type: 'block',
                   id: 'matchesReplaceMap[8]',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   props: {
                     type: 'todo',
                     text: {
@@ -532,7 +532,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[9]',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'todo',
                 text: {
@@ -553,7 +553,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[10]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'todo',
             text: {
@@ -572,7 +572,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[11]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'numbered',
             text: {
@@ -590,7 +590,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[12]',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'numbered',
                 text: {
@@ -608,7 +608,7 @@ describe('notion html to snapshot', () => {
                 {
                   type: 'block',
                   id: 'matchesReplaceMap[13]',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   props: {
                     type: 'numbered',
                     text: {
@@ -629,7 +629,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[14]',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'numbered',
                 text: {
@@ -650,7 +650,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[15]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'numbered',
             text: {
@@ -669,7 +669,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[16]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'bulleted',
             text: {
@@ -687,7 +687,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[17]',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'bulleted',
                 text: {
@@ -705,7 +705,7 @@ describe('notion html to snapshot', () => {
                 {
                   type: 'block',
                   id: 'matchesReplaceMap[18]',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   props: {
                     type: 'bulleted',
                     text: {
@@ -723,7 +723,7 @@ describe('notion html to snapshot', () => {
                     {
                       type: 'block',
                       id: 'matchesReplaceMap[19]',
-                      flavour: 'affine:paragraph',
+                      flavour: 'cloud-notes:paragraph',
                       props: {
                         type: 'text',
                         text: {
@@ -742,7 +742,7 @@ describe('notion html to snapshot', () => {
                 {
                   type: 'block',
                   id: 'matchesReplaceMap[20]',
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: 'text',
                     text: {
@@ -761,7 +761,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[21]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -811,7 +811,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -823,7 +823,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'bulleted',
             text: {
@@ -841,7 +841,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[2]',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'bulleted',
                 text: {
@@ -859,7 +859,7 @@ describe('notion html to snapshot', () => {
                 {
                   type: 'block',
                   id: 'matchesReplaceMap[3]',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   props: {
                     type: 'bulleted',
                     text: {
@@ -877,7 +877,7 @@ describe('notion html to snapshot', () => {
                     {
                       type: 'block',
                       id: 'matchesReplaceMap[4]',
-                      flavour: 'affine:paragraph',
+                      flavour: 'cloud-notes:paragraph',
                       props: {
                         type: 'text',
                         text: {
@@ -893,7 +893,7 @@ describe('notion html to snapshot', () => {
                         {
                           type: 'block',
                           id: 'matchesReplaceMap[5]',
-                          flavour: 'affine:paragraph',
+                          flavour: 'cloud-notes:paragraph',
                           props: {
                             type: 'text',
                             text: {
@@ -940,7 +940,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -952,7 +952,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'quote',
             text: {
@@ -969,7 +969,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[2]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'quote',
             text: {
@@ -985,7 +985,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[3]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'quote',
                 text: {
@@ -1001,7 +1001,7 @@ describe('notion html to snapshot', () => {
                 {
                   type: 'block',
                   id: 'matchesReplaceMap[4]',
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: 'quote',
                     text: {
@@ -1041,7 +1041,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -1053,7 +1053,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'quote',
             text: {
@@ -1090,7 +1090,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -1102,7 +1102,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -1119,14 +1119,14 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[2]',
-          flavour: 'affine:divider',
+          flavour: 'cloud-notes:divider',
           props: {},
           children: [],
         },
         {
           type: 'block',
           id: 'matchesReplaceMap[3]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -1159,7 +1159,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -1171,7 +1171,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -1235,7 +1235,7 @@ describe('notion html to snapshot', () => {
       const blockSnapshot: BlockSnapshot = {
         type: 'block',
         id: 'matchesReplaceMap[0]',
-        flavour: 'affine:note',
+        flavour: 'cloud-notes:note',
         props: {
           xywh: '[0,0,800,95]',
           background: DefaultTheme.noteBackgrounColor,
@@ -1247,7 +1247,7 @@ describe('notion html to snapshot', () => {
           {
             type: 'block',
             id: 'matchesReplaceMap[1]',
-            flavour: 'affine:image',
+            flavour: 'cloud-notes:image',
             props: {
               sourceId: 'matchesReplaceMap[2]',
             },
@@ -1283,7 +1283,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -1295,7 +1295,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:bookmark',
+          flavour: 'cloud-notes:bookmark',
           props: {
             type: 'card',
             url: 'https://notes.diegonmarcos.com/',
@@ -1327,7 +1327,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -1339,7 +1339,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:attachment',
+          flavour: 'cloud-notes:attachment',
           props: {
             name: 'README.pdf',
             size: 0,
@@ -1451,7 +1451,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -1463,7 +1463,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:database',
+          flavour: 'cloud-notes:database',
           props: {
             views: [
               {
@@ -1653,7 +1653,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[61]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 text: {
                   '$blocksuite:internal:text$': true,
@@ -1673,7 +1673,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[62]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 text: {
                   '$blocksuite:internal:text$': true,
@@ -1693,7 +1693,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[63]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 text: {
                   '$blocksuite:internal:text$': true,
@@ -1730,7 +1730,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -1742,7 +1742,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:database',
+          flavour: 'cloud-notes:database',
           props: {
             views: [
               {
@@ -1842,7 +1842,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[20]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 text: {
                   '$blocksuite:internal:text$': true,
@@ -1859,7 +1859,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[21]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 text: {
                   '$blocksuite:internal:text$': true,
@@ -1876,7 +1876,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[22]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 text: {
                   '$blocksuite:internal:text$': true,
@@ -1889,7 +1889,7 @@ describe('notion html to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[23]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 text: {
                   '$blocksuite:internal:text$': true,
@@ -1923,7 +1923,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -1935,7 +1935,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:latex',
+          flavour: 'cloud-notes:latex',
           props: {
             latex: 'E = mc^2',
           },
@@ -1964,7 +1964,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -1976,7 +1976,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             text: {
               '$blocksuite:internal:text$': true,
@@ -2016,7 +2016,7 @@ describe('notion html to snapshot', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -2028,7 +2028,7 @@ describe('notion html to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             text: {
               '$blocksuite:internal:text$': true,

@@ -5,7 +5,7 @@
         {
           "children": [
           ],
-          "flavour": "affine:code",
+          "flavour": "cloud-notes:code",
           "id": "5",
           "props": {
             "caption": "",
@@ -23,7 +23,7 @@
         {
           "children": [
           ],
-          "flavour": "affine:paragraph",
+          "flavour": "cloud-notes:paragraph",
           "id": "6",
           "props": {
             "collapsed": false,
@@ -45,7 +45,7 @@
             {
               "children": [
               ],
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "id": "4",
               "props": {
                 "collapsed": false,
@@ -63,7 +63,7 @@
               "version": 1
             }
           ],
-          "flavour": "affine:paragraph",
+          "flavour": "cloud-notes:paragraph",
           "id": "3",
           "props": {
             "collapsed": false,
@@ -81,7 +81,7 @@
           "version": 1
         }
       ],
-      "flavour": "affine:note",
+      "flavour": "cloud-notes:note",
       "id": "1",
       "props": {
         "background": {
@@ -106,7 +106,7 @@
       "version": 1
     }
   ],
-  "flavour": "affine:page",
+  "flavour": "cloud-notes:page",
   "id": "0",
   "props": {
     "title": {

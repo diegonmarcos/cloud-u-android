@@ -2,7 +2,7 @@ import { EdgelessClipboardConfig } from '@blocksuite/cloud-notes-block-surface';
 import { type BlockSnapshot } from '@blocksuite/store';
 
 export class EdgelessClipboardEmbedIframeConfig extends EdgelessClipboardConfig {
-  static override readonly key = 'affine:embed-iframe';
+  static override readonly key = 'cloud-notes:embed-iframe';
 
   override createBlock(embedIframe: BlockSnapshot): string | null {
     if (!this.surface) return null;
@@ -19,7 +19,7 @@ export class EdgelessClipboardEmbedIframeConfig extends EdgelessClipboardConfig 
     } = embedIframe.props;
 
     return this.crud.addBlock(
-      'affine:embed-iframe',
+      'cloud-notes:embed-iframe',
       {
         url,
         iframeUrl,

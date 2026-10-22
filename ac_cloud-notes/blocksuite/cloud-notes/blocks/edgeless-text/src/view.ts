@@ -25,7 +25,7 @@ export class EdgelessTextViewExtension extends ViewExtensionProvider {
     if (isEdgeless) {
       context.register([
         BlockViewExtension(
-          'affine:edgeless-text',
+          'cloud-notes:edgeless-text',
           literal`cloud-notes-edgeless-text`
         ),
       ]);

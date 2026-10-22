@@ -4,16 +4,16 @@ import type { BlockModel } from '@blocksuite/store';
 export * from './uni-component';
 
 export type NoteChildrenFlavour =
-  | 'affine:paragraph'
-  | 'affine:list'
-  | 'affine:code'
-  | 'affine:divider'
-  | 'affine:database'
-  | 'affine:data-view'
-  | 'affine:image'
-  | 'affine:bookmark'
-  | 'affine:attachment'
-  | 'affine:surface-ref';
+  | 'cloud-notes:paragraph'
+  | 'cloud-notes:list'
+  | 'cloud-notes:code'
+  | 'cloud-notes:divider'
+  | 'cloud-notes:database'
+  | 'cloud-notes:data-view'
+  | 'cloud-notes:image'
+  | 'cloud-notes:bookmark'
+  | 'cloud-notes:attachment'
+  | 'cloud-notes:surface-ref';
 
 export interface Viewport {
   left: number;

@@ -22,7 +22,7 @@ export const dividerBlockMarkdownAdapterMatcher: BlockMarkdownAdapterMatcher = {
           {
             type: 'block',
             id: nanoid(),
-            flavour: 'affine:divider',
+            flavour: 'cloud-notes:divider',
             props: {},
             children: [],
           },

@@ -50,7 +50,7 @@ export const splitListCommand: Command<{
      *   - bbb
      */
     if (parent.role === 'hub') {
-      const id = doc.addBlock('affine:paragraph', {}, parent, modelIndex);
+      const id = doc.addBlock('cloud-notes:paragraph', {}, parent, modelIndex);
       const paragraph = doc.getBlock(id);
       if (!paragraph) return;
       doc.deleteBlock(model, {
@@ -130,7 +130,7 @@ export const splitListCommand: Command<{
        *   - bbb
        */
       newListId = doc.addBlock(
-        'affine:list',
+        'cloud-notes:list',
         {
           type: model.props.type,
           text: afterText,
@@ -174,7 +174,7 @@ export const splitListCommand: Command<{
        *   - bbb
        */
       newListId = doc.addBlock(
-        'affine:list',
+        'cloud-notes:list',
         {
           type: model.props.type,
           text: afterText,
@@ -225,7 +225,7 @@ export const splitListCommand: Command<{
      */
     const afterText = model.props.text.split(inlineIndex);
     newListId = doc.addBlock(
-      'affine:list',
+      'cloud-notes:list',
       {
         type: model.props.type,
         text: afterText,

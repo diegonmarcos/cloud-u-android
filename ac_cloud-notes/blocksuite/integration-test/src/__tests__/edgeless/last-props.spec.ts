@@ -227,7 +227,7 @@ describe('apply last props', () => {
 
   test('edgeless-text', () => {
     const surface = getSurfaceBlock(doc);
-    const id = service.crud.addBlock('affine:edgeless-text', {}, surface!.id);
+    const id = service.crud.addBlock('cloud-notes:edgeless-text', {}, surface!.id);
     if (!id) {
       throw new Error('id is not found');
     }
@@ -239,7 +239,7 @@ describe('apply last props', () => {
       fontFamily: FontFamily.OrelegaOne,
     });
 
-    const id2 = service.crud.addBlock('affine:edgeless-text', {}, surface!.id);
+    const id2 = service.crud.addBlock('cloud-notes:edgeless-text', {}, surface!.id);
     if (!id2) {
       throw new Error('id2 is not found');
     }
@@ -249,7 +249,7 @@ describe('apply last props', () => {
   });
 
   test('note', () => {
-    const id = service.crud.addBlock('affine:note', {}, doc.root!.id);
+    const id = service.crud.addBlock('cloud-notes:note', {}, doc.root!.id);
     if (!id) {
       throw new Error('id is not found');
     }
@@ -265,7 +265,7 @@ describe('apply last props', () => {
       },
     });
 
-    const id2 = service.crud.addBlock('affine:note', {}, doc.root!.id);
+    const id2 = service.crud.addBlock('cloud-notes:note', {}, doc.root!.id);
     if (!id2) {
       throw new Error('id2 is not found');
     }
@@ -278,7 +278,7 @@ describe('apply last props', () => {
 
   test('frame', () => {
     const surface = getSurfaceBlock(doc);
-    const id = service.crud.addBlock('affine:frame', {}, surface!.id);
+    const id = service.crud.addBlock('cloud-notes:frame', {}, surface!.id);
     if (!id) {
       throw new Error('id is not found');
     }
@@ -288,7 +288,7 @@ describe('apply last props', () => {
       background: DefaultTheme.StrokeColorShortMap.Purple,
     });
 
-    const id2 = service.crud.addBlock('affine:frame', {}, surface!.id);
+    const id2 = service.crud.addBlock('cloud-notes:frame', {}, surface!.id);
     if (!id2) {
       throw new Error('id2 is not found');
     }
@@ -300,7 +300,7 @@ describe('apply last props', () => {
       background: { normal: '#def4e740' },
     });
 
-    const id3 = service.crud.addBlock('affine:frame', {}, surface!.id);
+    const id3 = service.crud.addBlock('cloud-notes:frame', {}, surface!.id);
     if (!id3) {
       throw new Error('id3 is not found');
     }
@@ -310,7 +310,7 @@ describe('apply last props', () => {
       background: { light: '#a381aa23', dark: '#6e907452' },
     });
 
-    const id4 = service.crud.addBlock('affine:frame', {}, surface!.id);
+    const id4 = service.crud.addBlock('cloud-notes:frame', {}, surface!.id);
     if (!id4) {
       throw new Error('id4 is not found');
     }

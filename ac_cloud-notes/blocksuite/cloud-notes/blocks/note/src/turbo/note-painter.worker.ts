@@ -6,12 +6,12 @@ import type {
 import { BlockLayoutPainterExtension } from '@blocksuite/cloud-notes-gfx-turbo-renderer/painter';
 
 export interface NoteLayout extends BlockLayout {
-  type: 'affine:note';
+  type: 'cloud-notes:note';
   background?: string;
 }
 
 function isNoteLayout(layout: BlockLayout): layout is NoteLayout {
-  return layout.type === 'affine:note';
+  return layout.type === 'cloud-notes:note';
 }
 
 class NoteLayoutPainter implements BlockLayoutPainter {
@@ -25,7 +25,7 @@ class NoteLayoutPainter implements BlockLayoutPainter {
       const message: WorkerToHostMessage = {
         type: 'paintError',
         error: 'Invalid layout format',
-        blockType: 'affine:note',
+        blockType: 'cloud-notes:note',
       };
       self.postMessage(message);
       return;
@@ -44,6 +44,6 @@ class NoteLayoutPainter implements BlockLayoutPainter {
 }
 
 export const NoteLayoutPainterExtension = BlockLayoutPainterExtension(
-  'affine:note',
+  'cloud-notes:note',
   NoteLayoutPainter
 );

@@ -45,7 +45,7 @@ export const paragraphBlockNotionHtmlAdapterMatcher: BlockNotionHtmlAdapterMatch
               {
                 type: 'block',
                 id: nanoid(),
-                flavour: 'affine:paragraph',
+                flavour: 'cloud-notes:paragraph',
                 props: {
                   type: 'quote',
                   text: {
@@ -72,7 +72,7 @@ export const paragraphBlockNotionHtmlAdapterMatcher: BlockNotionHtmlAdapterMatch
               {
                 type: 'block',
                 id: nanoid(),
-                flavour: 'affine:paragraph',
+                flavour: 'cloud-notes:paragraph',
                 props: {
                   type: walkerContext.getGlobalContext('hast:blockquote')
                     ? 'quote'
@@ -102,7 +102,7 @@ export const paragraphBlockNotionHtmlAdapterMatcher: BlockNotionHtmlAdapterMatch
                 {
                   type: 'block',
                   id: nanoid(),
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: o.node.tagName,
                     text: {
@@ -126,7 +126,7 @@ export const paragraphBlockNotionHtmlAdapterMatcher: BlockNotionHtmlAdapterMatch
                     {
                       type: 'block',
                       id: nanoid(),
-                      flavour: 'affine:paragraph',
+                      flavour: 'cloud-notes:paragraph',
                       props: {
                         type: 'text',
                         text: {
@@ -163,7 +163,7 @@ export const paragraphBlockNotionHtmlAdapterMatcher: BlockNotionHtmlAdapterMatch
                   {
                     type: 'block',
                     id: nanoid(),
-                    flavour: 'affine:paragraph',
+                    flavour: 'cloud-notes:paragraph',
                     props: {
                       type: 'quote',
                       text: {

@@ -180,9 +180,9 @@ export const NodePropsSchema = z.object({
   highlighter: HighlighterSchema,
   text: TextSchema,
   mindmap: MindmapSchema,
-  'affine:edgeless-text': EdgelessTextZodSchema,
-  'affine:note': NoteZodSchema,
-  'affine:frame': FrameZodSchema,
+  'cloud-notes:edgeless-text': EdgelessTextZodSchema,
+  'cloud-notes:note': NoteZodSchema,
+  'cloud-notes:frame': FrameZodSchema,
   // shapes
   'shape:diamond': ShapeSchema,
   'shape:ellipse': ShapeSchema,

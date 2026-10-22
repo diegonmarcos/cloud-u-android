@@ -237,4 +237,4 @@ export const updateView = <ViewData extends ViewBasicDataType>(
     });
   });
 };
-export const DATABASE_CONVERT_WHITE_LIST = ['affine:list', 'affine:paragraph'];
+export const DATABASE_CONVERT_WHITE_LIST = ['cloud-notes:list', 'cloud-notes:paragraph'];

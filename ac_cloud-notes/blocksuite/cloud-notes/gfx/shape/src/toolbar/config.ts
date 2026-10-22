@@ -333,6 +333,6 @@ export function hasGrouped(model: ShapeElementModel) {
 }
 
 export const shapeToolbarExtension = ToolbarModuleExtension({
-  id: BlockFlavourIdentifier('affine:surface:shape'),
+  id: BlockFlavourIdentifier('cloud-notes:surface:shape'),
   config: shapeToolbarConfig,
 });

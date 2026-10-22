@@ -44,7 +44,7 @@ export class LitTranscriptionBlock extends BlockComponent<TranscriptionBlockMode
 }
 
 export const AITranscriptionBlockSpec: ExtensionType[] = [
-  BlockViewExtension('affine:transcription', () => {
+  BlockViewExtension('cloud-notes:transcription', () => {
     return literal`transcription-block`;
   }),
 ];

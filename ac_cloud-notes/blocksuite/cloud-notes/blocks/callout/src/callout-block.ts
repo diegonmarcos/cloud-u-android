@@ -81,16 +81,16 @@ export class CalloutBlockComponent extends CaptionedBlockComponent<CalloutBlockM
     const flavour = firstChild.flavour;
 
     const marginTopMap: Record<string, string> = {
-      'affine:paragraph:h1': '23px',
-      'affine:paragraph:h2': '20px',
-      'affine:paragraph:h3': '16px',
-      'affine:paragraph:h4': '15px',
-      'affine:paragraph:h5': '14px',
-      'affine:paragraph:h6': '13px',
+      'cloud-notes:paragraph:h1': '23px',
+      'cloud-notes:paragraph:h2': '20px',
+      'cloud-notes:paragraph:h3': '16px',
+      'cloud-notes:paragraph:h4': '15px',
+      'cloud-notes:paragraph:h5': '14px',
+      'cloud-notes:paragraph:h6': '13px',
     };
 
     // For heading blocks, use the type to determine margin
-    if (flavour === 'affine:paragraph') {
+    if (flavour === 'cloud-notes:paragraph') {
       const paragraph = firstChild as ParagraphBlockModel;
       const type = paragraph.props.type$.value;
       const key = `${flavour}:${type}`;
@@ -182,7 +182,7 @@ export class CalloutBlockComponent extends CaptionedBlockComponent<CalloutBlockM
     event.stopPropagation();
 
     // Create a new paragraph block
-    const paragraphId = this.store.addBlock('affine:paragraph', {}, this.model);
+    const paragraphId = this.store.addBlock('cloud-notes:paragraph', {}, this.model);
 
     // Focus the new paragraph
     focusTextModel(this.std, paragraphId);

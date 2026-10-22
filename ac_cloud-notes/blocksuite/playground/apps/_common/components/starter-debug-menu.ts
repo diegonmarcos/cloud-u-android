@@ -238,8 +238,8 @@ export class StarterDebugMenu extends ShadowlessElement {
     const count = rootModel.children.length;
     const xywh: SerializedXYWH = `[0,${count * 60},800,95]`;
 
-    const noteId = this.doc.addBlock('affine:note', { xywh }, rootId);
-    this.doc.addBlock('affine:paragraph', {}, noteId);
+    const noteId = this.doc.addBlock('cloud-notes:note', { xywh }, rootId);
+    this.doc.addBlock('cloud-notes:paragraph', {}, noteId);
   }
 
   private async _clearSiteData() {
@@ -518,9 +518,9 @@ export class StarterDebugMenu extends ShadowlessElement {
         );
         for (const doc of docs) {
           if (doc) {
-            const noteBlock = window.doc.getModelsByFlavour('affine:note');
+            const noteBlock = window.doc.getModelsByFlavour('cloud-notes:note');
             window.doc.addBlock(
-              'affine:paragraph',
+              'cloud-notes:paragraph',
               {
                 type: 'text',
                 text: new Text([

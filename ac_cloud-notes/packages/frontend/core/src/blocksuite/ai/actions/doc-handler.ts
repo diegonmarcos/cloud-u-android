@@ -222,7 +222,7 @@ export function actionToHandler<T extends keyof BlockSuitePresets.AIActions>(
     if (!block) return;
     if (
       blocks.length === 1 &&
-      block.model.flavour === 'affine:image' &&
+      block.model.flavour === 'cloud-notes:image' &&
       id === 'createImage'
     ) {
       // if only one image block is selected, and the action is createImage

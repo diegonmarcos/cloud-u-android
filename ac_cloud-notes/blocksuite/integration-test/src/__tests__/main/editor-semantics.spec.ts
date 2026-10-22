@@ -170,7 +170,7 @@ describe('markdown/list/paragraph/quote/code/link', () => {
       throw new Error('Cannot find note model');
     }
     const model = note.children[0] as ListBlockModel;
-    expect(model.flavour).toBe('affine:list');
+    expect(model.flavour).toBe('cloud-notes:list');
     expect(model.props.type).toBe('todo');
     expect(model.props.checked).toBe(true);
   });
@@ -184,7 +184,7 @@ describe('markdown/list/paragraph/quote/code/link', () => {
       throw new Error('Cannot find heading note model');
     }
     const headingModel = headingNote.children[0] as ParagraphBlockModel;
-    expect(headingModel.flavour).toBe('affine:paragraph');
+    expect(headingModel.flavour).toBe('cloud-notes:paragraph');
     expect(headingModel.props.type).toBe('h1');
 
     const { noteId: quoteNoteId, paragraphId: quoteParagraphId } =
@@ -195,7 +195,7 @@ describe('markdown/list/paragraph/quote/code/link', () => {
       throw new Error('Cannot find quote note model');
     }
     const quoteModel = quoteNote.children[0] as ParagraphBlockModel;
-    expect(quoteModel.flavour).toBe('affine:paragraph');
+    expect(quoteModel.flavour).toBe('cloud-notes:paragraph');
     expect(quoteModel.props.type).toBe('quote');
   });
 
@@ -208,7 +208,7 @@ describe('markdown/list/paragraph/quote/code/link', () => {
       throw new Error('Cannot find note model');
     }
     const model = note.children[0];
-    expect(model.flavour).toBe('affine:code');
+    expect(model.flavour).toBe('cloud-notes:code');
     expect((model as any).props.language).toBe('typescript');
   });
 
@@ -335,7 +335,7 @@ describe('slash-menu action semantics', () => {
     }
     const first = note.children[0] as ParagraphBlockModel;
     const secondId = doc.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       { text: new Text('second') },
       noteId
     );

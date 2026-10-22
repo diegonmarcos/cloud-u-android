@@ -86,7 +86,7 @@ export class DndService extends Service {
         }
         const snapshotSlice = dndAPI.fromEntity({
           docId: data.entity.id,
-          flavour: 'affine:embed-linked-doc',
+          flavour: 'cloud-notes:embed-linked-doc',
         });
         if (!snapshotSlice) {
           return;
@@ -152,7 +152,7 @@ export class DndService extends Service {
       const flavour =
         dropTarget === 'canvas'
           ? this.editorSettingService.editorSetting.docCanvasPreferView.value
-          : 'affine:embed-linked-doc';
+          : 'cloud-notes:embed-linked-doc';
 
       const { entity, bsEntity } = args.source.data;
       if (!entity || !bsEntity) return;
@@ -257,7 +257,7 @@ export class DndService extends Service {
 
     const snapshotSlice = dndAPI.fromEntity({
       docId: normalData.entity.id,
-      flavour: 'affine:embed-linked-doc',
+      flavour: 'cloud-notes:embed-linked-doc',
     });
 
     if (!snapshotSlice) {
@@ -347,7 +347,7 @@ export class DndService extends Service {
   ): Entity | null => {
     for (const block of snapshot.content) {
       if (
-        ['affine:embed-linked-doc', 'affine:embed-synced-doc'].includes(
+        ['cloud-notes:embed-linked-doc', 'cloud-notes:embed-synced-doc'].includes(
           block.flavour
         )
       ) {

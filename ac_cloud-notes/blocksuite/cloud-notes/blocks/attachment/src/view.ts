@@ -33,7 +33,7 @@ export class AttachmentViewExtension extends ViewExtensionProvider {
     context.register([
       FlavourExtension(flavour),
       BlockViewExtension(flavour, model => {
-        return model.parent?.flavour === 'affine:surface'
+        return model.parent?.flavour === 'cloud-notes:surface'
           ? literal`cloud-notes-edgeless-attachment`
           : literal`cloud-notes-attachment`;
       }),

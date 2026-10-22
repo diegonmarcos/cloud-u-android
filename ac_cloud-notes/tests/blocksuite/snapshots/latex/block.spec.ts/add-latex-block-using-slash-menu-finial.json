@@ -5,7 +5,7 @@
         {
           "children": [
           ],
-          "flavour": "affine:latex",
+          "flavour": "cloud-notes:latex",
           "id": "3",
           "props": {
             "index": "a0",
@@ -19,7 +19,7 @@
           "version": 1
         }
       ],
-      "flavour": "affine:note",
+      "flavour": "cloud-notes:note",
       "id": "1",
       "props": {
         "background": {
@@ -44,7 +44,7 @@
       "version": 1
     }
   ],
-  "flavour": "affine:page",
+  "flavour": "cloud-notes:page",
   "id": "0",
   "props": {
     "title": {

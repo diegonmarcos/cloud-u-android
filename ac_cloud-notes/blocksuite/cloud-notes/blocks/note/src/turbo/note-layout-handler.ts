@@ -16,7 +16,7 @@ import type { BlockModel } from '@blocksuite/store';
 import type { NoteLayout } from './note-painter.worker';
 
 export class NoteLayoutHandlerExtension extends BlockLayoutHandlerExtension<NoteLayout> {
-  readonly blockType = 'affine:note';
+  readonly blockType = 'cloud-notes:note';
 
   static override setup(di: Container) {
     di.addImpl(
@@ -58,7 +58,7 @@ export class NoteLayoutHandlerExtension extends BlockLayoutHandlerExtension<Note
 
     // Create the note layout object
     const noteLayout: NoteLayout = {
-      type: 'affine:note',
+      type: 'cloud-notes:note',
       blockId: model.id,
       rect: {
         x: modelX,

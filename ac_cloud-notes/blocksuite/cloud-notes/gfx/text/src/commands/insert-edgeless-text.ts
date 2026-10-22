@@ -35,7 +35,7 @@ export const insertEdgelessTextCommand: Command<
   const selection = gfx.selection;
 
   const textId = std.get(EdgelessCRUDIdentifier).addBlock(
-    'affine:edgeless-text',
+    'cloud-notes:edgeless-text',
     {
       xywh: new Bound(
         x - (EDGELESS_TEXT_BLOCK_MIN_WIDTH * zoom) / 2,
@@ -47,7 +47,7 @@ export const insertEdgelessTextCommand: Command<
     surface.id
   );
 
-  const blockId = doc.addBlock('affine:paragraph', { type: 'text' }, textId);
+  const blockId = doc.addBlock('cloud-notes:paragraph', { type: 'text' }, textId);
   host.updateComplete
     .then(() => {
       selection.set({

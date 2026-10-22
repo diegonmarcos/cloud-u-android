@@ -48,7 +48,7 @@ export const insertEmbedIframeWithUrlCommand: Command<
     selectedBlockId = surfaceSelection.blockId;
   }
 
-  const flavour = 'affine:embed-iframe';
+  const flavour = 'cloud-notes:embed-iframe';
   const props: Record<string, unknown> = { url };
   // When there is a selected block, it means that the selection is in note or edgeless text
   // we should insert the embed iframe block after the selected block and only need the url prop

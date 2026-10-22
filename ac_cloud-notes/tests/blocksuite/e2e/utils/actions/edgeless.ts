@@ -70,7 +70,7 @@ export async function getNoteRect(page: Page, noteId: string) {
     ([noteId]) => {
       const doc = window.collection.getDoc('doc:home')?.getStore();
       const block = doc?.getModelById(noteId);
-      if (block?.flavour === 'affine:note') {
+      if (block?.flavour === 'cloud-notes:note') {
         return (block as NoteBlockModel).xywh;
       } else {
         return null;
@@ -88,7 +88,7 @@ export async function getNoteProps(page: Page, noteId: string) {
     ([id]) => {
       const doc = window.collection.getDoc('doc:home')?.getStore();
       const block = doc?.getModelById(id);
-      if (block?.flavour === 'affine:note') {
+      if (block?.flavour === 'cloud-notes:note') {
         return (block as NoteBlockModel).keys.reduce(
           (pre, key) => {
             pre[key] = block[key as keyof typeof block] as string;

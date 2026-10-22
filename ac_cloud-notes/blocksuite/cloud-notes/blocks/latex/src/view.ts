@@ -20,8 +20,8 @@ export class LatexViewExtension extends ViewExtensionProvider {
   override setup(context: ViewExtensionContext) {
     super.setup(context);
     context.register([
-      BlockViewExtension('affine:latex', literal`cloud-notes-latex`),
-      SlashMenuConfigExtension('affine:latex', latexSlashMenuConfig),
+      BlockViewExtension('cloud-notes:latex', literal`cloud-notes-latex`),
+      SlashMenuConfigExtension('cloud-notes:latex', latexSlashMenuConfig),
     ]);
   }
 }

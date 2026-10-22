@@ -16,7 +16,7 @@ function createBaseSnapshot(
   return {
     type: 'block',
     id: 'block:test',
-    flavour: 'affine:page',
+    flavour: 'cloud-notes:page',
     props: {
       title: {
         '$blocksuite:internal:text$': true,
@@ -27,7 +27,7 @@ function createBaseSnapshot(
       {
         type: 'block',
         id: 'block:surface',
-        flavour: 'affine:surface',
+        flavour: 'cloud-notes:surface',
         props: {
           elements: {},
         },
@@ -36,7 +36,7 @@ function createBaseSnapshot(
       {
         type: 'block',
         id: 'block:note',
-        flavour: 'affine:note',
+        flavour: 'cloud-notes:note',
         props: {
           xywh: '[0,0,800,95]',
           background: DefaultTheme.noteBackgrounColor,
@@ -55,7 +55,7 @@ describe('snapshot to pdf', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:test',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -66,7 +66,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:surface',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -75,7 +75,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:note',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -87,7 +87,7 @@ describe('snapshot to pdf', () => {
             {
               type: 'block',
               id: 'block:paragraph',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -130,7 +130,7 @@ describe('snapshot to pdf', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:test',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -141,7 +141,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:surface',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -150,7 +150,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:note',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -162,7 +162,7 @@ describe('snapshot to pdf', () => {
             {
               type: 'block',
               id: 'block:code',
-              flavour: 'affine:code',
+              flavour: 'cloud-notes:code',
               props: {
                 language: 'python',
                 text: {
@@ -202,7 +202,7 @@ describe('snapshot to pdf', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:test',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -213,7 +213,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:surface',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -222,7 +222,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:note',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -234,7 +234,7 @@ describe('snapshot to pdf', () => {
             {
               type: 'block',
               id: 'block:list1',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'bulleted',
                 text: {
@@ -251,7 +251,7 @@ describe('snapshot to pdf', () => {
             {
               type: 'block',
               id: 'block:list2',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'bulleted',
                 text: {
@@ -291,7 +291,7 @@ describe('snapshot to pdf', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:test',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -302,7 +302,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:surface',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -311,7 +311,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:note',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -323,7 +323,7 @@ describe('snapshot to pdf', () => {
             {
               type: 'block',
               id: 'block:header',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'h1',
                 text: {
@@ -377,7 +377,7 @@ describe('snapshot to pdf', () => {
       blocks: {
         type: 'block',
         id: 'block:test',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -388,7 +388,7 @@ describe('snapshot to pdf', () => {
           {
             type: 'block',
             id: 'block:surface',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -397,7 +397,7 @@ describe('snapshot to pdf', () => {
           {
             type: 'block',
             id: 'block:note',
-            flavour: 'affine:note',
+            flavour: 'cloud-notes:note',
             props: {
               xywh: '[0,0,800,95]',
               background: DefaultTheme.noteBackgrounColor,
@@ -447,7 +447,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -488,7 +488,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -529,7 +529,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -574,7 +574,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -619,7 +619,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -663,7 +663,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -706,7 +706,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -752,7 +752,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -804,7 +804,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -850,7 +850,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:quote',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'quote',
             text: {
@@ -889,7 +889,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:quote',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'quote',
             text: {
@@ -905,7 +905,7 @@ describe('snapshot to pdf', () => {
             {
               type: 'block',
               id: 'block:child',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -945,7 +945,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:callout',
-          flavour: 'affine:callout',
+          flavour: 'cloud-notes:callout',
           props: {
             backgroundColorName: 'grey',
             text: {
@@ -981,7 +981,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:callout',
-          flavour: 'affine:callout',
+          flavour: 'cloud-notes:callout',
           props: {
             backgroundColorName: 'blue',
             text: {
@@ -1017,7 +1017,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:callout',
-          flavour: 'affine:callout',
+          flavour: 'cloud-notes:callout',
           props: {
             backgroundColorName: 'grey',
             text: {
@@ -1033,7 +1033,7 @@ describe('snapshot to pdf', () => {
             {
               type: 'block',
               id: 'block:child',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -1073,7 +1073,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:image',
-          flavour: 'affine:image',
+          flavour: 'cloud-notes:image',
           props: {
             sourceId: undefined,
             caption: 'Test caption',
@@ -1117,7 +1117,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:image',
-          flavour: 'affine:image',
+          flavour: 'cloud-notes:image',
           props: {
             sourceId: blobId,
             caption: 'SVG Image',
@@ -1144,7 +1144,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:image',
-          flavour: 'affine:image',
+          flavour: 'cloud-notes:image',
           props: {
             sourceId: 'nonexistent-blob-id',
             caption: 'Missing image',
@@ -1188,7 +1188,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:image',
-          flavour: 'affine:image',
+          flavour: 'cloud-notes:image',
           props: {
             sourceId: blobId,
             width: 300,
@@ -1227,7 +1227,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:image',
-          flavour: 'affine:image',
+          flavour: 'cloud-notes:image',
           props: {
             sourceId: blobId,
             textAlign: 'right',
@@ -1256,7 +1256,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:table',
-          flavour: 'affine:table',
+          flavour: 'cloud-notes:table',
           props: {
             columns: {
               col1: {
@@ -1326,7 +1326,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:table',
-          flavour: 'affine:table',
+          flavour: 'cloud-notes:table',
           props: {
             columns: {},
             rows: {},
@@ -1354,7 +1354,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -1382,7 +1382,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -1408,7 +1408,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -1440,7 +1440,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:paragraph',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             textAlign: 'center',
@@ -1484,7 +1484,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:list1',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'bulleted',
             text: {
@@ -1500,7 +1500,7 @@ describe('snapshot to pdf', () => {
             {
               type: 'block',
               id: 'block:list2',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'bulleted',
                 text: {
@@ -1538,7 +1538,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:list1',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'numbered',
             order: 5,
@@ -1579,7 +1579,7 @@ describe('snapshot to pdf', () => {
         {
           type: 'block',
           id: 'block:todo',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'todo',
             checked: true,

@@ -113,7 +113,7 @@ export class CodeBlockClipboardController extends LifeCycleWatcher {
     const codeBlock = selectedBlockId
       ? this.std.store.getBlock(selectedBlockId)?.model
       : null;
-    if (plainText && codeBlock?.flavour === 'affine:code' && selectedBlockId) {
+    if (plainText && codeBlock?.flavour === 'cloud-notes:code' && selectedBlockId) {
       const richText = this.std.view
         .getBlock(selectedBlockId)
         ?.querySelector<RichText>('rich-text');
@@ -174,7 +174,7 @@ export class CodeBlockClipboardController extends LifeCycleWatcher {
     // add paste event listener for code block
     const subscription = this.std.view.viewUpdated.subscribe(
       ({ type, method, view }) => {
-        if (type !== 'block' || view.model.flavour !== 'affine:code') return;
+        if (type !== 'block' || view.model.flavour !== 'cloud-notes:code') return;
 
         if (method === 'add') {
           view.handleEvent('paste', this.onPaste);

@@ -35,10 +35,10 @@ export function createLinkedDocFromNote(
   blockSnapshot.props.displayMode = NoteDisplayMode.DocAndEdgeless;
   const linkedDoc = _doc.getStore({ id: doc.id });
   linkedDoc.load(() => {
-    const rootId = linkedDoc.addBlock('affine:page', {
+    const rootId = linkedDoc.addBlock('cloud-notes:page', {
       title: new Text(docTitle),
     });
-    linkedDoc.addBlock('affine:surface', {}, rootId);
+    linkedDoc.addBlock('cloud-notes:surface', {}, rootId);
     transformer
       .snapshotToBlock(blockSnapshot, linkedDoc, rootId)
       .catch(console.error);
@@ -56,10 +56,10 @@ export function createLinkedDocFromEdgelessElements(
   const transformer = host.store.getTransformer();
   const linkedDoc = _doc.getStore();
   linkedDoc.load(() => {
-    const rootId = linkedDoc.addBlock('affine:page', {
+    const rootId = linkedDoc.addBlock('cloud-notes:page', {
       title: new Text(docTitle),
     });
-    const surfaceId = linkedDoc.addBlock('affine:surface', {}, rootId);
+    const surfaceId = linkedDoc.addBlock('cloud-notes:surface', {}, rootId);
     const surface = getSurfaceBlock(linkedDoc);
     if (!surface) return;
 

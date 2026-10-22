@@ -35,7 +35,7 @@ export class EmbedEdgelessLinkedDocBlockComponent extends toEdgelessEmbedBlock(
     const { addBlock } = this.std.get(EdgelessCRUDIdentifier);
     const surface = this.gfx.surface ?? undefined;
     const newId = addBlock(
-      'affine:embed-synced-doc',
+      'cloud-notes:embed-synced-doc',
       {
         xywh: bound.serialize(),
         caption,

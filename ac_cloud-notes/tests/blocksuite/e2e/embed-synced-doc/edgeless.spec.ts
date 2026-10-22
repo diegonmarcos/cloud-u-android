@@ -98,9 +98,9 @@ test.describe('Embed synced doc in edgeless mode', () => {
       await page.evaluate(
         ({ embedDocId, height }) => {
           const std = window.editor.std;
-          const surface = std.store.getModelsByFlavour('affine:surface')[0];
+          const surface = std.store.getModelsByFlavour('cloud-notes:surface')[0];
           std.store.addBlock(
-            'affine:embed-synced-doc',
+            'cloud-notes:embed-synced-doc',
             {
               pageId: embedDocId,
               xywh: `[0,100,370,${height}]`,

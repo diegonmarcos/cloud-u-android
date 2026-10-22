@@ -161,7 +161,7 @@ const embedConfig: AttachmentEmbedConfig[] = [
     name: 'image',
     shouldBeConverted: true,
     check: model =>
-      model.store.schema.flavourSchemaMap.has('affine:image') &&
+      model.store.schema.flavourSchemaMap.has('cloud-notes:image') &&
       model.props.type.startsWith('image/'),
     async action(model, std) {
       const component = std.view.getBlock(model.id);
@@ -256,7 +256,7 @@ const embedConfig: AttachmentEmbedConfig[] = [
  * Turn the attachment block into an image block.
  */
 async function turnIntoImageBlock(model: AttachmentBlockModel) {
-  if (!model.store.schema.flavourSchemaMap.has('affine:image')) {
+  if (!model.store.schema.flavourSchemaMap.has('cloud-notes:image')) {
     console.error('The image flavour is not supported!');
     return;
   }
@@ -301,5 +301,5 @@ async function turnIntoImageBlock(model: AttachmentBlockModel) {
     ...imageSize,
     ...others,
   };
-  transformModel(model, 'affine:image', imageProp);
+  transformModel(model, 'cloud-notes:image', imageProp);
 }

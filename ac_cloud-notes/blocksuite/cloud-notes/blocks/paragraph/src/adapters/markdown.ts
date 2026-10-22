@@ -123,7 +123,7 @@ const flattenSnapshotBlockToDelta = (
   node: BlockSnapshot,
   depth = 0
 ): DeltaInsert[] => {
-  if (node.flavour === 'affine:list') {
+  if (node.flavour === 'cloud-notes:list') {
     const type = node.props.type;
     const order = (node.props.order as number | undefined) ?? 1;
     const prefix =
@@ -166,7 +166,7 @@ export const paragraphBlockMarkdownAdapterMatcher: BlockMarkdownAdapterMatcher =
                 {
                   type: 'block',
                   id: nanoid(),
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: 'text',
                     text: {
@@ -188,7 +188,7 @@ export const paragraphBlockMarkdownAdapterMatcher: BlockMarkdownAdapterMatcher =
                 {
                   type: 'block',
                   id: nanoid(),
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: `h${o.node.depth}`,
                     collapsed: isCollapsed,
@@ -214,7 +214,7 @@ export const paragraphBlockMarkdownAdapterMatcher: BlockMarkdownAdapterMatcher =
                 {
                   type: 'block',
                   id: nanoid(),
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: 'quote',
                     text: {
@@ -246,7 +246,7 @@ export const paragraphBlockMarkdownAdapterMatcher: BlockMarkdownAdapterMatcher =
       enter: (o, context) => {
         const { walkerContext, deltaConverter } = context;
         const paragraphDepth = (walkerContext.getGlobalContext(
-          'affine:paragraph:depth'
+          'cloud-notes:paragraph:depth'
         ) ?? 0) as number;
         const text = (o.node.props.text ?? { delta: [] }) as {
           delta: DeltaInsert[];
@@ -315,15 +315,15 @@ export const paragraphBlockMarkdownAdapterMatcher: BlockMarkdownAdapterMatcher =
           }
         }
         walkerContext.setGlobalContext(
-          'affine:paragraph:depth',
+          'cloud-notes:paragraph:depth',
           paragraphDepth + 1
         );
       },
       leave: (_, context) => {
         const { walkerContext } = context;
         walkerContext.setGlobalContext(
-          'affine:paragraph:depth',
-          (walkerContext.getGlobalContext('affine:paragraph:depth') as number) -
+          'cloud-notes:paragraph:depth',
+          (walkerContext.getGlobalContext('cloud-notes:paragraph:depth') as number) -
             1
         );
       },

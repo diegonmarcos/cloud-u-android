@@ -23,7 +23,7 @@ const bookmarkSlashMenuConfig: SlashMenuConfig = {
       },
       group: '4_Content & Media@2',
       when: ({ model }) =>
-        model.store.schema.flavourSchemaMap.has('affine:bookmark'),
+        model.store.schema.flavourSchemaMap.has('cloud-notes:bookmark'),
       action: ({ std, model }) => {
         const { host } = std;
         const parentModel = host.store.getParent(model);

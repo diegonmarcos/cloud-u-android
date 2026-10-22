@@ -121,17 +121,17 @@ async function createLinkBlock(page: Page, str: string, link: string) {
   const id = await page.evaluate(
     ([str, link]) => {
       const { doc } = window;
-      const rootId = doc.addBlock('affine:page', {
+      const rootId = doc.addBlock('cloud-notes:page', {
         title: new window.$blocksuite.store.Text('title'),
       });
-      const noteId = doc.addBlock('affine:note', {}, rootId);
+      const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
 
       const text = new window.$blocksuite.store.Text([
         { insert: 'Hello' },
         { insert: str, attributes: { link } },
       ]);
       const id = doc.addBlock(
-        'affine:paragraph',
+        'cloud-notes:paragraph',
         { type: 'text', text: text },
         noteId
       );

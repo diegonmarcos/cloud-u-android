@@ -1,4 +1,9 @@
-import { type IconData, IconRenderer, IconType } from '@cloud-notes/component';
+import {
+  type IconData,
+  IconRenderer,
+  IconType,
+  isCloudNotesIconType,
+} from '@cloud-notes/component';
 import * as litIcons from '@blocksuite/icons/lit';
 import { html } from 'lit';
 
@@ -15,7 +20,7 @@ export const getDocIconComponentLit = (icon: IconData) => {
     if (icon.type === IconType.Emoji) {
       return html`<div class="icon">${icon.unicode}</div>`;
     }
-    if (icon.type === IconType.CloudNotesIcon) {
+    if (isCloudNotesIconType(icon.type) && 'name' in icon) {
       return html`<div
         style="color: ${icon.color}; display: flex; align-items: center; justify-content: center;"
       >

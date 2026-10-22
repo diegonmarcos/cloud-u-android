@@ -431,6 +431,6 @@ function updateModelsWith<
 }
 
 export const connectorToolbarExtension = ToolbarModuleExtension({
-  id: BlockFlavourIdentifier('affine:surface:connector'),
+  id: BlockFlavourIdentifier('cloud-notes:surface:connector'),
   config: connectorToolbarConfig,
 });

@@ -19,10 +19,10 @@ export class BlockZeroWidth extends LitElement {
     stopPropagation(e);
     if (this.block.store.readonly) return;
     const nextBlock = this.block.store.getNext(this.block.model);
-    if (nextBlock?.flavour !== 'affine:paragraph') {
+    if (nextBlock?.flavour !== 'cloud-notes:paragraph') {
       const [paragraphId] = this.block.store.addSiblingBlocks(
         this.block.model,
-        [{ flavour: 'affine:paragraph' }]
+        [{ flavour: 'cloud-notes:paragraph' }]
       );
       const std = this.block.std;
       std.selection.setGroup('note', [

@@ -539,7 +539,7 @@ export class ExportManager {
       return false;
     }
     const frames = sortFramesForDeck(
-      this.doc.getModelsByFlavour('affine:frame') as unknown as Array<
+      this.doc.getModelsByFlavour('cloud-notes:frame') as unknown as Array<
         GfxBlockElementModel & { props: { presentationIndex?: string } }
       >
     );
@@ -550,7 +550,7 @@ export class ExportManager {
       const bound = frame.elementBound;
       const inside = gfx
         .getElementsByBound(bound, { type: 'all' })
-        .filter(e => e !== frame && (e as { flavour?: string }).flavour !== 'affine:frame');
+        .filter(e => e !== frame && (e as { flavour?: string }).flavour !== 'cloud-notes:frame');
       const blocks = inside.filter(
         (e): e is GfxBlockElementModel => e instanceof GfxBlockElementModel
       );

@@ -25,7 +25,7 @@ export class SurfaceViewExtension extends ViewExtensionProvider {
   override setup(context: ViewExtensionContext) {
     super.setup(context);
     context.register([
-      FlavourExtension('affine:surface'),
+      FlavourExtension('cloud-notes:surface'),
       EdgelessCRUDExtension,
       EdgelessLegacySlotExtension,
       ExportManagerExtension,
@@ -33,12 +33,12 @@ export class SurfaceViewExtension extends ViewExtensionProvider {
     if (this.isEdgeless(context.scope)) {
       context.register(DefaultTool);
       context.register(
-        BlockViewExtension('affine:surface', literal`cloud-notes-surface`)
+        BlockViewExtension('cloud-notes:surface', literal`cloud-notes-surface`)
       );
       context.register(EditPropsMiddlewareBuilder);
     } else {
       context.register(
-        BlockViewExtension('affine:surface', literal`cloud-notes-surface-void`)
+        BlockViewExtension('cloud-notes:surface', literal`cloud-notes-surface-void`)
       );
     }
   }

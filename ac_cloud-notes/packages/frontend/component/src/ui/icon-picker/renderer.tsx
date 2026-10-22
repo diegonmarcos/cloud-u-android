@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { CloudNotesIconRenderer } from './renderer/cloud-notes-icon';
-import { type IconData, IconType } from './type';
+import { type IconData, IconType, isCloudNotesIconType } from './type';
 
 export const IconRenderer = ({
   data,
@@ -18,7 +18,7 @@ export const IconRenderer = ({
   if (data.type === IconType.Emoji && data.unicode) {
     return data.unicode;
   }
-  if (data.type === IconType.CloudNotesIcon && data.name) {
+  if (isCloudNotesIconType(data.type) && 'name' in data && data.name) {
     return (
       <CloudNotesIconRenderer name={data.name} color={data.color} {...props} />
     );

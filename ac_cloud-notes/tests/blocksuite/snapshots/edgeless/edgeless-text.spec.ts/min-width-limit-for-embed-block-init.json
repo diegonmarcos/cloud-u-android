@@ -7,7 +7,7 @@
             {
               "children": [
               ],
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "id": "5",
               "props": {
                 "collapsed": false,
@@ -22,7 +22,7 @@
               "version": 1
             }
           ],
-          "flavour": "affine:edgeless-text",
+          "flavour": "cloud-notes:edgeless-text",
           "id": "4",
           "props": {
             "color": {
@@ -44,7 +44,7 @@
           "version": 1
         }
       ],
-      "flavour": "affine:surface",
+      "flavour": "cloud-notes:surface",
       "id": "1",
       "props": {
         "elements": {
@@ -58,7 +58,7 @@
         {
           "children": [
           ],
-          "flavour": "affine:paragraph",
+          "flavour": "cloud-notes:paragraph",
           "id": "3",
           "props": {
             "collapsed": false,
@@ -73,7 +73,7 @@
           "version": 1
         }
       ],
-      "flavour": "affine:note",
+      "flavour": "cloud-notes:note",
       "id": "2",
       "props": {
         "background": {
@@ -98,7 +98,7 @@
       "version": 1
     }
   ],
-  "flavour": "affine:page",
+  "flavour": "cloud-notes:page",
   "id": "0",
   "props": {
     "title": {

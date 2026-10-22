@@ -44,7 +44,7 @@ const defaultImageProps: ImageBlockProps = {
 };
 
 export const ImageBlockSchema = defineBlockSchema({
-  flavour: 'affine:image',
+  flavour: 'cloud-notes:image',
   props: () => defaultImageProps,
   metadata: {
     version: 1,

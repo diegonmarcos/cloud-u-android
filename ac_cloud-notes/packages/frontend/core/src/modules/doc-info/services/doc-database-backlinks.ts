@@ -84,7 +84,7 @@ export class DocDatabaseBacklinksService extends Service {
         const maybeDatabaseBlock = docRef.doc.blockSuiteDoc.getBlock(
           backlink.databaseBlockId
         );
-        if (maybeDatabaseBlock?.flavour === 'affine:database') {
+        if (maybeDatabaseBlock?.flavour === 'cloud-notes:database') {
           const dbModel = maybeDatabaseBlock.model as DatabaseBlockModel;
           const [cells$, dataSource] = this.adaptRowCells(
             dbModel,

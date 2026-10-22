@@ -84,17 +84,17 @@ export const defaultAttachmentProps: AttachmentBlockProps = {
 };
 
 export const AttachmentBlockSchema = defineBlockSchema({
-  flavour: 'affine:attachment',
+  flavour: 'cloud-notes:attachment',
   props: (): AttachmentBlockProps => defaultAttachmentProps,
   metadata: {
     version: 1,
     role: 'content',
     parent: [
-      'affine:note',
-      'affine:surface',
-      'affine:edgeless-text',
-      'affine:paragraph',
-      'affine:list',
+      'cloud-notes:note',
+      'cloud-notes:surface',
+      'cloud-notes:edgeless-text',
+      'cloud-notes:paragraph',
+      'cloud-notes:list',
     ],
     children: ['@attachment-viewer'],
   },

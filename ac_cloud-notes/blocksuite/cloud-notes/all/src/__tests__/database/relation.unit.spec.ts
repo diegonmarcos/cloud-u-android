@@ -41,11 +41,11 @@ function setup() {
   const doc = collection.createDoc('doc0');
   doc.load();
   const store = doc.getStore({ extensions });
-  const root = store.addBlock('affine:page', { title: new Text('relations') });
-  const note = store.addBlock('affine:note', {}, root);
+  const root = store.addBlock('cloud-notes:page', { title: new Text('relations') });
+  const note = store.addBlock('cloud-notes:note', {}, root);
   const mkDb = (title: string) =>
     store.addBlock(
-      'affine:database',
+      'cloud-notes:database',
       { columns: [], title: new Text(title) },
       note
     );
@@ -54,7 +54,7 @@ function setup() {
   const projects = store.getModelById(projectsId) as DatabaseBlockModel;
   const tasks = store.getModelById(tasksId) as DatabaseBlockModel;
   const row = (dbId: string, title: string) =>
-    store.addBlock('affine:paragraph', { text: new Text(title) }, dbId);
+    store.addBlock('cloud-notes:paragraph', { text: new Text(title) }, dbId);
 
   const budget = addProperty(
     projects,

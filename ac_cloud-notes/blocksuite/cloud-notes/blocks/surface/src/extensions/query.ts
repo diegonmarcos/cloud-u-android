@@ -11,5 +11,5 @@ export function isConnectable(
 export function isNoteBlock(
   element: BlockModel | GfxModel | null
 ): element is NoteBlockModel {
-  return !!element && 'flavour' in element && element.flavour === 'affine:note';
+  return !!element && 'flavour' in element && element.flavour === 'cloud-notes:note';
 }

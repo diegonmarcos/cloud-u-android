@@ -42,7 +42,7 @@ describe('basic', () => {
     })!;
     await wait(0); // wait next frame
     frameId = service.crud.addBlock(
-      'affine:frame',
+      'cloud-notes:frame',
       {
         xywh: '[0, 0, 800, 200]',
         index: service.generateIndex(),
@@ -55,10 +55,10 @@ describe('basic', () => {
 
   test('surface-ref should be rendered in page mode', async () => {
     const surfaceRefId = doc.addBlock(
-      'affine:surface-ref',
+      'cloud-notes:surface-ref',
       {
         reference: frameId,
-        refFlavour: 'affine:frame',
+        refFlavour: 'cloud-notes:frame',
       },
       noteAId
     );
@@ -75,10 +75,10 @@ describe('basic', () => {
 
   test('content in frame should be rendered in the correct order', async () => {
     const surfaceRefId = doc.addBlock(
-      'affine:surface-ref',
+      'cloud-notes:surface-ref',
       {
         reference: frameId,
-        refFlavour: 'affine:frame',
+        refFlavour: 'cloud-notes:frame',
       },
       noteAId
     );
@@ -113,7 +113,7 @@ describe('basic', () => {
       },
     });
     const surfaceRefId = doc.addBlock(
-      'affine:surface-ref',
+      'cloud-notes:surface-ref',
       {
         reference: groupId,
         refFlavour: 'group',
@@ -143,10 +143,10 @@ describe('basic', () => {
 
   test('frame should be rendered in surface-ref viewport', async () => {
     const surfaceRefId = doc.addBlock(
-      'affine:surface-ref',
+      'cloud-notes:surface-ref',
       {
         reference: frameId,
-        refFlavour: 'affine:frame',
+        refFlavour: 'cloud-notes:frame',
       },
       noteAId
     );
@@ -179,7 +179,7 @@ describe('basic', () => {
       },
     })!;
     const surfaceRefId = doc.addBlock(
-      'affine:surface-ref',
+      'cloud-notes:surface-ref',
       {
         reference: groupId,
         refFlavour: 'group',
@@ -203,10 +203,10 @@ describe('basic', () => {
 
   test('viewport of surface-ref should be updated when the reference xywh updated', async () => {
     const surfaceRefId = doc.addBlock(
-      'affine:surface-ref',
+      'cloud-notes:surface-ref',
       {
         reference: frameId,
-        refFlavour: 'affine:frame',
+        refFlavour: 'cloud-notes:frame',
       },
       noteAId
     );
@@ -242,7 +242,7 @@ describe('basic', () => {
       },
     });
     const surfaceRefId = doc.addBlock(
-      'affine:surface-ref',
+      'cloud-notes:surface-ref',
       {
         reference: groupId,
         refFlavour: 'group',
@@ -280,7 +280,7 @@ describe('clipboard', () => {
     editor.doc = newDoc!;
     await wait();
 
-    const surfaceRefs = newDoc!.getBlocksByFlavour('affine:surface-ref');
+    const surfaceRefs = newDoc!.getBlocksByFlavour('cloud-notes:surface-ref');
     expect(surfaceRefs).toHaveLength(2);
 
     const surfaceRefBlocks = surfaceRefs.map(({ id }) =>

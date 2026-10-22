@@ -161,7 +161,7 @@ export class CloudNotesBlockDiffWidgetForPage extends WidgetComponent {
 }
 
 export const blockDiffWidgetForPage = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_BLOCK_DIFF_WIDGET_FOR_PAGE,
   literal`${unsafeStatic(CLOUD_NOTES_BLOCK_DIFF_WIDGET_FOR_PAGE)}`
 );

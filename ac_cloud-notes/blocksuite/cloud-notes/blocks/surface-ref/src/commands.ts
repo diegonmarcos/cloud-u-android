@@ -24,9 +24,9 @@ export const insertSurfaceRefBlockCommand: Command<
       : selectedModels[selectedModels.length - 1];
 
   const surfaceRefProps: Partial<SurfaceRefProps> & {
-    flavour: 'affine:surface-ref';
+    flavour: 'cloud-notes:surface-ref';
   } = {
-    flavour: 'affine:surface-ref',
+    flavour: 'cloud-notes:surface-ref',
     reference,
   };
 

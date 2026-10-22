@@ -17,4 +17,4 @@ export type NoteConfig = {
 };
 
 export const NoteConfigExtension =
-  ConfigExtensionFactory<NoteConfig>('affine:note');
+  ConfigExtensionFactory<NoteConfig>('cloud-notes:note');

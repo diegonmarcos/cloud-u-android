@@ -299,7 +299,7 @@ export class RichTextCell extends BaseCellRenderer<Text, string> {
           module: 'database rich-text cell',
           type: 'paste',
           segment: 'database',
-          parentFlavour: 'affine:database',
+          parentFlavour: 'cloud-notes:database',
         });
         return;
       }

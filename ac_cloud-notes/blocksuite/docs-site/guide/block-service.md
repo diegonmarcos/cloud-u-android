@@ -58,7 +58,7 @@ import type { ImageService } from '@blocksuite/blocks';
 const editorRoot = document.querySelector('editor-host');
 if (!editorRoot) return;
 
-const imageService = editorRoot.spec.getService('affine:image') as ImageService;
+const imageService = editorRoot.spec.getService('cloud-notes:image') as ImageService;
 
 // Call specific method to set runtime configurations
 imageService.setImageProxyURL('https://example.com/image-proxy');

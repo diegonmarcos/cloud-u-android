@@ -6,12 +6,13 @@ import type { Schema } from '../../schema/index.js';
 import type { BlockModel } from '../block/block-model.js';
 import type { YBlock } from '../block/types.js';
 import { internalPrimitives } from '../block/zod.js';
+import { normalizeFlavour } from '../../utils/legacy-flavour.js';
 
 export class DocCRUD {
   get root(): string | null {
     let rootId: string | null = null;
     this._yBlocks.forEach(yBlock => {
-      const flavour = yBlock.get('sys:flavour') as string;
+      const flavour = normalizeFlavour(yBlock.get('sys:flavour') as string);
       const schema = this._schema.flavourSchemaMap.get(flavour);
       if (!schema) return;
 
@@ -67,7 +68,9 @@ export class DocCRUD {
     }
 
     const parentFlavour = parent
-      ? this._yBlocks.get(parent)?.get('sys:flavour')
+      ? normalizeFlavour(
+          this._yBlocks.get(parent)?.get('sys:flavour') as string | undefined
+        )
       : undefined;
 
     this._schema.validate(flavour, parentFlavour as string);
@@ -81,7 +84,7 @@ export class DocCRUD {
     )?.map(child => (typeof child === 'string' ? child : child.id));
 
     yBlock.set('sys:id', id);
-    yBlock.set('sys:flavour', flavour);
+    yBlock.set('sys:flavour', normalizeFlavour(flavour));
     yBlock.set('sys:version', version);
     yBlock.set('sys:children', Y.Array.from(children ?? []));
 

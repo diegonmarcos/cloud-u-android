@@ -15,7 +15,7 @@ export class CloudNotesFrameTitleWidget extends WidgetComponent<FrameBlockModel>
 }
 
 export const frameTitleWidget = WidgetViewExtension(
-  'affine:frame',
+  'cloud-notes:frame',
   CLOUD_NOTES_FRAME_TITLE_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_FRAME_TITLE_WIDGET)}`
 );

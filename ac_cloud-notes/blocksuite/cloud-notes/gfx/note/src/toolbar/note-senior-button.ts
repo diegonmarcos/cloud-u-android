@@ -129,7 +129,7 @@ export class EdgelessNoteSeniorButton extends EdgelessToolbarToolMixin(
     return this.edgeless.std
       .get(ThemeProvider)
       .generateColorProperty(
-        this.edgeless.std.get(EditPropsStore).lastProps$.value['affine:note']
+        this.edgeless.std.get(EditPropsStore).lastProps$.value['cloud-notes:note']
           .background
       );
   });
@@ -210,7 +210,7 @@ export class EdgelessNoteSeniorButton extends EdgelessToolbarToolMixin(
 
   // TODO: better to extract these states outside of component?
   @state()
-  accessor childFlavour: NoteToolOption['childFlavour'] = 'affine:paragraph';
+  accessor childFlavour: NoteToolOption['childFlavour'] = 'cloud-notes:paragraph';
 
   @state()
   accessor childType = 'text';

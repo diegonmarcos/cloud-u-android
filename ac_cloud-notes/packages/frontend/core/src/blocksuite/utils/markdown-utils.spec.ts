@@ -16,10 +16,10 @@ describe('markdown-utils', () => {
 
     const store = collection.createDoc('page0').getStore({ extensions });
     store.load();
-    const rootId = store.addBlock('affine:page', {
+    const rootId = store.addBlock('cloud-notes:page', {
       title: new Text(''),
     });
-    const noteId = store.addBlock('affine:note', {}, rootId);
+    const noteId = store.addBlock('cloud-notes:note', {}, rootId);
 
     await insertFromMarkdown(
       undefined,

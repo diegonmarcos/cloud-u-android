@@ -6,4 +6,4 @@ export interface ParagraphBlockConfig {
 }
 
 export const ParagraphBlockConfigExtension =
-  ConfigExtensionFactory<ParagraphBlockConfig>('affine:paragraph');
+  ConfigExtensionFactory<ParagraphBlockConfig>('cloud-notes:paragraph');

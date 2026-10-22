@@ -167,7 +167,7 @@ export class CloudNotesReference extends WithDisposable(ShadowlessElement) {
 
       if (hovered) {
         message$.value = {
-          flavour: 'affine:reference',
+          flavour: 'cloud-notes:reference',
           element: this,
           setFloating: this._whenHover.setFloating,
         };

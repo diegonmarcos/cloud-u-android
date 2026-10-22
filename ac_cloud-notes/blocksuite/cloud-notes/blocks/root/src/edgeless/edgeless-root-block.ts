@@ -125,7 +125,7 @@ export class EdgelessRootBlockComponent extends BlockComponent<
 
   get surfaceBlockModel() {
     return this.model.children.find(
-      child => child.flavour === 'affine:surface'
+      child => child.flavour === 'cloud-notes:surface'
     ) as SurfaceBlockModel;
   }
 

@@ -485,7 +485,7 @@ export const EdgelessNoteInteraction =
 
                   if (model.children.length === 0) {
                     const blockId = std.store.addBlock(
-                      'affine:paragraph',
+                      'cloud-notes:paragraph',
                       { type: 'text' },
                       model.id
                     );

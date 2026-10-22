@@ -22,7 +22,7 @@ export type DatabaseBlockProps = {
 export class DatabaseBlockModel extends BlockModel<DatabaseBlockProps> {}
 
 export const DatabaseBlockSchema = defineBlockSchema({
-  flavour: 'affine:database',
+  flavour: 'cloud-notes:database',
   props: (internal): DatabaseBlockProps => ({
     views: [],
     title: internal.Text(),
@@ -33,8 +33,8 @@ export const DatabaseBlockSchema = defineBlockSchema({
   metadata: {
     role: 'hub',
     version: 3,
-    parent: ['affine:note'],
-    children: ['affine:paragraph', 'affine:list'],
+    parent: ['cloud-notes:note'],
+    children: ['cloud-notes:paragraph', 'cloud-notes:list'],
   },
   toModel: () => new DatabaseBlockModel(),
 });

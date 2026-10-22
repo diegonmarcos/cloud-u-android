@@ -32,7 +32,7 @@ export const embedYoutubeBlockHtmlAdapterMatcher =
               {
                 type: 'block',
                 id: nanoid(),
-                flavour: 'affine:embed-youtube',
+                flavour: 'cloud-notes:embed-youtube',
                 props: {
                   url: `https://www.youtube.com/watch?v=${videoId}`,
                 },

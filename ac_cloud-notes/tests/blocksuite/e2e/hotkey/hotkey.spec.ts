@@ -264,10 +264,10 @@ test('format list to h1', async ({ page }) => {
   await initEmptyParagraphState(page);
 
   await focusRichText(page, 0);
-  await updateBlockType(page, 'affine:list', 'bulleted');
+  await updateBlockType(page, 'cloud-notes:list', 'bulleted');
   await type(page, 'aa');
   await focusRichText(page, 0);
-  await updateBlockType(page, 'affine:paragraph', 'h1');
+  await updateBlockType(page, 'cloud-notes:paragraph', 'h1');
   await waitNextFrame(page, 200);
   await assertRichTextModelType(page, 'h1');
   await undoByClick(page);

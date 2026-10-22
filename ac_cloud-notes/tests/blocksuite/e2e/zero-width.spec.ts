@@ -33,7 +33,7 @@ test(
     }
     // click the zero width
     await page.mouse.click(rect.x + 20, rect.y + rect.height + 8);
-    await assertBlockFlavour(page, '3', 'affine:paragraph');
+    await assertBlockFlavour(page, '3', 'cloud-notes:paragraph');
   }
 );
 
@@ -43,12 +43,12 @@ test(
     await enterPlaygroundRoom(page);
     await page.evaluate(() => {
       const { doc } = window;
-      const rootId = doc.addBlock('affine:page', {
+      const rootId = doc.addBlock('cloud-notes:page', {
         title: new window.$blocksuite.store.Text(),
       });
-      const note = doc.addBlock('affine:note', {}, rootId);
-      doc.addBlock('affine:code', {}, note);
-      doc.addBlock('affine:paragraph', {}, note);
+      const note = doc.addBlock('cloud-notes:note', {}, rootId);
+      doc.addBlock('cloud-notes:code', {}, note);
+      doc.addBlock('cloud-notes:paragraph', {}, note);
     });
     const codeComponent = page.locator('cloud-notes-code');
     const codeComponentrect = await codeComponent.boundingBox();
@@ -70,13 +70,13 @@ test(
     await page.evaluate(
       async ({ bookMarkUrl, embedUrl }) => {
         const { doc } = window;
-        const rootId = doc.addBlock('affine:page', {
+        const rootId = doc.addBlock('cloud-notes:page', {
           title: new window.$blocksuite.store.Text(),
         });
-        const note = doc.addBlock('affine:note', {}, rootId);
-        doc.addBlock('affine:code', {}, note);
-        doc.addBlock('affine:divider', {}, note);
-        doc.addBlock('affine:bookmark', { url: bookMarkUrl }, note);
+        const note = doc.addBlock('cloud-notes:note', {}, rootId);
+        doc.addBlock('cloud-notes:code', {}, note);
+        doc.addBlock('cloud-notes:divider', {}, note);
+        doc.addBlock('cloud-notes:bookmark', { url: bookMarkUrl }, note);
         await new Promise(res => setTimeout(res, 200));
         const pageRoot = document.querySelector('cloud-notes-page-root');
         if (!pageRoot) throw new Error('Cannot find doc page');
@@ -85,8 +85,8 @@ test(
         ).then(response => response.blob());
         const storage = doc.blobSync;
         const sourceId = await storage.set(imageBlob);
-        doc.addBlock('affine:image', { sourceId }, note);
-        doc.addBlock('affine:embed-github', { url: embedUrl }, note);
+        doc.addBlock('cloud-notes:image', { sourceId }, note);
+        doc.addBlock('cloud-notes:embed-github', { url: embedUrl }, note);
       },
       { bookMarkUrl, embedUrl }
     );
@@ -99,7 +99,7 @@ test(
       codeComponentrect.x + 20,
       codeComponentrect.y + codeComponentrect.height + 8
     );
-    await assertBlockFlavour(page, '7', 'affine:paragraph');
+    await assertBlockFlavour(page, '7', 'cloud-notes:paragraph');
 
     const dividerComponent = page.locator('cloud-notes-divider');
     const dividerComponentRect = await dividerComponent.boundingBox();
@@ -110,7 +110,7 @@ test(
       dividerComponentRect.x + 20,
       dividerComponentRect.y + dividerComponentRect.height + 8
     );
-    await assertBlockFlavour(page, '8', 'affine:paragraph');
+    await assertBlockFlavour(page, '8', 'cloud-notes:paragraph');
 
     const bookmarkComponent = page.locator('cloud-notes-bookmark');
     const bookmarkComponentRect = await bookmarkComponent.boundingBox();
@@ -121,7 +121,7 @@ test(
       bookmarkComponentRect.x + 20,
       bookmarkComponentRect.y + bookmarkComponentRect.height + 8
     );
-    await assertBlockFlavour(page, '9', 'affine:paragraph');
+    await assertBlockFlavour(page, '9', 'cloud-notes:paragraph');
 
     await page.evaluate(() => {
       const viewport = document.querySelector('.cloud-notes-page-viewport');
@@ -140,6 +140,6 @@ test(
       imageComponentRect.x + 20,
       imageComponentRect.y + imageComponentRect.height + 8
     );
-    await assertBlockFlavour(page, '10', 'affine:paragraph');
+    await assertBlockFlavour(page, '10', 'cloud-notes:paragraph');
   }
 );

@@ -105,7 +105,7 @@ export const databaseBlockNotionHtmlAdapterMatcher: BlockNotionHtmlAdapterMatche
                       {
                         type: 'block',
                         id: nanoid(),
-                        flavour: 'affine:paragraph',
+                        flavour: 'cloud-notes:paragraph',
                         props: {
                           text: {
                             '$blocksuite:internal:text$': true,
@@ -122,7 +122,7 @@ export const databaseBlockNotionHtmlAdapterMatcher: BlockNotionHtmlAdapterMatche
                     {
                       type: 'block',
                       id: nanoid(),
-                      flavour: 'affine:paragraph',
+                      flavour: 'cloud-notes:paragraph',
                       props: {
                         text: {
                           '$blocksuite:internal:text$': true,
@@ -147,7 +147,7 @@ export const databaseBlockNotionHtmlAdapterMatcher: BlockNotionHtmlAdapterMatche
                     {
                       type: 'block',
                       id: nanoid(),
-                      flavour: 'affine:paragraph',
+                      flavour: 'cloud-notes:paragraph',
                       props: {
                         text: {
                           '$blocksuite:internal:text$': true,

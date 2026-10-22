@@ -17,6 +17,7 @@ import {
   Transformer,
   type TransformerMiddleware,
   type YBlock,
+  normalizeFlavour,
 } from '@blocksuite/cloud-notes/store';
 import { uniqBy } from 'lodash-es';
 import {
@@ -51,11 +52,11 @@ export interface BlockDocumentInfo {
 }
 
 const bookmarkFlavours = new Set([
-  'affine:bookmark',
-  'affine:embed-youtube',
-  'affine:embed-figma',
-  'affine:embed-github',
-  'affine:embed-loom',
+  'cloud-notes:bookmark',
+  'cloud-notes:embed-youtube',
+  'cloud-notes:embed-figma',
+  'cloud-notes:embed-github',
+  'cloud-notes:embed-loom',
 ]);
 
 const collectInlineReferences = (
@@ -139,7 +140,7 @@ function generateMarkdownPreviewBuilder(
   yRootDoc?: YDoc
 ) {
   function yblockToDraftModal(yblock: YBlock): DraftModel | null {
-    const flavour = yblock.get('sys:flavour') as string;
+    const flavour = normalizeFlavour(yblock.get('sys:flavour') as string);
     const blockSchema = blocksuiteSchema.flavourSchemaMap.get(flavour);
     if (!blockSchema) {
       return null;
@@ -250,7 +251,7 @@ function generateMarkdownPreviewBuilder(
       );
 
       // reach the root block. do not count it.
-      if (!currentBlock || currentBlock.flavour !== 'affine:list') {
+      if (!currentBlock || currentBlock.flavour !== 'cloud-notes:list') {
         break;
       }
       parentBlockCount++;
@@ -274,7 +275,7 @@ function generateMarkdownPreviewBuilder(
 
   const generateDatabaseMarkdownPreview = (block: BlockDocumentInfo) => {
     const isDatabaseBlock = (block: BlockDocumentInfo) => {
-      return block.flavour === 'affine:database';
+      return block.flavour === 'cloud-notes:database';
     };
 
     const model = yblockToDraftModal(block.yblock);
@@ -309,7 +310,7 @@ function generateMarkdownPreviewBuilder(
     const isImageModel = (
       model: DraftModel | null
     ): model is DraftModel<ImageBlockModel> => {
-      return model?.flavour === 'affine:image';
+      return model?.flavour === 'cloud-notes:image';
     };
 
     const model = yblockToDraftModal(block.yblock);
@@ -336,8 +337,8 @@ function generateMarkdownPreviewBuilder(
       model: DraftModel | null
     ): model is DraftModel<EmbedBlockModel> => {
       return (
-        model?.flavour === 'affine:embed-linked-doc' ||
-        model?.flavour === 'affine:embed-synced-doc'
+        model?.flavour === 'cloud-notes:embed-linked-doc' ||
+        model?.flavour === 'cloud-notes:embed-synced-doc'
       );
     };
 
@@ -382,7 +383,7 @@ function generateMarkdownPreviewBuilder(
     const isAttachmentModel = (
       model: DraftModel | null
     ): model is DraftModel<AttachmentBlockModel> => {
-      return model?.flavour === 'affine:attachment';
+      return model?.flavour === 'cloud-notes:attachment';
     };
 
     const draftModel = yblockToDraftModal(block.yblock);
@@ -397,7 +398,7 @@ function generateMarkdownPreviewBuilder(
     const isTableModel = (
       model: DraftModel | null
     ): model is DraftModel<TableBlockModel> => {
-      return model?.flavour === 'affine:table';
+      return model?.flavour === 'cloud-notes:table';
     };
 
     const draftModel = yblockToDraftModal(block.yblock);
@@ -418,48 +419,48 @@ function generateMarkdownPreviewBuilder(
     let markdown: string | null = null;
 
     if (
-      flavour === 'affine:paragraph' ||
-      flavour === 'affine:list' ||
-      flavour === 'affine:code'
+      flavour === 'cloud-notes:paragraph' ||
+      flavour === 'cloud-notes:list' ||
+      flavour === 'cloud-notes:code'
     ) {
       const draftModel = yblockToDraftModal(block.yblock);
       markdown =
-        block.parentFlavour === 'affine:database'
+        block.parentFlavour === 'cloud-notes:database'
           ? generateDatabaseMarkdownPreview(block)
           : ((draftModel ? await markdownAdapter.fromBlock(draftModel) : null)
               ?.file ?? null);
 
       if (markdown) {
-        if (flavour === 'affine:code') {
+        if (flavour === 'cloud-notes:code') {
           markdown = trimCodeBlock(markdown);
-        } else if (flavour === 'affine:paragraph') {
+        } else if (flavour === 'cloud-notes:paragraph') {
           markdown = trimParagraph(markdown);
         }
       }
-    } else if (flavour === 'affine:database') {
+    } else if (flavour === 'cloud-notes:database') {
       markdown = generateDatabaseMarkdownPreview(block);
     } else if (
-      flavour === 'affine:embed-linked-doc' ||
-      flavour === 'affine:embed-synced-doc'
+      flavour === 'cloud-notes:embed-linked-doc' ||
+      flavour === 'cloud-notes:embed-synced-doc'
     ) {
       markdown = generateEmbedMarkdownPreview(block);
-    } else if (flavour === 'affine:attachment') {
+    } else if (flavour === 'cloud-notes:attachment') {
       markdown = generateAttachmentMarkdownPreview(block);
-    } else if (flavour === 'affine:image') {
+    } else if (flavour === 'cloud-notes:image') {
       markdown = generateImageMarkdownPreview(block);
-    } else if (flavour === 'affine:surface' || flavour === 'affine:page') {
+    } else if (flavour === 'cloud-notes:surface' || flavour === 'cloud-notes:page') {
       // skip
-    } else if (flavour === 'affine:latex') {
+    } else if (flavour === 'cloud-notes:latex') {
       markdown = generateLatexMarkdownPreview(block);
     } else if (bookmarkFlavours.has(flavour)) {
       markdown = generateBookmarkMarkdownPreview(block);
-    } else if (flavour === 'affine:table') {
+    } else if (flavour === 'cloud-notes:table') {
       markdown = generateTableMarkdownPreview(block);
     } else {
       console.warn(`unknown flavour: ${flavour}`);
     }
 
-    if (markdown && flavour === 'affine:list') {
+    if (markdown && flavour === 'cloud-notes:list') {
       const blockDepth = getListDepth(block);
       markdown = indentMarkdown(markdown, Math.max(0, blockDepth));
     }
@@ -573,13 +574,13 @@ export async function readAllBlocksFromDoc({
   };
 
   const nearestByFlavour = (blockId: string, flavour: string) =>
-    nearest(blockId, block => block.get('sys:flavour') === flavour);
+    nearest(blockId, block => normalizeFlavour(block.get('sys:flavour') as string) === flavour);
 
   let rootBlockId: string | null = null;
   for (const block of blocks.values()) {
-    const flavour = block.get('sys:flavour')?.toString();
+    const flavour = normalizeFlavour(block.get('sys:flavour')?.toString());
     const blockId = block.get('sys:id')?.toString();
-    if (flavour === 'affine:page' && blockId) {
+    if (flavour === 'cloud-notes:page' && blockId) {
       rootBlockId = blockId;
     }
   }
@@ -618,9 +619,11 @@ export async function readAllBlocksFromDoc({
       break;
     }
 
-    const flavour = block.get('sys:flavour')?.toString();
-    const parentFlavour = parentBlock?.get('sys:flavour')?.toString();
-    const noteBlock = nearestByFlavour(blockId, 'affine:note');
+    const flavour = normalizeFlavour(block.get('sys:flavour')?.toString());
+    const parentFlavour = normalizeFlavour(
+      parentBlock?.get('sys:flavour')?.toString()
+    );
+    const noteBlock = nearestByFlavour(blockId, 'cloud-notes:note');
 
     // display mode:
     // - both: page and edgeless -> fallback to page
@@ -647,13 +650,13 @@ export async function readAllBlocksFromDoc({
       additional: { displayMode, noteBlockId },
     };
 
-    if (flavour === 'affine:page') {
+    if (flavour === 'cloud-notes:page') {
       docTitle = block.get('prop:title').toString();
       blockDocuments.push({ ...commonBlockProps, content: docTitle });
     } else if (
-      flavour === 'affine:paragraph' ||
-      flavour === 'affine:list' ||
-      flavour === 'affine:code'
+      flavour === 'cloud-notes:paragraph' ||
+      flavour === 'cloud-notes:list' ||
+      flavour === 'cloud-notes:code'
     ) {
       const text = block.get('prop:text') as YText;
 
@@ -665,7 +668,7 @@ export async function readAllBlocksFromDoc({
       const refs = collectInlineReferences(deltas);
 
       const databaseName =
-        flavour === 'affine:paragraph' && parentFlavour === 'affine:database' // if block is a database row
+        flavour === 'cloud-notes:paragraph' && parentFlavour === 'cloud-notes:database' // if block is a database row
           ? parentBlock?.get('prop:title')?.toString()
           : undefined;
 
@@ -690,8 +693,8 @@ export async function readAllBlocksFromDoc({
         maxSummaryLength -= text.length;
       }
     } else if (
-      flavour === 'affine:embed-linked-doc' ||
-      flavour === 'affine:embed-synced-doc'
+      flavour === 'cloud-notes:embed-linked-doc' ||
+      flavour === 'cloud-notes:embed-synced-doc'
     ) {
       const pageId = block.get('prop:pageId');
       if (typeof pageId === 'string') {
@@ -705,7 +708,7 @@ export async function readAllBlocksFromDoc({
           parentBlockId,
         });
       }
-    } else if (flavour === 'affine:attachment') {
+    } else if (flavour === 'cloud-notes:attachment') {
       const blobId = block.get('prop:sourceId');
       if (typeof blobId === 'string') {
         blockDocuments.push({
@@ -716,7 +719,7 @@ export async function readAllBlocksFromDoc({
           parentBlockId,
         });
       }
-    } else if (flavour === 'affine:image') {
+    } else if (flavour === 'cloud-notes:image') {
       const blobId = block.get('prop:sourceId');
       if (typeof blobId === 'string') {
         blockDocuments.push({
@@ -727,7 +730,7 @@ export async function readAllBlocksFromDoc({
           parentBlockId,
         });
       }
-    } else if (flavour === 'affine:surface') {
+    } else if (flavour === 'cloud-notes:surface') {
       const texts = [];
 
       const elementsObj = block.get('prop:elements');
@@ -762,7 +765,7 @@ export async function readAllBlocksFromDoc({
         parentFlavour,
         parentBlockId,
       });
-    } else if (flavour === 'affine:database') {
+    } else if (flavour === 'cloud-notes:database') {
       const texts = [];
       const columnsObj = block.get('prop:columns');
       const databaseTitle = block.get('prop:title');
@@ -839,12 +842,12 @@ export async function readAllBlocksFromDoc({
             )
           : {}),
       });
-    } else if (flavour === 'affine:latex') {
+    } else if (flavour === 'cloud-notes:latex') {
       blockDocuments.push({
         ...commonBlockProps,
         content: block.get('prop:latex')?.toString() ?? '',
       });
-    } else if (flavour === 'affine:table') {
+    } else if (flavour === 'cloud-notes:table') {
       const contents = Array.from<string>(block.keys())
         .map(key => {
           if (key.startsWith('prop:cells.') && key.endsWith('.text')) {
@@ -871,13 +874,13 @@ export async function readAllBlocksFromDoc({
     if (block.ref?.length) {
       const target = block;
 
-      // should only generate the markdown preview belong to the same affine:note
-      const noteBlock = nearestByFlavour(block.blockId, 'affine:note');
+      // should only generate the markdown preview belong to the same cloud-notes:note
+      const noteBlock = nearestByFlavour(block.blockId, 'cloud-notes:note');
 
       const sameNoteBlocks = noteBlock
         ? blockDocuments.filter(
             candidate =>
-              nearestByFlavour(candidate.blockId, 'affine:note') === noteBlock
+              nearestByFlavour(candidate.blockId, 'cloud-notes:note') === noteBlock
           )
         : [];
 

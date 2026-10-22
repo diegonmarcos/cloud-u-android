@@ -6,7 +6,7 @@ import { CLOUD_NOTES_TOOLBAR_WIDGET } from './toolbar';
 export * from './toolbar';
 
 export const toolbarWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_TOOLBAR_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_TOOLBAR_WIDGET)}`
 );

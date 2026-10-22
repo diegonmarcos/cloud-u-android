@@ -19,12 +19,12 @@ export const EmbedYoutubeViewExtensions: ExtensionType[] = [
   FlavourExtension(flavour),
   EmbedYoutubeBlockService,
   BlockViewExtension(flavour, model => {
-    return model.parent?.flavour === 'affine:surface'
+    return model.parent?.flavour === 'cloud-notes:surface'
       ? literal`cloud-notes-embed-edgeless-youtube-block`
       : literal`cloud-notes-embed-youtube-block`;
   }),
   EmbedYoutubeBlockOptionConfig,
   createBuiltinToolbarConfigExtension(flavour, EmbedYoutubeBlockComponent),
-  SlashMenuConfigExtension('affine:embed-youtube', embedYoutubeSlashMenuConfig),
+  SlashMenuConfigExtension('cloud-notes:embed-youtube', embedYoutubeSlashMenuConfig),
   EmbedYoutubeBlockInteraction,
 ].flat();

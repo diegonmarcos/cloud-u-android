@@ -1,4 +1,5 @@
 import type { ColumnDataType } from '@blocksuite/cloud-notes/model';
+import { normalizeFlavour } from '@blocksuite/cloud-notes/store';
 import { Array as YArray, type Map as YMap, type Text as YText } from 'yjs';
 
 import { deltaToMd, getConverters } from './delta-to-md';
@@ -53,7 +54,7 @@ export function parseBlock(
   });
 
   const id = yBlock.get('sys:id') as string;
-  const flavour = yBlock.get('sys:flavour') as Flavour;
+  const flavour = normalizeFlavour(yBlock.get('sys:flavour') as string) as Flavour;
   const type = yBlock.get('prop:type') as string;
   const toMd = () =>
     deltaToMd((yBlock.get('prop:text') as YText).toDelta(), deltaConverters);
@@ -80,7 +81,7 @@ export function parseBlock(
 
   try {
     switch (flavour) {
-      case 'affine:paragraph': {
+      case 'cloud-notes:paragraph': {
         let initial = '';
         if (type === 'h1') {
           initial = '# ';
@@ -100,11 +101,11 @@ export function parseBlock(
         result.content = initial + toMd() + '\n';
         break;
       }
-      case 'affine:divider': {
+      case 'cloud-notes:divider': {
         result.content = '\n---\n\n';
         break;
       }
-      case 'affine:list': {
+      case 'cloud-notes:list': {
         let prefix = type === 'bulleted' ? '* ' : '1. ';
         if (type === 'todo') {
           const checked = yBlock.get('prop:checked') as boolean;
@@ -113,7 +114,7 @@ export function parseBlock(
         result.content = prefix + toMd();
         break;
       }
-      case 'affine:code': {
+      case 'cloud-notes:code': {
         const lang =
           (yBlock.get('prop:language') as string)?.toLowerCase() || 'txt';
         // do not transform to delta for code block
@@ -127,7 +128,7 @@ export function parseBlock(
           '\n```\n\n';
         break;
       }
-      case 'affine:image': {
+      case 'cloud-notes:image': {
         const sourceId = yBlock.get('prop:sourceId') as string;
         const width = yBlock.get('prop:width');
         const height = yBlock.get('prop:height');
@@ -156,7 +157,7 @@ export function parseBlock(
 
         break;
       }
-      case 'affine:attachment': {
+      case 'cloud-notes:attachment': {
         const sourceId = yBlock.get('prop:sourceId') as string;
         const blobUrl = context.buildBlobUrl(sourceId);
         const caption = yBlock.get('prop:caption') as string;
@@ -177,7 +178,7 @@ export function parseBlock(
         });
         break;
       }
-      case 'affine:embed-youtube': {
+      case 'cloud-notes:embed-youtube': {
         const videoId = yBlock.get('prop:videoId') as string;
         // prettier-ignore
         result.content = `
@@ -193,7 +194,7 @@ export function parseBlock(
         </iframe>` + '\n\n';
         break;
       }
-      case 'affine:bookmark': {
+      case 'cloud-notes:bookmark': {
         const url = yBlock.get('prop:url') as string;
         const caption = yBlock.get('prop:caption') as string;
         result.content = `\n[](Bookmark,${url})\n\n`;
@@ -203,8 +204,8 @@ export function parseBlock(
         });
         break;
       }
-      case 'affine:embed-linked-doc':
-      case 'affine:embed-synced-doc': {
+      case 'cloud-notes:embed-linked-doc':
+      case 'cloud-notes:embed-synced-doc': {
         const pageId = yBlock.get('prop:pageId') as string;
         const caption = yBlock.get('prop:caption') as string;
         result.content = `\n[${caption}](${context.buildDocUrl(pageId)})\n\n`;
@@ -214,14 +215,14 @@ export function parseBlock(
         });
         break;
       }
-      case 'affine:surface':
-      case 'affine:page':
-      case 'affine:note':
-      case 'affine:frame': {
+      case 'cloud-notes:surface':
+      case 'cloud-notes:page':
+      case 'cloud-notes:note':
+      case 'cloud-notes:frame': {
         result.content = '';
         break;
       }
-      case 'affine:database': {
+      case 'cloud-notes:database': {
         const title = (yBlock.get('prop:title') as YText).toJSON();
         const childrenTitleById = Object.fromEntries(
           childrenIds.map(cid => {
@@ -311,7 +312,7 @@ export function parseBlock(
         });
         break;
       }
-      case 'affine:table': {
+      case 'cloud-notes:table': {
         // Extract row IDs and their order
         const rowEntries = Object.entries(yBlock.toJSON())
           .filter(
@@ -392,7 +393,7 @@ export function parseBlock(
     }
 
     result.children =
-      flavour !== 'affine:database'
+      flavour !== 'cloud-notes:database'
         ? childrenIds
             .map(cid =>
               parseBlock(
@@ -415,7 +416,7 @@ export function parseBlock(
 
   if (result.content && aiEditable && blockLevel === 2) {
     // add a placeholder comment for the block level 2
-    if (flavour === 'affine:database' || placeholder) {
+    if (flavour === 'cloud-notes:database' || placeholder) {
       result.content = `<!-- block_id=${id} flavour=${flavour} placeholder -->\n`;
       result.children = [];
     } else {
@@ -429,7 +430,7 @@ export const parsePageDoc = (ctx: ParserContext): ParsedDoc => {
   // we assume that the first block is the page block
   const yBlocks: YBlocks = ctx.doc.getMap('blocks');
   const maybePageBlock = Object.entries(yBlocks.toJSON()).findLast(
-    ([_, b]) => b['sys:flavour'] === 'affine:page'
+    ([_, b]) => normalizeFlavour(b['sys:flavour']) === 'cloud-notes:page'
   );
 
   // there are cases that the page is empty due to some weird issues
@@ -449,7 +450,7 @@ export const parsePageDoc = (ctx: ParserContext): ParsedDoc => {
       };
     }
     rootBlock.children = rootBlock.children.filter(
-      (block): block is BaseParsedBlock => block.flavour === 'affine:note'
+      (block): block is BaseParsedBlock => block.flavour === 'cloud-notes:note'
     );
     const md = parseBlockToMd(rootBlock);
 

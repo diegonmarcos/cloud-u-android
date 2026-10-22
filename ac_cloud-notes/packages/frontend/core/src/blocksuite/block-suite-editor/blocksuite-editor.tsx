@@ -160,7 +160,7 @@ const BlockSuiteEditorImpl = ({
       const lastBlock = note.lastChild();
       if (
         lastBlock &&
-        lastBlock.flavour === 'affine:paragraph' &&
+        lastBlock.flavour === 'cloud-notes:paragraph' &&
         lastBlock.text?.length === 0
       ) {
         const focusBlock = std.view.getBlock(lastBlock.id) ?? undefined;

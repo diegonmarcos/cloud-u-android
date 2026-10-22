@@ -163,7 +163,7 @@ export class SurfaceRefBlockComponent extends BlockComponent<SurfaceRefBlockMode
 
       const [paragraphId] = this.store.addSiblingBlocks(this.model, [
         {
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
         },
       ]);
       const model = this.store.getModelById(paragraphId);

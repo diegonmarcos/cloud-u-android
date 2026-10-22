@@ -150,7 +150,7 @@ export class HeaderAreaTextCell extends BaseCellRenderer<Text, string> {
           module: 'database title cell',
           type: 'paste',
           segment: 'database',
-          parentFlavour: 'affine:database',
+          parentFlavour: 'cloud-notes:database',
         });
         return;
       }
@@ -268,7 +268,7 @@ export class HeaderAreaTextCell extends BaseCellRenderer<Text, string> {
         this.topContenteditableElement?.host
           ? getViewportElement(this.topContenteditableElement.host)
           : null}"
-      data-parent-flavour="affine:database"
+      data-parent-flavour="cloud-notes:database"
       class="${titleRichTextStyle}"
     ></rich-text>`;
   }

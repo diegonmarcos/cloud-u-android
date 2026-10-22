@@ -51,7 +51,7 @@ export const CodeBlockMarkdownExtension =
 
       if (model.text && model.text.length > prefixText.length) {
         const text = model.text.clone();
-        store.addBlock('affine:paragraph', { text }, parent, index + 1);
+        store.addBlock('cloud-notes:paragraph', { text }, parent, index + 1);
         text.delete(0, prefixText.length);
       }
       store.deleteBlock(model, { bringChildrenTo: parent });

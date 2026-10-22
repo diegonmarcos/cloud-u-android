@@ -2,6 +2,7 @@ import type { Schema } from '../../schema/index.js';
 import type { Store } from '../store/store.js';
 import { FlatSyncController } from './flat-sync-controller.js';
 import { SyncController } from './sync-controller.js';
+import { migrateStoredFlavour } from '../../utils/legacy-flavour.js';
 import type { BlockOptions, YBlock } from './types.js';
 
 export type BlockViewType = 'bypass' | 'display' | 'hidden';
@@ -49,7 +50,7 @@ export class Block {
           }
           options.onChange?.(this, key, isLocal);
         };
-    const flavour = yBlock.get('sys:flavour') as string;
+    const flavour = migrateStoredFlavour(yBlock);
     const blockSchema = this.schema.get(flavour);
     if (blockSchema?.model.isFlatData) {
       this._syncController = new FlatSyncController(

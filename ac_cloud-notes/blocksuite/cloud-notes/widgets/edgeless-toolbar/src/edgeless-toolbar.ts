@@ -728,7 +728,7 @@ export class EdgelessToolbarWidget extends WidgetComponent<RootBlockModel> {
 }
 
 export const edgelessToolbarWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   EDGELESS_TOOLBAR_WIDGET,
   literal`${unsafeStatic(EDGELESS_TOOLBAR_WIDGET)}`
 );

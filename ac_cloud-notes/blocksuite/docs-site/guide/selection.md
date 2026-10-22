@@ -73,7 +73,7 @@ Selection model has two important properties: `type` and `group`.
 
 The `type` of a selection means which kind of selection it is. And the `group` of a selection indicates the scope of selection.
 
-Some types of selections can share the same group because they have the same scope. For example, the `text` selection and the `block` selection can share the `note` group because they are both in the `affine:note` block. And you may also have a `cell` and `row` selection in a `table` block, and they can share the `table` group.
+Some types of selections can share the same group because they have the same scope. For example, the `text` selection and the `block` selection can share the `note` group because they are both in the `cloud-notes:note` block. And you may also have a `cell` and `row` selection in a `table` block, and they can share the `table` group.
 
 ## Update Selection State
 

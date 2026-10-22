@@ -20,8 +20,8 @@ export class ListViewExtension extends ViewExtensionProvider {
   override setup(context: ViewExtensionContext) {
     super.setup(context);
     context.register([
-      FlavourExtension('affine:list'),
-      BlockViewExtension('affine:list', literal`cloud-notes-list`),
+      FlavourExtension('cloud-notes:list'),
+      BlockViewExtension('cloud-notes:list', literal`cloud-notes-list`),
       ListKeymapExtension,
       ListTextKeymapExtension,
       ListMarkdownExtension,

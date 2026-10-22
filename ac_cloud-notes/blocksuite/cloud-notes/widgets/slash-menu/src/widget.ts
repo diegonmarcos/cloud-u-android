@@ -101,7 +101,7 @@ export class CloudNotesSlashMenuWidget extends WidgetComponent {
       }
     };
 
-    if (this.block?.model.flavour !== 'affine:page') {
+    if (this.block?.model.flavour !== 'cloud-notes:page') {
       console.error('SlashMenuWidget should be used in RootBlock');
       return;
     }

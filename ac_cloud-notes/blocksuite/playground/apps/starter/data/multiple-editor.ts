@@ -7,16 +7,16 @@ export const multiEditor: InitFn = (collection: Workspace, id: string) => {
   const doc = collection.createDoc(id).getStore({ id });
   doc.load(() => {
     // Add root block and surface block at root level
-    const rootId = doc.addBlock('affine:page', {
+    const rootId = doc.addBlock('cloud-notes:page', {
       title: new Text(),
     });
 
-    doc.addBlock('affine:surface', {}, rootId);
+    doc.addBlock('cloud-notes:surface', {}, rootId);
 
     // Add note block inside root block
-    const noteId = doc.addBlock('affine:note', {}, rootId);
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
     // Add paragraph block inside note block
-    doc.addBlock('affine:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
   });
 
   doc.resetHistory();
@@ -42,16 +42,16 @@ export const multiEditorVertical: InitFn = (
   const doc = collection.createDoc(docId).getStore();
   doc.load(() => {
     // Add root block and surface block at root level
-    const rootId = doc.addBlock('affine:page', {
+    const rootId = doc.addBlock('cloud-notes:page', {
       title: new Text(),
     });
 
-    doc.addBlock('affine:surface', {}, rootId);
+    doc.addBlock('cloud-notes:surface', {}, rootId);
 
     // Add note block inside root block
-    const noteId = doc.addBlock('affine:note', {}, rootId);
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
     // Add paragraph block inside note block
-    doc.addBlock('affine:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
   });
 
   doc.resetHistory();

@@ -72,7 +72,7 @@ export class EdgelessNoteToolButton extends QuickToolMixin(LitElement) {
     this._disposables.add(
       effect(() => {
         const value = this.gfx.tool.currentToolName$.value;
-        if (value !== 'affine:note') {
+        if (value !== 'cloud-notes:note') {
           this._disposeMenu();
         }
       })
@@ -112,7 +112,7 @@ export class EdgelessNoteToolButton extends QuickToolMixin(LitElement) {
   }
 
   @state()
-  accessor childFlavour: NoteToolOption['childFlavour'] = 'affine:paragraph';
+  accessor childFlavour: NoteToolOption['childFlavour'] = 'cloud-notes:paragraph';
 
   @state()
   accessor childType = 'text';

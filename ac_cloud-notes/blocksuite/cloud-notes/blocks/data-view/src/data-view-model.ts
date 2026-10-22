@@ -80,7 +80,7 @@ export class DataViewBlockModel extends BlockModel<Props> {
 }
 
 export const DataViewBlockSchema = defineBlockSchema({
-  flavour: 'affine:data-view',
+  flavour: 'cloud-notes:data-view',
   props: (): Props => ({
     views: [],
     title: '',
@@ -90,8 +90,8 @@ export const DataViewBlockSchema = defineBlockSchema({
   metadata: {
     role: 'hub',
     version: 1,
-    parent: ['affine:note'],
-    children: ['affine:paragraph', 'affine:list'],
+    parent: ['cloud-notes:note'],
+    children: ['cloud-notes:paragraph', 'cloud-notes:list'],
   },
   toModel: () => {
     return new DataViewBlockModel();

@@ -10,13 +10,13 @@ export class StoreRelationSpace implements RelationSpace {
 
   private model(id: string): DatabaseBlockModel | undefined {
     const m = this.store.getModelById(id);
-    return m?.flavour === 'affine:database'
+    return m?.flavour === 'cloud-notes:database'
       ? (m as DatabaseBlockModel)
       : undefined;
   }
 
   databases() {
-    return (this.store.getModelsByFlavour('affine:database') as DatabaseBlockModel[]).map(
+    return (this.store.getModelsByFlavour('cloud-notes:database') as DatabaseBlockModel[]).map(
       m => ({ id: m.id, name: m.props.title?.toString() || 'Untitled database' })
     );
   }

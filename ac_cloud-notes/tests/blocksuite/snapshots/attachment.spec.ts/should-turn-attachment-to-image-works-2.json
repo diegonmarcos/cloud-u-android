@@ -5,7 +5,7 @@
         {
           "children": [
           ],
-          "flavour": "affine:attachment",
+          "flavour": "cloud-notes:attachment",
           "id": "5",
           "props": {
             "caption": "",
@@ -25,7 +25,7 @@
           "version": 1
         }
       ],
-      "flavour": "affine:note",
+      "flavour": "cloud-notes:note",
       "id": "1",
       "props": {
         "background": {
@@ -50,7 +50,7 @@
       "version": 1
     }
   ],
-  "flavour": "affine:page",
+  "flavour": "cloud-notes:page",
   "id": "0",
   "props": {
     "title": {

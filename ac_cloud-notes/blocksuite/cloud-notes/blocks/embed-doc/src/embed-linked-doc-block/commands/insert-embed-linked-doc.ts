@@ -3,14 +3,14 @@ import type { EmbedCardStyle, ReferenceParams } from '@blocksuite/cloud-notes-mo
 import type { Command } from '@blocksuite/std';
 
 export type LinkableFlavour =
-  | 'affine:bookmark'
-  | 'affine:embed-linked-doc'
-  | 'affine:embed-synced-doc'
-  | 'affine:embed-iframe'
-  | 'affine:embed-figma'
-  | 'affine:embed-github'
-  | 'affine:embed-loom'
-  | 'affine:embed-youtube';
+  | 'cloud-notes:bookmark'
+  | 'cloud-notes:embed-linked-doc'
+  | 'cloud-notes:embed-synced-doc'
+  | 'cloud-notes:embed-iframe'
+  | 'cloud-notes:embed-figma'
+  | 'cloud-notes:embed-github'
+  | 'cloud-notes:embed-loom'
+  | 'cloud-notes:embed-youtube';
 
 export type InsertedLinkType = {
   flavour: LinkableFlavour;
@@ -24,7 +24,7 @@ export const insertEmbedLinkedDocCommand: Command<
   { blockId: string }
 > = (ctx, next) => {
   const { docId, params, std } = ctx;
-  const flavour = 'affine:embed-linked-doc';
+  const flavour = 'cloud-notes:embed-linked-doc';
   const targetStyle: EmbedCardStyle = 'vertical';
   const props: Record<string, unknown> = { pageId: docId };
   if (params) props.params = params;

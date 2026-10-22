@@ -67,7 +67,7 @@ export const listBlockNotionHtmlAdapterMatcher: BlockNotionHtmlAdapterMatcher =
               {
                 type: 'block',
                 id: nanoid(),
-                flavour: 'affine:list',
+                flavour: 'cloud-notes:list',
                 props: {
                   type: listType,
                   text: {

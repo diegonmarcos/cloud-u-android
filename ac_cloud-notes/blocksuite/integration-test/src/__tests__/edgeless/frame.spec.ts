@@ -22,7 +22,7 @@ describe('frame', () => {
 
   test('frame should have title', async () => {
     const frame = service.doc.addBlock(
-      'affine:frame',
+      'cloud-notes:frame',
       {
         xywh: '[0,0,300,300]',
         title: new Text('Frame 1'),
@@ -55,7 +55,7 @@ describe('frame', () => {
     expect(titleY).toBeLessThan(0);
 
     const nestedFrame = service.doc.addBlock(
-      'affine:frame',
+      'cloud-notes:frame',
       {
         xywh: '[20,20,200,200]',
         title: new Text('Frame 2'),
@@ -81,7 +81,7 @@ describe('frame', () => {
 
   test('frame should have externalXYWH after moving viewport to contains frame', async () => {
     const frameId = service.doc.addBlock(
-      'affine:frame',
+      'cloud-notes:frame',
       {
         xywh: '[1800,1800,200,200]',
         title: new Text('Frame 1'),
@@ -102,7 +102,7 @@ describe('frame', () => {
   test('descendant of frame should not contain itself', async () => {
     const frameIds = [1, 2, 3].map(i => {
       return service.doc.addBlock(
-        'affine:frame',
+        'cloud-notes:frame',
         {
           xywh: '[0,0,300,300]',
           title: new Text(`Frame ${i}`),

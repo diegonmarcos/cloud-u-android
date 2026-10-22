@@ -11,7 +11,7 @@ import type { BlockModel } from '@blocksuite/store';
 import type { ImageLayout } from './image-painter.worker';
 
 export class ImageLayoutHandlerExtension extends BlockLayoutHandlerExtension<ImageLayout> {
-  readonly blockType = 'affine:image';
+  readonly blockType = 'cloud-notes:image';
 
   static override setup(di: Container) {
     di.addImpl(
@@ -47,7 +47,7 @@ export class ImageLayoutHandlerExtension extends BlockLayoutHandlerExtension<Ima
     ]);
 
     const imageLayout: ImageLayout = {
-      type: 'affine:image',
+      type: 'cloud-notes:image',
       blockId: model.id,
       rect: {
         x: modelX,

@@ -29,9 +29,9 @@ function twoDocs() {
     const doc = ws.createDoc(id);
     doc.load();
     const store = doc.getStore({ id, extensions });
-    const root = store.addBlock('affine:page', { title: new Text(id) });
-    const note = store.addBlock('affine:note', {}, root);
-    const paragraph = store.addBlock('affine:paragraph', { text: new Text(text) }, note);
+    const root = store.addBlock('cloud-notes:page', { title: new Text(id) });
+    const note = store.addBlock('cloud-notes:note', {}, root);
+    const paragraph = store.addBlock('cloud-notes:paragraph', { text: new Text(text) }, note);
     store.load();
     return { store, paragraph };
   };

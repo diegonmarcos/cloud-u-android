@@ -18,7 +18,7 @@ export const embedYoutubeSlashMenuConfig: SlashMenuConfig = {
       },
       group: '4_Content & Media@6',
       when: ({ model }) =>
-        model.store.schema.flavourSchemaMap.has('affine:embed-youtube'),
+        model.store.schema.flavourSchemaMap.has('cloud-notes:embed-youtube'),
       action: ({ std, model }) => {
         (async () => {
           const { host } = std;

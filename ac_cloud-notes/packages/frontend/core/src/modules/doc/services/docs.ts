@@ -193,10 +193,10 @@ export class DocsService extends Service {
         },
       },
     ] as DeltaInsert<CloudNotesTextAttributes>[]);
-    const [frame] = doc.blockSuiteDoc.getBlocksByFlavour('affine:note');
+    const [frame] = doc.blockSuiteDoc.getBlocksByFlavour('cloud-notes:note');
     frame &&
       doc.blockSuiteDoc.addBlock(
-        'affine:paragraph' as never, // TODO(eyhn): fix type
+        'cloud-notes:paragraph' as never, // TODO(eyhn): fix type
         { text },
         frame.id
       );

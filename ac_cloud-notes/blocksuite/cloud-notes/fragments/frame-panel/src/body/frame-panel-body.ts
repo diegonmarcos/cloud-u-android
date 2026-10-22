@@ -157,7 +157,7 @@ export class FramePanelBody extends SignalWatcher(
 
   get frames() {
     const frames = this.editorHost.store
-      .getBlocksByFlavour('affine:frame')
+      .getBlocksByFlavour('cloud-notes:frame')
       .map(block => block.model as FrameBlockModel);
     return frames.sort(compare);
   }
@@ -332,7 +332,7 @@ export class FramePanelBody extends SignalWatcher(
     this._docDisposables = new DisposableGroup();
     this._docDisposables.add(
       doc.slots.blockUpdated.subscribe(({ type, flavour }) => {
-        if (flavour === 'affine:frame' && type !== 'update') {
+        if (flavour === 'cloud-notes:frame' && type !== 'update') {
           requestAnimationFrame(() => {
             this._updateFrames();
           });

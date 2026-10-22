@@ -51,6 +51,6 @@ export const textToolbarConfig = {
 } as const satisfies ToolbarModuleConfig;
 
 export const textToolbarExtension = ToolbarModuleExtension({
-  id: BlockFlavourIdentifier('affine:surface:text'),
+  id: BlockFlavourIdentifier('cloud-notes:surface:text'),
   config: textToolbarConfig,
 });

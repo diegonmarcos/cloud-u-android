@@ -19,7 +19,7 @@ export class DividerViewExtension extends ViewExtensionProvider {
   override setup(context: ViewExtensionContext) {
     super.setup(context);
     context.register([
-      BlockViewExtension('affine:divider', literal`cloud-notes-divider`),
+      BlockViewExtension('cloud-notes:divider', literal`cloud-notes-divider`),
       DividerMarkdownExtension,
     ]);
   }

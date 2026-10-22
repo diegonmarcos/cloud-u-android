@@ -254,6 +254,14 @@ jobs:
           grep -Eq "Test Files .* passed" /tmp/dv.plain && ! grep -Eq "failed" /tmp/dv.plain || { echo "::error::data-view specs did not all pass"; exit 1; }
           grep -q "gallery.unit.spec" /tmp/dv.plain || { echo "::error::the gallery spec did not run"; exit 1; }
 
+      - name: store unit specs (old flavour ids still open and are rewritten)
+        working-directory: ac_cloud-notes/blocksuite/framework/store
+        run: |
+          NO_COLOR=1 yarn vitest run src/__tests__/legacy-flavour.unit.spec.ts 2>&1 | tee /tmp/st.log
+          sed 's/\x1b\[[0-9;]*m//g' /tmp/st.log > /tmp/st.plain
+          grep -Eq "Test Files .* passed" /tmp/st.plain && ! grep -Eq "failed" /tmp/st.plain || { echo "::error::the legacy-flavour specs did not all pass"; exit 1; }
+          grep -q "legacy-flavour.unit.spec" /tmp/st.plain || { echo "::error::the legacy-flavour spec did not run"; exit 1; }
+
       - name: database relations, rollups and synced blocks over real blocks
         working-directory: ac_cloud-notes/blocksuite/cloud-notes/all
         run: |

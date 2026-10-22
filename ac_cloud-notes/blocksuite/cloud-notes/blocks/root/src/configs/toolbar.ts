@@ -121,7 +121,7 @@ const conversionsActionGroup = {
         >
           <div data-size="large" data-orientation="vertical">
             ${repeat(
-              textConversionConfigs.filter(c => c.flavour !== 'affine:divider'),
+              textConversionConfigs.filter(c => c.flavour !== 'cloud-notes:divider'),
               item => item.name,
               ({ flavour, type, name, icon }) => html`
                 <editor-menu-action

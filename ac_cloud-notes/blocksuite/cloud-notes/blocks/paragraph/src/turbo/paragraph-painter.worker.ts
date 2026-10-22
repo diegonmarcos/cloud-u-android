@@ -16,14 +16,14 @@ interface SentenceLayout {
 }
 
 export interface ParagraphLayout extends BlockLayout {
-  type: 'affine:paragraph';
+  type: 'cloud-notes:paragraph';
   sentences: SentenceLayout[];
 }
 
 const debugSentenceBorder = false;
 
 function isParagraphLayout(layout: BlockLayout): layout is ParagraphLayout {
-  return layout.type === 'affine:paragraph';
+  return layout.type === 'cloud-notes:paragraph';
 }
 
 class ParagraphLayoutPainter implements BlockLayoutPainter {
@@ -67,7 +67,7 @@ class ParagraphLayoutPainter implements BlockLayoutPainter {
       const message: WorkerToHostMessage = {
         type: 'paintError',
         error: 'Font not loaded',
-        blockType: 'affine:paragraph',
+        blockType: 'cloud-notes:paragraph',
       };
       self.postMessage(message);
       return;
@@ -110,6 +110,6 @@ class ParagraphLayoutPainter implements BlockLayoutPainter {
 }
 
 export const ParagraphLayoutPainterExtension = BlockLayoutPainterExtension(
-  'affine:paragraph',
+  'cloud-notes:paragraph',
   ParagraphLayoutPainter
 );

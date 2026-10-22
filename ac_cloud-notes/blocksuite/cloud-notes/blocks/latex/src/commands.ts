@@ -28,9 +28,9 @@ export const insertLatexBlockCommand: Command<
       : selectedModels[selectedModels.length - 1];
 
   const latexBlockProps: Partial<LatexProps> & {
-    flavour: 'affine:latex';
+    flavour: 'cloud-notes:latex';
   } = {
-    flavour: 'affine:latex',
+    flavour: 'cloud-notes:latex',
     latex: latex ?? '',
   };
 

@@ -622,15 +622,15 @@ test.fixme('should support moving blocks from multiple notes', async ({
   await page.evaluate(() => {
     const { doc } = window;
 
-    const rootId = doc.addBlock('affine:page', {
+    const rootId = doc.addBlock('cloud-notes:page', {
       title: new window.$blocksuite.store.Text(),
     });
-    doc.addBlock('affine:surface', {}, rootId);
+    doc.addBlock('cloud-notes:surface', {}, rootId);
 
     ['123', '456', '789', '987', '654', '321'].forEach(text => {
-      const noteId = doc.addBlock('affine:note', {}, rootId);
+      const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
       doc.addBlock(
-        'affine:paragraph',
+        'cloud-notes:paragraph',
         {
           text: new window.$blocksuite.store.Text(text),
         },

@@ -4,6 +4,6 @@ import { BlockFlavourIdentifier } from '@blocksuite/std';
 import { builtinInlineLinkToolbarConfig } from './link-node/configs/toolbar.js';
 
 export const linkToolbar = ToolbarModuleExtension({
-  id: BlockFlavourIdentifier('affine:link'),
+  id: BlockFlavourIdentifier('cloud-notes:link'),
   config: builtinInlineLinkToolbarConfig,
 });

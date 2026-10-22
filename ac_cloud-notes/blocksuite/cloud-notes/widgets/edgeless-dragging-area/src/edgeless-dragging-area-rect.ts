@@ -62,7 +62,7 @@ export class EdgelessDraggingAreaRectWidget extends WidgetComponent<RootBlockMod
 }
 
 export const edgelessDraggingAreaWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   EDGELESS_DRAGGING_AREA_WIDGET,
   literal`${unsafeStatic(EDGELESS_DRAGGING_AREA_WIDGET)}`
 );

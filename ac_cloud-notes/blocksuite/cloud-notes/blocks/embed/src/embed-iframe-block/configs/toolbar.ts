@@ -121,7 +121,7 @@ export const builtinToolbarConfig = {
 
             const text = new Text(yText);
 
-            ctx.store.addBlock('affine:paragraph', { text }, parent, index);
+            ctx.store.addBlock('cloud-notes:paragraph', { text }, parent, index);
 
             ctx.store.deleteBlock(model);
 
@@ -149,7 +149,7 @@ export const builtinToolbarConfig = {
             const { parent } = model;
             const index = parent?.children.indexOf(model);
 
-            const flavour = 'affine:bookmark';
+            const flavour = 'cloud-notes:bookmark';
             const style =
               BookmarkStyles.find(s => s !== 'vertical' && s !== 'cube') ??
               BookmarkStyles[1];
@@ -356,7 +356,7 @@ export const builtinSurfaceToolbarConfig = {
             const style =
               BookmarkStyles.find(s => s !== 'vertical' && s !== 'cube') ??
               BookmarkStyles[1];
-            let flavour = 'affine:bookmark';
+            let flavour = 'cloud-notes:bookmark';
 
             const bounds = Bound.deserialize(xywh);
             bounds.w = EMBED_CARD_WIDTH[style];
@@ -485,7 +485,7 @@ export const createBuiltinToolbarConfigExtension = (
       config: builtinToolbarConfig,
     }),
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier(`affine:surface:${name}`),
+      id: BlockFlavourIdentifier(`cloud-notes:surface:${name}`),
       config: builtinSurfaceToolbarConfig,
     }),
   ];

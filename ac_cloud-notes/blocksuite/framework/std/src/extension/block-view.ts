@@ -16,7 +16,7 @@ import type { BlockViewType } from '../spec/type.js';
  * import { BlockViewExtension } from '@blocksuite/std';
  *
  * const MyListBlockViewExtension = BlockViewExtension(
- *   'affine:list',
+ *   'cloud-notes:list',
  *   literal`my-list-block`
  * );
  * ```

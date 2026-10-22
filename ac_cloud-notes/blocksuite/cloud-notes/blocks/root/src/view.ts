@@ -34,7 +34,7 @@ export class RootViewExtension extends ViewExtensionProvider {
   override setup(context: ViewExtensionContext) {
     super.setup(context);
     context.register([
-      FlavourExtension('affine:page'),
+      FlavourExtension('cloud-notes:page'),
       fallbackKeymap,
       ToolbarModuleExtension({
         id: BlockFlavourIdentifier(NoteBlockSchema.model.flavour),
@@ -58,12 +58,12 @@ export class RootViewExtension extends ViewExtensionProvider {
     context.register(ViewportElementExtension('.cloud-notes-page-viewport'));
     if (context.scope === 'preview-page') {
       context.register(
-        BlockViewExtension('affine:page', literal`cloud-notes-preview-root`)
+        BlockViewExtension('cloud-notes:page', literal`cloud-notes-preview-root`)
       );
       return;
     }
     context.register(
-      BlockViewExtension('affine:page', literal`cloud-notes-page-root`)
+      BlockViewExtension('cloud-notes:page', literal`cloud-notes-page-root`)
     );
     context.register(PageClipboard);
   };
@@ -76,7 +76,7 @@ export class RootViewExtension extends ViewExtensionProvider {
     if (context.scope === 'preview-edgeless') {
       context.register([
         BlockViewExtension(
-          'affine:page',
+          'cloud-notes:page',
           literal`cloud-notes-edgeless-root-preview`
         ),
         EdgelessLocker,
@@ -84,7 +84,7 @@ export class RootViewExtension extends ViewExtensionProvider {
       return;
     }
     context.register([
-      BlockViewExtension('affine:page', literal`cloud-notes-edgeless-root`),
+      BlockViewExtension('cloud-notes:page', literal`cloud-notes-edgeless-root`),
       EdgelessClipboardController,
       AltCloneExtension,
     ]);

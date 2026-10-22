@@ -74,7 +74,7 @@ export class CloudNotesDragHandleWidget extends WidgetComponent<RootBlockModel> 
     if (index < 0) return;
     store.captureSync();
     const newBlockId = store.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       {},
       parent,
       index + 1

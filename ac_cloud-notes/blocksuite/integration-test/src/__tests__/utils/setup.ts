@@ -55,10 +55,10 @@ function initCollection(collection: TestWorkspace) {
   const doc = collection.createDoc('doc:home').getStore();
 
   doc.load(() => {
-    const rootId = doc.addBlock('affine:page', {
+    const rootId = doc.addBlock('cloud-notes:page', {
       title: new Text(),
     });
-    doc.addBlock('affine:surface', {}, rootId);
+    doc.addBlock('cloud-notes:surface', {}, rootId);
   });
   doc.resetHistory();
 }

@@ -16,7 +16,7 @@ type AIChatProps = {
 } & Omit<GfxCommonBlockProps, 'rotate'>;
 
 export const AIChatBlockSchema = defineBlockSchema({
-  flavour: 'affine:embed-ai-chat',
+  flavour: 'cloud-notes:embed-ai-chat',
   props: (): AIChatProps => ({
     xywh: '[0,0,0,0]',
     index: 'a0',

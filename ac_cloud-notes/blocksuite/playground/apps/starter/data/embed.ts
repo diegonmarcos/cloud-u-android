@@ -9,26 +9,26 @@ export const embed: InitFn = (collection: Workspace, id: string) => {
 
   doc.load(() => {
     // Add root block and surface block at root level
-    const rootId = store.addBlock('affine:page', {
+    const rootId = store.addBlock('cloud-notes:page', {
       title: new Text(),
     });
 
-    const surfaceId = store.addBlock('affine:surface', {}, rootId);
+    const surfaceId = store.addBlock('cloud-notes:surface', {}, rootId);
 
     // Add note block inside root block
-    const noteId = store.addBlock('affine:note', {}, rootId);
+    const noteId = store.addBlock('cloud-notes:note', {}, rootId);
     // Add paragraph block inside note block
-    store.addBlock('affine:paragraph', {}, noteId);
+    store.addBlock('cloud-notes:paragraph', {}, noteId);
 
     store.addBlock(
-      'affine:embed-github',
+      'cloud-notes:embed-github',
       {
         url: 'https://github.com/diegonmarcos/cloud-u-android/pull/5453',
       },
       noteId
     );
     store.addBlock(
-      'affine:embed-github',
+      'cloud-notes:embed-github',
       {
         url: 'https://www.github.com/toeverything/blocksuite/pull/5927',
         style: 'vertical',
@@ -37,14 +37,14 @@ export const embed: InitFn = (collection: Workspace, id: string) => {
       surfaceId
     );
     store.addBlock(
-      'affine:embed-github',
+      'cloud-notes:embed-github',
       {
         url: 'https://github.com/Milkdown/milkdown/pull/1215',
         xywh: '[500, 400, 752, 116]',
       },
       surfaceId
     );
-    store.addBlock('affine:paragraph', {}, noteId);
+    store.addBlock('cloud-notes:paragraph', {}, noteId);
   });
 
   store.resetHistory();

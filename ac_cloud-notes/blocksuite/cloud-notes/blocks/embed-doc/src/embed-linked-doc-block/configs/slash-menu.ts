@@ -23,7 +23,7 @@ const linkedDocSlashMenuConfig: SlashMenuConfig = {
       },
       group: '3_Page@0',
       when: ({ model }) =>
-        model.store.schema.flavourSchemaMap.has('affine:embed-linked-doc'),
+        model.store.schema.flavourSchemaMap.has('cloud-notes:embed-linked-doc'),
       action: ({ std, model }) => {
         const newDoc = createDefaultDoc(std.host.store.workspace);
         insertContent(std, model, REFERENCE_NODE, {
@@ -54,7 +54,7 @@ const linkedDocSlashMenuConfig: SlashMenuConfig = {
         if (!linkedDocWidget) return false;
 
         return model.store.schema.flavourSchemaMap.has(
-          'affine:embed-linked-doc'
+          'cloud-notes:embed-linked-doc'
         );
       },
       action: ({ model, std }) => {

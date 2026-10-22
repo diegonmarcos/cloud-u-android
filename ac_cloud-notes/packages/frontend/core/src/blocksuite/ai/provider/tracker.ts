@@ -120,13 +120,13 @@ function inferObjectType(event: AIRequestActionEvent) {
     return 'draw object';
   } else if (models.every(isBlockModel)) {
     const flavour = models[0].flavour;
-    if (flavour === 'affine:note') {
+    if (flavour === 'cloud-notes:note') {
       return 'note';
     } else if (
-      ['affine:paragraph', 'affine:list', 'affine:code'].includes(flavour)
+      ['cloud-notes:paragraph', 'cloud-notes:list', 'cloud-notes:code'].includes(flavour)
     ) {
       return 'text';
-    } else if (flavour === 'affine:image') {
+    } else if (flavour === 'cloud-notes:image') {
       return 'image';
     }
   }

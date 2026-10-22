@@ -518,7 +518,7 @@ export class CodeArtifactTool extends ArtifactTool<
       const codeBlock: BlockSnapshot = {
         type: 'block',
         id: nanoid(),
-        flavour: 'affine:code',
+        flavour: 'cloud-notes:code',
         version: 1,
         props: {
           language: 'html',
@@ -571,12 +571,12 @@ export class CodeArtifactTool extends ArtifactTool<
       try {
         const store = this.std?.store;
         if (!store) return;
-        const notes = store.getBlocksByFlavour('affine:note');
+        const notes = store.getBlocksByFlavour('cloud-notes:note');
         const parentId = notes.length > 0 ? notes[0].id : store.root?.id;
         if (!parentId) return;
         const html = preprocessHtml(htmlContent);
         store.addBlock(
-          'affine:code',
+          'cloud-notes:code',
           { text: new Text(html), language: 'html', preview: true },
           parentId
         );

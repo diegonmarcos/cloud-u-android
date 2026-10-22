@@ -399,7 +399,7 @@ export const createBuiltinToolbarConfigExtension = (
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier(`affine:surface:${name}`),
+      id: BlockFlavourIdentifier(`cloud-notes:surface:${name}`),
       config: builtinSurfaceToolbarConfig,
     }),
   ];

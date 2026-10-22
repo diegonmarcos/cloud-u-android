@@ -296,7 +296,7 @@ export function createEdgelessElement(
   } else {
     const { store } = edgeless;
     id = store.addBlock(
-      'affine:note',
+      'cloud-notes:note',
       {
         background: current.props.background,
         displayMode: current.props.displayMode,
@@ -316,7 +316,7 @@ export function createEdgelessElement(
     store.updateBlock(note, () => {
       note.props.edgeless.collapse = true;
     });
-    store.addBlock('affine:paragraph', {}, note.id);
+    store.addBlock('cloud-notes:paragraph', {}, note.id);
 
     element = note;
   }

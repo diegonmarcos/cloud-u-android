@@ -42,7 +42,7 @@ export class RootBlockModel extends BlockModel<RootBlockProps> {
     for (const child of this.children) {
       empty = empty && child.isEmpty();
 
-      if (child.flavour === 'affine:note') numNotes++;
+      if (child.flavour === 'cloud-notes:note') numNotes++;
       if (numNotes > 1) return false;
     }
 
@@ -51,7 +51,7 @@ export class RootBlockModel extends BlockModel<RootBlockProps> {
 }
 
 export const RootBlockSchema = defineBlockSchema({
-  flavour: 'affine:page',
+  flavour: 'cloud-notes:page',
   props: (internal): RootBlockProps => ({
     title: internal.Text(),
   }),

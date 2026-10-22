@@ -50,10 +50,10 @@ export function createEmptyDoc() {
     doc,
     async init() {
       await doc.load(() => {
-        const rootBlockId = doc.addBlock('affine:page', {});
-        doc.addBlock('affine:surface', {}, rootBlockId);
-        const noteId = doc.addBlock('affine:note', {}, rootBlockId);
-        doc.addBlock('affine:paragraph', {}, noteId);
+        const rootBlockId = doc.addBlock('cloud-notes:page', {});
+        doc.addBlock('cloud-notes:surface', {}, rootBlockId);
+        const noteId = doc.addBlock('cloud-notes:note', {}, rootBlockId);
+        doc.addBlock('cloud-notes:paragraph', {}, noteId);
       });
       return doc;
     },

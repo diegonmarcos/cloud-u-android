@@ -142,7 +142,7 @@ const builtinToolbarConfig = {
           icon: BookmarkIcon(),
           when(ctx) {
             const supported =
-              ctx.store.schema.flavourSchemaMap.has('affine:attachment');
+              ctx.store.schema.flavourSchemaMap.has('cloud-notes:attachment');
             if (!supported) return false;
 
             const block = ctx.getCurrentBlockByType(ImageBlockComponent);
@@ -215,7 +215,7 @@ export const createBuiltinToolbarConfigExtension = (
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier(`affine:surface:${name}`),
+      id: BlockFlavourIdentifier(`cloud-notes:surface:${name}`),
       config: builtinSurfaceToolbarConfig,
     }),
   ];

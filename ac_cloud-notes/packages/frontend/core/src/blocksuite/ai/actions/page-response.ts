@@ -123,14 +123,14 @@ function responseToMakeItReal(host: EditorHost, ctx: AIContext, place: Place) {
     );
     if (ifUseCodeBlock) {
       const note = host.store.addBlock(
-        'affine:note',
+        'cloud-notes:note',
         {
           xywh: htmlBound.serialize(),
         },
         host.store.root
       );
       host.store.addBlock(
-        'affine:code',
+        'cloud-notes:code',
         { text: new Text(html), language: 'html', preview: true },
         note
       );
@@ -138,7 +138,7 @@ function responseToMakeItReal(host: EditorHost, ctx: AIContext, place: Place) {
       addSurfaceRefBlock(host, frameBound, place);
     } else {
       host.store.addBlock(
-        'affine:embed-html',
+        'cloud-notes:embed-html',
         {
           html,
           design: 'ai:makeItReal', // as tag
@@ -179,8 +179,8 @@ async function responseToCreateSlides(
       frame && frameIds.push(frame.id);
     }
     const props = frameIds.map(id => ({
-      flavour: 'affine:surface-ref',
-      refFlavour: 'affine:frame',
+      flavour: 'cloud-notes:surface-ref',
+      refFlavour: 'cloud-notes:frame',
       reference: id,
     }));
     addSiblingBlocks(host, props, place);
@@ -286,7 +286,7 @@ function addSurfaceRefBlock(host: EditorHost, bound: Bound, place: Place) {
   const surface = getSurfaceBlock(host.store);
   if (!surface) return;
   const frame = host.store.addBlock(
-    'affine:frame',
+    'cloud-notes:frame',
     {
       title: new Text(new Y.Text('Frame')),
       xywh: bound.serialize(),
@@ -295,8 +295,8 @@ function addSurfaceRefBlock(host: EditorHost, bound: Bound, place: Place) {
     surface
   );
   const props = {
-    flavour: 'affine:surface-ref',
-    refFlavour: 'affine:frame',
+    flavour: 'cloud-notes:surface-ref',
+    refFlavour: 'cloud-notes:frame',
     reference: frame,
   };
   return addSiblingBlocks(host, [props], place);
@@ -321,7 +321,7 @@ function addSiblingBlocks(
 }
 
 function findFrameObject(obj: CloudNotesNode): CloudNotesNode | null {
-  if (obj.flavour === 'affine:frame') {
+  if (obj.flavour === 'cloud-notes:frame') {
     return obj;
   }
 

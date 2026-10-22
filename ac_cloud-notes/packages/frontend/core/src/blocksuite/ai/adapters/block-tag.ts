@@ -4,12 +4,12 @@ import {
 } from '@blocksuite/cloud-notes-shared/adapters';
 
 export const blockTagMarkdownAdapterMatcher: BlockMarkdownAdapterMatcher = {
-  flavour: 'affine:page/affine:note/*',
+  flavour: 'cloud-notes:page/cloud-notes:note/*',
   toMatch: () => false,
   fromMatch: o => {
     const block = o.node;
     const parent = o.parent;
-    if (block.type === 'block' && parent?.node.flavour === 'affine:note') {
+    if (block.type === 'block' && parent?.node.flavour === 'cloud-notes:note') {
       return true;
     }
     return false;

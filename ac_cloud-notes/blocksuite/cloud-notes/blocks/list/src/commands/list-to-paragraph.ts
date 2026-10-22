@@ -34,7 +34,7 @@ export const listToParagraphCommand: Command<
   });
 
   const listConvertedId = doc.addBlock(
-    'affine:paragraph',
+    'cloud-notes:paragraph',
     blockProps,
     parent,
     index

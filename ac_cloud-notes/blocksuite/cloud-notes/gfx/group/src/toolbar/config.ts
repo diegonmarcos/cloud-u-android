@@ -101,6 +101,6 @@ export const groupToolbarConfig = {
 } as const satisfies ToolbarModuleConfig;
 
 export const groupToolbarExtension = ToolbarModuleExtension({
-  id: BlockFlavourIdentifier('affine:surface:group'),
+  id: BlockFlavourIdentifier('cloud-notes:surface:group'),
   config: groupToolbarConfig,
 });

@@ -108,7 +108,7 @@ export class EmbedSyncedDocBlockComponent extends EmbedBlockComponent<EmbedSynce
     mode: 'loose',
     match: [
       {
-        flavour: 'affine:note',
+        flavour: 'cloud-notes:note',
         props: {
           displayMode: NoteDisplayMode.EdgelessOnly,
         },
@@ -134,7 +134,7 @@ export class EmbedSyncedDocBlockComponent extends EmbedBlockComponent<EmbedSynce
         view.viewUpdated.subscribe(payload => {
           if (
             payload.type !== 'block' ||
-            payload.view.model.flavour !== 'affine:embed-synced-doc'
+            payload.view.model.flavour !== 'cloud-notes:embed-synced-doc'
           ) {
             return;
           }
@@ -297,7 +297,7 @@ export class EmbedSyncedDocBlockComponent extends EmbedBlockComponent<EmbedSynce
     const index = parent.children.indexOf(this.model);
 
     const blockId = store.addBlock(
-      'affine:embed-linked-doc',
+      'cloud-notes:embed-linked-doc',
       { caption, ...this.referenceInfo, ...aliasInfo },
       parent,
       index
@@ -332,7 +332,7 @@ export class EmbedSyncedDocBlockComponent extends EmbedBlockComponent<EmbedSynce
     const text = new Text(yText);
 
     store.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       {
         text,
       },

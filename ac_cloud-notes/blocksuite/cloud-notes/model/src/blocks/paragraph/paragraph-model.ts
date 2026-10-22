@@ -27,7 +27,7 @@ export type ParagraphProps = {
 } & BlockMeta;
 
 export const ParagraphBlockSchema = defineBlockSchema({
-  flavour: 'affine:paragraph',
+  flavour: 'cloud-notes:paragraph',
   props: (internal): ParagraphProps => ({
     type: 'text',
     text: internal.Text(),
@@ -43,13 +43,13 @@ export const ParagraphBlockSchema = defineBlockSchema({
     version: 1,
     role: 'content',
     parent: [
-      'affine:note',
-      'affine:database',
-      'affine:paragraph',
-      'affine:list',
-      'affine:edgeless-text',
-      'affine:callout',
-      'affine:transcription',
+      'cloud-notes:note',
+      'cloud-notes:database',
+      'cloud-notes:paragraph',
+      'cloud-notes:list',
+      'cloud-notes:edgeless-text',
+      'cloud-notes:callout',
+      'cloud-notes:transcription',
     ],
   },
   toModel: () => new ParagraphBlockModel(),

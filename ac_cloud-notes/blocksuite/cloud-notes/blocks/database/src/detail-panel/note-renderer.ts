@@ -71,7 +71,7 @@ export class NoteRenderer
       if (note.root) {
         (note.root as RootBlockModel).props.title.insert(rowContent ?? '', 0);
         note.root.children
-          .find(child => child.flavour === 'affine:note')
+          .find(child => child.flavour === 'cloud-notes:note')
           ?.children.find(block =>
             matchModels(block, [
               ParagraphBlockModel,
@@ -85,7 +85,7 @@ export class NoteRenderer
         segment: 'database',
         module: 'center peek in database',
         type: 'turn into',
-        parentFlavour: 'affine:database',
+        parentFlavour: 'cloud-notes:database',
       });
     }
   }

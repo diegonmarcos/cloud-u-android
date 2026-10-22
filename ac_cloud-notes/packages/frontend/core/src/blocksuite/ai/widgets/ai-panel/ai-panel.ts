@@ -628,7 +628,7 @@ export class CloudNotesAIPanelWidget extends WidgetComponent {
 }
 
 export const aiPanelWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_AI_PANEL_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_AI_PANEL_WIDGET)}`
 );

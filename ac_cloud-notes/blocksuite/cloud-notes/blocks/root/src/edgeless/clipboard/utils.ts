@@ -28,7 +28,7 @@ export function createNewPresentationIndexes(
   const frames = raw
     .filter((block): block is FrameSnapshot => {
       const { data } = BlockSnapshotSchema.safeParse(block);
-      return data?.flavour === 'affine:frame';
+      return data?.flavour === 'cloud-notes:frame';
     })
     .sort((a, b) => EdgelessFrameManager.framePresentationComparator(a, b));
 

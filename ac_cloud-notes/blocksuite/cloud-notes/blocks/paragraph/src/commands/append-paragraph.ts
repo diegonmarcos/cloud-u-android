@@ -17,10 +17,10 @@ export const appendParagraphCommand: Command<{ text?: string }> = (
   const note = getLastNoteBlock(store);
   let noteId = note?.id;
   if (!noteId) {
-    noteId = store.addBlock('affine:note', {}, store.root.id);
+    noteId = store.addBlock('cloud-notes:note', {}, store.root.id);
   }
   const id = store.addBlock(
-    'affine:paragraph',
+    'cloud-notes:paragraph',
     { text: new Text(text) },
     noteId
   );

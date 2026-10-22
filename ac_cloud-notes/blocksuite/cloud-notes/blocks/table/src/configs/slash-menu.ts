@@ -8,7 +8,7 @@ import { insertTableBlockCommand } from '../commands';
 import { tableTooltip } from './tooltips';
 
 export const tableSlashMenuConfig: SlashMenuConfig = {
-  disableWhen: ({ model }) => model.flavour === 'affine:table',
+  disableWhen: ({ model }) => model.flavour === 'cloud-notes:table',
   items: [
     {
       name: 'Table',
@@ -20,7 +20,7 @@ export const tableSlashMenuConfig: SlashMenuConfig = {
       },
       group: '4_Content & Media@0',
       when: ({ model }) =>
-        !isInsideBlockByFlavour(model.store, model, 'affine:edgeless-text'),
+        !isInsideBlockByFlavour(model.store, model, 'cloud-notes:edgeless-text'),
       action: ({ std }) => {
         std.command
           .chain()
@@ -33,7 +33,7 @@ export const tableSlashMenuConfig: SlashMenuConfig = {
             if (insertedTableBlockId) {
               const telemetry = std.getOptional(TelemetryProvider);
               telemetry?.track('BlockCreated', {
-                blockType: 'affine:table',
+                blockType: 'cloud-notes:table',
               });
             }
           })

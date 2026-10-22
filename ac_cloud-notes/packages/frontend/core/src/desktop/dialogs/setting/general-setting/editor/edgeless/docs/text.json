@@ -9,7 +9,7 @@
   "blocks": {
     "type": "block",
     "id": "Mz1SM8_rfE",
-    "flavour": "affine:page",
+    "flavour": "cloud-notes:page",
     "version": 2,
     "props": {
       "title": {
@@ -25,7 +25,7 @@
       {
         "type": "block",
         "id": "AnKvfM9lyB",
-        "flavour": "affine:surface",
+        "flavour": "cloud-notes:surface",
         "version": 5,
         "props": {
           "elements": {}
@@ -34,7 +34,7 @@
           {
             "type": "block",
             "id": "xLced7EEmu",
-            "flavour": "affine:frame",
+            "flavour": "cloud-notes:frame",
             "version": 1,
             "props": {
               "title": {
@@ -59,7 +59,7 @@
           {
             "type": "block",
             "id": "1jGoMnK9qs",
-            "flavour": "affine:edgeless-text",
+            "flavour": "cloud-notes:edgeless-text",
             "version": 1,
             "props": {
               "xywh": "[112.00732421875,29.2640380859375,273.905029296875,127.79339599609375]",
@@ -78,7 +78,7 @@
               {
                 "type": "block",
                 "id": "EC2iyFQ3aU",
-                "flavour": "affine:paragraph",
+                "flavour": "cloud-notes:paragraph",
                 "version": 1,
                 "props": {
                   "type": "text",
@@ -97,7 +97,7 @@
               {
                 "type": "block",
                 "id": "Ss-EVG-70C",
-                "flavour": "affine:paragraph",
+                "flavour": "cloud-notes:paragraph",
                 "version": 1,
                 "props": {
                   "type": "text",

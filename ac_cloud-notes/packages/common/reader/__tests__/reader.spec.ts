@@ -177,14 +177,14 @@ test('should index references from database rich-text cells', async () => {
   pageTitle.insert(0, 'Page');
   const page = new YMap();
   page.set('sys:id', 'page');
-  page.set('sys:flavour', 'affine:page');
+  page.set('sys:flavour', 'cloud-notes:page');
   page.set('sys:children', YArray.from(['note']));
   page.set('prop:title', pageTitle);
   blocks.set('page', page);
 
   const note = new YMap();
   note.set('sys:id', 'note');
-  note.set('sys:flavour', 'affine:note');
+  note.set('sys:flavour', 'cloud-notes:note');
   note.set('sys:children', YArray.from(['db']));
   note.set('prop:displayMode', 'page');
   blocks.set('note', note);
@@ -193,7 +193,7 @@ test('should index references from database rich-text cells', async () => {
   dbTitle.insert(0, 'Database');
   const db = new YMap();
   db.set('sys:id', 'db');
-  db.set('sys:flavour', 'affine:database');
+  db.set('sys:flavour', 'cloud-notes:database');
   db.set('sys:children', new YArray());
   db.set('prop:title', dbTitle);
 

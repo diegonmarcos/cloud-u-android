@@ -748,7 +748,7 @@ describe('share document block projection', () => {
       null,
       [
         {
-          flavour: 'affine:bookmark',
+          flavour: 'cloud-notes:bookmark',
           props: {
             url: 'https://example.com',
             title: 'Example',
@@ -784,40 +784,40 @@ describe('share document block projection', () => {
         },
         tagIds: [],
       },
-      { flavour: 'affine:embed-youtube', styles: ['video'] },
+      { flavour: 'cloud-notes:embed-youtube', styles: ['video'] },
       [
         {
-          flavour: 'affine:embed-youtube',
+          flavour: 'cloud-notes:embed-youtube',
           props: {
             url: 'https://youtube.com/watch?v=123',
             style: 'video',
           },
         },
         {
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: { type: 'quote', text: 'Selected passage' },
         },
         {
-          flavour: 'affine:callout',
+          flavour: 'cloud-notes:callout',
           props: {
             icon: { type: 'emoji', unicode: '💬' },
             backgroundColorName: 'grey',
           },
           children: [
             {
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: { type: 'h6', text: 'Transcript', collapsed: true },
             },
             {
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: { type: 'h6', text: 'Opening' },
             },
             {
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: { type: 'text', text: '[0:01] Host: Welcome' },
             },
             {
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: { type: 'text', text: 'Plain paragraph' },
             },
           ],
@@ -844,7 +844,7 @@ describe('share document block projection', () => {
       null,
       [
         {
-          flavour: 'affine:bookmark',
+          flavour: 'cloud-notes:bookmark',
           props: {
             url: 'https://x.com/cloud-notes/status/123',
             title: undefined,

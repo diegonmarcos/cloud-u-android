@@ -53,8 +53,8 @@ export class ParagraphViewExtension extends ViewExtensionProvider<
       options?.getPlaceholder ?? (model => placeholders[model.props.type]);
 
     context.register([
-      FlavourExtension('affine:paragraph'),
-      BlockViewExtension('affine:paragraph', literal`cloud-notes-paragraph`),
+      FlavourExtension('cloud-notes:paragraph'),
+      BlockViewExtension('cloud-notes:paragraph', literal`cloud-notes-paragraph`),
       ParagraphTextKeymapExtension,
       ParagraphKeymapExtension,
       ParagraphBlockConfigExtension({

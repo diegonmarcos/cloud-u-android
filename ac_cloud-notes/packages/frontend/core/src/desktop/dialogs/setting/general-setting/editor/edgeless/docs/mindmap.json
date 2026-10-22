@@ -9,7 +9,7 @@
   "blocks": {
     "type": "block",
     "id": "FnaWN8Zm2_",
-    "flavour": "affine:page",
+    "flavour": "cloud-notes:page",
     "version": 2,
     "props": {
       "title": {
@@ -25,7 +25,7 @@
       {
         "type": "block",
         "id": "hevWf4ccWc",
-        "flavour": "affine:surface",
+        "flavour": "cloud-notes:surface",
         "version": 5,
         "props": {
           "elements": {
@@ -33,7 +33,7 @@
               "index": "a0",
               "seed": 739933670,
               "children": {
-                "affine:surface:ymap": true,
+                "cloud-notes:surface:ymap": true,
                 "json": {
                   "BvanBL7O38": {
                     "index": "a0"
@@ -89,7 +89,7 @@
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "text": {
-                "affine:surface:text": true,
+                "cloud-notes:surface:text": true,
                 "delta": [
                   {
                     "insert": "Mind Map"
@@ -133,7 +133,7 @@
               "strokeStyle": "solid",
               "strokeWidth": 3,
               "text": {
-                "affine:surface:text": true,
+                "cloud-notes:surface:text": true,
                 "delta": [
                   {
                     "insert": "Text"
@@ -177,7 +177,7 @@
               "strokeStyle": "solid",
               "strokeWidth": 3,
               "text": {
-                "affine:surface:text": true,
+                "cloud-notes:surface:text": true,
                 "delta": [
                   {
                     "insert": "Text"
@@ -221,7 +221,7 @@
               "strokeStyle": "solid",
               "strokeWidth": 3,
               "text": {
-                "affine:surface:text": true,
+                "cloud-notes:surface:text": true,
                 "delta": [
                   {
                     "insert": "Text"
@@ -239,7 +239,7 @@
           {
             "type": "block",
             "id": "bVYX1z2q3T",
-            "flavour": "affine:frame",
+            "flavour": "cloud-notes:frame",
             "version": 1,
             "props": {
               "title": {

@@ -39,7 +39,7 @@ export class EmbedIframeLinkInputBase extends WithDisposable(LitElement) {
     const { model } = this;
     const { parent } = model;
     const index = parent?.children.indexOf(model);
-    const flavour = 'affine:bookmark';
+    const flavour = 'cloud-notes:bookmark';
 
     this.store.transact(() => {
       const blockId = this.store.addBlock(flavour, { url }, parent, index);

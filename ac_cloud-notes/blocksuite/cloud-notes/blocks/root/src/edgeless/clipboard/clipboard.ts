@@ -282,7 +282,7 @@ export class EdgelessClipboardController extends PageClipboard {
       const docUrlInfo = parseDocUrlService?.parseDocUrl(url);
       const options: Record<string, unknown> = {};
 
-      let flavour = 'affine:bookmark';
+      let flavour = 'cloud-notes:bookmark';
       let style: EmbedCardStyle = BookmarkStyles[0];
       let isInternalLink = false;
       let isLinkedBlock = false;
@@ -290,7 +290,7 @@ export class EdgelessClipboardController extends PageClipboard {
       if (docUrlInfo) {
         const { docId: pageId, ...params } = docUrlInfo;
 
-        flavour = 'affine:embed-linked-doc';
+        flavour = 'cloud-notes:embed-linked-doc';
         style = 'vertical';
 
         isInternalLink = true;
@@ -622,7 +622,7 @@ export class EdgelessClipboardController extends PageClipboard {
     };
 
     const noteId = this.crud.addBlock(
-      'affine:note',
+      'cloud-notes:note',
       noteProps,
       this.doc.root!.id
     );
@@ -638,7 +638,7 @@ export class EdgelessClipboardController extends PageClipboard {
     if (typeof content === 'string') {
       splitIntoLines(content).forEach((line, idx) => {
         this.crud.addBlock(
-          'affine:paragraph',
+          'cloud-notes:paragraph',
           { text: new Y.Text(line) },
           noteId,
           idx
@@ -648,7 +648,7 @@ export class EdgelessClipboardController extends PageClipboard {
       // oxlint-disable-next-line typescript/prefer-for-of
       for (let index = 0; index < content.length; index++) {
         const blockSnapshot = content[index];
-        if (blockSnapshot.flavour === 'affine:note') {
+        if (blockSnapshot.flavour === 'cloud-notes:note') {
           for (const child of blockSnapshot.children) {
             await this.onBlockSnapshotPaste(child, this.doc, noteId);
           }

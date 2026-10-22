@@ -75,7 +75,7 @@ export class FramePreview extends WithDisposable(ShadowlessElement) {
     mode: 'loose',
     match: [
       {
-        flavour: 'affine:frame',
+        flavour: 'cloud-notes:frame',
         viewType: 'hidden',
       },
     ],
@@ -136,7 +136,7 @@ export class FramePreview extends WithDisposable(ShadowlessElement) {
           if (
             payload.type !== 'block' ||
             payload.method !== 'add' ||
-            payload.view.model.flavour !== 'affine:page'
+            payload.view.model.flavour !== 'cloud-notes:page'
           ) {
             return;
           }

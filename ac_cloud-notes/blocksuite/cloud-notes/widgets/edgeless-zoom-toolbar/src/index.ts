@@ -98,7 +98,7 @@ export class CloudNotesEdgelessZoomToolbarWidget extends WidgetComponent<RootBlo
 }
 
 export const edgelessZoomToolbarWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_EDGELESS_ZOOM_TOOLBAR_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_EDGELESS_ZOOM_TOOLBAR_WIDGET)}`
 );

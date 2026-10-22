@@ -10,7 +10,7 @@
     "blocks": {
       "type": "block",
       "id": "Z1ykl12cSx",
-      "flavour": "affine:page",
+      "flavour": "cloud-notes:page",
       "version": 2,
       "props": {
         "title": {
@@ -22,7 +22,7 @@
         {
           "type": "block",
           "id": "nk3_3Ly7J4",
-          "flavour": "affine:surface",
+          "flavour": "cloud-notes:surface",
           "version": 5,
           "props": {
             "elements": {
@@ -46,7 +46,7 @@
                 "id": "dvNokXHFjJ",
                 "color": "--cloud-notes-palette-line-white",
                 "text": {
-                  "affine:surface:text": true,
+                  "cloud-notes:surface:text": true,
                   "delta": [
                     {
                       "insert": "1"
@@ -76,7 +76,7 @@
                 "id": "pjLp5iRHj1",
                 "color": "--cloud-notes-palette-line-white",
                 "text": {
-                  "affine:surface:text": true,
+                  "cloud-notes:surface:text": true,
                   "delta": [
                     {
                       "insert": "2"
@@ -106,7 +106,7 @@
                 "id": "vrH9SvPlB6",
                 "color": "--cloud-notes-palette-line-white",
                 "text": {
-                  "affine:surface:text": true,
+                  "cloud-notes:surface:text": true,
                   "delta": [
                     {
                       "insert": "4"
@@ -136,7 +136,7 @@
                 "id": "UF3qaMw35x",
                 "color": "--cloud-notes-palette-line-white",
                 "text": {
-                  "affine:surface:text": true,
+                  "cloud-notes:surface:text": true,
                   "delta": [
                     {
                       "insert": "3"
@@ -172,7 +172,7 @@
             {
               "type": "block",
               "id": "TVg0_H3pS-",
-              "flavour": "affine:frame",
+              "flavour": "cloud-notes:frame",
               "version": 1,
               "props": {
                 "title": {
@@ -210,7 +210,7 @@
         {
           "type": "block",
           "id": "lLFwOmRC7W",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-2053.238012404669,-9.923971266973126,1341.3334350585938,283.6666920979818]",
@@ -234,7 +234,7 @@
             {
               "type": "block",
               "id": "HQ-jnOE1f3",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h1",
@@ -254,7 +254,7 @@
         {
           "type": "block",
           "id": "FL__cfBte4",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-1957.8756949308126,298.9828272123103,810.9499838439583,216.11059503352658]",
@@ -278,7 +278,7 @@
             {
               "type": "block",
               "id": "UdkuWp8Pq1",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h4",
@@ -298,7 +298,7 @@
         {
           "type": "block",
           "id": "SplfMbP19A",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-1949.666909116133,409.4267986521621,747.1235944841051,274.25339814778795]",
@@ -322,7 +322,7 @@
             {
               "type": "block",
               "id": "aexenplBOM",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "text",
@@ -342,7 +342,7 @@
         {
           "type": "block",
           "id": "hkkjrzh5U2",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-1060.8108545830105,298.9828272123103,810.9499838439583,216.11059503352658]",
@@ -366,7 +366,7 @@
             {
               "type": "block",
               "id": "tfckfWqMY2",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h4",
@@ -386,7 +386,7 @@
         {
           "type": "block",
           "id": "CZkdeTlqzf",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-1052.6020687683308,409.4267986521621,747.1235944841051,274.25339814778795]",
@@ -410,7 +410,7 @@
             {
               "type": "block",
               "id": "FJwQSWbMrK",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "text",
@@ -430,7 +430,7 @@
         {
           "type": "block",
           "id": "dCmC6nD4oM",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-1060.8108545830105,659.9727569688716,810.9499838439583,216.11059503352658]",
@@ -454,7 +454,7 @@
             {
               "type": "block",
               "id": "hsaCDcCh4T",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h4",
@@ -474,7 +474,7 @@
         {
           "type": "block",
           "id": "GbdYivh7V_",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-1052.6020687683308,770.4167284087234,747.1235944841051,274.25339814778795]",
@@ -498,7 +498,7 @@
             {
               "type": "block",
               "id": "m5nGW684z7",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "text",
@@ -518,7 +518,7 @@
         {
           "type": "block",
           "id": "heDlgO5-AP",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-1957.8756949308124,659.9727569688716,810.9499838439583,216.11059503352658]",
@@ -542,7 +542,7 @@
             {
               "type": "block",
               "id": "e7i3FY50Y9",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h4",
@@ -562,7 +562,7 @@
         {
           "type": "block",
           "id": "aTPSWy7isi",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-1949.6669091161327,770.4167284087234,747.1235944841051,274.25339814778795]",
@@ -586,7 +586,7 @@
             {
               "type": "block",
               "id": "eKBpvD2seQ",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "text",
@@ -617,7 +617,7 @@
     "blocks": {
       "type": "block",
       "id": "aa6W7J2mx2",
-      "flavour": "affine:page",
+      "flavour": "cloud-notes:page",
       "version": 2,
       "props": {
         "title": {
@@ -629,7 +629,7 @@
         {
           "type": "block",
           "id": "PMd-PuXWK7",
-          "flavour": "affine:surface",
+          "flavour": "cloud-notes:surface",
           "version": 5,
           "props": {
             "elements": {
@@ -659,7 +659,7 @@
             {
               "type": "block",
               "id": "CnuFtpWnKL",
-              "flavour": "affine:frame",
+              "flavour": "cloud-notes:frame",
               "version": 1,
               "props": {
                 "title": {
@@ -695,7 +695,7 @@
             {
               "type": "block",
               "id": "2Y9Hkx2NH_",
-              "flavour": "affine:image",
+              "flavour": "cloud-notes:image",
               "version": 1,
               "props": {
                 "caption": "section1.image",
@@ -712,7 +712,7 @@
             {
               "type": "block",
               "id": "wfAA7nMj9S",
-              "flavour": "affine:image",
+              "flavour": "cloud-notes:image",
               "version": 1,
               "props": {
                 "caption": "section2.image",
@@ -729,7 +729,7 @@
             {
               "type": "block",
               "id": "v0kbq9Ge2L",
-              "flavour": "affine:image",
+              "flavour": "cloud-notes:image",
               "version": 1,
               "props": {
                 "caption": "section3.image",
@@ -746,7 +746,7 @@
             {
               "type": "block",
               "id": "U0VKdP1QXx",
-              "flavour": "affine:image",
+              "flavour": "cloud-notes:image",
               "version": 1,
               "props": {
                 "caption": "section4.image",
@@ -765,7 +765,7 @@
         {
           "type": "block",
           "id": "vep0c6lfir",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "background": "--cloud-notes-palette-transparent",
@@ -789,7 +789,7 @@
             {
               "type": "block",
               "id": "fSKn6ISVDM",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h1",
@@ -809,7 +809,7 @@
         {
           "type": "block",
           "id": "sm_bXJ4OIr",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "background": "--cloud-notes-palette-transparent",
@@ -833,7 +833,7 @@
             {
               "type": "block",
               "id": "Z0vZzczM9m",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h1",
@@ -853,7 +853,7 @@
         {
           "type": "block",
           "id": "-e1FBf1VVV",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-1503.264569392059,-2279.702158995507,505.068393234737,409.5622543957249]",
@@ -877,7 +877,7 @@
             {
               "type": "block",
               "id": "nVm30fhD_V",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h2",
@@ -897,7 +897,7 @@
         {
           "type": "block",
           "id": "SWuXaO4zVD",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-1048.5978722078141,-2279.702158995507,505.068393234737,409.5622543957249]",
@@ -921,7 +921,7 @@
             {
               "type": "block",
               "id": "m44JtQOkYX",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h2",
@@ -941,7 +941,7 @@
         {
           "type": "block",
           "id": "dUtL3CwWVp",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-1054.9994122742746,-2449.148531089114,589.0618769832358,219.56087840116928]",
@@ -965,7 +965,7 @@
             {
               "type": "block",
               "id": "_ufa27y_Mw",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h1",
@@ -985,7 +985,7 @@
         {
           "type": "block",
           "id": "LUjOSttIUe",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-589.9311851960954,-2279.702158995507,505.068393234737,409.5622543957249]",
@@ -1009,7 +1009,7 @@
             {
               "type": "block",
               "id": "QyiTDLrbQs",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h2",
@@ -1029,7 +1029,7 @@
         {
           "type": "block",
           "id": "SgzW7o7hMY",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-596.3327252625559,-2449.148531089114,589.0618769832358,219.56087840116928]",
@@ -1053,7 +1053,7 @@
             {
               "type": "block",
               "id": "PE0lR8TFaS",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h1",
@@ -1073,7 +1073,7 @@
         {
           "type": "block",
           "id": "3yZ-tCMJ5n",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-132.59791289791826,-2279.702158995507,505.068393234737,409.5622543957249]",
@@ -1097,7 +1097,7 @@
             {
               "type": "block",
               "id": "NIHjcRX-f8",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h2",
@@ -1117,7 +1117,7 @@
         {
           "type": "block",
           "id": "KK8h_OiRqv",
-          "flavour": "affine:note",
+          "flavour": "cloud-notes:note",
           "version": 1,
           "props": {
             "xywh": "[-138.99945296437875,-2449.148531089114,589.0618769832358,219.56087840116928]",
@@ -1141,7 +1141,7 @@
             {
               "type": "block",
               "id": "hv1g2gHWbM",
-              "flavour": "affine:paragraph",
+              "flavour": "cloud-notes:paragraph",
               "version": 1,
               "props": {
                 "type": "h1",

@@ -77,7 +77,7 @@ export class FileDropExtension extends LifeCycleWatcher {
 
     let lastNote = rootModel.children[rootModel.children.length - 1];
     if (!lastNote || !matchModels(lastNote, [NoteBlockModel])) {
-      const newNoteId = this.doc.addBlock('affine:note', {}, rootModel.id);
+      const newNoteId = this.doc.addBlock('cloud-notes:note', {}, rootModel.id);
       const newNote = this.doc.getBlock(newNoteId)?.model;
       if (!newNote) return null;
       lastNote = newNote;
@@ -88,7 +88,7 @@ export class FileDropExtension extends LifeCycleWatcher {
       model = lastItem;
     } else {
       const newParagraphId = this.doc.addBlock(
-        'affine:paragraph',
+        'cloud-notes:paragraph',
         {},
         lastNote,
         0

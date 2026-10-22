@@ -176,7 +176,7 @@ export class GfxBlockElementModel<
   }
 
   get surface(): SurfaceBlockModel | null {
-    const result = this.store.getBlocksByFlavour('affine:surface');
+    const result = this.store.getBlocksByFlavour('cloud-notes:surface');
     if (result.length === 0) return null;
     return result[0].model as SurfaceBlockModel;
   }

@@ -44,7 +44,7 @@ function getPreviewFromSelections(
       // Get block flavour for BlockSelection
       const block = std.store.getBlock(selection.blockId);
       if (block?.model) {
-        const flavour = block.model.flavour.replace('affine:', '');
+        const flavour = block.model.flavour.replace('cloud-notes:', '');
         previews.push(`<${flavour}>`);
       }
     } else if (selection instanceof ImageSelection) {
@@ -54,10 +54,10 @@ function getPreviewFromSelections(
       selection.elements.forEach(elementId => {
         const model = gfx.getElementById(elementId);
         if (model instanceof GfxPrimitiveElementModel) {
-          const flavour = model.type.replace('affine:', '');
+          const flavour = model.type.replace('cloud-notes:', '');
           previews.push(`<${flavour}>`);
         } else if (model instanceof GfxBlockElementModel) {
-          const flavour = model.flavour.replace('affine:', '');
+          const flavour = model.flavour.replace('cloud-notes:', '');
           previews.push(`<${flavour}>`);
         }
       });

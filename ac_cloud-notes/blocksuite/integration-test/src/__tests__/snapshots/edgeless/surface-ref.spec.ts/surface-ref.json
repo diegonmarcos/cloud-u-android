@@ -9,7 +9,7 @@
   "blocks": {
     "type": "block",
     "id": "xguBwzpkGD",
-    "flavour": "affine:page",
+    "flavour": "cloud-notes:page",
     "version": 2,
     "props": {
       "title": {
@@ -21,7 +21,7 @@
       {
         "type": "block",
         "id": "m9-hJeL979",
-        "flavour": "affine:surface",
+        "flavour": "cloud-notes:surface",
         "version": 5,
         "props": {
           "elements": {
@@ -110,14 +110,14 @@
               "index": "a5",
               "seed": 1817567358,
               "children": {
-                "affine:surface:ymap": true,
+                "cloud-notes:surface:ymap": true,
                 "json": {
                   "8fUiHCCqfG": true,
                   "0AlG3AohCi": true
                 }
               },
               "title": {
-                "affine:surface:text": true,
+                "cloud-notes:surface:text": true,
                 "delta": [
                   {
                     "insert": "Group 1"
@@ -133,7 +133,7 @@
           {
             "type": "block",
             "id": "yBzeQ6raOv",
-            "flavour": "affine:frame",
+            "flavour": "cloud-notes:frame",
             "version": 1,
             "props": {
               "title": {
@@ -158,7 +158,7 @@
       {
         "type": "block",
         "id": "eWPFqL6VST",
-        "flavour": "affine:note",
+        "flavour": "cloud-notes:note",
         "version": 1,
         "props": {
           "xywh": "[0,0,498,92]",
@@ -179,7 +179,7 @@
           {
             "type": "block",
             "id": "09MoQfa5ex",
-            "flavour": "affine:paragraph",
+            "flavour": "cloud-notes:paragraph",
             "version": 1,
             "props": {
               "type": "text",
@@ -194,19 +194,19 @@
           {
             "type": "block",
             "id": "NhoAqBBMZg",
-            "flavour": "affine:surface-ref",
+            "flavour": "cloud-notes:surface-ref",
             "version": 1,
             "props": {
               "reference": "yBzeQ6raOv",
               "caption": "",
-              "refFlavour": "affine:frame"
+              "refFlavour": "cloud-notes:frame"
             },
             "children": []
           },
           {
             "type": "block",
             "id": "jJDE1rYIYJ",
-            "flavour": "affine:surface-ref",
+            "flavour": "cloud-notes:surface-ref",
             "version": 1,
             "props": {
               "reference": "KfzvfxYw5C",

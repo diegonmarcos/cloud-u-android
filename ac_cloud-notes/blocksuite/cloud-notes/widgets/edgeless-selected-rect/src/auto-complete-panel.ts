@@ -168,12 +168,12 @@ export class EdgelessAutoCompletePanel extends WithDisposable(LitElement) {
     if (!surfaceBlockModel) return;
     const frameMgr = this.std.get(EdgelessFrameManagerIdentifier);
     const frameIndex = frameMgr.frames.length + 1;
-    const props = this.std.get(EditPropsStore).applyLastProps('affine:frame', {
+    const props = this.std.get(EditPropsStore).applyLastProps('cloud-notes:frame', {
       title: new Y.Text(`Frame ${frameIndex}`),
       xywh: serializeXYWH(...xywh),
       presentationIndex: frameMgr.generatePresentationIndex(),
     });
-    const id = this.crud.addBlock('affine:frame', props, surfaceBlockModel);
+    const id = this.crud.addBlock('cloud-notes:frame', props, surfaceBlockModel);
     edgeless.store.captureSync();
     const frame = this.crud.getElementById(id);
     if (!frame) return;
@@ -199,7 +199,7 @@ export class EdgelessAutoCompletePanel extends WithDisposable(LitElement) {
 
     const { xywh, position } = target;
     const id = this.crud.addBlock(
-      'affine:note',
+      'cloud-notes:note',
       {
         xywh: serializeXYWH(...xywh),
       },
@@ -209,7 +209,7 @@ export class EdgelessAutoCompletePanel extends WithDisposable(LitElement) {
     if (!matchModels(note, [NoteBlockModel])) {
       return;
     }
-    store.addBlock('affine:paragraph', { type: 'text' }, id);
+    store.addBlock('cloud-notes:paragraph', { type: 'text' }, id);
     const group = this.currentSource.group;
 
     if (group instanceof GroupElementModel) {
@@ -489,7 +489,7 @@ export class EdgelessAutoCompletePanel extends WithDisposable(LitElement) {
     const background = this.edgeless.std
       .get(ThemeProvider)
       .getColorValue(
-        this.edgeless.std.get(EditPropsStore).lastProps$.value['affine:note']
+        this.edgeless.std.get(EditPropsStore).lastProps$.value['cloud-notes:note']
           .background,
         DefaultTheme.noteBackgrounColor,
         true

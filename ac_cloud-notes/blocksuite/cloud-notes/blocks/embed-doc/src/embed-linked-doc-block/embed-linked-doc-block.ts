@@ -145,7 +145,7 @@ export class EmbedLinkedDocBlockComponent extends EmbedBlockComponent<EmbedLinke
     const index = parent?.children.indexOf(this.model);
 
     const blockId = store.addBlock(
-      'affine:embed-synced-doc',
+      'cloud-notes:embed-synced-doc',
       {
         caption,
         ...cloneReferenceInfoWithoutAliases(this.referenceInfo$.peek()),
@@ -180,7 +180,7 @@ export class EmbedLinkedDocBlockComponent extends EmbedBlockComponent<EmbedLinke
     const text = new Text(yText);
 
     store.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       {
         text,
       },

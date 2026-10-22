@@ -95,7 +95,7 @@ const builtinSurfaceToolbarConfig = {
             page: 'whiteboard editor',
             module: 'toolbar',
             segment: 'toolbar',
-            blockType: 'affine:note',
+            blockType: 'cloud-notes:note',
             control: 'toolbar:general',
             other: `display in page: ${newMode === NoteDisplayMode.EdgelessOnly ? 'off' : 'on'}`,
           });
@@ -343,7 +343,7 @@ export const createBuiltinToolbarConfigExtension = (
 
   return [
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier(`affine:surface:${name}`),
+      id: BlockFlavourIdentifier(`cloud-notes:surface:${name}`),
       config: builtinSurfaceToolbarConfig,
     }),
   ];

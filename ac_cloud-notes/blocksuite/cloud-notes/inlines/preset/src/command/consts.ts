@@ -2,18 +2,18 @@
 import { TableModelFlavour } from '@blocksuite/cloud-notes-model';
 
 export const FORMAT_TEXT_SUPPORT_FLAVOURS = [
-  'affine:paragraph',
-  'affine:list',
-  'affine:code',
+  'cloud-notes:paragraph',
+  'cloud-notes:list',
+  'cloud-notes:code',
 ];
 // corresponding to `formatBlock` command
 export const FORMAT_BLOCK_SUPPORT_FLAVOURS = [
-  'affine:paragraph',
-  'affine:list',
-  'affine:code',
+  'cloud-notes:paragraph',
+  'cloud-notes:list',
+  'cloud-notes:code',
 ];
 // corresponding to `formatNative` command
 export const FORMAT_NATIVE_SUPPORT_FLAVOURS = [
-  'affine:database',
+  'cloud-notes:database',
   TableModelFlavour,
 ];

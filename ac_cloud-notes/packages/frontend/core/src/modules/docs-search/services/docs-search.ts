@@ -153,7 +153,7 @@ export class DocsSearchService extends Service {
                   query: {
                     type: 'match',
                     field: 'flavour',
-                    match: 'affine:page',
+                    match: 'cloud-notes:page',
                   },
                 },
               ],
@@ -189,7 +189,7 @@ export class DocsSearchService extends Service {
 
           for (const bucket of buckets) {
             const firstMatchFlavour = bucket.hits.nodes[0]?.fields.flavour;
-            if (firstMatchFlavour === 'affine:page') {
+            if (firstMatchFlavour === 'cloud-notes:page') {
               // is title match
               const blockContent = normalizeSearchText(
                 bucket.hits.nodes[1]?.highlights.content[0]
@@ -367,7 +367,7 @@ export class DocsSearchService extends Service {
             {
               type: 'match',
               field: 'parentFlavour',
-              match: 'affine:database',
+              match: 'cloud-notes:database',
             },
           ],
         },

@@ -26,9 +26,9 @@ export const insertEmptyEmbedIframeCommand: Command<
       : selectedModels[selectedModels.length - 1];
 
   const embedIframeBlockProps: Partial<EmbedIframeBlockProps> & {
-    flavour: 'affine:embed-iframe';
+    flavour: 'cloud-notes:embed-iframe';
   } = {
-    flavour: 'affine:embed-iframe',
+    flavour: 'cloud-notes:embed-iframe',
   };
 
   const result = std.store.addSiblingBlocks(

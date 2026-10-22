@@ -130,15 +130,15 @@ export class SnapshotHelper extends Service {
       const store = doc.getStore();
       store.load(() => {
         // Add root page block with empty title
-        const rootId = store.addBlock('affine:page', {
+        const rootId = store.addBlock('cloud-notes:page', {
           title: new Text(''),
         });
 
         // Add note block
-        const noteId = store.addBlock('affine:note', {}, rootId);
+        const noteId = store.addBlock('cloud-notes:note', {}, rootId);
 
         // Add default paragraph block
-        store.addBlock('affine:paragraph', {}, noteId);
+        store.addBlock('cloud-notes:paragraph', {}, noteId);
       });
 
       // Reset history to prevent initial creation operations from being undone

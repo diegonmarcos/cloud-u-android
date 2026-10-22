@@ -68,7 +68,7 @@ export function isEmptyDoc(doc: Store | null, mode: DocMode) {
 export function isEmptyNote(note: BlockModel) {
   return note.children.every(block => {
     return (
-      block.flavour === 'affine:paragraph' &&
+      block.flavour === 'cloud-notes:paragraph' &&
       (!block.text || block.text.length === 0)
     );
   });
@@ -117,7 +117,7 @@ export function getTitleFromSelectedModels(selectedModels: DraftModel[]) {
   const isParagraph = (
     model: DraftModel
   ): model is DraftModel<ParagraphBlockModel> =>
-    model.flavour === 'affine:paragraph';
+    model.flavour === 'cloud-notes:paragraph';
   if (isParagraph(firstBlock) && firstBlock.props.type.startsWith('h')) {
     return firstBlock.props.text.toString();
   }
@@ -170,7 +170,7 @@ export async function convertSelectedBlocksToLinkedDoc(
     doc.getBlock(firstBlock.id)!.model,
     [
       {
-        flavour: 'affine:embed-linked-doc',
+        flavour: 'cloud-notes:embed-linked-doc',
         pageId: linkedDoc.id,
       },
     ],
@@ -190,11 +190,11 @@ export function createLinkedDocFromSlice(
   const _doc = doc.workspace.createDoc();
   const linkedDoc = _doc.getStore();
   linkedDoc.load(() => {
-    const rootId = linkedDoc.addBlock('affine:page', {
+    const rootId = linkedDoc.addBlock('cloud-notes:page', {
       title: new Text(docTitle),
     });
-    linkedDoc.addBlock('affine:surface', {}, rootId);
-    const noteId = linkedDoc.addBlock('affine:note', {}, rootId);
+    linkedDoc.addBlock('cloud-notes:surface', {}, rootId);
+    const noteId = linkedDoc.addBlock('cloud-notes:note', {}, rootId);
     snapshots.forEach(snapshot => {
       std.clipboard
         .pasteBlockSnapshot(snapshot, linkedDoc, noteId)

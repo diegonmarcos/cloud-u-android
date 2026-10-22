@@ -34,11 +34,11 @@ export const getIcon = (
     };
   }
 ): TemplateResult => {
-  if (model.flavour === 'affine:paragraph') {
+  if (model.flavour === 'cloud-notes:paragraph') {
     const type = model.props.type as ParagraphType;
     return icons[type] ?? TextIcon();
   }
-  if (model.flavour === 'affine:list') {
+  if (model.flavour === 'cloud-notes:list') {
     return icons[model.props.type ?? 'bulleted'] ?? BulletedListIcon();
   }
   return TextIcon();

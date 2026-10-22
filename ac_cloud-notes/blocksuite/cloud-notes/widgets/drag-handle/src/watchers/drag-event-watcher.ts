@@ -221,7 +221,7 @@ export class DragEventWatcher {
 
       if (
         snapshot.content.every(block =>
-          schema.safeValidate(block.flavour, 'affine:list')
+          schema.safeValidate(block.flavour, 'cloud-notes:list')
         )
       ) {
         const rect = Rect.fromLWTH(
@@ -266,7 +266,7 @@ export class DragEventWatcher {
     } else {
       const placement =
         isDropOnNoteBlock &&
-        schema.safeValidate(snapshot.content[0].flavour, 'affine:note')
+        schema.safeValidate(snapshot.content[0].flavour, 'cloud-notes:note')
           ? 'in'
           : edge === 'top'
             ? 'before'
@@ -564,7 +564,7 @@ export class DragEventWatcher {
     // drop a note on other note
     if (
       matchModels(parent, [NoteBlockModel]) &&
-      snapshot.content.every(block => block.flavour === 'affine:note')
+      snapshot.content.every(block => block.flavour === 'cloud-notes:note')
     ) {
       snapshot.content = snapshot.content.filter(
         block =>
@@ -600,7 +600,7 @@ export class DragEventWatcher {
         };
 
         const walk = (block: BlockSnapshot) => {
-          if (block.flavour === 'affine:surface') {
+          if (block.flavour === 'cloud-notes:surface') {
             Object.values(
               block.props.elements as Record<
                 string,
@@ -633,7 +633,7 @@ export class DragEventWatcher {
 
         if (largestElem) {
           store.addBlock(
-            'affine:surface-ref',
+            'cloud-notes:surface-ref',
             {
               reference: largestElem.id,
               refFlavour: largestElem.flavour,
@@ -643,7 +643,7 @@ export class DragEventWatcher {
           );
         } else {
           store.addBlock(
-            'affine:embed-linked-doc',
+            'cloud-notes:embed-linked-doc',
             {
               pageId: store.doc.id,
             },
@@ -681,7 +681,7 @@ export class DragEventWatcher {
 
             if (!largestElem) {
               store.addBlock(
-                'affine:embed-linked-doc',
+                'cloud-notes:embed-linked-doc',
                 {
                   pageId: store.doc.id,
                 },
@@ -690,7 +690,7 @@ export class DragEventWatcher {
               );
             } else {
               store.addBlock(
-                'affine:surface-ref',
+                'cloud-notes:surface-ref',
                 {
                   reference: largestElem.id,
                   refFlavour: largestElem.flavour,
@@ -805,7 +805,7 @@ export class DragEventWatcher {
 
     // walk through the snapshot to build the container dependency tree
     const buildContainerTree = (block: BlockSnapshot) => {
-      if (block.flavour === 'affine:surface') {
+      if (block.flavour === 'cloud-notes:surface') {
         elemMap = (block.props.elements as typeof elemMap) ?? {};
         Object.entries(elemMap).forEach(([elemId, elem]) => {
           if (
@@ -849,7 +849,7 @@ export class DragEventWatcher {
       } else {
         const isSurfaceChild = schema.safeValidate(
           block.flavour,
-          'affine:surface'
+          'cloud-notes:surface'
         );
         blockMap[block.id] = {
           surfaceChild: isSurfaceChild,
@@ -996,7 +996,7 @@ export class DragEventWatcher {
     const { x: modelX, y: modelY } = point;
 
     const rewrite = (block: BlockSnapshot) => {
-      if (block.flavour === 'affine:surface') {
+      if (block.flavour === 'cloud-notes:surface') {
         if (block.props.elements) {
           Object.values(
             block.props.elements as Record<
@@ -1072,7 +1072,7 @@ export class DragEventWatcher {
           Bound.deserialize(block.props.xywh as SerializedXYWH) ??
           new Bound(0, 0, 0, 0);
 
-        if (block.flavour === 'affine:embed-iframe') {
+        if (block.flavour === 'cloud-notes:embed-iframe') {
           let width = EMBED_IFRAME_DEFAULT_WIDTH_IN_SURFACE;
           let height = EMBED_IFRAME_DEFAULT_HEIGHT_IN_SURFACE;
           if (block.props.url && typeof block.props.url === 'string') {
@@ -1088,9 +1088,9 @@ export class DragEventWatcher {
           blockBound.w = width;
           blockBound.h = height;
         } else if (
-          block.flavour === 'affine:attachment' ||
-          block.flavour === 'affine:bookmark' ||
-          block.flavour.startsWith('affine:embed-')
+          block.flavour === 'cloud-notes:attachment' ||
+          block.flavour === 'cloud-notes:bookmark' ||
+          block.flavour.startsWith('cloud-notes:embed-')
         ) {
           const style = (block.props.style ?? 'vertical') as EmbedCardStyle;
           block.props.style = style;
@@ -1099,7 +1099,7 @@ export class DragEventWatcher {
           blockBound.h = EMBED_CARD_HEIGHT[style];
         }
 
-        if (block.flavour === 'affine:image') {
+        if (block.flavour === 'cloud-notes:image') {
           assertType<{ width: number; height: number }>(block.props);
           blockBound.w = blockBound.w || block.props.width || 100;
           blockBound.h = blockBound.h || block.props.height || 100;
@@ -1143,10 +1143,10 @@ export class DragEventWatcher {
 
     // check if all blocks can be dropped as gfx block
     const groupByParent = groupBy(snapshot.content, block =>
-      schema.safeValidate(block.flavour, 'affine:surface')
-        ? 'affine:surface'
-        : schema.safeValidate(block.flavour, 'affine:page')
-          ? 'affine:page'
+      schema.safeValidate(block.flavour, 'cloud-notes:surface')
+        ? 'cloud-notes:surface'
+        : schema.safeValidate(block.flavour, 'cloud-notes:page')
+          ? 'cloud-notes:page'
           : // if the parent is not surface or page, it can't be dropped as gfx block
             // mark it as empty
             'empty'
@@ -1156,8 +1156,8 @@ export class DragEventWatcher {
     if (!groupByParent.empty?.length) {
       // drop as children of surface or page
 
-      if (groupByParent['affine:surface']) {
-        const content = groupByParent['affine:surface'];
+      if (groupByParent['cloud-notes:surface']) {
+        const content = groupByParent['cloud-notes:surface'];
         const surfaceSnapshot = {
           ...snapshot,
           content,
@@ -1168,15 +1168,15 @@ export class DragEventWatcher {
           .then(slices => {
             slices?.content.forEach((block, idx) => {
               if (block.id === content[idx].id) {
-                if (block.flavour === 'affine:embed-iframe') {
+                if (block.flavour === 'cloud-notes:embed-iframe') {
                   store.updateBlock(block.id, {
                     xywh: content[idx].props.xywh,
                   });
                 } else if (
-                  block.flavour === 'affine:image' ||
-                  block.flavour === 'affine:attachment' ||
-                  block.flavour === 'affine:bookmark' ||
-                  block.flavour.startsWith('affine:embed-')
+                  block.flavour === 'cloud-notes:image' ||
+                  block.flavour === 'cloud-notes:attachment' ||
+                  block.flavour === 'cloud-notes:bookmark' ||
+                  block.flavour.startsWith('cloud-notes:embed-')
                 ) {
                   store.updateBlock(block.id, {
                     xywh: content[idx].props.xywh,
@@ -1189,8 +1189,8 @@ export class DragEventWatcher {
           .catch(console.error);
       }
 
-      if (groupByParent['affine:page']) {
-        const content = groupByParent['affine:page'];
+      if (groupByParent['cloud-notes:page']) {
+        const content = groupByParent['cloud-notes:page'];
         const pageSnapshot = {
           ...snapshot,
           content,
@@ -1200,13 +1200,13 @@ export class DragEventWatcher {
         this._dropToModel(pageSnapshot, this.widget.store.root!.id)
           .then(slices => {
             slices?.content.forEach((block, idx) => {
-              if (block.flavour === 'affine:embed-iframe') {
+              if (block.flavour === 'cloud-notes:embed-iframe') {
                 store.updateBlock(block.id, {
                   xywh: content[idx].props.xywh,
                 });
               } else if (
-                block.flavour === 'affine:attachment' ||
-                block.flavour.startsWith('affine:embed-')
+                block.flavour === 'cloud-notes:attachment' ||
+                block.flavour.startsWith('cloud-notes:embed-')
               ) {
                 store.updateBlock(block.id, {
                   xywh: content[idx].props.xywh,
@@ -1220,7 +1220,7 @@ export class DragEventWatcher {
     } else {
       const dndExtApi = this.dndExtension;
       const content = snapshot.content.filter(block =>
-        schema.safeValidate(block.flavour, 'affine:note')
+        schema.safeValidate(block.flavour, 'cloud-notes:note')
       );
       const sourceDocId = snapshot.pageId;
 
@@ -1269,7 +1269,7 @@ export class DragEventWatcher {
             originalNote,
             [
               {
-                flavour: 'affine:note',
+                flavour: 'cloud-notes:note',
                 xywh: new Bound(
                   point.x,
                   point.y,
@@ -1282,7 +1282,7 @@ export class DragEventWatcher {
           )[0];
         } else {
           noteId = store.addBlock(
-            'affine:note',
+            'cloud-notes:note',
             {
               xywh: new Bound(
                 point.x,
@@ -1360,7 +1360,7 @@ export class DragEventWatcher {
     const resetCallbacks: (() => void)[] = [];
 
     const traverse = (block: BlockSnapshot) => {
-      if (block.flavour === 'affine:surface') {
+      if (block.flavour === 'cloud-notes:surface') {
         block.children.forEach(traverse);
         Object.keys(block.props.elements as Record<string, unknown>).forEach(
           elemId => {
@@ -1411,7 +1411,7 @@ export class DragEventWatcher {
 
       if (snapshot.content.length === 1) {
         const [first] = snapshot.content;
-        if (first.flavour === 'affine:embed-linked-doc') {
+        if (first.flavour === 'cloud-notes:embed-linked-doc') {
           this._trackLinkedDocCreated(first.id);
         }
       }
@@ -1519,7 +1519,7 @@ export class DragEventWatcher {
     const isNote = matchModels(view.model, [NoteBlockModel]);
 
     if (
-      // affine:surface block can't be drop target in any modes
+      // cloud-notes:surface block can't be drop target in any modes
       matchModels(view.model, [SurfaceBlockModel]) ||
       // in page mode, blocks other than root block can be drop target
       (this.mode === 'page' && view.model.role === 'root') ||

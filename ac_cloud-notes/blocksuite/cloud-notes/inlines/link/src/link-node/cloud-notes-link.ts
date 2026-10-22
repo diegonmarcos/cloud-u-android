@@ -70,7 +70,7 @@ export class CloudNotesLink extends WithDisposable(ShadowlessElement) {
 
       if (hovered) {
         message$.value = {
-          flavour: 'affine:link',
+          flavour: 'cloud-notes:link',
           element: this,
           setFloating: this._whenHover.setFloating,
         };

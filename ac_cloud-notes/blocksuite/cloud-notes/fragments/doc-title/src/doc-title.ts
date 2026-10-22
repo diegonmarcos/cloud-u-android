@@ -82,7 +82,7 @@ export class DocTitle extends WithDisposable(ShadowlessElement) {
     );
     if (note) return note;
 
-    const noteId = this.doc.addBlock('affine:note', {}, this._rootModel, 0);
+    const noteId = this.doc.addBlock('cloud-notes:note', {}, this._rootModel, 0);
     return this.doc.getBlock(noteId)?.model as NoteBlockModel;
   }
 
@@ -99,7 +99,7 @@ export class DocTitle extends WithDisposable(ShadowlessElement) {
       if (inlineRange) {
         const rightText = this._rootModel?.props.title.split(inlineRange.index);
         const newFirstParagraphId = this.doc.addBlock(
-          'affine:paragraph',
+          'cloud-notes:paragraph',
           { text: rightText },
           this._getOrCreateFirstPageVisibleNote(),
           0
@@ -123,7 +123,7 @@ export class DocTitle extends WithDisposable(ShadowlessElement) {
         if (this._std) focusTextModel(this._std, firstText.id);
       } else {
         const newFirstParagraphId = this.doc.addBlock(
-          'affine:paragraph',
+          'cloud-notes:paragraph',
           {},
           note,
           0

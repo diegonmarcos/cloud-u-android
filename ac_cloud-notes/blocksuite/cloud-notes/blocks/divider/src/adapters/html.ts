@@ -21,7 +21,7 @@ export const dividerBlockHtmlAdapterMatcher: BlockHtmlAdapterMatcher = {
           {
             type: 'block',
             id: nanoid(),
-            flavour: 'affine:divider',
+            flavour: 'cloud-notes:divider',
             props: {},
             children: [],
           },

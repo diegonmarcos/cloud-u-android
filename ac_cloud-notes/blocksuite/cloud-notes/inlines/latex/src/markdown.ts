@@ -41,7 +41,7 @@ export const LatexExtension = InlineMarkdownExtension<CloudNotesTextAttributes>(
       });
 
       const id = doc.addBlock(
-        'affine:latex',
+        'cloud-notes:latex',
         {
           latex: '',
         },
@@ -51,7 +51,7 @@ export const LatexExtension = InlineMarkdownExtension<CloudNotesTextAttributes>(
       blockComponent.host.updateComplete
         .then(() => {
           const latexBlock = blockComponent.std.view.getBlock(id);
-          if (!latexBlock || latexBlock.flavour !== 'affine:latex') return;
+          if (!latexBlock || latexBlock.flavour !== 'cloud-notes:latex') return;
 
           //FIXME(@Flrande): wait for refactor
           // @ts-expect-error BS-2241

@@ -17,7 +17,7 @@ export const imageSlashMenuConfig: SlashMenuConfig = {
       },
       group: '4_Content & Media@1',
       when: ({ model }) =>
-        model.store.schema.flavourSchemaMap.has('affine:image'),
+        model.store.schema.flavourSchemaMap.has('cloud-notes:image'),
       action: ({ std }) => {
         const [success, ctx] = std.command
           .chain()

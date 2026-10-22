@@ -143,7 +143,7 @@ export class EmbedIframeService
     index?: number
   ): string | undefined => {
     const blockId = this.store.addBlock(
-      'affine:embed-iframe',
+      'cloud-notes:embed-iframe',
       props,
       parentId,
       index

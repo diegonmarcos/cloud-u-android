@@ -14,7 +14,7 @@ import { insertDatabaseBlockCommand } from '../commands';
 import { KanbanViewTooltip, TableViewTooltip } from './tooltips';
 
 export const databaseSlashMenuConfig: SlashMenuConfig = {
-  disableWhen: ({ model }) => model.flavour === 'affine:database',
+  disableWhen: ({ model }) => model.flavour === 'cloud-notes:database',
   items: [
     {
       name: 'Table View',
@@ -27,7 +27,7 @@ export const databaseSlashMenuConfig: SlashMenuConfig = {
       },
       group: '7_Database@0',
       when: ({ model }) =>
-        !isInsideBlockByFlavour(model.store, model, 'affine:edgeless-text'),
+        !isInsideBlockByFlavour(model.store, model, 'cloud-notes:edgeless-text'),
       action: ({ std }) => {
         std.command
           .chain()
@@ -41,7 +41,7 @@ export const databaseSlashMenuConfig: SlashMenuConfig = {
             if (insertedDatabaseBlockId) {
               const telemetry = std.getOptional(TelemetryProvider);
               telemetry?.track('BlockCreated', {
-                blockType: 'affine:database',
+                blockType: 'cloud-notes:database',
               });
             }
           })
@@ -56,7 +56,7 @@ export const databaseSlashMenuConfig: SlashMenuConfig = {
       icon: TodayIcon(),
       group: '7_Database@1',
       when: ({ model }) =>
-        !isInsideBlockByFlavour(model.store, model, 'affine:edgeless-text'),
+        !isInsideBlockByFlavour(model.store, model, 'cloud-notes:edgeless-text'),
       action: ({ std }) => {
         std.command
           .chain()
@@ -70,7 +70,7 @@ export const databaseSlashMenuConfig: SlashMenuConfig = {
             if (insertedDatabaseBlockId) {
               const telemetry = std.getOptional(TelemetryProvider);
               telemetry?.track('BlockCreated', {
-                blockType: 'affine:database',
+                blockType: 'cloud-notes:database',
               });
             }
           })
@@ -85,7 +85,7 @@ export const databaseSlashMenuConfig: SlashMenuConfig = {
       icon: ImageIcon(),
       group: '7_Database@1',
       when: ({ model }) =>
-        !isInsideBlockByFlavour(model.store, model, 'affine:edgeless-text'),
+        !isInsideBlockByFlavour(model.store, model, 'cloud-notes:edgeless-text'),
       action: ({ std }) => {
         std.command
           .chain()
@@ -99,7 +99,7 @@ export const databaseSlashMenuConfig: SlashMenuConfig = {
             if (insertedDatabaseBlockId) {
               const telemetry = std.getOptional(TelemetryProvider);
               telemetry?.track('BlockCreated', {
-                blockType: 'affine:database',
+                blockType: 'cloud-notes:database',
               });
             }
           })
@@ -118,7 +118,7 @@ export const databaseSlashMenuConfig: SlashMenuConfig = {
       },
       group: '7_Database@2',
       when: ({ model }) =>
-        !isInsideBlockByFlavour(model.store, model, 'affine:edgeless-text'),
+        !isInsideBlockByFlavour(model.store, model, 'cloud-notes:edgeless-text'),
       action: ({ std }) => {
         std.command
           .chain()
@@ -132,7 +132,7 @@ export const databaseSlashMenuConfig: SlashMenuConfig = {
             if (insertedDatabaseBlockId) {
               const telemetry = std.getOptional(TelemetryProvider);
               telemetry?.track('BlockCreated', {
-                blockType: 'affine:database',
+                blockType: 'cloud-notes:database',
               });
             }
           })

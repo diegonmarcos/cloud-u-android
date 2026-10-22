@@ -46,7 +46,7 @@ export const splitCalloutCommand: Command<{
     if (parent) {
       const currentIndex = parent.children.indexOf(currentModel);
       const newParagraphId = doc.addBlock(
-        'affine:paragraph',
+        'cloud-notes:paragraph',
         {
           text: afterText,
         },
@@ -65,7 +65,7 @@ export const splitCalloutCommand: Command<{
   } else {
     // If current block is not a paragraph, create a new paragraph in callout
     const newParagraphId = doc.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       {
         text: new Text(),
       },

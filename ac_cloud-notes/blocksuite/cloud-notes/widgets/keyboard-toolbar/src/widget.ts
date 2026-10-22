@@ -120,7 +120,7 @@ export class CloudNotesKeyboardToolbarWidget extends WidgetComponent<RootBlockMo
 }
 
 export const keyboardToolbarWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_KEYBOARD_TOOLBAR_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_KEYBOARD_TOOLBAR_WIDGET)}`
 );

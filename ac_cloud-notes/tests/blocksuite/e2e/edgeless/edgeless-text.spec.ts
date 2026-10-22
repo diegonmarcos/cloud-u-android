@@ -83,10 +83,10 @@ test.describe('edgeless text block', () => {
     await pressEnter(page);
     await type(page, 'ccc');
 
-    await assertBlockFlavour(page, 4, 'affine:edgeless-text');
-    await assertBlockFlavour(page, 5, 'affine:paragraph');
-    await assertBlockFlavour(page, 6, 'affine:paragraph');
-    await assertBlockFlavour(page, 7, 'affine:paragraph');
+    await assertBlockFlavour(page, 4, 'cloud-notes:edgeless-text');
+    await assertBlockFlavour(page, 5, 'cloud-notes:paragraph');
+    await assertBlockFlavour(page, 6, 'cloud-notes:paragraph');
+    await assertBlockFlavour(page, 7, 'cloud-notes:paragraph');
     await assertBlockChildrenIds(page, '4', ['5', '6', '7']);
     await assertBlockTextContent(page, 5, 'aaa');
     await assertBlockTextContent(page, 6, 'bbb');
@@ -610,11 +610,11 @@ test('press backspace at the start of first line when edgeless text exist', asyn
   await enterPlaygroundRoom(page);
   await page.evaluate(() => {
     const { doc } = window;
-    const rootId = doc.addBlock('affine:page', {
+    const rootId = doc.addBlock('cloud-notes:page', {
       title: new window.$blocksuite.store.Text(),
     });
-    doc.addBlock('affine:surface', {}, rootId);
-    doc.addBlock('affine:note', {}, rootId);
+    doc.addBlock('cloud-notes:surface', {}, rootId);
+    doc.addBlock('cloud-notes:note', {}, rootId);
 
     // do not add paragraph block
 

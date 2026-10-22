@@ -9,9 +9,9 @@ import { ElementToPlainTextAdapterMatcherIdentifier } from './element-adapter/ty
 
 export const surfaceBlockPlainTextAdapterMatcher: BlockPlainTextAdapterMatcher =
   {
-    flavour: 'affine:surface',
+    flavour: 'cloud-notes:surface',
     toMatch: () => false,
-    fromMatch: o => o.node.flavour === 'affine:surface',
+    fromMatch: o => o.node.flavour === 'cloud-notes:surface',
     toBlockSnapshot: {},
     fromBlockSnapshot: {
       enter: (_, context) => {
@@ -25,9 +25,9 @@ export const SurfaceBlockPlainTextAdapterExtension =
 
 export const edgelessSurfaceBlockPlainTextAdapterMatcher: BlockPlainTextAdapterMatcher =
   {
-    flavour: 'affine:surface',
+    flavour: 'cloud-notes:surface',
     toMatch: () => false,
-    fromMatch: o => o.node.flavour === 'affine:surface',
+    fromMatch: o => o.node.flavour === 'cloud-notes:surface',
     toBlockSnapshot: {},
     fromBlockSnapshot: {
       enter: (o, context) => {

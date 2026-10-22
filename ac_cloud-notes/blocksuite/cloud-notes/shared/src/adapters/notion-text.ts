@@ -145,7 +145,7 @@ export class NotionTextAdapter extends BaseAdapter<NotionText> {
     content.push({
       type: 'block',
       id: nanoid(),
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -157,7 +157,7 @@ export class NotionTextAdapter extends BaseAdapter<NotionText> {
         {
           type: 'block',
           id: nanoid(),
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {

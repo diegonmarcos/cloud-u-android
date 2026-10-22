@@ -35,7 +35,7 @@ export function getPrevContentBlock(
       let prev = parent.children[tmpIndex];
 
       if (parent.role === 'root' && model.role === 'hub') {
-        while (prev && prev.flavour !== 'affine:note') {
+        while (prev && prev.flavour !== 'cloud-notes:note') {
           prev = parent.children[tmpIndex];
           tmpIndex--;
         }
@@ -100,7 +100,7 @@ export function getPrevContentBlock(
  *   - paragraph <- 4
  * ```
  *
- * NOTE: this method will skip the `affine:note` block
+ * NOTE: this method will skip the `cloud-notes:note` block
  */
 export function getNextContentBlock(
   editorHost: EditorHost,
@@ -121,7 +121,7 @@ export function getNextContentBlock(
   while (currentBlock) {
     const nextSibling = doc.getNext(currentBlock);
     if (nextSibling) {
-      // Assert nextSibling is not possible to be `affine:page`
+      // Assert nextSibling is not possible to be `cloud-notes:page`
       if (nextSibling.role === 'hub') {
         // in edgeless mode, limit search for the next block within the same note
         if (

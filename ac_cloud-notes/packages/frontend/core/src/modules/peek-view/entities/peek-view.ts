@@ -91,37 +91,37 @@ export type ActivePeekView = {
 const isEmbedLinkedDocModel = (
   blockModel: BlockModel
 ): blockModel is EmbedLinkedDocModel => {
-  return blockModel.flavour === 'affine:embed-linked-doc';
+  return blockModel.flavour === 'cloud-notes:embed-linked-doc';
 };
 
 const isEmbedSyncedDocModel = (
   blockModel: BlockModel
 ): blockModel is EmbedSyncedDocModel => {
-  return blockModel.flavour === 'affine:embed-synced-doc';
+  return blockModel.flavour === 'cloud-notes:embed-synced-doc';
 };
 
 const isImageBlockModel = (
   blockModel: BlockModel
 ): blockModel is ImageBlockModel => {
-  return blockModel.flavour === 'affine:image';
+  return blockModel.flavour === 'cloud-notes:image';
 };
 
 const isAttachmentBlockModel = (
   blockModel: BlockModel
 ): blockModel is AttachmentBlockModel => {
-  return blockModel.flavour === 'affine:attachment';
+  return blockModel.flavour === 'cloud-notes:attachment';
 };
 
 const isSurfaceRefModel = (
   blockModel: BlockModel
 ): blockModel is SurfaceRefBlockModel => {
-  return blockModel.flavour === 'affine:surface-ref';
+  return blockModel.flavour === 'cloud-notes:surface-ref';
 };
 
 const isAIChatBlockModel = (
   blockModel: BlockModel
 ): blockModel is AIChatBlockModel => {
-  return blockModel.flavour === 'affine:embed-ai-chat';
+  return blockModel.flavour === 'cloud-notes:embed-ai-chat';
 };
 
 function resolvePeekInfoFromPeekTarget(

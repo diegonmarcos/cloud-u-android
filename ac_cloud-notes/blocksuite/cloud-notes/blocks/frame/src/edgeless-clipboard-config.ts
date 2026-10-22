@@ -5,7 +5,7 @@ import {
 import { type BlockSnapshot, fromJSON } from '@blocksuite/store';
 
 export class EdgelessClipboardFrameConfig extends EdgelessClipboardConfig {
-  static override readonly key = 'affine:frame';
+  static override readonly key = 'cloud-notes:frame';
 
   override createBlock(
     frame: BlockSnapshot,
@@ -28,7 +28,7 @@ export class EdgelessClipboardFrameConfig extends EdgelessClipboardConfig {
     }
 
     const frameId = this.crud.addBlock(
-      'affine:frame',
+      'cloud-notes:frame',
       {
         xywh,
         background,

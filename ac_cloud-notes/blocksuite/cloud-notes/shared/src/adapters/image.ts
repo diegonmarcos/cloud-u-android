@@ -56,7 +56,7 @@ export class ImageAdapter extends BaseAdapter<Image> {
     for (const contentSlice of payload.snapshot.content) {
       if (contentSlice.type === 'block') {
         const { flavour, props } = contentSlice;
-        if (flavour === 'affine:image') {
+        if (flavour === 'cloud-notes:image') {
           const { sourceId } = props;
           const file = payload.assets?.getAssets().get(sourceId as string) as
             | File

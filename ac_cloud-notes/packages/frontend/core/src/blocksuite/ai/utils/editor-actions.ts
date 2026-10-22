@@ -28,7 +28,7 @@ import type { CloudNotesAIPanelWidget } from '../widgets/ai-panel/ai-panel';
 
 const getNoteId = (blockElement: BlockComponent) => {
   let element = blockElement;
-  while (element.flavour !== 'affine:note') {
+  while (element.flavour !== 'cloud-notes:note') {
     if (!element.parentComponent) {
       break;
     }
@@ -129,9 +129,9 @@ export const replace = async (
       const fragment = fragmentDoc.getStore();
       fragmentDoc.load();
 
-      const rootId = fragment.addBlock('affine:page');
-      fragment.addBlock('affine:surface', {}, rootId);
-      const noteId = fragment.addBlock('affine:note', {}, rootId);
+      const rootId = fragment.addBlock('cloud-notes:page');
+      fragment.addBlock('cloud-notes:surface', {}, rootId);
+      const noteId = fragment.addBlock('cloud-notes:note', {}, rootId);
 
       const { snapshot, transformer } = await markdownToSnapshot(
         content,
@@ -141,7 +141,7 @@ export const replace = async (
 
       if (snapshot) {
         const blockSnapshots = (
-          snapshot.content[0].flavour === 'affine:note'
+          snapshot.content[0].flavour === 'cloud-notes:note'
             ? snapshot.content[0].children
             : snapshot.content
         ) as BlockSnapshot[];
@@ -197,7 +197,7 @@ export const copyTextAnswer = async (panel: CloudNotesAIPanelWidget) => {
 export const copyText = async (text: string) => {
   const previewDoc = await markDownToDoc(text, [defaultImageProxyMiddleware]);
   const models = previewDoc
-    .getBlocksByFlavour('affine:note')
+    .getBlocksByFlavour('cloud-notes:note')
     .map(b => b.model)
     .flatMap(model => model.children);
   const slice = Slice.fromModels(previewDoc, models);

@@ -16,10 +16,10 @@ async function initMockImage(page: Page) {
   await page.evaluate(sourceId => {
     const { doc } = window;
     doc.captureSync();
-    const rootId = doc.addBlock('affine:page');
-    const noteId = doc.addBlock('affine:note', {}, rootId);
+    const rootId = doc.addBlock('cloud-notes:page');
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
     doc.addBlock(
-      'affine:image',
+      'cloud-notes:image',
       {
         sourceId,
         width: 200,

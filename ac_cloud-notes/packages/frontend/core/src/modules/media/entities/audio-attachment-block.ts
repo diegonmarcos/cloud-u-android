@@ -123,7 +123,7 @@ export class AudioAttachmentBlock extends Entity<AttachmentBlockModel> {
     if (!transcriptionBlockProps) {
       // transcription block is not created yet, we need to create it
       this.props.store.addBlock(
-        'affine:transcription',
+        'cloud-notes:transcription',
         {
           transcription: {},
         },
@@ -206,14 +206,14 @@ export class AudioAttachmentBlock extends Entity<AttachmentBlockModel> {
       collapsed: boolean = false
     ) => {
       const calloutId = this.props.store.addBlock(
-        'affine:callout',
+        'cloud-notes:callout',
         {
           emoji,
         },
         this.transcriptionBlock$.value?.id
       );
       this.props.store.addBlock(
-        'affine:paragraph',
+        'cloud-notes:paragraph',
         {
           type: 'h6',
           collapsed,
@@ -250,7 +250,7 @@ export class AudioAttachmentBlock extends Entity<AttachmentBlockModel> {
           },
         ];
         this.props.store.addBlock(
-          'affine:paragraph',
+          'cloud-notes:paragraph',
           {
             text: new Text(deltaInserts),
           },

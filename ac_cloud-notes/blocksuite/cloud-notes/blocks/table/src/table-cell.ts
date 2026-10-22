@@ -772,7 +772,7 @@ export class TableCell extends SignalWatcher(
             this.topContenteditableElement?.host
               ? getViewportElement(this.topContenteditableElement.host)
               : null}"
-          data-parent-flavour="affine:table"
+          data-parent-flavour="cloud-notes:table"
         ></rich-text>
         ${this.renderOptionsButton()} ${this.renderColumnIndicator()}
         ${this.renderRowIndicator()}

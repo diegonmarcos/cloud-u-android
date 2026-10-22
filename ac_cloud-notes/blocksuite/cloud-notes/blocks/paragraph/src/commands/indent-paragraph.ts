@@ -56,7 +56,7 @@ export const canIndentParagraphCommand: Command<
       blockId,
       inlineIndex,
       type: 'indent',
-      flavour: 'affine:paragraph',
+      flavour: 'cloud-notes:paragraph',
     },
   });
 };
@@ -70,7 +70,7 @@ export const indentParagraphCommand: Command<{
   if (
     !indentContext ||
     indentContext.type !== 'indent' ||
-    indentContext.flavour !== 'affine:paragraph'
+    indentContext.flavour !== 'cloud-notes:paragraph'
   ) {
     console.warn(
       'you need to use `canIndentParagraph` command before running `indentParagraph` command'

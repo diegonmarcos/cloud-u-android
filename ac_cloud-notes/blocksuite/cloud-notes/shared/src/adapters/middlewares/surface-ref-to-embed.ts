@@ -17,7 +17,7 @@ export const surfaceRefToEmbed =
         // only handle surface-ref block snapshot
         if (
           payload.type !== 'block' ||
-          payload.snapshot.flavour !== 'affine:surface-ref'
+          payload.snapshot.flavour !== 'cloud-notes:surface-ref'
         )
           return;
 
@@ -27,7 +27,7 @@ export const surfaceRefToEmbed =
           // The blockId of the original surface-ref block
           const blockId = payload.snapshot.id;
           payload.snapshot.id = std.workspace.idGenerator();
-          payload.snapshot.flavour = 'affine:embed-linked-doc';
+          payload.snapshot.flavour = 'cloud-notes:embed-linked-doc';
           payload.snapshot.props = {
             pageId,
             params: {

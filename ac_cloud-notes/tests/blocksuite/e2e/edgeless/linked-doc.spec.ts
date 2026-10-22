@@ -163,7 +163,7 @@ test.describe('single edgeless element to linked doc', () => {
       }));
     });
     expect(groups.length).toBe(1);
-    expect(groups[0].children).toContain('affine:note');
+    expect(groups[0].children).toContain('cloud-notes:note');
     expect(groups[0].children).toContain('shape');
     expect(groups[0].children).toContain('connector');
     expect(groups[0].children).toContain('brush');
@@ -205,7 +205,7 @@ test.describe('single edgeless element to linked doc', () => {
     });
 
     expect(nodes).toEqual({
-      blocks: ['affine:note', 'affine:frame'].sort(),
+      blocks: ['cloud-notes:note', 'cloud-notes:frame'].sort(),
       elements: ['group', 'shape', 'connector', 'brush'].sort(),
     });
   });
@@ -253,7 +253,7 @@ test.describe('multiple edgeless elements to linked doc', () => {
       return { blocks, elements };
     });
     expect(nodes).toEqual({
-      blocks: ['affine:frame', 'affine:note'].sort(),
+      blocks: ['cloud-notes:frame', 'cloud-notes:note'].sort(),
       elements: ['shape', 'shape', 'group', 'connector', 'brush'].sort(),
     });
   });
@@ -288,7 +288,7 @@ test.describe('multiple edgeless elements to linked doc', () => {
     });
 
     expect(nodes.blocks).toHaveLength(1);
-    expect(nodes.blocks).toContain('affine:embed-synced-doc');
+    expect(nodes.blocks).toContain('cloud-notes:embed-synced-doc');
 
     expect(nodes.elements).toHaveLength(2);
     expect(nodes.elements).toContain('shape');

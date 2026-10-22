@@ -28,7 +28,7 @@ let id = 1;
  *       'mod-a': SelectAll
  *     }
  *     options: {
- *       flavour: 'affine:paragraph'
+ *       flavour: 'cloud-notes:paragraph'
  *     }
  *   }
  * });

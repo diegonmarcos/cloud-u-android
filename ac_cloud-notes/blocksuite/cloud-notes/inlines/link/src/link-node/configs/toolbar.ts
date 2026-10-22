@@ -142,7 +142,7 @@ export const builtinInlineLinkToolbarConfig = {
             const flavour =
               options?.viewType === 'card'
                 ? options.flavour
-                : 'affine:bookmark';
+                : 'cloud-notes:bookmark';
             const index = parent.children.indexOf(model);
             const props = {
               url,
@@ -311,7 +311,7 @@ export const builtinInlineLinkToolbarConfig = {
         if (!parent) return false;
 
         const schema = ctx.store.schema;
-        const bookmarkSchema = schema.flavourSchemaMap.get('affine:bookmark');
+        const bookmarkSchema = schema.flavourSchemaMap.get('cloud-notes:bookmark');
         if (!bookmarkSchema) return false;
 
         const parentSchema = schema.flavourSchemaMap.get(parent.flavour);

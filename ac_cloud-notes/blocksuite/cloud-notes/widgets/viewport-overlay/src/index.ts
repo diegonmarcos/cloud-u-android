@@ -78,7 +78,7 @@ export class CloudNotesViewportOverlayWidget extends WidgetComponent<RootBlockMo
 }
 
 export const viewportOverlayWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_VIEWPORT_OVERLAY_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_VIEWPORT_OVERLAY_WIDGET)}`
 );

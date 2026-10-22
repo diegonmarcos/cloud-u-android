@@ -17,15 +17,15 @@ describe('helpers/cloud-notes-template', () => {
 
     const pageBlock = host.store.getBlock('page');
     expect(pageBlock).toBeDefined();
-    expect(pageBlock?.flavour).toBe('affine:page');
+    expect(pageBlock?.flavour).toBe('cloud-notes:page');
 
     const noteBlock = host.store.getBlock('note');
     expect(noteBlock).toBeDefined();
-    expect(noteBlock?.flavour).toBe('affine:note');
+    expect(noteBlock?.flavour).toBe('cloud-notes:note');
 
     const paragraphBlock = host.store.getBlock('paragraph-1');
     expect(paragraphBlock).toBeDefined();
-    expect(paragraphBlock?.flavour).toBe('affine:paragraph');
+    expect(paragraphBlock?.flavour).toBe('cloud-notes:paragraph');
   });
 
   it('should handle nested blocks correctly', () => {
@@ -39,9 +39,9 @@ describe('helpers/cloud-notes-template', () => {
       </cloud-notes-page>
     `;
 
-    const noteBlocks = host.store.getBlocksByFlavour('affine:note');
-    const paragraphBlocks = host.store.getBlocksByFlavour('affine:paragraph');
-    const listBlocks = host.store.getBlocksByFlavour('affine:list');
+    const noteBlocks = host.store.getBlocksByFlavour('cloud-notes:note');
+    const paragraphBlocks = host.store.getBlocksByFlavour('cloud-notes:paragraph');
+    const listBlocks = host.store.getBlocksByFlavour('cloud-notes:list');
 
     expect(noteBlocks.length).toBe(1);
     expect(paragraphBlocks.length).toBe(2);
@@ -52,9 +52,9 @@ describe('helpers/cloud-notes-template', () => {
       host.store.getBlock(noteBlock.id)?.model.children || [];
     expect(noteChildren.length).toBe(3);
 
-    expect(noteChildren[0].flavour).toBe('affine:paragraph');
-    expect(noteChildren[1].flavour).toBe('affine:list');
-    expect(noteChildren[2].flavour).toBe('affine:paragraph');
+    expect(noteChildren[0].flavour).toBe('cloud-notes:paragraph');
+    expect(noteChildren[1].flavour).toBe('cloud-notes:list');
+    expect(noteChildren[2].flavour).toBe('cloud-notes:paragraph');
   });
 
   it('should handle empty blocks correctly', () => {
@@ -66,7 +66,7 @@ describe('helpers/cloud-notes-template', () => {
       </cloud-notes-page>
     `;
 
-    const paragraphBlocks = host.store.getBlocksByFlavour('affine:paragraph');
+    const paragraphBlocks = host.store.getBlocksByFlavour('cloud-notes:paragraph');
     expect(paragraphBlocks.length).toBe(1);
 
     const paragraphBlock = host.store.getBlock(paragraphBlocks[0].id);

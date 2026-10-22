@@ -194,7 +194,7 @@ export class EdgelessTextBlockComponent extends GfxBlockComponent<EdgelessTextBl
           !matchModels(firstChild, [ListBlockModel, ParagraphBlockModel])
         ) {
           newParagraphId = this.store.addBlock(
-            'affine:paragraph',
+            'cloud-notes:paragraph',
             {},
             this.model.id,
             0
@@ -207,7 +207,7 @@ export class EdgelessTextBlockComponent extends GfxBlockComponent<EdgelessTextBl
           !matchModels(lastChild, [ListBlockModel, ParagraphBlockModel])
         ) {
           newParagraphId = this.store.addBlock(
-            'affine:paragraph',
+            'cloud-notes:paragraph',
             {},
             this.model.id
           );
@@ -475,7 +475,7 @@ export const EdgelessTextInteraction =
 
                   if (model.children.length === 0) {
                     const blockId = std.store.addBlock(
-                      'affine:paragraph',
+                      'cloud-notes:paragraph',
                       { type: 'text' },
                       model.id
                     );

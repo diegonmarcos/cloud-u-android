@@ -68,13 +68,13 @@ describe('DatabaseManager', () => {
   beforeEach(() => {
     doc = createTestDoc();
 
-    rootId = doc.addBlock('affine:page', {
+    rootId = doc.addBlock('cloud-notes:page', {
       title: new Text('database test'),
     });
-    noteBlockId = doc.addBlock('affine:note', {}, rootId);
+    noteBlockId = doc.addBlock('cloud-notes:note', {}, rootId);
 
     databaseBlockId = doc.addBlock(
-      'affine:database',
+      'cloud-notes:database',
       {
         columns: [],
         titleColumn: 'Title',
@@ -110,14 +110,14 @@ describe('DatabaseManager', () => {
     });
 
     p1 = doc.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       {
         text: new Text('text1'),
       },
       databaseBlockId
     );
     p2 = doc.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       {
         text: new Text('text2'),
       },
@@ -169,7 +169,7 @@ describe('DatabaseManager', () => {
 
   test('getCell', () => {
     const modelId = doc.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       {
         text: new Text('paragraph'),
       },
@@ -197,7 +197,7 @@ describe('DatabaseManager', () => {
 
   test('updateCell', () => {
     const newRowId = doc.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       {
         text: new Text('text3'),
       },

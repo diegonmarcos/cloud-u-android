@@ -27,7 +27,7 @@ export const CLOUD_NOTES_PAGE_DRAGGING_AREA_WIDGET =
   'cloud-notes-page-dragging-area-widget';
 
 export class CloudNotesPageDraggingAreaWidget extends WidgetComponent<RootBlockModel> {
-  static excludeFlavours: string[] = ['affine:note', 'affine:surface'];
+  static excludeFlavours: string[] = ['cloud-notes:note', 'cloud-notes:surface'];
 
   private _dragging = false;
 
@@ -319,7 +319,7 @@ export class CloudNotesPageDraggingAreaWidget extends WidgetComponent<RootBlockM
 }
 
 export const pageDraggingAreaWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_PAGE_DRAGGING_AREA_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_PAGE_DRAGGING_AREA_WIDGET)}`
 );

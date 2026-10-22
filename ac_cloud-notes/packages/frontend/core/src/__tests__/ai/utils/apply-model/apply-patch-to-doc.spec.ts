@@ -100,7 +100,7 @@ describe('applyPatchToDoc', () => {
         after: 'paragraph-1',
         block: {
           id: 'paragraph-3',
-          type: 'affine:paragraph',
+          type: 'cloud-notes:paragraph',
           content: 'Inserted',
         },
       },

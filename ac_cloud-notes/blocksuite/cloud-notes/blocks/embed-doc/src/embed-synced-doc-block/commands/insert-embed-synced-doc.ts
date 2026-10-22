@@ -10,7 +10,7 @@ export const insertEmbedSyncedDocCommand: Command<
   { blockId: string }
 > = (ctx, next) => {
   const { docId, params, std } = ctx;
-  const flavour = 'affine:embed-synced-doc';
+  const flavour = 'cloud-notes:embed-synced-doc';
   const targetStyle: EmbedCardStyle = 'syncedDoc';
   const props: Record<string, unknown> = { pageId: docId };
   if (params) props.params = params;

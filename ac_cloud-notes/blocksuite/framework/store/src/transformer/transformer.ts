@@ -2,6 +2,7 @@ import { DisposableGroup } from '@blocksuite/global/disposable';
 import { BlockSuiteError, ErrorCode } from '@blocksuite/global/exceptions';
 import { nextTick } from '@blocksuite/global/utils';
 import { Subject } from 'rxjs';
+import { normalizeFlavour } from '../utils/legacy-flavour.js';
 
 import { BlockModel } from '../model/block/block-model.js';
 import { type DraftModel, toDraftModel } from '../model/block/draft.js';
@@ -216,7 +217,8 @@ export class Transformer {
 
   snapshotToModelData = async (snapshot: BlockSnapshot) => {
     try {
-      const { children, flavour, props, id } = snapshot;
+      const { children, props, id } = snapshot;
+      const flavour = normalizeFlavour(snapshot.flavour);
 
       const schema = this._getSchema(flavour);
       const snapshotLeaf = {
@@ -258,7 +260,7 @@ export class Transformer {
       // Create a temporary root snapshot to encompass all content blocks
       const tmpRootSnapshot: BlockSnapshot = {
         id: 'temporary-root',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {},
         type: 'block',
         children: content,
@@ -444,13 +446,14 @@ export class Transformer {
     flat: FlatSnapshot
   ): Promise<DraftModel | undefined> {
     try {
-      const { children, flavour } = flat.snapshot;
+      const { children } = flat.snapshot;
+      const flavour = normalizeFlavour(flat.snapshot.flavour);
       const schema = this._getSchema(flavour);
       const transformer = this._getTransformer(schema);
       const { props } = await transformer.fromSnapshot({
         json: {
           id: flat.snapshot.id,
-          flavour: flat.snapshot.flavour,
+          flavour,
           props: flat.snapshot.props,
         },
         assets: this._assetsManager,
@@ -459,7 +462,7 @@ export class Transformer {
 
       return {
         id: flat.snapshot.id,
-        flavour: flat.snapshot.flavour,
+        flavour,
         children: [],
         props,
       } as unknown as DraftModel;
@@ -533,7 +536,7 @@ export class Transformer {
 
       const actualIndex =
         startIndex !== undefined ? startIndex + index : undefined;
-      doc.addBlock(flavour, { id, ...props }, parentId, actualIndex);
+      doc.addBlock(normalizeFlavour(flavour), { id, ...props }, parentId, actualIndex);
 
       const model = doc.getBlock(id)?.model;
       if (!model) {

@@ -20,7 +20,7 @@ describe('notion-text to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[0]',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -32,7 +32,7 @@ describe('notion-text to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[1]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -117,7 +117,7 @@ describe('notion-text to snapshot', () => {
         {
           type: 'block',
           id: 'matchesReplaceMap[0]',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -129,7 +129,7 @@ describe('notion-text to snapshot', () => {
             {
               type: 'block',
               id: 'matchesReplaceMap[1]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {

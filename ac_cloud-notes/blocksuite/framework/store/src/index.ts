@@ -5,6 +5,7 @@ export * from './reactive';
 export * from './schema';
 export * from './transformer';
 export { type IdGenerator, nanoid, uuidv4 } from './utils/id-generator';
+export * from './utils/legacy-flavour';
 export * from './yjs';
 
 const env = (typeof globalThis !== 'undefined'

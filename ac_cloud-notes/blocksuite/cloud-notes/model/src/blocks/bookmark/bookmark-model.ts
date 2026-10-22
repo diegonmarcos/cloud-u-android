@@ -57,17 +57,17 @@ const defaultBookmarkProps: BookmarkBlockProps = {
 };
 
 export const BookmarkBlockSchema = defineBlockSchema({
-  flavour: 'affine:bookmark',
+  flavour: 'cloud-notes:bookmark',
   props: (): BookmarkBlockProps => defaultBookmarkProps,
   metadata: {
     version: 1,
     role: 'content',
     parent: [
-      'affine:note',
-      'affine:surface',
-      'affine:edgeless-text',
-      'affine:paragraph',
-      'affine:list',
+      'cloud-notes:note',
+      'cloud-notes:surface',
+      'cloud-notes:edgeless-text',
+      'cloud-notes:paragraph',
+      'cloud-notes:list',
     ],
   },
   toModel: () => new BookmarkBlockModel(),

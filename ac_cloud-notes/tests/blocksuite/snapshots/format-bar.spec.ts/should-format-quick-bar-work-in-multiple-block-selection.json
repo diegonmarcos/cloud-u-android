@@ -5,7 +5,7 @@
         {
           "children": [
           ],
-          "flavour": "affine:paragraph",
+          "flavour": "cloud-notes:paragraph",
           "id": "2",
           "props": {
             "collapsed": false,
@@ -29,7 +29,7 @@
         {
           "children": [
           ],
-          "flavour": "affine:paragraph",
+          "flavour": "cloud-notes:paragraph",
           "id": "3",
           "props": {
             "collapsed": false,
@@ -53,7 +53,7 @@
         {
           "children": [
           ],
-          "flavour": "affine:paragraph",
+          "flavour": "cloud-notes:paragraph",
           "id": "4",
           "props": {
             "collapsed": false,
@@ -75,7 +75,7 @@
           "version": 1
         }
       ],
-      "flavour": "affine:note",
+      "flavour": "cloud-notes:note",
       "id": "1",
       "props": {
         "background": {
@@ -100,7 +100,7 @@
       "version": 1
     }
   ],
-  "flavour": "affine:page",
+  "flavour": "cloud-notes:page",
   "id": "0",
   "props": {
     "title": {

@@ -124,7 +124,7 @@ export class CloudNotesScrollAnchoringWidget extends WidgetComponent {
     const viewport = controller.viewport;
     const blockComponent = this.std.view.getBlock(id);
     const parentComponent = blockComponent?.parentComponent;
-    if (parentComponent && parentComponent.flavour === 'affine:note') {
+    if (parentComponent && parentComponent.flavour === 'cloud-notes:note') {
       const { left: x, width: w } = parentComponent.getBoundingClientRect();
       const { top: y, height: h } = blockComponent.getBoundingClientRect();
       const coord = viewport.toModelCoordFromClientCoord([x, y]);

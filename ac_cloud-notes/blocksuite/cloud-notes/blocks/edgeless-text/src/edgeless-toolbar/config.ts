@@ -14,6 +14,6 @@ export const edgelessTextToolbarConfig = {
 } as const satisfies ToolbarModuleConfig;
 
 export const edgelessTextToolbarExtension = ToolbarModuleExtension({
-  id: BlockFlavourIdentifier('affine:surface:edgeless-text'),
+  id: BlockFlavourIdentifier('cloud-notes:surface:edgeless-text'),
   config: edgelessTextToolbarConfig,
 });

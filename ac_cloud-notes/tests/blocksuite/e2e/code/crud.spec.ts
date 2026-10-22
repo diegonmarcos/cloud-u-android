@@ -39,7 +39,7 @@ test('use debug menu can create code block', async ({ page }) => {
   await initEmptyParagraphState(page);
 
   await focusRichText(page);
-  await updateBlockType(page, 'affine:code');
+  await updateBlockType(page, 'cloud-notes:code');
 
   const locator = page.locator('cloud-notes-code');
   await expect(locator).toBeVisible();

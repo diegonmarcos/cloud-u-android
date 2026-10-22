@@ -21,14 +21,14 @@ Here is an example demonstrating the manipulation of the block tree through thes
 
 ```ts
 // The first block will be added as root
-const rootId = doc.addBlock('affine:page');
+const rootId = doc.addBlock('cloud-notes:page');
 
 // Insert second block as a child of the root with empty props
 const props = {};
-const noteId = doc.addBlock('affine:note', props, rootId);
+const noteId = doc.addBlock('cloud-notes:note', props, rootId);
 
 // You can also provide an optional `parentIndex`
-const paragraphId = doc.addBlock('affine:paragraph', props, noteId, 0);
+const paragraphId = doc.addBlock('cloud-notes:paragraph', props, noteId, 0);
 
 const modelA = doc.root!.children[0].children[0];
 const modelB = doc.getBlockById(paragraphId);
@@ -53,8 +53,8 @@ The block tree hierarchy is specific to the preset editors. At the framework lev
 All block operations on `doc` are automatically recorded and can be reversed using [`doc.undo()`](/api/@blocksuite/store/classes/Doc.html#undo) and [`doc.redo()`](/api/@blocksuite/store/classes/Doc.html#redo). By default, operations within a certain period are automatically merged into a single record. However, you can explicitly add a history record during operations by inserting [`doc.captureSync()`](/api/@blocksuite/store/classes/Doc.html#capturesync) between block operations:
 
 ```ts
-const rootId = doc.addBlock('affine:page');
-const noteId = doc.addBlock('affine:note', props, rootId);
+const rootId = doc.addBlock('cloud-notes:page');
+const noteId = doc.addBlock('cloud-notes:note', props, rootId);
 
 // Capture a history record now
 doc.captureSync();
@@ -157,7 +157,7 @@ This direct usage is not very convenient. Also, as BlockSuite encourages complet
 In BlockSuite, service is used for registering state or methods specific to a certain block type. For example, instead of implementing the `getFirstSelectedModel` method yourself, you can use shortcuts predefined on `RootService`:
 
 ```ts
-const rootService = host.spec.getService('affine:page');
+const rootService = host.spec.getService('cloud-notes:page');
 
 // Get models of selected blocks
 rootService.selectedModel;
@@ -350,7 +350,7 @@ const props = {
 };
 
 // The 'cloud-notes' prefix is kept by default, but you can also override it.
-doc.addBlock('affine:embed-github', props, parentId);
+doc.addBlock('cloud-notes:embed-github', props, parentId);
 ```
 
 You can view the [source code](https://github.com/toeverything/blocksuite/tree/master/packages/blocks/src/embed-github-block) for the above example in BlockSuite repository.

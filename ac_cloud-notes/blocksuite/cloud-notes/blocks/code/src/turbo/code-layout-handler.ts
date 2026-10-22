@@ -11,7 +11,7 @@ import type { BlockModel } from '@blocksuite/store';
 import type { CodeLayout } from './code-painter.worker';
 
 export class CodeLayoutHandlerExtension extends BlockLayoutHandlerExtension<CodeLayout> {
-  readonly blockType = 'affine:code';
+  readonly blockType = 'cloud-notes:code';
 
   static override setup(di: Container) {
     di.addImpl(
@@ -37,7 +37,7 @@ export class CodeLayoutHandlerExtension extends BlockLayoutHandlerExtension<Code
 
     const { zoom, viewScale } = viewportRecord;
     const codeLayout: CodeLayout = {
-      type: 'affine:code',
+      type: 'cloud-notes:code',
       blockId: model.id,
       rect: { x: 0, y: 0, w: 0, h: 0 },
     };

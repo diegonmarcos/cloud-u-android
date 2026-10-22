@@ -189,11 +189,11 @@ export const shapeMindmapToolbarConfig = {
 } as const satisfies ToolbarModuleConfig;
 
 export const mindmapToolbarExtension = ToolbarModuleExtension({
-  id: BlockFlavourIdentifier('affine:surface:mindmap'),
+  id: BlockFlavourIdentifier('cloud-notes:surface:mindmap'),
   config: mindmapToolbarConfig,
 });
 
 export const shapeMindmapToolbarExtension = ToolbarModuleExtension({
-  id: BlockFlavourIdentifier('custom:affine:surface:shape'),
+  id: BlockFlavourIdentifier('custom:cloud-notes:surface:shape'),
   config: shapeMindmapToolbarConfig,
 });

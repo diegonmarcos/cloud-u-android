@@ -20,21 +20,21 @@ export const database: InitFn = (collection: Workspace, id: string) => {
 
   doc.load(() => {
     // Add root block and surface block at root level
-    const rootId = store.addBlock('affine:page', {
+    const rootId = store.addBlock('cloud-notes:page', {
       title: new Text('BlockSuite Playground'),
     });
-    store.addBlock('affine:surface', {}, rootId);
+    store.addBlock('cloud-notes:surface', {}, rootId);
 
     // Add note block inside root block
-    const noteId = store.addBlock('affine:note', {}, rootId);
-    const pId = store.addBlock('affine:paragraph', {}, noteId);
+    const noteId = store.addBlock('cloud-notes:note', {}, rootId);
+    const pId = store.addBlock('cloud-notes:paragraph', {}, noteId);
     const model = store.getModelById(pId);
     if (!model) {
       throw new Error('model is not found');
     }
     const addDatabase = (title: string, group = true) => {
       const databaseId = store.addBlock(
-        'affine:database',
+        'cloud-notes:database',
         {
           columns: [],
           cells: {},
@@ -79,7 +79,7 @@ export const database: InitFn = (collection: Workspace, id: string) => {
       ];
       paragraphTypes.forEach(type => {
         const id = store.addBlock(
-          'affine:paragraph',
+          'cloud-notes:paragraph',
           { type: type, text: new Text(`Paragraph type ${type}`) },
           databaseId
         );
@@ -95,7 +95,7 @@ export const database: InitFn = (collection: Workspace, id: string) => {
 
       listTypes.forEach(type => {
         const id = store.addBlock(
-          'affine:list',
+          'cloud-notes:list',
           { type: type, text: new Text(`List type ${type}`) },
           databaseId
         );
@@ -108,11 +108,11 @@ export const database: InitFn = (collection: Workspace, id: string) => {
         }
       });
       // Add a paragraph after database
-      store.addBlock('affine:paragraph', {}, noteId);
-      store.addBlock('affine:paragraph', {}, noteId);
-      store.addBlock('affine:paragraph', {}, noteId);
-      store.addBlock('affine:paragraph', {}, noteId);
-      store.addBlock('affine:paragraph', {}, noteId);
+      store.addBlock('cloud-notes:paragraph', {}, noteId);
+      store.addBlock('cloud-notes:paragraph', {}, noteId);
+      store.addBlock('cloud-notes:paragraph', {}, noteId);
+      store.addBlock('cloud-notes:paragraph', {}, noteId);
+      store.addBlock('cloud-notes:paragraph', {}, noteId);
       datasource.viewManager.viewAdd(viewPresets.kanbanViewMeta.type);
 
       store.resetHistory();

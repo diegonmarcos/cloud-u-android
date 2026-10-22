@@ -178,7 +178,7 @@ export function copyAsImage(std: BlockStdScope) {
       const { zoom } = gfx.viewport;
       const isFrameSelected =
         selected.length === 1 &&
-        (selected[0] as GfxBlockElementModel).flavour === 'affine:frame';
+        (selected[0] as GfxBlockElementModel).flavour === 'cloud-notes:frame';
       const margin = isFrameSelected ? -2 : MARGIN * zoom;
 
       gfx.selection.clear();

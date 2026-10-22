@@ -733,10 +733,10 @@ describe('edgeless canvas budget', () => {
         roots: [
           {
             blockId: 'root',
-            type: 'affine:page',
+            type: 'cloud-notes:page',
             layout: {
               blockId: 'root',
-              type: 'affine:page',
+              type: 'cloud-notes:page',
               rect: { x: 0, y: 0, w: 50, h: 20 },
             },
             children: [],

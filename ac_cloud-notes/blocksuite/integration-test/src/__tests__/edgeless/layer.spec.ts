@@ -915,7 +915,7 @@ test('the actual rendering z-index should satisfy the logic order of their index
   expect(blocks.length).toBe(indexes.length + 1);
 
   blocks
-    .filter(block => block.flavour !== 'affine:surface')
+    .filter(block => block.flavour !== 'cloud-notes:surface')
     .forEach((block, index) => {
       if (index === blocks.length - 1) return;
 

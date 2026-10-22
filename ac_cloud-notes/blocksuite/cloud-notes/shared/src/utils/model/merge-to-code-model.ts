@@ -24,7 +24,7 @@ export function mergeToCodeModel(models: BlockModel[]) {
   models.forEach(model => doc.deleteBlock(model));
 
   const id = doc.addBlock(
-    'affine:code',
+    'cloud-notes:code',
     { text: new Text(text) },
     parent,
     index

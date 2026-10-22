@@ -18,7 +18,7 @@ export const embedLoomSlashMenuConfig: SlashMenuConfig = {
       },
       group: '4_Content & Media@9',
       when: ({ model }) =>
-        model.store.schema.flavourSchemaMap.has('affine:embed-loom'),
+        model.store.schema.flavourSchemaMap.has('cloud-notes:embed-loom'),
       action: ({ std, model }) => {
         (async () => {
           const { host } = std;

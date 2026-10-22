@@ -6,10 +6,10 @@ export async function cloudNotesSnapshot(collection: Workspace, id: string) {
   doc.load();
   const store = doc.getStore();
   // Add root block and surface block at root level
-  const rootId = store.addBlock('affine:page', {
+  const rootId = store.addBlock('cloud-notes:page', {
     title: new Text('Cloud Notes Snapshot Test'),
   });
-  store.addBlock('affine:surface', {}, rootId);
+  store.addBlock('cloud-notes:surface', {}, rootId);
 
   const path = '/apps/starter/data/snapshots/cloud-notes-default.zip';
   const response = await fetch(path);

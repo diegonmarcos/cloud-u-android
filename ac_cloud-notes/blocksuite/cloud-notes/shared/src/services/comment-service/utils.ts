@@ -30,7 +30,7 @@ export function findAllCommentedElements(store: Store) {
   type CommentedElement = GfxPrimitiveElementModel & {
     comments: Record<CommentId, boolean>;
   };
-  const surface = store.getModelsByFlavour('affine:surface')[0] as
+  const surface = store.getModelsByFlavour('cloud-notes:surface')[0] as
     | SurfaceBlockModel
     | undefined;
   if (!surface) return [];

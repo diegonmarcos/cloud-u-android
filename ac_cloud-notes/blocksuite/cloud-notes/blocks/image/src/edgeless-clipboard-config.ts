@@ -2,7 +2,7 @@ import { EdgelessClipboardConfig } from '@blocksuite/cloud-notes-block-surface';
 import { type BlockSnapshot } from '@blocksuite/store';
 
 export class EdgelessClipboardImageConfig extends EdgelessClipboardConfig {
-  static override readonly key = 'affine:image';
+  static override readonly key = 'cloud-notes:image';
 
   override async createBlock(image: BlockSnapshot) {
     const { xywh, rotate, sourceId, size, width, height, caption } =
@@ -14,7 +14,7 @@ export class EdgelessClipboardImageConfig extends EdgelessClipboardConfig {
       return null;
     }
     return this.crud.addBlock(
-      'affine:image',
+      'cloud-notes:image',
       {
         caption,
         sourceId,

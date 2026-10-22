@@ -83,19 +83,19 @@ export class MixTextAdapter extends BaseAdapter<MixText> {
         buffer += '\n';
       }
       switch (o.node.flavour) {
-        case 'affine:code': {
+        case 'cloud-notes:code': {
           buffer += text.delta.map(delta => delta.insert).join('');
           break;
         }
-        case 'affine:paragraph': {
+        case 'cloud-notes:paragraph': {
           buffer += text.delta.map(delta => delta.insert).join('');
           break;
         }
-        case 'affine:list': {
+        case 'cloud-notes:list': {
           buffer += text.delta.map(delta => delta.insert).join('');
           break;
         }
-        case 'affine:divider': {
+        case 'cloud-notes:divider': {
           buffer += '---';
           break;
         }
@@ -158,7 +158,7 @@ export class MixTextAdapter extends BaseAdapter<MixText> {
     return {
       type: 'block',
       id: nanoid(),
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -170,7 +170,7 @@ export class MixTextAdapter extends BaseAdapter<MixText> {
         return {
           type: 'block',
           id: nanoid(),
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -201,7 +201,7 @@ export class MixTextAdapter extends BaseAdapter<MixText> {
       blocks: {
         type: 'block',
         id: nanoid(),
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -216,7 +216,7 @@ export class MixTextAdapter extends BaseAdapter<MixText> {
           {
             type: 'block',
             id: nanoid(),
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -225,7 +225,7 @@ export class MixTextAdapter extends BaseAdapter<MixText> {
           {
             type: 'block',
             id: nanoid(),
-            flavour: 'affine:note',
+            flavour: 'cloud-notes:note',
             props: {
               xywh: '[0,0,800,95]',
               background: DefaultTheme.noteBackgrounColor,
@@ -237,7 +237,7 @@ export class MixTextAdapter extends BaseAdapter<MixText> {
               return {
                 type: 'block',
                 id: nanoid(),
-                flavour: 'affine:paragraph',
+                flavour: 'cloud-notes:paragraph',
                 props: {
                   type: 'text',
                   text: {
@@ -278,7 +278,7 @@ export class MixTextAdapter extends BaseAdapter<MixText> {
       const blockSnapshotRoot = {
         type: 'block',
         id: nanoid(),
-        flavour: 'affine:note',
+        flavour: 'cloud-notes:note',
         props: {
           xywh: '[0,0,800,95]',
           background: DefaultTheme.noteBackgrounColor,
@@ -295,11 +295,11 @@ export class MixTextAdapter extends BaseAdapter<MixText> {
       );
       walker.setEnter((o, context) => {
         switch (o.node.flavour) {
-          case 'affine:note': {
+          case 'cloud-notes:note': {
             break;
           }
-          case 'affine:paragraph': {
-            if (o.parent?.node.flavour !== 'affine:note') {
+          case 'cloud-notes:paragraph': {
+            if (o.parent?.node.flavour !== 'cloud-notes:note') {
               context.openNode({ ...o.node, children: [] });
               break;
             }
@@ -333,7 +333,7 @@ export class MixTextAdapter extends BaseAdapter<MixText> {
       });
       walker.setLeave((o, context) => {
         switch (o.node.flavour) {
-          case 'affine:note': {
+          case 'cloud-notes:note': {
             break;
           }
           default: {

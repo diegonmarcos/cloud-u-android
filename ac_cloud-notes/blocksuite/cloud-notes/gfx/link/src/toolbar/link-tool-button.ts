@@ -34,7 +34,7 @@ export class EdgelessLinkToolButton extends QuickToolMixin(LitElement) {
           mode: 'edgeless',
           onSave: url => {
             insertEmbedCard(this.edgeless.std, {
-              flavour: 'affine:bookmark',
+              flavour: 'cloud-notes:bookmark',
               targetStyle: 'vertical',
               props: { url },
             });

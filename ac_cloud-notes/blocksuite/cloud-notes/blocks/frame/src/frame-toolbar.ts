@@ -208,7 +208,7 @@ const createFrameToolbarConfig = (flavour: string): ExtensionType => {
   const name = flavour.split(':').pop();
 
   return ToolbarModuleExtension({
-    id: BlockFlavourIdentifier(`affine:surface:${name}`),
+    id: BlockFlavourIdentifier(`cloud-notes:surface:${name}`),
     config: builtinSurfaceToolbarConfig,
   });
 };

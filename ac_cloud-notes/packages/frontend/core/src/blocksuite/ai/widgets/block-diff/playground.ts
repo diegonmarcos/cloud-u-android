@@ -224,7 +224,7 @@ export class BlockDiffPlayground extends WidgetComponent {
 }
 
 export const blockDiffPlayground = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_BLOCK_DIFF_PLAYGROUND,
   literal`${unsafeStatic(CLOUD_NOTES_BLOCK_DIFF_PLAYGROUND)}`
 );

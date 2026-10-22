@@ -27,7 +27,7 @@ export const draftSelectedModelsCommand: Command<
     const modelMap = new Map(draftedModels.map(model => [model.id, model]));
 
     const traverse = (model: DraftModel) => {
-      const isDatabase = model.flavour === 'affine:database';
+      const isDatabase = model.flavour === 'cloud-notes:database';
       const children = isDatabase
         ? model.children
         : model.children.filter(child => modelMap.has(child.id));

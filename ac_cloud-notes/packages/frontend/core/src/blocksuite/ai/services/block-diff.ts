@@ -178,7 +178,7 @@ export class BlockDiffService extends Extension implements BlockDiffProvider {
   }
 
   getBlockIndexById(doc: Store, blockId: string): number {
-    const notes = doc.getBlocksByFlavour('affine:note');
+    const notes = doc.getBlocksByFlavour('cloud-notes:note');
     if (notes.length === 0) return 0;
     const note = notes[0].model;
     return note.children.findIndex(child => child.id === blockId);

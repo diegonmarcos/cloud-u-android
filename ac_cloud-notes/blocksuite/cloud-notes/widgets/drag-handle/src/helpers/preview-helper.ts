@@ -79,18 +79,18 @@ export class PreviewHelper {
       {
         setup(di) {
           di.override(
-            BlockViewIdentifier('affine:database'),
+            BlockViewIdentifier('cloud-notes:database'),
             () => literal`cloud-notes-dnd-preview-database`
           );
         },
       } as ExtensionType,
       {
         setup(di) {
-          di.override(BlockViewIdentifier('affine:image'), () => {
+          di.override(BlockViewIdentifier('cloud-notes:image'), () => {
             return (model: BlockModel) => {
               const parent = model.store.getParent(model.id);
 
-              if (parent?.flavour === 'affine:surface') {
+              if (parent?.flavour === 'cloud-notes:surface') {
                 return literal`cloud-notes-edgeless-placeholder-preview-image`;
               }
 
@@ -133,7 +133,7 @@ export class PreviewHelper {
     }[] = [];
 
     snapshot.content.forEach(block => {
-      if (block.flavour === 'affine:surface') {
+      if (block.flavour === 'cloud-notes:surface') {
         Object.values(
           block.props.elements as Record<string, { id: string; type: string }>
         ).forEach(elem => {

@@ -41,7 +41,7 @@ export type NoteToolOption = {
 };
 
 export class NoteTool extends BaseTool<NoteToolOption> {
-  static override toolName = 'affine:note';
+  static override toolName = 'cloud-notes:note';
 
   private _draggingNoteOverlay: DraggingNoteOverlay | null = null;
 
@@ -109,7 +109,7 @@ export class NoteTool extends BaseTool<NoteToolOption> {
 
   override activate() {
     const attributes =
-      this.std.get(EditPropsStore).lastProps$.value['affine:note'];
+      this.std.get(EditPropsStore).lastProps$.value['cloud-notes:note'];
     const background = attributes.background;
     this._noteOverlay = new NoteOverlay(this.gfx, background);
     this._noteOverlay.text = this.activatedOption.tip;
@@ -173,7 +173,7 @@ export class NoteTool extends BaseTool<NoteToolOption> {
     this._clearOverlay();
 
     const attributes =
-      this.std.get(EditPropsStore).lastProps$.value['affine:note'];
+      this.std.get(EditPropsStore).lastProps$.value['cloud-notes:note'];
     const background = attributes.background;
     this._draggingNoteOverlay = new DraggingNoteOverlay(this.gfx, background);
     this._surfaceComponent?.renderer.addOverlay(this._draggingNoteOverlay);
@@ -254,7 +254,7 @@ function addNote(
   requestAnimationFrame(() => {
     const blocks =
       (doc.root?.children.filter(
-        child => child.flavour === 'affine:note'
+        child => child.flavour === 'cloud-notes:note'
       ) as GfxBlockElementModel[]) ?? [];
     const element = blocks.find(b => b.id === noteId);
     if (element) {
@@ -304,7 +304,7 @@ function addNoteAtPoint(
   } = options;
   const [x, y] = gfx.viewport.toModelCoord(point.x, point.y);
   const blockId = crud.addBlock(
-    'affine:note',
+    'cloud-notes:note',
     {
       xywh: serializeXYWH(
         x - offsetX * scale,

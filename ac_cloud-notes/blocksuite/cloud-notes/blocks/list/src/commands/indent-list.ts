@@ -81,7 +81,7 @@ export const canIndentListCommand: Command<
       blockId,
       inlineIndex,
       type: 'indent',
-      flavour: 'affine:list',
+      flavour: 'cloud-notes:list',
     },
   });
 };
@@ -93,7 +93,7 @@ export const indentListCommand: Command<{
   if (
     !indentContext ||
     indentContext.type !== 'indent' ||
-    indentContext.flavour !== 'affine:list'
+    indentContext.flavour !== 'cloud-notes:list'
   ) {
     console.warn(
       'you need to use `canIndentList` command before running `indentList` command'

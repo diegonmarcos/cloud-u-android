@@ -13,7 +13,7 @@ import type { BlockModel } from '@blocksuite/store';
 import type { ListLayout } from './list-painter.worker';
 
 export class ListLayoutHandlerExtension extends BlockLayoutHandlerExtension<ListLayout> {
-  readonly blockType = 'affine:list';
+  readonly blockType = 'cloud-notes:list';
 
   static override setup(di: Container) {
     di.addImpl(
@@ -41,7 +41,7 @@ export class ListLayoutHandlerExtension extends BlockLayoutHandlerExtension<List
 
     const { zoom, viewScale } = viewportRecord;
     const list: ListLayout = {
-      type: 'affine:list',
+      type: 'cloud-notes:list',
       items: [],
       blockId: model.id,
       rect: { x: 0, y: 0, w: 0, h: 0 },

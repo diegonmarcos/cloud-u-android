@@ -18,7 +18,7 @@ export const attachmentSlashMenuConfig: SlashMenuConfig = {
       searchAlias: ['file'],
       group: '4_Content & Media@3',
       when: ({ model }) =>
-        model.store.schema.flavourSchemaMap.has('affine:attachment'),
+        model.store.schema.flavourSchemaMap.has('cloud-notes:attachment'),
       action: ({ std, model }) => {
         (async () => {
           const file = await openSingleFileWith();
@@ -41,7 +41,7 @@ export const attachmentSlashMenuConfig: SlashMenuConfig = {
       },
       group: '4_Content & Media@4',
       when: ({ model }) =>
-        model.store.schema.flavourSchemaMap.has('affine:attachment'),
+        model.store.schema.flavourSchemaMap.has('cloud-notes:attachment'),
       action: ({ std, model }) => {
         (async () => {
           const file = await openSingleFileWith();

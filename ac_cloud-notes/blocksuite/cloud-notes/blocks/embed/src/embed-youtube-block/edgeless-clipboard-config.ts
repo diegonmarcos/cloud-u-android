@@ -2,7 +2,7 @@ import { EdgelessClipboardConfig } from '@blocksuite/cloud-notes-block-surface';
 import { type BlockSnapshot } from '@blocksuite/store';
 
 export class EdgelessClipboardEmbedYoutubeConfig extends EdgelessClipboardConfig {
-  static override readonly key = 'affine:embed-youtube';
+  static override readonly key = 'cloud-notes:embed-youtube';
 
   override createBlock(youtubeEmbed: BlockSnapshot): string | null {
     if (!this.surface) return null;
@@ -21,7 +21,7 @@ export class EdgelessClipboardEmbedYoutubeConfig extends EdgelessClipboardConfig
     } = youtubeEmbed.props;
 
     const embedYoutubeId = this.crud.addBlock(
-      'affine:embed-youtube',
+      'cloud-notes:embed-youtube',
       {
         xywh,
         style,

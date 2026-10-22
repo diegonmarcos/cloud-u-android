@@ -808,7 +808,7 @@ test('indexer defers indexed clock persistence until a refresh happens on delaye
       title: 'Doc 1',
       summary: 'summary',
       blocks: [
-        { blockId: 'block-1', flavour: 'affine:image', blob: ['blob-1'] },
+        { blockId: 'block-1', flavour: 'cloud-notes:image', blob: ['blob-1'] },
       ],
     })
   );
@@ -873,7 +873,7 @@ test('indexer completion waits for the current job to finish', async () => {
         title: 'Doc 1',
         summary: 'summary',
         blocks: [
-          { blockId: 'block-1', flavour: 'affine:image', blob: ['blob-1'] },
+          { blockId: 'block-1', flavour: 'cloud-notes:image', blob: ['blob-1'] },
         ],
       };
     }

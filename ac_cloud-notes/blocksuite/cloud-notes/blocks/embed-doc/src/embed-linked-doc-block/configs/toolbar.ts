@@ -219,7 +219,7 @@ const conversionsActionGroup = {
           const editorSetting = ctx.std.getOptional(EditorSettingProvider);
           editorSetting?.set?.(
             'docCanvasPreferView',
-            'affine:embed-synced-doc'
+            'cloud-notes:embed-synced-doc'
           );
         }
 
@@ -501,7 +501,7 @@ export const createBuiltinToolbarConfigExtension = (
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier(`affine:surface:${name}`),
+      id: BlockFlavourIdentifier(`cloud-notes:surface:${name}`),
       config: builtinSurfaceToolbarConfig,
     }),
   ];

@@ -102,7 +102,7 @@ export class EdgelessNoteBackground extends SignalWatcher(
     ) {
       const [pId] = this.doc.addSiblingBlocks(
         nearestModel,
-        [{ flavour: 'affine:paragraph' }],
+        [{ flavour: 'cloud-notes:paragraph' }],
         insertPos
       );
 

@@ -76,7 +76,7 @@ describe('commands/block-crud', () => {
       const note = host.store.getBlock('note-1')?.model;
 
       const [_, { firstBlock }] = host.command.exec(getFirstBlockCommand, {
-        flavour: 'affine:list',
+        flavour: 'cloud-notes:list',
         root: note,
       });
 
@@ -96,7 +96,7 @@ describe('commands/block-crud', () => {
       const note = host.store.getBlock('note-1')?.model;
 
       const [_, { firstBlock }] = host.command.exec(getFirstBlockCommand, {
-        flavour: ['affine:list', 'affine:code'],
+        flavour: ['cloud-notes:list', 'cloud-notes:code'],
         root: note,
       });
 
@@ -117,7 +117,7 @@ describe('commands/block-crud', () => {
       const note = host.store.getBlock('note-1')?.model;
       const [_, { firstBlock }] = host.command.exec(getFirstBlockCommand, {
         role: 'content',
-        flavour: 'affine:list',
+        flavour: 'cloud-notes:list',
         root: note,
       });
 
@@ -196,7 +196,7 @@ describe('commands/block-crud', () => {
       const note = host.store.getBlock('note-1')?.model;
 
       const [_, { firstBlock }] = host.command.exec(getFirstBlockCommand, {
-        flavour: 'affine:list',
+        flavour: 'cloud-notes:list',
         root: note,
       });
 

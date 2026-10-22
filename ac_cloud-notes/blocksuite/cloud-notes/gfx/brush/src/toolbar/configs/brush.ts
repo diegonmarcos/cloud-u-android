@@ -115,6 +115,6 @@ export const brushToolbarConfig = {
 } as const satisfies ToolbarModuleConfig;
 
 export const brushToolbarExtension = ToolbarModuleExtension({
-  id: BlockFlavourIdentifier('affine:surface:brush'),
+  id: BlockFlavourIdentifier('cloud-notes:surface:brush'),
   config: brushToolbarConfig,
 });

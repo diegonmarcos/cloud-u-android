@@ -99,7 +99,7 @@ async fn index_tables_support_terminal_queries_and_restart() {
           ("docId", &["doc-1"]),
           ("blockId", &["block-1"]),
           ("content", &["hello world", "你好搜索"]),
-          ("flavour", &["affine:paragraph"]),
+          ("flavour", &["cloud-notes:paragraph"]),
         ],
       ),
     )
@@ -114,7 +114,7 @@ async fn index_tables_support_terminal_queries_and_restart() {
           ("docId", &["doc-10"]),
           ("blockId", &["block-2"]),
           ("content", &["hello unrelated"]),
-          ("flavour", &["affine:code"]),
+          ("flavour", &["cloud-notes:code"]),
         ],
       ),
     )

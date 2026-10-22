@@ -43,8 +43,8 @@ describe('A3.5 live doc-in-canvas portal', () => {
     const doc = ws.createDoc('host');
     doc.load();
     const store = doc.getStore({ id: 'host', extensions });
-    const root = store.addBlock('affine:page', { title: new Text('host') });
-    const id = store.addBlock('affine:embed-synced-doc', { pageId: 'src' }, root);
+    const root = store.addBlock('cloud-notes:page', { title: new Text('host') });
+    const id = store.addBlock('cloud-notes:embed-synced-doc', { pageId: 'src' }, root);
     store.load();
     const model = store.getModelById(id) as any;
     expect(model.props.portal).toBeFalsy();
@@ -65,9 +65,9 @@ describe('A3.5 live doc-in-canvas portal', () => {
       extensions,
       ...syncedDocStoreOptions({ portal: true }),
     });
-    const root = writable.addBlock('affine:page', { title: new Text('src') });
-    const note = writable.addBlock('affine:note', {}, root);
-    const p = writable.addBlock('affine:paragraph', { text: new Text('a') }, note);
+    const root = writable.addBlock('cloud-notes:page', { title: new Text('src') });
+    const note = writable.addBlock('cloud-notes:note', {}, root);
+    const p = writable.addBlock('cloud-notes:paragraph', { text: new Text('a') }, note);
     writable.load();
     const preview = doc.getStore({
       id: 'r',

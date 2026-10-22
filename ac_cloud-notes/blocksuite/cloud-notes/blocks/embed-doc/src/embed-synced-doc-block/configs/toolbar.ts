@@ -167,7 +167,7 @@ const conversionsActionGroup = {
           const editorSetting = ctx.std.getOptional(EditorSettingProvider);
           editorSetting?.set?.(
             'docCanvasPreferView',
-            'affine:embed-linked-doc'
+            'cloud-notes:embed-linked-doc'
           );
         }
 
@@ -296,7 +296,7 @@ const builtinSurfaceToolbarConfig = {
         if (!model) return;
 
         const lastVisibleNote = ctx.store
-          .getModelsByFlavour('affine:note')
+          .getModelsByFlavour('cloud-notes:note')
           .findLast(
             (note): note is NoteBlockModel =>
               matchModels(note, [NoteBlockModel]) &&
@@ -315,7 +315,7 @@ const builtinSurfaceToolbarConfig = {
           page: 'whiteboard editor',
           module: 'toolbar',
           segment: 'toolbar',
-          blockType: 'affine:embed-linked-doc',
+          blockType: 'cloud-notes:embed-linked-doc',
           control: 'toolbar:general',
           other: 'insert to page',
         });
@@ -340,7 +340,7 @@ const builtinSurfaceToolbarConfig = {
           const store = doc?.getStore({ readonly: true });
           if (!store) return;
           contentModels = store
-            .getModelsByFlavour('affine:note')
+            .getModelsByFlavour('cloud-notes:note')
             .filter(
               (note): note is NoteBlockModel =>
                 matchModels(note, [NoteBlockModel]) &&
@@ -366,7 +366,7 @@ const builtinSurfaceToolbarConfig = {
 
               const children = await draftedModels;
               const noteId = std.store.addBlock(
-                'affine:note',
+                'cloud-notes:note',
                 {
                   xywh: new Bound(
                     x,
@@ -381,7 +381,7 @@ const builtinSurfaceToolbarConfig = {
               );
 
               std.store.addBlock(
-                'affine:paragraph',
+                'cloud-notes:paragraph',
                 {
                   text: new Text<CloudNotesTextAttributes>([
                     {
@@ -508,7 +508,7 @@ export const createBuiltinToolbarConfigExtension = (
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier(`affine:surface:${name}`),
+      id: BlockFlavourIdentifier(`cloud-notes:surface:${name}`),
       config: builtinSurfaceToolbarConfig,
     }),
   ];

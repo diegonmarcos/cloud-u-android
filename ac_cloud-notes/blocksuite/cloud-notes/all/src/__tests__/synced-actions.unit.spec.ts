@@ -35,10 +35,10 @@ function setup() {
     const doc = ws.createDoc(id);
     doc.load();
     const store = doc.getStore({ id, extensions });
-    const root = store.addBlock('affine:page', { title: new Text(id) });
-    const note = store.addBlock('affine:note', {}, root);
+    const root = store.addBlock('cloud-notes:page', { title: new Text(id) });
+    const note = store.addBlock('cloud-notes:note', {}, root);
     const paragraph = store.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       { text: new Text(text), type: 'h2' },
       note
     );

@@ -67,7 +67,7 @@ export function toNumberedList(
 
   // add a new list block and delete the current block
   const newListId = doc.addBlock(
-    'affine:list',
+    'cloud-notes:list',
     {
       type: 'numbered',
       text: model.text.clone(),

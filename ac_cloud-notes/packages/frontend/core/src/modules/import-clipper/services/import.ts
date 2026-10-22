@@ -180,14 +180,14 @@ export class ImportClipperService extends Service {
       const { doc, release } = docsService.open(record.id);
       try {
         await doc.waitForSyncReady();
-        const page = doc.blockSuiteDoc.getBlocksByFlavour('affine:page')[0];
+        const page = doc.blockSuiteDoc.getBlocksByFlavour('cloud-notes:page')[0];
         if (!page) {
           throw new Error('Failed to initialize shared doc');
         }
         page.model.children.forEach(child => {
           doc.blockSuiteDoc.deleteBlock(child);
         });
-        const noteId = doc.blockSuiteDoc.addBlock('affine:note', {}, page.id);
+        const noteId = doc.blockSuiteDoc.addBlock('cloud-notes:note', {}, page.id);
         if (input.content.kind === 'url' && input.content.url) {
           const embedOptions = createBlockStdScope(doc.blockSuiteDoc)
             .get(EmbedOptionProvider)

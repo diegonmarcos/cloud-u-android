@@ -166,7 +166,7 @@ export class CloudNotesFrameTitle extends SignalWatcher(
           (payload.type === 'update' &&
             payload.props.key === 'xywh' &&
             doc.getBlock(payload.id)?.model instanceof FrameBlockModel) ||
-          (payload.type === 'add' && payload.flavour === 'affine:frame')
+          (payload.type === 'add' && payload.flavour === 'cloud-notes:frame')
         ) {
           this._nestedFrame = this._isInsideFrame();
         }

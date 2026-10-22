@@ -354,7 +354,7 @@ describe('AIRequestService action definitions', () => {
     );
     const frame = {
       id: frameSource.id,
-      flavour: `affine:${frameSource.type}`,
+      flavour: `cloud-notes:${frameSource.type}`,
       xywh: JSON.stringify([
         frameSource.bounds.x,
         frameSource.bounds.y,

@@ -45,7 +45,7 @@ export function calcDropTarget(
    */
   allowSublist: boolean = true
 ): DropTarget | null {
-  const schema = model.store.schema.get('affine:database');
+  const schema = model.store.schema.get('cloud-notes:database');
   const children = schema?.model.children ?? [];
 
   let shouldAppendToDatabase = true;

@@ -19,7 +19,7 @@ export const EmbedLoomViewExtensions: ExtensionType[] = [
   FlavourExtension(flavour),
   EmbedLoomBlockService,
   BlockViewExtension(flavour, model => {
-    return model.parent?.flavour === 'affine:surface'
+    return model.parent?.flavour === 'cloud-notes:surface'
       ? literal`cloud-notes-embed-edgeless-loom-block`
       : literal`cloud-notes-embed-loom-block`;
   }),

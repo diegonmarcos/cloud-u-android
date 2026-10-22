@@ -47,7 +47,7 @@ export interface TableBlockPropsSerialized {
 }
 
 export class TableBlockModel extends BlockModel<TableBlockProps> {}
-export const TableModelFlavour = 'affine:table';
+export const TableModelFlavour = 'cloud-notes:table';
 export const TableBlockSchema = defineBlockSchema({
   flavour: TableModelFlavour,
   props: (): TableBlockProps => ({
@@ -65,7 +65,7 @@ export const TableBlockSchema = defineBlockSchema({
     isFlatData: true,
     role: 'content',
     version: 1,
-    parent: ['affine:note'],
+    parent: ['cloud-notes:note'],
     children: [],
   },
   toModel: () => new TableBlockModel(),

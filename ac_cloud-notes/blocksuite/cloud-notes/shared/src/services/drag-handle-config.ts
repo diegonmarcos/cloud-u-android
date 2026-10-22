@@ -34,7 +34,7 @@ export class DNDAPIExtension extends Extension {
     blockId?: string;
     props?: Record<string, unknown>;
   }): SliceSnapshot | null {
-    const { docId, flavour = 'affine:embed-linked-doc', blockId } = options;
+    const { docId, flavour = 'cloud-notes:embed-linked-doc', blockId } = options;
 
     const slice = Slice.fromModels(this.std.store, []);
     const job = this.std.store.getTransformer();
@@ -47,7 +47,7 @@ export class DNDAPIExtension extends Extension {
       ...options.props,
       ...(blockId ? { blockId } : {}),
       pageId: docId,
-      style: flavour === 'affine:embed-synced-doc' ? 'syncedDoc' : 'vertical',
+      style: flavour === 'cloud-notes:embed-synced-doc' ? 'syncedDoc' : 'vertical',
     };
     return {
       ...snapshot,

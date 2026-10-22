@@ -2,7 +2,7 @@ import { EdgelessClipboardConfig } from '@blocksuite/cloud-notes-block-surface';
 import { type BlockSnapshot } from '@blocksuite/store';
 
 export class EdgelessClipboardEmbedGithubConfig extends EdgelessClipboardConfig {
-  static override readonly key = 'affine:embed-github';
+  static override readonly key = 'cloud-notes:embed-github';
 
   override createBlock(githubEmbed: BlockSnapshot): string | null {
     if (!this.surface) return null;
@@ -26,7 +26,7 @@ export class EdgelessClipboardEmbedGithubConfig extends EdgelessClipboardConfig 
     } = githubEmbed.props;
 
     const embedGithubId = this.crud.addBlock(
-      'affine:embed-github',
+      'cloud-notes:embed-github',
       {
         xywh,
         style,

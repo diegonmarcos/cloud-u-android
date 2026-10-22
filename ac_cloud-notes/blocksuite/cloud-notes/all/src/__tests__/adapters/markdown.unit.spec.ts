@@ -122,7 +122,7 @@ function noteSnapshotByTitle(collection: TestWorkspace, title: string) {
   expect(doc).toBeTruthy();
   const snapshot = exportSnapshot(doc!);
   return snapshot.blocks.children.find(
-    block => block.flavour === 'affine:note'
+    block => block.flavour === 'cloud-notes:note'
   );
 }
 
@@ -181,7 +181,7 @@ function simplifyBlockForSnapshot(
     flavour: block.flavour,
   };
 
-  if (block.flavour === 'affine:paragraph' || block.flavour === 'affine:list') {
+  if (block.flavour === 'cloud-notes:paragraph' || block.flavour === 'cloud-notes:list') {
     simplified.type = block.props.type;
     const text = block.props.text as
       | { delta?: DeltaInsert<CloudNotesTextAttributes>[] }
@@ -189,21 +189,21 @@ function simplifyBlockForSnapshot(
     simplified.delta = normalizeDeltaForSnapshot(text?.delta ?? [], titleById);
   }
 
-  if (block.flavour === 'affine:callout') {
+  if (block.flavour === 'cloud-notes:callout') {
     simplified.emoji = block.props.emoji;
   }
 
-  if (block.flavour === 'affine:attachment') {
+  if (block.flavour === 'cloud-notes:attachment') {
     simplified.name = block.props.name;
     simplified.style = block.props.style;
   }
 
-  if (block.flavour === 'affine:image') {
+  if (block.flavour === 'cloud-notes:image') {
     simplified.sourceId = '<asset>';
   }
 
   const children = (block.children ?? [])
-    .filter(child => child.flavour !== 'affine:surface')
+    .filter(child => child.flavour !== 'cloud-notes:surface')
     .map(child => simplifyBlockForSnapshot(child, titleById));
   if (children.length) {
     simplified.children = children;
@@ -271,7 +271,7 @@ describe('snapshot to markdown', () => {
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -282,7 +282,7 @@ describe('snapshot to markdown', () => {
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -291,7 +291,7 @@ describe('snapshot to markdown', () => {
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -303,7 +303,7 @@ describe('snapshot to markdown', () => {
             {
               type: 'block',
               id: 'block:8hOLxad5Fv',
-              flavour: 'affine:code',
+              flavour: 'cloud-notes:code',
               props: {
                 language: 'python',
                 text: {
@@ -379,10 +379,10 @@ Hello world
     expect(simplifyBlockForSnapshot(snapshot.blocks, new Map())).toMatchObject({
       children: [
         {
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           children: [
             {
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               type: 'quote',
               delta: [
                 { insert: 'Shopping List:' },
@@ -1027,7 +1027,7 @@ Hello world
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -1038,7 +1038,7 @@ Hello world
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -1047,7 +1047,7 @@ Hello world
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -1059,7 +1059,7 @@ Hello world
             {
               type: 'block',
               id: 'block:Bdn8Yvqcny',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -1075,7 +1075,7 @@ Hello world
                 {
                   type: 'block',
                   id: 'block:72SMa5mdLy',
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: 'text',
                     text: {
@@ -1092,7 +1092,7 @@ Hello world
                 {
                   type: 'block',
                   id: 'block:f-Z6nRrGK_',
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: 'text',
                     text: {
@@ -1108,7 +1108,7 @@ Hello world
                     {
                       type: 'block',
                       id: 'block:sP3bU52el7',
-                      flavour: 'affine:paragraph',
+                      flavour: 'cloud-notes:paragraph',
                       props: {
                         type: 'text',
                         text: {
@@ -1125,7 +1125,7 @@ Hello world
                     {
                       type: 'block',
                       id: 'block:X_HMxP4wxC',
-                      flavour: 'affine:paragraph',
+                      flavour: 'cloud-notes:paragraph',
                       props: {
                         type: 'text',
                         text: {
@@ -1142,7 +1142,7 @@ Hello world
                     {
                       type: 'block',
                       id: 'block:iA34Rb-RvV',
-                      flavour: 'affine:paragraph',
+                      flavour: 'cloud-notes:paragraph',
                       props: {
                         text: {
                           '$blocksuite:internal:text$': true,
@@ -1161,7 +1161,7 @@ Hello world
                 {
                   type: 'block',
                   id: 'block:I0Fmz5Nv02',
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: 'text',
                     text: {
@@ -1180,7 +1180,7 @@ Hello world
             {
               type: 'block',
               id: 'block:12lDwMD7ec',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -1226,7 +1226,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -1237,7 +1237,7 @@ hhh
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -1246,7 +1246,7 @@ hhh
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -1258,7 +1258,7 @@ hhh
             {
               type: 'block',
               id: 'block:imiLDMKSkx',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'bulleted',
                 text: {
@@ -1276,7 +1276,7 @@ hhh
                 {
                   type: 'block',
                   id: 'block:kYliRIovvL',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   props: {
                     type: 'bulleted',
                     text: {
@@ -1294,7 +1294,7 @@ hhh
                     {
                       type: 'block',
                       id: 'block:UyvxA_gqCJ',
-                      flavour: 'affine:list',
+                      flavour: 'cloud-notes:list',
                       props: {
                         type: 'bulleted',
                         text: {
@@ -1315,7 +1315,7 @@ hhh
                 {
                   type: 'block',
                   id: 'block:-guNZRm5u1',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   props: {
                     type: 'bulleted',
                     text: {
@@ -1336,7 +1336,7 @@ hhh
             {
               type: 'block',
               id: 'block:B9CaZzQ2CO',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'bulleted',
                 text: {
@@ -1374,7 +1374,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -1385,7 +1385,7 @@ hhh
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -1394,7 +1394,7 @@ hhh
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -1406,7 +1406,7 @@ hhh
             {
               type: 'block',
               id: 'block:imiLDMKSkx',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'todo',
                 text: {
@@ -1424,7 +1424,7 @@ hhh
                 {
                   type: 'block',
                   id: 'block:kYliRIovvL',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   props: {
                     type: 'todo',
                     text: {
@@ -1442,7 +1442,7 @@ hhh
                     {
                       type: 'block',
                       id: 'block:UyvxA_gqCJ',
-                      flavour: 'affine:list',
+                      flavour: 'cloud-notes:list',
                       props: {
                         type: 'todo',
                         text: {
@@ -1463,7 +1463,7 @@ hhh
                 {
                   type: 'block',
                   id: 'block:-guNZRm5u1',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   props: {
                     type: 'todo',
                     text: {
@@ -1484,7 +1484,7 @@ hhh
             {
               type: 'block',
               id: 'block:B9CaZzQ2CO',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'todo',
                 text: {
@@ -1523,7 +1523,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:m5hvdXHXS2',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       version: 2,
       props: {
         title: {
@@ -1535,7 +1535,7 @@ hhh
         {
           type: 'block',
           id: 'block:Y4J-oO9h9d',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           version: 5,
           props: {
             elements: {},
@@ -1545,7 +1545,7 @@ hhh
         {
           type: 'block',
           id: 'block:1Ll22zT992',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           version: 1,
           props: {
             xywh: '[0,0,800,95]',
@@ -1566,7 +1566,7 @@ hhh
             {
               type: 'block',
               id: 'block:Fd0ZCYB7a4',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               version: 1,
               props: {
                 type: 'numbered',
@@ -1585,7 +1585,7 @@ hhh
                 {
                   type: 'block',
                   id: 'block:8-GeKDc06x',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   version: 1,
                   props: {
                     type: 'numbered',
@@ -1605,7 +1605,7 @@ hhh
                 {
                   type: 'block',
                   id: 'block:f0c-9xKaEL',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   version: 1,
                   props: {
                     type: 'numbered',
@@ -1627,7 +1627,7 @@ hhh
             {
               type: 'block',
               id: 'block:Fd0ZCYB7a5',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               version: 1,
               props: {
                 type: 'numbered',
@@ -1666,7 +1666,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:m5hvdXHXS2',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       version: 2,
       props: {
         title: {
@@ -1678,7 +1678,7 @@ hhh
         {
           type: 'block',
           id: 'block:Y4J-oO9h9d',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           version: 5,
           props: {
             elements: {},
@@ -1688,7 +1688,7 @@ hhh
         {
           type: 'block',
           id: 'block:1Ll22zT992',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           version: 1,
           props: {
             xywh: '[0,0,800,95]',
@@ -1709,7 +1709,7 @@ hhh
             {
               type: 'block',
               id: 'block:Fd0ZCYB7a4',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               version: 1,
               props: {
                 type: 'numbered',
@@ -1728,7 +1728,7 @@ hhh
                 {
                   type: 'block',
                   id: 'block:8-GeKDc06x',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   version: 1,
                   props: {
                     type: 'numbered',
@@ -1748,7 +1748,7 @@ hhh
                 {
                   type: 'block',
                   id: 'block:f0c-9xKaEL',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   version: 1,
                   props: {
                     type: 'bulleted',
@@ -1768,7 +1768,7 @@ hhh
                 {
                   type: 'block',
                   id: 'block:f0c-9xKaEL',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   version: 1,
                   props: {
                     type: 'numbered',
@@ -1790,7 +1790,7 @@ hhh
             {
               type: 'block',
               id: 'block:Fd0ZCYB7a5',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               version: 1,
               props: {
                 type: 'numbered',
@@ -1830,7 +1830,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -1841,7 +1841,7 @@ hhh
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -1850,7 +1850,7 @@ hhh
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -1862,7 +1862,7 @@ hhh
             {
               type: 'block',
               id: 'block:qhpbuss-KN',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -1902,7 +1902,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -1913,7 +1913,7 @@ hhh
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -1922,7 +1922,7 @@ hhh
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -1934,7 +1934,7 @@ hhh
             {
               type: 'block',
               id: 'block:qhpbuss-KN',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -1974,7 +1974,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -1985,7 +1985,7 @@ hhh
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -1994,7 +1994,7 @@ hhh
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -2006,7 +2006,7 @@ hhh
             {
               type: 'block',
               id: 'block:8hOLxad5Fv',
-              flavour: 'affine:latex',
+              flavour: 'cloud-notes:latex',
               props: {
                 latex: 'E=mc^2',
               },
@@ -2030,7 +2030,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -2041,7 +2041,7 @@ hhh
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -2050,7 +2050,7 @@ hhh
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -2062,7 +2062,7 @@ hhh
             {
               type: 'block',
               id: 'block:Bdn8Yvqcny',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -2102,7 +2102,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -2113,7 +2113,7 @@ hhh
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -2122,7 +2122,7 @@ hhh
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -2134,7 +2134,7 @@ hhh
             {
               type: 'block',
               id: 'block:Bdn8Yvqcny',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -2171,7 +2171,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -2182,7 +2182,7 @@ hhh
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -2191,7 +2191,7 @@ hhh
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -2203,7 +2203,7 @@ hhh
             {
               type: 'block',
               id: 'block:zxDyvrg1Mh',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -2244,7 +2244,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -2255,7 +2255,7 @@ hhh
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -2264,7 +2264,7 @@ hhh
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -2276,7 +2276,7 @@ hhh
             {
               type: 'block',
               id: 'block:zxDyvrg1Mh',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -2317,7 +2317,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:WcYcyv-oZY',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -2328,7 +2328,7 @@ hhh
         {
           type: 'block',
           id: 'block:zqtuv999Ww',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -2337,7 +2337,7 @@ hhh
         {
           type: 'block',
           id: 'block:UTUZojv22c',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -2349,7 +2349,7 @@ hhh
             {
               type: 'block',
               id: 'block:Gan31s-dYK',
-              flavour: 'affine:image',
+              flavour: 'cloud-notes:image',
               props: {
                 sourceId: 'YXXTjRmLlNyiOUnHb8nAIvUP6V7PAXhwW9F5_tc2LGs=',
                 caption: 'aaa',
@@ -2364,7 +2364,7 @@ hhh
             {
               type: 'block',
               id: 'block:If92CIQiOl',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -2401,7 +2401,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:8Wb7CSJ9Qe',
-      flavour: 'affine:database',
+      flavour: 'cloud-notes:database',
       props: {
         cells: {
           'block:P_-Wg7Rg9O': {
@@ -2575,7 +2575,7 @@ hhh
         {
           type: 'block',
           id: 'block:P_-Wg7Rg9O',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -2592,7 +2592,7 @@ hhh
         {
           type: 'block',
           id: 'block:0vhfgcHtPF',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -2626,7 +2626,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -2637,7 +2637,7 @@ hhh
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -2646,7 +2646,7 @@ hhh
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -2658,7 +2658,7 @@ hhh
             {
               type: 'block',
               id: 'block:Bdn8Yvqcny',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -2674,7 +2674,7 @@ hhh
                 {
                   type: 'block',
                   id: 'block:72SMa5mdLy',
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: 'text',
                     text: {
@@ -2691,7 +2691,7 @@ hhh
                 {
                   type: 'block',
                   id: 'C0sH2Ee6cz-MysVNLNrBt',
-                  flavour: 'affine:embed-linked-doc',
+                  flavour: 'cloud-notes:embed-linked-doc',
                   props: {
                     index: 'a0',
                     xywh: '[0,0,0,0]',
@@ -2712,7 +2712,7 @@ hhh
                 {
                   type: 'block',
                   id: 'block:f-Z6nRrGK_',
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: 'text',
                     text: {
@@ -2728,7 +2728,7 @@ hhh
                     {
                       type: 'block',
                       id: 'block:sP3bU52el7',
-                      flavour: 'affine:paragraph',
+                      flavour: 'cloud-notes:paragraph',
                       props: {
                         type: 'text',
                         text: {
@@ -2745,7 +2745,7 @@ hhh
                     {
                       type: 'block',
                       id: 'block:X_HMxP4wxC',
-                      flavour: 'affine:paragraph',
+                      flavour: 'cloud-notes:paragraph',
                       props: {
                         type: 'text',
                         text: {
@@ -2787,7 +2787,7 @@ hhh
                     {
                       type: 'block',
                       id: 'block:iA34Rb-RvV',
-                      flavour: 'affine:paragraph',
+                      flavour: 'cloud-notes:paragraph',
                       props: {
                         text: {
                           '$blocksuite:internal:text$': true,
@@ -2806,7 +2806,7 @@ hhh
                 {
                   type: 'block',
                   id: 'block:I0Fmz5Nv02',
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: 'text',
                     text: {
@@ -2825,7 +2825,7 @@ hhh
             {
               type: 'block',
               id: 'block:12lDwMD7ec',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -2887,7 +2887,7 @@ hhh
       blocks: {
         type: 'block',
         id: '8WdJmN5FTT',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         version: 2,
         props: {
           title: {
@@ -2903,7 +2903,7 @@ hhh
           {
             type: 'block',
             id: 'zVN1EZFuZe',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             version: 5,
             props: {
               elements: {},
@@ -2913,7 +2913,7 @@ hhh
           {
             type: 'block',
             id: '2s9sJlphLH',
-            flavour: 'affine:note',
+            flavour: 'cloud-notes:note',
             version: 1,
             props: {
               xywh: '[0,0,800,95]',
@@ -2934,7 +2934,7 @@ hhh
               {
                 type: 'block',
                 id: 'vNp5XrR5yw',
-                flavour: 'affine:paragraph',
+                flavour: 'cloud-notes:paragraph',
                 version: 1,
                 props: {
                   type: 'text',
@@ -2948,7 +2948,7 @@ hhh
               {
                 type: 'block',
                 id: 'JTdfSl1ygZ',
-                flavour: 'affine:paragraph',
+                flavour: 'cloud-notes:paragraph',
                 version: 1,
                 props: {
                   type: 'text',
@@ -2980,7 +2980,7 @@ hhh
       blocks: {
         type: 'block',
         id: 'AGOahFisBN',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         version: 2,
         props: {
           title: {
@@ -2996,7 +2996,7 @@ hhh
           {
             type: 'block',
             id: 'gfVzx5tGpB',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             version: 5,
             props: {
               elements: {},
@@ -3006,7 +3006,7 @@ hhh
           {
             type: 'block',
             id: 'CzEfaUret4',
-            flavour: 'affine:note',
+            flavour: 'cloud-notes:note',
             version: 1,
             props: {
               xywh: '[0,0,800,95]',
@@ -3027,7 +3027,7 @@ hhh
               {
                 type: 'block',
                 id: 'yFlNufsgke',
-                flavour: 'affine:paragraph',
+                flavour: 'cloud-notes:paragraph',
                 version: 1,
                 props: {
                   type: 'h1',
@@ -3045,7 +3045,7 @@ hhh
               {
                 type: 'block',
                 id: 'oMuLcD6XS3',
-                flavour: 'affine:paragraph',
+                flavour: 'cloud-notes:paragraph',
                 version: 1,
                 props: {
                   type: 'h2',
@@ -3063,7 +3063,7 @@ hhh
               {
                 type: 'block',
                 id: 'PQ8FhGV6VM',
-                flavour: 'affine:paragraph',
+                flavour: 'cloud-notes:paragraph',
                 version: 1,
                 props: {
                   type: 'text',
@@ -3081,7 +3081,7 @@ hhh
               {
                 type: 'block',
                 id: 'sA9paSrdEN',
-                flavour: 'affine:paragraph',
+                flavour: 'cloud-notes:paragraph',
                 version: 1,
                 props: {
                   type: 'text',
@@ -3102,7 +3102,7 @@ hhh
               {
                 type: 'block',
                 id: 'DF26giFpKX',
-                flavour: 'affine:code',
+                flavour: 'cloud-notes:code',
                 version: 1,
                 props: {
                   text: {
@@ -3122,7 +3122,7 @@ hhh
               {
                 type: 'block',
                 id: '-3bbVQTvI2',
-                flavour: 'affine:embed-synced-doc',
+                flavour: 'cloud-notes:embed-synced-doc',
                 version: 1,
                 props: {
                   index: 'a0',
@@ -3153,7 +3153,7 @@ hhh
       blocks: {
         type: 'block',
         id: 'VChAZIX7DM',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         version: 2,
         props: {
           title: {
@@ -3169,7 +3169,7 @@ hhh
           {
             type: 'block',
             id: 'uRj8gejH4d',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             version: 5,
             props: {
               elements: {},
@@ -3179,7 +3179,7 @@ hhh
           {
             type: 'block',
             id: 'AqFoVDUoW9',
-            flavour: 'affine:note',
+            flavour: 'cloud-notes:note',
             version: 1,
             props: {
               xywh: '[0,0,800,95]',
@@ -3200,7 +3200,7 @@ hhh
               {
                 type: 'block',
                 id: 'cWBI4UGTqh',
-                flavour: 'affine:paragraph',
+                flavour: 'cloud-notes:paragraph',
                 version: 1,
                 props: {
                   type: 'text',
@@ -3218,7 +3218,7 @@ hhh
               {
                 type: 'block',
                 id: 'AqFoVxas19',
-                flavour: 'affine:embed-synced-doc',
+                flavour: 'cloud-notes:embed-synced-doc',
                 version: 1,
                 props: {
                   index: 'a0',
@@ -3232,7 +3232,7 @@ hhh
               {
                 type: 'block',
                 id: 'Db976U9v18',
-                flavour: 'affine:paragraph',
+                flavour: 'cloud-notes:paragraph',
                 version: 1,
                 props: {
                   type: 'text',
@@ -3283,7 +3283,7 @@ World!
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'block:vu6SK6WJpW',
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -3294,7 +3294,7 @@ World!
         {
           type: 'block',
           id: 'block:Tk4gSPocAt',
-          flavour: 'affine:surface',
+          flavour: 'cloud-notes:surface',
           props: {
             elements: {},
           },
@@ -3303,7 +3303,7 @@ World!
         {
           type: 'block',
           id: 'block:WfnS5ZDCJT',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -3315,7 +3315,7 @@ World!
             {
               type: 'block',
               id: 'block:zxDyvrg1Mh',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -3390,7 +3390,7 @@ World!
       const blockSnapshot: BlockSnapshot = {
         type: 'block',
         id: 'block:vu6SK6WJpW',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -3401,7 +3401,7 @@ World!
           {
             type: 'block',
             id: 'block:Tk4gSPocAt',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -3410,7 +3410,7 @@ World!
           {
             type: 'block',
             id: 'block:WfnS5ZDCJT',
-            flavour: 'affine:note',
+            flavour: 'cloud-notes:note',
             props: {
               xywh: '[0,0,800,95]',
               background: DefaultTheme.noteBackgrounColor,
@@ -3422,7 +3422,7 @@ World!
               {
                 type: 'block',
                 id: 'block:8hOLxad5Fv',
-                flavour: 'affine:callout',
+                flavour: 'cloud-notes:callout',
                 props: {
                   emoji: '💡',
                 },
@@ -3430,7 +3430,7 @@ World!
                   {
                     type: 'block',
                     id: 'block:8hOLxad5Fv',
-                    flavour: 'affine:paragraph',
+                    flavour: 'cloud-notes:paragraph',
                     props: {
                       type: 'text',
                       text: {
@@ -3445,7 +3445,7 @@ World!
               {
                 type: 'block',
                 id: 'block:8hOLxadvdv',
-                flavour: 'affine:callout',
+                flavour: 'cloud-notes:callout',
                 props: {
                   emoji: '',
                 },
@@ -3453,7 +3453,7 @@ World!
                   {
                     type: 'block',
                     id: 'block:8hOLxad5Fv',
-                    flavour: 'affine:paragraph',
+                    flavour: 'cloud-notes:paragraph',
                     props: {
                       type: 'text',
                       text: {
@@ -3468,7 +3468,7 @@ World!
                   {
                     type: 'block',
                     id: 'block:8hOLxad5Fv',
-                    flavour: 'affine:paragraph',
+                    flavour: 'cloud-notes:paragraph',
                     props: {
                       type: 'text',
                       text: {
@@ -3507,7 +3507,7 @@ World!
       const blockSnapshot: BlockSnapshot = {
         type: 'block',
         id: 'block:vu6SK6WJpW',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -3518,7 +3518,7 @@ World!
           {
             type: 'block',
             id: 'block:Tk4gSPocAt',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -3527,7 +3527,7 @@ World!
           {
             type: 'block',
             id: 'block:WfnS5ZDCJT',
-            flavour: 'affine:note',
+            flavour: 'cloud-notes:note',
             props: {
               xywh: '[0,0,800,95]',
               background: DefaultTheme.noteBackgrounColor,
@@ -3539,7 +3539,7 @@ World!
               {
                 type: 'block',
                 id: 'block:8hOLxad5Fv',
-                flavour: 'affine:callout',
+                flavour: 'cloud-notes:callout',
                 props: {
                   emoji: '💡',
                 },
@@ -3547,7 +3547,7 @@ World!
                   {
                     type: 'block',
                     id: 'block:8hOLxad5Fv',
-                    flavour: 'affine:paragraph',
+                    flavour: 'cloud-notes:paragraph',
                     props: {
                       type: 'text',
                       text: {
@@ -3564,7 +3564,7 @@ World!
               {
                 type: 'block',
                 id: 'block:8hOLxadvdv',
-                flavour: 'affine:callout',
+                flavour: 'cloud-notes:callout',
                 props: {
                   emoji: '',
                 },
@@ -3572,7 +3572,7 @@ World!
                   {
                     type: 'block',
                     id: 'block:8hOLxad5Fv',
-                    flavour: 'affine:paragraph',
+                    flavour: 'cloud-notes:paragraph',
                     props: {
                       type: 'text',
                       text: {
@@ -3590,7 +3590,7 @@ World!
                   {
                     type: 'block',
                     id: 'block:8hOLxad5Fv',
-                    flavour: 'affine:paragraph',
+                    flavour: 'cloud-notes:paragraph',
                     props: {
                       type: 'text',
                       text: {
@@ -3605,7 +3605,7 @@ World!
               {
                 type: 'block',
                 id: 'block:8hOLxad5Fv',
-                flavour: 'affine:callout',
+                flavour: 'cloud-notes:callout',
                 props: {
                   emoji: '💡',
                 },
@@ -3613,7 +3613,7 @@ World!
                   {
                     type: 'block',
                     id: 'block:8hOLxad5Fv',
-                    flavour: 'affine:paragraph',
+                    flavour: 'cloud-notes:paragraph',
                     props: {
                       type: 'text',
                       text: {
@@ -3678,7 +3678,7 @@ describe('markdown to snapshot', () => {
       const blockSnapshot: BlockSnapshot = {
         type: 'block',
         id: 'matchesReplaceMap[0]',
-        flavour: 'affine:note',
+        flavour: 'cloud-notes:note',
         props: {
           xywh: '[0,0,800,95]',
           background: DefaultTheme.noteBackgrounColor,
@@ -3690,7 +3690,7 @@ describe('markdown to snapshot', () => {
           {
             type: 'block',
             id: 'matchesReplaceMap[1]',
-            flavour: 'affine:code',
+            flavour: 'cloud-notes:code',
             props: {
               language: 'python',
               wrap: false,
@@ -3724,7 +3724,7 @@ describe('markdown to snapshot', () => {
           {
             type: 'block',
             id: 'matchesReplaceMap[0]',
-            flavour: 'affine:note',
+            flavour: 'cloud-notes:note',
             props: {
               xywh: '[0,0,800,95]',
               background: DefaultTheme.noteBackgrounColor,
@@ -3736,7 +3736,7 @@ describe('markdown to snapshot', () => {
               {
                 type: 'block',
                 id: 'matchesReplaceMap[1]',
-                flavour: 'affine:code',
+                flavour: 'cloud-notes:code',
                 props: {
                   language: 'python',
                   wrap: false,
@@ -3776,7 +3776,7 @@ describe('markdown to snapshot', () => {
           {
             type: 'block',
             id: 'matchesReplaceMap[0]',
-            flavour: 'affine:note',
+            flavour: 'cloud-notes:note',
             props: {
               xywh: '[0,0,800,95]',
               background: DefaultTheme.noteBackgrounColor,
@@ -3788,7 +3788,7 @@ describe('markdown to snapshot', () => {
               {
                 type: 'block',
                 id: 'matchesReplaceMap[1]',
-                flavour: 'affine:code',
+                flavour: 'cloud-notes:code',
                 props: {
                   language: 'python',
                   wrap: false,
@@ -3828,7 +3828,7 @@ describe('markdown to snapshot', () => {
           {
             type: 'block',
             id: 'matchesReplaceMap[0]',
-            flavour: 'affine:note',
+            flavour: 'cloud-notes:note',
             props: {
               xywh: '[0,0,800,95]',
               background: DefaultTheme.noteBackgrounColor,
@@ -3840,7 +3840,7 @@ describe('markdown to snapshot', () => {
               {
                 type: 'block',
                 id: 'matchesReplaceMap[1]',
-                flavour: 'affine:code',
+                flavour: 'cloud-notes:code',
                 props: {
                   language: 'python',
                   wrap: false,
@@ -3890,7 +3890,7 @@ describe('markdown to snapshot', () => {
       const blockSnapshot: BlockSnapshot = {
         type: 'block',
         id: 'matchesReplaceMap[0]',
-        flavour: 'affine:note',
+        flavour: 'cloud-notes:note',
         props: {
           xywh: '[0,0,800,95]',
           background: DefaultTheme.noteBackgrounColor,
@@ -3902,7 +3902,7 @@ describe('markdown to snapshot', () => {
           {
             type: 'block',
             id: 'matchesReplaceMap[1]',
-            flavour: 'affine:code',
+            flavour: 'cloud-notes:code',
             props: {
               language: 'html',
               wrap: false,
@@ -3986,7 +3986,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -3998,7 +3998,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4015,7 +4015,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[2]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4032,7 +4032,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[3]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4049,7 +4049,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[4]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4066,7 +4066,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[5]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4083,7 +4083,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[6]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             text: {
               '$blocksuite:internal:text$': true,
@@ -4100,7 +4100,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[7]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4117,7 +4117,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[8]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4156,7 +4156,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -4168,7 +4168,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'bulleted',
             text: {
@@ -4187,7 +4187,7 @@ hhh
             {
               type: 'block',
               id: 'matchesReplaceMap[2]',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'bulleted',
                 text: {
@@ -4206,7 +4206,7 @@ hhh
                 {
                   type: 'block',
                   id: 'matchesReplaceMap[3]',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   props: {
                     type: 'bulleted',
                     text: {
@@ -4228,7 +4228,7 @@ hhh
             {
               type: 'block',
               id: 'matchesReplaceMap[4]',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'bulleted',
                 text: {
@@ -4250,7 +4250,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[5]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'bulleted',
             text: {
@@ -4292,7 +4292,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -4304,7 +4304,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'todo',
             text: {
@@ -4323,7 +4323,7 @@ hhh
             {
               type: 'block',
               id: 'matchesReplaceMap[2]',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'todo',
                 text: {
@@ -4342,7 +4342,7 @@ hhh
                 {
                   type: 'block',
                   id: 'matchesReplaceMap[3]',
-                  flavour: 'affine:list',
+                  flavour: 'cloud-notes:list',
                   props: {
                     type: 'todo',
                     text: {
@@ -4364,7 +4364,7 @@ hhh
             {
               type: 'block',
               id: 'matchesReplaceMap[4]',
-              flavour: 'affine:list',
+              flavour: 'cloud-notes:list',
               props: {
                 type: 'todo',
                 text: {
@@ -4386,7 +4386,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[5]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'todo',
             text: {
@@ -4426,7 +4426,7 @@ bbb
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -4438,7 +4438,7 @@ bbb
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'numbered',
             text: {
@@ -4458,7 +4458,7 @@ bbb
         {
           type: 'block',
           id: 'matchesReplaceMap[2]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4475,7 +4475,7 @@ bbb
         {
           type: 'block',
           id: 'matchesReplaceMap[3]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'numbered',
             text: {
@@ -4495,7 +4495,7 @@ bbb
         {
           type: 'block',
           id: 'matchesReplaceMap[4]',
-          flavour: 'affine:list',
+          flavour: 'cloud-notes:list',
           props: {
             type: 'numbered',
             text: {
@@ -4527,7 +4527,7 @@ bbb
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -4539,7 +4539,7 @@ bbb
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4581,7 +4581,7 @@ bbb
         {
           type: 'block',
           id: 'matchesReplaceMap[0]',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -4593,7 +4593,7 @@ bbb
             {
               type: 'block',
               id: 'matchesReplaceMap[1]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -4634,7 +4634,7 @@ bbb
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -4646,7 +4646,7 @@ bbb
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4684,7 +4684,7 @@ bbb
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -4696,7 +4696,7 @@ bbb
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4735,7 +4735,7 @@ bbb
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -4747,7 +4747,7 @@ bbb
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4786,7 +4786,7 @@ bbb
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -4798,7 +4798,7 @@ bbb
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -4840,7 +4840,7 @@ bbb
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: {
@@ -4964,7 +4964,7 @@ bbb
       const blockSnapshot: BlockSnapshot = {
         type: 'block',
         id: 'matchesReplaceMap[0]',
-        flavour: 'affine:note',
+        flavour: 'cloud-notes:note',
         props: {
           xywh: '[0,0,800,95]',
           background: DefaultTheme.noteBackgrounColor,
@@ -4976,7 +4976,7 @@ bbb
           {
             type: 'block',
             id: 'matchesReplaceMap[1]',
-            flavour: 'affine:paragraph',
+            flavour: 'cloud-notes:paragraph',
             props: {
               type: 'text',
               text: {
@@ -5018,7 +5018,7 @@ bbb
       const blockSnapshot: BlockSnapshot = {
         type: 'block',
         id: 'matchesReplaceMap[0]',
-        flavour: 'affine:note',
+        flavour: 'cloud-notes:note',
         props: {
           xywh: '[0,0,800,95]',
           background: DefaultTheme.noteBackgrounColor,
@@ -5030,7 +5030,7 @@ bbb
           {
             type: 'block',
             id: 'matchesReplaceMap[1]',
-            flavour: 'affine:latex',
+            flavour: 'cloud-notes:latex',
             props: {
               latex: 'E=mc^2',
             },
@@ -5052,7 +5052,7 @@ bbb
       const blockSnapshot: BlockSnapshot = {
         type: 'block',
         id: 'matchesReplaceMap[0]',
-        flavour: 'affine:note',
+        flavour: 'cloud-notes:note',
         props: {
           xywh: '[0,0,800,95]',
           background: DefaultTheme.noteBackgrounColor,
@@ -5064,7 +5064,7 @@ bbb
           {
             type: 'block',
             id: 'matchesReplaceMap[1]',
-            flavour: 'affine:paragraph',
+            flavour: 'cloud-notes:paragraph',
             props: {
               type: 'text',
               text: {
@@ -5112,7 +5112,7 @@ hhh
     const blockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -5124,7 +5124,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -5137,7 +5137,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[2]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -5150,7 +5150,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[3]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -5174,7 +5174,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[4]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -5187,7 +5187,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[5]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -5200,7 +5200,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[6]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -5239,7 +5239,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[7]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -5252,7 +5252,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[8]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -5265,7 +5265,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[9]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -5295,7 +5295,7 @@ hhh
     const blockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -5307,7 +5307,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'text',
             text: {
@@ -5365,7 +5365,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[2]',
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: {
             type: 'h6',
             text: {
@@ -5383,7 +5383,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[3]',
-          flavour: 'affine:bookmark',
+          flavour: 'cloud-notes:bookmark',
           props: {
             style: 'citation',
             url,
@@ -5397,7 +5397,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[4]',
-          flavour: 'affine:embed-linked-doc',
+          flavour: 'cloud-notes:embed-linked-doc',
           props: {
             style: 'citation',
             pageId: 'deadbeef',
@@ -5408,7 +5408,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[5]',
-          flavour: 'affine:attachment',
+          flavour: 'cloud-notes:attachment',
           props: {
             name: 'test.txt',
             sourceId: 'abcdefg',
@@ -5446,7 +5446,7 @@ hhh
       const blockSnapshot = {
         type: 'block',
         id: 'matchesReplaceMap[0]',
-        flavour: 'affine:note',
+        flavour: 'cloud-notes:note',
         props: {
           xywh: '[0,0,800,95]',
           background: DefaultTheme.noteBackgrounColor,
@@ -5458,7 +5458,7 @@ hhh
           {
             type: 'block',
             id: 'matchesReplaceMap[1]',
-            flavour: 'affine:paragraph',
+            flavour: 'cloud-notes:paragraph',
             props: {
               type: 'text',
               text: {
@@ -5496,7 +5496,7 @@ hhh
           {
             type: 'block',
             id: 'matchesReplaceMap[2]',
-            flavour: 'affine:paragraph',
+            flavour: 'cloud-notes:paragraph',
             props: {
               type: 'h6',
               text: {
@@ -5514,7 +5514,7 @@ hhh
           {
             type: 'block',
             id: 'matchesReplaceMap[3]',
-            flavour: 'affine:bookmark',
+            flavour: 'cloud-notes:bookmark',
             props: {
               style: 'citation',
               url,
@@ -5546,7 +5546,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[0]',
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {
             xywh: '[0,0,800,95]',
             background: DefaultTheme.noteBackgrounColor,
@@ -5558,7 +5558,7 @@ hhh
             {
               type: 'block',
               id: 'matchesReplaceMap[1]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {
@@ -5593,7 +5593,7 @@ hhh
     const calloutBlockSnapshot: BlockSnapshot = {
       type: 'block',
       id: 'matchesReplaceMap[0]',
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -5605,7 +5605,7 @@ hhh
         {
           type: 'block',
           id: 'matchesReplaceMap[1]',
-          flavour: 'affine:callout',
+          flavour: 'cloud-notes:callout',
           props: {
             emoji: '💬',
           },
@@ -5613,7 +5613,7 @@ hhh
             {
               type: 'block',
               id: 'matchesReplaceMap[2]',
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {

@@ -21,7 +21,7 @@ function docSnapshot(id: string, title: string): DocSnapshot {
     blocks: {
       type: 'block',
       id: `block:${id}`,
-      flavour: 'affine:page',
+      flavour: 'cloud-notes:page',
       props: {
         title: {
           '$blocksuite:internal:text$': true,
@@ -32,13 +32,13 @@ function docSnapshot(id: string, title: string): DocSnapshot {
         {
           type: 'block',
           id: `block:${id}:note`,
-          flavour: 'affine:note',
+          flavour: 'cloud-notes:note',
           props: {},
           children: [
             {
               type: 'block',
               id: `block:${id}:paragraph`,
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type: 'text',
                 text: {

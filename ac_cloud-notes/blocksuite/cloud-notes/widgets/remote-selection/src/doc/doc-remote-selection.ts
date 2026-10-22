@@ -148,7 +148,7 @@ export class CloudNotesDocRemoteSelectionWidget extends WidgetComponent {
       return null;
     }
 
-    if (this.block.model.flavour !== 'affine:page') {
+    if (this.block.model.flavour !== 'cloud-notes:page') {
       console.error('remote selection widget must be used in page component');
       return null;
     }
@@ -216,7 +216,7 @@ export class CloudNotesDocRemoteSelectionWidget extends WidgetComponent {
       return [];
     }
 
-    if (this.block.model.flavour !== 'affine:page') {
+    if (this.block.model.flavour !== 'cloud-notes:page') {
       console.error('remote selection widget must be used in page component');
       return [];
     }

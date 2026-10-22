@@ -119,7 +119,7 @@ const openParagraphBlocks = (
         {
           type: 'block',
           id: nanoid(),
-          flavour: 'affine:paragraph',
+          flavour: 'cloud-notes:paragraph',
           props: { type, text: { '$blocksuite:internal:text$': true, delta } },
           children: [],
         },
@@ -130,7 +130,7 @@ const openParagraphBlocks = (
 };
 
 const MULTI_PARAGRAPH_EMITTED_NODES_CONTEXT_KEY =
-  'affine:paragraph:multi-emitted-nodes';
+  'cloud-notes:paragraph:multi-emitted-nodes';
 
 const markMultiParagraphEmitted = (walkerContext: any, node: HtmlAST) => {
   const emittedNodes =
@@ -181,7 +181,7 @@ export const paragraphBlockHtmlAdapterMatcher: BlockHtmlAdapterMatcher = {
                 {
                   type: 'block',
                   id: nanoid(),
-                  flavour: 'affine:paragraph',
+                  flavour: 'cloud-notes:paragraph',
                   props: {
                     type: 'quote',
                     text: {
@@ -233,7 +233,7 @@ export const paragraphBlockHtmlAdapterMatcher: BlockHtmlAdapterMatcher = {
             {
               type: 'block',
               id: nanoid(),
-              flavour: 'affine:paragraph',
+              flavour: 'cloud-notes:paragraph',
               props: {
                 type,
                 text: {
@@ -258,7 +258,7 @@ export const paragraphBlockHtmlAdapterMatcher: BlockHtmlAdapterMatcher = {
               {
                 type: 'block',
                 id: nanoid(),
-                flavour: 'affine:paragraph',
+                flavour: 'cloud-notes:paragraph',
                 props: {
                   type: o.node.tagName,
                   text: {

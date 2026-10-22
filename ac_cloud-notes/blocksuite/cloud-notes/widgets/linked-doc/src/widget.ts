@@ -221,7 +221,7 @@ export class CloudNotesLinkedDocWidget extends WidgetComponent<RootBlockModel> {
   get config(): LinkedWidgetConfig {
     return {
       triggerKeys: ['@', '[[', '【【'],
-      ignoreBlockTypes: ['affine:code'],
+      ignoreBlockTypes: ['cloud-notes:code'],
       ignoreSelector:
         'edgeless-text-editor, edgeless-shape-text-editor, edgeless-group-title-editor, edgeless-frame-title-editor, edgeless-connector-label-editor',
       convertTriggerKey: true,
@@ -332,7 +332,7 @@ export class CloudNotesLinkedDocWidget extends WidgetComponent<RootBlockModel> {
 }
 
 export const linkedDocWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_LINKED_DOC_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_LINKED_DOC_WIDGET)}`
 );

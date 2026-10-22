@@ -3,7 +3,7 @@
     {
       "children": [
       ],
-      "flavour": "affine:surface",
+      "flavour": "cloud-notes:surface",
       "id": "1",
       "props": {
         "elements": {
@@ -17,7 +17,7 @@
         {
           "children": [
           ],
-          "flavour": "affine:paragraph",
+          "flavour": "cloud-notes:paragraph",
           "id": "3",
           "props": {
             "collapsed": false,
@@ -37,7 +37,7 @@
         {
           "children": [
           ],
-          "flavour": "affine:bookmark",
+          "flavour": "cloud-notes:bookmark",
           "id": "4",
           "props": {
             "caption": null,
@@ -57,7 +57,7 @@
           "version": 1
         }
       ],
-      "flavour": "affine:note",
+      "flavour": "cloud-notes:note",
       "id": "2",
       "props": {
         "background": {
@@ -82,7 +82,7 @@
       "version": 1
     }
   ],
-  "flavour": "affine:page",
+  "flavour": "cloud-notes:page",
   "id": "0",
   "props": {
     "title": {

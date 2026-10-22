@@ -75,10 +75,10 @@ export const NoteSettings = () => {
     [t]
   );
 
-  const { borderStyle } = settings['affine:note'].edgeless.style;
+  const { borderStyle } = settings['cloud-notes:note'].edgeless.style;
   const setBorderStyle = useCallback(
     (value: StrokeStyle) => {
-      editorSetting.set('affine:note', {
+      editorSetting.set('cloud-notes:note', {
         edgeless: {
           style: {
             borderStyle: value,
@@ -89,10 +89,10 @@ export const NoteSettings = () => {
     [editorSetting]
   );
 
-  const { borderSize } = settings['affine:note'].edgeless.style;
+  const { borderSize } = settings['cloud-notes:note'].edgeless.style;
   const setBorderSize = useCallback(
     (value: number[]) => {
-      editorSetting.set('affine:note', {
+      editorSetting.set('cloud-notes:note', {
         edgeless: {
           style: {
             borderSize: value[0],
@@ -104,10 +104,10 @@ export const NoteSettings = () => {
   );
 
   const backgroundItems = useMemo(() => {
-    const { background } = settings['affine:note'];
+    const { background } = settings['cloud-notes:note'];
     return palettes.map(({ key, value, resolvedValue }) => {
       const handler = () => {
-        editorSetting.set('affine:note', { background: value });
+        editorSetting.set('cloud-notes:note', { background: value });
       };
       const isSelected = isEqual(background, value);
       return (
@@ -124,10 +124,10 @@ export const NoteSettings = () => {
   }, [editorSetting, settings, palettes]);
 
   const cornerItems = useMemo(() => {
-    const { borderRadius } = settings['affine:note'].edgeless.style;
+    const { borderRadius } = settings['cloud-notes:note'].edgeless.style;
     return CORNER_SIZE.map(({ name, value }) => {
       const handler = () => {
-        editorSetting.set('affine:note', {
+        editorSetting.set('cloud-notes:note', {
           edgeless: {
             style: {
               borderRadius: value,
@@ -145,10 +145,10 @@ export const NoteSettings = () => {
   }, [editorSetting, settings]);
 
   const shadowItems = useMemo(() => {
-    const { shadowType } = settings['affine:note'].edgeless.style;
+    const { shadowType } = settings['cloud-notes:note'].edgeless.style;
     return Object.entries(NoteShadow).map(([name, value]) => {
       const handler = () => {
-        editorSetting.set('affine:note', {
+        editorSetting.set('cloud-notes:note', {
           edgeless: {
             style: {
               shadowType: value,
@@ -166,12 +166,12 @@ export const NoteSettings = () => {
   }, [editorSetting, settings]);
 
   const currentColor = useMemo(() => {
-    const { background } = settings['affine:note'];
+    const { background } = settings['cloud-notes:note'];
     return getCurrentColor(background);
   }, [getCurrentColor, settings]);
 
   const getElements = useCallback((doc: Store) => {
-    return doc.getBlocksByFlavour('affine:note') || [];
+    return doc.getBlocksByFlavour('cloud-notes:note') || [];
   }, []);
 
   return (
@@ -179,7 +179,7 @@ export const NoteSettings = () => {
       <EdgelessSnapshot
         title={t['com.cloud-notes.settings.editorSettings.edgeless.note']()}
         docName="note"
-        keyName="affine:note"
+        keyName="cloud-notes:note"
         getElements={getElements}
         height={240}
       />
@@ -213,7 +213,7 @@ export const NoteSettings = () => {
             <MenuTrigger className={menuTrigger}>
               {
                 CornerSizeMap[
-                  settings['affine:note'].edgeless.style
+                  settings['cloud-notes:note'].edgeless.style
                     .borderRadius as CornerSize
                 ]
               }
@@ -229,7 +229,7 @@ export const NoteSettings = () => {
           items={shadowItems}
           trigger={
             <MenuTrigger className={menuTrigger}>
-              {NoteShadowMap[settings['affine:note'].edgeless.style.shadowType]}
+              {NoteShadowMap[settings['cloud-notes:note'].edgeless.style.shadowType]}
             </MenuTrigger>
           }
         />

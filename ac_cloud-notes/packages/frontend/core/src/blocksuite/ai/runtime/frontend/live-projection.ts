@@ -39,7 +39,7 @@ function boundsOf(element: GfxModel) {
 
 function elementType(element: GfxModel) {
   const type = isPrimitiveModel(element) ? element.type : element.flavour;
-  return type.startsWith('affine:') ? type.slice('affine:'.length) : type;
+  return type.startsWith('cloud-notes:') ? type.slice('cloud-notes:'.length) : type;
 }
 
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -83,7 +83,7 @@ function relations(element: GfxModel, props: Record<string, unknown>) {
   const target = record(props.target);
   const group = element.group;
   const frame = element.groups.find(
-    candidate => 'flavour' in candidate && candidate.flavour === 'affine:frame'
+    candidate => 'flavour' in candidate && candidate.flavour === 'cloud-notes:frame'
   );
   const serializedGroup = group
     ? record(isPrimitiveModel(group) ? group.serialize() : group.props)
@@ -353,7 +353,7 @@ export function snapshotDocument(
     };
   }
   const outline = host.store
-    .getBlocksByFlavour('affine:note')
+    .getBlocksByFlavour('cloud-notes:note')
     .flatMap(note => note.model.children);
   const blocks = outline.slice(0, limit).map(model => projectBlock(model, 500));
   return {

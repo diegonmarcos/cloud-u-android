@@ -53,7 +53,7 @@ export const canDedentParagraphCommand: Command<
       blockId,
       inlineIndex,
       type: 'dedent',
-      flavour: 'affine:paragraph',
+      flavour: 'cloud-notes:paragraph',
     },
   });
 };
@@ -67,7 +67,7 @@ export const dedentParagraphCommand: Command<{
   if (
     !dedentContext ||
     dedentContext.type !== 'dedent' ||
-    dedentContext.flavour !== 'affine:paragraph'
+    dedentContext.flavour !== 'cloud-notes:paragraph'
   ) {
     console.warn(
       'you need to use `canDedentParagraph` command before running `dedentParagraph` command'

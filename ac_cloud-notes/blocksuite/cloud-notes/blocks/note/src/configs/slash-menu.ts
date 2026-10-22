@@ -41,7 +41,7 @@ const noteSlashMenuConfig: SlashMenuConfig = {
         .map(config => createConversionItem(config)),
     },
     ...textConversionConfigs
-      .filter(i => i.flavour === 'affine:code')
+      .filter(i => i.flavour === 'cloud-notes:code')
       .map(config => createConversionItem(config, `0_Basic@${basicIndex++}`)),
 
     ...textConversionConfigs
@@ -55,13 +55,13 @@ const noteSlashMenuConfig: SlashMenuConfig = {
               !isInsideBlockByFlavour(
                 model.store,
                 model,
-                'affine:edgeless-text'
+                'cloud-notes:edgeless-text'
               ),
           }) satisfies SlashMenuActionItem
       ),
 
     ...textConversionConfigs
-      .filter(i => i.flavour === 'affine:list')
+      .filter(i => i.flavour === 'cloud-notes:list')
       .map((config, index) =>
         createConversionItem(config, `1_List@${index++}`)
       ),
@@ -151,6 +151,6 @@ function createTextFormatItem(
 }
 
 export const NoteSlashMenuConfigExtension = SlashMenuConfigExtension(
-  'affine:note',
+  'cloud-notes:note',
   noteSlashMenuConfig
 );

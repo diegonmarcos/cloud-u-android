@@ -46,7 +46,7 @@ export function createEmbedBlockSchema<
   transformer?: () => Transformer;
 }) {
   return defineBlockSchema({
-    flavour: `affine:embed-${name}`,
+    flavour: `cloud-notes:embed-${name}`,
     props: internalPrimitives => {
       const userProps = props?.(internalPrimitives);
 

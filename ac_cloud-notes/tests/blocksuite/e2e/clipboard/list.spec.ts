@@ -442,13 +442,13 @@ test(scoped`should copy and paste of database work`, async ({ page }) => {
   let pageJson = await getPageSnapshot(page, false);
   let note = (pageJson as BlockSnapshot).children[0];
   const database = note.children[0];
-  expect(database.flavour).toBe('affine:database');
+  expect(database.flavour).toBe('cloud-notes:database');
 
   await undoByKeyboard(page);
 
   pageJson = await getPageSnapshot(page, false);
   note = (pageJson as BlockSnapshot).children[0];
-  const db = note.children.find(child => child.flavour === 'affine:database');
+  const db = note.children.find(child => child.flavour === 'cloud-notes:database');
   expect(db).toBeDefined();
 });
 

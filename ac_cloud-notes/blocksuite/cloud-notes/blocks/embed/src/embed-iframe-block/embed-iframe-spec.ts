@@ -13,7 +13,7 @@ const flavour = EmbedIframeBlockSchema.model.flavour;
 export const EmbedIframeViewExtensions: ExtensionType[] = [
   FlavourExtension(flavour),
   BlockViewExtension(flavour, model => {
-    return model.parent?.flavour === 'affine:surface'
+    return model.parent?.flavour === 'cloud-notes:surface'
       ? literal`cloud-notes-embed-edgeless-iframe-block`
       : literal`cloud-notes-embed-iframe-block`;
   }),

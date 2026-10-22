@@ -27,11 +27,11 @@ beforeEach(async () => {
   const initPage = async (page: Store) => {
     page.load();
     expect(page).not.toBeNull();
-    const pageBlockId = page.addBlock('affine:page', {
+    const pageBlockId = page.addBlock('cloud-notes:page', {
       title: new Text(''),
     });
-    const frameId = page.addBlock('affine:note', {}, pageBlockId);
-    page.addBlock('affine:paragraph', {}, frameId);
+    const frameId = page.addBlock('cloud-notes:note', {}, pageBlockId);
+    page.addBlock('cloud-notes:paragraph', {}, frameId);
   };
   const store = docCollection.createDoc('page0').getStore({ extensions });
   await initPage(store);
@@ -44,11 +44,11 @@ describe('useBlockSuitePagePreview', () => {
       throw new Error('Page not found');
     }
     const id = page.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       {
         text: new Text('Hello, world!'),
       },
-      page.getModelsByFlavour('affine:note')[0].id
+      page.getModelsByFlavour('cloud-notes:note')[0].id
     );
     const hook = renderHook(() => useAtomValue(useBlockSuitePagePreview(page)));
     expect(hook.result.current).toBe('Hello, world!');
@@ -61,11 +61,11 @@ describe('useBlockSuitePagePreview', () => {
 
     // Insert before
     page.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       {
         text: new Text('First block!'),
       },
-      page.getModelsByFlavour('affine:note')[0].id,
+      page.getModelsByFlavour('cloud-notes:note')[0].id,
       0
     );
     await new Promise(resolve => setTimeout(resolve, 100));

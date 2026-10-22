@@ -5,7 +5,7 @@ import type {
 import { BlockLayoutPainterExtension } from '@blocksuite/cloud-notes-gfx-turbo-renderer/painter';
 
 export interface ImageLayout extends BlockLayout {
-  type: 'affine:image';
+  type: 'cloud-notes:image';
   rect: {
     x: number;
     y: number;
@@ -15,7 +15,7 @@ export interface ImageLayout extends BlockLayout {
 }
 
 function isImageLayout(layout: BlockLayout): layout is ImageLayout {
-  return layout.type === 'affine:image';
+  return layout.type === 'cloud-notes:image';
 }
 
 class ImageLayoutPainter implements BlockLayoutPainter {
@@ -51,6 +51,6 @@ class ImageLayoutPainter implements BlockLayoutPainter {
 }
 
 export const ImageLayoutPainterExtension = BlockLayoutPainterExtension(
-  'affine:image',
+  'cloud-notes:image',
   ImageLayoutPainter
 );

@@ -52,7 +52,7 @@ export class BlockCaptionEditor<
   };
 
   get mode(): DocMode {
-    return this.doc.getParent(this.model)?.flavour === 'affine:surface'
+    return this.doc.getParent(this.model)?.flavour === 'cloud-notes:surface'
       ? 'edgeless'
       : 'page';
   }
@@ -86,7 +86,7 @@ export class BlockCaptionEditor<
       const nextBlockText = value.slice(start);
       const index = parent.children.indexOf(model);
       const id = doc.addBlock(
-        'affine:paragraph',
+        'cloud-notes:paragraph',
         { text: new Text(nextBlockText) },
         parent,
         index + 1

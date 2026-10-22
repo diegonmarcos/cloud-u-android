@@ -27,7 +27,7 @@ export const getPagePreviewText = (page: Store) => {
       console.error('Unexpected empty block');
       break;
     }
-    if (block.flavour === 'affine:surface') {
+    if (block.flavour === 'cloud-notes:surface') {
       // The surface block is a special block that contains canvas data,
       // it should not be included in the preview.
       continue;
@@ -48,7 +48,7 @@ export const getPagePreviewText = (page: Store) => {
       preview.push(text);
     } else {
       // Other block e.g. image/attachment/bookmark
-      const type = block.flavour.split('affine:')[1] ?? null;
+      const type = block.flavour.split('cloud-notes:')[1] ?? null;
       if (type) {
         previewLenNeeded -= type.length + 2;
         preview.push(`[${type}]`);

@@ -353,8 +353,8 @@ export const LinkPreview = ({
         searchParams.set('mode', displayMode);
 
         let blockId = link.blockId;
-        if (link.parentFlavour === 'affine:database' && link.parentBlockId) {
-          // if parentBlockFlavour is 'affine:database',
+        if (link.parentFlavour === 'cloud-notes:database' && link.parentBlockId) {
+          // if parentBlockFlavour is 'cloud-notes:database',
           // we will fallback to the database block instead
           blockId = link.parentBlockId;
         } else if (displayMode === 'edgeless' && link.noteBlockId) {

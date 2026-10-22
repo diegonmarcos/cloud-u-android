@@ -54,12 +54,12 @@ export type ToSliceSnapshotPayload<Target> = {
 };
 
 export function wrapFakeNote(snapshot: SliceSnapshot) {
-  if (snapshot.content[0]?.flavour !== 'affine:note') {
+  if (snapshot.content[0]?.flavour !== 'cloud-notes:note') {
     snapshot.content = [
       {
         type: 'block',
         id: '',
-        flavour: 'affine:note',
+        flavour: 'cloud-notes:note',
         props: {},
         children: snapshot.content,
       },

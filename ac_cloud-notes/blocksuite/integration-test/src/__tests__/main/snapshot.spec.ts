@@ -52,7 +52,7 @@ const snapshotTest = async (snapshotUrl: string, elementsCount: number) => {
   await wait();
 
   const surface = newDoc.getModelsByFlavour(
-    'affine:surface'
+    'cloud-notes:surface'
   )[0] as SurfaceBlockModel;
   const surfaceElements = [...surface['_elementModels']].map(
     ([_, { model }]) => model

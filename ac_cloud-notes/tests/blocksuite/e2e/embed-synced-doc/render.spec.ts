@@ -49,11 +49,11 @@ test.describe('embed-synced-doc render', () => {
     await page.evaluate(async embedDocId => {
       const { collection } = window;
       const doc2 = collection.getDoc(embedDocId)!.getStore();
-      const [noteBlock] = doc2!.getBlocksByFlavour('affine:note');
+      const [noteBlock] = doc2!.getBlocksByFlavour('cloud-notes:note');
       const noteId = noteBlock.id;
 
       const databaseId = doc2.addBlock(
-        'affine:database',
+        'cloud-notes:database',
         {
           title: new window.$blocksuite.store.Text('Database 1'),
         },

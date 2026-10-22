@@ -53,7 +53,7 @@ export const NoteZodSchema = z
   });
 
 export const NoteBlockSchema = defineBlockSchema({
-  flavour: 'affine:note',
+  flavour: 'cloud-notes:note',
   props: (): NoteProps => ({
     xywh: `[0,0,${DEFAULT_NOTE_WIDTH},${DEFAULT_NOTE_HEIGHT}]`,
     background: DefaultTheme.noteBackgrounColor,
@@ -77,9 +77,9 @@ export const NoteBlockSchema = defineBlockSchema({
     parent: ['@root'],
     children: [
       '@content',
-      'affine:database',
-      'affine:data-view',
-      'affine:callout',
+      'cloud-notes:database',
+      'cloud-notes:data-view',
+      'cloud-notes:callout',
     ],
   },
   toModel: () => {
@@ -145,7 +145,7 @@ export class NoteBlockModel
     if (this.children.length === 0) return true;
     if (this.children.length === 1) {
       const firstChild = this.children[0];
-      if (firstChild.flavour === 'affine:paragraph') {
+      if (firstChild.flavour === 'cloud-notes:paragraph') {
         return firstChild.isEmpty();
       }
     }

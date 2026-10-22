@@ -6,14 +6,14 @@ import { builtinLockedToolbarConfig, builtinMiscToolbarConfig } from './misc';
 
 export const EdgelessElementToolbarExtension: ExtensionType[] = [
   ToolbarModuleExtension({
-    id: BlockFlavourIdentifier('affine:surface:*'),
+    id: BlockFlavourIdentifier('cloud-notes:surface:*'),
     config: builtinMiscToolbarConfig,
   }),
 
   // Special Scenarios
   // Only display the `unlock` button when the selection includes a locked element.
   ToolbarModuleExtension({
-    id: BlockFlavourIdentifier('affine:surface:locked'),
+    id: BlockFlavourIdentifier('cloud-notes:surface:locked'),
     config: builtinLockedToolbarConfig,
   }),
 ];

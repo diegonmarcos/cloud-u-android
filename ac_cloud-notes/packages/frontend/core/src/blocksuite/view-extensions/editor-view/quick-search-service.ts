@@ -157,12 +157,12 @@ export function patchQuickSearchService(framework: FrameworkProvider) {
                 const flavour = type?.flavour;
                 if (!flavour) return;
 
-                if (flavour === 'affine:bookmark') {
+                if (flavour === 'cloud-notes:bookmark') {
                   track.doc.editor.slashMenu.bookmark();
                   return;
                 }
 
-                if (flavour === 'affine:embed-linked-doc') {
+                if (flavour === 'cloud-notes:embed-linked-doc') {
                   track.doc.editor.slashMenu.linkDoc({
                     control: 'linkDoc',
                   });

@@ -6,6 +6,6 @@
 
 # Variable: SURFACE\_TEXT\_UNIQ\_IDENTIFIER
 
-> `const` **SURFACE\_TEXT\_UNIQ\_IDENTIFIER**: `"affine:surface:text"` = `'affine:surface:text'`
+> `const` **SURFACE\_TEXT\_UNIQ\_IDENTIFIER**: `"cloud-notes:surface:text"` = `'cloud-notes:surface:text'`
 
 Used for text field

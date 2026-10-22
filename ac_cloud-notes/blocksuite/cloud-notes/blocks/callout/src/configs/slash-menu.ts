@@ -21,7 +21,7 @@ export const calloutSlashMenuConfig: SlashMenuConfig = {
         return !isInsideBlockByFlavour(
           model.store,
           model,
-          'affine:edgeless-text'
+          'cloud-notes:edgeless-text'
         );
       },
       action: ({ model, std }) => {
@@ -32,13 +32,13 @@ export const calloutSlashMenuConfig: SlashMenuConfig = {
         const index = parent.children.indexOf(model);
         if (index === -1) return;
         const calloutId = store.addBlock(
-          'affine:callout',
+          'cloud-notes:callout',
           {},
           parent,
           index + 1
         );
         if (!calloutId) return;
-        const paragraphId = store.addBlock('affine:paragraph', {}, calloutId);
+        const paragraphId = store.addBlock('cloud-notes:paragraph', {}, calloutId);
         if (!paragraphId) return;
         std.host.updateComplete
           .then(() => {

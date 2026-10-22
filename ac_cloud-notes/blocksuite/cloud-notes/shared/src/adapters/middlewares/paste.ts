@@ -292,7 +292,7 @@ class PasteTr {
     const host = this.std.host;
 
     const cursorBlock =
-      this.pointState.model.flavour === 'affine:code' || !this.lastSnapshot
+      this.pointState.model.flavour === 'cloud-notes:code' || !this.lastSnapshot
         ? this.std.store.getBlock(this.pointState.model.id)
         : this.std.store.getBlock(this.lastSnapshot.id);
     if (!cursorBlock) {
@@ -401,7 +401,7 @@ class PasteTr {
           .reduce((a, b) => a + b + 1, -1);
     }
     this.firstSnapshotIsPlainText =
-      this.firstSnapshot.flavour === 'affine:paragraph' &&
+      this.firstSnapshot.flavour === 'cloud-notes:paragraph' &&
       this.firstSnapshot.props.type === 'text';
   }
 
@@ -507,7 +507,7 @@ class PasteTr {
       return;
     }
 
-    if (this.pointState.model.flavour === 'affine:code') {
+    if (this.pointState.model.flavour === 'cloud-notes:code') {
       this._mergeCode();
       return;
     }
@@ -518,7 +518,7 @@ class PasteTr {
 }
 
 function flatNote(snapshot: SliceSnapshot) {
-  if (snapshot.content[0]?.flavour === 'affine:note') {
+  if (snapshot.content[0]?.flavour === 'cloud-notes:note') {
     snapshot.content = snapshot.content[0].children;
   }
 }

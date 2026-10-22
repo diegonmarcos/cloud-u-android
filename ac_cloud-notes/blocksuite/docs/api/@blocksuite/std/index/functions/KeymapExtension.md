@@ -42,7 +42,7 @@ const MyKeymapExtension = KeymapExtension(std => {
       'mod-a': SelectAll
     }
     options: {
-      flavour: 'affine:paragraph'
+      flavour: 'cloud-notes:paragraph'
     }
   }
 });

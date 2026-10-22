@@ -8,9 +8,9 @@ import { MarkdownElementModelAdapter } from './element-adapter/index.js';
 import { ElementToMarkdownAdapterMatcherIdentifier } from './element-adapter/type.js';
 
 export const surfaceBlockMarkdownAdapterMatcher: BlockMarkdownAdapterMatcher = {
-  flavour: 'affine:surface',
+  flavour: 'cloud-notes:surface',
   toMatch: () => false,
-  fromMatch: o => o.node.flavour === 'affine:surface',
+  fromMatch: o => o.node.flavour === 'cloud-notes:surface',
   toBlockSnapshot: {},
   fromBlockSnapshot: {
     enter: (_, context) => {
@@ -24,9 +24,9 @@ export const SurfaceBlockMarkdownAdapterExtension =
 
 export const edgelessSurfaceBlockMarkdownAdapterMatcher: BlockMarkdownAdapterMatcher =
   {
-    flavour: 'affine:surface',
+    flavour: 'cloud-notes:surface',
     toMatch: () => false,
-    fromMatch: o => o.node.flavour === 'affine:surface',
+    fromMatch: o => o.node.flavour === 'cloud-notes:surface',
     toBlockSnapshot: {},
     fromBlockSnapshot: {
       enter: (o, context) => {

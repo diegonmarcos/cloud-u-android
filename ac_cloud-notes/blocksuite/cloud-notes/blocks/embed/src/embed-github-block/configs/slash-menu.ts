@@ -18,7 +18,7 @@ export const embedGithubSlashMenuConfig: SlashMenuConfig = {
       },
       group: '4_Content & Media@7',
       when: ({ model }) =>
-        model.store.schema.flavourSchemaMap.has('affine:embed-github'),
+        model.store.schema.flavourSchemaMap.has('cloud-notes:embed-github'),
       action: ({ std, model }) => {
         (async () => {
           const { host } = std;

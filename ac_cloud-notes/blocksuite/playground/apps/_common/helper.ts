@@ -12,10 +12,10 @@ export function createEmptyDoc() {
     doc,
     init() {
       doc.load();
-      const rootId = store.addBlock('affine:page', {});
-      store.addBlock('affine:surface', {}, rootId);
-      const noteId = store.addBlock('affine:note', {}, rootId);
-      store.addBlock('affine:paragraph', {}, noteId);
+      const rootId = store.addBlock('cloud-notes:page', {});
+      store.addBlock('cloud-notes:surface', {}, rootId);
+      const noteId = store.addBlock('cloud-notes:note', {}, rootId);
+      store.addBlock('cloud-notes:paragraph', {}, noteId);
       return store;
     },
   };

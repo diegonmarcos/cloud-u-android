@@ -46,7 +46,7 @@ function waitOnce<T>(slot: Subject<T>) {
 }
 
 function createRoot(doc: Store) {
-  doc.addBlock('affine:page');
+  doc.addBlock('cloud-notes:page');
   if (!doc.root) throw new Error('root not found');
   return doc.root;
 }
@@ -159,12 +159,12 @@ describe('basic', () => {
     store.slots.rootAdded.subscribe(rootAddedCallback);
 
     store.load(() => {
-      const rootId = store.addBlock('affine:page', {
+      const rootId = store.addBlock('cloud-notes:page', {
         title: new Text(),
       });
       expect(rootAddedCallback).toBeCalledTimes(1);
 
-      store.addBlock('affine:note', {}, rootId);
+      store.addBlock('cloud-notes:note', {}, rootId);
     });
 
     expect(readyCallback).toBeCalledTimes(1);
@@ -180,7 +180,7 @@ describe('basic', () => {
       extensions,
     });
     doc.load(() => {
-      store.addBlock('affine:page', {
+      store.addBlock('cloud-notes:page', {
         title: new Text(),
       });
     });
@@ -220,7 +220,7 @@ describe('basic', () => {
               'prop:style': {},
               'prop:title': '',
               'sys:children': [],
-              'sys:flavour': 'affine:page',
+              'sys:flavour': 'cloud-notes:page',
               'sys:id': '0',
               'sys:version': 2,
             },
@@ -241,7 +241,7 @@ describe('basic', () => {
 describe('addBlock', () => {
   it('can add single model', () => {
     const doc = createTestDoc();
-    doc.addBlock('affine:page', {
+    doc.addBlock('cloud-notes:page', {
       title: new Text(),
     });
 
@@ -252,7 +252,7 @@ describe('addBlock', () => {
         'prop:style': {},
         'prop:title': '',
         'sys:children': [],
-        'sys:flavour': 'affine:page',
+        'sys:flavour': 'cloud-notes:page',
         'sys:id': '0',
         'sys:version': 2,
       },
@@ -261,7 +261,7 @@ describe('addBlock', () => {
 
   it('can add model with props', () => {
     const doc = createTestDoc();
-    doc.addBlock('affine:page', { title: new Text('hello') });
+    doc.addBlock('cloud-notes:page', { title: new Text('hello') });
 
     assert.deepEqual(serializCollection(doc.rootDoc).spaces[spaceId].blocks, {
       '0': {
@@ -269,7 +269,7 @@ describe('addBlock', () => {
         'prop:items': [],
         'prop:style': {},
         'sys:children': [],
-        'sys:flavour': 'affine:page',
+        'sys:flavour': 'cloud-notes:page',
         'sys:id': '0',
         'prop:title': 'hello',
         'sys:version': 2,
@@ -279,15 +279,15 @@ describe('addBlock', () => {
 
   it('can add multi models', () => {
     const doc = createTestDoc();
-    const rootId = doc.addBlock('affine:page', {
+    const rootId = doc.addBlock('cloud-notes:page', {
       title: new Text(),
     });
-    const noteId = doc.addBlock('affine:note', {}, rootId);
-    doc.addBlock('affine:paragraph', {}, noteId);
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
     doc.addBlocks(
       [
-        { flavour: 'affine:paragraph', blockProps: { type: 'h1' } },
-        { flavour: 'affine:paragraph', blockProps: { type: 'h2' } },
+        { flavour: 'cloud-notes:paragraph', blockProps: { type: 'h1' } },
+        { flavour: 'cloud-notes:paragraph', blockProps: { type: 'h2' } },
       ],
       noteId
     );
@@ -298,20 +298,20 @@ describe('addBlock', () => {
         'prop:items': [],
         'prop:style': {},
         'sys:children': ['1'],
-        'sys:flavour': 'affine:page',
+        'sys:flavour': 'cloud-notes:page',
         'sys:id': '0',
         'prop:title': '',
         'sys:version': 2,
       },
       '1': {
         'sys:children': ['2', '3', '4'],
-        'sys:flavour': 'affine:note',
+        'sys:flavour': 'cloud-notes:note',
         'sys:id': '1',
         'sys:version': 1,
       },
       '2': {
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '2',
         'prop:text': '',
         'prop:type': 'text',
@@ -319,7 +319,7 @@ describe('addBlock', () => {
       },
       '3': {
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '3',
         'prop:text': '',
         'prop:type': 'h1',
@@ -327,7 +327,7 @@ describe('addBlock', () => {
       },
       '4': {
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '4',
         'prop:text': '',
         'prop:type': 'h2',
@@ -340,13 +340,13 @@ describe('addBlock', () => {
     const doc = createTestDoc();
 
     queueMicrotask(() =>
-      doc.addBlock('affine:page', {
+      doc.addBlock('cloud-notes:page', {
         title: new Text(),
       })
     );
     const blockId = await waitOnce(doc.slots.rootAdded);
     const block = doc.getModelById(blockId) as BlockModel;
-    assert.equal(block.flavour, 'affine:page');
+    assert.equal(block.flavour, 'cloud-notes:page');
   });
 
   it('can add block to root', async () => {
@@ -355,18 +355,18 @@ describe('addBlock', () => {
     let noteId: string;
 
     queueMicrotask(() => {
-      const rootId = doc.addBlock('affine:page');
-      noteId = doc.addBlock('affine:note', {}, rootId);
+      const rootId = doc.addBlock('cloud-notes:page');
+      noteId = doc.addBlock('cloud-notes:note', {}, rootId);
     });
     await waitOnce(doc.slots.rootAdded);
     const { root } = doc;
     if (!root) throw new Error('root is null');
 
-    assert.equal(root.flavour, 'affine:page');
+    assert.equal(root.flavour, 'cloud-notes:page');
 
-    doc.addBlock('affine:paragraph', {}, noteId!);
-    assert.equal(root.children[0].flavour, 'affine:note');
-    assert.equal(root.children[0].children[0].flavour, 'affine:paragraph');
+    doc.addBlock('cloud-notes:paragraph', {}, noteId!);
+    assert.equal(root.children[0].flavour, 'cloud-notes:note');
+    assert.equal(root.children[0].children[0].flavour, 'cloud-notes:paragraph');
     assert.equal(root.childMap.value.get('1'), 0);
 
     const serializedChildren = serializCollection(doc.rootDoc).spaces[spaceId]
@@ -389,7 +389,7 @@ describe('addBlock', () => {
       extensions,
     });
 
-    store0.addBlock('affine:page', {
+    store0.addBlock('cloud-notes:page', {
       title: new Text(),
     });
     collection.removeDoc(doc0.id);
@@ -461,10 +461,10 @@ describe('deleteBlock', () => {
   it('delete children recursively by default', () => {
     const doc = createTestDoc();
 
-    const rootId = doc.addBlock('affine:page', {});
-    const noteId = doc.addBlock('affine:note', {}, rootId);
-    doc.addBlock('affine:paragraph', {}, noteId);
-    doc.addBlock('affine:paragraph', {}, noteId);
+    const rootId = doc.addBlock('cloud-notes:page', {});
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
     assert.deepEqual(serializCollection(doc.rootDoc).spaces[spaceId].blocks, {
       '0': {
         'prop:count': 0,
@@ -472,13 +472,13 @@ describe('deleteBlock', () => {
         'prop:style': {},
         'prop:title': '',
         'sys:children': ['1'],
-        'sys:flavour': 'affine:page',
+        'sys:flavour': 'cloud-notes:page',
         'sys:id': '0',
         'sys:version': 2,
       },
       '1': {
         'sys:children': ['2', '3'],
-        'sys:flavour': 'affine:note',
+        'sys:flavour': 'cloud-notes:note',
         'sys:id': '1',
         'sys:version': 1,
       },
@@ -486,7 +486,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '2',
         'sys:version': 1,
       },
@@ -494,7 +494,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '3',
         'sys:version': 1,
       },
@@ -510,7 +510,7 @@ describe('deleteBlock', () => {
         'prop:style': {},
         'prop:title': '',
         'sys:children': [],
-        'sys:flavour': 'affine:page',
+        'sys:flavour': 'cloud-notes:page',
         'sys:id': '0',
         'sys:version': 2,
       },
@@ -520,11 +520,11 @@ describe('deleteBlock', () => {
   it('bring children to parent', () => {
     const doc = createTestDoc();
 
-    const rootId = doc.addBlock('affine:page', {});
-    const noteId = doc.addBlock('affine:note', {}, rootId);
-    const p1 = doc.addBlock('affine:paragraph', {}, noteId);
-    doc.addBlock('affine:paragraph', {}, p1);
-    doc.addBlock('affine:paragraph', {}, p1);
+    const rootId = doc.addBlock('cloud-notes:page', {});
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
+    const p1 = doc.addBlock('cloud-notes:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, p1);
+    doc.addBlock('cloud-notes:paragraph', {}, p1);
 
     assert.deepEqual(serializCollection(doc.rootDoc).spaces[spaceId].blocks, {
       '0': {
@@ -533,13 +533,13 @@ describe('deleteBlock', () => {
         'prop:style': {},
         'prop:title': '',
         'sys:children': ['1'],
-        'sys:flavour': 'affine:page',
+        'sys:flavour': 'cloud-notes:page',
         'sys:id': '0',
         'sys:version': 2,
       },
       '1': {
         'sys:children': ['2'],
-        'sys:flavour': 'affine:note',
+        'sys:flavour': 'cloud-notes:note',
         'sys:id': '1',
         'sys:version': 1,
       },
@@ -547,7 +547,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': ['3', '4'],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '2',
         'sys:version': 1,
       },
@@ -555,7 +555,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '3',
         'sys:version': 1,
       },
@@ -563,7 +563,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '4',
         'sys:version': 1,
       },
@@ -582,13 +582,13 @@ describe('deleteBlock', () => {
         'prop:style': {},
         'prop:title': '',
         'sys:children': ['1'],
-        'sys:flavour': 'affine:page',
+        'sys:flavour': 'cloud-notes:page',
         'sys:id': '0',
         'sys:version': 2,
       },
       '1': {
         'sys:children': ['3', '4'],
-        'sys:flavour': 'affine:note',
+        'sys:flavour': 'cloud-notes:note',
         'sys:id': '1',
         'sys:version': 1,
       },
@@ -596,7 +596,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '3',
         'sys:version': 1,
       },
@@ -604,7 +604,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '4',
         'sys:version': 1,
       },
@@ -614,13 +614,13 @@ describe('deleteBlock', () => {
   it('bring children to other block', () => {
     const doc = createTestDoc();
 
-    const rootId = doc.addBlock('affine:page', {});
-    const noteId = doc.addBlock('affine:note', {}, rootId);
-    const p1 = doc.addBlock('affine:paragraph', {}, noteId);
-    const p2 = doc.addBlock('affine:paragraph', {}, noteId);
-    doc.addBlock('affine:paragraph', {}, p1);
-    doc.addBlock('affine:paragraph', {}, p1);
-    doc.addBlock('affine:paragraph', {}, p2);
+    const rootId = doc.addBlock('cloud-notes:page', {});
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
+    const p1 = doc.addBlock('cloud-notes:paragraph', {}, noteId);
+    const p2 = doc.addBlock('cloud-notes:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, p1);
+    doc.addBlock('cloud-notes:paragraph', {}, p1);
+    doc.addBlock('cloud-notes:paragraph', {}, p2);
 
     assert.deepEqual(serializCollection(doc.rootDoc).spaces[spaceId].blocks, {
       '0': {
@@ -629,13 +629,13 @@ describe('deleteBlock', () => {
         'prop:style': {},
         'prop:title': '',
         'sys:children': ['1'],
-        'sys:flavour': 'affine:page',
+        'sys:flavour': 'cloud-notes:page',
         'sys:id': '0',
         'sys:version': 2,
       },
       '1': {
         'sys:children': ['2', '3'],
-        'sys:flavour': 'affine:note',
+        'sys:flavour': 'cloud-notes:note',
         'sys:id': '1',
         'sys:version': 1,
       },
@@ -643,7 +643,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': ['4', '5'],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '2',
         'sys:version': 1,
       },
@@ -651,7 +651,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': ['6'],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '3',
         'sys:version': 1,
       },
@@ -659,7 +659,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '4',
         'sys:version': 1,
       },
@@ -667,7 +667,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '5',
         'sys:version': 1,
       },
@@ -675,7 +675,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '6',
         'sys:version': 1,
       },
@@ -694,13 +694,13 @@ describe('deleteBlock', () => {
         'prop:style': {},
         'prop:title': '',
         'sys:children': ['1'],
-        'sys:flavour': 'affine:page',
+        'sys:flavour': 'cloud-notes:page',
         'sys:id': '0',
         'sys:version': 2,
       },
       '1': {
         'sys:children': ['3'],
-        'sys:flavour': 'affine:note',
+        'sys:flavour': 'cloud-notes:note',
         'sys:id': '1',
         'sys:version': 1,
       },
@@ -708,7 +708,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': ['6', '4', '5'],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '3',
         'sys:version': 1,
       },
@@ -716,7 +716,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '4',
         'sys:version': 1,
       },
@@ -724,7 +724,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '5',
         'sys:version': 1,
       },
@@ -732,7 +732,7 @@ describe('deleteBlock', () => {
         'prop:text': '',
         'prop:type': 'text',
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '6',
         'sys:version': 1,
       },
@@ -742,9 +742,9 @@ describe('deleteBlock', () => {
   it('can delete model with parent', () => {
     const doc = createTestDoc();
     const rootModel = createRoot(doc);
-    const noteId = doc.addBlock('affine:note', {}, rootModel.id);
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootModel.id);
 
-    doc.addBlock('affine:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
 
     // before delete
     assert.deepEqual(serializCollection(doc.rootDoc).spaces[spaceId].blocks, {
@@ -754,19 +754,19 @@ describe('deleteBlock', () => {
         'prop:style': {},
         'prop:title': '',
         'sys:children': ['1'],
-        'sys:flavour': 'affine:page',
+        'sys:flavour': 'cloud-notes:page',
         'sys:id': '0',
         'sys:version': 2,
       },
       '1': {
         'sys:children': ['2'],
-        'sys:flavour': 'affine:note',
+        'sys:flavour': 'cloud-notes:note',
         'sys:id': '1',
         'sys:version': 1,
       },
       '2': {
         'sys:children': [],
-        'sys:flavour': 'affine:paragraph',
+        'sys:flavour': 'cloud-notes:paragraph',
         'sys:id': '2',
         'prop:text': '',
         'prop:type': 'text',
@@ -784,13 +784,13 @@ describe('deleteBlock', () => {
         'prop:style': {},
         'prop:title': '',
         'sys:children': ['1'],
-        'sys:flavour': 'affine:page',
+        'sys:flavour': 'cloud-notes:page',
         'sys:id': '0',
         'sys:version': 2,
       },
       '1': {
         'sys:children': [],
-        'sys:flavour': 'affine:note',
+        'sys:flavour': 'cloud-notes:note',
         'sys:id': '1',
         'sys:version': 1,
       },
@@ -803,13 +803,13 @@ describe('getBlock', () => {
   it('can get block by id', () => {
     const doc = createTestDoc();
     const rootModel = createRoot(doc);
-    const noteId = doc.addBlock('affine:note', {}, rootModel.id);
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootModel.id);
 
-    doc.addBlock('affine:paragraph', {}, noteId);
-    doc.addBlock('affine:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
 
     const text = doc.getModelById('3') as BlockModel;
-    assert.equal(text.flavour, 'affine:paragraph');
+    assert.equal(text.flavour, 'cloud-notes:paragraph');
     assert.equal(rootModel.children[0].children.indexOf(text), 1);
 
     const invalid = doc.getModelById('😅');
@@ -819,10 +819,10 @@ describe('getBlock', () => {
   it('can get parent', () => {
     const doc = createTestDoc();
     const rootModel = createRoot(doc);
-    const noteId = doc.addBlock('affine:note', {}, rootModel.id);
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootModel.id);
 
-    doc.addBlock('affine:paragraph', {}, noteId);
-    doc.addBlock('affine:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
 
     const result = doc.getParent(
       rootModel.children[0].children[1]
@@ -836,10 +836,10 @@ describe('getBlock', () => {
   it('can get previous sibling', () => {
     const doc = createTestDoc();
     const rootModel = createRoot(doc);
-    const noteId = doc.addBlock('affine:note', {}, rootModel.id);
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootModel.id);
 
-    doc.addBlock('affine:paragraph', {}, noteId);
-    doc.addBlock('affine:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
 
     const result = doc.getPrev(rootModel.children[0].children[1]) as BlockModel;
     assert.equal(result, rootModel.children[0].children[0]);

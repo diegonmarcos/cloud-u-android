@@ -9,7 +9,7 @@
   "blocks": {
     "type": "block",
     "id": "mUEhyeRfVdzFKHV3w897g",
-    "flavour": "affine:page",
+    "flavour": "cloud-notes:page",
     "version": 2,
     "props": {
       "title": {
@@ -25,7 +25,7 @@
       {
         "type": "block",
         "id": "oc5oq3DFWcqVjzyevWrx6",
-        "flavour": "affine:surface",
+        "flavour": "cloud-notes:surface",
         "version": 5,
         "props": {
           "elements": {
@@ -155,7 +155,7 @@
           {
             "type": "block",
             "id": "NSlTmqVn2NsIJCDvzIoUF",
-            "flavour": "affine:frame",
+            "flavour": "cloud-notes:frame",
             "version": 1,
             "props": {
               "title": {

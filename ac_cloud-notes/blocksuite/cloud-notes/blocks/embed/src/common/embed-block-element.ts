@@ -80,7 +80,7 @@ export class EmbedBlockComponent<
 
       const insideNote = findAncestorModel(
         this.model,
-        m => m.flavour === 'affine:note'
+        m => m.flavour === 'cloud-notes:note'
       );
 
       if (

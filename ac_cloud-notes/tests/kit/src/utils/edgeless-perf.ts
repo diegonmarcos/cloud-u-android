@@ -165,7 +165,7 @@ export async function seedEdgelessPerfScene(
     const addNote = () => {
       const { x, y } = getPosition(noteCursor++);
       const noteId = doc.addBlock(
-        'affine:note',
+        'cloud-notes:note',
         {
           index: nextIndex(),
           xywh: `[${x}, ${y}, ${Math.max(width * 2, 260)}, ${height}]`,
@@ -173,7 +173,7 @@ export async function seedEdgelessPerfScene(
         doc.root
       );
 
-      doc.addBlock('affine:paragraph', {}, noteId);
+      doc.addBlock('cloud-notes:paragraph', {}, noteId);
       noteIds.push(noteId);
     };
 

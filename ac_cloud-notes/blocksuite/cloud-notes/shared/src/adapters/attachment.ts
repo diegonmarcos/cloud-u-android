@@ -77,7 +77,7 @@ export class AttachmentAdapter extends BaseAdapter<Attachment> {
     for (const contentSlice of payload.snapshot.content) {
       if (contentSlice.type === 'block') {
         const { flavour, props } = contentSlice;
-        if (flavour === 'affine:attachment') {
+        if (flavour === 'cloud-notes:attachment') {
           const { sourceId } = props;
           const file = payload.assets?.getAssets().get(sourceId as string) as
             | File

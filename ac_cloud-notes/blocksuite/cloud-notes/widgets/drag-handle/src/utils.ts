@@ -304,7 +304,7 @@ export function getSnapshotRect(snapshot: SliceSnapshot): Bound | null {
   let bound: Bound | null = null;
 
   const getBound = (block: BlockSnapshot) => {
-    if (block.flavour === 'affine:surface') {
+    if (block.flavour === 'cloud-notes:surface') {
       if (block.props.elements) {
         Object.values(
           block.props.elements as Record<

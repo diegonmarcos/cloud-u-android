@@ -10,7 +10,7 @@ export const insertBookmarkCommand: Command<
   const { url, std } = ctx;
   const embedOptions = std.get(EmbedOptionProvider).getEmbedBlockOptions(url);
 
-  let flavour = 'affine:bookmark';
+  let flavour = 'cloud-notes:bookmark';
   let targetStyle: EmbedCardStyle = 'vertical';
   const props: Record<string, unknown> = { url };
   if (embedOptions) {

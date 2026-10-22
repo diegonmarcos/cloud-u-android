@@ -22,19 +22,19 @@ const BLOCK_PREVIEW_ICON_MAP: Record<
     icon: ShapeIcon,
     name: 'Edgeless shape',
   },
-  'affine:image': {
+  'cloud-notes:image': {
     icon: ImageIcon,
     name: 'Image block',
   },
-  'affine:note': {
+  'cloud-notes:note': {
     icon: PageIcon,
     name: 'Note block',
   },
-  'affine:frame': {
+  'cloud-notes:frame': {
     icon: FrameIcon,
     name: 'Frame block',
   },
-  'affine:embed-': {
+  'cloud-notes:embed-': {
     icon: EmbedIcon,
     name: 'Embed block',
   },
@@ -102,8 +102,8 @@ export class EdgelessDndPreviewElement extends LitElement {
       return BLOCK_PREVIEW_ICON_MAP[type];
     }
 
-    if (type.startsWith('affine:embed-')) {
-      return BLOCK_PREVIEW_ICON_MAP['affine:embed-'];
+    if (type.startsWith('cloud-notes:embed-')) {
+      return BLOCK_PREVIEW_ICON_MAP['cloud-notes:embed-'];
     }
 
     return {

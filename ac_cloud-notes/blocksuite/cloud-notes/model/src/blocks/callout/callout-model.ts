@@ -15,7 +15,7 @@ export type CalloutProps = {
 } & BlockMeta;
 
 export const CalloutBlockSchema = defineBlockSchema({
-  flavour: 'affine:callout',
+  flavour: 'cloud-notes:callout',
   props: (internal): CalloutProps => ({
     icon: { type: 'emoji', unicode: '💡' } as IconData,
     text: internal.Text(),
@@ -29,14 +29,14 @@ export const CalloutBlockSchema = defineBlockSchema({
     version: 1,
     role: 'hub',
     parent: [
-      'affine:note',
-      'affine:database',
-      'affine:paragraph',
-      'affine:list',
-      'affine:edgeless-text',
-      'affine:transcription',
+      'cloud-notes:note',
+      'cloud-notes:database',
+      'cloud-notes:paragraph',
+      'cloud-notes:list',
+      'cloud-notes:edgeless-text',
+      'cloud-notes:transcription',
     ],
-    children: ['affine:paragraph', 'affine:list'],
+    children: ['cloud-notes:paragraph', 'cloud-notes:list'],
   },
   toModel: () => new CalloutBlockModel(),
 });

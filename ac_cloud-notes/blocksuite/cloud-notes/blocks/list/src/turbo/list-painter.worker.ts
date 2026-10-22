@@ -20,14 +20,14 @@ interface ListItemLayout {
 }
 
 export interface ListLayout extends BlockLayout {
-  type: 'affine:list';
+  type: 'cloud-notes:list';
   items: ListItemLayout[];
 }
 
 const debugListBorder = false;
 
 function isListLayout(layout: BlockLayout): layout is ListLayout {
-  return layout.type === 'affine:list';
+  return layout.type === 'cloud-notes:list';
 }
 
 class ListLayoutPainter implements BlockLayoutPainter {
@@ -71,7 +71,7 @@ class ListLayoutPainter implements BlockLayoutPainter {
       const message: WorkerToHostMessage = {
         type: 'paintError',
         error: 'Font not loaded',
-        blockType: 'affine:list',
+        blockType: 'cloud-notes:list',
       };
       self.postMessage(message);
       return;
@@ -114,6 +114,6 @@ class ListLayoutPainter implements BlockLayoutPainter {
 }
 
 export const ListLayoutPainterExtension = BlockLayoutPainterExtension(
-  'affine:list',
+  'cloud-notes:list',
   ListLayoutPainter
 );

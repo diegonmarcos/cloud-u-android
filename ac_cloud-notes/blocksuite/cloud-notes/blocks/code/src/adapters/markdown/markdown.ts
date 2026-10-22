@@ -19,7 +19,7 @@ const isCodeOrHtmlNode = (node: MarkdownAST): node is Code | Html =>
 export const codeBlockMarkdownAdapterMatcher: BlockMarkdownAdapterMatcher = {
   flavour: CodeBlockSchema.model.flavour,
   toMatch: o => isCodeOrHtmlNode(o.node),
-  fromMatch: o => o.node.flavour === 'affine:code',
+  fromMatch: o => o.node.flavour === 'cloud-notes:code',
   toBlockSnapshot: {
     enter: (o, context) => {
       if (!isCodeOrHtmlNode(o.node)) {
@@ -53,7 +53,7 @@ export const codeBlockMarkdownAdapterMatcher: BlockMarkdownAdapterMatcher = {
           {
             type: 'block',
             id: nanoid(),
-            flavour: 'affine:code',
+            flavour: 'cloud-notes:code',
             props: {
               language,
               wrap,

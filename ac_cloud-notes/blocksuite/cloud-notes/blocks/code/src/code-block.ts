@@ -402,7 +402,7 @@ export class CodeBlockComponent extends CaptionedBlockComponent<CodeBlockModel> 
         const index = parent.children.indexOf(model);
         if (index === -1) return;
         const id = this.store.addBlock(
-          'affine:paragraph',
+          'cloud-notes:paragraph',
           {},
           parent,
           index + 1

@@ -11,7 +11,7 @@ const flavour = EmbedLinkedDocBlockSchema.model.flavour;
 
 export const EmbedLinkedDocViewExtensions: ExtensionType[] = [
   BlockViewExtension(flavour, model => {
-    return model.parent?.flavour === 'affine:surface'
+    return model.parent?.flavour === 'cloud-notes:surface'
       ? literal`cloud-notes-embed-edgeless-linked-doc-block`
       : literal`cloud-notes-embed-linked-doc-block`;
   }),

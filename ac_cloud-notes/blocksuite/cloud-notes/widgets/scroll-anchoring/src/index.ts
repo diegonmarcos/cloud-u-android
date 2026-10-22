@@ -6,7 +6,7 @@ import { CLOUD_NOTES_SCROLL_ANCHORING_WIDGET } from './scroll-anchoring.js';
 export * from './scroll-anchoring.js';
 
 export const scrollAnchoringWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_SCROLL_ANCHORING_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_SCROLL_ANCHORING_WIDGET)}`
 );

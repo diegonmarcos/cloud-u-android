@@ -22,7 +22,7 @@ export const gfxBlocksFilter = (
 ): TransformerMiddleware => {
   const selectedIds = new Set<string>();
   const store = std.store;
-  const surface = store.getBlocksByFlavour('affine:surface')[0]
+  const surface = store.getBlocksByFlavour('cloud-notes:surface')[0]
     .model as SurfaceBlockModel;
   const idsToCheck = ids.slice();
   const gfx = std.get(GfxController);
@@ -45,7 +45,7 @@ export const gfxBlocksFilter = (
         return;
       }
 
-      if (payload.model.flavour === 'affine:surface') {
+      if (payload.model.flavour === 'cloud-notes:surface') {
         transformerConfigs.set('selectedElements', selectedIds);
         payload.model.children = payload.model.children.filter(model =>
           selectedIds.has(model.id)
@@ -59,7 +59,7 @@ export const gfxBlocksFilter = (
         return;
       }
 
-      if (payload.model.flavour === 'affine:surface') {
+      if (payload.model.flavour === 'cloud-notes:surface') {
         const { snapshot } = payload;
         const elementsMap = snapshot.props.elements as Record<
           string,

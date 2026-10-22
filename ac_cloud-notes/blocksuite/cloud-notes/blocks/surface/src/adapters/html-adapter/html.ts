@@ -4,9 +4,9 @@ import {
 } from '@blocksuite/cloud-notes-shared/adapters';
 
 export const surfaceBlockHtmlAdapterMatcher: BlockHtmlAdapterMatcher = {
-  flavour: 'affine:surface',
+  flavour: 'cloud-notes:surface',
   toMatch: () => false,
-  fromMatch: o => o.node.flavour === 'affine:surface',
+  fromMatch: o => o.node.flavour === 'cloud-notes:surface',
   toBlockSnapshot: {},
   fromBlockSnapshot: {
     enter: (_, context) => {

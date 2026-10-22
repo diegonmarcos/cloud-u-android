@@ -6,11 +6,11 @@ import type {
 import { BlockLayoutPainterExtension } from '@blocksuite/cloud-notes-gfx-turbo-renderer/painter';
 
 export interface CodeLayout extends BlockLayout {
-  type: 'affine:code';
+  type: 'cloud-notes:code';
 }
 
 function isCodeLayout(layout: BlockLayout): layout is CodeLayout {
-  return layout.type === 'affine:code';
+  return layout.type === 'cloud-notes:code';
 }
 
 class CodeLayoutPainter implements BlockLayoutPainter {
@@ -24,7 +24,7 @@ class CodeLayoutPainter implements BlockLayoutPainter {
       const message: WorkerToHostMessage = {
         type: 'paintError',
         error: 'Invalid layout format',
-        blockType: 'affine:code',
+        blockType: 'cloud-notes:code',
       };
       self.postMessage(message);
       return;
@@ -48,6 +48,6 @@ class CodeLayoutPainter implements BlockLayoutPainter {
 }
 
 export const CodeLayoutPainterExtension = BlockLayoutPainterExtension(
-  'affine:code',
+  'cloud-notes:code',
   CodeLayoutPainter
 );

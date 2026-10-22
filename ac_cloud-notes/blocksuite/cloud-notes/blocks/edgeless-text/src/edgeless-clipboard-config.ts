@@ -2,7 +2,7 @@ import { EdgelessClipboardConfig } from '@blocksuite/cloud-notes-block-surface';
 import { type BlockSnapshot } from '@blocksuite/store';
 
 export class EdgelessClipboardEdgelessTextConfig extends EdgelessClipboardConfig {
-  static override readonly key = 'affine:edgeless-text';
+  static override readonly key = 'cloud-notes:edgeless-text';
 
   override async createBlock(
     edgelessText: BlockSnapshot

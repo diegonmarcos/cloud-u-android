@@ -20,14 +20,14 @@ export const preset: InitFn = async (collection: Workspace, id: string) => {
   let noteId: string;
   if (!hasDoc) {
     // Add root block and surface block at root level
-    const rootId = store.addBlock('affine:page', {
+    const rootId = store.addBlock('cloud-notes:page', {
       title: new Text('BlockSuite Playground'),
     });
-    store.addBlock('affine:surface', {}, rootId);
+    store.addBlock('cloud-notes:surface', {}, rootId);
 
     // Add note block inside root block
     noteId = store.addBlock(
-      'affine:note',
+      'cloud-notes:note',
       { xywh: '[0, 100, 800, 640]' },
       rootId
     );

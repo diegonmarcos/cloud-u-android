@@ -22,7 +22,7 @@ export type ListProps = {
 } & BlockMeta;
 
 export const ListBlockSchema = defineBlockSchema({
-  flavour: 'affine:list',
+  flavour: 'cloud-notes:list',
   props: internal =>
     ({
       type: 'bulleted',
@@ -43,12 +43,12 @@ export const ListBlockSchema = defineBlockSchema({
     version: 1,
     role: 'content',
     parent: [
-      'affine:note',
-      'affine:database',
-      'affine:list',
-      'affine:paragraph',
-      'affine:edgeless-text',
-      'affine:callout',
+      'cloud-notes:note',
+      'cloud-notes:database',
+      'cloud-notes:list',
+      'cloud-notes:paragraph',
+      'cloud-notes:edgeless-text',
+      'cloud-notes:callout',
     ],
   },
   toModel: () => new ListBlockModel(),

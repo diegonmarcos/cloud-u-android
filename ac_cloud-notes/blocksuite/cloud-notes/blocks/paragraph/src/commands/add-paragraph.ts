@@ -36,7 +36,7 @@ export const addParagraphCommand: Command<
     // aaa
     //   |
     //   bbb
-    id = store.addBlock('affine:paragraph', {}, model, 0);
+    id = store.addBlock('cloud-notes:paragraph', {}, model, 0);
   } else {
     const parent = store.getParent(model);
     if (!parent) return;
@@ -48,7 +48,7 @@ export const addParagraphCommand: Command<
     // after:
     // aaa
     // |
-    id = store.addBlock('affine:paragraph', {}, parent, index + 1);
+    id = store.addBlock('cloud-notes:paragraph', {}, parent, index + 1);
   }
 
   focusTextModel(std, id);

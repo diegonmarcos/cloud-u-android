@@ -53,7 +53,7 @@ export class AIViewExtension extends ViewExtensionProvider<AIViewOptions> {
       .register(AICodeBlockWatcher)
       .register(
         ToolbarModuleExtension({
-          id: BlockFlavourIdentifier('custom:affine:image'),
+          id: BlockFlavourIdentifier('custom:cloud-notes:image'),
           config: imageToolbarAIEntryConfig(),
         })
       );
@@ -63,7 +63,7 @@ export class AIViewExtension extends ViewExtensionProvider<AIViewOptions> {
         aiPanelWidget,
         AiSlashMenuConfigExtension(),
         ToolbarModuleExtension({
-          id: BlockFlavourIdentifier('custom:affine:note'),
+          id: BlockFlavourIdentifier('custom:cloud-notes:note'),
           config: toolbarAIEntryConfig(),
         }),
       ]);
@@ -75,7 +75,7 @@ export class AIViewExtension extends ViewExtensionProvider<AIViewOptions> {
         getAIEdgelessRootWatcher(),
         // In note
         ToolbarModuleExtension({
-          id: BlockFlavourIdentifier('custom:affine:surface:*'),
+          id: BlockFlavourIdentifier('custom:cloud-notes:surface:*'),
           config: edgelessToolbarAIEntryConfig(),
         }),
       ]);

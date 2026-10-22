@@ -21,7 +21,7 @@ export const latexBlockMarkdownAdapterMatcher: BlockMarkdownAdapterMatcher = {
           {
             type: 'block',
             id: nanoid(),
-            flavour: 'affine:latex',
+            flavour: 'cloud-notes:latex',
             props: {
               latex,
             },

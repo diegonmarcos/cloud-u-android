@@ -134,6 +134,6 @@ export const highlighterToolbarConfig = {
 } as const satisfies ToolbarModuleConfig;
 
 export const highlighterToolbarExtension = ToolbarModuleExtension({
-  id: BlockFlavourIdentifier('affine:surface:highlighter'),
+  id: BlockFlavourIdentifier('cloud-notes:surface:highlighter'),
   config: highlighterToolbarConfig,
 });

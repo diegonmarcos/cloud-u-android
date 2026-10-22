@@ -55,9 +55,9 @@ describe('My Test', () => {
     `;
 
     // Get blocks
-    const pages = doc.getBlocksByFlavour('affine:page');
-    const notes = doc.getBlocksByFlavour('affine:note');
-    const paragraphs = doc.getBlocksByFlavour('affine:paragraph');
+    const pages = doc.getBlocksByFlavour('cloud-notes:page');
+    const notes = doc.getBlocksByFlavour('cloud-notes:note');
+    const paragraphs = doc.getBlocksByFlavour('cloud-notes:paragraph');
 
     expect(pages.length).toBe(1);
     expect(notes.length).toBe(1);
@@ -72,8 +72,8 @@ describe('My Test', () => {
 
 Currently supports the following block types:
 
-- `cloud-notes-page` → `affine:page`
-- `cloud-notes-note` → `affine:note`
-- `cloud-notes-paragraph` → `affine:paragraph`
-- `cloud-notes-list` → `affine:list`
-- `cloud-notes-image` → `affine:image`
+- `cloud-notes-page` → `cloud-notes:page`
+- `cloud-notes-note` → `cloud-notes:note`
+- `cloud-notes-paragraph` → `cloud-notes:paragraph`
+- `cloud-notes-list` → `cloud-notes:list`
+- `cloud-notes-image` → `cloud-notes:image`

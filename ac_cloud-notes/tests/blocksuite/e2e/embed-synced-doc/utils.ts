@@ -41,15 +41,15 @@ export async function initEmbedSyncedDocState(
         ).getStore();
         store.load();
 
-        const rootId = store.addBlock('affine:page', {
+        const rootId = store.addBlock('cloud-notes:page', {
           title: new Text(title),
         } satisfies Partial<RootBlockProps>);
 
-        store.addBlock('affine:surface', {}, rootId);
+        store.addBlock('cloud-notes:surface', {}, rootId);
 
-        const noteId = store.addBlock('affine:note', {}, rootId);
+        const noteId = store.addBlock('cloud-notes:note', {}, rootId);
         store.addBlock(
-          'affine:paragraph',
+          'cloud-notes:paragraph',
           {
             text: new Text(content),
           } satisfies Partial<ParagraphProps>,
@@ -59,7 +59,7 @@ export async function initEmbedSyncedDocState(
 
       const getVisibleNote = (store: Store) => {
         const note = store
-          .getModelsByFlavour('affine:note')
+          .getModelsByFlavour('cloud-notes:note')
           .find((note): note is NoteBlockModel => {
             return (
               note instanceof NoteBlockModel &&
@@ -96,13 +96,13 @@ export async function initEmbedSyncedDocState(
           throw new Error(`Note not found in ${docId}`);
         }
 
-        const surface = store.getModelsByFlavour('affine:surface')[0];
+        const surface = store.getModelsByFlavour('cloud-notes:surface')[0];
         if (!surface) {
           throw new Error(`Surface not found in ${docId}`);
         }
 
         store.addBlock(
-          'affine:embed-synced-doc',
+          'cloud-notes:embed-synced-doc',
           {
             pageId: docId,
             xywh: '[0, 100, 370, 100]',

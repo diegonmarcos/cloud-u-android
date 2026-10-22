@@ -94,7 +94,7 @@ export class SlashMenu extends WithDisposable(LitElement) {
         this._telemetry?.track('SelectSlashMenuItem', {
           page: this._editorMode ?? undefined,
           segment:
-            this.context.model.flavour === 'affine:edgeless-text'
+            this.context.model.flavour === 'cloud-notes:edgeless-text'
               ? 'edgeless-text'
               : 'doc',
           module: 'slash menu',

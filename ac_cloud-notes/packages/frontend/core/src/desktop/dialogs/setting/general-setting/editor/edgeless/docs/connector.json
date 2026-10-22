@@ -9,7 +9,7 @@
   "blocks": {
     "type": "block",
     "id": "orzKfiHevj",
-    "flavour": "affine:page",
+    "flavour": "cloud-notes:page",
     "version": 2,
     "props": {
       "title": {
@@ -21,7 +21,7 @@
       {
         "type": "block",
         "id": "-48EmppaxI",
-        "flavour": "affine:surface",
+        "flavour": "cloud-notes:surface",
         "version": 5,
         "props": {
           "elements": {
@@ -59,7 +59,7 @@
                 "position": [387.4453125, 4.02734375]
               },
               "text": {
-                "affine:surface:text": true,
+                "cloud-notes:surface:text": true,
                 "delta": [
                   {
                     "insert": "label"
@@ -75,7 +75,7 @@
           {
             "type": "block",
             "id": "-6UhNH7qhy",
-            "flavour": "affine:frame",
+            "flavour": "cloud-notes:frame",
             "version": 1,
             "props": {
               "title": {

@@ -503,7 +503,7 @@ test('should format bar follow scroll', async ({ page }) => {
   // should format bar follow scroll after transform text type
   await scrollToTop(page);
   await assertLocatorVisible(page, formatBar);
-  await updateBlockType(page, 'affine:list', 'bulleted');
+  await updateBlockType(page, 'cloud-notes:list', 'bulleted');
   await scrollToBottom(page);
   await assertLocatorVisible(page, formatBar, false);
 });
@@ -514,12 +514,12 @@ test('should format quick bar position correct at the start of second line', asy
   await enterPlaygroundRoom(page);
   await page.evaluate(() => {
     const { doc } = window;
-    const rootId = doc.addBlock('affine:page', {
+    const rootId = doc.addBlock('cloud-notes:page', {
       title: new window.$blocksuite.store.Text(),
     });
-    const note = doc.addBlock('affine:note', {}, rootId);
+    const note = doc.addBlock('cloud-notes:note', {}, rootId);
     const text = new window.$blocksuite.store.Text('a'.repeat(100));
-    const paragraphId = doc.addBlock('affine:paragraph', { text }, note);
+    const paragraphId = doc.addBlock('cloud-notes:paragraph', { text }, note);
     return paragraphId;
   });
   // await focusRichText(page);
@@ -760,17 +760,17 @@ test('should format bar style active correctly', async ({ page }) => {
   await enterPlaygroundRoom(page);
   await page.evaluate(() => {
     const { doc } = window;
-    const rootId = doc.addBlock('affine:page', {
+    const rootId = doc.addBlock('cloud-notes:page', {
       title: new window.$blocksuite.store.Text(),
     });
-    const note = doc.addBlock('affine:note', {}, rootId);
+    const note = doc.addBlock('cloud-notes:note', {}, rootId);
     const delta = [
       { insert: '1', attributes: { bold: true, italic: true } },
       { insert: '2', attributes: { bold: true, underline: true } },
       { insert: '3', attributes: { bold: true, code: true } },
     ];
     const text = new window.$blocksuite.store.Text(delta as DeltaInsert[]);
-    doc.addBlock('affine:paragraph', { text }, note);
+    doc.addBlock('cloud-notes:paragraph', { text }, note);
   });
 
   const { boldBtn, codeBtn, underlineBtn } = getFormatBar(page);
@@ -819,7 +819,7 @@ test('should the database action icon show correctly', async ({ page }) => {
 
   await focusRichText(page, 2);
   await pressEnter(page);
-  await updateBlockType(page, 'affine:code');
+  await updateBlockType(page, 'cloud-notes:code');
   const codeBlock = page.locator('cloud-notes-code');
   const codeBox = await codeBlock.boundingBox();
   if (!codeBox) throw new Error('Missing code block box');
@@ -914,17 +914,17 @@ test('should update the format quick bar state when there is a change in keyboar
   await enterPlaygroundRoom(page);
   await page.evaluate(() => {
     const { doc } = window;
-    const rootId = doc.addBlock('affine:page', {
+    const rootId = doc.addBlock('cloud-notes:page', {
       title: new window.$blocksuite.store.Text(),
     });
-    const note = doc.addBlock('affine:note', {}, rootId);
+    const note = doc.addBlock('cloud-notes:note', {}, rootId);
     const delta = [
       { insert: '1', attributes: { bold: true } },
       { insert: '2', attributes: { bold: true } },
       { insert: '3', attributes: { bold: false } },
     ];
     const text = new window.$blocksuite.store.Text(delta as DeltaInsert[]);
-    doc.addBlock('affine:paragraph', { text }, note);
+    doc.addBlock('cloud-notes:paragraph', { text }, note);
   });
   await focusTitle(page);
   await pressArrowDown(page);

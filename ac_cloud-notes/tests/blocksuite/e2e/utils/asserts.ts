@@ -67,12 +67,12 @@ export const defaultStore = {
         '0': {
           'prop:title': '',
           'sys:id': '0',
-          'sys:flavour': 'affine:page',
+          'sys:flavour': 'cloud-notes:page',
           'sys:children': ['1'],
           'sys:version': 2,
         },
         '1': {
-          'sys:flavour': 'affine:note',
+          'sys:flavour': 'cloud-notes:note',
           'sys:id': '1',
           'sys:children': ['2'],
           'sys:version': 1,
@@ -91,7 +91,7 @@ export const defaultStore = {
           },
         },
         '2': {
-          'sys:flavour': 'affine:paragraph',
+          'sys:flavour': 'cloud-notes:paragraph',
           'sys:id': '2',
           'sys:children': [],
           'sys:version': 1,
@@ -321,7 +321,7 @@ export async function assertNoteXYWH(
   const actual = await page.evaluate(() => {
     const rootModel = window.doc.root as RootBlockModel;
     const note = rootModel.children.find(
-      x => x.flavour === 'affine:note'
+      x => x.flavour === 'cloud-notes:note'
     ) as NoteBlockModel;
     return JSON.parse(note.xywh) as number[];
   });

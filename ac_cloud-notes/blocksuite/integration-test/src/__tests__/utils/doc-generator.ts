@@ -2,7 +2,7 @@ import { type Store, Text } from '@blocksuite/store';
 
 function addParagraph(doc: Store, noteId: string, content: string) {
   const props = { text: new Text(content) };
-  doc.addBlock('affine:paragraph', props, noteId);
+  doc.addBlock('cloud-notes:paragraph', props, noteId);
 }
 
 function addSampleNote(doc: Store, noteId: string, i: number) {
@@ -26,7 +26,7 @@ export function addSampleNotes(doc: Store, n: number) {
   const NOTE_HEIGHT = 250;
   const SPACING = 50;
 
-  const rootId = doc.getBlocksByFlavour('affine:page')[0]?.id;
+  const rootId = doc.getBlocksByFlavour('cloud-notes:page')[0]?.id;
 
   for (let i = 0; i < n; i++) {
     const row = Math.floor(i / cols);
@@ -35,7 +35,7 @@ export function addSampleNotes(doc: Store, n: number) {
     const y = row * (NOTE_HEIGHT + SPACING);
 
     const xywh = `[${x},${y},${NOTE_WIDTH},${NOTE_HEIGHT}]`;
-    const noteId = doc.addBlock('affine:note', { xywh }, rootId);
+    const noteId = doc.addBlock('cloud-notes:note', { xywh }, rootId);
     addSampleNote(doc, noteId, i);
   }
 }

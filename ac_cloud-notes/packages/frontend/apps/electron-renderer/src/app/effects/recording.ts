@@ -16,7 +16,7 @@ import { getCurrentWorkspace, isAiEnabled } from './utils';
 const logger = new DebugLogger('electron-renderer:recording');
 const RECORDING_IMPORT_RETRY_MS = 1000;
 const NATIVE_RECORDING_MIME_TYPE = 'audio/ogg';
-const TRANSCRIPTION_BLOCK_FLAVOUR = 'affine:transcription';
+const TRANSCRIPTION_BLOCK_FLAVOUR = 'cloud-notes:transcription';
 
 type TranscriptionBlockModel = {
   props: {
@@ -107,22 +107,22 @@ function getAttachmentName(status: RecordingImportStatus) {
 }
 
 function ensureNoteId(docStore: Store) {
-  const [existingNote] = docStore.getModelsByFlavour('affine:note');
+  const [existingNote] = docStore.getModelsByFlavour('cloud-notes:note');
   if (existingNote) {
     return existingNote.id;
   }
 
-  const [page] = docStore.getModelsByFlavour('affine:page');
+  const [page] = docStore.getModelsByFlavour('cloud-notes:page');
   if (!page) {
     throw new Error('Recording doc is missing the page block');
   }
 
-  return docStore.addBlock('affine:note', {}, page.id);
+  return docStore.addBlock('cloud-notes:note', {}, page.id);
 }
 
 function findExistingAttachment(docStore: Store, attachmentName: string) {
   return (
-    docStore.getModelsByFlavour('affine:attachment') as AttachmentBlockModel[]
+    docStore.getModelsByFlavour('cloud-notes:attachment') as AttachmentBlockModel[]
   ).find(
     model =>
       model.props.name === attachmentName &&
@@ -205,7 +205,7 @@ async function createRecordingDoc(
       );
 
       const attachmentId = doc.blockSuiteDoc.addBlock(
-        'affine:attachment',
+        'cloud-notes:attachment',
         {
           name: attachmentName,
           type: NATIVE_RECORDING_MIME_TYPE,

@@ -63,7 +63,7 @@ export function setupSpaceAIEntry(panel: CloudNotesAIPanelWidget) {
         if (
           !block?.model?.text ||
           block.model.text?.length > 0 ||
-          block.model.flavour !== 'affine:paragraph'
+          block.model.flavour !== 'cloud-notes:paragraph'
         )
           return;
 

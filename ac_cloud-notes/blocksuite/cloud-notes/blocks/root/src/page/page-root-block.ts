@@ -119,7 +119,7 @@ export class PageRootBlockComponent extends BlockComponent<RootBlockModel> {
       return { id: firstText.id, created: false };
     } else {
       const newFirstParagraphId = this.store.addBlock(
-        'affine:paragraph',
+        'cloud-notes:paragraph',
         {},
         defaultNote,
         0
@@ -133,7 +133,7 @@ export class PageRootBlockComponent extends BlockComponent<RootBlockModel> {
 
   prependParagraphWithText = (text: Text) => {
     const newFirstParagraphId = this.store.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       { text },
       this._getDefaultNoteBlock(),
       0
@@ -160,14 +160,14 @@ export class PageRootBlockComponent extends BlockComponent<RootBlockModel> {
   private _createDefaultNoteBlock() {
     const { store } = this;
 
-    const noteId = store.addBlock('affine:note', {}, store.root?.id);
+    const noteId = store.addBlock('cloud-notes:note', {}, store.root?.id);
     return store.getModelById(noteId) as NoteBlockModel;
   }
 
   private _getDefaultNoteBlock() {
     return (
       this.store.root?.children.find(
-        child => child.flavour === 'affine:note'
+        child => child.flavour === 'cloud-notes:note'
       ) ?? this._createDefaultNoteBlock()
     );
   }
@@ -234,7 +234,7 @@ export class PageRootBlockComponent extends BlockComponent<RootBlockModel> {
         let model: BlockModel | null = null;
         let current = this.store.getModelById(sel.blockId);
         while (current && !model) {
-          if (current.flavour === 'affine:note') {
+          if (current.flavour === 'cloud-notes:note') {
             model = current;
           } else {
             current = this.store.getParent(current);
@@ -242,7 +242,7 @@ export class PageRootBlockComponent extends BlockComponent<RootBlockModel> {
         }
         if (!model) return;
         const prevNote = this.store.getPrev(model);
-        if (!prevNote || prevNote.flavour !== 'affine:note') {
+        if (!prevNote || prevNote.flavour !== 'cloud-notes:note') {
           const isFirstText = sel.is(TextSelection) && sel.start.index === 0;
           const isBlock = sel.is(BlockSelection);
           if (isBlock || isFirstText) {
@@ -250,7 +250,7 @@ export class PageRootBlockComponent extends BlockComponent<RootBlockModel> {
           }
           return;
         }
-        const notes = this.store.getModelsByFlavour('affine:note');
+        const notes = this.store.getModelsByFlavour('cloud-notes:note');
         const index = notes.indexOf(prevNote);
         if (index !== 0) return;
 

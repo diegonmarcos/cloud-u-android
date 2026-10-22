@@ -17,7 +17,7 @@ export class SlashMenuExtension extends Extension {
 
   static override setup(di: Container) {
     WidgetViewExtension(
-      'affine:page',
+      'cloud-notes:page',
       CLOUD_NOTES_SLASH_MENU_WIDGET,
       literal`${unsafeStatic(CLOUD_NOTES_SLASH_MENU_WIDGET)}`
     ).setup(di);

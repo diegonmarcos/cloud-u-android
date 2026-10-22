@@ -15,7 +15,7 @@ const flavour = EmbedFigmaBlockSchema.model.flavour;
 export const EmbedFigmaViewExtensions: ExtensionType[] = [
   FlavourExtension(flavour),
   BlockViewExtension(flavour, model => {
-    return model.parent?.flavour === 'affine:surface'
+    return model.parent?.flavour === 'cloud-notes:surface'
       ? literal`cloud-notes-embed-edgeless-figma-block`
       : literal`cloud-notes-embed-figma-block`;
   }),

@@ -62,12 +62,12 @@ const createCalendarDatabase = async (
       const rows = rowCount ?? 1;
       const linkedDocId = linkedDocTitle ? `doc:${linkedDocTitle}` : undefined;
       doc.captureSync();
-      const rootId = doc.addBlock('affine:page', {
+      const rootId = doc.addBlock('cloud-notes:page', {
         title: new window.$blocksuite.store.Text(),
       });
-      const noteId = doc.addBlock('affine:note', {}, rootId);
+      const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
       const databaseId = doc.addBlock(
-        'affine:database',
+        'cloud-notes:database',
         {
           title: new window.$blocksuite.store.Text('Calendar database'),
         },
@@ -76,11 +76,11 @@ const createCalendarDatabase = async (
       if (linkedDocId && linkedDocTitle) {
         const linkedDoc = window.collection.createDoc(linkedDocId).getStore();
         linkedDoc.load();
-        const linkedRootId = linkedDoc.addBlock('affine:page', {
+        const linkedRootId = linkedDoc.addBlock('cloud-notes:page', {
           title: new window.$blocksuite.store.Text(linkedDocTitle),
         });
-        linkedDoc.addBlock('affine:surface', {}, linkedRootId);
-        linkedDoc.addBlock('affine:note', {}, linkedRootId);
+        linkedDoc.addBlock('cloud-notes:surface', {}, linkedRootId);
+        linkedDoc.addBlock('cloud-notes:note', {}, linkedRootId);
       }
       const rowIds = Array.from({ length: rows }, (_, index) => {
         const text =
@@ -98,7 +98,7 @@ const createCalendarDatabase = async (
               ] as unknown as DeltaInsert[])
             : new window.$blocksuite.store.Text(`Task ${index + 1}`);
         return doc.addBlock(
-          'affine:paragraph',
+          'cloud-notes:paragraph',
           {
             type: 'text',
             text,

@@ -252,10 +252,10 @@ function createBlockAndInsert(
       EDGELESS_TEXT_BLOCK_MIN_WIDTH,
       EDGELESS_TEXT_BLOCK_MIN_HEIGHT
     );
-    const surfaceBlock = doc.getBlocksByFlavour('affine:surface')[0];
+    const surfaceBlock = doc.getBlocksByFlavour('cloud-notes:surface')[0];
     if (type === 'edgelessText') {
       blockId = doc.addBlock(
-        'affine:edgeless-text',
+        'cloud-notes:edgeless-text',
         {
           xywh: bounds.serialize(),
         },
@@ -264,7 +264,7 @@ function createBlockAndInsert(
     } else {
       const bounds = edgelessCopilot.determineInsertionBounds(800, 95);
       blockId = doc.addBlock(
-        'affine:note',
+        'cloud-notes:note',
         {
           xywh: bounds.serialize(),
           displayMode: NoteDisplayMode.EdgelessOnly,
@@ -504,20 +504,20 @@ function responseToMakeItReal(host: EditorHost, ctx: AIContext) {
 
     if (ifUseCodeBlock) {
       const note = host.store.addBlock(
-        'affine:note',
+        'cloud-notes:note',
         {
           xywh: bounds.serialize(),
         },
         host.store.root
       );
       host.store.addBlock(
-        'affine:code',
+        'cloud-notes:code',
         { text: new Text(html), language: 'html', preview: true },
         note
       );
     } else {
       host.store.addBlock(
-        'affine:embed-html',
+        'cloud-notes:embed-html',
         {
           html,
           design: 'ai:makeItReal', // as tag

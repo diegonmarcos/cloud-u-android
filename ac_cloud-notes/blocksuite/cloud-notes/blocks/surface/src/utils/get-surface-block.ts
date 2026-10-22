@@ -5,7 +5,7 @@ import type { SurfaceBlockComponent } from '../surface-block';
 import type { SurfaceBlockModel } from '../surface-model';
 
 export function getSurfaceBlock(doc: Store) {
-  const blocks = doc.getBlocksByFlavour('affine:surface');
+  const blocks = doc.getBlocksByFlavour('cloud-notes:surface');
   return blocks.length !== 0 ? (blocks[0].model as SurfaceBlockModel) : null;
 }
 

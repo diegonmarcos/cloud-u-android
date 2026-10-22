@@ -8,7 +8,7 @@ import type { Store } from '@blocksuite/store';
 import type { TestCloudNotesEditorContainer } from '../../index.js';
 
 export function getSurface(doc: Store, editor: TestCloudNotesEditorContainer) {
-  const surfaceModel = doc.getModelsByFlavour('affine:surface');
+  const surfaceModel = doc.getModelsByFlavour('cloud-notes:surface');
 
   return editor.host!.view.getBlock(
     surfaceModel[0]!.id
@@ -37,7 +37,7 @@ export function getDocRootBlock(
 
 export function addNote(doc: Store, props: Record<string, any> = {}) {
   const noteId = doc.addBlock(
-    'affine:note',
+    'cloud-notes:note',
     {
       xywh: '[0, 0, 800, 100]',
       ...props,
@@ -45,7 +45,7 @@ export function addNote(doc: Store, props: Record<string, any> = {}) {
     doc.root
   );
 
-  doc.addBlock('affine:paragraph', {}, noteId);
+  doc.addBlock('cloud-notes:paragraph', {}, noteId);
 
   return noteId;
 }

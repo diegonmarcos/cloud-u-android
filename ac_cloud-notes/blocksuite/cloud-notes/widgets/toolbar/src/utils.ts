@@ -42,11 +42,11 @@ import toPairs from 'lodash-es/toPairs';
 
 export const sideMap = new Map([
   // includes frame element
-  ['affine:surface:frame', { top: 28 }],
+  ['cloud-notes:surface:frame', { top: 28 }],
   // includes group element
-  ['affine:surface:group', { top: 20 }],
+  ['cloud-notes:surface:group', { top: 20 }],
   // has only one shape element
-  ['affine:surface:shape', { top: 26, bottom: -26 }],
+  ['cloud-notes:surface:shape', { top: 26, bottom: -26 }],
 ]);
 
 export function autoUpdatePosition(
@@ -58,7 +58,7 @@ export function autoUpdatePosition(
   sideOptions: Partial<SideObject> | null,
   options: AutoUpdateOptions = { elementResize: false }
 ) {
-  const isInline = flavour === 'affine:note';
+  const isInline = flavour === 'cloud-notes:note';
   const hasSurfaceScope = flavour.includes('surface');
   const isInner = placement === 'inner';
   const offsetTop = sideOptions?.top ?? 0;
@@ -201,8 +201,8 @@ const merge = (a: any, b: any) =>
  * Renders toolbar
  *
  * Merges the following configs:
- * 1. `affine:note`
- * 2. `custom:affine:note`
+ * 1. `cloud-notes:note`
+ * 2. `custom:cloud-notes:note`
  * 3. `cloud-notes:*`
  * 4. `custom:cloud-notes:*`
  */
@@ -217,7 +217,7 @@ export function renderToolbar(
   const actions = [
     flavour,
     `custom:${flavour}`,
-    hasSurfaceScope ? ['affine:surface:*', 'custom:affine:surface:*'] : [],
+    hasSurfaceScope ? ['cloud-notes:surface:*', 'custom:cloud-notes:surface:*'] : [],
     'cloud-notes:*',
     'custom:cloud-notes:*',
   ]
@@ -302,7 +302,7 @@ export function renderToolbar(
   );
 
   // Avoids shaking
-  if (flavour === 'affine:note' && context.std.range.value) {
+  if (flavour === 'cloud-notes:note' && context.std.range.value) {
     if (!('inline' in toolbar.dataset)) {
       toolbar.dataset.inline = '';
     } else {

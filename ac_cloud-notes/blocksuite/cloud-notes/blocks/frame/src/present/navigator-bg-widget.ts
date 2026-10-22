@@ -120,7 +120,7 @@ export class EdgelessNavigatorBlackBackgroundWidget extends WidgetComponent<Root
 }
 
 export const edgelessNavigatorBgWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   EDGELESS_NAVIGATOR_BLACK_BACKGROUND_WIDGET,
   literal`${unsafeStatic(EDGELESS_NAVIGATOR_BLACK_BACKGROUND_WIDGET)}`
 );

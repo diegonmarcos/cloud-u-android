@@ -18,7 +18,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -33,7 +33,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -41,7 +41,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'jnpiF-qH-9NYu1WEx_asdmPfIBVf_Y5AX64yq-Jvbic=',
@@ -78,7 +78,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -93,7 +93,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -101,7 +101,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'JwGgaM_IRE2A9RLtMk8KKbyHAz1rQ3SxnCmNt5CI0Q4=',
@@ -138,7 +138,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -153,7 +153,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -161,7 +161,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: '9UO31nxq6_RN2F__dx__Rp4UbhmmLDz1Nfz_WdnKOXI=',
@@ -198,7 +198,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -213,7 +213,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -221,7 +221,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'lbL16jkIuhQw9gHkalgBT2Bih2AyKOq75NJpE5lZQ_g=',
@@ -258,7 +258,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -273,7 +273,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -281,7 +281,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'kwZRDukIBDUV5ixvz5iT3_WExlc4H5hCrDLZxxgQEu8=',
@@ -318,7 +318,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -333,7 +333,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -341,7 +341,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'Kc9ZAVaolBXfSTZu94gJH5OAbwdwtP7TaIKmWBhEeYo=',
@@ -378,7 +378,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -393,7 +393,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -401,7 +401,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'vY51WmaGESNrWFGsZ8NQ5lembXapx9epsP-ZuOugGvk=',
@@ -438,7 +438,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -453,7 +453,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -461,7 +461,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'YuPd_NI22xNMhfm3GHSonetlA9pebkl-z1fsocwM638=',
@@ -498,7 +498,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -513,7 +513,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -521,7 +521,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: '6upuFIKSmrBV8pYRoioRM2jJr6W9-dh-zdMTECor4hk=',
@@ -558,7 +558,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -573,7 +573,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -581,7 +581,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'WTCWRS4fVWExlws9Sgfw6mNkM5tUcsUkDta6cITV5as=',
@@ -618,7 +618,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -633,7 +633,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -641,7 +641,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'hrclQO6EpB6VTJER_N_LkR9P_cK-Ckw0S10x6jf2Btk=',
@@ -678,7 +678,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -693,7 +693,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -701,7 +701,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'WWiNfo_E9g7nllIi9BfvNbJHInhwl5vG26LU56hvtJE=',
@@ -738,7 +738,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -753,7 +753,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -761,7 +761,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: '4KbnQ1P38nUux0Tf2fdGqc909fVzGz8PJVuvuSVvnzc=',
@@ -798,7 +798,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -813,7 +813,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -821,7 +821,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: '9-e8kW6m8ps6c5UAL4gp6na1xtld40LB9D9y-UxDMHM=',
@@ -858,7 +858,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -873,7 +873,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -881,7 +881,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'wda7t68nS-GZ5nFvtizlZGznECDe__F86Kcz5a5FAWk=',
@@ -918,7 +918,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -933,7 +933,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -941,7 +941,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'cQF0iqkB21MBBJtwCUqb48hbsPpiZ3vZK7YtNXKmos0=',
@@ -978,7 +978,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -993,7 +993,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -1001,7 +1001,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'pmPMoebd5Z2h2cblWB_TxEw4C5VKdVc0r4BDzMu5Jrw=',
@@ -1038,7 +1038,7 @@ export default [
       blocks: {
         type: 'block',
         id: 'block:1VxnfD_8xb',
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -1053,7 +1053,7 @@ export default [
           {
             type: 'block',
             id: 'block:pcmYJQ63hX',
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -1061,7 +1061,7 @@ export default [
               {
                 type: 'block',
                 id: 'block:N24al1Qgl7',
-                flavour: 'affine:image',
+                flavour: 'cloud-notes:image',
                 props: {
                   caption: '',
                   sourceId: 'KN7FRbU7RrtqrgjWE3YX_vTnb3NfsSWWbosjoc2GvJI=',

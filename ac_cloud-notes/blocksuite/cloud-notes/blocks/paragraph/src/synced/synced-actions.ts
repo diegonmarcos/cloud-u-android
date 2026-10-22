@@ -63,7 +63,7 @@ export function insertSyncedCopy(
   const info = readSyncedSource(store.workspace, source);
   if (!info) return null;
   const id = store.addBlock(
-    'affine:paragraph',
+    'cloud-notes:paragraph',
     { type: info.type as any, text: new Text(info.delta) },
     place.parentId,
     place.index
@@ -94,7 +94,7 @@ export function syncBlockToDoc(
   const root = targetStore.root;
   if (!source || !root) return null;
   const note =
-    root.children.find(child => child.flavour === 'affine:note')?.id ??
-    targetStore.addBlock('affine:note', {}, root.id);
+    root.children.find(child => child.flavour === 'cloud-notes:note')?.id ??
+    targetStore.addBlock('cloud-notes:note', {}, root.id);
   return insertSyncedCopy(targetStore, source, { parentId: note });
 }

@@ -47,7 +47,7 @@ export class EditorSettingDocCreateMiddleware
 
     docCreateOptions.docProps = {
       ...docCreateOptions.docProps,
-      note: this.editorSettingService.editorSetting.get('affine:note'),
+      note: this.editorSettingService.editorSetting.get('cloud-notes:note'),
     };
 
     return docCreateOptions;

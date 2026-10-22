@@ -305,7 +305,7 @@ export class MarkdownAdapter extends BaseAdapter<Markdown> {
     const blockSnapshotRoot = {
       type: 'block',
       id: nanoid(),
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -330,7 +330,7 @@ export class MarkdownAdapter extends BaseAdapter<Markdown> {
     const blockSnapshotRoot = {
       type: 'block',
       id: nanoid(),
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,
@@ -351,7 +351,7 @@ export class MarkdownAdapter extends BaseAdapter<Markdown> {
       blocks: {
         type: 'block',
         id: nanoid(),
-        flavour: 'affine:page',
+        flavour: 'cloud-notes:page',
         props: {
           title: {
             '$blocksuite:internal:text$': true,
@@ -366,7 +366,7 @@ export class MarkdownAdapter extends BaseAdapter<Markdown> {
           {
             type: 'block',
             id: nanoid(),
-            flavour: 'affine:surface',
+            flavour: 'cloud-notes:surface',
             props: {
               elements: {},
             },
@@ -393,7 +393,7 @@ export class MarkdownAdapter extends BaseAdapter<Markdown> {
     const blockSnapshotRoot = {
       type: 'block',
       id: nanoid(),
-      flavour: 'affine:note',
+      flavour: 'cloud-notes:note',
       props: {
         xywh: '[0,0,800,95]',
         background: DefaultTheme.noteBackgrounColor,

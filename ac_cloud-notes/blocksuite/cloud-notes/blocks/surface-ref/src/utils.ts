@@ -117,7 +117,7 @@ export const TYPE_ICON_MAP: {
     icon: TemplateResult;
   };
 } = {
-  'affine:frame': {
+  'cloud-notes:frame': {
     name: 'Frame',
     icon: FrameIcon(),
   },

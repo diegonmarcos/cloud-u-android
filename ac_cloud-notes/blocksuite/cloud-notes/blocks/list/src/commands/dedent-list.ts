@@ -88,7 +88,7 @@ export const canDedentListCommand: Command<
       blockId,
       inlineIndex,
       type: 'dedent',
-      flavour: 'affine:list',
+      flavour: 'cloud-notes:list',
     },
   });
 };
@@ -102,7 +102,7 @@ export const dedentListCommand: Command<{
   if (
     !dedentContext ||
     dedentContext.type !== 'dedent' ||
-    dedentContext.flavour !== 'affine:list'
+    dedentContext.flavour !== 'cloud-notes:list'
   ) {
     console.warn(
       'you need to use `canDedentList` command before running `dedentList` command'

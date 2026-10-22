@@ -113,7 +113,7 @@ function createBuiltinToolbarConfigForExternal(
 
               const text = new Text(yText);
 
-              ctx.store.addBlock('affine:paragraph', { text }, parent, index);
+              ctx.store.addBlock('cloud-notes:paragraph', { text }, parent, index);
 
               ctx.store.deleteBlock(model);
 
@@ -154,7 +154,7 @@ function createBuiltinToolbarConfigForExternal(
                 .getEmbedBlockOptions(url);
 
               let style: EmbedCardStyle = model.props.style;
-              let flavour = 'affine:bookmark';
+              let flavour = 'cloud-notes:bookmark';
 
               if (options?.viewType === 'card') {
                 flavour = options.flavour;
@@ -439,7 +439,7 @@ const createBuiltinSurfaceToolbarConfigForExternal = (
               const { url, caption } = model.props;
 
               let { style } = model.props;
-              let flavour = 'affine:bookmark';
+              let flavour = 'cloud-notes:bookmark';
 
               if (
                 !BookmarkStyles.includes(
@@ -674,7 +674,7 @@ export const createBuiltinToolbarConfigExtension = (
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier(`affine:surface:${name}`),
+      id: BlockFlavourIdentifier(`cloud-notes:surface:${name}`),
       config: createBuiltinSurfaceToolbarConfigForExternal(klass),
     }),
   ];

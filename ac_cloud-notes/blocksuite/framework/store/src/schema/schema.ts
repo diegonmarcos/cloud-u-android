@@ -2,6 +2,7 @@ import { minimatch } from 'minimatch';
 
 import { SCHEMA_NOT_FOUND_MESSAGE } from '../consts.js';
 import { BlockSchema, type BlockSchemaType } from '../model/block/zod.js';
+import { FlavourKeyedMap } from '../utils/legacy-flavour.js';
 import { SchemaValidateError } from './error.js';
 
 /**
@@ -12,7 +13,7 @@ export class Schema {
   /**
    * A map storing block flavour names to their corresponding schema definitions.
    */
-  readonly flavourSchemaMap = new Map<string, BlockSchemaType>();
+  readonly flavourSchemaMap = new FlavourKeyedMap<BlockSchemaType>();
 
   /**
    * Safely validates the schema relationship for a given flavour, parent, and children.

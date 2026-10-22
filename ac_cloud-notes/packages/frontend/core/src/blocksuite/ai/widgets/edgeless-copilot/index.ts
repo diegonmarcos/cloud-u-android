@@ -335,7 +335,7 @@ export class EdgelessCopilotWidget extends WidgetComponent<RootBlockModel> {
 }
 
 export const edgelessCopilotWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_EDGELESS_COPILOT_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_EDGELESS_COPILOT_WIDGET)}`
 );

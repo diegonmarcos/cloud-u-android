@@ -9,7 +9,7 @@
   "blocks": {
     "type": "block",
     "id": "DBwzSu70O4",
-    "flavour": "affine:page",
+    "flavour": "cloud-notes:page",
     "version": 2,
     "props": {
       "title": {
@@ -25,7 +25,7 @@
       {
         "type": "block",
         "id": "VsLifn6v6J",
-        "flavour": "affine:surface",
+        "flavour": "cloud-notes:surface",
         "version": 5,
         "props": {
           "elements": {
@@ -49,7 +49,7 @@
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "text": {
-                "affine:surface:text": true,
+                "cloud-notes:surface:text": true,
                 "delta": [
                   {
                     "insert": "Start"
@@ -81,7 +81,7 @@
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "text": {
-                "affine:surface:text": true,
+                "cloud-notes:surface:text": true,
                 "delta": [
                   {
                     "insert": "Action"
@@ -113,7 +113,7 @@
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "text": {
-                "affine:surface:text": true,
+                "cloud-notes:surface:text": true,
                 "delta": [
                   {
                     "insert": "Action"
@@ -145,7 +145,7 @@
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "text": {
-                "affine:surface:text": true,
+                "cloud-notes:surface:text": true,
                 "delta": [
                   {
                     "insert": "Yes/No"
@@ -177,7 +177,7 @@
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "text": {
-                "affine:surface:text": true,
+                "cloud-notes:surface:text": true,
                 "delta": [
                   {
                     "insert": "Action"
@@ -209,7 +209,7 @@
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "text": {
-                "affine:surface:text": true,
+                "cloud-notes:surface:text": true,
                 "delta": [
                   {
                     "insert": "End"
@@ -407,7 +407,7 @@
           {
             "type": "block",
             "id": "LHrmmlDo4Q",
-            "flavour": "affine:edgeless-text",
+            "flavour": "cloud-notes:edgeless-text",
             "version": 1,
             "props": {
               "xywh": "[30.80080405395168,20.987504771361614,71.2421875,56]",
@@ -425,7 +425,7 @@
               {
                 "type": "block",
                 "id": "qc2TtDkPRq",
-                "flavour": "affine:paragraph",
+                "flavour": "cloud-notes:paragraph",
                 "version": 1,
                 "props": {
                   "type": "text",
@@ -445,7 +445,7 @@
           {
             "type": "block",
             "id": "cmuL9JhfVH",
-            "flavour": "affine:frame",
+            "flavour": "cloud-notes:frame",
             "version": 1,
             "props": {
               "title": {

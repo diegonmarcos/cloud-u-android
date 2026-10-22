@@ -11,7 +11,7 @@ import { nanoid } from '@blocksuite/store';
 export const codeBlockHtmlAdapterMatcher: BlockHtmlAdapterMatcher = {
   flavour: CodeBlockSchema.model.flavour,
   toMatch: o => HastUtils.isElement(o.node) && o.node.tagName === 'pre',
-  fromMatch: o => o.node.flavour === 'affine:code',
+  fromMatch: o => o.node.flavour === 'cloud-notes:code',
   toBlockSnapshot: {
     enter: (o, context) => {
       if (!HastUtils.isElement(o.node)) {
@@ -44,7 +44,7 @@ export const codeBlockHtmlAdapterMatcher: BlockHtmlAdapterMatcher = {
           {
             type: 'block',
             id: nanoid(),
-            flavour: 'affine:code',
+            flavour: 'cloud-notes:code',
             props: {
               language: codeLang ?? 'Plain Text',
               wrap,

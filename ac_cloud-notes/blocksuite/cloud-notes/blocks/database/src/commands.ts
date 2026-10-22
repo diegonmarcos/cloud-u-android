@@ -30,7 +30,7 @@ export const insertDatabaseBlockCommand: Command<
 
   const result = std.store.addSiblingBlocks(
     targetModel,
-    [{ flavour: 'affine:database' }],
+    [{ flavour: 'cloud-notes:database' }],
     place
   );
   const string = result[0];
@@ -64,6 +64,6 @@ export const initDatabaseBlock = (
   if (isAppendNewRow) {
     const parent = doc.getParent(model);
     if (!parent) return;
-    doc.addBlock('affine:paragraph', {}, parent.id);
+    doc.addBlock('cloud-notes:paragraph', {}, parent.id);
   }
 };

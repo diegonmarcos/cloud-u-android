@@ -78,7 +78,7 @@ export const builtinInlineReferenceToolbarConfig = {
             const index = parent.children.indexOf(model);
 
             const blockId = ctx.store.addBlock(
-              'affine:embed-linked-doc',
+              'cloud-notes:embed-linked-doc',
               referenceInfo,
               parent,
               index + 1
@@ -115,7 +115,7 @@ export const builtinInlineReferenceToolbarConfig = {
               isInsideBlockByFlavour(
                 ctx.store,
                 target.block.model,
-                'affine:edgeless-text'
+                'cloud-notes:edgeless-text'
               )
             )
               return true;
@@ -152,7 +152,7 @@ export const builtinInlineReferenceToolbarConfig = {
             const index = parent.children.indexOf(model);
 
             const blockId = ctx.store.addBlock(
-              'affine:embed-synced-doc',
+              'cloud-notes:embed-synced-doc',
               cloneReferenceInfoWithoutAliases(referenceInfo),
               parent,
               index + 1

@@ -13,7 +13,7 @@ export async function applyPatchToDoc(
   patch: PatchOp[]
 ): Promise<void> {
   // Get all note blocks
-  const notes = doc.getBlocksByFlavour('affine:note');
+  const notes = doc.getBlocksByFlavour('cloud-notes:note');
   if (notes.length === 0) return;
   // Only handle the first note block
   const note = notes[0].model;

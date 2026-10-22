@@ -27,7 +27,7 @@ export const FrameSettings = () => {
     DefaultTheme.transparent
   );
 
-  const { background } = settings['affine:frame'];
+  const { background } = settings['cloud-notes:frame'];
   const currentColor = useMemo(() => {
     return getCurrentColor(background);
   }, [getCurrentColor, background]);
@@ -35,7 +35,7 @@ export const FrameSettings = () => {
   const colorItems = useMemo(() => {
     return palettes.map(({ key, value, resolvedValue }) => {
       const handler = () => {
-        editorSetting.set('affine:frame', { background: value });
+        editorSetting.set('cloud-notes:frame', { background: value });
       };
       const isSelected = isEqual(background, value);
       return (
@@ -52,7 +52,7 @@ export const FrameSettings = () => {
   }, [editorSetting, background, palettes]);
 
   const getElements = useCallback((doc: Store) => {
-    return doc.getBlocksByFlavour('affine:frame') || [];
+    return doc.getBlocksByFlavour('cloud-notes:frame') || [];
   }, []);
 
   return (
@@ -60,7 +60,7 @@ export const FrameSettings = () => {
       <EdgelessSnapshot
         title={t['com.cloud-notes.settings.editorSettings.edgeless.frame']()}
         docName="frame"
-        keyName="affine:frame"
+        keyName="cloud-notes:frame"
         getElements={getElements}
       />
       <SettingRow

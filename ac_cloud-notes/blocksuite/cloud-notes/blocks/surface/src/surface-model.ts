@@ -13,7 +13,7 @@ import { surfaceMiddlewareIdentifier } from './extensions/surface-middleware.js'
 import { SurfaceBlockTransformer } from './surface-transformer.js';
 
 export const SurfaceBlockSchema = defineBlockSchema({
-  flavour: 'affine:surface',
+  flavour: 'cloud-notes:surface',
   props: (internalPrimitives): SurfaceBlockProps => ({
     elements: internalPrimitives.Boxed(new Y.Map()),
   }),
@@ -22,12 +22,12 @@ export const SurfaceBlockSchema = defineBlockSchema({
     role: 'hub',
     parent: ['@root'],
     children: [
-      'affine:frame',
-      'affine:image',
-      'affine:bookmark',
-      'affine:attachment',
-      'affine:embed-*',
-      'affine:edgeless-text',
+      'cloud-notes:frame',
+      'cloud-notes:image',
+      'cloud-notes:bookmark',
+      'cloud-notes:attachment',
+      'cloud-notes:embed-*',
+      'cloud-notes:edgeless-text',
     ],
   },
   transformer: transformerConfigs =>

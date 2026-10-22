@@ -134,7 +134,7 @@ export class PageKeyboardManager {
       .run();
     const selectedModels = ctx.selectedModels?.filter(
       block =>
-        !block.flavour.startsWith('affine:embed-') &&
+        !block.flavour.startsWith('cloud-notes:embed-') &&
         matchModels(doc.getParent(block), [NoteBlockModel])
     );
 

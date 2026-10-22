@@ -230,8 +230,8 @@ export class AISlidesRenderer extends WithDisposable(LitElement) {
     const doc = collection.createDoc().getStore();
 
     doc.load(() => {
-      const pageBlockId = doc.addBlock('affine:page', {});
-      doc.addBlock('affine:surface', {}, pageBlockId);
+      const pageBlockId = doc.addBlock('cloud-notes:page', {});
+      doc.addBlock('cloud-notes:surface', {}, pageBlockId);
     });
 
     doc.resetHistory();

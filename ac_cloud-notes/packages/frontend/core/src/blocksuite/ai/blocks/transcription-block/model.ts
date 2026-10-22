@@ -8,7 +8,7 @@ import {
   defineBlockSchema,
 } from '@blocksuite/cloud-notes/store';
 
-export const TranscriptionBlockFlavour = 'affine:transcription';
+export const TranscriptionBlockFlavour = 'cloud-notes:transcription';
 
 const defaultProps: TranscriptionBlockProps = {
   transcription: {},
@@ -22,8 +22,8 @@ export const TranscriptionBlockSchema = defineBlockSchema({
   metadata: {
     version: 1,
     role: 'attachment-viewer',
-    parent: ['affine:attachment'],
-    children: ['affine:callout'],
+    parent: ['cloud-notes:attachment'],
+    children: ['cloud-notes:callout'],
   },
   toModel: () => new TranscriptionBlockModel(),
 });

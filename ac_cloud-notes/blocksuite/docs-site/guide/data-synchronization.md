@@ -76,13 +76,13 @@ function createDoc() {
   new IndexeddbPersistence('provider-demo', doc.spaceDoc);
 
   doc.load(() => {
-    const pageBlockId = doc.addBlock('affine:page', {
+    const pageBlockId = doc.addBlock('cloud-notes:page', {
       title: new Text('Test'),
     });
-    doc.addBlock('affine:surface', {}, pageBlockId);
-    const noteId = doc.addBlock('affine:note', {}, pageBlockId);
+    doc.addBlock('cloud-notes:surface', {}, pageBlockId);
+    const noteId = doc.addBlock('cloud-notes:note', {}, pageBlockId);
     doc.addBlock(
-      'affine:paragraph',
+      'cloud-notes:paragraph',
       { text: new Text('Hello World!') },
       noteId
     );

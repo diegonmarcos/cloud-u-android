@@ -95,7 +95,7 @@ import { Text } from '@blocksuite/store';
   document.body.appendChild(editor);
 
   // Update block node with some initial text content
-  const paragraphs = doc.getBlockByFlavour('affine:paragraph');
+  const paragraphs = doc.getBlockByFlavour('cloud-notes:paragraph');
   const paragraph = paragraphs[0];
   doc.updateBlock(paragraph, { text: new Text('Hello World!') });
 })();

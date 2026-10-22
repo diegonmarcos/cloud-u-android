@@ -153,20 +153,20 @@ function createWorkspaceRef() {
 
   const blockSuiteDoc = {
     getModelsByFlavour: vi.fn((flavour: string) => {
-      if (flavour === 'affine:page') {
+      if (flavour === 'cloud-notes:page') {
         return [{ id: 'page-1' }];
       }
-      if (flavour === 'affine:note') {
+      if (flavour === 'cloud-notes:note') {
         return [{ id: 'note-1' }];
       }
-      if (flavour === 'affine:attachment') {
+      if (flavour === 'cloud-notes:attachment') {
         return attachments;
       }
       return [];
     }),
     addBlock: vi.fn(
       (flavour: string, props: Record<string, unknown>, parentId?: string) => {
-        if (flavour === 'affine:attachment') {
+        if (flavour === 'cloud-notes:attachment') {
           const id = `attachment-${attachments.length + 1}`;
           const attachment = {
             id,
@@ -185,7 +185,7 @@ function createWorkspaceRef() {
           attachments.push(attachment);
           return id;
         }
-        if (flavour === 'affine:transcription') {
+        if (flavour === 'cloud-notes:transcription') {
           const id = `transcription-${transcriptionBlocks.length + 1}`;
           const block = {
             id,

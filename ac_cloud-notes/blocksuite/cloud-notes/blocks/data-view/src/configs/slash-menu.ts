@@ -8,7 +8,7 @@ import { ToDoListTooltip } from './tooltips';
 
 export const dataViewSlashMenuConfig: SlashMenuConfig = {
   disableWhen: ({ model }) => {
-    return model.flavour === 'affine:data-view';
+    return model.flavour === 'cloud-notes:data-view';
   },
   items: [
     {
@@ -21,7 +21,7 @@ export const dataViewSlashMenuConfig: SlashMenuConfig = {
       },
       group: '7_Database@1',
       when: ({ model, std }) =>
-        !isInsideBlockByFlavour(model.store, model, 'affine:edgeless-text') &&
+        !isInsideBlockByFlavour(model.store, model, 'cloud-notes:edgeless-text') &&
         !!std.get(FeatureFlagService).getFlag('enable_block_query'),
 
       action: ({ model, std }) => {
@@ -30,7 +30,7 @@ export const dataViewSlashMenuConfig: SlashMenuConfig = {
         if (!parent) return;
         const index = parent.children.indexOf(model);
         const id = host.store.addBlock(
-          'affine:data-view',
+          'cloud-notes:data-view',
           {},
           host.store.getParent(model),
           index + 1

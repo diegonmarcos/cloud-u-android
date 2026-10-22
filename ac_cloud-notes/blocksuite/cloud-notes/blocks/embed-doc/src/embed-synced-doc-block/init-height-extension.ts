@@ -17,7 +17,7 @@ export class HeightInitializationExtension extends LifeCycleWatcher {
           payload.type === 'add' &&
           payload.isLocal &&
           payload.flavour === EmbedSyncedDocBlockSchema.model.flavour &&
-          payload.model.parent?.flavour === 'affine:surface'
+          payload.model.parent?.flavour === 'cloud-notes:surface'
         ) {
           this._initQueue.add(payload.id);
         }

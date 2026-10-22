@@ -81,7 +81,7 @@ export const updateBlockType: Command<
     _,
     next
   ) => {
-    if (flavour !== 'affine:code') return;
+    if (flavour !== 'cloud-notes:code') return;
     const id = mergeToCodeModel(blockModels);
     if (!id) return;
     const model = doc.getModelById(id);
@@ -96,7 +96,7 @@ export const updateBlockType: Command<
     _,
     next
   ) => {
-    if (flavour !== 'affine:divider') {
+    if (flavour !== 'cloud-notes:divider') {
       return false;
     }
     const model = blockModels.at(-1);
@@ -110,9 +110,9 @@ export const updateBlockType: Command<
     const index = parent.children.indexOf(model);
     const nextSibling = doc.getNext(model);
     let nextSiblingId = nextSibling?.id as string;
-    const id = doc.addBlock('affine:divider', {}, parent, index + 1);
+    const id = doc.addBlock('cloud-notes:divider', {}, parent, index + 1);
     if (!nextSibling) {
-      nextSiblingId = doc.addBlock('affine:paragraph', {}, parent);
+      nextSiblingId = doc.addBlock('cloud-notes:paragraph', {}, parent);
     }
     focusTextModel(host.std, nextSiblingId);
     const newModel = doc.getModelById(id);
@@ -125,7 +125,7 @@ export const updateBlockType: Command<
     _,
     next
   ) => {
-    if (flavour !== 'affine:latex') return;
+    if (flavour !== 'cloud-notes:latex') return;
 
     const newModels: BlockModel[] = [];
     blockModels.forEach(model => {
@@ -140,7 +140,7 @@ export const updateBlockType: Command<
       }
 
       const latex = model.text?.toString() ?? '';
-      const newId = transformModel(model, 'affine:latex', { latex });
+      const newId = transformModel(model, 'cloud-notes:latex', { latex });
       if (!newId) {
         return;
       }
@@ -283,14 +283,14 @@ export const updateBlockType: Command<
     .try(chain => [
       chain
         .pipe((_, next) => {
-          if (flavour === 'affine:latex') {
+          if (flavour === 'cloud-notes:latex') {
             return next();
           }
           return false;
         })
         .pipe(selectBlocks),
       chain.pipe((_, next) => {
-        if (['affine:code', 'affine:divider'].includes(flavour)) {
+        if (['cloud-notes:code', 'cloud-notes:divider'].includes(flavour)) {
           return next();
         }
         return false;

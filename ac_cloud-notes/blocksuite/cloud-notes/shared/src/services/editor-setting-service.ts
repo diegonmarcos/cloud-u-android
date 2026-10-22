@@ -11,8 +11,8 @@ export const GeneralSettingSchema = z
     edgelessScrollZoom: z.boolean().default(false),
     edgelessDisableScheduleUpdate: z.boolean().default(false),
     docCanvasPreferView: z
-      .enum(['affine:embed-linked-doc', 'affine:embed-synced-doc'])
-      .default('affine:embed-synced-doc'),
+      .enum(['cloud-notes:embed-linked-doc', 'cloud-notes:embed-synced-doc'])
+      .default('cloud-notes:embed-synced-doc'),
   })
   .merge(NodePropsSchema);
 

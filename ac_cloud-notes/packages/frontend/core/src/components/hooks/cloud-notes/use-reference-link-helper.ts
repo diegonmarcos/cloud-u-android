@@ -24,9 +24,9 @@ export function useReferenceLinkHelper(docCollection: Workspace) {
           },
         },
       ] as DeltaInsert<CloudNotesTextAttributes>[]);
-      const [frame] = page.getModelsByFlavour('affine:note');
+      const [frame] = page.getModelsByFlavour('cloud-notes:note');
 
-      frame && page.addBlock('affine:paragraph', { text }, frame.id);
+      frame && page.addBlock('cloud-notes:paragraph', { text }, frame.id);
     },
     [docCollection]
   );

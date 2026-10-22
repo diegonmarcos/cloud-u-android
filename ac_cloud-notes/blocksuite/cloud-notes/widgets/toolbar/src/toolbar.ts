@@ -195,7 +195,7 @@ export class CloudNotesToolbarWidget extends WidgetComponent {
   ) {
     const gfx = ctx.gfx;
     const surface = gfx.surface;
-    let flavour = 'affine:surface';
+    let flavour = 'cloud-notes:surface';
     let elements: GfxModel[] = [];
     let hasLocked = false;
     let sideOptions = null;
@@ -232,21 +232,21 @@ export class CloudNotesToolbarWidget extends WidgetComponent {
       ]);
 
       if (hasLocked) {
-        flavour = 'affine:surface:locked';
+        flavour = 'cloud-notes:surface:locked';
       } else {
         if (paired.length === 1) {
           flavour = paired[0][0];
-          if (flavour === 'affine:surface:shape' && paired[0][1].length === 1) {
+          if (flavour === 'cloud-notes:surface:shape' && paired[0][1].length === 1) {
             sideOptions = sideMap.get(flavour) ?? null;
           }
         }
       }
       if (!sideOptions) {
         const flavours = new Set(paired.map(([f]) => f));
-        if (flavours.has('affine:surface:frame')) {
-          sideOptions = sideMap.get('affine:surface:frame') ?? null;
-        } else if (flavours.has('affine:surface:group')) {
-          sideOptions = sideMap.get('affine:surface:group') ?? null;
+        if (flavours.has('cloud-notes:surface:frame')) {
+          sideOptions = sideMap.get('cloud-notes:surface:frame') ?? null;
+        } else if (flavours.has('cloud-notes:surface:group')) {
+          sideOptions = sideMap.get('cloud-notes:surface:group') ?? null;
         }
       }
     }
@@ -362,8 +362,8 @@ export class CloudNotesToolbarWidget extends WidgetComponent {
           this.setReferenceElementWithRange(range);
 
           sideOptions$.value = null;
-          flavour$.value = 'affine:note';
-          placement$.value = toolbarRegistry.getModulePlacement('affine:note');
+          flavour$.value = 'cloud-notes:note';
+          placement$.value = toolbarRegistry.getModulePlacement('cloud-notes:note');
           flags.refresh(Flag.Text);
         });
       };
@@ -416,8 +416,8 @@ export class CloudNotesToolbarWidget extends WidgetComponent {
           this.setReferenceElementWithRange(range);
 
           sideOptions$.value = null;
-          flavour$.value = 'affine:note';
-          placement$.value = toolbarRegistry.getModulePlacement('affine:note');
+          flavour$.value = 'cloud-notes:note';
+          placement$.value = toolbarRegistry.getModulePlacement('cloud-notes:note');
           flags.refresh(Flag.Text);
         });
       })
@@ -449,8 +449,8 @@ export class CloudNotesToolbarWidget extends WidgetComponent {
         this.setReferenceElementWithRange(range);
 
         sideOptions$.value = null;
-        flavour$.value = 'affine:note';
-        placement$.value = toolbarRegistry.getModulePlacement('affine:note');
+        flavour$.value = 'cloud-notes:note';
+        placement$.value = toolbarRegistry.getModulePlacement('cloud-notes:note');
         flags.refresh(Flag.Native);
       });
     });
@@ -460,7 +460,7 @@ export class CloudNotesToolbarWidget extends WidgetComponent {
       std.selection.filter$(BlockSelection).subscribe(selections => {
         const blockIds = selections.map(s => s.blockId);
         const count = blockIds.length;
-        let flavour = 'affine:note';
+        let flavour = 'cloud-notes:note';
         let activated = context.activated && Boolean(count);
 
         if (activated) {
@@ -501,7 +501,7 @@ export class CloudNotesToolbarWidget extends WidgetComponent {
           flavour$.value = flavour;
           placement$.value = toolbarRegistry.getModulePlacement(
             flavour,
-            flavour === 'affine:note' ? 'top' : 'top-start'
+            flavour === 'cloud-notes:note' ? 'top' : 'top-start'
           );
           flags.refresh(Flag.Block);
         });

@@ -210,14 +210,14 @@ export class EdgelessFrameManager extends GfxExtension {
     const surfaceModel = this.gfx.surface as SurfaceBlockModel;
     const props = this.gfx.std
       .get(EditPropsStore)
-      .applyLastProps('affine:frame', {
+      .applyLastProps('cloud-notes:frame', {
         title: new Text(new Y.Text(`Frame ${this.frames.length + 1}`)),
         xywh: bound.serialize(),
         index: this.gfx.layer.generateIndex(true),
         presentationIndex: this.generatePresentationIndex(),
       });
 
-    const id = this.gfx.doc.addBlock('affine:frame', props, surfaceModel);
+    const id = this.gfx.doc.addBlock('cloud-notes:frame', props, surfaceModel);
     const frameModel = this.gfx.getElementById(id);
 
     if (!frameModel || !isFrameBlock(frameModel)) {
@@ -499,5 +499,5 @@ function areSetsEqual<T>(setA: Set<T>, setB: Set<T>) {
 }
 
 export function isFrameBlock(element: unknown): element is FrameBlockModel {
-  return !!element && (element as BlockModel).flavour === 'affine:frame';
+  return !!element && (element as BlockModel).flavour === 'cloud-notes:frame';
 }

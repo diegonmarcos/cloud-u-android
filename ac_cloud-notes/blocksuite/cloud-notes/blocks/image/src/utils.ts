@@ -173,7 +173,7 @@ export async function turnImageIntoCardView(
   block: ImageBlockComponent | ImageEdgelessBlockComponent
 ) {
   const doc = block.store;
-  if (!doc.schema.flavourSchemaMap.has('affine:attachment')) {
+  if (!doc.schema.flavourSchemaMap.has('cloud-notes:attachment')) {
     console.error('The attachment flavour is not supported!');
     return;
   }
@@ -200,7 +200,7 @@ export async function turnImageIntoCardView(
     caption: model.props.caption,
     ...attachmentConvertData,
   };
-  transformModel(model, 'affine:attachment', attachmentProp);
+  transformModel(model, 'cloud-notes:attachment', attachmentProp);
 }
 
 export function shouldResizeImage(node: Node, target: EventTarget | null) {

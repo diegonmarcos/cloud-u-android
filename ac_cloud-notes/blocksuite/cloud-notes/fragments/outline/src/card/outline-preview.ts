@@ -130,7 +130,7 @@ export class OutlineBlockPreview extends SignalWatcher(
     const showPreviewIcon = this._context.showIcons$.value;
 
     switch (block.flavour) {
-      case 'affine:page':
+      case 'cloud-notes:page':
         assertType<RootBlockModel>(block);
         return block.props.title.length > 0
           ? html`<span
@@ -140,13 +140,13 @@ export class OutlineBlockPreview extends SignalWatcher(
               ${block.props.title$.value}
             </span>`
           : nothing;
-      case 'affine:paragraph':
+      case 'cloud-notes:paragraph':
         assertType<ParagraphBlockModel>(block);
         return this._TextBlockPreview(block);
-      case 'affine:list':
+      case 'cloud-notes:list':
         assertType<ListBlockModel>(block);
         return this._TextBlockPreview(block);
-      case 'affine:bookmark':
+      case 'cloud-notes:bookmark':
         assertType<BookmarkBlockModel>(block);
         return html`
           <span class="${styles.text} ${styles.textGeneral}"
@@ -162,7 +162,7 @@ export class OutlineBlockPreview extends SignalWatcher(
               : nothing
           }
         `;
-      case 'affine:code':
+      case 'cloud-notes:code':
         assertType<CodeBlockModel>(block);
         return html`
           <span class="${styles.text} ${styles.textGeneral}"
@@ -174,7 +174,7 @@ export class OutlineBlockPreview extends SignalWatcher(
               : nothing
           }
         `;
-      case 'affine:database':
+      case 'cloud-notes:database':
         assertType<DatabaseBlockModel>(block);
         return html`
           <span class="${styles.text} ${styles.textGeneral}"
@@ -190,7 +190,7 @@ export class OutlineBlockPreview extends SignalWatcher(
               : nothing
           }
         `;
-      case 'affine:image':
+      case 'cloud-notes:image':
         assertType<ImageBlockModel>(block);
         return html`
           <span class="${styles.text} ${styles.textGeneral}"
@@ -206,7 +206,7 @@ export class OutlineBlockPreview extends SignalWatcher(
               : nothing
           }
         `;
-      case 'affine:attachment':
+      case 'cloud-notes:attachment':
         assertType<AttachmentBlockModel>(block);
         return html`
           <span class="${styles.text} ${styles.textGeneral}"

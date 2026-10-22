@@ -33,7 +33,7 @@ export class NoteOverlay extends ToolOverlay {
     this.disposables.add(
       effect(() => {
         // when change note child type, update overlay text
-        if (this.gfx.tool.currentToolName$.value !== 'affine:note') return;
+        if (this.gfx.tool.currentToolName$.value !== 'cloud-notes:note') return;
         const tool = this.gfx.tool.currentTool$.peek() as NoteTool;
         this.text = this._getOverlayText(tool.activatedOption.tip);
         const surface = getSurfaceComponent(this.gfx.std);

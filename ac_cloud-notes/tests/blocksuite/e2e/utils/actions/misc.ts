@@ -236,14 +236,14 @@ export async function enterPlaygroundWithList(
   await page.evaluate(
     ({ contents, type }: { contents: string[]; type: ListType }) => {
       const { doc } = window;
-      const rootId = doc.addBlock('affine:page', {
+      const rootId = doc.addBlock('cloud-notes:page', {
         title: new window.$blocksuite.store.Text(),
       });
-      const noteId = doc.addBlock('affine:note', {}, rootId);
+      const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
       // oxlint-disable-next-line typescript/prefer-for-of
       for (let i = 0; i < contents.length; i++) {
         doc.addBlock(
-          'affine:list',
+          'cloud-notes:list',
           contents.length > 0
             ? { text: new window.$blocksuite.store.Text(contents[i]), type }
             : { type },
@@ -262,14 +262,14 @@ export async function initEmptyParagraphState(page: Page, rootId?: string) {
     const { doc } = window;
     doc.captureSync();
     if (!rootId) {
-      rootId = doc.addBlock('affine:page', {
+      rootId = doc.addBlock('cloud-notes:page', {
         title: new window.$blocksuite.store.Text(),
       });
     }
 
-    const noteId = doc.addBlock('affine:note', {}, rootId);
-    const paragraphId = doc.addBlock('affine:paragraph', {}, noteId);
-    // doc.addBlock('affine:surface', {}, rootId);
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
+    const paragraphId = doc.addBlock('cloud-notes:paragraph', {}, noteId);
+    // doc.addBlock('cloud-notes:surface', {}, rootId);
     doc.captureSync();
 
     return { rootId, noteId, paragraphId };
@@ -287,7 +287,7 @@ export async function initMultipleNoteWithParagraphState(
       const { doc } = window;
       doc.captureSync();
       if (!rootId) {
-        rootId = doc.addBlock('affine:page', {
+        rootId = doc.addBlock('cloud-notes:page', {
           title: new window.$blocksuite.store.Text(),
         });
       }
@@ -295,12 +295,12 @@ export async function initMultipleNoteWithParagraphState(
       const ids = Array.from({ length: count })
         .fill(0)
         .map(() => {
-          const noteId = doc.addBlock('affine:note', {}, rootId);
-          const paragraphId = doc.addBlock('affine:paragraph', {}, noteId);
+          const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
+          const paragraphId = doc.addBlock('cloud-notes:paragraph', {}, noteId);
           return { noteId, paragraphId };
         });
 
-      // doc.addBlock('affine:surface', {}, rootId);
+      // doc.addBlock('cloud-notes:surface', {}, rootId);
       doc.captureSync();
 
       return { rootId, ids };
@@ -313,12 +313,12 @@ export async function initMultipleNoteWithParagraphState(
 export async function initEmptyEdgelessState(page: Page) {
   const ids = await page.evaluate(() => {
     const { doc } = window;
-    const rootId = doc.addBlock('affine:page', {
+    const rootId = doc.addBlock('cloud-notes:page', {
       title: new window.$blocksuite.store.Text(),
     });
-    doc.addBlock('affine:surface', {}, rootId);
-    const noteId = doc.addBlock('affine:note', {}, rootId);
-    const paragraphId = doc.addBlock('affine:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:surface', {}, rootId);
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
+    const paragraphId = doc.addBlock('cloud-notes:paragraph', {}, noteId);
 
     doc.resetHistory();
 
@@ -332,13 +332,13 @@ export async function initEmptyDatabaseState(page: Page, rootId?: string) {
     const { doc } = window;
     doc.captureSync();
     if (!rootId) {
-      rootId = doc.addBlock('affine:page', {
+      rootId = doc.addBlock('cloud-notes:page', {
         title: new window.$blocksuite.store.Text(),
       });
     }
-    const noteId = doc.addBlock('affine:note', {}, rootId);
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
     const databaseId = doc.addBlock(
-      'affine:database',
+      'cloud-notes:database',
       {
         title: new window.$blocksuite.store.Text('Database 1'),
       },
@@ -368,13 +368,13 @@ export async function initKanbanViewState(
 
       doc.captureSync();
       if (!rootId) {
-        rootId = doc.addBlock('affine:page', {
+        rootId = doc.addBlock('cloud-notes:page', {
           title: new window.$blocksuite.store.Text(),
         });
       }
-      const noteId = doc.addBlock('affine:note', {}, rootId);
+      const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
       const databaseId = doc.addBlock(
-        'affine:database',
+        'cloud-notes:database',
         {
           title: new window.$blocksuite.store.Text('Database 1'),
         },
@@ -385,7 +385,7 @@ export async function initKanbanViewState(
         new window.$blocksuite.blocks.database.DatabaseBlockDataSource(model);
       const rowIds = config.rows.map(rowText => {
         const rowId = doc.addBlock(
-          'affine:paragraph',
+          'cloud-notes:paragraph',
           { type: 'text', text: new window.$blocksuite.store.Text(rowText) },
           databaseId
         );
@@ -429,13 +429,13 @@ export async function initEmptyDatabaseWithParagraphState(
     const { doc } = window;
     doc.captureSync();
     if (!rootId) {
-      rootId = doc.addBlock('affine:page', {
+      rootId = doc.addBlock('cloud-notes:page', {
         title: new window.$blocksuite.store.Text(),
       });
     }
-    const noteId = doc.addBlock('affine:note', {}, rootId);
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
     const databaseId = doc.addBlock(
-      'affine:database',
+      'cloud-notes:database',
       {
         title: new window.$blocksuite.store.Text('Database 1'),
       },
@@ -445,7 +445,7 @@ export async function initEmptyDatabaseWithParagraphState(
     const datasource =
       new window.$blocksuite.blocks.database.DatabaseBlockDataSource(model);
     datasource.viewManager.viewAdd('table');
-    doc.addBlock('affine:paragraph', {}, noteId);
+    doc.addBlock('cloud-notes:paragraph', {}, noteId);
     doc.captureSync();
     return { rootId, noteId, databaseId };
   }, rootId);
@@ -526,9 +526,9 @@ export async function initEmptyCodeBlockState(
   const ids = await page.evaluate(codeBlockProps => {
     const { doc } = window;
     doc.captureSync();
-    const rootId = doc.addBlock('affine:page');
-    const noteId = doc.addBlock('affine:note', {}, rootId);
-    const codeBlockId = doc.addBlock('affine:code', codeBlockProps, noteId);
+    const rootId = doc.addBlock('cloud-notes:page');
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
+    const codeBlockId = doc.addBlock('cloud-notes:code', codeBlockProps, noteId);
     doc.captureSync();
 
     return { rootId, noteId, codeBlockId };
@@ -1200,10 +1200,10 @@ export async function waitForInlineEditorStateUpdated(page: Page) {
 export async function initImageState(page: Page, prependParagraph = false) {
   await page.evaluate(async prepend => {
     const { doc } = window;
-    const rootId = doc.addBlock('affine:page', {
+    const rootId = doc.addBlock('cloud-notes:page', {
       title: new window.$blocksuite.store.Text(),
     });
-    const noteId = doc.addBlock('affine:note', {}, rootId);
+    const noteId = doc.addBlock('cloud-notes:note', {}, rootId);
 
     await new Promise(res => setTimeout(res, 200));
 
@@ -1215,10 +1215,10 @@ export async function initImageState(page: Page, prependParagraph = false) {
     const storage = pageRoot.store.blobSync;
     const sourceId = await storage.set(imageBlob);
     if (prepend) {
-      doc.addBlock('affine:paragraph', {}, noteId);
+      doc.addBlock('cloud-notes:paragraph', {}, noteId);
     }
     const imageId = doc.addBlock(
-      'affine:image',
+      'cloud-notes:image',
       {
         sourceId,
       },

@@ -22,11 +22,11 @@ export class CalloutViewExtension extends ViewExtensionProvider {
   override setup(context: ViewExtensionContext) {
     super.setup(context);
     context.register([
-      FlavourExtension('affine:callout'),
-      BlockViewExtension('affine:callout', literal`cloud-notes-callout`),
+      FlavourExtension('cloud-notes:callout'),
+      BlockViewExtension('cloud-notes:callout', literal`cloud-notes-callout`),
       CalloutKeymapExtension,
-      SlashMenuConfigExtension('affine:callout', calloutSlashMenuConfig),
-      ...createBuiltinToolbarConfigExtension('affine:callout'),
+      SlashMenuConfigExtension('cloud-notes:callout', calloutSlashMenuConfig),
+      ...createBuiltinToolbarConfigExtension('cloud-notes:callout'),
     ]);
   }
 }

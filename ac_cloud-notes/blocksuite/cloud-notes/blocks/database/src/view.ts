@@ -38,9 +38,9 @@ export class DatabaseViewExtension extends ViewExtensionProvider<DatabaseViewExt
   ) {
     super.setup(context);
     context.register([
-      FlavourExtension('affine:database'),
-      BlockViewExtension('affine:database', literal`cloud-notes-database`),
-      SlashMenuConfigExtension('affine:database', databaseSlashMenuConfig),
+      FlavourExtension('cloud-notes:database'),
+      BlockViewExtension('cloud-notes:database', literal`cloud-notes-database`),
+      SlashMenuConfigExtension('cloud-notes:database', databaseSlashMenuConfig),
     ]);
     if (options) {
       context.register(

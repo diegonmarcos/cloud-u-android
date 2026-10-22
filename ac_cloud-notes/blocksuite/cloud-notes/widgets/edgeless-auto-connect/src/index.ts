@@ -289,7 +289,7 @@ export class EdgelessAutoConnectWidget extends WidgetComponent<RootBlockModel> {
       return;
     }
     const surfaceRefs = this.block.std.store
-      .getBlocksByFlavour('affine:surface-ref')
+      .getBlocksByFlavour('cloud-notes:surface-ref')
       .map(block => block.model) as SurfaceRefBlockModel[];
 
     const getVisibility = () => {
@@ -318,7 +318,7 @@ export class EdgelessAutoConnectWidget extends WidgetComponent<RootBlockModel> {
     );
     this._disposables.add(
       this.store.slots.blockUpdated.subscribe(payload => {
-        if (payload.flavour === 'affine:surface-ref') {
+        if (payload.flavour === 'cloud-notes:surface-ref') {
           switch (payload.type) {
             case 'add':
               surfaceRefs.push(payload.model as SurfaceRefBlockModel);
@@ -624,7 +624,7 @@ export class EdgelessAutoConnectWidget extends WidgetComponent<RootBlockModel> {
 }
 
 export const autoConnectWidget = WidgetViewExtension(
-  'affine:page',
+  'cloud-notes:page',
   CLOUD_NOTES_EDGELESS_AUTO_CONNECT_WIDGET,
   literal`${unsafeStatic(CLOUD_NOTES_EDGELESS_AUTO_CONNECT_WIDGET)}`
 );

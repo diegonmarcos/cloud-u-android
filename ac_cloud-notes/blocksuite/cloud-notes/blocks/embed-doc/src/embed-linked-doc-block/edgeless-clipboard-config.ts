@@ -3,7 +3,7 @@ import { ReferenceInfoSchema } from '@blocksuite/cloud-notes-model';
 import { type BlockSnapshot } from '@blocksuite/store';
 
 export class EdgelessClipboardEmbedLinkedDocConfig extends EdgelessClipboardConfig {
-  static override readonly key = 'affine:embed-linked-doc';
+  static override readonly key = 'cloud-notes:embed-linked-doc';
 
   override createBlock(linkedDocEmbed: BlockSnapshot): string | null {
     if (!this.surface) return null;
@@ -18,7 +18,7 @@ export class EdgelessClipboardEmbedLinkedDocConfig extends EdgelessClipboardConf
     });
 
     return this.crud.addBlock(
-      'affine:embed-linked-doc',
+      'cloud-notes:embed-linked-doc',
       {
         xywh,
         style,

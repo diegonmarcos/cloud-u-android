@@ -47,7 +47,7 @@ pub(super) fn rewrite_non_image_assets_to_attachments(value: &mut JsonValue, ass
       let attachment = map
         .get("flavour")
         .and_then(JsonValue::as_str)
-        .filter(|flavour| *flavour == "affine:image")
+        .filter(|flavour| *flavour == "cloud-notes:image")
         .and_then(|_| map.get("props"))
         .and_then(JsonValue::as_object)
         .and_then(|props| props.get("sourceId"))
@@ -58,7 +58,7 @@ pub(super) fn rewrite_non_image_assets_to_attachments(value: &mut JsonValue, ass
       if let Some(asset) = attachment {
         map.insert(
           "flavour".to_string(),
-          JsonValue::String("affine:attachment".to_string()),
+          JsonValue::String("cloud-notes:attachment".to_string()),
         );
         if let Some(props) = map.get_mut("props").and_then(JsonValue::as_object_mut) {
           props.insert("name".to_string(), JsonValue::String(asset.file_name.clone()));
@@ -507,16 +507,16 @@ mod tests {
     let mut snapshot = json!({
       "children": [
         {
-          "flavour": "affine:paragraph",
+          "flavour": "cloud-notes:paragraph",
           "props": {},
           "children": [
             {
-              "flavour": "affine:image",
+              "flavour": "cloud-notes:image",
               "props": { "sourceId": "skipped" },
               "children": []
             },
             {
-              "flavour": "affine:image",
+              "flavour": "cloud-notes:image",
               "props": { "sourceId": "kept" },
               "children": []
             }

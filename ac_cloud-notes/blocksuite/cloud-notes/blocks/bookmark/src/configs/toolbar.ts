@@ -122,7 +122,7 @@ const builtinToolbarConfig = {
 
             const text = new Text(yText);
 
-            ctx.store.addBlock('affine:paragraph', { text }, parent, index);
+            ctx.store.addBlock('cloud-notes:paragraph', { text }, parent, index);
 
             ctx.store.deleteBlock(model);
 
@@ -423,7 +423,7 @@ const builtinSurfaceToolbarConfig = {
                 heightInSurface ?? EMBED_IFRAME_DEFAULT_HEIGHT_IN_SURFACE;
 
               newId = ctx.store.addBlock(
-                'affine:embed-iframe',
+                'cloud-notes:embed-iframe',
                 { url, caption, title, description, xywh: bound.serialize() },
                 parent
               );
@@ -613,7 +613,7 @@ export const createBuiltinToolbarConfigExtension = (
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier(`affine:surface:${name}`),
+      id: BlockFlavourIdentifier(`cloud-notes:surface:${name}`),
       config: builtinSurfaceToolbarConfig,
     }),
   ];

@@ -16,7 +16,7 @@ export const ImageBlockSpec: ExtensionType[] = [
   BlockViewExtension(flavour, model => {
     const parent = model.store.getParent(model.id);
 
-    if (parent?.flavour === 'affine:surface') {
+    if (parent?.flavour === 'cloud-notes:surface') {
       return literal`cloud-notes-edgeless-image`;
     }
 

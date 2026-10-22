@@ -118,7 +118,7 @@ class NoteKeymap {
                         return;
                       }
 
-                      if (item.flavour !== 'affine:code') {
+                      if (item.flavour !== 'cloud-notes:code') {
                         return;
                       }
 
@@ -493,7 +493,7 @@ class NoteKeymap {
         const index = parent.children.indexOf(model) ?? undefined;
 
         const blockId = store.addBlock(
-          'affine:paragraph',
+          'cloud-notes:paragraph',
           {},
           parent,
           index + 1

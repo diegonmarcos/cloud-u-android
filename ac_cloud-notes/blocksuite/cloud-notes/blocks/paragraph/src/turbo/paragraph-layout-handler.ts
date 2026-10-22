@@ -13,7 +13,7 @@ import type { BlockModel } from '@blocksuite/store';
 import type { ParagraphLayout } from './paragraph-painter.worker';
 
 export class ParagraphLayoutHandlerExtension extends BlockLayoutHandlerExtension<ParagraphLayout> {
-  readonly blockType = 'affine:paragraph';
+  readonly blockType = 'cloud-notes:paragraph';
 
   static override setup(di: Container) {
     di.addImpl(
@@ -38,7 +38,7 @@ export class ParagraphLayoutHandlerExtension extends BlockLayoutHandlerExtension
 
     const { zoom, viewScale } = viewportRecord;
     const paragraph: ParagraphLayout = {
-      type: 'affine:paragraph',
+      type: 'cloud-notes:paragraph',
       sentences: [],
       blockId: model.id,
       rect: { x: 0, y: 0, w: 0, h: 0 },

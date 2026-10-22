@@ -1087,57 +1087,57 @@ export const createCustomToolbarExtension = (
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:bookmark'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:bookmark'),
       config: createExternalLinkableToolbarConfig(BookmarkBlockComponent),
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:surface:bookmark'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:surface:bookmark'),
       config: createExternalLinkableToolbarConfig(BookmarkBlockComponent),
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:embed-figma'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:embed-figma'),
       config: createExternalLinkableToolbarConfig(EmbedFigmaBlockComponent),
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:surface:embed-figma'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:surface:embed-figma'),
       config: createExternalLinkableToolbarConfig(BookmarkBlockComponent),
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:embed-github'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:embed-github'),
       config: createExternalLinkableToolbarConfig(EmbedGithubBlockComponent),
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:surface:embed-github'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:surface:embed-github'),
       config: createExternalLinkableToolbarConfig(BookmarkBlockComponent),
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:embed-loom'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:embed-loom'),
       config: createExternalLinkableToolbarConfig(EmbedLoomBlockComponent),
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:surface:embed-loom'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:surface:embed-loom'),
       config: createExternalLinkableToolbarConfig(BookmarkBlockComponent),
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:embed-youtube'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:embed-youtube'),
       config: createExternalLinkableToolbarConfig(EmbedYoutubeBlockComponent),
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:surface:embed-youtube'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:surface:embed-youtube'),
       config: createExternalLinkableToolbarConfig(BookmarkBlockComponent),
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:embed-linked-doc'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:embed-linked-doc'),
       config: {
         actions: [
           embedLinkedDocToolbarConfig.actions,
@@ -1147,7 +1147,7 @@ export const createCustomToolbarExtension = (
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:surface:embed-linked-doc'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:surface:embed-linked-doc'),
       config: {
         actions: [
           embedLinkedDocToolbarConfig.actions,
@@ -1160,7 +1160,7 @@ export const createCustomToolbarExtension = (
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:embed-synced-doc'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:embed-synced-doc'),
       config: {
         actions: [
           embedSyncedDocToolbarConfig.actions,
@@ -1170,7 +1170,7 @@ export const createCustomToolbarExtension = (
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:surface:embed-synced-doc'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:surface:embed-synced-doc'),
       config: {
         actions: [
           // the open actions are provided by the header of embed-edgeless-synced-doc-block
@@ -1183,7 +1183,7 @@ export const createCustomToolbarExtension = (
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:reference'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:reference'),
       config: {
         actions: [
           {
@@ -1207,12 +1207,12 @@ export const createCustomToolbarExtension = (
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:embed-iframe'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:embed-iframe'),
       config: embedIframeToolbarConfig,
     }),
 
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:surface:embed-iframe'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:surface:embed-iframe'),
       config: {
         actions: [embedIframeToolbarConfig.actions].flat(),
 

@@ -31,13 +31,13 @@ const DEFAULT_EXTENSIONS = [
 
 // Mapping from tag names to flavours
 const tagToFlavour: Record<string, string> = {
-  'cloud-notes-page': 'affine:page',
-  'cloud-notes-note': 'affine:note',
-  'cloud-notes-paragraph': 'affine:paragraph',
-  'cloud-notes-list': 'affine:list',
-  'cloud-notes-image': 'affine:image',
-  'cloud-notes-database': 'affine:database',
-  'cloud-notes-code': 'affine:code',
+  'cloud-notes-page': 'cloud-notes:page',
+  'cloud-notes-note': 'cloud-notes:note',
+  'cloud-notes-paragraph': 'cloud-notes:paragraph',
+  'cloud-notes-list': 'cloud-notes:list',
+  'cloud-notes-image': 'cloud-notes:image',
+  'cloud-notes-database': 'cloud-notes:database',
+  'cloud-notes-code': 'cloud-notes:code',
 };
 
 interface SelectionInfo {
@@ -195,12 +195,12 @@ export function createCloudNotesTemplate(
       // Create a root block if needed
       const flavour = tagToFlavour[root.tagName.toLowerCase()];
       if (
-        flavour === 'affine:paragraph' ||
-        flavour === 'affine:list' ||
-        flavour === 'affine:code'
+        flavour === 'cloud-notes:paragraph' ||
+        flavour === 'cloud-notes:list' ||
+        flavour === 'cloud-notes:code'
       ) {
-        const pageId = store.addBlock('affine:page', {});
-        const noteId = store.addBlock('affine:note', {}, pageId);
+        const pageId = store.addBlock('cloud-notes:page', {});
+        const noteId = store.addBlock('cloud-notes:note', {}, pageId);
         blockId = buildDocFromElement(store, root, noteId, selectionInfo);
       } else {
         blockId = buildDocFromElement(store, root, null, selectionInfo);
@@ -290,8 +290,8 @@ function buildDocFromElement(
 
   // Special handling for different block types based on their flavours
   switch (flavour) {
-    case 'affine:paragraph':
-    case 'affine:list':
+    case 'cloud-notes:paragraph':
+    case 'cloud-notes:list':
       if (element.textContent) {
         props.text = new Text(element.textContent);
       }
