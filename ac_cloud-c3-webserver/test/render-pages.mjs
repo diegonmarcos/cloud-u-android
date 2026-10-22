@@ -109,7 +109,8 @@ await evalJs(`(() => { const dd = document.querySelector('#fileview').contentDoc
 await until(`[...document.querySelector('#fileview').contentDocument.querySelectorAll('#file-list .file-entry')].some((e) => e.innerText.includes(${JSON.stringify(expectFile)}))`);
 await evalJs(`(() => { const dd = document.querySelector('#fileview').contentDocument; const e = [...dd.querySelectorAll('#file-list .file-entry')].find((x) => x.innerText.includes(${JSON.stringify(expectFile)})); e && e.click(); })()`);
 const linkReady = await until(`(() => { try { return !!document.querySelector('#fileview').contentDocument.querySelector('#viewer').contentDocument.querySelector('.markdown-body a[href^="https://example.org"]'); } catch (e) { return false; } })()`);
-check('L1', linkReady, 'the rendered Markdown in the file view carries a link');
+const hooked = await until(`(() => { try { return document.querySelector('#fileview').contentDocument.querySelector('#viewer').contentDocument.__c3 === true; } catch (e) { return false; } })()`);
+check('L1', linkReady && hooked, 'the rendered Markdown in the file view carries a link and the shell has hooked its document');
 await evalJs(`document.querySelector('#fileview').contentDocument.querySelector('#viewer').contentDocument.querySelector('.markdown-body a[href^="https://example.org"]').click()`);
 const sheet = await until(`document.querySelector('#sheet.on button[data-choice]')`);
 const labels = await evalJs(`[...document.querySelectorAll('#sheet button.ch')].map((b) => b.innerText.trim())`);

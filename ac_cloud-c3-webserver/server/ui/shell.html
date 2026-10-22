@@ -370,17 +370,22 @@ if (typeof module !== 'undefined') {
     if (tab && a.ownerDocument === document) { ev.preventDefault(); show(tab[1], true); return; }
     if (onLink(href, a.ownerDocument.baseURI || a.ownerDocument.location.href)) { ev.preventDefault(); ev.stopPropagation(); }
   }
+  // Hook a document once; then every frame inside it. A page of the file view renders (and shows its links) before
+  // its load event, so the frames are rescanned on a short timer rather than hooked on load alone.
   function watch(doc) {
-    if (!doc || doc.__c3) return;
-    doc.__c3 = true;
-    doc.addEventListener('click', linkClick, true);
+    if (!doc) return;
+    if (!doc.__c3) { doc.__c3 = true; doc.addEventListener('click', linkClick, true); }
     var frames = doc.querySelectorAll('iframe');
-    for (var i = 0; i < frames.length; i++) watchFrame(frames[i]);
+    for (var i = 0; i < frames.length; i++) {
+      try { watch(frames[i].contentDocument); } catch (x) {}
+    }
   }
+  var scanTimer = null;
   function watchFrame(f) {
-    var attach = function () { try { var d = f.contentDocument; if (d) { d.__c3 = false; watch(d); } } catch (x) {} };
-    f.addEventListener('load', attach);
-    attach();
+    if (scanTimer) clearInterval(scanTimer);
+    var scan = function () { try { watch(f.contentDocument); } catch (x) {} };
+    scan();
+    scanTimer = setInterval(function () { if (!document.body.contains(f)) { clearInterval(scanTimer); scanTimer = null; } else scan(); }, 50);
   }
   document.addEventListener('click', linkClick, true);
 

@@ -100,6 +100,7 @@ const glue = html.slice(html.indexOf('<script>', m.index + m[0].length));
 const wires = [
   ['clicks hooked in the capture phase', /addEventListener\('click', linkClick, true\)/],
   ['file view and its frames are watched', /watchFrame\(fv\)/],
+  ['frames are rescanned, not hooked on load alone', /setInterval\(function \(\) \{ if \(!document\.body\.contains\(f\)\)/],
   ['frames inside frames are watched', /querySelectorAll\('iframe'\)/],
   ['embedded navigates the WebView', /window\.location\.assign\(embedUrl\(/],
   ['browser opens go to the guarded endpoint', /post\('\/__app__\/api\/open', \{ url: cls\.url \}\)/],
