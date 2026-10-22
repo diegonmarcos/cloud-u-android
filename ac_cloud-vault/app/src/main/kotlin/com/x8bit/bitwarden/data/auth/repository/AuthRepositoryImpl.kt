@@ -771,29 +771,22 @@ class AuthRepositoryImpl(
             }
             .flatMap { refreshTokenResponse ->
                 when (refreshTokenResponse) {
+                    // Offline-first: a failed refresh never wipes the encrypted vault, the keys or the KDF
+                    // parameters. The local unlock (master password / biometrics) is the gate, not the server;
+                    // a 401/403 may come from the edge gate (not Vaultwarden) and invalid_grant only means the
+                    // next online sync needs a new login. The caller sees a failure and syncs quietly later.
                     is RefreshTokenResponseJson.Error -> {
-                        if (refreshTokenResponse.isInvalidGrant) {
-                            userLogoutManager.softLogout(
-                                userId = userId,
-                                reason = LogoutReason.InvalidGrant,
-                            )
-                        }
+                        Timber.w("refresh failed (invalid_grant=${refreshTokenResponse.isInvalidGrant}); vault kept")
                         IllegalStateException(refreshTokenResponse.error).asFailure()
                     }
 
                     is RefreshTokenResponseJson.Forbidden -> {
-                        userLogoutManager.softLogout(
-                            userId = userId,
-                            reason = LogoutReason.RefreshForbidden,
-                        )
+                        Timber.w("refresh forbidden; vault kept")
                         refreshTokenResponse.error.asFailure()
                     }
 
                     is RefreshTokenResponseJson.Unauthorized -> {
-                        userLogoutManager.softLogout(
-                            userId = userId,
-                            reason = LogoutReason.RefreshUnauthorized,
-                        )
+                        Timber.w("refresh unauthorized; vault kept")
                         refreshTokenResponse.error.asFailure()
                     }
 

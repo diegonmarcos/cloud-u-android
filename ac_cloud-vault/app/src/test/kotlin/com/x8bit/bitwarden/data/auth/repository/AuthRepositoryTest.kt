@@ -796,7 +796,7 @@ class AuthRepositoryTest {
 
     @Suppress("MaxLineLength")
     @Test
-    fun `refreshAccessTokenSynchronously returns logs out and returns failure if refreshTokenSynchronously returns invalid_grant`() =
+    fun `refreshAccessTokenSynchronously keeps the vault and returns failure if refreshTokenSynchronously returns invalid_grant`() =
         runTest {
             fakeAuthDiskSource.userState = SINGLE_USER_STATE_1
             fakeAuthDiskSource.storeAccountTokens(
@@ -811,13 +811,14 @@ class AuthRepositoryTest {
 
             coVerify(exactly = 1) {
                 identityService.refreshTokenSynchronously(REFRESH_TOKEN)
-                userLogoutManager.softLogout(userId = USER_ID_1, reason = LogoutReason.InvalidGrant)
             }
+            coVerify(exactly = 0) { userLogoutManager.softLogout(any(), any()) }
+            coVerify(exactly = 0) { userLogoutManager.logout(any(), any()) }
         }
 
     @Suppress("MaxLineLength")
     @Test
-    fun `refreshAccessTokenSynchronously returns logs out and returns failure if refreshTokenSynchronously returns Forbidden`() =
+    fun `refreshAccessTokenSynchronously keeps the vault and returns failure if refreshTokenSynchronously returns Forbidden`() =
         runTest {
             fakeAuthDiskSource.userState = SINGLE_USER_STATE_1
             fakeAuthDiskSource.storeAccountTokens(
@@ -832,16 +833,14 @@ class AuthRepositoryTest {
 
             coVerify(exactly = 1) {
                 identityService.refreshTokenSynchronously(REFRESH_TOKEN)
-                userLogoutManager.softLogout(
-                    userId = USER_ID_1,
-                    reason = LogoutReason.RefreshForbidden,
-                )
             }
+            coVerify(exactly = 0) { userLogoutManager.softLogout(any(), any()) }
+            coVerify(exactly = 0) { userLogoutManager.logout(any(), any()) }
         }
 
     @Suppress("MaxLineLength")
     @Test
-    fun `refreshAccessTokenSynchronously returns logs out and returns failure if refreshTokenSynchronously returns Unauthorized`() =
+    fun `refreshAccessTokenSynchronously keeps the vault and returns failure if refreshTokenSynchronously returns Unauthorized`() =
         runTest {
             fakeAuthDiskSource.userState = SINGLE_USER_STATE_1
             fakeAuthDiskSource.storeAccountTokens(
@@ -856,11 +855,9 @@ class AuthRepositoryTest {
 
             coVerify(exactly = 1) {
                 identityService.refreshTokenSynchronously(REFRESH_TOKEN)
-                userLogoutManager.softLogout(
-                    userId = USER_ID_1,
-                    reason = LogoutReason.RefreshUnauthorized,
-                )
             }
+            coVerify(exactly = 0) { userLogoutManager.softLogout(any(), any()) }
+            coVerify(exactly = 0) { userLogoutManager.logout(any(), any()) }
         }
 
     @Test
