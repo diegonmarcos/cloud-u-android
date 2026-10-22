@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.clouddrive.MainActivity
 import com.diegonmarcos.clouddrive.R
+import com.diegonmarcos.clouddrive.ui.denseTypography
 
 /**
  * #1106 "Drive hit a startup error": the newest report in files/crashes with Copy, Share and
@@ -47,7 +48,7 @@ class CrashReportActivity : ComponentActivity() {
         val dir = StartupGuard.dir(this)
         val report = StartupGuard.shareText(dir)
         runCatching { StartupGuard.markAllSeen(dir) }
-        setContent { MaterialTheme(colorScheme = darkColorScheme()) { Screen(report) } }
+        setContent { MaterialTheme(colorScheme = darkColorScheme(), typography = denseTypography()) { Screen(report) } }
     }
 
     @Composable

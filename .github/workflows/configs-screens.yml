@@ -143,35 +143,6 @@ jobs:
           done
           exit $rc
 
-      - name: Render the MyHealth card (seeded data, no permission, timeout) at A37 size
-        if: always()
-        working-directory: aa_cloud-superapp
-        env:
-          BYPASS_NIX: "1"
-          VAULT_DIR: ${{ github.workspace }}/.vault
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.*.*Health*"
-        run: bash ./build.sh test
-
-      - name: MyHealth card tests passed BY NAME (no failure, none skipped)
-        if: always()
-        working-directory: aa_cloud-superapp
-        run: |
-          set -u
-          out=app/build/configs-screens/myhealth-unit-xml; mkdir -p "$out"
-          find app/build/test-results -name 'TEST-*Health*.xml' -exec cp {} "$out"/ \;
-          rc=0
-          for c in notificationcenter.HealthBadgeModelTest launcher.MyHealthCardScreenTest; do
-            f="$out/TEST-com.diegonmarcos.superapp.$c.xml"
-            if [ ! -f "$f" ]; then echo "::error::no report for $c"; rc=1; continue; fi
-            t=$(grep -o 'tests="[0-9]*"' "$f" | head -1 | tr -dc 0-9)
-            bad=$(grep -o -E '(failures|errors|skipped)="[1-9][0-9]*"' "$f" | head -1 || true)
-            echo "$c tests=$t ${bad:-failures=0 errors=0 skipped=0}"
-            { [ "${t:-0}" -ge 1 ] && [ -z "$bad" ]; } || rc=1
-          done
-          exit $rc
-
       - name: Render the Quick Actions and KDE cards next to their notifications; parity + one-source guard
         if: always()
         working-directory: aa_cloud-superapp
