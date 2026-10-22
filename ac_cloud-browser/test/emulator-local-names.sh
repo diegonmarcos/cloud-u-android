@@ -18,8 +18,21 @@ ok()  { echo "PASS  $1"; }
 bad() { echo "::error title=local names emulator test::$1"; echo "FAIL  $1"; fails=$((fails + 1)); }
 shot() { adb exec-out screencap -p > "$OUT/$1.png" 2>/dev/null || true; }
 dump() { adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb shell cat /sdcard/ui.xml 2>/dev/null > "$OUT/$1.xml" || true; }
-tcp_listening() { local h; h=$(printf '%04X' "$1"); adb shell cat /proc/net/tcp /proc/net/tcp6 2>/dev/null | tr -d '\r' | awk -v p=":$h" '$4=="0A" && toupper($2) ~ p"$" {f=1} END{exit !f}'; }
-udp_bound() { local h; h=$(printf '%04X' "$1"); adb shell cat /proc/net/udp /proc/net/udp6 2>/dev/null | tr -d '\r' | awk -v p=":$h" 'toupper($2) ~ p"$" {f=1} END{exit !f}'; }
+# Anchored to 127.0.0.1: the system's own mDNS daemon binds udp 5353 on every address, so an unanchored match is always true.
+tcp_listening() { local h; h=$(printf '%04X' "$1"); adb shell cat /proc/net/tcp 2>/dev/null | tr -d '\r' | awk -v p="0100007F:$h" '$4=="0A" && toupper($2)==p {f=1} END{exit !f}'; }
+udp_bound() { local h; h=$(printf '%04X' "$1"); adb shell cat /proc/net/udp 2>/dev/null | tr -d '\r' | awk -v p="0100007F:$h" 'toupper($2)==p {f=1} END{exit !f}'; }
+# Tap the first node of the current screen whose text matches $1 (a regex); returns 1 when none does.
+tap_text() {
+  adb shell uiautomator dump /sdcard/t.xml >/dev/null 2>&1
+  local xy; xy=$(adb shell cat /sdcard/t.xml 2>/dev/null | python3 -c '
+import re, sys
+x = sys.stdin.read()
+for m in re.finditer(r"<node[^>]*?text=\"([^\"]*)\"[^>]*?bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"", x):
+    if re.fullmatch(sys.argv[1], m.group(1)):
+        a, b, c, d = map(int, m.groups()[1:]); print((a + c) // 2, (b + d) // 2); break
+' "$1")
+  [ -n "$xy" ] && adb shell input tap $xy
+}
 wait_for() { local n="$1"; shift; for _ in $(seq 1 "$n"); do "$@" && return 0; sleep 1; done; return 1; }
 fg_service() { adb shell dumpsys activity services "$WPKG" 2>/dev/null | tr -d '\r' | grep -q "isForeground=true"; }
 
@@ -38,7 +51,7 @@ if tcp_listening 8002 || udp_bound 5353; then bad "E1 the servers are still boun
 # ── E2 ───────────────────────────────────────────────────────────────────────
 adb shell am start -W -a android.intent.action.VIEW -d http://emulated.app -p "$BPKG" >/dev/null
 wait_for 30 tcp_listening 8002 && ok "E2 opening emulated.app brought the servers back (browser started the service)" || bad "E2 tcp 8002 never came back after the browser opened emulated.app"
-sleep 6; shot e2-emulated-app; dump e2-emulated-app
+sleep 12; shot e2-emulated-app; dump e2-emulated-app
 if grep -q "did not answer\|private name of this phone" "$OUT/e2-emulated-app.xml" 2>/dev/null; then bad "E2 the browser shows its private-name error page"; else ok "E2 no private-name error page"; fi
 if grep -qiE "emulated|storage|File Browser|Index of" "$OUT/e2-emulated-app.xml" 2>/dev/null; then ok "E2 the drive page content is on screen"; else bad "E2 nothing of the drive page is on screen (see e2-emulated-app.png)"; fi
 fg_service && ok "E2 KeepAliveService is a foreground service" || bad "E2 KeepAliveService is not in the foreground"
@@ -47,13 +60,15 @@ udp_bound 5353 && ok "E2 the private DNS (udp 5353) is bound again" || bad "E2 u
 # ── E3 ───────────────────────────────────────────────────────────────────────
 for act in android.intent.action.BOOT_COMPLETED android.intent.action.MY_PACKAGE_REPLACED; do
   adb shell am force-stop "$WPKG"; sleep 2
-  adb shell am broadcast -a "$act" -n "$WPKG/.BootReceiver" >/dev/null 2>&1
+  adb shell am broadcast --include-stopped-packages -a "$act" -n "$WPKG/.BootReceiver" >/dev/null 2>&1
   if wait_for 25 tcp_listening 8002 && wait_for 5 udp_bound 5353; then ok "E3 $act started the servers with no UI"; else bad "E3 $act did not start the servers"; fi
 done
 
 # ── E4 ───────────────────────────────────────────────────────────────────────
+# The servers must be up for the comparison to mean anything (a refused connection renders alike in both).
+wait_for 5 tcp_listening 8002 || { adb shell am start -W -a android.intent.action.VIEW -d http://emulated.app -p "$BPKG" >/dev/null; wait_for 30 tcp_listening 8002 || bad "E4 the servers are not up for the render comparison"; }
 adb shell am start -W -a android.intent.action.VIEW -d 'http://127.0.0.1:8002/#/' -p "$BPKG" >/dev/null
-sleep 8; shot e4-cloud-browser; dump e4-cloud-browser
+sleep 12; shot e4-cloud-browser; dump e4-cloud-browser
 adb logcat -d -v threadtime > "$OUT/logcat.txt"
 BPID=$(adb shell pidof "$BPKG" | tr -d '\r' | awk '{print $1}')
 grep -E "chromium|CONSOLE|Console" "$OUT/logcat.txt" | grep -E " $BPID +[0-9]+ " > "$OUT/console-cloud-browser.txt" || true
@@ -66,8 +81,12 @@ if adb shell pm list packages "$CHROME" | grep -q "$CHROME"; then
   adb shell am force-stop "$CHROME"
   adb shell 'echo "chrome --no-first-run --disable-fre --no-default-browser-check --disable-notifications" > /data/local/tmp/chrome-command-line; chmod 755 /data/local/tmp/chrome-command-line' || true
   adb shell am start -W -a android.intent.action.VIEW -d 'http://127.0.0.1:8002/#/' -p "$CHROME" >/dev/null
-  sleep 12; shot e4-chrome; dump e4-chrome
-  if python3 "$(dirname "$0")/compare_renders.py" "$OUT/e4-cloud-browser.png" "$OUT/e4-chrome.png" "$OUT/e4-diff.txt"; then
+  sleep 10
+  for _ in 1 2 3 4; do tap_text "No thanks|NO THANKS|Use without an account|Got it|Not now|Skip|Accept & continue|No, thanks" || break; sleep 2; done
+  sleep 6; shot e4-chrome; dump e4-chrome
+  if grep -q "ERR_CONNECTION_REFUSED\|Webpage not available" "$OUT/e4-cloud-browser.xml" "$OUT/e4-chrome.xml" 2>/dev/null; then
+    bad "E4 a browser shows a connection error instead of the page (the comparison would be vacuous)"
+  elif python3 "$(dirname "$0")/compare_renders.py" "$OUT/e4-cloud-browser.png" "$OUT/e4-chrome.png" "$OUT/e4-diff.txt"; then
     ok "E4 Cloud Browser renders 127.0.0.1:8002/#/ like Chrome ($(cat "$OUT/e4-diff.txt"))"
   else bad "E4 Cloud Browser's render differs from Chrome's ($(cat "$OUT/e4-diff.txt" 2>/dev/null))"; fi
 else
