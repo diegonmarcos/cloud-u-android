@@ -121,7 +121,7 @@ both; any other app is unchanged. What moved:
   declared `authelia` pair routes only `/api/health`. The portal URL is `BuildConfig.FLEET_AUTH_URL`.
 - **libs:updater** tries the git-proxy mesh mirror FIRST (`sourceOrder`: mesh, release, ghcr); its base is
   `BuildConfig.MESH_MIRROR_BASE`, derived from the `git-proxy-api` declaration. A dead mesh costs a 3 s connect, then the public legs run.
-- **libs:news** reads the declared `news` service (mesh `news-gdelt.app:3019`, public `api.diegonmarcos.com/news`, mesh first):
+- **libs:news** reads the declared `news` service (mesh `news-gdelt.app:3019`, public `news-gdelt.diegonmarcos.com`, mesh first):
   default base `BuildConfig.NEWS_API_BASE`, calls over the seam. `topics.json` no longer carries a `base`.
 - **Keyboard / Writer** default LanguageTool URL is `BuildConfig.LANGUAGETOOL_URL` (the declared `languagetool` URL).
 - Build scripts read the declaration through `ab_cloud-libs-shared/libs/fleet-urls.gradle` (`fleetUrl(id)`, `fleetMeshUrl(id)`).

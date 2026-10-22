@@ -482,8 +482,8 @@ class NewsBridge(private val ctx: Context) {
     /**
      * `base`, if present, MUST be http:// or https:// — this is what
      * lets the deployment switch between the public HTTPS gateway
-     * (https://api.diegonmarcos.com/news) and the WireGuard-mesh HTTP
-     * host (http://news-gdelt:3019); see network_security_config.xml
+     * (https://news-gdelt.diegonmarcos.com, behind the fleet bearer) and the WireGuard-mesh HTTP
+     * host (http://news-gdelt.app:3019); see network_security_config.xml
      * for why only that one hostname is allowed to be cleartext.
      * Anything else (or a malformed scheme entirely) is rejected here
      * before it's ever handed to NewsApi/HttpURLConnection.

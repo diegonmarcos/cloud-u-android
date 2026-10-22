@@ -80,7 +80,7 @@ class AuthHttpRoutingTest {
     @Test fun theDeclaredPublicApiRoutesOnlyItsPublicPathsAndIsStillMeshOnlyWhereDeclaredSo() {
         val services = FleetEndpointsContract.parseDecl(java.io.File("../build.json").readText().let { org.json.JSONObject(it).getJSONObject("fleet_endpoints").toString() })
         val api = services.single { it.id == "c3-public-api" }
-        assertEquals("https://api.diegonmarcos.com/pub", api.publicUrl()); assertEquals("http://c3-public-api.app:8087", api.meshUrl())
+        assertEquals("https://c3-public-api.diegonmarcos.com", api.publicUrl()); assertEquals("http://c3-public-api.app:8087", api.meshUrl())
         assertEquals(listOf("/health", "/ready", "/analytics"), api.routePaths)
         for (id in listOf("auth-broker", "cloud-me-api", "vaultwarden")) assertEquals(FleetEndpointsContract.POLICY_MESH_ONLY, services.single { it.id == id }.policy)
     }

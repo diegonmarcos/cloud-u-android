@@ -12,7 +12,7 @@ import java.net.URL
  * this for free, with zero per-app wiring. POSTs to c3-infra-api's public
  * events ingest:
  *
- *   POST https://api.diegonmarcos.com/c3-infra-api/public/events/{app}
+ *   POST https://c3-infra-api.diegonmarcos.com/public/events/{app}
  *   { kind: "log"|"debug"|"action"|"probe"|"crash", title?, message?, log?, meta? }
  *
  * 2 MB cap, unauthenticated (same "public path" reasoning as [LogUpload] —
@@ -28,7 +28,7 @@ import java.net.URL
  */
 object Telemetry {
     private const val TAG = "Telemetry"
-    private const val BASE_URL = "https://api.diegonmarcos.com/c3-infra-api/public/events/"
+    private const val BASE_URL = "https://c3-infra-api.diegonmarcos.com/public/events/"
 
     /** Newest logcat bytes attached to a crash report. Deliberately far below
      *  [LogUpload]'s 1.5 MB ceiling: this is read and uploaded on the dying
