@@ -184,6 +184,25 @@ object BoardsWire {
     }
 }
 
+/**
+ * The ONE Health Connect route: [HealthBoardReader] then the pure [HealthAgg]. Boards > MyHealth and the Notify MyHealth
+ * card both come through here, so they can never disagree. Cancellable, so a caller can put a timeout on it.
+ */
+suspend fun readHealthBoard(ctx: Context, days: Int = 30, today: LocalDate = LocalDate.now()): Read<HealthBoard> = try {
+    val raw = com.diegonmarcos.superapp.health.HealthBoardReader.read(ctx, days, today)
+    when (raw.status) {
+        com.diegonmarcos.superapp.health.HealthBoardReader.Status.UPDATE_REQUIRED ->
+            Read.Unavailable(Why.OUTDATED, "Health Connect needs an update before it can be read")
+        com.diegonmarcos.superapp.health.HealthBoardReader.Status.UNAVAILABLE ->
+            Read.Unavailable(Why.NOT_INSTALLED, "Health Connect is not available on this phone")
+        else -> Read.Ok(HealthAgg.board(raw, today))
+    }
+} catch (e: kotlinx.coroutines.CancellationException) {
+    throw e
+} catch (e: Exception) {
+    Read.Unavailable(Why.FAILED, "Health Connect: ${e.message ?: e.javaClass.simpleName}")
+}
+
 /** The real reads. Blocking: call off the main thread. */
 class FleetBoardsSource(private val ctx: Context) : BoardsSource {
 
@@ -235,18 +254,9 @@ class FleetBoardsSource(private val ctx: Context) : BoardsSource {
     override fun steps(days: Int): Read<StepsBoard> =
         ask(Boards.NAV_PKG, "Cloud Nav", "tracker/steps", mapOf("days" to days.toString())) { BoardsWire.steps(it) }
 
-    override fun health(days: Int): Read<HealthBoard> = try {
-        val raw = kotlinx.coroutines.runBlocking { com.diegonmarcos.superapp.health.HealthBoardReader.read(ctx, days) }
-        when (raw.status) {
-            com.diegonmarcos.superapp.health.HealthBoardReader.Status.UPDATE_REQUIRED ->
-                Read.Unavailable(Why.OUTDATED, "Health Connect needs an update before it can be read")
-            com.diegonmarcos.superapp.health.HealthBoardReader.Status.UNAVAILABLE ->
-                Read.Unavailable(Why.NOT_INSTALLED, "Health Connect is not available on this phone")
-            else -> Read.Ok(HealthAgg.board(raw, LocalDate.now()))
-        }
-    } catch (e: Exception) {
-        Read.Unavailable(Why.FAILED, "Health Connect: ${e.message ?: e.javaClass.simpleName}")
-    }
+    override fun health(days: Int): Read<HealthBoard> =
+        try { kotlinx.coroutines.runBlocking { readHealthBoard(ctx, days) } }
+        catch (e: Exception) { Read.Unavailable(Why.FAILED, "Health Connect: ${e.message ?: e.javaClass.simpleName}") }
 
     override fun places(days: Int): Read<List<PlacesDay>> =
         ask(Boards.NAV_PKG, "Cloud Nav", "tracker/places", mapOf("days" to days.toString())) { BoardsWire.places(it) }

@@ -156,7 +156,7 @@ elif 'BadgeServices.status' not in code:
 else:
     # No badge id may be spoken in the pane's own code.
     hard = [i for i in ('kde_status', 'media_now_playing', 'floating_nav_quick_actions',
-                        'fleet_alerts', 'health_activity') if i in code]
+                        'fleet_alerts', 'myhealth') if i in code]
     if hard: print('pane hardcodes badge ids: %s' % hard)
     else:    print('OK')
 PY
@@ -201,10 +201,11 @@ check "$(python3 - "$BJ" "$NC/HealthBadgeService.kt" <<'PY'
 import json, sys, os
 bj, svc = sys.argv[1], sys.argv[2]
 ps = json.load(open(bj))['ui']['notification_center']['producers']
-h = next((p for p in ps if p['id'] == 'health_activity'), None)
-if h is None:                      print('no health_activity producer')
-elif not h.get('badge'):           print('health_activity is not a badge')
-elif not h.get('persistent'):      print('health_activity is not persistent')
+h = next((p for p in ps if p['id'] == 'myhealth'), None)
+if h is None:                      print('no myhealth producer')
+elif 'health_activity' not in h.get('aliases', []): print('the old health_activity id no longer resolves')
+elif not h.get('badge'):           print('myhealth is not a badge')
+elif not h.get('persistent'):      print('myhealth is not persistent')
 elif 'health_connect' not in h.get('requires', []):
                                    print('health badge does not declare its grant')
 elif not os.path.exists(svc):      print('HealthBadgeService.kt does not exist')
@@ -212,8 +213,9 @@ else:
     s = open(svc).read()
     # The honesty rule: a half that cannot be read says so. It must never be
     # estimated from steps and never rendered as 0.
-    if 'readActivityToday' not in s: print('not sourced from Health Connect')
-    elif 'unavailable' not in s:     print('no unavailable state — a missing grant would read as a number')
+    if 'readHealthBoard' not in s:   print('not on the shared Boards > MyHealth route')
+    elif 'readActivityToday' in s or 'readStepsToday' in s: print('the card still has its own data path')
+    elif 'withTimeoutOrNull' not in s: print('no timeout - the card could read forever')
     else:                            print('OK')
 PY
 )" "Health comes through the same declaration and never fabricates a number"

@@ -11,40 +11,18 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import com.diegonmarcos.superapp.R
-import com.diegonmarcos.superapp.health.HealthConnectGateway
-import com.diegonmarcos.superapp.health.StepsToday
-import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 /**
- * #517 — the "Health" badge: active kcal burned today and km walked today.
+ * The "MyHealth" badge (was "Health", #517): today's steps in km with the step count, resting heart rate and last
+ * night's sleep. Foreground service like the other persistent badges; started by [BadgeServices.ensureAll].
  *
- * A foreground service for the same reason `KdeStatusService` is one: an
- * ongoing notify from a dead process is droppable, and this badge is declared
- * persistent. It is started by [BadgeServices.ensureAll] like every other
- * persistent badge — there is no bespoke start call for it anywhere, which is
- * the whole point of #515.
- *
- * DATA ROUTE, and why. Android has four places this data could come from:
- * Health Connect, Google Fit (deprecated and shut down), Samsung Health (no
- * public read API without partner onboarding), and the raw TYPE_STEP_COUNTER
- * sensor. Only Health Connect can deliver BOTH halves truthfully:
- * TYPE_STEP_COUNTER gives steps-since-boot, from which km is a stride-length
- * guess and active kcal is not derivable at all without a body profile. This
- * app already ships `:libs:health` with a Health Connect client, the read
- * permissions for ActiveCaloriesBurnedRecord and DistanceRecord are already
- * in its canonical permission set, and on a Samsung handset Samsung Health
- * writes both into Health Connect. So: Health Connect, no new dependency.
- *
- * NOTHING HERE IS ESTIMATED. A half with no grant renders as "not available"
- * with the reason — never as 0, never as a number inferred from steps. A
- * badge that invents the owner's health data is worse than one that admits it
- * does not have it.
+ * DATA ROUTE: the SAME one as Boards > MyHealth - `readHealthBoard` (HealthBoardReader + the pure HealthAgg) - and no
+ * other. The old separate Gateway path is gone from this card. Nothing
+ * is estimated or shown as 0 when missing; see [HealthBadgeModel] for the faces.
  */
 class HealthBadgeService : Service() {
 
@@ -57,10 +35,8 @@ class HealthBadgeService : Service() {
     override fun onCreate() {
         super.onCreate()
         ensureChannel()
-        // Foreground within the first few seconds or the platform kills us —
-        // so post the "reading…" face immediately and fill it in when the
-        // Health Connect read returns.
-        startForeground(NOTIF_ID, build(null))
+        // Foreground within the first few seconds or the platform kills us: post the last cached face at once.
+        startForeground(NOTIF_ID, build())
         schedule()
     }
 
@@ -99,70 +75,63 @@ class HealthBadgeService : Service() {
         return m.coerceIn(5L, 240L) * 60_000L
     }
 
+    /**
+     * The card is filled from the last read at once (with its age), then re-read in the background. The read is the
+     * shared MyHealth route, for TODAY only (the card needs no 30-day window), under a timeout: whatever happens it ends
+     * as data or as a named error, never as "reading".
+     */
     private fun refresh() {
         scope.launch {
-            val today = runCatching { HealthConnectGateway.readActivityToday(applicationContext) }
-                .getOrNull()
-            val steps = runCatching { HealthConnectGateway.readStepsToday(applicationContext) }.getOrNull()
-            main.post {
-                runCatching {
-                    (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
-                        .notify(NOTIF_ID, build(today, steps))
-                }
+            val t0 = android.os.SystemClock.elapsedRealtime()
+            val read = kotlinx.coroutines.withTimeoutOrNull(HealthBadgeModel.TIMEOUT_S * 1000L) {
+                com.diegonmarcos.superapp.boards.readHealthBoard(applicationContext, days = 1)
             }
+            android.util.Log.i("MyHealthCard", "read ${if (read == null) "TIMEOUT" else "done"} in ${android.os.SystemClock.elapsedRealtime() - t0} ms")
+            val face = HealthBadgeModel.face(read)
+            // A failed refresh keeps showing the last good values (marked with their age) instead of replacing them.
+            val failed = face.state == HealthBadgeModel.State.ERROR || face.state == HealthBadgeModel.State.TIMEOUT
+            val cached = cached()
+            if (failed && cached != null) save(cached.first, cached.second, face.text) else save(face)
+            main.post { runCatching { (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIF_ID, build()) } }
         }
     }
 
-    /**
-     * One line per half the owner asked to see. A half that could not be read
-     * says so; a half that read 0 says 0, because 0 km walked is a true fact
-     * about today and "not available" is not.
-     */
-    private fun build(today: HealthConnectGateway.ActivityToday?, steps: StepsToday.Result? = null): android.app.Notification {
-        val b = badge()
-        val showKcal = b?.let { BadgeCustomization.bool(this, it, "show_kcal") } ?: true
-        val showKm = b?.let { BadgeCustomization.bool(this, it, "show_km") } ?: true
+    private fun prefs() = getSharedPreferences("myhealth_card", MODE_PRIVATE)
+    private fun cached(): Pair<HealthBadgeModel.Face, Long>? =
+        HealthBadgeModel.faceFromJson(prefs().getString("face", null))?.let { it to prefs().getLong("at", 0L) }
+    private fun save(f: HealthBadgeModel.Face, at: Long = System.currentTimeMillis(), failure: String = "") {
+        prefs().edit().putString("face", f.toJson()).putLong("at", at).putString("failure", failure).apply()
+    }
 
-        val showSteps = b?.let { BadgeCustomization.bool(this, it, "show_steps") } ?: true
-
-        val parts = mutableListOf<String>()
-        if (showSteps) parts += HealthBadgeModel.stepsText(steps)
-        if (showKcal) parts += today?.activeKcal
-            ?.let { getString(R.string.badge_health_kcal, it.toInt()) }
-            ?: getString(R.string.badge_health_kcal_unavailable)
-        if (showKm) parts += today?.distanceKm
-            ?.let { getString(R.string.badge_health_km, String.format(Locale.US, "%.2f", it)) }
-            ?: getString(R.string.badge_health_km_unavailable)
-
-        val text = if (today == null && steps == null) getString(R.string.badge_health_reading)
-        else parts.joinToString("  ·  ")
-
+    /** One face: the cached one with "updated Xm ago", or - nothing cached yet - the honest first-read line. */
+    private fun build(): android.app.Notification {
+        val c = cached()
+        val f = c?.first
+        val age = c?.let { HealthBadgeModel.updated(System.currentTimeMillis() - it.second) }
+        val failure = prefs().getString("failure", "").orEmpty()
+        val second = if (f == null) getString(R.string.badge_health_reading) else f.text
         val pinned = BadgeServices.pinned(this, BADGE_ID)
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_notify)
             .setColor(0xFF0A0A0A.toInt())
-            .setContentTitle(getString(R.string.badge_health_title))
-            .setContentText(text)
-            .setSubText("Cloud SA - Health")
+            .setContentTitle(f?.title ?: HealthBadgeModel.TITLE)
+            .setContentText(second)
+            .setSubText(listOfNotNull("Cloud SA - MyHealth", age).joinToString(" · "))
             .setOnlyAlertOnce(true)
             .setOngoing(pinned)
             .apply { if (pinned) setDeleteIntent(BadgeServices.repostOnDismiss(this@HealthBadgeService, NOTIF_ID)) }
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE) // health data stays off the lockscreen
             .apply {
-                // The WHY, where the owner can actually read it, instead of a
-                // badge that silently shows one half.
-                // Status line (source, permission, last data time) and the why-it-is-zero hint: the long-press / expanded face.
-                val status = steps?.let { StepsToday.statusLine(it, ZoneId.systemDefault()) }
-                val why = listOfNotNull(steps?.let { StepsToday.hint(it) }, today?.reason?.takeIf { it.isNotBlank() })
-                if (status != null || why.isNotEmpty())
-                    setStyle(NotificationCompat.BigTextStyle().bigText((listOf(text) + listOfNotNull(status) + why).joinToString("\n")))
+                val detail = (f?.lines.orEmpty() + listOfNotNull(age, failure.takeIf { it.isNotBlank() }?.let { "Last refresh failed: $it" }))
+                if (detail.isNotEmpty()) setStyle(NotificationCompat.BigTextStyle().bigText((listOf(second) + detail).joinToString("\n")))
             }
-            // Tap = Cloud Navigation > Timeline > Steps; with no grant, the button runs the Health Connect dialog.
-            .setContentIntent(BadgeClick.pi(this, BadgeClick.HEALTH_STEPS))
+            // Tap = Boards > MyHealth; with a missing grant, the button runs the same Health Connect dialog the board uses.
+            .setContentIntent(BadgeClick.pi(this, BadgeClick.MYHEALTH))
             .apply {
-                if (steps != null && steps.perm == StepsToday.Perm.DENIED) addAction(0, "Grant access",
+                if (f?.grant == true) addAction(0, "Grant access",
                     android.app.PendingIntent.getActivity(this@HealthBadgeService, 7716,
-                        Intent(this@HealthBadgeService, HealthGrantActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        Intent(this@HealthBadgeService, HealthGrantActivity::class.java)
+                            .putExtra(HealthGrantActivity.EXTRA_BOARD, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                         android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
             }
             .let { NotifyGroups.attach(this, it, BADGE_ID) } // #777 group G1
@@ -175,7 +144,7 @@ class HealthBadgeService : Service() {
         if (nm.getNotificationChannel(CHANNEL_ID) != null) return
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_ID, "Health activity", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Active calories and distance walked today."
+                description = "Steps in km, resting heart rate and last night's sleep."
                 setShowBadge(false)
             },
         )
@@ -187,6 +156,6 @@ class HealthBadgeService : Service() {
         private const val DEFAULT_REFRESH_MIN = 30L
 
         /** This badge's id in build.json::ui.notification_center.producers. */
-        const val BADGE_ID = "health_activity"
+        const val BADGE_ID = "myhealth"
     }
 }

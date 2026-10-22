@@ -26,8 +26,8 @@ class BadgeClickTest {
         try { java.util.Locale.setDefault(java.util.Locale.GERMANY); assertTrue(BadgeClick.weatherUrl(1.5, 2.5).endsWith("1.5000,2.5000")) }
         finally { java.util.Locale.setDefault(old) }
     }
-    @Test fun healthOpensNavTimelineSteps() {
-        assertEquals("extapp:cloud-nav#page:timeline/steps", BadgeClick.HEALTH_STEPS)
+    @Test fun myHealthOpensTheBoardsMyHealthPage() {
+        assertEquals("page:boards/my-pm", BadgeClick.MYHEALTH)
     }
 
     // ── permission state mapping ─────────────────────────────────────
@@ -64,7 +64,6 @@ class BadgeClickTest {
     @Test fun deniedAsksForGrantAndNeverShowsZero() {
         val r = StepsToday.Result(null, StepsToday.Perm.DENIED, emptySet(), null)
         assertTrue(StepsToday.hint(r)!!.contains("Grant access"))
-        assertEquals("steps not allowed", HealthBadgeModel.stepsText(r))
     }
     @Test fun statusLineNamesSourcePermissionAndLastData() {
         val zone = ZoneId.of("UTC")
@@ -72,9 +71,5 @@ class BadgeClickTest {
         val line = StepsToday.statusLine(StepsToday.Result(8421, StepsToday.Perm.GRANTED, setOf("com.sec.android.app.shealth"), last), zone)
         assertEquals("Source: Health Connect | Permission: granted | Last data: 14:32 | From: com.sec.android.app.shealth", line)
         assertTrue(StepsToday.statusLine(StepsToday.Result(null, StepsToday.Perm.DENIED, emptySet(), null), zone).endsWith("Last data: none"))
-    }
-    @Test fun stepsTextFormats() {
-        assertEquals("8,421 steps", HealthBadgeModel.stepsText(StepsToday.Result(8421, StepsToday.Perm.GRANTED, emptySet(), null)))
-        assertEquals("steps reading…", HealthBadgeModel.stepsText(null))
     }
 }

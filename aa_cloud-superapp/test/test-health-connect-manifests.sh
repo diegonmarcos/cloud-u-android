@@ -7,7 +7,7 @@
 # guarded by android.permission.START_VIEW_PERMISSION_USAGE holding VIEW_PERMISSION_USAGE + category
 # HEALTH_PERMISSIONS (the SuperApp had that filter on the activity itself, which Health Connect ignores).
 # Cloud Nav also needs ACTIVITY_RECOGNITION for the on-device step-counter fallback. The badge's tap target
-# (extapp:cloud-nav#page:timeline/steps) must match the deep link Cloud Nav declares in its build.json.
+# (page:boards/my-pm) must be the Boards > MyHealth page.
 #
 # Static tester (no device, no build). Each check is then run against planted mutations of the real files; a
 # mutation that leaves every check green fails this tester.
@@ -62,20 +62,14 @@ def hc_problems(xml, need_activity_recognition):
 
 def link_problems(nav_bj, sa_bj, click_kt):
     out = []
-    try: dl = {d["id"]: d for d in json.loads(nav_bj)["ui"].get("deep_links", [])}
-    except Exception as e: return [f"nav build.json: {e}"]
-    d = dl.get("timeline-steps")
-    if not d: return ["nav build.json declares no timeline-steps deep link"]
-    if d.get("target") != "page:timeline/steps": out.append("timeline-steps target is not page:timeline/steps")
-    if d.get("intent_extra") != "shortcut_action": out.append("timeline-steps does not use the shortcut_action extra")
-    want = "extapp:cloud-nav#" + str(d.get("target"))
-    if d.get("from_superapp") != want: out.append("from_superapp is not extapp:cloud-nav#<target>")
-    m = re.search(r'HEALTH_STEPS\s*=\s*"([^"]+)"', click_kt)
-    if not m or m.group(1) != want: out.append("BadgeClick.HEALTH_STEPS does not match the nav deep link")
+    # The MyHealth badge opens the Boards page that reads the same data (it no longer routes into cloud-nav).
+    want = "page:boards/my-pm"
+    m = re.search(r'MYHEALTH\s*=\s*"([^"]+)"', click_kt)
+    if not m or m.group(1) != want: out.append("BadgeClick.MYHEALTH is not the Boards > MyHealth page")
     try:
-        prod = next(p for p in json.loads(sa_bj)["ui"]["notification_center"]["producers"] if p["id"] == "health_activity")
-        if prod.get("click_target") != want: out.append("health_activity click_target does not match the nav deep link")
-    except Exception as e: out.append(f"superapp build.json health_activity: {e}")
+        prod = next(p for p in json.loads(sa_bj)["ui"]["notification_center"]["producers"] if p["id"] == "myhealth")
+        if prod.get("click_target") != want: out.append("myhealth click_target is not the Boards > MyHealth page")
+    except Exception as e: out.append(f"superapp build.json myhealth: {e}")
     return out
 
 def run(sa_m, nav_m, nav_bj, sa_bj, click_kt):
@@ -113,10 +107,8 @@ muts = {
     "Nav drops the rationale filter": sub("nav_m", RATIONALE, "androidx.health.SOMETHING_ELSE"),
     "Nav drops the usage alias": sub("nav_m", "<activity-alias", "<activity-aliasX"),
     "Nav usage alias loses its guard": sub("nav_m", f'android:permission="{GUARD}"', ""),
-    "Nav drops the timeline-steps deep link": sub("nav_bj", '"id": "timeline-steps"', '"id": "timeline-other"'),
-    "Nav deep link target changes": sub("nav_bj", '"target": "page:timeline/steps"', '"target": "page:timeline/stops"'),
-    "Badge tap target drifts from the deep link": sub("click_kt", "extapp:cloud-nav#page:timeline/steps", "extapp:cloud-nav#page:timeline/stops"),
-    "SuperApp build.json click_target drifts": sub("sa_bj", '"click_target": "extapp:cloud-nav#page:timeline/steps"', '"click_target": "extapp:cloud-nav"'),
+    "Badge tap target drifts from the deep link": sub("click_kt", '"page:boards/my-pm"', '"page:boards/msgs"'),
+    "SuperApp build.json click_target drifts": sub("sa_bj", '"click_target": "page:boards/my-pm"', '"click_target": "extapp:cloud-nav"'),
 }
 for name, f in muts.items():
     try: m = f(REAL)

@@ -13,8 +13,8 @@ import java.util.Locale
  * (launchExternalApp). Markets (exchange), Weather and Health all tap through here.
  */
 object BadgeClick {
-    /** Health badge: Cloud Navigation > Timeline > Steps (ac_cloud-nav build.json::ui.deep_links "timeline-steps"). */
-    const val HEALTH_STEPS = "extapp:cloud-nav#page:timeline/steps"
+    /** MyHealth badge: Boards > MyHealth, the page that reads the same data. */
+    const val MYHEALTH = "page:boards/my-pm"
 
     /** Weather has no position yet: yr.no, the public face of the MET Norway source. */
     const val WEATHER_NO_FIX = "https://www.yr.no/en"

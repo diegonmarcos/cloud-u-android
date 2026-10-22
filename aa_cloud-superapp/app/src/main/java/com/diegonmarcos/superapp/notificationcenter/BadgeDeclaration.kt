@@ -88,6 +88,8 @@ object BadgeDeclaration {
          *  that is not quoting anything. */
         val instruments: List<Instrument> = emptyList(),
         val card: Card = Card(),
+        /** Retired ids (and old deep-link names) that still resolve to this badge. */
+        val aliases: List<String> = emptyList(),
     )
 
     /**
@@ -157,10 +159,15 @@ object BadgeDeclaration {
                 customization = options(o.optJSONArray("customization")),
                 instruments = instruments(o.optJSONArray("instruments")),
                 card = o.optJSONObject("card")?.let { Card(it.optString("kind", "text"), it.optString("accent", ""), it.optInt("rank", Int.MAX_VALUE)) } ?: Card(),
+                aliases = strings(o.optJSONArray("aliases")),
             )
         }
         return out
     }
+
+    /** The badge [id] names: its own id, else the badge that declares [id] as a retired alias. */
+    fun resolve(all: List<Badge>, id: String): Badge? =
+        all.firstOrNull { it.id == id } ?: all.firstOrNull { id in it.aliases }
 
     /** What Configs ▸ Panel ▸ Push renders — one box in section 1 and one
      *  customization menu in section 2 per entry, in declaration order. */
