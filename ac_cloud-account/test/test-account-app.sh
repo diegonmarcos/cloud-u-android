@@ -139,7 +139,7 @@ want = {'personal': ['me', 'wallet', 'autocomplete'],
         'connect': ['status', 'auth'],
         'activity': ['activity']}
 strips = {'autocomplete': ['personal', 'sites', 'snippets'], 'android': ['runbook', 'apps', 'push', 'perms', 'adb-shell'],
-          'secrets': ['providers', 'keys', 'grants', 'import'], 'backups': ['databases', 'bundle'],
+          'secrets': ['providers', 'keys', 'tokens', 'grants', 'import'], 'backups': ['databases', 'bundle'],
           'devices': ['mesh', 'files', 'working', 'diff'], 'status': ['connections', 'apps'], 'auth': ['hub', 'signin', 'settings']}
 got = {s.get('id'): [p.get('id') for p in s.get('pages') or []] for s in ui.get('sections') or []}
 gotstrips = {p.get('id'): [q.get('id') for q in p.get('pages')] for s in ui.get('sections') or [] for p in s.get('pages') or [] if p.get('pages')}

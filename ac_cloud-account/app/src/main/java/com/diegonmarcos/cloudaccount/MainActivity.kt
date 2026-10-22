@@ -40,6 +40,7 @@ import com.diegonmarcos.cloudaccount.hub.HubNav
 import com.diegonmarcos.cloudaccount.hub.ImportPage
 import com.diegonmarcos.cloudaccount.hub.LocalDeviceAuth
 import com.diegonmarcos.cloudaccount.hub.SecretsProvidersPage
+import com.diegonmarcos.cloudaccount.hub.TokensPage
 import com.diegonmarcos.cloudaccount.hub.SystemDeviceAuth
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
@@ -210,6 +211,7 @@ class MainActivity : AppCompatActivity() {
             // PRIVATE: secrets stay masked until reveal behind device auth.
             "data" -> when (page) {
                 "keys" -> SecretsTab(openVault = { AccountHost.route(this, "extapp:cloud-vault") })
+                "tokens" -> TokensPage()
                 "grants" -> GrantsTab()
                 "import" -> ImportPage(::pickText)
                 "databases" -> BackupsPage()

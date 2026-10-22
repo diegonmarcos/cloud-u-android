@@ -26,6 +26,7 @@ import com.diegonmarcos.cloudaccount.hub.AppProfilesPage
 import com.diegonmarcos.cloudaccount.hub.ConnectionsPage
 import com.diegonmarcos.cloudaccount.hub.LocalDeviceAuth
 import com.diegonmarcos.cloudaccount.hub.SecretsProvidersPage
+import com.diegonmarcos.cloudaccount.hub.TokensPage
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
@@ -126,6 +127,7 @@ class SectionScreensTest(private val section: String, private val page: String) 
             "configs/desktop" -> DesktopConfigsPage()
             "configs/c3" -> C3ConfigsPage()
             "data/providers" -> SecretsProvidersPage(go)
+            "data/tokens" -> TokensPage()
             "data/databases" -> BackupsPage()
             "data/mesh" -> DevicesMeshPage()
             "connect/connections" -> ConnectionsPage(go)
@@ -201,7 +203,7 @@ class SectionScreensTest(private val section: String, private val page: String) 
         fun pages(): List<Array<Any>> = listOf(
             "personal/me", "personal/wallet", "personal/personal",
             "configs/runbook", "configs/perms", "configs/desktop", "configs/c3",
-            "data/providers", "data/databases", "data/mesh",
+            "data/providers", "data/tokens", "data/databases", "data/mesh",
             "connect/connections", "connect/apps", "connect/endpoints",
             "activity/activity",
         ).map { it.split('/').toTypedArray<Any>() }

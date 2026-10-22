@@ -55,6 +55,7 @@
         <domain>authelia.app</domain>
         <domain>auth-broker.app</domain>
         <domain>cloud-me-api.app</domain>
+        <domain>tokens-api.app</domain>
         <domain>vaultwarden.app</domain>
         <domain>c3-public-api.app</domain>
 

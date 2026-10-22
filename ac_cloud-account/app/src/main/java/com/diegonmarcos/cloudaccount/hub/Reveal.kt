@@ -12,6 +12,9 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PersistableBundle
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Asks the owner to prove it is them (biometric or the screen lock). [done] is called exactly once. */
 fun interface DeviceAuth {
@@ -28,6 +31,20 @@ class RevealGate(private val auth: DeviceAuth) {
             if (!ok) { denied(); return@authenticate }
             val v = read()
             if (v.isNullOrEmpty()) denied() else show(v)
+        }
+    }
+
+    /**
+     * [reveal] for a value that has to be fetched over the network: [read] runs on the IO dispatcher, and (as with
+     * [reveal]) not at all until [DeviceAuth] said yes. [show] and [denied] run on [scope]'s dispatcher (main).
+     */
+    fun revealOnIo(reason: String, scope: kotlinx.coroutines.CoroutineScope, read: () -> String?, show: (String) -> Unit, denied: () -> Unit = {}) {
+        auth.authenticate(reason) { ok ->
+            if (!ok) { denied(); return@authenticate }
+            scope.launch {
+                val v = withContext(Dispatchers.IO) { read() }
+                if (v.isNullOrEmpty()) denied() else show(v)
+            }
         }
     }
 }

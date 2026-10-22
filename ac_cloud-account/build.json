@@ -371,6 +371,19 @@
         "health": "/oauth2/google/health"
       },
       {
+        "id": "tokens-api",
+        "kind": "tokens",
+        "source": "cloud-u-containers/infra-sec_tokens-api/build.json",
+        "_doc": "The fleet token engine behind Data > Secrets > Tokens: owner-only (the engine checks the phone's fleet bearer), wg_only like the other private services.",
+        "mesh_dns": "tokens-api.app",
+        "mesh_port": 4184,
+        "mesh_scheme": "http",
+        "public_domain": "tokens-api.diegonmarcos.com",
+        "public_scheme": "https",
+        "policy": "mesh_first",
+        "health": "/health"
+      },
+      {
         "id": "cloud-me-api",
         "kind": "data",
         "source": "cloud-u-containers/infra-api_cloud-me-api/build.json",
@@ -528,6 +541,12 @@
                 "_doc": "Was Secrets > Fleet keys (id `secrets`).",
                 "id": "keys",
                 "label": "Fleet keys",
+                "icon": "data"
+              },
+              {
+                "_doc": "Fleet token manager: every bearer token the fleet has emitted (Authelia JWTs and engine-minted ft_ tokens), reveal and copy behind device auth, generate (name, audience, scopes, expiry), revoke. Talks to cloud-u-containers infra-sec_tokens-api (tokens-api.app, tokens-api.diegonmarcos.com), owner-only. Private: a Data page, never a Configs one.",
+                "id": "tokens",
+                "label": "Tokens",
                 "icon": "data"
               },
               {

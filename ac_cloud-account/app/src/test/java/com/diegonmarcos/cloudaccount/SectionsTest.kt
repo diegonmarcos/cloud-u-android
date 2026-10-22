@@ -30,7 +30,7 @@ class SectionsTest {
         val configs = MainActivity.NAV.section("configs")!!
         assertEquals(allowed, configs.allPages().filter { it.pages.isEmpty() }.map { it.id }.toSet())
         // the pages that hold or show secrets live in Data and Connect, never in Configs
-        for (secretPage in listOf("providers", "keys", "grants", "import", "bundle", "signin", "settings", "connections"))
+        for (secretPage in listOf("providers", "keys", "tokens", "grants", "import", "bundle", "signin", "settings", "connections"))
             assertFalse("$secretPage is in Configs", configs.allPages().any { it.id == secretPage })
     }
 
