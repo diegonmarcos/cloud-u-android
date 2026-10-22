@@ -60,7 +60,8 @@ udp_bound 5353 && ok "E2 the private DNS (udp 5353) is bound again" || bad "E2 u
 # ── E3 ───────────────────────────────────────────────────────────────────────
 for act in android.intent.action.BOOT_COMPLETED android.intent.action.MY_PACKAGE_REPLACED; do
   adb shell am force-stop "$WPKG"; sleep 2
-  adb shell am broadcast --include-stopped-packages -a "$act" -n "$WPKG/.BootReceiver" >/dev/null 2>&1
+  adb shell am broadcast --include-stopped-packages -a "$act" -n "$WPKG/.BootReceiver" 2>&1 | tr -d '\r' | tee "$OUT/e3-broadcast-${act##*.}.txt"
+  adb shell dumpsys package "$WPKG" 2>/dev/null | tr -d '\r' | grep -iE -B1 -A6 "receiver|bootreceiver" > "$OUT/e3-package-${act##*.}.txt" || true
   if wait_for 25 tcp_listening 8002 && wait_for 5 udp_bound 5353; then ok "E3 $act started the servers with no UI"; else bad "E3 $act did not start the servers"; fi
 done
 

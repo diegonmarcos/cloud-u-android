@@ -125,10 +125,41 @@ pub fn query_a(id: u16, name: &str) -> Vec<u8> {
     q
 }
 
+/// Bind `host:port` with SO_REUSEADDR and SO_REUSEPORT set first. 5353 is also the mDNS port: Android's own mDNS
+/// daemon binds it on every address, and a plain `UdpSocket::bind` of 127.0.0.1:5353 then fails with "Address already
+/// in use" (seen on the emulator: the private DNS never started, whoever opened the app). With the options set, the
+/// kernel delivers a datagram sent to 127.0.0.1:5353 to this more specific socket. Falls back to the plain bind.
+fn bind_shared(host: &str, port: u16) -> std::io::Result<UdpSocket> {
+    if let Ok(ip) = host.parse::<Ipv4Addr>() {
+        // SAFETY: plain libc socket calls; the fd is closed on every error path and otherwise owned by the UdpSocket.
+        unsafe {
+            let fd = libc::socket(libc::AF_INET, libc::SOCK_DGRAM, 0);
+            if fd >= 0 {
+                let on: libc::c_int = 1;
+                let len = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+                let p = &on as *const libc::c_int as *const libc::c_void;
+                libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEADDR, p, len);
+                libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEPORT, p, len);
+                let mut addr: libc::sockaddr_in = std::mem::zeroed();
+                addr.sin_family = libc::AF_INET as libc::sa_family_t;
+                addr.sin_port = port.to_be();
+                addr.sin_addr = libc::in_addr { s_addr: u32::from_ne_bytes(ip.octets()) };
+                let rc = libc::bind(fd, &addr as *const libc::sockaddr_in as *const libc::sockaddr, std::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t);
+                if rc == 0 {
+                    use std::os::fd::FromRawFd;
+                    return Ok(UdpSocket::from_raw_fd(fd));
+                }
+                libc::close(fd);
+            }
+        }
+    }
+    UdpSocket::bind((host, port))
+}
+
 /// Bind the declared address and answer on a thread of its own. Loopback bind, loopback peers only.
 pub fn start() -> Result<(), String> {
     let sv = serving::get();
-    let sock = UdpSocket::bind((sv.dns.host.as_str(), sv.dns.port)).map_err(|e| format!("cannot bind udp {}:{} ({})", sv.dns.host, sv.dns.port, e))?;
+    let sock = bind_shared(sv.dns.host.as_str(), sv.dns.port).map_err(|e| format!("cannot bind udp {}:{} ({})", sv.dns.host, sv.dns.port, e))?;
     let answer: Ipv4Addr = sv.dns.answer.parse().map_err(|_| format!("serving.dns.answer {} is not an IPv4 address", sv.dns.answer))?;
     let ttl = sv.dns.ttl_s;
     println!("c3-webserver dns on udp {}:{} answers {} for {}", sv.dns.host, sv.dns.port, answer, serving::names().join(", "));
@@ -163,6 +194,19 @@ mod tests {
     }
     fn ancount(r: &[u8]) -> u16 {
         u16::from_be_bytes([r[6], r[7]])
+    }
+
+    #[test]
+    fn binds_beside_a_wildcard_socket_on_the_same_port() {
+        // What Android's mDNS daemon does on 5353: a wildcard bind that sets SO_REUSEADDR (std's bind sets none).
+        let wild = bind_shared("0.0.0.0", 0).unwrap();
+        let port = wild.local_addr().unwrap().port();
+        let lo = bind_shared("127.0.0.1", port).expect("the loopback bind must coexist with a wildcard one");
+        let c = UdpSocket::bind("127.0.0.1:0").unwrap();
+        c.send_to(b"ping", ("127.0.0.1", port)).unwrap();
+        lo.set_read_timeout(Some(std::time::Duration::from_secs(2))).unwrap();
+        let mut b = [0u8; 8];
+        assert_eq!(lo.recv_from(&mut b).unwrap().0, 4, "the more specific loopback socket gets the datagram");
     }
 
     #[test]
