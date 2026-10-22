@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
@@ -90,6 +91,7 @@ class FakeTokenEngine(var status: Int = 200) {
     }
 }
 
+@RunWith(RobolectricTestRunner::class)
 class TokensClientTest {
     private fun client(e: FakeTokenEngine, bearer: String? = "owner.jwt") = TokensClient(TokensClient.BASE, { bearer }, e.transport)
 
@@ -255,11 +257,11 @@ class TokensPageUiTest {
         val e = FakeTokenEngine(); val asked = mutableListOf<String>()
         show(e, asked = asked)
         compose.onNodeWithTag(TokensTags.NEW_TOGGLE).performClick()
-        compose.onNodeWithTag(TokensTags.NEW_NAME).performTextInput("ci bot")
-        compose.onNodeWithTag(TokensTags.NEW_AUDIENCE).performTextReplacement("*.diegonmarcos.com")
-        compose.onNodeWithTag(TokensTags.NEW_SCOPES).performTextInput("mcp:read mcp:write")
-        compose.onNodeWithTag(TokensTags.NEW_DAYS).performTextReplacement("7")
-        compose.onNodeWithTag(TokensTags.NEW_CREATE).performClick()
+        compose.onNodeWithTag(TokensTags.NEW_NAME).performScrollTo().performTextInput("ci bot")
+        compose.onNodeWithTag(TokensTags.NEW_AUDIENCE).performScrollTo().performTextReplacement("*.diegonmarcos.com")
+        compose.onNodeWithTag(TokensTags.NEW_SCOPES).performScrollTo().performTextInput("mcp:read mcp:write")
+        compose.onNodeWithTag(TokensTags.NEW_DAYS).performScrollTo().performTextReplacement("7")
+        compose.onNodeWithTag(TokensTags.NEW_CREATE).performScrollTo().performClick()
         waitFor(TokensTags.value("tk_new"))
         val sent = JSONObject(e.createBody!!)
         assertEquals("ci bot", sent.getString("name")); assertEquals(7, sent.getInt("ttl_days")); assertEquals("*.diegonmarcos.com", sent.getString("audience"))
