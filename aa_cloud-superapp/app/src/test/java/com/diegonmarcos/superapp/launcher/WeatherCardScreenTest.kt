@@ -85,9 +85,9 @@ class WeatherCardScreenTest : KitPageHarness() {
         showKit { Column(androidx.compose.ui.Modifier.fillMaxSize().background(NotifCard.panel).padding(12.dp)) { BadgeCard(none) } }
         compose.onNodeWithTag(BadgeCardTags.card(WeatherBadgeService.BADGE_ID)).assertExists()
         compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID)).assertExists().assertHasClickAction()
-        compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID)).assert(
-            androidx.compose.ui.test.SemanticsMatcher("is a Button") {
-                it.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Role) == androidx.compose.ui.semantics.Role.Button })
+        assertEquals(androidx.compose.ui.semantics.Role.Button,
+            compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID)).fetchSemanticsNode()
+                .config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Role))
         // The button's PendingIntent opens this app's settings page (where Location is granted).
         val saved = org.robolectric.Shadows.shadowOf(none.actionIntent).savedIntents.single()
         assertEquals(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, saved.action)
