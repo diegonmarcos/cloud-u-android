@@ -11,6 +11,8 @@ if (project.extensions.findByName('kotlin') == null) {
     apply plugin: 'org.jetbrains.kotlin.android'
 }
 
+apply from: '../fleet-urls.gradle'
+
 android {
 
     // #825 IDataBackend (the engine wire) and its client/service left for
@@ -23,6 +25,9 @@ android {
     defaultConfig {
         minSdk 26
         consumerProguardFiles 'consumer-rules.pro'
+        // Telemetry's per-app crash/log route: both origins of c3-infra-api come from the one fleet declaration.
+        buildConfigField "String", "INFRA_API_MESH",   "\"${fleetMeshUrl('c3-infra-api')}\""
+        buildConfigField "String", "INFRA_API_PUBLIC", "\"${fleetUrl('c3-infra-api')}\""
     }
 
     // #825 IFleetConfigEngine: the provider's one wire to the fleet-config policy engine
@@ -30,6 +35,7 @@ android {
     // it replaced in this module was ~300 lines every app recompiled on each edit.
     buildFeatures {
         aidl true
+        buildConfig true
     }
 
     compileOptions {

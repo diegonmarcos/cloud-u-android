@@ -12,7 +12,7 @@ import java.net.URL
  * this for free, with zero per-app wiring. POSTs to c3-infra-api's public
  * events ingest:
  *
- *   POST https://c3-infra-api.diegonmarcos.com/public/events/{app}
+ *   POST <mesh c3-infra-api.app, then the public c3-pvt path>/apk/{app}/logs   (see [TelemetryRoute])
  *   { kind: "log"|"debug"|"action"|"probe"|"crash", title?, message?, log?, meta? }
  *
  * 2 MB cap, unauthenticated (same "public path" reasoning as [LogUpload] —
@@ -28,7 +28,6 @@ import java.net.URL
  */
 object Telemetry {
     private const val TAG = "Telemetry"
-    private const val BASE_URL = "https://c3-infra-api.diegonmarcos.com/public/events/"
 
     /** Newest logcat bytes attached to a crash report. Deliberately far below
      *  [LogUpload]'s 1.5 MB ceiling: this is read and uploaded on the dying
@@ -79,10 +78,89 @@ object Telemetry {
         (field.get(null) as? String)?.takeIf { it.isNotBlank() }
     }.getOrNull()
 
-    /** Full ingest URL this app will post to. */
+    /**
+     * Every URL this app tries, in order: its declared override alone, else the per-app route on the mesh origin
+     * (c3-infra-api.app, no auth) and then on the public one (c3-pvt, fleet bearer). Both origins are baked from the
+     * fleet declaration. An override of "" turns telemetry off.
+     */
     @JvmStatic
-    fun endpoint(context: Context): String =
-        overrideEndpoint(context) ?: (BASE_URL + appId(context))
+    fun endpoints(context: Context): List<String> {
+        val override = overrideEndpoint(context)
+        if (override != null) return listOf(override)
+        if (overrideDisabled(context)) return emptyList()
+        return TelemetryRoute.urls(BuildConfig.INFRA_API_MESH, BuildConfig.INFRA_API_PUBLIC, appId(context))
+    }
+
+    /** The public URL of this app's route (what the fleet transport keys on), or "". */
+    @JvmStatic
+    fun endpoint(context: Context): String = endpoints(context).lastOrNull().orEmpty()
+
+    private fun overrideDisabled(context: Context): Boolean = runCatching {
+        val cls = Class.forName("${context.packageName}.BuildConfig")
+        (cls.getField("TELEMETRY_INGEST_URL").get(null) as? String)?.isBlank() == true
+    }.getOrDefault(false)
+
+    private fun queueDir(context: Context) = java.io.File(context.filesDir, "telemetry-queue")
+
+    /**
+     * Sends the crashes that could not leave last time (no network, mesh down). Called at every start from
+     * [CoreInitProvider]; runs on its own thread, oldest first, and stops at the first failure.
+     */
+    @JvmStatic
+    fun flushQueue(context: Context) {
+        val ctx = context.applicationContext
+        Thread({
+            runCatching {
+                val urls = endpoints(ctx)
+                if (urls.isNotEmpty()) {
+                    val n = TelemetryQueue.drain(queueDir(ctx)) { runCatching { send(urls, it, 5_000, 8_000); true }.getOrDefault(false) }
+                    if (n > 0) Log.i(TAG, "flushed $n queued event(s)")
+                }
+            }.onFailure { Log.w(TAG, "flush failed: ${it.javaClass.simpleName}: ${it.message}") }
+        }, "telemetry-flush").start()
+    }
+
+    /** What a crash report needs besides the stack: app version, device and ABI. */
+    private fun deviceMeta(context: Context): Map<String, String> = runCatching {
+        val pi = context.packageManager.getPackageInfo(context.packageName, 0)
+        mapOf(
+            "version" to (pi.versionName ?: ""),
+            "versionCode" to (if (android.os.Build.VERSION.SDK_INT >= 28) pi.longVersionCode else @Suppress("DEPRECATION") pi.versionCode.toLong()).toString(),
+            "device" to "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}",
+            "abi" to (android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: ""),
+            "sdk" to android.os.Build.VERSION.SDK_INT.toString(),
+            "package" to context.packageName,
+        )
+    }.getOrDefault(emptyMap())
+
+    /** One request per leg, first 2xx wins. The fleet transport (apps that run it) takes the public URL and does mesh-first plus bearer itself. */
+    private fun send(urls: List<String>, payload: String, connectTimeoutMs: Int, readTimeoutMs: Int) {
+        val headers = mapOf("Content-Type" to "application/json; charset=utf-8")
+        // #1093 an app that runs the fleet endpoints sends this over them (mesh first for the declared c3-infra-api pair).
+        FleetHttpSeam.exchange("POST", urls.last(), headers, payload, connectTimeoutMs, readTimeoutMs)?.let {
+            if (it.code in 200..299) { Log.i(TAG, "POST ${urls.last()} -> ${it.code} (${payload.length} bytes, fleet transport)"); return }
+            throw java.io.IOException("HTTP ${it.code} (fleet transport)")
+        }
+        var last: Exception? = null
+        for (url in urls) {
+            try {
+                val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    doOutput = true
+                    connectTimeout = connectTimeoutMs
+                    readTimeout = readTimeoutMs
+                    setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                }
+                conn.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                val code = conn.responseCode
+                conn.disconnect()
+                Log.i(TAG, "POST $url -> $code (${payload.length} bytes)")
+                if (code in 200..299) return
+                last = java.io.IOException("HTTP $code from $url")
+            } catch (e: Exception) { last = e }
+        }
+        throw last ?: java.io.IOException("no telemetry endpoint")
+    }
 
     /**
      * Fire-and-forget: runs on its own background thread, never throws into
@@ -170,7 +248,7 @@ object Telemetry {
                     title = throwable.javaClass.name,
                     message = throwable.message,
                     log = trace + "\n\n--- logcat (own process, newest ${CRASH_LOGCAT_BYTES}B) ---\n" + logcat,
-                    meta = emptyMap(),
+                    meta = deviceMeta(ctx),
                     // The process is already dead on its feet: the user is
                     // looking at a frozen app until this returns, so the crash
                     // path gets its own tighter budget than ordinary telemetry.
@@ -201,8 +279,8 @@ object Telemetry {
         connectTimeoutMs: Int = 5_000,
         readTimeoutMs: Int = 8_000,
     ) {
-        val url = endpoint(context)
-        if (url.isBlank()) {
+        val urls = endpoints(context)
+        if (urls.isEmpty()) {
             Log.i(TAG, "telemetry disabled (blank endpoint)")
             return
         }
@@ -213,23 +291,12 @@ object Telemetry {
             log?.let { put("log", it) }
             if (meta.isNotEmpty()) put("meta", JSONObject(meta))
         }.toString()
-        // #1093 an app that runs the fleet endpoints sends this over them (mesh first for the declared c3-infra-api pair).
-        FleetHttpSeam.exchange("POST", url, mapOf("Content-Type" to "application/json; charset=utf-8"), payload, connectTimeoutMs, readTimeoutMs)?.let {
-            Log.i(TAG, "POST $url -> ${it.code} (kind=$kind, ${payload.length} bytes, fleet transport)")
-            return
+        try {
+            send(urls, payload, connectTimeoutMs, readTimeoutMs)
+        } catch (e: Exception) {
+            // A crash that cannot leave now waits on disk and goes out at the next start (flushQueue).
+            if (kind == "crash") runCatching { TelemetryQueue.enqueue(queueDir(context), payload) }
+            throw e
         }
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            doOutput = true
-            connectTimeout = connectTimeoutMs
-            readTimeout = readTimeoutMs
-            setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            // Public endpoint by design — no Authorization, same reasoning as
-            // LogUpload.
-        }
-        conn.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
-        val code = conn.responseCode
-        conn.disconnect()
-        Log.i(TAG, "POST $url -> $code (kind=$kind, ${payload.length} bytes)")
     }
 }

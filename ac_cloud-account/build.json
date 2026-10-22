@@ -387,7 +387,7 @@
         "mesh_scheme": "http",
         "public_domain": "c3-infra-api.diegonmarcos.com",
         "public_scheme": "https",
-        "route_paths": ["/public/events", "/public/logs"],
+        "route_paths": ["/public/events", "/public/logs", "/apk", "/containers"],
         "policy": "mesh_first",
         "health": "/health"
       },

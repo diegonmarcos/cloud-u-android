@@ -43,6 +43,8 @@ class CoreInitProvider : ContentProvider() {
         // out of a provider's onCreate takes the whole process down before
         // Application.onCreate ever runs.
         runCatching { Telemetry.installCrashHandler(ctx) }
+        // The crashes the last run could not send (offline, mesh down) go out now.
+        runCatching { Telemetry.flushQueue(ctx) }
         // #777: /api/fleetalert/raise in EVERY fleet app, so "an app raises an
         // alert while the SuperApp is stopped" is checkable on the phone with
         // the screen locked — the alert goes through the real FleetAlerts path.
