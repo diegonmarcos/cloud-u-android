@@ -11,3 +11,4 @@ ac_cloud-c3/app/src/main/java/com/diegonmarcos/cloudc3/cloud/NtfyCatalog.kt	ntfy
 ac_cloud-mail/app/src/main/kotlin/app/sterna/ui/home/HomeHandOffs.kt	links the user opens in the browser; no request is made here
 ac_cloud-mail/app/src/main/kotlin/app/sterna/ui/settings/AccountAuthSection.kt	hint text naming the auth host; no request is made here
 ac_cloud-vault/data/src/main/kotlin/com/bitwarden/data/repository/util/EnvironmentUrlDataJsonExtensions.kt	ROUTED: the self-hosted server URL; the network module's fleet interceptors send it mesh first (#1093)
+ac_cloud-notes/packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/components/Markdown.kt	sample markdown text shown in the editor preview (data and links); no request is made here
