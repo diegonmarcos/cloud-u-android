@@ -1,0 +1,101 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║ Test → local names (emulator: emulated.app must just work)             ║
+# ║                                                                        ║
+# ║ Installs Cloud Browser and Cloud C3 WebServer on a REAL x86_64 API-34  ║
+# ║ emulator, force-stops the WebServer, opens http://emulated.app in the  ║
+# ║ browser and asserts the page loads (the browser starts the keep-alive  ║
+# ║ foreground service itself), then that the boot / package-replaced      ║
+# ║ broadcasts start the servers with no UI, then renders                  ║
+# ║ http://127.0.0.1:8002/#/ in Cloud Browser and in Chrome and compares   ║
+# ║ them, with the browser's console output captured. Screenshots, ui      ║
+# ║ dumps and logcat are uploaded as the `local-names-evidence` artifact.  ║
+# ║                                                                        ║
+# ║ APKs: a Ship run's artifacts when its run id is given, else the        ║
+# ║ release asset. Script: ac_cloud-browser/test/emulator-local-names.sh.  ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+name: "Test → local names (emulator)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      browser_run_id:
+        description: "Ship Cloud Browser run id whose APK artifact to test (empty = release asset)"
+        required: false
+        default: ""
+      webserver_run_id:
+        description: "Ship Cloud C3 WebServer run id whose APK artifact to test (empty = release asset)"
+        required: false
+        default: ""
+      release_tag:
+        description: "Release to download from when a run id is empty"
+        required: false
+        default: "latest"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  local-names:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch the two APKs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          B_RUN: ${{ inputs.browser_run_id }}
+          W_RUN: ${{ inputs.webserver_run_id }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          set -eu
+          fetch() { # fetch <run id> <artifact prefix> <release asset> <dest dir>
+            mkdir -p "$4"
+            if [ -n "$1" ]; then
+              gh api "repos/$REPO/actions/runs/$1/artifacts" --paginate --jq ".artifacts[] | select(.name|startswith(\"$2\")) | .name" |
+              while read -r name; do gh run download "$1" -R "$REPO" -n "$name" -D "$4/$name"; done
+            else
+              gh release download "${TAG:-latest}" -R "$REPO" -p "$3" -D "$4"
+            fi
+            pick=""
+            for want in x86_64 universal arm64 ''; do
+              pick=$(find "$4" -name '*.apk' | sort | grep -i -- "$want" | head -1 || true)
+              [ -n "$pick" ] && break
+            done
+            [ -n "$pick" ] || { echo "::error::no APK for $2"; exit 1; }
+            echo "$pick"
+          }
+          cp "$(fetch "$B_RUN" Cloud-Browser- Cloud-Browser.apk apk-browser | tail -1)" browser.apk
+          cp "$(fetch "$W_RUN" Cloud-C3-WebServer- Cloud-C3-WebServer.apk apk-webserver | tail -1)" webserver.apk
+          ls -l browser.apk webserver.apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Python imaging (screenshot comparison)
+        run: python3 -m pip install --quiet pillow
+
+      - name: Boot emulator + run the local-names checks
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: bash ac_cloud-browser/test/emulator-local-names.sh browser.apk webserver.apk out
+
+      - name: Upload evidence (screenshots, ui dumps, console, logcat)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-names-evidence
+          path: out/
+          if-no-files-found: warn
