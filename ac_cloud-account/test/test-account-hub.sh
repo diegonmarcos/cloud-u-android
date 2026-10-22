@@ -78,7 +78,9 @@ ok(not re.search(r"Text\(\s*HubAndroid\.value", pg) and not re.search(r"SecretCl
    "no page draws or copies a value without the gate", "a value is drawn or copied without the gate")
 ok("SecretClipboard.copy(ctx, it)" in pg, "copy goes through SecretClipboard (auto-clear)", "copy bypasses SecretClipboard")
 rv = code(rd(f"{K}/hub/Reveal.kt"))
-ok(re.search(r"auth\.authenticate\(reason\) \{ ok ->\s*if \(!ok\) \{ denied\(\); return@authenticate \}", rv) is not None and rv.index("if (!ok)") < rv.index("val v = read()"),
+# EVERY authenticate block (reveal and revealOnIo) must open with the refusal before anything is read
+gated = [re.match(r"\s*\{ ok ->\s*if \(!ok\) \{ denied\(\); return@authenticate \}", b) is not None for b in rv.split("auth.authenticate(reason)")[1:]]
+ok(len(gated) >= 2 and all(gated) and rv.index("if (!ok)") < rv.index("val v = read()"),
    "RevealGate reads only after a yes", "RevealGate can read before device auth")
 ok("!km.isDeviceSecure) { finish(false)" in rv, "no screen lock = refused (fail closed)", "a phone without a lock can reveal")
 
