@@ -1281,9 +1281,9 @@
      "authority": "<pkg>.accountdata",
      "callers": [
       "aa_cloud-superapp",
-      "code",
+      "browser",
+      "keyboard",
       "mail",
-      "office",
       "search",
       "store"
      ]
