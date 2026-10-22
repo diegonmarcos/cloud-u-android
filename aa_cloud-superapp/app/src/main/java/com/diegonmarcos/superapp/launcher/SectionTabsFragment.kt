@@ -59,7 +59,7 @@ import com.diegonmarcos.superapp.uikit.KitComposeFragment
  * Fragments built by [LauncherNavController.pageFragment].
  */
 
-class SectionTabsFragment : KitComposeFragment(), Collapsible {
+class SectionTabsFragment : KitComposeFragment(), Collapsible, BackHandler {
 
     private val sectionId: String get() = arguments?.getString(ARG_SECTION_ID).orEmpty()
 
@@ -122,6 +122,16 @@ class SectionTabsFragment : KitComposeFragment(), Collapsible {
         val host = paneIds.getOrNull(activePane) ?: return false
         return (childFragmentManager.findFragmentById(host) as? Collapsible)
             ?.toggleAllCollapsed() ?: false
+    }
+
+    /**
+     * [BackHandler] — the shell's top-right Back arrow asks the TOP fragment, and on a tabbed section that is this wrapper, not the page
+     * inside it. Forward to the ACTIVE pane's page so an embedded WebView (Cloud ▸ WebApps) steps back through its own history
+     * instead of the whole section being popped. False when the page is not a [BackHandler] or has nothing to undo.
+     */
+    override fun tryHandleBack(): Boolean {
+        val host = paneIds.getOrNull(activePane) ?: return false
+        return (childFragmentManager.findFragmentById(host) as? BackHandler)?.tryHandleBack() ?: false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
