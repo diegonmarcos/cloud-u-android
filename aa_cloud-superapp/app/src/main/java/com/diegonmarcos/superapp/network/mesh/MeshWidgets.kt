@@ -210,13 +210,16 @@ fun SwitchLine(
     reason: String? = null,
 ) {
     val p = LocalKitPalette.current
-    // One node for the line (label, state, reason): a screen reader and a test read the switch with its reason.
-    Column(modifier.fillMaxWidth().semantics(mergeDescendants = true) {}) {
+    // One node for the line (label, state, reason): a screen reader and a test read the switch with its reason,
+    // and enabled / disabled / click sit on the same node the tag names.
+    Column(
+        modifier.fillMaxWidth()
+            .clickable(enabled = enabled, role = Role.Switch) { onChange(!checked) }
+            .semantics { stateDescription = if (checked) "on" else "off"; if (!enabled) disabled() },
+    ) {
         Row(
             Modifier.fillMaxWidth()
                 .alpha(if (enabled) 1f else 0.55f)
-                .clickable(enabled = enabled, role = Role.Switch) { onChange(!checked) }
-                .semantics { stateDescription = if (checked) "on" else "off"; if (!enabled) disabled() }
                 .padding(vertical = MeshDensity.dp(MeshDensity.S6)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
