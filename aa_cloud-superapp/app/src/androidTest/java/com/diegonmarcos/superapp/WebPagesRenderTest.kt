@@ -24,7 +24,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * Cloud ▸ WebApps (the embedded cloud-mobile page: section headers kept, fits one screen, sits below the SuperApp top row) and Cloud ▸ Linktree on a REAL emulator WebView (Robolectric cannot render one). Opens each page through
+ * Cloud ▸ WebApps (the embedded cloud-webapps index: no in-page tab row, the shell's Cloud tab strip drawn under the top row, the WebView below it) and Cloud ▸ Linktree on a REAL emulator WebView (Robolectric cannot render one). Opens each page through
  * the same route a tile uses, waits up to 20 s, and writes the evidence to /data/local/tmp/webpage-<name>.{png,txt}:
  * the WebView's on-screen pixels, its measured size, document.readyState, the body's text length, every console line,
  * every load / HTTP error and the final URL. Fails when the body has no text or the WebView's pixels are one colour.
@@ -173,8 +173,8 @@ class WebPagesRenderTest {
         clearPrompt(); SystemClock.sleep(1500)
 
         var htmlH = -1
-        var embedHeaders = ""; var embedBottom = -1; var embedInner = -1; var embedOverflow = -1; var embedOwnTabs = -1; var embedApkRow = -1
-        var embedTiles = -1; var islandBottom = -1; var islandShown = false
+        var embedNav = -1; var embedFlag = ""; var embedLinks = -1; var finalUrl = ""
+        var islandBottom = -1; var islandShown = false; var stripBottom = -1; var stripTabs = 0
         var pageTitle = ""; var groups = -1
         val report = StringBuilder()
         val w = web
@@ -198,13 +198,11 @@ class WebPagesRenderTest {
             report.appendLine("title=$pageTitle tileGroups=$groups")
             if (embed) {
                 fun num(expr: String) = js(w, expr).trim('"').toIntOrNull() ?: -1
-                embedHeaders = js(w, "[...document.querySelectorAll('.tile-group__title')].map(e=>e.textContent.trim()).join(' | ')")
-                embedTiles = num("document.querySelectorAll('[data-app-group] .tile').length")
-                embedBottom = num("(()=>{const r=document.querySelector('#embed-fit');return r?Math.round(r.getBoundingClientRect().bottom):-1})()")
-                embedInner = num("innerHeight")
-                embedOverflow = num("(()=>{const c=document.querySelector('.content');return (c.scrollHeight>c.clientHeight+1||document.documentElement.scrollHeight>innerHeight)?1:0})()")
-                embedOwnTabs = num("(()=>{const e=document.querySelector('.page-tabs-bar');return e&&getComputedStyle(e).display!=='none'?1:0})()")
-                embedApkRow = num("(()=>{const e=document.querySelector('.site-footer');return e&&getComputedStyle(e).display!=='none'?1:0})()")
+                // The page is the cloud-webapps index in embed mode: its own sub-page tab row (#cwa-nav) must not be drawn.
+                embedNav = num("document.getElementById('cwa-nav')?1:0")
+                embedFlag = js(w, "String(document.documentElement.getAttribute('data-embed'))").trim('"')
+                embedLinks = num("document.querySelectorAll('main a[href]').length")
+                finalUrl = w.url.orEmpty()
                 // The SuperApp's top row (status / app top bar island) stays visible and the page sits BELOW it, inside the shell.
                 // resumed() itself runs on the main thread: calling it inside runOnMainSync throws "can not be called from the main application thread".
                 val shell = resumed()
@@ -215,7 +213,21 @@ class WebPagesRenderTest {
                         islandBottom = l[1] + island.height; islandShown = island.isShown && island.height > 0
                     }
                 }
-                report.appendLine("embed: headers=[$embedHeaders] fitBottom=$embedBottom/$embedInner overflow=$embedOverflow ownTabs=$embedOwnTabs apkRow=$embedApkRow tiles=$embedTiles " +
+                // SuperApp's own Cloud tab strip (App | WebApps | Linktree | Configs) stays drawn: find its labels in the accessibility tree.
+                val wanted = listOf("app", "webapps", "linktree", "configs")
+                val seen = mutableSetOf<String>()
+                fun walk(n: android.view.accessibility.AccessibilityNodeInfo?) {
+                    if (n == null) return
+                    val t = (n.text ?: n.contentDescription)?.toString()?.trim()?.lowercase()
+                    if (t != null && t in wanted) {
+                        val b = Rect(); n.getBoundsInScreen(b)
+                        if (b.height() > 0 && b.top >= islandBottom - 2 && b.top < loc[1] && seen.add(t)) stripBottom = maxOf(stripBottom, b.bottom)
+                    }
+                    for (i in 0 until n.childCount) walk(n.getChild(i))
+                }
+                walk(ua.rootInActiveWindow)
+                stripTabs = seen.size
+                report.appendLine("embed: url=$finalUrl cwaNav=$embedNav dataEmbed=$embedFlag links=$embedLinks stripTabs=$stripTabs stripBottom=$stripBottom " +
                     "webTop=${loc[1]} topRowBottom=$islandBottom topRowShown=$islandShown")
             }
             report.appendLine("ua=${js(w, "navigator.userAgent")}")
@@ -260,16 +272,15 @@ class WebPagesRenderTest {
         assertTrue("[$name] WebView renders blank (one colour)\n$report", colours > 1)
         if (embed) {
             val webTop = IntArray(2).also { a -> inst.runOnMainSync { w!!.getLocationOnScreen(a) } }[1]
-            assertTrue("[$name] the section headers are missing: [$embedHeaders]\n$report", groups >= 5)
-            val sourceTiles = com.diegonmarcos.superapp.launcher.Sections.byId("cloud")!!.tileGroups.flatMap { it.destinations }.size
-            assertTrue("[$name] the embedded page shows $embedTiles app tiles, the SuperApp's Cloud list has $sourceTiles (an app went missing)\n$report",
-                embedTiles == sourceTiles && embedTiles >= 40)
-            assertTrue("[$name] the page still draws its own tab bar\n$report", embedOwnTabs == 0)
-            assertTrue("[$name] the page still draws the APK download row\n$report", embedApkRow == 0)
-            assertTrue("[$name] the page does not fit one screen: bottom $embedBottom of $embedInner, overflow=$embedOverflow\n$report",
-                embedBottom in 1..embedInner && embedOverflow == 0)
+            val declared = com.diegonmarcos.superapp.launcher.Sections.byId("cloud")!!.pages.first { it.id == "webapps" }.url
+            assertTrue("[$name] WebApps loaded $finalUrl, the declared page is $declared\n$report", finalUrl.substringBefore('?').trimEnd('/') == declared.substringBefore('?').trimEnd('/'))
+            assertTrue("[$name] the cloud-webapps index lists only $embedLinks links\n$report", embedLinks >= 36)
+            assertTrue("[$name] the page still draws its own sub-page tab row (#cwa-nav)\n$report", embedNav == 0 && embedFlag == "1")
             assertTrue("[$name] the SuperApp's top row is not visible\n$report", islandShown)
             assertTrue("[$name] the page (top $webTop px) is not below the SuperApp's top row (bottom $islandBottom px)\n$report", webTop >= islandBottom - 2)
+            // The shell's Cloud tab strip is drawn on WebApps, flush under the top row, and the WebView starts below it.
+            assertTrue("[$name] the Cloud tab strip is missing on WebApps (found $stripTabs of 4 tabs)\n$report", stripTabs == 4)
+            assertTrue("[$name] the WebView (top $webTop px) does not start below the Cloud tab strip (bottom $stripBottom px)\n$report", webTop >= stripBottom - 2)
         }
     }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cloud ▸ tabs: App | WebApps | Linktree | Configs; WebApps (#1062) is the cloud-mobile page embedded in the shell, its address declared ONCE (webapps_base + webapps_path).
+# Cloud ▸ tabs: App | WebApps | Linktree | Configs; WebApps (#1062) is the cloud-webapps index embedded in the shell, its address declared ONCE (webapps_base + webapps_path).
 #   T1 the Cloud section lists exactly those four visible pages, in that order
 #   T2 WebApps declares webapps_base (https) + webapps_path with embed=1, and no second url or per-app list
 #   T3 WebPageFragment appends the CloudSuperApp-Embed/1 user-agent marker, keyed off embed=1 only
@@ -44,12 +44,15 @@ grep -qF 'sameSite(url, target.toString())' "$WP" && grep -qF '.launchUri(target
 MUT="$(sed 's/settings.userAgentString + UA_MARKER/settings.userAgentString/' "$WP")"
 if grep -qF 'settings.userAgentString + UA_MARKER' <<<"$MUT"; then
   bad "mutation: the UA check cannot see the marker go"; else ok "mutation: removing the marker is visible to T3"; fi
-# T5 WebApps (and only it) hides SuperApp's own Cloud strip, declared per page
+# T5 SuperApp's own Cloud strip is shown on every page incl. WebApps: nothing declares hide_tabs, and the code has no such switch
 h="$(python3 - "$APP/build.json" <<'PY'
 import json, sys
 s = [x for x in json.load(open(sys.argv[1]))["ui"]["sections"] if x["id"] == "cloud"][0]
 print(",".join(p["id"] for p in s["pages"] if p.get("hide_tabs")))
 PY
 )"
-[ "$h" = "webapps" ] && ok "T5 only WebApps declares hide_tabs" || bad "T5 hide_tabs is on '$h'"
+[ -z "$h" ] && ok "T5 no Cloud page declares hide_tabs (WebApps keeps the shell tab row)" || bad "T5 hide_tabs is on '$h'"
+! grep -rqE 'hide_tabs|hideTabs' "$APP/app/src/main" && ok "T5 the shell has no strip-hiding switch" || bad "T5 the shell still can hide the tab strip"
+# the page being embedded is the cloud-webapps index (the in-page tab row is hidden by the site in embed mode)
+grep -q '"webapps_base": "https://diegonmarcos.github.io/cloud-webapps"' "$APP/build.json" && ok "T6 WebApps points at the cloud-webapps index" || bad "T6 webapps_base is not the cloud-webapps site"
 echo "PASS=$PASS FAIL=$FAIL"; [ "$FAIL" -eq 0 ]

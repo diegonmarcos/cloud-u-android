@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.launcher
 
 import android.app.Application
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.ui.KitPageHarness
@@ -16,7 +17,7 @@ import org.robolectric.annotation.Config
  *
  *   E1 the page's URL is the one declared (webapps_base + webapps_path), https, with embed=1 and no second url or app list
  *   E2 the WebApps tab hosts a WebView on exactly that URL with the embed user agent and no floating Back
- *   E3 SuperApp's own Cloud strip is hidden on WebApps (`hide_tabs`) and still drawn on Cloud ▸ App; no other page hides it
+ *   E3 SuperApp's own Cloud strip (App | WebApps | Linktree | Configs) is drawn on WebApps and the WebView starts below it; no page can hide it
  *   E4 the page is the section's own tab, so it renders inside the shell content area (below the top row), never a pushed full-screen page
  */
 @RunWith(RobolectricTestRunner::class)
@@ -32,7 +33,7 @@ class WebAppsEmbedTest : KitPageHarness() {
     @Test
     fun `E1 the URL is the one declaration, https, with embed=1`() {
         val url = page.url
-        assertEquals("https://diegonmarcos.github.io/cloud-superapp/cloud/apps/?embed=1", url)
+        assertEquals("https://diegonmarcos.github.io/cloud-webapps/?embed=1", url)
         assertTrue("https: $url", url.startsWith("https://"))
         assertTrue("embed=1: $url", WebPageFragment.isEmbed(url))
     }
@@ -52,12 +53,15 @@ class WebAppsEmbedTest : KitPageHarness() {
     }
 
     @Test
-    fun `E3 the Cloud strip is hidden on WebApps only`() {
-        assertTrue("WebApps declares hide_tabs", page.hideTabs)
-        assertTrue("no other Cloud page hides the strip", Sections.byId("cloud")!!.pages.filter { it.id != "webapps" }.none { it.hideTabs })
+    fun `E3 the Cloud strip is drawn on WebApps and the WebView starts below it`() {
         show(SectionTabsFragment.newInstance("cloud", "webapps"))
-        compose.onNodeWithTag(PageTabsTags.tab("apps")).assertDoesNotExist()
-        compose.onNodeWithTag(PageTabsTags.tab("webapps")).assertDoesNotExist()
+        compose.waitForIdle()
+        for (id in listOf("apps", "webapps", "lnktree", "configs")) compose.onNodeWithTag(PageTabsTags.tab(id)).assertExists()
+        val strip = compose.onAllNodesWithTag(PageTabsTags.STRIP)[0].fetchSemanticsNode().boundsInWindow
+        val web = webViewIn(compose.activity.window.decorView)
+        assertTrue("a WebView is hosted under the strip", web != null)
+        val at = IntArray(2); web!!.getLocationInWindow(at)
+        assertTrue("the WebView (top ${at[1]}) starts below the strip (bottom ${strip.bottom})", at[1] >= strip.bottom.toInt() - 1)
     }
 
     @Test

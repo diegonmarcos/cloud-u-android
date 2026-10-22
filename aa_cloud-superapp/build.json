@@ -2484,10 +2484,9 @@
             "id": "webapps",
             "label": "WebApps",
             "icon": "ic_world",
-            "_doc": "The cloud-superapp site (published from the diegonmarcos.github.io repo, a_Portals/cloud-superapp, on GitHub Pages) in the app's embedded browser (WebPageFragment) as a pane INSIDE the shell, under the SuperApp's top row and above its bottom nav, opened DIRECTLY on its Cloud ▸ App page (the site routes by path). ONE declaration of where it lives: `webapps_base` + `webapps_path` give the page URL (moving the web apps to the cloud-webapps repo is a change to `webapps_base`, nothing else). `?embed=1` tells the site it is drawn inside the SuperApp (it hides its own tab bar and APK row and auto-scales every section to one screen in JS), and WebPageFragment appends the user-agent marker ' CloudSuperApp-Embed/1' for the same reason. `hide_tabs` hides SuperApp's OWN Cloud strip on this page only. The pane fills exactly (no floating Back, the system Back walks the page history), pulls to refresh, and says so when it is offline. Guarded by WebAppsEmbedTest, WebPagesRenderTest and test-cloud-webapps-tab.sh.",
-            "hide_tabs": true,
-            "webapps_base": "https://diegonmarcos.github.io/cloud-superapp",
-            "webapps_path": "cloud/apps/?embed=1"
+            "_doc": "The cloud-webapps site index (repo cloud-webapps, published on GitHub Pages) in the app's embedded browser (WebPageFragment) as a pane INSIDE the shell: SuperApp's own Cloud tab strip (App | WebApps | Linktree | Configs) stays drawn flush under the top row and the WebView starts directly below it. ONE declaration of where it lives: `webapps_base` + `webapps_path` give the page URL. `?embed=1` tells the site it is drawn inside the SuperApp (it hides its own sub-page tab row and auto-scales to one screen), and WebPageFragment appends the user-agent marker ' CloudSuperApp-Embed/1' for the same reason. The pane fills exactly (no floating Back, the system Back walks the page history), pulls to refresh, and says so when it is offline. Guarded by WebAppsEmbedTest, ShellTopInsetGuardTest, WebPagesRenderTest and test-cloud-webapps-tab.sh.",
+            "webapps_base": "https://diegonmarcos.github.io/cloud-webapps",
+            "webapps_path": "?embed=1"
           },
           {
             "id": "lnktree",

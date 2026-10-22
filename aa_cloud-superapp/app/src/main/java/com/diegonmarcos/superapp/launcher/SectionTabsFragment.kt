@@ -156,8 +156,6 @@ class SectionTabsFragment : KitComposeFragment(), Collapsible {
         }
 
         Column(Modifier.fillMaxSize()) {
-            // A page that declares `hide_tabs` (Cloud ▸ WebApps) is shown without the strip.
-            if (pages.firstOrNull { it.id == selected }?.hideTabs != true)
             PageTabs(pages.map(Sections::navPage), selected, onSelect = select@{ tapped ->
                 val position = pages.indexOfFirst { it.id == tapped.id }
                 val page = pages.getOrNull(position) ?: return@select

@@ -181,6 +181,8 @@ class ShellTopInsetGuardTest(private val key: String) : KitPageHarness() {
         val targets = mutableListOf<Pair<String, () -> Fragment>>()
         for (s in Sections.all()) {
             if (s.tabs && s.pages.isNotEmpty()) targets += "tabs/${s.id}" to { SectionTabsFragment.newInstance(s.id) }
+            // Cloud ▸ WebApps is a WebView page: it keeps the section's tab strip like every other page (the strip is checked below).
+            if (s.id == "cloud") targets += "tabs/cloud/webapps" to { SectionTabsFragment.newInstance("cloud", "webapps") }
             for (p in s.allPages) if (p.tabs.isNotEmpty()) targets += "tabs/${s.id}/${p.id}" to { SectionTabsFragment.forPage(s.id, p.id) }
         }
         if (targets.isEmpty()) out += "no tabbed section or tab-owning page is registered"
@@ -195,7 +197,11 @@ class ShellTopInsetGuardTest(private val key: String) : KitPageHarness() {
                     settle(stripDp)
                     val limit = (windowTop(shell) + compose.runOnUiThread { island.top + island.height }).toFloat()
                     val strips = stripNodes()
-                    if (strips.isEmpty()) continue   // a strip-less page (hide_tabs) has nothing to measure
+                    if (strips.isEmpty()) {
+                        // Every page draws the section strip; WebApps in particular must (a WebView page is not strip-less).
+                        if (name == "tabs/cloud/webapps") out += "$name @strip ${stripDp}dp: the Cloud tab strip is not drawn on the WebApps page"
+                        continue
+                    }
                     measured++
                     // The reserved band ends at the row's bottom edge, or at the declared floor when the row sits higher than it
                     // (no strip: 6 dp margin here, 26 dp in the real shell, where the two coincide). Tabs start AT that edge.

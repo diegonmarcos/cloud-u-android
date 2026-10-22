@@ -451,9 +451,6 @@ object Sections {
          *  after the tab stops being its own entry — see
          *  [tabOwnerOf] and [LauncherNavController.openSectionPage]. */
         val tabs: List<String> = emptyList(),
-        /** true = the section's tab strip is not drawn while THIS page is selected (Cloud ▸ WebApps is the cloud-mobile page and draws its own sections).
-         *  Declared per page in build.json (`hide_tabs`); the other pages of the section keep their strip. */
-        val hideTabs: Boolean = false,
         /** true = this entry DOES something and returns (Update All, ...)
          *  rather than opening a page. Declared, not inferred: `import`,
          *  `keyboard` and `constellation` all carry an action: target yet
@@ -737,7 +734,6 @@ object Sections {
                         actionsFromSection = po.optString("actions_from_section", ""),
                         hidden   = po.optBoolean("hidden", false),
                         separator = po.optBoolean("separator", false),
-                        hideTabs = po.optBoolean("hide_tabs", false),
                         tabs     = po.optJSONArray("tabs")?.let { ta ->
                             (0 until ta.length()).map { ta.getString(it) }
                         }.orEmpty(),
