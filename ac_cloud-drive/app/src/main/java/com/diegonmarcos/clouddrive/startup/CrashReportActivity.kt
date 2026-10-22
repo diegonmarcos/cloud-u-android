@@ -28,9 +28,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.clouddrive.MainActivity
+import com.diegonmarcos.clouddrive.R
 
 /**
  * #1106 "Drive hit a startup error": the newest report in files/crashes with Copy, Share and
@@ -54,9 +56,9 @@ class CrashReportActivity : ComponentActivity() {
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("Drive hit a startup error", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+            Text(stringResource(R.string.crash_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
             Text(
-                "The app kept running instead of closing. Copy or share the trace below, or retry without the optional startup work.",
+                stringResource(R.string.crash_body),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
@@ -69,22 +71,22 @@ class CrashReportActivity : ComponentActivity() {
                 )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { copy(report) }, Modifier.weight(1f)) { Text("Copy") }
-                OutlinedButton(onClick = { share(report) }, Modifier.weight(1f)) { Text("Share") }
+                OutlinedButton(onClick = { copy(report) }, Modifier.weight(1f)) { Text(stringResource(R.string.crash_copy)) }
+                OutlinedButton(onClick = { share(report) }, Modifier.weight(1f)) { Text(stringResource(R.string.crash_share)) }
             }
-            Button(onClick = { retryInSafeMode() }, Modifier.fillMaxWidth()) { Text("Retry in safe mode") }
-            OutlinedButton(onClick = { finish() }, Modifier.fillMaxWidth()) { Text("Close") }
+            Button(onClick = { retryInSafeMode() }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.crash_safe_mode)) }
+            OutlinedButton(onClick = { finish() }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.crash_close)) }
         }
     }
 
     private fun copy(report: String) {
-        (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Drive startup error", report))
-        Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show()
+        (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(getString(R.string.crash_title), report))
+        Toast.makeText(this, getString(R.string.crash_copied), Toast.LENGTH_SHORT).show()
     }
 
     private fun share(report: String) {
-        val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, "Drive startup error").putExtra(Intent.EXTRA_TEXT, report)
-        startActivity(Intent.createChooser(send, "Share startup error"))
+        val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, getString(R.string.crash_title)).putExtra(Intent.EXTRA_TEXT, report)
+        startActivity(Intent.createChooser(send, getString(R.string.crash_share)))
     }
 
     private fun retryInSafeMode() {

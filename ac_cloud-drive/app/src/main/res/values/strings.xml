@@ -628,4 +628,12 @@
     <string name="shared_store_migration_ok_action">OK</string>
     <string name="shared_store_migration_done">Restored %1$d files.</string>
     <string name="shared_store_migration_failed">Restore failed: %1$s</string>
+    <!-- #1106 the startup-error screen (startup/CrashReportActivity) -->
+    <string name="crash_title">Drive hit a startup error</string>
+    <string name="crash_body">The app kept running instead of closing. Copy or share the trace below, or retry without the optional startup work.</string>
+    <string name="crash_copy">Copy</string>
+    <string name="crash_copied">Copied</string>
+    <string name="crash_share">Share</string>
+    <string name="crash_safe_mode">Retry in safe mode</string>
+    <string name="crash_close">Close</string>
 </resources>
