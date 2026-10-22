@@ -63,6 +63,8 @@ const dk = await evalJs(`(() => { const s = document.querySelector('#sidebar').g
 check('1440/two-panes', dk.sr <= dk.vl + 1 && dk.vw > 600, `desktop keeps tree left (ends ${Math.round(dk.sr)}) of viewer (from ${Math.round(dk.vl)}, ${Math.round(dk.vw)} wide)`);
 await send('Emulation.setDeviceMetricsOverride', { width: 360, height: 800, deviceScaleFactor: 1, mobile: true, screenWidth: 360, screenHeight: 800 });
 await go('about:blank'); await go(D + '/#/Documents/readme.md');
-const ph = await evalJs(`(() => { const r = document.querySelector('#viewer').getBoundingClientRect(); return { vl: r.left, vw: r.width, side: getComputedStyle(document.querySelector('#sidebar')).display }; })()`);
+const ph = await evalJs(`(() => { const r = document.querySelector('#viewer').getBoundingClientRect(); return { bh: document.body.getBoundingClientRect().height, vh: r.height, vl: r.left, vw: r.width, side: getComputedStyle(document.querySelector('#sidebar')).display }; })()`);
 check('360/viewer-full-width', ph.vl <= 1 && ph.vw >= 358 && ph.side === 'none', `phone: viewer ${Math.round(ph.vl)}+${Math.round(ph.vw)}, tree display=${ph.side}`);
+// a WebView that resolves 100dvh to 0 drew the page blank: the phone layout must have a real height from plain pixels
+check('360/page-has-height', ph.bh >= 600 && ph.vh >= 300, `phone: body ${Math.round(ph.bh)}px tall, viewer ${Math.round(ph.vh)}px tall (want the screen height; no dvh)`);
 finish(bad ? 1 : 0);

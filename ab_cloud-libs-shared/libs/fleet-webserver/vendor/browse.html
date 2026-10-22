@@ -423,11 +423,11 @@ html { overflow-x: hidden; }
 #sb-close { display: none; }
 .search-toggles { flex-wrap: wrap; }
 @media (max-width: 700px) {
-  body { height: 100dvh; }
-  #right-panel { height: 100dvh; min-width: 0; width: 100%; }
+  body { height: var(--app-h, 100vh); }
+  #right-panel { height: var(--app-h, 100vh); min-width: 0; width: 100%; }
   #sidebar {
     position: fixed; inset: 0; z-index: 30; width: 100%; max-width: none;
-    height: 100dvh; resize: none;
+    height: var(--app-h, 100vh); resize: none;
   }
   #sidebar h1 { display: flex; align-items: center; justify-content: space-between; }
   #sb-close {
@@ -441,7 +441,7 @@ html { overflow-x: hidden; }
   .search-box input[type="text"] { font-size: 16px; padding: 8px 10px; }
   .search-toggles { flex-wrap: wrap; font-size: 12px; gap: 8px 12px; }
   .copy-raw-btn, .open-btn { font-size: 12px; padding: 6px 10px; }
-  .info-panel { left: 4px; right: 4px; max-height: 60dvh; }
+  .info-panel { left: 4px; right: 4px; max-height: 60vh; }
 }
 @media (hover: none) { .file-entry[title]:hover::after { display: none; } }
 </style>
@@ -514,6 +514,11 @@ html { overflow-x: hidden; }
 </div>
 
 <script>
+// Phone layout height: the pixel inner height, set from script (100dvh resolves to 0 in some embedded WebViews).
+function setAppH() { document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px'); }
+setAppH();
+window.addEventListener('resize', setAppH);
+window.addEventListener('orientationchange', setAppH);
 let currentDir = '/';
 
 // Remembered per browser, and deliberately read here rather than threaded
