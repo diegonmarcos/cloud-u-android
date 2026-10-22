@@ -74,6 +74,16 @@ else
   bad "E4 this system image has no Chrome to compare against"
 fi
 
+# ── E5 (#1112) the embedded WebView of Cloud C3 WebServer uses the phone layout, not a forced desktop one ──
+adb shell am force-stop "$WPKG"; sleep 2
+adb shell am start -W -n "$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$WPKG" | tr -d '\r' | tail -1)" >/dev/null
+sleep 10; shot e5-webserver-embedded; dump e5-webserver-embedded
+SCREEN_W=$(adb shell wm size | tr -d '\r' | grep -oE '[0-9]+x[0-9]+' | tail -1 | cut -dx -f1)
+# every on-screen element must sit inside the screen width: a desktop viewport shrinks or overflows the page
+WIDEST=$(grep -oE 'bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,' "$OUT/e5-webserver-embedded.xml" | grep -oE '\]\[[0-9]+,' | tr -dc '0-9\n' | sort -n | tail -1)
+if [ -n "$WIDEST" ] && [ -n "$SCREEN_W" ] && [ "$WIDEST" -le "$SCREEN_W" ]; then ok "E5 the embedded view lays out within the ${SCREEN_W}px screen (widest element ends at ${WIDEST}px)"
+else bad "E5 the embedded view is wider than the screen (widest ${WIDEST:-?} vs ${SCREEN_W:-?}); see e5-webserver-embedded.png"; fi
+
 adb logcat -d -v threadtime > "$OUT/logcat.txt"
 [ "$fails" -eq 0 ] || { echo "$fails check(s) failed"; exit 1; }
 echo "all local-name emulator checks passed"
