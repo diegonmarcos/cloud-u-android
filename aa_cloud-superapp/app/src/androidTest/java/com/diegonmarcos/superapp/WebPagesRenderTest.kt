@@ -81,23 +81,30 @@ class WebPagesRenderTest {
             // The first same-origin link that leaves the page: it must stay in this WebView (shouldOverrideUrlLoading) and add a history entry.
             // It is TAPPED, not a.click()ed: Chromium marks a history entry that never saw a user gesture as skippable, so a script click
             // leaves the start page unreachable (canGoBack false) exactly as run 39778820062 showed (url moved, canGoBack false). A reader taps.
-            val pick = "(()=>{const a=[...document.querySelectorAll('a[href]')].find(a=>a.origin===location.origin&&a.href.split('#')[0]!==location.href.split('#')[0]&&!a.hasAttribute('download'));if(!a)return 'none';a.scrollIntoView({block:'center'});const r=a.getBoundingClientRect();return a.href+'|'+(r.left+r.width/2)+','+(r.top+r.height/2)+','+innerWidth})()"
-            val clicked = js(v, pick).trim('"')
-            assertTrue("no same-origin app link on the WebApps page", clicked != "none")
-            SystemClock.sleep(500)
-            val (href, xy) = clicked.split('|').let { it[0] to it.getOrElse(1) { "" } }
-            val c = xy.split(',').mapNotNull { it.toDoubleOrNull() }
-            val loc = IntArray(2); inst.runOnMainSync { v.getLocationOnScreen(loc) }
-            // CSS px -> screen px is the WebView's width over the page's innerWidth (devicePixelRatio is 1 here: wide viewport, overview mode).
-            val k = if (c.size == 3 && c[2] > 0) v.width / c[2] else 1.0
-            if (c.size == 3) sh("input tap ${(loc[0] + c[0] * k).toInt()} ${(loc[1] + c[1] * k).toInt()}")
-            val t0 = SystemClock.elapsedRealtime()
-            while (SystemClock.elapsedRealtime() - t0 < 6_000 && urlOf(v).split('#')[0] == main.split('#')[0]) { clearPrompt(); SystemClock.sleep(500) }
-            // The tap missed (scaled viewport, a covering view): fall back to the script click so the rest of the test still runs.
-            if (urlOf(v).split('#')[0] == main.split('#')[0]) js(v, "(()=>{const a=[...document.querySelectorAll('a[href]')].find(a=>a.href===${org.json.JSONObject.quote(href)});if(a)a.click();return 'ok'})()")
+            // Run 39788105373: the tap never arrived, because SystemUI's "Allow wireless debugging?" dialog (it re-appears while the test
+            // runs) sat over the link and took the tap; the script-click fallback then moved the url with no gesture and failed canGoBack.
+            // So: clear the dialog right before every tap, and tap again when the page did not move. No script click: it could only fake it.
+            val pick = "(()=>{const a=[...document.querySelectorAll('a[href]')].find(a=>a.origin===location.origin&&a.href.split('#')[0]!==location.href.split('#')[0]&&!a.hasAttribute('download'));if(!a)return 'none';a.scrollIntoView({block:'center',behavior:'instant'});const r=a.getBoundingClientRect();return a.href+'|'+(r.left+r.width/2)+','+(r.top+r.height/2)+','+innerWidth})()"
+            var clicked = ""
+            for (attempt in 1..4) {
+                clearPrompt()
+                clicked = js(v, pick).trim('"')
+                assertTrue("no same-origin app link on the WebApps page", clicked != "none")
+                SystemClock.sleep(500)
+                clearPrompt()
+                val c = clicked.split('|').getOrElse(1) { "" }.split(',').mapNotNull { it.toDoubleOrNull() }
+                val loc = IntArray(2); inst.runOnMainSync { v.getLocationOnScreen(loc) }
+                // CSS px -> screen px is the WebView's width over the page's innerWidth (devicePixelRatio is 1 here: wide viewport, overview mode).
+                val k = if (c.size == 3 && c[2] > 0) v.width / c[2] else 1.0
+                if (c.size == 3) sh("input tap ${(loc[0] + c[0] * k).toInt()} ${(loc[1] + c[1] * k).toInt()}")
+                val t0 = SystemClock.elapsedRealtime()
+                while (SystemClock.elapsedRealtime() - t0 < 5_000 && urlOf(v).split('#')[0] == main.split('#')[0]) { SystemClock.sleep(500) }
+                if (urlOf(v).split('#')[0] != main.split('#')[0]) break
+            }
             until("the app page opens inside the WebView", diag = { "tapped $clicked, url ${urlOf(v)}, canGoBack ${canBack(v)}, main $main" }) { urlOf(v).split('#')[0] != main.split('#')[0] && canBack(v) }
         }
         fun tapShellBack() {
+            clearPrompt()
             val a = resumed()!!; val loc = IntArray(2); var wd = 0; var ht = 0
             inst.runOnMainSync { a.findViewById<View>(R.id.toolbar).let { it.getLocationOnScreen(loc); wd = it.width; ht = it.height } }
             sh("input tap ${loc[0] + wd - (28 * a.resources.displayMetrics.density).toInt()} ${loc[1] + ht / 2}")
