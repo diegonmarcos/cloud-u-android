@@ -2,7 +2,7 @@ import { Switch } from '@cloud-notes/component';
 import { AuthService, SubscriptionService } from '@cloud-notes/core/modules/cloud';
 import { SubscriptionPlan, SubscriptionRecurring } from '@cloud-notes/graphql';
 import { Trans, useI18n } from '@cloud-notes/i18n';
-import { AffineIcon as CloudNotesIcon } from '@blocksuite/icons/rc';
+import { AfFiNeIcon as CloudNotesIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useServices } from '@toeverything/infra';
 import {
   type ReactNode,

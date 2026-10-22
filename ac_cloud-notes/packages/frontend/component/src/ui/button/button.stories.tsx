@@ -1,5 +1,5 @@
 import {
-  AffineIcon as CloudNotesIcon,
+  AfFiNeIcon as CloudNotesIcon,
   ArrowRightBigIcon,
   FolderIcon,
 } from '@blocksuite/icons/rc';

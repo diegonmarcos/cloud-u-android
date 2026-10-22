@@ -1,4 +1,4 @@
-import { AffineIcon as CloudNotesIcon } from '@blocksuite/icons/rc';
+import { AfFiNeIcon as CloudNotesIcon } from '@blocksuite/icons/rc';
 import type { Meta } from '@storybook/react';
 import clsx from 'clsx';
 import { type ReactElement, useCallback, useEffect, useState } from 'react';

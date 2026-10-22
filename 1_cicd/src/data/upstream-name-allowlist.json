@@ -156,7 +156,7 @@
         "ac_cloud-notes/**"
       ],
       "patterns": [
-        "Affine(?:CssVariables|ThemeKeyV2|Theme|Icon)(?= as CloudNotes)"
+        "Affine(?:CssVariables|ThemeKeyV2|Theme)(?= as CloudNotes)|AfFiNeIcon(?= as CloudNotesIcon)"
       ],
       "reason": "Named exports of the registry packages @toeverything/theme and @blocksuite/icons, imported under our own names."
     },
