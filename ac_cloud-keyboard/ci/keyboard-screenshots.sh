@@ -30,19 +30,29 @@ state() { kb state; last state; }
 
 adb logcat -c
 adb install -r -g "$APK" >/dev/null && ok "installed" || { bad "install"; exit 1; }
-adb shell ime enable "$IME" >/dev/null; adb shell ime set "$IME" >/dev/null
-adb shell settings put secure show_ime_with_hard_keyboard 1
 # The app restarts itself when ACTION_BOOT_COMPLETED reaches it (SystemBroadcastReceiver: "Killing my process"), and on a slow
 # emulator that broadcast is still being delivered when the script starts: it killed the first run's screen. Let the boot
 # dispatch finish, then start the screen, and start it again if the process is gone.
 for _ in $(seq 1 60); do [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ] && break; sleep 2; done
 sleep 45
+# make Cloud Keyboard THE input method (the image ships Gboard); the package manager may need a moment to know the service
+cur=""
+for i in $(seq 1 15); do
+    adb shell ime enable "$IME" 2>&1 | tail -1
+    adb shell ime set "$IME" 2>&1 | tail -1
+    cur="$(adb shell settings get secure default_input_method | tr -d '\r')"
+    [ "$cur" = "$IME" ] && break
+    sleep 4
+done
+echo "default input method: $cur"; adb shell ime list -s
+[ "$cur" = "$IME" ] && ok "Cloud Keyboard is the input method" || bad "Cloud Keyboard is not the input method ($cur)"
+adb shell settings put secure show_ime_with_hard_keyboard 1
 shown() { adb shell dumpsys input_method | grep -q 'mInputShown=true'; }
 for attempt in 1 2 3; do
     adb shell am start -n "$PKG/.ShotActivity" >/dev/null
     for _ in $(seq 1 25); do shown && break; sleep 1; done
     sleep 8
-    if [ -n "$(adb shell pidof "$PKG" | tr -d '\r')" ] && shown; then break; fi
+    if [ -n "$(adb shell pidof "$PKG" | tr -d '\r')" ] && shown && adb shell dumpsys input_method | grep -q "mCurMethodId=$IME"; then break; fi
     echo "attempt $attempt: the screen or the keyboard is gone, starting again"
 done
 shown && ok "the keyboard is up" || bad "the keyboard never came up"
