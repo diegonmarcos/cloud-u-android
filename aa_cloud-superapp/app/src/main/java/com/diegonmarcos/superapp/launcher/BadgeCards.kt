@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -39,14 +40,18 @@ import com.diegonmarcos.superapp.ui.Haptics
  * #1068 — the top of the Notify page: every declared badge as a One UI live / ongoing card, in the order build.json
  * ranks them (`card.rank` in `ui.notification_center.producers`; the shade's own group order is untouched). One list, one source: [BadgeDeclaration.badges] over [BadgeServices.declared]; a card exists for
  * every entry, drawn from [BadgeCardData] (the badge providers' real data), so a badge added to build.json is a card
- * here with no edit. No control lives on a card, except the one action a badge's own notification carries (Weather: the fix for a missing permission): the switches, Launch and customisation are in the page's Settings
+ * here with no edit. No control lives on a card except the actions the badge's own notification carries (BadgeModel: every one, as an icon button): the switches, Launch and customisation are in the page's Settings
  * section at the very bottom.
  */
 internal object BadgeCardTags {
     const val LIST = "badge-cards"
     fun card(id: String) = "badge-card:$id"
     fun progress(id: String) = "badge-card-progress:$id"
-    fun action(id: String) = "badge-card-action:$id"
+    /** One action button of a card (an icon button); [actionId] is the id the badge's own notification action carries. */
+    fun action(id: String, actionId: String) = "badge-card-action:$id:$actionId"
+    fun actions(id: String) = "badge-card-actions:$id"
+    /** The sub-text line (the notification's sub text). */
+    fun subText(id: String) = "badge-card-subtext:$id"
 }
 
 /** The declared badges in display order: `card.rank` from build.json, ties in declaration order (the sort is stable). */
@@ -105,19 +110,11 @@ internal fun BadgeCard(d: BadgeCardData.Data) {
                 Box(Modifier.fillMaxWidth(p.coerceIn(0.02f, 1f)).height(6.dp).clip(CircleShape).background(accent))
             }
         }
-        val act = d.actionIntent
-        if (d.actionLabel != null && act != null) {
-            Box(
-                Modifier.padding(top = 10.dp).clip(CircleShape).background(accent.copy(alpha = 0.22f))
-                    .semantics { role = Role.Button }
-                    .clickable { Haptics.tap(hostView); runCatching { act.send() } }
-                    .padding(horizontal = 18.dp, vertical = 9.dp)
-                    .testTag(BadgeCardTags.action(d.badge.id)),
-            ) {
-                Text(d.actionLabel, color = accent, fontSize = NotifCard.bodySp, fontWeight = FontWeight.SemiBold,
-                    fontFamily = NotifCard.font, maxLines = 1)
-            }
-        }
+        // The notification's sub text: the info line a badge such as KDE carries under its text. A bare "Cloud SA - X"
+        // is only the app name the header already shows.
+        if (d.subText.isNotBlank() && !d.subText.startsWith("Cloud SA - ")) Text(d.subText, color = NotifCard.meta,
+            fontSize = NotifCard.metaSp, fontFamily = NotifCard.font, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 2.dp).testTag(BadgeCardTags.subText(d.badge.id)))
         if (d.badge.card.kind == "quotes") {
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (l in d.lines) Column(
@@ -134,6 +131,33 @@ internal fun BadgeCard(d: BadgeCardData.Data) {
                 fontFamily = NotifCard.font, maxLines = 1, modifier = Modifier.padding(end = 10.dp))
             Text(l.value, color = NotifCard.body, fontSize = NotifCard.bodySp, fontFamily = NotifCard.font, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        }
+        ActionRow(d, accent, hostView)
+    }
+}
+
+/**
+ * Every action the badge's notification carries, as a tappable icon button (icon, label under it, same PendingIntent).
+ * The list is [BadgeCardData.Data.actions], read from the notification itself: this composable has no list of its own.
+ */
+@Composable
+private fun ActionRow(d: BadgeCardData.Data, accent: Color, hostView: android.view.View) {
+    if (d.actions.isEmpty()) return
+    Row(Modifier.fillMaxWidth().padding(top = 10.dp).testTag(BadgeCardTags.actions(d.badge.id)),
+        horizontalArrangement = Arrangement.SpaceEvenly) {
+        for (a in d.actions) Column(
+            Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
+                .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = a.label }
+                .clickable { Haptics.tap(hostView); runCatching { a.intent.send() } }
+                .padding(vertical = 4.dp)
+                .testTag(BadgeCardTags.action(d.badge.id, a.id)),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(Modifier.size(40.dp).clip(CircleShape).background(accent.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
+                Icon(painterResource(a.icon), null, tint = accent, modifier = Modifier.size(22.dp))
+            }
+            Text(a.label, color = NotifCard.meta, fontSize = NotifCard.metaSp, fontFamily = NotifCard.font,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
         }
     }
 }

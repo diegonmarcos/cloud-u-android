@@ -13,6 +13,7 @@ import android.media.session.PlaybackState
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.diegonmarcos.superapp.notificationcenter.BadgeCustomization
+import com.diegonmarcos.superapp.notificationcenter.BadgeModel
 import com.diegonmarcos.superapp.notificationcenter.BadgeDeclaration
 import com.diegonmarcos.superapp.notificationcenter.BadgeServices
 import com.diegonmarcos.superapp.notificationcenter.NotifyGroups
@@ -128,12 +129,13 @@ class MediaProxy(private val ctx: Context) {
             .let { NotifyGroups.attach(ctx, it, BADGE_ID) } // #777 group G3
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         if (art != null) b.setLargeIcon(art)
-        b.addAction(android.R.drawable.ic_media_previous, "Prev", pi("media:prev"))
-        b.addAction(
-            if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
-            if (playing) "Pause" else "Play", pi("media:playpause"),
-        )
-        b.addAction(android.R.drawable.ic_media_next, "Next", pi("media:next"))
+        BadgeModel.add(b, listOf(
+            BadgeModel.Action("prev", android.R.drawable.ic_media_previous, "Prev", pi("media:prev")),
+            BadgeModel.Action(if (playing) "pause" else "play",
+                if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
+                if (playing) "Pause" else "Play", pi("media:playpause")),
+            BadgeModel.Action("next", android.R.drawable.ic_media_next, "Next", pi("media:next")),
+        ))
         // NOTE: deliberately NOT calling setMediaSession(token). Linking our
         // notification to the playing app's session token makes Android MERGE
         // it into that app's existing media card (so our distinct "NC Media"
@@ -169,7 +171,7 @@ class MediaProxy(private val ctx: Context) {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         // Play is the only transport that means anything with no session; the
         // other two would be buttons that silently do nothing.
-        b.addAction(android.R.drawable.ic_media_play, "Play", pi("media:playpause"))
+        BadgeModel.add(b, BadgeModel.Action("play", android.R.drawable.ic_media_play, "Play", pi("media:playpause")))
         runCatching { nm().notify(NOTIF_MEDIA, b.build()) }
     }
 

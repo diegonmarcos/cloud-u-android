@@ -196,7 +196,7 @@ class WeatherBadgeService : Service() {
             .setContentTitle(title)
             .setContentText(text)
             .setSubText("Cloud SA - Weather")
-            .apply { actionPi(face.action)?.let { addAction(0, face.actionLabel, it) } }
+            .let { nb -> BadgeModel.add(nb, face.action?.let { a -> actionPi(a)?.let { BadgeModel.Action(a.name.lowercase(), WeatherFace.iconFor(a), face.actionLabel.orEmpty(), it) } }) }
             .setOnlyAlertOnce(true)
             .setOngoing(pinned)
             .apply { if (pinned) setDeleteIntent(BadgeServices.repostOnDismiss(this@WeatherBadgeService, NOTIF_ID)) }

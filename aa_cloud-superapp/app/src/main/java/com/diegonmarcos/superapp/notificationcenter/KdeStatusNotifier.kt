@@ -78,11 +78,7 @@ object KdeStatusNotifier {
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .let { NotifyGroups.attach(ctx, it, BADGE_ID) } // #777 group G2
-            .addAction(R.drawable.ic_kde_share, "Share", sharePi)
-            .addAction(R.drawable.ic_kde_desktop, "Desktop", KdeQuickActionReceiver.pi(ctx, "desktop"))
-            .addAction(R.drawable.ic_kde_ping, "Ping", KdeQuickActionReceiver.pi(ctx, "ping"))
-            .addAction(R.drawable.ic_kde_connect, "Connect", KdeQuickActionReceiver.pi(ctx, "connect"))
-            .addAction(R.drawable.ic_kde_find, "Find", KdeQuickActionReceiver.pi(ctx, "find"))
+            .let { BadgeModel.add(it, actions(ctx, sharePi)) } // the card draws these same five
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             // Same layout as "Cloud SA - Quick Actions": MediaStyle with NO
@@ -97,6 +93,15 @@ object KdeStatusNotifier {
                 if (pinned) flags = flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT
             }
     }
+
+    /** The five KDE buttons: the notification's action row AND the Notify card's icon row (one declaration). */
+    fun actions(ctx: Context, sharePi: PendingIntent): List<BadgeModel.Action> = listOf(
+        BadgeModel.Action("share", R.drawable.ic_kde_share, "Share", sharePi),
+        BadgeModel.Action("desktop", R.drawable.ic_kde_desktop, "Desktop", KdeQuickActionReceiver.pi(ctx, "desktop")),
+        BadgeModel.Action("ping", R.drawable.ic_kde_ping, "Ping", KdeQuickActionReceiver.pi(ctx, "ping")),
+        BadgeModel.Action("connect", R.drawable.ic_kde_connect, "Connect", KdeQuickActionReceiver.pi(ctx, "connect")),
+        BadgeModel.Action("find", R.drawable.ic_kde_find, "Find", KdeQuickActionReceiver.pi(ctx, "find")),
+    )
 
     fun ensureChannel(ctx: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return

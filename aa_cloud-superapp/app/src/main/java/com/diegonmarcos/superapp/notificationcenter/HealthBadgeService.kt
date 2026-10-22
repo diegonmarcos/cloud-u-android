@@ -128,11 +128,11 @@ class HealthBadgeService : Service() {
             // Tap = Boards > MyHealth; with a missing grant, the button runs the same Health Connect dialog the board uses.
             .setContentIntent(BadgeClick.pi(this, BadgeClick.MYHEALTH))
             .apply {
-                if (f?.grant == true) addAction(0, "Grant access",
+                if (f?.grant == true) BadgeModel.add(this, BadgeModel.Action("grant-access", R.drawable.ic_act_key, "Grant access",
                     android.app.PendingIntent.getActivity(this@HealthBadgeService, 7716,
                         Intent(this@HealthBadgeService, HealthGrantActivity::class.java)
                             .putExtra(HealthGrantActivity.EXTRA_BOARD, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
+                        android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)))
             }
             .let { NotifyGroups.attach(this, it, BADGE_ID) } // #777 group G1
             .build()

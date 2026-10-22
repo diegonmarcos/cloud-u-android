@@ -42,10 +42,11 @@ class MyHealthCardScreenTest : KitPageHarness() {
 
     private fun data(f: HealthBadgeModel.Face): BadgeCardData.Data {
         val b = orderedBadges(ctx).first { it.id == HealthBadgeService.BADGE_ID }
-        val pi = if (f.grant) android.app.PendingIntent.getActivity(ctx, 7716, android.content.Intent("grant"), android.app.PendingIntent.FLAG_IMMUTABLE) else null
+        val acts = if (f.grant) listOf(com.diegonmarcos.superapp.notificationcenter.BadgeModel.Action("grant-access",
+            com.diegonmarcos.superapp.R.drawable.ic_act_key, "Grant access",
+            android.app.PendingIntent.getActivity(ctx, 7716, android.content.Intent("grant"), android.app.PendingIntent.FLAG_IMMUTABLE))) else emptyList()
         val lines = (f.lines + HealthBadgeModel.updated(4 * 60_000L)).map { BadgeCardData.Line("", it) }
-        return BadgeCardData.Data(b, b.label, f.title, f.text, null, lines, true, "", System.currentTimeMillis(), null,
-            if (f.grant) "Grant access" else null, pi)
+        return BadgeCardData.Data(b, b.label, f.title, f.text, null, lines, true, "", System.currentTimeMillis(), null, acts)
     }
 
     private fun draw(d: BadgeCardData.Data, shot: String) {
@@ -58,14 +59,14 @@ class MyHealthCardScreenTest : KitPageHarness() {
     fun `render the MyHealth card seeded, without permission and timed out`() {
         val seeded = HealthBadgeModel.face(Read.Ok(HealthAgg.board(HealthFixtures.seeded(today), today)))
         draw(data(seeded), "myhealth-card-seeded.png")
-        compose.onNodeWithTag(BadgeCardTags.action(HealthBadgeService.BADGE_ID)).assertDoesNotExist()
+        compose.onNodeWithTag(BadgeCardTags.action(HealthBadgeService.BADGE_ID, "grant-access")).assertDoesNotExist()
 
         val noPerm = HealthBadgeModel.face(Read.Unavailable(Why.NO_PERMISSION, "Needs read access in Health Connect: steps, distance, resting heart rate, sleep"))
         draw(data(noPerm), "myhealth-card-noperm.png")
-        compose.onNodeWithTag(BadgeCardTags.action(HealthBadgeService.BADGE_ID)).assertExists().assertHasClickAction()
+        compose.onNodeWithTag(BadgeCardTags.action(HealthBadgeService.BADGE_ID, "grant-access")).assertExists().assertHasClickAction()
 
         draw(data(HealthBadgeModel.face(null)), "myhealth-card-timeout.png")
-        compose.onNodeWithTag(BadgeCardTags.action(HealthBadgeService.BADGE_ID)).assertDoesNotExist()
+        compose.onNodeWithTag(BadgeCardTags.action(HealthBadgeService.BADGE_ID, "grant-access")).assertDoesNotExist()
     }
 
     private fun snap(name: String) {

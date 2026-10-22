@@ -55,13 +55,13 @@ class WeatherCardScreenTest : KitPageHarness() {
         val lines = if (state is WeatherFace.State.Forecast)
             state.today.forecast.hours.filter { it.first % 3 == 0 }.map { BadgeCardData.Line("%02dh".format(it.first), "%.0f°".format(it.second)) }
         else emptyList()
-        val pi = f.action?.let { a ->
+        val acts = f.action?.let { a ->
             val i = WeatherFace.intentFor(ctx, a)
-            if (a == WeatherFace.Action.RETRY) android.app.PendingIntent.getService(ctx, 3, i, android.app.PendingIntent.FLAG_IMMUTABLE)
+            val pi = if (a == WeatherFace.Action.RETRY) android.app.PendingIntent.getService(ctx, 3, i, android.app.PendingIntent.FLAG_IMMUTABLE)
             else android.app.PendingIntent.getActivity(ctx, 1, i, android.app.PendingIntent.FLAG_IMMUTABLE)
-        }
-        return BadgeCardData.Data(b, b.label, f.title, f.text, null, lines, true, "", System.currentTimeMillis(), null,
-            f.actionLabel, pi)
+            listOf(com.diegonmarcos.superapp.notificationcenter.BadgeModel.Action(a.name.lowercase(), WeatherFace.iconFor(a), f.actionLabel.orEmpty(), pi))
+        }.orEmpty()
+        return BadgeCardData.Data(b, b.label, f.title, f.text, null, lines, true, "", System.currentTimeMillis(), null, acts)
     }
 
     @Test
@@ -84,18 +84,18 @@ class WeatherCardScreenTest : KitPageHarness() {
         val none = data(WeatherFace.State.NoLocation(WeatherLocation.Reason.PERMISSION))
         showKit { Column(androidx.compose.ui.Modifier.fillMaxSize().background(NotifCard.panel).padding(12.dp)) { BadgeCard(none) } }
         compose.onNodeWithTag(BadgeCardTags.card(WeatherBadgeService.BADGE_ID)).assertExists()
-        compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID)).assertExists().assertHasClickAction()
+        compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID, "app_settings")).assertExists().assertHasClickAction()
         assertEquals(androidx.compose.ui.semantics.Role.Button,
-            compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID)).fetchSemanticsNode()
+            compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID, "app_settings")).fetchSemanticsNode()
                 .config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Role))
         // The button's PendingIntent opens this app's settings page (where Location is granted).
-        val saved = org.robolectric.Shadows.shadowOf(none.actionIntent!!).savedIntents.single()
+        val saved = org.robolectric.Shadows.shadowOf(none.actions.single().intent).savedIntents.single()
         assertEquals(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, saved.action)
         assertEquals("package:" + ctx.packageName, saved.dataString)
         snap("weather-card-nofix.png")
         // A seeded card has no button at all.
         showKit { Column(androidx.compose.ui.Modifier.fillMaxSize().background(NotifCard.panel).padding(12.dp)) { BadgeCard(withFix) } }
-        compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID)).assertDoesNotExist()
+        compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID, "app_settings")).assertDoesNotExist()
     }
 
     private fun snap(name: String) {

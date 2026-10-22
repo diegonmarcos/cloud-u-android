@@ -58,6 +58,13 @@ object WeatherFace {
         Action.RETRY -> android.content.Intent(ctx, WeatherBadgeService::class.java)
     }
 
+    /** The thin-line icon of each button, on the notification and on the card. */
+    fun iconFor(a: Action): Int = when (a) {
+        Action.APP_SETTINGS -> R.drawable.ic_act_settings
+        Action.LOCATION_SETTINGS -> R.drawable.ic_act_location
+        Action.RETRY -> R.drawable.ic_act_refresh
+    }
+
     /** "network · 12 min ago" - where the position came from and how old it is. */
     fun position(ctx: Context, fix: WeatherLocation.Fix, nowMs: Long): String {
         val m = ((nowMs - fix.timeMs) / 60_000L).coerceAtLeast(0)

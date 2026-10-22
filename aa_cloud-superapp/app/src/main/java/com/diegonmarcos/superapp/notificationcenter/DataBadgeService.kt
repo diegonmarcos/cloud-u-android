@@ -151,7 +151,11 @@ class DataBadgeService : Service() {
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                 Act.OPEN -> open
             }
-            b.addAction(R.drawable.ic_stat_notify, a.label, pi)
+            BadgeModel.add(b, BadgeModel.Action(a.act.name.lowercase(), when (a.act) {
+                Act.GRANT, Act.GRANT_PHONE -> R.drawable.ic_act_key
+                Act.REFRESH -> R.drawable.ic_act_refresh
+                Act.OPEN -> R.drawable.ic_act_open
+            }, a.label, pi))
         }
         return NotifyGroups.attach(this, b, BADGE_ID).build()
             .apply { if (pinned) flags = flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT }

@@ -33,16 +33,20 @@ object BadgeCardData {
         val note: String,
         val whenMs: Long,
         val open: PendingIntent?,
-        /** The notification's first action (a real button on the card), e.g. Weather's "Allow location". */
-        val actionLabel: String? = null,
-        val actionIntent: PendingIntent? = null,
+        /** EVERY action the badge's notification carries (icon, label, intent), read back through [BadgeModel.of]. */
+        val actions: List<BadgeModel.Action> = emptyList(),
+        /** The notification's sub-text ("3/8 plugins - 1 paired - ..."), the info line under the text. */
+        val subText: String = "",
     )
 
     /** Test seam: a JVM/Robolectric render has no running services, so it supplies the data a phone would have. */
     @Volatile var override: ((Context, BadgeDeclaration.Badge) -> Data?)? = null
 
     fun read(ctx: Context, b: BadgeDeclaration.Badge): Data {
-        override?.invoke(ctx, b)?.let { return it }
+        // A fixture supplies the numbers; the buttons always come from what the badge's notification carries.
+        override?.invoke(ctx, b)?.let { d ->
+            return BadgeServices.live(ctx, b)?.let { n -> d.copy(actions = BadgeModel.of(n)) } ?: d
+        }
         val st = runCatching { BadgeServices.status(ctx, b) }.getOrNull()
         val n = BadgeServices.live(ctx, b)
         val ex = n?.extras
@@ -61,7 +65,7 @@ object BadgeCardData {
             }
         fun data(headline: String, sub: String, progress: Float?, lines: List<Line>) = Data(
             b, b.label, headline, sub, progress, lines, live, note, n?.`when` ?: 0L, n?.contentIntent,
-            n?.actions?.firstOrNull()?.title?.toString(), n?.actions?.firstOrNull()?.actionIntent)
+            n?.let { BadgeModel.of(it) }.orEmpty(), ex?.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString().orEmpty())
         return when (b.card.kind) {
             "level" -> {
                 val lv = batteryLevel(ctx)

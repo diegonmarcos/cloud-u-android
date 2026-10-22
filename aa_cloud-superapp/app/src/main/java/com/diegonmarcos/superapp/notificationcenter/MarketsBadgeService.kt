@@ -198,7 +198,7 @@ class MarketsBadgeService : Service() {
             // Notification actions cap at five and the compact view shows
             // three; take(4) keeps every declared instrument reachable while
             // leaving the cap alone.
-            for (i in list.take(4)) builder.addAction(R.drawable.ic_p_markets_prices, i.label, tickerPi(i.url))
+            BadgeModel.add(builder, list.take(4).map { BadgeModel.Action(BadgeModel.idOf(it.label), R.drawable.ic_p_markets_prices, it.label, tickerPi(it.url)) })
         }
         return builder.build()
     }

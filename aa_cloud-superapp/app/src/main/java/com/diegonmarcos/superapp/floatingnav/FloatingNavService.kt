@@ -490,72 +490,83 @@ class FloatingNavService : Service() {
                 ).apply { description = "Cloud SuperApp floating nav + quick actions."; setShowBadge(false) })
             }
         }
-        val pinned = com.diegonmarcos.superapp.notificationcenter.BadgeServices.pinned(this, QUICK_ACTIONS_BADGE_ID)
-        val open = PendingIntent.getActivity(
-            this, 0,
-            (packageManager.getLaunchIntentForPackage(packageName) ?: Intent()).apply {
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        // System MediaStyle template — reliable rendering (a custom RemoteViews
-        // view falls back to a broken default on some OEMs / after updates).
-        // Collapsed shows the first compact_action_count; expanded shows all 5.
-        val b = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_stat_notify)
-            .setColor(0xFF0A0A0A.toInt())
-            .setContentTitle("Cloud SA - Quick Actions")
-            .setContentText("Quick actions")
-            .setOngoing(pinned).setOnlyAlertOnce(true)
-            .setContentIntent(open)
-            // Android 14+ lets the user swipe-dismiss even an ongoing FGS
-            // notification; re-post it immediately when that happens so it
-            // stays effectively un-removable.
-            .apply { if (pinned) setDeleteIntent(serviceAction(ACTION_RENOTIFY)) }
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            // #777 group G2 (Quick Actions · KDE Connect).
-            .let { com.diegonmarcos.superapp.notificationcenter.NotifyGroups.attach(this, it, QUICK_ACTIONS_BADGE_ID) }
-        val acts = cfg.actions.take(5)
-        for (a in acts) b.addAction(actionIcon(a.target), a.label, actionPi(a.target))
-        val compact = IntArray(minOf(cfg.compactActionCount, acts.size)) { it }
-        b.setStyle(androidx.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(*compact))
-        return b.build().apply {
-            // Persistent: blocks swipe-to-dismiss + "clear all".
-            if (pinned) flags = flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT
-        }
-    }
-
-    /** PendingIntent for a notification action — routed through the invisible
-     *  NavActionActivity so tapping it ALSO closes the notification shade
-     *  (a service PendingIntent would leave the shade open). */
-    private fun actionPi(target: String): PendingIntent = PendingIntent.getActivity(
-        this, target.hashCode(),
-        Intent(this, NavActionActivity::class.java)
-            .putExtra(NavActionActivity.EXTRA_TARGET, target)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION),
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-    )
-
-    /** PendingIntent for a bare service action (e.g. re-notify on dismiss). */
-    private fun serviceAction(action: String): PendingIntent = PendingIntent.getService(
-        this, action.hashCode(),
-        Intent(this, FloatingNavService::class.java).setAction(action),
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-    )
-
-    /** Refined thin-line action icons (One-UI style), tinted by the system. */
-    private fun actionIcon(target: String): Int = when (target) {
-        "torch" -> R.drawable.ic_nav_torch
-        "screensaver" -> R.drawable.ic_nav_screensaver
-        "calc" -> R.drawable.ic_nav_calc
-        "dnd" -> R.drawable.ic_nav_dnd
-        "powersave" -> R.drawable.ic_nav_powersave
-        "lock" -> R.drawable.ic_nav_lock
-        else -> R.drawable.ic_nav_search
+        return quickActionsNotification(this, cfg)
     }
 
     companion object {
+        /**
+         * The Quick Actions notification, built from a Context alone so the Notify card and its parity test see the very
+         * notification the service posts. System MediaStyle template (a custom RemoteViews falls back to a broken default
+         * on some OEMs): collapsed shows the first compact_action_count, expanded all 5. Buttons are data-driven
+         * (ui.floating_nav), declared once through [com.diegonmarcos.superapp.notificationcenter.BadgeModel].
+         */
+        internal fun quickActionsNotification(ctx: Context, cfg: FloatingNavConfig): Notification {
+            val pinned = com.diegonmarcos.superapp.notificationcenter.BadgeServices.pinned(ctx, QUICK_ACTIONS_BADGE_ID)
+            val open = PendingIntent.getActivity(
+                ctx, 0,
+                (ctx.packageManager.getLaunchIntentForPackage(ctx.packageName) ?: Intent()).apply {
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            val b = NotificationCompat.Builder(ctx, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_notify)
+                .setColor(0xFF0A0A0A.toInt())
+                .setContentTitle("Cloud SA - Quick Actions")
+                .setContentText("Quick actions")
+                .setOngoing(pinned).setOnlyAlertOnce(true)
+                .setContentIntent(open)
+                // Android 14+ lets the user swipe-dismiss even an ongoing FGS notification; re-post it immediately
+                // when that happens so it stays effectively un-removable.
+                .apply { if (pinned) setDeleteIntent(serviceAction(ctx, ACTION_RENOTIFY)) }
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                // #777 group G2 (Quick Actions · KDE Connect).
+                .let { com.diegonmarcos.superapp.notificationcenter.NotifyGroups.attach(ctx, it, QUICK_ACTIONS_BADGE_ID) }
+            val acts = quickActions(ctx, cfg)
+            com.diegonmarcos.superapp.notificationcenter.BadgeModel.add(b, acts)
+            val compact = IntArray(minOf(cfg.compactActionCount, acts.size)) { it }
+            b.setStyle(androidx.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(*compact))
+            return b.build().apply {
+                // Persistent: blocks swipe-to-dismiss + "clear all".
+                if (pinned) flags = flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT
+            }
+        }
+
+        /** The (up to five) buttons: the notification's action row and the Notify card's icon row. */
+        internal fun quickActions(ctx: Context, cfg: FloatingNavConfig): List<com.diegonmarcos.superapp.notificationcenter.BadgeModel.Action> =
+            cfg.actions.take(5).map {
+                com.diegonmarcos.superapp.notificationcenter.BadgeModel.Action(it.target, actionIcon(it.target), it.label, actionPi(ctx, it.target))
+            }
+
+        /** PendingIntent for a notification action - routed through the invisible NavActionActivity so tapping it ALSO
+         *  closes the notification shade (a service PendingIntent would leave the shade open). */
+        private fun actionPi(ctx: Context, target: String): PendingIntent = PendingIntent.getActivity(
+            ctx, target.hashCode(),
+            Intent(ctx, NavActionActivity::class.java)
+                .putExtra(NavActionActivity.EXTRA_TARGET, target)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+        /** PendingIntent for a bare service action (e.g. re-notify on dismiss). */
+        private fun serviceAction(ctx: Context, action: String): PendingIntent = PendingIntent.getService(
+            ctx, action.hashCode(),
+            Intent(ctx, FloatingNavService::class.java).setAction(action),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+        /** Refined thin-line action icons (One-UI style), tinted by the system. */
+        private fun actionIcon(target: String): Int = when (target) {
+            "torch" -> R.drawable.ic_nav_torch
+            "screensaver" -> R.drawable.ic_nav_screensaver
+            "calc" -> R.drawable.ic_nav_calc
+            "dnd" -> R.drawable.ic_nav_dnd
+            "powersave" -> R.drawable.ic_nav_powersave
+            "lock" -> R.drawable.ic_nav_lock
+            else -> R.drawable.ic_nav_search
+        }
+
         private const val CHANNEL_ID = "floating_nav"
         private const val NOTIF_ID = 0xF1
         /** The Quick Actions badge's id in build.json::ui.notification_center.producers. */

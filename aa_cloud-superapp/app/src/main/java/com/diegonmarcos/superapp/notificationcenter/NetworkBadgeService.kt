@@ -242,7 +242,11 @@ class NetworkBadgeService : Service() {
                 Act.TOGGLE -> servicePi(this, ACTION_TOGGLE, RC_TOGGLE)
                 Act.MORE -> more
             }
-            b.addAction(R.drawable.ic_stat_notify, a.label, pi)
+            BadgeModel.add(b, BadgeModel.Action(a.act.name.lowercase(), when (a.act) {
+                Act.ALWAYS_ON -> R.drawable.ic_act_shield
+                Act.TOGGLE -> R.drawable.ic_act_power
+                Act.MORE -> R.drawable.ic_act_more
+            }, a.label, pi))
         }
         return NotifyGroups.attach(this, b, BADGE_ID).build()
             .apply { if (pinned) flags = flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT }
