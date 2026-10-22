@@ -126,6 +126,9 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
         // a resume that lands right behind it must not load twice.
         val w = web ?: return
         if (android.os.SystemClock.elapsedRealtime() - lastLoadAt < REENTRY_DEBOUNCE_MS) return
+        // The reader went deeper into the site (an app page, then a dialog or another app took focus): coming back must not
+        // throw that position away and reload the start page under them; Back still walks the history.
+        if (w.canGoBack()) return
         loadFresh(w, failed ?: declaredUrl.ifBlank { return })
     }
 
